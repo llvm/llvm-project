@@ -278,7 +278,7 @@ void llvm::SplitModule(
     for (unsigned I = 0; I < N; ++I) {
       if (auto It = ModuleFunctionCount.find(I);
           It != ModuleFunctionCount.end())
-        BalancingQueue.emplace(It->first, It->second);
+        BalancingQueue.push(*It);
       else
         BalancingQueue.push({I, 0});
     }

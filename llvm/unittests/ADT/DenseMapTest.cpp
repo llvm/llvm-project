@@ -479,10 +479,9 @@ using IntBucket = detail::DenseMapPair<int, int>;
 static_assert(std::is_trivially_copyable_v<IntBucket>);
 static_assert(!std::is_trivially_default_constructible_v<IntBucket>);
 
-// Converting a bucket to a std::pair copies both members, so it must not happen
-// implicitly: `const std::pair<int, int> &P = *M.begin();` would bind to a
-// temporary rather than the bucket.
-static_assert(!std::is_convertible_v<IntBucket, std::pair<int, int>>);
+// A bucket converts to a std::pair, so code naming the pair type keeps working.
+static_assert(std::is_convertible_v<IntBucket, std::pair<int, int>>);
+static_assert(std::is_convertible_v<IntBucket, std::pair<const int, int>>);
 
 TEST(DenseMapCustomTest, InsertRange) {
   DenseMap<int, int> M;
@@ -515,8 +514,8 @@ TEST(DenseMapCustomTest, InsertRange) {
   EXPECT_EQ(*MoveMap.find(4)->second, 7);
   EXPECT_EQ(MoveSrc.find(4)->second, nullptr);
 
-  // Converting a bucket explicitly still reaches a vector's element type, and a
-  // std::map's, whose key is const.
+  // The conversion reaches a vector's element type, and a std::map's, whose key
+  // is const.
   DenseMap<int, int> Src({{1, 10}, {2, 20}});
   SmallVector<std::pair<int, int>> Vec(Src.begin(), Src.end());
   EXPECT_THAT(Vec, testing::UnorderedElementsAre(testing::Pair(1, 10),

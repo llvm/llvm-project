@@ -69,10 +69,8 @@ template <typename KeyT, typename ValueT> struct DenseMapPair {
   DenseMapPair(DenseMapPair<U1, U2> &&P)
       : first(std::move(P.first)), second(std::move(P.second)) {}
 
-  explicit operator std::pair<KeyT, ValueT>() const { return {first, second}; }
-  explicit operator std::pair<const KeyT, ValueT>() const {
-    return {first, second};
-  }
+  operator std::pair<KeyT, ValueT>() const { return {first, second}; }
+  operator std::pair<const KeyT, ValueT>() const { return {first, second}; }
 
   friend bool operator==(const DenseMapPair &LHS, const DenseMapPair &RHS) {
     return LHS.first == RHS.first && LHS.second == RHS.second;
