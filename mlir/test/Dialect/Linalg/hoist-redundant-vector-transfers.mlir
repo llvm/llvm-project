@@ -1067,38 +1067,40 @@ module attributes {transform.with_named_sequence} {
 
 ///----------------------------------------------------------------------------------------
 /// Tests for hoisting through `memref.subview` views, guarded by a static
-/// footprint disjointness check.
+/// footprint disjointness check. Function names carry a `_2d` / `_3d` suffix
+/// marking the rank of the sliced buffer.
 ///----------------------------------------------------------------------------------------
 
-// Disjoint static subviews of one buffer: both transfer pairs are hoisted.
+// Disjoint static subviews of one buffer, separated along the middle (a
+// non-trailing) dimension of a rank-3 buffer: both transfer pairs are hoisted.
 
-// CHECK-LABEL:   func.func @hoist_disjoint_static_subviews(
-// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<4xf32>,
-// CHECK:           %[[SV0:.*]] = memref.subview %[[MEM]][0] [2] [1]
-// CHECK-NEXT:      %[[SV1:.*]] = memref.subview %[[MEM]][2] [2] [1]
+// CHECK-LABEL:   func.func @hoist_disjoint_static_subviews_3d(
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<2x4x2xf32>,
+// CHECK:           %[[SV0:.*]] = memref.subview %[[MEM]][0, 0, 0] [2, 2, 2] [1, 1, 1]
+// CHECK-NEXT:      %[[SV1:.*]] = memref.subview %[[MEM]][0, 2, 0] [2, 2, 2] [1, 1, 1]
 // CHECK-NEXT:      %[[R0:.*]] = vector.transfer_read %[[SV0]]
 // CHECK-NEXT:      %[[R1:.*]] = vector.transfer_read %[[SV1]]
-// CHECK-NEXT:      %[[FOR:.*]]:2 = scf.for {{.*}} iter_args(%[[I0:.*]] = %[[R0]], %[[I1:.*]] = %[[R1]]) -> (vector<2xf32>, vector<2xf32>) {
+// CHECK-NEXT:      %[[FOR:.*]]:2 = scf.for {{.*}} iter_args(%[[I0:.*]] = %[[R0]], %[[I1:.*]] = %[[R1]]) -> (vector<2x2x2xf32>, vector<2x2x2xf32>) {
 // CHECK-NEXT:        %[[U0:.*]] = "test.val_use"(%[[I0]])
 // CHECK-NEXT:        %[[U1:.*]] = "test.val_use"(%[[I1]])
 // CHECK-NEXT:        scf.yield %[[U0]], %[[U1]]
 // CHECK-NEXT:      }
 // CHECK-NEXT:      vector.transfer_write %[[FOR]]#1, %[[SV1]]
 // CHECK-NEXT:      vector.transfer_write %[[FOR]]#0, %[[SV0]]
-func.func @hoist_disjoint_static_subviews(
-    %mem: memref<4xf32>, %lb : index, %ub : index, %step: index) {
+func.func @hoist_disjoint_static_subviews_3d(
+    %mem: memref<2x4x2xf32>, %lb : index, %ub : index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %sv0 = memref.subview %mem[0][2][1] : memref<4xf32> to memref<2xf32, strided<[1]>>
-  %sv1 = memref.subview %mem[2][2][1] : memref<4xf32> to memref<2xf32, strided<[1], offset: 2>>
+  %sv0 = memref.subview %mem[0, 0, 0][2, 2, 2][1, 1, 1] : memref<2x4x2xf32> to memref<2x2x2xf32, strided<[8, 2, 1]>>
+  %sv1 = memref.subview %mem[0, 2, 0][2, 2, 2][1, 1, 1] : memref<2x4x2xf32> to memref<2x2x2xf32, strided<[8, 2, 1], offset: 4>>
   scf.for %i = %lb to %ub step %step {
-    %r0 = vector.transfer_read %sv0[%c0], %pad : memref<2xf32, strided<[1]>>, vector<2xf32>
-    %u0 = "test.val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
-    vector.transfer_write %u0, %sv0[%c0] : vector<2xf32>, memref<2xf32, strided<[1]>>
+    %r0 = vector.transfer_read %sv0[%c0, %c0, %c0], %pad : memref<2x2x2xf32, strided<[8, 2, 1]>>, vector<2x2x2xf32>
+    %u0 = "test.val_use"(%r0) : (vector<2x2x2xf32>) -> vector<2x2x2xf32>
+    vector.transfer_write %u0, %sv0[%c0, %c0, %c0] : vector<2x2x2xf32>, memref<2x2x2xf32, strided<[8, 2, 1]>>
 
-    %r1 = vector.transfer_read %sv1[%c0], %pad : memref<2xf32, strided<[1], offset: 2>>, vector<2xf32>
-    %u1 = "test.val_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
-    vector.transfer_write %u1, %sv1[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: 2>>
+    %r1 = vector.transfer_read %sv1[%c0, %c0, %c0], %pad : memref<2x2x2xf32, strided<[8, 2, 1], offset: 4>>, vector<2x2x2xf32>
+    %u1 = "test.val_use"(%r1) : (vector<2x2x2xf32>) -> vector<2x2x2xf32>
+    vector.transfer_write %u1, %sv1[%c0, %c0, %c0] : vector<2x2x2xf32>, memref<2x2x2xf32, strided<[8, 2, 1], offset: 4>>
   }
   return
 }
@@ -1115,9 +1117,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Overlapping static subviews are not provably disjoint: hoisting is blocked.
+// Overlapping static subviews, sharing rows along the middle dimension of a
+// rank-3 buffer, are not provably disjoint: hoisting is blocked.
 
-// CHECK-LABEL:   func.func @negative_hoist_overlapping_static_subviews(
+// CHECK-LABEL:   func.func @negative_hoist_overlapping_static_subviews_3d(
 // CHECK:           scf.for {{.*}} step %{{.*}} {
 // CHECK:             vector.transfer_read
 // CHECK:             vector.transfer_write
@@ -1125,20 +1128,20 @@ module attributes {transform.with_named_sequence} {
 // CHECK:             vector.transfer_write
 // CHECK:           }
 
-func.func @negative_hoist_overlapping_static_subviews(
-    %mem: memref<4xf32>, %lb : index, %ub : index, %step: index) {
+func.func @negative_hoist_overlapping_static_subviews_3d(
+    %mem: memref<2x4x2xf32>, %lb : index, %ub : index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %sv0 = memref.subview %mem[0][2][1] : memref<4xf32> to memref<2xf32, strided<[1]>>
-  %sv1 = memref.subview %mem[1][2][1] : memref<4xf32> to memref<2xf32, strided<[1], offset: 1>>
+  %sv0 = memref.subview %mem[0, 0, 0][2, 2, 2][1, 1, 1] : memref<2x4x2xf32> to memref<2x2x2xf32, strided<[8, 2, 1]>>
+  %sv1 = memref.subview %mem[0, 1, 0][2, 2, 2][1, 1, 1] : memref<2x4x2xf32> to memref<2x2x2xf32, strided<[8, 2, 1], offset: 2>>
   scf.for %i = %lb to %ub step %step {
-    %r0 = vector.transfer_read %sv0[%c0], %pad : memref<2xf32, strided<[1]>>, vector<2xf32>
-    %u0 = "test.val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
-    vector.transfer_write %u0, %sv0[%c0] : vector<2xf32>, memref<2xf32, strided<[1]>>
+    %r0 = vector.transfer_read %sv0[%c0, %c0, %c0], %pad : memref<2x2x2xf32, strided<[8, 2, 1]>>, vector<2x2x2xf32>
+    %u0 = "test.val_use"(%r0) : (vector<2x2x2xf32>) -> vector<2x2x2xf32>
+    vector.transfer_write %u0, %sv0[%c0, %c0, %c0] : vector<2x2x2xf32>, memref<2x2x2xf32, strided<[8, 2, 1]>>
 
-    %r1 = vector.transfer_read %sv1[%c0], %pad : memref<2xf32, strided<[1], offset: 1>>, vector<2xf32>
-    %u1 = "test.val_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
-    vector.transfer_write %u1, %sv1[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: 1>>
+    %r1 = vector.transfer_read %sv1[%c0, %c0, %c0], %pad : memref<2x2x2xf32, strided<[8, 2, 1], offset: 2>>, vector<2x2x2xf32>
+    %u1 = "test.val_use"(%r1) : (vector<2x2x2xf32>) -> vector<2x2x2xf32>
+    vector.transfer_write %u1, %sv1[%c0, %c0, %c0] : vector<2x2x2xf32>, memref<2x2x2xf32, strided<[8, 2, 1], offset: 2>>
   }
   return
 }
@@ -1354,10 +1357,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// A subview with a dynamic size: disjointness is proven along the static
-// dimension (rows [0, 2) vs [2, 4)).
+// A subview with a dynamic size in a rank-2 buffer: disjointness is proven along
+// the static dimension (rows [0, 2) vs [2, 4)).
 
-// CHECK-LABEL:   func.func @hoist_disjoint_dynamic_size_subviews(
+// CHECK-LABEL:   func.func @hoist_disjoint_dynamic_size_subviews_2d(
 // CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<4x8xf32>,
 // CHECK-SAME:      %[[SZ:[a-zA-Z0-9]+]]: index,
 // CHECK:           %[[SV0:.*]] = memref.subview %[[MEM]][0, 0] [2, %[[SZ]]] [1, 1]
@@ -1371,7 +1374,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-NEXT:      }
 // CHECK-NEXT:      vector.transfer_write %[[FOR]]#1, %[[SV1]]
 // CHECK-NEXT:      vector.transfer_write %[[FOR]]#0, %[[SV0]]
-func.func @hoist_disjoint_dynamic_size_subviews(
+func.func @hoist_disjoint_dynamic_size_subviews_2d(
     %mem: memref<4x8xf32>, %sz: index, %lb: index, %ub: index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
@@ -1401,11 +1404,11 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// The only separation is along the dynamic-size dimension (offsets 0 vs 4),
-// while the static dimension is identical. The dynamic dimension cannot prove
-// disjointness, so hoisting is blocked.
+// In a rank-2 buffer, the only separation is along the dynamic-size dimension
+// (offsets 0 vs 4), while the static dimension is identical. The dynamic
+// dimension cannot prove disjointness, so hoisting is blocked.
 
-// CHECK-LABEL:   func.func @negative_hoist_dynamic_size_only_separation(
+// CHECK-LABEL:   func.func @negative_hoist_dynamic_size_only_separation_2d(
 // CHECK:           scf.for {{.*}} step %{{.*}} {
 // CHECK:             vector.transfer_read
 // CHECK:             vector.transfer_write
@@ -1413,7 +1416,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:             vector.transfer_write
 // CHECK:           }
 
-func.func @negative_hoist_dynamic_size_only_separation(
+func.func @negative_hoist_dynamic_size_only_separation_2d(
     %mem: memref<4x8xf32>, %sz: index, %lb: index, %ub: index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
