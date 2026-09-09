@@ -319,5 +319,16 @@ EXIT:
   ret void
 }
 
+define i1 @freeze_samesign(i32 %x) {
+; CHECK-LABEL: @freeze_samesign(
+; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[FR]], 42
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp samesign ult i32 %x, 42
+  %fr = freeze i1 %cmp
+  ret i1 %fr
+}
+
 declare void @g1()
 declare void @g2()
