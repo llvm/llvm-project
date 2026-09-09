@@ -3138,7 +3138,7 @@ define void @trunc_stride_extra_narrow_use(ptr noalias %p.out, ptr %p, i64 %stri
 ; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i32 [[TMP0]]
 ; COMPARE-LAA-MV-NEXT:    [[TMP29:%.*]] = load <4 x i32>, ptr [[TMP1]], align 8
 ; COMPARE-LAA-MV-NEXT:    [[TMP30:%.*]] = shl <4 x i32> [[TMP29]], splat (i32 1)
-; COMPARE-LAA-MV-NEXT:    [[TMP31:%.*]] = select i1 [[STRIDE_I1]], <4 x i32> [[TMP29]], <4 x i32> [[TMP30]]
+; COMPARE-LAA-MV-NEXT:    [[TMP31:%.*]] = select i1 true, <4 x i32> [[TMP29]], <4 x i32> [[TMP30]]
 ; COMPARE-LAA-MV-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[P_OUT]], i32 [[INDEX]]
 ; COMPARE-LAA-MV-NEXT:    store <4 x i32> [[TMP31]], ptr [[TMP32]], align 8
 ; COMPARE-LAA-MV-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
