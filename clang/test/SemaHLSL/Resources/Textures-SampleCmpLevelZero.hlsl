@@ -35,10 +35,10 @@
 //
 // Check prefixes:
 //   offset             diagnostics for types that have offset overloads
-//   dim2               diagnostics naming a 2-component offset or location
-//                      vector
 //   nooffset           diagnostics for types that have no offset overloads
 //   dim1               diagnostics naming a scalar offset or location
+//   dim2               diagnostics naming a 2-component offset or location
+//                      vector
 //   dim3               diagnostics naming a 3-component offset or location
 //                      vector
 //

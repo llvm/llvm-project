@@ -5,9 +5,8 @@
 // RUN:   -DLOAD_ARG="int2(loc, 0)" -o - %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SRV,SCALAR-COORD,WIDE-LOC,DXIL,DXIL-SRV \
 // RUN:   -DTEXTURE=Texture1D -D#LOAD_DIM=2 -DCOORD_DIM=1 -DDXIL_TY=1 -DRW=0 \
-// RUN:   -DENTRY_DIM=1 -DDIM=1 -DCOORD_LLVM=i32 -DOFFSET_LLVM=i32 \
-// RUN:   -DOFFSET_CXX=int -DOFFSET_ZERO=0 -DOFFSET_CONST=1 \
-// RUN:   -DENTRY_CXX=int -DLOAD_LLVM="<2 x i32>" \
+// RUN:   -DCOORD_LLVM=i32 -DOFFSET_LLVM=i32 -DOFFSET_CXX=int -DOFFSET_ZERO=0 \
+// RUN:   -DOFFSET_CONST=1 -DENTRY_CXX=int -DLOAD_LLVM="<2 x i32>" \
 // RUN:   -DLOAD_CXX="int vector[2]"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int \
@@ -16,10 +15,9 @@
 // RUN:   --check-prefixes=CHECK,SRV,SCALAR-COORD,WIDE-LOC,SPIRV,SPIRV-SRV \
 // RUN:   -DTEXTURE=Texture1D -D#LOAD_DIM=2 -DCOORD_DIM=1 -DARRAYED=0 \
 // RUN:   -DSAMPLED=1 -DFORMAT1=0 -DFORMAT3=0 -DFORMAT6=0 -DFORMAT21=0 \
-// RUN:   -DFORMAT24=0 -DFORMAT25=0 -DSPV_DIM=0 -DENTRY_DIM=1 -DDIM=1 \
-// RUN:   -DCOORD_LLVM=i32 -DOFFSET_LLVM=i32 -DOFFSET_CXX=int \
-// RUN:   -DOFFSET_ZERO=0 -DOFFSET_CONST=1 -DENTRY_CXX=int \
-// RUN:   -DLOAD_LLVM="<2 x i32>" -DLOAD_CXX="int vector[2]"
+// RUN:   -DFORMAT24=0 -DFORMAT25=0 -DSPV_DIM=0 -DCOORD_LLVM=i32 \
+// RUN:   -DOFFSET_LLVM=i32 -DOFFSET_CXX=int -DOFFSET_ZERO=0 -DOFFSET_CONST=1 \
+// RUN:   -DENTRY_CXX=int -DLOAD_LLVM="<2 x i32>" -DLOAD_CXX="int vector[2]"
 
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
@@ -28,11 +26,10 @@
 // RUN:   -DLOAD_ARG="int3(loc, 0)" -o - %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SRV,VEC-COORD,WIDE-LOC,DXIL,DXIL-SRV \
 // RUN:   -DTEXTURE=Texture1DArray -D#LOAD_DIM=3 -DCOORD_DIM=2 \
-// RUN:   -DCOORD_MASK="<i32 0, i32 1>" -DDXIL_TY=6 -DRW=0 -DENTRY_DIM=2 \
-// RUN:   -DDIM=1 -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM=i32 \
-// RUN:   -DOFFSET_CXX=int -DOFFSET_ZERO=0 -DOFFSET_CONST=1 \
-// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<3 x i32>" \
-// RUN:   -DLOAD_CXX="int vector[3]"
+// RUN:   -DCOORD_MASK="<i32 0, i32 1>" -DDXIL_TY=6 -DRW=0 \
+// RUN:   -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM=i32 -DOFFSET_CXX=int \
+// RUN:   -DOFFSET_ZERO=0 -DOFFSET_CONST=1 -DENTRY_CXX="int vector[2]" \
+// RUN:   -DLOAD_LLVM="<3 x i32>" -DLOAD_CXX="int vector[3]"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
 // RUN:   -DHAS_OFFSET -DOFFSET_ARG="1" -DTEXTURE=Texture1DArray \
@@ -41,10 +38,11 @@
 // RUN:   -DTEXTURE=Texture1DArray -D#LOAD_DIM=3 -DCOORD_DIM=2 \
 // RUN:   -DCOORD_MASK="<i32 0, i32 1>" -DARRAYED=1 -DSAMPLED=1 -DFORMAT1=0 \
 // RUN:   -DFORMAT3=0 -DFORMAT6=0 -DFORMAT21=0 -DFORMAT24=0 -DFORMAT25=0 \
-// RUN:   -DSPV_DIM=0 -DENTRY_DIM=2 -DDIM=1 -DCOORD_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_LLVM=i32 -DOFFSET_CXX=int -DOFFSET_ZERO=0 \
-// RUN:   -DOFFSET_CONST=1 -DENTRY_CXX="int vector[2]" \
-// RUN:   -DLOAD_LLVM="<3 x i32>" -DLOAD_CXX="int vector[3]"
+// RUN:   -DSPV_DIM=0 -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM=i32 \
+// RUN:   -DOFFSET_CXX=int -DOFFSET_ZERO=0 -DOFFSET_CONST=1 \
+// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<3 x i32>" \
+// RUN:   -DLOAD_CXX="int vector[3]"
+
 // Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
@@ -52,8 +50,8 @@
 // RUN:   -DLOAD_ARG="int3(loc, 0)" -o - %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SRV,VEC-COORD,WIDE-LOC,DXIL,DXIL-SRV \
 // RUN:   -DTEXTURE=Texture2D -D#LOAD_DIM=3 -DCOORD_DIM=2 \
-// RUN:   -DCOORD_MASK="<i32 0, i32 1>" -DDXIL_TY=2 -DRW=0 -DENTRY_DIM=2 \
-// RUN:   -DDIM=2 -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM="<2 x i32>" \
+// RUN:   -DCOORD_MASK="<i32 0, i32 1>" -DDXIL_TY=2 -DRW=0 \
+// RUN:   -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM="<2 x i32>" \
 // RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer \
 // RUN:   -DOFFSET_CONST="splat (i32 1)" -DENTRY_CXX="int vector[2]" \
 // RUN:   -DLOAD_LLVM="<3 x i32>" -DLOAD_CXX="int vector[3]"
@@ -65,11 +63,10 @@
 // RUN:   -DTEXTURE=Texture2D -D#LOAD_DIM=3 -DCOORD_DIM=2 \
 // RUN:   -DCOORD_MASK="<i32 0, i32 1>" -DARRAYED=0 -DSAMPLED=1 -DFORMAT1=0 \
 // RUN:   -DFORMAT3=0 -DFORMAT6=0 -DFORMAT21=0 -DFORMAT24=0 -DFORMAT25=0 \
-// RUN:   -DSPV_DIM=1 -DENTRY_DIM=2 -DDIM=2 -DCOORD_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_CXX="int vector[2]" \
-// RUN:   -DOFFSET_ZERO=zeroinitializer -DOFFSET_CONST="splat (i32 1)" \
-// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<3 x i32>" \
-// RUN:   -DLOAD_CXX="int vector[3]"
+// RUN:   -DSPV_DIM=1 -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM="<2 x i32>" \
+// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer \
+// RUN:   -DOFFSET_CONST="splat (i32 1)" -DENTRY_CXX="int vector[2]" \
+// RUN:   -DLOAD_LLVM="<3 x i32>" -DLOAD_CXX="int vector[3]"
 
 // Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
@@ -79,11 +76,10 @@
 // RUN:   --check-prefixes=CHECK,SRV,VEC-COORD,WIDE-LOC,DXIL,DXIL-SRV \
 // RUN:   -DTEXTURE=Texture2DArray -D#LOAD_DIM=4 -DCOORD_DIM=3 \
 // RUN:   -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DDXIL_TY=7 -DRW=0 \
-// RUN:   -DENTRY_DIM=2 -DDIM=2 -DCOORD_LLVM="<3 x i32>" \
-// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_CXX="int vector[2]" \
-// RUN:   -DOFFSET_ZERO=zeroinitializer -DOFFSET_CONST="splat (i32 1)" \
-// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<4 x i32>" \
-// RUN:   -DLOAD_CXX="int vector[4]"
+// RUN:   -DCOORD_LLVM="<3 x i32>" -DOFFSET_LLVM="<2 x i32>" \
+// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer \
+// RUN:   -DOFFSET_CONST="splat (i32 1)" -DENTRY_CXX="int vector[2]" \
+// RUN:   -DLOAD_LLVM="<4 x i32>" -DLOAD_CXX="int vector[4]"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
 // RUN:   -DHAS_OFFSET -DOFFSET_ARG="int2(1, 1)" -DTEXTURE=Texture2DArray \
@@ -92,11 +88,11 @@
 // RUN:   -DTEXTURE=Texture2DArray -D#LOAD_DIM=4 -DCOORD_DIM=3 \
 // RUN:   -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DARRAYED=1 -DSAMPLED=1 \
 // RUN:   -DFORMAT1=0 -DFORMAT3=0 -DFORMAT6=0 -DFORMAT21=0 -DFORMAT24=0 \
-// RUN:   -DFORMAT25=0 -DSPV_DIM=1 -DENTRY_DIM=2 -DDIM=2 \
-// RUN:   -DCOORD_LLVM="<3 x i32>" -DOFFSET_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer \
-// RUN:   -DOFFSET_CONST="splat (i32 1)" -DENTRY_CXX="int vector[2]" \
-// RUN:   -DLOAD_LLVM="<4 x i32>" -DLOAD_CXX="int vector[4]"
+// RUN:   -DFORMAT25=0 -DSPV_DIM=1 -DCOORD_LLVM="<3 x i32>" \
+// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_CXX="int vector[2]" \
+// RUN:   -DOFFSET_ZERO=zeroinitializer -DOFFSET_CONST="splat (i32 1)" \
+// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<4 x i32>" \
+// RUN:   -DLOAD_CXX="int vector[4]"
 
 // RWTexture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
@@ -104,41 +100,17 @@
 // RUN:   -DTEXTURE=RWTexture1D -DLOAD_ARG="loc" -o - %s | llvm-cxxfilt | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,UAV,EXACT-LOC,DXIL,DXIL-UAV \
 // RUN:   -DTEXTURE=RWTexture1D -D#LOAD_DIM=1 -DCOORD_DIM=1 -DDXIL_TY=1 -DRW=1 \
-// RUN:   -DENTRY_DIM=1 -DDIM=1 -DCOORD_LLVM=i32 -DOFFSET_LLVM=i32 \
-// RUN:   -DOFFSET_CXX=int -DOFFSET_ZERO=0 -DOFFSET_CONST=1 \
-// RUN:   -DENTRY_CXX=int -DLOAD_LLVM=i32 -DLOAD_CXX=int
+// RUN:   -DCOORD_LLVM=i32 -DOFFSET_LLVM=i32 -DOFFSET_CXX=int -DOFFSET_ZERO=0 \
+// RUN:   -DOFFSET_CONST=1 -DENTRY_CXX=int -DLOAD_LLVM=i32 -DLOAD_CXX=int
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int \
 // RUN:   -DTEXTURE=RWTexture1D -DLOAD_ARG="loc" -o - %s | llvm-cxxfilt | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,UAV,EXACT-LOC,SPIRV,SPIRV-UAV \
 // RUN:   -DTEXTURE=RWTexture1D -D#LOAD_DIM=1 -DCOORD_DIM=1 -DARRAYED=0 \
 // RUN:   -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 \
-// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=0 -DENTRY_DIM=1 -DDIM=1 \
-// RUN:   -DCOORD_LLVM=i32 -DOFFSET_LLVM=i32 -DOFFSET_CXX=int \
-// RUN:   -DOFFSET_ZERO=0 -DOFFSET_CONST=1 -DENTRY_CXX=int -DLOAD_LLVM=i32 \
-// RUN:   -DLOAD_CXX=int
-// RWTexture2D
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
-// RUN:   -DTEXTURE=RWTexture2D -DLOAD_ARG="loc" -o - %s | llvm-cxxfilt | \
-// RUN:   FileCheck %s --check-prefixes=CHECK,UAV,EXACT-LOC,DXIL,DXIL-UAV \
-// RUN:   -DTEXTURE=RWTexture2D -D#LOAD_DIM=2 -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=1 \
-// RUN:   -DENTRY_DIM=2 -DDIM=2 -DCOORD_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_CXX="int vector[2]" \
-// RUN:   -DOFFSET_ZERO=zeroinitializer -DOFFSET_CONST="splat (i32 1)" \
-// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<2 x i32>" \
-// RUN:   -DLOAD_CXX="int vector[2]"
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
-// RUN:   -DTEXTURE=RWTexture2D -DLOAD_ARG="loc" -o - %s | llvm-cxxfilt | \
-// RUN:   FileCheck %s --check-prefixes=CHECK,UAV,EXACT-LOC,SPIRV,SPIRV-UAV \
-// RUN:   -DTEXTURE=RWTexture2D -D#LOAD_DIM=2 -DCOORD_DIM=2 -DARRAYED=0 \
-// RUN:   -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 \
-// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=1 -DENTRY_DIM=2 -DDIM=2 \
-// RUN:   -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer \
-// RUN:   -DOFFSET_CONST="splat (i32 1)" -DENTRY_CXX="int vector[2]" \
-// RUN:   -DLOAD_LLVM="<2 x i32>" -DLOAD_CXX="int vector[2]"
+// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=0 -DCOORD_LLVM=i32 \
+// RUN:   -DOFFSET_LLVM=i32 -DOFFSET_CXX=int -DOFFSET_ZERO=0 -DOFFSET_CONST=1 \
+// RUN:   -DENTRY_CXX=int -DLOAD_LLVM=i32 -DLOAD_CXX=int
 
 // RWTexture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
@@ -147,10 +119,9 @@
 // RUN:   llvm-cxxfilt | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,UAV,WIDE-LOC,DXIL,DXIL-UAV \
 // RUN:   -DTEXTURE=RWTexture1DArray -D#LOAD_DIM=2 -DCOORD_DIM=2 -DDXIL_TY=6 \
-// RUN:   -DRW=1 -DENTRY_DIM=1 -DDIM=1 -DCOORD_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_LLVM=i32 -DOFFSET_CXX=int -DOFFSET_ZERO=0 \
-// RUN:   -DOFFSET_CONST=1 -DENTRY_CXX=int -DLOAD_LLVM="<2 x i32>" \
-// RUN:   -DLOAD_CXX="int vector[2]"
+// RUN:   -DRW=1 -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM=i32 -DOFFSET_CXX=int \
+// RUN:   -DOFFSET_ZERO=0 -DOFFSET_CONST=1 -DENTRY_CXX=int \
+// RUN:   -DLOAD_LLVM="<2 x i32>" -DLOAD_CXX="int vector[2]"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int \
 // RUN:   -DTEXTURE=RWTexture1DArray -DLOAD_ARG="int2(loc, 0)" -o - %s | \
@@ -158,10 +129,32 @@
 // RUN:   --check-prefixes=CHECK,UAV,WIDE-LOC,SPIRV,SPIRV-UAV \
 // RUN:   -DTEXTURE=RWTexture1DArray -D#LOAD_DIM=2 -DCOORD_DIM=2 -DARRAYED=1 \
 // RUN:   -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 \
-// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=0 -DENTRY_DIM=1 -DDIM=1 \
-// RUN:   -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM=i32 -DOFFSET_CXX=int \
-// RUN:   -DOFFSET_ZERO=0 -DOFFSET_CONST=1 -DENTRY_CXX=int \
+// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=0 -DCOORD_LLVM="<2 x i32>" \
+// RUN:   -DOFFSET_LLVM=i32 -DOFFSET_CXX=int -DOFFSET_ZERO=0 -DOFFSET_CONST=1 \
+// RUN:   -DENTRY_CXX=int -DLOAD_LLVM="<2 x i32>" -DLOAD_CXX="int vector[2]"
+
+// RWTexture2D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
+// RUN:   -DTEXTURE=RWTexture2D -DLOAD_ARG="loc" -o - %s | llvm-cxxfilt | \
+// RUN:   FileCheck %s --check-prefixes=CHECK,UAV,EXACT-LOC,DXIL,DXIL-UAV \
+// RUN:   -DTEXTURE=RWTexture2D -D#LOAD_DIM=2 -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=1 \
+// RUN:   -DCOORD_LLVM="<2 x i32>" -DOFFSET_LLVM="<2 x i32>" \
+// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer \
+// RUN:   -DOFFSET_CONST="splat (i32 1)" -DENTRY_CXX="int vector[2]" \
 // RUN:   -DLOAD_LLVM="<2 x i32>" -DLOAD_CXX="int vector[2]"
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
+// RUN:   -DTEXTURE=RWTexture2D -DLOAD_ARG="loc" -o - %s | llvm-cxxfilt | \
+// RUN:   FileCheck %s --check-prefixes=CHECK,UAV,EXACT-LOC,SPIRV,SPIRV-UAV \
+// RUN:   -DTEXTURE=RWTexture2D -D#LOAD_DIM=2 -DCOORD_DIM=2 -DARRAYED=0 \
+// RUN:   -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 \
+// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=1 -DCOORD_LLVM="<2 x i32>" \
+// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_CXX="int vector[2]" \
+// RUN:   -DOFFSET_ZERO=zeroinitializer -DOFFSET_CONST="splat (i32 1)" \
+// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<2 x i32>" \
+// RUN:   -DLOAD_CXX="int vector[2]"
+
 // RWTexture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
@@ -169,11 +162,10 @@
 // RUN:   llvm-cxxfilt | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,UAV,WIDE-LOC,DXIL,DXIL-UAV \
 // RUN:   -DTEXTURE=RWTexture2DArray -D#LOAD_DIM=3 -DCOORD_DIM=3 -DDXIL_TY=7 \
-// RUN:   -DRW=1 -DENTRY_DIM=2 -DDIM=2 -DCOORD_LLVM="<3 x i32>" \
-// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_CXX="int vector[2]" \
-// RUN:   -DOFFSET_ZERO=zeroinitializer -DOFFSET_CONST="splat (i32 1)" \
-// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<3 x i32>" \
-// RUN:   -DLOAD_CXX="int vector[3]"
+// RUN:   -DRW=1 -DCOORD_LLVM="<3 x i32>" -DOFFSET_LLVM="<2 x i32>" \
+// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer \
+// RUN:   -DOFFSET_CONST="splat (i32 1)" -DENTRY_CXX="int vector[2]" \
+// RUN:   -DLOAD_LLVM="<3 x i32>" -DLOAD_CXX="int vector[3]"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
 // RUN:   -DTEXTURE=RWTexture2DArray -DLOAD_ARG="int3(loc, 0)" -o - %s | \
@@ -181,11 +173,11 @@
 // RUN:   --check-prefixes=CHECK,UAV,WIDE-LOC,SPIRV,SPIRV-UAV \
 // RUN:   -DTEXTURE=RWTexture2DArray -D#LOAD_DIM=3 -DCOORD_DIM=3 -DARRAYED=1 \
 // RUN:   -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 \
-// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=1 -DENTRY_DIM=2 -DDIM=2 \
-// RUN:   -DCOORD_LLVM="<3 x i32>" -DOFFSET_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer \
-// RUN:   -DOFFSET_CONST="splat (i32 1)" -DENTRY_CXX="int vector[2]" \
-// RUN:   -DLOAD_LLVM="<3 x i32>" -DLOAD_CXX="int vector[3]"
+// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=1 -DCOORD_LLVM="<3 x i32>" \
+// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_CXX="int vector[2]" \
+// RUN:   -DOFFSET_ZERO=zeroinitializer -DOFFSET_CONST="splat (i32 1)" \
+// RUN:   -DENTRY_CXX="int vector[2]" -DLOAD_LLVM="<3 x i32>" \
+// RUN:   -DLOAD_CXX="int vector[3]"
 
 // Texture3D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
@@ -257,9 +249,6 @@
 //   ENTRY_CXX          the entry point's coordinate type in the C++ signature
 //   DXIL_TY            dx.Texture resource-kind operand
 //   RW                 dx.Texture UAV operand
-//   ENTRY_DIM          the entry point's own coordinate components
-//   DIM                number of resource dimensions (offset, ddx/ddy, LOD
-//                      location)
 //   ARRAYED            spirv.Image Arrayed operand
 //   SAMPLED            spirv.Image Sampled operand
 //   SPV_DIM            spirv.Image Dim operand

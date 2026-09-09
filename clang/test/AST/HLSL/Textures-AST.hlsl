@@ -1,61 +1,75 @@
+// Texture1D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
+// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=Texture1D -o - %s | FileCheck \
+// RUN:   %s --check-prefixes=CHECK,SRV -DTEXTURE=Texture1D -DDIM_NAME=1D \
+// RUN:   -DINDEX_TYPE="unsigned int" -DLOCATION_TYPE=int
+
+// Texture1DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
+// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=Texture1DArray -o - %s | \
+// RUN:   FileCheck %s --check-prefixes=CHECK,SRV,SRV-ARRAY \
+// RUN:   -DTEXTURE=Texture1DArray -DDIM_NAME=1D \
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" \
+// RUN:   -DLOCATION_TYPE="vector<int, 2>"
+
+// Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DHAS_GETDIM \
 // RUN:   -DINDEX_ARG_TYPE=uint3 -DINDEX_ARG="uint3(0, 0, 0)" \
 // RUN:   -DTEXTURE=Texture2D -o - %s | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SRV,GETDIM,GETDIM-SRV -DTEXTURE=Texture2D \
-// RUN:   -DINDEX_DIM=2 -DDIM_NAME=2D -DINDEX_TYPE="vector<unsigned int, 2>" \
+// RUN:   -DDIM_NAME=2D -DINDEX_TYPE="vector<unsigned int, 2>" \
 // RUN:   -DLOCATION_TYPE="vector<int, 2>"
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
-// RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
-// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=Texture1D -o - %s | FileCheck \
-// RUN:   %s --check-prefixes=CHECK,SRV -DTEXTURE=Texture1D -DINDEX_DIM=1 \
-// RUN:   -DDIM_NAME=1D -DINDEX_TYPE="unsigned int" -DLOCATION_TYPE=int
+
+// Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DHAS_GETDIM \
 // RUN:   -DINDEX_ARG_TYPE=uint3 -DINDEX_ARG="uint3(0, 0, 0)" \
 // RUN:   -DTEXTURE=Texture2DArray -o - %s | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SRV,SRV-ARRAY,GETDIM,GETDIM-SRV,GETDIM-SRV-ARRAY \
-// RUN:   -DTEXTURE=Texture2DArray -DINDEX_DIM=3 -DDIM_NAME=2D \
+// RUN:   -DTEXTURE=Texture2DArray -DDIM_NAME=2D \
 // RUN:   -DINDEX_TYPE="vector<unsigned int, 3>" \
 // RUN:   -DLOCATION_TYPE="vector<int, 3>"
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
-// RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
-// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=Texture1DArray -o - %s | \
-// RUN:   FileCheck %s --check-prefixes=CHECK,SRV,SRV-ARRAY \
-// RUN:   -DTEXTURE=Texture1DArray -DINDEX_DIM=2 -DDIM_NAME=1D \
-// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" \
-// RUN:   -DLOCATION_TYPE="vector<int, 2>"
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
-// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_GETDIM \
-// RUN:   -DINDEX_ARG_TYPE=uint3 -DINDEX_ARG="uint3(0, 0, 0)" \
-// RUN:   -DTEXTURE=RWTexture2D -DRW=1 -o - %s | FileCheck %s \
-// RUN:   --check-prefixes=CHECK,UAV,UAV-STORE,UAV-TRUNC,GETDIM,GETDIM-UAV \
-// RUN:   -DTEXTURE=RWTexture2D -DINDEX_DIM=2 -DDIM_NAME=2D \
-// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" \
-// RUN:   -DLOCATION_TYPE="vector<int, 2>" -DTRUNC_TYPE="vector<uint, 2>"
+
+// RWTexture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
 // RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=RWTexture1D -DRW=1 -o - %s | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,UAV,UAV-STORE,UAV-TRUNC \
-// RUN:   -DTEXTURE=RWTexture1D -DINDEX_DIM=1 -DDIM_NAME=1D \
-// RUN:   -DINDEX_TYPE="unsigned int" -DLOCATION_TYPE=int \
-// RUN:   -DTRUNC_TYPE="uint':'unsigned int"
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
-// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_GETDIM \
-// RUN:   -DINDEX_ARG_TYPE=uint3 -DINDEX_ARG="uint3(0, 0, 0)" \
-// RUN:   -DTEXTURE=RWTexture2DArray -DRW=1 -o - %s | FileCheck %s \
-// RUN:   --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-NOTRUNC,GETDIM,GETDIM-UAV,GETDIM-UAV-ARRAY \
-// RUN:   -DTEXTURE=RWTexture2DArray -DINDEX_DIM=3 -DDIM_NAME=2D \
-// RUN:   -DINDEX_TYPE="vector<unsigned int, 3>" \
-// RUN:   -DLOCATION_TYPE="vector<int, 3>"
+// RUN:   -DTEXTURE=RWTexture1D -DDIM_NAME=1D -DINDEX_TYPE="unsigned int" \
+// RUN:   -DLOCATION_TYPE=int -DTRUNC_TYPE="uint':'unsigned int"
+
+// RWTexture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
 // RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=RWTexture1DArray -DRW=1 -o - \
 // RUN:   %s | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-TRUNC \
-// RUN:   -DTEXTURE=RWTexture1DArray -DINDEX_DIM=2 -DDIM_NAME=1D \
+// RUN:   -DTEXTURE=RWTexture1DArray -DDIM_NAME=1D \
 // RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" \
 // RUN:   -DLOCATION_TYPE="vector<int, 2>" -DTRUNC_TYPE="vector<uint, 2>"
+
+// RWTexture2D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_GETDIM \
+// RUN:   -DINDEX_ARG_TYPE=uint3 -DINDEX_ARG="uint3(0, 0, 0)" \
+// RUN:   -DTEXTURE=RWTexture2D -DRW=1 -o - %s | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,UAV,UAV-STORE,UAV-TRUNC,GETDIM,GETDIM-UAV \
+// RUN:   -DTEXTURE=RWTexture2D -DDIM_NAME=2D \
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" \
+// RUN:   -DLOCATION_TYPE="vector<int, 2>" -DTRUNC_TYPE="vector<uint, 2>"
+
+// RWTexture2DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_GETDIM \
+// RUN:   -DINDEX_ARG_TYPE=uint3 -DINDEX_ARG="uint3(0, 0, 0)" \
+// RUN:   -DTEXTURE=RWTexture2DArray -DRW=1 -o - %s | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-NOTRUNC,GETDIM,GETDIM-UAV,GETDIM-UAV-ARRAY \
+// RUN:   -DTEXTURE=RWTexture2DArray -DDIM_NAME=2D \
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 3>" \
+// RUN:   -DLOCATION_TYPE="vector<int, 3>"
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -63,7 +77,6 @@
 //   INDEX_ARG_TYPE     the declared type of INDEX_ARG
 //   INDEX_ARG          a literal operator[] index
 //   TEXTURE            resource type name
-//   INDEX_DIM          operator[] index components
 //   INDEX_TYPE         operator[] index type
 //   LOCATION_TYPE      Load location type
 //   DIM_NAME           hlsl::dimension spelling

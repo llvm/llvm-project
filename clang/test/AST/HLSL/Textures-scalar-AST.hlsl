@@ -1,11 +1,12 @@
 // Texture1D
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \
 // RUN:   -DHAS_SAMPLE_CMP -DTEXTURE=Texture1D -DCOORD_TYPE=float \
 // RUN:   -DGRAD_TYPE=float -DLOD_LOCATION=loc -DOFFSET_ARG="1" -o - %s | \
 // RUN:   FileCheck %s \
 // RUN:   --check-prefixes=CHECK,TEXEL,OFFSET,SAMPLECMP,SAMPLECMP-OFFSET \
-// RUN:   -DTEXTURE=Texture1D -DDIM_NAME=1D -DDIM=1 -DCOORD_DIM=1 -DLOAD_DIM=2 \
+// RUN:   -DTEXTURE=Texture1D -DDIM_NAME=1D -DLOAD_DIM=2 \
 // RUN:   -DINDEX_TYPE="unsigned int" -DIS_ARRAY="" -DLOCATION_TYPE=float \
 // RUN:   -DGRADIENT_TYPE=float -DOFFSET_TYPE=int
 
@@ -16,8 +17,8 @@
 // RUN:   -DGRAD_TYPE=float -DLOD_LOCATION=loc.x -DOFFSET_ARG="1" -o - %s | \
 // RUN:   FileCheck %s \
 // RUN:   --check-prefixes=CHECK,ARRAY,TEXEL,OFFSET,SAMPLECMP,SAMPLECMP-OFFSET \
-// RUN:   -DTEXTURE=Texture1DArray -DDIM_NAME=1D -DDIM=1 -DCOORD_DIM=2 \
-// RUN:   -DLOAD_DIM=3 -DINDEX_TYPE="vector<unsigned int, 2>" \
+// RUN:   -DTEXTURE=Texture1DArray -DDIM_NAME=1D -DLOAD_DIM=3 \
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" \
 // RUN:   -DIS_ARRAY=" [[hlsl::is_array]]" -DLOCATION_TYPE="vector<float, 2>" \
 // RUN:   -DGRADIENT_TYPE=float -DOFFSET_TYPE=int
 
@@ -28,7 +29,7 @@
 // RUN:   -DCOORD_TYPE=float2 -DGRAD_TYPE=float2 -DLOD_LOCATION=loc \
 // RUN:   -DOFFSET_ARG="int2(1, 2)" -o - %s | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,TEXEL,OFFSET,GETDIM-XY,SAMPLECMP,SAMPLECMP-OFFSET,GATHER,GATHER-OFFSET \
-// RUN:   -DTEXTURE=Texture2D -DDIM_NAME=2D -DDIM=2 -DCOORD_DIM=2 -DLOAD_DIM=3 \
+// RUN:   -DTEXTURE=Texture2D -DDIM_NAME=2D -DLOAD_DIM=3 \
 // RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" -DIS_ARRAY="" \
 // RUN:   -DLOCATION_TYPE="vector<float, 2>" \
 // RUN:   -DGRADIENT_TYPE="vector<float, 2>" -DOFFSET_TYPE="vector<int, 2>"
@@ -41,8 +42,8 @@
 // RUN:   -DLOD_LOCATION=loc.xy -DOFFSET_ARG="int2(1, 2)" -o - %s | FileCheck \
 // RUN:   %s \
 // RUN:   --check-prefixes=CHECK,ARRAY,TEXEL,OFFSET,GETDIM-XY,SAMPLECMP,SAMPLECMP-OFFSET,GATHER,GATHER-OFFSET \
-// RUN:   -DTEXTURE=Texture2DArray -DDIM_NAME=2D -DDIM=2 -DCOORD_DIM=3 \
-// RUN:   -DLOAD_DIM=4 -DINDEX_TYPE="vector<unsigned int, 3>" \
+// RUN:   -DTEXTURE=Texture2DArray -DDIM_NAME=2D -DLOAD_DIM=4 \
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 3>" \
 // RUN:   -DIS_ARRAY=" [[hlsl::is_array]]" -DLOCATION_TYPE="vector<float, 3>" \
 // RUN:   -DGRADIENT_TYPE="vector<float, 2>" -DOFFSET_TYPE="vector<int, 2>"
 
@@ -52,9 +53,8 @@
 // RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -DGRAD_TYPE=float3 \
 // RUN:   -DLOD_LOCATION=loc -DOFFSET_ARG="int3(1, 2, 3)" -o - %s | FileCheck \
 // RUN:   %s --check-prefixes=CHECK,TEXEL,OFFSET -DTEXTURE=Texture3D \
-// RUN:   -DDIM_NAME=3D -DDIM=3 -DCOORD_DIM=3 -DLOAD_DIM=4 \
-// RUN:   -DINDEX_TYPE="vector<unsigned int, 3>" -DIS_ARRAY="" \
-// RUN:   -DLOCATION_TYPE="vector<float, 3>" \
+// RUN:   -DDIM_NAME=3D -DLOAD_DIM=4 -DINDEX_TYPE="vector<unsigned int, 3>" \
+// RUN:   -DIS_ARRAY="" -DLOCATION_TYPE="vector<float, 3>" \
 // RUN:   -DGRADIENT_TYPE="vector<float, 3>" -DOFFSET_TYPE="vector<int, 3>"
 
 // TextureCube
@@ -63,8 +63,7 @@
 // RUN:   -DHAS_GATHER -DTEXTURE=TextureCube -DCOORD_TYPE=float3 \
 // RUN:   -DGRAD_TYPE=float3 -DLOD_LOCATION=loc -o - %s | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SAMPLECMP,GATHER -DTEXTURE=TextureCube \
-// RUN:   -DDIM_NAME=Cube -DDIM=3 -DCOORD_DIM=3 -DIS_ARRAY="" \
-// RUN:   -DLOCATION_TYPE="vector<float, 3>" \
+// RUN:   -DDIM_NAME=Cube -DIS_ARRAY="" -DLOCATION_TYPE="vector<float, 3>" \
 // RUN:   -DGRADIENT_TYPE="vector<float, 3>" -DOFFSET_TYPE="vector<int, 3>"
 
 // TextureCubeArray
@@ -73,8 +72,8 @@
 // RUN:   -DHAS_GATHER -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 \
 // RUN:   -DGRAD_TYPE=float3 -DLOD_LOCATION=loc.xyz -o - %s | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SAMPLECMP,GATHER -DTEXTURE=TextureCubeArray \
-// RUN:   -DDIM_NAME=Cube -DDIM=3 -DCOORD_DIM=4 \
-// RUN:   -DIS_ARRAY=" [[hlsl::is_array]]" -DLOCATION_TYPE="vector<float, 4>" \
+// RUN:   -DDIM_NAME=Cube -DIS_ARRAY=" [[hlsl::is_array]]" \
+// RUN:   -DLOCATION_TYPE="vector<float, 4>" \
 // RUN:   -DGRADIENT_TYPE="vector<float, 3>" -DOFFSET_TYPE="vector<int, 3>"
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
@@ -95,9 +94,6 @@
 //   LOD_LOCATION       expression producing a LOD_TYPE location from `loc`
 //   OFFSET_ARG         a literal offset argument
 //   DIM_NAME           hlsl::dimension spelling
-//   DIM                number of resource dimensions (offset, ddx/ddy, LOD
-//                      location)
-//   COORD_DIM          sample location components (DIM plus the array slice)
 //   LOAD_DIM           Load location components (COORD_DIM plus the mip level)
 //   INDEX_TYPE         operator[] index type
 //

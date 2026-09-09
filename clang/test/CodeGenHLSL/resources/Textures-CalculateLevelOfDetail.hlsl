@@ -1,118 +1,80 @@
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float \
 // RUN:   -DTEXTURE=Texture1D %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   -DTEXTURE=Texture1D --check-prefixes=CHECK,DXIL -DDXIL_TY=1 -DRW=0 \
-// RUN:   -DDIM=1 -DCOORD_LLVM=float -DCOORD_CXX=float -DINDEX_LLVM=i32 \
-// RUN:   -DINDEX_CXX_U="unsigned int" -DINDEX_CXX_I=int \
-// RUN:   -DGRAD_LLVM=float -DGRAD_CXX=float -DOFFSET_LLVM=i32 \
-// RUN:   -DOFFSET_CXX=int -DOFFSET_ZERO=0
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float \
-// RUN:   -DTEXTURE=Texture1DArray %s | llvm-cxxfilt | FileCheck %s \
-// RUN:   -DTEXTURE=Texture1DArray --check-prefixes=CHECK,DXIL -DDXIL_TY=6 \
-// RUN:   -DRW=0 -DDIM=1 -DCOORD_LLVM="<2 x float>" \
-// RUN:   -DCOORD_CXX="float vector[2]" -DINDEX_LLVM="<2 x i32>" \
-// RUN:   -DINDEX_CXX_U="unsigned int vector[2]" \
-// RUN:   -DINDEX_CXX_I="int vector[2]" -DGRAD_LLVM=float \
-// RUN:   -DGRAD_CXX=float -DOFFSET_LLVM=i32 -DOFFSET_CXX=int \
-// RUN:   -DOFFSET_ZERO=0
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float2 \
-// RUN:   -DTEXTURE=Texture2D %s | llvm-cxxfilt | FileCheck %s \
-// RUN:   -DTEXTURE=Texture2D --check-prefixes=CHECK,DXIL -DDXIL_TY=2 -DRW=0 \
-// RUN:   -DDIM=2 -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
-// RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX_U="unsigned int vector[2]" \
-// RUN:   -DINDEX_CXX_I="int vector[2]" -DGRAD_LLVM="<2 x float>" \
-// RUN:   -DGRAD_CXX="float vector[2]" -DOFFSET_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
-// RUN:   -DTEXTURE=TextureCube %s | llvm-cxxfilt | FileCheck %s \
-// RUN:   -DTEXTURE=TextureCube --check-prefixes=CHECK,DXIL -DDXIL_TY=5 -DRW=0 \
-// RUN:   -DDIM=3 -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
-// RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX_U="unsigned int vector[3]" \
-// RUN:   -DINDEX_CXX_I="int vector[3]" -DGRAD_LLVM="<3 x float>" \
-// RUN:   -DGRAD_CXX="float vector[3]" -DOFFSET_LLVM="<3 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[3]" -DOFFSET_ZERO=zeroinitializer
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
-// RUN:   -DTEXTURE=TextureCubeArray %s | llvm-cxxfilt | FileCheck %s \
-// RUN:   -DTEXTURE=TextureCubeArray --check-prefixes=CHECK,DXIL -DDXIL_TY=9 \
-// RUN:   -DRW=0 -DDIM=3 -DCOORD_LLVM="<4 x float>" \
-// RUN:   -DCOORD_CXX="float vector[4]" -DINDEX_LLVM="<4 x i32>" \
-// RUN:   -DINDEX_CXX_U="unsigned int vector[4]" \
-// RUN:   -DINDEX_CXX_I="int vector[4]" -DGRAD_LLVM="<3 x float>" \
-// RUN:   -DGRAD_CXX="float vector[3]" -DOFFSET_LLVM="<3 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[3]" -DOFFSET_ZERO=zeroinitializer
+// RUN:   -DGRAD_LLVM=float -DGRAD_CXX=float
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float \
 // RUN:   -DTEXTURE=Texture1D %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   -DTEXTURE=Texture1D --check-prefixes=CHECK,SPIRV -DARRAYED=0 \
-// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=0 -DDIM=1 -DCOORD_LLVM=float \
-// RUN:   -DCOORD_CXX=float -DINDEX_LLVM=i32 \
-// RUN:   -DINDEX_CXX_U="unsigned int" -DINDEX_CXX_I=int \
-// RUN:   -DGRAD_LLVM=float -DGRAD_CXX=float -DOFFSET_LLVM=i32 \
-// RUN:   -DOFFSET_CXX=int -DOFFSET_ZERO=0
+// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=0 -DGRAD_LLVM=float \
+// RUN:   -DGRAD_CXX=float
+
+// Texture1DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float \
+// RUN:   -DTEXTURE=Texture1DArray %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   -DTEXTURE=Texture1DArray --check-prefixes=CHECK,DXIL -DDXIL_TY=6 \
+// RUN:   -DRW=0 -DGRAD_LLVM=float -DGRAD_CXX=float
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float \
 // RUN:   -DTEXTURE=Texture1DArray %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   -DTEXTURE=Texture1DArray --check-prefixes=CHECK,SPIRV -DARRAYED=1 \
-// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=0 -DDIM=1 \
-// RUN:   -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
-// RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX_U="unsigned int vector[2]" \
-// RUN:   -DINDEX_CXX_I="int vector[2]" -DGRAD_LLVM=float \
-// RUN:   -DGRAD_CXX=float -DOFFSET_LLVM=i32 -DOFFSET_CXX=int \
-// RUN:   -DOFFSET_ZERO=0
+// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=0 -DGRAD_LLVM=float \
+// RUN:   -DGRAD_CXX=float
+
+// Texture2D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float2 \
+// RUN:   -DTEXTURE=Texture2D %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   -DTEXTURE=Texture2D --check-prefixes=CHECK,DXIL -DDXIL_TY=2 -DRW=0 \
+// RUN:   -DGRAD_LLVM="<2 x float>" -DGRAD_CXX="float vector[2]"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float2 \
 // RUN:   -DTEXTURE=Texture2D %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   -DTEXTURE=Texture2D --check-prefixes=CHECK,SPIRV -DARRAYED=0 \
-// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DDIM=2 \
-// RUN:   -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
-// RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX_U="unsigned int vector[2]" \
-// RUN:   -DINDEX_CXX_I="int vector[2]" -DGRAD_LLVM="<2 x float>" \
-// RUN:   -DGRAD_CXX="float vector[2]" -DOFFSET_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
-// RUN:   -DTEXTURE=TextureCube %s | llvm-cxxfilt | FileCheck %s \
-// RUN:   -DTEXTURE=TextureCube --check-prefixes=CHECK,SPIRV -DARRAYED=0 \
-// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3 \
-// RUN:   -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
-// RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX_U="unsigned int vector[3]" \
-// RUN:   -DINDEX_CXX_I="int vector[3]" -DGRAD_LLVM="<3 x float>" \
-// RUN:   -DGRAD_CXX="float vector[3]" -DOFFSET_LLVM="<3 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[3]" -DOFFSET_ZERO=zeroinitializer
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
-// RUN:   -DTEXTURE=TextureCubeArray %s | llvm-cxxfilt | FileCheck %s \
-// RUN:   -DTEXTURE=TextureCubeArray --check-prefixes=CHECK,SPIRV -DARRAYED=1 \
-// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3 \
-// RUN:   -DCOORD_LLVM="<4 x float>" -DCOORD_CXX="float vector[4]" \
-// RUN:   -DINDEX_LLVM="<4 x i32>" -DINDEX_CXX_U="unsigned int vector[4]" \
-// RUN:   -DINDEX_CXX_I="int vector[4]" -DGRAD_LLVM="<3 x float>" \
-// RUN:   -DGRAD_CXX="float vector[3]" -DOFFSET_LLVM="<3 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[3]" -DOFFSET_ZERO=zeroinitializer
+// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DGRAD_LLVM="<2 x float>" \
+// RUN:   -DGRAD_CXX="float vector[2]"
+
+// Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float2 \
 // RUN:   -DTEXTURE=Texture2DArray %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   -DTEXTURE=Texture2DArray --check-prefixes=CHECK,DXIL -DDXIL_TY=7 \
-// RUN:   -DRW=0 -DDIM=2 -DCOORD_LLVM="<3 x float>" \
-// RUN:   -DCOORD_CXX="float vector[3]" -DINDEX_LLVM="<3 x i32>" \
-// RUN:   -DINDEX_CXX_U="unsigned int vector[3]" \
-// RUN:   -DINDEX_CXX_I="int vector[3]" -DGRAD_LLVM="<2 x float>" \
-// RUN:   -DGRAD_CXX="float vector[2]" -DOFFSET_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer
+// RUN:   -DRW=0 -DGRAD_LLVM="<2 x float>" -DGRAD_CXX="float vector[2]"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float2 \
 // RUN:   -DTEXTURE=Texture2DArray %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   -DTEXTURE=Texture2DArray --check-prefixes=CHECK,SPIRV -DARRAYED=1 \
-// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DDIM=2 \
-// RUN:   -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
-// RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX_U="unsigned int vector[3]" \
-// RUN:   -DINDEX_CXX_I="int vector[3]" -DGRAD_LLVM="<2 x float>" \
-// RUN:   -DGRAD_CXX="float vector[2]" -DOFFSET_LLVM="<2 x i32>" \
-// RUN:   -DOFFSET_CXX="int vector[2]" -DOFFSET_ZERO=zeroinitializer
+// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DGRAD_LLVM="<2 x float>" \
+// RUN:   -DGRAD_CXX="float vector[2]"
+
+// TextureCube
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
+// RUN:   -DTEXTURE=TextureCube %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   -DTEXTURE=TextureCube --check-prefixes=CHECK,DXIL -DDXIL_TY=5 -DRW=0 \
+// RUN:   -DGRAD_LLVM="<3 x float>" -DGRAD_CXX="float vector[3]"
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
+// RUN:   -DTEXTURE=TextureCube %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   -DTEXTURE=TextureCube --check-prefixes=CHECK,SPIRV -DARRAYED=0 \
+// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=3 -DGRAD_LLVM="<3 x float>" \
+// RUN:   -DGRAD_CXX="float vector[3]"
+
+// TextureCubeArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
+// RUN:   -DTEXTURE=TextureCubeArray %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   -DTEXTURE=TextureCubeArray --check-prefixes=CHECK,DXIL -DDXIL_TY=9 \
+// RUN:   -DRW=0 -DGRAD_LLVM="<3 x float>" -DGRAD_CXX="float vector[3]"
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
+// RUN:   -DTEXTURE=TextureCubeArray %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   -DTEXTURE=TextureCubeArray --check-prefixes=CHECK,SPIRV -DARRAYED=1 \
+// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=3 -DGRAD_LLVM="<3 x float>" \
+// RUN:   -DGRAD_CXX="float vector[3]"
 
 // Texture3D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
@@ -138,11 +100,8 @@
 //   LOD_TYPE           CalculateLevelOfDetail location type
 //   TEXTURE            resource type name
 //   GRAD_CXX           ddx/ddy type in the C++ signature
-//   COORD_CXX          sample location type in the C++ signature
 //   DXIL_TY            dx.Texture resource-kind operand
 //   RW                 dx.Texture UAV operand
-//   DIM                number of resource dimensions (offset, ddx/ddy, LOD
-//                      location)
 //   ARRAYED            spirv.Image Arrayed operand
 //   SAMPLED            spirv.Image Sampled operand
 //   IMG_FMT            spirv.Image Image Format operand
