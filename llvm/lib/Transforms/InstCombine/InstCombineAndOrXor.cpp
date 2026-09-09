@@ -816,8 +816,7 @@ static Value *foldAndOrOfICmpsWithPow2AndWithZero(
   // of them is one-use. So cases where one is one-use and the other
   // is two-use might be profitable.
   if (!LHSOneUse || !RHSOneUse || !match(LHS1, m_Zero()) || RHS0 != LHS0 ||
-      match(RHS1, m_One()) ||
-      !isKnownToBeAPowerOfTwo(RHS1, Q.DL, /*OrZero=*/true, Q.AC, Q.CxtI, Q.DT))
+      match(RHS1, m_One()) || !isKnownToBeAPowerOfTwo(RHS1, /*OrZero=*/true, Q))
     return nullptr;
 
   Value *And = Builder.CreateAnd(LHS0, RHS1);
@@ -3595,8 +3594,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   // where CMAX is the all ones value for the truncated type,
   // iff the lower bits of C2 and CA are zero.
   if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
-      PredL.dropSameSign() == PredR.dropSameSign() && LHS->hasOneUse() &&
-      RHS->hasOneUse()) {
+      PredL.dropSameSign() == PredR.dropSameSign() && LHSOneUse && RHSOneUse) {
     Value *V;
     const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
 
@@ -3667,7 +3665,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   if (LHS0 == RHS0 && PredL.dropSameSign() == PredR.dropSameSign() &&
       PredL == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
       !I.getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
-      LHS->hasOneUse() && RHS->hasOneUse() &&
+      LHSOneUse && RHSOneUse &&
       match(LHS0, m_And(m_ElementWiseBitCast(m_Value(X)), m_APInt(MaskC))) &&
       X->getType()->getScalarType()->isIEEELikeFPTy() &&
       APFloat(X->getType()->getScalarType()->getFltSemantics(), *MaskC)
