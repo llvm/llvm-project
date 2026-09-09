@@ -264,6 +264,10 @@ public:
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
+
+private:
+  Register getBaseSegmentAperture(unsigned AS, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B) const;
 };
 } // End llvm namespace.
 #endif
