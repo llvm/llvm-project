@@ -1188,6 +1188,18 @@ void State::addInfoForInductions(BasicBlock &BB) {
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
 
+    // For a non-negative backedge value, 0 s<= PN s< B implies B is
+    // non-negative as well, so the same bound holds in the unsigned system.
+    if (ICmpInst::isSigned(ContinuePred)) {
+      MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
+      if ((Info.Signed && !Info.Decreasing) ||
+          isKnownNonNegative(Backedge, BB.getDataLayout())) {
+        CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
+      }
+    }
+
     // A relational latch steps past B rather than landing on it, so none of the
     // reasoning below applies.
     return;
