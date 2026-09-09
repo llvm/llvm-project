@@ -5,9 +5,13 @@
 ---
 
 # GCN-LABEL: name: vop3
-# GCN: %6:vgpr_32, %7:sreg_32_xm0_xexec = V_SUBBREV_U32_e64_dpp %3, %0, %1, %5, 1, 1, 15, 15, 1, implicit $exec
-# GCN: %8:vgpr_32 = V_CVT_PK_U8_F32_e64_dpp %3, 4, %0, 2, %2, 2, %1, 1, 1, 15, 15, 1, implicit $mode, implicit $exec
-# GCN: %10:vgpr_32 = V_MED3_F32_e64 0, %9, 0, %0, 0, 12345678, 0, 0, implicit $mode, implicit $exec
+# V_SUBBREV is a Src1-DPP opcode, so %4 cannot be folded into it. That rolls
+# back the whole group sharing %4, including the V_CVT_PK_U8_F32 use.
+# GCN: %4:vgpr_32 = V_MOV_B32_dpp %3, %0, 1, 15, 15, 1, implicit $exec
+# GCN: %6:vgpr_32, %7:sreg_32_xm0_xexec = V_SUBBREV_U32_e64 %4, %1, %5, 1, implicit $exec
+# GCN-NEXT: %8:vgpr_32 = V_CVT_PK_U8_F32_e64 4, %4, 2, %2, 2, %1, 1, implicit $mode, implicit $exec
+# GCN: %9:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
+# GCN-NEXT: %10:vgpr_32 = V_MED3_F32_e64 0, %9, 0, %0, 0, 12345678, 0, 0, implicit $mode, implicit $exec
 # GFX_NO_SRC1_SGPR: %12:vgpr_32 = V_MED3_F32_e64 0, %11, 0, 2, 0, %7, 0, 0, implicit $mode, implicit $exec
 # GFX_SRC1_SGPR: %12:vgpr_32 = V_MED3_F32_e64_dpp %3, 0, %1, 0, 2, 0, %7, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: vop3
@@ -172,7 +176,8 @@ body: |
 # GCN: %7:vgpr_32 = V_AND_B32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
 # GCN: %10:vgpr_32 = V_MAX_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
 # GCN: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
-# GCN: %16:vgpr_32 = V_SUBREV_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %15:vgpr_32 = V_MOV_B32_dpp %14, %0, 1, 14, 15, 0, implicit $exec
+# GCN-NEXT: %16:vgpr_32 = V_SUB_U32_e64 %1, %15, 0, implicit $exec
 name: dpp_commute_shrink
 tracksRegLiveness: true
 body:             |
@@ -234,7 +239,8 @@ body:             |
 # GCN-LABEL: name: dpp_commute_e64
 # GCN: %4:vgpr_32  = V_MUL_U32_U24_e64_dpp %1, %0, %1, 1, 1, 14, 15, 0, implicit $exec
 # GCN: %7:vgpr_32 = V_FMA_F32_e64_dpp %5, 2, %0, 1, %1, 2, %1, 1, 2, 1, 15, 15, 1, implicit $mode, implicit $exec
-# GCN: %10:vgpr_32 = V_SUBREV_U32_e64_dpp %1, %0, %1, 1, 1, 14, 15, 0, implicit $exec
+# GCN: %9:vgpr_32 = V_MOV_B32_dpp %8, %0, 1, 14, 15, 0, implicit $exec
+# GCN-NEXT: %10:vgpr_32 = V_SUB_U32_e64 %1, %9, 1, implicit $exec
 # GCN: %13:vgpr_32, %14:sreg_32_xm0_xexec = V_ADD_CO_U32_e64_dpp %1, %0, %1, 0, 1, 14, 15, 0, implicit $exec
 # GCN: %17:vgpr_32, %18:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 5, %16, 0, implicit $exec
 name: dpp_commute_e64
@@ -330,9 +336,10 @@ body:             |
 
 # tests on sequences of dpp consumers
 # GCN-LABEL: name: dpp_seq
-# GCN: %4:vgpr_32 = V_ADD_U32_dpp %1, %0, %1, 1, 14, 15, 0,  implicit $exec
-# GCN: %5:vgpr_32 = V_SUBREV_U32_dpp %1, %0, %1, 1, 14, 15, 0,  implicit $exec
-# GCN: %6:vgpr_32 = V_OR_B32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %3:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 14, 15, 0, implicit $exec
+# GCN-NEXT: %4:vgpr_32 = V_ADD_U32_e32 %3, %1, implicit $exec
+# GCN-NEXT: %5:vgpr_32 = V_SUB_U32_e32 %1, %3, implicit $exec
+# GCN-NEXT: %6:vgpr_32 = V_OR_B32_e32 %3, %1, implicit $exec
 # broken sequence:
 # GCN: %7:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 14, 15, 0, implicit $exec
 
@@ -358,9 +365,10 @@ body: |
 
 # tests on sequences of dpp consumers followed by control flow
 # GCN-LABEL: name: dpp_seq_cf
-# GCN: %4:vgpr_32 = V_ADD_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
-# GCN: %5:vgpr_32 = V_SUBREV_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
-# GCN: %6:vgpr_32 = V_OR_B32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %3:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 14, 15, 0, implicit $exec
+# GCN-NEXT: %4:vgpr_32 = V_ADD_U32_e32 %3, %1, implicit $exec
+# GCN-NEXT: %5:vgpr_32 = V_SUB_U32_e32 %1, %3, implicit $exec
+# GCN-NEXT: %6:vgpr_32 = V_OR_B32_e32 %3, %1, implicit $exec
 
 name: dpp_seq_cf
 tracksRegLiveness: true

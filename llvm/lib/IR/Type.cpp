@@ -1070,10 +1070,16 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(
         ArrayType::get(Type::getInt8Ty(C), Ty->getIntParameter(0)),
         TargetExtType::CanBeGlobal);
-  if (Name.starts_with("spirv."))
+  if (Name.starts_with("spirv.")) {
+    if (Name.ends_with("TypedPointerType"))
+      return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
+                            TargetExtType::CanBeGlobal,
+                            TargetExtType::CanBeLocal,
+                            TargetExtType::CanBeVectorElement);
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,
                           TargetExtType::CanBeLocal);
+  }
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
@@ -1102,8 +1108,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
         TargetExtType::CanBeGlobal);
   if (Name.starts_with("dx."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
-                          TargetExtType::CanBeLocal,
-                          TargetExtType::IsTokenLike);
+                          TargetExtType::CanBeLocal);
 
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.named.barrier") {

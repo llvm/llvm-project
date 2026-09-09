@@ -13,7 +13,10 @@
 #ifndef LLVM_C_TEST_H
 #define LLVM_C_TEST_H
 
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
+
 #include "llvm-c/Core.h"
 
 #ifdef __cplusplus

@@ -19,6 +19,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -240,6 +241,40 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   return nullptr;
 }
 
+// Decompose the expression recipe and transform each contained recipe into
+// an EVL recipe.
+static bool
+optimizeExpressionRecipeToEVL(VPValue *HeaderMask, VPRecipeBase &CurRecipe,
+                              VPValue &EVL,
+                              SmallVector<VPRecipeBase *> &OldRecipes) {
+
+  auto *Expr = dyn_cast<VPExpressionRecipe>(&CurRecipe);
+  if (!Expr)
+    return false;
+
+  // Decompose first and construct with EVL recipes later.
+  SmallVector<VPSingleDefRecipe *> ExpressionRecipes(Expr->decompose());
+  SmallSetVector<VPSingleDefRecipe *, 4> UniqueExpressionRecipes(
+      from_range, ExpressionRecipes);
+
+  // Convert recipes to EVL recipes.
+  for (auto *R : UniqueExpressionRecipes)
+    if (auto *EVLR = cast_if_present<VPSingleDefRecipe>(
+            optimizeMaskToEVL(HeaderMask, *R, EVL))) {
+      EVLR->insertBefore(R);
+      R->replaceAllUsesWith(EVLR);
+      OldRecipes.push_back(R);
+      replace(ExpressionRecipes, R, EVLR);
+    }
+
+  auto *NewExpr =
+      new VPExpressionRecipe(Expr->getExpressionType(), ExpressionRecipes);
+  ExpressionRecipes.back()->replaceAllUsesWith(NewExpr);
+  NewExpr->insertBefore(Expr);
+  OldRecipes.push_back(Expr);
+  return true;
+}
+
 /// Optimize away any EVL-based header masks to VP intrinsic based recipes.
 /// The transforms here need to preserve the original semantics.
 void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
@@ -259,6 +294,9 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
   SmallVector<VPRecipeBase *> OldRecipes;
   for (VPUser *U : vputils::collectUsersRecursively(HeaderMask)) {
     VPRecipeBase *R = cast<VPRecipeBase>(U);
+    // Transform recipes contained by an expression recipe into EVL recipes.
+    if (optimizeExpressionRecipeToEVL(HeaderMask, *R, *EVL, OldRecipes))
+      continue;
     if (auto *NewR = optimizeMaskToEVL(HeaderMask, *R, *EVL)) {
       NewR->insertBefore(R);
       for (auto [Old, New] :
@@ -359,29 +397,10 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
           .createScalarZExtOrTrunc(&EVL, Plan.getVF().getScalarType(),
                                    DebugLoc::getUnknown());
 
-  assert(all_of(Plan.getVF().users(),
-                [&Plan](VPUser *U) {
-                  auto IsAllowedUser =
-                      IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                              VPWidenIntOrFpInductionRecipe,
-                              VPWidenMemIntrinsicRecipe>;
-                  if (match(U, m_Trunc(m_Specific(&Plan.getVF()))))
-                    return all_of(cast<VPSingleDefRecipe>(U)->users(),
-                                  IsAllowedUser);
-                  return IsAllowedUser(U);
-                }) &&
-         "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
 
-  assert(all_of(Plan.getVFxUF().users(),
-                match_fn(m_CombineOr(
-                    m_c_Add(m_Specific(LoopRegion->getCanonicalIV()),
-                            m_Specific(&Plan.getVFxUF())),
-                    m_Isa<VPWidenPointerInductionRecipe>()))) &&
-         "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
-         "increment of the canonical induction.");
   Plan.getVFxUF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
     // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
     // canonical induction must not be updated.

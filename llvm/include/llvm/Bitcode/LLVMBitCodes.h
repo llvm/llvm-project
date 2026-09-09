@@ -400,6 +400,7 @@ enum MetadataCodes {
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
   METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
   METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
+  METADATA_PROPERTY = 50, // [distinct, name, file, line, type, backing_storage]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -571,6 +572,9 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInstOptionalFlags - Flags for serializing
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
+/// Flags for serializing AddrSpaceCastInst's SubclassOptionalData contents.
+enum AddrSpaceCastInstOptionalFlags { ASCI_NON_NULL = 0 };
 
 /// Mark to distinguish metadata from value in an operator bundle.
 enum MetadataOperandBundleValueMarker { OB_METADATA = 0x80000000 };

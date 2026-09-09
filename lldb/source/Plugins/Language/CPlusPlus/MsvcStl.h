@@ -151,6 +151,25 @@ SyntheticChildrenFrontEnd *
 MsvcStlBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::expected<>
+bool IsMsvcStlExpected(ValueObject &valobj);
+bool MsvcStlExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::valarray<>
+bool IsMsvcStlValarray(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::source_location
+bool IsMsvcStlSourceLocation(ValueObject &valobj);
+bool MsvcStlSourceLocationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                          const TypeSummaryOptions &options);
+
 } // namespace formatters
 } // namespace lldb_private
 
