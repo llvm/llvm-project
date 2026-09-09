@@ -326,3 +326,38 @@ public:
 auto streamer = std::make_unique<MyStreamer>();
 remark::enableOptimizationRemarks(context, std::move(streamer), cats);
 ```
+
+***
+
+## Importing LLVM Remarks
+
+LLVM passes emit their own
+[optimization remarks](https://llvm.org/docs/Remarks.html) while MLIR compiles
+a module with LLVM, for example in `gpu-module-to-binary`. `ModuleToObject`
+installs a `remark::LLVMToMLIRDiagnosticHandler` on the `llvm::LLVMContext` it
+compiles with, which imports these remarks into the remark engine: the category
+is the LLVM pass name prefixed with `llvm-`, the LLVM remark name becomes the
+name, the message is stored under the `Remark` argument and the structured LLVM
+arguments are copied as metrics. The remark filters therefore select LLVM
+remarks by pass name, and `llvm-.*` selects all of them:
+
+```
+mlir-opt kernel.mlir --gpu-module-to-binary="format=isa" --remarks-filter-passed=llvm-inline
+```
+
+```
+[Passed] Inlined | Category:llvm-inline | Function=kernel | Callee=helper, Caller=kernel, Cost=-30, Remark="'helper' inlined into 'kernel' with (cost=-30, threshold=337)", Threshold=337
+```
+
+Remarks that are not enabled in the engine are left to LLVM, so LLVM's
+`-pass-remarks` flags keep working. Other LLVM diagnostics, such as errors
+reported by a backend, become MLIR diagnostics.
+
+LLVM remarks carry a source location only when the LLVM IR has debug
+information; run `ensure-debug-info-scope-on-llvm-func` before serializing to
+get `file:line:column` locations. Otherwise a remark is attached to the MLIR
+symbol named after its LLVM function, or to the serialized operation.
+
+Remarks saved by an LLVM-based compiler to a YAML or bitstream file can be
+replayed into the engine with `remark::importLLVMRemarks`, which applies the
+same conversion.

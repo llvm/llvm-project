@@ -20,15 +20,15 @@
 // BOLT-NEXT:  nop
 // BOLT-NEXT:  call target_backward
 
+// The temporary NOPs created by fix-riscv-calls may be removed before
+// emission. Check the rewritten calls and their targets independently of them.
 // OBJDUMP-LABEL: <_start>:
-// OBJDUMP:       nop
-// OBJDUMP-NEXT:  auipc ra,
-// OBJDUMP-NEXT:  jalr {{.*}}(ra)
-// OBJDUMP-NEXT:  nop
-// OBJDUMP-NEXT:  auipc ra,
-// OBJDUMP-NEXT:  jalr {{.*}}(ra)
-// OBJDUMP-NEXT:  nop
-// OBJDUMP-NEXT:  jal {{.*}} <target_backward>
+// OBJDUMP:       auipc ra,
+// OBJDUMP-NEXT:  jalr {{.*}}(ra) <target_call>
+// OBJDUMP:       auipc ra,
+// OBJDUMP-NEXT:  jalr {{.*}}(ra) <target_call_plt>
+// OBJDUMP:       jal {{.*}} <target_backward>
+// OBJDUMP-NEXT:  ret
 // OBJDUMP-LABEL: <target_call>:
 // OBJDUMP-LABEL: <target_call_plt>:
 
