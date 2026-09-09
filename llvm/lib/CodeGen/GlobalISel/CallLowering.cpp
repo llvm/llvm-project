@@ -99,6 +99,26 @@ static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
   }
 }
 
+ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
+                                                     unsigned ArgIdx) const {
+  ISD::ArgFlagsTy Flags;
+  const AttributeList &Attrs = Call.getAttributes();
+  addFlagsFromAttrSet(Flags, Attrs.getParamAttrs(ArgIdx));
+  if (const Function *F = Call.getCalledFunction()) {
+    // "returned" is not an ABI attribute, so we can inherit it from the callee.
+    if (F->hasParamAttribute(ArgIdx, Attribute::Returned))
+      Flags.setReturned();
+  }
+  return Flags;
+}
+
+ISD::ArgFlagsTy
+CallLowering::getAttributesForReturn(const CallBase &Call) const {
+  ISD::ArgFlagsTy Flags;
+  addFlagsFromAttrSet(Flags, Call.getAttributes().getRetAttrs());
+  return Flags;
+}
+
 void CallLowering::addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
                                              const AttributeList &Attrs,
                                              unsigned OpIdx) const {
@@ -125,15 +145,10 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   CallingConv::ID CallConv = CB.getCallingConv();
   Type *RetTy = CB.getType();
   bool IsVarArg = CB.getFunctionType()->isVarArg();
-  const Function *Callee = CB.getCalledFunction();
 
-  if (RetTy->isVoidTy()) {
-    Info.CanLowerReturn = true;
-  } else {
-    SmallVector<BaseArgInfo, 4> SplitArgs;
-    getReturnInfo(CallConv, RetTy, CB.getAttributes(), SplitArgs, DL);
-    Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
-  }
+  SmallVector<BaseArgInfo, 4> SplitArgs;
+  getReturnInfo(CallConv, RetTy, CB.getAttributes(), SplitArgs, DL);
+  Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
   Info.IsConvergent = CB.isConvergent();
 
@@ -152,11 +167,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (const auto &Arg : CB.args()) {
-    ISD::ArgFlagsTy Flags;
-    // "returned" is not an ABI attribute, so we can inherit it from the callee.
-    if (Callee && Callee->hasParamAttribute(i, Attribute::Returned))
-      Flags.setReturned();
-    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, Flags};
+    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, getAttributesForArgIdx(CB, i)};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
     if (i >= NumFixedArgs)
       OrigArg.Flags[0].setVarArg();
@@ -200,8 +211,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Register ReturnHintAlignReg;
   Align ReturnHintAlign;
 
-  ISD::ArgFlagsTy RetFlags;
-  Info.OrigRet = ArgInfo{ResRegs, RetTy, 0, RetFlags};
+  Info.OrigRet = ArgInfo{ResRegs, RetTy, 0, getAttributesForReturn(CB)};
 
   if (!Info.OrigRet.Ty->isVoidTy()) {
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
