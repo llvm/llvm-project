@@ -125,6 +125,7 @@ void PGOFlowVerifier::emitPGOFlowDiagnostic(const Function *F,
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: record mismatch '" << F->getName()
                       << "' [" << RemarkName << "]\n");
     ReportedMismatchFunctions.insert(F);
+    watchFunction(F);
   }
   std::string Text = Msg.str();
   if (VerifyPGOFlowPrintDiagnostics)
@@ -175,6 +176,64 @@ void PGOFlowVerifier::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   });
 }
 
+void PGOFlowVerifier::watchFunction(const Function *F) const {
+  if (!F)
+    return;
+  Function *MutF = const_cast<Function *>(F);
+  if (FunctionHandles.find_as(MutF) != FunctionHandles.end())
+    return;
+  FunctionHandles[FunctionCallbackVH(MutF,
+                                     const_cast<PGOFlowVerifier *>(this))] = 0;
+}
+
+void PGOFlowVerifier::eraseFunctionHandle(Function *F) {
+  auto It = FunctionHandles.find_as(F);
+  if (It != FunctionHandles.end())
+    FunctionHandles.erase(It);
+}
+
+void PGOFlowVerifier::dropFunctionState(const Function *F) {
+  if (!F)
+    return;
+  FunctionBlockFreqInfoCache.erase(F);
+  FunctionsWithU32WeightOverflow.erase(F);
+  EmittedSkipNotes.erase(F);
+  ReportedMismatchFunctions.erase(F);
+  auto OldIt = IndirectCallTargetContributionsByFunction.find(F);
+  if (OldIt != IndirectCallTargetContributionsByFunction.end()) {
+    for (const auto &Entry : OldIt->second) {
+      uint64_t &Total = IndirectCallTargetCounts[Entry.first];
+      Total = Total < Entry.second ? 0 : Total - Entry.second;
+    }
+    IndirectCallTargetContributionsByFunction.erase(OldIt);
+  }
+}
+
+void PGOFlowVerifier::clearFunctionCaches() {
+  FunctionBlockFreqInfoCache.clear();
+  FunctionsWithU32WeightOverflow.clear();
+  EmittedSkipNotes.clear();
+  IndirectCallTargetCounts.clear();
+  IndirectCallTargetContributionsByFunction.clear();
+  IndirectCallTargetCountsValid = false;
+}
+
+void PGOFlowVerifier::FunctionCallbackVH::deleted() {
+  Function *F = cast<Function>(getValPtr());
+  LLVM_DEBUG(dbgs() << "PGOFlowVerifier: drop state for deleted '"
+                    << F->getName() << "'\n");
+  Parent->dropFunctionState(F);
+  Parent->eraseFunctionHandle(F);
+}
+
+void PGOFlowVerifier::FunctionCallbackVH::allUsesReplacedWith(Value *) {
+  Function *F = cast<Function>(getValPtr());
+  LLVM_DEBUG(dbgs() << "PGOFlowVerifier: drop state for replaced '"
+                    << F->getName() << "'\n");
+  Parent->dropFunctionState(F);
+  Parent->eraseFunctionHandle(F);
+}
+
 void PGOFlowVerifier::invalidateFunctionFrequencyCache(IRUnitRef IR) {
   auto DropFunction = [&](const Function *F) {
     FunctionBlockFreqInfoCache.erase(F);
@@ -184,12 +243,7 @@ void PGOFlowVerifier::invalidateFunctionFrequencyCache(IRUnitRef IR) {
   };
   if (isa<Module>(IR)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: clear block-freq cache (module)\n");
-    FunctionBlockFreqInfoCache.clear();
-    FunctionsWithU32WeightOverflow.clear();
-    EmittedSkipNotes.clear();
-    IndirectCallTargetCounts.clear();
-    IndirectCallTargetContributionsByFunction.clear();
-    IndirectCallTargetCountsValid = false;
+    clearFunctionCaches();
     return;
   }
   if (const auto *F = dyn_cast<Function>(IR)) {
@@ -212,12 +266,7 @@ void PGOFlowVerifier::invalidateFunctionFrequencyCache(IRUnitRef IR) {
   }
   LLVM_DEBUG(
       dbgs() << "PGOFlowVerifier: clear block-freq cache (unhandled IR)\n");
-  FunctionBlockFreqInfoCache.clear();
-  FunctionsWithU32WeightOverflow.clear();
-  EmittedSkipNotes.clear();
-  IndirectCallTargetCounts.clear();
-  IndirectCallTargetContributionsByFunction.clear();
-  IndirectCallTargetCountsValid = false;
+  clearFunctionCaches();
 }
 
 void PGOFlowVerifier::runAfterPass(StringRef PassID, IRUnitRef IR) {
@@ -274,19 +323,23 @@ bool PGOFlowVerifier::skipStrictInstrProfChecks(const Function *F,
   if (hasApproximateProfile(F)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip strict checks for '"
                       << F->getName() << "' (approxprofile)\n");
-    if (EmitNote && EmittedSkipNotes.insert(F).second)
+    if (EmitNote && EmittedSkipNotes.insert(F).second) {
+      watchFunction(F);
       emitPGOFlowDiagnostic(
           F, "ApproxProfileSkip",
           "skipping strict InstrProf verification (approxprofile)");
+    }
     return true;
   }
   if (hasU32WeightOverflow(F)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip strict checks for '"
                       << F->getName() << "' (u32 weight overflow)\n");
-    if (EmitNote && EmittedSkipNotes.insert(F).second)
+    if (EmitNote && EmittedSkipNotes.insert(F).second) {
+      watchFunction(F);
       emitPGOFlowDiagnostic(
           F, "CountOverflowSkip",
           "skipping strict InstrProf verification (profile count overflow)");
+    }
     return true;
   }
   return false;
@@ -371,6 +424,7 @@ void PGOFlowVerifier::computeBlockFrequencies(const Function *F) {
         AllFreqInfo[&BB].SumOut = 0;
       }
       FunctionBlockFreqInfoCache[F] = std::move(AllFreqInfo);
+      watchFunction(F);
       return;
     } else if (const Instruction *EntryTerm =
                    F->getEntryBlock().getTerminator();
@@ -514,6 +568,7 @@ void PGOFlowVerifier::computeBlockFrequencies(const Function *F) {
                      << "PGOFlowVerifier: u32 weight overflow in '"
                      << F->getName() << "' block " << BB->getName() << "\n");
           FunctionsWithU32WeightOverflow.insert(F);
+          watchFunction(F);
           return;
         }
       }
@@ -546,6 +601,7 @@ void PGOFlowVerifier::computeBlockFrequencies(const Function *F) {
   }
 
   FunctionBlockFreqInfoCache[F] = std::move(AllFreqInfo);
+  watchFunction(F);
 }
 
 void PGOFlowVerifier::validateBlockFrequencies(const Function *F) {
@@ -594,6 +650,7 @@ PGOFlowVerifier::getCachedBlockFreqInfo(const Function *F) const {
 void PGOFlowVerifier::updateIndirectCallTargetsForFunction(const Function *F) {
   if (!F)
     return;
+  watchFunction(F);
 
   auto OldIt = IndirectCallTargetContributionsByFunction.find(F);
   if (OldIt != IndirectCallTargetContributionsByFunction.end()) {
