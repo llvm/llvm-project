@@ -182,3 +182,9 @@ struct VI : virtual VA { virtual void h() = 0; };
 struct VD : VI, VB {};
 
 } // namespace M
+
+template<class T> struct X {
+  struct B;
+  struct A : public B { virtual void foo() {} };
+};
+template<class T> struct X<T>::B : public A { virtual void foo() {} };
