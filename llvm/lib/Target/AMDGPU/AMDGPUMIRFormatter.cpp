@@ -142,7 +142,7 @@ void AMDGPUMIRFormatter::printAsyncStageMaskImm(int64_t Imm,
   // hex bitmask instead.
   uint32_t Reserved = 0;
   ListSeparator Delim(AsyncStageDelim);
-  for (uint32_t S = 0; S != AMDGPU::AsyncStage::NUM_STAGES; ++S) {
+  for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
     if (!AMDGPU::AsyncStage::participates(Mask, S))
       continue;
     if (AMDGPU::AsyncStage::isReservedStage(S))
@@ -589,7 +589,7 @@ bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
         return ErrorCallback(NamePos, "invalid async stage mask");
       if (!AMDGPU::AsyncStage::isValidMask(Mask))
         return ErrorCallback(NamePos, "async stage mask out of range");
-      for (uint32_t S = 0; S != AMDGPU::AsyncStage::NUM_STAGES; ++S) {
+      for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
         if (!AMDGPU::AsyncStage::isReservedStage(S) &&
             (Mask & (1 << S)))
           return ErrorCallback(NamePos,

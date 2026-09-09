@@ -1156,7 +1156,7 @@ void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst, uint32_t OmitMask) {
                     << AMDGPU::AsyncStage::getCoveredStagesString(OmitMask)
                     << "):\n"
                     << Inst);
-  for (unsigned S = 0; S != AMDGPU::AsyncStage::NUM_STAGES; ++S) {
+  for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
     if (!AMDGPU::AsyncStage::participates(OmitMask, S))
       continue;
     AsyncMarks[S].push_back(AsyncScore[S]);
@@ -1271,7 +1271,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
   }
   OS << '\n';
 
-  for (unsigned S = 0; S < AMDGPU::AsyncStage::NUM_STAGES; ++S) {
+  for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
     OS << "Async score (stage " << AMDGPU::AsyncStage::getStageName(S) << "): ";
     if (llvm::all_of(AsyncScore[S], [](unsigned V) { return V == 0; }))
       OS << "none";
@@ -1449,7 +1449,7 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N,
   // implied by the marks dropped from each stage accumulate into one Waitcnt,
   // so a wait covering several stages is the union of their requirements.
   AMDGPU::Waitcnt Wait;
-  for (unsigned S = 0; S != AMDGPU::AsyncStage::NUM_STAGES; ++S) {
+  for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
     if (!AMDGPU::AsyncStage::participates(IgnoreMask, S))
       continue;
 
@@ -3012,7 +3012,7 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     }
   }
 
-  for (unsigned S = 0; S != AMDGPU::AsyncStage::NUM_STAGES; ++S) {
+  for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
     StrictDom |= mergeAsyncMarks(S, MergeInfos, Other.AsyncMarks[S]);
     for (auto T : inst_counter_types(Context->MaxCounter))
       StrictDom |=

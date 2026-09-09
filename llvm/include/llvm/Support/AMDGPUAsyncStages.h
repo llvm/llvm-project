@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_AMDGPUASYNCSTAGES_H
 #define LLVM_SUPPORT_AMDGPUASYNCSTAGES_H
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <string>
@@ -135,6 +136,21 @@ inline std::string getCoveredStagesString(uint32_t Mask) {
 
 } // namespace AsyncStage
 } // namespace AMDGPU
+
+template <> struct enum_iteration_traits<AMDGPU::AsyncStage::Stage> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace AMDGPU {
+namespace AsyncStage {
+
+inline iota_range<AsyncStage::Stage> stages() {
+  return enum_seq(static_cast<Stage>(0), NUM_STAGES);
+}
+
+} // namespace AsyncStage
+} // namespace AMDGPU
+
 } // namespace llvm
 
 #endif // LLVM_SUPPORT_AMDGPUASYNCSTAGES_H
