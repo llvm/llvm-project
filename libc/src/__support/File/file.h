@@ -68,31 +68,6 @@ public:
   using SeekFunc = ErrorOr<off_t>(File *, off_t, int);
   using CloseFunc = int(File *);
 
-  using ModeFlags = uint32_t;
-
-  // The three different types of flags below are to be used with '|' operator.
-  // Their values correspond to mutually exclusive bits in a 32-bit unsigned
-  // integer value. A flag set can include both READ and WRITE if the file
-  // is opened in update mode (ie. if the file was opened with a '+' the mode
-  // string.)
-  enum class OpenMode : ModeFlags {
-    READ = 0x1,
-    WRITE = 0x2,
-    APPEND = 0x4,
-    PLUS = 0x8,
-  };
-
-  // Denotes a file opened in binary mode (which is specified by including
-  // the 'b' character in teh mode string.)
-  enum class ContentType : ModeFlags {
-    BINARY = 0x10,
-  };
-
-  // Denotes a file to be created for writing.
-  enum class CreateType : ModeFlags {
-    EXCLUSIVE = 0x100,
-  };
-
   // This is a convenience RAII class to lock and unlock file objects.
   class FileLock {
     File *file;
@@ -135,12 +110,7 @@ private:
   // free-ed when close method is called on the stream.
   bool own_buf;
 
-  // The mode in which the file was opened.
-  //TODO: old way of doing things
-  // clean up when totally done with pr
-  ModeFlags mode;
-
-  FileMode file_mode;
+  FileMode mode;
 
   // Current read or write pointer.
   size_t pos;
@@ -160,16 +130,16 @@ private:
 
 protected:
   constexpr bool write_allowed() const {
-    return file_mode.write_allowed() ||
-        file_mode.append_allowed() ||
-          file_mode.is_plus(); //TODO: if micheal agrees for me to convert it change it here
+    return mode.write_allowed() || mode.append_allowed() ||
+           mode.is_plus(); // TODO: if micheal agrees for me to convert it
+                           // change it here
   }
 
   constexpr bool read_allowed() const {
-    return file_mode.read_allowed() || file_mode.is_plus();
+    return mode.read_allowed() || mode.is_plus();
   }
 
-  void reset_stream_state_unlocked(ModeFlags new_mode) {
+  void reset_stream_state_unlocked(FileMode new_mode) {
     mode = new_mode;
     pos = 0;
     prev_op = FileOp::NONE;
@@ -191,12 +161,12 @@ public:
   // the set_buffer method and allocate a buffer.
   constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
                  uint8_t *buffer, size_t buffer_size, int buffer_mode,
-                 bool owned, ModeFlags modeflags)
+                 bool owned, FileMode mode)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
         platform_close(cf), mutex(/*timed=*/false, /*recursive=*/false,
                                   /*robust=*/false, /*pshared=*/false),
         ungetc_buf{}, buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
-        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
+        own_buf(owned), mode(mode), pos(0), prev_op(FileOp::NONE),
         read_limit(0), eof(false), err(false),
         orientation(Orientation::UNORIENTED), mbstate(), prev(nullptr),
         next(nullptr) {
@@ -355,10 +325,6 @@ public:
     FileLock l(this);
     return try_set_orientation_unlocked(o);
   }
-
-  // Returns an bit map of flags corresponding to enumerations of
-  // OpenMode, ContentType and CreateType.
-  static ModeFlags mode_flags(const char *mode);
 
 private:
   FileIOResult write_unlocked_impl(const void *data, size_t len);
