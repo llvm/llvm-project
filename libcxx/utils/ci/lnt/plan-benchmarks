@@ -122,7 +122,7 @@ def main(argv: List[str]) -> int:
                     'Each line of the produced plan carries the commit to benchmark, the machine the '
                     'plan is about, how many runs the commit already has and how many it should end '
                     'up with, and a human-readable reason.',
-        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.',
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.',
         formatter_class=HelpFormatter)
     parser.add_argument('--commit-list', type=argparse.FileType('r'), default=sys.stdin,
         help='A file of whitespace separated commits for which benchmark data is desired. By default, '

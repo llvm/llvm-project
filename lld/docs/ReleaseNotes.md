@@ -37,6 +37,15 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### MachO Improvements
 
+* `__objc_stubs` entries are now ordered by the priority of the sections that
+  call them, so that stubs reached from prioritized code are laid out together.
+  This applies whenever section priorities exist, such as with `-order_file`.
+
 ### WebAssembly Improvements
+
+* Added support for resolving and merging common data symbols (allocating them
+  into .bss.common in executable/shared module links, or merging them with max
+  size/alignment in relocatable -r links). See
+  https://github.com/WebAssembly/tool-conventions/pull/267
 
 #### Fixes

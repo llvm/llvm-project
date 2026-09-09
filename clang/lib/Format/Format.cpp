@@ -25,6 +25,8 @@
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <functional>
 #include <limits>
 
@@ -219,10 +221,12 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("AfterClass", Wrapping.AfterClass);
     IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
     IO.mapOptional("AfterEnum", Wrapping.AfterEnum);
+    IO.mapOptional("AfterExportBlock", Wrapping.AfterExportBlock);
     IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
     IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
     IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
     IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
+    IO.mapOptional("AfterRequiresExpression", Wrapping.AfterRequiresExpression);
     IO.mapOptional("AfterStruct", Wrapping.AfterStruct);
     IO.mapOptional("AfterUnion", Wrapping.AfterUnion);
     IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
@@ -846,17 +850,20 @@ template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/true,
                                                  /*IgnoreExtension=*/false,
-                                                 /*Natural=*/false});
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
     IO.enumCase(Value, "CaseSensitive",
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/false,
                                                  /*IgnoreExtension=*/false,
-                                                 /*Natural=*/false});
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
     IO.enumCase(Value, "Natural",
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/false,
                                                  /*IgnoreExtension=*/false,
-                                                 /*Natural=*/true});
+                                                 /*Natural=*/true,
+                                                 /*FilesBeforeFolders=*/false});
 
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions{});
@@ -864,14 +871,15 @@ template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/false,
                                                  /*IgnoreExtension=*/false,
-                                                 /*Natural=*/false});
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
   }
-
   static void mapping(IO &IO, FormatStyle::SortIncludesOptions &Value) {
     IO.mapOptional("Enabled", Value.Enabled);
     IO.mapOptional("IgnoreCase", Value.IgnoreCase);
     IO.mapOptional("IgnoreExtension", Value.IgnoreExtension);
     IO.mapOptional("Natural", Value.Natural);
+    IO.mapOptional("FilesBeforeFolders", Value.FilesBeforeFolders);
   }
 };
 
@@ -1722,8 +1730,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*AfterFunction=*/false,
                             /*AfterNamespace=*/false,
                             /*AfterObjCDeclaration=*/false,
+                            /*AfterRequiresExpression=*/false,
                             /*AfterStruct=*/false,
                             /*AfterUnion=*/false,
+                            /*AfterExportBlock=*/false,
                             /*AfterExternBlock=*/false,
                             /*BeforeCatch=*/false,
                             /*BeforeElse=*/false,
@@ -1745,6 +1755,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
+    Expanded.BraceWrapping.AfterExportBlock = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.SplitEmptyFunction = true;
     Expanded.BraceWrapping.SplitEmptyRecord = false;
@@ -1762,8 +1773,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
+    Expanded.BraceWrapping.AfterExportBlock = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
@@ -1777,6 +1790,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
@@ -1792,8 +1806,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterFunction=*/true,
         /*AfterNamespace=*/true,
         /*AfterObjCDeclaration=*/true,
+        /*AfterRequiresExpression=*/true,
         /*AfterStruct=*/true,
         /*AfterUnion=*/true,
+        /*AfterExportBlock=*/true,
         /*AfterExternBlock=*/true,
         /*BeforeCatch=*/true,
         /*BeforeElse=*/true,
@@ -1894,8 +1910,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*AfterFunction=*/false,
                              /*AfterNamespace=*/false,
                              /*AfterObjCDeclaration=*/false,
+                             /*AfterRequiresExpression=*/false,
                              /*AfterStruct=*/false,
                              /*AfterUnion=*/false,
+                             /*AfterExportBlock=*/false,
                              /*AfterExternBlock=*/false,
                              /*BeforeCatch=*/false,
                              /*BeforeElse=*/false,
@@ -2015,7 +2033,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SkipMacroDefinitionBody = false;
   LLVMStyle.SortIncludes = {/*Enabled=*/true, /*IgnoreCase=*/false,
-                            /*IgnoreExtension=*/false, /*Natural=*/false};
+                            /*IgnoreExtension=*/false, /*Natural=*/false,
+                            /*FilesBeforeFolders=*/false};
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
@@ -3683,6 +3702,37 @@ static void sortCppIncludes(const FormatStyle &Style,
                                ? &StringRef::compare_numeric
                                : &StringRef::compare;
 
+      while (Style.SortIncludes.FilesBeforeFolders) {
+        auto [LHead, LTail] = LHSStem.split('/');
+        auto [RHead, RTail] = RHSStem.split('/');
+
+        bool LIsFile = LTail.empty();
+        bool RIsFile = RTail.empty();
+
+        // A file at this level sorts before a subdirectory at this level.
+        if (LIsFile != RIsFile)
+          return LIsFile;
+
+        // Both are leaf filenames — they are equal at this level, so we
+        // can break out of the loop and compare the full filenames later.
+        if (LIsFile)
+          break;
+
+        // Both are directory components at this level — compare them.
+        if (Style.SortIncludes.IgnoreCase) {
+          int Cmp = std::invoke(Compare, StringRef(LHead.lower()),
+                                StringRef(RHead.lower()));
+          if (Cmp != 0)
+            return Cmp < 0;
+        }
+        if (int Cmp = std::invoke(Compare, LHead, RHead); Cmp != 0)
+          return Cmp < 0;
+
+        // Directory components are equal; descend into the next level.
+        LHSStem = LTail;
+        RHSStem = RTail;
+      }
+
       if (Style.SortIncludes.IgnoreCase) {
         int Cmp = std::invoke(Compare, StringRef(LHSStemLower), RHSStemLower);
         if (Cmp != 0)
@@ -4203,6 +4253,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   }
 
   SmallVector<StringRef, 4> Matches;
+  SmallVector<tooling::HeaderIncludes::HeaderToInsert, 4> HeadersToInsert;
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();
     bool Matched =
@@ -4211,19 +4262,17 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                       "'#include ...'");
     (void)Matched;
     auto IncludeName = Matches[2];
-    auto Replace =
-        Includes.insert(IncludeName.trim("\"<>"), IncludeName.starts_with("<"),
-                        tooling::IncludeDirective::Include);
-    if (Replace) {
-      auto Err = Result.add(*Replace);
-      if (Err) {
-        consumeError(std::move(Err));
-        unsigned NewOffset =
-            Result.getShiftedCodePosition(Replace->getOffset());
-        auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
-                                            Replace->getReplacementText());
-        Result = Result.merge(tooling::Replacements(Shifted));
-      }
+    HeadersToInsert.emplace_back(IncludeName,
+                                 tooling::IncludeDirective::Include);
+  }
+  for (const auto &Replace : Includes.insert(HeadersToInsert)) {
+    auto Err = Result.add(Replace);
+    if (Err) {
+      consumeError(std::move(Err));
+      unsigned NewOffset = Result.getShiftedCodePosition(Replace.getOffset());
+      auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
+                                          Replace.getReplacementText());
+      Result = Result.merge(tooling::Replacements(Shifted));
     }
   }
   return Result;
@@ -4379,12 +4428,6 @@ reformat(const FormatStyle &Style, StringRef Code,
     }
   }
 
-  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
-    Passes.emplace_back([&](const Environment &Env) {
-      return DefinitionBlockSeparator(Env, Expanded).process();
-    });
-  }
-
   if (Style.Language == FormatStyle::LK_ObjC &&
       !Style.ObjCPropertyAttributeOrder.empty()) {
     Passes.emplace_back([&](const Environment &Env) {
@@ -4402,6 +4445,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   Passes.emplace_back([&](const Environment &Env) {
     return Formatter(Env, Expanded, Status).process();
   });
+
+  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+  }
 
   if (Style.isJavaScript() &&
       Style.InsertTrailingCommas == FormatStyle::TCS_Wrapped) {

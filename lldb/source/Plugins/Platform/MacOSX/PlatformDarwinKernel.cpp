@@ -721,7 +721,6 @@ void PlatformDarwinKernel::UpdateKextandKernelsLocalScan() {
 Status PlatformDarwinKernel::GetSharedModule(
     const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
-  Status error;
   module_sp.reset();
   const FileSpec &platform_file = module_spec.GetFileSpec();
 
@@ -733,14 +732,23 @@ Status PlatformDarwinKernel::GetSharedModule(
     // DynamicLoaderDarwinKernel uses the magic name mach_kernel,
     // UUID search can get here with no name - and it may be a kernel.
     if (kext_bundle_id == "mach_kernel" || kext_bundle_id.empty()) {
-      error = GetSharedModuleKernel(module_spec, target, module_sp, old_modules,
-                                    did_create_ptr);
-      if (error.Success() && module_sp) {
-        return error;
+      llvm::Expected<ModuleSP> kernel_sp = GetSharedModuleKernel(
+          module_spec, target, old_modules, did_create_ptr);
+      // The kernel branch is a guess based on the file name, so its failure
+      // must not preempt the generic search below.
+      if (!kernel_sp)
+        llvm::consumeError(kernel_sp.takeError());
+      else if (*kernel_sp) {
+        module_sp = *kernel_sp;
+        return {};
       }
     } else {
-      return GetSharedModuleKext(module_spec, target, module_sp, old_modules,
-                                 did_create_ptr);
+      llvm::Expected<ModuleSP> kext_sp =
+          GetSharedModuleKext(module_spec, target, old_modules, did_create_ptr);
+      if (!kext_sp)
+        return Status::FromError(kext_sp.takeError());
+      module_sp = *kext_sp;
+      return {};
     }
   }
 
@@ -750,99 +758,104 @@ Status PlatformDarwinKernel::GetSharedModule(
                                          old_modules, did_create_ptr);
 }
 
-Status PlatformDarwinKernel::GetSharedModuleKext(
-    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
-    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
-  Status error;
-  module_sp.reset();
-  const FileSpec &platform_file = module_spec.GetFileSpec();
+ModuleSP PlatformDarwinKernel::FindKextInIndex(const ModuleSpec &module_spec) {
   UpdateKextandKernelsLocalScan();
 
   // Treat the file's path as a kext bundle ID (e.g.
   // "com.apple.driver.AppleIRController") and search our kext index.
-  ConstString kext_bundle(platform_file.GetPath());
-  // First look through the kext bundles that had a dsym next to them
-  if (m_name_to_kext_path_map_with_dsyms.count(kext_bundle) > 0) {
-    for (BundleIDToKextIterator it = m_name_to_kext_path_map_with_dsyms.begin();
-         it != m_name_to_kext_path_map_with_dsyms.end(); ++it) {
-      if (it->first == kext_bundle) {
-        error = ExamineKextForMatchingUUID(it->second, module_spec.GetUUID(),
-                                           module_spec.GetArchitecture(),
-                                           module_sp);
-        if (module_sp.get()) {
-          return error;
-        }
-      }
-    }
+  ConstString kext_bundle(module_spec.GetFileSpec().GetPath());
+
+  // Only the kext bundles that had a dSYM next to them are worth looking at.
+  auto range = m_name_to_kext_path_map_with_dsyms.equal_range(kext_bundle);
+  for (auto it = range.first; it != range.second; ++it) {
+    if (ModuleSP module_sp = ExamineKextForMatchingUUID(
+            it->second, module_spec.GetUUID(), module_spec.GetArchitecture()))
+      return module_sp;
   }
 
-  // Give the generic methods, including possibly calling into  DebugSymbols
-  // framework on macOS systems, a chance.
-  error = PlatformDarwin::GetSharedModule(module_spec, target, module_sp,
-                                          old_modules, did_create_ptr);
-  if (error.Success() && module_sp.get()) {
-    return error;
-  }
-
-  return error;
+  return nullptr;
 }
 
-Status PlatformDarwinKernel::GetSharedModuleKernel(
-    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
-    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
-  assert(module_sp.get() == nullptr);
+ModuleSP
+PlatformDarwinKernel::FindKernelInIndex(const ModuleSpec &module_spec,
+                                        const FileSpecList &search_paths) {
   UpdateKextandKernelsLocalScan();
-  if (did_create_ptr)
-    *did_create_ptr = false;
 
-  // First try all kernel binaries that have a dSYM next to them
-  for (auto possible_kernel : m_kernel_binaries_with_dsyms) {
-    if (FileSystem::Instance().Exists(possible_kernel)) {
-      ModuleSpec kern_spec(possible_kernel);
-      kern_spec.GetUUID() = module_spec.GetUUID();
-      module_sp = std::make_shared<Module>(kern_spec);
-      if (module_sp && module_sp->GetObjectFile() &&
-          module_sp->MatchesModuleSpec(kern_spec)) {
-        // The dSYM is next to the binary (that's the only
-        // way it ends up in the index), but it might be a
-        // .dSYM.yaa that needs to be expanded, don't just
-        // append ".dSYM" to the filename for the SymbolFile.
-        FileSpecList search_paths = target.GetDebugFileSearchPaths();
-        FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
-            kern_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
-        if (FileSystem::Instance().Exists(dsym_fspec))
-          module_sp->SetSymbolFileFileSpec(dsym_fspec);
-        if (did_create_ptr)
-          *did_create_ptr = true;
-        return {};
-      }
-    }
+  // First try all kernel binaries that have a dSYM next to them.
+  for (const FileSpec &possible_kernel : m_kernel_binaries_with_dsyms) {
+    if (!FileSystem::Instance().Exists(possible_kernel))
+      continue;
+    ModuleSpec kern_spec(possible_kernel);
+    kern_spec.GetUUID() = module_spec.GetUUID();
+    ModuleSP module_sp = std::make_shared<Module>(kern_spec);
+    if (!module_sp->GetObjectFile() || !module_sp->MatchesModuleSpec(kern_spec))
+      continue;
+
+    // The dSYM is next to the binary (that's the only way it ends up in the
+    // index), but it might be a .dSYM.yaa that needs to be expanded, don't
+    // just append ".dSYM" to the filename for the SymbolFile.
+    FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
+        kern_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
+    if (FileSystem::Instance().Exists(dsym_fspec))
+      module_sp->SetSymbolFileFileSpec(dsym_fspec);
+    return module_sp;
   }
 
-  // Next try all dSYMs that have no kernel binary next to them (load
-  // the kernel DWARF stub as the main binary)
-  for (auto possible_kernel_dsym : m_kernel_dsyms_no_binaries) {
-    std::vector<FileSpec> objfile_names =
-        GetDWARFBinaryInDSYMBundle(possible_kernel_dsym);
-    for (FileSpec objfile : objfile_names) {
+  // Next try all dSYMs that have no kernel binary next to them, loading the
+  // kernel DWARF stub as the main binary.
+  for (const FileSpec &possible_kernel_dsym : m_kernel_dsyms_no_binaries) {
+    for (const FileSpec &objfile :
+         GetDWARFBinaryInDSYMBundle(possible_kernel_dsym)) {
       ModuleSpec kern_spec(objfile);
       kern_spec.GetUUID() = module_spec.GetUUID();
       kern_spec.GetSymbolFileSpec() = possible_kernel_dsym;
 
-      module_sp = std::make_shared<Module>(kern_spec);
-      if (module_sp && module_sp->GetObjectFile() &&
-          module_sp->MatchesModuleSpec(kern_spec)) {
-        if (did_create_ptr)
-          *did_create_ptr = true;
-        return {};
-      }
+      ModuleSP module_sp = std::make_shared<Module>(kern_spec);
+      if (module_sp->GetObjectFile() && module_sp->MatchesModuleSpec(kern_spec))
+        return module_sp;
     }
+  }
+
+  return nullptr;
+}
+
+llvm::Expected<ModuleSP> PlatformDarwinKernel::GetSharedModuleKext(
+    const ModuleSpec &module_spec, Target &target,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
+  if (ModuleSP module_sp = FindKextInIndex(module_spec))
+    return module_sp;
+
+  // Give the generic methods, including possibly calling into  DebugSymbols
+  // framework on macOS systems, a chance.
+  ModuleSP module_sp;
+  Status error = PlatformDarwin::GetSharedModule(module_spec, target, module_sp,
+                                                 old_modules, did_create_ptr);
+  if (error.Fail())
+    return error.takeError();
+  return module_sp;
+}
+
+llvm::Expected<ModuleSP> PlatformDarwinKernel::GetSharedModuleKernel(
+    const ModuleSpec &module_spec, Target &target,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
+  if (did_create_ptr)
+    *did_create_ptr = false;
+
+  if (ModuleSP module_sp =
+          FindKernelInIndex(module_spec, target.GetDebugFileSearchPaths())) {
+    if (did_create_ptr)
+      *did_create_ptr = true;
+    return module_sp;
   }
 
   // Give the generic methods, including possibly calling into DebugSymbols
   // framework on macOS systems, a chance.
-  return PlatformDarwin::GetSharedModule(module_spec, target, module_sp,
-                                         old_modules, did_create_ptr);
+  ModuleSP module_sp;
+  Status error = PlatformDarwin::GetSharedModule(module_spec, target, module_sp,
+                                                 old_modules, did_create_ptr);
+  if (error.Fail())
+    return error.takeError();
+  return module_sp;
 }
 
 std::vector<lldb_private::FileSpec>
@@ -862,36 +875,32 @@ PlatformDarwinKernel::SearchForExecutablesRecursively(const std::string &dir) {
   return executables;
 }
 
-Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
+ModuleSP PlatformDarwinKernel::ExamineKextForMatchingUUID(
     const FileSpec &kext_bundle_path, const lldb_private::UUID &uuid,
-    const ArchSpec &arch, ModuleSP &exe_module_sp) {
+    const ArchSpec &arch) {
   for (const auto &exe_file :
        SearchForExecutablesRecursively(kext_bundle_path.GetPath())) {
-    if (FileSystem::Instance().Exists(exe_file)) {
-      ModuleSpec exe_spec(exe_file);
-      exe_spec.GetUUID() = uuid;
-      if (!uuid.IsValid()) {
-        exe_spec.GetArchitecture() = arch;
-      }
+    if (!FileSystem::Instance().Exists(exe_file))
+      continue;
+    ModuleSpec exe_spec(exe_file);
+    exe_spec.GetUUID() = uuid;
+    if (!uuid.IsValid())
+      exe_spec.GetArchitecture() = arch;
 
-      // First try to create a ModuleSP with the file / arch and see if the UUID
-      // matches. If that fails (this exec file doesn't have the correct uuid),
-      // don't call GetSharedModule (which may call in to the DebugSymbols
-      // framework and therefore can be slow.)
-      ModuleSP module_sp(new Module(exe_spec));
-      if (module_sp && module_sp->GetObjectFile() &&
-          module_sp->MatchesModuleSpec(exe_spec)) {
-        Status error =
-            ModuleList::GetSharedModule(exe_spec, exe_module_sp, NULL, NULL);
-        if (exe_module_sp && exe_module_sp->GetObjectFile()) {
-          return error;
-        }
-      }
-      exe_module_sp.reset();
+    // First try to create a ModuleSP with the file / arch and see if the UUID
+    // matches. If that fails (this exec file doesn't have the correct uuid),
+    // don't call GetSharedModule (which may call in to the DebugSymbols
+    // framework and therefore can be slow.)
+    ModuleSP module_sp = std::make_shared<Module>(exe_spec);
+    if (module_sp->GetObjectFile() && module_sp->MatchesModuleSpec(exe_spec)) {
+      ModuleSP exe_module_sp;
+      ModuleList::GetSharedModule(exe_spec, exe_module_sp, nullptr, nullptr);
+      if (exe_module_sp && exe_module_sp->GetObjectFile())
+        return exe_module_sp;
     }
   }
 
-  return {};
+  return nullptr;
 }
 
 static addr_t find_kernel_in_macho_fileset(Process *process,

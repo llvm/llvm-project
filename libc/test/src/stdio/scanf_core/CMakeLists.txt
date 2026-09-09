@@ -9,13 +9,12 @@ add_libc_test(
     libc_stdio_unittests
   SRCS
     parser_test.cpp
-  LINK_LIBRARIES
-    LibcScanfHelpers
   DEPENDS
     libc.src.stdio.scanf_core.parser
     libc.src.stdio.scanf_core.core_structs
     libc.src.__support.CPP.string_view
     libc.src.__support.arg_list
+    libc.test.UnitTest.ScanfMatcher
 )
 
 if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND

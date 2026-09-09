@@ -18,7 +18,7 @@ define amdgpu_ps <4 x float> @caller(ptr %ptr) {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    ; return to shader part epilog
   %L = load i32, ptr %ptr, align 4
-  %R = call <4 x float> @fn(<4 x i32> zeroinitializer, i32 0, i32 %L, i32 0)
+  %R = call <4 x float> @fn(<4 x i32> inreg zeroinitializer, i32 0, i32 %L, i32 0)
   ret <4 x float> %R
 }
 

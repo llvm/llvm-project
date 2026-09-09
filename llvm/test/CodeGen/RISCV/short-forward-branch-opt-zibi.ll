@@ -7,6 +7,10 @@
 ; RUN:     | FileCheck %s --check-prefixes=RV64
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zibi,+short-forward-branch-ialu -verify-machineinstrs < %s \
 ; RUN:     | FileCheck %s --check-prefixes=RV64-SFB
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zibi,+zca,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN:     | FileCheck %s --check-prefixes=RV32-CMOV
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zibi,+zca,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN:     | FileCheck %s --check-prefixes=RV64-CMOV
 
 ; Basic select eq with Zibi immediate: should use bnei+mv SFB pattern when SFB enabled.
 define i32 @select_eq(i32 %a, i32 %b, i32 %c) {
@@ -48,6 +52,25 @@ define i32 @select_eq(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB0_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    beqi a0, 5, .LBB0_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB0_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beqi a0, 5, .LBB0_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB0_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -93,6 +116,25 @@ define i32 @select_ne(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB1_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_ne:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    bnei a0, 5, .LBB1_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB1_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_ne:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    bnei a0, 5, .LBB1_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB1_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp ne i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -136,6 +178,27 @@ define i32 @select_eq_xor(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB2_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq_xor:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    xor a2, a2, a1
+; RV32-CMOV-NEXT:    beqi a0, 5, .LBB2_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a2, a1
+; RV32-CMOV-NEXT:  .LBB2_2:
+; RV32-CMOV-NEXT:    mv a0, a2
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq_xor:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    xor a2, a2, a1
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beqi a0, 5, .LBB2_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a2, a1
+; RV64-CMOV-NEXT:  .LBB2_2:
+; RV64-CMOV-NEXT:    mv a0, a2
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %xor = xor i32 %b, %c
   %ret = select i1 %tst, i32 %xor, i32 %b
@@ -179,6 +242,27 @@ define i32 @select_ne_add(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB3_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_ne_add:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    add a2, a2, a1
+; RV32-CMOV-NEXT:    bnei a0, 5, .LBB3_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a2, a1
+; RV32-CMOV-NEXT:  .LBB3_2:
+; RV32-CMOV-NEXT:    mv a0, a2
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_ne_add:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    addw a2, a2, a1
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    bnei a0, 5, .LBB3_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a2, a1
+; RV64-CMOV-NEXT:  .LBB3_2:
+; RV64-CMOV-NEXT:    mv a0, a2
+; RV64-CMOV-NEXT:    ret
   %tst = icmp ne i32 %a, 5
   %add = add i32 %b, %c
   %ret = select i1 %tst, i32 %add, i32 %b
@@ -225,6 +309,25 @@ define i32 @select_eq_imm1(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB4_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq_imm1:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    beqi a0, 1, .LBB4_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB4_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq_imm1:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beqi a0, 1, .LBB4_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB4_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, 1
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -270,6 +373,25 @@ define i32 @select_eq_imm31(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB5_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq_imm31:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    beqi a0, 31, .LBB5_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB5_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq_imm31:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beqi a0, 31, .LBB5_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB5_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, 31
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -315,6 +437,25 @@ define i32 @select_eq_imm_neg1(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB6_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq_imm_neg1:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    beqi a0, -1, .LBB6_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB6_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq_imm_neg1:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beqi a0, -1, .LBB6_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB6_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, -1
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -364,6 +505,27 @@ define i32 @select_eq_imm32(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB7_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq_imm32:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    li a3, 32
+; RV32-CMOV-NEXT:    beq a0, a3, .LBB7_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB7_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq_imm32:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    li a3, 32
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beq a0, a3, .LBB7_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB7_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, 32
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -409,6 +571,25 @@ define i32 @select_eq_imm0(i32 %a, i32 %b, i32 %c) {
 ; RV64-SFB-NEXT:  .LBB8_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq_imm0:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    beqz a0, .LBB8_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB8_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq_imm0:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beqz a0, .LBB8_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB8_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, 0
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -454,6 +635,25 @@ define i32 @select_eq_minsize(i32 %a, i32 %b, i32 %c) minsize {
 ; RV64-SFB-NEXT:  .LBB9_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq_minsize:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    beqi a0, 5, .LBB9_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB9_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq_minsize:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beqi a0, 5, .LBB9_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB9_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -498,6 +698,25 @@ define i32 @select_ne_minsize(i32 %a, i32 %b, i32 %c) minsize {
 ; RV64-SFB-NEXT:  .LBB10_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_ne_minsize:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    bnei a0, 5, .LBB10_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a1, a2
+; RV32-CMOV-NEXT:  .LBB10_2:
+; RV32-CMOV-NEXT:    mv a0, a1
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_ne_minsize:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    bnei a0, 5, .LBB10_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a1, a2
+; RV64-CMOV-NEXT:  .LBB10_2:
+; RV64-CMOV-NEXT:    mv a0, a1
+; RV64-CMOV-NEXT:    ret
   %tst = icmp ne i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -543,6 +762,27 @@ define i32 @select_eq_xor_minsize(i32 %a, i32 %b, i32 %c) minsize {
 ; RV64-SFB-NEXT:  .LBB11_2:
 ; RV64-SFB-NEXT:    mv a0, a1
 ; RV64-SFB-NEXT:    ret
+;
+; RV32-CMOV-LABEL: select_eq_xor_minsize:
+; RV32-CMOV:       # %bb.0:
+; RV32-CMOV-NEXT:    xor a2, a2, a1
+; RV32-CMOV-NEXT:    beqi a0, 5, .LBB11_2
+; RV32-CMOV-NEXT:  # %bb.1:
+; RV32-CMOV-NEXT:    mv a2, a1
+; RV32-CMOV-NEXT:  .LBB11_2:
+; RV32-CMOV-NEXT:    mv a0, a2
+; RV32-CMOV-NEXT:    ret
+;
+; RV64-CMOV-LABEL: select_eq_xor_minsize:
+; RV64-CMOV:       # %bb.0:
+; RV64-CMOV-NEXT:    xor a2, a2, a1
+; RV64-CMOV-NEXT:    sext.w a0, a0
+; RV64-CMOV-NEXT:    beqi a0, 5, .LBB11_2
+; RV64-CMOV-NEXT:  # %bb.1:
+; RV64-CMOV-NEXT:    mv a2, a1
+; RV64-CMOV-NEXT:  .LBB11_2:
+; RV64-CMOV-NEXT:    mv a0, a2
+; RV64-CMOV-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %xor = xor i32 %b, %c
   %ret = select i1 %tst, i32 %xor, i32 %b

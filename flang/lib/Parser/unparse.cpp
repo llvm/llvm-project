@@ -2172,13 +2172,13 @@ public:
     return false;
   }
   void Unparse(const llvm::omp::Directive &x) {
-    unsigned ompVersion{langOpts_.OpenMPVersion};
+    llvm::omp::Version ompVersion{langOpts_.getOpenMPVersion()};
     Word(llvm::omp::getOpenMPDirectiveName(x, ompVersion).str());
   }
   void Unparse(const OmpAbsentClause &x) { Walk("", x.v, ","); }
   void Unparse(const OmpAdjustArgsClause &x) {
-    Walk(std::get<OmpAdjustArgsClause::OmpAdjustOp>(x.t).v);
-    Put(":");
+    using Modifier = OmpAdjustArgsClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<parser::OmpObjectList>(x.t));
   }
   void Unparse(const OmpAffinityClause &x) {
@@ -2285,6 +2285,14 @@ public:
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpDoacross &x) {
+    using Modifier = OmpDoacross::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t));
+    if (auto &&vector{std::get<std::optional<OmpIterationVector>>(x.t)}) {
+      Put(": ");
+      Walk(vector->v, ", ");
+    }
+  }
   void Unparse(const OmpDependClause::TaskDep &x) {
     using Modifier = OmpDependClause::TaskDep::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2309,7 +2317,7 @@ public:
     Put(")");
   }
   void Unparse(const OmpDirectiveNameModifier &x) {
-    unsigned ompVersion{langOpts_.OpenMPVersion};
+    llvm::omp::Version ompVersion{langOpts_.getOpenMPVersion()};
     Word(llvm::omp::getOpenMPDirectiveName(x.v, ompVersion));
   }
   void Unparse(const OmpDirectiveSpecification &x) {
@@ -2337,11 +2345,6 @@ public:
       unparseClauses();
     }
   }
-  void Unparse(const OmpDoacross::Sink &x) {
-    Word("SINK: ");
-    Walk(x.v.v);
-  }
-  void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
   void Unparse(const OmpDynGroupprivateClause &x) {
     using Modifier = OmpDynGroupprivateClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2804,7 +2807,7 @@ public:
   }
   void Unparse(const OpenMPInvalidDirective &x) {
     BeginOpenMP();
-    Word("!$OMP ");
+    Word(x.isExtensionSentinel ? "!$OMPX " : "!$OMP ");
     Put(parser::ToUpperCaseLetters(x.source.ToString()));
     Put("\n");
     EndOpenMP();
@@ -2921,13 +2924,14 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
-  WALK_NESTED_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value) // OMP adjustop
+  WALK_NESTED_ENUM(OmpAdjustOp, Value) // OMP adjustop
   WALK_NESTED_ENUM(OmpAtClause, ActionTime) // OMP at
   WALK_NESTED_ENUM(OmpAutomapModifier, Value) // OMP automap-modifier
   WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind
   WALK_NESTED_ENUM(OmpProcBindClause, AffinityPolicy) // OMP proc_bind
   WALK_NESTED_ENUM(OmpDefaultClause, DataSharingAttribute) // OMP default
   WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP defaultmap
+  WALK_NESTED_ENUM(OmpDependenceType, Value)
   WALK_NESTED_ENUM(OmpVariableCategory, Value) // OMP variable-category
   WALK_NESTED_ENUM(OmpLastprivateModifier, Value) // OMP lastprivate-modifier
   WALK_NESTED_ENUM(OmpChunkModifier, Value) // OMP chunk-modifier
