@@ -5171,7 +5171,15 @@ class HLSLSemanticBaseAttr : HLSLAnnotationAttr {
 }
 
 def HLSLParsedSemantic : HLSLSemanticBaseAttr {
-  let Spellings = [];
+  let Spellings = [
+    Microsoft<"SV_Position">,
+    Microsoft<"SV_Target">,
+    Microsoft<"SV_DispatchThreadID">,
+    Microsoft<"SV_GroupID">,
+    Microsoft<"SV_GroupIndex">,
+    Microsoft<"SV_GroupThreadID">,
+    Microsoft<"SV_VertexID">
+  ];
   let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
