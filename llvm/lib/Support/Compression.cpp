@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Compression.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <limits>
 #if LLVM_ENABLE_ZLIB
 #include <zlib.h>
 #endif
@@ -299,17 +301,20 @@ static Expected<uint64_t> getUncompressedSize(ArrayRef<uint8_t> InputBuffer) {
                              "lzma_stream_footer_decode()=%s",
                              convertLZMACodeToString(xzerr));
   }
-  if (InputBuffer.size() < (opts.backward_size + LZMA_STREAM_HEADER_SIZE)) {
+  // A stream is the header, block data, index and stream footer
+  uint64_t minSize = opts.backward_size + 2 * LZMA_STREAM_HEADER_SIZE;
+  if (InputBuffer.size() < minSize) {
     return createStringError(
         inconvertibleErrorCode(),
         "xz-compressed buffer size (%zu bytes) too small (required at "
-        "least %" PRIu64 " bytes) ",
-        InputBuffer.size(),
-        uint64_t(opts.backward_size + LZMA_STREAM_HEADER_SIZE));
+        "least %" PRIu64 " bytes)",
+        InputBuffer.size(), minSize);
   }
 
   // Decode xz index.
-  lzma_index *xzindex;
+  // liblzma stores null on failure, and lzma_index_end() ignores null.
+  lzma_index *xzindex = nullptr;
+  llvm::scope_exit freeIndex([&] { lzma_index_end(xzindex, nullptr); });
   uint64_t memlimit(UINT64_MAX);
   size_t inpos = 0;
   ArrayRef<uint8_t> IndexBuffer = InputBuffer.drop_back(LZMA_STREAM_HEADER_SIZE)
@@ -323,24 +328,29 @@ static Expected<uint64_t> getUncompressedSize(ArrayRef<uint8_t> InputBuffer) {
                              convertLZMACodeToString(xzerr));
   }
 
-  // Get size of uncompressed file to construct an in-memory buffer of the
-  // same size on the calling end (if needed).
-  uint64_t uncompressedSize = lzma_index_uncompressed_size(xzindex);
-
-  // Deallocate xz index as it is no longer needed.
-  lzma_index_end(xzindex, nullptr);
-
-  return uncompressedSize;
+  return lzma_index_uncompressed_size(xzindex);
 }
 
 Error xz::decompress(ArrayRef<uint8_t> Input,
                      SmallVectorImpl<uint8_t> &Output) {
+  // Hand back nothing unless the whole stream decodes.
+  Output.clear();
+
   Expected<uint64_t> uncompressedSize = getUncompressedSize(Input);
 
   if (auto err = uncompressedSize.takeError())
     return err;
 
-  Output.resize(*uncompressedSize);
+  if (*uncompressedSize > std::numeric_limits<size_t>::max()) {
+    return createStringError(inconvertibleErrorCode(),
+                             "xz uncompressed size (%" PRIu64
+                             " bytes) exceeds addressable memory",
+                             *uncompressedSize);
+  }
+
+  // Concatenated streams are unsupported: liblzma decodes only the first and
+  // still reports LZMA_OK, leaving the rest of Output zero-filled.
+  Output.resize(static_cast<size_t>(*uncompressedSize));
 
   // Decompress xz buffer to buffer.
   uint64_t memlimit = UINT64_MAX;
@@ -350,6 +360,7 @@ Error xz::decompress(ArrayRef<uint8_t> Input,
                                            &inpos, Input.size(), Output.data(),
                                            &outpos, Output.size());
   if (ret != LZMA_OK) {
+    Output.clear();
     return createStringError(inconvertibleErrorCode(),
                              "lzma_stream_buffer_decode()=%s",
                              convertLZMACodeToString(ret));

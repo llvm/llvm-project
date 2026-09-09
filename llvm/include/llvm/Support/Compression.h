@@ -83,7 +83,8 @@ LLVM_ABI bool isAvailable();
 
 /// Decompress an xz stream. Unlike zlib and zstd, the uncompressed size does
 /// not need to be supplied by the caller: it is recovered from the stream
-/// index, and \p Output is resized to fit.
+/// index, and \p Output is resized to fit. \p Output is left empty if an error
+/// is returned.
 ///
 /// Requires isAvailable(); calling this otherwise is a fatal error.
 LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
