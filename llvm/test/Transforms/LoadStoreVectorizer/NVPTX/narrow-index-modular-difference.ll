@@ -140,11 +140,15 @@ define i32 @zext_nested_difference_not_preserved(
 ; CHECK-SAME: ptr noundef align 8 dereferenceable(1032) [[BASE:%.*]], i8 [[X:%.*]], i8 [[P:%.*]], i8 [[Q:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = add i8 [[P]], [[Q]]
 ; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[Y_NEXT:%.*]] = add nuw i8 [[Y]], -64
+; CHECK-NEXT:    [[B1:%.*]] = add nuw i8 [[X]], [[Y_NEXT]]
 ; CHECK-NEXT:    [[EXTB:%.*]] = zext i8 [[B]] to i64
+; CHECK-NEXT:    [[EXTB1:%.*]] = zext i8 [[B1]] to i64
 ; CHECK-NEXT:    [[PB_BASE:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB_BASE]], align 8
-; CHECK-NEXT:    [[VA1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[VB2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[PB_BASE1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB1]]
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, ptr [[PB_BASE1]], i64 260
+; CHECK-NEXT:    [[VA1:%.*]] = load i32, ptr [[PB_BASE]], align 8
+; CHECK-NEXT:    [[VB2:%.*]] = load i32, ptr [[PB]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA1]], [[VB2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -175,12 +179,16 @@ define i32 @zext_nested_reverse_difference_not_preserved(
 ; CHECK-LABEL: define i32 @zext_nested_reverse_difference_not_preserved(
 ; CHECK-SAME: ptr noundef align 8 dereferenceable(1032) [[BASE:%.*]], i8 [[X:%.*]], i8 [[P:%.*]], i8 [[Q:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = add i8 [[P]], [[Q]]
-; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[Y_NEXT:%.*]] = add nuw i8 [[Y]], -64
+; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[X]], [[Y_NEXT]]
+; CHECK-NEXT:    [[B1:%.*]] = add nuw i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[EXTB:%.*]] = zext i8 [[B]] to i64
+; CHECK-NEXT:    [[EXTB1:%.*]] = zext i8 [[B1]] to i64
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB]], align 8
-; CHECK-NEXT:    [[VB1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[VA2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, ptr [[PB]], i64 260
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB1]]
+; CHECK-NEXT:    [[VA2:%.*]] = load i32, ptr [[PA]], align 4
+; CHECK-NEXT:    [[VB1:%.*]] = load i32, ptr [[PB1]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA2]], [[VB1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -210,13 +218,17 @@ define i32 @zext_nested_constants_difference_not_preserved(
 ; CHECK-LABEL: define i32 @zext_nested_constants_difference_not_preserved(
 ; CHECK-SAME: ptr noundef align 8 dereferenceable(1032) [[BASE:%.*]], i8 [[X:%.*]], i8 [[P:%.*]], i8 [[Q:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = add i8 [[P]], [[Q]]
+; CHECK-NEXT:    [[Y_A:%.*]] = add nuw i8 [[Y]], -64
 ; CHECK-NEXT:    [[Y_B:%.*]] = add nuw i8 [[Y]], 0
-; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[X]], [[Y_B]]
+; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[X]], [[Y_A]]
+; CHECK-NEXT:    [[B1:%.*]] = add nuw i8 [[X]], [[Y_B]]
 ; CHECK-NEXT:    [[EXTB:%.*]] = zext i8 [[B]] to i64
+; CHECK-NEXT:    [[EXTB1:%.*]] = zext i8 [[B1]] to i64
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB]], align 8
-; CHECK-NEXT:    [[VB1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[VA2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, ptr [[PB]], i64 260
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB1]]
+; CHECK-NEXT:    [[VA2:%.*]] = load i32, ptr [[PA]], align 4
+; CHECK-NEXT:    [[VB1:%.*]] = load i32, ptr [[PB1]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA2]], [[VB1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

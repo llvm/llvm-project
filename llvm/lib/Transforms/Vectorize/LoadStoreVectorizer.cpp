@@ -1414,24 +1414,35 @@ static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
     Value *OtherOperandB = AddOpB->getOperand(MatchingOpIdxB == 1 ? 0 : 1);
     Instruction *OtherInstrA = dyn_cast<Instruction>(OtherOperandA);
     Instruction *OtherInstrB = dyn_cast<Instruction>(OtherOperandB);
+
+    // Compare in N+1 bits, which can represent the exact difference between
+    // any two extended N-bit values. Constants use the same extension as the
+    // GEP indices, while IdxDiff remains a signed distance.
+    unsigned WideBitWidth = IdxDiff.getBitWidth() + 1;
+    APInt WideIdxDiff = IdxDiff.sext(WideBitWidth);
+    auto ExtendConstant = [Signed, WideBitWidth](const ConstantInt *C) {
+      const APInt &Value = C->getValue();
+      return Signed ? Value.sext(WideBitWidth) : Value.zext(WideBitWidth);
+    };
+
     // Match `x +nsw/nuw y` and `x +nsw/nuw (y +nsw/nuw IdxDiff)`.
     if (OtherInstrB && isAddLike(OtherInstrB) &&
         checkNoWrapFlags(OtherInstrB, Signed) &&
         isa<ConstantInt>(OtherInstrB->getOperand(1))) {
-      int64_t CstVal =
-          cast<ConstantInt>(OtherInstrB->getOperand(1))->getSExtValue();
+      APInt WideCstVal =
+          ExtendConstant(cast<ConstantInt>(OtherInstrB->getOperand(1)));
       if (OtherInstrB->getOperand(0) == OtherOperandA &&
-          IdxDiff.getSExtValue() == CstVal)
+          WideIdxDiff == WideCstVal)
         return true;
     }
     // Match `x +nsw/nuw (y +nsw/nuw -Idx)` and `x +nsw/nuw (y +nsw/nuw x)`.
     if (OtherInstrA && isAddLike(OtherInstrA) &&
         checkNoWrapFlags(OtherInstrA, Signed) &&
         isa<ConstantInt>(OtherInstrA->getOperand(1))) {
-      int64_t CstVal =
-          cast<ConstantInt>(OtherInstrA->getOperand(1))->getSExtValue();
+      APInt WideCstVal =
+          ExtendConstant(cast<ConstantInt>(OtherInstrA->getOperand(1)));
       if (OtherInstrA->getOperand(0) == OtherOperandB &&
-          IdxDiff.getSExtValue() == -CstVal)
+          WideIdxDiff == -WideCstVal)
         return true;
     }
     // Match `x +nsw/nuw (y +nsw/nuw c)` and
@@ -1441,12 +1452,12 @@ static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
         checkNoWrapFlags(OtherInstrB, Signed) &&
         isa<ConstantInt>(OtherInstrA->getOperand(1)) &&
         isa<ConstantInt>(OtherInstrB->getOperand(1))) {
-      int64_t CstValA =
-          cast<ConstantInt>(OtherInstrA->getOperand(1))->getSExtValue();
-      int64_t CstValB =
-          cast<ConstantInt>(OtherInstrB->getOperand(1))->getSExtValue();
+      APInt WideCstValA =
+          ExtendConstant(cast<ConstantInt>(OtherInstrA->getOperand(1)));
+      APInt WideCstValB =
+          ExtendConstant(cast<ConstantInt>(OtherInstrB->getOperand(1)));
       if (OtherInstrA->getOperand(0) == OtherInstrB->getOperand(0) &&
-          IdxDiff.getSExtValue() == (CstValB - CstValA))
+          WideIdxDiff == WideCstValB - WideCstValA)
         return true;
     }
   }
