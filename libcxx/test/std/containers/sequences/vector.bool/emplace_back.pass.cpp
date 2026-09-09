@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+// REQUIRES: std-at-least-c++11
 
 // <vector>
 //  vector.bool
