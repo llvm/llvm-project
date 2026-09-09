@@ -93,10 +93,17 @@ set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all 
 
 option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 option(LLVM_LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
+option(LIBC_ENABLE_MCDC "Build libc with MC/DC coverage instrumentation" OFF)
 if(LIBC_ENABLE_COVERAGE OR LLVM_LIBC_ENABLE_COVERAGE)
   list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
   list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
   list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
+
+  if(LIBC_ENABLE_MCDC)
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
+    list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
+    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fcoverage-mcdc")
+  endif()
 
   execute_process(
     COMMAND ${CMAKE_CXX_COMPILER} --print-libgcc-file-name --rtlib=compiler-rt

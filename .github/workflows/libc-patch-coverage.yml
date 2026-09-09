@@ -92,7 +92,7 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DLLVM_USE_LINKER=lld-23
           -DLLVM_ENABLE_RUNTIMES=libc
-          -DLLVM_LIBC_FULL_BUILD=ON
+          -DLLVM_LIBC_FULL_BUILD=OFF
           -DLIBC_ENABLE_COVERAGE=ON
           -DLIBC_ENABLE_MCDC=${{ matrix.enable_mcdc }}
           -DLIBC_TEST_UNIT_TEST_ONLY=ON
@@ -234,7 +234,7 @@ jobs:
         echo "[LOG] Executing Ninja targets: $TARGETS"
 
         if [ -n "$TARGETS" ]; then
-          export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+          export LLVM_PROFILE_FILE="${PWD}/build-cov/libc_cov_%p.profraw"
           ninja -C build-cov $TARGETS
           echo "TARGETS=$TARGETS" >> $GITHUB_ENV
         else
@@ -256,7 +256,7 @@ jobs:
     - name: Merge Profiles
       if: env.TARGETS != ''
       run: |
-        find build-cov -name "*.profraw" > profraw_list.txt
+        find build-cov -type f -name "*.profraw" > profraw_list.txt
         NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
         echo "[LOG] Discovered $NUM_PROFS raw profile data files."
         if [ -s profraw_list.txt ]; then
@@ -299,7 +299,7 @@ jobs:
         # 2. Generate git diff for modified libc source files
         git diff "$DIFF_BASE" HEAD -- libc/src/ > patch.diff
         echo "[LOG] Generated patch.diff size: $(wc -l < patch.diff 2>/dev/null || echo 0) lines"
-        echo "[LOG] Generated coverage.json size: $(wc -l < coverage.json 2>/dev/null || echo 0) lines"
+        echo "[LOG] Generated coverage.json size: $(wc -c < coverage.json 2>/dev/null || echo 0) bytes"
 
         # 3. Run Patch Coverage Python Script using persisted commit metadata
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
