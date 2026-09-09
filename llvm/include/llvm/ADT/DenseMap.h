@@ -44,17 +44,45 @@
 namespace llvm {
 
 namespace detail {
+// A bucket holds a key and a value. Don't use std::pair, which has a
+// non-trivial copy assignment, which costs is_trivially_copyable.
+template <typename KeyT, typename ValueT> struct DenseMapPair {
+  using first_type = KeyT;
+  using second_type = ValueT;
 
-// We extend a pair to allow users to override the bucket type with their own
-// implementation without requiring two members.
-template <typename KeyT, typename ValueT>
-struct DenseMapPair : std::pair<KeyT, ValueT> {
-  using std::pair<KeyT, ValueT>::pair;
+  KeyT first;
+  ValueT second;
 
-  KeyT &getFirst() { return std::pair<KeyT, ValueT>::first; }
-  const KeyT &getFirst() const { return std::pair<KeyT, ValueT>::first; }
-  ValueT &getSecond() { return std::pair<KeyT, ValueT>::second; }
-  const ValueT &getSecond() const { return std::pair<KeyT, ValueT>::second; }
+  DenseMapPair() : first(), second() {}
+  DenseMapPair(const KeyT &Key, const ValueT &Value)
+      : first(Key), second(Value) {}
+  DenseMapPair(KeyT &&Key, ValueT &&Value)
+      : first(std::move(Key)), second(std::move(Value)) {}
+  DenseMapPair(const std::pair<KeyT, ValueT> &P)
+      : first(P.first), second(P.second) {}
+  DenseMapPair(std::pair<KeyT, ValueT> &&P)
+      : first(std::move(P.first)), second(std::move(P.second)) {}
+  template <typename U1, typename U2>
+  DenseMapPair(const DenseMapPair<U1, U2> &P)
+      : first(P.first), second(P.second) {}
+  template <typename U1, typename U2>
+  DenseMapPair(DenseMapPair<U1, U2> &&P)
+      : first(std::move(P.first)), second(std::move(P.second)) {}
+
+  operator std::pair<KeyT, ValueT>() const { return {first, second}; }
+  operator std::pair<const KeyT, ValueT>() const { return {first, second}; }
+
+  friend bool operator==(const DenseMapPair &LHS, const DenseMapPair &RHS) {
+    return LHS.first == RHS.first && LHS.second == RHS.second;
+  }
+  friend bool operator!=(const DenseMapPair &LHS, const DenseMapPair &RHS) {
+    return !(LHS == RHS);
+  }
+
+  KeyT &getFirst() { return first; }
+  const KeyT &getFirst() const { return first; }
+  ValueT &getSecond() { return second; }
+  const ValueT &getSecond() const { return second; }
 };
 
 } // end namespace detail
@@ -292,6 +320,20 @@ public:
     return try_emplace_impl(std::move(KV.first), std::move(KV.second));
   }
 
+  template <
+      typename B = BucketT,
+      typename = std::enable_if_t<!std::is_same_v<B, std::pair<KeyT, ValueT>>>>
+  std::pair<iterator, bool> insert(const BucketT &KV) {
+    return try_emplace_impl(KV.first, KV.second);
+  }
+
+  template <
+      typename B = BucketT,
+      typename = std::enable_if_t<!std::is_same_v<B, std::pair<KeyT, ValueT>>>>
+  std::pair<iterator, bool> insert(BucketT &&KV) {
+    return try_emplace_impl(std::move(KV.first), std::move(KV.second));
+  }
+
   // Inserts key,value pair into the map if the key isn't already in the map.
   // The value is constructed in-place if the key is not in the map, otherwise
   // it is not moved.
@@ -462,10 +504,9 @@ protected:
   }
 
   void destroyAll() {
-    // No need to iterate through the buckets if both KeyT and ValueT are
-    // trivially destructible.
-    if constexpr (std::is_trivially_destructible_v<KeyT> &&
-                  std::is_trivially_destructible_v<ValueT>)
+    // No need to iterate through the buckets if the bucket is trivially
+    // destructible.
+    if constexpr (std::is_trivially_destructible_v<BucketT>)
       return;
 
     if (getNumBuckets() == 0) // Nothing to do.
@@ -555,8 +596,7 @@ protected:
     const UsedT *OtherU = other.getUsed();
     std::memcpy(U, OtherU,
                 llvm::densemap::detail::usedWords(NumBuckets) * sizeof(UsedT));
-    if constexpr (std::is_trivially_copyable_v<KeyT> &&
-                  std::is_trivially_copyable_v<ValueT>) {
+    if constexpr (std::is_trivially_copyable_v<BucketT>) {
       memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
              NumBuckets * sizeof(BucketT));
     } else {

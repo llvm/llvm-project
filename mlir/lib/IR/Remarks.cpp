@@ -205,6 +205,23 @@ bool RemarkEngine::isFailedOptRemarkEnabled(StringRef categoryName) const {
   return failedFilter && failedFilter->match(categoryName);
 }
 
+bool RemarkEngine::isRemarkEnabled(RemarkKind kind,
+                                   StringRef categoryName) const {
+  switch (kind) {
+  case RemarkKind::RemarkUnknown:
+    return false;
+  case RemarkKind::RemarkPassed:
+    return isPassedOptRemarkEnabled(categoryName);
+  case RemarkKind::RemarkMissed:
+    return isMissedOptRemarkEnabled(categoryName);
+  case RemarkKind::RemarkFailure:
+    return isFailedOptRemarkEnabled(categoryName);
+  case RemarkKind::RemarkAnalysis:
+    return isAnalysisOptRemarkEnabled(categoryName);
+  }
+  llvm_unreachable("Unknown remark kind");
+}
+
 InFlightRemark RemarkEngine::emitOptimizationRemark(Location loc,
                                                     RemarkOpts opts) {
   return emitIfEnabled<OptRemarkPass>(loc, opts,

@@ -4736,6 +4736,7 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
       name == LLVMDialect::getNestAttrName() ||
       name == LLVMDialect::getNoCaptureAttrName() ||
       name == LLVMDialect::getNoFreeAttrName() ||
+      name == LLVMDialect::getNoFreeObjAttrName() ||
       name == LLVMDialect::getNonNullAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();

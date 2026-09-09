@@ -216,11 +216,11 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
       auto Res = TryScheduleBndl(ReadyN);
       switch (Res) {
       case TryScheduleRes::Success:
-        // We successfully scheduled ReadyN, keep scheduling.
+        // We successfully scheduled ReadyN's bundle, keep scheduling.
         continue;
       case TryScheduleRes::Failure:
-        // We failed to schedule ReadyN, defer it to later and keep scheduling
-        // other ready instructions.
+        // We failed to schedule ReadyN's bundle, defer it to later and keep
+        // scheduling other ready instructions.
         Retry.push_back(ReadyN);
         continue;
       case TryScheduleRes::Finished:
@@ -239,6 +239,12 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
       }
     }
   }
+
+  // The Retry vector contains the ready nodes that were removed from the ready
+  // list but we could not schedule them (along with their parent bundle).
+  // Insert them back in.
+  for (auto *RetryN : Retry)
+    ReadyList.insert(RetryN);
 
   eraseBundle(InstrsSB);
   return false;
@@ -432,10 +438,7 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes from the new interval to ready list if they are ready.
-    Interval<Instruction> InstrsInterval(Instrs);
-    Interval<Instruction> ScanForReady =
-        InstrsInterval.getUnionInterval(Extension);
-    for (auto &I : ScanForReady) {
+    for (auto &I : Extension) {
       auto *N = DAG.getNode(&I);
       if (N->scheduled())
         continue;

@@ -1397,10 +1397,22 @@ define void @match() #3 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> poison, <8 x i16> poison, <vscale x 8 x i1> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:21 Lat:29 SizeLat:29 for: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> poison, <vscale x 4 x i1> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:11 Lat:15 SizeLat:15 for: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> poison, <vscale x 2 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %match_nxv16i8_v4i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v4i8(<vscale x 16 x i8> poison, <4 x i8> poison, <vscale x 16 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 8 for: %match_nxv16i8_v32i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v32i8(<vscale x 16 x i8> poison, <32 x i8> poison, <vscale x 16 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 8 for: %match_nxv32i8_v16i8 = call <vscale x 32 x i1> @llvm.experimental.vector.match.nxv32i8.v16i8(<vscale x 32 x i8> poison, <16 x i8> poison, <vscale x 32 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %match_nxv8i16_v4i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v4i16(<vscale x 8 x i16> poison, <4 x i16> poison, <vscale x 8 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 8 for: %match_nxv8i16_v16i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v16i16(<vscale x 8 x i16> poison, <16 x i16> poison, <vscale x 8 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 16 for: %match_nxv16i16_v16i16 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i16.v16i16(<vscale x 16 x i16> poison, <16 x i16> poison, <vscale x 16 x i1> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 14 for: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> poison, <16 x i8> poison, <16 x i1> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 14 for: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:21 Lat:29 SizeLat:29 for: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> poison, <4 x i32> poison, <4 x i1> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:11 Lat:15 SizeLat:15 for: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 14 for: %match_v16i8_v4i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v4i8(<16 x i8> poison, <4 x i8> poison, <16 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 28 for: %match_v16i8_v32i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v32i8(<16 x i8> poison, <32 x i8> poison, <16 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 28 for: %match_v32i8_v16i8 = call <32 x i1> @llvm.experimental.vector.match.v32i8.v16i8(<32 x i8> poison, <16 x i8> poison, <32 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 14 for: %match_v8i16_v4i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v4i16(<8 x i16> poison, <4 x i16> poison, <8 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 28 for: %match_v8i16_v16i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v16i16(<8 x i16> poison, <16 x i16> poison, <8 x i1> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 56 for: %match_v16i16_v16i16 = call <16 x i1> @llvm.experimental.vector.match.v16i16.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'match'
@@ -1408,10 +1420,22 @@ define void @match() #3 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> poison, <8 x i16> poison, <vscale x 8 x i1> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:21 Lat:29 SizeLat:29 for: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> poison, <vscale x 4 x i1> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:11 Lat:15 SizeLat:15 for: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> poison, <vscale x 2 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %match_nxv16i8_v4i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v4i8(<vscale x 16 x i8> poison, <4 x i8> poison, <vscale x 16 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 8 for: %match_nxv16i8_v32i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v32i8(<vscale x 16 x i8> poison, <32 x i8> poison, <vscale x 16 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 8 for: %match_nxv32i8_v16i8 = call <vscale x 32 x i1> @llvm.experimental.vector.match.nxv32i8.v16i8(<vscale x 32 x i8> poison, <16 x i8> poison, <vscale x 32 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %match_nxv8i16_v4i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v4i16(<vscale x 8 x i16> poison, <4 x i16> poison, <vscale x 8 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 8 for: %match_nxv8i16_v16i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v16i16(<vscale x 8 x i16> poison, <16 x i16> poison, <vscale x 8 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 16 for: %match_nxv16i16_v16i16 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i16.v16i16(<vscale x 16 x i16> poison, <16 x i16> poison, <vscale x 16 x i1> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 14 for: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> poison, <16 x i8> poison, <16 x i1> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 14 for: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:21 Lat:29 SizeLat:29 for: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> poison, <4 x i32> poison, <4 x i1> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:11 Lat:15 SizeLat:15 for: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 14 for: %match_v16i8_v4i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v4i8(<16 x i8> poison, <4 x i8> poison, <16 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 28 for: %match_v16i8_v32i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v32i8(<16 x i8> poison, <32 x i8> poison, <16 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 28 for: %match_v32i8_v16i8 = call <32 x i1> @llvm.experimental.vector.match.v32i8.v16i8(<32 x i8> poison, <16 x i8> poison, <32 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 14 for: %match_v8i16_v4i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v4i16(<8 x i16> poison, <4 x i16> poison, <8 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 28 for: %match_v8i16_v16i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v16i16(<8 x i16> poison, <16 x i16> poison, <8 x i1> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 56 for: %match_v16i16_v16i16 = call <16 x i1> @llvm.experimental.vector.match.v16i16.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'match'
@@ -1419,10 +1443,22 @@ define void @match() #3 {
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 4 for: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> poison, <8 x i16> poison, <vscale x 8 x i1> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:21 Lat:29 SizeLat:29 for: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> poison, <vscale x 4 x i1> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:11 Lat:15 SizeLat:15 for: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> poison, <vscale x 2 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 4 for: %match_nxv16i8_v4i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v4i8(<vscale x 16 x i8> poison, <4 x i8> poison, <vscale x 16 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 8 for: %match_nxv16i8_v32i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v32i8(<vscale x 16 x i8> poison, <32 x i8> poison, <vscale x 16 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 8 for: %match_nxv32i8_v16i8 = call <vscale x 32 x i1> @llvm.experimental.vector.match.nxv32i8.v16i8(<vscale x 32 x i8> poison, <16 x i8> poison, <vscale x 32 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 4 for: %match_nxv8i16_v4i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v4i16(<vscale x 8 x i16> poison, <4 x i16> poison, <vscale x 8 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 8 for: %match_nxv8i16_v16i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v16i16(<vscale x 8 x i16> poison, <16 x i16> poison, <vscale x 8 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 16 for: %match_nxv16i16_v16i16 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i16.v16i16(<vscale x 16 x i16> poison, <16 x i16> poison, <vscale x 16 x i1> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 14 for: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> poison, <16 x i8> poison, <16 x i1> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 14 for: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:21 Lat:29 SizeLat:29 for: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> poison, <4 x i32> poison, <4 x i1> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:11 Lat:15 SizeLat:15 for: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 14 for: %match_v16i8_v4i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v4i8(<16 x i8> poison, <4 x i8> poison, <16 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 28 for: %match_v16i8_v32i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v32i8(<16 x i8> poison, <32 x i8> poison, <16 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 28 for: %match_v32i8_v16i8 = call <32 x i1> @llvm.experimental.vector.match.v32i8.v16i8(<32 x i8> poison, <16 x i8> poison, <32 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 14 for: %match_v8i16_v4i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v4i16(<8 x i16> poison, <4 x i16> poison, <8 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 28 for: %match_v8i16_v16i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v16i16(<8 x i16> poison, <16 x i16> poison, <8 x i1> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 56 for: %match_v16i16_v16i16 = call <16 x i1> @llvm.experimental.vector.match.v16i16.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -1431,10 +1467,26 @@ define void @match() #3 {
   %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> poison, <vscale x 4 x i1> poison)
   %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> poison, <vscale x 2 x i1> poison)
 
+  %match_nxv16i8_v4i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> poison, <4 x i8> poison, <vscale x 16 x i1> poison)
+  %match_nxv16i8_v32i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> poison, <32 x i8> poison, <vscale x 16 x i1> poison)
+  %match_nxv32i8_v16i8 = call <vscale x 32 x i1> @llvm.experimental.vector.match(<vscale x 32 x i8> poison, <16 x i8> poison, <vscale x 32 x i1> poison)
+
+  %match_nxv8i16_v4i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match(<vscale x 8 x i16> poison, <4 x i16> poison, <vscale x 8 x i1> poison)
+  %match_nxv8i16_v16i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match(<vscale x 8 x i16> poison, <16 x i16> poison, <vscale x 8 x i1> poison)
+  %match_nxv16i16_v16i16 = call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i16> poison, <16 x i16> poison, <vscale x 16 x i1> poison)
+
   %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> poison, <16 x i8> poison, <16 x i1> poison)
   %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
   %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> poison, <4 x i32> poison, <4 x i1> poison)
   %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
+
+  %match_v16i8_v4i8 = call <16 x i1> @llvm.experimental.vector.match(<16 x i8> poison, <4 x i8> poison, <16 x i1> poison)
+  %match_v16i8_v32i8 = call <16 x i1> @llvm.experimental.vector.match(<16 x i8> poison, <32 x i8> poison, <16 x i1> poison)
+  %match_v32i8_v16i8 = call <32 x i1> @llvm.experimental.vector.match(<32 x i8> poison, <16 x i8> poison, <32 x i1> poison)
+
+  %match_v8i16_v4i16 = call <8 x i1> @llvm.experimental.vector.match(<8 x i16> poison, <4 x i16> poison, <8 x i1> poison)
+  %match_v8i16_v16i16 = call <8 x i1> @llvm.experimental.vector.match(<8 x i16> poison, <16 x i16> poison, <8 x i1> poison)
+  %match_v16i16_v16i16 = call <16 x i1> @llvm.experimental.vector.match(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
 
   ret void
 }

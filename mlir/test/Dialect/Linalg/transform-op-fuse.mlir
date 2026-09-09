@@ -104,7 +104,7 @@ func.func @fuse_unary_forall(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop = transform.structured.fuse %0 tile_sizes [32, 32] {use_forall}
+    %1, %loop = transform.structured.fuse %0 tile_sizes [32, 32] use_forall
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
   }
@@ -164,7 +164,7 @@ module attributes {transform.with_named_sequence} {
     %c32 = transform.param.constant 32 : i64 -> !transform.any_param
     %c64 = transform.param.constant 64 : i64 -> !transform.any_param
     %tiles = transform.merge_handles %c32, %c64 : !transform.any_param
-    %1, %loops = transform.structured.fuse %0 tile_sizes *(%tiles) {use_forall}
+    %1, %loops = transform.structured.fuse %0 tile_sizes *(%tiles) use_forall
       : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op)
     // Verify that correct number of loops is present in packed result.
     %loop:1 = transform.split_handle %loops : (!transform.any_op)
@@ -384,7 +384,7 @@ func.func @fuse_through_slice(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) ->
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] {apply_cleanup}
+    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] apply_cleanup
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
     transform.yield
   }
@@ -418,7 +418,7 @@ func.func @fuse_through_slice_and_cast_chain(%arg0: tensor<100x100xf32>, %arg1: 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] {apply_cleanup}
+    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] apply_cleanup
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
     transform.yield
   }
@@ -453,7 +453,7 @@ func.func @fuse_unrelated_slices(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>)
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] {apply_cleanup}
+    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] apply_cleanup
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
     transform.yield
   }
@@ -479,9 +479,9 @@ func.func @bubble_up_extract_slice_through_expand_shape(%0: tensor<60xf32>) -> t
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %transformed, %loops:3 = transform.structured.fuse %0 tile_sizes [1, 1, 5] interchange [0, 1, 2] {apply_cleanup} : 
+    %transformed, %loops:3 = transform.structured.fuse %0 tile_sizes [1, 1, 5] interchange [0, 1, 2] apply_cleanup :
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op, !transform.any_op)
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -504,9 +504,9 @@ func.func @bubble_up_extract_slice_through_expand_shape_full_inner_dim(%0: tenso
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %transformed, %loops:2 = transform.structured.fuse %0 tile_sizes [1, 2, 0] interchange [0, 1, 2] {apply_cleanup} :
+    %transformed, %loops:2 = transform.structured.fuse %0 tile_sizes [1, 2, 0] interchange [0, 1, 2] apply_cleanup :
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -528,9 +528,9 @@ func.func @no_bubble_up_extract_slice_through_expand_shape_non_contiguous(%0: te
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %transformed, %loops:3 = transform.structured.fuse %0 tile_sizes [1, 2, 5] interchange [0, 1, 2] {apply_cleanup} :
+    %transformed, %loops:3 = transform.structured.fuse %0 tile_sizes [1, 2, 5] interchange [0, 1, 2] apply_cleanup :
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op, !transform.any_op)
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -559,9 +559,9 @@ module {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %transformed, %loops:4 = transform.structured.fuse %0 tile_sizes [1, 2, 0, 1, 4] interchange [0, 1, 2, 3, 4] {apply_cleanup} :
+    %transformed, %loops:4 = transform.structured.fuse %0 tile_sizes [1, 2, 0, 1, 4] interchange [0, 1, 2, 3, 4] apply_cleanup :
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op, !transform.any_op, !transform.any_op)
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -588,9 +588,9 @@ module {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %transformed, %loops:1 = transform.structured.fuse %0 tile_sizes [0, 0, 1, 0] interchange [0, 1, 2, 3] {apply_cleanup} :
+    %transformed, %loops:1 = transform.structured.fuse %0 tile_sizes [0, 0, 1, 0] interchange [0, 1, 2, 3] apply_cleanup :
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -615,7 +615,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %transformed, %loops:3 = transform.structured.fuse %0 tile_sizes [1, 1, 5] interchange [0, 1, 2] :
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op, !transform.any_op)
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -636,9 +636,9 @@ func.func @bubble_up_extract_slice_through_collapse_shape(%0: tensor<1x8x1800x32
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %transformed, %loops:1 = transform.structured.fuse %0 tile_sizes [1, 0, 0] interchange [0, 1, 2] {apply_cleanup} : 
+    %transformed, %loops:1 = transform.structured.fuse %0 tile_sizes [1, 0, 0] interchange [0, 1, 2] apply_cleanup :
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -662,9 +662,9 @@ func.func @bubble_up_extract_slice_through_collapse_shape_with_collapse_producer
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %transformed, %loops:1 = transform.structured.fuse %0 tile_sizes [1, 0, 0] interchange [0, 1, 2] {apply_cleanup} : 
+    %transformed, %loops:1 = transform.structured.fuse %0 tile_sizes [1, 0, 0] interchange [0, 1, 2] apply_cleanup :
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
-    transform.yield 
+    transform.yield
   }
 }
 

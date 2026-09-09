@@ -57,6 +57,7 @@ static_library("Orc") {
     "LookupAndApply.cpp",
     "MachO.cpp",
     "MachOPlatform.cpp",
+    "Mangler.cpp",
     "Mangling.cpp",
     "MapperJITLinkMemoryManager.cpp",
     "MemoryMapper.cpp",

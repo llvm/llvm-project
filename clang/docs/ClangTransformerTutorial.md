@@ -2,9 +2,6 @@
 
 A tutorial on how to write a source-to-source translation tool using Clang Transformer.
 
-```{contents}
-:local:
-```
 
 ## What is Clang Transformer?
 

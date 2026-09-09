@@ -229,8 +229,6 @@ static size_t getSizeForTypeRISCV(uint32_t Type) {
   case ELF::R_RISCV_PCREL_LO12_I:
   case ELF::R_RISCV_PCREL_LO12_S:
   case ELF::R_RISCV_32_PCREL:
-  case ELF::R_RISCV_CALL:
-  case ELF::R_RISCV_CALL_PLT:
   case ELF::R_RISCV_ADD32:
   case ELF::R_RISCV_SUB32:
   case ELF::R_RISCV_HI20:
@@ -239,6 +237,8 @@ static size_t getSizeForTypeRISCV(uint32_t Type) {
   case ELF::R_RISCV_32:
     return 4;
   case ELF::R_RISCV_64:
+  case ELF::R_RISCV_CALL:
+  case ELF::R_RISCV_CALL_PLT:
   case ELF::R_RISCV_GOT_HI20:
   case ELF::R_RISCV_TLS_GOT_HI20:
   case ELF::R_RISCV_TLS_GD_HI20:
@@ -502,7 +502,11 @@ static uint64_t extractValueRISCV(uint32_t Type, uint64_t Contents,
     return extractJImmRISCV(Contents);
   case ELF::R_RISCV_CALL:
   case ELF::R_RISCV_CALL_PLT:
-    return extractUImmRISCV(Contents);
+    // The psABI "Relocations" chapter's "Procedure Calls" section defines
+    // R_RISCV_CALL and R_RISCV_CALL_PLT over an AUIPC/JALR pair. Decode both
+    // instructions so the addend includes the low 12 bits carried by JALR.
+    return extractUImmRISCV(Contents & 0xffffffff) +
+           extractIImmRISCV(Contents >> 32);
   case ELF::R_RISCV_BRANCH:
     return extractBImmRISCV(Contents);
   case ELF::R_RISCV_GOT_HI20:

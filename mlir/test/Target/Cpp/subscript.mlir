@@ -70,7 +70,7 @@ emitc.func @call_arg(%arg0: !emitc.array<4x8xf32>, %i: i32, %j: i16,
   emitc.call_opaque "func2" (%3) : (f32) -> ()
   %4 = emitc.load %0 : <f32>
   %5 = emitc.load %1 : <f32>
-  emitc.call_opaque "func3" (%4, %5) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
+  emitc.call_opaque "func3" (%4, %5) <{args = [1 : index, 0 : index]}> : (f32, f32) -> ()
   emitc.return
 }
 // CPP-DEFAULT: void call_arg(float [[ARR1:[^ ]*]][4][8], int32_t [[I:[^ ]*]],

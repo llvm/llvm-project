@@ -7129,7 +7129,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg());
 
-  if (mi_match(Src, *MRI, m_GFPExt(m_Reg(Src)))) {
+  if (!STI.useRealTrue16Insts() && mi_match(Src, *MRI, m_GFPExt(m_Reg(Src)))) {
     assert(MRI->getType(Src) == LLT::scalar(16));
 
     // Only change Src if src modifier could be gained. In such cases new Src
@@ -7327,7 +7327,7 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
       std::optional<int64_t> BarValImm =
           getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
       if (BarValImm) {
-        auto BarID = ((*BarValImm) >> 4) & 0x3F;
+        uint32_t BarID = *BarValImm & 0x3F;
         BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
             .addImm(BarID);
         I.eraseFromParent();
@@ -7336,16 +7336,10 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
     }
   }
 
-  // BarID = (BarOp >> 4) & 0x3F
-  Register TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHR_B32), TmpReg0)
-      .add(BarOp)
-      .addImm(4u)
-      .setOperandDead(3); // Dead scc
-
+  // BarID = BarOp & 0x3F
   Register TmpReg1 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_AND_B32), TmpReg1)
-      .addReg(TmpReg0)
+      .add(BarOp)
       .addImm(0x3F)
       .setOperandDead(3); // Dead scc
 
@@ -7394,16 +7388,10 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
       getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
 
   if (!BarValImm) {
-    // BarID = (BarOp >> 4) & 0x3F
-    Register TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHR_B32), TmpReg0)
-        .addReg(BarOp.getReg())
-        .addImm(4u)
-        .setOperandDead(3); // Dead scc;
-
+    // BarID = BarOp & 0x3F
     Register TmpReg1 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_AND_B32), TmpReg1)
-        .addReg(TmpReg0)
+        .addReg(BarOp.getReg())
         .addImm(0x3F)
         .setOperandDead(3); // Dead scc;
 
@@ -7426,7 +7414,7 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   }
 
   if (BarValImm) {
-    auto BarId = ((*BarValImm) >> 4) & 0x3F;
+    uint32_t BarId = *BarValImm & 0x3F;
     MIB.addImm(BarId);
   }
 

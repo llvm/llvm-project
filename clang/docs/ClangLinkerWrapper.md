@@ -1,8 +1,5 @@
 # Clang Linker Wrapper
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

@@ -217,6 +217,8 @@ enum class FrameProcedureOptions : uint32_t {
   SafeBuffers = 0x00002000,
   EncodedLocalBasePointerMask = 0x0000C000,
   EncodedParamBasePointerMask = 0x00030000,
+  EncodedPointersMask =
+      EncodedLocalBasePointerMask | EncodedParamBasePointerMask,
   ProfileGuidedOptimization = 0x00040000,
   ValidProfileCounts = 0x00080000,
   OptimizedForSpeed = 0x00100000,

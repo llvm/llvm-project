@@ -312,6 +312,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   GlobalVariableDebugInfoMap.clear();
   LexicalBlocks.clear();
   DebugScopeRegs.clear();
+  DebugInlinedAtRegs.clear();
   ScopeToPathOpStringReg.clear();
   DebugSourceRegByFileStr.clear();
   OpStringContentCache.clear();
@@ -695,6 +696,38 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugLexicalBlock(
 
   return emitExtInst(SPIRV::NonSemanticExtInst::DebugLexicalBlock, VoidTypeReg,
                      ExtInstSetReg, Ops, MAI);
+}
+
+MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugInlinedAt(
+    const DILocation *IA, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  assert(IA && "IA must not be null in getOrEmitDebugInlinedAt");
+
+  if (MCRegister Cached = DebugInlinedAtRegs.lookup(IA))
+    return Cached;
+
+  auto ScopeRegOpt = resolveScope(IA->getScope());
+  if (!ScopeRegOpt)
+    return MCRegister();
+
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(IA->getLine()), I32TypeReg, MAI);
+
+  SmallVector<MCRegister, 3> Ops{LineReg, *ScopeRegOpt};
+  // Recurse before building this instruction's operands so an outer
+  // inlined-at link is always available.
+  if (const DILocation *Outer = IA->getInlinedAt()) {
+    MCRegister OuterReg = getOrEmitDebugInlinedAt(
+        Outer, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+    if (!OuterReg.isValid())
+      return MCRegister();
+    Ops.push_back(OuterReg);
+  }
+
+  MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugInlinedAt,
+                               VoidTypeReg, ExtInstSetReg, Ops, MAI);
+  DebugInlinedAtRegs[IA] = Reg;
+  return Reg;
 }
 
 std::optional<MCRegister>
@@ -1142,6 +1175,7 @@ void SPIRVNonSemanticDebugHandler::resetPerFunctionDebugState() {
   LastFunctionOpVariable = nullptr;
   DebugFunctionDefinitionEmitted = false;
   LastLineMI = nullptr;
+  LastScopeMI = nullptr;
 }
 
 void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
@@ -1206,7 +1240,13 @@ void SPIRVNonSemanticDebugHandler::beginInstruction(const MachineInstr *MI) {
 
   if (!DebugFunctionDefinitionEmitted)
     return;
-  emitDebugLineForInstruction(MI);
+
+  std::optional<const MachineInstr *> Target = resolveDebugLocTarget(MI);
+  if (!Target)
+    return;
+
+  emitDebugScopeForInstruction(*Target);
+  emitDebugLineForInstruction(*Target);
 }
 
 static bool isMergeInstruction(unsigned Opcode) {
@@ -1214,8 +1254,8 @@ static bool isMergeInstruction(unsigned Opcode) {
          Opcode == SPIRV::OpLoopControlINTEL;
 }
 
-static bool isDebugLineTarget(const MachineInstr *MI,
-                              SPIRV::ModuleAnalysisInfo &MAI) {
+static bool isDebugLocTarget(const MachineInstr *MI,
+                             SPIRV::ModuleAnalysisInfo &MAI) {
   if (MAI.getSkipEmission(MI))
     return false;
   switch (MI->getOpcode()) {
@@ -1243,25 +1283,23 @@ findAdjacentEmittedInstruction(const MachineInstr *MI,
   return nullptr;
 }
 
-void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
-    const MachineInstr *MI) {
-  assert(DebugFunctionDefinitionEmitted &&
-         "DebugFunctionDefinition must be emitted");
+std::optional<const MachineInstr *>
+SPIRVNonSemanticDebugHandler::resolveDebugLocTarget(const MachineInstr *MI) {
   assert(CurrentMAI && "CurrentMAI must be set");
-
   SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
 
-  // Structural opcodes don't require a DebugLine, other opcodes might have
-  // already been emitted in the module scope.
-  if (!isDebugLineTarget(MI, MAI))
-    return;
+  // Structural opcodes don't require a DebugLine/DebugScope, other opcodes
+  // might have already been emitted in the module scope.
+  if (!isDebugLocTarget(MI, MAI))
+    return std::nullopt;
 
-  // DebugLine can be emitted before a merge instruction, but not after it
-  // (nothing may sit between the merge and its terminator). We can use either
-  // the merge's or the terminator's debug info; we emit the terminator's one.
+  // DebugLine/DebugScope can be emitted before a merge instruction, but not
+  // after it (nothing may sit between the merge and its terminator). We can
+  // use either the merge's or the terminator's debug info; we emit the
+  // terminator's one.
   const MachineInstr *Prev = findAdjacentEmittedInstruction(MI, MAI, false);
   if (Prev && isMergeInstruction(Prev->getOpcode()))
-    return;
+    return std::nullopt;
 
   if (isMergeInstruction(MI->getOpcode())) {
     // Use the terminator's debug info; when we reach it later, the check
@@ -1270,10 +1308,80 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
     assert(MI && "Merge instruction must be followed by a terminator");
   }
 
-  // The range of DebugLine must be reset at each basic block boundary.
+  return MI;
+}
+
+void SPIRVNonSemanticDebugHandler::emitDebugScopeForInstruction(
+    const MachineInstr *MI) {
+  assert(DebugFunctionDefinitionEmitted &&
+         "DebugFunctionDefinition must be emitted");
+  assert(CurrentMAI && "CurrentMAI must be set");
+
+  // The region is implicitly closed at each basic block boundary, so a
+  // LastScopeMI from another block must be dropped before it is read below:
+  // the new block needs its own DebugScope, and has no region left to close.
+  if (LastScopeMI && MI->getParent() != LastScopeMI->getParent())
+    LastScopeMI = nullptr;
+
+  SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
+  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
+  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
+
+  const DILocation *CurDL = MI->getDebugLoc().get();
+  if (!CurDL) {
+    // No location for the current instruction.
+    if (LastScopeMI) {
+      // Close the current DebugScope region.
+      emitExtInst(SPIRV::NonSemanticExtInst::DebugNoScope, VoidTypeReg,
+                  ExtInstSetReg, {}, MAI);
+      LastScopeMI = nullptr;
+    }
+    return;
+  }
+
+  const DIScope *CurScope = CurDL->getScope();
+  const DILocation *CurInlinedAt = CurDL->getInlinedAt();
+
+  if (LastScopeMI) {
+    const DILocation *LastDL = LastScopeMI->getDebugLoc().get();
+    if (LastDL->getScope() == CurScope &&
+        LastDL->getInlinedAt() == CurInlinedAt)
+      return;
+  }
+
+  auto CurScopeRegOpt = resolveScope(CurScope);
+  if (!CurScopeRegOpt)
+    return;
+
+  SmallVector<MCRegister, 2> Ops{*CurScopeRegOpt};
+  if (CurInlinedAt) {
+    // If the global emission did not include this inlined-at case, we skip it.
+    MCRegister InlinedReg = DebugInlinedAtRegs.lookup(CurInlinedAt);
+    if (!InlinedReg.isValid())
+      return;
+    Ops.push_back(InlinedReg);
+  }
+
+  // A new DebugScope region is needed.
+  emitExtInst(SPIRV::NonSemanticExtInst::DebugScope, VoidTypeReg, ExtInstSetReg,
+              Ops, MAI);
+
+  LastScopeMI = MI;
+}
+
+void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
+    const MachineInstr *MI) {
+  assert(DebugFunctionDefinitionEmitted &&
+         "DebugFunctionDefinition must be emitted");
+  assert(CurrentMAI && "CurrentMAI must be set");
+
+  // The region is implicitly closed at each basic block boundary, so a
+  // LastLineMI from another block must be dropped before it is read below:
+  // the new block needs its own DebugLine, and has no region left to close.
   if (LastLineMI && MI->getParent() != LastLineMI->getParent())
     LastLineMI = nullptr;
 
+  SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
   MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
 
@@ -1317,7 +1425,7 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   if (LastLineMI && MI->getDebugLoc() == LastLineMI->getDebugLoc())
     return;
 
-  // A new DebugLine region is needed. Emit it and update LastLineMI.
+  // A new DebugLine region is needed.
   emitExtInst(SPIRV::NonSemanticExtInst::DebugLine, VoidTypeReg, ExtInstSetReg,
               {SrcReg, LineReg, LineReg, ColStartReg, ColEndReg}, MAI);
 
@@ -1571,6 +1679,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)
     emitDebugGlobalVariable(GV, Info, VoidTypeReg, I32TypeReg, ExtInstSetReg,
                             MAI);
+
+  // Emit DebugInlinedAt allowing recursive inlining.
+  for (const DILocation *DL : UniqueDebugLocations)
+    if (const DILocation *IA = DL->getInlinedAt())
+      getOrEmitDebugInlinedAt(IA, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
 
   for (const DILocation *DL : UniqueDebugLocations) {
     emitOpConstantI32(DL->getLine(), I32TypeReg, MAI);

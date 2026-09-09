@@ -351,9 +351,16 @@ struct __reduce;
 //                       _Tp __init, _BinaryOperation __op) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
-struct __is_heap_until;
+struct __is_heap;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<bool>
+// operator()(_Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last,
+//                                _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __is_heap_until;
+// template <class _Policy, class _RandomAccessIterator, class _Comp>
+// optional<_RandomAccessIterator>
 // operator()(_Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last,
 //                                _Comp __comp) const noexcept;
 

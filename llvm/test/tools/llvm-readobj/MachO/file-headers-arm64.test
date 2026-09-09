@@ -21,6 +21,7 @@
 # ARM64-NEXT:  Magic: Magic64 (0xFEEDFACF)
 # ARM64-NEXT:  CpuType: Arm64 (0x100000C)
 # ARM64-NEXT:  CpuSubType: [[SUBTYPE]]
+# ARM64-NEXT:  CpuCapabilities: 0x0
 # ARM64-NEXT:  FileType: Relocatable (0x1)
 # ARM64-NEXT:  NumOfLoadCommands: 0
 # ARM64-NEXT:  SizeOfLoadCommands: 0

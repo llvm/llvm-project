@@ -109,8 +109,6 @@ add_entrypoint_object(
 add_object_library(
   pwd_utils
   HDRS
-    field_tokenizer.h
-    flat_file_db.h
     pwd_utils.h
   SRCS
     pwd_utils.cpp
@@ -130,6 +128,8 @@ add_object_library(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.error_or
+    libc.src.__support.pwd.field_tokenizer
+    libc.src.__support.pwd.flat_file_db
     libc.src.__support.str_to_integer
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config

@@ -41,6 +41,7 @@ add_orc_rt_unittest(SupportTests
   support/LockedAccessTest.cpp
   support/LoggingTest.cpp
   support/MacroUtilsTest.cpp
+  support/ManglingTest.cpp
   support/MemoryFlagsTest.cpp
   support/ProxyTest.cpp
   support/RTTITest.cpp

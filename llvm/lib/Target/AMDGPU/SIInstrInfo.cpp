@@ -1208,10 +1208,12 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       WideOpcode = AMDGPU::V_PK_MOV_B32;
   }
 
-  const TargetRegisterClass *WideRC{};
+  const TargetRegisterClass *WideDstRC{}, *WideSrcRC{};
   if (WideOpcode != AMDGPU::INSTRUCTION_LIST_END) {
+    const MCInstrDesc &Desc = get(WideOpcode);
     unsigned SrcOp = WideOpcode == AMDGPU::V_PK_MOV_B32 ? 2 : 1;
-    WideRC = getRegClass(get(WideOpcode), SrcOp);
+    WideDstRC = getRegClass(Desc, 0);
+    WideSrcRC = getRegClass(Desc, SrcOp);
   }
 
   // If there is an overlap, we can't kill the super-register on the last
@@ -1236,7 +1238,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     unsigned SubIdx =
         Forward ? SubIndices[Idx] : SubIndices[SubIndices.size() - Idx - 1];
 
-    if (WideRC && Idx + 1 < SubIndices.size()) {
+    if (WideDstRC && WideSrcRC && Idx + 1 < SubIndices.size()) {
       unsigned Channel = RI.getChannelFromSubReg(SubIdx);
       if (!Forward)
         --Channel;
@@ -1245,8 +1247,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Register WideDst = RI.getSubReg(DestReg, WideSubIdx);
       Register WideSrc = RI.getSubReg(SrcReg, WideSubIdx);
 
-      if (WideDst && WideSrc && WideRC->contains(WideDst) &&
-          WideRC->contains(WideSrc)) {
+      if (WideDst && WideSrc && WideDstRC->contains(WideDst) &&
+          WideSrcRC->contains(WideSrc)) {
         SubIdx = WideSubIdx;
         NumRegs = 2;
         ThisOpcode = WideOpcode;
@@ -4982,6 +4984,7 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
     return false;
   case AMDGPU::OPERAND_INLINE_C_AV64_PSEUDO:
     return isLegalAV64PseudoImm(Imm);
@@ -5442,9 +5445,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP64:
     case AMDGPU::OPERAND_REG_IMM_V2INT64:
-      break;
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
-      break;
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_INT32:
@@ -6786,9 +6788,6 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       if (Op.isFI())
         return false;
     }
-  } else if (IsInlineConst && ST.hasNoF16PseudoScalarTransInlineConstants() &&
-             isF16PseudoScalarTrans(MI.getOpcode())) {
-    return false;
   }
 
   if (MO->isReg()) {
@@ -8176,7 +8175,7 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
            "Deferred MachineInstr are not supposed to re-populate worklist");
   }
 
-  for (std::pair<MachineInstr *, V2PhysSCopyInfo> &Entry : WaterFalls) {
+  for (auto &Entry : WaterFalls) {
     if (Entry.first->getOpcode() == AMDGPU::SI_CALL_ISEL)
       createWaterFallForSiCall(Entry.first, MDT, Entry.second.MOs,
                                Entry.second.SGPRs);

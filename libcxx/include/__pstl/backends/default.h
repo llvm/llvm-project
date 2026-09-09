@@ -66,7 +66,7 @@ namespace __pstl {
 //
 // is_heap_until family
 // --------------
-// No other algorithms based on is_heap_until
+// - is_heap
 //
 // find_if family
 // --------------
@@ -376,6 +376,20 @@ struct __adjacent_find<__default_backend_tag, _ExecutionPolicy> {
       // Currently anything outside bidirectional iterators has to be processed serially
       return std::adjacent_find(std::move(__first), std::move(__last), std::move(__predicate));
     }
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_heap<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _RandomAccessIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool> operator()(
+      _Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) const noexcept {
+    using _IsHeapUntil = __dispatch<__is_heap_until, __current_configuration, _ExecutionPolicy>;
+    auto __res         = _IsHeapUntil()(__policy, std::move(__first), __last, std::forward<_Comp>(__comp));
+    if (!__res) {
+      return nullopt; // Failed to run the algorithm, propagate the error.
+    }
+    return *__res == __last; // is_heap_until returns the last iterator when no heap violations are found in the range.
   }
 };
 

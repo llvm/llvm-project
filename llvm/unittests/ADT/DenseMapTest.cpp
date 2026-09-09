@@ -474,6 +474,15 @@ TEST(DenseMapCustomTest, EqualityComparison) {
   EXPECT_NE(M1, M3);
 }
 
+using IntBucket = detail::DenseMapPair<int, int>;
+
+static_assert(std::is_trivially_copyable_v<IntBucket>);
+static_assert(!std::is_trivially_default_constructible_v<IntBucket>);
+
+// A bucket converts to a std::pair, so code naming the pair type keeps working.
+static_assert(std::is_convertible_v<IntBucket, std::pair<int, int>>);
+static_assert(std::is_convertible_v<IntBucket, std::pair<const int, int>>);
+
 TEST(DenseMapCustomTest, InsertRange) {
   DenseMap<int, int> M;
 
@@ -483,6 +492,44 @@ TEST(DenseMapCustomTest, InsertRange) {
   EXPECT_EQ(M.size(), 2u);
   EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
                                                testing::Pair(1, 2)));
+
+  // A move iterator yields an rvalue from operator*, which the range insert
+  // must forward to the members for a move-only value to survive.
+  std::vector<std::pair<int, std::unique_ptr<int>>> MoveOnly;
+  MoveOnly.emplace_back(3, std::make_unique<int>(42));
+  DenseMap<int, std::unique_ptr<int>> MoveMap;
+  MoveMap.insert(std::make_move_iterator(MoveOnly.begin()),
+                 std::make_move_iterator(MoveOnly.end()));
+  auto It = MoveMap.find(3);
+  ASSERT_NE(It, MoveMap.end());
+  EXPECT_EQ(*It->second, 42);
+  EXPECT_EQ(MoveOnly[0].second, nullptr);
+
+  // A move iterator over a map yields bucket rvalues instead, which must reach
+  // insert(BucketT &&) rather than be copied.
+  DenseMap<int, std::unique_ptr<int>> MoveSrc;
+  MoveSrc.try_emplace(4, std::make_unique<int>(7));
+  MoveMap.insert(std::make_move_iterator(MoveSrc.begin()),
+                 std::make_move_iterator(MoveSrc.end()));
+  EXPECT_EQ(*MoveMap.find(4)->second, 7);
+  EXPECT_EQ(MoveSrc.find(4)->second, nullptr);
+
+  // The conversion reaches a vector's element type, and a std::map's, whose key
+  // is const.
+  DenseMap<int, int> Src({{1, 10}, {2, 20}});
+  SmallVector<std::pair<int, int>> Vec(Src.begin(), Src.end());
+  EXPECT_THAT(Vec, testing::UnorderedElementsAre(testing::Pair(1, 10),
+                                                 testing::Pair(2, 20)));
+  std::map<int, int> Sorted(Src.begin(), Src.end());
+  EXPECT_THAT(Sorted,
+              testing::ElementsAre(testing::Pair(1, 10), testing::Pair(2, 20)));
+
+  // As polly inserts a DenseMap<BasicBlock *, BasicBlock *> into a
+  // DenseMap<AssertingVH<Value>, AssertingVH<Value>>, insert from a map whose
+  // key and value types only convert to this one's.
+  DenseMap<CtorTester, CtorTester, CtorTesterMapInfo> Convertible;
+  Convertible.insert_range(DenseMap<uint32_t, uint32_t>({{1, 10}}));
+  EXPECT_EQ(CtorTester(10), Convertible.lookup(CtorTester(1)));
 }
 
 TEST(SmallDenseMapCustomTest, InsertRange) {
@@ -1147,6 +1194,12 @@ TEST(DenseMapCustomTest, RemoveIfValueDtor) {
     EXPECT_EQ(Map.size(), 6u);
   }
   EXPECT_EQ(0u, CtorTester::getNumConstructed());
+}
+
+TEST(DenseMapCustomTest, BucketComparison) {
+  IntBucket A(1, 2), B(1, 2), C(1, 3);
+  EXPECT_EQ(A, B);
+  EXPECT_NE(A, C);
 }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS

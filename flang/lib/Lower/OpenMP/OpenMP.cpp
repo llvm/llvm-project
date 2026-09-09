@@ -2846,19 +2846,72 @@ static void genWsloopClauses(
 //===----------------------------------------------------------------------===//
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
-static mlir::omp::AllocateDirOp genAllocateDirOp(
-    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ObjectList &objects, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item) {
+
+static bool
+allocateRequiresInitOrFinalization(const semantics::Symbol &ultimate) {
+  const semantics::DeclTypeSpec *declTypeSpec = ultimate.GetType();
+  if (!declTypeSpec)
+    return false;
+  const semantics::DerivedTypeSpec *derivedTypeSpec = declTypeSpec->AsDerived();
+  if (!derivedTypeSpec)
+    return false;
+  return derivedTypeSpec->HasDefaultInitialization(false, false) ||
+         semantics::MayRequireFinalization(*derivedTypeSpec);
+}
+
+static void genAllocateDirOp(lower::AbstractConverter &converter,
+                             semantics::SemanticsContext &semaCtx,
+                             lower::StatementContext &stmtCtx,
+                             lower::pft::Evaluation &eval, mlir::Location loc,
+                             const ObjectList &objects,
+                             const ConstructQueue &queue,
+                             ConstructQueue::const_iterator item) {
+  ObjectList supportedObjects;
+  supportedObjects.reserve(objects.size());
+  for (const Object &object : objects) {
+    const semantics::Symbol *sym = object.sym();
+    assert(sym && "Expected Symbol");
+    const semantics::Symbol &ultimate = sym->GetUltimate();
+    if (semantics::omp::IsCommonBlock(ultimate) ||
+        semantics::IsSaved(ultimate)) {
+      mlir::emitWarning(
+          loc, "TODO : OpenMP declarative ALLOCATE on SAVE variables or "
+               "COMMON blocks is not yet supported, ignoring the ALLOCATE "
+               "directive for '" +
+                   sym->name().ToString() + "'");
+      continue;
+    }
+    if (allocateRequiresInitOrFinalization(ultimate)) {
+      mlir::emitWarning(
+          loc, "TODO : OpenMP declarative ALLOCATE on derived-type "
+               "variables with initialization or finalization is not yet "
+               "supported, ignoring the ALLOCATE directive for '" +
+                   sym->name().ToString() + "'");
+      continue;
+    }
+    if (semantics::IsDummy(ultimate)) {
+      if (semaCtx.langOptions().OpenMPVersion < 60) {
+        mlir::emitWarning(
+            loc, "TODO : OpenMP declarative ALLOCATE on dummy arguments is "
+                 "not yet supported, ignoring the ALLOCATE directive for '" +
+                     sym->name().ToString() + "'");
+      }
+      continue;
+    }
+    supportedObjects.push_back(object);
+  }
+
+  if (supportedObjects.empty())
+    return;
+
   llvm::SmallVector<mlir::Value> operandRange;
   mlir::omp::AllocateDirOperands clauseOps;
-  genAllocateClauses(converter, semaCtx, stmtCtx, objects, item->clauses, loc,
-                     operandRange, clauseOps);
+  genAllocateClauses(converter, semaCtx, stmtCtx, supportedObjects,
+                     item->clauses, loc, operandRange, clauseOps);
 
-  auto allocDirOp = mlir::omp::AllocateDirOp::create(
-      converter.getFirOpBuilder(), loc, operandRange, clauseOps.align,
-      clauseOps.allocator);
+  mlir::omp::AllocateDirOp::create(converter.getFirOpBuilder(), loc,
+                                   operandRange, clauseOps.align,
+                                   clauseOps.allocator);
 
   // Register a cleanup at the Fortran scope exit.
   fir::FirOpBuilder *builder = &converter.getFirOpBuilder();
@@ -2867,8 +2920,6 @@ static mlir::omp::AllocateDirOp genAllocateDirOp(
                                        allocator]() {
     mlir::omp::AllocateFreeOp::create(*builder, loc, operandRange, allocator);
   });
-
-  return allocDirOp;
 }
 
 static mlir::omp::BarrierOp

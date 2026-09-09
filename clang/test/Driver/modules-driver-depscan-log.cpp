@@ -5,7 +5,7 @@
 // RUN: split-file %s %t
 
 // RUN: %clang -c -std=c++23 -fmodules-driver -fdepscan-log-path=%t/scan.log \
-// RUN:   %t/A.cppm
+// RUN:   %t/A.cppm -o %t/A.o
 // RUN: FileCheck %s --input-file %t/scan.log
 
 // CHECK: logging_start

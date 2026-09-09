@@ -15,15 +15,21 @@
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPMEMORYUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Alignment.h"
 
 namespace llvm {
+class AssumptionCache;
 class DataLayout;
+class DominatorTree;
+class FixedVectorType;
 class SCEV;
 class ScalarEvolution;
 class TargetLibraryInfo;
 class Type;
 class Value;
+class VectorType;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
@@ -50,6 +56,39 @@ template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL);
 const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
                               const DataLayout &DL, ScalarEvolution &SE,
                               SmallVectorImpl<unsigned> &SortedIndices);
+
+/// Checks if the \p VL can be transformed to a (masked)load + compress or
+/// (masked) interleaved load.
+bool isMaskedLoadCompress(
+    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
+    const DominatorTree &DT, const TargetLibraryInfo &TLI,
+    const TargetTransformInfo::TargetCostKind CostKind,
+    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
+    bool &IsMasked, unsigned &InterleaveFactor,
+    SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy);
+
+/// Checks if the \p VL can be transformed to a (masked)load + compress or
+/// (masked) interleaved load.
+bool isMaskedLoadCompress(
+    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
+    const DominatorTree &DT, const TargetLibraryInfo &TLI,
+    const TargetTransformInfo::TargetCostKind CostKind,
+    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec);
+
+/// Checks if the stores \p VL with pointers \p PointerOps can be lowered as a
+/// single masked store. On success \p StoreVecTy is the widened store type and
+/// \p ReuseShuffleIndices is the expand mask that places each stored value at
+/// its element offset from the base (poison in the gaps).
+bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+                           ArrayRef<unsigned> Order,
+                           const TargetTransformInfo &TTI, const DataLayout &DL,
+                           ScalarEvolution &SE, Align CommonAlignment,
+                           SmallVectorImpl<int> &ReuseShuffleIndices,
+                           FixedVectorType *&StoreVecTy);
 
 } // namespace llvm::slpvectorizer
 

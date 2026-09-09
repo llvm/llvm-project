@@ -193,12 +193,12 @@ private:
 
     struct value_type : view_interface<value_type> {
     private:
+      friend struct __outer_iterator;
       __outer_iterator __i_ = __outer_iterator();
 
-    public:
-      _LIBCPP_HIDE_FROM_ABI value_type() = default;
       _LIBCPP_HIDE_FROM_ABI constexpr explicit value_type(__outer_iterator __i) : __i_(std::move(__i)) {}
 
+    public:
       [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator<_Const> begin() const {
         return __inner_iterator<_Const>{__i_};
       }

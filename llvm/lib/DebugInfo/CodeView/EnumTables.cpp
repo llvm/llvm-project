@@ -373,6 +373,18 @@ EnumStrings<uint8_t> getThunkOrdinalNames() {
   return ThunkOrdinalNames;
 }
 
+EnumStrings<uint8_t> getEncodedFramePtrRegNames() {
+  constexpr EnumStringDef<uint8_t> EncodedFramePtrRegNameDefs[] = {
+      CV_ENUM_CLASS_ENT(EncodedFramePtrReg, None),
+      CV_ENUM_CLASS_ENT(EncodedFramePtrReg, StackPtr),
+      CV_ENUM_CLASS_ENT(EncodedFramePtrReg, FramePtr),
+      CV_ENUM_CLASS_ENT(EncodedFramePtrReg, BasePtr),
+  };
+  static constexpr auto EncodedFramePtrRegNames =
+      BUILD_ENUM_STRINGS(EncodedFramePtrRegNameDefs);
+  return EncodedFramePtrRegNames;
+}
+
 EnumStrings<uint16_t> getTrampolineNames() {
   constexpr EnumStringDef<uint16_t> TrampolineNameDefs[] = {
       CV_ENUM_CLASS_ENT(TrampolineType, TrampIncremental),

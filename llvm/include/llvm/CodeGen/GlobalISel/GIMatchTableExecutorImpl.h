@@ -1323,7 +1323,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t Imm = readU64();
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
 
-      unsigned Width = ExecInfo.TypeObjects[TypeID].getScalarSizeInBits();
+      unsigned Width = getTypeFromIdx(TypeID).getScalarSizeInBits();
       LLVMContext &Ctx = MF->getFunction().getContext();
       OutMIs[InsnID].addCImm(
           ConstantInt::get(IntegerType::get(Ctx, Width), Imm, /*signed*/ true));

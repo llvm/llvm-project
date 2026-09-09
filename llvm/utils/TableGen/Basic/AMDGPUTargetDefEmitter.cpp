@@ -113,16 +113,6 @@ static void emitArchFamily(raw_ostream &OS, const Record *Rec) {
   OS << "gfx" << Rec->getValueAsListOfInts("IsaVersion")[0];
 }
 
-// Emit the canonical GPU name for a variant (empty for a non-variant GPU). The
-// stepping is the trailing single hex character of the device name (validated
-// by emitIsaVersion).
-static void emitBaseName(raw_ostream &OS, const Record *Rec) {
-  if (!getSubArchSpelling(Rec))
-    return;
-  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
-  OS << "gfx" << V[0] << V[1] << hexdigit(V[2], /*LowerCase=*/true);
-}
-
 // Emit the ISA version tuple as "major, minor, stepping" wrapped in \p Open and
 // \p Close (parens for the AMDGPU_GPU macro's ISAVERSION argument, braces for a
 // struct initializer).
@@ -607,11 +597,7 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     SmallString<16> Family;
     raw_svector_ostream FamilyOS(Family);
     emitArchFamily(FamilyOS, R);
-    OS << ", " << Names.GetOrAddStringOffset(Family) << ", ";
-    SmallString<16> BaseName;
-    raw_svector_ostream BaseNameOS(BaseName);
-    emitBaseName(BaseNameOS, R);
-    OS << Names.GetOrAddStringOffset(BaseName) << ", "
+    OS << ", " << Names.GetOrAddStringOffset(Family) << ", "
        << getFeatureValue(R, "MaxWavesPerEU", 10) << ", "
        << getFeatureValue(R, "AddressableLocalMemorySize", 32768) << ", "
        << getFeatureValue(R, "LDSBankCount", 32) << "},\n";

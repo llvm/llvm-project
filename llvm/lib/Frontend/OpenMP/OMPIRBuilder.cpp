@@ -8587,6 +8587,14 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
     }
   }
 
+  // Generic mode runs the main thread on a warp of its own, past thread_limit.
+  // Reserve the widest warp any target has.
+  if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
+      hasGridValue(T))
+    MaxThreadsVal = int32_t(
+        std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
+                          int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
+
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
                                MaxThreadsVal);
