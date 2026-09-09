@@ -5,32 +5,24 @@
 ; RUN: llc -mtriple=x86_64-uefi -verify-machineinstrs < %s | FileCheck %s --check-prefix=WINRET
 ; RUN: llc -mtriple=x86_64-uefi -mattr=+shstk -verify-machineinstrs < %s | FileCheck %s --check-prefix=WIN64
 
-define void @test(i64 %offset, ptr %handler) {
+define void @test(i64 %offset, ptr %handler) nounwind {
 ; RET-LABEL: test:
 ; RET:       # %bb.0: # %entry
 ; RET-NEXT:    pushq %rbp
-; RET-NEXT:    .cfi_def_cfa_offset 16
-; RET-NEXT:    .cfi_offset %rbp, -16
 ; RET-NEXT:    movq %rsp, %rbp
-; RET-NEXT:    .cfi_def_cfa_register %rbp
 ; RET-NEXT:    movq %rsi, 8(%rbp,%rdi)
 ; RET-NEXT:    leaq 8(%rbp,%rdi), %rcx
 ; RET-NEXT:    popq %rbp
-; RET-NEXT:    .cfi_def_cfa %rsp, 8
 ; RET-NEXT:    movq %rcx, %rsp
 ; RET-NEXT:    retq # eh_return, addr: %rcx
 ;
 ; SHSTK-LABEL: test:
 ; SHSTK:       # %bb.0: # %entry
 ; SHSTK-NEXT:    pushq %rbp
-; SHSTK-NEXT:    .cfi_def_cfa_offset 16
-; SHSTK-NEXT:    .cfi_offset %rbp, -16
 ; SHSTK-NEXT:    movq %rsp, %rbp
-; SHSTK-NEXT:    .cfi_def_cfa_register %rbp
 ; SHSTK-NEXT:    movq %rsi, 8(%rbp,%rdi)
 ; SHSTK-NEXT:    leaq 8(%rbp,%rdi), %rcx
 ; SHSTK-NEXT:    popq %rbp
-; SHSTK-NEXT:    .cfi_def_cfa %rsp, 8
 ; SHSTK-NEXT:    movq %rcx, %rsp
 ; SHSTK-NEXT:    popq %rcx
 ; SHSTK-NEXT:    jmpq *%rcx
@@ -38,35 +30,23 @@ define void @test(i64 %offset, ptr %handler) {
 ; WIN64-LABEL: test:
 ; WIN64:       # %bb.0: # %entry
 ; WIN64-NEXT:    pushq %rbp
-; WIN64-NEXT:    .seh_pushreg %rbp
 ; WIN64-NEXT:    movq %rsp, %rbp
-; WIN64-NEXT:    .seh_setframe %rbp, 0
-; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    movq %rdx, 8(%rbp,%rcx)
 ; WIN64-NEXT:    leaq 8(%rbp,%rcx), %rcx
-; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rbp
-; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    movq %rcx, %rsp
 ; WIN64-NEXT:    popq %rcx
 ; WIN64-NEXT:    rex64 jmpq *%rcx
-; WIN64-NEXT:    .seh_endproc
 ;
 ; WINRET-LABEL: test:
 ; WINRET:       # %bb.0: # %entry
 ; WINRET-NEXT:    pushq %rbp
-; WINRET-NEXT:    .seh_pushreg %rbp
 ; WINRET-NEXT:    movq %rsp, %rbp
-; WINRET-NEXT:    .seh_setframe %rbp, 0
-; WINRET-NEXT:    .seh_endprologue
 ; WINRET-NEXT:    movq %rdx, 8(%rbp,%rcx)
 ; WINRET-NEXT:    leaq 8(%rbp,%rcx), %rcx
-; WINRET-NEXT:    .seh_startepilogue
 ; WINRET-NEXT:    popq %rbp
-; WINRET-NEXT:    .seh_endepilogue
 ; WINRET-NEXT:    movq %rcx, %rsp
 ; WINRET-NEXT:    retq # eh_return, addr: %rcx
-; WINRET-NEXT:    .seh_endproc
 entry:
   call void @llvm.eh.return.i64(i64 %offset, ptr %handler)
   unreachable

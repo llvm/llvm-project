@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=i386-pc-linux -verify-machineinstrs < %s | FileCheck %s --check-prefix=RET
 ; RUN: llc -mtriple=i386-pc-linux -mattr=+shstk -verify-machineinstrs < %s | FileCheck %s --check-prefix=SHSTK
 
-target triple = "i386-pc-linux"
-
 define void @test(i32 %offset, ptr %handler) nounwind {
 ; RET-LABEL: test:
 ; RET:       # %bb.0: # %entry
