@@ -14,7 +14,6 @@
 #define LLVM_SANDBOXIR_TYPE_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
@@ -241,13 +240,7 @@ public:
   /// Return true if it makes sense to take the size of this type. To get the
   /// actual size for a particular target, it is reasonable to use the
   /// DataLayout subsystem to do this.
-  bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const {
-    SmallPtrSet<llvm::Type *, 8> LLVMVisited;
-    LLVMVisited.reserve(Visited->size());
-    for (Type *Ty : *Visited)
-      LLVMVisited.insert(Ty->LLVMTy);
-    return LLVMTy->isSized(&LLVMVisited);
-  }
+  bool isSized() const { return LLVMTy->isSized(); }
 
   /// Return the basic size of this type if it is a primitive type. These are
   /// fixed by LLVM and are not target-dependent.
