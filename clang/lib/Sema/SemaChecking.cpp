@@ -13266,7 +13266,7 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
 }
 
 // Helper function to filter out cases for constant width constant conversion.
-// Don't warn on unsigned character array initialization or for non-decimal
+// Don't warn on unsigned char array initialization or for non-decimal
 // values.
 static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
                                           SourceLocation CC) {
@@ -13280,7 +13280,7 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
       return false;
   }
 
-  // If the CC location points to a '{' and the type is an unsigned character
+  // If the CC location points to a '{' and the type is an unsigned char
   // type, assume it is an array initialization.
   if (T->isCharType() && !T->isSignedIntegerType() && CC.isValid()) {
     const char FirstContextCharacter =
