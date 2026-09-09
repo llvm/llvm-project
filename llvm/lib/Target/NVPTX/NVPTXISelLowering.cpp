@@ -1604,7 +1604,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (IsIndirectCall)
     DAG.getMachineFunction()
         .getInfo<NVPTXMachineFunctionInfo>()
-        ->addCallPrototype(UniqueCallSite, CB);
+        ->addCallPrototype(UniqueCallSite, CB, DAG.getMachineFunction());
 
   const bool IsUnknownIntrinsic =
       CalleeF && CalleeF->isIntrinsic() &&

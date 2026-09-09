@@ -220,7 +220,6 @@ public:
 
 private:
   const Function *F;
-  DenseMap<unsigned, MCSymbol *> CallPrototypeSymbols;
 
   NVPTXTargetStreamer *getTargetStreamer() const;
 
@@ -604,9 +603,11 @@ static bool isCallPrototypeOperand(const MachineInstr &MI, unsigned OpNum) {
 
 MCOperand NVPTXAsmPrinter::lowerCallPrototypeArg(const MachineOperand &MO) {
   assert(MO.isImm() && "call prototype operand must be an ID");
-  auto It = CallPrototypeSymbols.find(MO.getImm());
-  assert(It != CallPrototypeSymbols.end() && "unknown call prototype");
-  return GetSymbolRef(It->second);
+  const auto &CallPrototypes =
+      MF->getInfo<NVPTXMachineFunctionInfo>()->getCallPrototypes();
+  auto It = CallPrototypes.find(MO.getImm());
+  assert(It != CallPrototypes.end() && "unknown call prototype");
+  return GetSymbolRef(It->second.second);
 }
 
 MCOperand NVPTXAsmPrinter::lowerOperand(const MachineInstr &MI,
@@ -629,10 +630,10 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
   case MachineOperand::MO_MachineBasicBlock:
     return MCOperand::createExpr(
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), OutContext));
-  case MachineOperand::MO_MCSymbol:
-    return GetSymbolRef(MO.getMCSymbol());
   case MachineOperand::MO_ExternalSymbol:
     return GetSymbolRef(GetExternalSymbolSymbol(MO.getSymbolName()));
+  case MachineOperand::MO_MCSymbol:
+    return GetSymbolRef(MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
     // The jump table index names the .branchtargets list emitted for a brx.idx
     // (see emitJumpTable); reference it by that label.
@@ -963,12 +964,9 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
 
-  CallPrototypeSymbols.clear();
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
-  for (const auto &[Id, CB] : MFI->getCallPrototypes()) {
-    MCSymbol *Symbol = OutContext.createTempSymbol("prototype_" + Twine(Id),
-                                                   /*AlwaysAddSuffix=*/false);
-    CallPrototypeSymbols.try_emplace(Id, Symbol);
+  for (const auto &Entry : MFI->getCallPrototypes()) {
+    const auto &[CB, Symbol] = Entry.second;
     emitCallPrototype(*CB, Symbol, O);
   }
 
@@ -980,7 +978,6 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
 }
 
 void NVPTXAsmPrinter::emitFunctionBodyEnd() {
-  CallPrototypeSymbols.clear();
   VRegMapping.clear();
 }
 
@@ -1276,6 +1273,11 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   bool Result = AsmPrinter::doInitialization(M);
 
   GlobalsEmitted = false;
+
+  // Ensure globals are in the symbol table before ISel so any temp symbols are
+  // guaranteed not to collide with user symbols
+  for (const GlobalValue &GV : M.global_values())
+    TM.getSymbol(&GV);
 
   return Result;
 }

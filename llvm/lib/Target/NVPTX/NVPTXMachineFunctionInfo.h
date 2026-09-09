@@ -28,9 +28,10 @@ private:
   /// references.
   SmallPtrSet<const MCSymbol *, 8> ImageHandleSymbols;
 
+  using CallProtoTy = std::pair<const CallBase *, MCSymbol *>;
   /// Stores a mapping from a unique call-site id to the call instruction that
   /// needs an indirect-call prototype emitted.
-  std::map<unsigned, const CallBase *> CallPrototypes;
+  std::map<unsigned, CallProtoTy> CallPrototypes;
 
 public:
   NVPTXMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
@@ -52,11 +53,16 @@ public:
     return ImageHandleSymbols.contains(Symbol);
   }
 
-  void addCallPrototype(unsigned Id, const CallBase *CB) {
-    CallPrototypes.try_emplace(Id, CB);
+  void addCallPrototype(unsigned Id, const CallBase *CB, MachineFunction &MF) {
+    if (CallPrototypes.find(Id) == CallPrototypes.end()) {
+      MCSymbol *Symbol =
+          MF.getContext().createTempSymbol("prototype_" + Twine(Id),
+                                           /*AlwaysAddSuffix=*/false);
+      CallPrototypes.try_emplace(Id, CB, Symbol);
+    }
   }
 
-  const std::map<unsigned, const CallBase *> &getCallPrototypes() const {
+  const std::map<unsigned, CallProtoTy> &getCallPrototypes() const {
     return CallPrototypes;
   }
 };
