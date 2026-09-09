@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
+#include "file_mode.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
@@ -122,7 +123,11 @@ private:
   bool own_buf;
 
   // The mode in which the file was opened.
+  //TODO: old way of doing things
+  // clean up when totally done with pr
   ModeFlags mode;
+
+  FileMode file_mode;
 
   // Current read or write pointer.
   size_t pos;
@@ -155,14 +160,13 @@ private:
 
 protected:
   constexpr bool write_allowed() const {
-    return mode & (static_cast<ModeFlags>(OpenMode::WRITE) |
-                   static_cast<ModeFlags>(OpenMode::APPEND) |
-                   static_cast<ModeFlags>(OpenMode::PLUS));
+    return file_mode.write_allowed() ||
+        file_mode.append_allowed() ||
+          file_mode.is_plus(); //TODO: if micheal agrees for me to convert it change it here
   }
 
   constexpr bool read_allowed() const {
-    return mode & (static_cast<ModeFlags>(OpenMode::READ) |
-                   static_cast<ModeFlags>(OpenMode::PLUS));
+    return file_mode.read_allowed() || file_mode.is_plus();
   }
 
   void reset_stream_state_unlocked(ModeFlags new_mode) {
