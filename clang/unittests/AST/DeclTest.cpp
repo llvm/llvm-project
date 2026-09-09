@@ -15,7 +15,9 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -1028,4 +1030,73 @@ TEST(Decl, ObjCPropertyDeclNameForDiagnostic) {
   ExtP->getNameForDiagnostic(ExtPQualifiedOS, Ctx.getPrintingPolicy(),
                              /*Qualified=*/true);
   EXPECT_EQ(ExtPQualifiedOS.str(), "-[MyClass extensionProp]");
+}
+
+namespace {
+
+/// Collects every ConceptSpecializationExpr in a translation unit.
+struct ConceptSpecializationExprCollector
+    : RecursiveASTVisitor<ConceptSpecializationExprCollector> {
+  SmallVector<const ConceptSpecializationExpr *, 8> Exprs;
+
+  bool VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
+    Exprs.push_back(E);
+    return true;
+  }
+};
+
+} // namespace
+
+// Pins the postcondition of the fix for #191361: CreateDeserialized() publishes
+// NumTemplateArgs, but ASTDeclReader does not write the trailing arguments
+// until setTemplateArguments() runs at the end of
+// VisitImplicitConceptSpecializationDecl(). Re-entrant deserialization can
+// reach the decl in that window -- through a ConceptSpecializationExpr, into
+// StmtProfiler -- so the storage has to be well defined rather than raw
+// bump-allocator memory.
+TEST(ImplicitConceptSpecializationDecl,
+     DeserializedArgumentsAreValueInitialized) {
+  std::unique_ptr<ASTUnit> AST = buildASTFromCodeWithArgs("", {"-std=c++20"});
+  ASSERT_TRUE(AST);
+
+  auto *D = ImplicitConceptSpecializationDecl::CreateDeserialized(
+      AST->getASTContext(), GlobalDeclID(), /*NumTemplateArgs=*/3);
+  ArrayRef<TemplateArgument> Args = D->getTemplateArguments();
+
+  ASSERT_EQ(Args.size(), 3u);
+  for (const TemplateArgument &Arg : Args)
+    EXPECT_TRUE(Arg.isNull())
+        << "trailing arguments must be value-initialized before "
+           "setTemplateArguments() runs";
+}
+
+// The value-initialization must not survive the real write.
+TEST(ImplicitConceptSpecializationDecl, SetTemplateArgumentsOverwritesStorage) {
+  std::unique_ptr<ASTUnit> AST = buildASTFromCodeWithArgs("", {"-std=c++20"});
+  ASSERT_TRUE(AST);
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *D = ImplicitConceptSpecializationDecl::CreateDeserialized(
+      Ctx, GlobalDeclID(), /*NumTemplateArgs=*/2);
+
+  TemplateArgument Written[] = {TemplateArgument(Ctx.IntTy),
+                                TemplateArgument(Ctx.CharTy)};
+  D->setTemplateArguments(Written);
+
+  ArrayRef<TemplateArgument> Args = D->getTemplateArguments();
+  ASSERT_EQ(Args.size(), 2u);
+  for (const TemplateArgument &Arg : Args)
+    EXPECT_FALSE(Arg.isNull());
+  EXPECT_TRUE(Args[0].getAsType()->isIntegerType());
+}
+
+// The zero-argument case: getTemplateArguments() must be empty and must not
+// touch the trailing storage at all.
+TEST(ImplicitConceptSpecializationDecl, DeserializedWithNoArguments) {
+  std::unique_ptr<ASTUnit> AST = buildASTFromCodeWithArgs("", {"-std=c++20"});
+  ASSERT_TRUE(AST);
+
+  auto *D = ImplicitConceptSpecializationDecl::CreateDeserialized(
+      AST->getASTContext(), GlobalDeclID(), /*NumTemplateArgs=*/0);
+  EXPECT_TRUE(D->getTemplateArguments().empty());
 }

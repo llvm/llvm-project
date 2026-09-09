@@ -33,7 +33,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <memory>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 using namespace clang;
@@ -1130,7 +1132,19 @@ ImplicitConceptSpecializationDecl::ImplicitConceptSpecializationDecl(
 ImplicitConceptSpecializationDecl::ImplicitConceptSpecializationDecl(
     EmptyShell Empty, unsigned NumTemplateArgs)
     : Decl(ImplicitConceptSpecialization, Empty),
-      NumTemplateArgs(NumTemplateArgs) {}
+      NumTemplateArgs(NumTemplateArgs) {
+  // ASTReader registers a decl before ASTDeclReader visits it, so re-entrant
+  // deserialization can reach this one through a ConceptSpecializationExpr and
+  // call getTemplateArguments() before setTemplateArguments() has run. Give
+  // that read a well-defined result rather than raw allocator memory.
+  //
+  // FIXME: well-defined is not the same as correct. Profiling the decl in this
+  // window hashes these value-initialized arguments rather than the real ones,
+  // so a FunctionProtoType uniqued from that profile is filed under a hash it
+  // will never profile to again. A later lookup cannot find that type, and the
+  // next derivation of the same type creates a duplicate. See #191361.
+  std::uninitialized_value_construct_n(getTrailingObjects(), NumTemplateArgs);
+}
 
 ImplicitConceptSpecializationDecl *ImplicitConceptSpecializationDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation SL,
@@ -1150,6 +1164,12 @@ ImplicitConceptSpecializationDecl::CreateDeserialized(
 void ImplicitConceptSpecializationDecl::setTemplateArguments(
     ArrayRef<TemplateArgument> Converted) {
   assert(Converted.size() == NumTemplateArgs);
+  // uninitialized_copy rather than assignment: Create() calls this on genuinely
+  // raw storage. Overwriting the value-initialized objects CreateDeserialized()
+  // leaves behind is sound because TemplateArgument is trivially destructible.
+  static_assert(std::is_trivially_destructible_v<TemplateArgument>,
+                "setTemplateArguments() overwrites any trailing arguments that "
+                "may exist without destroying them");
   llvm::uninitialized_copy(Converted, getTrailingObjects());
 }
 
