@@ -351,7 +351,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
         // because this-argument is implemented as a normal argument in
         // operator call expressions but not in operator declarations.
         const TypedValueRegion *TVR = Caller->getParameterLocation(
-            Caller->getAdjustedParameterIndex(Idx), NumVisitedCaller);
+            Caller->adjustASTArgIdxToDeclParamIdx(Idx), NumVisitedCaller);
         if (!TVR)
           return std::nullopt;
 

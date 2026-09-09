@@ -421,10 +421,11 @@ public:
   /// frame. The behavior is undefined if the block count is different from the
   /// one that is there when call happens. May fail; returns null on failure.
   ///
-  /// \param DeclParamIdx refers to the index of the declared parameter of the callee.
-  /// See getDeclaredParameterIndex().
-  const ParamVarRegion *getParameterLocation(std::optional<unsigned> DeclParamIdx,
-                                             unsigned BlockCount) const;
+  /// \param DeclParamIdx refers to the index of the declared parameter of the
+  /// callee. See getDeclaredParameterIndex().
+  const ParamVarRegion *
+  getParameterLocation(std::optional<unsigned> DeclParamIdx,
+                       unsigned BlockCount) const;
 
   /// Returns true if on the current path, the argument was constructed by
   /// calling a C++ constructor over it. This is an internal detail of the
@@ -451,7 +452,7 @@ public:
   /// Note that \c clang::AnyCall::arguments() uses the opposite convention:
   /// there the object argument is part of the argument list.
   virtual std::optional<unsigned>
-  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const {
+  adjustASTArgIdxToDeclParamIdx(unsigned ASTArgumentIndex) const {
     return ASTArgumentIndex;
   }
 
@@ -474,7 +475,8 @@ public:
   /// argument 0, but there it is a declared parameter #0.
   std::optional<unsigned>
   getDeclaredParameterIndex(unsigned CallArgumentIndex) const {
-    return getAdjustedParameterIndex(getASTArgumentIndex(CallArgumentIndex));
+    return adjustASTArgIdxToDeclParamIdx(
+        getASTArgumentIndex(CallArgumentIndex));
   }
 
   /// Returns the construction context of the call, if it is a C++ constructor
@@ -794,7 +796,7 @@ public:
   }
 
   std::optional<unsigned>
-  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const override {
+  adjustASTArgIdxToDeclParamIdx(unsigned ASTArgumentIndex) const override {
     // Ignore the object parameter that is not used for static member functions.
     if (ASTArgumentIndex == 0)
       return std::nullopt;
@@ -900,7 +902,7 @@ public:
   }
 
   std::optional<unsigned>
-  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const override {
+  adjustASTArgIdxToDeclParamIdx(unsigned ASTArgumentIndex) const override {
     // For member operator calls argument 0 on the expression corresponds
     // to implicit this-parameter on the declaration.
     return (ASTArgumentIndex > 0)
