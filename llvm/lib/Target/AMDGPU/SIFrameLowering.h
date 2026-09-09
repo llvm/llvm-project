@@ -173,11 +173,10 @@ public:
                                            MachineBasicBlock::iterator MBBI,
                                            const DebugLoc &DL, MCRegister VGPR,
                                            int64_t Offset) const;
-  MachineInstr *buildCFIForRegToSGPRPairSpill(MachineBasicBlock &MBB,
-                                              MachineBasicBlock::iterator MBBI,
-                                              const DebugLoc &DL,
-                                              MCRegister Reg,
-                                              MCRegister SGPRPair) const;
+  void buildCFIForSRegToSRegSpill(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, MCRegister Reg,
+                                  MCRegister CopyReg) const;
   MachineInstr *buildCFIForSameValue(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      const DebugLoc &DL, MCRegister Reg) const;
