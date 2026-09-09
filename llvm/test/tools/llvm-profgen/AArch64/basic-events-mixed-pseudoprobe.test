@@ -1,0 +1,99 @@
+; REQUIRES: aarch64-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: rm -rf %t && split-file %s %t
+; RUN: yaml2obj %S/Inputs/basic-events-mixed-pseudoprobe.yaml \
+; RUN:   -o %t/basic-events-mixed-pseudoprobe.perfbin
+; RUN: llvm-dwarfdump --verify %t/basic-events-mixed-pseudoprobe.perfbin
+
+; Basic samples in a mixed pseudo-probe binary use DWARF line mapping.
+; RUN: llvm-profgen --format=text --basic-events \
+; RUN:   --perfscript=%t/basic.perfscript \
+; RUN:   --binary=%t/basic-events-mixed-pseudoprobe.perfbin \
+; RUN:   --profile-summary-cold-count=0 --output=%t/basic.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=BASIC \
+; RUN:   --implicit-check-not='!CFGChecksum' --input-file=%t/basic.prof
+; RUN: llvm-profgen --basic-events --perfscript=%t/basic.perfscript \
+; RUN:   --binary=%t/basic-events-mixed-pseudoprobe.perfbin \
+; RUN:   --output=%t/basic.extbinary
+; RUN: llvm-profdata merge --sample --text %t/basic.extbinary -o - \
+; RUN:   | FileCheck %s --match-full-lines --check-prefix=BASIC
+; RUN: llvm-profdata show --sample --show-sec-info-only %t/basic.extbinary \
+; RUN:   | FileCheck %s --check-prefix=LINE-HEADER
+
+; Empty Basic input retains line-based mode when zero-filling both translation
+; units.
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t/empty.raw \
+; RUN:   --binary=%t/basic-events-mixed-pseudoprobe.perfbin \
+; RUN:   --fill-zero-for-all-funcs --profile-summary-cold-count=0 \
+; RUN:   --output=%t/empty.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=EMPTY \
+; RUN:   --implicit-check-not='!CFGChecksum' --input-file=%t/empty.prof
+; RUN: llvm-profgen --unsymbolized-profile=%t/empty.raw \
+; RUN:   --binary=%t/basic-events-mixed-pseudoprobe.perfbin \
+; RUN:   --fill-zero-for-all-funcs --output=%t/empty.extbinary
+; RUN: llvm-profdata merge --sample --text %t/empty.extbinary -o - \
+; RUN:   | FileCheck %s --match-full-lines --check-prefix=EMPTY
+; RUN: llvm-profdata show --sample --show-sec-info-only %t/empty.extbinary \
+; RUN:   | FileCheck %s --check-prefix=LINE-HEADER
+
+; The Basic rejection precedes opening the data-access trace for empty input.
+; RUN: not llvm-profgen --unsymbolized-profile=%t/empty.raw \
+; RUN:   --binary=%t/basic-events-mixed-pseudoprobe.perfbin \
+; RUN:   --data-access-perftrace=%t/missing.trace --skip-symbolization \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=DATA-ACCESS
+
+; Markerless LBR input for a probed function must retain probe-based generation.
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t/probe.raw \
+; RUN:   --binary=%t/basic-events-mixed-pseudoprobe.perfbin \
+; RUN:   --profile-summary-cold-count=0 --output=%t/probe.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=PROBE \
+; RUN:   --input-file=%t/probe.prof
+; RUN: llvm-profgen --unsymbolized-profile=%t/probe.raw \
+; RUN:   --binary=%t/basic-events-mixed-pseudoprobe.perfbin \
+; RUN:   --output=%t/probe.extbinary
+; RUN: llvm-profdata merge --sample --text %t/probe.extbinary -o - \
+; RUN:   | FileCheck %s --match-full-lines --check-prefix=PROBE
+; RUN: llvm-profdata show --sample --show-sec-info-only %t/probe.extbinary \
+; RUN:   | FileCheck %s --check-prefix=PROBE-HEADER
+
+; BASIC-NOT:  {{.}}
+; BASIC:      unprobed_sampled:4:0
+; BASIC-NEXT:  0: 1
+; BASIC-NEXT:  1: 0
+; BASIC-NOT:  {{.}}
+
+; EMPTY:      main:0:0
+; EMPTY-NEXT:  0: 0
+; EMPTY-NEXT:  0.1: 0
+; EMPTY-NEXT: probed_anchor:0:0
+; EMPTY-NEXT:  0: 0
+; EMPTY-NEXT: unprobed_sampled:0:0
+; EMPTY-NEXT:  0: 0
+; EMPTY-NEXT:  1: 0
+; EMPTY-NOT:  {{.}}
+
+; DATA-ACCESS: --data-access-perftrace cannot be used with Basic samples
+
+; PROBE-NOT:  {{.}}
+; PROBE:      probed_anchor:1:1
+; PROBE-NEXT:  1: 1
+; PROBE-NEXT:  !CFGChecksum: 4294967295
+; PROBE-NOT:  {{.}}
+
+; LINE-HEADER: ProfileSummarySection {{.*}} Flags: {}
+; LINE-HEADER: FunctionMetadata {{.*}} Flags: {}
+; PROBE-HEADER: ProfileSummarySection {{.*}} Flags: {}
+; PROBE-HEADER: FunctionMetadata {{.*}} Flags: {probe}
+
+;--- basic.perfscript
+PERF_RECORD_MMAP2 100/100: [0x210120(0x44) @ 0x120 00:1d 1 1]: r-xp /tmp/basic-events-mixed-pseudoprobe.perfbin
+100 210138
+
+;--- probe.raw
+1
+128-128:1
+0
+;--- empty.raw
+# llvm-profgen-content: basic-event
+0

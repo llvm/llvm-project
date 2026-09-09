@@ -1,0 +1,243 @@
+## bar has locations at offsets 0, 1, 2, 4 and 5. The instructions at
+## 0x5dc and 0x5e0 share source offset 4, allowing tests to check line maxima
+## independently of the four-byte instruction weight used for function totals.
+## foo inlines bar, including a line-zero location. partition_pivot_last has
+## discriminator 514 at 0x6b4: base discriminator one and duplication factor two.
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_AARCH64
+  Entry: 0x5b0
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x5b0
+    Offset: 0x5b0
+    AddressAlign: 4
+    Content: '1F2003D51F2003D51F2003D51F2003D51F2003D51F2003D51F2003D51F2003D51F2003D51F2003D51F2003D51F2003D51F2003D5C0035FD6'
+  - Name: .text.foo
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x620
+    Offset: 0x620
+    AddressAlign: 4
+    Content: '1F2003D51F2003D5C0035FD6'
+  - Name: .text.duplication
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x6b0
+    Offset: 0x6b0
+    AddressAlign: 4
+    Content: '1F2003D5C0035FD6'
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Offset: 0
+    VAddr: 0
+    FileSize: 0x6b8
+    MemSize: 0x6b8
+Symbols:
+  - Name: bar
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x5b0
+    Size: 0x38
+  - Name: foo
+    Type: STT_FUNC
+    Section: .text.foo
+    Binding: STB_GLOBAL
+    Value: 0x620
+    Size: 0xc
+  - Name: partition_pivot_last
+    Type: STT_FUNC
+    Section: .text.duplication
+    Binding: STB_GLOBAL
+    Value: 0x6b0
+    Size: 8
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code: 1
+          Tag: DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_stmt_list
+              Form: DW_FORM_sec_offset
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+        - Code: 2
+          Tag: DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+            - Attribute: DW_AT_decl_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_decl_line
+              Form: DW_FORM_data1
+        - Code: 3
+          Tag: DW_TAG_subprogram
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+            - Attribute: DW_AT_decl_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_decl_line
+              Form: DW_FORM_data1
+        - Code: 4
+          Tag: DW_TAG_inlined_subroutine
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+            - Attribute: DW_AT_decl_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_decl_line
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_call_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_call_line
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_GNU_discriminator
+              Form: DW_FORM_data1
+  debug_info:
+    - Version: 4
+      AddrSize: 8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: basic.c
+            - Value: 0
+            - Value: 0x5b0
+            - Value: 0x108
+        - AbbrCode: 2
+          Values:
+            - CStr: bar
+            - Value: 0x5b0
+            - Value: 0x38
+            - Value: 1
+            - Value: 1
+        - AbbrCode: 3
+          Values:
+            - CStr: foo
+            - Value: 0x620
+            - Value: 0xc
+            - Value: 1
+            - Value: 10
+        - AbbrCode: 4
+          Values:
+            - CStr: bar
+            - Value: 0x620
+            - Value: 8
+            - Value: 1
+            - Value: 1
+            - Value: 1
+            - Value: 13
+            - Value: 2
+        - AbbrCode: 0
+        - AbbrCode: 2
+          Values:
+            - CStr: partition_pivot_last
+            - Value: 0x6b0
+            - Value: 8
+            - Value: 1
+            - Value: 1
+        - AbbrCode: 0
+  debug_line:
+    - Version: 4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase: 251
+      LineRange: 14
+      Files:
+        - Name: basic.c
+          DirIdx: 0
+          ModTime: 0
+          Length: 0
+      Opcodes:
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_address
+          Data: 0x5b0
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_advance_line
+          SData: 1
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_advance_line
+          SData: 1
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 0x24
+        - Opcode: DW_LNS_advance_line
+          SData: 2
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 8
+        - Opcode: DW_LNS_advance_line
+          SData: 1
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_end_sequence
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_address
+          Data: 0x620
+        - Opcode: DW_LNS_advance_line
+          SData: -1
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_advance_line
+          SData: 2
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_advance_line
+          SData: 12
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_end_sequence
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_address
+          Data: 0x6b0
+        - Opcode: DW_LNS_advance_line
+          SData: 3
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_discriminator
+          Data: 514
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_end_sequence
