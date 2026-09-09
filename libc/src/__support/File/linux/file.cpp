@@ -99,7 +99,7 @@ static int map_c_mode_flags_to_linux_open_flags(const FileMode &file_mode) {
 }
 
 ErrorOr<File *> openfile(const char *path, const char *mode) {
-  FileMode file_mode(mode);
+  const FileMode file_mode(mode);
 
   if (!file_mode.is_valid()) {
     return Error(EINVAL);
@@ -131,7 +131,7 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
 }
 
 ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
-  FileMode file_mode(mode);
+  const FileMode file_mode(mode);
 
   if (!file_mode.is_valid()) {
     return Error(EINVAL);
@@ -192,7 +192,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
 }
 
 int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
-  FileMode file_mode(mode);
+  const FileMode *file_mode(mode);
 
   if (path != nullptr) {
     int old_fd = get_fd();
