@@ -45,7 +45,6 @@ using namespace llvm;
 #include "AMDGPUGenInstrInfo.inc"
 
 namespace llvm::AMDGPU {
-#define GET_D16ImageDimIntrinsics_IMPL
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
 #include "AMDGPUGenSearchableTables.inc"
@@ -257,6 +256,43 @@ bool SIInstrInfo::isReMaterializableImpl(
   }
 
   return true;
+}
+
+bool SIInstrInfo::isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode) {
+  switch (Opcode) {
+  // v_subrev_u16 (gfx9)
+  case AMDGPU::V_SUBREV_U16_e32:
+  case AMDGPU::V_SUBREV_U16_e64:
+  // v_subrev_u32 (gfx9) / v_subrev_nc_u32 (gfx10+)
+  case AMDGPU::V_SUBREV_U32_e32:
+  case AMDGPU::V_SUBREV_U32_e64:
+  // v_subrev_co_u32
+  case AMDGPU::V_SUBREV_CO_U32_e32:
+  case AMDGPU::V_SUBREV_CO_U32_e64:
+  // v_subbrev_u32 (gfx9) / v_subrev_co_ci_u32 (gfx10+)
+  case AMDGPU::V_SUBBREV_U32_e32:
+  case AMDGPU::V_SUBBREV_U32_e64:
+    return true;
+  // REV shift opcodes worked this way before GFX11, verified on hardware
+  case AMDGPU::V_ASHRREV_I16_e32:
+  case AMDGPU::V_ASHRREV_I16_e64:
+  case AMDGPU::V_ASHRREV_I32_e32:
+  case AMDGPU::V_ASHRREV_I32_e64:
+  case AMDGPU::V_ASHRREV_I64_e64:
+  case AMDGPU::V_LSHLREV_B16_e32:
+  case AMDGPU::V_LSHLREV_B16_e64:
+  case AMDGPU::V_LSHLREV_B32_e32:
+  case AMDGPU::V_LSHLREV_B32_e64:
+  case AMDGPU::V_LSHLREV_B64_e64:
+  case AMDGPU::V_LSHRREV_B16_e32:
+  case AMDGPU::V_LSHRREV_B16_e64:
+  case AMDGPU::V_LSHRREV_B32_e32:
+  case AMDGPU::V_LSHRREV_B32_e64:
+  case AMDGPU::V_LSHRREV_B64_e64:
+    return !ST.hasGFX11Insts();
+  default:
+    return false;
+  }
 }
 
 // Returns true if the result of a VALU instruction depends on exec.
@@ -2902,7 +2938,7 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
   // It may move literal to position other than src0, this is not allowed
   // pre-gfx10 However, most test cases need literals in Src0 for VOP
   // FIXME: After gfx9, literal can be in place other than Src0
-  if (isVALU(MI, /*AllowLDSDMA=*/true)) {
+  if (isVALU(MI, /*AllowLDSDMA=*/false)) {
     if ((int)OpIdx0 == Src0Idx && !MO0.isReg() &&
         !isInlineConstant(MO0, OpInfo1))
       return false;
@@ -4946,6 +4982,7 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
     return false;
   case AMDGPU::OPERAND_INLINE_C_AV64_PSEUDO:
     return isLegalAV64PseudoImm(Imm);
@@ -5406,9 +5443,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP64:
     case AMDGPU::OPERAND_REG_IMM_V2INT64:
-      break;
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
-      break;
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_INT32:
@@ -5678,7 +5714,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   // Verify VOP*. Ignore multiple sgpr operands on writelane.
-  if (isVALU(MI, /*AllowLDSDMA=*/true) &&
+  if (isVALU(MI, /*AllowLDSDMA=*/false) &&
       Desc.getOpcode() != AMDGPU::V_WRITELANE_B32) {
     unsigned ConstantBusCount = 0;
     bool UsesLiteral = false;
@@ -6687,7 +6723,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
 
   const bool IsInlineConst = !MO->isReg() && isInlineConstant(*MO, OpInfo);
 
-  if (isVALU(MI, /*AllowLDSDMA=*/true) && !IsInlineConst &&
+  if (isVALU(MI, /*AllowLDSDMA=*/false) && !IsInlineConst &&
       usesConstantBus(MRI, *MO, OpInfo)) {
     const MachineOperand *UsedLiteral = nullptr;
 
@@ -6750,9 +6786,6 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       if (Op.isFI())
         return false;
     }
-  } else if (IsInlineConst && ST.hasNoF16PseudoScalarTransInlineConstants() &&
-             isF16PseudoScalarTrans(MI.getOpcode())) {
-    return false;
   }
 
   if (MO->isReg()) {
@@ -6806,7 +6839,7 @@ bool SIInstrInfo::isNeverCoissue(MachineInstr &MI) const {
   if (!IsGFX950Only && !IsGFX940Only)
     return false;
 
-  if (!isVALU(MI, /*AllowLDSDMA=*/true))
+  if (!isVALU(MI, /*AllowLDSDMA=*/false))
     return false;
 
   // V_COS, V_EXP, V_RCP, etc.
@@ -10226,7 +10259,7 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   // Instructions may have a 32-bit literal encoded after them. Check
   // operands that could ever be literals.
-  if (isVALU(MI, /*AllowLDSDMA=*/true) || isSALU(MI)) {
+  if (isVALU(MI, /*AllowLDSDMA=*/false) || isSALU(MI)) {
     if (isDPP(MI))
       return DescSize;
     bool HasLiteral = false;
@@ -11149,8 +11182,7 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
 
   auto HandleAddrSpaceCast = [this, &MRI](const MachineInstr &MI) {
     Register Dst = MI.getOperand(0).getReg();
-    Register Src = isa<GIntrinsic>(MI) ? MI.getOperand(2).getReg()
-                                       : MI.getOperand(1).getReg();
+    Register Src = MI.getOperand(1).getReg();
     LLT DstTy = MRI.getType(Dst);
     LLT SrcTy = MRI.getType(Src);
     unsigned DstAS = DstTy.getAddressSpace();
@@ -11176,8 +11208,6 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
       return ValueUniformity::AlwaysUniform;
 
     switch (IID) {
-    case Intrinsic::amdgcn_addrspacecast_nonnull:
-      return HandleAddrSpaceCast(MI);
     case Intrinsic::amdgcn_if:
     case Intrinsic::amdgcn_else:
       // FIXME: Uniform if second result
