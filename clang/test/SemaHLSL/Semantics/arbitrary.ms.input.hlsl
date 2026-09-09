@@ -3,5 +3,5 @@
 
 [numthreads(1,1,1)]
 void main(uint a : A) {
-// expected-error@-1 {{semantic 'A' is not supported in mesh shader inputs; it is only available as an output, a patch constant or a primitive}}
+// expected-error@-1 {{semantic 'A' is not supported in mesh shader inputs}}
 }

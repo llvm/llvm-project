@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-vertex -finclude-default-header -x hlsl -verify -o - %s
 
 float4 main(float4 a : SV_Target) : A {
-// expected-error@-1 {{semantic 'SV_Target' is not supported in vertex shaders}}
+// expected-error@-1 {{semantic 'SV_Target' is not supported in vertex shader inputs}}
   return a;
 }
 

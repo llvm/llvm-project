@@ -2,6 +2,6 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -finclude-default-header -x hlsl -verify -o - %s
 
 float4 main(float4 a : A) : B {
-// expected-error@-1 {{semantic 'B' is not supported in pixel shader outputs; it is only available as an input}}
+// expected-error@-1 {{semantic 'B' is not supported in pixel shader outputs}}
   return a;
 }

@@ -1134,32 +1134,25 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
     return Info.Stage == Stage;
   });
 
+  StringRef CurrentIOTypeName = "patch constants or primitives";
+  if (any(CurrentIOType & IOType::In))
+    CurrentIOTypeName = "inputs";
+  else if (any(CurrentIOType & IOType::Out))
+    CurrentIOTypeName = "outputs";
+
   // The semantic is not available in this shader stage at all.
   if (It == Allowed.end()) {
     Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
         << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
-        << /*AvailableInStage=*/false;
+        << CurrentIOTypeName;
     return;
   }
 
   IOType AllowedIOTypes = It->AllowedIOTypesMask;
   if (!(AllowedIOTypes & CurrentIOType)) {
-    StringRef CurrentIOTypeName = "patch constants or primitives";
-    if (any(CurrentIOType & IOType::In))
-      CurrentIOTypeName = "inputs";
-    else if (any(CurrentIOType & IOType::Out))
-      CurrentIOTypeName = "outputs";
-    SmallVector<std::string, 3> ValidType;
-    if (any(AllowedIOTypes & IOType::In))
-      ValidType.push_back("an input");
-    if (any(AllowedIOTypes & IOType::Out))
-      ValidType.push_back("an output");
-    if (any(AllowedIOTypes & IOType::PatchConstantOrPrimitive))
-      ValidType.push_back("a patch constant or a primitive");
     Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
         << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
-        << /*AvailableInStage=*/true << CurrentIOTypeName
-        << join(ValidType, ", ");
+        << CurrentIOTypeName;
     return;
   }
 }

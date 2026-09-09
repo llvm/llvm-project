@@ -74,8 +74,8 @@ struct ST2_GThreadID {
 
 
 [shader("vertex")]
-// expected-error@+4 {{semantic 'SV_GroupIndex' is not supported in vertex shaders}}
-// expected-error@+3 {{semantic 'SV_DispatchThreadID' is not supported in vertex shaders}}
-// expected-error@+2 {{semantic 'SV_GroupID' is not supported in vertex shaders}}
-// expected-error@+1 {{semantic 'SV_GroupThreadID' is not supported in vertex shaders}}
+// expected-error@+4 {{semantic 'SV_GroupIndex' is not supported in vertex shader inputs}}
+// expected-error@+3 {{semantic 'SV_DispatchThreadID' is not supported in vertex shader inputs}}
+// expected-error@+2 {{semantic 'SV_GroupID' is not supported in vertex shader inputs}}
+// expected-error@+1 {{semantic 'SV_GroupThreadID' is not supported in vertex shader inputs}}
 void vs_main(int GI : SV_GroupIndex, uint ID : SV_DispatchThreadID, uint GID : SV_GroupID, uint GThreadID : SV_GroupThreadID) {}
