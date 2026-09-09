@@ -1353,6 +1353,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   // NOTE: At the moment it seems only possible to expose this path for
   // the trunc, zext and sext opcodes.
+  // TODO: Update VF arg to use onlyFirstLaneUsed once WidenCast is unified.
   if (Instruction::isCast(getOpcode()))
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx);
@@ -1536,6 +1537,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // licm transform we can add the cost here so that it doesn't incorrectly
     // affect the choice of VF.
     return 0;
+  case VPInstruction::WideIVStep:
+    // It isn't currently possible to expose cases where WideIVStep's cost is
+    // queried.
+    llvm_unreachable("Unhandled opcode");
   case Instruction::FCmp:
   case Instruction::ICmp:
     return getCostForRecipeWithOpcode(
