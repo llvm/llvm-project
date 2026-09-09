@@ -9,12 +9,9 @@ body:             |
   bb.0:
     liveins: $vgpr1_vgpr2
 
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: - instruction: $vcc = V_CMP_NE_U64_e64 0, $vgpr1_vgpr2, implicit $exec
     ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
     $vcc = V_CMP_NE_U64_e64 0, $vgpr1_vgpr2, implicit $exec
 
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
     ; CHECK: - instruction: V_CMP_NE_U64_e32 0, $vgpr1_vgpr2, implicit-def $vcc, implicit $exec
     V_CMP_NE_U64_e32 0, $vgpr1_vgpr2, implicit-def $vcc, implicit $exec

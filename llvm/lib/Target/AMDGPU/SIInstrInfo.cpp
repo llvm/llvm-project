@@ -5438,7 +5438,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
 
     const MCOperandInfo &OpInfo = Desc.operands()[i];
-    int16_t RegClass = getOpRegClassID(OpInfo);
 
     switch (OpInfo.OperandType) {
     case MCOI::OPERAND_REGISTER:
@@ -5523,51 +5522,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       if (OpInfo.isGenericType())
         continue;
       break;
-    }
-
-    // Operands without a fixed register class (RegClass == -1), such as inline
-    // asm operands, are not verified here.
-    if (RegClass == -1)
-      continue;
-
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (!Reg)
-      continue;
-
-    const TargetRegisterClass *OpRC = RI.getRegClass(RegClass);
-
-    if (ST.needsAlignedVGPRs()) {
-      const TargetRegisterClass *RegRC = RI.getRegClassForReg(MRI, Reg);
-      if (RI.hasVectorRegisters(RegRC)) {
-        if (MO.getSubReg()) {
-          // Narrow to the sub-register's class. getSubRegisterClass already
-          // accounts for the sub-register index's alignment within the tuple
-          // (an odd-aligned slice yields an unaligned class, caught below); a
-          // null result means an invalid sub-register index and is left to the
-          // sub-register check.
-          RegRC = RI.getSubRegisterClass(RegRC, MO.getSubReg());
-        }
-        // Flag an alignment-only mismatch: the register does not satisfy the
-        // operand's class, but does satisfy it with the alignment requirement
-        // relaxed (the operand class's unaligned equivalent). A bank or size
-        // mismatch fails even when relaxed, so it is left to the
-        // illegal-register / sub-register checks.
-        if (RegRC && !OpRC->hasSubClassEq(RegRC)) {
-          int UnalignedRC = AMDGPU::getUnalignedEquivalentRC(RegClass);
-          if (UnalignedRC >= 0 &&
-              RI.getRegClass(UnalignedRC)->hasSubClassEq(RegRC)) {
-            ErrInfo = "Subtarget requires even aligned vector registers";
-            return false;
-          }
-        }
-      }
-    }
-
-    if (Reg.isPhysical() && !OpRC->contains(Reg)) {
-      ErrInfo = "Operand has incorrect register class.";
-      return false;
     }
   }
 
