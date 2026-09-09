@@ -14625,18 +14625,6 @@ static bool DiagnoseTwoPhaseLookup(
   if (!SemaRef.inTemplateInstantiation() || !SS.isEmpty())
     return false;
 
-  llvm::SmallPtrSet<FunctionDecl *, 4> InvalidCandidates(
-      llvm::from_range,
-      llvm::make_filter_range(
-          llvm::map_range(
-              KnownInvalidCandidateSet,
-              [](const OverloadCandidate &Candidate) -> FunctionDecl * {
-                if (!Candidate.Viable)
-                  return Candidate.Function;
-                return nullptr;
-              }),
-          [](const FunctionDecl *FD) { return FD != nullptr; }));
-
   for (DeclContext *DC = SemaRef.CurContext; DC; DC = DC->getParent()) {
     if (DC->isTransparentContext())
       continue;
@@ -14647,13 +14635,14 @@ static bool DiagnoseTwoPhaseLookup(
       R.suppressDiagnostics();
 
       OverloadCandidateSet Candidates(FnLoc, CSK);
-      for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I) {
-        if (InvalidCandidates.contains(I->getAsFunction()))
-          continue;
-        AddOverloadedCallCandidate(SemaRef, I.getPair(), ExplicitTemplateArgs,
-                                   Args, Candidates, false,
-                                   /*KnownValid=*/false);
+      for (auto &Cand : KnownInvalidCandidateSet) {
+        if (Cand.Function)
+          Candidates.exclude(Cand.Function);
+        else if (Cand.IsSurrogate)
+          Candidates.exclude(Cand.Surrogate);
       }
+      SemaRef.AddOverloadedCallCandidates(R, ExplicitTemplateArgs, Args,
+                                          Candidates);
 
       OverloadCandidateSet::iterator Best;
       OverloadingResult OR =
