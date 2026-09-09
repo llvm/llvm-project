@@ -812,6 +812,8 @@ namespace llvm {
 template <>
 struct DenseMapInfo<mlir::ProgramPoint> {
   static unsigned getHashValue(mlir::ProgramPoint pp) {
+    if (mlir::Operation *op = pp.getOperation())
+      return hash_value(op);
     return hash_combine(pp.getBlock(), pp.getPoint().getNodePtr());
   }
   static bool isEqual(mlir::ProgramPoint lhs, mlir::ProgramPoint rhs) {
@@ -819,7 +821,7 @@ struct DenseMapInfo<mlir::ProgramPoint> {
   }
 };
 
-// Allow llvm::cast style functions.
+/// Allow llvm::cast style functions.
 template <typename To>
 struct CastInfo<To, mlir::LatticeAnchor>
     : public CastInfo<To, mlir::LatticeAnchor::PointerUnion> {};
