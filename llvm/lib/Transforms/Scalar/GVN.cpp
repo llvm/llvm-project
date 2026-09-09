@@ -2116,7 +2116,11 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load,
     if (GetElementPtrInst *GEP =
             dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
       for (Use &U : GEP->indices())
-        if (Instruction *I = dyn_cast<Instruction>(U.get()))
+        // Skip instructions GVN inserted in this iteration, e.g. when coercing
+        // an available load value: they have no value number yet, and no
+        // leaders either, so PRE cannot do anything with them until the next
+        // iteration numbers them.
+        if (Instruction *I = dyn_cast<Instruction>(U.get()); I && VN.exists(I))
           Changed |= performScalarPRE(I);
     }
   }
@@ -3643,13 +3647,7 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
       return false;
   }
 
-  // Instructions inserted by GVN itself in the current iteration, e.g. when
-  // coercing an available load value to the load type, have not been assigned
-  // a value number yet. They have no leaders either, so PRE cannot do anything
-  // with them until they are numbered on the next iteration; skip them.
-  uint32_t ValNo = VN.lookup(CurInst, /*Verify=*/false);
-  if (!ValNo)
-    return false;
+  uint32_t ValNo = VN.lookup(CurInst);
 
   // Look for the predecessors for PRE opportunities.  We're
   // only trying to solve the basic diamond case, where
