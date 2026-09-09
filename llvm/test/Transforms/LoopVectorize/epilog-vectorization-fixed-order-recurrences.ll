@@ -94,7 +94,7 @@ define void @dead_for(ptr %a, i64 %N) {
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLDED-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLDED-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 3
@@ -121,6 +121,18 @@ define void @dead_for(ptr %a, i64 %N) {
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br i1 [[TMP9]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-TAILFOLDED-EPILOGUE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLDED-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br label %[[LOOP:.*]]
+; CHECK-TAILFOLDED-EPILOGUE:       [[LOOP]]:
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[FOR:%.*]] = phi i64 [ 99, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[L:%.*]], %[[LOOP]] ]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[L]] = load i64, ptr [[GEP]], align 4
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[ADD:%.*]] = add i64 [[L]], 10
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    store i64 [[ADD]], ptr [[GEP]], align 4
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK-TAILFOLDED-EPILOGUE:       [[EXIT]]:
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    ret void
 ;
@@ -346,7 +358,7 @@ define i64 @for_phi_not_used_in_loop_and_live_out(ptr %a, i64 %N) {
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLDED-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLDED-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 99, %[[ITER_CHECK]] ], [ 99, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -382,9 +394,21 @@ define i64 @for_phi_not_used_in_loop_and_live_out(ptr %a, i64 %N) {
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[WIDE_MASKED_LOAD]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLDED-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br label %[[LOOP:.*]]
+; CHECK-TAILFOLDED-EPILOGUE:       [[LOOP]]:
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[FOR:%.*]] = phi i64 [ 99, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[L:%.*]], %[[LOOP]] ]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[L]] = load i64, ptr [[GEP]], align 4
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[ADD:%.*]] = add i64 [[L]], 10
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    store i64 [[ADD]], ptr [[GEP]], align 4
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK-TAILFOLDED-EPILOGUE:       [[EXIT]]:
-; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[FOR_LCSSA:%.*]] = phi i64 [ [[TMP11]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
-; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[L_LCSSA:%.*]] = phi i64 [ [[TMP12]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[FOR_LCSSA:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ], [ [[TMP11]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[L_LCSSA:%.*]] = phi i64 [ [[L]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ [[TMP12]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    [[RES:%.*]] = add i64 [[L_LCSSA]], [[FOR_LCSSA]]
 ; CHECK-TAILFOLDED-EPILOGUE-NEXT:    ret i64 [[RES]]
 ;

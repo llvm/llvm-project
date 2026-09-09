@@ -115,14 +115,14 @@ define i32 @pred_reduction(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[PARTIAL_REDUCE5]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI2]], <16 x i32> [[TMP10]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP12]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -146,12 +146,32 @@ define i32 @pred_reduction(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT11]], i64 [[N]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP21:%.*]] = xor i1 [[TMP20]], true
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP21]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP21]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE10]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_BODY]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_1:%.*]], %[[FOR_INC]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[C:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[C]], 0
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[IF_THEN]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VAL:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CONV:%.*]] = zext i8 [[VAL]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUM]], [[CONV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_INC]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_INC]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[SUM]], %[[FOR_BODY]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[EXIT]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[TMP22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_1]], %[[FOR_INC]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[TMP22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    ret i32 [[SUM_1_LCSSA]]
 ;
 entry:
@@ -292,14 +312,14 @@ define i32 @pred_reduction_sext(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[PARTIAL_REDUCE5]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI2]], <16 x i32> [[TMP10]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP12]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -323,12 +343,32 @@ define i32 @pred_reduction_sext(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT11]], i64 [[N]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP21:%.*]] = xor i1 [[TMP20]], true
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP21]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP21]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE10]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_BODY]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_1:%.*]], %[[FOR_INC]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[C:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[C]], 0
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[IF_THEN]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VAL:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CONV:%.*]] = sext i8 [[VAL]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUM]], [[CONV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_INC]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_INC]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[SUM]], %[[FOR_BODY]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[EXIT]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[TMP22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_1]], %[[FOR_INC]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[TMP22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    ret i32 [[SUM_1_LCSSA]]
 ;
 entry:
@@ -489,14 +529,14 @@ define i32 @pred_reduction_dotprod(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[PARTIAL_REDUCE7]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI2]], <16 x i32> [[TMP16]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE7]], [[PARTIAL_REDUCE]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP18]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -524,12 +564,36 @@ define i32 @pred_reduction_dotprod(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT14]], i64 [[N]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP29:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP30:%.*]] = xor i1 [[TMP29]], true
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP30]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP30]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE13]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_BODY]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_1:%.*]], %[[FOR_INC]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[C:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[C]], 0
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[IF_THEN]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[LOAD_A:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[LOAD_B:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXT_A:%.*]] = zext i8 [[LOAD_A]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXT_B:%.*]] = zext i8 [[LOAD_B]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[EXT_A]], [[EXT_B]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUM]], [[MUL]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_INC]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_INC]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[SUM]], %[[FOR_BODY]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[EXIT]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[TMP31]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP18]], %[[MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_1]], %[[FOR_INC]] ], [ [[TMP18]], %[[MIDDLE_BLOCK]] ], [ [[TMP31]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    ret i32 [[SUM_1_LCSSA]]
 ;
 entry:
@@ -696,7 +760,7 @@ define i32 @pred_sub_reduction(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[PARTIAL_REDUCE7]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI2]], <16 x i32> [[TMP16]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE7]], [[PARTIAL_REDUCE]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
@@ -704,7 +768,7 @@ define i32 @pred_sub_reduction(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -731,13 +795,37 @@ define i32 @pred_sub_reduction(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT14]], i64 [[N]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP29:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP30:%.*]] = xor i1 [[TMP29]], true
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP30]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP30]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE13]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP32:%.*]] = sub i32 [[BC_MERGE_RDX]], [[TMP31]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_BODY]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_1:%.*]], %[[FOR_INC]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[C:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[C]], 0
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[IF_THEN]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[LOAD_A:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[LOAD_B:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXT_A:%.*]] = zext i8 [[LOAD_A]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXT_B:%.*]] = zext i8 [[LOAD_B]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[EXT_A]], [[EXT_B]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUB:%.*]] = sub nsw i32 [[SUM]], [[MUL]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_INC]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_INC]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1]] = phi i32 [ [[SUB]], %[[IF_THEN]] ], [ [[SUM]], %[[FOR_BODY]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[EXIT]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[TMP32]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP19]], %[[MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_1]], %[[FOR_INC]] ], [ [[TMP19]], %[[MIDDLE_BLOCK]] ], [ [[TMP32]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    ret i32 [[SUM_1_LCSSA]]
 ;
 entry:
@@ -903,14 +991,14 @@ define i32 @chained_pred_reduction(ptr %src, ptr noalias %src_b, ptr %cond, i64 
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[PARTIAL_REDUCE9]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[PARTIAL_REDUCE5]], <16 x i32> [[TMP14]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE9]], [[PARTIAL_REDUCE8]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP16]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -939,12 +1027,36 @@ define i32 @chained_pred_reduction(ptr %src, ptr noalias %src_b, ptr %cond, i64 
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT17]], i64 [[N]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP27:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP28:%.*]] = xor i1 [[TMP27]], true
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP28]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP28]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP29:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE16]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_BODY]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_2:%.*]], %[[FOR_INC]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[C:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[C]], 0
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[IF_THEN]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VAL:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CONV:%.*]] = zext i8 [[VAL]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUM]], [[CONV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_INC]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_INC]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1:%.*]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[SUM]], %[[FOR_BODY]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[B_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC_B]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BVAL:%.*]] = load i8, ptr [[B_GEP]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BCONV:%.*]] = zext i8 [[BVAL]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_2]] = add nsw i32 [[SUM_1]], [[BCONV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[EXIT]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i32 [ [[TMP29]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i32 [ [[SUM_2]], %[[FOR_INC]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[TMP29]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    ret i32 [[SUM_2_LCSSA]]
 ;
 entry:
@@ -1110,14 +1222,14 @@ define i32 @reduction_before_pred(ptr %src, ptr noalias %src_b, ptr %cond, i64 %
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[PARTIAL_REDUCE9]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[PARTIAL_REDUCE4]], <16 x i32> [[TMP14]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE9]], [[PARTIAL_REDUCE8]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP16]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -1146,12 +1258,36 @@ define i32 @reduction_before_pred(ptr %src, ptr noalias %src_b, ptr %cond, i64 %
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT17]], i64 [[N]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP27:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP28:%.*]] = xor i1 [[TMP27]], true
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP28]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP28]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP29:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE16]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_BODY]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_2:%.*]], %[[FOR_INC]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[B_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC_B]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BVAL:%.*]] = load i8, ptr [[B_GEP]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BCONV:%.*]] = zext i8 [[BVAL]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1:%.*]] = add nsw i32 [[SUM]], [[BCONV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[C:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[C]], 0
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[IF_THEN]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VAL:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CONV:%.*]] = zext i8 [[VAL]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUM_1]], [[CONV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_INC]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_INC]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_2]] = phi i32 [ [[SUM_1]], %[[FOR_BODY]] ], [ [[ADD]], %[[IF_THEN]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[EXIT]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i32 [ [[TMP29]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i32 [ [[SUM_2]], %[[FOR_INC]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[TMP29]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    ret i32 [[SUM_2_LCSSA]]
 ;
 entry:
@@ -1263,7 +1399,7 @@ define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-TAILFOLD-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
-; CHECK-TAILFOLD-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-TAILFOLD-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-TAILFOLD:       [[MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[EXIT:.*]]
@@ -1304,14 +1440,14 @@ define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[PARTIAL_REDUCE5]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI2]], <16 x i32> [[TMP10]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[VEC_EPILOG_PH]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_PH]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP12]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -1335,12 +1471,32 @@ define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT11]], i64 [[N]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP21:%.*]] = xor i1 [[TMP20]], true
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP21]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TMP21]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE10]])
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[EXIT]]
+; CHECK-TAILFOLD-EPILOGUE:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[IF_THEN:.*]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 [[IV:%.*]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[VAL:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[CONV:%.*]] = zext i8 [[VAL]] to i32
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUM:%.*]], [[CONV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br label %[[FOR_INC:.*]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_BODY]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM]] = phi i32 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_1:%.*]], %[[FOR_INC]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[IV]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[C:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[C]], 0
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN]]
+; CHECK-TAILFOLD-EPILOGUE:       [[FOR_INC]]:
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[SUM]], %[[FOR_BODY]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK-TAILFOLD-EPILOGUE:       [[EXIT]]:
-; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[TMP22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
+; CHECK-TAILFOLD-EPILOGUE-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_1]], %[[FOR_INC]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[TMP22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-TAILFOLD-EPILOGUE-NEXT:    ret i32 [[SUM_1_LCSSA]]
 ;
 entry:
