@@ -359,7 +359,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
         getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
     assert(result.succeeded() && "expected a backward slice");
     (void)result;
-    it->second.append(backwardSlice.begin(), backwardSlice.end());
+    it->second = backwardSlice.takeVector();
     return it->second;
   };
 
@@ -382,7 +382,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
     } else {
       getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
     }
-    it->second.append(forwardSlice.begin(), forwardSlice.end());
+    it->second = forwardSlice.takeVector();
     return it->second;
   };
 
