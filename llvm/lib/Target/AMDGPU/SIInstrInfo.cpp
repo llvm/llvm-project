@@ -667,6 +667,16 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     BaseOp = &LdStIdx->getIdxOp();
     OffsetOp = &LdStIdx->getOffsetOp();
 
+    // Callers compare two accesses by base operand and constant offset, and
+    // treat identical bases as the same address. That only holds while the base
+    // names a value. On a movrel subtarget every one of these reads M0, so two
+    // accesses with unrelated indices compare as the same base and would be
+    // declared disjoint on their offsets alone; M0 can also be redefined
+    // between them, which the comparison does not look for. Report such an
+    // access as opaque instead.
+    if (!BaseOp->isReg() || !BaseOp->getReg().isVirtual())
+      return false;
+
     BaseOps.push_back(BaseOp);
     Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
 
