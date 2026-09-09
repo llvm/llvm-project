@@ -57,6 +57,17 @@ class DiffHunk:
 
 
 @dataclass
+class MCDCDecisionDetail:
+    """Detailed record of an individual MC/DC decision in a patch."""
+
+    line: int
+    code_text: str
+    total_conditions: int
+    covered_conditions: int
+    uncovered_indices: List[int]
+
+
+@dataclass
 class FilePatchMetrics:
     """Encapsulates coverage metrics and decisions for a single modified file."""
 
@@ -70,6 +81,7 @@ class FilePatchMetrics:
     decisions_total: int = 0
     condition_diagnostics: List[str] = field(default_factory=list)
     unverified_decision_lines: Dict[int, List[str]] = field(default_factory=dict)
+    mcdc_details: List[MCDCDecisionDetail] = field(default_factory=list)
 
     @property
     def total_lines(self) -> int:
@@ -416,26 +428,51 @@ def calculate_patch_statistics(
                 summary.total_mcdc_covered_conditions += decision["covered"]
                 summary.total_mcdc_total_conditions += decision["total"]
 
+                decision_lines = []
+                for hunk in diff_files.get(file_path, []):
+                    for _, text, num in hunk.lines:
+                        if decision_start_line <= num <= decision_end_line:
+                            decision_lines.append(text.strip())
+                decision_code = " ".join(decision_lines)
+
+                if not decision_code and os.path.isfile(file_path):
+                    try:
+                        with open(file_path, "r", encoding="utf-8") as f:
+                            all_lines = f.readlines()
+                            sliced = all_lines[
+                                decision_start_line - 1 : decision_end_line
+                            ]
+                            decision_code = " ".join(line.strip() for line in sliced)
+                    except Exception:
+                        pass
+
+                uncovered_indices = [
+                    condition_index + 1
+                    for condition_index, is_covered in enumerate(
+                        decision["conditions"]
+                    )
+                    if not is_covered
+                ]
+
+                detail = MCDCDecisionDetail(
+                    line=decision_start_line,
+                    code_text=decision_code,
+                    total_conditions=decision["total"],
+                    covered_conditions=decision["covered"],
+                    uncovered_indices=uncovered_indices,
+                )
+                file_metrics.mcdc_details.append(detail)
+
                 if decision["covered"] == decision["total"]:
                     summary.fully_verified_decisions += 1
                     file_metrics.decisions_verified += 1
                     file_metrics.condition_diagnostics.append(
-                        f"`L{decision_start_line}`: "
-                        f"{decision['covered']}/{decision['total']} verified"
+                        f"Line {decision_start_line}: all verified"
                     )
                 else:
-                    uncovered_indices = [
-                        f"C{condition_index + 1}"
-                        for condition_index, is_covered in enumerate(
-                            decision["conditions"]
-                        )
-                        if not is_covered
-                    ]
-                    unverified_conditions_string = ", ".join(uncovered_indices)
+                    unv_conds = ", ".join(f"C{idx}" for idx in uncovered_indices)
                     file_metrics.condition_diagnostics.append(
-                        f"`L{decision_start_line}`: "
-                        f"{decision['covered']}/{decision['total']} verified "
-                        f"({unverified_conditions_string} unverified)"
+                        f"Line {decision_start_line}: {unv_conds} unverified"
                     )
                     for decision_line in range(
                         decision_start_line, decision_end_line + 1
@@ -443,7 +480,7 @@ def calculate_patch_statistics(
                         if decision_line in added_lines:
                             file_metrics.unverified_decision_lines[
                                 decision_line
-                            ] = uncovered_indices
+                            ] = [f"C{idx}" for idx in uncovered_indices]
 
         summary.files[file_path] = file_metrics
 
@@ -451,71 +488,70 @@ def calculate_patch_statistics(
 
 
 def format_status_banner(summary: PatchCoverageSummary) -> str:
-    """Generates the executive summary block."""
-    lines: List[str] = []
-    if summary.total_missed_lines == 0:
-        if not summary.has_mcdc:
+    """Generates the executive summary table and callout status."""
+    lines: List[str] = ["### Summary\n"]
+    if summary.has_mcdc:
+        line_status = "Pass" if summary.total_missed_lines == 0 else "Fail"
+        mcdc_status = (
+            "Pass"
+            if summary.total_mcdc_covered_conditions
+            == summary.total_mcdc_total_conditions
+            else "Partial"
+        )
+        lines.append("| Metric | Coverage | Details | Status |")
+        lines.append("| :--- | :---: | :---: | :---: |")
+        lines.append(
+            f"| **Line Coverage** | **{summary.line_coverage_percentage:.2f}%** | "
+            f"{summary.total_covered_lines} / {summary.total_lines} lines covered | {line_status} |"
+        )
+        lines.append(
+            f"| **MC/DC Coverage** | **{summary.mcdc_coverage_percentage:.1f}%** | "
+            f"{summary.total_mcdc_covered_conditions} / {summary.total_mcdc_total_conditions} conditions evaluated | {mcdc_status} |"
+        )
+        lines.append("")
+        if summary.total_missed_lines == 0 and mcdc_status == "Pass":
+            lines.append("> [!NOTE]")
             lines.append(
-                f"### Patch Coverage: **{summary.line_coverage_percentage:.2f}%**"
+                "> All modified executable lines and boolean conditions achieved full coverage."
             )
-            lines.append(
-                f"All **{summary.total_lines}** newly added or modified "
-                "executable lines are covered."
+        elif summary.total_missed_lines == 0:
+            unv_count = (
+                summary.total_mcdc_total_conditions
+                - summary.total_mcdc_covered_conditions
             )
-        elif (
-            summary.total_mcdc_covered_conditions == summary.total_mcdc_total_conditions
-        ):
+            lines.append("> [!WARNING]")
             lines.append(
-                f"### Patch Coverage: "
-                f"**{summary.line_coverage_percentage:.2f}% Line** | "
-                "**100.00% MC/DC**"
-            )
-            lines.append(
-                f"All **{summary.total_lines}** executable lines and "
-                f"**{summary.total_mcdc_total_conditions}** boolean conditions "
-                f"across **{summary.total_decisions_count}** decisions are covered."
+                f"> All **{summary.total_lines}** modified executable lines were executed, but "
+                f"**{unv_count}** boolean condition(s) require additional test cases for full MC/DC coverage. "
+                "See the **MC/DC Decision Details** section below for recommended test cases."
             )
         else:
+            lines.append("> [!CAUTION]")
             lines.append(
-                f"### Patch Coverage: "
-                f"**{summary.line_coverage_percentage:.2f}% Line** | "
-                f"**{summary.mcdc_coverage_percentage:.1f}% MC/DC**"
-            )
-            lines.append(
-                f"Executed **{summary.total_covered_lines} / {summary.total_lines}** "
-                f"lines. **{summary.total_mcdc_covered_conditions} / "
-                f"{summary.total_mcdc_total_conditions}** boolean conditions "
-                f"achieved independence across **{summary.fully_verified_decisions} / "
-                f"{summary.total_decisions_count}** decisions."
+                f"> **Missing Coverage:** Executed **{summary.total_covered_lines} / {summary.total_lines}** lines "
+                f"(**{summary.total_missed_lines}** unexecuted line(s) detected in patch)."
             )
     else:
-        if not summary.has_mcdc:
+        line_status = "Pass" if summary.total_missed_lines == 0 else "Fail"
+        lines.append("| Metric | Coverage | Details | Status |")
+        lines.append("| :--- | :---: | :---: | :---: |")
+        lines.append(
+            f"| **Line Coverage** | **{summary.line_coverage_percentage:.2f}%** | "
+            f"{summary.total_covered_lines} / {summary.total_lines} lines covered | {line_status} |"
+        )
+        lines.append("")
+        if summary.total_missed_lines == 0:
+            lines.append("> [!NOTE]")
             lines.append(
-                f"### Patch Coverage: "
-                f"**{summary.line_coverage_percentage:.2f}%** "
-                f"({summary.total_missed_lines} Missed Lines)"
-            )
-            lines.append(
-                f"Executed **{summary.total_covered_lines} / {summary.total_lines}** "
-                f"lines (**{summary.total_missed_lines}** unexecuted lines "
-                "detected in patch)."
+                f"> All **{summary.total_lines}** newly added or modified executable lines are covered."
             )
         else:
+            lines.append("> [!CAUTION]")
             lines.append(
-                f"### Patch Coverage: "
-                f"**{summary.line_coverage_percentage:.2f}% Line** | "
-                f"**{summary.mcdc_coverage_percentage:.1f}% MC/DC** "
-                f"({summary.total_missed_lines} Missed Lines)"
+                f"> **Missing Coverage:** Executed **{summary.total_covered_lines} / {summary.total_lines}** lines "
+                f"(**{summary.total_missed_lines}** unexecuted line(s) detected in patch)."
             )
-            lines.append(
-                f"Executed **{summary.total_covered_lines} / {summary.total_lines}** "
-                f"lines. **{summary.total_mcdc_covered_conditions} / "
-                f"{summary.total_mcdc_total_conditions}** boolean conditions "
-                f"achieved independence across **{summary.fully_verified_decisions} / "
-                f"{summary.total_decisions_count}** decisions "
-                f"(**{summary.total_missed_lines}** unexecuted lines "
-                "detected in patch)."
-            )
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -555,17 +591,15 @@ def format_breakdown_table(
     head_commit_sha: Optional[str] = None,
 ) -> str:
     """Generates the Markdown table breaking down coverage per source file."""
-    lines: List[str] = ["### Coverage Breakdown"]
+    lines: List[str] = ["### Coverage Breakdown\n"]
     if summary.has_mcdc:
         lines.append(
-            "| Modified Source File | Line Coverage | MC/DC Conditions | "
-            "Decisions (Verified / Total) | Missed Lines | Unverified Conditions |"
+            "| Modified Source File | Line Coverage | MC/DC Coverage | Missed Lines | Condition Diagnostics |"
         )
-        lines.append("| :--- | :---: | :---: | :---: | :---: | :--- |")
+        lines.append("| :--- | :---: | :---: | :---: | :--- |")
     else:
         lines.append(
-            "| Modified Source File | Patch Coverage | Covered / Total | "
-            "Missed Lines | Unexecuted Line Spans |"
+            "| Modified Source File | Coverage | Covered / Total | Missed Lines | Unexecuted Line Spans |"
         )
         lines.append("| :--- | :---: | :---: | :---: | :---: |")
 
@@ -581,6 +615,11 @@ def format_breakdown_table(
         missed_lines = file_metric.missed_lines
         covered_count = len(file_metric.covered_lines)
         total_file_lines = file_metric.total_lines
+        if missed_lines:
+            line_spans = format_line_ranges(missed_lines)
+            missed_count_str = f"**{len(missed_lines)}** ({line_spans})"
+        else:
+            missed_count_str = "0"
 
         if summary.has_mcdc:
             mc_pct = file_metric.mcdc_coverage_percentage
@@ -589,23 +628,24 @@ def format_breakdown_table(
             mcdc_cell = (
                 f"**{mc_pct:.1f}%** ({mc_cov}/{mc_tot})" if mc_tot > 0 else "N/A"
             )
-            dec_cell = (
-                f"**{file_metric.decisions_verified} / "
-                f"{file_metric.decisions_total}**"
-                if file_metric.decisions_total > 0
-                else "N/A"
-            )
-            diagnostic_cell = (
-                "<br>".join(file_metric.condition_diagnostics)
-                if file_metric.condition_diagnostics
-                else "None"
-            )
+            unv_list = []
+            for d in file_metric.mcdc_details:
+                if d.uncovered_indices:
+                    unv_conds = ", ".join(
+                        f"Condition {idx}" for idx in d.uncovered_indices
+                    )
+                    unv_list.append(f"Line {d.line}: {unv_conds} unverified")
+            if unv_list:
+                mcdc_summary_cell = "<br>".join(unv_list)
+            elif mc_tot > 0:
+                mcdc_summary_cell = "All verified"
+            else:
+                mcdc_summary_cell = "N/A"
+
             lines.append(
                 f"| {file_link} | "
-                f"**{file_metric.line_coverage_percentage:.2f}%** "
-                f"({covered_count}/{total_file_lines}) | "
-                f"{mcdc_cell} | {dec_cell} | "
-                f"{len(missed_lines)} | {diagnostic_cell} |"
+                f"**{file_metric.line_coverage_percentage:.2f}%** ({covered_count}/{total_file_lines}) | "
+                f"{mcdc_cell} | {missed_count_str} | {mcdc_summary_cell} |"
             )
         else:
             line_spans = format_line_ranges(missed_lines)
@@ -613,33 +653,115 @@ def format_breakdown_table(
                 f"| {file_link} | "
                 f"**{file_metric.line_coverage_percentage:.2f}%** | "
                 f"{covered_count} / {total_file_lines} | "
-                f"{len(missed_lines)} | {line_spans} |"
+                f"{missed_count_str} | {line_spans} |"
             )
 
     # Summary Row
     if summary.has_mcdc:
-        total_decision_cell = (
-            f"**{summary.fully_verified_decisions} / "
-            f"{summary.total_decisions_count}**"
+        total_missed_str = (
+            f"**{summary.total_missed_lines}**"
+            if summary.total_missed_lines > 0
+            else "0"
+        )
+        total_unverified = (
+            summary.total_mcdc_total_conditions
+            - summary.total_mcdc_covered_conditions
+        )
+        total_mcdc_summary = (
+            f"**{total_unverified}** condition(s) unverified"
+            if total_unverified > 0
+            else "All verified"
         )
         lines.append(
             f"| **Total (Patch)** | "
-            f"**{summary.line_coverage_percentage:.2f}%** "
-            f"({summary.total_covered_lines}/{summary.total_lines}) | "
-            f"**{summary.mcdc_coverage_percentage:.1f}%** "
-            f"({summary.total_mcdc_covered_conditions}/"
-            f"{summary.total_mcdc_total_conditions}) | "
-            f"{total_decision_cell} | **{summary.total_missed_lines}** | - |"
+            f"**{summary.line_coverage_percentage:.2f}%** ({summary.total_covered_lines}/{summary.total_lines}) | "
+            f"**{summary.mcdc_coverage_percentage:.1f}%** ({summary.total_mcdc_covered_conditions}/{summary.total_mcdc_total_conditions}) | "
+            f"{total_missed_str} | {total_mcdc_summary} |"
         )
     else:
+        total_missed_str = (
+            f"**{summary.total_missed_lines}**"
+            if summary.total_missed_lines > 0
+            else "0"
+        )
         lines.append(
             f"| **Total (Patch)** | "
             f"**{summary.line_coverage_percentage:.2f}%** | "
             f"{summary.total_covered_lines} / {summary.total_lines} | "
-            f"**{summary.total_missed_lines}** | - |"
+            f"{total_missed_str} | - |"
         )
 
     return "\n".join(lines)
+
+
+def extract_condition_expressions(line_text: str) -> List[str]:
+    """Extracts subexpressions for individual conditions from an if/while/for statement."""
+    match = re.search(r"\b(?:if|while|for)\s*\((.*)\)\s*\{?", line_text)
+    if match:
+        expr = match.group(1).rstrip("{ ")
+    else:
+        match = re.search(r"\(([^()]*?(?:\|\||&&)[^()]*?)\)", line_text)
+        if match:
+            expr = match.group(1)
+        elif "||" in line_text or "&&" in line_text:
+            expr = line_text
+        else:
+            return []
+    if (
+        "=" in expr
+        and "==" not in expr
+        and "!=" not in expr
+        and "<=" not in expr
+        and ">=" not in expr
+    ):
+        expr = re.sub(r"^.*?=\s*", "", expr)
+    tokens = re.split(r"\s*(?:\|\||&&)\s*", expr)
+    return [t.strip("() ;") for t in tokens if t.strip("() ;")]
+
+
+def format_mcdc_analysis(summary: PatchCoverageSummary) -> str:
+    """Formats human-readable analysis and recommendations for MC/DC decisions."""
+    has_unverified = any(
+        any(d.uncovered_indices for d in m.mcdc_details)
+        for m in summary.files.values()
+    )
+    if not has_unverified:
+        return ""
+
+    lines: List[str] = ["### MC/DC Decision Details\n"]
+    for file_path, file_metric in summary.files.items():
+        decisions_with_unverified = [
+            d for d in file_metric.mcdc_details if d.uncovered_indices
+        ]
+        if not decisions_with_unverified:
+            continue
+
+        lines.append(f"#### `{file_path}`")
+        for decision in decisions_with_unverified:
+            code_label = f" `{decision.code_text}`" if decision.code_text else ""
+            lines.append(f"- **Line {decision.line}:**{code_label}")
+            lines.append(
+                f"  - **Decision Coverage:** {decision.covered_conditions} of {decision.total_conditions} "
+                "conditions evaluated independently"
+            )
+            cond_texts = extract_condition_expressions(decision.code_text)
+            for cond_idx in range(1, decision.total_conditions + 1):
+                c_expr = (
+                    cond_texts[cond_idx - 1]
+                    if cond_idx <= len(cond_texts)
+                    else f"Condition {cond_idx}"
+                )
+                c_name = f" (`{c_expr}`)" if cond_idx <= len(cond_texts) else ""
+                if cond_idx in decision.uncovered_indices:
+                    lines.append(f"  - **Condition {cond_idx}{c_name}:** **Unverified**")
+                    lines.append(
+                        f"    - *Recommendation:* Add test cases where `{c_expr}` evaluates to True and "
+                        "False while keeping other conditions in the decision constant."
+                    )
+                else:
+                    lines.append(f"  - **Condition {cond_idx}{c_name}:** Verified")
+        lines.append("")
+    return "\n".join(lines).rstrip()
 
 
 def format_annotated_diff(
@@ -654,7 +776,6 @@ def format_annotated_diff(
 
     for file_path, file_metric in summary.files.items():
         hunks = diff_files.get(file_path, [])
-        unverified_decision_lines = file_metric.unverified_decision_lines
 
         lines.append(f"#### `{file_path}`")
         lines.append("```diff")
@@ -663,21 +784,13 @@ def format_annotated_diff(
             for line_type, line_text, line_number in hunk.lines:
                 if line_type == "+":
                     if line_number in file_metric.missed_lines:
-                        lines.append(f"- {line_text}  // [MISSED]")
-                    elif line_number in unverified_decision_lines:
-                        unverified_conditions = ", ".join(
-                            unverified_decision_lines[line_number]
-                        )
-                        lines.append(
-                            f"! {line_text}  // [PARTIAL MC/DC: "
-                            f"{unverified_conditions} unverified]"
-                        )
-                    elif line_number in file_metric.covered_lines:
-                        lines.append(f"+ {line_text}")
+                        lines.append(f"!{line_text}  // <-- UNEXECUTED")
                     else:
-                        lines.append(f"  {line_text}")
+                        lines.append(f"+{line_text}")
+                elif line_type == "-":
+                    lines.append(f"-{line_text}")
                 elif line_type == " ":
-                    lines.append(f"  {line_text}")
+                    lines.append(f" {line_text}")
         lines.append("```\n")
 
     lines.append("</details>")
@@ -703,28 +816,7 @@ def render_patch_report(
     else:
         print("## LLVM-libc Patch Coverage Report\n")
 
-    if summary.total_lines == 0 or not summary.files:
-        metadata_section_string = format_metadata_section(
-            base_commit_sha,
-            head_commit_sha,
-            base_branch_name,
-            head_branch_name,
-            targeted_tests_string,
-            base_repository,
-            head_repository,
-        )
-        if metadata_section_string:
-            print(metadata_section_string)
-            print("\n---\n")
-        print("### Coverage Summary")
-        print("No executable lines were added or modified in this patch.")
-        return
-
-    # 1. Status Banner
-    print(format_status_banner(summary))
-    print("")
-
-    # 2. Metadata Section
+    # 1. Metadata Section (Base, Head, Tests)
     metadata_section_string = format_metadata_section(
         base_commit_sha,
         head_commit_sha,
@@ -738,11 +830,28 @@ def render_patch_report(
         print(metadata_section_string)
         print("\n---\n")
 
+    if summary.total_lines == 0 or not summary.files:
+        print("### Summary\n")
+        print("> [!NOTE]")
+        print("> No executable lines were added or modified in this patch.")
+        return
+
+    # 2. Status Banner (Executive Summary Table & Callout)
+    print(format_status_banner(summary))
+    print("")
+
     # 3. Breakdown Table
     print(format_breakdown_table(summary, head_repository, head_commit_sha))
     print("")
 
-    # 4. Source Map Diff
+    # 4. MC/DC Analysis Details (if applicable)
+    if summary.has_mcdc:
+        mcdc_analysis = format_mcdc_analysis(summary)
+        if mcdc_analysis:
+            print(mcdc_analysis)
+            print("\n---\n")
+
+    # 5. Source Map Diff
     print(format_annotated_diff(summary, diff_files))
 
 
