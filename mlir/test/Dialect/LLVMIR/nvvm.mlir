@@ -556,11 +556,15 @@ func.func @match_sync(%val32: i32, %val64: i64, %thread_mask: i32) {
 }
 
 // CHECK-LABEL: @st_bulk
-func.func @st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
-  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr
-  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
-  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr<3>
-  nvvm.st.bulk %addr_shared, size = %size, init = 0 : !llvm.ptr<3>
+func.func @st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size32: i32, %size: i64) {
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr, i32
+  nvvm.st.bulk %addr_gen, size = %size32, init = 0 : !llvm.ptr, i32
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr<3>, i32
+  nvvm.st.bulk %addr_shared, size = %size32, init = 0 : !llvm.ptr<3>, i32
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr, i64
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr, i64
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr<3>, i64
+  nvvm.st.bulk %addr_shared, size = %size, init = 0 : !llvm.ptr<3>, i64
   return
 }
 
