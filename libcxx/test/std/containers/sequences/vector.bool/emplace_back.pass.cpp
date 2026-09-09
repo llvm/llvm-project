@@ -54,7 +54,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(c.back() == true);
   }
   {
-    typedef std::vector<bool, min_allocator<bool> > C;
+    typedef std::vector<bool, min_allocator<bool>> C;
     C c;
 
 #if TEST_STD_VER > 14
