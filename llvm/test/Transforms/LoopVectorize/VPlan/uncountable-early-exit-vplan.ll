@@ -24,7 +24,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.src> = getelementptr inbounds i32, ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.src>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
@@ -111,7 +111,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.src> = getelementptr inbounds i32, ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.src>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
@@ -191,7 +191,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.src> = getelementptr inbounds i32, ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.src>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
@@ -276,11 +276,11 @@ define i64 @two_early_exits_same_exit_with_constant_live_outs() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.A> = getelementptr inbounds i8, ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i8, ir<%gep.A>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld.A> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp1> = icmp eq ir<%ld.A>, ir<42>
-; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.B> = getelementptr inbounds i8, ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i8, ir<%gep.B>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld.B> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp2> = icmp eq ir<%ld.A>, ir<%ld.B>

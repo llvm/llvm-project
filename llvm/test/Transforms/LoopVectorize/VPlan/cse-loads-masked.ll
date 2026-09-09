@@ -20,14 +20,14 @@ define void @two_masked_same_mask(ptr noalias %a, ptr noalias %b, ptr noalias %c
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    CLONE ir<%gep.c> = getelementptr inbounds ir<%cond>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.c> = getelementptr inbounds i32, ir<%cond>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%c> = load ir<%gep.c>
 ; CHECK-NEXT:    WIDEN ir<%cmp> = icmp ne ir<%c>, ir<0>
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = load ir<%gep.a>, ir<%cmp>
 ; CHECK-NEXT:    WIDEN ir<%s> = add ir<%x>, ir<%x>
 ; CHECK-NEXT:    EMIT vp<%predphi> = select ir<%cmp>, ir<%s>, ir<0>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.b>, vp<%predphi>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = icmp eq vp<%index.next>, ir<1024>
@@ -77,19 +77,19 @@ define void @two_masked_diff_mask(ptr noalias %a, ptr noalias %b, ptr noalias %c
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
-; CHECK-NEXT:    CLONE ir<%gp1> = getelementptr inbounds ir<%c1>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr i32, ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gp1> = getelementptr inbounds i32, ir<%c1>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%v1> = load ir<%gp1>
 ; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp ne ir<%v1>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%x> = load ir<%gep.a>, ir<%cmp1>
 ; CHECK-NEXT:    EMIT vp<%predphi> = select ir<%cmp1>, ir<%x>, ir<0>
-; CHECK-NEXT:    CLONE ir<%gp2> = getelementptr inbounds ir<%c2>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gp2> = getelementptr inbounds i32, ir<%c2>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%v2> = load ir<%gp2>
 ; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp ne ir<%v2>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%y> = load ir<%gep.a>, ir<%cmp2>
 ; CHECK-NEXT:    EMIT vp<%predphi>.1 = select ir<%cmp2>, ir<%y>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add vp<%predphi>, vp<%predphi>.1
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%sum>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = icmp eq vp<%index.next>, ir<1024>
@@ -150,18 +150,18 @@ define void @masked_and_regular_mix(ptr noalias %a, ptr noalias %b, ptr noalias 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%r1> = load ir<%gep.a>
-; CHECK-NEXT:    CLONE ir<%gep.c> = getelementptr inbounds ir<%cond>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.c> = getelementptr inbounds i32, ir<%cond>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%c> = load ir<%gep.c>
 ; CHECK-NEXT:    WIDEN ir<%cmp> = icmp ne ir<%c>, ir<0>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%m1> = load ir<%gep.b>, ir<%cmp>
 ; CHECK-NEXT:    WIDEN ir<%ms> = add ir<%m1>, ir<%m1>
 ; CHECK-NEXT:    EMIT vp<%predphi> = select ir<%cmp>, ir<%ms>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%rr> = add ir<%r1>, ir<%r1>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%rr>, vp<%predphi>
-; CHECK-NEXT:    CLONE ir<%gep.o> = getelementptr inbounds ir<%out>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.o> = getelementptr inbounds i32, ir<%out>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.o>, ir<%sum>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = icmp eq vp<%index.next>, ir<1024>

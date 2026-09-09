@@ -25,11 +25,11 @@ define void @wide_call_attrs(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%in.gep> = getelementptr inbounds double, ir<%in.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds double, ir<%in.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%in> = load vp<[[VP4]]>
 ; CHECK-NEXT:      WIDEN-CALL ir<%call> = call @acos(ir<%in>) (using library function: vec_acos)
-; CHECK-NEXT:      CLONE ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%out.gep> = getelementptr inbounds double, ir<%out.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds double, ir<%out.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -88,8 +88,8 @@ define void @test_intrinsic_with_arg_and_ret_attrs(ptr noalias %A, ptr noalias %
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, ir<%i>
-; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, ir<%i>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.A> = getelementptr inbounds float, ir<%A>, ir<%i>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.B> = getelementptr inbounds float, ir<%B>, ir<%i>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.A>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%a> = load vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.B>, ir<1>

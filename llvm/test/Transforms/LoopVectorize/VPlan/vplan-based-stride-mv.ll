@@ -24,9 +24,9 @@ define void @basic(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -91,9 +91,9 @@ define void @basic_optsize(ptr noalias %p.out, ptr %p, i64 %stride) #0 {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -160,9 +160,9 @@ define void @basic_minsize(ptr noalias %p.out, ptr %p, i64 %stride) #1 {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -234,9 +234,9 @@ define void @byte_gep_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%stride.x8> = mul ir<%stride>, ir<8>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.x8>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i8, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -305,9 +305,9 @@ define void @byte_gep_under_scaled_stride(ptr noalias %p.out, ptr %p, i64 %strid
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%stride.x8> = mul ir<%stride>, ir<4>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.x8>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i8, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -377,9 +377,9 @@ define void @byte_gep_over_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%stride.x8> = mul ir<%stride>, ir<16>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.x8>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i8, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -448,9 +448,9 @@ define void @byte_gep_non_power_of_two_scaled_stride(ptr noalias %p.out, ptr %p,
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%stride.x8> = mul ir<%stride>, ir<11>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.x8>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i8, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -517,9 +517,9 @@ define void @byte_gep_nonscaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i8, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -588,9 +588,9 @@ define void @byte_gep_negated_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%stride.neg> = sub ir<0>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.neg>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i8, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -657,12 +657,12 @@ define void @shared_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx>
-; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld0> = getelementptr i64, ir<%p0>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld1> = getelementptr i64, ir<%p1>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -732,12 +732,12 @@ define void @independent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stri
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx0> = mul ir<%iv>, ir<%stride0>
 ; CHECK-NEXT:      EMIT ir<%idx1> = mul ir<%iv>, ir<%stride1>
-; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
-; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld0> = getelementptr i64, ir<%p0>, ir<%idx0>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld1> = getelementptr i64, ir<%p1>, ir<%idx1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -809,12 +809,12 @@ define void @dependent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride
 ; CHECK-NEXT:      EMIT ir<%stride1> = add ir<%stride>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx0> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%idx1> = mul ir<%iv>, ir<%stride1>
-; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
-; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld0> = getelementptr i64, ir<%p0>, ir<%idx0>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld1> = getelementptr i64, ir<%p1>, ir<%idx1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -889,12 +889,12 @@ define void @dependent_strides_reverse_order(ptr noalias %p.out, ptr %p0, ptr %p
 ; CHECK-NEXT:      EMIT ir<%stride0> = add ir<%stride>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx0> = mul ir<%iv>, ir<%stride0>
 ; CHECK-NEXT:      EMIT ir<%idx1> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
-; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld0> = getelementptr i64, ir<%p0>, ir<%idx0>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld1> = getelementptr i64, ir<%p1>, ir<%idx1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -966,13 +966,13 @@ define void @byte_dependent_byte_geps(ptr noalias %p.out, ptr %p0, ptr %p1, i64 
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld0> = getelementptr i8, ir<%p0>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
-; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld1> = getelementptr i8, ir<%p1>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1.ext> = sext ir<%ld1> to i64
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1.ext>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -1044,13 +1044,13 @@ define void @byte_dependent_byte_geps_reverse_order(ptr noalias %p.out, ptr %p0,
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld1> = getelementptr i8, ir<%p1>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1.ext> = sext ir<%ld1> to i64
-; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld0> = getelementptr i8, ir<%p0>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1.ext>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -1124,12 +1124,12 @@ define void @strided_interleave(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%gep.ld0>, ir<1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld0> = getelementptr i64, ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld1> = getelementptr i64, ir<%gep.ld0>, ir<1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -1201,10 +1201,10 @@ define void @in_loop_base(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset) 
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld.base> = getelementptr ir<%p>, ir<%offset>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%gep.ld.base>, ir<%mul>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld.base> = getelementptr i64, ir<%p>, ir<%offset>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%gep.ld.base>, ir<%mul>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -1274,9 +1274,9 @@ define void @base_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%mul>, ir<%offset>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -1346,9 +1346,9 @@ define void @non_invariant_uniform_base(ptr noalias %p.out, ptr %p, i64 %stride)
 ; CHECK-NEXT:      EMIT ir<%iv.sdiv32> = sdiv ir<%iv>, ir<32>
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%mul>, ir<%iv.sdiv32>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -1416,12 +1416,12 @@ define void @non_invariant_uniform_stride(ptr noalias %p.out, ptr %p, ptr %p.uni
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%iv.sdiv32> = sdiv ir<%iv>, ir<32>
-; CHECK-NEXT:      EMIT ir<%gep.uni> = getelementptr ir<%p.uni>, ir<%iv.sdiv32>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.uni> = getelementptr i64, ir<%p.uni>, ir<%iv.sdiv32>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%stride> = load ir<%gep.uni>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -1496,9 +1496,9 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -1566,9 +1566,9 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%stride>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -1637,9 +1637,9 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -1710,9 +1710,9 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -1781,9 +1781,9 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -1885,12 +1885,12 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.ld2> = getelementptr ir<%p2>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld2> = getelementptr i64, ir<%p2>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld2> = load ir<%gep.ld2>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld>, ir<%ld2>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -1962,10 +1962,10 @@ define void @actual_stride_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%base> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%base>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%base> = getelementptr i64, ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%base>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2034,9 +2034,9 @@ define void @nd_array_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<1>, ir<42>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr [256 x [256 x i64]], ir<%p>, ir<1>, ir<42>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2104,9 +2104,9 @@ define void @nd_array_non_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<1>, ir<%idx>, ir<42>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr [256 x [256 x i64]], ir<%p>, ir<1>, ir<%idx>, ir<42>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2172,9 +2172,9 @@ define void @nd_array_multiple_idxs(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<1>, ir<%idx>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr [256 x [256 x i64]], ir<%p>, ir<1>, ir<%idx>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2241,9 +2241,9 @@ define void @sext_stride(ptr noalias %p.out, ptr %p, i32 %stride.i32) {
 ; CHECK-NEXT:      EMIT-SCALAR ir<%stride> = sext ir<%stride.i32> to i64
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2311,9 +2311,9 @@ define void @trunc_stride(ptr noalias %p.out, ptr %p, i64 %stride.i64) {
 ; CHECK-NEXT:      EMIT-SCALAR ir<%stride> = trunc ir<%stride.i64> to i32
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i32, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i32, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2385,12 +2385,12 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; CHECK-NEXT:      EMIT-SCALAR ir<%iv.ext> = sext ir<%iv> to i64
 ; CHECK-NEXT:      EMIT ir<%idx.trunc> = mul ir<%iv.trunc>, ir<%stride.trunc>
 ; CHECK-NEXT:      EMIT ir<%idx.ext> = mul ir<%iv.ext>, ir<%stride.ext>
-; CHECK-NEXT:      EMIT ir<%gep.trunc> = getelementptr ir<%p0>, ir<%idx.trunc>
-; CHECK-NEXT:      EMIT ir<%gep.ext> = getelementptr ir<%p0>, ir<%idx.ext>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.trunc> = getelementptr i32, ir<%p0>, ir<%idx.trunc>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ext> = getelementptr i32, ir<%p0>, ir<%idx.ext>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld.trunc> = load ir<%gep.trunc>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld.ext> = load ir<%gep.ext>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld.trunc>, ir<%ld.ext>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i32, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2472,9 +2472,9 @@ define void @basic_masked(ptr noalias %p.out, ptr %p, i64 %stride, i64 %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if:
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>, ir<%c>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>, ir<%c>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>, ir<%c>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
@@ -2548,9 +2548,9 @@ define void @stride_poison(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<poison>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2616,9 +2616,9 @@ define void @basic_strided_store(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%idx>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2685,11 +2685,11 @@ define void @ptr_vec_use(ptr noalias %p.out, ptr noalias %p.ptr.out, ptr %p, i64
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
-; CHECK-NEXT:      EMIT ir<%gep.ptr.st> = getelementptr ir<%p.ptr.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ptr.st> = getelementptr ptr, ir<%p.ptr.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%gep.ld>, ir<%gep.ptr.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2759,10 +2759,10 @@ define void @stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%val> = mul ir<%ld>, ir<%idx>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2831,10 +2831,10 @@ define void @offset_stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%iv.times.stride> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%iv.times.stride>, ir<42>
-; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr i64, ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%val> = mul ir<%ld>, ir<%idx>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr i64, ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -2930,7 +2930,7 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv.0> = WIDEN-INDUCTION ir<%start.ext>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      ir<%iv.1> = WIDEN-INDUCTION ir<0>, vp<[[VP3]]>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv.1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.dst> = getelementptr float, ir<%dst>, ir<%iv.1>
 ; CHECK-NEXT:      EMIT store ir<0.000000e+00>, ir<%gep.dst>
 ; CHECK-NEXT:      EMIT ir<%iv.1.next> = add ir<%iv.1>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT ir<%iv.0.next> = add ir<%iv.0>, ir<1>

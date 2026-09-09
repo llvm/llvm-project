@@ -25,7 +25,7 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%tmp2> = getelementptr ir<%ptr>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%tmp2> = getelementptr i8, ir<%ptr>, vp<[[VP5]]>
 ; CHECK-NEXT:      CLONE ir<%tmp3> = load ir<%tmp2>
 ; CHECK-NEXT:      CLONE store ir<0>, ir<%tmp2>
 ; CHECK-NEXT:    Successor(s): pred.store

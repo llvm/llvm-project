@@ -25,7 +25,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (fadd) fast vp<[[VP3]]>, ir<%red.next>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds float, ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP6]]>
 ; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> + fast  reduce.fadd (ir<%lv>)
@@ -99,7 +99,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (fadd) fast vp<[[VP3]]>, ir<%red.next>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds float, ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP6]]>
 ; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> + fast  reduce.fadd (ir<%lv>)
@@ -175,10 +175,10 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.07> = phi (fmuladd) nnan ninf nsz vp<[[VP3]]>, ir<%muladd>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds float, ir<%a>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l.a> = load vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%b>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx2> = getelementptr inbounds float, ir<%b>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx2>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l.b> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = fmul nnan ninf nsz ir<%l.a>, ir<%l.b>
@@ -258,7 +258,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) ir<-9223372036854775808>, ir<%cond>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i64, ir<%a>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l.a> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp2> = icmp eq ir<%l.a>, ir<%start>
@@ -337,7 +337,7 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP3]]>, vp<[[VP7:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP7]]> = ir<%rdx> + reduce.add (ir<%load0> zext to i64)
@@ -414,10 +414,10 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP3]]>, vp<[[VP8:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i64, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i64, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx1> = getelementptr inbounds i64, ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i64, ir<%arrayidx1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load1> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP8]]> = ir<%rdx> + reduce.add (mul nsw ir<%load0>, ir<%load1>)
@@ -498,10 +498,10 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP3]]>, vp<[[VP8:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i16, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx1> = getelementptr inbounds i16, ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load1> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP8]]> = ir<%rdx> + reduce.add (mul nsw (ir<%load0> sext to i64), (ir<%load1> sext to i64))
@@ -588,7 +588,7 @@ define i64 @print_extended_sub_reduction(ptr nocapture readonly %x, ptr nocaptur
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (sub) vp<[[VP3]]>, vp<[[VP7:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP7]]> = ir<%rdx> + reduce.sub (ir<%load0> zext to i64)
@@ -665,10 +665,10 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%accum> = phi (sub) vp<[[VP3]]>, vp<[[VP8:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.a> = getelementptr i8, ir<%a>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i8, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.a> = load vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr i8, ir<%b>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i8, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.b> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP8]]> = ir<%accum> + reduce.sub (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32))
@@ -752,10 +752,10 @@ define i32 @print_mulacc_negated(ptr %a, ptr %b) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%accum> = phi (add) vp<[[VP3]]>, vp<[[VP8:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.a> = getelementptr i8, ir<%a>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i8, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.a> = load vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr i8, ir<%b>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i8, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.b> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP8]]> = ir<%accum> + reduce.add (sub (0, mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32)))
@@ -841,10 +841,10 @@ define i64 @print_mulacc_sub_extended(ptr nocapture readonly %x, ptr nocapture r
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (sub) vp<[[VP3]]>, vp<[[VP8:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i16, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx1> = getelementptr inbounds i16, ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load1> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP8]]> = ir<%rdx> + reduce.sub (mul nsw (ir<%load0> sext to i64), (ir<%load1> sext to i64))
@@ -931,7 +931,7 @@ define i64 @print_mulacc_duplicate_extends(ptr nocapture readonly %x, ptr nocapt
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (sub) vp<[[VP3]]>, vp<[[VP7:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i16, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP7]]> = ir<%rdx> + reduce.sub (mul nsw (ir<%load0> sext to i64), (ir<%load0> sext to i64))
@@ -1509,7 +1509,7 @@ define i32 @print_umax_reduction_out_of_loop(ptr %y) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (umax) ir<0>, ir<%red.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.umax(ir<%lv>, ir<%red>)
@@ -1582,7 +1582,7 @@ define i32 @print_umax_reduction(ptr %y) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (umax) ir<0>, ir<%red.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.umax(ir<%red>, ir<%lv>)
@@ -1655,7 +1655,7 @@ define i32 @print_umin_reduction(ptr %y) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (umin) ir<0>, ir<%red.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.umin(ir<%lv>, ir<%red>)
@@ -1728,7 +1728,7 @@ define i32 @print_smax_reduction(ptr %y) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (smax) ir<0>, ir<%red.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.smax(ir<%red>, ir<%lv>)
@@ -1801,7 +1801,7 @@ define i32 @print_smin_reduction(ptr %y) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (smin) ir<0>, ir<%red.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.smin(ir<%lv>, ir<%red>)

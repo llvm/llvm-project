@@ -28,7 +28,7 @@ define i64 @resume_values(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%red> = phi (add) vp<[[VP5]]>, ir<%red.next>
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%A>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep> = getelementptr inbounds i64, ir<%A>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep>
 ; CHECK-NEXT:    WIDEN ir<%red.next> = add ir<%red>, ir<%l>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<8>
@@ -85,7 +85,7 @@ define i64 @resume_values(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:  vec.epilog.vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
 ; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%red> = phi (add) vp<[[VP4]]>, ir<%red.next>
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%A>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep> = getelementptr inbounds i64, ir<%A>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep>
 ; CHECK-NEXT:    WIDEN ir<%red.next> = add ir<%red>, ir<%l>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
@@ -178,10 +178,10 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%red> = phi (add) vp<[[VP7]]>, ir<%red.next>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%iv.ext> = sext vp<%index> to i64
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%A>, ir<%iv.ext>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i64, ir<%A>, ir<%iv.ext>
 ; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.a>
 ; CHECK-NEXT:    WIDEN ir<%red.next> = add ir<%red>, ir<%l>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv.ext>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i64, ir<%B>, ir<%iv.ext>
 ; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%l>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<8>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
@@ -241,10 +241,10 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
 ; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%red> = phi (add) vp<[[VP4]]>, ir<%red.next>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%iv.ext> = sext vp<%index> to i64
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%A>, ir<%iv.ext>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i64, ir<%A>, ir<%iv.ext>
 ; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.a>
 ; CHECK-NEXT:    WIDEN ir<%red.next> = add ir<%red>, ir<%l>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv.ext>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i64, ir<%B>, ir<%iv.ext>
 ; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%l>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
@@ -331,10 +331,10 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.src> = getelementptr inbounds i32, ir<%src>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:    WIDEN ir<%add> = add ir<%l>, ir<1>
-; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.dst> = getelementptr inbounds i32, ir<%dst>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%add>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<8>
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
@@ -381,10 +381,10 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vec.epilog.vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
-; CHECK-NEXT:    CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.src> = getelementptr inbounds i32, ir<%src>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:    WIDEN ir<%add> = add ir<%l>, ir<1>
-; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.dst> = getelementptr inbounds i32, ir<%dst>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%add>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
@@ -462,7 +462,7 @@ define void @all_iterations_in_main_loop_with_scevcheck(ptr %p, i32 %off) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<%index> to i32
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = add ir<%off>, vp<[[VP5]]>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%idx> = zext vp<[[VP6]]> to i64
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%p>, ir<%idx>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%p>, ir<%idx>
 ; CHECK-NEXT:    WIDEN store ir<%gep>, ir<1>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<8>
 ; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
@@ -516,7 +516,7 @@ define void @all_iterations_in_main_loop_with_scevcheck(ptr %p, i32 %off) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = trunc vp<%index> to i32
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add ir<%off>, vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%idx> = zext vp<[[VP4]]> to i64
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%p>, ir<%idx>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%p>, ir<%idx>
 ; CHECK-NEXT:    WIDEN store ir<%gep>, ir<1>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
@@ -630,7 +630,7 @@ define void @dead_main_vector_loop(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  Successor(s): vec.epilog.vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vec.epilog.vector.body:
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%dst>, ir<%vec.epilog.resume.val>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%dst>, ir<%vec.epilog.resume.val>
 ; CHECK-NEXT:    WIDEN store ir<%gep>, ir<1>
 ; CHECK-NEXT:  Successor(s): vec.epilog.middle.block
 ; CHECK-EMPTY:

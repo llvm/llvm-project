@@ -16,8 +16,8 @@ define void @cast_flags_mixed(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    CLONE ir<%gep.zext> = getelementptr ir<%A>, ir<3>
-; CHECK-NEXT:    CLONE ir<%gep.trunc> = getelementptr ir<%B>, ir<3>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.zext> = getelementptr ptr, ir<%A>, ir<3>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.trunc> = getelementptr [4 x i8], ir<%B>, ir<3>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = wide-iv-step vp<[[VP0]]>, ir<1>
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = wide-iv-step vp<[[VP0]]>, ir<1>
 ; CHECK-NEXT:  Successor(s): vector loop
@@ -218,7 +218,7 @@ define void @fpiv_wideivstep_flags(float %init, ptr %p, i64 %n) {
 ; CHECK-NEXT:      ir<%x> = WIDEN-INDUCTION fast ir<%init>, ir<1.000000e+00>, vp<[[VP0]]>, vp<[[VP5]]>, vp<%step.add>
 ; CHECK-NEXT:      EMIT vp<%step.add> = fadd fast ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%p>, vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds float, ir<%p>, vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = mul nuw nsw vp<[[VP0]]>, ir<1>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx>, ir<1>, vp<[[VP8]]>

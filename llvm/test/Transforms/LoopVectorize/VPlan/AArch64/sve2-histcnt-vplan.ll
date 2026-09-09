@@ -27,10 +27,10 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
-; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
+; CHECK-NEXT:     EMIT-SCALAR [[GEP_IDX:.*]] = getelementptr inbounds i32, ir<%indices>, [[STEPS]]
 ; CHECK-NEXT:     CLONE [[IDX:.*]] = load [[GEP_IDX]]
 ; CHECK-NEXT:     EMIT-SCALAR [[EXT_IDX:.*]] = zext [[IDX]]
-; CHECK-NEXT:     CLONE [[GEP_BUCKET:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX]]
+; CHECK-NEXT:     EMIT-SCALAR [[GEP_BUCKET:.*]] = getelementptr inbounds i32, ir<%buckets>, [[EXT_IDX]]
 ; CHECK-NEXT:     CLONE [[HISTVAL:.*]] = load [[GEP_BUCKET]]
 ; CHECK-NEXT:     CLONE [[UPDATE:.*]] = add nsw [[HISTVAL]], ir<1>
 ; CHECK-NEXT:     CLONE store [[UPDATE]], [[GEP_BUCKET]]
@@ -76,7 +76,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
-; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
+; CHECK-NEXT:     EMIT-SCALAR [[GEP_IDX:.*]] = getelementptr inbounds i32, ir<%indices>, [[STEPS]]
 ; CHECK-NEXT:     [[VECP_IDX:vp.*]] = vector-pointer inbounds i32, [[GEP_IDX]]
 ; CHECK-NEXT:     WIDEN [[IDX:.*]] = load [[VECP_IDX]]
 ; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX:.*]] = zext [[IDX]] to i64

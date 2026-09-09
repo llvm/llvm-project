@@ -31,14 +31,14 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:      EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
 ; IF-EVL-NEXT:      EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = zext vp<%evl> to i64
 ; IF-EVL-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP5]]>
-; IF-EVL-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[VP6]]>
+; IF-EVL-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%b>, vp<[[VP6]]>
 ; IF-EVL-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; IF-EVL-NEXT:      WIDEN ir<%0> = vp.load vp<[[VP7]]>, vp<%evl>
-; IF-EVL-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[VP6]]>
+; IF-EVL-NEXT:      EMIT-SCALAR ir<%arrayidx2> = getelementptr inbounds i32, ir<%c>, vp<[[VP6]]>
 ; IF-EVL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx2>, ir<1>
 ; IF-EVL-NEXT:      WIDEN ir<%1> = vp.load vp<[[VP8]]>, vp<%evl>
 ; IF-EVL-NEXT:      WIDEN ir<%add> = add nsw ir<%1>, ir<%0>
-; IF-EVL-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<[[VP6]]>
+; IF-EVL-NEXT:      EMIT-SCALAR ir<%arrayidx4> = getelementptr inbounds i32, ir<%a>, vp<[[VP6]]>
 ; IF-EVL-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx4>, ir<1>
 ; IF-EVL-NEXT:      WIDEN vp.store vp<[[VP9]]>, ir<%add>, vp<%evl>
 ; IF-EVL-NEXT:      EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = zext vp<%evl> to i64
@@ -68,14 +68,14 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-EMPTY:
 ; NO-VP-NEXT:    vector.body:
 ; NO-VP-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; NO-VP-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[VP4]]>
+; NO-VP-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%b>, vp<[[VP4]]>
 ; NO-VP-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; NO-VP-NEXT:      WIDEN ir<%0> = load vp<[[VP5]]>
-; NO-VP-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[VP4]]>
+; NO-VP-NEXT:      EMIT-SCALAR ir<%arrayidx2> = getelementptr inbounds i32, ir<%c>, vp<[[VP4]]>
 ; NO-VP-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx2>, ir<1>
 ; NO-VP-NEXT:      WIDEN ir<%1> = load vp<[[VP6]]>
 ; NO-VP-NEXT:      WIDEN ir<%add> = add nsw ir<%1>, ir<%0>
-; NO-VP-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<[[VP4]]>
+; NO-VP-NEXT:      EMIT-SCALAR ir<%arrayidx4> = getelementptr inbounds i32, ir<%a>, vp<[[VP4]]>
 ; NO-VP-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx4>, ir<1>
 ; NO-VP-NEXT:      WIDEN store vp<[[VP7]]>, ir<%add>
 ; NO-VP-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -125,11 +125,11 @@ define void @safe_dep(ptr %p) {
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:    vector.body:
 ; IF-EVL-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; IF-EVL-NEXT:      CLONE ir<%a1> = getelementptr ir<%p>, vp<[[VP4]]>
+; IF-EVL-NEXT:      EMIT-SCALAR ir<%a1> = getelementptr i64, ir<%p>, vp<[[VP4]]>
 ; IF-EVL-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%a1>, ir<1>
 ; IF-EVL-NEXT:      WIDEN ir<%v> = load vp<[[VP5]]>
 ; IF-EVL-NEXT:      CLONE ir<%offset> = add vp<[[VP4]]>, ir<100>
-; IF-EVL-NEXT:      CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
+; IF-EVL-NEXT:      EMIT-SCALAR ir<%a2> = getelementptr i64, ir<%p>, ir<%offset>
 ; IF-EVL-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%a2>, ir<1>
 ; IF-EVL-NEXT:      WIDEN store vp<[[VP6]]>, ir<%v>
 ; IF-EVL-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -156,11 +156,11 @@ define void @safe_dep(ptr %p) {
 ; NO-VP-EMPTY:
 ; NO-VP-NEXT:    vector.body:
 ; NO-VP-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; NO-VP-NEXT:      CLONE ir<%a1> = getelementptr ir<%p>, vp<[[VP4]]>
+; NO-VP-NEXT:      EMIT-SCALAR ir<%a1> = getelementptr i64, ir<%p>, vp<[[VP4]]>
 ; NO-VP-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%a1>, ir<1>
 ; NO-VP-NEXT:      WIDEN ir<%v> = load vp<[[VP5]]>
 ; NO-VP-NEXT:      CLONE ir<%offset> = add vp<[[VP4]]>, ir<100>
-; NO-VP-NEXT:      CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
+; NO-VP-NEXT:      EMIT-SCALAR ir<%a2> = getelementptr i64, ir<%p>, ir<%offset>
 ; NO-VP-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%a2>, ir<1>
 ; NO-VP-NEXT:      WIDEN store vp<[[VP6]]>, ir<%v>
 ; NO-VP-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>

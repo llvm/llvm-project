@@ -27,14 +27,14 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; INITIAL-NEXT:    Successor(s): vector.body.split
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:    vector.body.split:
-; INITIAL-NEXT:      CLONE ir<%ptr.a> = getelementptr inbounds ir<%a>, ir<%iv>
+; INITIAL-NEXT:      EMIT-SCALAR ir<%ptr.a> = getelementptr inbounds i8, ir<%a>, ir<%iv>
 ; INITIAL-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i8, ir<%ptr.a>, ir<1>
 ; INITIAL-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP6]]>, vp<[[VP5]]>
-; INITIAL-NEXT:      CLONE ir<%ptr.b> = getelementptr inbounds ir<%b>, ir<%iv>
+; INITIAL-NEXT:      EMIT-SCALAR ir<%ptr.b> = getelementptr inbounds i8, ir<%b>, ir<%iv>
 ; INITIAL-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i8, ir<%ptr.b>, ir<1>
 ; INITIAL-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP7]]>, vp<[[VP5]]>
 ; INITIAL-NEXT:      WIDEN ir<%add> = add ir<%ld.b>, ir<%ld.a>
-; INITIAL-NEXT:      CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, ir<%iv>
+; INITIAL-NEXT:      EMIT-SCALAR ir<%ptr.c> = getelementptr inbounds i8, ir<%c>, ir<%iv>
 ; INITIAL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i8, ir<%ptr.c>, ir<1>
 ; INITIAL-NEXT:      WIDEN store vp<[[VP8]]>, ir<%add>, vp<[[VP5]]>
 ; INITIAL-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -85,12 +85,12 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:    WIDEN-PHI vp<[[VP12:%[0-9]+]]> = phi [ vp<[[VP10]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; FINAL-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp ule vp<[[VP12]]>, vp<[[VP9]]>
 ; FINAL-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = and vp<[[VP13]]>, vp<[[VP4]]>
-; FINAL-NEXT:    CLONE ir<%ptr.a> = getelementptr inbounds ir<%a>, vp<%index>
+; FINAL-NEXT:    EMIT-SCALAR ir<%ptr.a> = getelementptr inbounds i8, ir<%a>, vp<%index>
 ; FINAL-NEXT:    WIDEN ir<%ld.a> = load ir<%ptr.a>, vp<[[VP14]]>
-; FINAL-NEXT:    CLONE ir<%ptr.b> = getelementptr inbounds ir<%b>, vp<%index>
+; FINAL-NEXT:    EMIT-SCALAR ir<%ptr.b> = getelementptr inbounds i8, ir<%b>, vp<%index>
 ; FINAL-NEXT:    WIDEN ir<%ld.b> = load ir<%ptr.b>, vp<[[VP14]]>
 ; FINAL-NEXT:    WIDEN ir<%add> = add ir<%ld.b>, ir<%ld.a>
-; FINAL-NEXT:    CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, vp<%index>
+; FINAL-NEXT:    EMIT-SCALAR ir<%ptr.c> = getelementptr inbounds i8, ir<%c>, vp<%index>
 ; FINAL-NEXT:    WIDEN store ir<%ptr.c>, ir<%add>, vp<[[VP14]]>
 ; FINAL-NEXT:    EMIT vp<%index.next> = add vp<%index>, vp<%num.active.lanes>
 ; FINAL-NEXT:    EMIT vp<%vec.ind.next> = add nuw vp<[[VP12]]>, vp<[[VP11]]>

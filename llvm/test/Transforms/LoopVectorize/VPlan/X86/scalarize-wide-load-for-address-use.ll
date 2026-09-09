@@ -28,7 +28,7 @@ define void @reverse_unmasked_load_feeds_address(ptr noalias %src, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<%n.minus.1>, ir<-1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%src>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr double, ir<%src>, ir<%iv>
 ; CHECK-NEXT:      REPLICATE ir<%val> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%cmp> = fcmp oeq ir<%val>, ir<0.000000e+00>
 ; CHECK-NEXT:      EMIT ir<%ptr.sel> = select ir<%cmp>, ir<@tbl.a>, ir<@tbl.b>
@@ -83,13 +83,13 @@ define void @mixed_address_and_vector_uses(ptr noalias %src, ptr noalias %dst, i
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr ir<%src>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.src> = getelementptr double, ir<%src>, ir<%iv>
 ; CHECK-NEXT:      REPLICATE ir<%val> = load ir<%gep.src>
 ; CHECK-NEXT:      EMIT ir<%cmp> = fcmp oeq ir<%val>, ir<0.000000e+00>
 ; CHECK-NEXT:      EMIT ir<%ptr.sel> = select ir<%cmp>, ir<@tbl.a>, ir<@tbl.b>
 ; CHECK-NEXT:      REPLICATE store ir<1.000000e+00>, ir<%ptr.sel>
 ; CHECK-NEXT:      EMIT ir<%doubled> = fmul ir<%val>, ir<2.000000e+00>
-; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.dst> = getelementptr double, ir<%dst>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer double, ir<%gep.dst>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%doubled>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
@@ -144,9 +144,9 @@ define void @interleave_member_feeds_address(ptr noalias %arr, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%gep.p> = getelementptr ir<%arr>, ir<%iv>, ir<0>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.p> = getelementptr %struct.pair = type { ptr, double }, ir<%arr>, ir<%iv>, ir<0>
 ; CHECK-NEXT:      REPLICATE ir<%p> = load ir<%gep.p>
-; CHECK-NEXT:      EMIT ir<%gep.v> = getelementptr ir<%arr>, ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.v> = getelementptr %struct.pair = type { ptr, double }, ir<%arr>, ir<%iv>, ir<1>
 ; CHECK-NEXT:      REPLICATE ir<%v> = load ir<%gep.v>
 ; CHECK-NEXT:      REPLICATE store ir<%v>, ir<%p>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
@@ -198,7 +198,7 @@ define void @load_feeds_mask_reaching_address(ptr noalias %src, ptr noalias %dst
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%src>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr double, ir<%src>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer double, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%val> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%cmp> = fcmp ole ir<0.000000e+00>, ir<%val>
@@ -206,7 +206,7 @@ define void @load_feeds_mask_reaching_address(ptr noalias %src, ptr noalias %dst
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then:
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%iv>, ir<1>, ir<%cmp>
-; CHECK-NEXT:      EMIT ir<%gep2> = getelementptr ir<@tbl.a>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep2> = getelementptr double, ir<@tbl.a>, ir<%idx>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer double, ir<%gep2>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%val2> = load vp<[[VP5]]>, ir<%cmp>
 ; CHECK-NEXT:      REPLICATE store ir<%val2>, ir<%dst>, ir<%cmp>
@@ -269,11 +269,11 @@ define void @symbolic_stride_versioned_to_one(ptr noalias %src, ptr noalias %dst
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr ir<%src>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.src> = getelementptr double, ir<%src>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer double, ir<%gep.src>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%val> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%doubled> = fmul ir<%val>, ir<2.000000e+00>
-; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.dst> = getelementptr double, ir<%dst>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer double, ir<%gep.dst>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%doubled>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>

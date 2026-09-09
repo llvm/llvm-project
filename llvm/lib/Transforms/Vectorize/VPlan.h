@@ -1569,6 +1569,53 @@ protected:
 #endif
 };
 
+class VPGEPInstruction : public VPInstruction {
+  /// The source element type of the GEP.
+  Type *SourceElementTy;
+
+public:
+  VPGEPInstruction(Type *SourceElementTy, ArrayRef<VPValue *> Operands,
+                   const VPIRFlags &Flags = {},
+                   const VPIRMetadata &Metadata = {},
+                   DebugLoc DL = DebugLoc::getUnknown(), Twine Name = "",
+                   Value *UV = nullptr)
+      : VPInstruction(Instruction::GetElementPtr, Operands, Flags, Metadata, DL,
+                      Name, Operands[0]->getScalarType()),
+        SourceElementTy(SourceElementTy) {
+    setUnderlyingValue(UV);
+  }
+
+  static inline bool classof(const VPRecipeBase *R) {
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && VPI->getOpcode() == Instruction::GetElementPtr;
+  }
+
+  Type *getSourceElementType() const { return SourceElementTy; }
+
+  VPGEPInstruction *clone() override {
+    return new VPGEPInstruction(getSourceElementType(), operands(), *this,
+                                *this, getDebugLoc(), getName(),
+                                getUnderlyingValue());
+  }
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // We mark this instruction as zero-cost because the cost of GEPs in
+    // vectorized code depends on whether the corresponding memory instruction
+    // is scalarized or not. Therefore, we handle GEPs with the memory
+    // instruction cost.
+    return 0;
+  }
+
+  void execute(VPTransformState &State) override;
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// Helper type to provide functions to access incoming values and blocks for
 /// phi-like recipes.
 class VPPhiAccessors {
@@ -3371,8 +3418,10 @@ public:
                             computeScalarType(I, Operands), Flags, DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
-    assert((!IsSingleScalar || !I->isCast()) &&
-           "Single-scalar casts should use VPInstruction");
+    assert((!IsSingleScalar ||
+            (!I->isCast() && I->getOpcode() != Instruction::GetElementPtr)) &&
+           "single-scalar casts should use VPInstruction, and single-scalar "
+           "GEPs should use VPGEPInstruction");
     setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);

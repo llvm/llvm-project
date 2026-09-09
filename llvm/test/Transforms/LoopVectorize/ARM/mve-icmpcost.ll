@@ -21,13 +21,13 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %exitcond.not = icmp eq i32 %inc, %n
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; CHECK:  Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i16, ir<%s>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN ir<%1> = load vp<[[VP5]]>
 ; CHECK:  Cost of 4 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%1> to i32
 ; CHECK:  Cost of 20 for VF 2: WIDEN ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
 ; CHECK:  Cost of 26 for VF 2: WIDEN ir<%conv6> = add ir<%1>, ir<%0>
-; CHECK:  Cost of 0 for VF 2: CLONE ir<%arrayidx7> = getelementptr ir<%d>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR ir<%arrayidx7> = getelementptr i16, ir<%d>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer i16, ir<%arrayidx7>, ir<1>
 ; CHECK:  Cost of 16 for VF 2: WIDEN store vp<[[VP6]]>, ir<%conv6>, ir<%cmp2>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
@@ -46,13 +46,13 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost for VF 2: 86 (Estimated cost per lane: 43)
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK:  Cost of 0 for VF 4: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i16, ir<%s>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%1> = load vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv> = sext ir<%1> to i32
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%conv6> = add ir<%1>, ir<%0>
-; CHECK:  Cost of 0 for VF 4: CLONE ir<%arrayidx7> = getelementptr ir<%d>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR ir<%arrayidx7> = getelementptr i16, ir<%d>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer i16, ir<%arrayidx7>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN store vp<[[VP6]]>, ir<%conv6>, ir<%cmp2>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -71,13 +71,13 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost for VF 4: 10 (Estimated cost per lane: 2.5)
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK:  Cost of 0 for VF 8: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 8: EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i16, ir<%s>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP5]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%1> = load vp<[[VP5]]>
 ; CHECK:  Cost of 2 for VF 8: WIDEN-CAST ir<%conv> = sext ir<%1> to i32
 ; CHECK:  Cost of 36 for VF 8: WIDEN ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%conv6> = add ir<%1>, ir<%0>
-; CHECK:  Cost of 0 for VF 8: CLONE ir<%arrayidx7> = getelementptr ir<%d>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 8: EMIT-SCALAR ir<%arrayidx7> = getelementptr i16, ir<%d>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP6]]> = vector-pointer i16, ir<%arrayidx7>, ir<1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN store vp<[[VP6]]>, ir<%conv6>, ir<%cmp2>
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
