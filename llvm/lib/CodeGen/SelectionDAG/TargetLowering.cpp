@@ -9370,15 +9370,20 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   // expansion stays vector when ResVT is a vector.
   EVT IntScalarVT = EVT::getIntegerVT(*DAG.getContext(), SrcBits);
   EVT IntVT = ResVT.changeElementType(*DAG.getContext(), IntScalarVT);
-  if (!IntVT.isVector() && !isTypeLegal(IntScalarVT)) {
-    if (getTypeAction(*DAG.getContext(), IntScalarVT) != TypePromoteInteger) {
-      // We only know how to handle situations where the legal type is wider.
+  if (!IntVT.isVector()) {
+    switch (getTypeAction(*DAG.getContext(), IntScalarVT)) {
+    case TypeLegal:
+      break;
+    // We only know how to handle situations where the legal type is wider.
+    case TypePromoteInteger:
+      IntVT = getTypeToTransformTo(*DAG.getContext(), IntScalarVT);
+      break;
+    default:
       DAG.getContext()->emitError(
           "CONVERT_TO_ARBITRARY_FP: the requested integer value type for its "
           "legalization is not supported");
       return SDValue();
     }
-    IntVT = getTypeToTransformTo(*DAG.getContext(), IntScalarVT);
   }
   EVT SetCCVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
@@ -9417,15 +9422,19 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   EVT FrexpExpScalarVT =
       getValueType(DAG.getDataLayout(), Type::getInt32Ty(*DAG.getContext()));
   EVT FrexpExpVT = SrcVT.changeElementType(*DAG.getContext(), FrexpExpScalarVT);
-  if (!FrexpExpVT.isVector() && !isTypeLegal(FrexpExpVT)) {
-    if (getTypeAction(*DAG.getContext(), FrexpExpScalarVT) !=
-        TypePromoteInteger) {
-      // We only know how to handle situations where the legal type is wider.
+  if (!FrexpExpVT.isVector()) {
+    switch (getTypeAction(*DAG.getContext(), FrexpExpScalarVT)) {
+    case TypeLegal:
+      break;
+    // We only know how to handle situations where the legal type is wider.
+    case TypePromoteInteger:
+      FrexpExpVT = getTypeToTransformTo(*DAG.getContext(), FrexpExpScalarVT);
+      break;
+    default:
       DAG.getContext()->emitError("CONVERT_TO_ARBITRARY_FP: the requested i32 "
                                   "type for its legalization is not supported");
       return SDValue();
     }
-    FrexpExpVT = getTypeToTransformTo(*DAG.getContext(), FrexpExpScalarVT);
   }
   SDValue Frexp =
       DAG.getNode(ISD::FFREXP, dl, DAG.getVTList(SrcVT, FrexpExpVT), FloatVal);
