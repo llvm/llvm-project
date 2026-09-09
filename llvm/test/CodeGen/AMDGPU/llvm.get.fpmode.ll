@@ -13,7 +13,7 @@ define i32 @func_fpmode_i32() {
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_and_b32 s4, s4, 0x7f3ff
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -21,7 +21,7 @@ define i32 @func_fpmode_i32() {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_and_b32 s4, s4, 0x87f3ff
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -29,7 +29,7 @@ define i32 @func_fpmode_i32() {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_and_b32 s4, s4, 0x87f3ff
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -37,7 +37,7 @@ define i32 @func_fpmode_i32() {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x87f3ff
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fpmode = call i32 @llvm.get.fpmode.i32()
@@ -49,7 +49,7 @@ define i32 @strictfp_func_fpmode_i32() strictfp {
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_and_b32 s4, s4, 0x7f3ff
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -57,7 +57,7 @@ define i32 @strictfp_func_fpmode_i32() strictfp {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_and_b32 s4, s4, 0x87f3ff
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -65,7 +65,7 @@ define i32 @strictfp_func_fpmode_i32() strictfp {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_and_b32 s4, s4, 0x87f3ff
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -73,7 +73,7 @@ define i32 @strictfp_func_fpmode_i32() strictfp {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x87f3ff
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fpmode = call i32 @llvm.get.fpmode.i32() strictfp
@@ -85,7 +85,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX6-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX6-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX6-NEXT:    s_and_b32 s4, s4, 0x7f3ff
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
@@ -97,7 +97,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX7-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX7-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX7-NEXT:    s_and_b32 s4, s4, 0x7f3ff
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
@@ -109,7 +109,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 19)
-; GFX8-NEXT:    s_and_b32 s2, 0x7f3ff, s2
+; GFX8-NEXT:    s_and_b32 s2, s2, 0x7f3ff
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -121,7 +121,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s2, 0x87f3ff, s2
+; GFX9-NEXT:    s_and_b32 s2, s2, 0x87f3ff
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -133,7 +133,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 24)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_and_b32 s2, 0x87f3ff, s2
+; GFX10-NEXT:    s_and_b32 s2, s2, 0x87f3ff
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -143,7 +143,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s2, 0x87f3ff, s2
+; GFX11-NEXT:    s_and_b32 s2, s2, 0x87f3ff
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -159,8 +159,7 @@ define i32 @func_fpmode_i32_denormonly() {
 ; GFX678-LABEL: func_fpmode_i32_denormonly:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX678-NEXT:    s_and_b32 s4, s4, 0xf0
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
@@ -168,8 +167,7 @@ define i32 @func_fpmode_i32_denormonly() {
 ; GFX9-LABEL: func_fpmode_i32_denormonly:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0xf0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -177,8 +175,7 @@ define i32 @func_fpmode_i32_denormonly() {
 ; GFX10-LABEL: func_fpmode_i32_denormonly:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0xf0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -186,8 +183,7 @@ define i32 @func_fpmode_i32_denormonly() {
 ; GFX11-LABEL: func_fpmode_i32_denormonly:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 8)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xf0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -200,36 +196,28 @@ define i32 @func_fpmode_i32_roundonly() {
 ; GFX678-LABEL: func_fpmode_i32_roundonly:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
-; GFX678-NEXT:    s_and_b32 s4, s4, 15
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: func_fpmode_i32_roundonly:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
-; GFX9-NEXT:    s_and_b32 s4, s4, 15
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: func_fpmode_i32_roundonly:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
-; GFX10-NEXT:    s_and_b32 s4, s4, 15
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: func_fpmode_i32_roundonly:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
-; GFX11-NEXT:    s_and_b32 s0, s0, 15
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fpmode = call i32 @llvm.get.fpmode.i32()
@@ -241,36 +229,28 @@ define i32 @func_fpmode_i32_round_denorm_only() {
 ; GFX678-LABEL: func_fpmode_i32_round_denorm_only:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
-; GFX678-NEXT:    s_and_b32 s4, s4, 0xff
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: func_fpmode_i32_round_denorm_only:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
-; GFX9-NEXT:    s_and_b32 s4, s4, 0xff
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: func_fpmode_i32_round_denorm_only:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
-; GFX10-NEXT:    s_and_b32 s4, s4, 0xff
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: func_fpmode_i32_round_denorm_only:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
-; GFX11-NEXT:    s_and_b32 s0, s0, 0xff
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 8)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fpmode = call i32 @llvm.get.fpmode.i32()
@@ -282,36 +262,28 @@ define i32 @func_fpmode_i32_round_denorm_dx10_ieee() {
 ; GFX678-LABEL: func_fpmode_i32_round_denorm_dx10_ieee:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
-; GFX678-NEXT:    s_and_b32 s4, s4, 0x3ff
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 10)
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: func_fpmode_i32_round_denorm_dx10_ieee:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
-; GFX9-NEXT:    s_and_b32 s4, s4, 0x3ff
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 10)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: func_fpmode_i32_round_denorm_dx10_ieee:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
-; GFX10-NEXT:    s_and_b32 s4, s4, 0x3ff
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 10)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: func_fpmode_i32_round_denorm_dx10_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
-; GFX11-NEXT:    s_and_b32 s0, s0, 0x3ff
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 10)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fpmode = call i32 @llvm.get.fpmode.i32()
@@ -324,7 +296,6 @@ define i32 @func_fpmode_i32_excp_en() {
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
 ; GFX678-NEXT:    s_and_b32 s4, s4, 0x7f000
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
@@ -332,8 +303,7 @@ define i32 @func_fpmode_i32_excp_en() {
 ; GFX9-LABEL: func_fpmode_i32_excp_en:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0x7f000
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -341,8 +311,7 @@ define i32 @func_fpmode_i32_excp_en() {
 ; GFX10-LABEL: func_fpmode_i32_excp_en:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0x7f000
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -350,8 +319,7 @@ define i32 @func_fpmode_i32_excp_en() {
 ; GFX11-LABEL: func_fpmode_i32_excp_en:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 19)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0x7f000
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -366,7 +334,7 @@ define i32 @func_fpmode_i32_environment_gfx6() {
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_and_b32 s4, s4, 0x7f3ff
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -374,7 +342,6 @@ define i32 @func_fpmode_i32_environment_gfx6() {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0x7f3ff
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -383,7 +350,6 @@ define i32 @func_fpmode_i32_environment_gfx6() {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0x7f3ff
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -392,7 +358,6 @@ define i32 @func_fpmode_i32_environment_gfx6() {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0x7f3ff
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -407,7 +372,7 @@ define i32 @func_fpmode_i32_environment_gfx9() {
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_and_b32 s4, s4, 0x7f3ff
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -415,7 +380,7 @@ define i32 @func_fpmode_i32_environment_gfx9() {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_and_b32 s4, s4, 0x87f3ff
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -423,7 +388,7 @@ define i32 @func_fpmode_i32_environment_gfx9() {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_and_b32 s4, s4, 0x87f3ff
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -431,7 +396,7 @@ define i32 @func_fpmode_i32_environment_gfx9() {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x87f3ff
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fpmode = call i32 @llvm.get.fpmode.i32()
@@ -443,8 +408,7 @@ define i32 @func_fpmode_i32_denormf32only() {
 ; GFX678-LABEL: func_fpmode_i32_denormf32only:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 6)
 ; GFX678-NEXT:    s_and_b32 s4, s4, 48
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
@@ -452,8 +416,7 @@ define i32 @func_fpmode_i32_denormf32only() {
 ; GFX9-LABEL: func_fpmode_i32_denormf32only:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 6)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 48
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -461,8 +424,7 @@ define i32 @func_fpmode_i32_denormf32only() {
 ; GFX10-LABEL: func_fpmode_i32_denormf32only:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 6)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 48
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -470,8 +432,7 @@ define i32 @func_fpmode_i32_denormf32only() {
 ; GFX11-LABEL: func_fpmode_i32_denormf32only:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 6)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 48
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -484,8 +445,7 @@ define i32 @func_fpmode_i32_denormf32only_0() {
 ; GFX678-LABEL: func_fpmode_i32_denormf32only_0:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 6)
 ; GFX678-NEXT:    s_and_b32 s4, s4, 32
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
@@ -493,8 +453,7 @@ define i32 @func_fpmode_i32_denormf32only_0() {
 ; GFX9-LABEL: func_fpmode_i32_denormf32only_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 6)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 32
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -502,8 +461,7 @@ define i32 @func_fpmode_i32_denormf32only_0() {
 ; GFX10-LABEL: func_fpmode_i32_denormf32only_0:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 6)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 32
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -511,8 +469,7 @@ define i32 @func_fpmode_i32_denormf32only_0() {
 ; GFX11-LABEL: func_fpmode_i32_denormf32only_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 6)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 32
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -525,8 +482,7 @@ define i32 @func_fpmode_i32_denormf32only_1() {
 ; GFX678-LABEL: func_fpmode_i32_denormf32only_1:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 7)
 ; GFX678-NEXT:    s_and_b32 s4, s4, 64
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
@@ -534,8 +490,7 @@ define i32 @func_fpmode_i32_denormf32only_1() {
 ; GFX9-LABEL: func_fpmode_i32_denormf32only_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 7)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 64
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -543,8 +498,7 @@ define i32 @func_fpmode_i32_denormf32only_1() {
 ; GFX10-LABEL: func_fpmode_i32_denormf32only_1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 7)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 64
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -552,8 +506,7 @@ define i32 @func_fpmode_i32_denormf32only_1() {
 ; GFX11-LABEL: func_fpmode_i32_denormf32only_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 7)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 64
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -566,8 +519,7 @@ define i32 @func_fpmode_i32_denormf64f16only() {
 ; GFX678-LABEL: func_fpmode_i32_denormf64f16only:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX678-NEXT:    s_and_b32 s4, s4, 0xc0
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
@@ -575,8 +527,7 @@ define i32 @func_fpmode_i32_denormf64f16only() {
 ; GFX9-LABEL: func_fpmode_i32_denormf64f16only:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0xc0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -584,8 +535,7 @@ define i32 @func_fpmode_i32_denormf64f16only() {
 ; GFX10-LABEL: func_fpmode_i32_denormf64f16only:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 8)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0xc0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -593,8 +543,7 @@ define i32 @func_fpmode_i32_denormf64f16only() {
 ; GFX11-LABEL: func_fpmode_i32_denormf64f16only:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 8)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xc0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -607,8 +556,7 @@ define i32 @func_fpmode_i32_dx10_clamp_only() {
 ; GFX678-LABEL: func_fpmode_i32_dx10_clamp_only:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 9)
 ; GFX678-NEXT:    s_and_b32 s4, s4, 0x100
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
@@ -616,8 +564,7 @@ define i32 @func_fpmode_i32_dx10_clamp_only() {
 ; GFX9-LABEL: func_fpmode_i32_dx10_clamp_only:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 9)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0x100
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -625,8 +572,7 @@ define i32 @func_fpmode_i32_dx10_clamp_only() {
 ; GFX10-LABEL: func_fpmode_i32_dx10_clamp_only:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 9)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0x100
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -634,8 +580,7 @@ define i32 @func_fpmode_i32_dx10_clamp_only() {
 ; GFX11-LABEL: func_fpmode_i32_dx10_clamp_only:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 9)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0x100
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -648,8 +593,7 @@ define i32 @func_fpmode_i32_ieee_only() {
 ; GFX678-LABEL: func_fpmode_i32_ieee_only:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
-; GFX678-NEXT:    s_and_b32 s4, 0x7f3ff, s4
+; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 10)
 ; GFX678-NEXT:    s_and_b32 s4, s4, 0x200
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
@@ -657,8 +601,7 @@ define i32 @func_fpmode_i32_ieee_only() {
 ; GFX9-LABEL: func_fpmode_i32_ieee_only:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 10)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0x200
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -666,8 +609,7 @@ define i32 @func_fpmode_i32_ieee_only() {
 ; GFX10-LABEL: func_fpmode_i32_ieee_only:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 24)
-; GFX10-NEXT:    s_and_b32 s4, 0x87f3ff, s4
+; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 10)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0x200
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -675,8 +617,7 @@ define i32 @func_fpmode_i32_ieee_only() {
 ; GFX11-LABEL: func_fpmode_i32_ieee_only:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
-; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 10)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0x200
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
