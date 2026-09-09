@@ -95,31 +95,6 @@ static int map_c_mode_flags_to_linux_open_flags(FileMode mode) {
   return open_flags;
 }
 
-// TODO: clean up
-static int mode_flags_to_open_flags(File::ModeFlags modeflags) {
-  using ModeFlags = File::ModeFlags;
-  int open_flags = 0;
-  if (modeflags & ModeFlags(File::OpenMode::APPEND)) {
-    open_flags = O_CREAT | O_APPEND;
-    if (modeflags & ModeFlags(File::OpenMode::PLUS))
-      open_flags |= O_RDWR;
-    else
-      open_flags |= O_WRONLY;
-  } else if (modeflags & ModeFlags(File::OpenMode::WRITE)) {
-    open_flags = O_CREAT | O_TRUNC;
-    if (modeflags & ModeFlags(File::OpenMode::PLUS))
-      open_flags |= O_RDWR;
-    else
-      open_flags |= O_WRONLY;
-  } else {
-    if (modeflags & ModeFlags(File::OpenMode::PLUS))
-      open_flags |= O_RDWR;
-    else
-      open_flags |= O_RDONLY;
-  }
-  return open_flags;
-}
-
 ErrorOr<File *> openfile(const char *path, const char *mode) {
   FileMode file_mode(mode);
 
