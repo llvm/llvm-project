@@ -11,6 +11,7 @@
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
+#include "flang-rt/runtime/memory-map.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
@@ -851,6 +852,25 @@ void RTDEF(CopyOutAssignDirect)(const Descriptor &var, Descriptor &temp,
   // writable anyway.
   // Setting the system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
   // restores the unconditional copy-out.
+  //
+  // Additionally, FLANG_RT_COPYOUT_READONLY_MODE (host only, default off)
+  // consults the process memory map and skips the copy-out entirely when the
+  // destination lives in read-only memory - a compatibility mode: any store
+  // into such a destination could only rewrite identical bytes or fault, so
+  // skipping converts the fault into a no-op. Mode 1 trusts a one-time
+  // snapshot of the map (no system calls here); mode 2 re-confirms each
+  // rare snapshot hit against the current map, and a stale entry (the
+  // destination is writable now) falls through to the regular copy-out.
+  // Because both CopyOutAssign and compiler-inlined copy-out funnel through
+  // this entry point, the policy covers both. See memory-map.h.
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  if (CopyOutReadOnlyMode mode{GetCopyOutReadOnlyMode()};
+      mode != CopyOutReadOnlyMode::Off && CopyOutReadOnlyCandidate(var) &&
+      (mode == CopyOutReadOnlyMode::Trust || CopyOutReadOnlyConfirm(var))) {
+    NoteSkippedCopyOut(sourceFile, sourceLine);
+    return;
+  }
+#endif
   if (executionEnvironment.copyOutModifiedOnly) {
     ShallowCopyModifiedSuffix(var, temp);
   } else {
