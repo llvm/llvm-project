@@ -191,10 +191,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   MCSymbol *SignInstrLabel = nullptr;
 
   /// SignReturnAddressHardening specifies the PAC-RET hardening scheme.
-  enum class SignReturnAddressHardeningKind {
-    None,
-    LoadReturnAddress
-  } SignReturnAddressHardening = SignReturnAddressHardeningKind::None;
+  enum class SignReturnAddressHardeningKind { None, LoadReturnAddress };
+
+  SignReturnAddressHardeningKind SignReturnAddressHardening =
+      SignReturnAddressHardeningKind::None;
 
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.

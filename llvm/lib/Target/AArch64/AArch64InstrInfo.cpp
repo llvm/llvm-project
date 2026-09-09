@@ -10527,14 +10527,14 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                                    ->getInfo<AArch64FunctionInfo>()
                                    ->getSignReturnAddressCondition();
   if (RASignCondition != SignReturnAddress::None) {
-    // Candidates that have Return Address Signing Hardening enabled are
+    // Candidates that have Return Address Authentication Hardening enabled are
     // discarded.
     //
     // In its current form, the machine outliner does not preserve X16/X17
     // across outlined function calls, even though it should as they are
-    // caller-saved registers. And since the hardening based on load of return
-    // address may clobber one of these registers, if they are alive across a
-    // call their value would be lost due to the hardening mechanism.
+    // caller-saved registers. And since the hardening based on load from the
+    // return address may clobber one of these registers, if they are alive
+    // across a call their value would be lost due to the hardening mechanism.
     llvm::erase_if(RepeatedSequenceLocs, [](outliner::Candidate &C) {
       return C.getMF()
           ->getInfo<AArch64FunctionInfo>()
