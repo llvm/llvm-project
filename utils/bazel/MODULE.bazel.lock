@@ -318,7 +318,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%llvm_repos_extension": {
       "general": {
-        "bzlTransitiveDigest": "AfKN+Lbkiv3K+Q5JzNJsTiBryWarkkhFl9xAwjGjVfw=",
+        "bzlTransitiveDigest": "nmqMTTDURvBeR6PLzbfX1EEbe79FTb8wSzrT13UXlFk=",
         "usagesDigest": "X0yUkkWyxQ2Y5oZVDkRSE/K4YkDWo1IjhHsL+1weKyU=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -333,6 +333,10 @@
           },
           "vulkan_sdk": {
             "repoRuleId": "@@//:vulkan_sdk.bzl%vulkan_sdk_setup",
+            "attributes": {}
+          },
+          "linux_uapi": {
+            "repoRuleId": "@@//:linux_uapi.bzl%linux_uapi_setup",
             "attributes": {}
           },
           "pyyaml": {

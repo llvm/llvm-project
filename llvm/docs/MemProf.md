@@ -129,8 +129,7 @@ This feature uses a hybrid approach:
 To enable this feature, pass the following flags to the compiler:
 
 - `-fpartition-static-data-sections`: Instructs the compiler to generate `.hot` and `.unlikely` section prefixes for hot and cold static data respectively in the relocatable object files.
-- `-Wl,-z,keep-data-section-prefix`: Informs the LLD linker that `.data.rel.ro.hot` and `.data.rel.ro.unlikely` as relro sections. LLD requires all relro sections to be contiguous and this flag allows us to interleave the hotness-suffixed `.data.rel.ro` sections with other relro sections.
-- `-Wl,-script=<linker_script>`: Group hot and/or cold data sections, and order the data sections.
+- `-Wl,-z,keep-data-section-prefix`: This flag is currently only supported in LLD. It informs the linker that `.data.rel.ro.hot` and `.data.rel.ro.unlikely` are relro sections (rather than only recognizing `.data.rel.ro`). LLD allows multiple relro segments, but not all loaders (particularly glibc) properly support multiple relro segments. This flag ensures a single relro segment to ensure maximum compatibility. Additionally, it makes LLD keep the data section suffixes (hot/unlikely) as otherwise they will get merged together into the standard data sections.
 
 ```bash
 clang++ -fmemory-profile-use=memprof.memprofdata -fpartition-static-data-sections -fuse-ld=lld -Wl,-z,keep-data-section-prefix -O2 source.cpp -o optimized_app

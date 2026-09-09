@@ -2292,6 +2292,13 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
   return FPClass.isKnownNeverNaN();
 }
 
+bool GISelValueTracking::isKnownNeverLogicalZero(Register Val, unsigned Depth) {
+  KnownFPClass Known = computeKnownFPClass(Val, fcZero | fcSubnormal, Depth);
+  LLT Ty = MRI.getType(Val).getScalarType();
+  return Known.isKnownNeverLogicalZero(
+      MF.getDenormalMode(getFltSemanticForLLT(Ty)));
+}
+
 /// Compute number of sign bits for the intersection of \p Src0 and \p Src1
 unsigned GISelValueTracking::computeNumSignBitsMin(Register Src0, Register Src1,
                                                    const APInt &DemandedElts,

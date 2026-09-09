@@ -2,7 +2,7 @@
 
 func.func @test_invalid_enum_case() -> () {
   // expected-error@+1 {{expected string or keyword containing one of the following enum values for attribute 'value' [first, second, third]}}
-  test.op_with_enum #test<enum fourth>
+  test.op_with_enum #test.enum<fourth>
 }
 
 // -----

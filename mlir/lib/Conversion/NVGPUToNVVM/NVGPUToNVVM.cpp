@@ -566,6 +566,7 @@ static FailureOr<LLVM::InlineAsmOp> emitMmaSparseSyncOpAsm(
                                    /*has_side_effects=*/true,
                                    /*is_align_stack=*/false,
                                    LLVM::TailCallKind::None,
+                                   /*convergent=*/false,
                                    /*asm_dialect=*/asmDialectAttr,
                                    /*operand_attrs=*/ArrayAttr());
 }

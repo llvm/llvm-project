@@ -41,6 +41,11 @@ struct LifetimeSafetyOpts {
 
   /// Whether to suggest lifetime annotations.
   bool SuggestAnnotations;
+
+  bool CheckNoescapeViolations;
+  bool CheckLifetimeboundViolations;
+  bool CheckMisplacedLifetimebound;
+  bool CheckInapplicableLifetimebound;
 };
 
 /// Enum to track functions visible across or within TU.

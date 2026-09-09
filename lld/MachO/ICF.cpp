@@ -91,9 +91,10 @@ ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
 // FIXME(gkm): implement keep-unique attributes
 // FIXME(gkm): implement address-significance tables for MachO object files
 
-static bool isFoldableWithAddendsRemoved(const ConcatInputSection *isec) {
+static bool isFoldableIgnoringRelocatedBytes(const ConcatInputSection *isec) {
   return isCfStringSection(isec) || isClassRefsSection(isec) ||
-         isSelRefsSection(isec) || isEhFrameSection(isec);
+         isSelRefsSection(isec) || isEhFrameSection(isec) ||
+         isGccExceptTabSection(isec);
 }
 
 // Make a normalized copy of a section's bytes by zeroing out the embedded
@@ -117,9 +118,9 @@ static bool compareData(const ConcatInputSection *ia,
     return false;
   if (ia->data == ib->data)
     return true;
-  if (!isFoldableWithAddendsRemoved(ia))
+  if (!isFoldableIgnoringRelocatedBytes(ia))
     return false;
-  assert(isFoldableWithAddendsRemoved(ib));
+  assert(isFoldableIgnoringRelocatedBytes(ib));
 
   SmallVector<uint8_t, 64> bufA, bufB;
   getNormalizedData(ia, bufA);
@@ -629,9 +630,6 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
     //     safe_thunks logic is applied later at merge time based on the
     //     keepUnique flag.
     //   - Otherwise, keepUnique sections are not foldable.
-    // Happens to match isFoldableWithAddendsRemoved today, but expresses a
-    // different intent (ld64's coalescing semantics, not addend stripping),
-    // so the two may diverge as either list grows.
     bool isSafeThunksCode =
         config->icfLevel == ICFLevel::safe_thunks && isCodeSec;
     bool keepUniqueAllowsFolding =
@@ -639,8 +637,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
 
     // FIXME: consider non-code __text sections as foldable?
     bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&
-                      (isCodeSec || isFoldableWithAddendsRemoved(isec) ||
-                       isGccExceptTabSection(isec)) &&
+                      (isCodeSec || isFoldableIgnoringRelocatedBytes(isec)) &&
                       keepUniqueAllowsFolding && !isec->hasAltEntry &&
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
     if (isFoldable) {
@@ -666,7 +663,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   parallelForEach(foldable, [](ConcatInputSection *isec) {
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     uint64_t hash;
-    if (isFoldableWithAddendsRemoved(isec)) {
+    if (isFoldableIgnoringRelocatedBytes(isec)) {
       SmallVector<uint8_t, 64> stackBuf;
       getNormalizedData(isec, stackBuf);
       hash = xxh3_64bits(stackBuf);

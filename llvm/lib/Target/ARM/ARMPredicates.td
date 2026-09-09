@@ -186,9 +186,7 @@ let RecomputePerFunction = 1 in {
   def UseMovtInPic     : Predicate<"Subtarget->useMovt() && Subtarget->allowPositionIndependentMovt()">;
   def DontUseMovtInPic : Predicate<"!Subtarget->useMovt() || !Subtarget->allowPositionIndependentMovt()">;
 
-  def UseFPVMLx: Predicate<"((Subtarget->useFPVMLx() &&"
-                           "  TM.Options.AllowFPOpFusion != FPOpFusion::Fast) ||"
-                           "Subtarget->hasMinSize())">;
+  def UseFPVMLx: Predicate<"Subtarget->useFPVMLx() || Subtarget->hasMinSize()">;
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<ARMSubtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<ARMSubtarget>().hardenSlsBlr() }]>;
 
@@ -199,9 +197,7 @@ def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 // But only select them if more precision in FP computation is allowed, and when
 // they are not slower than a mul + add sequence.
 // Do not use them for Darwin platforms.
-def UseFusedMAC      : Predicate<"TM.Options.AllowFPOpFusion =="
-                                 "  FPOpFusion::Fast && "
-                                 "Subtarget->useFPVFMx()">;
+def UseFusedMAC      : Predicate<"Subtarget->useFPVFMx()">;
 
 def HasFastVGETLNi32 : Predicate<"!Subtarget->hasSlowVGETLNi32()">;
 def HasSlowVGETLNi32 : Predicate<"Subtarget->hasSlowVGETLNi32()">;

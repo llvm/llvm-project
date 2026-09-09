@@ -2856,7 +2856,7 @@ define i1 @assume_olt_neg1__oeq_inf(float %arg) {
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
-  %cmp = fcmp oeq float %arg, 0x7FF0000000000000
+  %cmp = fcmp oeq float %arg, +inf
   ret i1 %cmp
 }
 
@@ -2869,7 +2869,7 @@ define i1 @assume_olt_neg1__one_inf(float %arg) {
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
-  %cmp = fcmp one float %arg, 0x7FF0000000000000
+  %cmp = fcmp one float %arg, +inf
   ret i1 %cmp
 }
 
@@ -2883,7 +2883,7 @@ define i1 @assume_olt_neg1__oeq_ninf(float %arg) {
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
-  %cmp = fcmp oeq float %arg, 0xFFF0000000000000
+  %cmp = fcmp oeq float %arg, -inf
   ret i1 %cmp
 }
 
@@ -2897,7 +2897,7 @@ define i1 @assume_olt_neg1__one_ninf(float %arg) {
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
-  %cmp = fcmp one float %arg, 0xFFF0000000000000
+  %cmp = fcmp one float %arg, -inf
   ret i1 %cmp
 }
 
@@ -2959,9 +2959,9 @@ define i1 @assume_ogt_neginf_one_neginf(float %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_OGT_NEGINF]])
 ; CHECK-NEXT:    ret i1 true
 ;
-  %cmp.ogt.neginf = fcmp ogt float %arg, 0xFFF0000000000000
+  %cmp.ogt.neginf = fcmp ogt float %arg, -inf
   call void @llvm.assume(i1 %cmp.ogt.neginf)
-  %cmp = fcmp one float %arg, 0xFFF0000000000000
+  %cmp = fcmp one float %arg, -inf
   ret i1 %cmp
 }
 
@@ -2973,9 +2973,9 @@ define i1 @assume_ogt_neginf_oeq_posinf(float %arg) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], +inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %cmp.ogt.neginf = fcmp ogt float %arg, 0xFFF0000000000000
+  %cmp.ogt.neginf = fcmp ogt float %arg, -inf
   call void @llvm.assume(i1 %cmp.ogt.neginf)
-  %cmp = fcmp oeq float %arg, 0x7FF0000000000000
+  %cmp = fcmp oeq float %arg, +inf
   ret i1 %cmp
 }
 
@@ -2987,9 +2987,9 @@ define i1 @assume_ule_neginf_oeq_neginf(float %arg) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], -inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %cmp.ule.neginf = fcmp ule float %arg, 0xFFF0000000000000
+  %cmp.ule.neginf = fcmp ule float %arg, -inf
   call void @llvm.assume(i1 %cmp.ule.neginf)
-  %cmp = fcmp oeq float %arg, 0xFFF0000000000000
+  %cmp = fcmp oeq float %arg, -inf
   ret i1 %cmp
 }
 
@@ -3000,9 +3000,9 @@ define i1 @assume_ult_neginf_oeq_neginf(float %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ULT_NEGINF]])
 ; CHECK-NEXT:    ret i1 false
 ;
-  %cmp.ult.neginf = fcmp ult float %arg, 0xFFF0000000000000
+  %cmp.ult.neginf = fcmp ult float %arg, -inf
   call void @llvm.assume(i1 %cmp.ult.neginf)
-  %cmp = fcmp oeq float %arg, 0xFFF0000000000000
+  %cmp = fcmp oeq float %arg, -inf
   ret i1 %cmp
 }
 
@@ -3016,9 +3016,9 @@ define i1 @assume_fabs_ogt_neginf_one_neginf(float %arg) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
-  %cmp.ogt.neginf = fcmp ogt float %fabs.arg, 0xFFF0000000000000
+  %cmp.ogt.neginf = fcmp ogt float %fabs.arg, -inf
   call void @llvm.assume(i1 %cmp.ogt.neginf)
-  %cmp = fcmp one float %arg, 0xFFF0000000000000
+  %cmp = fcmp one float %arg, -inf
   ret i1 %cmp
 }
 
@@ -3032,9 +3032,9 @@ define i1 @assume_fabs_ogt_neginf_one_posinf(float %arg) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
-  %cmp.ogt.neginf = fcmp ogt float %fabs.arg, 0xFFF0000000000000
+  %cmp.ogt.neginf = fcmp ogt float %fabs.arg, -inf
   call void @llvm.assume(i1 %cmp.ogt.neginf)
-  %cmp = fcmp one float %arg, 0x7FF0000000000000
+  %cmp = fcmp one float %arg, +inf
   ret i1 %cmp
 }
 
@@ -3047,9 +3047,9 @@ define i1 @assume_fabs_ule_neginf_oeq_neginf(float %arg) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
-  %cmp.ogt.neginf = fcmp ule float %fabs.arg, 0xFFF0000000000000
+  %cmp.ogt.neginf = fcmp ule float %fabs.arg, -inf
   call void @llvm.assume(i1 %cmp.ogt.neginf)
-  %cmp = fcmp oeq float %arg, 0xFFF0000000000000
+  %cmp = fcmp oeq float %arg, -inf
   ret i1 %cmp
 }
 
@@ -3061,9 +3061,9 @@ define i1 @assume_oge_neginf_oeq_neginf(float %arg) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], -inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %cmp.oge.neginf = fcmp oge float %arg, 0xFFF0000000000000
+  %cmp.oge.neginf = fcmp oge float %arg, -inf
   call void @llvm.assume(i1 %cmp.oge.neginf)
-  %cmp = fcmp oeq float %arg, 0xFFF0000000000000
+  %cmp = fcmp oeq float %arg, -inf
   ret i1 %cmp
 }
 

@@ -444,12 +444,6 @@ bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   }
 }
 
-std::optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
-  if (ST->hasVInstructions())
-    return ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
-  return BaseT::getMaxVScale();
-}
-
 std::optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
   if (ST->hasVInstructions())
     if (unsigned MinVLen = ST->getRealMinVLen();
@@ -3070,11 +3064,9 @@ void RISCVTTIImpl::getUnrollingPreferences(
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
-          if (!isLoweredToCall(F))
-            continue;
-        }
-        return;
+        const Function *F = cast<CallBase>(I).getCalledFunction();
+        if (!F || isLoweredToCall(F))
+          return;
       }
 
       SmallVector<const Value *> Operands(I.operand_values());

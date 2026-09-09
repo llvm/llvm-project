@@ -118,24 +118,6 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
   return llvm::Align(layout.getRecordAlign());
 }
 
-/// Whether \p ty reaches a bit-field access unit holding a named bit-field,
-/// looking through member records and array element types.
-static bool reachesNamedBitFieldUnit(mlir::Type ty) {
-  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
-    return reachesNamedBitFieldUnit(arrTy.getElementType());
-  auto recTy = dyn_cast<cir::RecordType>(ty);
-  if (!recTy)
-    return false;
-  // A zero-length array under the bit-field mark is a zero-width bit-field, not
-  // an access unit, and it carries its declared type rather than a unit width.
-  for (auto [memberTy, kind] :
-       llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
-    if (cir::isBitFieldAccessUnit(kind) &&
-        !cir::isZeroWidthBitField(memberTy, kind))
-      return true;
-  return llvm::any_of(recTy.getMembers(), reachesNamedBitFieldUnit);
-}
-
 /// Whether \p ty, or an aggregate member/element reached by value (never
 /// through a pointer), is an incomplete record.  Such a record has no known
 /// layout, so no eightbyte classification can be built for it.
@@ -222,6 +204,17 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
     return isSupportedType(arrTy.getElementType(), dl);
+  // A bit-field is classified from the type it was declared with and the bits
+  // it holds, and is loaded through its access unit, so both types have to be
+  // ones the bridge handles.  A zero-width bit-field has no unit of its own.
+  if (auto bfTy = dyn_cast<cir::BitFieldType>(ty)) {
+    if (mlir::Type storageTy = bfTy.getStorageType())
+      if (!isSupportedType(storageTy, dl))
+        return false;
+    return llvm::all_of(bfTy.getFields(), [&](cir::BitFieldDeclAttr decl) {
+      return isSupportedType(decl.getDeclaredType(), dl);
+    });
+  }
   if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
     // An incomplete record has no layout to classify.
     if (!recTy.isComplete())
@@ -246,33 +239,26 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         };
         if (!llvm::any_of(members, spansRecord))
           return false;
-        // A bit-field access unit's width may not match the bits it actually
-        // stores, so some member (the unit itself or another one) must both
+        // A bit-field's access unit may be wider than the bits the field
+        // holds, so some member (that bit-field or another one) must both
         // match the union's size and hold data.
         llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
-        if (llvm::any_of(kinds, cir::isBitFieldAccessUnit) &&
-            !llvm::any_of(llvm::zip_equal(members, kinds),
-                          [&](const auto &pair) {
-                            auto [memberTy, kind] = pair;
-                            return spansRecord(memberTy) &&
-                                   cir::holdsDataForABI(memberTy, kind) &&
-                                   !memberIsEmptyRecord(memberTy);
-                          }))
+        if (llvm::any_of(kinds, cir::isNamedBitField) &&
+            !llvm::any_of(
+                llvm::zip_equal(members, kinds), [&](const auto &pair) {
+                  auto [memberTy, kind] = pair;
+                  return spansRecord(memberTy) && cir::holdsDataForABI(kind) &&
+                         !memberIsEmptyRecord(memberTy);
+                }))
           return false;
       }
-    } else if (recTy.getPadded() && reachesNamedBitFieldUnit(recTy)) {
-      // A named access unit can be narrower than the type its bit-fields were
-      // declared with, and that declared type is what classic CodeGen coerces
-      // from.  CIR does not record it, so classifying here would coerce to the
-      // unit's width instead.
-      return false;
     }
-    // An `empty` member that occupies bytes is later read as an unnamed access
-    // unit.  One that is itself an empty-for-ABI record can occupy bytes by
-    // holding a unit of its own, which classic CodeGen reaches through the
-    // member's fields rather than as one unit.  A zero-sized one is dropped
-    // before classification, so a misaligned one never reaches the rule that
-    // sends its record to memory.
+    // An `empty` member that occupies bytes is later read as an unnamed
+    // bit-field.  One that is itself an empty-for-ABI record can occupy bytes
+    // by holding bit-fields of its own, which classic CodeGen reaches through
+    // the member's fields rather than as one unit.  A zero-sized one is
+    // dropped before classification, so a misaligned one never reaches the
+    // rule that sends its record to memory.
     for (auto [idx, memberTy, kind] :
          llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
       if (kind != cir::RecordMemberKind::Empty)
@@ -412,62 +398,103 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         SmallVector<llvm::abi::FieldInfo> fields;
         fields.reserve(recTy.getMembers().size());
 
+        // The classifier reads one entry per source bit-field, so a unit is
+        // spread back out into the fields it holds.  x86_64 is little-endian,
+        // so the unit's first byte holds the first of them, and the rest
+        // follow at the widths ahead of them.
+        //
+        // A coercion for an eightbyte is built from the type at that
+        // eightbyte's first byte, where the unit's first field sits, so that
+        // field's entry carries the unit rather than its own declared type.
+        // The bits holding user data are a separate question, and the answer
+        // is the extent of the type each field was declared with, which the
+        // eightbyte rules read through to decide whether a narrower coercion
+        // would drop something.  One entry cannot answer both, so a unit
+        // narrower than its first field's declaration takes an extra entry for
+        // that declaration, holding no bits of its own.  A zero-width
+        // bit-field has no unit and so contributes only the declaration.
+        //
+        // A width of zero is how the classifier recognizes the entries that
+        // take no part in assigning eightbyte classes, so the width goes
+        // through as declared.
+        auto addAccessUnit = [&](cir::BitFieldType bfTy,
+                                 uint64_t unitOffsetBits) {
+          mlir::Type unitTy = bfTy.getStorageType();
+          uint64_t unitBits =
+              unitTy ? dl.getTypeSizeInBits(unitTy).getFixedValue() : 0;
+          for (auto [idx, decl] : llvm::enumerate(bfTy.getFields())) {
+            const uint64_t offsetBits =
+                unitOffsetBits + bfTy.getFieldBitOffset(idx);
+            const bool holdsUnit = idx == 0 && unitTy;
+            if (holdsUnit)
+              fields.push_back(llvm::abi::FieldInfo(
+                  mapCIRType(unitTy, typeMapper, dl, modOp), offsetBits,
+                  /*IsBitField=*/true, decl.getWidth(),
+                  /*IsUnnamedBitField=*/decl.getIsUnnamed()));
+            mlir::Type declaredTy = decl.getDeclaredType();
+            if (!holdsUnit ||
+                dl.getTypeSizeInBits(declaredTy).getFixedValue() > unitBits)
+              fields.push_back(llvm::abi::FieldInfo(
+                  mapCIRType(declaredTy, typeMapper, dl, modOp), offsetBits,
+                  /*IsBitField=*/true, holdsUnit ? 0 : decl.getWidth(),
+                  /*IsUnnamedBitField=*/holdsUnit || decl.getIsUnnamed()));
+          }
+        };
+
         // The size passed here spans the tail padding, so an eightbyte covers
         // the whole union rather than just the member the classifier reduces
         // it to.
         if (recTy.isUnion()) {
           // Classify only the members that hold data for the ABI.  A member
-          // that holds none, such as an unnamed bit-field's storage, is
-          // skipped so it does not appear as a spurious argument.
+          // that holds none is skipped so it does not appear as a spurious
+          // argument.  Every variant starts at offset zero, so a bit-field
+          // variant needs no offset of its own.
           for (auto [fieldTy, kind] :
-               llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
-            if (cir::holdsDataForABI(fieldTy, kind))
-              fields.push_back(llvm::abi::FieldInfo(
-                  mapCIRType(fieldTy, typeMapper, dl, modOp)));
+               llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds())) {
+            if (auto bfTy = dyn_cast<cir::BitFieldType>(fieldTy)) {
+              // A variant that is an unnamed bit-field holds data all the
+              // same, so it is flagged rather than skipped, as in the struct
+              // path below.
+              addAccessUnit(bfTy, /*unitOffsetBits=*/0);
+              continue;
+            }
+            if (!cir::holdsDataForABI(kind))
+              continue;
+            fields.push_back(llvm::abi::FieldInfo(
+                mapCIRType(fieldTy, typeMapper, dl, modOp)));
+          }
           return tb.getUnionType(fields, sizeBits, align,
                                  llvm::abi::StructPacking::Default, flags);
         }
 
         // Padding is dropped, so the eightbyte rules see its bytes as holding
         // nothing, while the record's full size set above still spans them.  An
-        // unnamed bit-field access unit is flagged rather than dropped, since
-        // classic CodeGen ignores it when assigning eightbyte classes but
-        // counts it when choosing the coerce type, and a member's presence
-        // alone cannot say both.
+        // unnamed bit-field is flagged rather than dropped, since classic
+        // CodeGen ignores it when assigning eightbyte classes but counts it
+        // when choosing the coerce type, and a member's presence alone cannot
+        // say both.
         for (auto [idx, fieldTy, kind] :
              llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
           if (kind == cir::RecordMemberKind::Pad)
             continue;
-          // A zero-width bit-field occupies nothing, so its declared type is
-          // what the ABI counts, and that is the element type it carries.
-          mlir::Type countedTy = fieldTy;
-          bool isUnnamedUnit = kind == cir::RecordMemberKind::Empty;
-          bool isZeroWidth = cir::isZeroWidthBitField(fieldTy, kind);
-          if (isZeroWidth) {
-            countedTy = cast<cir::ArrayType>(fieldTy).getElementType();
-            isUnnamedUnit = true;
-          }
-          uint64_t widthBits = dl.getTypeSizeInBits(countedTy).getFixedValue();
-          if (isUnnamedUnit && widthBits == 0)
+          if (auto bfTy = dyn_cast<cir::BitFieldType>(fieldTy)) {
+            addAccessUnit(bfTy, recTy.getElementOffset(dl, idx) * 8);
             continue;
-          assert((!isUnnamedUnit || !memberIsEmptyRecord(countedTy)) &&
+          }
+          // An `empty` member that is not a bit-field still stands for bytes
+          // no field of the source reads, so it is flagged the same way.
+          bool isUnnamed = kind == cir::RecordMemberKind::Empty;
+          uint64_t widthBits = dl.getTypeSizeInBits(fieldTy).getFixedValue();
+          if (isUnnamed && widthBits == 0)
+            continue;
+          assert((!isUnnamed || !memberIsEmptyRecord(fieldTy)) &&
                  "an empty-for-ABI member must not reach the classifier as an "
                  "unnamed bit-field");
-          // A named access unit is a bit-field to the classifier as well.  Its
-          // eightbyte classes come from the bits it spans, and the rule that
-          // sends a record with an unaligned field to memory does not apply to
-          // a bit-field, which may sit at any offset.
-          bool isAccessUnit = isUnnamedUnit || cir::isBitFieldAccessUnit(kind);
-          // A zero-width bit-field spans no bits, and a zero width is what the
-          // classifier reads to leave it out of the eightbyte classes.  Its
-          // declared type stays on the field, since that is what the coerce
-          // type counts as user data.
-          uint64_t abiWidthBits = isAccessUnit && !isZeroWidth ? widthBits : 0;
-          fields.push_back(
-              llvm::abi::FieldInfo(mapCIRType(countedTy, typeMapper, dl, modOp),
-                                   recTy.getElementOffset(dl, idx) * 8,
-                                   /*IsBitField=*/isAccessUnit, abiWidthBits,
-                                   /*IsUnnamedBitField=*/isUnnamedUnit));
+          fields.push_back(llvm::abi::FieldInfo(
+              mapCIRType(fieldTy, typeMapper, dl, modOp),
+              recTy.getElementOffset(dl, idx) * 8,
+              /*IsBitField=*/isUnnamed, isUnnamed ? widthBits : 0,
+              /*IsUnnamedBitField=*/isUnnamed));
         }
 
         return tb.getRecordType(
@@ -484,14 +511,16 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// CIRABIRewriteContext.
 ///
 /// Direct: the value passes in register(s).  A coercion is forwarded in the
-/// three cases where the value has to be rebuilt on the wire: an aggregate
+/// four cases where the value has to be rebuilt on the wire: an aggregate
 /// unpacked into the register(s) holding it, a scalar too wide for one register
-/// split into a tuple of them, and a scalar the classifier widens to fill its
-/// eightbyte.  getDirect keeps canFlatten set so the rewriter can split a
-/// multi-field coerced struct into individual wire arguments.  Any other scalar
-/// passes in its natural CIR type, which a null coercion denotes.  A coercion
-/// this bridge cannot represent yields std::nullopt so the caller reports NYI
-/// rather than silently passing the value unchanged.
+/// split into a tuple of them, a scalar the classifier widens to fill its
+/// eightbyte, and a value whose live bytes start partway into its storage
+/// because a leading eightbyte holds no field (getDirectOffset).  getDirect
+/// keeps canFlatten set so the rewriter can split a multi-field coerced
+/// struct into individual wire arguments.  Any other scalar passes in its
+/// natural CIR type, which a null coercion denotes.  A coercion this bridge
+/// cannot represent yields std::nullopt so the caller reports NYI rather than
+/// silently passing the value unchanged.
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
 /// The x86_64 classifier (llvm/lib/ABI/Targets/X86.cpp) only returns Extend
@@ -506,11 +535,7 @@ static std::optional<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                   mlir::Type origTy) {
   if (info.isDirect()) {
-    // The rewriter reads a coercion from the start of the value's storage, so a
-    // classification naming an offset into it has no representation here.  The
-    // classifier names one when the low eightbyte holds no field.
-    if (info.getDirectOffset())
-      return std::nullopt;
+    unsigned offset = info.getDirectOffset();
     // The classifier names a coerce type even where it matches the natural
     // type, so a non-null coerce does not by itself mean a rewrite is needed.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
@@ -521,6 +546,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
         coerceAbi && isa_and_present<cir::ComplexType, cir::VectorType>(origTy);
     bool coerceIsRegisterTuple =
         isa_and_present<llvm::abi::RecordType>(coerceAbi);
+    // A tuple coercion cannot be read at an offset, so refuse the pair rather
+    // than emit a read of the wrong bytes.
+    if (offset && coerceIsRegisterTuple)
+      return std::nullopt;
     // Compare widths rather than identity: a coerce no wider than the natural
     // type carries the same value and needs no rewrite.
     auto origInt = dyn_cast_if_present<cir::IntType>(origTy);
@@ -531,19 +560,27 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
         coerceInt->getSizeInBits().getFixedValue() > origInt.getWidth();
     // Leaving the rest alone also avoids a lossy round trip: abiTypeToCIR
     // drops the LongDoubleType wrapper and a pointer's pointee, so comparing a
-    // scalar against its own coerce would report a difference that is not one.
-    if (!isAggregate && !comparesAgainstCoerce && !coerceIsRegisterTuple &&
-        !coerceWidensScalar)
-      return ArgClassification::getDirect(nullptr);
+    // scalar against its own coerce would report a difference that is not
+    // one.  Passing a value through reads it from byte 0, so one living at
+    // an offset cannot take this path.
+    if (!offset && !isAggregate && !comparesAgainstCoerce &&
+        !coerceIsRegisterTuple && !coerceWidensScalar)
+      return ArgClassification::getDirect();
     mlir::Type coerced = abiTypeToCIR(coerceAbi, ctx);
     if (!coerced)
+      return std::nullopt;
+    // An offset would be lost here, since a coercion to the value's own type
+    // is indistinguishable from no coercion at all.
+    if (offset && coerced == origTy)
       return std::nullopt;
     // Coercing a value to the type it already has would add a memory round
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
-      return ArgClassification::getDirect(nullptr);
-    return ArgClassification::getDirect(coerced);
+      return ArgClassification::getDirect();
+    return ArgClassification::getDirect(coerced, offset);
   }
+  // An extended value is always read from byte 0 of its own storage, so
+  // there is no offset to honor here.
   if (info.isExtend()) {
     if (isa_and_present<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt());

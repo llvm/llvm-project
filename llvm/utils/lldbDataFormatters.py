@@ -465,16 +465,6 @@ class DenseMapSynthetic:
     def get_child_at_index(self, child_index: int) -> lldb.SBValue:
         bucket_index = self.child_buckets[child_index]
         entry = self.valobj.GetValueForExpressionPath(f".Buckets[{bucket_index}]")
-
-        # By default, DenseMap instances use DenseMapPair to hold key-value
-        # entries. When the entry is a DenseMapPair, unwrap it to expose the
-        # children as simple std::pair values.
-        #
-        # This entry type is customizable (a template parameter). For other
-        # types, expose the entry type as is.
-        if entry.type.name.startswith("llvm::detail::DenseMapPair<"):
-            entry = entry.GetChildAtIndex(0)
-
         return entry.Clone(f"[{child_index}]")
 
     def update(self):

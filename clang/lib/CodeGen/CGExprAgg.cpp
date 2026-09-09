@@ -2343,11 +2343,10 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
 
   if (getLangOpts().CPlusPlus) {
     if (const auto *Record = Ty->getAsCXXRecordDecl()) {
-      assert((Record->hasTrivialCopyConstructor() ||
+      assert((Record->hasTrivialCopyConstructorForCall() ||
               Record->hasTrivialCopyAssignment() ||
-              Record->hasTrivialMoveConstructor() ||
-              Record->hasTrivialMoveAssignment() ||
-              Record->hasAttr<TrivialABIAttr>() || Record->isUnion() ||
+              Record->hasTrivialMoveConstructorForCall() ||
+              Record->hasTrivialMoveAssignment() || Record->isUnion() ||
               // HLSL uses aggregate-copy for user-defined record types.
               (getLangOpts().HLSL && !Record->isHLSLBuiltinRecord())) &&
              "Trying to aggregate-copy a type without a trivial copy/move "

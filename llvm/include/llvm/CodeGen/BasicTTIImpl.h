@@ -921,7 +921,6 @@ public:
     return TypeSize::getFixed(32);
   }
 
-  std::optional<unsigned> getMaxVScale() const override { return std::nullopt; }
   std::optional<unsigned> getVScaleForTuning() const override {
     return std::nullopt;
   }

@@ -124,7 +124,7 @@ entry:
   %uno = fcmp uno float %x, 0.000000e+00
   %cond = select i1 %uno, float %x, float %min
   %fabs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %fabs, +inf
   %cond6 = select i1 %cmpinf, float 0.000000e+00, float %cond
   store float %floor, ptr addrspace(1) %ip, align 4
   ret float %cond6
@@ -273,7 +273,7 @@ define <3 x float> @safe_math_fract_v3f32(<3 x float> %x, ptr addrspace(1) write
   %uno = fcmp uno <3 x float> %x, <float 0.0, float poison, float 0.0>
   %cond = select <3 x i1> %uno, <3 x float> %x, <3 x float> %min
   %fabs = tail call <3 x float> @llvm.fabs.v3f32(<3 x float> %x)
-  %cmpinf = fcmp oeq <3 x float> %fabs, <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+  %cmpinf = fcmp oeq <3 x float> %fabs, <float +inf, float poison, float +inf>
   %cond6 = select <3 x i1> %cmpinf, <3 x float> <float 0.0, float poison, float 0.0>, <3 x float> %cond
   store <3 x float> %floor, ptr addrspace(1) %ip, align 4
   ret <3 x float> %cond6
@@ -408,7 +408,7 @@ define <2 x float> @safe_math_fract_v2f32_const_splat_poison(<2 x float> %x, ptr
   %uno = fcmp uno <2 x float> %x, zeroinitializer
   %cond = select <2 x i1> %uno, <2 x float> %x, <2 x float> %min
   %fabs = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
-  %cmpinf = fcmp oeq <2 x float> %fabs, splat (float 0x7FF0000000000000)
+  %cmpinf = fcmp oeq <2 x float> %fabs, splat (float +inf)
   %cond6 = select <2 x i1> %cmpinf, <2 x float> zeroinitializer, <2 x float> %cond
   store <2 x float> %floor, ptr addrspace(1) %ip, align 4
   ret <2 x float> %cond6
@@ -516,7 +516,7 @@ entry:
   %uno = fcmp ord float %x, 0.000000e+00
   %cond = select i1 %uno, float %min, float %x
   %fabs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %fabs, +inf
   %cond6 = select i1 %cmpinf, float 0.000000e+00, float %cond
   store float %floor, ptr addrspace(1) %ip, align 4
   ret float %cond6
@@ -695,7 +695,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = tail call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %fabs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %fabs, +inf
   %cond6 = select i1 %cmpinf, float 0.000000e+00, float %min
   store float %floor, ptr addrspace(1) %ip, align 4
   ret float %cond6
@@ -1552,7 +1552,7 @@ entry:
   %floor = tail call float @llvm.floor.f32(float %x)
   %sub = fsub float %x, %floor
   %min = tail call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
-  %uno = fcmp uno float %x, 0x7FF8000000000000
+  %uno = fcmp uno float %x, +qnan
   %cond = select i1 %uno, float %x, float %min
   ret float %cond
 }
@@ -2503,7 +2503,7 @@ entry:
   %uno = fcmp uno <2 x float> %x, zeroinitializer
   %cond = select <2 x i1> %uno, <2 x float> %x, <2 x float> %min
   %fabs = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
-  %cmpinf = fcmp oeq <2 x float> %fabs, <float 0x7FF0000000000000, float 0x7FF0000000000000>
+  %cmpinf = fcmp oeq <2 x float> %fabs, <float +inf, float +inf>
   %cond6 = select <2 x i1> %cmpinf, <2 x float> zeroinitializer, <2 x float> %cond
   store <2 x float> %floor, ptr addrspace(1) %ip, align 4
   ret <2 x float> %cond6
@@ -2627,7 +2627,7 @@ entry:
   %uno = fcmp uno double %x, 0.000000e+00
   %cond = select i1 %uno, double %x, double %min
   %fabs = tail call double @llvm.fabs.f64(double %x)
-  %cmpinf = fcmp oeq double %fabs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq double %fabs, +inf
   %cond6 = select i1 %cmpinf, double 0.000000e+00, double %cond
   store double %floor, ptr addrspace(1) %ip, align 4
   ret double %cond6
@@ -3193,7 +3193,7 @@ entry:
   %uno = fcmp uno <2 x double> %x, zeroinitializer
   %cond = select <2 x i1> %uno, <2 x double> %x, <2 x double> %min
   %fabs = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
-  %cmpinf = fcmp oeq <2 x double> %fabs, <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %cmpinf = fcmp oeq <2 x double> %fabs, <double +inf, double +inf>
   %cond6 = select <2 x i1> %cmpinf, <2 x double> zeroinitializer, <2 x double> %cond
   store <2 x double> %floor, ptr addrspace(1) %ip, align 4
   ret <2 x double> %cond6
@@ -3304,7 +3304,7 @@ entry:
   %uno = fcmp uno float %x, 0.000000e+00
   %cond = select i1 %uno, float %x, float %min
   %fabs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %fabs, +inf
   %cond6 = select i1 %cmpinf, float 0.000000e+00, float %cond
   store float %floor, ptr addrspace(1) %ip, align 4
   ret float %cond6
@@ -3415,7 +3415,7 @@ entry:
   %uno = fcmp ord float %x, 0.000000e+00
   %cond = select i1 %uno, float %min, float %x
   %fabs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %fabs, +inf
   %cond6 = select i1 %cmpinf, float 0.000000e+00, float %cond
   store float %floor, ptr addrspace(1) %ip, align 4
   ret float %cond6
@@ -3523,7 +3523,7 @@ entry:
   %uno = fcmp uno float %x, 0.000000e+00
   %cond = select i1 %uno, float %x, float %min
   %fabs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %fabs, +inf
   %cond6 = select i1 %cmpinf, float 0.000000e+00, float %cond
   store float %floor, ptr addrspace(1) %ip, align 4
   ret float %cond6
@@ -3631,7 +3631,7 @@ entry:
   %uno = fcmp ord float %x, 0.000000e+00
   %cond = select i1 %uno, float %min, float %x
   %fabs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %fabs, +inf
   %cond6 = select i1 %cmpinf, float 0.000000e+00, float %cond
   store float %floor, ptr addrspace(1) %ip, align 4
   ret float %cond6
@@ -4063,7 +4063,7 @@ entry:
   %sub = fsub double %x, %floor
   %min = tail call double @llvm.minnum.f64(double %sub, double 0x3FEFFFFFFFFFFFFF)
   %x.abs = tail call double @llvm.fabs.f64(double %x)
-  %is.inf = fcmp oeq double %x.abs, 0x7FF0000000000000
+  %is.inf = fcmp oeq double %x.abs, +inf
   %result = select i1 %is.inf, double 0.0, double %min
   ret double %result
 }
@@ -4146,7 +4146,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   %cond = select i1 %not.inf, float %min, float 0.0
   %not.nan = fcmp ord float %x, 0.0
   %cond8 = select i1 %not.nan, float %cond, float %x
@@ -4249,7 +4249,7 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select(float
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   %cond = select i1 %not.inf, float %min, float 0.0
   store float %cond, ptr addrspace(1) %ptr
   %not.nan = fcmp ord float %x, 0.0
@@ -4358,7 +4358,7 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp(
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   store i1 %not.inf, ptr addrspace(1) %ptr
   %cond = select i1 %not.inf, float %min, float 0.0
   %not.nan = fcmp ord float %x, 0.0
@@ -4468,7 +4468,7 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_fabs(float %x, ptr
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
   store float %x.fabs, ptr addrspace(1) %ptr
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   %cond = select i1 %not.inf, float %min, float 0.0
   %not.nan = fcmp ord float %x, 0.0
   %cond8 = select i1 %not.nan, float %cond, float %x
@@ -4562,7 +4562,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %wrong.fabs = call float @llvm.fabs.f32(float %wrong)
-  %not.inf = fcmp une float %wrong.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %wrong.fabs, +inf
   %cond = select i1 %not.inf, float %min, float 0.0
   %not.nan = fcmp ord float %x, 0.0
   %cond8 = select i1 %not.nan, float %cond, float %x
@@ -4656,7 +4656,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %is.inf = fcmp oeq float %x.fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %x.fabs, +inf
   %cond = select i1 %is.inf, float 0.0, float %min
   %not.nan = fcmp ord float %x, 0.0
   %cond8 = select i1 %not.nan, float %cond, float %x
@@ -4750,7 +4750,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   %cond = select i1 %not.inf, float %min, float 0.0
   %is.nan = fcmp uno float %x, 0.0
   %cond8 = select i1 %is.nan, float %x, float %cond
@@ -4810,7 +4810,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %x.fabs, 0xFFF0000000000000
+  %not.inf = fcmp une float %x.fabs, -inf
   %cond = select i1 %not.inf, float %min, float 0.0
   %not.nan = fcmp ord float %x, 0.0
   %cond8 = select i1 %not.nan, float %cond, float %x
@@ -4891,7 +4891,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = tail call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   %clamp.inf.to.zero = select i1 %not.inf, float %min, float 0.0
   ret float %clamp.inf.to.zero
 }
@@ -4969,7 +4969,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = tail call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   %clamp.inf.to.zero = select i1 %not.inf, float %min, float 0.0
   ret float %clamp.inf.to.zero
 }
@@ -5068,7 +5068,7 @@ entry:
   %sub = fsub float bitcast (i32 ptrtoint (ptr @gv to i32) to float), %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float bitcast (i32 ptrtoint (ptr @gv to i32) to float))
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   %cond = select i1 %not.inf, float %min, float 0.000000e+00
   %not.nan = fcmp ord float bitcast (i32 ptrtoint (ptr @gv to i32) to float), 0.000000e+00
   %cond8 = select i1 %not.nan, float %cond, float bitcast (i32 ptrtoint (ptr @gv to i32) to float)
@@ -5259,7 +5259,7 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
   br i1 %cond, label %edge_cases, label %ret
 
 edge_cases:
-  %not.inf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %not.inf = fcmp une float %x.fabs, +inf
   %clamp.inf = select i1 %not.inf, float %min, float 0.0
   %not.nan = fcmp ord float %x, 0.0
   %cond8 = select i1 %not.nan, float %clamp.inf, float %x
@@ -5381,7 +5381,7 @@ entry:
   %sub = fsub <3 x float> %x, %floor
   %min = call <3 x float> @llvm.minnum.v3f32(<3 x float> %sub, <3 x float> <float 0x3FEFFFFFE0000000, float poison, float 0x3FEFFFFFE0000000>)
   %x.fabs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %x)
-  %not.inf = fcmp une <3 x float> %x.fabs, <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+  %not.inf = fcmp une <3 x float> %x.fabs, <float +inf, float poison, float +inf>
   %cond = select <3 x i1> %not.inf, <3 x float> %min, <3 x float> <float 0.0, float poison, float 0.0>
   %not.nan = fcmp ord <3 x float> %x, <float 0.0, float poison, float 0.0>
   %cond8 = select <3 x i1> %not.nan, <3 x float> %cond, <3 x float> %x
@@ -5444,7 +5444,7 @@ entry:
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
   %x.fabs = call float @llvm.fabs.f32(float %x)
-  %not.not.inf = fcmp ule float %x.fabs, 0x7FF0000000000000
+  %not.not.inf = fcmp ule float %x.fabs, +inf
   %cond = select i1 %not.not.inf, float %min, float 0.0
   %not.nan = fcmp ord float %x, 0.0
   %cond8 = select i1 %not.nan, float %cond, float %x
@@ -5556,7 +5556,7 @@ entry:
   %cmp = fcmp oge float %sub1, 0x3FEFFFFFE0000000
   %cond = select i1 %cmp, float 0x3FEFFFFFE0000000, float %sub1
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %fabs.x, 0x7FF0000000000000
+  %not.inf = fcmp une float %fabs.x, +inf
   %cond6 = select i1 %not.inf, float %cond, float 0.000000e+00
   ret float %cond6
 }
@@ -5664,7 +5664,7 @@ entry:
   %cmp = fcmp ogt float %sub1, 0x3FEFFFFFE0000000
   %cond = select i1 %cmp, float 0x3FEFFFFFE0000000, float %sub1
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %fabs.x, 0x7FF0000000000000
+  %not.inf = fcmp une float %fabs.x, +inf
   %cond6 = select i1 %not.inf, float %cond, float 0.000000e+00
   ret float %cond6
 }
@@ -5766,7 +5766,7 @@ entry:
   %cmp = fcmp olt float %sub1, 0x3FEFFFFFE0000000
   %cond = select i1 %cmp, float %sub1, float 0x3FEFFFFFE0000000
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %fabs.x, 0x7FF0000000000000
+  %not.inf = fcmp une float %fabs.x, +inf
   %cond6 = select i1 %not.inf, float %cond, float 0.000000e+00
   ret float %cond6
 }
@@ -5867,7 +5867,7 @@ entry:
   %cmp = fcmp olt float %sub1, 0x3FEFFFFFE0000000
   %cond = select i1 %cmp, float %sub1, float 0x3FEFFFFFE0000000
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %fabs.x, 0x7FF0000000000000
+  %not.inf = fcmp une float %fabs.x, +inf
   %cond6 = select i1 %not.inf, float %cond, float 0.000000e+00
   ret float %cond6
 }
@@ -5977,7 +5977,7 @@ entry:
   %sub1 = fsub float %x, %call
   %min = call float @llvm.minimum.f32(float %sub1, float 0x3FEFFFFFE0000000)
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp une float %fabs.x, 0x7FF0000000000000
+  %not.inf = fcmp une float %fabs.x, +inf
   %cond6 = select i1 %not.inf, float %min, float 0.0
   ret float %cond6
 }

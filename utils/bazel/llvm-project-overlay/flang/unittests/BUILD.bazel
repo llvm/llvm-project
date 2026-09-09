@@ -286,6 +286,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//mlir:AllExtensions",
+        "//mlir:ArithDialect",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:LLVMDialect",

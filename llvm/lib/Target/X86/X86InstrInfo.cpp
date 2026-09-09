@@ -1362,6 +1362,10 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
       Ins2Idx = LIS->InsertMachineInstrInMaps(*InsMI2);
     SlotIndex NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
     SlotIndex ExtIdx = LIS->InsertMachineInstrInMaps(*ExtMI);
+
+    // Drop the dead EFLAGS def MI had; the replacement does not define EFLAGS.
+    LIS->removePhysRegDefAt(X86::EFLAGS, NewIdx.getRegSlot());
+
     LIS->getInterval(InRegLEA);
     LIS->getInterval(OutRegLEA);
     if (InRegLEA2)
@@ -2042,7 +2046,11 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   MBB.insert(MI.getIterator(), NewMI); // Insert the new inst
 
   if (LIS) {
+    // The replacement does not define EFLAGS; drop the dead EFLAGS def MI had.
+    SlotIndex Idx = LIS->getInstructionIndex(MI);
     LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
+
+    LIS->removePhysRegDefAt(X86::EFLAGS, Idx.getRegSlot());
     if (SrcReg)
       LIS->getInterval(SrcReg);
     if (SrcReg2)
@@ -5070,8 +5078,15 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   CASE_ND(SHL32ri)
   CASE_ND(SHL64ri) {
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
-    if (isTruncatedShiftCountForLEA(ShAmt))
-      return false;
+    // Converting to LEA only pays off when the shifted operand stays live,
+    // since it spares a register copy; when the shift is the operand's only
+    // user, reusing the flags is strictly better.
+    if (isTruncatedShiftCountForLEA(ShAmt)) {
+      Register SrcReg = MI.getOperand(1).getReg();
+      const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+      if (!SrcReg.isVirtual() || !MRI.hasOneNonDBGUse(SrcReg))
+        return false;
+    }
     return ShAmt != 0;
   }
 

@@ -1,5 +1,6 @@
 // RUN: fir-opt --split-input-file --cuf-predefined-var-to-gpu --canonicalize %s | FileCheck %s
 // RUN: fir-opt --split-input-file --cuf-predefined-var-to-gpu --canonicalize %s | fir-opt --cuf-predefined-var-to-gpu --canonicalize | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-predefined-var-to-gpu --mlir-print-debuginfo --mlir-print-local-scope %s | FileCheck %s --check-prefix=LOC
 
 // attributes(device) subroutine sub1(i)
 //   integer :: i
@@ -50,26 +51,31 @@ func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i", cuf.data_attr = #
   return
 }
 
+// Each read is created where the variable is read, so the reads appear in use
+// order and the two reads of threadidx%x are distinct values.
+
 // CHECK-LABEL: func.func @_QPsub1
 
 // CHECK: %[[WARPSIZE:.*]] = arith.constant 32 : i32
 
+// CHECK: %[[I:.*]] = fir.declare %{{.*}} {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> !fir.ref<i32>
+
 // CHECK: %[[BASE_THREAD_ID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
 // CHECK: %[[THREAD_ID_X:.*]] = arith.addi %[[BASE_THREAD_ID_X]], %c1{{.*}} : i32
+// CHECK: fir.store %[[THREAD_ID_X]] to %[[I]] : !fir.ref<i32>
+// CHECK: %[[BLOCK_DIM_X:.*]] = nvvm.read.ptx.sreg.ntid.x : i32
+// CHECK: fir.store %[[BLOCK_DIM_X]] to %[[I]] : !fir.ref<i32>
 // CHECK: %[[BASE_BLOCK_ID_X:.*]] = nvvm.read.ptx.sreg.ctaid.x : i32
 // CHECK: %[[BLOCK_ID_X:.*]] = arith.addi %[[BASE_BLOCK_ID_X]], %c1{{.*}} : i32
-// CHECK: %[[GRID_DIM_Y:.*]] = nvvm.read.ptx.sreg.nctaid.y : i32
-// CHECK: %[[BLOCK_DIM_X:.*]] = nvvm.read.ptx.sreg.ntid.x : i32
-
-// CHECK: %[[I:.*]] = fir.declare %{{.*}} {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK: fir.store %[[THREAD_ID_X]] to %[[I]] : !fir.ref<i32>
-// CHECK: fir.store %[[BLOCK_DIM_X]] to %[[I]] : !fir.ref<i32>
 // CHECK: fir.store %[[BLOCK_ID_X]] to %[[I]] : !fir.ref<i32>
+// CHECK: %[[GRID_DIM_Y:.*]] = nvvm.read.ptx.sreg.nctaid.y : i32
 // CHECK: fir.store %[[GRID_DIM_Y]] to %[[I]] : !fir.ref<i32>
 
 // CHECK: fir.store %[[WARPSIZE]] to %[[I]] : !fir.ref<i32>
 
-// CHECK: %[[CMP:.*]] = arith.cmpi eq, %[[THREAD_ID_X]], %c0{{.*}} : i32
+// CHECK: %[[BASE_THREAD_ID_X2:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK: %[[THREAD_ID_X2:.*]] = arith.addi %[[BASE_THREAD_ID_X2]], %c1{{.*}} : i32
+// CHECK: %[[CMP:.*]] = arith.cmpi eq, %[[THREAD_ID_X2]], %c0{{.*}} : i32
 // CHECK: fir.if %[[CMP]] {
 // CHECK:   fir.store %c0{{.*}} to %[[I]] : !fir.ref<i32>
 // CHECK: }
@@ -129,10 +135,10 @@ func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i", cuf.data_attr = #
 
 // CHECK: %[[BASE_THREAD_ID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
 // CHECK: %{{.*}} = arith.addi %[[BASE_THREAD_ID_X]], %c1{{.*}} : i32
+// CHECK: %{{.*}} = nvvm.read.ptx.sreg.ntid.x : i32
 // CHECK: %[[BASE_BLOCK_ID_X:.*]] = nvvm.read.ptx.sreg.ctaid.x : i32
 // CHECK: %{{.*}} = arith.addi %[[BASE_BLOCK_ID_X]], %c1{{.*}} : i32
 // CHECK: %{{.*}} = nvvm.read.ptx.sreg.nctaid.y : i32
-// CHECK: %{{.*}} = nvvm.read.ptx.sreg.ntid.x : i32
 
 
 // -----
@@ -180,12 +186,15 @@ func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i", cuf.data_attr = #
 
 // CHECK: %{{.*}} = arith.constant 32 : i32
 
+// The read returned by the function is not touched by the pass.
+// CHECK: %{{.*}} = nvvm.read.ptx.sreg.tid.x : i32
+
 // CHECK: %[[BASE_THREAD_ID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
 // CHECK: %{{.*}} = arith.addi %[[BASE_THREAD_ID_X]], %c1{{.*}} : i32
+// CHECK: %{{.*}} = nvvm.read.ptx.sreg.ntid.x : i32
 // CHECK: %[[BASE_BLOCK_ID_X:.*]] = nvvm.read.ptx.sreg.ctaid.x : i32
 // CHECK: %{{.*}} = arith.addi %[[BASE_BLOCK_ID_X]], %c1{{.*}} : i32
 // CHECK: %{{.*}} = nvvm.read.ptx.sreg.nctaid.y : i32
-// CHECK: %{{.*}} = nvvm.read.ptx.sreg.ntid.x : i32
 
 // -----
 
@@ -202,11 +211,12 @@ func.func @_QMbarPgfoo(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, 
   return
 }
 
+// The only use is inside the fir.if, so the read is created there.
 // CHECK-LABEL: func.func @_QMbarPgfoo
-// CHECK: %[[THREAD_ID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
-// CHECK: %[[ADD:.*]] = arith.addi %[[THREAD_ID_X]], %c1_i32 : i32
 // CHECK: fir.if
-// CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
+// CHECK:   %[[THREAD_ID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK:   %[[ADD:.*]] = arith.addi %[[THREAD_ID_X]], %c1_i32 : i32
+// CHECK:   fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
 
 // -----
 
@@ -233,7 +243,9 @@ func.func @_QMbarPgfoo2(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>,
 // CHECK: %[[ADD:.*]] = arith.addi %[[THREAD_ID_X]], %c1_i32 : i32
 // CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
 // CHECK: fir.if
-// CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
+// CHECK:   %[[THREAD_ID_X2:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK:   %[[ADD2:.*]] = arith.addi %[[THREAD_ID_X2]], %c1_i32 : i32
+// CHECK:   fir.store %[[ADD2]] to %{{.*}} : !fir.ref<i32>
 
 // -----
 
@@ -443,4 +455,39 @@ func.func @_QMdevmodPkernel() attributes {cuf.proc_attr = #cuf.cuda_proc<global>
 // CHECK: %[[TID:.*]] = nvvm.read.ptx.sreg.tid.x : i32
 // CHECK: %[[ADD:.*]] = arith.addi %[[TID]], %c1{{.*}} : i32
 // CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
-// CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
+// CHECK: %[[TID2:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK: %[[ADD2:.*]] = arith.addi %[[TID2]], %c1{{.*}} : i32
+// CHECK: fir.store %[[ADD2]] to %{{.*}} : !fir.ref<i32>
+
+// -----
+
+// attributes(global) subroutine sub4(i)
+//   integer :: i
+//   i = blockidx%x
+//   i = blockidx%y
+// end subroutine
+
+// Each read is attributed to the line of the use it comes from.
+func.func @_QPsub4(%arg0: !fir.ref<i32> {fir.bindc_name = "i", cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %0 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>> loc(#loc1)
+  %1 = fir.declare %0 {uniq_name = "_QM__fortran_builtinsE__builtin_blockidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>> loc(#loc1)
+  %2 = fir.declare %arg0 {uniq_name = "_QFsub4Ei"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
+  %3 = fir.coordinate_of %1, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32> loc(#loc2)
+  %4 = fir.load %3 : !fir.ref<i32> loc(#loc2)
+  fir.store %4 to %2 : !fir.ref<i32> loc(#loc2)
+  %5 = fir.coordinate_of %1, y : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32> loc(#loc3)
+  %6 = fir.load %5 : !fir.ref<i32> loc(#loc3)
+  fir.store %6 to %2 : !fir.ref<i32> loc(#loc3)
+  return loc(#loc4)
+} loc(#loc1)
+
+#loc1 = loc("sub4.cuf":1:1)
+#loc2 = loc("sub4.cuf":3:3)
+#loc3 = loc("sub4.cuf":4:3)
+#loc4 = loc("sub4.cuf":5:1)
+
+// LOC-LABEL: func.func @_QPsub4
+// LOC: nvvm.read.ptx.sreg.ctaid.x : i32 loc("sub4.cuf":3:3)
+// LOC: arith.addi {{.*}} : i32 loc("sub4.cuf":3:3)
+// LOC: nvvm.read.ptx.sreg.ctaid.y : i32 loc("sub4.cuf":4:3)
+// LOC: arith.addi {{.*}} : i32 loc("sub4.cuf":4:3)

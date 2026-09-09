@@ -1287,9 +1287,14 @@ llvm::Function *CGOpenMPRuntime::emitTeamsOutlinedFunction(
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
     const RegionCodeGenTy &CodeGen) {
   const CapturedStmt *CS = D.getCapturedStmt(OMPD_teams);
-  return emitParallelOrTeamsOutlinedFunction(
+  llvm::Function *OutlinedFn = emitParallelOrTeamsOutlinedFunction(
       CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(CGF),
       CodeGen);
+  // A teams body is called once per team and is not handed back to the runtime
+  // as a callback, so unlike a parallel body it cannot be re-entered while a
+  // call to it is live.
+  OutlinedFn->setDoesNotRecurse();
+  return OutlinedFn;
 }
 
 llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
@@ -6414,6 +6419,10 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   if (!OutlinedFn)
     return;
+
+  // A target body is entered once, from the kernel, and never re-entered by
+  // the runtime, so it cannot occur in a cycle.
+  OutlinedFn->setDoesNotRecurse();
 
   CGM.getTargetCodeGenInfo().setTargetAttributes(nullptr, OutlinedFn, CGM);
 

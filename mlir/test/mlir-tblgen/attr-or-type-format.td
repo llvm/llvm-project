@@ -236,9 +236,7 @@ def TestStructEnum : I32EnumAttr<"TestStructEnum", "TestStructEnumType", [
   let genSpecializedAttr = 0;
 }
 
-def EnumAttrC : EnumAttr<Test_Dialect, TestStructEnum, "EnumAttrC"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def EnumAttrC : EnumAttr<Test_Dialect, TestStructEnum, "EnumAttrC">;
 
 // EnumAttr parameters in a struct use the underlying enum syntax rather than
 // the EnumAttr's assembly format.
@@ -266,9 +264,7 @@ def TestStructBitEnum : I32BitEnum<"TestStructBitEnum", "", [
   let separator = ", ";
 }
 
-def EnumAttrD : EnumAttr<Test_Dialect, TestStructBitEnum, "EnumAttrD"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def EnumAttrD : EnumAttr<Test_Dialect, TestStructBitEnum, "EnumAttrD">;
 
 // A non-final comma-separated bit enum is bracketed so its commas are not
 // confused with the struct separator.

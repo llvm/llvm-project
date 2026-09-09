@@ -81,14 +81,15 @@ typedef int orc_rt_log_Level;
  * Returns the display name for the given category, or null if the category is
  * unrecognized.
  */
-const char *
+ORC_RT_C_EXPORT const char *
 orc_rt_log_Category_getName(orc_rt_log_Category Cat) ORC_RT_C_NOTHROW;
 
 /**
  * Returns the display name for the given log level, or null if the log level
  * is unrecognized.
  */
-const char *orc_rt_log_Level_getName(orc_rt_log_Level L) ORC_RT_C_NOTHROW;
+ORC_RT_C_EXPORT const char *
+orc_rt_log_Level_getName(orc_rt_log_Level L) ORC_RT_C_NOTHROW;
 
 /**
  * Returns the level corresponding to the given level name, or -1 if the level
@@ -96,7 +97,8 @@ const char *orc_rt_log_Level_getName(orc_rt_log_Level L) ORC_RT_C_NOTHROW;
  *
  * Comparison is case-insensitive.
  */
-orc_rt_log_Level orc_rt_log_Level_parse(const char *Str) ORC_RT_C_NOTHROW;
+ORC_RT_C_EXPORT orc_rt_log_Level orc_rt_log_Level_parse(const char *Str)
+    ORC_RT_C_NOTHROW;
 
 /*
  * Declared but never defined: referenced only in unevaluated (sizeof) contexts
@@ -183,8 +185,9 @@ int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_FORMAT_PRINTF(1, 2);
  * category and level, to the logging output (stderr, or the file named by the
  * ORC_RT_LOG_OUTPUT environment variable). Not called directly: use ORC_RT_LOG.
  */
-void orc_rt_log_printf(orc_rt_log_Level Level, orc_rt_log_Category Category,
-                       const char *Fmt, ...) ORC_RT_C_NOTHROW
+ORC_RT_C_EXPORT void orc_rt_log_printf(orc_rt_log_Level Level,
+                                       orc_rt_log_Category Category,
+                                       const char *Fmt, ...) ORC_RT_C_NOTHROW
     ORC_RT_FORMAT_PRINTF(3, 4);
 
 /*
@@ -231,14 +234,15 @@ void orc_rt_log_printf(orc_rt_log_Level Level, orc_rt_log_Category Category,
  * are filled lazily (and read) atomically by orc_rt_log_osLogHandle. An
  * implementation detail of that accessor; do not use directly.
  */
-extern os_log_t orc_rt_log_OSLogHandles[orc_rt_log_Category_Count];
+ORC_RT_C_EXPORT extern os_log_t
+    orc_rt_log_OSLogHandles[orc_rt_log_Category_Count];
 
 /*
  * Cold path for orc_rt_log_osLogHandle: creates the handle for Category (in the
  * "org.llvm.orc-rt" subsystem), caches it, and returns it. Defined in
  * Logging_oslog.cpp.
  */
-os_log_t
+ORC_RT_C_EXPORT os_log_t
 orc_rt_log_osLogHandleSlow(orc_rt_log_Category Category) ORC_RT_C_NOTHROW;
 
 /*

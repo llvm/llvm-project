@@ -1251,6 +1251,12 @@ llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
 // CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)
 llvm.func @nofreeattr_decl(!llvm.ptr {llvm.nofree})
 
+// CHECK-LABEL: declare void @nofreeobjattr_decl(ptr nofreeobj)
+llvm.func @nofreeobjattr_decl(!llvm.ptr {llvm.nofreeobj})
+
+// CHECK-LABEL: declare nofreeobj ptr @nofreeobjattr_ret_decl()
+llvm.func @nofreeobjattr_ret_decl() -> (!llvm.ptr {llvm.nofreeobj})
+
 // CHECK-LABEL: declare void @nonnullattr_decl(ptr nonnull)
 llvm.func @nonnullattr_decl(!llvm.ptr {llvm.nonnull})
 
@@ -2209,8 +2215,13 @@ llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // CHECK-NEXT:  notail call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %8 = llvm.inline_asm tail_call_kind = <notail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
+  // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}}) #[[$CONVERGENT:.*]]
+  %9 = llvm.inline_asm convergent "foo", "=r,r" %arg0 : (i32) -> i8
+
   llvm.return
 }
+
+// CHECK: attributes #[[$CONVERGENT]] = { convergent }
 
 // -----
 
@@ -3046,6 +3057,52 @@ llvm.func @save_reg_params_call() {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @uniform_work_group_size
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size() attributes { uniform_work_group_size } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @uniform_work_group_size_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_call() {
+  llvm.call @f() {uniform_work_group_size} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @uniform_work_group_size_invoke
+// CHECK: invoke void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_invoke() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {uniform_work_group_size} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
 
 // -----
 

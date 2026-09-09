@@ -104,3 +104,68 @@ add_entrypoint_object(
     libc.src.signal.linux.signal_utils
     libc.src.unistd.environ
 )
+
+add_entrypoint_object(
+  getloadavg
+  SRCS
+    getloadavg.cpp
+  HDRS
+    ../getloadavg.h
+  DEPENDS
+    libc.hdr.types.struct_sysinfo
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sysinfo
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  mktemp_util
+  HDRS
+    mktemp_util.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  mkdtemp
+  SRCS
+    mkdtemp.cpp
+  HDRS
+    ../mkdtemp.h
+  DEPENDS
+    .mktemp_util
+    libc.hdr.sys_stat_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mkdir
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  mkstemp
+  SRCS
+    mkstemp.cpp
+  HDRS
+    ../mkstemp.h
+  DEPENDS
+    .mktemp_util
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+

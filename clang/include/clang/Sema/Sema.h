@@ -4523,6 +4523,13 @@ public:
   bool isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S = nullptr,
                      bool AllowInlineNamespace = false) const;
 
+  /// Determine whether a tag-like declaration found by lookup can be
+  /// redeclared in the given scope. If lookup found a using-shadow, also
+  /// consider the scope of the declaration named by the using-shadow.
+  bool isTagRedeclarationInScope(NamedDecl *D, DeclContext *Ctx,
+                                 Scope *S = nullptr,
+                                 bool AllowInlineNamespace = false) const;
+
   /// Finds the scope corresponding to the given decl context, if it
   /// happens to be an enclosing scope.  Otherwise return NULL.
   static Scope *getScopeForDeclContext(Scope *S, DeclContext *DC);
@@ -9341,16 +9348,12 @@ public:
     void setKind(Kind K) { Pair.setInt(K); }
   };
 
-  class SpecialMemberOverloadResultEntry : public llvm::FastFoldingSetNode,
-                                           public SpecialMemberOverloadResult {
-  public:
-    SpecialMemberOverloadResultEntry(const llvm::FoldingSetNodeID &ID)
-        : FastFoldingSetNode(ID) {}
-  };
+  using SpecialMemberCacheKey = std::pair<const CXXRecordDecl *, unsigned>;
 
   /// A cache of special member function overload resolution results
   /// for C++ records.
-  llvm::FoldingSet<SpecialMemberOverloadResultEntry> SpecialMemberCache;
+  llvm::DenseMap<SpecialMemberCacheKey, SpecialMemberOverloadResult>
+      SpecialMemberCache;
 
   enum class AcceptableKind { Visible, Reachable };
 

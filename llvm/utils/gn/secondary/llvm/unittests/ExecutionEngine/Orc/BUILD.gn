@@ -32,7 +32,7 @@ unittest("OrcJITTests") {
     "LookupAndApplyTest.cpp",
     "MachOBuilderTest.cpp",
     "MachOPlatformTest.cpp",
-    "MangleAndInternerTest.cpp",
+    "ManglerTest.cpp",
     "MapperJITLinkMemoryManagerTest.cpp",
     "MemoryFlagsTest.cpp",
     "MemoryMapperTest.cpp",

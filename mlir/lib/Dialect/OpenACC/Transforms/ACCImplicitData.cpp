@@ -124,7 +124,7 @@
 //   func.func @test() {
 //     %scalar = memref.alloca() {acc.var_name = "n"} : memref<i32>
 //     %copyin = acc.copyin varPtr(%scalar : memref<i32>) -> memref<i32>
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "n"}
 //     acc.kernels dataOperands(%copyin : memref<i32>) {
 //       %val = memref.load %copyin[] : memref<i32>
@@ -132,7 +132,7 @@
 //     }
 //     acc.copyout accPtr(%copyin : memref<i32>)
 //                 to varPtr(%scalar : memref<i32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "n"}
 //   }
 //
@@ -153,7 +153,7 @@
 //     %array = memref.alloca() {acc.var_name = "arr"} : memref<100xf32>
 //     %copyin = acc.copyin varPtr(%array : memref<100xf32>)
 //                 -> memref<100xf32>
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "arr"}
 //     acc.parallel dataOperands(%copyin : memref<100xf32>) {
 //       %c0 = arith.constant 0 : index
@@ -162,7 +162,7 @@
 //     }
 //     acc.copyout accPtr(%copyin : memref<100xf32>)
 //                 to varPtr(%array : memref<100xf32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "arr"}
 //   }
 //
@@ -175,7 +175,7 @@
 //       %c0 = arith.constant 0 : index
 //       %val = memref.load %array[%c0] : memref<100xf32>
 //       acc.yield
-//     } attributes {defaultAttr = #acc<defaultvalue present>}
+//     } attributes {defaultAttr = #acc.defaultvalue<present>}
 //   }
 //
 // After:
@@ -185,13 +185,13 @@
 //                  -> memref<100xf32>
 //                  {implicit = true, name = "arr"}
 //     acc.parallel dataOperands(%present : memref<100xf32>)
-//                  attributes {defaultAttr = #acc<defaultvalue present>} {
+//                  attributes {defaultAttr = #acc.defaultvalue<present>} {
 //       %c0 = arith.constant 0 : index
 //       %val = memref.load %present[%c0] : memref<100xf32>
 //       acc.yield
 //     }
 //     acc.delete accPtr(%present : memref<100xf32>)
-//                {dataClause = #acc<data_clause acc_present>,
+//                {dataClause = #acc.data_clause<acc_present>,
 //                 implicit = true, name = "arr"}
 //   }
 //

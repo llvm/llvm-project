@@ -71,6 +71,8 @@ add_mlir_library(MLIRIR
   MLIRSymbolInterfacesIncGen
   MLIRTensorEncodingIncGen
   MLIROpAsmDialectInterfaceIncGen
+  MLIRBytecodeDialectInterfaceIncGen
+  MLIRBytecodeOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRSupport

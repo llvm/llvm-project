@@ -1,8 +1,5 @@
 # OverflowBehaviorTypes
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

@@ -82,14 +82,17 @@ define void @constant_foldable() #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[CATCH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[CALL:%.*]] = call double @floor(double 1.000000e+00) #[[ATTR1:[0-9]+]] [ "funclet"(token [[TMP1]]) ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    br label %[[VECTOR_BODY1:.*]]
+; CHECK:       [[VECTOR_BODY1]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x double> @llvm.floor.v16f64(<16 x double> splat (double 1.000000e+00)) [ "funclet"(token [[TMP1]]) ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[EXIT:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[CALL_LCSSA:%.*]] = phi double [ [[CALL]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    store double [[CALL_LCSSA]], ptr @sink, align 8
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    store double 1.000000e+00, ptr @sink, align 8
 ; CHECK-NEXT:    catchret from [[TMP1]] to label %[[TRY_CONT:.*]]
 ; CHECK:       [[TRY_CONT]]:
 ; CHECK-NEXT:    ret void

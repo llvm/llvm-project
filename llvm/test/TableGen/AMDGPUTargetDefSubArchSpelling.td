@@ -15,7 +15,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 
 def GFX888 : ProcessorModel<"gfx888", NoSchedModel, []>, AMDGPUGPUInfo<[8, 8, 8]>;
 
-// A variant CPU: its subarch, triple name, family, and base name come from the
+// A variant CPU: its subarch, triple name, and family come from the
 // spelling / ISA version, not its own name.
 def GFX888_AMAZING : ProcessorModel<"gfx888-amazing", NoSchedModel, []>,
     AMDGPUGPUInfo<[8, 8, 8]> {
@@ -35,7 +35,7 @@ def GFX88F : ProcessorModel<"gfx88f", NoSchedModel, []>,
 // The variant is its own major subarch, so it produces no override entry.
 // CHECK: AMDGPUMajorSubArchEntry, 0>{{ }}AMDGPUMajorSubArch
 
-// The name pool holds the variant's name, its gfx8 family, and its base name.
+// The name pool holds the variant's name and its gfx8 family.
 // CHECK: "gfx888\0"
 // CHECK: "gfx8\0"
 // CHECK: "gfx888-amazing\0"
@@ -44,11 +44,11 @@ def GFX88F : ProcessorModel<"gfx88f", NoSchedModel, []>,
 // The stepping is spelled as a single lowercase hex digit in the triple name.
 // CHECK: "amdgpu8.8f\0"
 
-// The GPU table: the base GPU has no base name (offset 0); the variant uses
-// AMDGPUSubArch888A and records "gfx888" as its base name.
-// CHECK: {[[#]], Triple::AMDGPUSubArch888, {{.*}}, {8, 8, 8}, [[FAM:[0-9]+]], 0, [[#]], [[#]], [[#]]},
-// CHECK: {[[#]], Triple::AMDGPUSubArch888A, {{.*}}, {8, 8, 8}, [[FAM]], [[#]], [[#]], [[#]], [[#]]},
-// CHECK: {[[#]], Triple::AMDGPUSubArch88F, {{.*}}, {8, 8, 15}, [[#]], 0, [[#]], [[#]], [[#]]},
+// The GPU table: both the base GPU and the variant share the gfx8 family; the
+// variant uses its own AMDGPUSubArch888A from the spelling.
+// CHECK: {[[#]], Triple::AMDGPUSubArch888, {{.*}}, {8, 8, 8}, [[FAM:[0-9]+]], [[#]], [[#]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch888A, {{.*}}, {8, 8, 8}, [[FAM]], [[#]], [[#]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch88F, {{.*}}, {8, 8, 15}, [[#]], [[#]], [[#]], [[#]]},
 
 // The subarch-name table maps the variant's own subarch to its triple name.
 // CHECK: {Triple::AMDGPUSubArch888A, [[#]], [[#]]},

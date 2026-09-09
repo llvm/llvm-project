@@ -308,7 +308,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP4:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:            catch ptr null
 // CHECK1-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i32 } [[TMP4]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP5]]) #[[ATTR10:[0-9]+]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP5]]) #[[ATTR11:[0-9]+]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -351,7 +351,7 @@ int main() {
 // CHECK1-LABEL: define {{[^@]+}}@__clang_call_terminate
 // CHECK1-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] comdat {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3]]
-// CHECK1-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
+// CHECK1-NEXT:    call void @_ZSt9terminatev() #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -410,7 +410,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP10:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:            catch ptr null
 // CHECK1-NEXT:    [[TMP11:%.*]] = extractvalue { ptr, i32 } [[TMP10]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP11]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP11]]) #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -453,7 +453,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZZN2SSC1ERiENKUlvE_clEv.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -547,7 +547,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZZN2SSC1ERiENKUlvE_clEv.omp_outlined.omp.reduction.reduction_func
-// CHECK1-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK1-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR10:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -590,7 +590,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z15parallel_singlev.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR8]] personality ptr @__gxx_personality_v0 {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR9]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -607,7 +607,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP2:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:            catch ptr null
 // CHECK1-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP3]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP3]]) #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -806,7 +806,7 @@ int main() {
 // CHECK4-NEXT:    [[TMP4:%.*]] = landingpad { ptr, i32 }
 // CHECK4-NEXT:            catch ptr null
 // CHECK4-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i32 } [[TMP4]], 0
-// CHECK4-NEXT:    call void @__clang_call_terminate(ptr [[TMP5]]) #[[ATTR10:[0-9]+]]
+// CHECK4-NEXT:    call void @__clang_call_terminate(ptr [[TMP5]]) #[[ATTR11:[0-9]+]]
 // CHECK4-NEXT:    unreachable
 //
 //
@@ -849,7 +849,7 @@ int main() {
 // CHECK4-LABEL: define {{[^@]+}}@__clang_call_terminate
 // CHECK4-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] comdat {
 // CHECK4-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3]]
-// CHECK4-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
+// CHECK4-NEXT:    call void @_ZSt9terminatev() #[[ATTR11]]
 // CHECK4-NEXT:    unreachable
 //
 //
@@ -954,7 +954,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN3SSTIdEC1Ev_l70.omp_outlined.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_NULL_ALLOCATOR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_DEFAULT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LARGE_CAP_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CONST_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_HIGH_BW_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LOW_LAT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_THREAD_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR8]] personality ptr @__gxx_personality_v0 {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_NULL_ALLOCATOR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_DEFAULT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LARGE_CAP_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CONST_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_HIGH_BW_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LOW_LAT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_THREAD_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR9:[0-9]+]] personality ptr @__gxx_personality_v0 {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1032,7 +1032,7 @@ int main() {
 // CHECK4-NEXT:    [[TMP24:%.*]] = landingpad { ptr, i32 }
 // CHECK4-NEXT:            catch ptr null
 // CHECK4-NEXT:    [[TMP25:%.*]] = extractvalue { ptr, i32 } [[TMP24]], 0
-// CHECK4-NEXT:    call void @__clang_call_terminate(ptr [[TMP25]]) #[[ATTR10]]
+// CHECK4-NEXT:    call void @__clang_call_terminate(ptr [[TMP25]]) #[[ATTR11]]
 // CHECK4-NEXT:    unreachable
 //
 //
@@ -1134,7 +1134,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_NULL_ALLOCATOR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_DEFAULT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LARGE_CAP_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CONST_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_HIGH_BW_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LOW_LAT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_THREAD_MEM_ALLOC:%.*]]) #[[ATTR8]] {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_NULL_ALLOCATOR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_DEFAULT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LARGE_CAP_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CONST_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_HIGH_BW_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LOW_LAT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_THREAD_MEM_ALLOC:%.*]]) #[[ATTR9]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1238,7 +1238,7 @@ int main() {
 // CHECK4-NEXT:    [[TMP10:%.*]] = landingpad { ptr, i32 }
 // CHECK4-NEXT:            catch ptr null
 // CHECK4-NEXT:    [[TMP11:%.*]] = extractvalue { ptr, i32 } [[TMP10]], 0
-// CHECK4-NEXT:    call void @__clang_call_terminate(ptr [[TMP11]]) #[[ATTR10]]
+// CHECK4-NEXT:    call void @__clang_call_terminate(ptr [[TMP11]]) #[[ATTR11]]
 // CHECK4-NEXT:    unreachable
 //
 //
@@ -1281,7 +1281,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_ZZN2SSC1ERiENKUlvE_clEv.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR8]] {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR9]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1375,7 +1375,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_ZZN2SSC1ERiENKUlvE_clEv.omp_outlined.omp.reduction.reduction_func
-// CHECK4-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK4-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR10:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1418,7 +1418,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z15parallel_singlev.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR8]] personality ptr @__gxx_personality_v0 {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR9]] personality ptr @__gxx_personality_v0 {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1435,7 +1435,7 @@ int main() {
 // CHECK4-NEXT:    [[TMP2:%.*]] = landingpad { ptr, i32 }
 // CHECK4-NEXT:            catch ptr null
 // CHECK4-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 0
-// CHECK4-NEXT:    call void @__clang_call_terminate(ptr [[TMP3]]) #[[ATTR10]]
+// CHECK4-NEXT:    call void @__clang_call_terminate(ptr [[TMP3]]) #[[ATTR11]]
 // CHECK4-NEXT:    unreachable
 //
 //
@@ -1627,7 +1627,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP4:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:            catch ptr null, !dbg [[DBG42]]
 // CHECK5-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i32 } [[TMP4]], 0, !dbg [[DBG42]]
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP5]]) #[[ATTR10:[0-9]+]], !dbg [[DBG42]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP5]]) #[[ATTR11:[0-9]+]], !dbg [[DBG42]]
 // CHECK5-NEXT:    unreachable, !dbg [[DBG42]]
 //
 //
@@ -1670,7 +1670,7 @@ int main() {
 // CHECK5-LABEL: define {{[^@]+}}@__clang_call_terminate
 // CHECK5-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK5-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3]]
-// CHECK5-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
+// CHECK5-NEXT:    call void @_ZSt9terminatev() #[[ATTR11]]
 // CHECK5-NEXT:    unreachable
 //
 //
@@ -1727,7 +1727,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN3SSTIdEC1Ev_l70.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR8]] personality ptr @__gxx_personality_v0 !dbg [[DBG72:![0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR9:[0-9]+]] personality ptr @__gxx_personality_v0 !dbg [[DBG72:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1765,7 +1765,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP8:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:            catch ptr null, !dbg [[DBG75]]
 // CHECK5-NEXT:    [[TMP9:%.*]] = extractvalue { ptr, i32 } [[TMP8]], 0, !dbg [[DBG75]]
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP9]]) #[[ATTR10]], !dbg [[DBG75]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP9]]) #[[ATTR11]], !dbg [[DBG75]]
 // CHECK5-NEXT:    unreachable, !dbg [[DBG75]]
 //
 //
@@ -1819,7 +1819,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR8]] !dbg [[DBG91:![0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR9]] !dbg [[DBG91:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1899,7 +1899,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP10:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:            catch ptr null, !dbg [[DBG107]]
 // CHECK5-NEXT:    [[TMP11:%.*]] = extractvalue { ptr, i32 } [[TMP10]], 0, !dbg [[DBG107]]
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP11]]) #[[ATTR10]], !dbg [[DBG107]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP11]]) #[[ATTR11]], !dbg [[DBG107]]
 // CHECK5-NEXT:    unreachable, !dbg [[DBG107]]
 //
 //
@@ -1942,7 +1942,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZZN2SSC1ERiENKUlvE_clEv.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR8]] !dbg [[DBG124:![0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR9]] !dbg [[DBG124:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2036,7 +2036,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZZN2SSC1ERiENKUlvE_clEv.omp_outlined.omp.reduction.reduction_func
-// CHECK5-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] !dbg [[DBG139:![0-9]+]] {
+// CHECK5-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR10:[0-9]+]] !dbg [[DBG139:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -2079,7 +2079,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z15parallel_singlev.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR8]] personality ptr @__gxx_personality_v0 !dbg [[DBG151:![0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR9]] personality ptr @__gxx_personality_v0 !dbg [[DBG151:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2096,7 +2096,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP2:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:            catch ptr null, !dbg [[DBG152]]
 // CHECK5-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 0, !dbg [[DBG152]]
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP3]]) #[[ATTR10]], !dbg [[DBG152]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP3]]) #[[ATTR11]], !dbg [[DBG152]]
 // CHECK5-NEXT:    unreachable, !dbg [[DBG152]]
 //
 //

@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class InductionDescriptor;
 class Instruction;
 class Loop;
@@ -156,7 +157,8 @@ struct VPlanTransforms {
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr,
+              function_ref<const BranchProbabilityInfo &()> GetBPI = nullptr);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
@@ -421,7 +423,7 @@ struct VPlanTransforms {
                                        VFRange &Range);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan.
-  static void simplifyRecipes(VPlan &Plan);
+  static void combineRecipes(VPlan &Plan);
 
   /// Cancel out redundant reverses in \p Plan, e.g. reverse(reverse(x)) -> x.
   static void simplifyReverses(VPlan &Plan);
@@ -599,9 +601,10 @@ struct VPlanTransforms {
   static void optimizeFindIVReductions(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L);
 
-  /// Detect and create partial reduction recipes for scaled reductions in
-  /// \p Plan. Must be called after recipe construction. If partial reductions
-  /// are only valid for a subset of VFs in Range, Range.End is updated.
+  /// Detect and create partial reduction recipes for scaled or unordered
+  /// reductions in \p Plan. Must be called after recipe construction. If
+  /// partial reductions are only valid for a subset of VFs in Range, Range.End
+  /// is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
 

@@ -98,7 +98,7 @@ static cl::opt<bool>
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnablePPCGenScalarMASSEntries(
+cl::opt<bool> EnablePPCGenScalarMASSEntries(
     "enable-ppc-gen-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
              "(scalar) entries"),
@@ -416,10 +416,8 @@ void PPCPassConfig::addIRPasses() {
   // Generate PowerPC target-specific entries for scalar math functions
   // that are available in IBM MASS (scalar) library.
   if (TM->getOptLevel() == CodeGenOptLevel::Aggressive &&
-      EnablePPCGenScalarMASSEntries) {
-    TM->Options.PPCGenScalarMASSEntries = EnablePPCGenScalarMASSEntries;
+      EnablePPCGenScalarMASSEntries)
     addPass(createPPCGenScalarMASSEntriesPass());
-  }
 
   // If explicitly requested, add explicit data prefetch intrinsics.
   if (EnablePrefetch.getNumOccurrences() > 0)

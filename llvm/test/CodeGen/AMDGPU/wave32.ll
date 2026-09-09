@@ -163,7 +163,7 @@ define amdgpu_kernel void @test_vopc_class(ptr addrspace(1) %out, float %x) #0 {
 ; GFX1064-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1064-NEXT:    s_endpgm
   %fabs = tail call float @llvm.fabs.f32(float %x)
-  %cmp = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmp = fcmp oeq float %fabs, +inf
   %ext = zext i1 %cmp to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
@@ -195,7 +195,7 @@ define amdgpu_kernel void @test_vcmp_vcnd_f16(ptr addrspace(1) %out, half %x) #0
 ; GFX1064-NEXT:    v_cndmask_b32_e32 v0, 0x3c00, v0, vcc
 ; GFX1064-NEXT:    global_store_short v1, v0, s[0:1]
 ; GFX1064-NEXT:    s_endpgm
-  %cmp = fcmp oeq half %x, 0x7FF0000000000000
+  %cmp = fcmp oeq half %x, +inf
   %sel = select i1 %cmp, half 1.0, half %x
   store half %sel, ptr addrspace(1) %out, align 2
   ret void

@@ -57,6 +57,15 @@ option(ORC_RT_ENABLE_ASSERTIONS "Enable assertions independent of build mode." O
 option(ORC_RT_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(ORC_RT_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 
+option(ORC_RT_ENABLE_PIC "Build position-independent code." ON)
+if(NOT ORC_RT_ENABLE_PIC AND
+   "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} ${CMAKE_ASM_FLAGS}" MATCHES "-fPIC")
+  message(WARNING
+    "ORC_RT_ENABLE_PIC is OFF, but -fPIC is already in CMAKE_C_FLAGS, "
+    "CMAKE_CXX_FLAGS or CMAKE_ASM_FLAGS, so the build will still be "
+    "position-independent.")
+endif()
+
 # --- Language runtime (RTTI / exceptions) ---
 option(ORC_RT_ENABLE_RTTI "Enable RTTI." ON)
 option(ORC_RT_ENABLE_EXCEPTIONS "Enable exceptions." ON)

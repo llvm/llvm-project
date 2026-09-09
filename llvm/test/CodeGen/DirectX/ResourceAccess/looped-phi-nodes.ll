@@ -1,5 +1,4 @@
-; RUN: not opt -S -dxil-resource-type -dxil-resource-access -disable-verify \
-; RUN:  -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-resource-type -dxil-resource-access -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; Ensure that a cyclic loop of resource ptrs reports a fatal error and exits
 ; compilation, rather than hanging or crashing later on the illegal access.

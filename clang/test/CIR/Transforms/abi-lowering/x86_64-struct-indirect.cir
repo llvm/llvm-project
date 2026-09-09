@@ -30,7 +30,7 @@ module attributes {
     cir.return %2 : !s64i
   }
 
-  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> !s64i
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
   // CHECK:   %[[VAL:.*]] = cir.load %arg0 : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK:   %[[LOCAL:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_Big>
   // CHECK:   cir.store %[[VAL]], %[[LOCAL]] : !rec_Big, !cir.ptr<!rec_Big>
@@ -60,7 +60,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_big128(%arg0: !cir.ptr<!rec_Big128> {llvm.align = 16 : i64, llvm.byval = !rec_Big128, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_big128(%arg0: !cir.ptr<!rec_Big128> {llvm.align = 16 : i64, llvm.byval = !rec_Big128, llvm.noundef})
 
   cir.func @ret_big128() -> !rec_Big128 {
     %0 = cir.alloca "r" align(16) : !cir.ptr<!rec_Big128>

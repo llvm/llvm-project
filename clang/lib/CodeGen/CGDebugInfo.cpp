@@ -3748,13 +3748,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       Flags |= llvm::DINode::FlagBitField;
 
     llvm::MDNode *PropertyNode = nullptr;
+    ObjCPropertyDecl *SynthesizedProperty = nullptr;
+    llvm::DIFile *PUnit = nullptr;
+    unsigned PLine = 0;
     if (ObjCImplementationDecl *ImpD = ID->getImplementation()) {
       if (ObjCPropertyImplDecl *PImpD =
               ImpD->FindPropertyImplIvarDecl(Field->getIdentifier())) {
         if (ObjCPropertyDecl *PD = PImpD->getPropertyDecl()) {
+          SynthesizedProperty = PD;
           SourceLocation Loc = PD->getLocation();
-          llvm::DIFile *PUnit = getOrCreateFile(Loc);
-          unsigned PLine = getLineNumber(Loc);
+          PUnit = getOrCreateFile(Loc);
+          PLine = getLineNumber(Loc);
           ObjCMethodDecl *Getter = PImpD->getGetterMethodDecl();
           ObjCMethodDecl *Setter = PImpD->getSetterMethodDecl();
           PropertyNode = DBuilder.createObjCProperty(
@@ -3770,10 +3774,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
         }
       }
     }
-    FieldTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
-                                      FieldSize, FieldAlign, FieldOffset, Flags,
-                                      FieldTy, PropertyNode);
-    EltTys.push_back(FieldTy);
+    auto *IvarTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
+                                           FieldSize, FieldAlign, FieldOffset,
+                                           Flags, FieldTy, PropertyNode);
+    EltTys.push_back(IvarTy);
+
+    if (SynthesizedProperty) {
+      assert(PUnit && "SynthesizedProperty implies PUnit");
+      EltTys.push_back(DBuilder.createProperty(
+          SynthesizedProperty->getName(), PUnit, PLine,
+          getOrCreateType(SynthesizedProperty->getType(), PUnit), IvarTy));
+    }
   }
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);

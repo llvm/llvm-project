@@ -34,7 +34,13 @@ def SDT_MipsTruncIntFP : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_MipsBuildPairF64 : SDTypeProfile<1, 2, [SDTCisVT<0, f64>,
                                                 SDTCisVT<1, i32>,
                                                 SDTCisSameAs<1, 2>]>;
+def SDT_MipsBuildPairF64_FPR : SDTypeProfile<1, 2, [SDTCisVT<0, f64>,
+                                                SDTCisVT<1, f32>,
+                                                SDTCisSameAs<1, 2>]>;
 def SDT_MipsExtractElementF64 : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
+                                                     SDTCisVT<1, f64>,
+                                                     SDTCisVT<2, i32>]>;
+def SDT_MipsExtractElementF64_FPR : SDTypeProfile<1, 2, [SDTCisVT<0, f32>,
                                                      SDTCisVT<1, f64>,
                                                      SDTCisVT<2, i32>]>;
 
@@ -57,8 +63,12 @@ def MipsTruncIntFP : SDNode<"MipsISD::TruncIntFP", SDT_MipsTruncIntFP>;
 
 def MipsBuildPairF64 : SDNode<"MipsISD::BuildPairF64", SDT_MipsBuildPairF64>;
 def : GINodeEquiv<G_MERGE_VALUES, MipsBuildPairF64>;
+def MipsBuildPairF64_FPR : SDNode<"MipsISD::BuildPairF64_FPR", SDT_MipsBuildPairF64_FPR>;
+def : GINodeEquiv<G_MERGE_VALUES, MipsBuildPairF64_FPR>;
 def MipsExtractElementF64 : SDNode<"MipsISD::ExtractElementF64",
                                    SDT_MipsExtractElementF64>;
+def MipsExtractElementF64_FPR : SDNode<"MipsISD::ExtractElementF64_FPR",
+                                   SDT_MipsExtractElementF64_FPR>;
 
 // Node used to generate an MTC1 i32 to f64 instruction
 def MipsMTC1_D64 : SDNode<"MipsISD::MTC1_D64", SDT_MipsMTC1_D64>;
@@ -836,7 +846,12 @@ class BuildPairF64Base<RegisterOperand RO> :
   PseudoSE<(outs RO:$dst), (ins GPR32Opnd:$lo, GPR32Opnd:$hi),
            [(set RO:$dst, (MipsBuildPairF64 GPR32Opnd:$lo, GPR32Opnd:$hi))]>;
 
+class BuildPairF64Base_FPR<RegisterOperand RO> :
+  PseudoSE<(outs RO:$dst), (ins FGR32Opnd:$lo, FGR32Opnd:$hi),
+           [(set RO:$dst, (MipsBuildPairF64_FPR FGR32Opnd:$lo, FGR32Opnd:$hi))]>;
+
 def BuildPairF64 : BuildPairF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
+def BuildPairF64_FPR : BuildPairF64Base_FPR<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def BuildPairF64_64 : BuildPairF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
 
 // This pseudo instr gets expanded into 2 mfc1 instrs after register
@@ -849,7 +864,12 @@ class ExtractElementF64Base<RegisterOperand RO> :
   PseudoSE<(outs GPR32Opnd:$dst), (ins RO:$src, i32imm:$n),
            [(set GPR32Opnd:$dst, (MipsExtractElementF64 RO:$src, imm:$n))]>;
 
+class ExtractElementF64Base_FPR<RegisterOperand RO> :
+  PseudoSE<(outs FGR32Opnd:$dst), (ins RO:$src, i32imm:$n),
+           [(set FGR32Opnd:$dst, (MipsExtractElementF64_FPR RO:$src, imm:$n))]>;
+
 def ExtractElementF64 : ExtractElementF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
+def ExtractElementF64_FPR : ExtractElementF64Base_FPR<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def ExtractElementF64_64 : ExtractElementF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
 
 def PseudoTRUNC_W_S : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
@@ -1090,10 +1110,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
     def : LoadRegImmPat<LWC1, f32, load>, ISA_MIPS1;
     def : StoreRegImmPat<SWC1, f32>, ISA_MIPS1;
 
-    def : LoadRegImmPat<LDC164, f64, load>, ISA_MIPS1, FGR_64;
-    def : StoreRegImmPat<SDC164, f64>, ISA_MIPS1, FGR_64;
+    def : LoadRegImmPat<LDC164, f64, load>, ISA_MIPS2, FGR_64;
+    def : StoreRegImmPat<SDC164, f64>, ISA_MIPS2, FGR_64;
 
-    def : LoadRegImmPat<LDC1, f64, load>, ISA_MIPS1, FGR_32;
-    def : StoreRegImmPat<SDC1, f64>, ISA_MIPS1, FGR_32;
+    def : LoadRegImmPat<LDC1, f64, load>, ISA_MIPS2, FGR_32;
+    def : StoreRegImmPat<SDC1, f64>, ISA_MIPS2, FGR_32;
   }
 }

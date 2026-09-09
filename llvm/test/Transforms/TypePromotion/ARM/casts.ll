@@ -795,6 +795,33 @@ exit:
   ret i32 %retval
 }
 
+define i8 @loop_trunc_i1(i8 zeroext %x) {
+; CHECK-LABEL: @loop_trunc_i1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[VALUE:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = lshr i32 [[VALUE]], 1
+; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[VALUE]] to i1
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[NEXT]] to i8
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %value = phi i8 [ %x, %entry ], [ %next, %loop ]
+  %next = lshr i8 %value, 1
+  %cond = trunc i8 %value to i1
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i8 %next
+}
+
 define void @search_back_through_trunc(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) {
 ; CHECK-LABEL: @search_back_through_trunc(
 ; CHECK-NEXT:  entry:

@@ -49,7 +49,8 @@ Print out the version of {program}`llubi` and exit without doing anything else.
 :::{option} -max-mem=N
 Limit the amount of memory (in bytes) that can be allocated by the program, including
 stack, heap, and global variables. If the limit is exceeded, execution will be terminated.
-By default, there is no limit (N = 0).
+By default, it is 4 GiB (N = UINT32_MAX). Note that you cannot specify a larger one due to
+the limitation of internal data structure.
 :::
 
 :::{option} -max-stack-depth=N

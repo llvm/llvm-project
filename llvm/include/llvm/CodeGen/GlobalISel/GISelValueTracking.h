@@ -153,6 +153,10 @@ public:
   /// Returns true if \p Val can be assumed to never be a signaling NaN.
   bool isKnownNeverSNaN(Register Val) { return isKnownNeverNaN(Val, true); }
 
+  /// Returns true if \p Val can be assumed to never be a zero, accounting for
+  /// denormal flushing of the containing function.
+  bool isKnownNeverLogicalZero(Register Val, unsigned Depth = 0);
+
   // Observer API. No-op for non-caching implementation.
   void erasingInstr(MachineInstr &MI) override {}
   void createdInstr(MachineInstr &MI) override {}

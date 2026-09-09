@@ -192,15 +192,16 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
-  unsigned OperandOrder;
+  unsigned OperandOrder = 0;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
+  bool TRNMask = isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder);
+  if (!TRNMask && !isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_TRN1 : AArch64::G_TRN2;
   Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
-  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 && TRNMask ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }

@@ -1412,6 +1412,27 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                  getStyleWithColumns(getDefaultStyle(), 29));
 }
 
+TEST_F(FormatTestVerilog, Struct) {
+  verifyFormat("struct packed signed {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("struct packed {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("struct {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("typedef struct packed signed {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
+  verifyFormat("typedef struct {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
+  verifyFormat("typedef struct packed {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
+}
+
 TEST_F(FormatTestVerilog, StructLiteral) {
   verifyFormat("c = '{0, 0.0};");
   verifyFormat("c = '{'{1, 1.0}, '{2, 2.0}};");

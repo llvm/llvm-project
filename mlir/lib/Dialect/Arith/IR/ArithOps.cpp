@@ -1866,6 +1866,93 @@ LogicalResult arith::ExtFOp::verify() { return verifyExtOp<FloatType>(*this); }
 // ScalingExtFOp
 //===----------------------------------------------------------------------===//
 
+/// Fold `calculate` element-wise over the operands of a scaling cast op. The
+/// `constFoldBinaryOp` helpers cannot be used: they bail out unless both
+/// operands have the same type, and `in` and `scale` never do.
+static Attribute foldScalingCastOp(
+    Attribute inAttr, Attribute scaleAttr, Type resultType,
+    function_ref<std::optional<APFloat>(const APFloat &, const APFloat &)>
+        calculate) {
+  // Poison propagates, as it does in the generic constant folders.
+  if (isa_and_nonnull<ub::PoisonAttr>(inAttr))
+    return inAttr;
+  if (isa_and_nonnull<ub::PoisonAttr>(scaleAttr))
+    return scaleAttr;
+
+  if (!inAttr || !scaleAttr || !resultType)
+    return {};
+
+  if (auto inFloat = dyn_cast<FloatAttr>(inAttr)) {
+    auto scaleFloat = dyn_cast<FloatAttr>(scaleAttr);
+    if (!scaleFloat)
+      return {};
+    std::optional<APFloat> result =
+        calculate(inFloat.getValue(), scaleFloat.getValue());
+    if (!result)
+      return {};
+    return FloatAttr::get(resultType, *result);
+  }
+
+  auto inElements = dyn_cast<DenseFPElementsAttr>(inAttr);
+  auto scaleElements = dyn_cast<DenseFPElementsAttr>(scaleAttr);
+  auto shapedResultType = dyn_cast<ShapedType>(resultType);
+  if (!inElements || !scaleElements || !shapedResultType ||
+      !shapedResultType.hasStaticShape() ||
+      inElements.getNumElements() != scaleElements.getNumElements())
+    return {};
+
+  // Both operands are splats, so avoid expanding the elements out.
+  if (inElements.isSplat() && scaleElements.isSplat()) {
+    std::optional<APFloat> result =
+        calculate(inElements.getSplatValue<APFloat>(),
+                  scaleElements.getSplatValue<APFloat>());
+    if (!result)
+      return {};
+    return DenseElementsAttr::get(shapedResultType, *result);
+  }
+
+  SmallVector<APFloat> results;
+  results.reserve(inElements.getNumElements());
+  for (const auto &[in, scale] : llvm::zip_equal(inElements, scaleElements)) {
+    std::optional<APFloat> result = calculate(in, scale);
+    if (!result)
+      return {};
+    results.push_back(*result);
+  }
+  return DenseElementsAttr::get(shapedResultType, results);
+}
+
+/// Only scales that already are f8E8M0FNU fold. What a wider scale means is
+/// unsettled -- the tree does not say whether truncating one to f8E8M0FNU
+/// rounds or takes its exponent -- so a folder should not settle it, see
+/// https://github.com/llvm/llvm-project/issues/215295.
+static bool isFoldableScalingScale(Value scale) {
+  return isa<Float8E8M0FNUType>(getElementTypeOrSelf(scale.getType()));
+}
+
+OpFoldResult arith::ScalingExtFOp::fold(FoldAdaptor adaptor) {
+  // scaling_extf(in, scale) -> mulf(extf(in), extf(scale)), matching the
+  // expansion in ExpandOps.cpp. As in arith.extf, the widening steps only fold
+  // when they are lossless.
+  if (!isFoldableScalingScale(getScale()))
+    return {};
+
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &resSemantics = resElemType.getFloatSemantics();
+  return foldScalingCastOp(
+      adaptor.getIn(), adaptor.getScale(), getType(),
+      [&resSemantics](const APFloat &in,
+                      const APFloat &scale) -> std::optional<APFloat> {
+        FailureOr<APFloat> inExt = convertFloatValue(in, resSemantics);
+        FailureOr<APFloat> scaleExt = convertFloatValue(scale, resSemantics);
+        if (failed(inExt) || failed(scaleExt))
+          return std::nullopt;
+        APFloat result(*inExt);
+        result.multiply(*scaleExt, kDefaultRoundingMode);
+        return result;
+      });
+}
+
 bool arith::ScalingExtFOp::areCastCompatible(TypeRange inputs,
                                              TypeRange outputs) {
   return checkWidthChangeCast<std::greater, FloatType>(inputs.front(), outputs);
@@ -2044,6 +2131,35 @@ LogicalResult arith::ConvertFOp::verify() {
 //===----------------------------------------------------------------------===//
 // ScalingTruncFOp
 //===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ScalingTruncFOp::fold(FoldAdaptor adaptor) {
+  // scaling_truncf(in, scale) -> truncf(in / extf(scale)), matching the
+  // expansion in ExpandOps.cpp. Unlike scaling_extf, the scale is widened to
+  // the type of `in` rather than to the result type.
+  if (!isFoldableScalingScale(getScale()))
+    return {};
+
+  auto inElemType = cast<FloatType>(getElementTypeOrSelf(getIn().getType()));
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &inSemantics = inElemType.getFloatSemantics();
+  const llvm::fltSemantics &resSemantics = resElemType.getFloatSemantics();
+  llvm::RoundingMode roundingMode =
+      convertArithRoundingModeToLLVMIR(getRoundingmode());
+  return foldScalingCastOp(
+      adaptor.getIn(), adaptor.getScale(), getType(),
+      [&](const APFloat &in, const APFloat &scale) -> std::optional<APFloat> {
+        FailureOr<APFloat> scaleExt = convertFloatValue(scale, inSemantics);
+        if (failed(scaleExt))
+          return std::nullopt;
+        APFloat quotient(in);
+        quotient.divide(*scaleExt, kDefaultRoundingMode);
+        FailureOr<APFloat> result =
+            convertFloatValue(quotient, resSemantics, roundingMode);
+        if (failed(result))
+          return std::nullopt;
+        return *result;
+      });
+}
 
 bool arith::ScalingTruncFOp::areCastCompatible(TypeRange inputs,
                                                TypeRange outputs) {

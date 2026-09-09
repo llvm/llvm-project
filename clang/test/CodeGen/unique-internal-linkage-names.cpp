@@ -64,8 +64,13 @@ static int asm_label() asm("custom_label");
 static int asm_label() { return 0; }
 int call_asm_label() { return asm_label(); }
 
+// Likewise for a static variable with an asm label.
+static int asm_label_var asm("custom_var_label");
+int read_asm_label_var() { return asm_label_var; }
+
 // PLAIN: @_ZL4glob = internal global
 // PLAIN: @_ZZ8retAnonMvE5fGlob = internal global
+// PLAIN: @custom_var_label = internal global
 // PLAIN: @_ZN12_GLOBAL__N_16anon_mE = internal global
 // PLAIN: define internal noundef i32 @_ZL3foov()
 // PLAIN: define internal noundef i32 @_ZN12_GLOBAL__N_14getMEv
@@ -76,10 +81,11 @@ int call_asm_label() { return asm_label(); }
 // PLAIN: define internal noundef i32 @_ZL4mverv()
 // PLAIN: define internal noundef i32 @_ZL4mverv.sse4.2()
 // PLAIN-NOT: "sample-profile-suffix-elision-policy"
-// UNIQUE: @_ZL4glob = internal global
-// UNIQUE: @_ZZ8retAnonMvE5fGlob = internal global
-// UNIQUE: @_ZN12_GLOBAL__N_16anon_mE = internal global
-// UNIQUE: define internal noundef i32 @_ZL3foov.[[MODHASH:__uniq.[0-9]+]]() #[[#ATTR:]] {
+// UNIQUE: @_ZL4glob.[[MODHASH:__uniq.[0-9]+]] = internal global
+// UNIQUE: @_ZZ8retAnonMvE5fGlob.[[MODHASH]] = internal global
+// UNIQUE: @custom_var_label = internal global
+// UNIQUE: @_ZN12_GLOBAL__N_16anon_mE.[[MODHASH]] = internal global
+// UNIQUE: define internal noundef i32 @_ZL3foov.[[MODHASH]]() #[[#ATTR:]] {
 // UNIQUE: define internal noundef i32 @_ZN12_GLOBAL__N_14getMEv.[[MODHASH]]
 // UNIQUE: define internal ptr @_ZL4mverv.[[MODHASH]].resolver()
 // UNIQUE: define internal void @_ZN12_GLOBAL__N_11AC1Ev.__uniq.68358509610070717889884130747296293671
@@ -92,9 +98,10 @@ int call_asm_label() { return asm_label(); }
 // Expected module path and unique ID
 // /repro/src/path/unique-internal-linkage-names.cpp => __uniq.5283619504002921413211664429594652319
 
-// UNIQUE-PATH-MAP-LINUX: @_ZL4glob = internal global
-// UNIQUE-PATH-MAP-LINUX: @_ZZ8retAnonMvE5fGlob = internal global
-// UNIQUE-PATH-MAP-LINUX: @_ZN12_GLOBAL__N_16anon_mE = internal global
+// UNIQUE-PATH-MAP-LINUX: @_ZL4glob.__uniq.5283619504002921413211664429594652319 = internal global
+// UNIQUE-PATH-MAP-LINUX: @_ZZ8retAnonMvE5fGlob.__uniq.5283619504002921413211664429594652319 = internal global
+// UNIQUE-PATH-MAP-LINUX: @custom_var_label = internal global
+// UNIQUE-PATH-MAP-LINUX: @_ZN12_GLOBAL__N_16anon_mE.__uniq.5283619504002921413211664429594652319 = internal global
 // UNIQUE-PATH-MAP-LINUX: define internal noundef i32 @_ZL3foov.__uniq.5283619504002921413211664429594652319() #[[#ATTR:]] {
 // UNIQUE-PATH-MAP-LINUX: define internal noundef i32 @_ZN12_GLOBAL__N_14getMEv.__uniq.5283619504002921413211664429594652319
 // UNIQUE-PATH-MAP-LINUX: define internal ptr @_ZL4mverv.__uniq.5283619504002921413211664429594652319.resolver()
@@ -107,9 +114,11 @@ int call_asm_label() { return asm_label(); }
 // Expected module path and unique ID
 // \repro\src\path\unique-internal-linkage-names.cpp => __uniq.68451533753012730514350177221027644473
 
+// Note: 'glob' is not mangled under the MS ABI, so it gets no unique suffix.
 // UNIQUE-PATH-MAP-WINDOWS: @glob = internal global
-// UNIQUE-PATH-MAP-WINDOWS: @"?fGlob@?1??retAnonM@@YAHXZ@4HA" = internal global
-// UNIQUE-PATH-MAP-WINDOWS: @"?anon_m@?{{.*}}@@3HA" = internal global
+// UNIQUE-PATH-MAP-WINDOWS: @"?fGlob@?1??retAnonM@@YAHXZ@4HA.__uniq.68451533753012730514350177221027644473" = internal global
+// UNIQUE-PATH-MAP-WINDOWS: @custom_var_label = internal global
+// UNIQUE-PATH-MAP-WINDOWS: @"?anon_m@?{{.*}}@@3HA.__uniq.68451533753012730514350177221027644473" = internal global
 // UNIQUE-PATH-MAP-WINDOWS: ret ptr @"?foo@@YAHXZ.__uniq.68451533753012730514350177221027644473"
 // UNIQUE-PATH-MAP-WINDOWS: define internal noundef i32 @"?foo@@YAHXZ.__uniq.68451533753012730514350177221027644473"
 // UNIQUE-PATH-MAP-WINDOWS: define internal i32 @"?mver@@YAHXZ.__uniq.68451533753012730514350177221027644473.resolver"()

@@ -62,7 +62,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     OpenMPThreadprivateEquivalence, RelaxedCLocChecks, CudaPinned,
     OpenAccDefaultNoneScalarsStrict, OpenACCMultipleNamesInRoutine,
     EnumerationType, CUDAInit, PreferIntrinsicModuleUseAssociation,
-    MultipleCommonBlockInit)
+    MultipleCommonBlockInit, OutOfBoundsSubscripts)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,

@@ -504,9 +504,9 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
 
 ExceptionResult
 NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
-  Log *log = GetLog(WindowsLog::Exception);
   uint32_t wp_id = LLDB_INVALID_INDEX32;
 #ifndef __aarch64__
+  Log *log = GetLog(WindowsLog::Exception);
   if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID())) {
     NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
     Status error =

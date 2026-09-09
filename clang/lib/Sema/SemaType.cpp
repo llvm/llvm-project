@@ -343,7 +343,11 @@ namespace {
         }
       }
 
-      llvm_unreachable("no Attr* for AttributedType*");
+      // The AttributedType can be inherited from another declarator, for
+      // example when __typeof__ reuses a type built for a different
+      // declaration, in which case there is no entry for it in this
+      // TypeProcessingState. Return null in that case.
+      return nullptr;
     }
 
     SourceLocation

@@ -661,3 +661,18 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {nvvm.grid_constant}) attributes {nvvm.k
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant = true}) attributes {nvvm.kernel} {
   llvm.return
 }
+
+// -----
+
+func.func @wgmma_f16_bf16_bf16(%descA : i64, %descB : i64) {
+  %result = llvm.mlir.undef : !llvm.struct<(f16, f16, f16, f16)>
+  // expected-error @+1 {{op f16 += bf16 * bf16, it is not supported}}
+  %res = nvvm.wgmma.mma_async %descA, %descB, %result,
+      #nvvm.shape<m = 64, n = 16, k = 16>,
+      D [<f16>, <zero>],
+      A [<bf16>, #nvvm.wgmma_scale_in<neg>, <col>],
+      B [<bf16>, #nvvm.wgmma_scale_in<neg>, <col>]
+      : !llvm.struct<(f16, f16, f16, f16)>
+      -> !llvm.struct<(f16, f16, f16, f16)>
+  return
+}

@@ -60,7 +60,7 @@ llvm.func @opaque_ptr_matrix_load_store(%ptr: !llvm.ptr, %stride: i64) -> vector
 // CHECK-LABEL: @opaque_ptr_masked_load
 llvm.func @opaque_ptr_masked_load(%arg0: !llvm.ptr, %arg1: vector<7xi1>) -> vector<7xf32> {
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr
-  %0 = llvm.intr.masked.load %arg0, %arg1 { alignment = 1: i32} :
+  %0 = llvm.intr.masked.load %arg0, %arg1 { alignment = 1: i64} :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   llvm.return %0 : vector<7 x f32>
 }
@@ -68,7 +68,7 @@ llvm.func @opaque_ptr_masked_load(%arg0: !llvm.ptr, %arg1: vector<7xi1>) -> vect
 // CHECK-LABEL: @opaque_ptr_gather
 llvm.func @opaque_ptr_gather(%M: vector<7 x !llvm.ptr>, %mask: vector<7xi1>) -> vector<7xf32> {
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 {{.*}},
-  %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
+  %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i64} :
       (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   llvm.return %a : vector<7xf32>
 }

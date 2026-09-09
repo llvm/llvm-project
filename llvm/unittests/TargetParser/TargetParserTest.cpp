@@ -3143,6 +3143,49 @@ TEST(TargetParserTest, testAMDGPUgetVGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getVGPRAllocGranule(Triple::AMDGPUSubArch1100, true), 24u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetTotalNumVGPRs) {
+  // Pre-gfx10 the file is 256 registers, and gfx90a doubles it by unifying the
+  // AGPRs. From gfx10 on it is split between the waves of a wave64 kernel.
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_GFX600, false), 256u);
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_GFX600, true), 256u);
+
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_GFX90A, false), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_GFX90A, true), 512u);
+
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_GFX1030, false), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_GFX1030, true), 1024u);
+
+  // gfx11+ has 1536 physical VGPRs.
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_GFX1100, false), 768u);
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_GFX1100, true), 1536u);
+
+  // An unknown GPU falls back to the pre-gfx10 file size.
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(AMDGPU::GK_NONE, true), 256u);
+
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(Triple::AMDGPUSubArch90A, true), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumVGPRs(Triple::AMDGPUSubArch1100, true), 1536u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetAddressableNumVGPRs) {
+  // A wave addresses 256 VGPRs, except on gfx90a where the unified file makes
+  // the AGPRs addressable too, and on targets with 1024 addressable VGPRs.
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX600, false), 256u);
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX1030, true), 256u);
+
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX90A, false), 512u);
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX90A, true), 512u);
+
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX1250, false), 512u);
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX1250, true), 1024u);
+
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_NONE, true), 256u);
+
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(Triple::AMDGPUSubArch90A, true),
+            512u);
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(Triple::AMDGPUSubArch1250, true),
+            1024u);
+}
+
 TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
   // The addressable cap is a fixed hardware property, independent of how many
   // SIMDs a work-group runs on.

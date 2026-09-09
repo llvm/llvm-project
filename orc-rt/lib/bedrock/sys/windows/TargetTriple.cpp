@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/ExecutorProcessInfo.h"
+#include "orc-rt-internal/bedrock/sys/TargetTriple.h"
 
-namespace orc_rt {
+namespace orc_rt::sys {
 
-std::string ExecutorProcessInfo::detectTargetTriple() noexcept { return {}; }
+std::string detectTargetTriple() noexcept { return {}; }
 
-} // namespace orc_rt
+} // namespace orc_rt::sys

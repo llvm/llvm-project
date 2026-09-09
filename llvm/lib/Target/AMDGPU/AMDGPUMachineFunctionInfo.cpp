@@ -14,6 +14,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -96,17 +97,8 @@ unsigned AMDGPUMachineFunctionInfo::allocateLDSGlobal(const DataLayout &DL,
 
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-    if (AMDGPU::isNamedBarrier(GV)) {
-      std::optional<unsigned> BarAddr = getLDSAbsoluteAddress(GV);
-      if (!BarAddr)
-        llvm_unreachable("named barrier should have an assigned address");
-      Entry.first->second = BarAddr.value();
-      unsigned BarCnt = GV.getGlobalSize(DL) / 16;
-      recordNumNamedBarriers(BarAddr.value(), BarCnt);
-      return BarAddr.value();
-    }
-
-    std::optional<uint32_t> MaybeAbs = getLDSAbsoluteAddress(GV);
+    std::optional<uint32_t> MaybeAbs =
+        get32BitAbsoluteAddress(GV, AMDGPUAS::LOCAL_ADDRESS);
     if (MaybeAbs) {
       // Absolute address LDS variables that exist prior to the LDS lowering
       // pass raise a fatal error in that pass. These failure modes are only
@@ -164,6 +156,27 @@ unsigned AMDGPUMachineFunctionInfo::allocateLDSGlobal(const DataLayout &DL,
   return Offset;
 }
 
+unsigned
+AMDGPUMachineFunctionInfo::allocateBarrierGlobal(const DataLayout &DL,
+                                                 const GlobalVariable &GV) {
+  assert(AMDGPU::isNamedBarrier(GV));
+  std::optional<unsigned> BarAddr =
+      get32BitAbsoluteAddress(GV, AMDGPUAS::BARRIER);
+  assert(BarAddr && "Expected named barrier global to have an address!");
+
+  if (*BarAddr == 0) {
+    // We cannot allow this because some places in CodeGen (rightfully) assume a
+    // GV address is never null. For example, there are no null checks on
+    // addrspacecast if the pointer is a GV pointer.
+    reportFatalInternalError("named barrier global variable '" + GV.getName() +
+                             "' has a NULL address, which is not supported");
+  }
+
+  unsigned BarCnt = AMDGPU::getNumNamedBarriersDeclared(DL, GV);
+  recordNumNamedBarriers(BarAddr.value(), BarCnt);
+  return BarAddr.value();
+}
+
 std::optional<uint32_t>
 AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(const Function &F) {
   // TODO: Would be more consistent with the abs symbols to use a range
@@ -181,8 +194,9 @@ AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(const Function &F) {
 }
 
 std::optional<uint32_t>
-AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(const GlobalValue &GV) {
-  if (GV.getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(const GlobalValue &GV,
+                                                   unsigned AS) {
+  if (GV.getAddressSpace() != AS)
     return {};
 
   std::optional<ConstantRange> AbsSymRange = GV.getAbsoluteSymbolRange();
@@ -220,7 +234,8 @@ void AMDGPUMachineFunctionInfo::setDynLDSAlign(const Function &F,
   const GlobalVariable *Dyn = getKernelDynLDSGlobalFromFunction(F);
   if (Dyn) {
     unsigned Offset = LDSSize; // return this?
-    std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*Dyn);
+    std::optional<uint32_t> Expect =
+        get32BitAbsoluteAddress(GV, AMDGPUAS::LOCAL_ADDRESS);
     if (!Expect || (Offset != *Expect)) {
       report_fatal_error("Inconsistent metadata on dynamic LDS variable");
     }

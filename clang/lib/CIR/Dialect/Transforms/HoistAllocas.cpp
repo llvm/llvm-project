@@ -64,11 +64,23 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
   // let's not depend on the default staying that way.
   func.getBody().walk<mlir::WalkOrder::PostOrder>([&](cir::AllocaOp alloca) {
     mlir::Block *destBlock = getHoistDestBlock(alloca);
-    if (alloca->getBlock() == destBlock)
-      return;
     // Don't hoist allocas with dynamic alloca size.
     if (alloca.getDynAllocSize())
       return;
+    if (alloca->getBlock() == destBlock) {
+      // Already in the right block, but not necessarily ahead of the control
+      // flow in it. This pass runs before FlattenCFG, which splits the body at
+      // each structured control-flow op, so an alloca that sits after one ends
+      // up in a non-entry block and SROA only ever collects allocas from the
+      // entry block, so it would never be promoted at all.
+      // Only a region-carrying op ahead of the alloca can strand it that way;
+      // straight-line code cannot.
+      if (std::all_of(destBlock->begin(), alloca->getIterator(),
+                      [](mlir::Operation &blockOp) {
+                        return blockOp.getNumRegions() == 0;
+                      }))
+        return;
+    }
 
     // Hoist allocas into the entry block.
 

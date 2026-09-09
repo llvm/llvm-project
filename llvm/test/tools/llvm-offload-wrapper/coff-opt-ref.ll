@@ -17,10 +17,10 @@
 ; CHECK: icmp ne ptr getelementptr inbounds ([1 x %struct.__tgt_offload_entry], ptr @__start_llvm_offload_entries, i32 0, i32 1), @__stop_llvm_offload_entries
 
 ; OBJ: Name: llvm_offload_entries{{[$]}}OA
-; OBJ: RawDataSize: 56
+; OBJ: RawDataSize: 0x38
 ; OBJ: IMAGE_SCN_ALIGN_8BYTES
 ; OBJ: Name: llvm_offload_entries{{[$]}}OZ
-; OBJ: RawDataSize: 56
+; OBJ: RawDataSize: 0x38
 ; OBJ: IMAGE_SCN_ALIGN_8BYTES
 
 ; MAP:      {{[0-9A-Fa-f]+}}:00000000 00000038H llvm_offload_entries{{[$]}}OA DATA

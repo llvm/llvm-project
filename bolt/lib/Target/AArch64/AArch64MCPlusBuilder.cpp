@@ -766,7 +766,7 @@ public:
     case AArch64::LDRSWl:
       AddrReg = DataReg;
       OpCode = AArch64::LDRSWui;
-      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
       break;
     default:
       llvm_unreachable("LDR (literal) or LDRSW (literal) expected");
@@ -2658,7 +2658,7 @@ public:
            isAArch64ExclusiveStore(Inst);
   }
 
-  bool isCleanRegXOR(const MCInst &Inst) const override {
+  bool isCleanReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::EORXrs:
     case AArch64::EORWrs:

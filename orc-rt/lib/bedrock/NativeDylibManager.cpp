@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/NativeDylibManager.h"
-#include "orc-rt-internal/support/sys/DynamicLibrary.h"
+#include "orc-rt-internal/bedrock/sys/DynamicLibrary.h"
 #include "orc-rt/bedrock/Session.h"
 
 namespace orc_rt {

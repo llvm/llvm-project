@@ -2724,10 +2724,9 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
   // We only need to the predecessors of MBBs that could have is_stmt set by
   // this logic.
   SmallDenseSet<MachineBasicBlock *, 4> PredMBBsToExamine;
-  SmallDenseMap<MachineBasicBlock *, MachineInstr *> PotentialIsStmtMBBInstrs;
-  // We use const_cast even though we won't actually modify MF, because some
-  // methods we need take a non-const MBB.
-  for (auto &MBB : *const_cast<MachineFunction *>(MF)) {
+  SmallDenseMap<const MachineBasicBlock *, const MachineInstr *>
+      PotentialIsStmtMBBInstrs;
+  for (const auto &MBB : *MF) {
     if (MBB.empty() || MBB.pred_empty())
       continue;
     for (auto &MI : MBB) {
@@ -2745,11 +2744,12 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
   // multiple branches that each have their own source location); otherwise we
   // just use the last line in the block.
   for (auto *MBB : PredMBBsToExamine) {
-    auto CheckMBBEdge = [&](MachineBasicBlock *Succ, unsigned OutgoingLine) {
+    auto CheckMBBEdge = [&](const MachineBasicBlock *Succ,
+                            unsigned OutgoingLine) {
       auto MBBInstrIt = PotentialIsStmtMBBInstrs.find(Succ);
       if (MBBInstrIt == PotentialIsStmtMBBInstrs.end())
         return;
-      MachineInstr *MI = MBBInstrIt->second;
+      const MachineInstr *MI = MBBInstrIt->second;
       if (MI->getDebugLoc()->getLine() == OutgoingLine)
         return;
       PotentialIsStmtMBBInstrs.erase(MBBInstrIt);
@@ -2771,10 +2771,10 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
       continue;
     // If we can't determine what DLs this branch's successors use, just treat
     // all the successors as coming from the last DebugLoc.
-    SmallVector<MachineBasicBlock *, 2> SuccessorBBs;
+    SmallVector<const MachineBasicBlock *, 2> SuccessorBBs;
     auto MIIt = MBB->rbegin();
     {
-      MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+      const MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
       SmallVector<MachineOperand, 4> Cond;
       bool AnalyzeFailed = TII->analyzeBranch(*MBB, TBB, FBB, Cond);
       // For a conditional branch followed by unconditional branch where the

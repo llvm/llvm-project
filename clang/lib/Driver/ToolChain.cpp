@@ -815,7 +815,6 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
     return getClang();
 
   case Action::OffloadBundlingJobClass:
-  case Action::OffloadUnbundlingJobClass:
     return getOffloadBundler();
 
   case Action::OffloadPackagerJobClass:

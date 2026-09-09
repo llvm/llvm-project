@@ -2110,7 +2110,8 @@ DeclResult Sema::CheckClassTemplate(
           PrevDecl = (*Previous.begin())->getUnderlyingDecl();
       }
     }
-  } else if (PrevDecl && !isDeclInScope(Previous.getRepresentativeDecl(),
+  } else if (PrevDecl &&
+             !isTagRedeclarationInScope(Previous.getRepresentativeDecl(),
                                         SemanticContext, S, SS.isValid()))
     PrevDecl = PrevClassTemplate = nullptr;
 

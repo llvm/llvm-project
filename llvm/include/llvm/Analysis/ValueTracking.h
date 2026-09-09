@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -376,7 +377,13 @@ inline Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
   Value *Base =
       Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt, AllowNonInbounds);
 
-  Offset = OffsetAPInt.getSExtValue();
+  std::optional<int64_t> OffsetInt64 = OffsetAPInt.trySExtValue();
+  if (!OffsetInt64) {
+    Offset = 0;
+    return Ptr;
+  }
+
+  Offset = *OffsetInt64;
   return Base;
 }
 inline const Value *

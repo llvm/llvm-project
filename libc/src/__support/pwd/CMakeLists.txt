@@ -1,0 +1,28 @@
+add_header_library(
+  field_tokenizer
+  HDRS
+    field_tokenizer.h
+  DEPENDS
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  flat_file_db
+  HDRS
+    flat_file_db.h
+  DEPENDS
+    .field_tokenizer
+    libc.hdr.errno_macros
+    libc.hdr.stdio_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.functional
+    libc.src.__support.CPP.span
+    libc.src.__support.File.file
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)

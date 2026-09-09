@@ -432,7 +432,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   std::optional<int64_t> CommonOffset;
   DenseMap<const MachineInstr *, SmallVector<unsigned>>
       InlineAsmMemoryOpIndexesMap;
-  for (const MachineInstr &UseMI : MRI->use_instructions(DestReg)) {
+  for (const MachineInstr &UseMI : MRI->use_nodbg_instructions(DestReg)) {
     switch (UseMI.getOpcode()) {
     default:
       LLVM_DEBUG(dbgs() << "Not a load or store instruction: " << UseMI);
@@ -555,6 +555,9 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     }
   }
 
+  if (!CommonOffset)
+    return false;
+
   // We found a common offset.
   // Update the offsets in global address lowering.
   // We may have already folded some arithmetic so we need to add to any
@@ -566,6 +569,10 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   // We can only fold simm32 offsets.
   if (!isInt<32>(NewOffset))
     return false;
+
+  // Folding changes the value represented by DestReg, so its debug users can
+  // no longer describe the same address.
+  MRI->markUsesInDebugValueAsUndef(DestReg);
 
   Hi.getOperand(1).setOffset(NewOffset);
   MachineOperand &ImmOp =
@@ -583,7 +590,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 
   // Update the immediate in the load/store instructions to add the offset.
   for (MachineInstr &UseMI :
-       llvm::make_early_inc_range(MRI->use_instructions(DestReg))) {
+       llvm::make_early_inc_range(MRI->use_nodbg_instructions(DestReg))) {
     if (UseMI.getOpcode() == RISCV::INLINEASM ||
         UseMI.getOpcode() == RISCV::INLINEASM_BR) {
       auto &InlineAsmMemoryOpIndexes = InlineAsmMemoryOpIndexesMap[&UseMI];

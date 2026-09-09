@@ -233,8 +233,8 @@ exit:
 
 
 
-attributes #0 = { "target-features"="+64bit,+v,+zvl256b" }
-attributes #1 = { "target-cpu"="sifive-p670" }
+attributes #0 = { "target-features"="+64bit,+v,+zvl256b" vscale_range(4, 1024) }
+attributes #1 = { "target-cpu"="sifive-p670" vscale_range(2, 1024) }
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

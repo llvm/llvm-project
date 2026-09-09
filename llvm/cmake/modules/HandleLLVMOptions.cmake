@@ -578,7 +578,7 @@ endif()
 
 # set stack reserved size to ~10MB
 set(_is_exe "$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>")
-if(MSVC)
+if(MSVC OR (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
   # CMake previously automatically set this value for MSVC builds, but the
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
@@ -919,6 +919,13 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     # that is cleaned up in the destructor).
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12.1)
       append("-Wno-dangling-pointer" CMAKE_CXX_FLAGS)
+    endif()
+
+    # Silence a false positive GCC -Wunused-but-set-parameter warning in
+    # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
+    # for details
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
+      append("-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
     endif()
   endif()
 

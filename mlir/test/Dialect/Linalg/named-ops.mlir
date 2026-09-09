@@ -1978,6 +1978,168 @@ func.func @contract_matmul_bcast_b_transpose_a(%A: memref<5x3xf32>, %B: memref<5
 
 // -----
 
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$ACCESS_SCALE_A:.+]] = affine_map<(d0, d1, d2) -> (d0 floordiv 32, d2 floordiv 128)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK: #[[$ACCESS_SCALE_B:.+]] = affine_map<(d0, d1, d2) -> (d1)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @scaled_contract
+func.func @scaled_contract(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>,
+    %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+// CHECK:  linalg.scaled_contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_SCALE_A]], #[[$ACCESS_B]], #[[$ACCESS_SCALE_B]], #[[$ACCESS_C]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}} : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+// CHECK-SAME: outs(%{{.+}} : tensor<256x128xf32>) -> tensor<256x128xf32>
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$ACCESS_SCALE:.+]] = affine_map<(d0, d1, d2) -> ()>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @scaled_contract_tensor_scale
+func.func @scaled_contract_tensor_scale(
+    %A: memref<256x512xi8>, %sA: memref<f8E8M0FNU>,
+    %B: memref<128x512xi8>, %sB: memref<f8E8M0FNU>,
+    %C: memref<256x128xf32>) {
+// CHECK:  linalg.scaled_contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_SCALE]], #[[$ACCESS_B]], #[[$ACCESS_SCALE]], #[[$ACCESS_C]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}} : memref<256x512xi8>, memref<f8E8M0FNU>, memref<128x512xi8>, memref<f8E8M0FNU>)
+// CHECK-SAME: outs(%{{.+}} : memref<256x128xf32>)
+  linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> ()>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> ()>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : memref<256x512xi8>, memref<f8E8M0FNU>, memref<128x512xi8>, memref<f8E8M0FNU>)
+      outs(%C : memref<256x128xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$ACCESS_SCALE_A:.+]] = affine_map<(d0, d1, d2) -> (d0)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK: #[[$ACCESS_SCALE_B:.+]] = affine_map<(d0, d1, d2) -> (d1)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @scaled_contract_dim_scale
+func.func @scaled_contract_dim_scale(
+    %A: tensor<256x512xi8>, %sA: tensor<256xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>,
+    %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+// CHECK:  linalg.scaled_contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_SCALE_A]], #[[$ACCESS_B]], #[[$ACCESS_SCALE_B]], #[[$ACCESS_C]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}} : tensor<256x512xi8>, tensor<256xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+// CHECK-SAME: outs(%{{.+}} : tensor<256x128xf32>) -> tensor<256x128xf32>
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<256xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$ACCESS_SCALE_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2 floordiv 32)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK: #[[$ACCESS_SCALE_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2 floordiv 32)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @scaled_contract_block_scale
+func.func @scaled_contract_block_scale(
+    %A: tensor<?x?xi8>, %sA: tensor<?x?xf8E8M0FNU>,
+    %B: tensor<?x?xi8>, %sB: tensor<?x?xf8E8M0FNU>,
+    %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
+// CHECK:  linalg.scaled_contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_SCALE_A]], #[[$ACCESS_B]], #[[$ACCESS_SCALE_B]], #[[$ACCESS_C]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}} : tensor<?x?xi8>, tensor<?x?xf8E8M0FNU>, tensor<?x?xi8>, tensor<?x?xf8E8M0FNU>)
+// CHECK-SAME: outs(%{{.+}} : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m, k floordiv 32)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n, k floordiv 32)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<?x?xi8>, tensor<?x?xf8E8M0FNU>, tensor<?x?xi8>, tensor<?x?xf8E8M0FNU>)
+      outs(%C : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %D : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$ACCESS_SCALE_A:.+]] = affine_map<(d0, d1, d2) -> (d0 floordiv 32, d2 floordiv 128)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK: #[[$ACCESS_SCALE_B:.+]] = affine_map<(d0, d1, d2) -> (d1)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @scaled_contract_cast_unsigned
+func.func @scaled_contract_cast_unsigned(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>,
+    %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+// CHECK:  linalg.scaled_contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_SCALE_A]], #[[$ACCESS_B]], #[[$ACCESS_SCALE_B]], #[[$ACCESS_C]]]
+// CHECK-SAME: {cast = #linalg.type_fn<cast_unsigned>}
+// CHECK-SAME: ins(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}} : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+// CHECK-SAME: outs(%{{.+}} : tensor<256x128xf32>) -> tensor<256x128xf32>
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) {cast = #linalg.type_fn<cast_unsigned>} -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$ACCESS_SCALE_A:.+]] = affine_map<(d0, d1, d2) -> (d2 floordiv 128, d0 floordiv 32)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK: #[[$ACCESS_SCALE_B:.+]] = affine_map<(d0, d1, d2) -> (d1)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @scaled_contract_permuted_scale
+func.func @scaled_contract_permuted_scale(
+    %A: tensor<256x512xi8>, %sA: tensor<4x8xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>,
+    %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+// CHECK:  linalg.scaled_contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_SCALE_A]], #[[$ACCESS_B]], #[[$ACCESS_SCALE_B]], #[[$ACCESS_C]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}} : tensor<256x512xi8>, tensor<4x8xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+// CHECK-SAME: outs(%{{.+}} : tensor<256x128xf32>) -> tensor<256x128xf32>
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (k floordiv 128, m floordiv 32)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<4x8xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @mmt4d
 func.func @mmt4d(%A: tensor<10x32x8x1xf32>, %B: tensor<80x32x4x1xf32>, %C: tensor<10x80x8x4xf32>) -> tensor<10x80x8x4xf32> {
   // CHECK: %{{.+}} = linalg.mmt4d

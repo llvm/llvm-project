@@ -1,5 +1,4 @@
-; RUN: opt -S -dxil-resource-type -dxil-resource-access -disable-verify \
-; RUN:  -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -S -dxil-resource-type -dxil-resource-access -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 @OutArr.str = internal unnamed_addr constant [7 x i8] c"OutArr\00", align 1
 

@@ -139,7 +139,7 @@ module attributes { transform.with_named_sequence } {
   transform.named_sequence @match_structured_body_passthrough(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.body %arg1 { passthrough } : !transform.any_op
+      transform.match.structured.body %arg1 passthrough : !transform.any_op
       transform.match.structured.yield %arg1 : !transform.any_op
     }
     transform.yield %0 : !transform.any_op
@@ -189,7 +189,7 @@ module attributes { transform.with_named_sequence } {
   transform.named_sequence @match_structured_body_elementwise(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.body %arg1 { elementwise } : !transform.any_op
+      transform.match.structured.body %arg1 elementwise : !transform.any_op
       transform.match.structured.yield %arg1 : !transform.any_op
     }
     transform.yield %0 : !transform.any_op
@@ -246,7 +246,7 @@ module attributes { transform.with_named_sequence } {
   transform.named_sequence @match_structured_body_reduction(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.body %arg1 { reduction_position = 0 } : !transform.any_op
+      transform.match.structured.body %arg1 reduction_position = 0 : !transform.any_op
       transform.match.structured.yield %arg1 : !transform.any_op
     }
     transform.yield %0 : !transform.any_op
@@ -414,7 +414,7 @@ module attributes { transform.with_named_sequence } {
   transform.named_sequence @match_all_reduction(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     transform.match.structured failures(propagate) %arg0 : !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.dim %arg1[all] { reduction } : !transform.any_op
+      transform.match.structured.dim %arg1[all] reduction : !transform.any_op
       transform.match.structured.yield
     }
     transform.yield %arg0 : !transform.any_op
@@ -422,7 +422,7 @@ module attributes { transform.with_named_sequence } {
   transform.named_sequence @match_all_parallel(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     transform.match.structured failures(propagate) %arg0 : !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.dim %arg1[all] { parallel } : !transform.any_op
+      transform.match.structured.dim %arg1[all] parallel : !transform.any_op
       transform.match.structured.yield
     }
     transform.yield %arg0 : !transform.any_op
@@ -430,7 +430,7 @@ module attributes { transform.with_named_sequence } {
   transform.named_sequence @match_last_reduction(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     transform.match.structured failures(propagate) %arg0 : !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.dim %arg1[-1] { reduction } : !transform.any_op
+      transform.match.structured.dim %arg1[-1] reduction : !transform.any_op
       transform.match.structured.yield
     }
     transform.yield %arg0 : !transform.any_op
@@ -438,7 +438,7 @@ module attributes { transform.with_named_sequence } {
   transform.named_sequence @match_parallel_except_last(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     transform.match.structured failures(propagate) %arg0 : !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.dim %arg1[except(-1)] { parallel } : !transform.any_op
+      transform.match.structured.dim %arg1[except(-1)] parallel : !transform.any_op
       transform.match.structured.yield
     }
     transform.yield %arg0 : !transform.any_op
@@ -576,7 +576,7 @@ module attributes { transform.with_named_sequence } {
       -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.init %arg1[0] { permutation }: !transform.any_op
+      transform.match.structured.init %arg1[0] permutation: !transform.any_op
       transform.match.structured.yield %arg1 : !transform.any_op
     }
     transform.yield %0 : !transform.any_op
@@ -585,7 +585,7 @@ module attributes { transform.with_named_sequence } {
       -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.init %arg1[1] { permutation }: !transform.any_op
+      transform.match.structured.init %arg1[1] permutation: !transform.any_op
       transform.match.structured.yield %arg1 : !transform.any_op
     }
     transform.yield %0 : !transform.any_op
@@ -594,7 +594,7 @@ module attributes { transform.with_named_sequence } {
       -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      transform.match.structured.init %arg1[2] { projected_permutation }: !transform.any_op
+      transform.match.structured.init %arg1[2] projected_permutation: !transform.any_op
       transform.match.structured.yield %arg1 : !transform.any_op
     }
     transform.yield %0 : !transform.any_op
@@ -767,7 +767,7 @@ module attributes { transform.with_named_sequence } {
     %0:2 = transform.match.structured failures(propagate) %arg0
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op) {
     ^bb0(%arg1: !transform.any_op):
-      %1 = transform.match.structured.result %arg1[0] { single } : (!transform.any_op) -> !transform.any_op
+      %1 = transform.match.structured.result %arg1[0] single : (!transform.any_op) -> !transform.any_op
       transform.match.structured.yield %1, %arg1 : !transform.any_op, !transform.any_op
     }
     transform.yield %0#0, %0#1 : !transform.any_op, !transform.any_op
@@ -787,7 +787,7 @@ module attributes { transform.with_named_sequence } {
     %0 = transform.match.structured failures(propagate) %arg0
          : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
-      %1 = transform.match.structured.result %arg1[-1] { any } : (!transform.any_op) -> !transform.any_op
+      %1 = transform.match.structured.result %arg1[-1] any : (!transform.any_op) -> !transform.any_op
       transform.match.structured.yield %arg1 : !transform.any_op
     }
     transform.yield %0 : !transform.any_op
@@ -917,7 +917,7 @@ module attributes { transform.with_named_sequence } {
     -> (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>) {
     %1:4 = transform.match.structured %arg0 : (!transform.any_op) -> (!transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>) {
     ^bb0(%struct: !transform.any_op):
-      transform.match.structured.body %struct { contraction = ["arith.mulf", "arith.addf"] } : !transform.any_op
+      transform.match.structured.body %struct contraction = ["arith.mulf", "arith.addf"] : !transform.any_op
       %0:4 = transform.match.structured.classify_contraction_dims %struct
         : (!transform.any_op) -> (!transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>)
       transform.match.structured.yield %0#0, %0#1, %0#2, %0#3
@@ -1034,7 +1034,7 @@ module attributes { transform.with_named_sequence } {
     -> (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>) {
     %1:8 = transform.match.structured %arg0 : (!transform.any_op) -> (!transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>) {
     ^bb0(%struct: !transform.any_op):
-      transform.match.structured.body %struct { contraction = ["arith.mulf", "arith.addf"] } : !transform.any_op
+      transform.match.structured.body %struct contraction = ["arith.mulf", "arith.addf"] : !transform.any_op
       %0:8 = transform.match.structured.classify_convolution_dims %struct
         : (!transform.any_op) -> (!transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>)
       transform.match.structured.yield %0#0, %0#1, %0#2, %0#3, %0#4, %0#5, %0#6, %0#7

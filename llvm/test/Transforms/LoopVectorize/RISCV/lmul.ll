@@ -5,13 +5,12 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+v -S --riscv-v-register-bit-width-lmul=8 | FileCheck %s -check-prefix=LMUL8
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+v -S | FileCheck %s -check-prefix=LMUL2
 
-define void @load_store(ptr %p) {
+define void @load_store(ptr %p) vscale_range(2, 1024) {
 ; LMUL1-LABEL: @load_store(
 ; LMUL1-NEXT:  entry:
-; LMUL1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP0]]
-; LMUL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; LMUL1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; LMUL1:       vector.ph:
+; LMUL1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -23,18 +22,7 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; LMUL1-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:
-; LMUL1-NEXT:    br label [[FOR_END:%.*]]
-; LMUL1:       scalar.ph:
 ; LMUL1-NEXT:    br label [[FOR_BODY:%.*]]
-; LMUL1:       for.body:
-; LMUL1-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; LMUL1-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV]]
-; LMUL1-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
-; LMUL1-NEXT:    [[W:%.*]] = add i64 [[V]], 1
-; LMUL1-NEXT:    store i64 [[W]], ptr [[Q]], align 8
-; LMUL1-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; LMUL1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; LMUL1-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; LMUL1:       for.end:
 ; LMUL1-NEXT:    ret void
 ;

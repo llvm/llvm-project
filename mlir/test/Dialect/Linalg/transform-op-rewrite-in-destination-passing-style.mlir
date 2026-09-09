@@ -139,7 +139,7 @@ func.func @tensor_pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   ^bb0(%arg0: index, %arg1: index):
     %m = arith.muli %arg0, %arg1 : index
     tensor.yield %m : index
-  } { test.discardable.attr = 1 : i64 } : tensor<?x10xindex> to tensor<?x?xindex>
+  } {test.discardable.attr = 1 : i64} : tensor<?x10xindex> to tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
 }
 
@@ -175,7 +175,7 @@ func.func @tensor_pad_constant(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   ^bb0(%arg0: index, %arg1: index):
     %c = arith.constant 50 : index
     tensor.yield %c : index
-  } { test.discardable.attr = 1 : i64 } : tensor<?x10xindex> to tensor<?x?xindex>
+  } {test.discardable.attr = 1 : i64} : tensor<?x10xindex> to tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
 }
 
@@ -209,7 +209,7 @@ func.func @tensor_pad_invariant(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   %0 = tensor.pad %t1 low[5, %l2] high[%h1, %h2] {
   ^bb0(%arg0: index, %arg1: index):
     tensor.yield %padding : index
-  } { test.discardable.attr = 1 : i64 } : tensor<?x10xindex> to tensor<?x?xindex>
+  } {test.discardable.attr = 1 : i64} : tensor<?x10xindex> to tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
 }
 

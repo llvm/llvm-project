@@ -80,14 +80,14 @@ bb0:
   %fadd1 = fadd float %arg0, %arg1
   %fadd2 = fadd float %arg0, 0.0
   %fadd3 = fadd float %arg0, 1.0
-  %fadd4 = fadd float %arg0, 0x7FF8000000000000
+  %fadd4 = fadd float %arg0, +qnan
   %fadd5 = fadd float %arg0, undef
   %fadd6 = fadd <2 x float> %arg2, %arg3
   %fadd7 = fadd <2 x float> %arg2, %arg3
   %fadd8 = fadd <2 x float> %arg2, zeroinitializer
   %fadd9 = fadd <2 x float> %arg2, <float 1.0, float 1.0>
   %fadd10 = fadd <2 x float> %arg2, undef
-  %fadd11 = fadd <2 x float> %arg2, <float 0x7FF8000000000000, float 0x7FF8000000000000>
-  %fadd12 = fadd <2 x float> %arg2, <float 0x7FF8000000000000, float 2.0>
+  %fadd11 = fadd <2 x float> %arg2, <float +qnan, float +qnan>
+  %fadd12 = fadd <2 x float> %arg2, <float +qnan, float 2.0>
   ret void
 }

@@ -383,7 +383,7 @@ bool CompilerInstance::setUpTargetMachine() {
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
   tOpts.EnableMachineFunctionSplitter = targetOpts.SplitMachineFunctions;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
-  tOpts.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
+  tOpts.MCOptions.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
   tOpts.FunctionSections = CGOpts.FunctionSections;
   tOpts.DataSections = CGOpts.DataSections;
 

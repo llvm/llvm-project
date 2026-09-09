@@ -337,6 +337,12 @@ class RISCVSImmOp<int bitsNum> : RISCVOp {
 class RISCVSImmLeafOp<int bitsNum> :
   RISCVSImmOp<bitsNum>, ImmLeaf<XLenVT, "return isInt<" # bitsNum # ">(Imm);">;
 
+// Variant of RISCVSImmLeafOp for memory-operand offsets that may be omitted
+// entirely, e.g. "qc.e.lb a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalSImmLeafOp<int bitsNum> : RISCVSImmLeafOp<bitsNum> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<SImmAsmOperand<bitsNum>>;
+}
+
 def FenceArg : AsmOperandClass {
   let Name = "FenceArg";
   let RenderMethod = "addFenceArgOperands";

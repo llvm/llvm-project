@@ -427,8 +427,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
           TheDef->getLoc(),
           formatv("RangeSet requires ImmArg for argument {}", RangeSet.ArgNo));
 
-  // Default values are not yet supported for overloaded intrinsics
-  // (overloaded support will come in a follow-up).
   if (isOverloaded &&
       llvm::any_of(ParamDefaultValues, [](const std::optional<uint64_t> &DV) {
         return DV.has_value();
@@ -437,8 +435,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                     "default argument values are not supported for "
                     "overloaded intrinsics");
 
-  // Validate: defaults must form a contiguous trailing block ending at
-  // the last parameter (mirrors C++ default-argument rules).
   unsigned NumParams = IS.ParamTys.size();
   bool SeenDefault = false;
   for (unsigned i = 0; i < NumParams; ++i) {
@@ -452,8 +448,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
     }
   }
 
-  // Validate each declared default: the parameter must be an integer type and
-  // the value (an unsigned bit pattern) must fit in the declared width.
   for (unsigned i = 0; i < ParamDefaultValues.size(); ++i) {
     if (!ParamDefaultValues[i].has_value())
       continue;
@@ -577,14 +571,10 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, ImmArg);
 
-    // If a DefaultValue (not the NoDefault sentinel) was supplied, record it.
-    // NoDefault is recognized by its Value field being unset (?).
     const Record *DefaultField = R->getValueAsDef("Default");
     const RecordVal *ValueField = DefaultField->getValue("Value");
     if (ValueField && !isa<UnsetInit>(ValueField->getValue())) {
       int64_t Value = DefaultField->getValueAsInt("Value");
-      // Defaults are stored as an unsigned bit pattern; a negative literal
-      // would silently wrap, so reject it with a clear message.
       if (Value < 0)
         PrintFatalError(TheDef->getLoc(), "default argument value " +
                                               Twine(Value) + " on parameter " +

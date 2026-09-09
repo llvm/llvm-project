@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStackFrameRecognizerInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -195,10 +196,13 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   if (!module_sp)
     return StackFrameRecognizerSP();
   llvm::StringRef module_name = module_sp->GetFileSpec().GetFilename();
-  const Symbol *symbol = symctx.symbol;
-  if (!symbol)
+  Address start_addr;
+  if (symctx.symbol)
+    start_addr = symctx.symbol->GetAddress();
+  else if (symctx.function)
+    start_addr = symctx.function->GetAddress();
+  else
     return StackFrameRecognizerSP();
-  Address start_addr = symbol->GetAddress();
   Address current_addr = frame->GetFrameCodeAddress();
 
   // The symbol's start address may fall inside a non-executable function

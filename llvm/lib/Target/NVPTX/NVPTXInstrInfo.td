@@ -114,6 +114,10 @@ def PrmtMode : Operand<i32> {
   let PrintMethod = "printPrmtMode";
 }
 
+def FPRoundingMode : Operand<i32> {
+  let PrintMethod = "printFPRoundingMode";
+}
+
 
 class NVPTXAddressSpace<string enum, string name, string suffix = "." # name> {
   string Suffix = suffix;

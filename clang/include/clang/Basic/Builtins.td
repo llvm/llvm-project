@@ -3917,6 +3917,7 @@ def StrlCpy : GNULibBuiltin<"string.h"> {
 def StrlCat : GNULibBuiltin<"string.h"> {
   let Spellings = ["strlcat"];
   let Prototype = "size_t(char*, char const*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def ObjcMsgSend : ObjCLibBuiltin<"objc_message.h"> {
@@ -5547,6 +5548,12 @@ def HLSLWaveActiveBitAnd : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_add"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_and"];
   let Attributes = [NoThrow];
   let Prototype = "void (...)";
 }

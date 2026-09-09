@@ -342,6 +342,7 @@ public:
   //       modes. Fold this functionality into Types::getCompilationPhases and
   //       handleArguments.
   phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
+                           llvm::ArrayRef<InputTy>,
                            llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>

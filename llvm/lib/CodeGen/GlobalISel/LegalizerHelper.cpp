@@ -5008,7 +5008,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     LLT SrcTy = MRI.getType(SrcReg);
     LLT DstTy = MRI.getType(DstReg);
 
-    if (SrcTy.isScalable() || DstTy.isScalable())
+    if (SrcTy.isScalable())
       return UnableToLegalize;
 
     if (SrcTy.getScalarType() != DstTy.getScalarType())

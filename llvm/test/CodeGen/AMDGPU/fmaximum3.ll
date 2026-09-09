@@ -4641,11 +4641,10 @@ define <2 x half> @v_no_fmaximum3_f16__multi_use(half %a, half %b, half %c) {
 ; GFX950-LABEL: v_no_fmaximum3_f16__multi_use:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_pk_maximum3_f16 v0, v0, v1, v1
+; GFX950-NEXT:    v_pk_maximum3_f16 v3, v0, v1, v1
+; GFX950-NEXT:    v_pk_maximum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_maximum3_f16 v1, v0, v2, v2
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX950-NEXT:    v_pack_b32_f16 v0, v3, v0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.maximum.f16(half %a, half %b)
   %max1 = call half @llvm.maximum.f16(half %max0, half %c)
@@ -4709,9 +4708,10 @@ define amdgpu_ps <2 x i32> @s_no_fmaximum3_f16__multi_use(half inreg %a, half in
 ; GFX950-LABEL: s_no_fmaximum3_f16__multi_use:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX950-NEXT:    v_pk_maximum3_f16 v0, v0, s1, s1
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_maximum3_f16 v1, v0, s2, s2
+; GFX950-NEXT:    v_pk_maximum3_f16 v1, s0, v1, v2
 ; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX950-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
@@ -4777,9 +4777,9 @@ define <4 x half> @v_no_fmaximum3_v2f16__multi_use(<2 x half> %a, <2 x half> %b,
 ; GFX950-LABEL: v_no_fmaximum3_v2f16__multi_use:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_pk_maximum3_f16 v0, v0, v1, v1
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_maximum3_f16 v1, v0, v2, v2
+; GFX950-NEXT:    v_pk_maximum3_f16 v3, v0, v1, v1
+; GFX950-NEXT:    v_pk_maximum3_f16 v1, v0, v1, v2
+; GFX950-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x half> @llvm.maximum.f16(<2 x half> %a, <2 x half> %b)
   %max1 = call <2 x half> @llvm.maximum.f16(<2 x half> %max0, <2 x half> %c)

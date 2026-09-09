@@ -23,6 +23,7 @@
 #include "kmp_lock.h"
 #include "kmp_settings.h"
 #include "kmp_str.h"
+#include "kmp_traits.h"
 #include "kmp_wrapper_getpid.h"
 #include <ctype.h> // toupper()
 #if OMPD_SUPPORT
@@ -807,6 +808,7 @@ static void __kmp_stg_print_inherit_fp_control(kmp_str_buf_t *buffer,
 
 // Used for OMP_WAIT_POLICY
 static char const *blocktime_str = NULL;
+static char const *use_yield_str = NULL;
 
 // -----------------------------------------------------------------------------
 // KMP_LIBRARY, OMP_WAIT_POLICY
@@ -828,6 +830,10 @@ static void __kmp_stg_parse_wait_policy(char const *name, char const *value,
       if (blocktime_str == NULL) {
         // KMP_BLOCKTIME not specified, so set default to "infinite".
         __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
+      }
+      if (use_yield_str == NULL) {
+        // KMP_USE_YIELD not specified, so set default to 2.
+        __kmp_use_yield = 2;
       }
     } else if (__kmp_str_match("PASSIVE", 1, value)) {
       __kmp_library = library_throughput;
@@ -1415,8 +1421,8 @@ static void __kmp_stg_print_max_active_levels(kmp_str_buf_t *buffer,
 // OpenMP 4.0: OMP_DEFAULT_DEVICE
 static void __kmp_stg_parse_default_device(char const *name, char const *value,
                                            void *data) {
-  __kmp_stg_parse_int(name, value, 0, KMP_MAX_DEFAULT_DEVICE_LIMIT,
-                      &__kmp_default_device);
+  __kmp_default_device = kmp_trait_context::parse_single_device(
+      value, /*device_num_min=*/0, KMP_MAX_DEFAULT_DEVICE_LIMIT, name);
 } // __kmp_stg_parse_default_device
 
 static void __kmp_stg_print_default_device(kmp_str_buf_t *buffer,
@@ -6147,8 +6153,10 @@ void __kmp_env_initialize(char const *string) {
     }
   }
 
-  // We need to know if blocktime was set when processing OMP_WAIT_POLICY
+  // We need to know if blocktime and use_yield were set when processing
+  // OMP_WAIT_POLICY
   blocktime_str = __kmp_env_blk_var(&block, "KMP_BLOCKTIME");
+  use_yield_str = __kmp_env_blk_var(&block, "KMP_USE_YIELD");
 
   // Special case. If we parse environment, not a string, process KMP_WARNINGS
   // first.

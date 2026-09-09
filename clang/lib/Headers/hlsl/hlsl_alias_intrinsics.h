@@ -147,8 +147,9 @@ T select(bool, T, T);
 
 template <typename T, int N>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, vector<T, N>,
-                    vector<T, N>);
+vector<T, N> select(
+    __detail::enable_if_t<(N > 1), __detail::type_identity_t<vector<bool, N>>>,
+    vector<T, N>, vector<T, N>);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVal,
 ///                         vector<T,Sz> FalseVals)
@@ -160,8 +161,9 @@ vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, vector<T, N>,
 
 template <typename T, int N>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, T,
-                    vector<T, N>);
+vector<T, N> select(
+    __detail::enable_if_t<(N > 1), __detail::type_identity_t<vector<bool, N>>>,
+    T, vector<T, N>);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
 ///                         T FalseVal)
@@ -172,8 +174,9 @@ vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, T,
 
 template <typename T, int N>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, vector<T, N>,
-                    T);
+vector<T, N> select(
+    __detail::enable_if_t<(N > 1), __detail::type_identity_t<vector<bool, N>>>,
+    vector<T, N>, T);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVals,
 ///                         T FalseVal)

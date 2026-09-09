@@ -15,6 +15,7 @@
 
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 
 #include <deque>

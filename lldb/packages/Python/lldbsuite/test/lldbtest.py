@@ -890,6 +890,9 @@ class Base(unittest.TestCase):
             "settings set target.auto-apply-fixits false",
             # Testsuite runs in parallel and the host can have also other load.
             "settings set plugin.process.gdb-remote.packet-timeout 60",
+            # LLDB-internal utility expressions can take very long when the
+            # host is under heavy load.
+            "settings set target.process.utility-expression-timeout 600",
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),

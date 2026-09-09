@@ -18,6 +18,7 @@
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "AllocActionTestUtils.h"
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 #include "DirectCaller.h"
 #include "gtest/gtest.h"

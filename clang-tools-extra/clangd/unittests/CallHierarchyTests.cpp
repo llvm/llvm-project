@@ -46,7 +46,6 @@ using ::testing::UnorderedElementsAre;
 MATCHER_P(withName, N, "") { return arg.name == N; }
 MATCHER_P(withDetail, N, "") { return arg.detail == N; }
 MATCHER_P(withFile, N, "") { return arg.uri.file() == N; }
-MATCHER_P(withSelectionRange, R, "") { return arg.selectionRange == R; }
 
 template <typename... Tags>
 ::testing::Matcher<CallHierarchyItem> withSymbolTags(Tags... tags) {

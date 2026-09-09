@@ -25,7 +25,7 @@ builtin.module {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
       %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-      transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+      transform.nvgpu.create_async_groups %top_level_func bypass_l1 : (!transform.any_op) -> (!transform.any_op)
       transform.yield
     }
   }
@@ -156,7 +156,7 @@ builtin.module {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
       %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-      transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+      transform.nvgpu.create_async_groups %top_level_func bypass_l1 : (!transform.any_op) -> (!transform.any_op)
       transform.yield
     }
   }
@@ -200,7 +200,7 @@ builtin.module {
       transform.apply_patterns to %top_level_func {
         transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
       } : !transform.any_op
-      transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+      transform.nvgpu.create_async_groups %top_level_func bypass_l1 : (!transform.any_op) -> (!transform.any_op)
       %top_level_func_2 = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
       transform.apply_cse to %top_level_func_2 : !transform.any_op
       transform.yield
@@ -263,7 +263,7 @@ builtin.module {
       transform.apply_patterns to %top_level_func {
         transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
       } : !transform.any_op
-      transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+      transform.nvgpu.create_async_groups %top_level_func bypass_l1 : (!transform.any_op) -> (!transform.any_op)
       %top_level_func_2 = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
       transform.apply_cse to %top_level_func_2 : !transform.any_op
       transform.yield

@@ -1976,7 +1976,7 @@ define amdgpu_kernel void @v_clamp_constant_qnan_f32(ptr addrspace(1) %out) #0 {
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 0x7FF8000000000000)
+  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float +qnan)
   store float %med, ptr addrspace(1) %out.gep
   ret void
 }
@@ -2912,7 +2912,7 @@ define amdgpu_kernel void @v_clamp_constant_qnan_f32_no_dx10_clamp(ptr addrspace
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 0x7FF8000000000000)
+  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float +qnan)
   store float %med, ptr addrspace(1) %out.gep
   ret void
 }

@@ -102,6 +102,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-lowering"
 
+extern cl::opt<bool> EnablePPCGenScalarMASSEntries;
+
 static cl::opt<bool> DisableP10StoreForward(
     "disable-p10-store-forward",
     cl::desc("disable P10 store forward-friendly conversion"), cl::Hidden,
@@ -19641,7 +19643,6 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
         User->getOpcode() != Instruction::FAdd)
       return true;
 
-    const TargetOptions &Options = getTargetMachine().Options;
     const Function *F = I->getFunction();
     const DataLayout &DL = F->getDataLayout();
     Type *Ty = User->getOperand(0)->getType();
@@ -19650,7 +19651,7 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
 
     return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
              isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-             (AllowContract || Options.AllowFPOpFusion == FPOpFusion::Fast));
+             AllowContract);
   }
   case Instruction::Load: {
     // Don't break "store (load float*)" pattern, this pattern will be combined
@@ -20770,7 +20771,8 @@ bool PPCTargetLowering::isLowringToMASSSafe(SDValue Op) const {
 }
 
 bool PPCTargetLowering::isScalarMASSConversionEnabled() const {
-  return getTargetMachine().Options.PPCGenScalarMASSEntries;
+  return getTargetMachine().getOptLevel() == CodeGenOptLevel::Aggressive &&
+         EnablePPCGenScalarMASSEntries;
 }
 
 SDValue PPCTargetLowering::lowerLibCallBase(const char *LibCallDoubleName,

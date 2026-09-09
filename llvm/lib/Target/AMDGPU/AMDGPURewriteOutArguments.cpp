@@ -378,7 +378,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   // this function with a stub.
   NewFunc->splice(NewFunc->begin(), &F);
 
-  for (std::pair<ReturnInst *, ReplacementVec> &Replacement : Replacements) {
+  for (auto &Replacement : Replacements) {
     ReturnInst *RI = Replacement.first;
     IRBuilder<> B(RI);
     B.SetCurrentDebugLocation(RI->getDebugLoc());

@@ -3586,7 +3586,7 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
 }
 
 // Ensure that the symbol for an intrinsic procedure is marked with
-// the INTRINSIC attribute.  Also set PURE &/or ELEMENTAL as
+// the INTRINSIC attribute.  Also set SIMPLE, PURE &/or ELEMENTAL as
 // appropriate.
 void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   SetImplicitAttr(symbol, Attr::INTRINSIC);
@@ -3595,6 +3595,13 @@ void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   case evaluate::IntrinsicClass::elementalSubroutine:
     SetExplicitAttr(symbol, Attr::ELEMENTAL);
     SetExplicitAttr(symbol, Attr::PURE);
+    break;
+  case evaluate::IntrinsicClass::simpleElementalSubroutine:
+    SetExplicitAttr(symbol, Attr::ELEMENTAL);
+    SetExplicitAttr(symbol, Attr::SIMPLE);
+    break;
+  case evaluate::IntrinsicClass::simpleSubroutine:
+    SetExplicitAttr(symbol, Attr::SIMPLE);
     break;
   case evaluate::IntrinsicClass::impureSubroutine:
     break;
@@ -5976,6 +5983,27 @@ const Symbol *SubprogramVisitor::CheckExtantProc(
 Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
+  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix) {
+    const Scope &parent{currScope().parent()};
+    if (parent.IsModule() || parent.IsSubmodule()) {
+      if (const Symbol *host{parent.FindSymbol(name.source)}) {
+        const Symbol &hostUlt{host->GetUltimate()};
+        const auto *hostSubp{hostUlt.detailsIf<SubprogramDetails>()};
+        if (IsSeparateModuleProcedureInterface(&hostUlt)) {
+          // Use the low-level Warn() call to avoid module-file suppression
+          // based on scope ancestry; InModuleFile() provides the appropriate
+          // check here.
+          context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
+              context().languageFeatures(), common::UsageWarning::Portability,
+              name.source,
+              "Subprogram '%s' in this submodule is missing the MODULE prefix "
+              "to implement the module procedure interface from its parent; "
+              "did you mean 'MODULE %s'?"_port_en_US,
+              name.source, hostSubp->isFunction() ? "FUNCTION" : "SUBROUTINE");
+        }
+      }
+    }
+  }
   Symbol *symbol{GetSpecificFromGeneric(name)};
   const DeclTypeSpec *previousImplicitType{nullptr};
   SourceName previousName;
@@ -10914,16 +10942,17 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
         if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
-          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+                common::LanguageFeature::CUDA)) {
+          if (context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaManaged))
+            object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+          // Implicitly treat allocatable arrays as pinned when feature is
+          // enabled.
+          else if (IsAllocatable(symbol) &&
+              context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaPinned))
+            object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+        }
       }
     }
   }

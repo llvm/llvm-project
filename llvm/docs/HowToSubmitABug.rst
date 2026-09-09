@@ -78,7 +78,7 @@ The `creduce <https://github.com/csmith-project/creduce>`_ tool helps to
 reduce the preprocessed file down to the smallest amount of code that still
 replicates the problem. You're encouraged to use creduce to reduce the code
 to make the developers' lives easier. The
-``clang/utils/creduce-clang-crash.py`` script can be used on the files
+``clang/utils/reduce-clang-crash.py`` script can be used on the files
 that clang dumps to help with automating creating a test to check for the
 compiler crash.
 

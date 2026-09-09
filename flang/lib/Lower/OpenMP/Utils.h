@@ -29,6 +29,7 @@ class RecordType;
 namespace Fortran {
 
 namespace semantics {
+class SemanticsContext;
 class Symbol;
 namespace omp {
 class OmpVariantMatchContext;
@@ -268,6 +269,15 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 void collectEnclosingConstructTraits(
     mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+
+/// Return true when \p module is being compiled for an AMDGPU device or all of
+/// its offload targets are AMDGPU devices.
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module);
+
+/// Return true when unified shared memory is required by either the OpenMP
+/// module attributes or a source-level `requires` directive.
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx);
 
 /// Build the OpenMP variant-matching context for \p module. The device flag,
 /// host triple, offload triple, and target features are read from the module;

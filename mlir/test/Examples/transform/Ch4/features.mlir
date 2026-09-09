@@ -88,14 +88,14 @@ module @transforms attributes { transform.with_named_sequence } {
       transform.match.param.cmpi eq %n_inits, %c1 : !transform.param<i64>
 
       // All inputs and inits are accessed with a projected permutation.
-      transform.match.structured.input %c[all] {projected_permutation}
+      transform.match.structured.input %c[all] projected_permutation
         : !transform.any_op
-      transform.match.structured.init %c[0] {projected_permutation}
+      transform.match.structured.init %c[0] projected_permutation
         : !transform.any_op
 
       // The body is a mulf/addf contraction with appropriate dimensions.
       transform.match.structured.body %c 
-        { contraction = ["arith.mulf", "arith.addf"] } : !transform.any_op
+        contraction = ["arith.mulf", "arith.addf"] : !transform.any_op
       %batch, %lhs, %rhs, %reduction =
       transform.match.structured.classify_contraction_dims %c
         : (!transform.any_op)
