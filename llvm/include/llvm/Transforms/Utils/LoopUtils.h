@@ -669,6 +669,8 @@ addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander, bool HoistRuntimeChecks = false);
 
+/// Try to add runtime checks based on pointer differences. Returns the combined
+/// check on success, or nullptr if the required check could not be created.
 LLVM_ABI Value *addDiffRuntimeChecks(Instruction *Loc,
                                      ArrayRef<PointerDiffInfo> Checks,
                                      SCEVExpander &Expander, ElementCount VF,
