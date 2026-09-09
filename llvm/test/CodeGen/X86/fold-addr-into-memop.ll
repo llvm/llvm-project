@@ -14,12 +14,10 @@ define i32 @fold_idx4(ptr %a, ptr %b, i64 %i, i1 %c) {
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %la
-; CHECK-NEXT:    leaq (%rdi,%rdx,4), %rax
-; CHECK-NEXT:    movl (%rax), %eax
+; CHECK-NEXT:    movl (%rdi,%rdx,4), %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %lb
-; CHECK-NEXT:    leaq (%rsi,%rdx,4), %rax
-; CHECK-NEXT:    movl (%rax), %eax
+; CHECK-NEXT:    movl (%rsi,%rdx,4), %eax
 ; CHECK-NEXT:    retq
   br i1 %c, label %la, label %lb
 la:
@@ -41,12 +39,10 @@ define i64 @fold_idx8(ptr %a, ptr %b, i64 %i, i1 %c) {
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    je .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %la
-; CHECK-NEXT:    leaq (%rdi,%rdx,8), %rax
-; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    movq (%rdi,%rdx,8), %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_2: # %lb
-; CHECK-NEXT:    leaq (%rsi,%rdx,8), %rax
-; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    movq (%rsi,%rdx,8), %rax
 ; CHECK-NEXT:    retq
   br i1 %c, label %la, label %lb
 la:
@@ -68,12 +64,10 @@ define void @fold_store_idx4(ptr %a, ptr %b, i64 %i, i32 %x, i1 %c) {
 ; CHECK-NEXT:    testb $1, %r8b
 ; CHECK-NEXT:    je .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %la
-; CHECK-NEXT:    leaq (%rdi,%rdx,4), %rax
-; CHECK-NEXT:    movl %ecx, (%rax)
+; CHECK-NEXT:    movl %ecx, (%rdi,%rdx,4)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB2_2: # %lb
-; CHECK-NEXT:    leaq (%rsi,%rdx,4), %rax
-; CHECK-NEXT:    movl %ecx, (%rax)
+; CHECK-NEXT:    movl %ecx, (%rsi,%rdx,4)
 ; CHECK-NEXT:    retq
   br i1 %c, label %la, label %lb
 la:
@@ -97,12 +91,10 @@ define i32 @fold_addrm(ptr %a, ptr %b, i64 %i, i32 %x, i1 %c) {
 ; CHECK-NEXT:    testb $1, %r8b
 ; CHECK-NEXT:    je .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %la
-; CHECK-NEXT:    leaq (%rdi,%rdx,4), %rcx
-; CHECK-NEXT:    addl (%rcx), %eax
+; CHECK-NEXT:    addl (%rdi,%rdx,4), %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_2: # %lb
-; CHECK-NEXT:    leaq (%rsi,%rdx,4), %rcx
-; CHECK-NEXT:    addl (%rcx), %eax
+; CHECK-NEXT:    addl (%rsi,%rdx,4), %eax
 ; CHECK-NEXT:    retq
   br i1 %c, label %la, label %lb
 la:
@@ -126,12 +118,10 @@ define void @fold_rmw_idx4(ptr %a, ptr %b, i64 %i, i32 %x, i1 %c) {
 ; CHECK-NEXT:    testb $1, %r8b
 ; CHECK-NEXT:    je .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %la
-; CHECK-NEXT:    leaq (%rdi,%rdx,4), %rax
-; CHECK-NEXT:    addl %ecx, (%rax)
+; CHECK-NEXT:    addl %ecx, (%rdi,%rdx,4)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB4_2: # %lb
-; CHECK-NEXT:    leaq (%rsi,%rdx,4), %rax
-; CHECK-NEXT:    addl %ecx, (%rax)
+; CHECK-NEXT:    addl %ecx, (%rsi,%rdx,4)
 ; CHECK-NEXT:    retq
   br i1 %c, label %la, label %lb
 la:
@@ -155,12 +145,10 @@ define void @fold_rmw_atomic_idx4(ptr %a, ptr %b, i64 %i, i32 %x, i1 %c) {
 ; CHECK-NEXT:    testb $1, %r8b
 ; CHECK-NEXT:    je .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %la
-; CHECK-NEXT:    leaq (%rdi,%rdx,4), %rax
-; CHECK-NEXT:    lock addl %ecx, (%rax)
+; CHECK-NEXT:    lock addl %ecx, (%rdi,%rdx,4)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB5_2: # %lb
-; CHECK-NEXT:    leaq (%rsi,%rdx,4), %rax
-; CHECK-NEXT:    lock addl %ecx, (%rax)
+; CHECK-NEXT:    lock addl %ecx, (%rsi,%rdx,4)
 ; CHECK-NEXT:    retq
   br i1 %c, label %la, label %lb
 la:
@@ -182,12 +170,10 @@ define <4 x float> @fold_vec_load_idx4(ptr %a, ptr %b, i64 %i, i1 %c) {
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    je .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %la
-; CHECK-NEXT:    leaq (%rdi,%rdx,4), %rax
-; CHECK-NEXT:    movups (%rax), %xmm0
+; CHECK-NEXT:    movups (%rdi,%rdx,4), %xmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB6_2: # %lb
-; CHECK-NEXT:    leaq (%rsi,%rdx,4), %rax
-; CHECK-NEXT:    movups (%rax), %xmm0
+; CHECK-NEXT:    movups (%rsi,%rdx,4), %xmm0
 ; CHECK-NEXT:    retq
   br i1 %c, label %la, label %lb
 la:
@@ -209,12 +195,10 @@ define void @fold_vec_store_idx4(ptr %a, ptr %b, i64 %i, <4 x float> %x, i1 %c) 
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    je .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %la
-; CHECK-NEXT:    leaq (%rdi,%rdx,4), %rax
-; CHECK-NEXT:    movups %xmm0, (%rax)
+; CHECK-NEXT:    movups %xmm0, (%rdi,%rdx,4)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB7_2: # %lb
-; CHECK-NEXT:    leaq (%rsi,%rdx,4), %rax
-; CHECK-NEXT:    movups %xmm0, (%rax)
+; CHECK-NEXT:    movups %xmm0, (%rsi,%rdx,4)
 ; CHECK-NEXT:    retq
   br i1 %c, label %la, label %lb
 la:
