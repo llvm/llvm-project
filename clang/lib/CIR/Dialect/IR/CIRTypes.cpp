@@ -729,22 +729,49 @@ constexpr static uint64_t kBitsInByte = 8;
 constexpr static uint64_t kDefaultPointerSizeBits = 64;
 constexpr static uint64_t kDefaultPointerAlignment = 8;
 
-/// Returns the default-address-space #cir.ptr_spec entry, or a synthesized
-/// 64-bit default when there is none. Per-AS entries are not modeled yet.
+/// Returns the matching #cir.ptr_spec entry for the pointer's address space,
+/// or falls back to the default address space entry, or a synthesized 64-bit
+/// default when neither is present.
 cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
                                 cir::PointerType type) {
-  // FIXME: improve this in face of address spaces
-  assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
+  cir::PtrSpecAttr defaultSpec;
+
+  auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+      type.getAddrSpace());
+  bool isDefaultAS =
+      !type.getAddrSpace() || (targetAS && targetAS.getValue() == 0);
+
   for (mlir::DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
     auto key =
         mlir::cast<cir::PointerType>(mlir::cast<mlir::Type>(entry.getKey()));
-    if (key.getAddrSpace())
+    auto spec = mlir::dyn_cast<cir::PtrSpecAttr>(entry.getValue());
+    if (!spec)
       continue;
-    if (auto spec = mlir::dyn_cast<cir::PtrSpecAttr>(entry.getValue()))
+
+    auto keyTargetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+        key.getAddrSpace());
+    bool keyIsDefault =
+        !key.getAddrSpace() || (keyTargetAS && keyTargetAS.getValue() == 0);
+
+    if (keyIsDefault && !defaultSpec)
+      defaultSpec = spec;
+
+    if (isDefaultAS) {
+      if (keyIsDefault)
+        return spec;
+    } else if (targetAS && keyTargetAS &&
+               targetAS.getValue() == keyTargetAS.getValue()) {
       return spec;
+    } else if (key.getAddrSpace() == type.getAddrSpace()) {
+      return spec;
+    }
   }
+
+  if (defaultSpec)
+    return defaultSpec;
+
   return cir::PtrSpecAttr::get(type.getContext(), kDefaultPointerSizeBits,
                                kDefaultPointerAlignment * kBitsInByte,
                                kDefaultPointerAlignment * kBitsInByte,
@@ -792,11 +819,12 @@ PointerType::verifyEntries(mlir::DataLayoutEntryListRef entries,
     if (!mlir::isa<cir::VoidType>(key.getPointee()))
       return mlir::emitError(loc) << "expected !cir.ptr data layout entry for "
                                   << key << " to use !cir.void as pointee";
-    // Per-address-space pointer layouts are not supported yet.
-    if (key.getAddrSpace())
-      return mlir::emitError(loc)
-             << "!cir.ptr data layout entries are currently limited to the "
-                "default address space";
+    if (auto addrSpace = key.getAddrSpace()) {
+      if (!mlir::isa<cir::TargetAddressSpaceAttr>(addrSpace))
+        return mlir::emitError(loc)
+               << "expected !cir.ptr data layout entry for " << key
+               << " to use target_address_space";
+    }
   }
   return mlir::success();
 }
@@ -805,15 +833,17 @@ bool PointerType::areCompatible(
     mlir::DataLayoutEntryListRef oldLayout,
     mlir::DataLayoutEntryListRef newLayout, mlir::DataLayoutSpecInterface,
     const mlir::DataLayoutIdentifiedEntryMap &) const {
-  // A nested spec may only override with the same size and a compatible ABI
-  // alignment. TODO(cir): match by address space once per-AS specs exist.
-  cir::PtrSpecAttr oldSpec = getPointerSpec(oldLayout, *this);
-  uint64_t size = oldSpec.getSize();
-  uint64_t abi = oldSpec.getAbi();
   for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
     if (!newEntry.isTypeEntry())
       continue;
+    auto newKey =
+        mlir::cast<cir::PointerType>(mlir::cast<mlir::Type>(newEntry.getKey()));
     auto newSpec = mlir::cast<cir::PtrSpecAttr>(newEntry.getValue());
+
+    cir::PtrSpecAttr oldSpec = getPointerSpec(oldLayout, newKey);
+    uint64_t size = oldSpec.getSize();
+    uint64_t abi = oldSpec.getAbi();
+
     if (size != newSpec.getSize() || abi < newSpec.getAbi() ||
         abi % newSpec.getAbi() != 0)
       return false;
