@@ -13,8 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/OMPContext.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -179,10 +177,11 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   return true;
 }
 
-static int isVariantApplicableInContextHelper(
-    const VariantMatchInfo &VMI, const OMPContext &Ctx,
-    SmallVectorImpl<std::optional<unsigned>> *ConstructMatches,
-    bool DeviceOrImplementationSetOnly) {
+static int
+isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
+                                   const OMPContext &Ctx,
+                                   SmallVectorImpl<unsigned> *ConstructMatches,
+                                   bool DeviceOrImplementationSetOnly) {
 
   // The match kind determines if we need to match all traits, any of the
   // traits, or none of the traits for it to be an applicable context.
@@ -245,10 +244,6 @@ static int isVariantApplicableInContextHelper(
         TraitSelector::implementation_extension)
       continue;
 
-    // Construct traits require ordered matching and are handled below.
-    if (getOpenMPContextTraitSetForProperty(Property) == TraitSet::construct)
-      continue;
-
     bool IsActiveTrait = Ctx.ActiveTraits.test(unsigned(Property));
 
     // We overwrite the isa trait as it is actually up to the OMPContext hook to
@@ -284,10 +279,8 @@ static int isVariantApplicableInContextHelper(
         FoundInOrder = (Ctx.ConstructTraits[ConstructIdx++] == Property);
       if (!FoundInOrder && MK != MK_ALL)
         ConstructIdx = SearchStart;
-      if (ConstructMatches)
-        ConstructMatches->push_back(
-            FoundInOrder ? std::optional<unsigned>{ConstructIdx - 1}
-                         : std::nullopt);
+      if (ConstructMatches && FoundInOrder)
+        ConstructMatches->push_back(ConstructIdx - 1);
 
       if (!HandleTrait(Property, FoundInOrder)) {
         LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "
@@ -322,9 +315,9 @@ bool llvm::omp::isVariantApplicableInContext(
       VMI, Ctx, /* ConstructMatches */ nullptr, DeviceOrImplementationSetOnly);
 }
 
-static APInt
-getVariantMatchScore(const VariantMatchInfo &VMI, const OMPContext &Ctx,
-                     ArrayRef<std::optional<unsigned>> ConstructMatches) {
+static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
+                                  const OMPContext &Ctx,
+                                  SmallVectorImpl<unsigned> &ConstructMatches) {
   APInt Score(64, 1);
 
   unsigned NoConstructTraits = VMI.ConstructTraits.size();
@@ -389,18 +382,11 @@ getVariantMatchScore(const VariantMatchInfo &VMI, const OMPContext &Ctx,
     }
   }
 
-  assert(NoConstructTraits == ConstructMatches.size() &&
+  assert(NoConstructTraits >= ConstructMatches.size() &&
          "Mismatch in the construct traits!");
-  for (auto [Property, Match] :
-       llvm::zip_equal(VMI.ConstructTraits, ConstructMatches)) {
-    assert(getOpenMPContextTraitSetForProperty(Property) ==
-               TraitSet::construct &&
-           "Ill-formed variant match info!");
-    (void)Property;
-    if (!Match)
-      continue;
+  for (unsigned Match : ConstructMatches) {
     // ConstructMatches is the position p - 1 and we need 2^(p-1).
-    Score += (1ULL << *Match);
+    Score += (1ULL << Match);
   }
 
   LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Variant has a score of " << Score
@@ -418,7 +404,7 @@ int llvm::omp::getBestVariantMatchForContext(
   for (unsigned u = 0, e = VMIs.size(); u < e; ++u) {
     const VariantMatchInfo &VMI = VMIs[u];
 
-    SmallVector<std::optional<unsigned>, 8> ConstructMatches;
+    SmallVector<unsigned, 8> ConstructMatches;
     // If the variant is not applicable its not the best.
     if (!isVariantApplicableInContextHelper(
             VMI, Ctx, &ConstructMatches,
