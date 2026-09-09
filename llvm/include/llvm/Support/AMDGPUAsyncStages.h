@@ -56,7 +56,7 @@ enum Stage : uint32_t {
 // Bits that a mask may legally set. Reserved stages are included: omitting a
 // stage whose operations do not exist yet is harmless, and accepting the bit
 // keeps masks portable as stages are filled in.
-constexpr uint32_t MaskAllStages = (uint32_t(1) << NUM_STAGES) - 1;
+constexpr uint32_t MaskAllStages = (1 << NUM_STAGES) - 1;
 
 constexpr bool isValidMask(uint32_t Mask) {
   return (Mask & ~MaskAllStages) == 0;
@@ -64,7 +64,7 @@ constexpr bool isValidMask(uint32_t Mask) {
 
 // A stage participates in an operation unless the mask names it.
 constexpr bool participates(uint32_t Mask, uint32_t S) {
-  return !(Mask & (uint32_t(1) << S));
+  return !(Mask & (1 << S));
 }
 
 constexpr bool isReservedStage(uint32_t S) {

@@ -43,7 +43,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-  ; CHECK-NEXT:   ASYNCMARK 16
+  ; CHECK-NEXT:   ASYNCMARK .TENSOR.GLOBAL_LOAD_ASYNC_TO_LDS.GLOBAL_LOAD_ASYNC_TO_LDS_MCAST.GLOBAL_STORE_ASYNC_FROM_LDS.BUFFER_GLOBAL_LOAD.RES7c0
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -52,7 +52,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, 16
+  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, .TENSOR.GLOBAL_LOAD_ASYNC_TO_LDS.GLOBAL_LOAD_ASYNC_TO_LDS_MCAST.GLOBAL_STORE_ASYNC_FROM_LDS.BUFFER_GLOBAL_LOAD.RES7c0
   ; CHECK-NEXT:   S_WAIT_ASYNCCNT 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -61,7 +61,7 @@ body:             |
     S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 
-  ; then branch — issues async LDS DMA + ASYNCMARK
+  ; then branch - issues async LDS DMA + ASYNCMARK
   bb.1:
     liveins: $vgpr0_vgpr1, $vgpr2
 
@@ -69,11 +69,11 @@ body:             |
     ASYNCMARK 16
     S_BRANCH %bb.3
 
-  ; else branch — sync path, no async operations; OtherMarks is empty at join
+  ; else branch - sync path, no async operations; OtherMarks is empty at join
   bb.2:
     S_BRANCH %bb.3
 
-  ; join — mergeAsyncMarks sees non-empty AsyncMarks (then) and empty OtherMarks (else).
+  ; join - mergeAsyncMarks sees non-empty AsyncMarks (then) and empty OtherMarks (else).
   ; Before fix: assertion. After fix: returns early, no spurious wait inserted.
   bb.3:
     WAIT_ASYNCMARK 0, 16
@@ -81,7 +81,7 @@ body:             |
 ...
 ---
 # Pattern 2: ASYNCMARK in else-successor, then-successor is sync.
-# Mirror of asyncmark_in_then — exercises the opposite predecessor ordering.
+# Mirror of asyncmark_in_then - exercises the opposite predecessor ordering.
 name:            asyncmark_in_else
 tracksRegLiveness: true
 machineFunctionInfo:
@@ -107,11 +107,11 @@ body:             |
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-  ; CHECK-NEXT:   ASYNCMARK 16
+  ; CHECK-NEXT:   ASYNCMARK .TENSOR.GLOBAL_LOAD_ASYNC_TO_LDS.GLOBAL_LOAD_ASYNC_TO_LDS_MCAST.GLOBAL_STORE_ASYNC_FROM_LDS.BUFFER_GLOBAL_LOAD.RES7c0
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, 16
+  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, .TENSOR.GLOBAL_LOAD_ASYNC_TO_LDS.GLOBAL_LOAD_ASYNC_TO_LDS_MCAST.GLOBAL_STORE_ASYNC_FROM_LDS.BUFFER_GLOBAL_LOAD.RES7c0
   ; CHECK-NEXT:   S_WAIT_ASYNCCNT 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -120,11 +120,11 @@ body:             |
     S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 
-  ; then branch — sync path, no async operations
+  ; then branch - sync path, no async operations
   bb.1:
     S_BRANCH %bb.3
 
-  ; else branch — issues async LDS DMA + ASYNCMARK
+  ; else branch - issues async LDS DMA + ASYNCMARK
   bb.2:
     liveins: $vgpr0_vgpr1, $vgpr2
 

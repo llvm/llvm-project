@@ -39,13 +39,13 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $m0 = S_MOV_B32 0
   ; CHECK-NEXT:   GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-  ; CHECK-NEXT:   ASYNCMARK 16
+  ; CHECK-NEXT:   ASYNCMARK .TENSOR.GLOBAL_LOAD_ASYNC_TO_LDS.GLOBAL_LOAD_ASYNC_TO_LDS_MCAST.GLOBAL_STORE_ASYNC_FROM_LDS.BUFFER_GLOBAL_LOAD.RES7c0
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   liveins: $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, 16
+  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, .TENSOR.GLOBAL_LOAD_ASYNC_TO_LDS.GLOBAL_LOAD_ASYNC_TO_LDS_MCAST.GLOBAL_STORE_ASYNC_FROM_LDS.BUFFER_GLOBAL_LOAD.RES7c0
   ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0
   ; CHECK-NEXT:   renamable $vgpr0 = DS_READ_B32_gfx9 killed $vgpr2, 0, 0, implicit $exec :: (load (s32), addrspace 3)
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -107,7 +107,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $m0 = S_MOV_B32 0
   ; CHECK-NEXT:   GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-  ; CHECK-NEXT:   ASYNCMARK 16
+  ; CHECK-NEXT:   ASYNCMARK .TENSOR.GLOBAL_LOAD_ASYNC_TO_LDS.GLOBAL_LOAD_ASYNC_TO_LDS_MCAST.GLOBAL_STORE_ASYNC_FROM_LDS.BUFFER_GLOBAL_LOAD.RES7c0
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -124,7 +124,7 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   liveins: $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, 16
+  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, .TENSOR.GLOBAL_LOAD_ASYNC_TO_LDS.GLOBAL_LOAD_ASYNC_TO_LDS_MCAST.GLOBAL_STORE_ASYNC_FROM_LDS.BUFFER_GLOBAL_LOAD.RES7c0
   ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0
   ; CHECK-NEXT:   renamable $vgpr0 = DS_READ_B32_gfx9 killed $vgpr2, 0, 0, implicit $exec :: (load (s32), addrspace 3)
   ; CHECK-NEXT:   S_ENDPGM 0
