@@ -214,7 +214,15 @@ static bool trySinkCastForWideMul(Instruction *I) {
     return false;
   };
 
-  if (IsDoubleIntegerExtend(I) && all_of(I->users(), IsUserMulWideCandidate))
+  // This check ensures we don't re-process clones of cast created by previous
+  // iteration of this pass.
+  bool HasAnyOutsideUsers = any_of(I->users(), [&I](const User *U) {
+    return isa<Instruction>(U) &&
+           cast<Instruction>(U)->getParent() != I->getParent();
+  });
+
+  if (IsDoubleIntegerExtend(I) && HasAnyOutsideUsers &&
+      all_of(I->users(), IsUserMulWideCandidate))
     return sinkCastToUsers(cast<CastInst>(I));
 
   return false;
