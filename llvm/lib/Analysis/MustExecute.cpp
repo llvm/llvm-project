@@ -28,10 +28,23 @@ using namespace llvm;
 
 const DenseMap<BasicBlock *, ColorVector> &
 LoopSafetyInfo::getBlockColors() const {
+  // Compute funclet colors if we might sink/hoist in a function with a funclet
+  // personality routine. This traverses the whole function, so it is done
+  // lazily, on first use, instead of every time a safety info is constructed.
+  if (!BlockColorsComputed) {
+    BlockColorsComputed = true;
+    Function *Fn = CurLoop->getHeader()->getParent();
+    if (Fn->hasPersonalityFn())
+      if (Constant *PersonalityFn = Fn->getPersonalityFn())
+        if (isScopedEHPersonality(classifyEHPersonality(PersonalityFn)))
+          BlockColors = colorEHFunclets(*Fn);
+  }
   return BlockColors;
 }
 
 void LoopSafetyInfo::copyColors(BasicBlock *New, BasicBlock *Old) {
+  assert(BlockColorsComputed &&
+         "getBlockColors() must be queried before updating block colors");
   ColorVector &ColorsForNewBlock = BlockColors[New];
   ColorVector &ColorsForOldBlock = BlockColors[Old];
   ColorsForNewBlock = ColorsForOldBlock;
@@ -62,8 +75,6 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo() {
     if (MayThrow)
       break;
   }
-
-  computeBlockColors();
 }
 
 bool ICFLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
@@ -85,7 +96,6 @@ void ICFLoopSafetyInfo::computeLoopSafetyInfo() {
       MayThrow = true;
       break;
     }
-  computeBlockColors();
 }
 
 void ICFLoopSafetyInfo::insertInstructionTo(const Instruction *Inst,
@@ -97,16 +107,6 @@ void ICFLoopSafetyInfo::insertInstructionTo(const Instruction *Inst,
 void ICFLoopSafetyInfo::removeInstruction(const Instruction *Inst) {
   ICF.removeInstruction(Inst);
   MW.removeInstruction(Inst);
-}
-
-void LoopSafetyInfo::computeBlockColors() {
-  // Compute funclet colors if we might sink/hoist in a function with a funclet
-  // personality routine.
-  Function *Fn = CurLoop->getHeader()->getParent();
-  if (Fn->hasPersonalityFn())
-    if (Constant *PersonalityFn = Fn->getPersonalityFn())
-      if (isScopedEHPersonality(classifyEHPersonality(PersonalityFn)))
-        BlockColors = colorEHFunclets(*Fn);
 }
 
 /// Return true if we can prove that the given ExitBlock is not reached on the
