@@ -169,7 +169,7 @@ what to add to your calendar invite.
      - Monthly
      -
      - [Minutes/docs](https://docs.google.com/document/d/1JecbplF09l3swTjze-UVeLh4L48svJxGVy4mz_e9Rhs/edit?usp=gmail#heading=h.ts9cmcjbir1j)
-   * - [LLVM security group](https://llvm.org/docs/Security.html)
+   * - {doc}`LLVM security group <Security>`
      - Monthly, every 3rd Tuesday
      - [ics](https://calendar.google.com/calendar/ical/eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com/public/basic.ics)
        [gcal](https://calendar.google.com/calendar/embed?src=eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com)
@@ -219,7 +219,7 @@ what to add to your calendar invite.
      - 3rd Tuesday of the month
      - [ics](https://www.icloud.com/iclouddrive/032PeZzdN6U4uRMwJRJPrS2Lw#Vectorizer_Improvements)
      - [Meeting details/agenda:](https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit)
-   * - [LLVM Qualification Working Group](https://llvm.org/docs/QualGroup.html)
+   * - {doc}`LLVM Qualification Working Group <QualGroup>`
      - Monthly: 2nd Tuesday (EU/Asia) and 2nd Friday JST / Thursday (Americas)
      - [ics](https://calendar.google.com/calendar/ical/f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com/public/basic.ics)
        [gcal](https://calendar.google.com/calendar/embed?src=f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com&ctz=Asia%2FTokyo)
@@ -422,6 +422,8 @@ for info.
   from the list above.
 
 
+(discord)=
+
 ## Discord
 
 Users and developers of the LLVM project (including subprojects such as Clang)
@@ -591,7 +593,7 @@ This event is a meetup for all developers of LLDB. Meeting agendas are posted
 on Discourse before the event.
 
 Attendees must adhere to the LLVM Code of Conduct
-(https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,
+({doc}`Code of Conduct <CodeOfConduct>`). For any Code of Conduct reports,
 please contact the organizers and also email conduct@llvm.org.
 
 Agenda/Meeting Minutes: Link to minutes

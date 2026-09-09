@@ -36,7 +36,7 @@ instead of string triplets, streamlining the training data preparation workflow.
 
 :::{note}
 For information about using IR2Vec and MIR2Vec programmatically within LLVM
-passes and the C++ API, see the [IR2Vec Embeddings](https://llvm.org/docs/MLGO.html#ir2vec-embeddings)
+passes and the C++ API, see the [IR2Vec Embeddings](project:../MLGO.rst#ir2vec-embeddings)
 section in the MLGO documentation.
 :::
 
@@ -331,4 +331,3 @@ For more information about the IR2Vec algorithm and approach, see:
 
 For more information about the MIR2Vec algorithm and approach, see:
 [RL4ReAl: Reinforcement Learning for Register Allocation](https://doi.org/10.1145/3578360.3580273).
-
