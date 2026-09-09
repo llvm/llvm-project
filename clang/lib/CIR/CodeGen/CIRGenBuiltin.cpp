@@ -1735,24 +1735,27 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(emitCoroEndBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_promise:
     return RValue::get(emitCoroPromiseBuiltinCall(e).getResult());
-  case Builtin::BI__builtin_coro_resume:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_resume NYI");
-    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_resume: {
+    emitCoroResumeBuiltinCall(e);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_coro_noop:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
-    return getUndefRValue(e->getType());
-  case Builtin::BI__builtin_coro_destroy:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_destroy NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroNoopBuiltinCall(e).getResult());
+  case Builtin::BI__builtin_coro_destroy: {
+    emitCoroDestroyBuiltinCall(e);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_coro_done:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_done NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroDoneBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_suspend:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
-    return getUndefRValue(e->getType());
-  case Builtin::BI__builtin_coro_align:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroSuspendBuiltinCall(e).getResult());
+  case Builtin::BI__builtin_coro_align: {
+    mlir::Value align = emitCoroAlignBuiltinCall(e).getResult();
+    mlir::Type expectedTy = convertType(e->getType());
+    if (align.getType() != expectedTy)
+      align = builder.createIntCast(align, expectedTy);
+    return RValue::get(align);
+  }
 
   case Builtin::BI__builtin_coro_frame: {
     return emitCoroutineFrame();
@@ -1764,7 +1767,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   case Builtin::BI__builtin_coro_size: {
-    return RValue::get(emitCoroSizeBuiltinCall(e).getResult());
+    mlir::Value size = emitCoroSizeBuiltinCall(e).getResult();
+    mlir::Type expectedTy = convertType(e->getType());
+    if (size.getType() != expectedTy)
+      size = builder.createIntCast(size, expectedTy);
+    return RValue::get(size);
   }
 
   case Builtin::BI__builtin_constant_p: {

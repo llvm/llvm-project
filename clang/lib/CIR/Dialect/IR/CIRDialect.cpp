@@ -2853,10 +2853,13 @@ mlir::LogicalResult cir::FuncOp::verify() {
 
   if (!isDeclaration() && getCoroutine()) {
     bool foundAwait = false;
+    bool foundCoroSuspend = false;
     int coroBodyCount = 0;
     this->walk([&](Operation *op) {
-      if (auto await = dyn_cast<AwaitOp>(op)) {
+      if (isa<AwaitOp>(op)) {
         foundAwait = true;
+      } else if (isa<CoroSuspendOp>(op)) {
+        foundCoroSuspend = true;
       } else if (isa<CoroBodyOp>(op)) {
         coroBodyCount++;
         if (coroBodyCount > 1) {
@@ -2865,10 +2868,10 @@ mlir::LogicalResult cir::FuncOp::verify() {
       }
       return mlir::WalkResult::advance();
     });
-    if (!foundAwait)
+    if (!foundAwait && !foundCoroSuspend)
       return emitOpError()
              << "coroutine body must use at least one cir.await op";
-    if (coroBodyCount != 1)
+    if (coroBodyCount > 1 || (coroBodyCount != 1 && !foundCoroSuspend))
       return emitOpError()
              << "coroutine function must have exactly one cir.body op";
   }

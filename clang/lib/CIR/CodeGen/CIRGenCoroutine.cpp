@@ -321,6 +321,46 @@ CIRGenFunction::emitCoroPromiseBuiltinCall(const CallExpr *e) {
   return coroPromise;
 }
 
+cir::CoroResumeOp CIRGenFunction::emitCoroResumeBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  mlir::Value handle = emitScalarExpr(e->getArg(0));
+  return cir::CoroResumeOp::create(cgm.getBuilder(), loc, handle);
+}
+
+cir::CoroDestroyOp
+CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  mlir::Value handle = emitScalarExpr(e->getArg(0));
+  return cir::CoroDestroyOp::create(cgm.getBuilder(), loc, handle);
+}
+
+cir::CoroDoneOp CIRGenFunction::emitCoroDoneBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  mlir::Value handle = emitScalarExpr(e->getArg(0));
+  return cir::CoroDoneOp::create(cgm.getBuilder(), loc,
+                                 convertType(e->getType()), handle);
+}
+
+cir::CoroNoopOp CIRGenFunction::emitCoroNoopBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroNoopOp::create(cgm.getBuilder(), loc,
+                                 convertType(e->getType()));
+}
+
+cir::CoroAlignOp CIRGenFunction::emitCoroAlignBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroAlignOp::create(cgm.getBuilder(), loc);
+}
+
+cir::CoroSuspendOp
+CIRGenFunction::emitCoroSuspendBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::Value saveToken = cir::TokenNoneOp::create(builder, loc);
+  mlir::Value finalSuspend = emitScalarExpr(e->getArg(0));
+  return cir::CoroSuspendOp::create(builder, loc, saveToken, finalSuspend);
+}
+
 static mlir::LogicalResult
 coroutineBodyExceptionHelper(CIRGenFunction &cgf, const CoroutineBodyStmt &s) {
 

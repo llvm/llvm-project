@@ -2813,9 +2813,25 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   // function attribute, so route it through the `passthrough` array. The MLIR
   // LLVM IR translator forwards `passthrough` entries to LLVM IR as function
   // attributes.
-  if (op->hasAttr(CIRDialect::getStrictFPAttrName()))
-    fn.setPassthroughAttr(rewriter.getArrayAttr(
-        {rewriter.getStringAttr(CIRDialect::getStrictFPAttrName())}));
+  if (auto passthrough = op->getAttrOfType<mlir::ArrayAttr>("passthrough"))
+    fn.setPassthroughAttr(passthrough);
+
+  if (op->hasAttr(CIRDialect::getStrictFPAttrName())) {
+    llvm::SmallVector<mlir::Attribute, 2> passthroughAttrs;
+    if (auto existing = fn.getPassthroughAttr())
+      passthroughAttrs.append(existing.begin(), existing.end());
+    passthroughAttrs.push_back(
+        rewriter.getStringAttr(CIRDialect::getStrictFPAttrName()));
+    fn.setPassthroughAttr(rewriter.getArrayAttr(passthroughAttrs));
+  }
+
+  if (op.getCoroutine()) {
+    llvm::SmallVector<mlir::Attribute, 2> passthroughAttrs;
+    if (auto existing = fn.getPassthroughAttr())
+      passthroughAttrs.append(existing.begin(), existing.end());
+    passthroughAttrs.push_back(rewriter.getStringAttr("presplitcoroutine"));
+    fn.setPassthroughAttr(rewriter.getArrayAttr(passthroughAttrs));
+  }
 
   if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
     fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);

@@ -1,0 +1,52 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+!void = !cir.void
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @test_coro_intrinsics(%arg0: !cir.ptr<!void>) {
+    %save = cir.coro.intrinsic.save(%arg0) : (!cir.ptr<!void>) -> token
+    %false = cir.const #cir.bool<false> : !cir.bool
+    %susp = cir.coro.intrinsic.suspend(%save, %false) : (token, !cir.bool) -> !s8i
+    cir.coro.intrinsic.resume(%arg0) : (!cir.ptr<!void>) -> ()
+    cir.coro.intrinsic.destroy(%arg0) : (!cir.ptr<!void>) -> ()
+    %done = cir.coro.intrinsic.done(%arg0) : (!cir.ptr<!void>) -> !cir.bool
+    %noop = cir.coro.intrinsic.noop() : () -> !cir.ptr<!void>
+    %align = cir.coro.intrinsic.align() : () -> !u64i
+    cir.return
+  }
+
+  cir.func coroutine @test_coro_func(%arg0: !cir.ptr<!void>) {
+    %save = cir.coro.intrinsic.save(%arg0) : (!cir.ptr<!void>) -> token
+    %false = cir.const #cir.bool<false> : !cir.bool
+    %susp = cir.coro.intrinsic.suspend(%save, %false) : (token, !cir.bool) -> !s8i
+    cir.return
+  }
+}
+
+// MLIR-LABEL: llvm.func @test_coro_intrinsics(%arg0: !llvm.ptr)
+// MLIR: %[[SAVE:.*]] = llvm.intr.coro.save %arg0 : (!llvm.ptr) -> token
+// MLIR: %[[FALSE:.*]] = llvm.mlir.constant(false) : i1
+// MLIR: %[[SUSP:.*]] = llvm.intr.coro.suspend %[[SAVE]], %[[FALSE]] : i8
+// MLIR: llvm.intr.coro.resume %arg0 : !llvm.ptr
+// MLIR: llvm.intr.coro.destroy %arg0 : !llvm.ptr
+// MLIR: %[[DONE:.*]] = llvm.intr.coro.done %arg0 : (!llvm.ptr) -> i1
+// MLIR: %[[NOOP:.*]] = llvm.intr.coro.noop : !llvm.ptr
+// MLIR: %[[ALIGN:.*]] = llvm.intr.coro.align : i64
+
+// MLIR-LABEL: llvm.func @test_coro_func(%arg0: !llvm.ptr)
+// MLIR-SAME: passthrough = ["presplitcoroutine"]
+
+// LLVM-LABEL: define void @test_coro_intrinsics(ptr %0)
+// LLVM: %[[SAVE:.*]] = call token @llvm.coro.save(ptr %0)
+// LLVM: %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %[[SAVE]], i1 false)
+// LLVM: call void @llvm.coro.resume(ptr %0)
+// LLVM: call void @llvm.coro.destroy(ptr %0)
+// LLVM: %[[DONE:.*]] = call i1 @llvm.coro.done(ptr %0)
+// LLVM: %[[NOOP:.*]] = call ptr @llvm.coro.noop()
+// LLVM: %[[ALIGN:.*]] = call i64 @llvm.coro.align.i64()
+
+// LLVM: define void @test_coro_func(ptr %0) #[[CORO_ATTR:[0-9]+]]
+// LLVM: attributes #[[CORO_ATTR]] = {{.*}}presplitcoroutine

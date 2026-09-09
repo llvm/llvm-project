@@ -5020,6 +5020,107 @@ def CIR_CoroPromiseOp : CIR_CoroIntrinsicOp<"promise",
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic SaveOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSaveOp : CIR_CoroIntrinsicOp<"save",
+    (ins CIR_VoidPtrType:$handle),
+    (outs Token:$result), [TokenProducerTrait]> {
+  let summary = "Represents llvm.coro.save";
+  let description = [{
+    Saves the state of a coroutine identified by `handle` for a subsequent
+    suspension point, producing a token consumed by `coro.intrinsic.suspend`.
+  }];
+  let llvmOp = "CoroSaveOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic SuspendOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
+    (ins Token:$save, CIR_AnyBoolType:$final_suspend),
+    (outs CIR_SInt8:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.suspend";
+  let description = [{
+    Marks a coroutine suspension point. Consumes the token `save` produced
+    by `coro.intrinsic.save` (or `cir.token.none`) and a boolean flag
+    `final_suspend` indicating whether this is the final suspension point.
+    Returns an 8-bit signed integer indicating whether the coroutine should
+    suspend (`-1`), resume (`0`), or destroy (`1`).
+  }];
+  let llvmOp = "CoroSuspendOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic ResumeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroResumeOp : CIR_CoroIntrinsicOp<"resume",
+    (ins CIR_VoidPtrType:$handle), (outs)> {
+  let summary = "Represents llvm.coro.resume";
+  let description = [{
+    Resumes a suspended coroutine given its frame pointer `handle`.
+  }];
+  let llvmOp = "CoroResumeOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic DestroyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroDestroyOp : CIR_CoroIntrinsicOp<"destroy",
+    (ins CIR_VoidPtrType:$handle), (outs)> {
+  let summary = "Represents llvm.coro.destroy";
+  let description = [{
+    Destroys a suspended coroutine given its frame pointer `handle`.
+  }];
+  let llvmOp = "CoroDestroyOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic DoneOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done",
+    (ins CIR_VoidPtrType:$handle),
+    (outs CIR_AnyBoolType:$result)> {
+  let summary = "Represents llvm.coro.done";
+  let description = [{
+    Checks whether a suspended coroutine identified by `handle` is at its
+    final suspension point.
+  }];
+  let llvmOp = "CoroDoneOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic NoopOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroNoopOp : CIR_CoroIntrinsicOp<"noop",
+    (ins), (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.noop";
+  let description = [{
+    Returns the coroutine handle for a coroutine that does nothing when resumed
+    or destroyed.
+  }];
+  let llvmOp = "CoroNoopOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic AlignOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAlignOp : CIR_CoroIntrinsicOp<"align",
+    (ins), (outs CIR_UInt64:$result)> {
+  let summary = "Represents llvm.coro.align";
+  let description = [{
+    Returns the required alignment, in bytes, of the coroutine frame.
+  }];
+  let llvmOp = "CoroAlignOp";
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 

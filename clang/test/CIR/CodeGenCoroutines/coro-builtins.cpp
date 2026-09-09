@@ -29,8 +29,13 @@ void f(int n) {
 
   // LLVM: call i1 @llvm.coro.alloc(token %[[COROID]])
 
-  // TODO
-  //__builtin_coro_noop();
+  __builtin_coro_noop();
+  // CIR: cir.coro.intrinsic.noop() : () -> !cir.ptr<!void>
+  // LLVM: call ptr @llvm.coro.noop()
+
+  __builtin_coro_align();
+  // CIR: cir.coro.intrinsic.align() : () -> !u64i
+  // LLVM: call i64 @llvm.coro.align.i64()
 
   __builtin_coro_begin(myAlloc(__builtin_coro_size()));
   // TODO(CIR): Support both variants of the coroutine size intrinsic, matching
@@ -44,14 +49,17 @@ void f(int n) {
   // LLVM: %[[MEM:.*]] = call noundef ptr @_Z7myAllocx(i64 noundef %[[SIZE]])
   // LLVM: %[[FRAME:.*]] = call ptr @llvm.coro.begin(token %[[COROID]], ptr %[[MEM]])
 
-  // TODO(CIR):
-  //__builtin_coro_resume(__builtin_coro_frame());
+  __builtin_coro_resume(__builtin_coro_frame());
+  // CIR: cir.coro.intrinsic.resume(%[[FRAME]]) : (!cir.ptr<!void>) -> ()
+  // LLVM: call void @llvm.coro.resume(ptr %[[FRAME]])
 
-  // TODO(CIR):
-  //__builtin_coro_destroy(__builtin_coro_frame());
+  __builtin_coro_destroy(__builtin_coro_frame());
+  // CIR: cir.coro.intrinsic.destroy(%[[FRAME]]) : (!cir.ptr<!void>) -> ()
+  // LLVM: call void @llvm.coro.destroy(ptr %[[FRAME]])
 
-  // TODO(CIR):
-  //__builtin_coro_done(__builtin_coro_frame());
+  __builtin_coro_done(__builtin_coro_frame());
+  // CIR: cir.coro.intrinsic.done(%[[FRAME]]) : (!cir.ptr<!void>) -> !cir.bool
+  // LLVM: call i1 @llvm.coro.done(ptr %[[FRAME]])
 
   __builtin_coro_promise(__builtin_coro_frame(), 48, 0);
   // CIR: %[[ALIGN:.*]] = cir.const #cir.int<48> : !s32i
@@ -72,6 +80,10 @@ void f(int n) {
 
   // LLVM: call void @llvm.coro.end(ptr %[[FRAME]], i1 false, token none)
 
-  // TODO(CIR):
-  //__builtin_coro_suspend(1);
+  __builtin_coro_suspend(1);
+  // CIR: %[[TK_SAVE:.*]] = cir.token.none
+  // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+  // CIR: %[[SUSP_FINAL:.*]] = cir.cast int_to_bool %[[ONE]] : !s32i -> !cir.bool
+  // CIR: cir.coro.intrinsic.suspend(%[[TK_SAVE]], %[[SUSP_FINAL]]) : (token, !cir.bool) -> !s8i
+  // LLVM: call i8 @llvm.coro.suspend(token none, i1 true)
 }
