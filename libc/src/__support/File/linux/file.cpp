@@ -69,29 +69,32 @@ int linux_file_close(File *f) {
   return retval;
 }
 
-static int map_c_mode_flags_to_linux_open_flags(FileMode mode) {
-  FileMode file_mode(mode);
+// helper methods for manipulating linux file flags
+static constexpr int create_and_append() { return O_CREAT | O_APPEND; }
+static constexpr int read_and_write() { return O_RDWR; }
+static constexpr int write_only() { return O_WRONLY; }
+static constexpr int read_only() { return O_RDONLY; }
+static constexpr int create_or_truncate() { return O_CREAT | O_TRUNC; }
 
+static int map_c_mode_flags_to_linux_open_flags(FileMode file_mode) {
   int open_flags = 0;
 
-  if (file_mode.is_append()) {
-    open_flags = O_CREAT | O_APPEND;
-    if (file_mode.is_update())
-      open_flags |= O_RDWR;
-    else
-      open_flags |= O_WRONLY;
-  } else if (file_mode.is_write()) {
-    open_flags = O_CREAT | O_TRUNC;
-    if (file_mode.is_update())
-      open_flags |= O_RDWR;
-    else
-      open_flags |= O_WRONLY;
-  } else {
-    if (file_mode.is_update())
-      open_flags |= O_RDWR;
-    else
-      open_flags |= O_RDONLY;
-  }
+  // handle access patterns i.e whether the file should be in
+  // only read, write modes or both.
+  if (file_mode.is_update())
+    open_flags |= read_and_write();
+  else if (file_mode.is_append() || file_mode.is_write())
+    open_flags |= write_only();
+  else
+    open_flags = write_only();
+
+  // handle the behaviour of the file when accessed i.e should the file
+  // be appended to or truncate when created.
+  if (file_mode.is_append())
+    open_flags |= create_and_append();
+  else if (file_mode.is_write())
+    open_flags |= create_or_truncate();
+
   return open_flags;
 }
 
