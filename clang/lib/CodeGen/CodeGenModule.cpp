@@ -3574,7 +3574,7 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       SmallVector<QualType, 8> ParamTypes;
       for (const ParmVarDecl *P : Def->parameters())
         ParamTypes.push_back(P->getType());
-      QT = reconstructCallGraphPrototype(FNPT, ParamTypes);
+      QT = ReconstructCallGraphPrototype(FNPT, ParamTypes);
     }
 
     F->addMetadata(
@@ -8758,7 +8758,7 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
 // promotion rules here. In the long term, this type-based logic should be
 // unified with Sema (for example, by extracting a shared type-level promotion
 // helper in ASTContext).
-QualType CodeGenModule::getCallGraphPromotedType(QualType Ty) const {
+QualType CodeGenModule::GetCallGraphPromotedType(QualType Ty) const {
   if (Context.isPromotableIntegerType(Ty))
     return Context.getPromotedIntegerType(Ty);
   if (const auto *BT = Ty->getAs<BuiltinType>()) {
@@ -8769,12 +8769,12 @@ QualType CodeGenModule::getCallGraphPromotedType(QualType Ty) const {
   return Ty;
 }
 
-QualType CodeGenModule::reconstructCallGraphPrototype(
+QualType CodeGenModule::ReconstructCallGraphPrototype(
     const FunctionNoProtoType *FNPT, ArrayRef<QualType> ParamTypes) const {
   SmallVector<QualType, 8> PromotedParamTypes;
   PromotedParamTypes.reserve(ParamTypes.size());
   for (QualType PT : ParamTypes)
-    PromotedParamTypes.push_back(getCallGraphPromotedType(PT));
+    PromotedParamTypes.push_back(GetCallGraphPromotedType(PT));
   FunctionProtoType::ExtProtoInfo EPI;
   return Context.getFunctionType(FNPT->getReturnType(), PromotedParamTypes,
                                  EPI);
@@ -8783,7 +8783,7 @@ QualType CodeGenModule::reconstructCallGraphPrototype(
 llvm::Metadata *
 CodeGenModule::CreateMetadataIdentifierForCallGraphType(QualType T) {
   if (auto *FNPT = T->getAs<FunctionNoProtoType>())
-    T = reconstructCallGraphPrototype(FNPT, {});
+    T = ReconstructCallGraphPrototype(FNPT, {});
   return CreateMetadataIdentifierImpl(T, CallGraphMetadataIdMap, "",
                                       /*ForceString=*/true);
 }

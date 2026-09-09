@@ -1770,13 +1770,13 @@ public:
 
   /// Applies C default argument promotions to a parameter type for Call Graph
   /// Section type reconstruction.
-  QualType getCallGraphPromotedType(QualType Ty) const;
+  QualType GetCallGraphPromotedType(QualType Ty) const;
 
   /// Reconstructs a FunctionProtoType for an unprototyped function type
   /// (FunctionNoProtoType) using the given parameter/argument types, applying
   /// default argument promotions to ensure call-site and definition-site type
   /// signatures match.
-  QualType reconstructCallGraphPrototype(const FunctionNoProtoType *FNPT,
+  QualType ReconstructCallGraphPrototype(const FunctionNoProtoType *FNPT,
                                          ArrayRef<QualType> ParamTypes) const;
 
   /// Create a metadata identifier that is intended to be used to check virtual
