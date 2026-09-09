@@ -1,7 +1,15 @@
-RUN: llvm-config --link-static --system-libs Support 2>&1 | FileCheck %s
+# Exercise the options used by Mesa with a minimal component set. System
+# libraries are reported globally, independently of the selected components.
+RUN: llvm-config --libs --ldflags --link-static --system-libs Support 2>&1 | \
+RUN:   FileCheck %s --check-prefix=CHECK %if zstd %{--check-prefix=ZSTD%} %if libxml2 %{--check-prefix=LIBXML2%}
 REQUIRES: static-libs
 REQUIRES: host={{.*-windows-msvc}}
 CHECK-NOT: -l
+CHECK: -LIBPATH:
+CHECK: LLVMSupport.lib
 CHECK: psapi.lib shell32.lib ole32.lib uuid.lib advapi32.lib ws2_32.lib
+# Accept the supported import/static library names and optional debug suffixes.
+ZSTD-SAME: {{[ /\\](lib)?zstd(_static)?d?\.lib}}
+LIBXML2-SAME: {{[ /\\](lib)?xml2(s|_a)?d?\.lib}}
 CHECK-NOT: error
 CHECK-NOT: warning
