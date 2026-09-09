@@ -25,13 +25,14 @@ static constexpr unsigned MaxSignatureRows = 32;
 static constexpr unsigned MaxSignatureCols = 4;
 
 /// Denotes the element that could not be packed and why.
-class SignaturePackingError : public ErrorInfo<SignaturePackingError> {
+class LLVM_ABI SignaturePackingError
+    : public ErrorInfo<SignaturePackingError> {
 public:
   enum ErrorKind {
     SignatureOverflow,
   };
 
-  LLVM_ABI static char ID;
+  static char ID;
 
   SignaturePackingError(ErrorKind Kind, unsigned ElementIndex)
       : Kind(Kind), ElementIndex(ElementIndex) {}
@@ -39,7 +40,7 @@ public:
   ErrorKind getErrorKind() const { return Kind; }
   unsigned getElementIndex() const { return ElementIndex; }
 
-  LLVM_ABI void log(raw_ostream &OS) const override;
+  void log(raw_ostream &OS) const override;
 
   std::error_code convertToErrorCode() const override {
     return llvm::inconvertibleErrorCode();
