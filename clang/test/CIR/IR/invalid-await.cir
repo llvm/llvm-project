@@ -19,3 +19,22 @@ cir.func coroutine @missing_condition() {
   }
   cir.return
 }
+
+// -----
+
+!void = !cir.void
+!s8i = !cir.int<s, 8>
+
+cir.func coroutine @flattened_with_await(%arg0: !cir.ptr<!void>, %arg1: !cir.bool) { // expected-error {{flattened coroutine function cannot use cir.await op}}
+  %save = cir.coro.intrinsic.save(%arg0) : (!cir.ptr<!void>) -> token
+  %false = cir.const #cir.bool<false> : !cir.bool
+  %susp = cir.coro.intrinsic.suspend(%save, %false) : (token, !cir.bool) -> !s8i
+  cir.await(user, ready : {
+    cir.condition(%arg1)
+  }, suspend : {
+    cir.yield
+  }, resume : {
+    cir.yield
+  },)
+  cir.return
+}

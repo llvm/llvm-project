@@ -19,3 +19,37 @@ cir.func coroutine @must_have_one_coro_body(%arg0 : !cir.bool) {  // expected-er
   cir.coro.body {
   }
 }
+
+// -----
+
+!void = !cir.void
+!s8i = !cir.int<s, 8>
+
+cir.func coroutine @preflattened_with_suspend(%arg0: !cir.ptr<!void>, %arg1: !cir.bool) { // expected-error {{pre-flattened coroutine function cannot use cir.coro.intrinsic.suspend op}}
+  cir.coro.body {
+    %save = cir.coro.intrinsic.save(%arg0) : (!cir.ptr<!void>) -> token
+    %false = cir.const #cir.bool<false> : !cir.bool
+    %susp = cir.coro.intrinsic.suspend(%save, %false) : (token, !cir.bool) -> !s8i
+    cir.await(user, ready : {
+      cir.condition(%arg1)
+    }, suspend : {
+      cir.yield
+    }, resume : {
+      cir.yield
+    },)
+  }
+  cir.return
+}
+
+// -----
+
+cir.func coroutine @missing_coro_body(%arg0 : !cir.bool) { // expected-error {{coroutine function must have exactly one cir.body op}}
+  cir.await(user, ready : {
+    cir.condition(%arg0)
+  }, suspend : {
+    cir.yield
+  }, resume : {
+    cir.yield
+  },)
+  cir.return
+}

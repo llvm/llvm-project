@@ -2868,12 +2868,31 @@ mlir::LogicalResult cir::FuncOp::verify() {
       }
       return mlir::WalkResult::advance();
     });
-    if (!foundAwait && !foundCoroSuspend)
-      return emitOpError()
-             << "coroutine body must use at least one cir.await op";
-    if (coroBodyCount > 1 || (coroBodyCount != 1 && !foundCoroSuspend))
+    if (coroBodyCount > 1)
       return emitOpError()
              << "coroutine function must have exactly one cir.body op";
+    if (coroBodyCount == 1) {
+      if (!foundAwait)
+        return emitOpError()
+               << "coroutine body must use at least one cir.await op";
+      if (foundCoroSuspend)
+        return emitOpError()
+               << "pre-flattened coroutine function cannot use "
+                  "cir.coro.intrinsic.suspend op";
+    } else {
+      // coroBodyCount == 0: post-flattened coroutine must use
+      // cir.coro.intrinsic.suspend and must not contain cir.await.
+      if (!foundCoroSuspend) {
+        if (!foundAwait)
+          return emitOpError()
+                 << "coroutine body must use at least one cir.await op";
+        return emitOpError()
+               << "coroutine function must have exactly one cir.body op";
+      }
+      if (foundAwait)
+        return emitOpError()
+               << "flattened coroutine function cannot use cir.await op";
+    }
   }
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
