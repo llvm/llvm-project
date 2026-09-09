@@ -14,6 +14,7 @@
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/file_mode.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/dup2.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
@@ -66,6 +67,30 @@ int linux_file_close(File *f) {
   }
   delete lf;
   return retval;
+}
+
+static int map_c_mode_flags_to_linux_open_flags(FileMode mode) {
+  FileMode file_mode(mode);
+
+  if (file_mode.append_allowed()) {
+    open_flags = O_CREAT | O_APPEND;
+    if (file_mode.is_plus())
+      open_flags |= O_RDWR;
+    else
+      open_flags |= O_WRONLY;
+  } else if (file_mode.write_allowed()) {
+    open_flags = O_CREAT | O_TRUNC;
+    if (file_mode.is_plus())
+      open_flags |= O_RDWR;
+    else
+      open_flags |= O_WRONLY;
+  } else {
+    if (file_mode.is_plus())
+      open_flags |= O_RDWR;
+    else
+      open_flags |= O_RDONLY;
+  }
+  return open_flags;
 }
 
 static int mode_flags_to_open_flags(File::ModeFlags modeflags) {
