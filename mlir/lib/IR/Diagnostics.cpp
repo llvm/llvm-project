@@ -161,9 +161,22 @@ Diagnostic &Diagnostic::operator<<(Value val) {
   return *this << str;
 }
 
-/// Outputs this diagnostic to a stream.
-void Diagnostic::print(raw_ostream &os) const {
-  for (auto &arg : getArguments())
+/// Outputs this diagnostic to a stream. `ChunkIdx` specifies which chunk to
+/// print to `os`. If empty, all arguments are printed to `os`.
+void Diagnostic::print(raw_ostream &os, std::optional<int64_t> chunkIdx) const {
+  if (!chunkIdx.has_value()) {
+    for (auto &arg : getArguments())
+      arg.print(os);
+    return;
+  }
+
+  assert(0 <= chunkIdx && chunkIdx <= chunkSizes.size());
+  size_t argumentStart = *chunkIdx - 1 >= 0 ? chunkSizes[*chunkIdx - 1] : 0;
+  size_t argumentEnd = *chunkIdx == static_cast<int64_t>(chunkSizes.size())
+                           ? arguments.size()
+                           : chunkSizes[*chunkIdx];
+  for (auto &arg :
+       getArguments().slice(argumentStart, argumentEnd - argumentStart))
     arg.print(os);
 }
 
@@ -173,6 +186,19 @@ std::string Diagnostic::str() const {
   llvm::raw_string_ostream os(str);
   print(os);
   return str;
+}
+
+/// Converts the diagnostic to a vector of strings, where each element
+/// represents a chunk.
+SmallVector<std::string> Diagnostic::strs() const {
+  SmallVector<std::string, 2> strs;
+  for (size_t i = 0, e = chunkSizes.size(); i <= e; ++i) {
+    std::string str;
+    llvm::raw_string_ostream os(str);
+    print(os, i);
+    strs.push_back(str);
+  }
+  return strs;
 }
 
 /// Attaches a note to this diagnostic. A new location may be optionally
@@ -195,6 +221,16 @@ Diagnostic &Diagnostic::attachNote(std::optional<Location> noteLoc) {
 
 /// Allow a diagnostic to be converted to 'failure'.
 Diagnostic::operator LogicalResult() const { return failure(); }
+
+/// Finalizes the current group of arguments and starts a new chunk.
+void Diagnostic::checkpointArguments() {
+  size_t size = arguments.size();
+  if (size == 0)
+    return;
+  if (!chunkSizes.empty() && chunkSizes.back() == arguments.size())
+    return;
+  chunkSizes.push_back(arguments.size());
+}
 
 //===----------------------------------------------------------------------===//
 // InFlightDiagnostic
@@ -505,11 +541,13 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
 
   // If the location stack is empty, use the initial location.
   if (locationStack.empty()) {
-    emitDiagnostic(diag.getLocation(), diag.str(), diag.getSeverity());
+    for (const std::string &str : diag.strs())
+      emitDiagnostic(diag.getLocation(), str, diag.getSeverity());
 
     // Otherwise, use the location stack.
   } else {
-    emitDiagnostic(locationStack.front().first, diag.str(), diag.getSeverity());
+    for (const std::string &str : diag.strs())
+      emitDiagnostic(locationStack.front().first, str, diag.getSeverity());
     for (auto &it : llvm::drop_begin(locationStack))
       emitDiagnostic(it.first, it.second, DiagnosticSeverity::Note);
   }
@@ -879,7 +917,8 @@ void SourceMgrDiagnosticVerifierHandler::registerInContext(MLIRContext *ctx) {
 
 /// Process a single diagnostic.
 void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
-  return process(diag.getLocation(), diag.str(), diag.getSeverity());
+  for (const std::string &str : diag.strs())
+    process(diag.getLocation(), str, diag.getSeverity());
 }
 
 /// Process a diagnostic at a certain location.
