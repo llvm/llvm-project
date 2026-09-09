@@ -65,7 +65,7 @@ add_entrypoint_object(
     libc.hdr.types.FILE
     libc.hdr.types.off_t
     libc.hdr.types.size_t
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.new
     libc.src.__support.File.file
     libc.src.__support.alloc_checker

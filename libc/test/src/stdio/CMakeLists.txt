@@ -169,6 +169,7 @@ add_libc_test(
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
     libc.test.UnitTest.MemoryMatcher
 )
 

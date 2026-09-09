@@ -1,9 +1,14 @@
-//===-- Unittests for the fmemopen function -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unit tests for fmemopen.
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/stdio_macros.h"
@@ -24,12 +29,15 @@
 #include "src/stdio/fwrite.h"
 #include "src/stdio/setvbuf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcFMemOpenTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
 using LIBC_NAMESPACE::cpp::scope_exit;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST_F(LlvmLibcFMemOpenTest, InitialPositionAndEnd) {
   struct Mode {
@@ -165,41 +173,49 @@ TEST_F(LlvmLibcFMemOpenTest, SeekBoundsAndEnd) {
   ::FILE *f = LIBC_NAMESPACE::fmemopen(storage, sizeof(storage), "w+");
   ASSERT_TRUE(f != nullptr);
   scope_exit close([&] { EXPECT_EQ(0, LIBC_NAMESPACE::fclose(f)); });
+
   EXPECT_EQ(size_t(3), LIBC_NAMESPACE::fwrite("ABC", 1, 3, f));
-  EXPECT_EQ(0, LIBC_NAMESPACE::fseek(f, 8, SEEK_SET));
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 8, SEEK_SET), Succeeds());
   EXPECT_EQ(8L, LIBC_NAMESPACE::ftell(f));
-  EXPECT_NE(0, LIBC_NAMESPACE::fseek(f, 9, SEEK_SET));
-  ASSERT_ERRNO_EQ(EINVAL);
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 9, SEEK_SET), Fails(EINVAL));
   EXPECT_EQ(8L, LIBC_NAMESPACE::ftell(f));
-  EXPECT_NE(0, LIBC_NAMESPACE::fseek(f, -1, SEEK_SET));
-  ASSERT_ERRNO_EQ(EINVAL);
-  EXPECT_EQ(0, LIBC_NAMESPACE::fseek(f, 0, SEEK_END));
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, -1, SEEK_SET), Fails(EINVAL));
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 0, SEEK_END), Succeeds());
   EXPECT_EQ(3L, LIBC_NAMESPACE::ftell(f));
-  EXPECT_EQ(0, LIBC_NAMESPACE::fseek(f, 2, SEEK_END));
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 2, SEEK_END), Succeeds());
   EXPECT_EQ(5L, LIBC_NAMESPACE::ftell(f));
+
   // Reading past the data end must not advance the memory stream's position.
   EXPECT_EQ(EOF, LIBC_NAMESPACE::fgetc(f));
   EXPECT_NE(0, LIBC_NAMESPACE::feof(f));
   EXPECT_EQ(0, LIBC_NAMESPACE::ferror(f));
-  EXPECT_EQ(0, LIBC_NAMESPACE::fseek(f, 0, SEEK_CUR));
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 0, SEEK_CUR), Succeeds());
   EXPECT_EQ(5L, LIBC_NAMESPACE::ftell(f));
-  EXPECT_EQ(0, LIBC_NAMESPACE::fseek(f, -1, SEEK_END));
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, -1, SEEK_END), Succeeds());
   EXPECT_EQ(2L, LIBC_NAMESPACE::ftell(f));
+
   const off_t offsets[] = {LIBC_NAMESPACE::cpp::numeric_limits<off_t>::min(),
                            LIBC_NAMESPACE::cpp::numeric_limits<off_t>::max()};
   for (off_t offset : offsets) {
-    EXPECT_NE(0, LIBC_NAMESPACE::fseeko(f, offset, SEEK_CUR));
-    ASSERT_ERRNO_EQ(EINVAL);
+    ASSERT_THAT(LIBC_NAMESPACE::fseeko(f, offset, SEEK_CUR), Fails(EINVAL));
     EXPECT_EQ(2L, LIBC_NAMESPACE::ftell(f));
   }
-  EXPECT_EQ(0, LIBC_NAMESPACE::fseek(f, 6, SEEK_SET));
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 6, SEEK_SET), Succeeds());
   EXPECT_EQ(size_t(1), LIBC_NAMESPACE::fwrite("Z", 1, 1, f));
-  EXPECT_EQ(0, LIBC_NAMESPACE::fseek(f, 0, SEEK_END));
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 0, SEEK_END), Succeeds());
   EXPECT_EQ(7L, LIBC_NAMESPACE::ftell(f));
   EXPECT_EQ('Z', storage[6]);
   EXPECT_EQ('\0', storage[7]);
-  EXPECT_NE(0, LIBC_NAMESPACE::fseek(f, 0, -1));
-  ASSERT_ERRNO_EQ(EINVAL);
+
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 0, -1), Fails(EINVAL));
   // The contents of the gap between the old end and position 6 are unspecified.
 }
 

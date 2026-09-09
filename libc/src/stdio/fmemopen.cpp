@@ -1,9 +1,14 @@
-//===-- Implementation of fmemopen ----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of fmemopen, a POSIX function.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fmemopen.h"
@@ -12,7 +17,7 @@
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
-#include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 #include "src/__support/alloc-checker.h"
@@ -36,23 +41,24 @@ class MemoryFile : public File {
   bool append;
 
   static FileIOResult memory_read(File *f, void *data, size_t size) {
-    auto *mf = static_cast<MemoryFile *>(f);
+    auto *mf = reinterpret_cast<MemoryFile *>(f);
     if (size == 0 || mf->position >= mf->end)
       return 0;
     size_t available = mf->end - mf->position;
-    size_t count = size < available ? size : available;
+    size_t count = cpp::min(size, available);
     inline_memcpy(data, mf->storage + mf->position, count);
     mf->position += count;
     return count;
   }
 
   static FileIOResult memory_write(File *f, const void *data, size_t size) {
-    auto *mf = static_cast<MemoryFile *>(f);
+    auto *mf = reinterpret_cast<MemoryFile *>(f);
     if (size == 0)
       return 0;
     size_t start = mf->append ? mf->end : mf->position;
     size_t available = mf->capacity - start;
-    size_t count = size < available ? size : available;
+    size_t count = cpp::min(size, available);
+    // POSIX fflush and fseek specify ENOSPC for a full fmemopen buffer.
     if (count == 0)
       return {0, ENOSPC};
     inline_memcpy(mf->storage + start, data, count);
@@ -68,7 +74,7 @@ class MemoryFile : public File {
   }
 
   static ErrorOr<off_t> memory_seek(File *f, off_t offset, int whence) {
-    auto *mf = static_cast<MemoryFile *>(f);
+    auto *mf = reinterpret_cast<MemoryFile *>(f);
     size_t base;
     switch (whence) {
     case SEEK_SET:
@@ -84,28 +90,19 @@ class MemoryFile : public File {
       return Error(EINVAL);
     }
 
-    size_t next;
-    if (offset < 0) {
-      // Avoid negating the minimum off_t, and compare before narrowing to
-      // size_t (which may be smaller than off_t).
-      uintmax_t distance = static_cast<uintmax_t>(-(offset + 1)) + 1;
-      if (distance > base)
-        return Error(EINVAL);
-      next = base - static_cast<size_t>(distance);
-    } else {
-      uintmax_t distance = static_cast<uintmax_t>(offset);
-      if (distance > mf->capacity - base)
-        return Error(EINVAL);
-      next = base + static_cast<size_t>(distance);
-    }
-    if (next > static_cast<uintmax_t>(cpp::numeric_limits<off_t>::max()))
-      return Error(EOVERFLOW);
+    // The bounds fit in off_t since no object is larger than PTRDIFF_MAX, so
+    // comparing in off_t needs no negation of offset or narrowing to size_t.
+    off_t min_offset = -static_cast<off_t>(base);
+    off_t max_offset = static_cast<off_t>(mf->capacity - base);
+    if (offset < min_offset || offset > max_offset)
+      return Error(EINVAL);
+    size_t next = base + static_cast<size_t>(offset);
     mf->position = next;
     return static_cast<off_t>(next);
   }
 
   static int memory_close(File *f) {
-    auto *mf = static_cast<MemoryFile *>(f);
+    auto *mf = reinterpret_cast<MemoryFile *>(f);
     File::remove_file(mf);
     if (mf->owns_storage)
       delete[] mf->storage;
