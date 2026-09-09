@@ -1251,8 +1251,13 @@ bool Parser::AnnotatePackIndexingTemplateName(CXXScopeSpec &SS,
 
   TemplateName Indexed = Actions.ActOnPackIndexingTemplateName(
       Template.get(), NameLoc, IndexExpr.get());
+
+  // If we are unable to index a template name, treat is as a non
+  // template and recover by eating the arguments and producing a
+  // TypeError annotation.
   if (Indexed.isNull())
-    return true;
+    TNK = TNK_Non_template;
+
   Template = TemplateTy::make(Indexed);
 
   // C++29 [temp.names]p7:
@@ -1273,11 +1278,14 @@ bool Parser::AnnotatePackIndexingTemplateName(CXXScopeSpec &SS,
   // C++29 [dcl.type.simple]p1:
   //   A type specifier is a placeholder for a deduced class type if [...] it
   //   is of the form typename pack-index-template-name.
-  if ((TNK == TNK_Type_template || TNK == TNK_Dependent_template_name) &&
-      getLangOpts().CPlusPlus17) {
+  if (Indexed.isNull() ||
+      ((TNK == TNK_Type_template || TNK == TNK_Dependent_template_name) &&
+       getLangOpts().CPlusPlus17)) {
     TypeResult Type =
-        Actions.ActOnPackIndexingDeducedTemplateSpecializationType(Indexed,
-                                                                   NameLoc);
+        Indexed.isNull()
+            ? TypeError()
+            : Actions.ActOnPackIndexingDeducedTemplateSpecializationType(
+                  Indexed, NameLoc);
     Tok.setKind(tok::annot_typename);
     setTypeAnnotation(Tok, Type);
   } else {
@@ -1292,7 +1300,7 @@ bool Parser::AnnotatePackIndexingTemplateName(CXXScopeSpec &SS,
   Tok.setLocation(NameLoc);
   Tok.setAnnotationEndLoc(T.getCloseLocation());
   PP.AnnotateCachedTokens(Tok);
-  return false;
+  return Indexed.isNull();
 }
 
 void Parser::AnnotateExistingIndexedTypeNamePack(ParsedType T,

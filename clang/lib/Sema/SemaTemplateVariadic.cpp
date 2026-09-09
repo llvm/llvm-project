@@ -1406,6 +1406,11 @@ TemplateName Sema::ActOnPackIndexingTemplateName(TemplateName Pattern,
   // C++29 [temp.names]p3:
   //   The simple-template-name P in a pack-index-template-name shall denote a
   //   pack.
+  if (!Pattern.getAsTemplateTemplateParmDecl()) {
+    Diag(NameLoc, diag::err_expected_name_of_pack) << Pattern;
+    return TemplateName();
+  }
+
   bool DenotesPack = Pattern.containsUnexpandedParameterPack();
   if (!DenotesPack)
     Diag(NameLoc, diag::err_expected_name_of_pack) << Pattern;
