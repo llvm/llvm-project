@@ -49,7 +49,7 @@ __device__ int hip_exchange(int *p, int v) {
 // CIR-LABEL: @_Z15opencl_exchangePVU7_Atomicii
 // CIR: cir.atomic.xchg relaxed
 // LLVM-LABEL: @_Z15opencl_exchangePVU7_Atomicii
-// LLVM: atomicrmw xchg ptr {{.*}} monotonic
+// LLVM: atomicrmw volatile xchg ptr {{.*}} monotonic
 __device__ int opencl_exchange(_Atomic(int) volatile *p, int v) {
   return __opencl_atomic_exchange(p, v, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
@@ -105,7 +105,7 @@ __device__ int hip_fetch_add(int *p, int v) {
 // CIR-LABEL: @_Z16opencl_fetch_addPVU7_Atomicii
 // CIR: cir.atomic.fetch add relaxed {{.*}} fetch_first
 // LLVM-LABEL: @_Z16opencl_fetch_addPVU7_Atomicii
-// LLVM: atomicrmw add ptr {{.*}} monotonic
+// LLVM: atomicrmw volatile add ptr {{.*}} monotonic
 __device__ int opencl_fetch_add(_Atomic(int) volatile *p, int v) {
   return __opencl_atomic_fetch_add(p, v, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
@@ -121,7 +121,7 @@ __device__ int hip_fetch_sub(int *p, int v) {
 // CIR-LABEL: @_Z16opencl_fetch_subPVU7_Atomicii
 // CIR: cir.atomic.fetch sub relaxed {{.*}} fetch_first
 // LLVM-LABEL: @_Z16opencl_fetch_subPVU7_Atomicii
-// LLVM: atomicrmw sub ptr {{.*}} monotonic
+// LLVM: atomicrmw volatile sub ptr {{.*}} monotonic
 __device__ int opencl_fetch_sub(_Atomic(int) volatile *p, int v) {
   return __opencl_atomic_fetch_sub(p, v, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
@@ -137,7 +137,7 @@ __device__ int hip_fetch_min(int *p, int v) {
 // CIR-LABEL: @_Z16opencl_fetch_minPVU7_Atomicii
 // CIR: cir.atomic.fetch min relaxed {{.*}} fetch_first
 // LLVM-LABEL: @_Z16opencl_fetch_minPVU7_Atomicii
-// LLVM: atomicrmw min ptr {{.*}} monotonic
+// LLVM: atomicrmw volatile min ptr {{.*}} monotonic
 __device__ int opencl_fetch_min(_Atomic(int) volatile *p, int v) {
   return __opencl_atomic_fetch_min(p, v, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
@@ -153,7 +153,7 @@ __device__ int hip_fetch_max(int *p, int v) {
 // CIR-LABEL: @_Z16opencl_fetch_maxPVU7_Atomicii
 // CIR: cir.atomic.fetch max relaxed {{.*}} fetch_first
 // LLVM-LABEL: @_Z16opencl_fetch_maxPVU7_Atomicii
-// LLVM: atomicrmw max ptr {{.*}} monotonic
+// LLVM: atomicrmw volatile max ptr {{.*}} monotonic
 __device__ int opencl_fetch_max(_Atomic(int) volatile *p, int v) {
   return __opencl_atomic_fetch_max(p, v, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
@@ -169,7 +169,7 @@ __device__ int hip_fetch_and(int *p, int v) {
 // CIR-LABEL: @_Z16opencl_fetch_andPVU7_Atomicii
 // CIR: cir.atomic.fetch and relaxed {{.*}} fetch_first
 // LLVM-LABEL: @_Z16opencl_fetch_andPVU7_Atomicii
-// LLVM: atomicrmw and ptr {{.*}} monotonic
+// LLVM: atomicrmw volatile and ptr {{.*}} monotonic
 __device__ int opencl_fetch_and(_Atomic(int) volatile *p, int v) {
   return __opencl_atomic_fetch_and(p, v, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
@@ -185,7 +185,7 @@ __device__ int hip_fetch_or(int *p, int v) {
 // CIR-LABEL: @_Z15opencl_fetch_orPVU7_Atomicii
 // CIR: cir.atomic.fetch or relaxed {{.*}} fetch_first
 // LLVM-LABEL: @_Z15opencl_fetch_orPVU7_Atomicii
-// LLVM: atomicrmw or ptr {{.*}} monotonic
+// LLVM: atomicrmw volatile or ptr {{.*}} monotonic
 __device__ int opencl_fetch_or(_Atomic(int) volatile *p, int v) {
   return __opencl_atomic_fetch_or(p, v, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
@@ -201,7 +201,7 @@ __device__ int hip_fetch_xor(int *p, int v) {
 // CIR-LABEL: @_Z16opencl_fetch_xorPVU7_Atomicii
 // CIR: cir.atomic.fetch xor relaxed {{.*}} fetch_first
 // LLVM-LABEL: @_Z16opencl_fetch_xorPVU7_Atomicii
-// LLVM: atomicrmw xor ptr {{.*}} monotonic
+// LLVM: atomicrmw volatile xor ptr {{.*}} monotonic
 __device__ int opencl_fetch_xor(_Atomic(int) volatile *p, int v) {
   return __opencl_atomic_fetch_xor(p, v, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
