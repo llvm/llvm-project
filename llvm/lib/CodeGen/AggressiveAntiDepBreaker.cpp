@@ -204,16 +204,28 @@ findLoopCarriedRename(MachineBasicBlock &MBB, MCRegister Reg,
                       const TargetInstrInfo &TII,
                       const TargetRegisterInfo &TRI) {
   LoopCarriedRename Rename{{}, BitVector(TRI.getNumRegs(), true)};
-  bool FoundFirstDef = false;
-  bool FoundSecondDef = false;
-  bool FoundUse = false;
+  enum class ScanPhase { BeforeFirstDef, RenameRange, AfterSecondDef };
+  ScanPhase Phase = ScanPhase::BeforeFirstDef;
+  bool FoundUseInRenameRange = false;
   bool FoundUseAfterSecondDef = false;
+
+  auto AddRenameRef = [&](MachineOperand &MO) {
+    if (!MO.isDebug()) {
+      const TargetRegisterClass *RC =
+          MO.getParent()->getRegClassConstraint(MO.getOperandNo(), &TII, &TRI);
+      if (!RC)
+        return false;
+      Rename.Candidates &= TRI.getAllocatableSet(*MBB.getParent(), RC);
+    }
+    Rename.Refs.push_back(&MO);
+    return true;
+  };
 
   for (MachineInstr &MI : MBB) {
     if (MI.isBundle())
       return std::nullopt;
     if (MI.isDebugInstr()) {
-      if (FoundFirstDef && !FoundSecondDef) {
+      if (Phase == ScanPhase::RenameRange) {
         for (MachineOperand &MO : MI.operands()) {
           if (!overlapsReg(MO, Reg, TRI))
             continue;
@@ -221,7 +233,8 @@ findLoopCarriedRename(MachineBasicBlock &MBB, MCRegister Reg,
             continue;
           if (MO.getReg() != Reg)
             return std::nullopt;
-          Rename.Refs.push_back(&MO);
+          if (!AddRenameRef(MO))
+            return std::nullopt;
         }
       }
       continue;
@@ -242,27 +255,28 @@ findLoopCarriedRename(MachineBasicBlock &MBB, MCRegister Reg,
         HasFullDef = true;
     }
 
-    if (!FoundFirstDef) {
+    if (Phase == ScanPhase::BeforeFirstDef) {
       for (MachineOperand &MO : MI.operands())
         if (overlapsReg(MO, Reg, TRI) && MO.readsReg())
           return std::nullopt;
       if (!HasFullDef)
         continue;
 
-      FoundFirstDef = true;
+      Phase = ScanPhase::RenameRange;
       for (MachineOperand &MO : MI.operands()) {
         if (!overlapsReg(MO, Reg, TRI))
           continue;
         if (MO.readsReg() || MO.isImplicit() || !MO.isRenamable())
           return std::nullopt;
-        Rename.Refs.push_back(&MO);
+        if (!AddRenameRef(MO))
+          return std::nullopt;
       }
       continue;
     }
 
-    if (!FoundSecondDef) {
+    if (Phase == ScanPhase::RenameRange) {
       if (HasFullDef) {
-        FoundSecondDef = true;
+        Phase = ScanPhase::AfterSecondDef;
         for (MachineOperand &MO : MI.operands()) {
           if (!overlapsReg(MO, Reg, TRI))
             continue;
@@ -276,8 +290,9 @@ findLoopCarriedRename(MachineBasicBlock &MBB, MCRegister Reg,
           if (MO.readsReg()) {
             if (MO.isTied() || !MO.isRenamable())
               return std::nullopt;
-            Rename.Refs.push_back(&MO);
-            FoundUse = true;
+            if (!AddRenameRef(MO))
+              return std::nullopt;
+            FoundUseInRenameRange = true;
           }
         }
         continue;
@@ -289,8 +304,9 @@ findLoopCarriedRename(MachineBasicBlock &MBB, MCRegister Reg,
         if (MO.getReg() != Reg || MO.getSubReg() || MO.isDef() ||
             MO.isImplicit() || !MO.readsReg() || !MO.isRenamable())
           return std::nullopt;
-        FoundUse = true;
-        Rename.Refs.push_back(&MO);
+        if (!AddRenameRef(MO))
+          return std::nullopt;
+        FoundUseInRenameRange = true;
       }
       continue;
     }
@@ -300,26 +316,8 @@ findLoopCarriedRename(MachineBasicBlock &MBB, MCRegister Reg,
         FoundUseAfterSecondDef = true;
   }
 
-  if (!FoundSecondDef || !FoundUse || !FoundUseAfterSecondDef)
-    return std::nullopt;
-
-  bool HasConstraint = false;
-  for (MachineOperand *MO : Rename.Refs) {
-    if (MO->isDebug())
-      continue;
-    const TargetRegisterClass *RC =
-        MO->getParent()->getRegClassConstraint(MO->getOperandNo(), &TII, &TRI);
-    if (!RC)
-      return std::nullopt;
-    BitVector Allocatable = TRI.getAllocatableSet(*MBB.getParent(), RC);
-    if (!HasConstraint) {
-      Rename.Candidates = std::move(Allocatable);
-      HasConstraint = true;
-    } else {
-      Rename.Candidates &= Allocatable;
-    }
-  }
-  if (!HasConstraint)
+  if (Phase != ScanPhase::AfterSecondDef || !FoundUseInRenameRange ||
+      !FoundUseAfterSecondDef)
     return std::nullopt;
 
   return Rename;
