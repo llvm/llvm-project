@@ -121,6 +121,7 @@
 ; CHECK-EP-VECTORIZER-START-NEXT: Running pass: NoOpFunctionPass on foo
 ; CHECK-O23-NEXT: Running pass: LoopSimplifyPass on foo
 ; CHECK-O23-NEXT: Running pass: LCSSAPass on foo
+; CHECK-O23-NEXT: Running pass: LoopFlattenPass on loop
 ; CHECK-O23-NEXT: Running pass: IndVarSimplifyPass on loop
 ; CHECK-O23-NEXT: Running pass: LoopDeletionPass on loop
 ; CHECK-O23-NEXT: Running pass: LoopFullUnrollPass on loop
