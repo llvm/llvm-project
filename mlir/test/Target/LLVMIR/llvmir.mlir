@@ -3437,14 +3437,32 @@ llvm.func @vec_type_hint_bfloat_vec() attributes {vec_type_hint = #llvm.vec_type
 // CHECK: declare !work_group_size_hint ![[#WORK_GROUP_SIZE_HINT:]] void @work_group_size_hint()
 llvm.func @work_group_size_hint() attributes {work_group_size_hint = array<i32: 128, 128, 128>}
 
+// Preserve signed i32 boundary values while keeping the dimension product within 64 bits.
+// CHECK: declare !work_group_size_hint ![[#WORK_GROUP_SIZE_HINT_SIGNED_BOUNDARY:]] void @work_group_size_hint_signed_boundary()
+llvm.func @work_group_size_hint_signed_boundary() attributes {work_group_size_hint = array<i32: 2147483647, -2147483648, 1>}
+
+// CHECK: declare !work_group_size_hint ![[#WORK_GROUP_SIZE_HINT_UNSIGNED_MAX:]] void @work_group_size_hint_unsigned_max()
+llvm.func @work_group_size_hint_unsigned_max() attributes {work_group_size_hint = array<i32: 1, 1, -1>}
+
 // CHECK: ![[#WORK_GROUP_SIZE_HINT]] = !{i32 128, i32 128, i32 128}
+// CHECK: ![[#WORK_GROUP_SIZE_HINT_SIGNED_BOUNDARY]] = !{i32 2147483647, i32 -2147483648, i32 1}
+// CHECK: ![[#WORK_GROUP_SIZE_HINT_UNSIGNED_MAX]] = !{i32 1, i32 1, i32 -1}
 
 // -----
 
 // CHECK: declare !reqd_work_group_size ![[#REQD_WORK_GROUP_SIZE:]] void @reqd_work_group_size()
 llvm.func @reqd_work_group_size() attributes {reqd_work_group_size = array<i32: 128, 256, 128>}
 
+// Preserve signed i32 boundary values while keeping the dimension product within 64 bits.
+// CHECK: declare !reqd_work_group_size ![[#REQD_WORK_GROUP_SIZE_SIGNED_BOUNDARY:]] void @reqd_work_group_size_signed_boundary()
+llvm.func @reqd_work_group_size_signed_boundary() attributes {reqd_work_group_size = array<i32: 2147483647, -2147483648, 1>}
+
+// CHECK: declare !reqd_work_group_size ![[#REQD_WORK_GROUP_SIZE_UNSIGNED_MAX:]] void @reqd_work_group_size_unsigned_max()
+llvm.func @reqd_work_group_size_unsigned_max() attributes {reqd_work_group_size = array<i32: 1, 1, -1>}
+
 // CHECK: ![[#REQD_WORK_GROUP_SIZE]] = !{i32 128, i32 256, i32 128}
+// CHECK: ![[#REQD_WORK_GROUP_SIZE_SIGNED_BOUNDARY]] = !{i32 2147483647, i32 -2147483648, i32 1}
+// CHECK: ![[#REQD_WORK_GROUP_SIZE_UNSIGNED_MAX]] = !{i32 1, i32 1, i32 -1}
 
 // -----
 
