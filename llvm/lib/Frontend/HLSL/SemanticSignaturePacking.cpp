@@ -22,7 +22,7 @@ char SignaturePackingError::ID;
 void SignaturePackingError::log(raw_ostream &OS) const {
   switch (Kind) {
   case SignatureOverflow:
-    OS << "signature elements do not fit in 32 rows";
+    OS << "signature elements do not fit in " << MaxSignatureRows << " rows";
     break;
   }
   OS << " (element " << ElementIndex << ")";
