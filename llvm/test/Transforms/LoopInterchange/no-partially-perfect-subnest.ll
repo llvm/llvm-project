@@ -1,5 +1,6 @@
-; RUN: opt < %s -passes=loop-interchange -loop-interchange-profitabilities=ignore -debug-only=loop-interchange -disable-output -S 2>%t
-; RUN: FileCheck --input-file=%t %s
+; REQUIRES: asserts
+; RUN: opt < %s -passes=loop-interchange -loop-interchange-profitabilities=ignore -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s
+
 
 ; There is no partially-perfect subnest here. Every innermost loop has a parent
 ; with multiple child loops, so collectPerfectNests() should return an empty
