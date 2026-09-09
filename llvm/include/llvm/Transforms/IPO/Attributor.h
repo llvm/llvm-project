@@ -1823,7 +1823,8 @@ struct Attributor {
 
   /// Return whether attributes can participate in fixed-point deduction.
   bool isDuringDeduction() const {
-    return Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE;
+    return Phase == AttributorPhase::SEEDING ||
+           Phase == AttributorPhase::UPDATE;
   }
 
   /// Mark the internal function \p F as live.
