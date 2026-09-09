@@ -13,8 +13,7 @@ class MockAcceleratorAddressSpacesTestCase(TestBase):
             self.skipTest("mock-accelerator plugin is not enabled")
 
     def accelerator_target(self, native_target):
-        for i in range(self.dbg.GetNumTargets()):
-            candidate = self.dbg.GetTargetAtIndex(i)
+        for candidate in self.dbg:
             if candidate != native_target:
                 return candidate
         return None
