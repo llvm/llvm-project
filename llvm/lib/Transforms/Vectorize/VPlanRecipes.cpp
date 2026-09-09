@@ -3184,6 +3184,11 @@ InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
   if (vputils::onlyFirstLaneUsed(this))
     return 0;
 
+  // If the vector body executes at most once, the canonical IV is a constant
+  // and every lane's step folds away with it.
+  if (VPCostContext::executesAtMostOnce(*getParent()->getPlan(), VF))
+    return 0;
+
   // Typically the operations are:
   //   1. Add the start index to each lane value.
   //   2. Multiply the start index by the step.

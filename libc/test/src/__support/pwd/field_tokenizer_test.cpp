@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/span.h"
-#include "src/pwd/field_tokenizer.h"
+#include "src/__support/pwd/field_tokenizer.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcFieldTokenizerTest, StandardPasswdLine) {

@@ -5719,7 +5719,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                  BestVF, BestUF, PSE);
   RUN_VPLAN_PASS(VPlanTransforms::optimizeForVFAndUF, BestVPlan, BestVF, BestUF,
                  PSE);
-  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   // Check if scalar epilogue is required, before simplifying constant branches.
   const bool RequiresScalarEpilogue = BestVPlan.requiresScalarEpilogue();
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
@@ -5776,13 +5776,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     RUN_VPLAN_PASS(VPlanTransforms::expandSCEVsToVPInstructions, BestVPlan,
                    *PSE.getSE());
   RUN_VPLAN_PASS(VPlanTransforms::cse, BestVPlan);
-  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   // Removing branches and incoming values may expose additional simplification
   // opportunities.
   if (RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                      /*OnlyLatches=*/EpilogueVecKind !=
                          EpilogueVectorizationKind::None))
-    RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
+    RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyKnownEVL, BestVPlan, BestVF, PSE);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
@@ -6387,7 +6387,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   if (const LoopAccessInfo *LAI = Legal->getLAI())
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
                    LAI->getSymbolicStrides(), VPDT);
-  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
 
   // Create recipes for header phis. For outer loops, reductions, recurrences
