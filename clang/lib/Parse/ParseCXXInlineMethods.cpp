@@ -559,6 +559,64 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     LM.ExceptionSpecTokens = nullptr;
   }
 
+  // A contract specifier within a member-specification is a complete-class
+  // context. Parse cached predicates now that all members of the enclosing
+  // class are known.
+  for (auto &Contract : LM.ContractSpecifiers) {
+    std::unique_ptr<CachedTokens> Toks = std::move(Contract.PredicateTokens);
+    if (!Toks || Toks->empty())
+      continue;
+
+    ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
+    Token LastContractToken = Toks->back();
+    Token ContractEnd;
+    ContractEnd.startToken();
+    ContractEnd.setKind(tok::eof);
+    ContractEnd.setLocation(LastContractToken.getEndLoc());
+    ContractEnd.setEofData(LM.Method);
+    Toks->push_back(ContractEnd);
+
+    Toks->push_back(Tok); // So that the current token doesn't get lost.
+    PP.EnterTokenStream(*Toks, true, /*IsReinject=*/true);
+    ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
+
+    FunctionDecl *FunctionToPush;
+    if (auto *FunTmpl = dyn_cast<FunctionTemplateDecl>(LM.Method))
+      FunctionToPush = FunTmpl->getTemplatedDecl();
+    else
+      FunctionToPush = cast<FunctionDecl>(LM.Method);
+    auto *Method = dyn_cast<CXXMethodDecl>(FunctionToPush);
+
+    ParseScope FnScope(this, Scope::FnScope);
+    Sema::ContextRAII FnContext(Actions, FunctionToPush,
+                                /*NewThisContext=*/false);
+    Sema::CXXThisScopeRAII ThisScope(
+        Actions, Method ? Method->getParent() : nullptr,
+        Method ? Method->getMethodQualifiers() : Qualifiers{},
+        Method && Method->isImplicitObjectMemberFunction() &&
+            getLangOpts().CPlusPlus11);
+
+    std::optional<ParseScope> ResultNameScope;
+    if (Contract.IsPost && Contract.ResultName) {
+      ResultNameScope.emplace(this, Scope::DeclScope);
+      Actions.ActOnPostConditionResultName(getCurScope(), Contract.ResultName,
+                                           Contract.ResultNameLoc);
+    }
+
+    ExprResult Predicate = ParseConditionalExpression();
+    ResultNameScope.reset();
+
+    if (Predicate.isUsable() &&
+        (Tok.isNot(tok::eof) || Tok.getEofData() != LM.Method))
+      Diag(Tok, diag::err_expected) << tok::r_paren;
+
+    while (Tok.isNot(tok::eof))
+      ConsumeAnyToken();
+    if (Tok.is(tok::eof) && Tok.getEofData() == LM.Method)
+      ConsumeAnyToken();
+  }
+
   InFunctionTemplateScope.Scopes.Exit();
 
   // Finish the delayed C++ method declaration.

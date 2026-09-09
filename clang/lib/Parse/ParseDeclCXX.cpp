@@ -2424,7 +2424,8 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator &DeclaratorInfo,
   DeclaratorChunk::FunctionTypeInfo &FTI = DeclaratorInfo.getFunctionTypeInfo();
   // If there was a late-parsed exception-specification, we'll need a
   // late parse
-  bool NeedLateParse = FTI.getExceptionSpecType() == EST_Unparsed;
+  bool NeedLateParse = FTI.getExceptionSpecType() == EST_Unparsed ||
+                       DeclaratorInfo.hasLateParsedContractSpecifiers();
 
   if (!NeedLateParse) {
     // Look ahead to see if there are any default args
@@ -2445,7 +2446,8 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator &DeclaratorInfo,
 
     // Push tokens for each parameter. Those that do not have defaults will be
     // NULL. We need to track all the parameters so that we can push them into
-    // scope for later parameters and perhaps for the exception specification.
+    // scope for later parameters, the exception specification, and contract
+    // predicates.
     LateMethod->DefaultArgs.reserve(FTI.NumParams);
     for (unsigned ParamIdx = 0; ParamIdx < FTI.NumParams; ++ParamIdx)
       LateMethod->DefaultArgs.push_back(LateParsedDefaultArgument(
@@ -2457,6 +2459,9 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator &DeclaratorInfo,
       LateMethod->ExceptionSpecTokens = FTI.ExceptionSpecTokens;
       FTI.ExceptionSpecTokens = nullptr;
     }
+
+    for (auto &Contract : DeclaratorInfo.getLateParsedContractSpecifiers())
+      LateMethod->ContractSpecifiers.push_back(std::move(Contract));
   }
 }
 
@@ -2636,6 +2641,12 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   // For compatibility with code written to older Clang, also accept a
   // virt-specifier *after* the GNU attributes.
   if (BitfieldSize.isUnset() && VS.isUnset()) {
+    if (DeclaratorInfo.hasLateParsedContractSpecifiers()) {
+      VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier();
+      if (Specifier != VirtSpecifiers::VS_None)
+        Diag(Tok, diag::err_virt_specifier_after_contract)
+            << VirtSpecifiers::getSpecifierName(Specifier);
+    }
     ParseOptionalCXX11VirtSpecifierSeq(
         VS, getCurrentClass().IsInterface,
         DeclaratorInfo.getDeclSpec().getFriendSpecLoc());
@@ -4272,12 +4283,33 @@ void Parser::ParseContractSpecifiers(Declarator &D) {
 
     // FIXME: We should accept attribute for the result binding, e.g.,
     // post(r [[attr]] : expr).
+    IdentifierInfo *ResultName = nullptr;
+    SourceLocation ResultNameLoc;
     std::optional<ParseScope> ResultNameScope;
     if (IsPost && Tok.is(tok::identifier) && NextToken().is(tok::colon)) {
-      IdentifierInfo *ResultName = Tok.getIdentifierInfo();
-      SourceLocation ResultNameLoc = ConsumeToken();
+      ResultName = Tok.getIdentifierInfo();
+      ResultNameLoc = ConsumeToken();
       ConsumeToken();
+    }
 
+    // A function contract specifier in a member-specification is a
+    // complete-class context. Cache its predicate so that name lookup and
+    // semantic analysis happen after the enclosing class is complete.
+    if (D.getContext() == DeclaratorContext::Member) {
+      auto PredicateTokens = std::make_unique<CachedTokens>();
+      ConsumeAndStoreUntil(tok::r_paren, *PredicateTokens,
+                           /*StopAtSemi=*/false,
+                           /*ConsumeFinalToken=*/false);
+      if (PredicateTokens->empty())
+        Diag(Tok, diag::err_expected_expression);
+      T.consumeClose();
+
+      D.addLateParsedContractSpecifier(
+          {IsPost, ResultName, ResultNameLoc, std::move(PredicateTokens)});
+      continue;
+    }
+
+    if (ResultName) {
       ResultNameScope.emplace(this, Scope::DeclScope);
       Actions.ActOnPostConditionResultName(getCurScope(), ResultName,
                                            ResultNameLoc);

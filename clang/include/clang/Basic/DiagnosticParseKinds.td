@@ -337,6 +337,8 @@ def err_ms_attributes_not_enabled : Error<
 def err_expected_method_body : Error<"expected method body">;
 def err_declspec_after_virtspec : Error<
   "'%0' qualifier may not appear after the virtual specifier '%1'">;
+def err_virt_specifier_after_contract : Error<
+  "virtual specifier '%0' must appear before contract specifiers">;
 def err_invalid_token_after_toplevel_declarator : Error<
   "expected ';' after top level declarator">;
 def err_invalid_token_after_declarator_suggest_equal : Error<

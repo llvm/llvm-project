@@ -55,6 +55,42 @@ struct Widget {
   }
 };
 
+struct CompleteClassContext {
+  bool check() pre(sizeof(CompleteClassContext) > 0);
+  bool check_later_member() pre(sizeof(LaterMember) > 0);
+  bool check_later_data() const pre(this->value > 0);
+  int result() post(value: value >= 0);
+
+  struct LaterMember {};
+  int value;
+};
+
+struct ExplicitObjectMemberFunctions {
+  int value;
+
+  bool valid(this ExplicitObjectMemberFunctions &self)
+      pre(self.value > 0);
+  // expected-error@+2 {{invalid use of 'this' in a function with an explicit object parameter}}
+  bool invalid(this ExplicitObjectMemberFunctions &self)
+      pre(this->value > 0);
+};
+
+struct OuterCompleteClassContext {
+  struct Inner {
+    bool check() pre(sizeof(OuterCompleteClassContext) > 0 &&
+                     sizeof(Inner) > 0);
+  };
+};
+
+struct Base {
+  virtual void overridden();
+};
+
+struct Derived : Base {
+  // expected-error@+1 {{virtual specifier 'override' must appear before contract specifiers}}
+  void overridden() pre(true) override;
+};
+
 Widget::Widget(int input) pre(input > 0) : value(input) {}
 Widget::~Widget() pre(true) {}
 
