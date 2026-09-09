@@ -74,20 +74,20 @@ static int map_c_mode_flags_to_linux_open_flags(FileMode mode) {
 
   int open_flags = 0;
 
-  if (file_mode.append_allowed()) {
+  if (file_mode.is_append()) {
     open_flags = O_CREAT | O_APPEND;
-    if (file_mode.is_plus())
+    if (file_mode.is_update())
       open_flags |= O_RDWR;
     else
       open_flags |= O_WRONLY;
-  } else if (file_mode.write_allowed()) {
+  } else if (file_mode.is_write()) {
     open_flags = O_CREAT | O_TRUNC;
-    if (file_mode.is_plus())
+    if (file_mode.is_update())
       open_flags |= O_RDWR;
     else
       open_flags |= O_WRONLY;
   } else {
-    if (file_mode.is_plus())
+    if (file_mode.is_update())
       open_flags |= O_RDWR;
     else
       open_flags |= O_RDONLY;
@@ -140,18 +140,26 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   }
   int fd_flags = result.value();
 
-  const bool REQUIRES_WRITE = file_mode.write_allowed() ||
-                              file_mode.append_allowed() || file_mode.is_plus();
+  // constants to check whether a file descriptor was opened in read or write
+  // only mode
+  const bool FD_OPENED_IN_READ_ONLY = (fd_flags & O_ACCMODE) == O_RDONLY;
+  const bool FD_OPENED_IN_WRITE_ONLY = (fd_flags & O_ACCMODE) == O_WRONLY;
 
-  const bool REQUIRES_READ = file_mode.read_allowed() || file_mode.is_plus();
-
-  if (((fd_flags & O_ACCMODE) == O_RDONLY && REQUIRES_WRITE) ||
-      ((fd_flags & O_ACCMODE) == O_WRONLY && REQUIRES_READ)) {
+  if ((FD_OPENED_IN_READ_ONLY && file_mode.write_allowed()) ||
+      (FD_OPENED_IN_WRITE_ONLY && file_mode.read_allowed())) {
     return Error(EINVAL);
   }
 
   bool do_seek = false;
-  if (file_mode.append_allowed() && !(fd_flags & O_APPEND)) {
+
+  // TODO: Ask Michael if this explicit value is better. I think it is more
+  // readable in the conditional statements than the bit manipulations.
+  //
+  // TODO<me>: If he agrees check for conditional statements with bit checking
+  // and rework their use.
+  const bool APPEND_MODE_IS_ENABLED_IN_FD = fd_flags & O_APPEND;
+
+  if (file_mode.is_append() && !APPEND_MODE_IS_ENABLED_IN_FD) {
     do_seek = true;
     if (!linux_syscalls::fcntl(fd, F_SETFL,
                                reinterpret_cast<void *>(fd_flags | O_APPEND))
@@ -255,27 +263,27 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
     return EBADF;
   int fd_flags = result.value();
 
-  const bool REQUIRES_WRITE = file_mode.write_allowed() ||
-                              file_mode.append_allowed() || file_mode.is_plus();
+  // constants to check whether a file descriptor was opened in read or write
+  // only mode
+  const bool FD_OPENED_IN_READ_ONLY = (fd_flags & O_ACCMODE) == O_RDONLY;
+  const bool FD_OPENED_IN_WRITE_ONLY = (fd_flags & O_ACCMODE) == O_WRONLY;
 
-  const bool REQUIRES_READ = file_mode.write_allowed() || file_mode.is_plus();
-
-  if (((fd_flags & O_ACCMODE) == O_RDONLY && REQUIRES_WRITE) ||
-      ((fd_flags & O_ACCMODE) == O_WRONLY && REQUIRES_READ)) {
+  if ((FD_OPENED_IN_READ_ONLY && file_mode.write_allowed()) ||
+      (FD_OPENED_IN_WRITE_ONLY && file_mode.read_allowed())) {
     return EBADF;
   }
 
   bool do_seek = false;
   bool has_append_flag = fd_flags & O_APPEND;
 
-  if (file_mode.append_allowed() && !has_append_flag) {
+  if (file_mode.is_append() && !has_append_flag) {
     if (!linux_syscalls::fcntl(fd, F_SETFL,
                                reinterpret_cast<void *>(fd_flags | O_APPEND))
              .has_value()) {
       return EBADF;
     }
     do_seek = true;
-  } else if (!file_mode.append_allowed() && has_append_flag) {
+  } else if (!file_mode.is_append() && has_append_flag) {
     if (!linux_syscalls::fcntl(fd, F_SETFL,
                                reinterpret_cast<void *>(fd_flags & ~O_APPEND))
              .has_value()) {
