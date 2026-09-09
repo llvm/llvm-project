@@ -4,7 +4,7 @@
 # Test that redundant_and fires before overlapping_and for and(and(x, C), C)
 # where both constants are identical.
 #
-# Before 97f2b2f1a136, commit 3741dacd195a migrated redundant_and from
+# Commit 3741dacd195a migrated redundant_and from
 # wip_match_opcode to MIR-pattern but left overlapping_and as
 # wip_match_opcode. In the generated combiner match table, wip_match_opcode
 # rules run before MIR-pattern rules, so overlapping_and fired first and
