@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/MC/MCContext.h"
 #include <map>
 
 namespace llvm {
