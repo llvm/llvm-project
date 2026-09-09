@@ -24,13 +24,13 @@ TEST(LlvmLibcWcscasecmpTest, EmptyVsNonEmptyStrings) {
 }
 
 TEST(LlvmLibcWcscasecmpTest, Substrings) {
-  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"abc", L"ab"), 0);
-  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"abc", L"a"), 0);
-  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"abc", L""), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"aβc", L"aβ"), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"aβc", L"a"), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"aβc", L""), 0);
 
-  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"ab", L"abc"), 0);
-  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"a", L"abc"), 0);
-  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"", L"abc"), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"aβ", L"aβc"), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"a", L"aβc"), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"", L"aβc"), 0);
 }
 
 TEST(LlvmLibcWcscasecmpTest, MatchingStringsIgnoreCase) {
@@ -48,13 +48,13 @@ TEST(LlvmLibcWcscasecmpTest, MatchingStringsIgnoreCase) {
 }
 
 TEST(LlvmLibcWcscasecmpTest, NonMatchingStrings) {
-  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"Xbc", L"abc"), 0);
-  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"aXc", L"abc"), 0);
-  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"abX", L"abc"), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"Δbc", L"abc"), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"aΔc", L"abc"), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcscasecmp(L"abΔ", L"abc"), 0);
 
-  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"abc", L"Xbc"), 0);
-  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"abc", L"aXc"), 0);
-  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"abc", L"abX"), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"abc", L"Δbc"), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"abc", L"aΔc"), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcscasecmp(L"abc", L"abΔ"), 0);
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)

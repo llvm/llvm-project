@@ -26,13 +26,13 @@ TEST(LlvmLibcWcsncasecmpTest, EmptyVsNonEmptyStringsUnlimited) {
 }
 
 TEST(LlvmLibcWcsncasecmpTest, SubstringsUnlimited) {
-  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"ab", INT_MAX), 0);
-  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"a", INT_MAX), 0);
-  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"", INT_MAX), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"aβc", L"aβ", INT_MAX), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"aβc", L"a", INT_MAX), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"aβc", L"", INT_MAX), 0);
 
-  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"ab", L"abc", INT_MAX), 0);
-  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"a", L"abc", INT_MAX), 0);
-  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"", L"abc", INT_MAX), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"aβ", L"aβc", INT_MAX), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"a", L"aβc", INT_MAX), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"", L"aβc", INT_MAX), 0);
 }
 
 TEST(LlvmLibcWcsncasecmpTest, MatchingStringsIgnoreCaseUnlimited) {
@@ -50,22 +50,22 @@ TEST(LlvmLibcWcsncasecmpTest, MatchingStringsIgnoreCaseUnlimited) {
 }
 
 TEST(LlvmLibcWcsncasecmpTest, NonMatchingStringsUnlimited) {
-  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"Xbc", L"abc", INT_MAX), 0);
-  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"aXc", L"abc", INT_MAX), 0);
-  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"abX", L"abc", INT_MAX), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"Δbc", L"abc", INT_MAX), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"aΔc", L"abc", INT_MAX), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wcsncasecmp(L"abΔ", L"abc", INT_MAX), 0);
 
-  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"Xbc", INT_MAX), 0);
-  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"aXc", INT_MAX), 0);
-  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"abX", INT_MAX), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"Δbc", INT_MAX), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"aΔc", INT_MAX), 0);
+  EXPECT_LT(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"abΔ", INT_MAX), 0);
 }
 
 TEST(LlvmLibcWcsncasecmpTest, CompareAtMostStartingMatch) {
-  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"", 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγδ", L"", 0), 0);
   EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"", L"def", 0), 0);
 
-  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"def", 0), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"ade", 1), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"abd", 2), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγδ", L"def", 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγδ", L"βde", 1), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγδ", L"βγd", 2), 0);
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)
