@@ -143,6 +143,11 @@ struct TestLinalgElementwiseFusion
       llvm::cl::desc("Test fusion of producer ops with multiple uses"),
       llvm::cl::init(false)};
 
+  Option<bool> testInvalidElementwiseKindBuilder{
+      *this, "test-invalid-elementwise-kind-builder",
+      llvm::cl::desc("Test building an elementwise op with an invalid kind"),
+      llvm::cl::init(false)};
+
   ListOption<int64_t> collapseDimensions{
       *this, "collapse-dimensions-control",
       llvm::cl::desc("Test controlling dimension collapse pattern")};
@@ -150,6 +155,19 @@ struct TestLinalgElementwiseFusion
   void runOnOperation() override {
     MLIRContext *context = &this->getContext();
     func::FuncOp funcOp = this->getOperation();
+
+    if (testInvalidElementwiseKindBuilder) {
+      OpBuilder builder = OpBuilder::atBlockBegin(&funcOp.front());
+      linalg::ElementwiseOp missingKindOp = linalg::ElementwiseOp::create(
+          builder, funcOp.getLoc(), ValueRange{}, ValueRange{});
+      missingKindOp.erase();
+
+      NamedAttribute kind = builder.getNamedAttr("kind", builder.getUnitAttr());
+      linalg::ElementwiseOp wrongKindOp = linalg::ElementwiseOp::create(
+          builder, funcOp.getLoc(), ValueRange{}, ValueRange{}, kind);
+      wrongKindOp.erase();
+      return;
+    }
 
     if (fuseGenericOps) {
       RewritePatternSet fusionPatterns(context);

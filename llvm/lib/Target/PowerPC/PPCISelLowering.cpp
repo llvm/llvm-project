@@ -102,6 +102,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-lowering"
 
+extern cl::opt<bool> EnablePPCGenScalarMASSEntries;
+
 static cl::opt<bool> DisableP10StoreForward(
     "disable-p10-store-forward",
     cl::desc("disable P10 store forward-friendly conversion"), cl::Hidden,
@@ -4281,13 +4283,10 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
         case MVT::v16i8:
         case MVT::v8i16:
         case MVT::v4i32:
-          RC = &PPC::VRRCRegClass;
-          break;
         case MVT::v4f32:
-          RC = &PPC::VRRCRegClass;
-          break;
         case MVT::v2f64:
         case MVT::v2i64:
+        case MVT::f128:
           RC = &PPC::VRRCRegClass;
           break;
       }
@@ -20773,7 +20772,8 @@ bool PPCTargetLowering::isLowringToMASSSafe(SDValue Op) const {
 }
 
 bool PPCTargetLowering::isScalarMASSConversionEnabled() const {
-  return getTargetMachine().Options.PPCGenScalarMASSEntries;
+  return getTargetMachine().getOptLevel() == CodeGenOptLevel::Aggressive &&
+         EnablePPCGenScalarMASSEntries;
 }
 
 SDValue PPCTargetLowering::lowerLibCallBase(const char *LibCallDoubleName,

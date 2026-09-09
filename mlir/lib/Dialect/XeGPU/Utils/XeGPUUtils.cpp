@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Casting.h"
@@ -160,19 +161,30 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     }
 
     std::string layoutName = getTemporaryLayoutName(result);
-    if (defOp->hasAttr(layoutName)) {
+    if (defOp->hasDiscardableAttr(layoutName)) {
       auto layout =
-          defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+          defOp->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(
+              layoutName);
       return layout;
     }
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto *parentOp = arg.getOwner()->getParentOp();
-    if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
-      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      if (tiedInit)
+    auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp);
+    if (loop)
+      if (OpOperand *tiedInit = loop.getTiedLoopInit(arg))
         return getTemporaryLayout(*tiedInit);
+    // An scf.while "after" argument is tied to no init operand; scf.condition
+    // feeds it. Only a pass-through is supported: the forwarded value must be
+    // the matching "before" argument, whose tied init operand carries the
+    // layout.
+    if (auto whileOp = dyn_cast_if_present<scf::WhileOp>(parentOp);
+        whileOp && arg.getOwner()->getParent() == &whileOp.getAfter()) {
+      Value forwarded = whileOp.getConditionOp().getArgs()[arg.getArgNumber()];
+      if (auto beforeArg = dyn_cast<BlockArgument>(forwarded))
+        if (OpOperand *tiedInit = whileOp.getTiedLoopInit(beforeArg))
+          return getTemporaryLayout(*tiedInit);
     }
   }
 
@@ -254,8 +266,9 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -312,11 +325,11 @@ void xegpu::setDistributeLayoutAttr(
   }
 
   std::string name = xegpu::getTemporaryLayoutName(result);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -360,11 +373,11 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
   }
 
   std::string name = xegpu::getTemporaryLayoutName(operand);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -374,8 +387,9 @@ xegpu::getTemporaryLayout(const T &operandOrResult) {
   Operation *op = operandOrResult.getOwner();
 
   std::string layoutName = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -392,11 +406,11 @@ void xegpu::setTemporaryLayout(const T &operandOrResult,
                                const xegpu::DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 

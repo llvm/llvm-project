@@ -176,6 +176,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {save_reg_params} : () -> ()
   llvm.call @baz() {save_reg_params} : () -> ()
 
+// CHECK: llvm.call @baz() {uniform_work_group_size} : () -> ()
+  llvm.call @baz() {uniform_work_group_size} : () -> ()
+
 // CHECK: llvm.call @baz() {zero_call_used_regs = "all"} : () -> ()
   llvm.call @baz() {zero_call_used_regs="all"} : () -> ()
 
@@ -274,6 +277,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 
 // CHECK: llvm.intr.bitreverse(%{{.*}}) : (i32) -> i32
   %32 = llvm.intr.bitreverse(%arg0) : (i32) -> i32
+
+// CHECK: llvm.intr.clmul(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %clmul = llvm.intr.clmul(%arg0, %arg0) : (i32, i32) -> i32
 
 // CHECK: llvm.intr.ctpop(%{{.*}}) : (i32) -> i32
   %33 = llvm.intr.ctpop(%arg0) : (i32) -> i32
@@ -664,6 +670,17 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   llvm.return %0 : i32
 }
 
+// CHECK-LABEL: @invokeUniformWorkGroupSize
+llvm.func @invokeUniformWorkGroupSize() attributes { personality = @__gxx_personality_v0 } {
+  // CHECK: llvm.invoke @baz() to ^{{.*}} unwind ^{{.*}} {uniform_work_group_size}
+  llvm.invoke @baz() to ^bb1 unwind ^bb2 {uniform_work_group_size} : () -> ()
+^bb1:
+  llvm.return
+^bb2:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+}
+
 // CHECK-LABEL: @useFreezeOp
 func.func @useFreezeOp(%arg0: i32) {
   // CHECK:  = llvm.freeze %[[ARG0:.*]] : i32
@@ -706,6 +723,9 @@ llvm.func @useInlineAsm(%arg0: i32) {
 
   // CHECK-NEXT:  llvm.inline_asm "foo", "=r,=r,r" {{.*}} : (i32) -> !llvm.struct<(i8, i8)>
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+
+  // CHECK-NEXT:  llvm.inline_asm convergent {{.*}} (i32) -> i8
+  %6 = llvm.inline_asm convergent "bswap $0", "=r,r" %arg0 : (i32) -> i8
 
   llvm.return
 }
