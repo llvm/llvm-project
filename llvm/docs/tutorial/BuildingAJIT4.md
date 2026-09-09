@@ -39,5 +39,4 @@ Here is the code:
 :language: c++
 ```
 
-[Next: Remote-JITing -- Process-isolation and laziness-at-a-distance](https://llvm.org/docs/tutorial/BuildingAJIT5.html)
-
+Next: Remote-JITing -- Process-isolation and laziness-at-a-distance

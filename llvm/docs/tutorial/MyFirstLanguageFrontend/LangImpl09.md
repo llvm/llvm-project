@@ -160,7 +160,7 @@ corresponds 1:1 similarly to `IRBuilder` and LLVM IR, but with nicer names.
 Using it does require that you be more familiar with DWARF terminology than
 you needed to be with `IRBuilder` and `Instruction` names, but if you
 read through the general documentation on the
-[Metadata Format](https://llvm.org/docs/SourceLevelDebugging.html) it
+{doc}`Metadata Format <../../SourceLevelDebugging>` it
 should be a little more clear. We'll be using this class to construct all
 of our IR level descriptions. Construction for it takes a module so we
 need to construct it shortly after we construct our module. We've left it
@@ -450,4 +450,3 @@ Here is the code:
 ```
 
 [Next: Conclusion and other useful LLVM tidbits](LangImpl10.md)
-

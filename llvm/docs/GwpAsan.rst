@@ -119,7 +119,7 @@ Usage
 =====
 
 GWP-ASan already ships by default in the
-`Scudo Hardened Allocator <https://llvm.org/docs/ScudoHardenedAllocator.html>`_,
+:doc:`Scudo Hardened Allocator <ScudoHardenedAllocator>`,
 so building with ``-fsanitize=scudo`` is the quickest and easiest way to try out
 GWP-ASan.
 
