@@ -209,8 +209,11 @@ template <typename AnalysisT, typename Diagnostic> struct DiagnosisCallbacks {
   DiagnosisCallback<AnalysisT, Diagnostic> After;
 };
 
-/// Default for the maximum number of SAT solver iterations during analysis.
-inline constexpr std::int64_t kDefaultMaxSATIterations = 1'000'000'000;
+/// A factory for creating a Solver.
+using SolverFactory = std::function<std::unique_ptr<Solver>()>;
+
+/// Default SolverFactory.
+std::unique_ptr<Solver> createDefaultSolver();
 
 /// Default for the maximum number of block visits during analysis.
 inline constexpr std::int32_t kDefaultMaxBlockVisits = 20'000;
@@ -307,12 +310,8 @@ auto createAnalysis(ASTContext &ASTCtx, Environment &Env)
 /// error. Currently, errors can occur (at least) because the analysis requires
 /// too many iterations over the CFG or the SAT solver times out.
 ///
-/// The default value of `MaxSATIterations` was chosen based on the following
-/// observations:
-/// - Non-pathological calls to the solver typically require only a few hundred
-///   iterations.
-/// - This limit is still low enough to keep runtimes acceptable (on typical
-///   machines) in cases where we hit the limit.
+/// `MakeSolver` allows the caller to inject a custom SAT solver (e.g.,
+/// it may have custom timeout settings, or use different algorithms).
 ///
 /// `MaxBlockVisits` caps the number of block visits during analysis. See
 /// `runDataflowAnalysis` for a full description and explanation of the default
@@ -321,13 +320,13 @@ template <typename AnalysisT, typename Diagnostic>
 llvm::Expected<llvm::SmallVector<Diagnostic>>
 diagnoseFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
                  DiagnosisCallbacks<AnalysisT, Diagnostic> Diagnoser,
-                 std::int64_t MaxSATIterations = kDefaultMaxSATIterations,
+                 const SolverFactory &MakeSolver = createDefaultSolver,
                  std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits) {
   llvm::Expected<AdornedCFG> Context = AdornedCFG::build(FuncDecl);
   if (!Context)
     return Context.takeError();
 
-  auto Solver = std::make_unique<WatchedLiteralsSolver>(MaxSATIterations);
+  auto Solver = MakeSolver();
   DataflowAnalysisContext AnalysisContext(*Solver);
   Environment Env(AnalysisContext, FuncDecl);
   AnalysisT Analysis = createAnalysis<AnalysisT>(ASTCtx, Env);
@@ -382,10 +381,10 @@ template <typename AnalysisT, typename Diagnostic>
 llvm::Expected<llvm::SmallVector<Diagnostic>>
 diagnoseFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
                  DiagnosisCallback<AnalysisT, Diagnostic> Diagnoser,
-                 std::int64_t MaxSATIterations = kDefaultMaxSATIterations,
+                 const SolverFactory &MakeSolver = createDefaultSolver,
                  std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits) {
   DiagnosisCallbacks<AnalysisT, Diagnostic> Callbacks = {nullptr, Diagnoser};
-  return diagnoseFunction(FuncDecl, ASTCtx, Callbacks, MaxSATIterations,
+  return diagnoseFunction(FuncDecl, ASTCtx, Callbacks, MakeSolver,
                           MaxBlockVisits);
 }
 
