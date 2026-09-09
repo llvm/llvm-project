@@ -40,7 +40,6 @@ struct GPUInfo {
   AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
-  StringTable::Offset BaseName; // The canonical device name for a variant.
   uint8_t MaxWavesPerEU;
   uint32_t MaxHWAddressableLocalMemorySize;
   uint8_t LDSBankCount;
@@ -173,11 +172,6 @@ Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
 
 Triple::SubArchType llvm::AMDGPU::getSubArchFromGPUName(StringRef CPU) {
   return getSubArch(parseArchAMDGCN(CPU));
-}
-
-StringRef llvm::AMDGPU::getBaseArchNameAMDGCN(GPUKind AK) {
-  const GPUInfo *Info = getAMDGPUInfo(AK);
-  return Info ? AMDGPUNameStrTab[Info->BaseName] : "";
 }
 
 AMDGPU::GPUKind
@@ -451,6 +445,36 @@ unsigned AMDGPU::getVGPRAllocGranule(Triple::SubArchType SubArch,
   return getVGPRAllocGranule(getGPUKindFromSubArch(SubArch), IsWave32);
 }
 
+unsigned AMDGPU::getTotalNumVGPRs(GPUKind AK, bool IsWave32) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.test(FEAT_GFX90A_INSTS))
+    return 512;
+  if (!Features.test(FEAT_GFX10_INSTS))
+    return 256;
+  if (Features.test(FEAT_1536_PHYSICAL_VGPRS))
+    return IsWave32 ? 1536 : 768;
+  return IsWave32 ? 1024 : 512;
+}
+
+unsigned AMDGPU::getTotalNumVGPRs(Triple::SubArchType SubArch, bool IsWave32) {
+  return getTotalNumVGPRs(getGPUKindFromSubArch(SubArch), IsWave32);
+}
+
+unsigned AMDGPU::getAddressableNumVGPRs(GPUKind AK, bool IsWave32) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  // The unified register file makes the AGPRs addressable as VGPRs.
+  if (Features.test(FEAT_GFX90A_INSTS))
+    return 512;
+  if (Features.test(FEAT_1024_ADDRESSABLE_VGPRS))
+    return IsWave32 ? 1024 : 512;
+  return 256;
+}
+
+unsigned AMDGPU::getAddressableNumVGPRs(Triple::SubArchType SubArch,
+                                        bool IsWave32) {
+  return getAddressableNumVGPRs(getGPUKindFromSubArch(SubArch), IsWave32);
+}
+
 unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxHWAddressableLocalMemorySize : 32768;
@@ -494,12 +518,19 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
 // FIXME: This is hacky, we shouldn't have mismatches between the bitset and
 // feature string map.
 static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
-    FEAT_FAST_FMAF,           FEAT_FAST_DENORMAL_F32,
-    FEAT_SUPPORTS_WAVE32,     FEAT_SUPPORTS_WGP,
-    FEAT_XNACK_SUPPORT,       FEAT_SRAMECC_SUPPORT,
-    FEAT_XNACK_ON_OFF_MODES,  FEAT_APERTURE_REGS,
-    FEAT_GET_DOORBELL_ID,     FEAT_AGPR_ALLOC,
-    FEAT_1536_PHYSICAL_VGPRS, FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY};
+    FEAT_FAST_FMAF,
+    FEAT_FAST_DENORMAL_F32,
+    FEAT_SUPPORTS_WAVE32,
+    FEAT_SUPPORTS_WGP,
+    FEAT_XNACK_SUPPORT,
+    FEAT_SRAMECC_SUPPORT,
+    FEAT_XNACK_ON_OFF_MODES,
+    FEAT_APERTURE_REGS,
+    FEAT_GET_DOORBELL_ID,
+    FEAT_AGPR_ALLOC,
+    FEAT_1536_PHYSICAL_VGPRS,
+    FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY,
+    FEAT_1024_ADDRESSABLE_VGPRS};
 
 // Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.

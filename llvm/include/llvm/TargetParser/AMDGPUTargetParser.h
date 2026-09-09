@@ -109,9 +109,6 @@ enum FeatureError : uint32_t {
 
 LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 
-/// The canonical GPU name for a variant name.
-LLVM_ABI StringRef getBaseArchNameAMDGCN(GPUKind AK);
-
 LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
 
 /// Returns the preferred subarch for a GPU name \p CPU, or NoSubArch if
@@ -214,6 +211,18 @@ LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getVGPRAllocGranule(GPUKind AK, bool IsWave32);
 LLVM_ABI unsigned getVGPRAllocGranule(Triple::SubArchType SubArch,
                                       bool IsWave32);
+
+/// \returns Number of physical VGPRs, i.e. the size of the register file a
+/// work-group's waves share. \p IsWave32 selects the wavefront size.
+LLVM_ABI unsigned getTotalNumVGPRs(GPUKind AK, bool IsWave32);
+LLVM_ABI unsigned getTotalNumVGPRs(Triple::SubArchType SubArch, bool IsWave32);
+
+/// \returns Number of VGPRs a single wave can address. On a target with a
+/// unified register file this covers the AGPRs as well. This does not account
+/// for dynamic VGPR mode, which caps allocation at a fixed number of blocks.
+LLVM_ABI unsigned getAddressableNumVGPRs(GPUKind AK, bool IsWave32);
+LLVM_ABI unsigned getAddressableNumVGPRs(Triple::SubArchType SubArch,
+                                         bool IsWave32);
 
 /// \returns Maximum LDS in bytes a single work-group can address. This is a
 /// fixed hardware cap and does not depend on how many SIMDs a work-group runs

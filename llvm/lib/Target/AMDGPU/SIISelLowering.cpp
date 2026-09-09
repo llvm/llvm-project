@@ -45,6 +45,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
@@ -1894,23 +1895,6 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   }
   default:
     return;
-  }
-}
-
-void SITargetLowering::CollectTargetIntrinsicOperands(
-    const CallInst &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
-  switch (cast<IntrinsicInst>(I).getIntrinsicID()) {
-  case Intrinsic::amdgcn_addrspacecast_nonnull: {
-    // The DAG's ValueType loses the addrspaces.
-    // Add them as 2 extra Constant operands "from" and "to".
-    unsigned SrcAS = I.getOperand(0)->getType()->getPointerAddressSpace();
-    unsigned DstAS = I.getType()->getPointerAddressSpace();
-    Ops.push_back(DAG.getTargetConstant(SrcAS, SDLoc(), MVT::i32));
-    Ops.push_back(DAG.getTargetConstant(DstAS, SDLoc(), MVT::i32));
-    break;
-  }
-  default:
-    break;
   }
 }
 
@@ -8602,9 +8586,11 @@ bool SITargetLowering::shouldUseLDSConstAddress(const GlobalValue *GV) const {
   // linker can assign their offsets.
   if (AMDGPUTargetMachine::EnableObjectLinking) {
     if (const auto *GVar = dyn_cast<GlobalVariable>(GV)) {
-      if (GVar->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-        assert(GVar->isDeclaration() && "AS3 GVs should be declaration here "
-                                        "when object linking is enabled");
+      if (GVar->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
+          GVar->getAddressSpace() == AMDGPUAS::BARRIER) {
+        assert(GVar->isDeclaration() &&
+               "AS 3 & 13 GVs should be declaration here "
+               "when object linking is enabled");
         return false;
       }
     }
@@ -9331,10 +9317,28 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
+  unsigned BaseAS = AS;
+  unsigned SANum = AMDGPU::getSyntheticApertureNumber(AS);
+  if (SANum != AMDGPU::SyntheticAperture::None)
+    BaseAS = AMDGPUAS::LOCAL_ADDRESS;
+
+  SDValue Aperture = getBaseSegmentAperture(BaseAS, DL, DAG);
+
+  if (SANum != AMDGPU::SyntheticAperture::None) {
+    SDValue Tag = DAG.getConstant(SANum, DL, MVT::i32);
+    return DAG.getNode(ISD::OR, DL, MVT::i32, Aperture, Tag);
+  }
+
+  return Aperture;
+}
+
+SDValue SITargetLowering::getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
+                                                 SelectionDAG &DAG) const {
+  const bool IsLDS = (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::BARRIER);
+
   if (Subtarget->hasApertureRegs()) {
-    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
-                                       ? AMDGPU::SRC_SHARED_BASE
-                                       : AMDGPU::SRC_PRIVATE_BASE;
+    const unsigned ApertureRegNo =
+        IsLDS ? AMDGPU::SRC_SHARED_BASE : AMDGPU::SRC_PRIVATE_BASE;
     assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
             !Subtarget->hasGloballyAddressableScratch()) &&
            "Cannot use src_private_base with globally addressable scratch!");
@@ -9356,8 +9360,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   // implicit kernargs.
   const Module *M = DAG.getMachineFunction().getFunction().getParent();
   if (AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5) {
-    ImplicitParameter Param =
-        (AS == AMDGPUAS::LOCAL_ADDRESS) ? SHARED_BASE : PRIVATE_BASE;
+    ImplicitParameter Param = IsLDS ? SHARED_BASE : PRIVATE_BASE;
     return loadImplicitKernelArgument(DAG, MVT::i32, DL, Align(4), Param);
   }
 
@@ -9375,7 +9378,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /
   // private_segment_aperture_base_hi.
-  uint32_t StructOffset = (AS == AMDGPUAS::LOCAL_ADDRESS) ? 0x40 : 0x44;
+  uint32_t StructOffset = IsLDS ? 0x40 : 0x44;
 
   SDValue Ptr =
       DAG.getObjectPtrOffset(DL, QueuePtr, TypeSize::getFixed(StructOffset));
@@ -9412,29 +9415,18 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   const AMDGPUTargetMachine &TM =
       static_cast<const AMDGPUTargetMachine &>(getTargetMachine());
 
-  unsigned DestAS, SrcAS;
-  SDValue Src;
-  bool IsNonNull = false;
-  if (const auto *ASC = dyn_cast<AddrSpaceCastSDNode>(Op)) {
-    SrcAS = ASC->getSrcAddressSpace();
-    Src = ASC->getOperand(0);
-    DestAS = ASC->getDestAddressSpace();
-  } else {
-    assert(Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-           Op.getConstantOperandVal(0) ==
-               Intrinsic::amdgcn_addrspacecast_nonnull);
-    Src = Op->getOperand(1);
-    SrcAS = Op->getConstantOperandVal(2);
-    DestAS = Op->getConstantOperandVal(3);
-    IsNonNull = true;
-  }
+  const auto *ASC = cast<AddrSpaceCastSDNode>(Op);
+  unsigned SrcAS = ASC->getSrcAddressSpace();
+  SDValue Src = ASC->getOperand(0);
+  unsigned DestAS = ASC->getDestAddressSpace();
+  bool IsNonNull = ASC->getFlags().hasNonNull();
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
-  // flat -> local/private
+  // flat -> local/private/barrier
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-        DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
+        DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::BARRIER) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
@@ -9461,10 +9453,10 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     }
   }
 
-  // local/private -> flat
+  // local/private/barrier -> flat
   if (DestAS == AMDGPUAS::FLAT_ADDRESS) {
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-        SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
+        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::BARRIER) {
       SDValue CvtPtr;
       if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
           Subtarget->hasGloballyAddressableScratch()) {
@@ -9496,6 +9488,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         CvtPtr = DAG.getNode(ISD::ADD, SL, MVT::i64, CvtPtr, FlatScratchBase);
       } else {
         SDValue Aperture = getSegmentAperture(SrcAS, SL, DAG);
+
         CvtPtr = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
         CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
       }
@@ -10050,12 +10043,11 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   EVT PtrVT = Op.getValueType();
 
   const GlobalValue *GV = GSD->getGlobal();
-  if ((GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
+  const unsigned AS = GSD->getAddressSpace();
+  if (((AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::BARRIER) &&
        shouldUseLDSConstAddress(GV)) ||
-      GSD->getAddressSpace() == AMDGPUAS::REGION_ADDRESS ||
-      GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
-    if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
-        GV->hasExternalLinkage()) {
+      AS == AMDGPUAS::REGION_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS) {
+    if (AS == AMDGPUAS::LOCAL_ADDRESS && GV->hasExternalLinkage()) {
       const GlobalVariable &GVar = *cast<GlobalVariable>(GV);
       // HIP uses an unsized array `extern __shared__ T s[]` or similar
       // zero-sized type in other languages to declare the dynamic shared
@@ -10075,7 +10067,13 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
   }
 
-  if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+  if (AS == AMDGPUAS::BARRIER) {
+    SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, GSD->getOffset(),
+                                            SIInstrInfo::MO_ABS32_LO);
+    return SDValue(DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0);
+  }
+
+  if (AS == AMDGPUAS::LOCAL_ADDRESS) {
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, GSD->getOffset(),
                                             SIInstrInfo::MO_ABS32_LO);
     return DAG.getNode(AMDGPUISD::LDS, DL, MVT::i32, GA);
@@ -11642,8 +11640,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     return SDValue();
   }
-  case Intrinsic::amdgcn_addrspacecast_nonnull:
-    return lowerADDRSPACECAST(Op, DAG);
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_writelane:
@@ -12345,7 +12341,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     if (isa<ConstantSDNode>(Op->getOperand(2))) {
       uint64_t BarID = cast<ConstantSDNode>(Op->getOperand(2))->getZExtValue();
       if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state)
-        BarID = (BarID >> 4) & 0x3F;
+        BarID = BarID & 0x3F;
       Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
@@ -12353,11 +12349,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     } else {
       Opc = AMDGPU::S_GET_BARRIER_STATE_M0;
       if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state) {
-        SDValue M0Val;
-        M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, Op->getOperand(2),
-                            DAG.getShiftAmountConstant(4, MVT::i32, DL));
-        M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, M0Val,
-                            DAG.getConstant(0x3F, DL, MVT::i32));
+        SDValue M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, Op->getOperand(2),
+                                    DAG.getConstant(0x3F, DL, MVT::i32));
         Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
       } else
         Ops.push_back(copyToM0(DAG, Chain, DL, Op->getOperand(2)).getValue(0));
@@ -12973,12 +12966,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       if (auto *C = dyn_cast<ConstantSDNode>(BarOp))
         BarVal = C->getZExtValue();
       else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp))
-        if (auto Addr = AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(
-                *GA->getGlobal()))
+        if (auto Addr = AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(
+                *GA->getGlobal(), AMDGPUAS::BARRIER))
           BarVal = *Addr + GA->getOffset();
 
       if (BarVal) {
-        unsigned BarID = (*BarVal >> 4) & 0x3F;
+        unsigned BarID = *BarVal & 0x3F;
         Ops.push_back(DAG.getTargetConstant(BarID, DL, MVT::i32));
         Ops.push_back(Chain);
         auto *NewMI = DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
@@ -12998,12 +12991,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opc = IntrinsicID == Intrinsic::amdgcn_s_barrier_init
                        ? AMDGPU::S_BARRIER_INIT_M0
                        : AMDGPU::S_BARRIER_SIGNAL_M0;
-    // extract the BarrierID from bits 4-9 of BarOp
-    SDValue BarID;
-    BarID = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
-                        DAG.getShiftAmountConstant(4, MVT::i32, DL));
-    BarID = DAG.getNode(ISD::AND, DL, MVT::i32, BarID,
-                        DAG.getConstant(0x3F, DL, MVT::i32));
+    // extract the BarrierID from bits 0-5 of BarOp
+    SDValue BarID = DAG.getNode(ISD::AND, DL, MVT::i32, BarOp,
+                                DAG.getConstant(0x3F, DL, MVT::i32));
     // Member count should be put into M0[ShAmt:+6]
     // Barrier ID should be put into M0[5:0]
     SDValue MemberCnt = DAG.getNode(ISD::AND, DL, MVT::i32, CntOp,
@@ -13043,8 +13033,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
         break;
       }
-      // extract the BarrierID from bits 4-9 of the immediate
-      unsigned BarID = (BarVal >> 4) & 0x3F;
+      // extract the BarrierID from bits 0-5 of the immediate
+      unsigned BarID = BarVal & 0x3F;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
@@ -13059,12 +13049,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Opc = AMDGPU::S_WAKEUP_BARRIER_M0;
         break;
       }
-      // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
-      SDValue M0Val;
-      M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
-                          DAG.getShiftAmountConstant(4, MVT::i32, DL));
-      M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, M0Val,
-                          DAG.getConstant(0x3F, DL, MVT::i32));
+      // extract the BarrierID from bits 0-5 of BarOp, copy to M0[5:0]
+      SDValue M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, BarOp,
+                                  DAG.getConstant(0x3F, DL, MVT::i32));
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
     }
 

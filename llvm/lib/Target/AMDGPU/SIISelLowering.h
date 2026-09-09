@@ -180,6 +180,8 @@ private:
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
+                                 SelectionDAG &DAG) const;
   SDValue getSegmentAperture(unsigned AS, const SDLoc &DL,
                              SelectionDAG &DAG) const;
 
@@ -354,10 +356,6 @@ public:
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
-
-  void CollectTargetIntrinsicOperands(const CallInst &I,
-                                      SmallVectorImpl<SDValue> &Ops,
-                                      SelectionDAG &DAG) const override;
 
   bool getAddrModeArguments(const IntrinsicInst *I,
                             SmallVectorImpl<Value *> &Ops,

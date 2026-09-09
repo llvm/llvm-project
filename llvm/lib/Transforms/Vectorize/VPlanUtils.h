@@ -374,9 +374,11 @@ public:
   /// Reassociate all the blocks connected to \p Old so that they now point to
   /// \p New.
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
-    for (auto *Pred : to_vector(Old->getPredecessors()))
+    auto Preds = to_vector(Old->getPredecessors());
+    auto Succs = to_vector(Old->getSuccessors());
+    for (auto *Pred : Preds)
       Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors()))
+    for (auto *Succ : Succs)
       Succ->replacePredecessor(Old, New);
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());

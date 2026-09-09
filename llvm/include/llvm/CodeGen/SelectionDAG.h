@@ -1746,7 +1746,8 @@ public:
 
   /// Return an AddrSpaceCastSDNode.
   LLVM_ABI SDValue getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
-                                    unsigned SrcAS, unsigned DestAS);
+                                    unsigned SrcAS, unsigned DestAS,
+                                    const SDNodeFlags Flags = SDNodeFlags());
 
   /// Return a freeze using the SDLoc of the value operand.
   LLVM_ABI SDValue getFreeze(SDValue V);
@@ -2091,6 +2092,13 @@ public:
   /// Create a stack temporary suitable for holding either of the specified
   /// value types.
   LLVM_ABI SDValue CreateStackTemporary(EVT VT1, EVT VT2);
+
+  /// Emit a store/load combination to the stack. This stores
+  /// SrcOp to a stack slot of type SlotVT, truncating it if needed. It then
+  /// does a load from the stack slot to DestVT, extending it if needed. The
+  /// resultant code need not be legal.
+  LLVM_ABI SDValue emitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
+                                    const SDLoc &DL, SDValue Chain);
 
   LLVM_ABI SDValue FoldSymbolOffset(unsigned Opcode, EVT VT,
                                     const GlobalAddressSDNode *GA,

@@ -93,6 +93,7 @@ Transforms/LowerAtomic/atomic-swap.ll
 Transforms/LowerConstantIntrinsics/builtin-object-size-phi.ll
 Transforms/LowerConstantIntrinsics/objectsize_basic.ll
 Transforms/OpenMP/always_inline_device.ll
+Transforms/OpenMP/callback_parallel_regions.ll
 Transforms/OpenMP/custom_state_machines.ll
 Transforms/OpenMP/custom_state_machines_remarks.ll
 Transforms/OpenMP/get_hardware_num_threads_in_block_fold.ll

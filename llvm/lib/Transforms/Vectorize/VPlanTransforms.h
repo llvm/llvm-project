@@ -421,7 +421,7 @@ struct VPlanTransforms {
                                        VFRange &Range);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan.
-  static void simplifyRecipes(VPlan &Plan);
+  static void combineRecipes(VPlan &Plan);
 
   /// Cancel out redundant reverses in \p Plan, e.g. reverse(reverse(x)) -> x.
   static void simplifyReverses(VPlan &Plan);

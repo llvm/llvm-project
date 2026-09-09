@@ -282,6 +282,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
     ];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let hasCanonicalizeMethod = 1;
 }
 
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
@@ -2547,6 +2548,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
         UnitAttr:$has_side_effects,
         UnitAttr:$is_align_stack,
         DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$tail_call_kind,
+        UnitAttr:$convergent,
         OptionalAttr<
           DefaultValuedAttr<AsmATTOrIntel, "AsmDialect::AD_ATT">>:$asm_dialect,
         OptionalAttr<ArrayAttr>:$operand_attrs);
@@ -2557,6 +2559,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
     (`has_side_effects` $has_side_effects^)?
     (`is_align_stack` $is_align_stack^)?
     (`tail_call_kind` `=` $tail_call_kind^)?
+    (`convergent` $convergent^)?
     (`asm_dialect` `=` $asm_dialect^)?
     (`operand_attrs` `=` $operand_attrs^)?
     attr-dict
