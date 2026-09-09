@@ -6,7 +6,7 @@ subroutine omp_single
     i = 10; j = 11
 
     !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
-    !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
+    !ERROR: COPYPRIVATE and NOWAIT clauses are mutually exclusive
     !$omp single copyprivate(i) nowait
         print *, "omp single", i
     !$omp end single
@@ -18,16 +18,16 @@ subroutine omp_single
     !$omp end parallel
 
     !$omp parallel
-        !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
+        !ERROR: NOWAIT and COPYPRIVATE clauses are mutually exclusive
         !$omp single nowait
             print *, "omp single", i
         !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
         !$omp end single copyprivate(i)
 
+        !ERROR: COPYPRIVATE and NOWAIT clauses are mutually exclusive
         !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
         !$omp single copyprivate(i)
             print *, "omp single", i
-        !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
         !$omp end single nowait
 
         !ERROR: COPYPRIVATE variable 'j' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct

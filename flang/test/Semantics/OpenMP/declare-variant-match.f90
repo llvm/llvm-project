@@ -97,7 +97,7 @@ contains
 end subroutine
 
 subroutine f08
-!ERROR: DECLARE_VARIANT directive requires a MATCH clause
+!ERROR: MATCH clause is required on DECLARE VARIANT directive
   !$omp declare variant (sub:vsub)
 contains
   subroutine vsub

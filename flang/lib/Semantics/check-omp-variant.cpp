@@ -1170,8 +1170,6 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
   const parser::traits::OmpContextSelectorSpecification *matchSelector{
       getMatchClauseContextSelector(spec)};
   if (!matchSelector) {
-    context_.Say(x.source,
-        "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
     return;
   }
 

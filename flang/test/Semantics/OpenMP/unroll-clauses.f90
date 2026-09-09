@@ -8,7 +8,7 @@ subroutine unroll_clauses
   integer :: i
   integer :: v(n)
 
-  !ERROR: FULL and PARTIAL clauses are mutually exclusive and may not appear on the same UNROLL directive
+  !ERROR: FULL and PARTIAL clauses are mutually exclusive
   !$omp unroll full partial(2)
   do i = 1, n
     v(i) = i

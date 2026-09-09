@@ -150,6 +150,10 @@ const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
 
 std::string GetUpperName(
     llvm::omp::Clause id, llvm::omp::Version version, bool annotate) {
+  if (id == llvm::omp::Clause::OMPC_cancellation_construct_type) {
+    return "cancel-directive-name";
+  }
+
   llvm::StringRef annot("");
   if (annotate) {
     switch (id) {
