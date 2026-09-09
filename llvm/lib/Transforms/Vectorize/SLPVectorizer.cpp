@@ -19387,7 +19387,6 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   SmallDenseMap<const TreeEntry *, InstructionCost> NodesCosts;
   SmallPtrSet<Value *, 4> CheckedExtracts;
   SmallSetVector<TreeEntry *, 4> GatheredLoadsNodes;
-  SmallPtrSet<const TreeEntry *, 4> NonTrimmableSTLFNodes;
   SmallDenseMap<const TreeEntry *, InstructionCost> ExtractCosts;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
@@ -19486,15 +19485,11 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       auto *BaseLoad = cast<LoadInst>(TE.getMainOp());
       if (findStoreLoadForwardingHazardForLoad(BaseLoad,
                                                TE.getVectorFactor())) {
-        Type *VecTy = getWidenedType(BaseLoad->getType(), TE.getVectorFactor());
+        Type *VecTy = getWidenedType(BaseLoad->getType(), TE.Scalars.size());
         InstructionCost Penalty =
             TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
-        if (Penalty != 0) {
+        if (Penalty != 0)
           C += Penalty;
-          for (const TreeEntry *NonTrimmable = &TE; NonTrimmable;
-               NonTrimmable = NonTrimmable->UserTreeIndex.UserTE)
-            NonTrimmableSTLFNodes.insert(NonTrimmable);
-        }
       }
     }
     uint64_t Scale = 0;
@@ -19663,7 +19658,6 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
     TreeEntry *TE = Worklist.top().first;
     if (TE->isGather() || TE->Idx == 0 || DeletedNodes.contains(TE) ||
-        NonTrimmableSTLFNodes.contains(TE) ||
         isa<StructType>(getValueType(TE->Scalars.front())) ||
         // Exit early if the parent node is split node and any of scalars is
         // used in other split nodes.
@@ -29036,8 +29030,11 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
                         /*StrictCheck=*/true, /*CheckType=*/false);
     if (!Diff || *Diff >= 0)
       continue;
+    // Negating the minimum signed value is undefined.
+    if (*Diff == std::numeric_limits<int64_t>::min())
+      continue;
 
-    uint64_t Distance = -static_cast<uint64_t>(*Diff) * ElementSize;
+    uint64_t Distance = static_cast<uint64_t>(-*Diff) * ElementSize;
     LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance="
                       << Distance << " bytes from chain base\n");
 

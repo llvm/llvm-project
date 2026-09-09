@@ -229,11 +229,11 @@ define void @gather_sequence_crash(<2 x float> %arg, ptr %arg1, float %arg2, ptr
 ; CHECK-NEXT:    store float [[TMP38]], ptr [[TMP35]], align 4
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr float, ptr [[ARG4]], i64 1
 ; CHECK-NEXT:    [[TMP40:%.*]] = load float, ptr [[TMP36]], align 4
-; CHECK-NEXT:    [[TMP41:%.*]] = fadd float 0.000000e+00, [[TMP40]]
-; CHECK-NEXT:    store float [[TMP41]], ptr [[TMP36]], align 4
 ; CHECK-NEXT:    [[TMP42:%.*]] = load float, ptr [[TMP39]], align 4
-; CHECK-NEXT:    [[TMP43:%.*]] = fadd float 0.000000e+00, [[TMP42]]
-; CHECK-NEXT:    store float [[TMP43]], ptr [[TMP39]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP42]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP40]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x float> zeroinitializer, [[TMP6]]
+; CHECK-NEXT:    store <2 x float> [[TMP7]], ptr [[TMP39]], align 4
 ; CHECK-NEXT:    [[TMP44:%.*]] = load float, ptr [[ARG3:%.*]], align 4
 ; CHECK-NEXT:    [[TMP45:%.*]] = load float, ptr [[ARG4]], align 4
 ; CHECK-NEXT:    [[TMP46:%.*]] = fadd float 0.000000e+00, [[TMP45]]
