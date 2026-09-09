@@ -826,11 +826,11 @@ public:
     if (auto vecType = mlir::dyn_cast<cir::VectorType>(input.getType())) {
       mlir::Type fpScalarType = vecType.getElementType();
       auto fpInterface = mlir::cast<cir::FPTypeInterface>(fpScalarType);
-      mlir::Value amount = builder.getConstFP(
-          loc, fpScalarType, llvm::APFloat(fpInterface.getFloatSemantics(), 1));
-      amount = cir::VecSplatOp::create(builder, loc, vecType, amount);
-      return e->isIncrementOp() ? builder.createFAdd(loc, input, amount)
-                                : builder.createFSub(loc, input, amount);
+      auto amount = llvm::APFloat::getOne(fpInterface.getFloatSemantics(),
+                                          /*Negative=*/e->isDecrementOp());
+      mlir::Value amtValue = builder.getConstFP(loc, fpScalarType, amount);
+      amtValue = cir::VecSplatOp::create(builder, loc, vecType, amtValue);
+      return builder.createFAdd(loc, input, amtValue);
     } else {
       QualType type = e->getSubExpr()->getType();
       // Another special case: half FP increment should be done via float.
@@ -838,12 +838,10 @@ public:
         input = builder.createFloatingCast(input, builder.getSingleTy());
 
       auto fpInterface = mlir::cast<cir::FPTypeInterface>(input.getType());
-      mlir::Value amount =
-          builder.getConstFP(loc, input.getType(),
-                             llvm::APFloat(fpInterface.getFloatSemantics(), 1));
-      mlir::Value output = e->isIncrementOp()
-                               ? builder.createFAdd(loc, input, amount)
-                               : builder.createFSub(loc, input, amount);
+      auto amount = llvm::APFloat::getOne(fpInterface.getFloatSemantics(),
+                                          /*Negative=*/e->isDecrementOp());
+      mlir::Value amtValue = builder.getConstFP(loc, input.getType(), amount);
+      mlir::Value output = builder.createFAdd(loc, input, amtValue);
 
       if (type->isHalfType() && !cgf.getContext().getLangOpts().NativeHalfType)
         output = builder.createFloatingCast(output, builder.getFp16Ty());
