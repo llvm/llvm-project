@@ -943,13 +943,15 @@ let isAdd = 1 in {
 }
 
 let isReMaterializable = 1 in {
-let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit] in {
+let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit],
+    GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 // We don't actually have something like V_SUBREV_U64 so V_SUB_U64 can't be treated as commutable.
 let isCommutable = 0 in
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
-} // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit]
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble] in
+} // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
+let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble],
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isReMaterializable = 1
 
@@ -1496,7 +1498,8 @@ let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
 } // End SubtargetPredicate = isGFX12Plus, isReMaterializable = 1
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, isReMaterializable = 1,
-    SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1 in {
+    SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1,
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
   defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x24, "v_min_num_f64", fminnum_like>;
   defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x23, "v_max_num_f64", fmaxnum_like>;
 }
