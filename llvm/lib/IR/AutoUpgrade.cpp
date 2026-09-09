@@ -1458,18 +1458,6 @@ static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
   return true;
 }
 
-static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
-                                                           StringRef Name) {
-  if (!Name.consume_front("tcgen05.mma."))
-    return Intrinsic::not_intrinsic;
-
-  // tcgen05.mma.ws.* variants do not need collector-b appended.
-  if (Name.starts_with("ws"))
-    return Intrinsic::not_intrinsic;
-
-  return F->getIntrinsicID();
-}
-
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
 getNVVMFAddUpgrade(StringRef Name) {
   auto [Modifiers, Type] = Name.rsplit('.');
