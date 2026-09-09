@@ -6278,15 +6278,14 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 static void printOptimizedVPlan(VPlan &) {}
 
 #ifndef NDEBUG
-/// Cross-check the execution frequencies recorded on the loop body of \p Plan
-/// against BlockFrequencyInfo for the blocks of \p OrigLoop.
+/// Cross-check the execution frequencies recorded in \p Plan against
+/// BlockFrequencyInfo for the blocks of \p OrigLoop.
 /// FIXME: Temporary verification aid, to be removed.
 static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
                                                LoopInfo *LI,
                                                LoopVectorizationCostModel &CM) {
-  // Limited to inner loops with the latch as only exiting block.
-  if (!OrigLoop->isInnermost() ||
-      OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+  // Limited to loops with the latch as only exiting block
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
     return true;
 
   // Visit the loop body in the same order as recordExecutionFrequencies. Both
@@ -6314,12 +6313,12 @@ static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
 
   for (const auto &[VPBB, BB] :
        zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
-    // Compare at BranchProbability's coarser resolution, which is as precise as
-    // BFI's frequencies get.
     std::optional<VPExecutionFrequency> Freq =
         getRecordedExecutionFrequency(VPBB);
     if (!Freq)
       continue;
+    // Compare at BranchProbability's coarser resolution, which is as precise as
+    // BFI's frequencies get.
     BranchProbability Computed = vputils::getExecutionProbability(Freq->Freq);
 
     // Clamp to the header's frequency, which BFI's rounding may exceed.
@@ -6369,11 +6368,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                    LAI->getSymbolicStrides(), VPDT);
   RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
-  // Record the execution frequencies while VPlan0 still mirrors the original
-  // loop's CFG; they are consumed by the cost model and predication below.
-  RUN_VPLAN_PASS(VPlanTransforms::recordExecutionFrequencies, *VPlan0);
-  assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, *CM) &&
-         "execution frequencies do not match the loop's block frequencies");
+  if (IsInnerLoop) {
+    RUN_VPLAN_PASS(VPlanTransforms::recordExecutionFrequencies, *VPlan0);
+    assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, *CM) &&
+           "execution frequencies do not match the loop's block frequencies");
+  }
   // Save copy of VPlan0 for scalar cost computation.
   InitialVPlan0 = VPlanPtr(VPlan0->duplicate());
 

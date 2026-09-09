@@ -646,12 +646,12 @@ std::unique_ptr<VPlan> VPlanTransforms::buildVPlan0(
 void VPlanTransforms::recordExecutionFrequencies(VPlan &Plan) {
   VPBasicBlock *Header = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
   SmallVector<VPBasicBlock *> Blocks = vp_rpo_plain_cfg_loop_body(Header);
-  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
-      Frequencies = vputils::computeExecutionFrequencies(Blocks);
+  auto Frequencies = vputils::computeExecutionFrequencies(Blocks);
+  LLVMContext &Ctx = Plan.getContext();
   for (VPBasicBlock *VPBB : Blocks) {
     std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
     for (VPRecipeBase &R : *VPBB)
-      cast<VPInstruction>(&R)->setExecutionFrequency(Freq, Plan.getContext());
+      cast<VPInstruction>(&R)->setExecutionFrequency(Freq, Ctx);
   }
 }
 

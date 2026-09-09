@@ -1242,8 +1242,8 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
     auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
     bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
     for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
-      // Edges leaving Blocks, like the backedge and exit edges of a plain
-      // CFG, do not contribute to any frequency computed here.
+      // Ignore edges leaving Blocks, i.e. a plain CFG's edges to the middle
+      // block or to an exit block.
       auto It = Frequencies.find(Succ);
       if (It == Frequencies.end())
         continue;
