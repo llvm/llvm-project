@@ -2481,10 +2481,10 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     // RefKind, but non-call references (such as address-of-function) can still
     // be interesting as they can indicate indirect calls.
     Request.Filter = RefKind::Reference;
-    // Initially store the ranges in a map keyed by SymbolID of the caller.
-    // This allows us to group different calls with the same caller
-    // into the same CallHierarchyIncomingCall.
-    llvm::DenseMap<SymbolID, std::vector<Location>> CallsIn;
+    // Group by (SymbolID, FileURI) to handle multiple callers with the same
+    // signature in different files (e.g., main() in different binaries).
+    using CallerKey = std::pair<SymbolID, std::string>;
+    std::map<CallerKey, std::vector<Location>> CallsIn;
     // We can populate the ranges based on a refs request only. As we do so, we
     // also accumulate the container IDs into a lookup request.
     LookupRequest ContainerLookup;
@@ -2494,29 +2494,64 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
         elog("incomingCalls failed to convert location: {0}", Loc.takeError());
         return;
       }
-      CallsIn[R.Container].push_back(*Loc);
+      // Group by both SymbolID and file to distinguish same-signature functions
+      CallerKey Key = {R.Container, Loc->uri.file().str()};
+      CallsIn[Key].push_back(*Loc);
 
       ContainerLookup.IDs.insert(R.Container);
     });
     // Perform the lookup request and combine its results with CallsIn to
     // get complete CallHierarchyIncomingCall objects.
     Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
-      auto It = CallsIn.find(Caller.ID);
-      assert(It != CallsIn.end());
-      if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
-        std::vector<Range> FromRanges;
-        for (const Location &L : It->second) {
-          if (L.uri != CHI->uri) {
-            // Call location not in same file as caller.
-            // This can happen in some edge cases. There's not much we can do,
-            // since the protocol only allows returning ranges interpreted as
-            // being in the caller's file.
-            continue;
+      // The caller's own location tells us which file it is defined in. If
+      // that file is one of the call files, then each distinct call file
+      // corresponds to a separate definition of the (same-signature) caller,
+      // so we point each item at the file where its calls occur. Otherwise the
+      // caller is declared in a different file than the calls (e.g. a
+      // macro-expanded function from a header), which the protocol cannot
+      // represent as ranges, so we keep the caller's own location.
+      auto SymLoc = Caller.Definition ? Caller.Definition
+                                      : Caller.CanonicalDeclaration;
+      auto SymFile = indexToLSPLocation(SymLoc, Item.uri.file());
+      bool IsDefinedInCallFile = false;
+      if (SymFile) {
+        for (const auto &Other : CallsIn) {
+          if (Other.first.first == Caller.ID &&
+              SymFile->uri.file() == Other.first.second) {
+            IsDefinedInCallFile = true;
+            break;
           }
-          FromRanges.push_back(L.range);
         }
-        Results.push_back(CallHierarchyIncomingCall{
-            std::move(*CHI), std::move(FromRanges), MightNeverCall});
+      }
+
+      // Find all entries for this SymbolID (may be in multiple files)
+      for (auto &Entry : CallsIn) {
+        if (Entry.first.first != Caller.ID)
+          continue;
+
+        if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+          // Use the file from the key to ensure correct URI when the caller is
+          // defined in the call file (handles multiple functions with the same
+          // signature in different files, e.g. main() in different binaries).
+          if (IsDefinedInCallFile) {
+            CHI->uri =
+                URIForFile::canonicalize(Entry.first.second, Item.uri.file());
+          }
+
+          std::vector<Range> FromRanges;
+          for (const Location &L : Entry.second) {
+            if (L.uri != CHI->uri) {
+              // Call location not in same file as caller.
+              // This can happen in some edge cases. There's not much we can do,
+              // since the protocol only allows returning ranges interpreted as
+              // being in the caller's file.
+              continue;
+            }
+            FromRanges.push_back(L.range);
+          }
+          Results.push_back(CallHierarchyIncomingCall{
+              std::move(*CHI), std::move(FromRanges), MightNeverCall});
+        }
       }
     });
   };
