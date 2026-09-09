@@ -800,10 +800,12 @@ is_char_or_wchar(wchar_t ch, [[maybe_unused]] char, wchar_t wc_value) {
 // Returns a three-way comparison between two wide character code points.
 LIBC_INLINE int threeway_cmp_single(wchar_t left, wchar_t right) {
   // Valid UTF-32 code points are in [0, 0x10FFFF]. If invalid code points were
-  // treated as UB, the comparison below could instead be done in 32 bits.
-  uint64_t diff = static_cast<uint64_t>(left) - static_cast<uint64_t>(right);
-  return cpp::bit_cast<int32_t>(static_cast<uint32_t>(diff >> 32) |
-                                static_cast<uint32_t>(diff & 0xFFFF));
+  // treated as UB, the comparison below could done with 32-bit arithmetic.
+  if (left == right)
+    return 0;
+  if (left < right)
+    return -1;
+  return 1;
 }
 
 } // namespace internal
