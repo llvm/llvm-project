@@ -56,7 +56,7 @@ int foo() {
 // IR-GPU-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
-// IR-GPU-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined(ptr [[TMP5]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP4]], ptr [[TMP0]]) #[[ATTR2:[0-9]+]]
+// IR-GPU-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined(ptr [[TMP5]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP4]], ptr [[TMP0]]) #[[ATTR3:[0-9]+]]
 // IR-GPU-NEXT:    call void @__kmpc_target_deinit()
 // IR-GPU-NEXT:    ret void
 // IR-GPU:       worker.exit:
@@ -181,7 +181,7 @@ int foo() {
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp_outlined
-// IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[SUM:%.*]]) #[[ATTR1]] {
+// IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[SUM:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -334,7 +334,7 @@ int foo() {
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func
-// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR3:[0-9]+]] {
+// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR4:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2, addrspace(5)
@@ -394,7 +394,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP35:%.*]] = or i1 [[TMP34]], [[TMP33]]
 // IR-GPU-NEXT:    br i1 [[TMP35]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // IR-GPU:       then:
-// IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]]) #[[ATTR2]]
+// IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]]) #[[ATTR3]]
 // IR-GPU-NEXT:    br label [[IFCONT:%.*]]
 // IR-GPU:       else:
 // IR-GPU-NEXT:    br label [[IFCONT]]
@@ -417,7 +417,7 @@ int foo() {
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func
-// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR4]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(5)
@@ -479,7 +479,7 @@ int foo() {
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func.1
-// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR3]] {
+// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR4]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2, addrspace(5)
@@ -539,7 +539,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP35:%.*]] = or i1 [[TMP34]], [[TMP33]]
 // IR-GPU-NEXT:    br i1 [[TMP35]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // IR-GPU:       then:
-// IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]]) #[[ATTR2]]
+// IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]]) #[[ATTR3]]
 // IR-GPU-NEXT:    br label [[IFCONT:%.*]]
 // IR-GPU:       else:
 // IR-GPU-NEXT:    br label [[IFCONT]]
@@ -562,7 +562,7 @@ int foo() {
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func.2
-// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR4]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(5)
@@ -624,7 +624,7 @@ int foo() {
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@_omp_reduction_list_to_global_copy_func
-// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR3]] {
+// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR4]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(5)
@@ -647,7 +647,7 @@ int foo() {
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@_omp_reduction_global_to_list_copy_func
-// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR3]] {
+// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR4]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(5)
@@ -670,7 +670,7 @@ int foo() {
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@_omp_reduction_global_to_list_reduce_func
-// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR3]] {
+// IR-GPU-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR4]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(5)
@@ -690,7 +690,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP6]], i32 0, i32 0
 // IR-GPU-NEXT:    store ptr [[TMP7]], ptr [[TMP5]], align 8
 // IR-GPU-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP8]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
+// IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP8]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR3]]
 // IR-GPU-NEXT:    ret void
 //
 //
@@ -866,7 +866,7 @@ int foo() {
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp_outlined
-// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[SUM:%.*]]) #[[ATTR1]] {
+// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[SUM:%.*]]) #[[ATTR3:[0-9]+]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1030,7 +1030,7 @@ int foo() {
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp_outlined.omp.reduction.reduction_func
-// IR-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// IR-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1061,7 +1061,7 @@ int foo() {
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp.reduction.reduction_func
-// IR-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// IR-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1263,7 +1263,7 @@ int foo() {
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp_outlined
-// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[SUM:%.*]]) #[[ATTR1]] {
+// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[SUM:%.*]]) #[[ATTR3:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1427,7 +1427,7 @@ int foo() {
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp_outlined.omp.reduction.reduction_func
-// IR-PCH-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// IR-PCH-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1458,7 +1458,7 @@ int foo() {
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp.reduction.reduction_func
-// IR-PCH-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// IR-PCH-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8

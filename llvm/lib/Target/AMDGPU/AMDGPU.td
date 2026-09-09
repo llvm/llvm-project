@@ -1,3 +1,4 @@
+
 //===-- AMDGPU.td - AMDGPU Tablegen files --------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -18,6 +19,7 @@ def p3 : PtrValueType<i32, 3>;
 def p4 : PtrValueType<i64, 4>;
 def p5 : PtrValueType<i32, 5>;
 def p6 : PtrValueType<i32, 6>;
+def p15 : PtrValueType<i32, 15>;
 
 //===-----------------------------------------------------------------------===//
 // AMDGPU Subtarget Feature (device properties)
@@ -233,21 +235,6 @@ defm XNACKOnOffModes : AMDGPUSubtargetFeature<"xnack-on-off-modes",
   InlineIgnore
 >;
 
-// XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
-// XNACK. The current default kernel driver setting is:
-// - graphics ring: XNACK disabled
-// - compute ring: XNACK enabled
-//
-// If XNACK is enabled, the VMEM latency can be worse.
-// If XNACK is disabled, the 2 SGPRs can be used for general purposes.
-def FeatureXNACK : SubtargetFeature<"xnack",
-  "EnableXNACK",
-  "true",
-  "Enable XNACK support",
-  [FeatureSupportsXNACK],
-  InlineIgnore
->;
-
 // Whether the hardware supports WGP (work-group processor) execution
 // mode, as opposed to the per-kernel CU-mode selection
 // (FeatureCuMode).
@@ -423,6 +410,7 @@ class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
 
 def FeatureLDSBankCount16 : SubtargetFeatureLDSBankCount<16>;
 def FeatureLDSBankCount32 : SubtargetFeatureLDSBankCount<32>;
+def FeatureLDSBankCount64 : SubtargetFeatureLDSBankCount<64>;
 
 class SubtargetFeatureMaxWavesPerEU <int Value> : SubtargetFeature <
   "max-waves-per-eu-"#Value,
@@ -988,6 +976,10 @@ defm CubeInsts : AMDGPUSubtargetFeature<"cube-insts",
   "Has v_cube* instructions"
 >;
 
+defm IndexedResources : AMDGPUSubtargetFeature<"indexed-resources",
+  "Has indexed resources"
+>;
+
 defm LerpInst : AMDGPUSubtargetFeature<"lerp-inst",
   "Has v_lerp_u8 instruction"
 >;
@@ -1169,12 +1161,6 @@ def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   [], InlineIgnore
 >;
 
-def FeatureSRAMECC : SubtargetFeature<"sramecc",
-  "EnableSRAMECC",
-  "true",
-  "Enable SRAMECC"
->;
-
 defm NoSdstCMPX : AMDGPUSubtargetFeature<"no-sdst-cmpx",
   "V_CMPX does not write VCC/SGPR in addition to EXEC"
 >;
@@ -1265,8 +1251,7 @@ defm PseudoScalarTrans : AMDGPUSubtargetFeature<"pseudo-scalar-trans",
 >;
 
 defm NoF16PseudoScalarTransInlineConstants : AMDGPUSubtargetFeature<"no-f16-pseudo-scalar-trans-inline-constants",
-  "Inline constants are not supported for F16 pseudo scalar transcendentals",
-  /*GenPredicate=*/0
+  "Inline constants are not supported for F16 pseudo scalar transcendentals"
 >;
 
 defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",
@@ -1343,6 +1328,11 @@ defm FlatSignedOffset : AMDGPUSubtargetFeature<"flat-signed-offset",
 
 defm RequiresInitialUnclausedVmem : AMDGPUSubtargetFeature<"requires-initial-unclause-vmem",
   "Hardware entrypoints require first VMEM instruction to be unclaused",
+  GenPredicate=false
+>;
+
+defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts",
+  "64-bit integer max/min/mul VALU instructions are slower than expanding to an equivalent code sequence",
   GenPredicate=false
 >;
 
@@ -1599,6 +1589,11 @@ defm NeedsTDMDrain : AMDGPUSubtargetFeature<"needs-tdm-drain",
 
 defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
   "Needs 2addr LDS instructions to be aligned to payload size",
+  /*GenPredicate=*/1
+>;
+
+defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
+  "s_monitor_sleep should not use sleep_forever",
   /*GenPredicate=*/1
 >;
 
@@ -2011,7 +2006,6 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureGFX940Insts,
    FeatureRequiresAlignedVGPRs,
    FeatureFmaMixInsts,
-   FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeatureDot1Insts,
@@ -2053,6 +2047,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
 def FeatureISAVersion9_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
   [FeatureAddressableLocalMemorySize163840,
+   FeatureLDSBankCount64,
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8SDWASrcSel,
@@ -2074,6 +2069,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
       FeatureAddressableLocalMemorySize65536,
+      FeatureLDSBankCount32,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
       FeatureCvtFP8SDWASrcSel,
@@ -2084,6 +2080,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureAddressableLocalMemorySize65536,
+     FeatureLDSBankCount32,
      FeatureRequiresCOV6])>;
 
 def FeatureISAVersion9_5_0 : FeatureSet<FeatureISAVersion9_5_Common.Features>;
@@ -2362,7 +2359,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
-   FeatureLDSBankCount32,
+   FeatureLDSBankCount64,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeaturePackedFP32SingleSGPROps,
@@ -2434,7 +2431,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
-   FeatureXNACK,
+   FeatureSupportsXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
@@ -2471,6 +2468,8 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
+   FeatureNoSleepForever,
+   FeatureSlowMaxMinMulI64Insts,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2496,6 +2495,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureNoSleepForever,
+   FeatureSlowMaxMinMulI64Insts,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2538,7 +2539,6 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   [FeatureAddressableLocalMemorySize327680,
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
-   FeatureSupportsXNACK,
    FeatureGFX125xLowestRateWMMA,
    FeatureTransCoexecutionHazard,
    FeatureWMMACoexecutionHazards,
@@ -2617,6 +2617,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
+   FeatureIndexedResources
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<
@@ -2996,7 +2997,7 @@ def HasUnrestrictedSOffset : Predicate<"!Subtarget->hasRestrictedSOffset()">,
 
 def D16PreservesUnusedBits :
   Predicate<"Subtarget->d16PreservesUnusedBits()">,
-  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSRAMECC))>;
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSupportsSRAMECC))>;
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
@@ -3234,7 +3235,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
-  FeatureAGPRAlloc
+  FeatureAGPRAlloc, Feature1536VGPRs, Feature1024AddressableVGPRs,
+  FeatureHalfAddressablePhysicalLocalMemory,
   ];
 }
 

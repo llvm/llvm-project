@@ -367,8 +367,8 @@ class RVPPairShift_ri<bits<3> f, bit direction, string opcodestr,
 }
 
 class RVPPairShiftW_ri<bits<3> f, bit direction, string opcodestr,
-                       bit DefVXSAT = 0>
-    : RVPPairShift_ri<f, direction, opcodestr, uimm5, DefVXSAT> {
+                       Operand ImmType = uimm5, bit DefVXSAT = 0>
+    : RVPPairShift_ri<f, direction, opcodestr, ImmType, DefVXSAT> {
   bits<5> shamt;
 
   let Inst{26-25} = 0b01;
@@ -376,8 +376,8 @@ class RVPPairShiftW_ri<bits<3> f, bit direction, string opcodestr,
 }
 
 class RVPPairShiftH_ri<bits<3> f, bit direction, string opcodestr,
-                       bit DefVXSAT = 0>
-    : RVPPairShift_ri<f, direction, opcodestr, uimm4, DefVXSAT> {
+                       Operand ImmType = uimm4, bit DefVXSAT = 0>
+    : RVPPairShift_ri<f, direction, opcodestr, ImmType, DefVXSAT> {
   bits<4> shamt;
 
   let Inst{26-24} = 0b001;
@@ -1457,8 +1457,10 @@ let append Predicates = [IsRV32] in {
   def PSRARI_DH    : RVPPairShiftH_ri<0b101, 0b1, "psrari.dh">;
   def PSRARI_DW    : RVPPairShiftW_ri<0b101, 0b1, "psrari.dw">;
 
-  def PSATI_DH     : RVPPairShiftH_ri<0b110, 0b1, "psati.dh", DefVXSAT=1>;
-  def PSATI_DW     : RVPPairShiftW_ri<0b110, 0b1, "psati.dw", DefVXSAT=1>;
+  def PSATI_DH     : RVPPairShiftH_ri<0b110, 0b1, "psati.dh", uimm4_plus1,
+                                      DefVXSAT=1>;
+  def PSATI_DW     : RVPPairShiftW_ri<0b110, 0b1, "psati.dw", uimm5_plus1,
+                                      DefVXSAT=1>;
 
   def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, 0b1, "psrl.dhs">;
   def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, 0b1, "psrl.dws">;
@@ -1883,6 +1885,28 @@ def riscv_pmulsu_halves_00
 def riscv_pmulsu_halves_11
     : RVSDNode<"PMULSU_HALVES_11", SDT_RISCVPackedWideningMulByHalves>;
 
+// Packed multiplication with widening horizontal addition.
+def SDT_RISCVPackedWideningHorizontalAdd
+    : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>, SDTCisVT<1, v2i16>,
+                           SDTCisSameAs<1, 2>]>;
+def riscv_pm2wadd
+    : RVSDNode<"PM2WADD", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2waddu
+    : RVSDNode<"PM2WADDU", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2waddsu
+    : RVSDNode<"PM2WADDSU", SDT_RISCVPackedWideningHorizontalAdd>;
+
+// Packed multiplication with widening horizontal addition and accumulate.
+def SDT_RISCVPackedWideningHorizontalAddAcc
+    : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisSameAs<0, 1>,
+                           SDTCisVT<2, v2i16>, SDTCisSameAs<2, 3>]>;
+def riscv_pm2wadda
+    : RVSDNode<"PM2WADDA", SDT_RISCVPackedWideningHorizontalAddAcc>;
+def riscv_pm2waddau
+    : RVSDNode<"PM2WADDAU", SDT_RISCVPackedWideningHorizontalAddAcc>;
+def riscv_pm2waddasu
+    : RVSDNode<"PM2WADDASU", SDT_RISCVPackedWideningHorizontalAddAcc>;
+
 def SDT_RISCVPM2Halfword
     : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>,
                            SDTCisVT<1, v4i16>,
@@ -1948,6 +1972,23 @@ def riscv_mhaccu   : RVSDNode<"MHACCU", SDT_RISCVSameTernary>;
 def riscv_mhraccu  : RVSDNode<"MHRACCU", SDT_RISCVSameTernary>;
 def riscv_mhaccsu  : RVSDNode<"MHACCSU", SDT_RISCVSameTernary>;
 def riscv_mhraccsu : RVSDNode<"MHRACCSU", SDT_RISCVSameTernary>;
+
+// Multiply packed elements and horizontally combine each adjacent group.
+def SDT_RISCVHorizontalMul
+    : SDTypeProfile<1, 2, [SDTCisVec<1>, SDTCisSameAs<1, 2>]>;
+def riscv_pm4add    : RVSDNode<"PM4ADD", SDT_RISCVHorizontalMul>;
+def riscv_pm2add    : RVSDNode<"PM2ADD", SDT_RISCVHorizontalMul>;
+def riscv_pm2add_x  : RVSDNode<"PM2ADD_X", SDT_RISCVHorizontalMul>;
+def riscv_pm4addu   : RVSDNode<"PM4ADDU", SDT_RISCVHorizontalMul>;
+def riscv_pm2addu   : RVSDNode<"PM2ADDU", SDT_RISCVHorizontalMul>;
+def riscv_pmq2add   : RVSDNode<"PMQ2ADD", SDT_RISCVHorizontalMul>;
+def riscv_pmqr2add  : RVSDNode<"PMQR2ADD", SDT_RISCVHorizontalMul>;
+def riscv_pm2sadd   : RVSDNode<"PM2SADD", SDT_RISCVHorizontalMul>;
+def riscv_pm2sadd_x : RVSDNode<"PM2SADD_X", SDT_RISCVHorizontalMul>;
+def riscv_pm2sub    : RVSDNode<"PM2SUB", SDT_RISCVHorizontalMul>;
+def riscv_pm2sub_x  : RVSDNode<"PM2SUB_X", SDT_RISCVHorizontalMul>;
+def riscv_pm4addsu  : RVSDNode<"PM4ADDSU", SDT_RISCVHorizontalMul>;
+def riscv_pm2addsu  : RVSDNode<"PM2ADDSU", SDT_RISCVHorizontalMul>;
 
 // "Q-format" multiplication
 def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp, [SDNPCommutative]>;
@@ -2076,6 +2117,11 @@ def SDT_RISCVSplitGPRVec : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
 def RISCVBuildPairGPRVec : RVSDNode<"BuildPairGPRVec",
                                     SDT_RISCVBuildPairGPRVec>;
 def RISCVSplitGPRVec     : RVSDNode<"SplitGPRVec", SDT_RISCVSplitGPRVec>;
+
+class PatHorizontalMul<SDPatternOperator OpNode, RVInst Inst,
+                       ValueType ResultVT, ValueType SrcVT>
+    : Pat<(ResultVT (OpNode (SrcVT GPR:$rs1), (SrcVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
 
 // (rs1 << 1) + rs2
 class PatPSh1Add<RVInst Inst, ValueType vt>
@@ -2390,6 +2436,21 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulq, MULQ, i32>;
   def : PatGprGpr<riscv_mulqr, MULQR, i32>;
 
+  // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, i32, v4i8>;
+  def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pm4addu, PM4ADDU_B, i32, v4i8>;
+  def : PatHorizontalMul<riscv_pm2addu, PM2ADDU_H, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pmq2add, PMQ2ADD_H, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pmqr2add, PMQR2ADD_H, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pm2sadd, PM2SADD_H, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pm2sadd_x, PM2SADD_HX, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pm2sub, PM2SUB_H, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pm2sub_x, PM2SUB_HX, i32, v2i16>;
+  def : PatHorizontalMul<riscv_pm4addsu, PM4ADDSU_B, i32, v4i8>;
+  def : PatHorizontalMul<riscv_pm2addsu, PM2ADDSU_H, i32, v2i16>;
+
   // Halfword multiply patterns where one operand is a sext.h or zext.h and
   // the other is a sext.h or zext.h or is known to be sign/zero-extended. We
   // prefer plain mul when both operands are known to be sign/zero-extended.
@@ -2472,6 +2533,26 @@ let append Predicates = [IsRV32] in {
             (PWMULSU_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pwmulsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
+
+  // Packed multiplication with widening horizontal addition patterns.
+  def : Pat<(v2i32 (riscv_pm2wadd (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADD_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2waddu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2waddsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDSU_H GPR:$rs1, GPR:$rs2)>;
+
+  // Packed multiplication with widening horizontal addition and accumulate
+  // patterns.
+  def : Pat<(v2i32 (riscv_pm2wadda (v2i32 GPRPair:$rd),
+                                   (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2waddau (v2i32 GPRPair:$rd),
+                                    (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDAU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2waddasu (v2i32 GPRPair:$rd),
+                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDASU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
   // With Zbkb, brev8 reverses the bits within each byte directly; otherwise
@@ -3025,6 +3106,33 @@ let append Predicates = [IsRV64] in {
   // 32-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, PMULQ_W, v2i32>;
   def : PatGprGpr<riscv_mulqr, PMULQR_W, v2i32>;
+
+  // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, v2i32, v8i8>;
+  def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pm4addu, PM4ADDU_B, v2i32, v8i8>;
+  def : PatHorizontalMul<riscv_pm2addu, PM2ADDU_H, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pmq2add, PMQ2ADD_H, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pmqr2add, PMQR2ADD_H, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pm2sadd, PM2SADD_H, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pm2sadd_x, PM2SADD_HX, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pm2sub, PM2SUB_H, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pm2sub_x, PM2SUB_HX, v2i32, v4i16>;
+  def : PatHorizontalMul<riscv_pm4addsu, PM4ADDSU_B, v2i32, v8i8>;
+  def : PatHorizontalMul<riscv_pm2addsu, PM2ADDSU_H, v2i32, v4i16>;
+
+  def : PatHorizontalMul<riscv_pm2add, PM2ADD_W, i64, v2i32>;
+  def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_WX, i64, v2i32>;
+  def : PatHorizontalMul<riscv_pm2addu, PM2ADDU_W, i64, v2i32>;
+  def : PatHorizontalMul<riscv_pmq2add, PMQ2ADD_W, i64, v2i32>;
+  def : PatHorizontalMul<riscv_pmqr2add, PMQR2ADD_W, i64, v2i32>;
+  def : PatHorizontalMul<riscv_pm2sub, PM2SUB_W, i64, v2i32>;
+  def : PatHorizontalMul<riscv_pm2sub_x, PM2SUB_WX, i64, v2i32>;
+  def : PatHorizontalMul<riscv_pm2addsu, PM2ADDSU_W, i64, v2i32>;
+  def : PatHorizontalMul<riscv_pm4add, PM4ADD_H, i64, v4i16>;
+  def : PatHorizontalMul<riscv_pm4addu, PM4ADDU_H, i64, v4i16>;
+  def : PatHorizontalMul<riscv_pm4addsu, PM4ADDSU_H, i64, v4i16>;
 
   // 8/16/32-bit multiply low patterns
   // FIXME custom lower

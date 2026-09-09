@@ -28,3 +28,30 @@ entry:
   %tmp4 = fmul fast double %tmp2, %b
   ret double %tmp4
 }
+
+define arm_aapcs_vfpcc float @t1_f32(float %a, float %b) {
+; CHECK-LABEL: t1_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vnmul.f32 s0, s0, s1
+; CHECK-NEXT:    bx lr
+entry:
+  %tmp2 = fneg float %a
+  %tmp4 = fmul float %tmp2, %b
+  ret float %tmp4
+}
+
+; The reassociated fold requires the default FP environment, so the constrained
+; nodes of a strictfp function do not select VNMUL.
+define arm_aapcs_vfpcc float @t1_f32_strictfp(float %a, float %b) strictfp {
+; CHECK-LABEL: t1_f32_strictfp:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vneg.f32 s0, s0
+; CHECK-NEXT:    vmul.f32 s0, s0, s1
+; CHECK-NEXT:    bx lr
+entry:
+  %tmp2 = fneg float %a
+  %tmp4 = call float @llvm.experimental.constrained.fmul.f32(float %tmp2, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret float %tmp4
+}
+
+declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
