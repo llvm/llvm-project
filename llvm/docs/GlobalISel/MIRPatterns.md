@@ -211,6 +211,51 @@ Semantics:
 - If both old/new are operands of matched instructions,
   `canReplaceReg` is checked before applying the rule.
 
+#### GIReplaceRegWithConstant
+
+```{code-block} text
+:caption: Usage
+
+(apply (GIReplaceRegWithConstant $reg, Imm))
+```
+
+Operands:
+
+- `$reg` (out) register defined by the match root
+- `Imm`: an integer literal
+
+Semantics:
+
+- Can only appear in an 'apply' pattern.
+- `$reg` must be a register defined by the match root.
+- Replaces all uses of `$reg` with a fresh constant of `$reg`'s type. If that
+  type is a fixed vector, the constant is splatted across all lanes.
+
+#### GIReplaceRegWithFConstant
+
+```{code-block} text
+:caption: Usage
+
+(apply (GIReplaceRegWithFConstant $reg, Imm))
+```
+
+Operands:
+
+- `$reg` (out) register defined by the match root
+- `Imm`: an integer literal
+
+```{warning}
+`Imm` is the **IEEE bit pattern** of `$reg`'s (scalar) type, not a decimal fp
+value: e.g. for an f32 `$reg`, `0` means `+0.0` (bit pattern `0x00000000`).
+```
+
+Semantics:
+
+- Can only appear in an 'apply' pattern.
+- `$reg` must be a register defined by the match root.
+- Replaces all uses of `$reg` with a fresh `G_FCONSTANT` of `$reg`'s type. If
+  that type is a fixed vector, the constant is splatted across all lanes.
+
 #### GIEraseRoot
 
 ```{code-block} text
@@ -421,6 +466,25 @@ def ReplaceTemp : GICombineRule<
             (G_UNMERGE_VALUES $a, $b, $tmp)),
   (apply  (G_UNMERGE_VALUES $a, i32:$new, $y),
           (GIReplaceReg $b, $new))>
+```
+
+#### Common Pattern #1b: Replace a Register with a Constant
+
+To replace a match root's def with a fresh constant, use
+`GIReplaceRegWithConstant` (or `GIReplaceRegWithFConstant` for a
+`G_FCONSTANT`, where `Imm` is an IEEE bit pattern rather than a decimal fp
+value).
+
+```text
+def Foo : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $dst, $x, $undef):$mi, (G_IMPLICIT_DEF $undef)),
+  (apply (GIReplaceRegWithConstant $dst, 0))>;
+
+def Bar : GICombineRule<
+  (defs root:$dst),
+  (match (G_UITOFP $dst, 0)),
+  (apply (GIReplaceRegWithFConstant $dst, 0))>;
 ```
 
 #### Common Pattern #2: Erasing a Def-less Root

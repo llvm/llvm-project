@@ -741,8 +741,8 @@ body:             |
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %logic_op:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
-    ; CHECK-NEXT: $q0 = COPY %logic_op(<2 x i64>)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %x:_(<2 x i64>) = G_IMPLICIT_DEF
     %y:_(<2 x i64>) = G_IMPLICIT_DEF
