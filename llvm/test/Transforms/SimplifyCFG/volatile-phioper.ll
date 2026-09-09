@@ -57,8 +57,8 @@ end:
 }
 declare i32 @Trace(...) #1
 
-attributes #0 = { nounwind ssp uwtable "frame-pointer"="non-leaf" "relocation-model"="pic" }
-attributes #1 = { "frame-pointer"="non-leaf" "relocation-model"="pic" }
+attributes #0 = { nounwind ssp uwtable "frame-pointer"="non-leaf" }
+attributes #1 = { "frame-pointer"="non-leaf" }
 attributes #2 = { nounwind }
 
 !0 = !{i32 1039}
