@@ -9973,9 +9973,12 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         // For indirectly-accessed global pointers, we rely on "internal"
         // linkage to optimize out the unneeded full-variable storage later,
         // since we can't prevent the LLVM dialect from generating globals
-        // without also breaking target lowering.
+        // without also breaking target lowering. However, We can only do
+        // this for definiions, as global variable declarations must have
+        // external or weak linkage.
         if (refPtr) {
-          gVar->setLinkage(llvm::GlobalValue::InternalLinkage);
+          if (!gVar->isDeclaration())
+            gVar->setLinkage(llvm::GlobalValue::InternalLinkage);
 
           // Register the (original global, reference pointer) pair so that the
           // OpenMPIRBuilder can rewrite uses of the original global during
