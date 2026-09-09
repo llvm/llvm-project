@@ -123,3 +123,46 @@ body:             |
     }
   }
 }
+
+// Two whole-dword accesses whose index operand is M0 - the form every access
+// has on a movrel subtarget - with M0 redefined between them. The dwords they
+// touch are (first M0)+1 and (second M0)+0, which are the same dword whenever
+// the second index is one more than the first, so they may alias. Disjointness
+// is decided from the base operand and the constant offset, and both bases are
+// literally $m0, so nothing in that comparison can tell the two M0 values
+// apart.
+TEST_F(VGPRAsMemoryTest, M0IndexedAccessesAcrossAM0RedefMayAlias) {
+  StringRef MIRString = R"MIR(
+name: m0_redef
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0
+
+    $m0 = COPY $sgpr0
+    $vgpr1 = V_LOAD_IDX_B32 $m0, 1, implicit $exec :: (load (s32), addrspace 13)
+    $m0 = COPY $sgpr1
+    V_STORE_IDX_B32 $vgpr0, $m0, 0, implicit $exec :: (store (s32), addrspace 13)
+    S_ENDPGM 0
+...
+)MIR";
+
+  ASSERT_TRUE(parseMIR(MIRString));
+  MachineFunction &MF = getMF("m0_redef");
+  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
+  MachineBasicBlock *MBB = MF.getBlockNumbered(0);
+
+  const MachineInstr *Load = nullptr;
+  const MachineInstr *Store = nullptr;
+  for (MachineInstr &MI : *MBB) {
+    if (MI.getOpcode() == AMDGPU::V_LOAD_IDX_B32)
+      Load = &MI;
+    else if (MI.getOpcode() == AMDGPU::V_STORE_IDX_B32)
+      Store = &MI;
+  }
+  ASSERT_NE(Load, nullptr);
+  ASSERT_NE(Store, nullptr);
+
+  EXPECT_FALSE(TII->areMemAccessesTriviallyDisjoint(*Load, *Store))
+      << "M0 is redefined between these accesses, so their dword indices are "
+         "unrelated and they must not be reported disjoint";
+}
