@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgpu8.03-mesa-mesa3d -O0 -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*' -filetype=null %s 2>&1  | FileCheck -check-prefix=ERR %s
+# RUN: llc -mtriple=amdgpu8.03-mesa-mesa3d -O0 -run-pass=legalizer -global-isel-abort=0 %s -o - | FileCheck -check-prefix=MIR %s
 
 # Make sure incorrect usage of control flow intrinsics fails to select in case some transform separated the intrinsic from its branch.
 
@@ -8,7 +9,7 @@
 # ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_xor_0)
 # ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_or_neg1)
 # ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_negated_multi_use)
-
+# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: si_if_negated_invalid_branch_layout)
 
 ---
 name: brcond_si_if_different_block
@@ -133,4 +134,28 @@ body:             |
 
   bb.3:
     S_NOP 2
+...
+
+# A failed match after recognizing the negation must not modify the MIR.
+# MIR-LABEL: name: si_if_negated_invalid_branch_layout
+# MIR: [[NOT:%[0-9]+]]:_(s1) = G_XOR
+# MIR-NEXT: G_BRCOND [[NOT]](s1), %bb.1
+# MIR-NEXT: S_ENDPGM 0
+---
+name: si_if_negated_invalid_branch_layout
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $vgpr0, $vgpr1
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s1) = G_ICMP intpred(ne), %0, %1
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
+    %5:_(s1) = G_CONSTANT i1 true
+    %6:_(s1) = G_XOR %3, %5
+    G_BRCOND %6, %bb.1
+    S_ENDPGM 0
+
+  bb.1:
+    S_ENDPGM 0
 ...

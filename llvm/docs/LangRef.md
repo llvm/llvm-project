@@ -26277,6 +26277,36 @@ This intrinsic is lowered to code which is intended to cause an
 execution trap with the intention of requesting the attention of a
 debugger.
 
+(llvm.is.debugging.enabled)=
+
+#### '`llvm.is.debugging.enabled`' Intrinsic
+
+##### Syntax:
+
+```llvm
+declare noundef i1 @llvm.is.debugging.enabled() nomerge memory(inaccessiblemem: readwrite)
+```
+
+##### Overview:
+
+The '`llvm.is.debugging.enabled`' intrinsic returns whether debugging is enabled
+for the target-defined execution context of the current invocation.
+
+##### Arguments:
+
+None.
+
+##### Semantics:
+
+Each call observes the current debugging-enabled state. Calls are distinct
+observations: LLVM must not assume separate calls return the same value, and a
+call may not be removed when its result is unused, commoned with another call,
+or reordered with respect to one.
+
+On targets that do not support querying debugging-enabled state, the intrinsic
+returns `false` and performs no observation.
+
+
 (llvm.ubsantrap)=
 
 #### '`llvm.ubsantrap`' Intrinsic
