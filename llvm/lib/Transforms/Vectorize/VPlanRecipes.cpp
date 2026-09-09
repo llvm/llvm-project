@@ -578,6 +578,8 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   case Instruction::Call:
     return getCalledFunction(Operands)->getReturnType();
   default:
+    if (Instruction::isCast(Opcode))
+      llvm_unreachable("type must be passed explicitly");
     break;
   }
 
