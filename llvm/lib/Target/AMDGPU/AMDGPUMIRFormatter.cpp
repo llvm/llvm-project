@@ -590,8 +590,7 @@ bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
       if (!AMDGPU::AsyncStage::isValidMask(Mask))
         return ErrorCallback(NamePos, "async stage mask out of range");
       for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
-        if (!AMDGPU::AsyncStage::isReservedStage(S) &&
-            (Mask & (1 << S)))
+        if (!AMDGPU::AsyncStage::isReservedStage(S) && (Mask & (1 << S)))
           return ErrorCallback(NamePos,
                                "async stage mask names a non-reserved stage");
       }
