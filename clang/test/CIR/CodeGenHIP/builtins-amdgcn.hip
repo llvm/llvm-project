@@ -332,12 +332,6 @@ __device__ void test_class_f64(bool* out, double a, int b) {
   *out = __builtin_amdgcn_class(a, b);
 }
 
-// __builtin_amdgcn_lerp, like __builtin_amdgcn_ds_swizzle above, is claimed by
-// the generic intrinsic path in emitBuiltinExpr: its intrinsic carries
-// ClangBuiltin<> and takes no overloaded type, so getIntrinsicForClangBuiltin
-// resolves it. Neither needs a case in emitAMDGPUBuiltinExpr; these tests pin
-// the emission down.
-
 // CIR-LABEL: @_Z9test_lerpPjjjj
 // CIR: cir.call_llvm_intrinsic "amdgcn.lerp" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
 // LLVM: define{{.*}} void @_Z9test_lerpPjjjj
