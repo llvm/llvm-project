@@ -53,8 +53,8 @@ FIRModule:(.text+0x97): undefined reference to `_FortranASinF128'
 
 In such configurations, basic arithmetic operations such as addition,
 subtraction, multiplication, and division may still work if they are
-supported by the LLVM backend, while math intrinsics such as SIN, COS, EXP,
-and LOG require additional runtime library support.
+supported by the LLVM backend, while math intrinsics such as `SIN`, `COS`, `EXP`,
+and `LOG` will require additional runtime library support.
 
 This distinction can affect programs that use `SELECTED_REAL_KIND` to
 determine whether `REAL(16)` is available. For example:
