@@ -3572,19 +3572,9 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       // type metadata matches the promoted signatures computed at indirect
       // call sites in CGCall.cpp (see CodeGenFunction::EmitCall).
       SmallVector<QualType, 8> ParamTypes;
-      for (const ParmVarDecl *P : Def->parameters()) {
-        QualType ParamTy = P->getType();
-        if (Context.isPromotableIntegerType(ParamTy))
-          ParamTy = Context.getPromotedIntegerType(ParamTy);
-        else if (const auto *BT = ParamTy->getAs<BuiltinType>()) {
-          if (BT->getKind() == BuiltinType::Float ||
-              BT->getKind() == BuiltinType::Half)
-            ParamTy = Context.DoubleTy;
-        }
-        ParamTypes.push_back(ParamTy);
-      }
-      FunctionProtoType::ExtProtoInfo EPI;
-      QT = Context.getFunctionType(FNPT->getReturnType(), ParamTypes, EPI);
+      for (const ParmVarDecl *P : Def->parameters())
+        ParamTypes.push_back(P->getType());
+      QT = reconstructCallGraphPrototype(FNPT, ParamTypes);
     }
 
     F->addMetadata(
@@ -8759,12 +8749,41 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
                                       ".generalized", /*ForceString=*/false);
 }
 
+// Applies C default argument promotions to a parameter type.
+//
+// FIXME: The canonical source of truth for C default argument promotion is
+// Sema::DefaultArgumentPromotion (SemaExpr.cpp), which operates on Expr*.
+// Because CodeGen only has type information (QualType from ParmVarDecl or
+// CallArg) and cannot invoke Sema without dummy expressions, we mirror the
+// promotion rules here. In the long term, this type-based logic should be
+// unified with Sema (for example, by extracting a shared type-level promotion
+// helper in ASTContext).
+QualType CodeGenModule::getCallGraphPromotedType(QualType Ty) const {
+  if (Context.isPromotableIntegerType(Ty))
+    return Context.getPromotedIntegerType(Ty);
+  if (const auto *BT = Ty->getAs<BuiltinType>()) {
+    if (BT->getKind() == BuiltinType::Float ||
+        BT->getKind() == BuiltinType::Half)
+      return Context.DoubleTy;
+  }
+  return Ty;
+}
+
+QualType CodeGenModule::reconstructCallGraphPrototype(
+    const FunctionNoProtoType *FNPT, ArrayRef<QualType> ParamTypes) const {
+  SmallVector<QualType, 8> PromotedParamTypes;
+  PromotedParamTypes.reserve(ParamTypes.size());
+  for (QualType PT : ParamTypes)
+    PromotedParamTypes.push_back(getCallGraphPromotedType(PT));
+  FunctionProtoType::ExtProtoInfo EPI;
+  return Context.getFunctionType(FNPT->getReturnType(), PromotedParamTypes,
+                                 EPI);
+}
+
 llvm::Metadata *
 CodeGenModule::CreateMetadataIdentifierForCallGraphType(QualType T) {
-  if (auto *FNPT = T->getAs<FunctionNoProtoType>()) {
-    FunctionProtoType::ExtProtoInfo EPI;
-    T = getContext().getFunctionType(FNPT->getReturnType(), {}, EPI);
-  }
+  if (auto *FNPT = T->getAs<FunctionNoProtoType>())
+    T = reconstructCallGraphPrototype(FNPT, {});
   return CreateMetadataIdentifierImpl(T, CallGraphMetadataIdMap, "",
                                       /*ForceString=*/true);
 }
