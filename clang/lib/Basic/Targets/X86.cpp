@@ -88,13 +88,12 @@ static const char *const GCCRegNames[] = {
     "zmm10", "zmm11", "zmm12", "zmm13", "zmm14",   "zmm15", "zmm16", "zmm17",
     "zmm18", "zmm19", "zmm20", "zmm21", "zmm22",   "zmm23", "zmm24", "zmm25",
     "zmm26", "zmm27", "zmm28", "zmm29", "zmm30",   "zmm31", "k0",    "k1",
-    "k2",    "k3",    "k4",    "k5",    "k6",      "k7",
-    "cr0",   "cr2",   "cr3",   "cr4",   "cr8",
-    "dr0",   "dr1",   "dr2",   "dr3",   "dr6",     "dr7",
-    "bnd0",  "bnd1",  "bnd2",  "bnd3",
-    "tmm0",  "tmm1",  "tmm2",  "tmm3",  "tmm4",    "tmm5",  "tmm6",  "tmm7",
-    "r16",   "r17",   "r18",   "r19",   "r20",     "r21",   "r22",   "r23",
-    "r24",   "r25",   "r26",   "r27",   "r28",     "r29",   "r30",   "r31",
+    "k2",    "k3",    "k4",    "k5",    "k6",      "k7",    "cr0",   "cr2",
+    "cr3",   "cr4",   "cr8",   "dr0",   "dr1",     "dr2",   "dr3",   "dr6",
+    "dr7",   "bnd0",  "bnd1",  "bnd2",  "bnd3",    "tmm0",  "tmm1",  "tmm2",
+    "tmm3",  "tmm4",  "tmm5",  "tmm6",  "tmm7",    "r16",   "r17",   "r18",
+    "r19",   "r20",   "r21",   "r22",   "r23",     "r24",   "r25",   "r26",
+    "r27",   "r28",   "r29",   "r30",   "r31",     "bsr0",
 };
 
 const TargetInfo::AddlRegName AddlRegNames[] = {

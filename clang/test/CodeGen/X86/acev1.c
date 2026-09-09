@@ -10,16 +10,31 @@
 void test_acev1_outer_products(__m512bh bf1, __m512bh bf2, __m512i i1,
                                __m512i i2) {
   // CHECK-LABEL: @test_acev1_outer_products
-  // CHECK: call void @llvm.x86.top2bf16ps(i8 0, <32 x bfloat> %{{.*}}, <32 x bfloat> %{{.*}})
-  // CHECK: call void @llvm.x86.top4buud(i8 1, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
-  // CHECK: call void @llvm.x86.top4busd(i8 2, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
-  // CHECK: call void @llvm.x86.top4bssd(i8 3, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
-  // CHECK: call void @llvm.x86.top4bsud(i8 4, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
-  _tile_top2bf16ps(0, bf1, bf2);
-  _tile_top4buud(1, i1, i2);
-  _tile_top4busd(2, i1, i2);
-  _tile_top4bssd(3, i1, i2);
-  _tile_top4bsud(4, i1, i2);
+  // CHECK: call void @llvm.x86.acev1.top2bf16ps(i8 0, <32 x bfloat> %{{.*}}, <32 x bfloat> %{{.*}})
+  // CHECK: call void @llvm.x86.acev1.top4buud(i8 1, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
+  // CHECK: call void @llvm.x86.acev1.top4busd(i8 2, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
+  // CHECK: call void @llvm.x86.acev1.top4bssd(i8 3, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
+  // CHECK: call void @llvm.x86.acev1.top4bsud(i8 4, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
+  _tile_op2bf16_ps(0, bf1, bf2);
+  _tile_op4buud_epi32(1, i1, i2);
+  _tile_op4busd_epi32(2, i1, i2);
+  _tile_op4bssd_epi32(3, i1, i2);
+  _tile_op4bsud_epi32(4, i1, i2);
+}
+
+// The mixed precision forms take an additional scale group selector.
+void test_acev1_mx_outer_products(__m512i i1, __m512i i2) {
+  // CHECK-LABEL: @test_acev1_mx_outer_products
+  // CHECK: call void @llvm.x86.acev1.top4mxhf8ps(i8 0, <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, i8 0)
+  // CHECK: call void @llvm.x86.acev1.top4mxbhf8ps(i8 1, <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, i8 1)
+  // CHECK: call void @llvm.x86.acev1.top4mxhbf8ps(i8 2, <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, i8 0)
+  // CHECK: call void @llvm.x86.acev1.top4mxbf8ps(i8 3, <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, i8 1)
+  // CHECK: call void @llvm.x86.acev1.top4mxbssps(i8 4, <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, i8 0)
+  _tile_op4mxhf8_ps(0, i1, i2, 0);
+  _tile_op4mxbhf8_ps(1, i1, i2, 1);
+  _tile_op4mxhbf8_ps(2, i1, i2, 0);
+  _tile_op4mxbf8_ps(3, i1, i2, 1);
+  _tile_op4mxbss_ps(4, i1, i2, 0);
 }
 
 void test_acev1_tile_config(void *data) {
@@ -38,14 +53,14 @@ void test_acev1_tile_config(void *data) {
 // TILEMOVROW/TILEMOVCOL with an explicit tile register ID.
 void test_acev1_tile_movement(__m512i src) {
   // CHECK-LABEL: @test_acev1_tile_movement
-  // CHECK: call void @llvm.x86.tilemovrow.set(i8 0, <16 x i32> %{{.*}}, i32 5)
-  // CHECK: call void @llvm.x86.tilemovcol.set(i8 1, <16 x i32> %{{.*}}, i32 3)
-  _tile_setrow(0, src, 5);
-  _tile_setcol(1, src, 3);
+  // CHECK: call void @llvm.x86.acev1.tilemovrowinsert(i8 0, <16 x i32> %{{.*}}, i32 5)
+  // CHECK: call void @llvm.x86.acev1.tilemovcolinsert(i8 1, <16 x i32> %{{.*}}, i32 3)
+  _tile_insertrow(0, src, 5);
+  _tile_insertcol(1, src, 3);
 }
 
 void test_acev1_bsr(void) {
   // CHECK-LABEL: @test_acev1_bsr
-  // CHECK: call void @llvm.x86.bsrinit()
+  // CHECK: call void @llvm.x86.acev1.bsr0init()
   _bsr0_init();
 }

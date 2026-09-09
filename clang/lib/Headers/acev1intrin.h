@@ -13,11 +13,13 @@
 
 #ifndef __ACEV1INTRIN_H
 #define __ACEV1INTRIN_H
-#ifdef __x86_64__
+#if defined(__x86_64__) && defined(__SSE2__)
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS_ACE                                                 \
   __attribute__((__always_inline__, __nodebug__, __target__("acev1")))
+
+// clang-format off
 
 /// Load tile configuration from a 64-byte memory location. For ACE
 /// (Palette 2), the palette_id byte must be 2. Unlike AMX (Palette 1),
@@ -60,7 +62,8 @@ _tile_ace_storeconfig(void *__config) {
 /// \headerfile <immintrin.h>
 ///
 /// This intrinsic corresponds to the <c> TILERELEASE </c> instruction.
-static __inline__ void __DEFAULT_FN_ATTRS_ACE _tile_ace_release(void) {
+static __inline__ void __DEFAULT_FN_ATTRS_ACE
+_tile_ace_release(void) {
   __builtin_ia32_tilerelease();
 }
 
@@ -89,8 +92,8 @@ static __inline__ void __DEFAULT_FN_ATTRS_ACE _tile_ace_release(void) {
 ///    Source ZMM vector (__m512i) containing 16 doublewords.
 /// \param idx
 ///    Column index (0-15). Immediate or register form selected automatically.
-#define _tile_setcol(dst, src, idx)                                            \
-  __builtin_ia32_tilemovcol_set((dst), (src), (idx))
+#define _tile_insertcol(dst, src, idx)                                         \
+  __builtin_ia32_tilemovcolinsert((dst), (__v16si)(src), (idx))
 
 /// Move a 64-byte ZMM vector to a tile row. The ZMM contents are written
 /// as a horizontal row in the tile at the specified index.
@@ -105,8 +108,8 @@ static __inline__ void __DEFAULT_FN_ATTRS_ACE _tile_ace_release(void) {
 ///    Source ZMM vector (__m512i) containing 16 doublewords.
 /// \param idx
 ///    Row index (0-15). Immediate or register form selected automatically.
-#define _tile_setrow(dst, src, idx)                                            \
-  __builtin_ia32_tilemovrow_set((dst), (src), (idx))
+#define _tile_insertrow(dst, src, idx)                                         \
+  __builtin_ia32_tilemovrowinsert((dst), (__v16si)(src), (idx))
 
 /// Initialize the Block Scale Register (BSR), setting all 128 scale bytes to
 /// 0x7F (the E8M0 encoding of 1.0), the same state LDTILECFG leaves it in.
@@ -116,8 +119,9 @@ static __inline__ void __DEFAULT_FN_ATTRS_ACE _tile_ace_release(void) {
 /// \headerfile <immintrin.h>
 ///
 /// This intrinsic corresponds to the <c> BSRINIT </c> instruction.
-static __inline__ void __DEFAULT_FN_ATTRS_ACE _bsr0_init(void) {
-  __builtin_ia32_bsrinit();
+static __inline__ void __DEFAULT_FN_ATTRS_ACE
+_bsr0_init(void) {
+  __builtin_ia32_bsr0init();
 }
 
 /// Load the full BSR (128 scale bytes) from two ZMM registers. The high half
@@ -131,9 +135,9 @@ static __inline__ void __DEFAULT_FN_ATTRS_ACE _bsr0_init(void) {
 ///    ZMM with the 64 A-operand scale bytes for the BSR high half.
 /// \param __src2
 ///    ZMM with the 64 B-operand scale bytes for the BSR low half.
-static __inline__ void __DEFAULT_FN_ATTRS_ACE _bsr0_movf(__m512i __src1,
-                                                         __m512i __src2) {
-  __builtin_ia32_bsrmovf((__v64qi)__src1, (__v64qi)__src2);
+static __inline__ void __DEFAULT_FN_ATTRS_ACE
+_bsr0_insertfull(__m512i __src1, __m512i __src2) {
+  __builtin_ia32_bsr0movf((__v64qi)__src1, (__v64qi)__src2);
 }
 
 /// Load the high half of BSR (64 A-operand scale bytes) from a ZMM register.
@@ -144,8 +148,9 @@ static __inline__ void __DEFAULT_FN_ATTRS_ACE _bsr0_movf(__m512i __src1,
 ///
 /// \param __src
 ///    ZMM with 64 scale bytes to write to the BSR high half.
-static __inline__ void __DEFAULT_FN_ATTRS_ACE _bsr0_movh_set(__m512i __src) {
-  __builtin_ia32_bsrmovh_set((__v64qi)__src);
+static __inline__ void __DEFAULT_FN_ATTRS_ACE
+_bsr0_inserth(__m512i __src) {
+  __builtin_ia32_bsr0movhinsert((__v64qi)__src);
 }
 
 /// Read the high half of BSR (64 A-operand scale bytes) to a ZMM register.
@@ -156,8 +161,9 @@ static __inline__ void __DEFAULT_FN_ATTRS_ACE _bsr0_movh_set(__m512i __src) {
 ///
 /// \returns
 ///    ZMM containing the 64 scale bytes from the BSR high half.
-static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movh_get(void) {
-  return (__m512i)__builtin_ia32_bsrmovh_get();
+static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE
+_bsr0_extracth(void) {
+  return (__m512i)__builtin_ia32_bsr0movhextract();
 }
 
 /// Load the low half of BSR (64 B-operand scale bytes) from a ZMM register.
@@ -168,8 +174,9 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movh_get(void) {
 ///
 /// \param __src
 ///    ZMM with 64 scale bytes to write to the BSR low half.
-static __inline__ void __DEFAULT_FN_ATTRS_ACE _bsr0_movl_set(__m512i __src) {
-  __builtin_ia32_bsrmovl_set((__v64qi)__src);
+static __inline__ void __DEFAULT_FN_ATTRS_ACE
+_bsr0_insertl(__m512i __src) {
+  __builtin_ia32_bsr0movlinsert((__v64qi)__src);
 }
 
 /// Read the low half of BSR (64 B-operand scale bytes) to a ZMM register.
@@ -180,8 +187,9 @@ static __inline__ void __DEFAULT_FN_ATTRS_ACE _bsr0_movl_set(__m512i __src) {
 ///
 /// \returns
 ///    ZMM containing the 64 scale bytes from the BSR low half.
-static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
-  return (__m512i)__builtin_ia32_bsrmovl_get();
+static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE
+_bsr0_extractl(void) {
+  return (__m512i)__builtin_ia32_bsr0movlextract();
 }
 
 /// Compute 2-way outer product of BF16 pairs, accumulating to FP32.
@@ -198,7 +206,7 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 ///    First source ZMM vector (__m512bh) containing 32 BF16 values.
 /// \param src2
 ///    Second source ZMM vector (__m512bh) containing 32 BF16 values.
-#define _tile_top2bf16ps(dst, src1, src2)                                      \
+#define _tile_op2bf16_ps(dst, src1, src2)                                      \
   __builtin_ia32_top2bf16ps((dst), (__v32bf)(src1), (__v32bf)(src2))
 
 /// Compute 4-way outer product of unsigned x unsigned bytes to INT32.
@@ -215,8 +223,8 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 ///    First source ZMM vector (__m512i) containing 64 unsigned bytes.
 /// \param src2
 ///    Second source ZMM vector (__m512i) containing 64 unsigned bytes.
-#define _tile_top4buud(dst, src1, src2)                                        \
-  __builtin_ia32_top4buud((dst), (__v64qs)(src1), (__v64qs)(src2))
+#define _tile_op4buud_epi32(dst, src1, src2)                                   \
+  __builtin_ia32_top4buud((dst), (__v64qi)(src1), (__v64qi)(src2))
 
 /// Compute 4-way outer product of unsigned x signed bytes to INT32.
 /// Each group of 4 byte pairs (unsigned from src1, signed from src2)
@@ -232,8 +240,8 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 ///    First source ZMM vector (__m512i) containing 64 unsigned bytes.
 /// \param src2
 ///    Second source ZMM vector (__m512i) containing 64 signed bytes.
-#define _tile_top4busd(dst, src1, src2)                                        \
-  __builtin_ia32_top4busd((dst), (__v64qs)(src1), (__v64qs)(src2))
+#define _tile_op4busd_epi32(dst, src1, src2)                                   \
+  __builtin_ia32_top4busd((dst), (__v64qi)(src1), (__v64qi)(src2))
 
 /// Compute 4-way outer product of signed x signed bytes to INT32.
 /// Each group of 4 signed byte pairs produces 4 products accumulated
@@ -249,8 +257,8 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 ///    First source ZMM vector (__m512i) containing 64 signed bytes.
 /// \param src2
 ///    Second source ZMM vector (__m512i) containing 64 signed bytes.
-#define _tile_top4bssd(dst, src1, src2)                                        \
-  __builtin_ia32_top4bssd((dst), (__v64qs)(src1), (__v64qs)(src2))
+#define _tile_op4bssd_epi32(dst, src1, src2)                                   \
+  __builtin_ia32_top4bssd((dst), (__v64qi)(src1), (__v64qi)(src2))
 
 /// Compute 4-way outer product of signed x unsigned bytes to INT32.
 /// Each group of 4 byte pairs (signed from src1, unsigned from src2)
@@ -266,12 +274,35 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 ///    First source ZMM vector (__m512i) containing 64 signed bytes.
 /// \param src2
 ///    Second source ZMM vector (__m512i) containing 64 unsigned bytes.
-#define _tile_top4bsud(dst, src1, src2)                                        \
-  __builtin_ia32_top4bsud((dst), (__v64qs)(src1), (__v64qs)(src2))
+#define _tile_op4bsud_epi32(dst, src1, src2)                                   \
+  __builtin_ia32_top4bsud((dst), (__v64qi)(src1), (__v64qi)(src2))
 
-/// Compute 4-way mixed precision outer product with HF8 (E4M3) format.
-/// Multiplies HF8 values from both sources, converting to FP32 and
-/// accumulating into the destination tile.
+/// Select the A-input scale group within the BSR for the mixed precision
+/// outer product intrinsics. Combine with \c _MM_ACE_SCALE_B using a bitwise
+/// OR to form the scale group selector.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param g
+///    A-input scale group number (0-3).
+/// \returns
+///    The A-input field of the scale group selector.
+#define _MM_ACE_SCALE_A(g) ((g) << 0)
+
+/// Select the B-input scale group within the BSR for the mixed precision
+/// outer product intrinsics. Combine with \c _MM_ACE_SCALE_A using a bitwise
+/// OR to form the scale group selector.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param g
+///    B-input scale group number (0-3).
+/// \returns
+///    The B-input field of the scale group selector.
+#define _MM_ACE_SCALE_B(g) ((g) << 3)
+
+/// Rank-4 MX FP8 outer product. A = FP8 E4M3, B = FP8 E4M3. OCP MX block
+/// scaling via the BSR, with FP32 accumulation into the destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -280,17 +311,17 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 /// \param dst
 ///    Destination/accumulator tile register ID (0-7).
 /// \param src1
-///    First source ZMM vector (__m512i) containing HF8 values.
+///    The A input: ZMM vector (__m512i) of FP8 E4M3 (HF8) values.
 /// \param src2
-///    Second source ZMM vector (__m512i) containing HF8 values.
+///    The B input: ZMM vector (__m512i) of FP8 E4M3 (HF8) values.
 /// \param imm
-///    8-bit control immediate for scaling/rounding options.
-#define _tile_top4mxhf8ps(dst, src1, src2, imm)                                \
-  __builtin_ia32_top4mxhf8ps((dst), (__v16si)(src1), (__v16si)(src2), (imm))
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
+#define _tile_op4mxhf8_ps(dst, src1, src2, imm)                                \
+  __builtin_ia32_top4mxhf8ps((dst), (__v64qi)(src1), (__v64qi)(src2), (imm))
 
-/// Compute 4-way mixed precision outer product with BF8/HF8 format.
-/// Multiplies BF8 values from src1 with HF8 (E4M3) values from src2,
-/// converting to FP32 and accumulating into the destination tile.
+/// Rank-4 MX FP8 outer product. A = FP8 E5M2, B = FP8 E4M3. OCP MX block
+/// scaling via the BSR, with FP32 accumulation into the destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -299,17 +330,17 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 /// \param dst
 ///    Destination/accumulator tile register ID (0-7).
 /// \param src1
-///    First source ZMM vector (__m512i) containing BF8 values.
+///    The A input: ZMM vector (__m512i) of FP8 E5M2 (BF8) values.
 /// \param src2
-///    Second source ZMM vector (__m512i) containing HF8 values.
+///    The B input: ZMM vector (__m512i) of FP8 E4M3 (HF8) values.
 /// \param imm
-///    8-bit control immediate for scaling/rounding options.
-#define _tile_top4mxbhf8ps(dst, src1, src2, imm)                               \
-  __builtin_ia32_top4mxbhf8ps((dst), (__v16si)(src1), (__v16si)(src2), (imm))
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
+#define _tile_op4mxbhf8_ps(dst, src1, src2, imm)                               \
+  __builtin_ia32_top4mxbhf8ps((dst), (__v64qi)(src1), (__v64qi)(src2), (imm))
 
-/// Compute 4-way mixed precision outer product with HF8/BF8 format.
-/// Multiplies HF8 (E4M3) values from src1 with BF8 values from src2,
-/// converting to FP32 and accumulating into the destination tile.
+/// Rank-4 MX FP8 outer product. A = FP8 E4M3, B = FP8 E5M2. OCP MX block
+/// scaling via the BSR, with FP32 accumulation into the destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -318,17 +349,17 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 /// \param dst
 ///    Destination/accumulator tile register ID (0-7).
 /// \param src1
-///    First source ZMM vector (__m512i) containing HF8 values.
+///    The A input: ZMM vector (__m512i) of FP8 E4M3 (HF8) values.
 /// \param src2
-///    Second source ZMM vector (__m512i) containing BF8 values.
+///    The B input: ZMM vector (__m512i) of FP8 E5M2 (BF8) values.
 /// \param imm
-///    8-bit control immediate for scaling/rounding options.
-#define _tile_top4mxhbf8ps(dst, src1, src2, imm)                               \
-  __builtin_ia32_top4mxhbf8ps((dst), (__v16si)(src1), (__v16si)(src2), (imm))
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
+#define _tile_op4mxhbf8_ps(dst, src1, src2, imm)                               \
+  __builtin_ia32_top4mxhbf8ps((dst), (__v64qi)(src1), (__v64qi)(src2), (imm))
 
-/// Compute 4-way mixed precision outer product with BF8 (E5M2) format.
-/// Multiplies BF8 values from both sources, converting to FP32 and
-/// accumulating into the destination tile.
+/// Rank-4 MX FP8 outer product. A = FP8 E5M2, B = FP8 E5M2. OCP MX block
+/// scaling via the BSR, with FP32 accumulation into the destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -337,17 +368,18 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 /// \param dst
 ///    Destination/accumulator tile register ID (0-7).
 /// \param src1
-///    First source ZMM vector (__m512i) containing BF8 values.
+///    The A input: ZMM vector (__m512i) of FP8 E5M2 (BF8) values.
 /// \param src2
-///    Second source ZMM vector (__m512i) containing BF8 values.
+///    The B input: ZMM vector (__m512i) of FP8 E5M2 (BF8) values.
 /// \param imm
-///    8-bit control immediate for scaling/rounding options.
-#define _tile_top4mxbf8ps(dst, src1, src2, imm)                                \
-  __builtin_ia32_top4mxbf8ps((dst), (__v16si)(src1), (__v16si)(src2), (imm))
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
+#define _tile_op4mxbf8_ps(dst, src1, src2, imm)                                \
+  __builtin_ia32_top4mxbf8ps((dst), (__v64qi)(src1), (__v64qi)(src2), (imm))
 
-/// Compute 4-way mixed precision outer product of signed INT8 with BSR
-/// scaling. Multiplies signed bytes, applies scale factors from the BSR,
-/// and accumulates FP32 results into the destination tile.
+/// Rank-4 MX INT8 outer product. A = MX INT8 signed, B = MX INT8 signed.
+/// OCP MX block scaling via the BSR, with FP32 accumulation into the
+/// destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -356,13 +388,102 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE _bsr0_movl_get(void) {
 /// \param dst
 ///    Destination/accumulator tile register ID (0-7).
 /// \param src1
-///    First source ZMM vector (__m512i) containing signed bytes.
+///    The A input: ZMM vector (__m512i) of MX INT8 signed values.
 /// \param src2
-///    Second source ZMM vector (__m512i) containing signed bytes.
+///    The B input: ZMM vector (__m512i) of MX INT8 signed values.
 /// \param imm
-///    8-bit immediate selecting BSR scale factors to apply.
-#define _tile_top4mxbssps(dst, src1, src2, imm)                                \
-  __builtin_ia32_top4mxbssps((dst), (__v16si)(src1), (__v16si)(src2), (imm))
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
+#define _tile_op4mxbss_ps(dst, src1, src2, imm)                                \
+  __builtin_ia32_top4mxbssps((dst), (__v64qi)(src1), (__v64qi)(src2), (imm))
+
+/// Read a row from a tile register and convert its int32 elements to FP32.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TCVTROWD2PS </c> instruction.
+///
+/// \param tsrc
+///    Source tile register ID (0-7).
+/// \param row
+///    Row index selecting the tile row to read.
+/// \returns
+///    ZMM vector (__m512) holding the converted FP32 elements.
+#define _tile_cvtrow_epi32_ps(tsrc, row) _tile_cvtrowd2ps((tsrc), (row))
+
+/// Read a row from a tile register and convert its FP32 elements to BF16,
+/// placing the results in the high half of each destination dword.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TCVTROWPS2BF16H </c> instruction.
+///
+/// \param tsrc
+///    Source tile register ID (0-7).
+/// \param row
+///    Row index selecting the tile row to read.
+/// \returns
+///    ZMM vector (__m512bh) holding the converted BF16 elements.
+#define _tile_cvtrowh_ps_pbh(tsrc, row) _tile_cvtrowps2bf16h((tsrc), (row))
+
+/// Read a row from a tile register and convert its FP32 elements to BF16,
+/// placing the results in the low half of each destination dword.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TCVTROWPS2BF16L </c> instruction.
+///
+/// \param tsrc
+///    Source tile register ID (0-7).
+/// \param row
+///    Row index selecting the tile row to read.
+/// \returns
+///    ZMM vector (__m512bh) holding the converted BF16 elements.
+#define _tile_cvtrowl_ps_pbh(tsrc, row) _tile_cvtrowps2bf16l((tsrc), (row))
+
+/// Read a row from a tile register and convert its FP32 elements to FP16,
+/// placing the results in the high half of each destination dword.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TCVTROWPS2PHH </c> instruction.
+///
+/// \param tsrc
+///    Source tile register ID (0-7).
+/// \param row
+///    Row index selecting the tile row to read.
+/// \returns
+///    ZMM vector (__m512h) holding the converted FP16 elements.
+#define _tile_cvtrowh_ps_ph(tsrc, row) _tile_cvtrowps2phh((tsrc), (row))
+
+/// Read a row from a tile register and convert its FP32 elements to FP16,
+/// placing the results in the low half of each destination dword.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TCVTROWPS2PHL </c> instruction.
+///
+/// \param tsrc
+///    Source tile register ID (0-7).
+/// \param row
+///    Row index selecting the tile row to read.
+/// \returns
+///    ZMM vector (__m512h) holding the converted FP16 elements.
+#define _tile_cvtrowl_ps_ph(tsrc, row) _tile_cvtrowps2phl((tsrc), (row))
+
+/// Extract one row of a tile register into a ZMM destination.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TILEMOVROW </c> instruction.
+///
+/// \param tsrc
+///    Source tile register ID (0-7).
+/// \param row
+///    Row index selecting the tile row to read.
+/// \returns
+///    ZMM vector (__m512i) holding the extracted row.
+#define _tile_extractrow(tsrc, row) _tile_movrow((tsrc), (row))
 
 /// ACE tile type with fixed dimensions (16 rows x 64 bytes = 1024 bytes).
 /// ACE Palette 2 uses fixed tile dimensions, unlike AMX Palette 1.
@@ -381,8 +502,7 @@ typedef struct __attribute__((__packed__, __aligned__(64))) {
 /// Use with _tile_ace_loadconfig to configure tiles for ACE operations.
 static __inline__ void __DEFAULT_FN_ATTRS_ACE
 __ace_init_config(__ace_tile_config *cfg) {
-  for (int i = 0; i < 64; i++)
-    ((unsigned char *)cfg)[i] = 0;
+  __builtin_memset(cfg, 0, sizeof(*cfg));
   cfg->palette_id = 2;
 }
 
@@ -416,8 +536,8 @@ static __inline__ void __tile_ace_zero(__acetile *dst) {
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top4buud(__acetile *dst, __m512i src1,
                                            __m512i src2) {
-  *dst = __builtin_ia32_top4buud_internal(16, 64, 64, *dst, (__v64qs)src1,
-                                          (__v64qs)src2);
+  *dst = __builtin_ia32_top4buud_internal(16, 64, 64, *dst, (__v64qi)src1,
+                                          (__v64qi)src2);
 }
 
 /// Compute 4-way outer product of unsigned x signed bytes to INT32.
@@ -437,8 +557,8 @@ static __inline__ void __tile_ace_top4buud(__acetile *dst, __m512i src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top4busd(__acetile *dst, __m512i src1,
                                            __m512i src2) {
-  *dst = __builtin_ia32_top4busd_internal(16, 64, 64, *dst, (__v64qs)src1,
-                                          (__v64qs)src2);
+  *dst = __builtin_ia32_top4busd_internal(16, 64, 64, *dst, (__v64qi)src1,
+                                          (__v64qi)src2);
 }
 
 /// Compute 4-way outer product of signed x signed bytes to INT32.
@@ -458,8 +578,8 @@ static __inline__ void __tile_ace_top4busd(__acetile *dst, __m512i src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top4bssd(__acetile *dst, __m512i src1,
                                            __m512i src2) {
-  *dst = __builtin_ia32_top4bssd_internal(16, 64, 64, *dst, (__v64qs)src1,
-                                          (__v64qs)src2);
+  *dst = __builtin_ia32_top4bssd_internal(16, 64, 64, *dst, (__v64qi)src1,
+                                          (__v64qi)src2);
 }
 
 /// Compute 4-way outer product of signed x unsigned bytes to INT32.
@@ -479,8 +599,8 @@ static __inline__ void __tile_ace_top4bssd(__acetile *dst, __m512i src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top4bsud(__acetile *dst, __m512i src1,
                                            __m512i src2) {
-  *dst = __builtin_ia32_top4bsud_internal(16, 64, 64, *dst, (__v64qs)src1,
-                                          (__v64qs)src2);
+  *dst = __builtin_ia32_top4bsud_internal(16, 64, 64, *dst, (__v64qi)src1,
+                                          (__v64qi)src2);
 }
 
 /// Compute 2-way outer product of BF16 to FP32.
@@ -504,9 +624,8 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
                                             (__v32bf)src2);
 }
 
-/// Compute 4-way mixed precision outer product with HF8 (E4M3) format.
-/// Multiplies HF8 values from src1 with HF8 values from src2, applies
-/// BSR scaling, converts to FP32 and accumulates into the ACE tile.
+/// Rank-4 MX FP8 outer product. A = FP8 E4M3, B = FP8 E4M3. OCP MX block
+/// scaling via the BSR, with FP32 accumulation into the destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -515,18 +634,18 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param dst
 ///    Pointer to destination/accumulator __acetile.
 /// \param src1
-///    First source ZMM vector containing HF8 (E4M3) values.
+///    The A input: ZMM vector of FP8 E4M3 (HF8) values.
 /// \param src2
-///    Second source ZMM vector containing HF8 (E4M3) values.
+///    The B input: ZMM vector of FP8 E4M3 (HF8) values.
 /// \param imm
-///    8-bit immediate selecting BSR scale factors to apply.
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxhf8ps(dst, src1, src2, imm)                           \
   (*(dst) = __builtin_ia32_top4mxhf8ps_internal(                               \
-       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
+       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
-/// Compute 4-way mixed precision outer product with BF8/HF8 format.
-/// Multiplies BF8 (E5M2) values from src1 with HF8 (E4M3) values from src2,
-/// applies BSR scaling, converts to FP32 and accumulates into the ACE tile.
+/// Rank-4 MX FP8 outer product. A = FP8 E5M2, B = FP8 E4M3. OCP MX block
+/// scaling via the BSR, with FP32 accumulation into the destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -535,18 +654,18 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param dst
 ///    Pointer to destination/accumulator __acetile.
 /// \param src1
-///    First source ZMM vector containing BF8 (E5M2) values.
+///    The A input: ZMM vector of FP8 E5M2 (BF8) values.
 /// \param src2
-///    Second source ZMM vector containing HF8 (E4M3) values.
+///    The B input: ZMM vector of FP8 E4M3 (HF8) values.
 /// \param imm
-///    8-bit immediate selecting BSR scale factors to apply.
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxbhf8ps(dst, src1, src2, imm)                          \
   (*(dst) = __builtin_ia32_top4mxbhf8ps_internal(                              \
-       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
+       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
-/// Compute 4-way mixed precision outer product with HF8/BF8 format.
-/// Multiplies HF8 (E4M3) values from src1 with BF8 (E5M2) values from src2,
-/// applies BSR scaling, converts to FP32 and accumulates into the ACE tile.
+/// Rank-4 MX FP8 outer product. A = FP8 E4M3, B = FP8 E5M2. OCP MX block
+/// scaling via the BSR, with FP32 accumulation into the destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -555,18 +674,18 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param dst
 ///    Pointer to destination/accumulator __acetile.
 /// \param src1
-///    First source ZMM vector containing HF8 (E4M3) values.
+///    The A input: ZMM vector of FP8 E4M3 (HF8) values.
 /// \param src2
-///    Second source ZMM vector containing BF8 (E5M2) values.
+///    The B input: ZMM vector of FP8 E5M2 (BF8) values.
 /// \param imm
-///    8-bit immediate selecting BSR scale factors to apply.
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxhbf8ps(dst, src1, src2, imm)                          \
   (*(dst) = __builtin_ia32_top4mxhbf8ps_internal(                              \
-       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
+       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
-/// Compute 4-way mixed precision outer product with BF8 (E5M2) format.
-/// Multiplies BF8 values from both sources, applies BSR scaling,
-/// converts to FP32 and accumulates into the ACE tile.
+/// Rank-4 MX FP8 outer product. A = FP8 E5M2, B = FP8 E5M2. OCP MX block
+/// scaling via the BSR, with FP32 accumulation into the destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -575,18 +694,19 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param dst
 ///    Pointer to destination/accumulator __acetile.
 /// \param src1
-///    First source ZMM vector containing BF8 (E5M2) values.
+///    The A input: ZMM vector of FP8 E5M2 (BF8) values.
 /// \param src2
-///    Second source ZMM vector containing BF8 (E5M2) values.
+///    The B input: ZMM vector of FP8 E5M2 (BF8) values.
 /// \param imm
-///    8-bit immediate selecting BSR scale factors to apply.
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxbf8ps(dst, src1, src2, imm)                           \
   (*(dst) = __builtin_ia32_top4mxbf8ps_internal(                               \
-       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
+       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
-/// Compute 4-way mixed precision outer product of MX INT8 with BSR scaling.
-/// Multiplies signed MX INT8 bytes from both sources, applies BSR scaling,
-/// converts to FP32 and accumulates into the ACE tile.
+/// Rank-4 MX INT8 outer product. A = MX INT8 signed, B = MX INT8 signed.
+/// OCP MX block scaling via the BSR, with FP32 accumulation into the
+/// destination tile.
 ///
 /// \headerfile <immintrin.h>
 ///
@@ -595,14 +715,15 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param dst
 ///    Pointer to destination/accumulator __acetile.
 /// \param src1
-///    First source ZMM vector containing signed MX INT8 values.
+///    The A input: ZMM vector of MX INT8 signed values.
 /// \param src2
-///    Second source ZMM vector containing signed MX INT8 values.
+///    The B input: ZMM vector of MX INT8 signed values.
 /// \param imm
-///    8-bit immediate selecting BSR scale factors to apply.
+///    Scale group selector, formed from \c _MM_ACE_SCALE_A and
+///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxbssps(dst, src1, src2, imm)                           \
   (*(dst) = __builtin_ia32_top4mxbssps_internal(                               \
-       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
+       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
 /// Write a ZMM vector as a column in an ACE tile.
 /// The 16 doublewords from src are written vertically at column idx.
@@ -620,7 +741,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_setcol(__acetile *dst, __m512i src,
                                          unsigned int idx) {
-  *dst = __builtin_ia32_tilemovcol_set_internal(16, 64, (__v16si)src, idx);
+  *dst = __builtin_ia32_tilemovcolinsert_internal(16, 64, (__v16si)src, idx);
 }
 
 /// Write a ZMM vector as a row in an ACE tile.
@@ -639,7 +760,7 @@ static __inline__ void __tile_ace_setcol(__acetile *dst, __m512i src,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_setrow(__acetile *dst, __m512i src,
                                          unsigned int idx) {
-  *dst = __builtin_ia32_tilemovrow_set_internal(16, 64, (__v16si)src, idx);
+  *dst = __builtin_ia32_tilemovrowinsert_internal(16, 64, (__v16si)src, idx);
 }
 
 /// Read a row from an ACE tile to a ZMM vector.
@@ -760,7 +881,9 @@ static __inline__ __m512h __tile_ace_cvtrowps2phl(__acetile *src,
   return __builtin_ia32_tcvtrowps2phl_internal(16, 64, *src, idx);
 }
 
+// clang-format on
+
 #undef __DEFAULT_FN_ATTRS_ACE
 
-#endif /* __x86_64__ */
+#endif /* __x86_64__ && __SSE2__ */
 #endif /* __ACEV1INTRIN_H */

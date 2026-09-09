@@ -110,20 +110,20 @@ static bool isACEOnlyIntrinsic(Instruction *I) {
     return false;
   switch (II->getIntrinsicID()) {
   // ACE outer product intrinsics
-  case Intrinsic::x86_top2bf16ps_internal:
-  case Intrinsic::x86_top4buud_internal:
-  case Intrinsic::x86_top4busd_internal:
-  case Intrinsic::x86_top4bssd_internal:
-  case Intrinsic::x86_top4bsud_internal:
+  case Intrinsic::x86_acev1_top2bf16ps_internal:
+  case Intrinsic::x86_acev1_top4buud_internal:
+  case Intrinsic::x86_acev1_top4busd_internal:
+  case Intrinsic::x86_acev1_top4bssd_internal:
+  case Intrinsic::x86_acev1_top4bsud_internal:
   // ACE mixed precision intrinsics
-  case Intrinsic::x86_top4mxhf8ps_internal:
-  case Intrinsic::x86_top4mxbhf8ps_internal:
-  case Intrinsic::x86_top4mxhbf8ps_internal:
-  case Intrinsic::x86_top4mxbf8ps_internal:
-  case Intrinsic::x86_top4mxbssps_internal:
+  case Intrinsic::x86_acev1_top4mxhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxhbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbssps_internal:
   // ACE tile movement intrinsics
-  case Intrinsic::x86_tilemovcol_set_internal:
-  case Intrinsic::x86_tilemovrow_set_internal:
+  case Intrinsic::x86_acev1_tilemovcolinsert_internal:
+  case Intrinsic::x86_acev1_tilemovrowinsert_internal:
     return true;
   default:
     return false;
@@ -254,11 +254,11 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   }
   // ACE internal intrinsics - outer products with ZMM sources
   // Pattern: (m, n, k, acc_tile, zmm1, zmm2) -> acc_tile += zmm1 * zmm2
-  case Intrinsic::x86_top2bf16ps_internal:
-  case Intrinsic::x86_top4buud_internal:
-  case Intrinsic::x86_top4busd_internal:
-  case Intrinsic::x86_top4bssd_internal:
-  case Intrinsic::x86_top4bsud_internal: {
+  case Intrinsic::x86_acev1_top2bf16ps_internal:
+  case Intrinsic::x86_acev1_top4buud_internal:
+  case Intrinsic::x86_acev1_top4busd_internal:
+  case Intrinsic::x86_acev1_top4bssd_internal:
+  case Intrinsic::x86_acev1_top4bsud_internal: {
     switch (OpNo) {
     case 3: // Accumulator tile
       Row = II->getArgOperand(0);
@@ -276,12 +276,11 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
     break;
   }
   // ACE TOP4MX intrinsics - mixed precision with BSR index
-  // Pattern: (m, n, k, bsr_idx, acc_tile, zmm1, zmm2)
-  case Intrinsic::x86_top4mxhf8ps_internal:
-  case Intrinsic::x86_top4mxbhf8ps_internal:
-  case Intrinsic::x86_top4mxhbf8ps_internal:
-  case Intrinsic::x86_top4mxbf8ps_internal:
-  case Intrinsic::x86_top4mxbssps_internal: {
+  case Intrinsic::x86_acev1_top4mxhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxhbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbssps_internal: {
     switch (OpNo) {
     case 4: // Accumulator tile
       Row = II->getArgOperand(0);
@@ -298,8 +297,8 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   }
   // ACE TILEMOV intrinsics - move ZMM to tile row/column
   // Pattern: (m, n, zmm_src, idx) -> tile
-  case Intrinsic::x86_tilemovcol_set_internal:
-  case Intrinsic::x86_tilemovrow_set_internal: {
+  case Intrinsic::x86_acev1_tilemovcolinsert_internal:
+  case Intrinsic::x86_acev1_tilemovrowinsert_internal: {
     // Output tile shape
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);
