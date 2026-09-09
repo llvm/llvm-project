@@ -43,7 +43,13 @@ class Value;
 ///   auto &allInValues = liveness.getLiveIn(block);
 ///   auto &allOutValues = liveness.getLiveOut(block);
 ///   auto allOperationsInWhichValueIsLive = liveness.resolveLiveness(value);
-///   bool isDeafAfter = liveness.isDeadAfter(value, operation);
+///   bool isDeadAfter = liveness.isDeadAfter(value, operation);
+///
+/// The analysis is computed once at construction time. All queries expect
+/// blocks and operations that were part of the analyzed operation when the
+/// analysis was constructed; querying blocks created afterwards (e.g. by a
+/// rewrite) is not supported. `getLiveness` returns nullptr for such blocks
+/// and can be used to check whether a block is covered.
 class Liveness {
 public:
   using OperationListT = std::vector<Operation *>;
@@ -63,18 +69,25 @@ public:
   /// Note that the operations in this list are not ordered and the current
   /// implementation is computationally expensive (as it iterates over all
   /// blocks in which the given value is live).
+  /// All blocks in which the value is live must be covered by the analysis
+  /// (see `getLiveness`).
   OperationListT resolveLiveness(Value value) const;
 
-  /// Gets liveness info (if any) for the block.
+  /// Gets liveness info (if any) for the block. Returns nullptr if the block
+  /// was not covered by the analysis at construction time.
   const LivenessBlockInfo *getLiveness(Block *block) const;
 
   /// Returns a reference to a set containing live-in values (unordered).
+  /// The block must be covered by the analysis (see `getLiveness`).
   const ValueSetT &getLiveIn(Block *block) const;
 
   /// Returns a reference to a set containing live-out values (unordered).
+  /// The block must be covered by the analysis (see `getLiveness`).
   const ValueSetT &getLiveOut(Block *block) const;
 
   /// Returns true if `value` is not live after `operation`.
+  /// The operation's block must be covered by the analysis (see
+  /// `getLiveness`).
   bool isDeadAfter(Value value, Operation *operation) const;
 
   /// Dumps the liveness information in a human readable format.
