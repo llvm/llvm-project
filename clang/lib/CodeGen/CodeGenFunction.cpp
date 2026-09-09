@@ -1094,7 +1094,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       ToConstrainedExceptMD(getLangOpts().getDefaultExceptionMode());
   Builder.setDefaultConstrainedRounding(RM);
   Builder.setDefaultConstrainedExcept(FPExceptionBehavior);
-  if ((FD && (FD->UsesFPIntrin() || FD->hasAttr<StrictFPAttr>())) ||
+  if ((FD && FD->UsesFPIntrin()) || (D && D->hasAttr<StrictFPAttr>()) ||
       (!FD && (FPExceptionBehavior != llvm::fp::ebIgnore ||
                RM != llvm::RoundingMode::NearestTiesToEven))) {
     Builder.setIsFPConstrained(true);
