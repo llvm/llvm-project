@@ -161,7 +161,7 @@ module attributes {transform.with_named_sequence} {
 // Negative: `nnan` declares that NaN operands do not occur, so the NaN neutral
 // element of maxnumf is not a usable pad value and inference fails instead.
 
-func.func @pad_reduce_maxnumf_nnan_fails(%input: tensor<8x30xf32>,
+func.func @negative_pad_reduce_maxnumf_nnan(%input: tensor<8x30xf32>,
     %init: tensor<8xf32>) -> tensor<8xf32> {
   // expected-note @below {{target op}}
   %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
@@ -261,7 +261,7 @@ module attributes {transform.with_named_sequence} {
 // element can be inferred and padding fails conservatively rather than
 // silently padding with a wrong value.
 
-func.func @pad_reduce_indirect_combiner_fails(
+func.func @negative_pad_reduce_indirect_combiner(
     %input: tensor<8x30xf32>, %init: tensor<8xf32>) -> tensor<8xf32> {
   // expected-note @below {{target op}}
   %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
@@ -293,7 +293,7 @@ module attributes {transform.with_named_sequence} {
 
 #map  = affine_map<(d0, d1) -> (d0, d1)>
 #mapr = affine_map<(d0, d1) -> (d0)>
-func.func @pad_multi_reduction_fails(%in: tensor<8x30xf32>, %m0: tensor<8xf32>,
+func.func @negative_pad_multi_reduction(%in: tensor<8x30xf32>, %m0: tensor<8xf32>,
                                      %s0: tensor<8xf32>)
     -> (tensor<8xf32>, tensor<8xf32>) {
   // expected-note @below {{target op}}

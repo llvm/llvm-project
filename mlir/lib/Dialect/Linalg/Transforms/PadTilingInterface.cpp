@@ -266,24 +266,52 @@ static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
                                paddingValue, /*nofold=*/false, dynDims);
 }
 
-/// Returns true if `mul` and `add` are a pair for which `0 * x = 0` and
-/// `0 + x = x`. Zero is then a valid padding value for the operands of a
-/// contraction with such a body: `mul` turns a padded zero into a zero, and
-/// adding that zero leaves the accumulated value unchanged.
-///
-/// Do not grow this list just to match `isaContractionOpInterface`, since not
-/// every contraction can be zero-padded: a `max`/`+` body needs `-inf`.
-static bool isZeroNeutralContractionPair(Operation *mul, Operation *add) {
-  if (isa<arith::MulFOp>(mul) && isa<arith::AddFOp>(add))
-    return true;
-  if (isa<arith::MulIOp>(mul) && isa<arith::AddIOp>(add))
-    return true;
-  if (isa<complex::MulOp>(mul) && isa<complex::AddOp>(add))
-    return true;
-  if (isa<arith::AndIOp>(mul) && isa<arith::OrIOp>(add) &&
-      mul->getResult(0).getType().isInteger(1))
-    return true;
-  return false;
+/// Returns true if `operand` is indexed along at least one reduction dimension
+/// of `linalgOp`
+static bool isReducedOperand(linalg::LinalgOp linalgOp, OpOperand *operand,
+                             ArrayRef<utils::IteratorType> iterTypes) {
+  AffineMap map = linalgOp.getMatchingIndexingMap(operand);
+  return llvm::any_of(llvm::enumerate(iterTypes), [&](auto it) {
+    return it.value() == utils::IteratorType::reduction &&
+           map.isFunctionOfDim(it.index());
+  });
+}
+
+/// Set `paddingValues` with the padding value of every input of `contractOp`
+/// that is indexed along a reduction dimension. Fails if the pair admits no
+/// padding value.
+static LogicalResult
+setContractionPaddingValues(OpBuilder &builder, linalg::LinalgOp contractOp,
+                            Operation *mul, Operation *add,
+                            ArrayRef<utils::IteratorType> iterTypes,
+                            MutableArrayRef<Attribute> paddingValues) {
+  // Identify the padding value, `p`, for which `mul(p, x)` is the neutral
+  // element of `add` for every `x`.
+  // Not every contraction can be zero-padded: a body with `mul` = `addf` and
+  // `add` = `maximumf` (a max-plus contraction) pads with `-inf` instead.
+  auto getPadValue = [&](Type elementType) -> Attribute {
+    // `0 * x = 0` and `0 + acc = acc`.
+    if ((isa<arith::MulFOp>(mul) && isa<arith::AddFOp>(add)) ||
+        (isa<arith::MulIOp>(mul) && isa<arith::AddIOp>(add)) ||
+        (isa<complex::MulOp>(mul) && isa<complex::AddOp>(add)))
+      return builder.getZeroAttr(elementType);
+    // `false & x = false` and `false | acc = acc`.
+    if (isa<arith::AndIOp>(mul) && isa<arith::OrIOp>(add) &&
+        mul->getResult(0).getType().isInteger(1))
+      return builder.getZeroAttr(elementType);
+    return {};
+  };
+
+  for (OpOperand *input : contractOp.getDpsInputOperands()) {
+    if (!isReducedOperand(contractOp, input, iterTypes))
+      continue;
+    Attribute padValue =
+        getPadValue(getElementTypeOrSelf(input->get().getType()));
+    if (!padValue)
+      return failure();
+    paddingValues[input->getOperandNumber()] = padValue;
+  }
+  return success();
 }
 
 /// Infers a semantics-preserving padding value for every operand of `toPad`
@@ -316,23 +344,42 @@ inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
   if (!linalgOp)
     return failure();
 
-  // Keep the default zero for a contraction: the multiply maps a padded zero to
-  // zero, and accumulating a zero changes nothing.
-  if (linalg::detail::isContractionBody(*linalgOp.getBlock(),
-                                        isZeroNeutralContractionPair))
+  // A contraction-like body accumulates as `acc = add(mul(a, b), acc)`. Use
+  // `isContractionBody` as an extractor: it hands back these two ops, from
+  // which the padding value is derived.
+  Operation *mulOp = nullptr, *addOp = nullptr;
+  auto captureBodyOps = [&](Operation *mul, Operation *add) {
+    mulOp = mul;
+    addOp = add;
+    return true;
+  };
+  if (linalg::detail::isContractionBody(*linalgOp.getBlock(), captureBodyOps)) {
+    if (failed(setContractionPaddingValues(builder, linalgOp, mulOp, addOp,
+                                           iterTypes, paddingValues)))
+      return failure();
     return paddingValues;
+  }
 
   // Only a single reduction has an unambiguous per-operand neutral.
   if (linalgOp.getNumDpsInits() != 1)
     return failure();
+
+  // For reduction-like bodies, the neutral element of the combiner is used to
+  // pad the reduced operands.
   SmallVector<Operation *> combiners;
-  if (!matchReduction(linalgOp.getRegionOutputArgs(), 0, combiners))
+  if (!matchReduction(linalgOp.getRegionOutputArgs(), /*redPos=*/0, combiners))
+    return failure();
+  if (combiners.size() != 1)
     return failure();
   Operation *combiner = combiners.front();
+
   std::optional<TypedAttr> neutral = arith::getNeutralElement(combiner);
   if (!neutral)
     return failure();
 
+  // In case fastMath is enabled with `nnan`, the neutral element of
+  // `maxnumf`/`minnumf`, NaN, becomes an invalid padding value. Bail out and
+  // let the caller supply a value explicitly.
   if (auto floatNeutral = dyn_cast<FloatAttr>(*neutral);
       floatNeutral && floatNeutral.getValue().isNaN()) {
     auto fastMath = dyn_cast<arith::ArithFastMathInterface>(combiner);
@@ -343,13 +390,7 @@ inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
   }
 
   for (OpOperand *input : linalgOp.getDpsInputOperands()) {
-    // Only operands indexed along a reduction dim need a neutral.
-    AffineMap map = linalgOp.getMatchingIndexingMap(input);
-    bool reduced = llvm::any_of(llvm::enumerate(iterTypes), [&](auto it) {
-      return it.value() == utils::IteratorType::reduction &&
-             map.isFunctionOfDim(it.index());
-    });
-    if (!reduced)
+    if (!isReducedOperand(linalgOp, input, iterTypes))
       continue;
     // A reduced operand must feed the combiner directly to use its neutral; an
     // indirect one (e.g. via a math.exp) has no valid pad value -> fail.
