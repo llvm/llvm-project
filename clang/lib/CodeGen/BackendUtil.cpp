@@ -407,7 +407,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.BinutilsVersion =
       llvm::MCTargetOptions::parseBinutilsVersion(CodeGenOpts.BinutilsVersion);
   Options.UseInitArray = CodeGenOpts.UseInitArray;
-  Options.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
+  Options.MCOptions.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
 
   // Set EABI version.
   Options.EABIVersion = TargetOpts.EABIVersion;

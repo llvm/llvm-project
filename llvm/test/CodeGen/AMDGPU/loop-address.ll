@@ -24,7 +24,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-attributes #0 = { nounwind "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { nounwind "relocation-model"="pic" "ssp-buffers-size"="8" }
 
 !opencl.kernels = !{!0, !1, !2, !3}
 

@@ -79,3 +79,12 @@ struct S {
 
 bool b = (S{} < S{}); // expected-error {{object of type 'S' cannot be compared because its 'operator<=>' is implicitly deleted}}
 }
+
+namespace GH147127{
+union A {
+  bool operator==(const A&) const = default;
+};
+
+A a;
+bool b = a == a;
+}

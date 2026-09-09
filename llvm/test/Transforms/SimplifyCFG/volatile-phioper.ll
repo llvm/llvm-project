@@ -57,8 +57,8 @@ end:
 }
 declare i32 @Trace(...) #1
 
-attributes #0 = { nounwind ssp uwtable "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { nounwind ssp uwtable "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #1 = { "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
 attributes #2 = { nounwind }
 
 !0 = !{i32 1039}
