@@ -1,0 +1,55 @@
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: "%cmake_exe" -S %t -B %t/build -G "%cmake_generator" \
+# RUN:   -DLLVM_SOURCE_DIR="%llvm_src_root" 2>&1 | FileCheck %s
+
+# CHECK: -- Generated header dependency checks passed
+
+#--- CMakeLists.txt
+cmake_minimum_required(VERSION 3.20)
+project(GeneratedHeaderDependencies NONE)
+set(CMAKE_INSTALL_LIBDIR lib)
+list(APPEND CMAKE_MODULE_PATH "${LLVM_SOURCE_DIR}/cmake/modules")
+include(AddLLVM)
+include(TableGen)
+
+foreach(provider Base Provider 3rdParty Disabled CycleA CycleB)
+  set(LLVM_COMMON_DEPENDS)
+  set(TABLEGEN_OUTPUT "${CMAKE_CURRENT_LIST_FILE}")
+  add_public_tablegen_target(${provider}IncGen)
+  add_library(${provider} INTERFACE)
+  set_property(TARGET ${provider} PROPERTY
+    LLVM_EXPLICIT_DEPENDS ${provider}IncGen)
+endforeach()
+add_custom_target(SourceGenerator)
+set_property(TARGET Provider APPEND PROPERTY LLVM_EXPLICIT_DEPENDS
+  SourceGenerator)
+target_link_libraries(Provider INTERFACE Base)
+add_library(ProviderAlias ALIAS Provider)
+target_link_libraries(CycleA INTERFACE CycleB)
+target_link_libraries(CycleB INTERFACE CycleA)
+
+add_custom_target(Consumer)
+_llvm_record_link_dependencies(Consumer ProviderAlias
+  "$<$<BOOL:1>:3rdParty>" "$<$<BOOL:0>:Disabled>" CycleA
+  /absolute/libunused.a -lpthread)
+
+function(check_dependencies)
+  get_target_property(actual Consumer MANUALLY_ADDED_DEPENDENCIES)
+  set(expected BaseIncGen ProviderIncGen 3rdPartyIncGen DisabledIncGen
+    CycleAIncGen CycleBIncGen)
+  list(SORT actual)
+  list(SORT expected)
+  if(NOT "${actual}" STREQUAL "${expected}")
+    message(FATAL_ERROR "Expected '${expected}', got '${actual}'")
+  endif()
+  # Querying the other cycle root after caching the first must retain both
+  # members' prerequisites.
+  _llvm_generated_header_closure(actual CycleB)
+  list(SORT actual)
+  if(NOT "${actual}" STREQUAL "CycleAIncGen;CycleBIncGen")
+    message(FATAL_ERROR "Incomplete cycle closure: '${actual}'")
+  endif()
+  message(STATUS "Generated header dependency checks passed")
+endfunction()
+cmake_language(DEFER CALL check_dependencies)

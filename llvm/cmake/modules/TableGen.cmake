@@ -171,6 +171,12 @@ function(add_public_tablegen_target target)
   endif()
   add_custom_target(${target}
     DEPENDS ${TABLEGEN_OUTPUT})
+  # Libraries propagate only explicitly declared generated-header prerequisites
+  # through their link interfaces.  Keep this marker separate from the target
+  # type: other utility targets may generate sources or run build tools and are
+  # not safe compilation-order dependencies for arbitrary consumers.
+  set_target_properties(${target} PROPERTIES
+    LLVM_GENERATED_HEADER_TARGET TRUE)
   if(LLVM_COMMON_DEPENDS)
     add_dependencies(${target} ${LLVM_COMMON_DEPENDS})
   endif()
