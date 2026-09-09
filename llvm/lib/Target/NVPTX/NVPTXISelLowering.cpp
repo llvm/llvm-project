@@ -1601,10 +1601,14 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Where the label is to be used as the last arg of the call instruction.
   // We record the call site here and emit all prototypes at the
   // start of the function in the AsmPrinter.
-  if (IsIndirectCall)
-    DAG.getMachineFunction()
-        .getInfo<NVPTXMachineFunctionInfo>()
-        ->addCallPrototype(UniqueCallSite, CB, DAG.getMachineFunction());
+  SDValue Proto = GetI32(0);
+  if (IsIndirectCall) {
+    MCSymbol *ProtoSymbol =
+        DAG.getMachineFunction()
+            .getInfo<NVPTXMachineFunctionInfo>()
+            ->addCallPrototype(UniqueCallSite, CB, DAG.getMachineFunction());
+    Proto = DAG.getMCSymbol(ProtoSymbol, MVT::i32);
+  }
 
   const bool IsUnknownIntrinsic =
       CalleeF && CalleeF->isIntrinsic() &&
@@ -1617,7 +1621,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         dl.getDebugLoc()));
   }
 
-  const unsigned Proto = IsIndirectCall ? UniqueCallSite : 0;
   const unsigned NumArgs =
       std::min<unsigned>(CLI.NumFixedArgs + 1, Args.size());
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
@@ -1626,7 +1629,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const SDValue Call = DAG.getNode(
       NVPTXISD::CALL, dl, MVT::Other,
       {CallToken, GetI32(CLI.IsConvergent), GetI32(IsIndirectCall),
-       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, GetI32(Proto)});
+       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, Proto});
 
   SmallVector<SDValue, 16> LoadChains{Call};
   SmallVector<SDValue, 16> ProxyRegOps;

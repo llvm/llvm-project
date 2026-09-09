@@ -232,8 +232,6 @@ private:
 
   void emitInstruction(const MachineInstr *) override;
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
-  MCOperand lowerCallPrototypeArg(const MachineOperand &MO);
-  MCOperand lowerOperand(const MachineInstr &MI, unsigned OpNum);
   MCOperand lowerOperand(const MachineOperand &MO);
   MCOperand GetSymbolRef(const MCSymbol *Symbol);
   MCRegister encodeVirtualRegister(Register Reg);
@@ -591,24 +589,8 @@ void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   OutMI.setOpcode(MI->getOpcode());
-  for (const auto &MO : MI->operands()) {
+  for (const auto MO : MI->operands())
     OutMI.addOperand(lowerOperand(MO));
-  }
-}
-
-static bool isCallPrototypeOperand(const MachineOperand &MO) {
-  return MO.getOperandNo() == 3 &&
-         (MO.getParent()->getOpcode() == NVPTX::CALL ||
-          MO.getParent()->getOpcode() == NVPTX::CALL_conv);
-}
-
-MCOperand NVPTXAsmPrinter::lowerCallPrototypeArg(const MachineOperand &MO) {
-  assert(MO.isImm() && "call prototype operand must be an ID");
-  const auto &CallPrototypes =
-      MF->getInfo<NVPTXMachineFunctionInfo>()->getCallPrototypes();
-  auto It = CallPrototypes.find(MO.getImm());
-  assert(It != CallPrototypes.end() && "unknown call prototype");
-  return GetSymbolRef(It->second.second);
 }
 
 MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
@@ -618,8 +600,6 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
   case MachineOperand::MO_Register:
     return MCOperand::createReg(encodeVirtualRegister(MO.getReg()));
   case MachineOperand::MO_Immediate:
-    if (isCallPrototypeOperand(MO))
-      return lowerCallPrototypeArg(MO);
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
     return MCOperand::createExpr(

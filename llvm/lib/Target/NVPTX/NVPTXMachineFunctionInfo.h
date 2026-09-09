@@ -53,12 +53,15 @@ public:
     return ImageHandleSymbols.contains(Symbol);
   }
 
-  void addCallPrototype(unsigned Id, const CallBase *CB, MachineFunction &MF) {
-    if (CallPrototypes.find(Id) == CallPrototypes.end()) {
+  MCSymbol* addCallPrototype(unsigned Id, const CallBase *CB, MachineFunction &MF) {
+    if (auto It= CallPrototypes.find(Id); It == CallPrototypes.end()) {
       MCSymbol *Symbol =
           MF.getContext().createTempSymbol("prototype_",
                                            /*AlwaysAddSuffix=*/true);
       CallPrototypes.try_emplace(Id, CB, Symbol);
+      return Symbol;
+    } else {
+      return It->second.second;
     }
   }
 
