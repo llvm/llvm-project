@@ -64,53 +64,38 @@ define void @splat_subtree_with_scalar_uses(ptr noalias %out, ptr noalias %in) {
 ; CHECK-LABEL: define void @splat_subtree_with_scalar_uses(
 ; CHECK-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[IN:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RTVEC:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[IN]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 12
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
-; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 16
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 20
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 24
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
-; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[TMP12]], [[TMP5]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[ADD9]], [[ADD5]]
-; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[XOR]], [[TMP3]]
-; CHECK-NEXT:    store i32 [[ADD10]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 28
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    [[ADD13:%.*]] = add i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[XOR14:%.*]] = xor i32 [[ADD13]], [[ADD5]]
-; CHECK-NEXT:    [[ADD15:%.*]] = add i32 [[XOR14]], [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 4
-; CHECK-NEXT:    store i32 [[ADD15]], ptr [[ARRAYIDX16]], align 4
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 32
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX17]], align 4
-; CHECK-NEXT:    [[ADD18:%.*]] = add i32 [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[ADD18]], [[ADD5]]
-; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 8
-; CHECK-NEXT:    store i32 [[ADD4]], ptr [[ARRAYIDX21]], align 4
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 36
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX22]], align 4
+; CHECK-NEXT:    [[XOR24:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[IN]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[XOR24:%.*]] = xor i32 [[ADD]], [[ADD5]]
 ; CHECK-NEXT:    [[ADD25:%.*]] = add i32 [[XOR24]], [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 12
-; CHECK-NEXT:    store i32 [[ADD25]], ptr [[ARRAYIDX26]], align 4
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP2]], [[TMP16]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[ADD1]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[ADD25]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i32> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> poison, i32 [[ADD]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i32> [[TMP12]], [[TMP14]]
+; CHECK-NEXT:    store <4 x i32> [[TMP15]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX27_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 16
-; CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYIDX27_SCALAR]], align 4
+; CHECK-NEXT:    store i32 [[ADD1]], ptr [[ARRAYIDX27_SCALAR]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX28_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 24
-; CHECK-NEXT:    store i32 [[ADD5]], ptr [[ARRAYIDX28_SCALAR]], align 4
+; CHECK-NEXT:    store i32 [[ADD25]], ptr [[ARRAYIDX28_SCALAR]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX29_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 32
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX29_SCALAR]], align 4
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX29_SCALAR]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
