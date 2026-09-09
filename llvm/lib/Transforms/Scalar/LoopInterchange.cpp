@@ -2130,16 +2130,10 @@ void LoopInterchangeTransform::restructureLoops(
   LI->changeLoopFor(OrigInnerPreHeader, OuterLoopParent);
 
   // Switch the loop levels.
-  if (OuterLoopParent) {
-    // Detach NewOuter from NewInner.
-    removeChildLoop(NewInner, NewOuter);
-    // Replace NewInner with NewOuter in place.
-    // (This will also preserve the sibling order)
-    OuterLoopParent->replaceChildLoopWith(NewInner, NewOuter);
-  } else {
-    removeChildLoop(NewInner, NewOuter);
-    LI->replaceLoop(NewInner, NewOuter);
-  }
+  removeChildLoop(NewInner, NewOuter);
+  // Replace NewInner with NewOuter in place, preserving sibling order.
+  LI->replaceLoop(NewInner, NewOuter);
+
   while (!NewOuter->isInnermost())
     NewInner->addChildLoop(NewOuter->removeChildLoop(NewOuter->begin()));
   NewOuter->addChildLoop(NewInner);
