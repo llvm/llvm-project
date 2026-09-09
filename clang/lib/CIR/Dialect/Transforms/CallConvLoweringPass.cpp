@@ -712,6 +712,22 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
                                  [&]() { return func.emitOpError(); });
 }
 
+/// Classify the single type fetched by a `cir.va_arg` as an unnamed argument
+/// (RequiredArgs(0)) with a full register budget.  Returns std::nullopt and
+/// emits an NYI error if the type is not one this bridge handles.
+static std::optional<ArgClassification> classifyX86_64VarArgType(
+    mlir::Type ty, MLIRContext *ctx, const DataLayout &dl,
+    mlir::abi::ABITypeMapper &typeMapper,
+    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
+  std::optional<FunctionClassification> fc = classifyX86_64Signature(
+      cir::VoidType::get(ctx), mlir::TypeRange(ty), llvm::abi::RequiredArgs(0),
+      ctx, dl, typeMapper, targetInfo, modOp, emitError);
+  if (!fc)
+    return std::nullopt;
+  return fc->argInfos[0];
+}
+
 /// Classify a call that passes arguments through an ellipsis.  The callee's
 /// own classification covers only its declared parameters, but an ellipsis
 /// argument competes for the same argument registers as a declared one, so
@@ -1107,6 +1123,29 @@ void CallConvLoweringPass::runOnOperation() {
     if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;
+    }
+  }
+
+  // Fetches on targets other than x86-64 are left in place here and still
+  // lower to a generic vararg instruction that cannot select an aggregate or
+  // an x87 long double result.
+  if (isX86) {
+    SmallVector<cir::VAArgOp> vaArgs;
+    moduleOp.walk([&](cir::VAArgOp v) { vaArgs.push_back(v); });
+    for (cir::VAArgOp v : vaArgs) {
+      cir::FuncOp enclosing = v->getParentOfType<cir::FuncOp>();
+      std::optional<ArgClassification> ac = classifyX86_64VarArgType(
+          v.getType(), ctx, dl, *x86TypeMapper,
+          x86TargetFor(avxLevelFor(enclosing)), moduleOp,
+          [&]() { return v->emitOpError(); });
+      if (!ac) {
+        signalPassFailure();
+        return;
+      }
+      if (failed(rewriteCtx.rewriteVAArg(v.getOperation(), *ac, builder))) {
+        signalPassFailure();
+        return;
+      }
     }
   }
 }

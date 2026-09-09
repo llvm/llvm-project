@@ -50,6 +50,12 @@ public:
                   const mlir::abi::FunctionClassification &fc,
                   mlir::OpBuilder &builder) override;
 
+  /// Expand a `cir.va_arg` into the x86-64 SysV register-save-area /
+  /// overflow-area sequence.
+  mlir::LogicalResult rewriteVAArg(mlir::Operation *vaArgOp,
+                                   const mlir::abi::ArgClassification &ac,
+                                   mlir::OpBuilder &builder) override;
+
   /// Retype \p addrOp, which holds the address of \p funcOp, to the signature
   /// funcOp was rewritten to, and cast it back so existing uses keep the type
   /// they were built for.  A no-op when the ABI left funcOp's type alone.

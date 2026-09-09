@@ -936,22 +936,48 @@ void foo33(__builtin_va_list a) {
   float _Complex b = __builtin_va_arg(a, float _Complex);
 }
 
+// `_Complex float` coerces to `<2 x float>`, one SSE eightbyte.
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.ptr<!rec___va_list_tag>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.ptr<!rec___va_list_tag>, !cir.ptr<!cir.ptr<!rec___va_list_tag>>
 // CIR: %[[VA_TAG:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.ptr<!rec___va_list_tag>>, !cir.ptr<!rec___va_list_tag>
-// CIR: %[[COMPLEX:.*]] = cir.va_arg %[[VA_TAG]] : (!cir.ptr<!rec___va_list_tag>) -> !cir.complex<!cir.float>
+// CIR: %[[FP_OFFSET_P:.*]] = cir.get_member %[[VA_TAG]][1] {name = "fp_offset"} : !cir.ptr<!rec___va_list_tag> -> !cir.ptr<!u32i>
+// CIR: %[[FP_OFFSET:.*]] = cir.load %[[FP_OFFSET_P]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[FP_LIMIT:.*]] = cir.const #cir.int<160> : !u32i
+// CIR: %[[FITS_FP:.*]] = cir.cmp le %[[FP_OFFSET]], %[[FP_LIMIT]] : !u32i
+// CIR: %[[COMPLEX_ADDR:.*]] = cir.ternary(%[[FITS_FP]], true {
+// CIR:   %[[REG_ADDR:.*]] = cir.ptr_stride %{{.*}}, %[[FP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
+// CIR:   %[[FP_BUMP:.*]] = cir.const #cir.int<16> : !u32i
+// CIR:   %[[FP_NEXT:.*]] = cir.add %[[FP_OFFSET]], %[[FP_BUMP]] : !u32i
+// CIR:   cir.store %[[FP_NEXT]], %[[FP_OFFSET_P]] : !u32i, !cir.ptr<!u32i>
+// CIR:   cir.yield %[[REG_ADDR]] : !cir.ptr<!u8i>
+// CIR: }, false {
+// CIR:   cir.yield %{{.*}} : !cir.ptr<!u8i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!u8i>
+// CIR: %[[COMPLEX_ADDR_B:.*]] = cir.cast bitcast %[[COMPLEX_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[COMPLEX:.*]] = cir.load %[[COMPLEX_ADDR_B]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca ptr, align 8
 // LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: store ptr %[[ARG_0:.*]], ptr %[[A_ADDR]], align 8
 // LLVM: %[[TMP_A:.*]] = load ptr, ptr %[[A_ADDR]], align 8
-// LLVM: %[[COMPLEX:.*]] = va_arg ptr %[[TMP_A]], { float, float }
-// LLVM: store { float, float } %[[COMPLEX]], ptr %[[B_ADDR]], align 4
-
-// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
-// Test will be updated when that is implemented
+// LLVM: %[[FP_OFFSET_P:.*]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[TMP_A]], i32 0, i32 1
+// LLVM: %[[FP_OFFSET:.*]] = load i32, ptr %[[FP_OFFSET_P]], align 4
+// LLVM: %[[FITS_FP:.*]] = icmp ule i32 %[[FP_OFFSET]], 160
+// LLVM: br i1 %[[FITS_FP]], label %[[REG_BB:.*]], label %[[MEM_BB:.*]]
+// LLVM: [[REG_BB]]:
+// LLVM: %[[REG_SAVE:.*]] = load ptr, ptr %{{.*}}, align 8
+// LLVM: %[[COMPLEX:.*]] = getelementptr i8, ptr %[[REG_SAVE]], i64 %{{.*}}
+// LLVM: %[[FP_NEXT:.*]] = add i32 %[[FP_OFFSET]], 16
+// LLVM: store i32 %[[FP_NEXT]], ptr %[[FP_OFFSET_P]], align 4
+// LLVM: br label %[[END_BB:.*]]
+// LLVM: [[MEM_BB]]:
+// LLVM: br label %[[END_BB]]
+// LLVM: [[END_BB]]:
+// LLVM: %[[COMPLEX_ADDR:.*]] = phi ptr [ %{{.*}}, %[[MEM_BB]] ], [ %[[COMPLEX]], %[[REG_BB]] ]
+// LLVM: %[[COMPLEX_V:.*]] = load { float, float }, ptr %[[COMPLEX_ADDR]], align 4
+// LLVM: store { float, float } %[[COMPLEX_V]], ptr %[[B_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca ptr, align 8
 // OGCG: %[[B_ADDR:.*]] = alloca { float, float }, align 4

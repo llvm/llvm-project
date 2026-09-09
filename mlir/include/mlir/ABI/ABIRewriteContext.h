@@ -190,6 +190,33 @@ public:
                                         const FunctionClassification &fc,
                                         OpBuilder &builder) = 0;
 
+  /// Rewrite a single "fetch the next vararg" operation (e.g. C `va_arg`) in
+  /// place to match how \p ac says the fetched type is passed at the ABI
+  /// level.
+  ///
+  /// This is deliberately separate from rewriteFunctionDefinition and
+  /// rewriteCallSite, which classify a whole signature ahead of time.  A
+  /// vararg fetch instead advances a runtime cursor (the platform va_list)
+  /// through registers and then memory, so whether a given fetch lands in a
+  /// register depends on how much of the register budget earlier variadic
+  /// arguments already consumed at run time, not on the fetch's static
+  /// position.  \p ac therefore classifies only the one type being fetched,
+  /// in isolation.
+  ///
+  /// The default implementation reports failure, so a dialect that has not
+  /// implemented vararg fetches does not need to override this.  An overrider
+  /// that fails is responsible for emitting its own diagnostic.
+  ///
+  /// \param vaArgOp  The operation to rewrite in place.
+  /// \param ac       The ABI classification of the fetched type.
+  /// \param builder  The OpBuilder to use for modifications.
+  /// \returns success() if the operation was rewritten.
+  virtual LogicalResult rewriteVAArg(Operation *vaArgOp,
+                                     const ArgClassification &ac,
+                                     OpBuilder &builder) {
+    return failure();
+  }
+
   /// Return the dialect namespace this context handles (e.g. "cir").
   virtual StringRef getDialectNamespace() const = 0;
 };

@@ -21,6 +21,7 @@ int varargs(int count, ...) {
     return res;
 }
 
+// `int` classifies Extend, one INTEGER eightbyte.
 // CIR-LABEL: cir.func {{.*}} @varargs(
 // CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
@@ -28,8 +29,28 @@ int varargs(int count, ...) {
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_ARG:.+]] = cir.va_arg %[[VA_PTR1]] : (!cir.ptr<!rec___va_list_tag>) -> !s32i
-// CIR:   cir.store{{.*}} %[[VA_ARG]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[GP_OFFSET_P:.+]] = cir.get_member %[[VA_PTR1]][0] {name = "gp_offset"} : !cir.ptr<!rec___va_list_tag> -> !cir.ptr<!u32i>
+// CIR:   %[[GP_OFFSET:.+]] = cir.load %[[GP_OFFSET_P]] : !cir.ptr<!u32i>, !u32i
+// CIR:   %[[GP_LIMIT:.+]] = cir.const #cir.int<40> : !u32i
+// CIR:   %[[FITS_GP:.+]] = cir.cmp le %[[GP_OFFSET]], %[[GP_LIMIT]] : !u32i
+// CIR:   %[[VA_ARG:.+]] = cir.ternary(%[[FITS_GP]], true {
+// CIR:     %[[REG_SAVE:.+]] = cir.load %{{.+}}
+// CIR:     %[[REG_SAVE_B:.+]] = cir.cast bitcast %[[REG_SAVE]] : !cir.ptr<!void> -> !cir.ptr<!u8i>
+// CIR:     %[[REG_ADDR:.+]] = cir.ptr_stride %[[REG_SAVE_B]], %[[GP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
+// CIR:     %[[GP_BUMP:.+]] = cir.const #cir.int<8> : !u32i
+// CIR:     %[[GP_NEXT:.+]] = cir.add %[[GP_OFFSET]], %[[GP_BUMP]] : !u32i
+// CIR:     cir.store %[[GP_NEXT]], %[[GP_OFFSET_P]] : !u32i, !cir.ptr<!u32i>
+// CIR:     cir.yield %[[REG_ADDR]] : !cir.ptr<!u8i>
+// CIR:   }, false {
+// CIR:     %[[OVERFLOW:.+]] = cir.load %{{.+}}
+// CIR:     %[[OVERFLOW_B:.+]] = cir.cast bitcast %[[OVERFLOW]] : !cir.ptr<!void> -> !cir.ptr<!u8i>
+// CIR:     %[[STRIDE:.+]] = cir.const #cir.int<8> : !s32i
+// CIR:     %[[OVERFLOW_NEXT:.+]] = cir.ptr_stride %[[OVERFLOW_B]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+// CIR:     cir.yield %[[OVERFLOW_B]] : !cir.ptr<!u8i>
+// CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
+// CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
+// CIR:   %[[VA_ARG_V:.+]] = cir.load %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
+// CIR:   cir.store{{.*}} %[[VA_ARG_V]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[RESULT:.+]] = cir.load{{.*}} %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
@@ -65,8 +86,20 @@ int stdarg_start(int count, ...) {
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_ARG:.+]] = cir.va_arg %[[VA_PTR1]] : (!cir.ptr<!rec___va_list_tag>) -> !s32i
-// CIR:   cir.store{{.*}} %[[VA_ARG]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[GP_OFFSET_P:.+]] = cir.get_member %[[VA_PTR1]][0] {name = "gp_offset"} : !cir.ptr<!rec___va_list_tag> -> !cir.ptr<!u32i>
+// CIR:   %[[GP_OFFSET:.+]] = cir.load %[[GP_OFFSET_P]] : !cir.ptr<!u32i>, !u32i
+// CIR:   %[[GP_LIMIT:.+]] = cir.const #cir.int<40> : !u32i
+// CIR:   %[[FITS_GP:.+]] = cir.cmp le %[[GP_OFFSET]], %[[GP_LIMIT]] : !u32i
+// CIR:   %[[VA_ARG:.+]] = cir.ternary(%[[FITS_GP]], true {
+// CIR:     %[[REG_ADDR:.+]] = cir.ptr_stride %{{.+}}, %[[GP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
+// CIR:     cir.store %{{.+}}, %[[GP_OFFSET_P]] : !u32i, !cir.ptr<!u32i>
+// CIR:     cir.yield %[[REG_ADDR]] : !cir.ptr<!u8i>
+// CIR:   }, false {
+// CIR:     cir.yield %{{.+}} : !cir.ptr<!u8i>
+// CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
+// CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
+// CIR:   %[[VA_ARG_V:.+]] = cir.load %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
+// CIR:   cir.store{{.*}} %[[VA_ARG_V]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[RESULT:.+]] = cir.load{{.*}} %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
@@ -121,8 +154,20 @@ int varargs_new(char *fmt, ...) {
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_ARG:.+]] = cir.va_arg %[[VA_PTR1]] : (!cir.ptr<!rec___va_list_tag>) -> !s32i
-// CIR:   cir.store{{.*}} %[[VA_ARG]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[GP_OFFSET_P:.+]] = cir.get_member %[[VA_PTR1]][0] {name = "gp_offset"} : !cir.ptr<!rec___va_list_tag> -> !cir.ptr<!u32i>
+// CIR:   %[[GP_OFFSET:.+]] = cir.load %[[GP_OFFSET_P]] : !cir.ptr<!u32i>, !u32i
+// CIR:   %[[GP_LIMIT:.+]] = cir.const #cir.int<40> : !u32i
+// CIR:   %[[FITS_GP:.+]] = cir.cmp le %[[GP_OFFSET]], %[[GP_LIMIT]] : !u32i
+// CIR:   %[[VA_ARG:.+]] = cir.ternary(%[[FITS_GP]], true {
+// CIR:     %[[REG_ADDR:.+]] = cir.ptr_stride %{{.+}}, %[[GP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
+// CIR:     cir.store %{{.+}}, %[[GP_OFFSET_P]] : !u32i, !cir.ptr<!u32i>
+// CIR:     cir.yield %[[REG_ADDR]] : !cir.ptr<!u8i>
+// CIR:   }, false {
+// CIR:     cir.yield %{{.+}} : !cir.ptr<!u8i>
+// CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
+// CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
+// CIR:   %[[VA_ARG_V:.+]] = cir.load %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
+// CIR:   cir.store{{.*}} %[[VA_ARG_V]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[RESULT:.+]] = cir.load{{.*}} %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
@@ -190,3 +235,24 @@ void with_param(int count, ...) {
 // LLVM:   %[[VA_PTR1:.+]] = getelementptr {{.*}}%struct.__va_list_tag{{.?}}, ptr %[[VAAREA]]
 // LLVM:   call void @llvm.va_end.p0(ptr %[[VA_PTR1]])
 // LLVM:   ret void
+
+double varargs_double(int count, ...) {
+    __builtin_va_list args;
+    __builtin_va_start(args, count);
+    double res = __builtin_va_arg(args, double);
+    __builtin_va_end(args);
+    return res;
+}
+
+// `double` is Direct with no coercion, filling one vector-register eightbyte,
+// so it reads the vector cursor rather than the integer one.
+// CIR-LABEL: cir.func {{.*}} @varargs_double(
+// CIR:   %[[FP_OFFSET_P:.+]] = cir.get_member %{{.+}}[1] {name = "fp_offset"} : !cir.ptr<!rec___va_list_tag> -> !cir.ptr<!u32i>
+// CIR:   %[[FP_OFFSET:.+]] = cir.load %[[FP_OFFSET_P]] : !cir.ptr<!u32i>, !u32i
+// CIR:   %[[FP_LIMIT:.+]] = cir.const #cir.int<160> : !u32i
+// CIR:   cir.cmp le %[[FP_OFFSET]], %[[FP_LIMIT]] : !u32i
+
+// LLVM-LABEL: define dso_local double @varargs_double(
+// LLVM:   %[[FP_OFFSET:.+]] = load i32, ptr %{{.+}}, align {{[0-9]+}}
+// LLVM:   icmp ule i32 %[[FP_OFFSET]], 160
+// LLVM:   add i32 %[[FP_OFFSET]], 16
