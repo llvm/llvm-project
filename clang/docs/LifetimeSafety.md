@@ -22,8 +22,8 @@ This is compile-time analysis; there is no run-time overhead.
 It tracks pointer validity through intra-procedural data-flow analysis. While it does
 not require lifetime annotations to get started, in their absence, the analysis
 treats function calls optimistically, assuming no lifetime effects, thereby potentially missing dangling pointer issues. As more functions are annotated
-with attributes like [clang::lifetimebound](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound), [gsl::Owner](https://clang.llvm.org/docs/AttributeReference.html#gsl-owner), and
-[gsl::Pointer](https://clang.llvm.org/docs/AttributeReference.html#gsl-pointer), the analysis can see through these lifetime contracts and enforce
+with attributes like [clang::lifetimebound](project:AttributeReference.md#lifetimebound), [gsl::Owner](project:AttributeReference.md#owner), and
+[gsl::Pointer](project:AttributeReference.md#pointer), the analysis can see through these lifetime contracts and enforce
 lifetime safety at call sites with higher accuracy. This approach supports
 gradual adoption in existing codebases.
 
@@ -122,8 +122,8 @@ void test() {
 Without these annotations, the analysis may not be able to determine whether a
 type is owning or borrowing, which can affect analysis precision. For more
 details on these attributes, see the Clang attribute reference for
-[gsl::Owner](https://clang.llvm.org/docs/AttributeReference.html#gsl-owner) and
-[gsl::Pointer](https://clang.llvm.org/docs/AttributeReference.html#gsl-pointer).
+[gsl::Owner](project:AttributeReference.md#owner) and
+[gsl::Pointer](project:AttributeReference.md#pointer).
 
 :::{note}
 Types with mixed ownership semantics (owning some data while holding views to
@@ -191,7 +191,7 @@ void test() {
 }
 ```
 
-For more details, see [lifetimebound](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound).
+For more details, see [lifetimebound](project:AttributeReference.md#lifetimebound).
 
 ### NoEscape
 
@@ -203,7 +203,7 @@ parameter to escape its scope, for example, by returning it or assigning it to
 a field or global variable. This is useful for parameters passed to callbacks
 or visitors that are only used during the call and not stored.
 
-For more details, see [noescape](https://clang.llvm.org/docs/AttributeReference.html#noescape).
+For more details, see [noescape](project:AttributeReference.md#noescape).
 
 ## Checks Performed
 
