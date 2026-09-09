@@ -989,13 +989,13 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(ptr addrspace(1) %out, <3 x do
 ;
 ; VI-SDAG-LABEL: fptrunc_v3f64_to_v3f32:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x54
 ; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x44
+; VI-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x54
 ; VI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; VI-SDAG-NEXT:    v_cvt_f32_f64_e32 v1, s[2:3]
 ; VI-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; VI-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    buffer_store_dwordx3 v[0:2], off, s[4:7], 0
@@ -1017,12 +1017,12 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(ptr addrspace(1) %out, <3 x do
 ; GFX10-SDAG-LABEL: fptrunc_v3f64_to_v3f32:
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_clause 0x1
-; GFX10-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x54
 ; GFX10-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x44
+; GFX10-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x54
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; GFX10-SDAG-NEXT:    v_cvt_f32_f64_e32 v1, s[2:3]
 ; GFX10-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; GFX10-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-SDAG-NEXT:    s_mov_b32 s2, -1
@@ -1047,12 +1047,12 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(ptr addrspace(1) %out, <3 x do
 ; GFX11-SDAG-LABEL: fptrunc_v3f64_to_v3f32:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_clause 0x1
-; GFX11-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x54
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x44
+; GFX11-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x54
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v1, s[2:3]
 ; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, -1
@@ -1096,13 +1096,13 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32_afn(ptr addrspace(1) %out, <3 
 ;
 ; VI-SDAG-LABEL: fptrunc_v3f64_to_v3f32_afn:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x54
 ; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x44
+; VI-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x54
 ; VI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; VI-SDAG-NEXT:    v_cvt_f32_f64_e32 v1, s[2:3]
 ; VI-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; VI-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    buffer_store_dwordx3 v[0:2], off, s[4:7], 0
@@ -1124,12 +1124,12 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32_afn(ptr addrspace(1) %out, <3 
 ; GFX10-SDAG-LABEL: fptrunc_v3f64_to_v3f32_afn:
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_clause 0x1
-; GFX10-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x54
 ; GFX10-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x44
+; GFX10-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x54
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; GFX10-SDAG-NEXT:    v_cvt_f32_f64_e32 v1, s[2:3]
 ; GFX10-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; GFX10-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-SDAG-NEXT:    s_mov_b32 s2, -1
@@ -1154,12 +1154,12 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32_afn(ptr addrspace(1) %out, <3 
 ; GFX11-SDAG-LABEL: fptrunc_v3f64_to_v3f32_afn:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_clause 0x1
-; GFX11-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x54
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x44
+; GFX11-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x54
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v1, s[2:3]
 ; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, s[6:7]
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, -1

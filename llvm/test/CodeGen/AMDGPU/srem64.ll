@@ -860,14 +860,14 @@ define amdgpu_kernel void @s_test_srem32_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-LABEL: s_test_srem32_64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0xe
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_ashr_i32 s4, s11, 31
-; GCN-NEXT:    s_ashr_i32 s0, s2, 31
-; GCN-NEXT:    s_add_u32 s2, s2, s0
-; GCN-NEXT:    s_mov_b32 s1, s0
-; GCN-NEXT:    s_addc_u32 s3, s0, s0
-; GCN-NEXT:    s_xor_b64 s[6:7], s[2:3], s[0:1]
+; GCN-NEXT:    s_ashr_i32 s2, s1, 31
+; GCN-NEXT:    s_add_u32 s0, s1, s2
+; GCN-NEXT:    s_mov_b32 s3, s2
+; GCN-NEXT:    s_addc_u32 s1, s2, s2
+; GCN-NEXT:    s_xor_b64 s[6:7], s[0:1], s[2:3]
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s6
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v1, s7
 ; GCN-NEXT:    s_sub_u32 s0, 0, s6

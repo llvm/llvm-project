@@ -27093,8 +27093,12 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   }
 
   // Check if we can express BUILD VECTOR via subvector extract.
-  if (!LegalTypes && (N->getNumOperands() > 1)) {
+  if (N->getNumOperands() > 1 &&
+      N->getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    SDLoc DL(N);
     SDValue Op0 = N->getOperand(0);
+    SDValue PreExtractVec = Op0.getOperand(0);
+    EVT PreExtractVT = PreExtractVec.getValueType();
     auto checkElem = [&](SDValue Op) -> uint64_t {
       if ((Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) &&
           (Op0.getOperand(0) == Op.getOperand(0)))
@@ -27111,14 +27115,14 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
       }
     }
 
-    if ((Offset == 0) &&
-        (Op0.getOperand(0).getValueType() == N->getValueType(0)))
-      return Op0.getOperand(0);
-    if ((Offset != -1) &&
-        ((Offset % N->getValueType(0).getVectorNumElements()) ==
-         0)) // IDX must be multiple of output size.
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), N->getValueType(0),
-                         Op0.getOperand(0), Op0.getOperand(1));
+    if (Offset == 0 && PreExtractVec.getValueType() == N->getValueType(0))
+      return PreExtractVec;
+    // IDX must be multiple of output size.
+    if (!LegalOperations && Offset != -1 &&
+        (Offset % VT.getVectorNumElements()) == 0) {
+      if (PreExtractVT.getScalarSizeInBits() == VT.getScalarSizeInBits())
+        return DAG.getExtractSubvector(DL, VT, PreExtractVec, Offset);
+    }
   }
 
   if (SDValue V = convertBuildVecExtToExt(N))

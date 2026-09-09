@@ -172,13 +172,12 @@ define amdgpu_kernel void @constant_load_v3i64(ptr addrspace(1) %out, ptr addrsp
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
-; GFX6-NEXT:    v_mov_b32_e32 v2, s8
-; GFX6-NEXT:    v_mov_b32_e32 v3, s9
+; GFX6-NEXT:    v_mov_b32_e32 v4, s8
+; GFX6-NEXT:    v_mov_b32_e32 v5, s9
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
-; GFX6-NEXT:    buffer_store_dwordx2 v[2:3], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s7
+; GFX6-NEXT:    buffer_store_dwordx2 v[4:5], off, s[0:3], 0 offset:16
 ; GFX6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -189,22 +188,22 @@ define amdgpu_kernel void @constant_load_v3i64(ptr addrspace(1) %out, ptr addrsp
 ; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x4
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
-; GFX7-NEXT:    s_add_u32 s2, s0, 16
-; GFX7-NEXT:    s_addc_u32 s3, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v4, s3
-; GFX7-NEXT:    v_mov_b32_e32 v3, s2
+; GFX7-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x4
+; GFX7-NEXT:    s_add_u32 s8, s0, 16
+; GFX7-NEXT:    s_addc_u32 s9, s1, 0
+; GFX7-NEXT:    v_mov_b32_e32 v6, s8
+; GFX7-NEXT:    v_mov_b32_e32 v7, s9
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v5, s8
-; GFX7-NEXT:    v_mov_b32_e32 v6, s9
+; GFX7-NEXT:    v_mov_b32_e32 v9, s3
+; GFX7-NEXT:    v_mov_b32_e32 v8, s2
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
+; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s6
-; GFX7-NEXT:    flat_store_dwordx2 v[3:4], v[5:6]
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s7
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
-; GFX7-NEXT:    v_mov_b32_e32 v4, s0
+; GFX7-NEXT:    flat_store_dwordx2 v[6:7], v[8:9]
 ; GFX7-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -212,22 +211,22 @@ define amdgpu_kernel void @constant_load_v3i64(ptr addrspace(1) %out, ptr addrsp
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x10
 ; GFX8-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
-; GFX8-NEXT:    s_add_u32 s2, s0, 16
-; GFX8-NEXT:    s_addc_u32 s3, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v4, s3
-; GFX8-NEXT:    v_mov_b32_e32 v3, s2
+; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x10
+; GFX8-NEXT:    s_add_u32 s8, s0, 16
+; GFX8-NEXT:    s_addc_u32 s9, s1, 0
+; GFX8-NEXT:    v_mov_b32_e32 v6, s8
+; GFX8-NEXT:    v_mov_b32_e32 v7, s9
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v5, s8
-; GFX8-NEXT:    v_mov_b32_e32 v6, s9
+; GFX8-NEXT:    v_mov_b32_e32 v9, s3
+; GFX8-NEXT:    v_mov_b32_e32 v8, s2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
+; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s6
-; GFX8-NEXT:    flat_store_dwordx2 v[3:4], v[5:6]
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s7
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
-; GFX8-NEXT:    v_mov_b32_e32 v4, s0
+; GFX8-NEXT:    flat_store_dwordx2 v[6:7], v[8:9]
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -236,11 +235,11 @@ define amdgpu_kernel void @constant_load_v3i64(ptr addrspace(1) %out, ptr addrsp
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
 ; EG-NEXT:    ALU 3, @11, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T2.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XY, T3.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XY, T3.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T2.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 16, #1
+; EG-NEXT:     VTX_READ_64 T1.XY, T0.X, 16, #1
 ; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 10:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,

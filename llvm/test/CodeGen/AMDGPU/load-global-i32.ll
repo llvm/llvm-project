@@ -661,26 +661,27 @@ define amdgpu_kernel void @global_load_v10i32(ptr addrspace(1) %out, ptr addrspa
 ;
 ; EG-LABEL: global_load_v10i32:
 ; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 2, @14, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 4, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 2 @8
-; EG-NEXT:    ALU 2, @17, KC0[], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T0.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.XYZW, T5.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XY, T4.X, 1
+; EG-NEXT:    ALU 1, @19, KC0[], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.XYZW, T0.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T5.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.XY, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 8:
-; EG-NEXT:     VTX_READ_128 T2.XYZW, T1.X, 0, #1
-; EG-NEXT:     VTX_READ_128 T3.XYZW, T1.X, 16, #1
-; EG-NEXT:     VTX_READ_128 T1.XYZW, T1.X, 32, #1
+; EG-NEXT:     VTX_READ_64 T3.XY, T2.X, 32, #1
+; EG-NEXT:     VTX_READ_128 T4.XYZW, T2.X, 0, #1
+; EG-NEXT:     VTX_READ_128 T2.XYZW, T2.X, 16, #1
 ; EG-NEXT:    ALU clause starting at 14:
-; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; EG-NEXT:     MOV * T1.X, KC0[2].Z,
+; EG-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:    ALU clause starting at 17:
-; EG-NEXT:     ADD_INT T4.X, T0.X, literal.x,
-; EG-NEXT:     ADD_INT * T5.X, T0.X, literal.y,
-; EG-NEXT:    8(1.121039e-44), 4(5.605194e-45)
+; EG-NEXT:     ADD_INT T1.X, PV.X, literal.x,
+; EG-NEXT:     MOV * T2.X, KC0[2].Z,
+; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 19:
+; EG-NEXT:     ADD_INT * T5.X, T0.X, literal.x,
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ;
 ; GCN-HSA-LABEL: global_load_v10i32:
 ; GCN-HSA:       ; %bb.0: ; %entry

@@ -1542,10 +1542,10 @@ define amdgpu_kernel void @s_insertelement_v2i16_dynamic(ptr addrspace(1) %out, 
 ; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x0
 ; GFX9-NEXT:    s_load_dword s7, s[2:3], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshl_b32 s3, s6, 4
-; GFX9-NEXT:    s_xor_b32 s2, s7, 0x3e703e7
-; GFX9-NEXT:    s_lshl_b32 s3, 0xffff, s3
-; GFX9-NEXT:    s_and_b32 s2, s2, s3
+; GFX9-NEXT:    s_lshl_b32 s2, s6, 4
+; GFX9-NEXT:    s_lshl_b32 s2, 0xffff, s2
+; GFX9-NEXT:    s_xor_b32 s3, s7, 0x3e703e7
+; GFX9-NEXT:    s_and_b32 s2, s3, s2
 ; GFX9-NEXT:    s_xor_b32 s2, s2, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -1561,13 +1561,13 @@ define amdgpu_kernel void @s_insertelement_v2i16_dynamic(ptr addrspace(1) %out, 
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshl_b32 s1, s4, 4
-; VI-NEXT:    s_xor_b32 s0, s2, 0x3e703e7
-; VI-NEXT:    s_lshl_b32 s1, 0xffff, s1
-; VI-NEXT:    s_and_b32 s0, s0, s1
+; VI-NEXT:    s_lshl_b32 s0, s4, 4
+; VI-NEXT:    s_lshl_b32 s0, 0xffff, s0
+; VI-NEXT:    s_xor_b32 s1, s2, 0x3e703e7
+; VI-NEXT:    s_and_b32 s0, s1, s0
 ; VI-NEXT:    s_xor_b32 s0, s0, s2
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -1583,13 +1583,13 @@ define amdgpu_kernel void @s_insertelement_v2i16_dynamic(ptr addrspace(1) %out, 
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CI-NEXT:    s_load_dword s2, s[2:3], 0x0
-; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
+; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_lshl_b32 s1, s4, 4
-; CI-NEXT:    s_xor_b32 s0, s2, 0x3e703e7
-; CI-NEXT:    s_lshl_b32 s1, 0xffff, s1
-; CI-NEXT:    s_and_b32 s0, s0, s1
+; CI-NEXT:    s_lshl_b32 s0, s4, 4
+; CI-NEXT:    s_lshl_b32 s0, 0xffff, s0
+; CI-NEXT:    s_xor_b32 s1, s2, 0x3e703e7
+; CI-NEXT:    s_and_b32 s0, s1, s0
 ; CI-NEXT:    s_xor_b32 s0, s0, s2
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    flat_store_dword v[0:1], v2
