@@ -23,21 +23,22 @@ using namespace offload::tblgen;
 constexpr auto PrintTypeHeader =
     R"(///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the {0} type
-/// @returns offload_ostream &
+/// @returns offload::detail::print_ostream &
 )";
 
 constexpr auto PrintTaggedEnumHeader =
     R"(///////////////////////////////////////////////////////////////////////////////
 /// @brief Print type-tagged {0} enum value
-/// @returns offload_ostream &
+/// @returns offload::detail::print_ostream &
 )";
 
 static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << formatv(PrintTypeHeader, Enum.getName());
-  OS << formatv("inline offload_ostream &operator<<(offload_ostream &os, "
-                "enum {0} value) "
-                "{{\n" TAB_1 "switch (value) {{\n",
-                Enum.getName());
+  OS << formatv(
+      "inline offload::detail::print_ostream &"
+      "operator<<(offload::detail::print_ostream &os, enum {0} value) "
+      "{{\n" TAB_1 "switch (value) {{\n",
+      Enum.getName());
 
   for (const auto &Val : Enum.getValues()) {
     auto Name = Enum.getEnumValNamePrefix() + "_" + Val.getName();
@@ -56,7 +57,7 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << formatv(PrintTaggedEnumHeader, Enum.getName());
 
   OS << formatv(R"""(template <>
-inline void printTagged(offload_ostream &os, const void *ptr, {0} value, size_t size) {{
+inline void printTagged(offload::detail::print_ostream &os, const void *ptr, {0} value, size_t size) {{
   if (ptr == NULL) {{
     printPtr(os, ptr);
     return;
@@ -101,8 +102,9 @@ inline void printTagged(offload_ostream &os, const void *ptr, {0} value, size_t 
 
 static void EmitResultPrint(raw_ostream &OS) {
   OS << R""(
-inline offload_ostream &operator<<(offload_ostream &os,
-                                   const ol_error_struct_t *Err) {
+inline offload::detail::print_ostream &
+operator<<(offload::detail::print_ostream &os,
+           const ol_error_struct_t *Err) {
   if (Err == nullptr) {
     os << "OL_SUCCESS";
   } else {
@@ -120,7 +122,8 @@ static void EmitFunctionParamStructPrint(const FunctionRec &Func,
   }
 
   OS << formatv(R"(
-inline offload_ostream &operator<<(offload_ostream &os, const struct {0} *params) {{
+inline offload::detail::print_ostream &
+operator<<(offload::detail::print_ostream &os, const struct {0} *params) {{
 )",
                 Func.getParamStructName());
 
@@ -164,7 +167,8 @@ void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   }
   OS << formatv(PrintTypeHeader, Struct.getName());
   OS << formatv(R"(
-inline offload_ostream &operator<<(offload_ostream &os, const struct {0} params) {{
+inline offload::detail::print_ostream &
+operator<<(offload::detail::print_ostream &os, const struct {0} params) {{
 )",
                 Struct.getName());
   OS << formatv(TAB_1 "os << \"(struct {0}){{\";\n", Struct.getName());
@@ -196,15 +200,19 @@ void EmitOffloadPrintHeader(const RecordKeeper &Records, raw_ostream &OS) {
 
 #ifdef OFFLOAD_PRINT_USE_STD_OSTREAM
 #include <ostream>
-using offload_ostream = std::ostream;
+namespace offload::detail {
+using print_ostream = std::ostream;
+}
 #else
 #include <llvm/Support/raw_ostream.h>
-using offload_ostream = llvm::raw_ostream;
+namespace offload::detail {
+using print_ostream = llvm::raw_ostream;
+}
 #endif
 
 
-template <typename T> inline ol_result_t printPtr(offload_ostream &os, const T *ptr);
-template <typename T> inline void printTagged(offload_ostream &os, const void *ptr, T value, size_t size);
+template <typename T> inline ol_result_t printPtr(offload::detail::print_ostream &os, const T *ptr);
+template <typename T> inline void printTagged(offload::detail::print_ostream &os, const void *ptr, T value, size_t size);
 )""";
 
   // ==========
@@ -222,12 +230,14 @@ template <typename T> inline void printTagged(offload_ostream &os, const void *p
   // use each other.
   OS << "\n";
   for (auto *R : Records.getAllDerivedDefinitions("Enum")) {
-    OS << formatv("inline offload_ostream &operator<<(offload_ostream &os, "
+    OS << formatv("inline offload::detail::print_ostream &"
+                  "operator<<(offload::detail::print_ostream &os, "
                   "enum {0} value);\n",
                   EnumRec{R}.getName());
   }
   for (auto *R : Records.getAllDerivedDefinitions("Struct")) {
-    OS << formatv("inline offload_ostream &operator<<(offload_ostream &os, "
+    OS << formatv("inline offload::detail::print_ostream &"
+                  "operator<<(offload::detail::print_ostream &os, "
                   "const struct {0} param);\n",
                   StructRec{R}.getName());
   }
@@ -253,7 +263,7 @@ template <typename T> inline void printTagged(offload_ostream &os, const void *p
   OS << R"""(
 ///////////////////////////////////////////////////////////////////////////////
 // @brief Print pointer value
-template <typename T> inline ol_result_t printPtr(offload_ostream &os, const T *ptr) {
+template <typename T> inline ol_result_t printPtr(offload::detail::print_ostream &os, const T *ptr) {
     if (ptr == nullptr) {
         os << "nullptr";
     } else if constexpr (std::is_pointer_v<T>) {

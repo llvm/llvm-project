@@ -7,10 +7,14 @@ include "APIDefs.td"
 // CHECK: #include <type_traits>
 // CHECK: #ifdef OFFLOAD_PRINT_USE_STD_OSTREAM
 // CHECK-NEXT: #include <ostream>
-// CHECK-NEXT: using offload_ostream = std::ostream;
+// CHECK-NEXT: namespace offload::detail {
+// CHECK-NEXT: using print_ostream = std::ostream;
+// CHECK-NEXT: }
 // CHECK-NEXT: #else
 // CHECK-NEXT: #include <llvm/Support/raw_ostream.h>
-// CHECK-NEXT: using offload_ostream = llvm::raw_ostream;
+// CHECK-NEXT: namespace offload::detail {
+// CHECK-NEXT: using print_ostream = llvm::raw_ostream;
+// CHECK-NEXT: }
 // CHECK-NEXT: #endif
 
 def my_enum_t : Enum {
@@ -23,7 +27,7 @@ def my_enum_t : Enum {
   ];
 }
 
-// CHECK: inline offload_ostream &operator<<(offload_ostream &os, enum my_enum_t value)
+// CHECK: inline offload::detail::print_ostream &operator<<(offload::detail::print_ostream &os, enum my_enum_t value)
 // CHECK: switch (value) {
 // CHECK: case MY_ENUM_VALUE_ONE:
 // CHECK:   os << "MY_ENUM_VALUE_ONE";
