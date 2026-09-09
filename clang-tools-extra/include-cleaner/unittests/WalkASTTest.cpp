@@ -579,6 +579,8 @@ TEST(WalkAST, CleanupAttr) {
            "void foo() { __attribute__((__cleanup__(^freep))) char* x = 0; }");
 }
 
+// Objective-C Tests
+
 TEST(WalkAST, ObjCInterfaceTypeLoc) {
   testWalk(R"objc(
     @interface $explicit^MyClass
@@ -600,6 +602,18 @@ TEST(WalkAST, ObjCImplementationDeclDependsOnInterface) {
            R"objc(
     @implementation ^MyClass
     @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCClassFunctionArg) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    void test(^MyClass *obj) {
+    }
   )objc",
            {"-x", "objective-c"});
 }
@@ -1000,6 +1014,18 @@ TEST(WalkAST, ObjCPropertyRefExprSuperNestedProtocolReceiver) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCInterfaceDeclInheritance) {
+  testWalk(R"objc(
+    @interface $explicit^BaseClass
+    @end
+  )objc",
+           R"objc(
+    @interface DerivedClass : ^BaseClass
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
 TEST(WalkAST, ObjCProtocolInType) {
   testWalk(R"objc(
     @protocol $explicit^MyProtocol
@@ -1128,6 +1154,28 @@ TEST(WalkAST, ObjCCompatibleAliasUsage) {
     void test() {
       ^AliasName *obj;
     }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCForwardClassDecl) {
+  testWalk(R"objc(
+    @interface MyClass
+    @end
+  )objc",
+           R"objc(
+    @class ^MyClass;
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCForwardProtocolDecl) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    @end
+  )objc",
+           R"objc(
+    @protocol ^MyProtocol;
   )objc",
            {"-x", "objective-c"});
 }

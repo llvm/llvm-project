@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+
+#include "IR/LLVMOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
@@ -88,7 +90,7 @@ static LogicalResult verifySymbolAttrUse(FlatSymbolRefAttr symbol,
 
 /// Returns a boolean type that has the same shape as `type`. It supports both
 /// fixed size vectors as well as scalable vectors.
-static Type getI1SameShape(Type type) {
+Type mlir::LLVM::getI1SameShape(Type type) {
   Type i1Type = IntegerType::get(type.getContext(), 1);
   if (LLVM::isCompatibleVectorType(type))
     return LLVM::getVectorType(i1Type, LLVM::getVectorNumElements(type));
@@ -142,11 +144,12 @@ static RetTy parseOptionalLLVMKeyword(OpAsmParser &parser,
   return static_cast<RetTy>(index);
 }
 
-static void printLLVMLinkage(OpAsmPrinter &p, Operation *, LinkageAttr val) {
+void mlir::LLVM::printLLVMLinkage(OpAsmPrinter &p, Operation *,
+                                  LinkageAttr val) {
   p << stringifyLinkage(val.getLinkage());
 }
 
-static ParseResult parseLLVMLinkage(OpAsmParser &p, LinkageAttr &val) {
+ParseResult mlir::LLVM::parseLLVMLinkage(OpAsmParser &p, LinkageAttr &val) {
   val = LinkageAttr::get(
       p.getContext(),
       parseOptionalLLVMKeyword<LLVM::Linkage>(p, LLVM::Linkage::External));
@@ -203,10 +206,10 @@ static void printOneOpBundle(OpAsmPrinter &p, OperandRange operands,
   p << ")";
 }
 
-static void printOpBundles(OpAsmPrinter &p, Operation *op,
-                           OperandRangeRange opBundleOperands,
-                           TypeRangeRange opBundleOperandTypes,
-                           std::optional<ArrayAttr> opBundleTags) {
+void mlir::LLVM::printOpBundles(OpAsmPrinter &p, Operation *op,
+                                OperandRangeRange opBundleOperands,
+                                TypeRangeRange opBundleOperandTypes,
+                                std::optional<ArrayAttr> opBundleTags) {
   if (opBundleOperands.empty())
     return;
   assert(opBundleTags && "expect operand bundle tags");
@@ -251,7 +254,7 @@ static ParseResult parseOneOpBundle(
   return success();
 }
 
-static std::optional<ParseResult> parseOpBundles(
+std::optional<ParseResult> mlir::LLVM::parseOpBundles(
     OpAsmParser &p,
     SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> &opBundleOperands,
     SmallVector<SmallVector<Type>> &opBundleOperandTypes,
@@ -394,7 +397,7 @@ OpFoldResult ICmpOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing, parsing and verification for LLVM::AllocaOp.
+// Printing, parsing, verification and canonicalization for LLVM::AllocaOp.
 //===----------------------------------------------------------------------===//
 
 void AllocaOp::print(OpAsmPrinter &p) {
@@ -466,6 +469,25 @@ LogicalResult AllocaOp::verify() {
     return emitOpError()
            << "this target extension type cannot be used in alloca";
 
+  return success();
+}
+
+LogicalResult AllocaOp::canonicalize(AllocaOp op, PatternRewriter &rewriter) {
+  // Convert `alloca Ty, C` to the canonical `alloca [C x Ty], 1` form.
+  APInt numElements;
+  if (!matchPattern(op.getArraySize(), m_ConstantInt(&numElements)) ||
+      numElements.isOne() || numElements.getActiveBits() > 64)
+    return failure();
+
+  auto arrayType =
+      LLVMArrayType::get(op.getElemType(), numElements.getZExtValue());
+  Value one = ConstantOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
+                                 /*value=*/1);
+  auto newAlloca =
+      AllocaOp::create(rewriter, op.getLoc(), op.getType(), one,
+                       op.getAlignmentAttr(), arrayType, op.getInalloca());
+  newAlloca->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+  rewriter.replaceOp(op, newAlloca);
   return success();
 }
 
@@ -554,7 +576,7 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
 
 /// <cases> ::= `[` (case (`,` case )* )? `]`
 /// <case>  ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
-static ParseResult parseSwitchOpCases(
+ParseResult mlir::LLVM::parseSwitchOpCases(
     OpAsmParser &parser, Type flagType, DenseIntElementsAttr &caseValues,
     SmallVectorImpl<Block *> &caseDestinations,
     SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &caseOperands,
@@ -596,11 +618,11 @@ static ParseResult parseSwitchOpCases(
   return parser.parseRSquare();
 }
 
-static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
-                               DenseIntElementsAttr caseValues,
-                               SuccessorRange caseDestinations,
-                               OperandRangeRange caseOperands,
-                               const TypeRangeRange &caseOperandTypes) {
+void mlir::LLVM::printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
+                                    DenseIntElementsAttr caseValues,
+                                    SuccessorRange caseDestinations,
+                                    OperandRangeRange caseOperands,
+                                    const TypeRangeRange &caseOperandTypes) {
   p << '[';
   p.printNewline();
   if (!caseValues) {
@@ -735,10 +757,10 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
         SmallVector<GEPArg>(indices), noWrapFlags, attributes);
 }
 
-static ParseResult
-parseGEPIndices(OpAsmParser &parser,
-                SmallVectorImpl<OpAsmParser::UnresolvedOperand> &indices,
-                DenseI32ArrayAttr &rawConstantIndices) {
+ParseResult mlir::LLVM::parseGEPIndices(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &indices,
+    DenseI32ArrayAttr &rawConstantIndices) {
   SmallVector<int32_t> constantIndices;
 
   auto idxParser = [&]() -> ParseResult {
@@ -763,9 +785,9 @@ parseGEPIndices(OpAsmParser &parser,
   return success();
 }
 
-static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
-                            OperandRange indices,
-                            DenseI32ArrayAttr rawConstantIndices) {
+void mlir::LLVM::printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
+                                 OperandRange indices,
+                                 DenseI32ArrayAttr rawConstantIndices) {
   llvm::interleaveComma(
       GEPIndicesAdaptor<OperandRange>(rawConstantIndices, indices), printer,
       [&](PointerUnion<IntegerAttr, Value> cst) {
@@ -2215,10 +2237,9 @@ void InsertValueOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 /// Infer the value type from the container type and position.
-static ParseResult
-parseInsertExtractValueElementType(AsmParser &parser, Type &valueType,
-                                   Type containerType,
-                                   DenseI64ArrayAttr position) {
+ParseResult mlir::LLVM::parseInsertExtractValueElementType(
+    AsmParser &parser, Type &valueType, Type containerType,
+    DenseI64ArrayAttr position) {
   valueType = getInsertExtractValueElementType(
       [&](StringRef msg) {
         return parser.emitError(parser.getCurrentLocation(), msg);
@@ -2228,10 +2249,9 @@ parseInsertExtractValueElementType(AsmParser &parser, Type &valueType,
 }
 
 /// Nothing to print for an inferred type.
-static void printInsertExtractValueElementType(AsmPrinter &printer,
-                                               Operation *op, Type valueType,
-                                               Type containerType,
-                                               DenseI64ArrayAttr position) {}
+void mlir::LLVM::printInsertExtractValueElementType(
+    AsmPrinter &printer, Operation *op, Type valueType, Type containerType,
+    DenseI64ArrayAttr position) {}
 
 LogicalResult InsertValueOp::verify() {
   auto emitError = [this](StringRef msg) { return emitOpError(msg); };
@@ -3055,8 +3075,9 @@ void ShuffleVectorOp::build(OpBuilder &builder, OperationState &state, Value v1,
 }
 
 /// Build the result type of a shuffle vector operation.
-static ParseResult parseShuffleType(AsmParser &parser, Type v1Type,
-                                    Type &resType, DenseI32ArrayAttr mask) {
+ParseResult mlir::LLVM::parseShuffleType(AsmParser &parser, Type v1Type,
+                                         Type &resType,
+                                         DenseI32ArrayAttr mask) {
   if (!LLVM::isCompatibleVectorType(v1Type))
     return parser.emitError(parser.getCurrentLocation(),
                             "expected an LLVM compatible vector type");
@@ -3067,8 +3088,9 @@ static ParseResult parseShuffleType(AsmParser &parser, Type v1Type,
 }
 
 /// Nothing to do when the result type is inferred.
-static void printShuffleType(AsmPrinter &printer, Operation *op, Type v1Type,
-                             Type resType, DenseI32ArrayAttr mask) {}
+void mlir::LLVM::printShuffleType(AsmPrinter &printer, Operation *op,
+                                  Type v1Type, Type resType,
+                                  DenseI32ArrayAttr mask) {}
 
 LogicalResult ShuffleVectorOp::verify() {
   if (LLVM::isScalableVectorType(getV1().getType()) &&
@@ -3767,8 +3789,6 @@ LogicalResult LLVM::ConstantOp::verify() {
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
   }
-
-  return success();
 }
 
 bool LLVM::ConstantOp::isBuildableWith(Attribute value, Type type) {
@@ -3852,7 +3872,7 @@ LogicalResult AtomicRMWOp::verify() {
 //===----------------------------------------------------------------------===//
 
 /// Returns an LLVM struct type that contains a value type and a boolean type.
-static LLVMStructType getValAndBoolStructType(Type valType) {
+LLVMStructType mlir::LLVM::getValAndBoolStructType(Type valType) {
   auto boolType = IntegerType::get(valType.getContext(), 1);
   return LLVMStructType::getLiteral(valType.getContext(), {valType, boolType});
 }
@@ -4409,7 +4429,7 @@ void IndirectBrOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   odsState.addSuccessors(successors);
 }
 
-static ParseResult parseIndirectBrOpSucessors(
+ParseResult mlir::LLVM::parseIndirectBrOpSucessors(
     OpAsmParser &parser, Type &flagType,
     SmallVectorImpl<Block *> &succOperandBlocks,
     SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &succOperands,
@@ -4441,10 +4461,9 @@ static ParseResult parseIndirectBrOpSucessors(
   return success();
 }
 
-static void
-printIndirectBrOpSucessors(OpAsmPrinter &p, IndirectBrOp op, Type flagType,
-                           SuccessorRange succs, OperandRangeRange succOperands,
-                           const TypeRangeRange &succOperandsTypes) {
+void mlir::LLVM::printIndirectBrOpSucessors(
+    OpAsmPrinter &p, IndirectBrOp op, Type flagType, SuccessorRange succs,
+    OperandRangeRange succOperands, const TypeRangeRange &succOperandsTypes) {
   p << "[";
   llvm::interleave(
       llvm::zip(succs, succOperands),
@@ -4624,27 +4643,13 @@ void LLVMDialect::initialize() {
   // clang-format on
   registerTypes();
 
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/LLVMOps.cpp.inc"
-
-      ,
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/LLVMIntrinsicOps.cpp.inc"
-
-      >();
+  registerLLVMDialectOperations(this);
 
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
   detail::addBytecodeInterface(this);
 }
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMOps.cpp.inc"
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMIntrinsicOps.cpp.inc"
 
 LogicalResult LLVMDialect::verifyDataLayoutString(
     StringRef descr, llvm::function_ref<void(const Twine &)> reportError) {
@@ -4731,6 +4736,7 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
       name == LLVMDialect::getNestAttrName() ||
       name == LLVMDialect::getNoCaptureAttrName() ||
       name == LLVMDialect::getNoFreeAttrName() ||
+      name == LLVMDialect::getNoFreeObjAttrName() ||
       name == LLVMDialect::getNonNullAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();

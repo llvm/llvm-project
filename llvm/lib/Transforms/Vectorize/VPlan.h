@@ -1177,6 +1177,17 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
                                              VPCostContext &Ctx) const;
 };
 
+/// The frequency with which a recipe executes, relative to the entry of the
+/// loop region. IsEstimated is set if any branch weight it was composed from
+/// was estimated from static heuristics.
+struct VPExecutionFrequency {
+  const BlockFrequency Freq;
+  const bool IsEstimated;
+
+  VPExecutionFrequency(BlockFrequency Freq, bool IsEstimated)
+      : Freq(Freq), IsEstimated(IsEstimated) {}
+};
+
 /// Helper to manage IR metadata for recipes. It filters out metadata that
 /// cannot be propagated.
 class LLVM_ABI_FOR_TEST VPIRMetadata {
@@ -1186,11 +1197,21 @@ class LLVM_ABI_FOR_TEST VPIRMetadata {
   static constexpr StringLiteral ExecutionFrequencyMDName =
       "vplan.execution.frequency";
 
+  /// Name of the VPlan-internal metadata kind holding estimated branch weights.
+  static constexpr StringLiteral EstimatedProfileMDName =
+      "vplan.prof.estimated";
+
   /// Returns the ID of the metadata kind named \p Kind, taking the context from
   /// any attached node; all belong to the context of the VPlan's function.
   unsigned getMDKindID(StringRef Kind) const {
     assert(!Metadata.empty() && "no node to take the context from");
     return Metadata.front().second->getContext().getMDKindID(Kind);
+  }
+
+  /// Returns the node attached under the VPlan-internal metadata kind named
+  /// \p Kind, or nullptr if there is none.
+  MDNode *getInternalMetadata(StringRef Kind) const {
+    return Metadata.empty() ? nullptr : getMetadata(getMDKindID(Kind));
   }
 
 public:
@@ -1240,15 +1261,34 @@ public:
   }
 
   /// Record that the recipe executes with frequency \p Freq, relative to the
-  /// entry of the loop region; see vputils::AlwaysExecutesFreq.
-  void setExecutionFrequency(std::optional<BlockFrequency> Freq,
+  /// entry of the loop region.
+  void setExecutionFrequency(std::optional<VPExecutionFrequency> Freq,
                              LLVMContext &Ctx);
 
   /// Returns the frequency recorded by setExecutionFrequency, if any.
-  std::optional<BlockFrequency> getExecutionFrequency() const;
+  std::optional<VPExecutionFrequency> getExecutionFrequency() const;
 
   /// Drop the frequency recorded by setExecutionFrequency, if any.
   void clearExecutionFrequency();
+
+  /// Returns the branch weights recorded for this terminator, preferring real
+  /// profile data over an estimate, or nullptr if there are none.
+  MDNode *getBranchWeights() const {
+    MDNode *Node = getMetadata(LLVMContext::MD_prof);
+    return Node ? Node : getInternalMetadata(EstimatedProfileMDName);
+  }
+
+  /// Returns true if the weights returned by getBranchWeights are estimated.
+  bool hasEstimatedBranchWeights() const {
+    return getInternalMetadata(EstimatedProfileMDName);
+  }
+
+  /// Set estimated branch weights to \p Node.
+  void setEstimatedBranchWeights(MDNode *Node) {
+    assert(!getMetadata(LLVMContext::MD_prof) &&
+           "real profile data takes precedence over an estimate");
+    setMetadata(Node->getContext().getMDKindID(EstimatedProfileMDName), Node);
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print metadata with node IDs.
@@ -1267,9 +1307,9 @@ class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum {
-    FirstOrderRecurrenceSplice =
-        Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
-                                      // values of a first-order recurrence.
+    FirstOrderRecurrenceSplice = Instruction::OtherOpsEnd +
+        1, // Combines the incoming and previous
+           // values of a first-order recurrence.
     Not,
     // Creates a mask where each lane is active (true) whilst the current
     // counter (first operand + index) is less than the second operand. i.e.
@@ -1379,14 +1419,6 @@ public:
     /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
     MaskedCond,
-
-    // The opcodes below are used for VPInstructionWithType.
-    // NOTE: VPInstructionWithType classes are also used for:
-    // 1. All CastInst variants - see createVPInstructionsForVPBB, and other
-    //    cases where createScalarCast, createScalarZExtOrTrunc and
-    //    createScalarSExtOrTrunc are invoked.
-    // 2. Scalar load instructions - see createVPInstructionsForVPBB.
-
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
@@ -1548,6 +1580,11 @@ public:
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override;
 
+  /// Returns true if the recipe only uses scalars of operand \p Op.
+  bool usesScalars(const VPValue *Op) const override {
+    return isSingleScalar() || usesFirstLaneOnly(Op);
+  }
+
   /// Returns true if the recipe only uses the first part of operand \p Op.
   bool usesFirstPartOnly(const VPValue *Op) const override;
 
@@ -1567,78 +1604,6 @@ public:
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPInstruction to \p O.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
-/// A specialization of VPInstruction augmenting it with a dedicated result
-/// type, to be used when the opcode and operands of the VPInstruction don't
-/// directly determine the result type. Note that there is no separate recipe ID
-/// for VPInstructionWithType; it shares the same ID as VPInstruction and is
-/// distinguished purely by the opcode.
-/// TODO: Merge with VPInstruction, now that VPRecipeValue provides the type.
-class VPInstructionWithType : public VPInstruction {
-public:
-  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Type *ResultTy, const VPIRFlags &Flags = {},
-                        const VPIRMetadata &Metadata = {},
-                        DebugLoc DL = DebugLoc::getUnknown(),
-                        const Twine &Name = "", Value *UV = nullptr)
-      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name, ResultTy) {
-    setUnderlyingValue(UV);
-  }
-
-  static inline bool classof(const VPRecipeBase *R) {
-    // VPInstructionWithType are VPInstructions with specific opcodes requiring
-    // type information.
-    auto *VPI = dyn_cast<VPInstruction>(R);
-    if (!VPI)
-      return false;
-    unsigned Opc = VPI->getOpcode();
-    if (Instruction::isCast(Opc))
-      return true;
-    switch (Opc) {
-    case VPInstruction::WideIVStep:
-    case VPInstruction::StepVector:
-    case VPInstruction::Intrinsic:
-    case Instruction::Load:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  static inline bool classof(const VPUser *R) {
-    return isa<VPInstructionWithType>(cast<VPRecipeBase>(R));
-  }
-
-  VPInstruction *clone() override {
-    auto *New =
-        new VPInstructionWithType(getOpcode(), operands(), getResultType(),
-                                  *this, *this, getDebugLoc(), getName());
-    New->setUnderlyingValue(getUnderlyingValue());
-    return New;
-  }
-
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPInstruction.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-  Type *getResultType() const { return getScalarType(); }
-
-  /// Cast recipes always use scalars of their operand.
-  bool usesScalars(const VPValue *Op) const override {
-    if (Instruction::isCast(getOpcode()))
-      return true;
-    return VPInstruction::usesScalars(Op);
-  }
-
-protected:
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
@@ -2598,9 +2563,6 @@ public:
 
   void execute(VPTransformState &State) override = 0;
 
-  /// Returns the start value of the induction.
-  VPValue *getStartValue() const { return getOperand(0); }
-
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
@@ -3450,7 +3412,7 @@ public:
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
     assert((!IsSingleScalar || !I->isCast()) &&
-           "single-scalar casts should use VPInstructionWithType");
+           "Single-scalar casts should use VPInstruction");
     setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);

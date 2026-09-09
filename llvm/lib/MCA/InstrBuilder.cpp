@@ -185,7 +185,7 @@ static void initializeUsedResources(InstrDesc &ID,
   }
 
   // Identify extra buffers that are consumed through super resources.
-  for (const std::pair<uint64_t, unsigned> &SR : SuperResources) {
+  for (const auto &SR : SuperResources) {
     for (unsigned I = 1, E = NumProcResources; I < E; ++I) {
       if (SM.getResourceBufferSize(I) == -1)
         continue;
