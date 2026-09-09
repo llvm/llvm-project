@@ -9,6 +9,8 @@
 # CHECK:      DW_TAG_variable
 # CHECK-NEXT:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_global)
 # CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_constant)
+# CHECK:      DW_TAG_variable
 # CHECK-NEXT:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_group)
 # CHECK:      DW_TAG_variable
 # CHECK-NEXT:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_private)
@@ -50,6 +52,9 @@ DWARF:
         - AbbrCode: 0x00000002
           Values:
             - Value: 0x0000000000000001
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000002
         - AbbrCode: 0x00000002
           Values:
             - Value: 0x0000000000000003
