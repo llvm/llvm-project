@@ -151,9 +151,9 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
 }
 
 ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
-  using ModeFlags = File::ModeFlags;
-  ModeFlags modeflags = File::mode_flags(mode);
-  if (modeflags == 0) {
+  FileMode file_mode(mode);
+
+  if (!file_mode.is_valid()) {
     return Error(EINVAL);
   }
 
@@ -163,25 +163,19 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   }
   int fd_flags = result.value();
 
-  using OpenMode = File::OpenMode;
-  using ModeFlags = File::ModeFlags;
+  constexpr int REQUIRES_WRITE = file_mode.write_allowed() |
+                                 file_mode.append_allowed() |
+                                 file_mode.is_plus();
 
-  constexpr ModeFlags REQUIRES_WRITE =
-      static_cast<ModeFlags>(OpenMode::WRITE) |
-      static_cast<ModeFlags>(OpenMode::APPEND) |
-      static_cast<ModeFlags>(OpenMode::PLUS);
+  constexpr int REQUIRES_READ = file_mode.write_allowed() | file_mode.is_plus();
 
-  constexpr ModeFlags REQUIRES_READ = static_cast<ModeFlags>(OpenMode::READ) |
-                                      static_cast<ModeFlags>(OpenMode::PLUS);
-
-  if (((fd_flags & O_ACCMODE) == O_RDONLY && (modeflags & REQUIRES_WRITE)) ||
-      ((fd_flags & O_ACCMODE) == O_WRONLY && (modeflags & REQUIRES_READ))) {
+  if (((fd_flags & O_ACCMODE) == O_RDONLY && REQUIRES_WRITE) ||
+      ((fd_flags & O_ACCMODE) == O_WRONLY && REQUIRES_READ)) {
     return Error(EINVAL);
   }
 
   bool do_seek = false;
-  if ((modeflags & static_cast<ModeFlags>(OpenMode::APPEND)) &&
-      !(fd_flags & O_APPEND)) {
+  if (file_mode.append_allowed() && !(fd_flags & O_APPEND)) {
     do_seek = true;
     if (!linux_syscalls::fcntl(fd, F_SETFL,
                                reinterpret_cast<void *>(fd_flags | O_APPEND))
@@ -200,7 +194,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   }
   AllocChecker ac;
   auto *file = new (ac)
-      LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
+      LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, file_mode);
   if (!ac) {
     return Error(ENOMEM);
   }
