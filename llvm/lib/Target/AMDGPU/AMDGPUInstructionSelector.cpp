@@ -4752,6 +4752,34 @@ Register AMDGPUInstructionSelector::copyToVGPRIfSrcFolded(
   return Src;
 }
 
+/// The mix instructions read 32-bit sources. With real true16 instructions a
+/// 16-bit VALU value lives in a VGPR_16, which they cannot read, so place it in
+/// the low half of a new 32-bit VGPR.
+Register AMDGPUInstructionSelector::widenMadMixSrcIfVGPR16(
+    Register Src, MachineInstr *InsertPt) const {
+  if (!Subtarget->useRealTrue16Insts() || MRI->getType(Src) != LLT::scalar(16))
+    return Src;
+
+  const RegisterBank *SrcRB = RBI.getRegBank(Src, *MRI, TRI);
+  if (!SrcRB || SrcRB->getID() != AMDGPU::VGPRRegBankID)
+    return Src;
+
+  MachineIRBuilder B(*InsertPt);
+
+  Register ImpDefReg = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+  B.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(ImpDefReg);
+
+  Register DstReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  B.buildInstr(AMDGPU::REG_SEQUENCE)
+      .addDef(DstReg)
+      .addReg(Src)
+      .addImm(AMDGPU::lo16)
+      .addReg(ImpDefReg)
+      .addImm(AMDGPU::hi16);
+
+  return DstReg;
+}
+
 ///
 /// This will select either an SGPR or VGPR operand and will save us from
 /// having to write an extra tablegen pattern.
@@ -7145,26 +7173,6 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
 
-// Place a 16-bit source into the low half of a new 32-bit VGPR.
-static Register createVOP3PSrc32FromLo16(Register Src, MachineInstr *InsertPt,
-                                         MachineRegisterInfo &MRI) {
-  MachineIRBuilder B(*InsertPt);
-
-  // Create an vgpr_16 for the hi16 part using IMPLICIT_DEF
-  Register ImpdefReg = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-  B.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(ImpdefReg);
-
-  Register DstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  B.buildInstr(AMDGPU::REG_SEQUENCE)
-      .addDef(DstReg)
-      .addReg(Src)
-      .addImm(AMDGPU::lo16)
-      .addReg(ImpdefReg)
-      .addImm(AMDGPU::hi16);
-
-  return DstReg;
-}
-
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
                                                      bool &Matched) const {
@@ -7212,14 +7220,12 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
       // Src is now the 32-bit source and op_sel picks its high half.
       Mods |= SISrcMods::OP_SEL_0;
       CheckAbsNeg();
-    } else if (!isExtractLoElt(*MRI, Src, Src)) {
-      // Src is genuinely 16 bits wide. With real true16 instructions a 16-bit
-      // VALU value lives in a VGPR_16, which the mix instructions cannot read,
-      // so widen it. 16-bit SALU values already occupy a full SGPR_32.
-      const RegisterBank *SrcRB = RBI.getRegBank(Src, *MRI, TRI);
-      if (Subtarget->useRealTrue16Insts() && SrcRB &&
-          SrcRB->getID() == AMDGPU::VGPRRegBankID)
-        Src = createVOP3PSrc32FromLo16(Src, Root.getParent(), *MRI);
+    } else {
+      // op_sel already picks the low half, so use the 32-bit source directly if
+      // the 16-bit value is the low half of one. Otherwise Src is genuinely 16
+      // bits wide and widenMadMixSrcIfVGPR16 widens it when the operand is
+      // rendered.
+      isExtractLoElt(*MRI, Src, Src);
     }
 
     Matched = true;
@@ -7239,7 +7245,9 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsExt(
     return {};
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(widenMadMixSrcIfVGPR16(Src, MIB));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -7252,7 +7260,9 @@ AMDGPUInstructionSelector::selectVOP3PMadMixMods(MachineOperand &Root) const {
   std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(widenMadMixSrcIfVGPR16(Src, MIB));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -7268,7 +7278,9 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsExtNeg(
     return {};
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(widenMadMixSrcIfVGPR16(Src, MIB));
+      },
       [=](MachineInstrBuilder &MIB) {
         MIB.addImm(Mods ^ SISrcMods::NEG);
       } // src_mods
@@ -7284,7 +7296,9 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsNeg(
   std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(widenMadMixSrcIfVGPR16(Src, MIB));
+      },
       [=](MachineInstrBuilder &MIB) {
         MIB.addImm(Mods ^ SISrcMods::NEG);
       } // src_mods
