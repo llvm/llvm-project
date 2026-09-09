@@ -2353,8 +2353,8 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
-  // Treat the two `mcause` and `mepc` frame indexes as callee-saved objects for
-  // frame layout purposes. They are not tracked by `CSI`.
+  // Preemptible Interrupts have two additional Callee-save Frame Indexes,
+  // not tracked by `CSI`.
   if (RVFI->isSiFivePreemptibleInterrupt(MF)) {
     for (int I = 0; I < 2; ++I) {
       int FI = RVFI->getInterruptCSRFrameIndex(I);
@@ -2533,7 +2533,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       getScalarSpillCSI(*MF, CSI, STI.preferAscendingLoadStore());
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
 
-  auto storeRegsToStackSlots = [&](ArrayRef<CalleeSavedInfo> CSInfo) {
+  auto storeRegsToStackSlots = [&](decltype(UnmanagedCSI) CSInfo) {
     for (auto &CS : CSInfo) {
       // Insert the spill to the stack frame.
       MCRegister Reg = CS.getReg();
@@ -2627,7 +2627,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       getScalarSpillCSI(*MF, CSI, STI.preferAscendingLoadStore());
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
 
-  auto loadRegFromStackSlot = [&](ArrayRef<CalleeSavedInfo> CSInfo) {
+  auto loadRegFromStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
     for (auto &CS : CSInfo) {
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
