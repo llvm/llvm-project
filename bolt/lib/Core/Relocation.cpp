@@ -988,6 +988,7 @@ uint32_t Relocation::getRelative() {
   case Triple::aarch64:
     return ELF::R_AARCH64_RELATIVE;
   case Triple::riscv64:
+    return ELF::R_RISCV_RELATIVE;
   case Triple::riscv32:
     llvm_unreachable("not implemented");
   case Triple::x86_64:
