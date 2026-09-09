@@ -16,7 +16,7 @@ end:
 
 !0 = !{!"branch_weights", i32 0, i32 0}
 
-; CHECK: define void @test() {
+; CHECK-LABEL: define void @test() {
 ; CHECK: entry:
 ; CHECK:   br label %loop
 ; CHECK: loop:

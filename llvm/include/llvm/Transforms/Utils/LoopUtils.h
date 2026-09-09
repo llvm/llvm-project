@@ -13,9 +13,12 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <optional>
 
 namespace llvm {
 
@@ -43,6 +46,7 @@ class SCEVExpander;
 class TargetLibraryInfo;
 class LPPassManager;
 class Instruction;
+class MDNode;
 struct RuntimeCheckingPtrGroup;
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
@@ -432,11 +436,41 @@ LLVM_ABI BranchProbability getBranchProbability(CondBrInst *B,
 LLVM_ABI BranchProbability getBranchProbability(BasicBlock *Src,
                                                 BasicBlock *Dst);
 
+/// Set \p Weights on \p B, keeping the profile origin of \p Source: unknown
+/// stays unknown, llvm.expect stays expected. Does not mark \c approxprofile.
+LLVM_ABI void setBranchWeightsPreservingOrigin(Instruction &B,
+                                               ArrayRef<uint32_t> Weights,
+                                               const Instruction &Source);
+LLVM_ABI void setBranchWeightsPreservingOrigin(Instruction &B,
+                                               ArrayRef<uint32_t> Weights,
+                                               const MDNode *SourceMD);
+
+/// For new remainder/unroll guards. Do not copy llvm.expect; mark unknown with
+/// \p PassName. Count-type origin marks the function \c approxprofile.
+LLVM_ABI void setBranchWeightsForNewCFG(Instruction &B,
+                                        ArrayRef<uint32_t> Weights,
+                                        const Instruction &Source,
+                                        StringRef PassName);
+LLVM_ABI void setBranchWeightsForNewCFG(Instruction &B,
+                                        ArrayRef<uint32_t> Weights,
+                                        const MDNode *SourceMD,
+                                        StringRef PassName);
+
+/// Like \c setBranchProbability, but llvm.expect becomes unknown (\p PassName).
+LLVM_ABI void setBranchProbabilityForNewCFG(CondBrInst *B, BranchProbability P,
+                                            bool ForFirstTarget,
+                                            const Instruction *Origin,
+                                            StringRef PassName);
+
 /// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
 /// the probabilities of control flowing to its first and second target labels,
 /// respectively, or vice-versa if \p ForFirstTarget is false.
+///
+/// These are probabilities, not counts. A count-type origin marks the function
+/// \c approxprofile.
 LLVM_ABI void setBranchProbability(CondBrInst *B, BranchProbability P,
-                                   bool ForFirstTarget);
+                                   bool ForFirstTarget,
+                                   const Instruction *Origin = nullptr);
 
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially

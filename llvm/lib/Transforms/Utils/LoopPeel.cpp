@@ -12,6 +12,7 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
@@ -1242,8 +1243,12 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
         // probability of reaching iteration 0 of the original loop.
         if (L->getExitBlock() == OrigLatchBr->getSuccessor(0))
           std::swap(Weights[0], Weights[1]);
-        setBranchWeights(*BI, Weights, /*IsExpected=*/false);
-      }
+        // New CFG: keep the ratio, do not treat the integers as conserved
+        // counts.
+        setBranchWeightsForNewCFG(*BI, Weights, *OrigLatchBr, DEBUG_TYPE);
+      } else if (!ProfcheckDisableMetadataFixes &&
+                 hasExplicitlyUnknownBranchWeights(*OrigLatchBr))
+        setExplicitlyUnknownBranchWeights(*BI, DEBUG_TYPE);
       PreHeaderBR->eraseFromParent();
 
       // PreHeader now dominates InsertTop.
@@ -1422,6 +1427,18 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     else
       EstimatedTripCountNew -= TotalPeeled;
     setLoopEstimatedTripCount(L, EstimatedTripCountNew);
+  }
+
+  // Peel-first clones count-type branch weights onto a new CFG. Keep the
+  // integers for BPI; they are no longer conserved counts.
+  if (!PeelLast && !ProfcheckDisableMetadataFixes) {
+    for (BasicBlock *BB : L->blocks()) {
+      const MDNode *MD = BB->getTerminator()->getMetadata(LLVMContext::MD_prof);
+      if (isBranchWeightMD(MD) && !hasBranchWeightOrigin(MD)) {
+        markApproximateProfileCounts(*F);
+        break;
+      }
+    }
   }
 
   if (Loop *ParentLoop = L->getParentLoop())

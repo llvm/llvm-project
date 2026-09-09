@@ -26,7 +26,7 @@ define i32 @test_expansion_cost_2(i32 %start, i32 %end) !prof !0 {
 ; BUDGET2-NEXT:    ret i32 0
 ;
 ; BUDGET3-LABEL: define i32 @test_expansion_cost_2(
-; BUDGET3-SAME: i32 [[START:%.*]], i32 [[END:%.*]]) !prof [[PROF0:![0-9]+]] {
+; BUDGET3-SAME: i32 [[START:%.*]], i32 [[END:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF0:![0-9]+]] {
 ; BUDGET3-NEXT:  [[ENTRY:.*]]:
 ; BUDGET3-NEXT:    [[SUB:%.*]] = add i32 [[END]], -1
 ; BUDGET3-NEXT:    [[TMP0:%.*]] = sub i32 [[SUB]], [[START]]
@@ -100,6 +100,7 @@ exit:
 ; BUDGET2: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]]}
 ; BUDGET2: [[META4]] = !{!"llvm.loop.estimated_trip_count", i32 42}
 ;.
+; BUDGET3: attributes #[[ATTR0]] = { approxprofile }
 ; BUDGET3: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; BUDGET3: [[PROF1]] = !{!"branch_weights", i32 10, i32 1}
 ; BUDGET3: [[PROF2]] = !{!"branch_weights", i32 2, i32 3}
