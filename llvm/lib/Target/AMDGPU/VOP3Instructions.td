@@ -188,7 +188,7 @@ defm V_FMA_F32 : VOP3Inst_VOPD <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, 
 let SubtargetPredicate = HasLerpInst in
   defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
-let SchedRW = [WriteIntMul] in {
+let SchedRW = [WriteIntMul], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
   let SubtargetPredicate = HasMadU32Inst in
     defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
   let SubtargetPredicate = HasMadNC64_32Insts in {
@@ -197,7 +197,7 @@ let SchedRW = [WriteIntMul] in {
   }
 }
 
-let SchedRW = [WriteDoubleAdd] in {
+let SchedRW = [WriteDoubleAdd], GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
 let FPDPRounding = 1 in {
 let IsDPMACCInstruction = 1 in
 defm V_FMA_F64 : VOP3Inst_VOPD <"v_fma_f64", VOP_F64_F64_F64_F64_DPP_PROF, 0x20, "v_fma_f64", any_fma>;
@@ -211,13 +211,16 @@ let SubtargetPredicate = NotHasIEEEMinimumMaximumInsts in {
 defm V_MIN_F64 : VOP3Inst <"v_min_f64", VOP3_Profile<VOP_F64_F64_F64>, fminnum_like>;
 defm V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_like>;
 } // End SubtargetPredicate = NotHasIEEEMinimumMaximumInsts
-} // End SchedRW = [WriteDoubleAdd]
+} // End SchedRW = [WriteDoubleAdd], GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
-let SchedRW = [WriteIntMul] in {
+let SchedRW = [WriteIntMul], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
 defm V_MUL_LO_U32 : VOP3Inst <"v_mul_lo_u32", V_MUL_PROF<VOP_I32_I32_I32>, DivergentBinFrag<mul>>;
 defm V_MUL_HI_U32 : VOP3Inst <"v_mul_hi_u32", V_MUL_PROF<VOP_I32_I32_I32>, mulhu>;
-defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
 defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs>;
+} // End SchedRW = [WriteIntMul], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
+
+let SchedRW = [WriteIntMul] in {
+defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
 } // End SchedRW = [WriteIntMul]
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1 in {
@@ -226,18 +229,19 @@ defm V_MAXIMUM_F32 : VOP3Inst <"v_maximum_f32", VOP3_Profile<VOP_F32_F32_F32>, f
 defm V_MINIMUM_F16 : VOP3Inst_t16 <"v_minimum_f16", VOP_F16_F16_F16, fminimum>;
 defm V_MAXIMUM_F16 : VOP3Inst_t16 <"v_maximum_f16", VOP_F16_F16_F16, fmaximum>;
 
-let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
+let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
 defm V_MINIMUM_F64 : VOP3Inst <"v_minimum_f64", VOP3_Profile<VOP_F64_F64_F64>, fminimum>;
 defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaximum>;
-} // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1
+} // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1
 
-let SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd] in {
+let SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd],
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
 defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
 defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
 defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
 defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
-} // End SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd]
+} // End SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd], GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
 } // End isReMaterializable = 1
 
@@ -254,7 +258,8 @@ defm V_DIV_FMAS_F32 : VOP3Inst_Pseudo_Wrapper <"v_div_fmas_f32", VOP_F32_F32_F32
 //   if (vcc)
 //     result *= 2^64
 //
-let SchedRW = [WriteDouble], FPDPRounding = 1, IsDPMACCInstruction = 1 in
+let SchedRW = [WriteDouble], FPDPRounding = 1, IsDPMACCInstruction = 1,
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
 defm V_DIV_FMAS_F64 : VOP3Inst <"v_div_fmas_f64", VOP_F64_F64_F64_F64_VCC>;
 } // End Uses = [MODE, VCC, EXEC]
 
@@ -319,10 +324,11 @@ defm V_CVT_PK_U8_F32 : VOP3Inst<"v_cvt_pk_u8_f32", VOP3_Profile<VOP_I32_F32_I32_
 
 defm V_DIV_FIXUP_F32 : VOP3Inst <"v_div_fixup_f32", DIV_FIXUP_F32_PROF, AMDGPUdiv_fixup>;
 
-let SchedRW = [WriteDoubleAdd], FPDPRounding = 1, IsDPMACCInstruction = 1 in {
+let SchedRW = [WriteDoubleAdd], FPDPRounding = 1, IsDPMACCInstruction = 1,
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
   defm V_DIV_FIXUP_F64 : VOP3Inst <"v_div_fixup_f64", VOP_F64_F64_F64_F64_DPP_PROF, AMDGPUdiv_fixup>;
   defm V_LDEXP_F64 : VOP3Inst <"v_ldexp_f64", VOP3_Profile<VOP_F64_F64_I32>, any_fldexp>;
-} // End SchedRW = [WriteDoubleAdd], FPDPRounding = 1, IsDPMACCInstruction = 1
+} // End SchedRW = [WriteDoubleAdd], FPDPRounding = 1, IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 } // End isReMaterializable = 1
 
 let SubtargetPredicate = isGFX9GFX10 in
@@ -360,21 +366,23 @@ let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it d
   defm V_DIV_SCALE_F32 : VOP3Inst_Pseudo_Wrapper <"v_div_scale_f32", VOP3b_F32_I1_F32_F32_F32> ;
 
   // Double precision division pre-scale.
-  let SchedRW = [WriteDouble, WriteSALUDummy], FPDPRounding = 1, IsDPMACCInstruction = 1 in
+  let SchedRW = [WriteDouble, WriteSALUDummy], FPDPRounding = 1, IsDPMACCInstruction = 1,
+      GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
   defm V_DIV_SCALE_F64 : VOP3Inst <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64>;
 } // End mayRaiseFPException = 0
 
 let isReMaterializable = 1, SubtargetPredicate = HasMsadInsts in
 defm V_MSAD_U8 : VOP3Inst <"v_msad_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 
-let SubtargetPredicate = HasMqsadPkInsts, Constraints = "@earlyclobber $vdst" in {
+let SubtargetPredicate = HasMqsadPkInsts, Constraints = "@earlyclobber $vdst",
+    GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
 defm V_MQSAD_PK_U16_U8 : VOP3Inst <"v_mqsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
-} // End SubtargetPredicate = HasMqsadPkInsts, Constraints = "@earlyclobber $vdst"
+} // End SubtargetPredicate = HasMqsadPkInsts, Constraints = "@earlyclobber $vdst", GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
 
 let isReMaterializable = 1 in {
-let SchedRW = [WriteDouble], IsDPMACCInstruction = 1 in {
+let SchedRW = [WriteDouble], IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
 defm V_TRIG_PREOP_F64 : VOP3Inst <"v_trig_preop_f64", VOP3_Profile<VOP_F64_F64_I32>, int_amdgcn_trig_preop>;
-} // End SchedRW = [WriteDouble], IsDPMACCInstruction = 1
+} // End SchedRW = [WriteDouble], IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
 let SchedRW = [Write64Bit] in {
   let SubtargetPredicate = isGFX6GFX7, IsDPMACCInstruction = 1 in {
@@ -383,14 +391,14 @@ let SchedRW = [Write64Bit] in {
   defm V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, csra_64>;
   } // End SubtargetPredicate = isGFX6GFX7
 
-  let SubtargetPredicate = isGFX8Plus in {
+  let SubtargetPredicate = isGFX8Plus, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
   defm V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshr_rev_64>;
   defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, cashr_rev_64>;
-  } // End SubtargetPredicate = isGFX8Plus
+  } // End SubtargetPredicate = isGFX8Plus, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
-  let SubtargetPredicate = isGFX8GFX9GFX10GFX11 in {
+  let SubtargetPredicate = isGFX8GFX9GFX10GFX11, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
   defm V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshl_rev_64>;
-  } // End SubtargetPredicate = isGFX8GFX9GFX10GFX11
+  } // End SubtargetPredicate = isGFX8GFX9GFX10GFX11, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 } // End SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
@@ -424,14 +432,15 @@ def VOPProfileMQSAD : VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP> {
   let HasModifiers = 0;
 }
 
-let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
+let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32],
+    GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
 let SubtargetPredicate = HasQsadInsts in
   defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
 let SubtargetPredicate = HasMqsadInsts in
   defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
-} // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
+} // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
 
-let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALUDummy] in {
+let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALUDummy], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
   let SubtargetPredicate = isGFX7Plus in {
     defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
     defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
@@ -441,7 +450,7 @@ let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALUDummy] in {
     defm V_MAD_U64_U32_gfx11 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
     defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
   }
-} // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU]
+} // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
 
 
 let FPDPRounding = 1 in {
@@ -794,8 +803,8 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 } // End isReMaterializable = 1
 
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
-// src0 is shifted left by 0-4 (use “0” to get ADD_U64).
-let SubtargetPredicate = HasLshlAddU64Inst in
+// src0 is shifted left by 0-4 (use "0" to get ADD_U64).
+let SubtargetPredicate = HasLshlAddU64Inst, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
 defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
@@ -1439,7 +1448,8 @@ let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in 
   }
 }
 
-let SubtargetPredicate = HasFP6BF6ConversionScaleInsts, mayRaiseFPException = 0, Constraints = "@earlyclobber $vdst" in {
+let SubtargetPredicate = HasFP6BF6ConversionScaleInsts, mayRaiseFPException = 0,
+    Constraints = "@earlyclobber $vdst", GFX1250BlockingCycles = 16, HasGFX1250BlockingCycles = true in {
   defm V_CVT_SCALEF32_PK32_F32_FP6  : VOP3Inst<"v_cvt_scalef32_pk32_f32_fp6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F32_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_f32_fp6>;
   defm V_CVT_SCALEF32_PK32_F32_BF6  : VOP3Inst<"v_cvt_scalef32_pk32_f32_bf6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F32_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_f32_bf6>;
   defm V_CVT_SCALEF32_PK32_F16_FP6  : VOP3Inst<"v_cvt_scalef32_pk32_f16_fp6",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F16_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_f16_fp6>;
@@ -1448,7 +1458,8 @@ let SubtargetPredicate = HasFP6BF6ConversionScaleInsts, mayRaiseFPException = 0,
   defm V_CVT_SCALEF32_PK32_BF16_BF6 : VOP3Inst<"v_cvt_scalef32_pk32_bf16_bf6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32BF16_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_bf16_bf6>;
 }
 
-let SubtargetPredicate = HasF16BF16ToFP6BF6ConversionScaleInsts, mayRaiseFPException = 0, Constraints = "@earlyclobber $vdst" in {
+let SubtargetPredicate = HasF16BF16ToFP6BF6ConversionScaleInsts, mayRaiseFPException = 0,
+    Constraints = "@earlyclobber $vdst", GFX1250BlockingCycles = 16, HasGFX1250BlockingCycles = true in {
   defm V_CVT_SCALEF32_PK32_FP6_F16   : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F16_F32>,  int_amdgcn_cvt_scalef32_pk32_fp6_f16>;
   defm V_CVT_SCALEF32_PK32_BF6_F16   : VOP3Inst<"v_cvt_scalef32_pk32_bf6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F16_F32>,  int_amdgcn_cvt_scalef32_pk32_bf6_f16>;
   defm V_CVT_SCALEF32_PK32_FP6_BF16  : VOP3Inst<"v_cvt_scalef32_pk32_fp6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32BF16_F32>, int_amdgcn_cvt_scalef32_pk32_fp6_bf16>;
@@ -1461,7 +1472,8 @@ let SubtargetPredicate = HasF16BF16ToFP6BF6ConversionScaleInsts, mayRaiseFPExcep
   defm V_CVT_SCALEF32_SR_PK32_FP6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk32_fp6_f32>;
 }
 
-let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0, Constraints = "@earlyclobber $vdst" in {
+let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0,
+    Constraints = "@earlyclobber $vdst", GFX1250BlockingCycles = 8, HasGFX1250BlockingCycles = true in {
   defm V_CVT_SCALEF32_2XPK16_FP6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_fp6_f32>;
   defm V_CVT_SCALEF32_2XPK16_BF6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_bf6_f32>;
 }
@@ -1859,7 +1871,7 @@ let SubtargetPredicate = isGFX1250Plus in {
     }
 
     let Constraints = "@earlyclobber $vdst" in {
-      let WaveSizePredicate = isWave32 in {
+      let WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
         defm V_CVT_SCALE_PK8_F16_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp8",   VOP_V8F16_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f16_fp8>;
         defm V_CVT_SCALE_PK8_BF16_FP8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_fp8>;
         defm V_CVT_SCALE_PK8_F16_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_bf8",   VOP_V8F16_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f16_bf8>;
@@ -1867,15 +1879,17 @@ let SubtargetPredicate = isGFX1250Plus in {
         defm V_CVT_SCALE_PK8_F32_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_fp8>;
         defm V_CVT_SCALE_PK8_F32_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_bf8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_bf8>;
       }
+      let GFX1250BlockingCycles = 8, HasGFX1250BlockingCycles = true in {
       defm V_CVT_SCALE_PK16_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f16_fp6",  VOP_V16F16_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f16_fp6>;
       defm V_CVT_SCALE_PK16_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_bf16_fp6", VOP_V16BF16_V3I32_I32, int_amdgcn_cvt_scale_pk16_bf16_fp6>;
       defm V_CVT_SCALE_PK16_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f16_bf6",  VOP_V16F16_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f16_bf6>;
       defm V_CVT_SCALE_PK16_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_bf16_bf6", VOP_V16BF16_V3I32_I32, int_amdgcn_cvt_scale_pk16_bf16_bf6>;
       defm V_CVT_SCALE_PK16_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f32_fp6",  VOP_V16F32_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f32_fp6>;
       defm V_CVT_SCALE_PK16_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f32_bf6",  VOP_V16F32_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f32_bf6>;
+      }
     } // End Constraints = "@earlyclobber $vdst"
 
-    let WaveSizePredicate = isWave32 in {
+    let WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
       defm V_CVT_SCALE_PK8_F16_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp4",   VOP_V8F16_I32_I32,     int_amdgcn_cvt_scale_pk8_f16_fp4>;
       defm V_CVT_SCALE_PK8_BF16_FP4  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp4",  VOP_V8BF16_I32_I32,    int_amdgcn_cvt_scale_pk8_bf16_fp4>;
       defm V_CVT_SCALE_PK8_F32_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp4",   VOP_V8F32_I32_I32,     int_amdgcn_cvt_scale_pk8_f32_fp4>;
@@ -1883,7 +1897,7 @@ let SubtargetPredicate = isGFX1250Plus in {
   } // End ReadsModeReg = 0
 
   let Constraints = "@earlyclobber $vdst" in {
-    let WaveSizePredicate = isWave32 in {
+    let WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
       defm V_CVT_SCALEF32_PK8_FP8_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_fp8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_F32>,  int_amdgcn_cvt_scalef32_pk8_fp8_bf16>;
       defm V_CVT_SCALEF32_PK8_BF8_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_bf8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_F32>,  int_amdgcn_cvt_scalef32_pk8_bf8_bf16>;
       defm V_CVT_SCALEF32_PK8_FP8_F16    : VOP3Inst<"v_cvt_scalef32_pk8_fp8_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F16_F32>,   int_amdgcn_cvt_scalef32_pk8_fp8_f16>;
@@ -1893,15 +1907,17 @@ let SubtargetPredicate = isGFX1250Plus in {
       defm V_CVT_SCALEF32_PK8_FP4_F32    : VOP3Inst<"v_cvt_scalef32_pk8_fp4_f32",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F32_F32>,     int_amdgcn_cvt_scalef32_pk8_fp4_f32>;
       defm V_CVT_SCALEF32_PK8_FP4_F16    : VOP3Inst<"v_cvt_scalef32_pk8_fp4_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F16_F32>,     int_amdgcn_cvt_scalef32_pk8_fp4_f16>;
       defm V_CVT_SCALEF32_PK8_FP4_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_fp4_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8BF16_F32>,    int_amdgcn_cvt_scalef32_pk8_fp4_bf16>;
-    } // End WaveSizePredicate = isWave32
+    } // End WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
+    let GFX1250BlockingCycles = 8, HasGFX1250BlockingCycles = true in {
     defm V_CVT_SCALEF32_PK16_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_F32>,  int_amdgcn_cvt_scalef32_pk16_fp6_f32>;
     defm V_CVT_SCALEF32_PK16_BF6_F32   : VOP3Inst<"v_cvt_scalef32_pk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_F32>,  int_amdgcn_cvt_scalef32_pk16_bf6_f32>;
     defm V_CVT_SCALEF32_PK16_FP6_F16   : VOP3Inst<"v_cvt_scalef32_pk16_fp6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_F32>,  int_amdgcn_cvt_scalef32_pk16_fp6_f16>;
     defm V_CVT_SCALEF32_PK16_BF6_F16   : VOP3Inst<"v_cvt_scalef32_pk16_bf6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_F32>,  int_amdgcn_cvt_scalef32_pk16_bf6_f16>;
     defm V_CVT_SCALEF32_PK16_FP6_BF16  : VOP3Inst<"v_cvt_scalef32_pk16_fp6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_F32>, int_amdgcn_cvt_scalef32_pk16_fp6_bf16>;
     defm V_CVT_SCALEF32_PK16_BF6_BF16  : VOP3Inst<"v_cvt_scalef32_pk16_bf6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_F32>, int_amdgcn_cvt_scalef32_pk16_bf6_bf16>;
+    }
 
-    let WaveSizePredicate = isWave32 in {
+    let WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
       defm V_CVT_SCALEF32_SR_PK8_FP8_BF16  : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk8_fp8_bf16>;
       defm V_CVT_SCALEF32_SR_PK8_BF8_BF16  : VOP3Inst<"v_cvt_scalef32_sr_pk8_bf8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk8_bf8_bf16>;
       defm V_CVT_SCALEF32_SR_PK8_FP8_F16   : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp8_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F16_I32_F32>,   int_amdgcn_cvt_scalef32_sr_pk8_fp8_f16>;
@@ -1911,13 +1927,15 @@ let SubtargetPredicate = isGFX1250Plus in {
       defm V_CVT_SCALEF32_SR_PK8_FP4_F32   : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp4_f32",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F32_I32_F32>,     int_amdgcn_cvt_scalef32_sr_pk8_fp4_f32>;
       defm V_CVT_SCALEF32_SR_PK8_FP4_F16   : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp4_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F16_I32_F32>,     int_amdgcn_cvt_scalef32_sr_pk8_fp4_f16>;
       defm V_CVT_SCALEF32_SR_PK8_FP4_BF16  : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp4_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8BF16_I32_F32>,    int_amdgcn_cvt_scalef32_sr_pk8_fp4_bf16>;
-    } // End WaveSizePredicate = isWave32
+    } // End WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
+    let GFX1250BlockingCycles = 8, HasGFX1250BlockingCycles = true in {
     defm V_CVT_SCALEF32_SR_PK16_BF6_BF16 : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_I32_F32>, int_amdgcn_cvt_scalef32_sr_pk16_bf6_bf16>;
     defm V_CVT_SCALEF32_SR_PK16_BF6_F16  : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_bf6_f16>;
     defm V_CVT_SCALEF32_SR_PK16_BF6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_bf6_f32>;
     defm V_CVT_SCALEF32_SR_PK16_FP6_BF16 : VOP3Inst<"v_cvt_scalef32_sr_pk16_fp6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_I32_F32>, int_amdgcn_cvt_scalef32_sr_pk16_fp6_bf16>;
     defm V_CVT_SCALEF32_SR_PK16_FP6_F16  : VOP3Inst<"v_cvt_scalef32_sr_pk16_fp6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_fp6_f16>;
     defm V_CVT_SCALEF32_SR_PK16_FP6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_fp6_f32>;
+    }
   } // End Constraints = "@earlyclobber $vdst"
 
   let SubtargetPredicate = HasF16FP8ConversionInsts in {
@@ -1932,11 +1950,11 @@ let SubtargetPredicate = isGFX1250Plus in {
   }
 } // End SubtargetPredicate = isGFX1250Plus
 
-let SubtargetPredicate = HasTensorCvtLutInsts in {
+let SubtargetPredicate = HasTensorCvtLutInsts, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
   defm V_PERM_PK16_B4_U4 : VOP3Inst<"v_perm_pk16_b4_u4", VOP3_V2I32_I32_I32_V2I32, int_amdgcn_perm_pk16_b4_u4>;
   defm V_PERM_PK16_B6_U4 : VOP3Inst<"v_perm_pk16_b6_u4", VOP3_V3I32_I32_I64_V2I32, int_amdgcn_perm_pk16_b6_u4>;
   defm V_PERM_PK16_B8_U4 : VOP3Inst<"v_perm_pk16_b8_u4", VOP3_V4I32_I64_I64_V2I32, int_amdgcn_perm_pk16_b8_u4>;
-} // End SubtargetPredicate = HasTensorCvtLutInsts
+} // End SubtargetPredicate = HasTensorCvtLutInsts, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
 
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
     (DstTy (node DstTy:$vdst_in, f32:$src0, i32:$src1, timm:$word_sel)),

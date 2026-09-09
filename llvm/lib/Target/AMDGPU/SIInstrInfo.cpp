@@ -47,6 +47,14 @@ using namespace llvm;
 namespace llvm::AMDGPU {
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
+#define GET_GFX1250BlockingCyclesTable_DECL
+#define GET_GFX1250BlockingCyclesTable_IMPL
+
+struct AMDGPUBlockingCyclesInfo {
+  uint16_t Opcode;
+  uint8_t GFX1250BlockingCycles;
+};
+
 #include "AMDGPUGenSearchableTables.inc"
 } // namespace llvm::AMDGPU
 
@@ -11167,6 +11175,17 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
+  if (!ST.hasGFX1250Insts())
+    return 0;
+
+  // Use processor-specific lookup table
+  if (const auto *Entry = AMDGPU::getGFX1250BlockingCyclesInfo(MI.getOpcode()))
+    return Entry->GFX1250BlockingCycles;
+
+  return 0;
 }
 
 const MachineOperand &

@@ -1,18 +1,31 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
 
-# CHECK: HWUI Resource Pressure:
-# CHECK-DAG: VMEM: {{[0-9]+}} cycles, 10 instrs
-# CHECK-DAG: DS: {{[0-9]+}} cycles, 4 instrs
-# CHECK-DAG: DMA: {{[0-9]+}} cycles, 2 instrs
-# CHECK-DAG: VALU(1c): {{[0-9]+}} cycles, 4 instrs
-# CHECK-DAG: TRANS: {{[0-9]+}} cycles, 2 instrs
 
 --- |
   define void @test_flavor_classification() #0 { ret void }
+  define void @blocking_cycles_arith_i64() #0 { ret void }
+  define void @blocking_cycles_cvt_scale_pk8() #0 { ret void }
+  define void @blocking_cycles_cvt_f64() #0 { ret void }
+  define void @blocking_cycles_cmp_f64() #0 { ret void }
+  define void @blocking_cycles_arith_f64() #0 { ret void }
+  define void @blocking_cycles_shift_64() #0 { ret void }
+  define void @blocking_cycles_swap() #0 { ret void }
+  define void @blocking_cycles_int_mul() #0 { ret void }
+
 
   attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
 ...
+
+# CHECK-LABEL: test_flavor_classification:
+# CHECK: HWUI Resource Pressure:
+# CHECK-DAG: VMEM: 10 cycles, 10 instrs
+# CHECK-DAG: DS: 5 cycles, 4 instrs
+# CHECK-DAG: DMA: 4 cycles, 2 instrs
+# CHECK-DAG: VALU(1c): 2 cycles, 2 instrs
+# CHECK-DAG: VALU(Nc): 36 cycles, 2 instrs
+# CHECK-DAG: TRANS: 4 cycles, 2 instrs
+
 
 ---
 name: test_flavor_classification
@@ -58,4 +71,117 @@ body: |
     %41:vgpr_32 = V_EXP_F32_e32 %12, implicit $exec, implicit $mode
 
     S_ENDPGM 0, implicit %10, implicit %11, implicit %12, implicit %13, implicit %14, implicit %15, implicit %20, implicit %21, implicit %30, implicit %31, implicit %32, implicit %33, implicit %40, implicit %41
+...
+
+# CHECK-LABEL: blocking_cycles_arith_i64:
+# CHECK: VALU(Nc): 32 cycles, 1 instrs
+
+---
+name: blocking_cycles_arith_i64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = V_MIN_I64_e64 %0, %0, implicit $exec
+
+    S_ENDPGM 0, implicit %1
+...
+
+# CHECK-LABEL: blocking_cycles_cvt_scale_pk8:
+# CHECK: VALU(Nc): 4 cycles, 1 instrs
+
+---
+name: blocking_cycles_cvt_scale_pk8
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_256_align2 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_64_align2 = V_CVT_SCALEF32_PK8_FP8_F32_e64 %0, %1, implicit $mode, implicit $exec
+
+    S_ENDPGM 0, implicit %2
+...
+
+# CHECK-LABEL: blocking_cycles_cvt_f64:
+# CHECK: VALU(Nc): 32 cycles, 1 instrs
+
+---
+name: blocking_cycles_cvt_f64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 %0, implicit $exec, implicit $mode, implicit-def $m0
+
+    S_ENDPGM 0, implicit %1
+...
+
+# CHECK-LABEL: blocking_cycles_cmp_f64:
+# CHECK: VALU(Nc): 32 cycles, 1 instrs
+
+---
+name: blocking_cycles_cmp_f64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:sreg_32 = nofpexcept V_CMP_GT_F64_e64 0, %0, 0, %0, 0, implicit $mode, implicit $exec
+
+    S_ENDPGM 0, implicit %1
+...
+
+# CHECK-LABEL: blocking_cycles_arith_f64:
+# CHECK: VALU(Nc): 32 cycles, 1 instrs
+
+---
+name: blocking_cycles_arith_f64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = V_MIN_NUM_F64_e64 1, %0, 0, %0, 0, 0, implicit $mode, implicit $exec
+
+    S_ENDPGM 0, implicit %1
+...
+
+# CHECK-LABEL: blocking_cycles_shift_64:
+# CHECK: VALU(Nc): 2 cycles, 1 instrs
+
+---
+name: blocking_cycles_shift_64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = V_MOV_B64_e32 %0, implicit $exec
+
+    S_ENDPGM 0, implicit %1
+...
+
+# CHECK-LABEL: blocking_cycles_swap:
+# CHECK: VALU(Nc): 2 cycles, 1 instrs
+
+---
+name: blocking_cycles_swap
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32, %2:vgpr_32 = V_PERMLANE32_SWAP_B32_e64 %0, %0, -1, 1, implicit $exec
+
+    S_ENDPGM 0, implicit %1, implicit %2
+...
+
+# CHECK-LABEL: blocking_cycles_int_mul:
+# CHECK: VALU(Nc): 4 cycles, 1 instrs
+
+---
+name: blocking_cycles_int_mul
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_MUL_HI_U32_e64 1, %0:vgpr_32, implicit $exec
+
+    S_ENDPGM 0, implicit %1
 ...
