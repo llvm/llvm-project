@@ -58,7 +58,7 @@ optimization. Memory optimization algorithms, such as SROA, GVN, and AA,
 generally need to look through LLVM's struct types and reason about the
 underlying memory offsets. The community realized that pointee types hinder LLVM
 development, rather than helping it. Some of the initially proposed high-level
-optimizations have evolved into [TBAA](https://llvm.org/docs/LangRef.html#tbaa-metadata) due to limitations with
+optimizations have evolved into [TBAA](project:LangRef.md#tbaa-metadata) due to limitations with
 representing higher-level language information directly via SSA values.
 
 Pointee types provide some value to frontends because the IR verifier uses types

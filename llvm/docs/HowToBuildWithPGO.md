@@ -14,7 +14,7 @@ for PGO](https://clang.llvm.org/docs/UsersManual.html#profile-guided-optimizatio
 
 ## Using preconfigured CMake caches
 
-See <https://llvm.org/docs/AdvancedBuilds.html#multi-stage-pgo>
+See [Multi-stage PGO](project:AdvancedBuilds.md#multi-stage-pgo)
 
 ## Using the script
 

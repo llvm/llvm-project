@@ -167,6 +167,8 @@ depends on context.
 
 ## High Level Structure
 
+(modulestructure)=
+
 ### Module Structure
 
 LLVM programs are composed of `Module`'s, each of which is a
@@ -2741,7 +2743,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
 `speculative_load_hardening`
 :   This attribute indicates that
-    [Speculative Load Hardening](https://llvm.org/docs/SpeculativeLoadHardening.html)
+    {doc}`Speculative Load Hardening <SpeculativeLoadHardening>`
     should be enabled for the function body.
 
     Speculative Load Hardening is a best-effort mitigation against
@@ -9223,6 +9225,8 @@ Example:
 This defines a global with type `SHT_LLVM_CFI_JUMP_TABLE` and entry
 size 8.
 
+
+(module-flags-metadata)=
 
 ## Module Flags Metadata
 

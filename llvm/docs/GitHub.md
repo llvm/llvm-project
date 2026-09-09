@@ -270,7 +270,7 @@ Your options are as follows:
    perform this step using the web interface.
 
    This approach requires commit access. See how to obtain it
-   [here](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
+   [here](project:DeveloperPolicy.md#obtaining-commit-access).
 
 2. Two PRs with a dependency note
 

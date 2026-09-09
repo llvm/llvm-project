@@ -33,7 +33,7 @@ The structure of the tutorial is:
   replacing the Compile-On-Demand layer with a custom layer that uses the ORC
   Compile Callbacks API directly to defer IR-generation until functions are
   called.
-- [Chapter #5](https://llvm.org/docs/tutorial/BuildingAJIT5.html): Add process isolation by JITing code into
+- Chapter #5: Add process isolation by JITing code into
   a remote process with reduced privileges using the JIT Remote APIs.
 
 To provide input for our JIT we will use a lightly modified version of the
@@ -292,5 +292,4 @@ Here is the code:
     | LLVMContext.h              | Provides the LLVMContext class.                       |
 
 [^footnote-3]: See the ErrorHandling section in the LLVM Programmer's Manual
-    (<https://llvm.org/docs/ProgrammersManual.html#error-handling>)
-
+    ([Error handling](project:../ProgrammersManual.md#error-handling))

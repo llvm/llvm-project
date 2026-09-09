@@ -135,7 +135,7 @@ important:
   for the target system into system directories for the host system. It is
   not required unless you are going to use the `install` target.
 
-See [LLVM's build documentation](https://llvm.org/docs/CMake.html#frequently-used-cmake-variables) for more
+See [LLVM's build documentation](project:CMake.md#frequently-used-cmake-variables) for more
 guidance on CMake variables (e.g. `LLVM_TARGETS_TO_BUILD` may be useful if
 your cross-compiled binaries only need to support compiling for one target).
 
@@ -222,6 +222,5 @@ tar -czvf clang-$TARGET.tar.gz -C $HOME clang-$TARGET
 The generated toolchain is portable, but requires compatible versions of any
 shared libraries it links against. This means using a sysroot that is as
 similar to your target operating system as possible is desirable. Other [CMake
-variables](https://llvm.org/docs/CMake.html#frequently-used-cmake-variables)
+variables](project:CMake.md#frequently-used-cmake-variables)
 may be helpful, for instance `LLVM_STATIC_LINK_CXX_STDLIB`.
-

@@ -201,6 +201,8 @@ Changes to the Policy
 The LLVM Security Policy may be changed by majority vote of the LLVM Security Response Group. Such changes also need to be approved by the LLVM Board.
 
 
+.. _what-is-considered-a-security-issue:
+
 What is considered a security issue?
 ====================================
 

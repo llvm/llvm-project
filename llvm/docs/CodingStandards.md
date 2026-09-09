@@ -106,7 +106,7 @@ subjects is available in the {doc}`ProgrammersManual`.
 For more information about LLVM's data structures and the tradeoffs they make,
 please consult [that section of the programmer's manual].
 
-[that section of the programmer's manual]: https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task
+[that section of the programmer's manual]: project:ProgrammersManual.md#picking-the-right-data-structure-for-a-task
 
 ### Python version and Source Code Formatting
 
@@ -754,6 +754,8 @@ If you use a braced initializer list when initializing a variable, use an equals
 ```c++
 int data[] = {0, 1, 2, 3};
 ```
+
+(use-auto-type-deduction)=
 
 #### Use `auto` Type Deduction to Make Code More Readable
 
@@ -1711,6 +1713,8 @@ static void runHelper() {
   ...
 }
 ```
+
+(don-t-use-braces-on-simple-single-statement-bodies-of-if-else-loop-statements)=
 
 #### Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 
