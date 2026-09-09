@@ -979,6 +979,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::Flatten:
       case Attribute::FnRetThunkExtern:
       case Attribute::Hot:
+      case Attribute::ApproxProfile:
       case Attribute::HybridPatchable:
       case Attribute::NoRecurse:
       case Attribute::InlineHint:

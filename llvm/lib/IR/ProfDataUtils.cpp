@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -27,6 +28,19 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
+void llvm::markApproximateProfileCounts(Function &F) {
+  F.addFnAttr(Attribute::ApproxProfile);
+}
+
+bool llvm::hasApproximateProfileCounts(const Function &F) {
+  return F.hasFnAttribute(Attribute::ApproxProfile);
+}
+
+static void markApproximateProfileCountsIfNeeded(Instruction &I) {
+  if (Function *F = I.getFunction())
+    markApproximateProfileCounts(*F);
 }
 
 // MD_prof nodes have the following layout
@@ -335,7 +349,10 @@ void llvm::setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
 
 void llvm::setFittedBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
                                   bool IsExpected, bool ElideAllZero) {
+  uint64_t Max = Weights.empty() ? 0 : *llvm::max_element(Weights);
   setBranchWeights(I, fitWeights(Weights), IsExpected, ElideAllZero);
+  if (Max > UINT_MAX && !IsExpected)
+    markApproximateProfileCountsIfNeeded(I);
 }
 
 SmallVector<uint32_t>
@@ -381,8 +398,11 @@ void llvm::scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
                   ->getValue()
                   .getZExtValue());
     Val *= APS;
+    APInt Scaled = Val.udiv(APT);
+    if (!Scaled.isIntN(32))
+      markApproximateProfileCountsIfNeeded(I);
     Vals.push_back(MDB.createConstant(ConstantInt::get(
-        Type::getInt32Ty(C), Val.udiv(APT).getLimitedValue(UINT32_MAX))));
+        Type::getInt32Ty(C), Scaled.getLimitedValue(UINT32_MAX))));
   } else if (ProfDataName->getString() == MDProfLabels::ValueProfile)
     for (unsigned Idx = 1; Idx < ProfileData->getNumOperands(); Idx += 2) {
       // The first value is the key of the value profile, which will not change.
@@ -399,8 +419,11 @@ void llvm::scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
       // Using APInt::div may be expensive, but most cases should fit 64 bits.
       APInt Val(128, Count);
       Val *= APS;
-      Vals.push_back(MDB.createConstant(ConstantInt::get(
-          Type::getInt64Ty(C), Val.udiv(APT).getLimitedValue())));
+      APInt Scaled = Val.udiv(APT);
+      if (!Scaled.isIntN(64))
+        markApproximateProfileCountsIfNeeded(I);
+      Vals.push_back(MDB.createConstant(
+          ConstantInt::get(Type::getInt64Ty(C), Scaled.getLimitedValue())));
     }
   I.setMetadata(LLVMContext::MD_prof, MDNode::get(C, Vals));
 }
