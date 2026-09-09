@@ -1608,13 +1608,11 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static unsigned getFullArgCountForDefaultArgUpgrade(Function *F,
-                                                    Intrinsic::ID IID) {
+static unsigned
+getFullArgCountForDefaultArgUpgrade(Function *F, Intrinsic::ID IID,
+                                    SmallVectorImpl<Type *> &OverloadTys) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
-    return 0;
-
-  if (Intrinsic::isOverloaded(IID))
     return 0;
 
   unsigned FullArgCount = FirstDefault + Defaults.size();
@@ -1623,13 +1621,20 @@ static unsigned getFullArgCountForDefaultArgUpgrade(Function *F,
   if (F->arg_size() < FirstDefault || F->arg_size() >= FullArgCount)
     return 0;
 
+  unsigned NumMissingTrailingParams = FullArgCount - F->arg_size();
+  if (!Intrinsic::isSignatureValid(IID, F->getFunctionType(), OverloadTys,
+                                   NumMissingTrailingParams))
+    return 0;
+
   return FullArgCount;
 }
 
 static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
   Intrinsic::ID IID = F->getIntrinsicID();
+  SmallVector<Type *, 4> OverloadTys;
 
-  unsigned FullArgCount = getFullArgCountForDefaultArgUpgrade(F, IID);
+  unsigned FullArgCount =
+      getFullArgCountForDefaultArgUpgrade(F, IID, OverloadTys);
   if (FullArgCount == 0)
     return false;
 
