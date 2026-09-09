@@ -45,6 +45,6 @@ attributes #2 = {
   }
 
 attributes #3 = {
-; CHECK: 'sign-return-address-harden' present without `sign-return-address` or `ptrauth-returns`
+; CHECK: 'sign-return-address-harden' present without 'sign-return-address' or 'ptrauth-returns'
   "sign-return-address-harden"="load-return-address"
 }
