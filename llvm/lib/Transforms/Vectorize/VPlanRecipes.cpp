@@ -649,7 +649,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::MaskedCond:
-  case VPInstruction::Not:
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
   case VPInstruction::NumActiveLanes:
@@ -721,7 +720,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::AnyOf:
-  case VPInstruction::Not:
     return true;
   default:
     return false;
@@ -751,11 +749,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
 
   switch (getOpcode()) {
-  case VPInstruction::Not: {
-    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
-    return Builder.CreateNot(A, Name);
-  }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
     if (auto *Idx = dyn_cast<VPConstantInt>(getOperand(1)))
@@ -1331,11 +1324,18 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   if (Instruction::isBinaryOp(getOpcode())) {
-    if (!getUnderlyingValue() && getOpcode() != Instruction::FMul) {
+    if (!getUnderlyingValue() && getOpcode() != Instruction::FMul &&
+        !match(this, m_Not(m_VPValue()))) {
       // TODO: Compute cost for VPInstructions without underlying values once
       // the legacy cost model has been retired.
       return 0;
     }
+
+    // InstCombine will fold `xor` to the conditional branch.
+    if (match(this, m_Not(m_VPValue())))
+      if (auto *U = const_cast<VPUser *>(getSingleUser()))
+        if (match(U, m_BranchOnCond(m_VPValue())))
+          return 0;
 
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
@@ -1465,17 +1465,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     auto *VecTy = toVectorTy(getOperand(0)->getScalarType(), VF);
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
                                                     VecTy, Ctx.CostKind, 0);
-  }
-  case VPInstruction::Not: {
-    Type *ValTy = this->getScalarType();
-    // InstCombine will fold `xor` to the conditional branch.
-    if (auto *U = const_cast<VPUser *>(getSingleUser()))
-      if (match(U, m_BranchOnCond(m_VPValue())))
-        return 0;
-    if (!vputils::onlyFirstLaneUsed(this))
-      ValTy = toVectorTy(ValTy, VF);
-    return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
-                                          Ctx.CostKind);
   }
   case VPInstruction::BranchOnCount: {
     // If TC <= VF then this is just a branch.
@@ -1652,7 +1641,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
   case VPInstruction::MaskedCond:
-  case VPInstruction::Not:
   case VPInstruction::PtrAdd:
   case VPInstruction::WideIVStep:
   case VPInstruction::WidePtrAdd:
@@ -1693,7 +1681,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case Instruction::Select:
   case Instruction::Or:
   case Instruction::Freeze:
-  case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case Instruction::Load:
@@ -1764,9 +1751,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   }
 
   switch (getOpcode()) {
-  case VPInstruction::Not:
-    O << "not";
-    break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
     break;

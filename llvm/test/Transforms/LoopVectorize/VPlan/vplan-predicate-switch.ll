@@ -28,7 +28,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp eq ir<%l>, ir<-12>
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp eq ir<%l>, ir<13>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = or vp<[[VP9]]>, vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = not vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = xor vp<[[VP11]]>, ir<true>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extractelement vp<[[VP10]]>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue

@@ -413,7 +413,6 @@ static bool preservesUniformity(unsigned Opcode) {
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Select:
-  case VPInstruction::Not:
   case VPInstruction::Broadcast:
   case VPInstruction::MaskedCond:
   case VPInstruction::PtrAdd:
@@ -1293,9 +1292,6 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
       return Folder.FoldCast(static_cast<Instruction::CastOps>(Opcode), Ops[0],
                              R.getVPSingleValue()->getScalarType());
     switch (Opcode) {
-    case VPInstruction::Not:
-      return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
-                              Constant::getAllOnesValue(Ops[0]->getType()));
     case Instruction::Select:
       return Folder.FoldSelect(Ops[0], Ops[1], Ops[2]);
     case Instruction::ICmp:

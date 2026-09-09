@@ -257,7 +257,10 @@ public:
   VPInstruction *createNot(VPValue *Operand,
                            DebugLoc DL = DebugLoc::getUnknown(),
                            const Twine &Name = "") {
-    return createInstruction(VPInstruction::Not, {Operand}, {}, DL, Name);
+    return createInstruction(
+        Instruction::Xor,
+        {Operand, getPlan().getAllOnesValue(Operand->getScalarType())}, {}, DL,
+        Name);
   }
 
   VPInstruction *createAnd(VPValue *LHS, VPValue *RHS,

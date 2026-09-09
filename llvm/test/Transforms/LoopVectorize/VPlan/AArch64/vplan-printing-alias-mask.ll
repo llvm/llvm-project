@@ -43,7 +43,7 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:    EMIT vp<%index.next> = add vp<%index>, vp<%num.active.lanes>
 ; FINAL-NEXT:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
-; FINAL-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = not vp<%extract.next.alm.part>
+; FINAL-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = xor vp<%extract.next.alm.part>, ir<true>
 ; FINAL-NEXT:    EMIT branch-on-cond vp<[[VP10]]>
 ; FINAL-NEXT:  Successor(s): middle.block, vector.body
 ; FINAL-EMPTY:

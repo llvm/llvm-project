@@ -13,7 +13,7 @@ define void @diamond_phi(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c0>, ir<true>
 ; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
@@ -88,14 +88,14 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = xor ir<%c1>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
 ; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP4]]> ir<%add1>/vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, ir<%c0>
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = xor ir<%c0>, ir<true>
 ; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/ir<%c0> ir<%iv>/vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -163,7 +163,7 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb6
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb6:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c0>, ir<true>
 ; CHECK-NEXT:      EMIT ir<%add6> = add ir<%iv>, ir<6>, vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%c6> = icmp sle ir<%iv>, ir<6>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): bb1
@@ -173,7 +173,7 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = xor ir<%c1>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT ir<%add3> = add ir<%iv>, ir<3>, vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%c3> = icmp sle ir<%iv>, ir<3>, vp<[[VP6]]>
@@ -194,7 +194,7 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:    bb5:
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c6>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = or vp<[[VP10]]>, vp<[[VP9]]>
-; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = not ir<%c3>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = xor ir<%c3>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP12]]>
 ; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = or vp<[[VP11]]>, vp<[[VP13]]>
 ; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add6>/vp<[[VP10]]> ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP13]]>
@@ -202,7 +202,7 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb7
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb7:
-; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = not ir<%c6>
+; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = xor ir<%c6>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP15]]>
 ; CHECK-NEXT:      BLEND ir<%phi7> = ir<%add6>/vp<[[VP16]]> ir<%add5>/vp<[[VP14]]>
 ; CHECK-NEXT:      EMIT store ir<%phi7>, ir<%gep>
@@ -288,7 +288,7 @@ define void @switch(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c0>, ir<true>
 ; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%c2> = icmp sle ir<%iv>, ir<2>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): bb1
@@ -306,7 +306,7 @@ define void @switch(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = or vp<[[VP7]]>, vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP10]]>
 ; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = or vp<[[VP9]]>, vp<[[VP11]]>
-; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = not vp<[[VP12]]>
+; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = xor vp<[[VP12]]>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP13]]>
 ; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP11]]>
 ; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP5]]> ir<%add1>/vp<[[VP11]]>
@@ -318,7 +318,7 @@ define void @switch(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb5
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
-; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = not ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = xor ir<%c2>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP17:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP16]]>
 ; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP15]]> ir<%add2>/vp<[[VP17]]> ir<%add1>/vp<[[VP14]]>
 ; CHECK-NEXT:      EMIT store ir<%phi5>, ir<%gep>
@@ -404,7 +404,7 @@ define void @diamond_phi2(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c0>, ir<true>
 ; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
@@ -486,19 +486,19 @@ define void @blend_masks(ptr noalias %p, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4)
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c0>, ir<true>
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = xor ir<%c1>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
 ; CHECK-NEXT:    Successor(s): bb6
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb6:
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%c3>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = xor ir<%c3>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = or vp<[[VP8]]>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): bb3
@@ -509,7 +509,7 @@ define void @blend_masks(ptr noalias %p, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%c3>
-; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = not ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = xor ir<%c2>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP10]]>, vp<[[VP12]]>
 ; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = or vp<[[VP11]]>, vp<[[VP13]]>
 ; CHECK-NEXT:    Successor(s): bb7
@@ -595,9 +595,9 @@ define void @blend_masks_triangle_phi(ptr noalias %p, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c1>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = xor ir<%c0>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
@@ -665,7 +665,7 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    Successor(s): merge.a
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.a:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = xor ir<%c0>, ir<true>
 ; CHECK-NEXT:      BLEND ir<%blend.a> = ir<%v1>/ir<%c0> ir<%v1>/vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT ir<%d0> = icmp sgt ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): if.b
@@ -682,7 +682,7 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    Successor(s): merge.b
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.b:
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%d0>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = xor ir<%d0>, ir<true>
 ; CHECK-NEXT:      BLEND ir<%blend.b> = ir<%v2>/ir<%d0> ir<%v2>/vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%sum> = add ir<%blend.a>, ir<%blend.b>
 ; CHECK-NEXT:      EMIT store ir<%sum>, ir<%gep>
@@ -761,11 +761,11 @@ define void @simplifiable_blend(i1 %c1, i1 %c2, i1 %c3, i32 %x, i32 %y, ptr %p) 
 ; CHECK-NEXT:    Successor(s): B
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    B:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c1>, ir<true>
 ; CHECK-NEXT:    Successor(s): E
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    E:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c3>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = xor ir<%c3>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP5]]>
 ; CHECK-NEXT:    Successor(s): F
 ; CHECK-EMPTY:
@@ -776,7 +776,7 @@ define void @simplifiable_blend(i1 %c1, i1 %c2, i1 %c3, i32 %x, i32 %y, ptr %p) 
 ; CHECK-NEXT:    Successor(s): D
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    D:
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = xor ir<%c2>, ir<true>
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and ir<%c1>, vp<[[VP7]]>
 ; CHECK-NEXT:    Successor(s): C
 ; CHECK-EMPTY:
@@ -850,7 +850,7 @@ define void @phi_doesnt_postdom_incoming(i1 %c1, i1 %c2, i32 %x, i32 %y, ptr %p)
 ; CHECK-NEXT:    Successor(s): B
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    B:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c1>, ir<true>
 ; CHECK-NEXT:    Successor(s): A
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    A:
@@ -921,7 +921,7 @@ define void @phi_switch_same_edge(ptr %p) {
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = icmp eq ir<%iv>, ir<0>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = icmp eq ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not vp<[[VP6]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = xor vp<[[VP6]]>, ir<true>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<0>, ir<%gep>, vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): latch
