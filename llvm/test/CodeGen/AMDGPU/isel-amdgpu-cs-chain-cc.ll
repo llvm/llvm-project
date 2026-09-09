@@ -559,10 +559,12 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; DAGISEL-GFX11-NEXT: {{  $}}
   ; DAGISEL-GFX11-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; DAGISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; DAGISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; DAGISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY2]].lo16
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX11-NEXT:   $vgpr0_lo16 = COPY [[COPY1]]
+  ; DAGISEL-GFX11-NEXT:   $vgpr0_lo16 = COPY [[COPY3]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1_lo16 = COPY [[COPY]]
   ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0_lo16, implicit $vgpr1_lo16
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
@@ -627,10 +629,12 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; DAGISEL-GFX11-NEXT: {{  $}}
   ; DAGISEL-GFX11-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; DAGISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; DAGISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; DAGISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY2]].lo16
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX11-NEXT:   $vgpr0_lo16 = COPY [[COPY1]]
+  ; DAGISEL-GFX11-NEXT:   $vgpr0_lo16 = COPY [[COPY3]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1_lo16 = COPY [[COPY]]
   ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0_lo16, implicit $vgpr1_lo16
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
@@ -695,10 +699,12 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; DAGISEL-GFX11-NEXT: {{  $}}
   ; DAGISEL-GFX11-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; DAGISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; DAGISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; DAGISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY2]].lo16
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX11-NEXT:   $vgpr0_lo16 = COPY [[COPY1]]
+  ; DAGISEL-GFX11-NEXT:   $vgpr0_lo16 = COPY [[COPY3]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1_lo16 = COPY [[COPY]]
   ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0_lo16, implicit $vgpr1_lo16
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
