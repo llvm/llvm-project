@@ -35,7 +35,7 @@ Error llvm::hlsl::packSignatureStacked(
          "stacked packing is only valid for a vertex shader input signature");
 
   unsigned NextRow = 0;
-  for (const auto &[Index, Element] : enumerate(Elements)) {
+  for (auto &&[Index, Element] : enumerate(Elements)) {
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
     assert(Element.Rows > 0 && "signature element must have at least one row");
