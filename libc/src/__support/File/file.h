@@ -129,13 +129,9 @@ private:
   internal::mbstate mbstate;
 
 protected:
-  constexpr bool write_allowed() const {
-    return mode.is_write() || mode.is_append() || mode.is_update();
-  }
+  constexpr bool write_allowed() const { return mode.write_allowed(); }
 
-  constexpr bool read_allowed() const {
-    return mode.is_read() || mode.is_update();
-  }
+  constexpr bool read_allowed() const { return mode.read_allowed(); }
 
   void reset_stream_state_unlocked(FileMode new_mode) {
     mode = new_mode;
