@@ -261,6 +261,11 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
   SectionEntryImpl DummySection;
   SectionList.emplace_back(DummySection); // Dummy entry at index 0.
 
+  // Dummy relocation entry at index 0.
+  GOFFRelEntry DummyRelEntry;
+  DummyRelEntry.PEsdId = 0;
+  RelEntries.emplace_back(DummyRelEntry);
+
   for (const auto &[RecordType, Data] : FlattenedData) {
     const uint8_t *I = Data.data();
     switch (RecordType) {
@@ -323,7 +328,8 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
       LLVM_DEBUG(dbgs() << "  --  TXT\n");
       break;
     case GOFF::RT_RLD:
-      LLVM_DEBUG(dbgs() << "  --  RLD (GOFF record type) unhandled\n");
+      setRelocationData(I);
+      LLVM_DEBUG(dbgs() << "  --  RLD\n");
       break;
     case GOFF::RT_LEN:
       LLVM_DEBUG(dbgs() << "  --  LEN (GOFF record type) unhandled\n");
@@ -758,4 +764,116 @@ basic_symbol_iterator GOFFObjectFile::symbol_begin() const {
 basic_symbol_iterator GOFFObjectFile::symbol_end() const {
   DataRefImpl Symb;
   return basic_symbol_iterator(SymbolRef(Symb, this));
+}
+
+inline constexpr uint8_t SAME_R_ID = 0x80;
+inline constexpr uint8_t SAME_P_ID = 0x40;
+inline constexpr uint8_t SAME_OFFSET = 0x20;
+inline constexpr uint8_t EXT_ATTR_PRESENT = 0x04;
+inline constexpr uint8_t BYTE_OFFSET_8 = 0x02;
+
+// Populate the relocation entries.
+void GOFFObjectFile::setRelocationData(const uint8_t *RldRecord) {
+  SmallVector<uint8_t, 8> RelocationData;
+  int DataIndex = 6;
+  uint16_t DataLength;
+  RLDRecord::getDataLength(RldRecord, DataLength);
+
+  // The record is already flattened if it's continued.
+  const uint8_t *RldI = RldRecord + DataIndex;
+  const uint8_t *RldE = RldI + DataLength;
+  uint32_t CurREsdId = 0;
+  uint32_t CurPEsdId = 0;
+  uint64_t CurPOffset = 0;
+  for (const uint8_t *Rld = RldI; Rld < RldE;) {
+    GOFFRelEntry RelEntry;
+    uint8_t Flags = Rld[0];
+    int32_t Length = 8;
+    if (!(Flags & SAME_R_ID)) {
+      CurREsdId = support::endian::read32be(&Rld[Length]);
+      Length += 4;
+    }
+    if (!(Flags & SAME_P_ID)) {
+      CurPEsdId = support::endian::read32be(&Rld[Length]);
+      Length += 4;
+    }
+    if (!(Flags & SAME_OFFSET)) {
+      if (Flags & BYTE_OFFSET_8) {
+        CurPOffset = support::endian::read64be(&Rld[Length]);
+        Length += 8;
+      } else {
+        CurPOffset = support::endian::read32be(&Rld[Length]);
+        Length += 4;
+      }
+    }
+    if (Flags & EXT_ATTR_PRESENT)
+      Length += 8;
+
+    RelEntry.PEsdId = CurPEsdId;
+    RelEntry.REsdId = CurREsdId;
+    RelEntry.POffset = CurPOffset;
+    RelEntry.RelType = getRldType(Rld);
+    RelEntries.emplace_back(RelEntry);
+
+    Rld += Length;
+    assert(Rld <= RldE && "RLD length?");
+  }
+}
+
+void GOFFObjectFile::moveRelocationNext(DataRefImpl &Rel) const {
+  for (size_t I = Rel.d.b + 1, E = RelEntries.size(); I < E; ++I) {
+    const GOFFRelEntry &RelEntry = RelEntries[I];
+    if (Rel.d.a == RelEntry.PEsdId) {
+      Rel.d.b = I;
+      return;
+    }
+  }
+
+  Rel.d.b = 0;
+}
+
+uint64_t GOFFObjectFile::getRelocationOffset(DataRefImpl Rel) const {
+  assert(Rel.d.b > 0 && Rel.d.b < RelEntries.size() &&
+         "Rel Index out of boundary");
+  const GOFFRelEntry &RelEntry = RelEntries[Rel.d.b];
+  return RelEntry.POffset;
+}
+
+symbol_iterator GOFFObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
+  assert(Rel.d.b > 0 && Rel.d.b < RelEntries.size() &&
+         "Rel Index out of boundary");
+  const GOFFRelEntry &RelEntry = RelEntries[Rel.d.b];
+  DataRefImpl RefSym;
+  RefSym.d.a = RelEntry.REsdId;
+  return basic_symbol_iterator(SymbolRef(RefSym, this));
+}
+
+uint64_t GOFFObjectFile::getRelocationType(DataRefImpl Rel) const {
+  assert(Rel.d.b > 0 && Rel.d.b < RelEntries.size() &&
+         "Rel Index out of boundary");
+  const GOFFRelEntry &RelEntry = RelEntries[Rel.d.b];
+  return RelEntry.RelType;
+}
+
+void GOFFObjectFile::getRelocationTypeName(
+    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
+  uint64_t RelType = getRelocationType(Rel);
+  char Buf[16];
+  sprintf(Buf, "R_%08lx", RelType);
+  Result.append(Buf, Buf + strlen(Buf));
+}
+
+relocation_iterator GOFFObjectFile::section_rel_begin(DataRefImpl Sec) const {
+  DataRefImpl Rel;
+  Rel.d.a = getSectionDefEsdId(Sec);
+  Rel.d.b = 0;
+  moveRelocationNext(Rel);
+  return relocation_iterator(RelocationRef(Rel, this));
+}
+
+relocation_iterator GOFFObjectFile::section_rel_end(DataRefImpl Sec) const {
+  DataRefImpl Rel;
+  Rel.d.a = getSectionDefEsdId(Sec);
+  Rel.d.b = 0;
+  return relocation_iterator(RelocationRef(Rel, this));
 }

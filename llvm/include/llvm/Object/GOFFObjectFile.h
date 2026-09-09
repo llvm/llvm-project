@@ -29,11 +29,49 @@ namespace llvm {
 
 namespace object {
 
+// RLD entry with all populated fields.
+struct GOFFRelEntry {
+  uint32_t REsdId;
+  uint32_t PEsdId;
+  uint64_t POffset;
+  uint64_t RelType;
+};
+
+// GOFFRelEntry::RelType is computed based on RLD fields at offset 1, 2, 4,
+// and 5.
+inline uint64_t getRldType(const uint8_t *Rld) {
+  return Rld[1] + (Rld[2] << 8) + (Rld[4] << 16) + (Rld[5] << 24);
+}
+
+// Getters for RLD fields based on GOFFRelEntry::RelType.
+inline GOFF::RLDReferenceType getRLDReferenceType(uint64_t RelType) {
+  return static_cast<GOFF::RLDReferenceType>((RelType >> 4) & 0x0000000F);
+}
+inline GOFF::RLDReferentType getRLDReferentType(uint64_t RelType) {
+  return static_cast<GOFF::RLDReferentType>((RelType) & 0x0000000F);
+}
+inline GOFF::RLDAction getRLDAction(uint64_t RelType) {
+  return static_cast<GOFF::RLDAction>((RelType >> (8 + 1)) & 0x0000007F);
+}
+inline GOFF::RLDFetchStore getRLDFetchStore(uint64_t RelType) {
+  return static_cast<GOFF::RLDFetchStore>((RelType >> 8) & 0x00000001);
+}
+inline uint8_t getRLDTargetLength(uint64_t RelType) {
+  return static_cast<uint8_t>((RelType >> 16) & 0x000000FF);
+}
+inline uint8_t getRLDBitLength(uint64_t RelType) {
+  return static_cast<uint8_t>((RelType >> (24 + 5)) & 0x00000007);
+}
+inline uint8_t getRLDBitOffset(uint64_t RelType) {
+  return static_cast<uint8_t>((RelType >> 24) & 0x00000007);
+}
+
 class LLVM_ABI GOFFObjectFile : public ObjectFile {
   friend class GOFFSymbolRef;
 
   IndexedMap<const uint8_t *> EsdPtrs; // Indexed by EsdId.
   SmallVector<const uint8_t *, 256> TextPtrs;
+  SmallVector<GOFFRelEntry, 256> RelEntries;
 
   mutable DenseMap<uint32_t, std::pair<size_t, std::unique_ptr<char[]>>>
       EsdNamesCache;
@@ -57,6 +95,8 @@ class LLVM_ABI GOFFObjectFile : public ObjectFile {
   Expected<unsigned> getContinuousData(SmallVectorImpl<uint8_t> &CompleteData,
                                        int DataIndex, uint16_t DataLength,
                                        const uint8_t *Record) const;
+
+  void setRelocationData(const uint8_t *RldRecord);
 
 public:
   // Get the flattened data structure
@@ -123,12 +163,8 @@ private:
   bool isSectionData(DataRefImpl Sec) const override;
   bool isSectionBSS(DataRefImpl Sec) const override { return false; }
   bool isSectionVirtual(DataRefImpl Sec) const override { return false; }
-  relocation_iterator section_rel_begin(DataRefImpl Sec) const override {
-    return relocation_iterator(RelocationRef(Sec, this));
-  }
-  relocation_iterator section_rel_end(DataRefImpl Sec) const override {
-    return relocation_iterator(RelocationRef(Sec, this));
-  }
+  relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
+  relocation_iterator section_rel_end(DataRefImpl Sec) const override;
 
   const uint8_t *getSectionEdEsdRecord(DataRefImpl &Sec) const;
   const uint8_t *getSectionPrEsdRecord(DataRefImpl &Sec) const;
@@ -137,15 +173,12 @@ private:
   uint32_t getSectionDefEsdId(DataRefImpl &Sec) const;
 
   // RelocationRef.
-  void moveRelocationNext(DataRefImpl &Rel) const override {}
-  uint64_t getRelocationOffset(DataRefImpl Rel) const override { return 0; }
-  symbol_iterator getRelocationSymbol(DataRefImpl Rel) const override {
-    DataRefImpl Temp;
-    return basic_symbol_iterator(SymbolRef(Temp, this));
-  }
-  uint64_t getRelocationType(DataRefImpl Rel) const override { return 0; }
+  void moveRelocationNext(DataRefImpl &Rel) const override;
+  uint64_t getRelocationOffset(DataRefImpl Rel) const override;
+  symbol_iterator getRelocationSymbol(DataRefImpl Rel) const override;
+  uint64_t getRelocationType(DataRefImpl Rel) const override;
   void getRelocationTypeName(DataRefImpl Rel,
-                             SmallVectorImpl<char> &Result) const override {}
+                             SmallVectorImpl<char> &Result) const override;
 };
 
 class GOFFSymbolRef : public SymbolRef {
