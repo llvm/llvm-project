@@ -677,9 +677,11 @@ bool llvm::findVCToolChainViaSetupConfig(
   do {
     bstr_t NameString;
     HR = Instance->GetInstallationName(NameString.GetAddress());
-    if (FAILED(HR))
+    // Expect that VS products provide an Installation name.
+    if (FAILED(HR) || static_cast<const wchar_t*>(NameString) == nullptr)
       continue;
-    if (std::wstring_view(NameString).find(L"VisualStudio") != 0)
+    // Ignore non-VS products registered with the VS Installer (e.g. SQL Server Management Studio), which have no VC toolchain.
+    if (std::wstring_view(NameString).rfind(L"VisualStudio", 0) == 0)
       continue;
     bstr_t VersionString;
     uint64_t VersionNum;
