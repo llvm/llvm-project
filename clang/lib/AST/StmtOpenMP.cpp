@@ -438,6 +438,14 @@ Stmt *OMPLoopTransformationDirective::getPreInits() const {
   llvm_unreachable("unexpected object type");
 }
 
+Stmt *OMPLoopTransformationDirective::getFinals() const {
+  if (auto *D = dyn_cast<OMPCanonicalLoopNestTransformationDirective>(S))
+    return D->getFinals();
+  if (auto *D = dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(S))
+    return D->getFinals();
+  llvm_unreachable("unexpected object type");
+}
+
 Stmt *OMPCanonicalLoopNestTransformationDirective::getTransformedStmt() const {
   switch (getStmtClass()) {
 #define STMT(CLASS, PARENT)
@@ -458,6 +466,19 @@ Stmt *OMPCanonicalLoopNestTransformationDirective::getPreInits() const {
 #define OMPCANONICALLOOPNESTTRANSFORMATIONDIRECTIVE(CLASS, PARENT)             \
   case Stmt::CLASS##Class:                                                     \
     return static_cast<const CLASS *>(this)->getPreInits();
+#include "clang/AST/StmtNodes.inc"
+  default:
+    llvm_unreachable("Not a loop transformation for canonical loop nests");
+  }
+}
+
+Stmt *OMPCanonicalLoopNestTransformationDirective::getFinals() const {
+  switch (getStmtClass()) {
+#define STMT(CLASS, PARENT)
+#define ABSTRACT_STMT(CLASS)
+#define OMPCANONICALLOOPNESTTRANSFORMATIONDIRECTIVE(CLASS, PARENT)             \
+  case Stmt::CLASS##Class:                                                     \
+    return static_cast<const CLASS *>(this)->getFinals();
 #include "clang/AST/StmtNodes.inc"
   default:
     llvm_unreachable("Not a loop transformation for canonical loop nests");
@@ -485,6 +506,19 @@ Stmt *OMPCanonicalLoopSequenceTransformationDirective::getPreInits() const {
 #define OMPCANONICALLOOPSEQUENCETRANSFORMATIONDIRECTIVE(CLASS, PARENT)         \
   case Stmt::CLASS##Class:                                                     \
     return static_cast<const CLASS *>(this)->getPreInits();
+#include "clang/AST/StmtNodes.inc"
+  default:
+    llvm_unreachable("Not a loop transformation for canonical loop sequences");
+  }
+}
+
+Stmt *OMPCanonicalLoopSequenceTransformationDirective::getFinals() const {
+  switch (getStmtClass()) {
+#define STMT(CLASS, PARENT)
+#define ABSTRACT_STMT(CLASS)
+#define OMPCANONICALLOOPSEQUENCETRANSFORMATIONDIRECTIVE(CLASS, PARENT)         \
+  case Stmt::CLASS##Class:                                                     \
+    return static_cast<const CLASS *>(this)->getFinals();
 #include "clang/AST/StmtNodes.inc"
   default:
     llvm_unreachable("Not a loop transformation for canonical loop sequences");
@@ -624,16 +658,19 @@ OMPSplitDirective *OMPSplitDirective::CreateEmpty(const ASTContext &C,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
-OMPFuseDirective *OMPFuseDirective::Create(
-    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
-    Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
+OMPFuseDirective *
+OMPFuseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                         SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
+                         unsigned NumGeneratedTopLevelLoops,
+                         Stmt *AssociatedStmt, Stmt *TransformedStmt,
+                         Stmt *PreInits, Stmt *Finals, unsigned FusedLoopIdx) {
 
   OMPFuseDirective *Dir = createDirective<OMPFuseDirective>(
       C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   Dir->setFinals(Finals);
+  Dir->setFusedLoopIdx(FusedLoopIdx);
   Dir->setNumGeneratedTopLevelLoops(NumGeneratedTopLevelLoops);
   return Dir;
 }

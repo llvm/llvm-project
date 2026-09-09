@@ -15023,6 +15023,11 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
     Stmt *TransformedStmt = LoopTransform->getTransformedStmt();
     unsigned NumGeneratedTopLevelLoops =
         LoopTransform->getNumGeneratedTopLevelLoops();
+    // Propagate this transformation's Finals (if any) to the enclosing
+    // directive. The enclosing directive will emit them so they execute at
+    // the right point (right after the transformed loops complete).
+    if (Stmt *InnerFinal = LoopTransform->getFinals())
+      SeqAnalysis.InnerFinals.push_back(InnerFinal);
     // Handle the case where transformed statement is not available due to
     // dependent contexts
     if (!TransformedStmt) {
@@ -17206,6 +17211,24 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     }
   }
 
+  // Build Finals for this fuse and combine with any Finals propagated from
+  // inner loop transformations. This ensures nested transformations'
+  // finalizations are not lost.
+  Stmt *OwnFinals = buildLoopFinalization(Context, FusedLoopHelpers);
+  SmallVector<Stmt *, 4> AllFinalsStmts;
+  for (Stmt *InnerFinal : SeqAnalysis.InnerFinals)
+    if (InnerFinal)
+      AllFinalsStmts.push_back(InnerFinal);
+  if (OwnFinals)
+    AllFinalsStmts.push_back(OwnFinals);
+  Stmt *CombinedFinals = nullptr;
+  if (AllFinalsStmts.size() == 1)
+    CombinedFinals = AllFinalsStmts.front();
+  else if (!AllFinalsStmts.empty())
+    CombinedFinals =
+        CompoundStmt::Create(Context, AllFinalsStmts, FPOptionsOverride(),
+                             SourceLocation(), SourceLocation());
+
   //  In the case of looprange, the result of fuse won't simply
   //  be a single loop (ForStmt), but rather a loop sequence
   //  (CompoundStmt) of 3 parts: the pre-fusion loops, the fused loop
@@ -17216,6 +17239,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   //  treatment is skipped)
 
   Stmt *FusionStmt = FusedForStmt;
+  unsigned FusedLoopIdx = 0;
   if (LRC && CountVal != SeqAnalysis.LoopSeqSize) {
     SmallVector<Stmt *, 4> FinalLoops;
 
@@ -17249,14 +17273,18 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       FinalLoops.push_back(SeqAnalysis.Loops[I].TheForStmt);
     }
 
-    FinalLoops.insert(FinalLoops.begin() + (FirstVal - 1), FusedForStmt);
+    // Insert the fused loop and record its position. Codegen uses this index
+    // to know where to emit Finals (right after the fused loop, before any
+    // post-fusion loops so that post-fusion code observes finalized values).
+    FusedLoopIdx = FirstVal - 1;
+    FinalLoops.insert(FinalLoops.begin() + FusedLoopIdx, FusedForStmt);
     FusionStmt = CompoundStmt::Create(Context, FinalLoops, FPOptionsOverride(),
                                       SourceLocation(), SourceLocation());
   }
-  return OMPFuseDirective::Create(
-      Context, StartLoc, EndLoc, Clauses, NumGeneratedTopLevelLoops, AStmt,
-      FusionStmt, buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, FusedLoopHelpers));
+  return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                  NumGeneratedTopLevelLoops, AStmt, FusionStmt,
+                                  buildPreInits(Context, PreInits),
+                                  CombinedFinals, FusedLoopIdx);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,

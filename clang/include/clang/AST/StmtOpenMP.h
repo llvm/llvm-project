@@ -1037,6 +1037,10 @@ public:
   /// Return preinits statement.
   Stmt *getPreInits() const;
 
+  /// Return loop variable finalization statement, or nullptr if the concrete
+  /// transformation does not produce one (e.g. unroll).
+  Stmt *getFinals() const;
+
   static bool classof(const Stmt *T) {
     return isa<OMPCanonicalLoopNestTransformationDirective,
                OMPCanonicalLoopSequenceTransformationDirective>(T);
@@ -1069,6 +1073,10 @@ public:
 
   /// Return preinits statement.
   Stmt *getPreInits() const;
+
+  /// Return loop variable finalization statement, or nullptr if the concrete
+  /// transformation does not produce one (e.g. unroll).
+  Stmt *getFinals() const;
 
   static bool classof(const Stmt *T) {
     Stmt::StmtClass C = T->getStmtClass();
@@ -5909,6 +5917,9 @@ public:
   /// Return the pre-init statements.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
 
+  /// Unroll does not model loop variable finalization; always returns nullptr.
+  Stmt *getFinals() const { return nullptr; }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPUnrollDirectiveClass;
   }
@@ -6095,6 +6106,10 @@ public:
   /// Return preinits statement.
   Stmt *getPreInits() const;
 
+  /// Return loop variable finalization statement, or nullptr if the concrete
+  /// transformation does not produce one.
+  Stmt *getFinals() const;
+
   static bool classof(const Stmt *T) {
     Stmt::StmtClass C = T->getStmtClass();
     return C == OMPFuseDirectiveClass;
@@ -6123,6 +6138,13 @@ class OMPFuseDirective final
     FinalsOffset,
   };
 
+  /// Position of the fused loop within the CompoundStmt TransformedStmt for
+  /// looprange fuse (i.e., the index of the FusedForStmt among the children of
+  /// the CompoundStmt). Codegen uses this to emit Finals immediately after the
+  /// fused loop, before any post-fusion loops. Ignored (0) when the
+  /// TransformedStmt is a single ForStmt (no looprange or full range).
+  unsigned FusedLoopIdx = 0;
+
   explicit OMPFuseDirective(SourceLocation StartLoc, SourceLocation EndLoc)
       : OMPCanonicalLoopSequenceTransformationDirective(
             OMPFuseDirectiveClass, llvm::omp::OMPD_fuse, StartLoc, EndLoc) {}
@@ -6136,6 +6158,8 @@ class OMPFuseDirective final
   }
 
   void setFinals(Stmt *Finals) { Data->getChildren()[FinalsOffset] = Finals; }
+
+  void setFusedLoopIdx(unsigned Idx) { FusedLoopIdx = Idx; }
 
 public:
   /// Create a new AST node representation for #pragma omp fuse'
@@ -6153,12 +6177,14 @@ public:
   ///                        dependent
   /// \param PreInits Helper preinits statements for the loop nest
   /// \param Finals Loop variable finalization statements
-  static OMPFuseDirective *Create(const ASTContext &C, SourceLocation StartLoc,
-                                  SourceLocation EndLoc,
-                                  ArrayRef<OMPClause *> Clauses,
-                                  unsigned NumGeneratedTopLevelLoops,
-                                  Stmt *AssociatedStmt, Stmt *TransformedStmt,
-                                  Stmt *PreInits, Stmt *Finals);
+  /// \param FusedLoopIdx Position of the fused loop within the compound
+  ///                     TransformedStmt (0-based). 0 when TransformedStmt is
+  ///                     a single ForStmt.
+  static OMPFuseDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
+         Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits,
+         Stmt *Finals, unsigned FusedLoopIdx = 0);
 
   /// Build an empty '#pragma omp fuse' AST node for deserialization
   ///
@@ -6179,6 +6205,10 @@ public:
 
   /// Return finals statement.
   Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
+
+  /// Return position of the fused loop within the CompoundStmt
+  /// TransformedStmt.
+  unsigned getFusedLoopIdx() const { return FusedLoopIdx; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPFuseDirectiveClass;
