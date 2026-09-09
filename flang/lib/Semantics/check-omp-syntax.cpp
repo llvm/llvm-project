@@ -497,8 +497,8 @@ bool OmpStructureChecker::VerifyModifierSyntax(
       VerifyModifierVersion(clause, info),
       VerifyModifierRequired(clause, info),
       VerifyModifierUnique(clause, info),
-      VerifyModifierUltimate(clause, info),
       VerifyModifierExclusive(clause, info),
+      VerifyModifierUltimate(clause, info),
   };
 
   return llvm::all_of(valid, [](bool x) { return x; });
