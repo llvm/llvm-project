@@ -249,11 +249,17 @@ public:
     return *this;
   }
 
-  /// Outputs this diagnostic to a stream.
-  void print(raw_ostream &os) const;
+  /// Outputs this diagnostic to a stream. `ChunkIdx` specifies which chunk to
+  /// print to `os`. If empty, all arguments are printed to `os`.
+  void print(raw_ostream &os,
+             std::optional<int64_t> chunkIdx = std::nullopt) const;
 
   /// Converts the diagnostic to a string.
   std::string str() const;
+
+  /// Converts the diagnostic to a vector of strings, where each element
+  /// represents a chunk.
+  SmallVector<std::string> strs() const;
 
   /// Attaches a note to this diagnostic. A new location may be optionally
   /// provided, if not, then the location defaults to the one specified for this
@@ -288,6 +294,9 @@ public:
   /// Returns the current list of diagnostic metadata.
   SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
 
+  /// Finalizes the current group of arguments and starts a new chunk.
+  void checkpointArguments();
+
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
   Diagnostic &operator=(const Diagnostic &rhs) = delete;
@@ -304,6 +313,9 @@ private:
   /// A list of string values used as arguments. This is used to guarantee the
   /// liveness of non-constant strings used in diagnostics.
   std::vector<std::unique_ptr<char[]>> strings;
+
+  /// Boundary indices in `arguments` that separate different chunks.
+  SmallVector<size_t, 2> chunkSizes;
 
   /// A list of attached notes.
   NoteVector notes;
@@ -346,6 +358,17 @@ public:
   template <typename Arg>
   InFlightDiagnostic &&operator<<(Arg &&arg) && {
     return std::move(append(std::forward<Arg>(arg)));
+  }
+
+  /// Enables stream-style manipulators to be chained into the diagnostic.
+  InFlightDiagnostic &
+  operator<<(InFlightDiagnostic &(*manip)(InFlightDiagnostic &)) & {
+    return manip(*this);
+  }
+
+  InFlightDiagnostic &&
+  operator<<(InFlightDiagnostic &(*manip)(InFlightDiagnostic &)) && {
+    return std::move(manip(*this));
   }
 
   /// Append arguments to the diagnostic.
@@ -408,6 +431,7 @@ private:
 
   // Allow access to the constructor.
   friend DiagnosticEngine;
+  friend inline InFlightDiagnostic &next(InFlightDiagnostic &diag);
 
   /// The engine that this diagnostic is to report to.
   DiagnosticEngine *owner = nullptr;
@@ -415,6 +439,13 @@ private:
   /// The raw diagnostic that is inflight to be reported.
   std::optional<Diagnostic> impl;
 };
+
+/// A stream manipulator that checkpoints the current messages, and allowing a
+/// single InFlightDiagnostic to output multiple lines.
+inline InFlightDiagnostic &next(InFlightDiagnostic &diag) {
+  diag.impl->checkpointArguments();
+  return diag;
+}
 
 //===----------------------------------------------------------------------===//
 // DiagnosticEngine
