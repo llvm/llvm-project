@@ -16,12 +16,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
-#include <memory>
 #include <optional>
 #include <set>
 #include <utility>
 #include <variant>
-#include <vector>
 
 using namespace llvm;
 

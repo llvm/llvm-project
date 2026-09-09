@@ -5144,8 +5144,9 @@ void AssemblyWriter::writeAllAttributeGroups() {
   std::vector<std::pair<AttributeSet, unsigned>> asVec;
   asVec.resize(Machine.as_size());
 
-  for (auto &I : llvm::make_range(Machine.as_begin(), Machine.as_end()))
-    asVec[I.second] = {I.first, I.second};
+  for (const auto &[AS, ID] :
+       llvm::make_range(Machine.as_begin(), Machine.as_end()))
+    asVec[ID] = {AS, ID};
 
   for (const auto &I : asVec)
     Out << "attributes #" << I.second << " = { "
