@@ -712,3 +712,167 @@ loop.exit:
   call void @use(i1 %c)
   ret void
 }
+
+; %iv is known non-negative, so the signed condition in the latch can also be
+; translated to an unsigned bound.
+define void @signed_latch_unsigned_fact(i64 %n, i1 %header.ec) {
+; CHECK-LABEL: define void @signed_latch_unsigned_fact(
+; CHECK-SAME: i64 [[N:%.*]], i1 [[HEADER_EC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ne i64 [[N]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp ne i64 %n, 0
+  call void @llvm.assume(i1 %pre)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp ult i64 %iv, %n
+  call void @use(i1 %c)
+  br i1 %header.ec, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i64 %iv, 2
+  %ec = icmp slt i64 %iv.next, %n
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  ret void
+}
+
+; Same, but the step may wrap.
+define void @neg_wrapping_step_no_unsigned_fact(i64 %n, i1 %header.ec) {
+; CHECK-LABEL: define void @neg_wrapping_step_no_unsigned_fact(
+; CHECK-SAME: i64 [[N:%.*]], i1 [[HEADER_EC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ne i64 [[N]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp ne i64 %n, 0
+  call void @llvm.assume(i1 %pre)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp ult i64 %iv, %n
+  call void @use(i1 %c)
+  br i1 %header.ec, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 2
+  %ec = icmp slt i64 %iv.next, %n
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  ret void
+}
+
+define void @signed_latch_unsigned_fact_variable_start(i64 %start, i64 %n, i1 %header.ec) {
+; CHECK-LABEL: define void @signed_latch_unsigned_fact_variable_start(
+; CHECK-SAME: i64 [[START:%.*]], i64 [[N:%.*]], i1 [[HEADER_EC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i64 [[START]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[PRE_POS:%.*]] = icmp sge i64 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_POS]])
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre.1 = icmp ult i64 %start, %n
+  call void @llvm.assume(i1 %pre.1)
+  %start.pos = icmp sge i64 %start, 0
+  call void @llvm.assume(i1 %start.pos)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp ult i64 %iv, %n
+  call void @use(i1 %c)
+  br i1 %header.ec, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i64 %iv, 2
+  %ec = icmp slt i64 %iv.next, %n
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  ret void
+}
+
+; Same as above, but with missing %start < %n precondition.
+define void @signed_latch_unsigned_fact_variable_start_missing_ult(i64 %start, i64 %n, i1 %header.ec) {
+; CHECK-LABEL: define void @signed_latch_unsigned_fact_variable_start_missing_ult(
+; CHECK-SAME: i64 [[START:%.*]], i64 [[N:%.*]], i1 [[HEADER_EC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PRE_POS:%.*]] = icmp sge i64 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_POS]])
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %start.pos = icmp sge i64 %start, 0
+  call void @llvm.assume(i1 %start.pos)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp ult i64 %iv, %n
+  call void @use(i1 %c)
+  br i1 %header.ec, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i64 %iv, 2
+  %ec = icmp slt i64 %iv.next, %n
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  ret void
+}
