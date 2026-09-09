@@ -5565,18 +5565,11 @@ InstructionCost LoopVectorizationPlanner::computeScalarCost() const {
   InstructionCost Cost = 0;
 
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(Header)) {
-    // Look up the divisor via the first underlying IR instruction in the loop.
-    uint64_t Divisor = 1;
-    for (const VPRecipeBase &R : *VPBB) {
-      auto *UI = dyn_cast_if_present<Instruction>(
-          cast<VPSingleDefRecipe>(&R)->getUnderlyingValue());
-      if (!UI)
-        continue;
-      Divisor = CostCtx.CM.getPredBlockCostDivisor(CostCtx.CostKind,
-                                                   UI->getParent());
-      break;
-    }
-    Cost += VPBB->cost(ScalarVF, CostCtx) / Divisor;
+    // In the scalar loop, we may not always execute the predicated block, if
+    // it is an if-else block. Thus, scale the block's cost by the probability
+    // of executing it.
+    Cost += VPBB->cost(ScalarVF, CostCtx) /
+            CostCtx.getCostDivisor(getRecordedExecutionFrequency(VPBB));
   }
   return Cost;
 }
@@ -6379,7 +6372,6 @@ static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
 
   for (const auto &[VPBB, BB] :
        zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
-    // Nothing to check for blocks without a recorded frequency.
     std::optional<VPExecutionFrequency> Freq =
         getRecordedExecutionFrequency(VPBB);
     if (!Freq)
