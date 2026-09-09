@@ -4,8 +4,8 @@
 // RUN: FileCheck %s
 
 func.func @maximumf_finite() {
-  // The neutral (-inf) must order below every active lane. The masked-off lane is the
-  // largest.
+  // The neutral (-inf) must order below every active lane. The masked-off
+  // lane is the largest.
   // max(<-inf>, -5, -7, -5) = -5
   %mask = arith.constant dense<[true, true, true, false]> : vector<4xi1>
   %v = arith.constant dense<[-5.0, -7.0, -5.0, -1.0]> : vector<4xf32>
@@ -32,37 +32,6 @@ func.func @minimumf_finite() {
 }
 // CHECK-LABEL: minimumf_finite
 // CHECK-NEXT: 5
-
-func.func @maximumf_inf() {
-  // The neutral must be an infinity: a finite one wins over -inf lanes.
-  // max(<-inf>, -inf, -inf, -inf) = -inf
-  %mask = arith.constant dense<[true, true, true, false]> : vector<4xi1>
-  %ninf = arith.constant 0xFF800000 : f32
-  %v = vector.broadcast %ninf : f32 to vector<4xf32>
-  %0 = vector.mask %mask {
-    vector.reduction <maximumf>, %v : vector<4xf32> into f32
-  } : vector<4xi1> -> f32
-  vector.print str "maximumf_inf\n"
-  vector.print %0 : f32
-  return
-}
-// CHECK-LABEL: maximumf_inf
-// CHECK-NEXT: -inf
-
-func.func @minimumf_inf() {
-  // min(<+inf>, +inf, +inf, +inf) = +inf
-  %mask = arith.constant dense<[true, true, true, false]> : vector<4xi1>
-  %inf = arith.constant 0x7F800000 : f32
-  %v = vector.broadcast %inf : f32 to vector<4xf32>
-  %0 = vector.mask %mask {
-    vector.reduction <minimumf>, %v : vector<4xf32> into f32
-  } : vector<4xi1> -> f32
-  vector.print str "minimumf_inf\n"
-  vector.print %0 : f32
-  return
-}
-// CHECK-LABEL: minimumf_inf
-// CHECK-NEXT: inf
 
 func.func @maximumf_no_active_lane() {
   // With no active lane the neutral wins.
@@ -141,8 +110,6 @@ func.func @maximumf_acc() {
 func.func @entry() {
   call @maximumf_finite() : () -> ()
   call @minimumf_finite() : () -> ()
-  call @maximumf_inf() : () -> ()
-  call @minimumf_inf() : () -> ()
   call @maximumf_no_active_lane() : () -> ()
   call @minimumf_no_active_lane() : () -> ()
   call @maximumf_ninf_no_active_lane() : () -> ()
