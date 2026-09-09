@@ -1,0 +1,131 @@
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: "%cmake_exe" -S %t -B %t/build -G "%cmake_generator" \
+# RUN:   -DLLVM_SOURCE_DIR="%llvm_src_root" 2>&1 | FileCheck %s
+# RUN: "%cmake_exe" --build %t/build --target Consumer --parallel 4
+# RUN: "%cmake_exe" --build %t/build --target clean
+# RUN: "%cmake_exe" --build %t/build --target OtherCycleConsumer --parallel 4
+# RUN: "%cmake_exe" --build %t/build --target clean
+# RUN: "%cmake_exe" --build %t/build --target ComponentConsumer --parallel 4
+# RUN: "%cmake_exe" --build %t/build --target clean
+# RUN: "%cmake_exe" --build %t/build --target obj.StaticConsumer --parallel 4
+# RUN: "%cmake_exe" --build %t/build --target clean
+# RUN: "%cmake_exe" --build %t/build --target obj.LLVMForwardConsumer --parallel 4
+
+# CHECK: -- Generated header dependency checks passed
+
+#--- CMakeLists.txt
+cmake_minimum_required(VERSION 3.20)
+project(GeneratedHeaderDependencies LANGUAGES C CXX)
+set(CMAKE_INSTALL_LIBDIR lib)
+list(APPEND CMAKE_MODULE_PATH "${LLVM_SOURCE_DIR}/cmake/modules")
+include(AddLLVM)
+include(TableGen)
+include(LLVM-Build)
+
+foreach(provider Base Provider 3rdParty Disabled CycleA CycleB LLVMProvider)
+  set(LLVM_COMMON_DEPENDS)
+  set(header "${CMAKE_CURRENT_BINARY_DIR}/${provider}.h")
+  add_custom_command(OUTPUT "${header}"
+    COMMAND ${CMAKE_COMMAND} -E touch "${header}")
+  set(TABLEGEN_OUTPUT "${header}")
+  add_public_tablegen_target(${provider}IncGen)
+  add_library(${provider} INTERFACE)
+  set_property(TARGET ${provider} PROPERTY
+    LLVM_EXPLICIT_DEPENDS ${provider}IncGen)
+endforeach()
+set(LLVM_COMMON_DEPENDS)
+add_custom_target(SourceGenerator
+  COMMAND ${CMAKE_COMMAND} -E false)
+set_property(TARGET Provider APPEND PROPERTY LLVM_EXPLICIT_DEPENDS
+  SourceGenerator)
+target_link_libraries(Provider INTERFACE Base)
+add_library(ProviderAlias ALIAS Provider)
+target_link_libraries(CycleA INTERFACE CycleB)
+target_link_libraries(CycleB INTERFACE CycleA)
+
+add_library(Consumer OBJECT consumer.cpp)
+target_include_directories(Consumer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+_llvm_record_link_dependencies(Consumer ProviderAlias
+  "$<$<BOOL:1>:3rdParty>" "$<$<BOOL:0>:Disabled>" CycleA
+  /absolute/libunused.a -lpthread)
+add_library(OtherCycleConsumer OBJECT cycle.cpp)
+target_include_directories(OtherCycleConsumer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+_llvm_record_link_dependencies(OtherCycleConsumer CycleB)
+
+# LINK_COMPONENTS is mapped to the same concrete libraries as LINK_LIBS, but
+# mapping happens after object-library creation. Its generated headers still
+# need to be ready before that object library compiles.
+set(LLVM_AVAILABLE_LIBS LLVMProvider)
+llvm_add_library(ComponentConsumer OBJECT PARTIAL_SOURCES_INTENDED
+  component.cpp LINK_COMPONENTS Provider)
+target_include_directories(obj.ComponentConsumer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
+# A combined shared/static provider must publish its own generators through
+# both variants. Do not build its objects or archive to satisfy this consumer.
+llvm_add_library(DualProvider SHARED STATIC PARTIAL_SOURCES_INTENDED
+  empty.cpp DEPENDS ProviderIncGen)
+llvm_add_library(StaticConsumer OBJECT PARTIAL_SOURCES_INTENDED
+  static.cpp LINK_LIBS DualProvider_static)
+target_include_directories(obj.StaticConsumer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
+# Component names are case-insensitive and can refer to libraries registered
+# later. Record their canonical targets only after component link resolution.
+llvm_add_library(LLVMForwardConsumer OBJECT COMPONENT_LIB PARTIAL_SOURCES_INTENDED
+  forward.cpp LINK_COMPONENTS forwardprovider)
+target_include_directories(obj.LLVMForwardConsumer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+add_library(LLVMForwardProvider INTERFACE)
+set_property(TARGET LLVMForwardProvider PROPERTY LLVM_EXPLICIT_DEPENDS BaseIncGen)
+list(APPEND LLVM_AVAILABLE_LIBS LLVMForwardProvider)
+add_library(Engine INTERFACE)
+LLVMBuildResolveComponentsLink()
+
+# The build-local interfaces must not leak into exported consumers.
+export(TARGETS Consumer OtherCycleConsumer FILE consumers.cmake)
+install(TARGETS Consumer OtherCycleConsumer EXPORT consumers OBJECTS DESTINATION lib)
+install(EXPORT consumers DESTINATION lib/cmake)
+
+function(check_dependencies)
+  get_target_property(actual Consumer LINK_LIBRARIES)
+  set(expected llvm.headers.Provider llvm.headers.3rdParty
+    llvm.headers.Disabled llvm.headers.CycleA)
+  list(SORT actual)
+  list(SORT expected)
+  if(NOT "${actual}" STREQUAL "${expected}")
+    message(FATAL_ERROR "Expected '${expected}', got '${actual}'")
+  endif()
+  get_target_property(interface Consumer INTERFACE_LINK_LIBRARIES)
+  if(interface)
+    message(FATAL_ERROR "Build-local header targets escaped: '${interface}'")
+  endif()
+  get_target_property(component_links obj.ComponentConsumer LINK_LIBRARIES)
+  if(NOT "llvm.headers.LLVMProvider" IN_LIST component_links)
+    message(FATAL_ERROR "Component headers missing: '${component_links}'")
+  endif()
+  message(STATUS "Generated header dependency checks passed")
+endfunction()
+cmake_language(DEFER CALL check_dependencies)
+
+#--- consumer.cpp
+#include "Base.h"
+#include "Provider.h"
+#include "3rdParty.h"
+#include "Disabled.h"
+#include "CycleA.h"
+#include "CycleB.h"
+
+#--- cycle.cpp
+#include "CycleA.h"
+#include "CycleB.h"
+
+#--- component.cpp
+#include "LLVMProvider.h"
+
+#--- empty.cpp
+void empty() {}
+
+#--- static.cpp
+#include "Provider.h"
+
+#--- forward.cpp
+#include "Base.h"
