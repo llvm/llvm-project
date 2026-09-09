@@ -13608,7 +13608,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // doesn't overflow.
     //
     // Using this information, try to prove whether the addition in
-    // "(Start - End) + (Stride - 1)" has unsigned overflow.
+    // "(End - Start) + (Stride - 1)" has unsigned overflow.
     //
     // If the IV cannot overflow, RHS is at least Stride - 1 below the maximum
     // value, so the distance End - Start is at most UMAX - (Stride - 1) and
@@ -13706,23 +13706,11 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //   "RHS - (Start - Stride) - 1" does not overflow, which is the
       //   reassociated numerator.
       //
-      //   Otherwise we rely on !AddingStrideMinusOneMayOverflow, which gives
-      //   3 cases:
-      //
-      //   - canIVOverflowOnLT proved: "RHS + (Stride - 1) <= MaxV", where MaxV
-      //     is the maximum signed/unsigned value. Let MinV be the matching
-      //     minimum value. "Start >= MinV" gives
-      //     "RHS + (Stride - 1) - Start <= MaxV - MinV", and as "MaxV - MinV"
-      //     is the largest unsigned value, the reassociated numerator does not
-      //     overflow.
-      //
-      //   - Stride is a power of two, so the largest multiple of Stride that
-      //     is representable is "UMAX - (Stride - 1)", and the IV not
-      //     overflowing bounds "RHS - Start" by such a multiple.
-      //
-      //   - "Start == Stride" or "Start == Stride - 1", for which
-      //     "(RHS - Start) + (Stride - 1)" is "RHS - 1" respectively "RHS",
-      //     which is trivially in range.
+      //   Otherwise !AddingStrideMinusOneMayOverflow guarantees that
+      //   "(End - Start) + (Stride - 1)" does not overflow unsigned. Here
+      //   "End" is "RHS", as "RHS > Start", so this is the reassociated
+      //   numerator. Neither sub-term wraps unsigned: "RHS - Start"
+      //   due to "RHS > Start", and "Stride - 1", as Stride is non-zero.
       const SCEV *MinusOne = getMinusOne(Stride->getType());
       const SCEV *Numerator =
           getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
