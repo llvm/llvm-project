@@ -9,15 +9,15 @@
 ## R_SPARC_64 is an absolute relocation type.
 ## In PIC mode, it creates a relative relocation if the symbol is non-preemptable.
 
-# NM: 0000000000300350 d b
+# NM: 0000000000300340 d b
 
 # RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x300350 R_SPARC_RELATIVE - 0x300350
-# RELOC-NEXT:   0x300348 R_SPARC_64 a 0x0
+# RELOC-NEXT:   0x300340 R_SPARC_RELATIVE - 0x300340
+# RELOC-NEXT:   0x300338 R_SPARC_64 a 0x0
 # RELOC-NEXT: }
 
 # HEX:      Contents of section .data:
-# HEX-NEXT: 300348 00000000 00000000 00000000 00300350
+# HEX-NEXT: 300338 00000000 00000000 00000000 00300340
 
 .globl a, b
 .hidden b
