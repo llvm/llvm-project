@@ -134,6 +134,11 @@ static cl::opt<bool>
                  cl::desc("Enable optimizations on complex GEPs"),
                  cl::init(false));
 
+static cl::opt<bool> EnableScalableVectorGEPOpt(
+    "aarch64-enable-scalable-vector-gep-opt", cl::Hidden,
+    cl::desc("Share common bases between scalable-vector GEPs"),
+    cl::init(true));
+
 static cl::opt<bool>
     EnableSelectOpt("aarch64-select-opt", cl::Hidden,
                     cl::desc("Enable select to branch optimizations"),
@@ -684,6 +689,9 @@ void AArch64PassConfig::addIRPasses() {
     // Do loop invariant code motion in case part of the lowered result is
     // invariant.
     addPass(createLICMPass());
+  } else if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
+             EnableScalableVectorGEPOpt) {
+    addPass(createShareScalableVectorGEPBasePass());
   }
 
   TargetPassConfig::addIRPasses();
