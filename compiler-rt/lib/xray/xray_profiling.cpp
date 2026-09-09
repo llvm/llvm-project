@@ -507,7 +507,7 @@ bool profilingDynamicInitializer() XRAY_NEVER_INSTRUMENT {
   }
 
   if (!internal_strcmp(flags()->xray_mode, "xray-profiling"))
-    __xray_log_select_mode("xray_profiling");
+    __xray_log_select_mode("xray-profiling");
   return true;
 }
 
