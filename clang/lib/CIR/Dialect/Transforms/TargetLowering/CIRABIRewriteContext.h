@@ -12,7 +12,7 @@
 // the ABI-lowered shape.
 //
 // This file handles Direct (pass-through and coerce-in-registers), Extend,
-// Ignore, Indirect (sret return, byval and byref arguments), and Expand
+// Ignore, Indirect (sret return, byval and non-byval arguments), and Expand
 // (struct flattening into scalar fields).
 //
 //===----------------------------------------------------------------------===//
@@ -24,6 +24,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace cir {
 
@@ -63,6 +64,19 @@ public:
 private:
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
+
+  /// Each block argument rewriteFunctionDefinition has rewritten into a
+  /// non-byval indirect parameter, mapped to the alignment its classification
+  /// states, so rewriteCallSite can forward such a parameter rather than copy
+  /// it.  Recorded where the classification says so rather than read back
+  /// from an emitted attribute, which would tie the pass to whichever
+  /// attribute is unique to this case today.
+  ///
+  /// Sound for one run over one module only.  A recorded argument is retyped
+  /// but never erased, so the keys stay valid, but a value freed with one
+  /// module can be recycled by the next, and a stale hit would forward the
+  /// caller's object where a copy is required.  Do not promote to pass state.
+  llvm::DenseMap<mlir::BlockArgument, uint64_t> nonByvalParams;
 };
 
 } // namespace cir

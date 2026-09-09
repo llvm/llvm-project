@@ -1,0 +1,267 @@
+// RUN: cir-opt %s -split-input-file \
+// RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A non-byval parameter handed on to another one, as a delegating or
+  // inherited constructor does.  Declaring the callee after the caller is what
+  // makes the operand load the incoming pointer rather than a slot, so the
+  // order here is load-bearing.
+  cir.func @forwards_non_byval_param(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_non_byval_param(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The reverse order, where the operand still loads the parameter's own slot
+  // and that slot is forwarded, then retargeted to the incoming pointer.  The
+  // callee receives the caller's storage either way.
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  cir.func @forwards_non_byval_param_via_slot(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_non_byval_param_via_slot(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Mutual recursion puts each function on both sides of the other, so both
+  // orders above occur in one module.
+  cir.func @ping(%arg0: !rec_Big) attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @pong(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  cir.func @pong(%arg0: !rec_Big) attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @ping(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @ping(%[[PING:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @pong(%[[PING]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK:      cir.func{{.*}} @pong(%[[PONG:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @ping(%[[PONG]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+!rec_Two = !cir.struct<"Two" {data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#expand_then_non_byval = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" },
+             { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // An Expand parameter ahead of the non-byval one turns into two arguments,
+  // so that parameter sits at a different index than it was declared at.
+  // The attributes have to follow it there for the forward to be recognized.
+  cir.func @expand_ahead_of_non_byval(%two: !rec_Two, %big: !rec_Big)
+      attributes { test_classify = #expand_then_non_byval } {
+    %spill = cir.alloca "big" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %big, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @expand_ahead_of_non_byval(%{{.*}}: !s64i, %{{.*}}: !s64i, %[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A slot reached through casts that preserve the storage.  The slot states
+  // the alignment, so it is found underneath the chain, while the outermost
+  // cast is what gets forwarded.
+  cir.func @forwards_slot_through_cast(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!cir.array<!s8i x 32>>
+    %mid = cir.cast bitcast %raw
+        : !cir.ptr<!cir.array<!s8i x 32>> -> !cir.ptr<!s8i>
+    %slot = cir.cast bitcast %mid : !cir.ptr<!s8i> -> !cir.ptr<!rec_Big>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %slot : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_slot_through_cast
+  // CHECK:        %[[RAW:.*]] = cir.alloca "raw" {{.*}}: !cir.ptr<!cir.array<!s8i x 32>>
+  // CHECK:        %[[MID:.*]] = cir.cast bitcast %[[RAW]] : !cir.ptr<!cir.array<!s8i x 32>> -> !cir.ptr<!s8i>
+  // CHECK:        %[[SLOT:.*]] = cir.cast bitcast %[[MID]] : !cir.ptr<!s8i> -> !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.load %[[SLOT]] : !cir.ptr<!rec_Big>
+  // CHECK:        cir.call @takes_big_non_byval(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#sret_non_byval = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The sret pointer takes block argument 0, so the forwarded parameter sits
+  // one past where it was declared.
+  cir.func @sret_forwards_non_byval_param(%arg0: !rec_Big) -> !rec_Big
+      attributes { test_classify = #sret_non_byval } {
+    %spill = cir.alloca "arg0" align(8) : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %ret : !rec_Big, !cir.ptr<!rec_Big>
+    %r = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %r : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @sret_forwards_non_byval_param(
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:     %[[PTR:[^:]*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
