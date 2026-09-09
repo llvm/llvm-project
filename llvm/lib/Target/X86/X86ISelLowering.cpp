@@ -24047,6 +24047,18 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
   assert((CmpVT == MVT::i8 || CmpVT == MVT::i16 ||
           CmpVT == MVT::i32 || CmpVT == MVT::i64) && "Unexpected VT!");
 
+  // If one operand is a non-extending atomic load, compare with CMP so the
+  // load folds into the compare's memory operand during isel. The SUB form
+  // chosen below for CSE would leave the load in a register: the peephole that
+  // folds a load into a following compare cannot move an ordered access, and
+  // an atomic load has no non-atomic sibling to be CSE'd with anyway.
+  auto IsFoldableAtomicLoad = [](SDValue Op) {
+    return Op.getOpcode() == ISD::ATOMIC_LOAD && Op.hasOneUse() &&
+           cast<AtomicSDNode>(Op)->getExtensionType() == ISD::NON_EXTLOAD;
+  };
+  if (IsFoldableAtomicLoad(Op0) || IsFoldableAtomicLoad(Op1))
+    return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op0, Op1);
+
   // Only promote the compare up to I32 if it is a 16 bit operation
   // with an immediate. 16 bit immediates are to be avoided unless the target
   // isn't slowed down by length changing prefixes, we're optimizing for
@@ -25384,11 +25396,11 @@ getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
     break;
   case ISD::SMULO:
     BaseOp = X86ISD::SMUL;
-    Cond = X86::COND_O;
+    Cond = X86::COND_B;
     break;
   case ISD::UMULO:
     BaseOp = X86ISD::UMUL;
-    Cond = X86::COND_O;
+    Cond = X86::COND_B;
     break;
   }
 
@@ -33814,18 +33826,24 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
-  if (Op.getOpcode() == ISD::CLMUL && VT.isVectorOf(MVT::i32)) {
+  if (VT.isVectorOf(MVT::i32)) {
     // Without VPCLMULQDQ we have to split down to v4i32.
     if (!Subtarget.hasVPCLMULQDQ() && !VT.is128BitVector())
       return splitVectorIntBinary(Op, DAG, DL);
 
     // Use PCLMUL lo/hi imms to multiply <0,u,2,u> 32-bit elements.
     MVT MulVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    LHS = DAG.getBitcast(MulVT, LHS);
-    RHS = DAG.getBitcast(MulVT, RHS);
-    SDValue Res0 = DAG.getNode(X86ISD::PCLMULQDQ, DL, MulVT, LHS, RHS,
+    SDValue LHSLo = DAG.getBitcast(MulVT, LHS);
+    SDValue RHSLo = DAG.getBitcast(MulVT, RHS);
+    if (IsHigh) {
+      // CLMULH: Ensure the upper 32-bits are zero.
+      SDValue Mask = DAG.getTargetConstant(0xFFFFFFFFULL, DL, MulVT);
+      LHSLo = DAG.getNode(ISD::AND, DL, MulVT, LHSLo, Mask);
+      RHSLo = DAG.getNode(ISD::AND, DL, MulVT, RHSLo, Mask);
+    }
+    SDValue Res0 = DAG.getNode(X86ISD::PCLMULQDQ, DL, MulVT, LHSLo, RHSLo,
                                DAG.getTargetConstant(0x00, DL, MVT::i8));
-    SDValue Res2 = DAG.getNode(X86ISD::PCLMULQDQ, DL, MulVT, LHS, RHS,
+    SDValue Res2 = DAG.getNode(X86ISD::PCLMULQDQ, DL, MulVT, LHSLo, RHSLo,
                                DAG.getTargetConstant(0x11, DL, MVT::i8));
     // Shift down to handle <1,u,3,u> 32-bit elements.
     LHS = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, MulVT, LHS, 32, DAG);
@@ -33836,10 +33854,10 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
                                DAG.getTargetConstant(0x11, DL, MVT::i8));
     // Pack together lowest elements.
     SDValue Res02 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res0),
-                               DAG.getBitcast(VT, Res1));
-    SDValue Res13 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res2),
+                               DAG.getBitcast(VT, Res2));
+    SDValue Res13 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res1),
                                DAG.getBitcast(VT, Res3));
-    return getUnpackl(DAG, DL, VT, Res02, Res13);
+    return getUnpack(DAG, DL, VT, Res02, Res13, IsHigh);
   }
 
   // Just scalarize other vector cases and rely on shuffle combining to

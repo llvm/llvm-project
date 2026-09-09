@@ -1210,9 +1210,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     const Record *R = this->getRecord(E->getType());
     assert(R);
     const Record::Field *RF = R->getField(UnionField);
-    QualType FieldType = RF->Decl->getType();
 
-    if (OptPrimType PT = classify(FieldType)) {
+    if (OptPrimType PT = RF->T) {
       if (!this->visit(SubExpr))
         return false;
       if (RF->isBitField())
@@ -3695,11 +3694,11 @@ bool Compiler<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
     if (!R || R->getNumFields() == 0)
       return false;
     const Record::Field *Field = R->getField(0U);
-    PrimType FieldT = classifyPrim(Field->Decl->getType());
-    if (!this->emitConst(CmpInfo.getValueInfo(Result)->getIntValue(), FieldT,
+    assert(Field->T);
+    if (!this->emitConst(CmpInfo.getValueInfo(Result)->getIntValue(), *Field->T,
                          E))
       return false;
-    return this->emitInitField(FieldT, Field->Offset, E);
+    return this->emitInitField(*Field->T, Field->Offset, E);
   }
 
   PrimType T = classifyPrim(E->getType());
@@ -4027,11 +4026,9 @@ bool Compiler<Emitter>::VisitSourceLocExpr(const SourceLocExpr *E) {
     const Record::Field *F = R->getField(I);
     const APValue &FieldValue = V.getStructField(I);
 
-    PrimType FieldT = classifyPrim(F->Decl->getType());
-
-    if (!this->visitAPValue(FieldValue, FieldT, E))
+    if (!this->visitAPValue(FieldValue, *F->T, E))
       return false;
-    if (!this->emitInitField(FieldT, F->Offset, E))
+    if (!this->emitInitField(*F->T, F->Offset, E))
       return false;
   }
 
@@ -4849,7 +4846,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   if (!this->emitInitFieldPtr(R->getField(0u)->Offset, E))
     return false;
 
-  PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
+  PrimType SecondFieldT = *R->getField(1u)->T;
   if (isIntegerOrBoolType(SecondFieldT)) {
     if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
@@ -5946,7 +5943,7 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       const Record::Field *RF = R->getField(I);
       QualType FieldType = RF->Decl->getType();
       // Fields.
-      if (OptPrimType PT = classify(FieldType)) {
+      if (OptPrimType PT = RF->T) {
         if (!this->visitAPValue(F, *PT, Info))
           return false;
         if (!this->emitInitField(*PT, RF->Offset, Info))
@@ -5995,7 +5992,7 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     const Record::Field *RF = R->getField(UnionField);
     QualType FieldType = RF->Decl->getType();
 
-    if (OptPrimType PT = classify(FieldType)) {
+    if (OptPrimType PT = RF->T) {
       if (!this->visitAPValue(F, *PT, Info))
         return false;
       if (RF->isBitField())
@@ -8926,7 +8923,7 @@ bool Compiler<Emitter>::emitHLSLAggregateSplat(PrimType SrcT,
         continue;
 
       QualType FieldType = F.Decl->getType();
-      if (OptPrimType FieldT = classify(FieldType)) {
+      if (OptPrimType FieldT = F.T) {
         if (!this->emitGetLocal(SrcT, SrcOffset, E))
           return false;
         if (!this->emitPrimCast(SrcT, *FieldT, FieldType, E))
@@ -9114,7 +9111,7 @@ bool Compiler<Emitter>::emitHLSLFlattenAggregate(
       if (!this->emitGetPtrFieldPop(F.Offset, E))
         return false;
 
-      if (OptPrimType FieldT = classify(FieldType)) {
+      if (OptPrimType FieldT = F.T) {
         if (!this->emitLoadPop(*FieldT, E))
           return false;
         if (!saveToLocal(*FieldT))
@@ -9227,7 +9224,7 @@ bool Compiler<Emitter>::emitHLSLConstructAggregate(
         continue;
 
       QualType FieldType = F.Decl->getType();
-      if (OptPrimType FieldT = classify(FieldType)) {
+      if (OptPrimType FieldT = F.T) {
         if (!loadAndCast(*FieldT, FieldType))
           return false;
         if (F.isBitField()) {
