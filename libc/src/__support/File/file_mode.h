@@ -65,30 +65,23 @@ public:
 
   bool is_valid() const { return file_mode_ != 0; }
 
-  // helper function to show if file allows writing
-  bool write_allowed() const {
+  bool is_write() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::WRITE)) != 0;
   }
 
-  // helper function to show if file allows reading
-  bool read_allowed() const {
+  bool is_read() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::READ)) != 0;
   }
 
-  // helper function to show if file allows appending
-  bool append_allowed() const {
+  bool is_append() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::APPEND)) != 0;
   }
 
-  // helper function to denote if the file is in binary format.
   bool is_binary_format() const {
     return (file_mode_ & static_cast<Mode>(ContentType::BINARY)) != 0;
   }
 
-  // '+' means update is allowed
-  // TODO: ask michael if I need to give it a better name like "update_allowed"
-  // or just continue with the old convention.
-  bool is_plus() const {
+  bool is_update() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::PLUS)) != 0;
   }
 
@@ -129,7 +122,7 @@ private:
 
   // This property tracks the mode for the particular file instance (i.e
   // currently opened file)
-  int file_mode_;
+  Mode file_mode_;
 };
 
 } // namespace LIBC_NAMESPACE_DECL
