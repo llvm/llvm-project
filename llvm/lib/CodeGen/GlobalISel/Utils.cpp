@@ -1051,10 +1051,9 @@ llvm::ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
       Type *Ty =
           Type::getFloatingPointTy(MRI.getMF().getFunction().getContext(),
                                    getFltSemanticForLLT(DstEltTy));
-      Constant *C = ConstantFoldFP(Opcode == TargetOpcode::G_FSQRT
-                                       ? static_cast<double (*)(double)>(sqrt)
-                                       : static_cast<double (*)(double)>(log2),
-                                   V, Ty);
+      Constant *C = Opcode == TargetOpcode::G_FSQRT
+                        ? ConstantFoldFP(sqrt, V, Ty)
+                        : ConstantFoldFP(log2, V, Ty);
       if (!C)
         return std::nullopt;
       return cast<ConstantFP>(C)->getValueAPF();
