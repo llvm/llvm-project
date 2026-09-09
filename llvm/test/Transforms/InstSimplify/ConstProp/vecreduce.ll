@@ -967,6 +967,16 @@ define <4 x i32> @partial_reduce_add_nonconstant_input(<16 x i32> %input) {
   ret <4 x i32> %x
 }
 
+define <4 x i32> @partial_reduce_add_mixed_fixed_scalable() {
+; CHECK-LABEL: @partial_reduce_add_mixed_fixed_scalable(
+; CHECK-NEXT:    [[X:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.nxv8i32(<4 x i32> zeroinitializer, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <4 x i32> [[X]]
+;
+  %x = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.nxv8i32(
+  <4 x i32> zeroinitializer, <vscale x 8 x i32> zeroinitializer)
+  ret <4 x i32> %x
+}
+
 define <4 x i32> @partial_reduce_add_poison_element() {
 ; CHECK-LABEL: @partial_reduce_add_poison_element(
 ; CHECK-NEXT:    ret <4 x i32> <i32 128, i32 poison, i32 336, i32 440>
