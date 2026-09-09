@@ -1,0 +1,25 @@
+# RUN: clangd -lit-test < %s | FileCheck %s
+# RUN: FileCheck %s < %t.err
+# RUN: FileCheck %s < %t.async.err
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"file:///",
+  "languageId":"c",
+  "version":1,
+  "text":""
+}}}
+#      CHECK: I[{{.*}}] Ignoring didOpen for directory: /
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"file:///tmp",
+  "languageId":"cpp",
+  "version":1,
+  "text":"int main() {}"
+}}}
+#      CHECK: E[{{.*}}] Ignoring didOpen for directory: /tmp
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
