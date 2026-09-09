@@ -1173,9 +1173,10 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   case Instruction::Or:
   case Instruction::Xor: {
     // Certain instructions can be cheaper if they have a constant second
-    // operand. One example of this are shifts on x86.
+    // operand. One example of this are shifts on x86. FNeg is the only unary
+    // opcode handled here and has no second operand.
     TargetTransformInfo::OperandValueInfo RHSInfo;
-    if (getNumOperands() == 2) {
+    if (Opcode != Instruction::FNeg) {
       RHSInfo = Ctx.getOperandInfo(getOperand(1));
       if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
           getOperand(1)->isDefinedOutsideLoopRegions())
@@ -1210,8 +1211,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     return Ctx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
                                              Ctx.CostKind) +
            Ctx.TTI.getMemoryOpCost(Opcode, ValTy, getLoadStoreAlignment(UI),
-                                   cast<PointerType>(PtrTy)->getAddressSpace(),
-                                   Ctx.CostKind,
+                                   getLoadStoreAddressSpace(UI), Ctx.CostKind,
                                    TTI::getOperandInfo(UI->getOperand(0)), UI);
   }
   case Instruction::ICmp:
@@ -1258,10 +1258,10 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
       }
       // Loads/stores in pre-predication VPlan0 are represented as
       // VPInstructions; treat them like an unmasked memory access.
-      if (const auto *VPI = dyn_cast<VPInstruction>(R))
-        if (VPI->getOpcode() == Instruction::Load ||
-            VPI->getOpcode() == Instruction::Store)
-          return TTI::CastContextHint::Normal;
+      const auto *VPI = dyn_cast<VPInstruction>(R);
+      if (VPI && (VPI->getOpcode() == Instruction::Load ||
+                  VPI->getOpcode() == Instruction::Store))
+        return TTI::CastContextHint::Normal;
       const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
       if (WidenMemoryRecipe == nullptr)
         return TTI::CastContextHint::None;
@@ -1372,11 +1372,12 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
-  // Vector-only opcodes have zero cost at scalar VF.
-  if (VF.isScalar() &&
-      (isVectorToScalar() ||
-       getOpcode() == VPInstruction::FirstOrderRecurrenceSplice))
-    return 0;
+  // A scalar cost is only computed for VPlan0, which has no vector-only
+  // opcodes.
+  assert(!(VF.isScalar() &&
+           (isVectorToScalar() ||
+            getOpcode() == VPInstruction::FirstOrderRecurrenceSplice)) &&
+         "unexpected vector-only opcode at scalar VF");
 
   // NOTE: At the moment it seems only possible to expose this path for
   // the trunc, zext and sext opcodes.
@@ -1579,7 +1580,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     if (!VF.isScalar() || !getUnderlyingValue())
       return 0;
     return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
-
   case Instruction::Load:
   case Instruction::Store:
     assert(VF.isScalar() && "only scalar VF expected");
@@ -1607,6 +1607,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
+    assert((VF.isScalar() || !getUnderlyingValue()) &&
+           "unexpected VPInstruction with underlying value");
     return 0;
   }
 }

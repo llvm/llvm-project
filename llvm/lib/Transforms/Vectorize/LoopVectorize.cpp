@@ -5471,6 +5471,17 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   return Cost;
 }
 
+/// Returns the frequency with which \p VPBB executes, as recorded on its
+/// recipes by VPlanTransforms::recordExecutionFrequencies. All recipes of a
+/// block share the same frequency, and blocks that always or never execute
+/// carry none. \p VPBB must be part of a plain CFG.
+static std::optional<VPExecutionFrequency>
+getRecordedExecutionFrequency(const VPBasicBlock *VPBB) {
+  if (VPBB->empty())
+    return std::nullopt;
+  return cast<VPInstruction>(&VPBB->front())->getExecutionFrequency();
+}
+
 InstructionCost LoopVectorizationPlanner::computeScalarCost() const {
   ElementCount ScalarVF = ElementCount::getFixed(1);
   VPCostContext CostCtx(*TLI, *InitialVPlan0, *CM, Config);
@@ -5479,17 +5490,11 @@ InstructionCost LoopVectorizationPlanner::computeScalarCost() const {
   InstructionCost Cost = 0;
 
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(Header)) {
-    // Look up the divisor via the first underlying IR instruction in the loop.
-    uint64_t Divisor = 1;
-    for (const VPRecipeBase &R : *VPBB) {
-      auto *UI = dyn_cast_if_present<Instruction>(
-          cast<VPSingleDefRecipe>(&R)->getUnderlyingValue());
-      if (!UI)
-        continue;
-      Divisor = CM->getPredBlockCostDivisor(CostCtx.CostKind, UI->getParent());
-      break;
-    }
-    Cost += VPBB->cost(ScalarVF, CostCtx) / Divisor;
+    // In the scalar loop, we may not always execute the predicated block, if
+    // it is an if-else block. Thus, scale the block's cost by the probability
+    // of executing it.
+    Cost += VPBB->cost(ScalarVF, CostCtx) /
+            CostCtx.getCostDivisor(getRecordedExecutionFrequency(VPBB));
   }
   return Cost;
 }
@@ -6273,26 +6278,23 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 static void printOptimizedVPlan(VPlan &) {}
 
 #ifndef NDEBUG
-/// Cross-check vputils::computeExecutionFrequencies for the loop region of
-/// \p Plan against BlockFrequencyInfo for the blocks of \p OrigLoop.
+/// Cross-check the execution frequencies recorded on the loop body of \p Plan
+/// against BlockFrequencyInfo for the blocks of \p OrigLoop.
 /// FIXME: Temporary verification aid, to be removed.
 static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
                                                LoopInfo *LI,
                                                LoopVectorizationCostModel &CM) {
-  // Limited to inner loops with the latch as only exiting block and no extra
-  // VPBBs without a matching IR BB (as introduced by tail folding).
-  if (Plan.isOuterLoop() ||
-      OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
-      Plan.hasTailFolded())
+  // Limited to inner loops with the latch as only exiting block.
+  if (!OrigLoop->isInnermost() ||
+      OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
     return true;
 
-  // Visit the region's blocks in the same order as introduceMasksAndLinearize.
-  // Both are reverse post-orders of the same CFG, so indices correspond.
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getVectorLoopRegion()->getEntryBasicBlock());
-  auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
+  // Visit the loop body in the same order as recordExecutionFrequencies. Both
+  // are reverse post-orders of the same CFG, so indices correspond.
+  VPBasicBlock *Header = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
+  SmallVector<VPBasicBlock *> Blocks = vp_rpo_plain_cfg_loop_body(Header);
   assert(Blocks.size() == OrigLoop->getNumBlocks() &&
-         "loop region and original loop must have the same blocks");
+         "loop body and original loop must have the same blocks");
 
   LoopBlocksRPO OrigRPO(OrigLoop);
   OrigRPO.perform(LI);
@@ -6310,13 +6312,12 @@ static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
     Edges += VPBB->getNumSuccessors();
   uint64_t Tolerance = Edges + BranchProbability::getDenominator() / HeaderFreq;
 
-  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
-      Frequencies = vputils::computeExecutionFrequencies(Blocks);
   for (const auto &[VPBB, BB] :
        zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
     // Compare at BranchProbability's coarser resolution, which is as precise as
     // BFI's frequencies get.
-    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
+    std::optional<VPExecutionFrequency> Freq =
+        getRecordedExecutionFrequency(VPBB);
     if (!Freq)
       continue;
     BranchProbability Computed = vputils::getExecutionProbability(Freq->Freq);
@@ -6368,6 +6369,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                    LAI->getSymbolicStrides(), VPDT);
   RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
+  // Record the execution frequencies while VPlan0 still mirrors the original
+  // loop's CFG; they are consumed by the cost model and predication below.
+  RUN_VPLAN_PASS(VPlanTransforms::recordExecutionFrequencies, *VPlan0);
+  assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, *CM) &&
+         "execution frequencies do not match the loop's block frequencies");
   // Save copy of VPlan0 for scalar cost computation.
   InitialVPlan0 = VPlanPtr(VPlan0->duplicate());
 
@@ -6425,8 +6431,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   if (CM->foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
 
-  assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, *CM) &&
-         "execution frequencies do not match the loop's block frequencies");
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
   return VPlan0;

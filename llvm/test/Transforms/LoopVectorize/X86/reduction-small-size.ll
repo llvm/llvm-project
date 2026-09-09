@@ -27,6 +27,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%indvars.iv.next> = add
 ; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT-SCALAR ir<%lftr.wideiv> = trunc
 ; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%exitcond> = icmp
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT branch-on-cond
 ; CHECK: Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%sum.013> = phi (add) vp<{{.+}}>, vp<[[EXT:%.+]]>
 ; CHECK: Cost of 0 for VF 2: vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>

@@ -160,6 +160,13 @@ struct VPlanTransforms {
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr,
               function_ref<const BranchProbabilityInfo &()> GetBPI = nullptr);
 
+  /// Record on each recipe in the loop body of the plain-CFG \p Plan the
+  /// frequency with which it executes, computed from the branch weights of the
+  /// terminators. Must run while \p Plan still mirrors the original loop's CFG,
+  /// so later transforms and the cost model can use the recorded frequencies
+  /// without recomputing them.
+  static void recordExecutionFrequencies(VPlan &Plan);
+
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
   /// fixed-order recurrences. This processes all header phis and creates
