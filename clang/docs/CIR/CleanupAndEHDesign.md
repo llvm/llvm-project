@@ -1825,24 +1825,35 @@ operation's successors. It does not synthesize any new operation.
 
 ```mlir
 cir.eh.dispatch %eh_token : !cir.eh_token [
+  // Taken when the exception is *not* one of the permitted types.
   filter(@_ZTIi) : ^bb4,
+  // Taken when it is.
   unwind : ^bb5
 ]
 ```
 
-Unlike `catch_all` and `unwind`, a `filter` clause does not take the
-place of the dispatch operation's default destination. A filter has two
-outgoing edges rather than one. Either the exception violates the
+A `filter` clause names the permitted types, but its destination is
+taken on the types it does *not* name. This is the opposite polarity
+from a `catch` clause, whose destination is taken when the exception
+does match the named type, so the two clause kinds cannot be read the
+same way. The polarity comes from the Itanium personality routine,
+which reports a filter *failure* by selecting the filter clause of the
+landing pad, and it is preserved in the flattened form so that the
+dispatch operation maps directly onto the landing pad it lowers to.
+
+Unlike `catch_all` and `unwind`, a `filter` clause also does not take
+the place of the dispatch operation's default destination. A filter has
+two outgoing edges rather than one. Either the exception violates the
 specification, in which case control transfers to the filter clause's
 destination, or it does not, in which case control continues along the
 dispatch operation's normal `unwind` edge. A `cir.eh.dispatch` operation
 carrying a `filter` clause therefore always carries an `unwind` clause
 as well.
 
-The two clauses correspond directly to the two handler regions. The
-unexpected region becomes the destination of the `filter` clause, and
-the filter region, which describes the permitted path, becomes the
-`unwind` destination.
+The two clauses correspond directly to the two handler regions, with the
+polarity inversion visible in the pairing. The unexpected region becomes
+the destination of the `filter` clause, and the filter region, which
+describes the permitted path, becomes the `unwind` destination.
 
 ```mlir
 ^bb4(%eh_token : !cir.eh_token): // Flattened unexpected region
@@ -1893,8 +1904,8 @@ cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
   cir.br ^bb3(%0 : !cir.eh_token)
 ^bb3(%eh_token : !cir.eh_token): // Exception specification dispatch
   cir.eh.dispatch %eh_token : !cir.eh_token [
-    filter(@_ZTIi) : ^bb4,
-    unwind : ^bb5
+    filter(@_ZTIi) : ^bb4, // Not an int: specification violated
+    unwind : ^bb5          // An int: permitted, keep unwinding
   ]
 ^bb4(%eh_token.1 : !cir.eh_token): // Specification violated
   cir.eh.unexpected %eh_token.1 : !cir.eh_token
@@ -1965,8 +1976,8 @@ cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
   cir.br ^bb3(%0 : !cir.eh_token)
 ^bb3(%eh_token : !cir.eh_token): // Exception specification dispatch
   cir.eh.dispatch %eh_token : !cir.eh_token [
-    filter(@_ZTIi) : ^bb4,
-    unwind : ^bb5
+    filter(@_ZTIi) : ^bb4, // Not an int: specification violated
+    unwind : ^bb5          // An int: permitted, keep unwinding
   ]
 ^bb4(%eh_token.1 : !cir.eh_token): // Specification violated
   cir.eh.unexpected %eh_token.1 : !cir.eh_token
