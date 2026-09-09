@@ -396,9 +396,12 @@ getLoopEstimatedTripCount(Loop *L,
 /// TODO: Eventually, once all passes have migrated away from setting branch
 /// weights to indicate estimated trip counts, this function will drop the
 /// \p EstimatedLoopInvocationWeight parameter.
+///
+/// For a new loop, pass the original latch \c !prof as \p ProfileOrigin.
 LLVM_ABI bool setLoopEstimatedTripCount(
     Loop *L, unsigned EstimatedTripCount,
-    std::optional<unsigned> EstimatedLoopInvocationWeight = std::nullopt);
+    std::optional<unsigned> EstimatedLoopInvocationWeight = std::nullopt,
+    std::optional<const MDNode *> ProfileOrigin = std::nullopt);
 
 /// Based on branch weight metadata, return either:
 /// - An unknown probability if the implementation is unable to handle the loop

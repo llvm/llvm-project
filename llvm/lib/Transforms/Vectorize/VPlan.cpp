@@ -1773,6 +1773,7 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
 void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
     Loop *VectorLoop, VPBasicBlock *HeaderVPBB, const VPlan &Plan,
     bool VectorizingEpilogue, MDNode *OrigLoopID,
+    const MDNode *OrigLoopLatchProfile,
     std::optional<unsigned> OrigAverageTripCount,
     unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
     bool DisableRuntimeUnroll, bool UnrollVectorizedLoop) {
@@ -1863,13 +1864,14 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
     RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
   }
   if (HeaderVPBB) {
-    setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
-                              OrigLoopInvocationWeight);
+    if (VectorLoop->getLoopLatch())
+      setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
+                                OrigLoopInvocationWeight, OrigLoopLatchProfile);
   }
 
   if (ScalarPH) {
     setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
-                              OrigLoopInvocationWeight);
+                              OrigLoopInvocationWeight, OrigLoopLatchProfile);
   }
 }
 

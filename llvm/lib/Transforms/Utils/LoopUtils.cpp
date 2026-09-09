@@ -969,7 +969,8 @@ llvm::getLoopEstimatedTripCount(Loop *L,
 
 bool llvm::setLoopEstimatedTripCount(
     Loop *L, unsigned EstimatedTripCount,
-    std::optional<unsigned> EstimatedloopInvocationWeight) {
+    std::optional<unsigned> EstimatedloopInvocationWeight,
+    std::optional<const MDNode *> ProfileOrigin) {
   // If EstimatedLoopInvocationWeight, we do not support this loop if
   // getExpectedExitLoopLatchBranch returns nullptr.
   //
@@ -1005,9 +1006,12 @@ bool llvm::setLoopEstimatedTripCount(
   if (LatchBranch->getSuccessor(0) != L->getHeader())
     std::swap(BackedgeTakenWeight, LatchExitWeight);
 
-  // Keep the latch origin (expect / unknown / counts).
+  // Keep origin from the original latch when L is newly created.
+  const MDNode *OriginMD = ProfileOrigin
+                               ? *ProfileOrigin
+                               : LatchBranch->getMetadata(LLVMContext::MD_prof);
   setBranchWeightsPreservingOrigin(
-      *LatchBranch, {BackedgeTakenWeight, LatchExitWeight}, *LatchBranch);
+      *LatchBranch, {BackedgeTakenWeight, LatchExitWeight}, OriginMD);
 
   return true;
 }
