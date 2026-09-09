@@ -934,19 +934,12 @@ function(add_libc_hermetic test_name)
     list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
 
-<<<<<<< Updated upstream
   set(coverage_link_libs "")
   if(LIBC_ENABLE_COVERAGE)
     set(coverage_link_libs
       "${LIBC_CLANG_PROFILE_LIB}"
       libc
     )
-=======
-  set(coverage_deps "")
-  if(LIBC_ENABLE_COVERAGE)
-    set(coverage_deps libc)
-    target_link_options(${fq_build_target_name} PRIVATE -Wl,--allow-multiple-definition)
->>>>>>> Stashed changes
   endif()
 
   target_link_libraries(
