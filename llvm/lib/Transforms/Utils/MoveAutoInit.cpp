@@ -179,10 +179,8 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
     }
 
     // EH pad blocks are not good candidates for insertion: CatchSwitchInst
-    // blocks can only have one instruction, and for the other pads
-    // getFirstInsertionPt() skips the pad instruction, which may itself have a
-    // memory access, while the MemorySSA update below assumes the moved
-    // instruction becomes the first access of the block.
+    // blocks can only have one instruction, and for other pads we risk
+    // re-ordering memory access instructions and violating MemorySSA rules.
     while (UsersDominator->isEHPad()) {
       for (BasicBlock *Pred : predecessors(UsersDominator))
         if (DT.isReachableFromEntry(Pred))
