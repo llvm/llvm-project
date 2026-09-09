@@ -20263,7 +20263,9 @@ On entry to a function:
 #.  GFX6-GFX8: M0 register set to the size of LDS in bytes. See
     :ref:`amdgpu-amdhsa-kernel-prolog-m0`.
 #.  The EXEC register is set to the lanes active on entry to the function.
-#.  MODE register: *TBD*
+#.  MODE register: the floating point rounding mode fields hold the mode
+    requested by the program with ``llvm.set.rounding``, or the default, round
+    to nearest even. Other fields: *TBD*.
 #.  VGPR0-31 and SGPR4-29 are used to pass function input arguments as described
     below.
 #.  SGPR30-31 return address (RA). The code address that the function must
@@ -20354,7 +20356,8 @@ On exit from a function:
       their value.
 
 #.  The PC is set to the RA provided on entry.
-#.  MODE register: *TBD*.
+#.  MODE register: as on entry to the function, unless the function changed the
+    rounding mode on behalf of the program. Other fields: *TBD*.
 #.  All other registers are clobbered.
 #.  Any necessary ``s_waitcnt`` has been performed to ensure memory accessed by
     function is available to the caller.

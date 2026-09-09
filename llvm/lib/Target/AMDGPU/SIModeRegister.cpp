@@ -15,8 +15,10 @@
 //
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include <optional>
 #include <queue>
 
 #define DEBUG_TYPE "si-mode-register"
@@ -122,6 +124,8 @@ public:
 
   bool Changed = false;
 
+  bool EnforceCallBoundary = false;
+
   bool run(MachineFunction &MF);
 
   void processBlockPhase1(MachineBasicBlock &MBB, const SIInstrInfo *TII);
@@ -162,6 +166,71 @@ FunctionPass *llvm::createSIModeRegisterPass() {
   return new SIModeRegisterLegacy();
 }
 
+static bool isFPTruncRoundPseudo(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO:
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32:
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64:
+  case AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO:
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// The opcodes for which getInstructionMode below returns a non-default Status.
+static bool mayNeedNonDefaultMode(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_INTERP_P1LL_F16:
+  case AMDGPU::V_INTERP_P1LV_F16:
+  case AMDGPU::V_INTERP_P2_F16:
+    return true;
+  default:
+    return isFPTruncRoundPseudo(MI);
+  }
+}
+
+// Returns the {offset, mask} of the mode field an explicit setreg writes.
+static std::optional<std::pair<unsigned, unsigned>>
+getModeSetregField(const MachineInstr &MI, const SIInstrInfo *TII) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_SETREG_B32:
+  case AMDGPU::S_SETREG_B32_mode:
+  case AMDGPU::S_SETREG_IMM32_B32:
+  case AMDGPU::S_SETREG_IMM32_B32_mode:
+    break;
+  default:
+    return std::nullopt;
+  }
+  using namespace AMDGPU::Hwreg;
+  unsigned Dst = TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
+  auto [Id, Offset, Width] = HwregEncoding::decode(Dst);
+  if (Id != ID_MODE)
+    return std::nullopt;
+  return std::make_pair(Offset, maskTrailingOnes<unsigned>(Width) << Offset);
+}
+
+// A mode the program asked for outlives the function and is not undone.
+static bool writesRoundMode(const MachineInstr &MI, const SIInstrInfo *TII) {
+  if (MI.getOpcode() == AMDGPU::S_ROUND_MODE)
+    return true;
+  auto Field = getModeSetregField(MI, TII);
+  return Field && (Field->second & AMDGPU::Hwreg::FP_ROUND_MASK);
+}
+
+// Not the wave-ending opcodes or the epilog return. Tail calls: see isCall.
+static bool isReturnToCaller(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::SI_RETURN:
+  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
+  case AMDGPU::S_SETPC_B64_return:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Determine the Mode register setting required for this instruction.
 // Instructions which don't use the Mode register return a null Status.
 // Note this currently only deals with instructions that use the floating point
@@ -169,12 +238,11 @@ FunctionPass *llvm::createSIModeRegisterPass() {
 Status SIModeRegister::getInstructionMode(MachineInstr &MI,
                                           const SIInstrInfo *TII) {
   unsigned Opcode = MI.getOpcode();
-  if (TII->usesFPDPRounding(MI) ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO) {
+  // Caller and callee agree on the default mode (AMDGPUUsage.rst, "MODE
+  // register").
+  if (EnforceCallBoundary && (MI.isCall() || isReturnToCaller(MI)))
+    return DefaultStatus;
+  if (TII->usesFPDPRounding(MI) || isFPTruncRoundPseudo(MI)) {
     switch (Opcode) {
     case AMDGPU::V_INTERP_P1LL_F16:
     case AMDGPU::V_INTERP_P1LV_F16:
@@ -272,20 +340,11 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
   Status IPChange;
   for (MachineInstr &MI : MBB) {
     Status InstrMode = getInstructionMode(MI, TII);
-    if (MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
-        MI.getOpcode() == AMDGPU::S_SETREG_B32_mode ||
-        MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
-        MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_mode) {
+    if (auto Field = getModeSetregField(MI, TII)) {
       // We preserve any explicit mode register setreg instruction we encounter,
       // as we assume it has been inserted by a higher authority (this is
       // likely to be a very rare occurrence).
-      unsigned Dst = TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
-      using namespace AMDGPU::Hwreg;
-      auto [Id, Offset, Width] = HwregEncoding::decode(Dst);
-      if (Id != ID_MODE)
-        continue;
-
-      unsigned Mask = maskTrailingOnes<unsigned>(Width) << Offset;
+      auto [Offset, Mask] = *Field;
 
       // If an InsertionPoint is set we will insert a setreg there.
       if (InsertionPoint) {
@@ -459,6 +518,16 @@ bool SIModeRegister::run(MachineFunction &MF) {
   BlockInfo.resize(MF.getNumBlockIDs());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
+
+  // The mixed case is not handled: a restore would undo the program's request.
+  auto AnyInstr = [&MF](function_ref<bool(const MachineInstr &)> P) {
+    return any_of(
+        MF, [&P](const MachineBasicBlock &MBB) { return any_of(MBB, P); });
+  };
+  EnforceCallBoundary = AnyInstr(mayNeedNonDefaultMode) &&
+                        !AnyInstr([TII](const MachineInstr &MI) {
+                          return writesRoundMode(MI, TII);
+                        });
 
   // Processing is performed in a number of phases
 
