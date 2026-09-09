@@ -19,6 +19,10 @@ def cuda_path_EQ : Joined<["--"], "cuda-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the system CUDA path">;
 def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the 'ptxas' path">;
+def Xptxas : Separate<["-", "--"], "Xptxas">, Flags<[WrapperOnlyOption]>,
+  MetaVarName<"<arg>">, HelpText<"Pass <arg> to the 'ptxas' invocation">;
+def Xptxas_EQ : Joined<["-", "--"], "Xptxas=">, Flags<[HelpHidden]>,
+  Alias<Xptxas>;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;

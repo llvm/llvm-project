@@ -155,9 +155,9 @@ if(CLANG_BUILT_STANDALONE)
 
       get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
 
-      # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
+      # On Win32 hosts, provide an option to specify the path to the Unix tools.
       if( WIN32 AND NOT CYGWIN )
-        set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
+        set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to Unix tools for Windows")
       endif()
     else()
       set(LLVM_INCLUDE_TESTS OFF)
@@ -527,10 +527,6 @@ option(CLANG_INCLUDE_TESTS
        "Generate build targets for the Clang unit tests."
        ${LLVM_INCLUDE_TESTS})
 
-option(CLANG_ENABLE_HLSL "Include HLSL build products" Off)
-# While HLSL support is experimental this should stay hidden.
-mark_as_advanced(CLANG_ENABLE_HLSL)
-
 add_subdirectory(utils/TableGen)
 
 # Export CLANG_TABLEGEN_EXE for use by flang docs.
@@ -855,7 +851,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
   # Populate the passthrough variables
   foreach(variableName ${CLANG_BOOTSTRAP_PASSTHROUGH} ${_BOOTSTRAP_DEFAULT_PASSTHROUGH})
     if(DEFINED ${variableName})
-      if("${${variableName}}" STREQUAL "")
+      if(variableName STREQUAL "LLVM_ENABLE_PROJECTS")
+        # Forward only requested roots; the next stage re-adds dependencies.
+        set(llvm_enable_projects "${LLVM_ENABLE_PROJECTS}")
+        if(DEFINED LLVM_REQUESTED_PROJECTS)
+          set(llvm_enable_projects "${LLVM_REQUESTED_PROJECTS}")
+        endif()
+        string(REPLACE ";" "|" value "${llvm_enable_projects}")
+        unset(llvm_enable_projects)
+      elseif("${${variableName}}" STREQUAL "")
         set(value "")
       else()
         string(REPLACE ";" "|" value "${${variableName}}")

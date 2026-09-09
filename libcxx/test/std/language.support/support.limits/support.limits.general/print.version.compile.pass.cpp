@@ -59,7 +59,7 @@
 #    endif
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
 #    ifndef __cpp_lib_print
@@ -74,6 +74,21 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#    ifndef __cpp_lib_print
+#      error "__cpp_lib_print should be defined in c++29"
+#    endif
+#    if __cpp_lib_print != 202207L
+#      error "__cpp_lib_print should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_print
+#      error "__cpp_lib_print should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

@@ -22,9 +22,9 @@
 // CHECK-SAME: %[[CRD:.*]]: memref<3xi32>,
 // CHECK-SAME: %[[POS:.*]]: memref<11xi32>,
 // CHECK-SAME: %[[VAL:.*]]: memref<3xf64>)
-// CHECK:      %[[ALLOC2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<11xi32>
+// CHECK:      %[[ALLOC2:.*]] = memref.alloc() alignment = 64 : memref<11xi32>
 // CHECK:      memref.copy %[[POS]], %[[ALLOC2]] : memref<11xi32> to memref<11xi32>
-// CHECK:      %[[ALLOC1:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3xf64>
+// CHECK:      %[[ALLOC1:.*]] = memref.alloc() alignment = 64 : memref<3xf64>
 // CHECK:      memref.copy %[[VAL]], %[[ALLOC1]] : memref<3xf64> to memref<3xf64>
 // CHECK-NOT:  memref.copy
 // CHECK:      return

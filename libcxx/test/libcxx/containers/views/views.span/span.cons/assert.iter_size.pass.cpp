@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
@@ -14,10 +15,6 @@
 // Check that the passed size is equal to the statically known extent.
 // Note that it doesn't make sense to validate the incoming size in the
 // dynamic_extent version.
-
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <array>
 #include <span>

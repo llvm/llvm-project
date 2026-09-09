@@ -91,7 +91,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // expected-note @below {{invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them}}
-  %func, %call = transform.loop.outline %outline_target {func_name = "outlined"}
+  %func, %call = transform.loop.outline %outline_target func_name = "outlined"
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
 
   // expected-error @below {{uses a handle invalidated by a previously executed transform op}}

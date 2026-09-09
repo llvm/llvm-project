@@ -198,7 +198,7 @@ llvm.func @active_lane_intr_wrong_type(%base : i64, %n : vector<7xi64>) -> vecto
 
 llvm.func @masked_load_intr_wrong_type(%ptr : i64, %mask : vector<7xi1>) -> vector<7xf32> {
   // expected-error @below{{op operand #0 must be LLVM pointer type, but got 'i64'}}
-  %0 = llvm.intr.masked.load %ptr, %mask { alignment = 1: i32} : (i64, vector<7xi1>) -> vector<7xf32>
+  %0 = llvm.intr.masked.load %ptr, %mask { alignment = 1: i64} : (i64, vector<7xi1>) -> vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
 
@@ -206,7 +206,7 @@ llvm.func @masked_load_intr_wrong_type(%ptr : i64, %mask : vector<7xi1>) -> vect
 
 llvm.func @masked_store_intr_wrong_type(%vec : vector<7xf32>, %ptr : !llvm.ptr, %mask : vector<7xi32>) {
   // expected-error @below{{op operand #2 must be LLVM dialect-compatible vector of 1-bit signless integer, but got 'vector<7xi32>}}
-  llvm.intr.masked.store %vec, %ptr, %mask { alignment = 1: i32} : vector<7xf32>, vector<7xi32> into !llvm.ptr
+  llvm.intr.masked.store %vec, %ptr, %mask { alignment = 1: i64} : vector<7xf32>, vector<7xi32> into !llvm.ptr
   llvm.return
 }
 
@@ -214,7 +214,7 @@ llvm.func @masked_store_intr_wrong_type(%vec : vector<7xf32>, %ptr : !llvm.ptr, 
 
 llvm.func @masked_gather_intr_wrong_type(%ptrs : vector<7xf32>, %mask : vector<7xi1>) -> vector<7xf32> {
   // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector of LLVM pointer type, but got 'vector<7xf32>'}}
-  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i32} : (vector<7xf32>, vector<7xi1>) -> vector<7xf32>
+  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i64} : (vector<7xf32>, vector<7xi1>) -> vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
 
@@ -222,7 +222,7 @@ llvm.func @masked_gather_intr_wrong_type(%ptrs : vector<7xf32>, %mask : vector<7
 
 llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : vector<7x!llvm.ptr>, %mask : vector<[7]xi1>) -> vector<[7]xf32> {
   // expected-error @below{{expected operand #1 type to be 'vector<[7]x!llvm.ptr>'}}
-  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i32} : (vector<7x!llvm.ptr>, vector<[7]xi1>) -> vector<[7]xf32>
+  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i64} : (vector<7x!llvm.ptr>, vector<[7]xi1>) -> vector<[7]xf32>
   llvm.return %0 : vector<[7]xf32>
 }
 
@@ -230,7 +230,7 @@ llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : vector<7x!llvm.ptr>, %
 
 llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : vector<7x!llvm.ptr>, %mask : vector<7xi1>) {
   // expected-error @below{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
-  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : f32, vector<7xi1> into vector<7x!llvm.ptr>
+  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i64} : f32, vector<7xi1> into vector<7x!llvm.ptr>
   llvm.return
 }
 
@@ -238,7 +238,7 @@ llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : vector<7x!llvm.ptr
 
 llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs : vector<7x!llvm.ptr>, %mask : vector<[7]xi1>) {
   // expected-error @below{{expected operand #2 type to be 'vector<[7]x!llvm.ptr>'}}
-  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : vector<[7]xf32>, vector<[7]xi1> into vector<7x!llvm.ptr>
+  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i64} : vector<[7]xf32>, vector<[7]xi1> into vector<7x!llvm.ptr>
   llvm.return
 }
 
@@ -301,6 +301,23 @@ llvm.func @foo() {
 module attributes {} {
   // expected-error @below{{expected a module flag attribute}}
   llvm.module_flags [4 : i32]
+}
+
+// -----
+
+// expected-error @below{{failed to convert named metadata 'bad': expected integer attribute in metadata constant}}
+// expected-error @below{{LLVM Translation failed for operation: llvm.named_metadata}}
+llvm.named_metadata "bad" [
+  #llvm.md_node<#llvm.md_const<"not an integer">>
+]
+
+// -----
+
+llvm.func @bad_metadata_as_value() {
+  // expected-error @below{{llvm.mlir.metadata_as_value: cannot lower metadata attribute: expected integer attribute in metadata constant}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.mlir.metadata_as_value}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_const<"not an integer">>
+  llvm.return
 }
 
 // -----

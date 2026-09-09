@@ -15783,62 +15783,62 @@ define inreg <52 x i16> @bitcast_v26f32_to_v52i16_scalar(<26 x float> inreg %a, 
 ; GFX9-NEXT:    v_mov_b32_e32 v27, s43
 ; GFX9-NEXT:    v_mov_b32_e32 v26, s42
 ; GFX9-NEXT:  .LBB29_6: ; %end
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX9-NEXT:    v_lshl_or_b32 v0, v43, 16, v0
-; GFX9-NEXT:    v_lshl_or_b32 v1, v42, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v2, v41, 16, v2
-; GFX9-NEXT:    v_lshl_or_b32 v3, v40, 16, v3
+; GFX9-NEXT:    v_lshlrev_b32_e32 v43, 16, v43
+; GFX9-NEXT:    v_lshlrev_b32_e32 v42, 16, v42
+; GFX9-NEXT:    v_lshlrev_b32_e32 v41, 16, v41
+; GFX9-NEXT:    v_lshlrev_b32_e32 v40, 16, v40
+; GFX9-NEXT:    v_or_b32_sdwa v0, v43, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v1, v42, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v2, v41, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v3, v40, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX9-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX9-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX9-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX9-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX9-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX9-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX9-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; GFX9-NEXT:    v_and_b32_e32 v14, 0xffff, v14
-; GFX9-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GFX9-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX9-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GFX9-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX9-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX9-NEXT:    v_and_b32_e32 v21, 0xffff, v21
-; GFX9-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX9-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX9-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX9-NEXT:    v_and_b32_e32 v25, 0xffff, v25
-; GFX9-NEXT:    v_lshl_or_b32 v4, v55, 16, v4
-; GFX9-NEXT:    v_lshl_or_b32 v5, v54, 16, v5
-; GFX9-NEXT:    v_lshl_or_b32 v6, v53, 16, v6
-; GFX9-NEXT:    v_lshl_or_b32 v7, v52, 16, v7
-; GFX9-NEXT:    v_lshl_or_b32 v8, v51, 16, v8
-; GFX9-NEXT:    v_lshl_or_b32 v9, v50, 16, v9
-; GFX9-NEXT:    v_lshl_or_b32 v10, v49, 16, v10
-; GFX9-NEXT:    v_lshl_or_b32 v11, v48, 16, v11
-; GFX9-NEXT:    v_lshl_or_b32 v12, v39, 16, v12
-; GFX9-NEXT:    v_lshl_or_b32 v13, v38, 16, v13
-; GFX9-NEXT:    v_lshl_or_b32 v14, v37, 16, v14
-; GFX9-NEXT:    v_lshl_or_b32 v15, v36, 16, v15
-; GFX9-NEXT:    v_lshl_or_b32 v16, v35, 16, v16
-; GFX9-NEXT:    v_lshl_or_b32 v17, v34, 16, v17
-; GFX9-NEXT:    v_lshl_or_b32 v18, v33, 16, v18
-; GFX9-NEXT:    v_lshl_or_b32 v19, v32, 16, v19
-; GFX9-NEXT:    v_lshl_or_b32 v20, v31, 16, v20
-; GFX9-NEXT:    v_lshl_or_b32 v21, v30, 16, v21
-; GFX9-NEXT:    v_lshl_or_b32 v22, v29, 16, v22
-; GFX9-NEXT:    v_lshl_or_b32 v23, v28, 16, v23
-; GFX9-NEXT:    v_lshl_or_b32 v24, v27, 16, v24
-; GFX9-NEXT:    v_lshl_or_b32 v25, v26, 16, v25
+; GFX9-NEXT:    v_lshlrev_b32_e32 v55, 16, v55
+; GFX9-NEXT:    v_lshlrev_b32_e32 v54, 16, v54
+; GFX9-NEXT:    v_lshlrev_b32_e32 v53, 16, v53
+; GFX9-NEXT:    v_lshlrev_b32_e32 v52, 16, v52
+; GFX9-NEXT:    v_lshlrev_b32_e32 v51, 16, v51
+; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v50
+; GFX9-NEXT:    v_lshlrev_b32_e32 v49, 16, v49
+; GFX9-NEXT:    v_lshlrev_b32_e32 v48, 16, v48
+; GFX9-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
+; GFX9-NEXT:    v_lshlrev_b32_e32 v38, 16, v38
+; GFX9-NEXT:    v_lshlrev_b32_e32 v37, 16, v37
+; GFX9-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
+; GFX9-NEXT:    v_lshlrev_b32_e32 v35, 16, v35
+; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v34
+; GFX9-NEXT:    v_lshlrev_b32_e32 v33, 16, v33
+; GFX9-NEXT:    v_lshlrev_b32_e32 v32, 16, v32
+; GFX9-NEXT:    v_lshlrev_b32_e32 v31, 16, v31
+; GFX9-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
+; GFX9-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; GFX9-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; GFX9-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
+; GFX9-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; GFX9-NEXT:    v_or_b32_sdwa v4, v55, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v5, v54, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v6, v53, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v7, v52, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v8, v51, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v9, v50, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v10, v49, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v11, v48, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v12, v39, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v13, v38, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v14, v37, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v15, v36, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v16, v35, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v17, v34, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v18, v33, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v19, v32, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v20, v31, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v21, v30, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v22, v29, v22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v23, v28, v23 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v24, v27, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v25, v26, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -20135,62 +20135,62 @@ define inreg <52 x half> @bitcast_v26f32_to_v52f16_scalar(<26 x float> inreg %a,
 ; GFX9-NEXT:    v_mov_b32_e32 v27, s43
 ; GFX9-NEXT:    v_mov_b32_e32 v26, s42
 ; GFX9-NEXT:  .LBB33_6: ; %end
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX9-NEXT:    v_lshl_or_b32 v0, v43, 16, v0
-; GFX9-NEXT:    v_lshl_or_b32 v1, v42, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v2, v41, 16, v2
-; GFX9-NEXT:    v_lshl_or_b32 v3, v40, 16, v3
+; GFX9-NEXT:    v_lshlrev_b32_e32 v43, 16, v43
+; GFX9-NEXT:    v_lshlrev_b32_e32 v42, 16, v42
+; GFX9-NEXT:    v_lshlrev_b32_e32 v41, 16, v41
+; GFX9-NEXT:    v_lshlrev_b32_e32 v40, 16, v40
+; GFX9-NEXT:    v_or_b32_sdwa v0, v43, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v1, v42, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v2, v41, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v3, v40, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX9-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX9-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX9-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX9-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX9-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX9-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX9-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; GFX9-NEXT:    v_and_b32_e32 v14, 0xffff, v14
-; GFX9-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GFX9-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX9-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GFX9-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX9-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX9-NEXT:    v_and_b32_e32 v21, 0xffff, v21
-; GFX9-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX9-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX9-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX9-NEXT:    v_and_b32_e32 v25, 0xffff, v25
-; GFX9-NEXT:    v_lshl_or_b32 v4, v55, 16, v4
-; GFX9-NEXT:    v_lshl_or_b32 v5, v54, 16, v5
-; GFX9-NEXT:    v_lshl_or_b32 v6, v53, 16, v6
-; GFX9-NEXT:    v_lshl_or_b32 v7, v52, 16, v7
-; GFX9-NEXT:    v_lshl_or_b32 v8, v51, 16, v8
-; GFX9-NEXT:    v_lshl_or_b32 v9, v50, 16, v9
-; GFX9-NEXT:    v_lshl_or_b32 v10, v49, 16, v10
-; GFX9-NEXT:    v_lshl_or_b32 v11, v48, 16, v11
-; GFX9-NEXT:    v_lshl_or_b32 v12, v39, 16, v12
-; GFX9-NEXT:    v_lshl_or_b32 v13, v38, 16, v13
-; GFX9-NEXT:    v_lshl_or_b32 v14, v37, 16, v14
-; GFX9-NEXT:    v_lshl_or_b32 v15, v36, 16, v15
-; GFX9-NEXT:    v_lshl_or_b32 v16, v35, 16, v16
-; GFX9-NEXT:    v_lshl_or_b32 v17, v34, 16, v17
-; GFX9-NEXT:    v_lshl_or_b32 v18, v33, 16, v18
-; GFX9-NEXT:    v_lshl_or_b32 v19, v32, 16, v19
-; GFX9-NEXT:    v_lshl_or_b32 v20, v31, 16, v20
-; GFX9-NEXT:    v_lshl_or_b32 v21, v30, 16, v21
-; GFX9-NEXT:    v_lshl_or_b32 v22, v29, 16, v22
-; GFX9-NEXT:    v_lshl_or_b32 v23, v28, 16, v23
-; GFX9-NEXT:    v_lshl_or_b32 v24, v27, 16, v24
-; GFX9-NEXT:    v_lshl_or_b32 v25, v26, 16, v25
+; GFX9-NEXT:    v_lshlrev_b32_e32 v55, 16, v55
+; GFX9-NEXT:    v_lshlrev_b32_e32 v54, 16, v54
+; GFX9-NEXT:    v_lshlrev_b32_e32 v53, 16, v53
+; GFX9-NEXT:    v_lshlrev_b32_e32 v52, 16, v52
+; GFX9-NEXT:    v_lshlrev_b32_e32 v51, 16, v51
+; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v50
+; GFX9-NEXT:    v_lshlrev_b32_e32 v49, 16, v49
+; GFX9-NEXT:    v_lshlrev_b32_e32 v48, 16, v48
+; GFX9-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
+; GFX9-NEXT:    v_lshlrev_b32_e32 v38, 16, v38
+; GFX9-NEXT:    v_lshlrev_b32_e32 v37, 16, v37
+; GFX9-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
+; GFX9-NEXT:    v_lshlrev_b32_e32 v35, 16, v35
+; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v34
+; GFX9-NEXT:    v_lshlrev_b32_e32 v33, 16, v33
+; GFX9-NEXT:    v_lshlrev_b32_e32 v32, 16, v32
+; GFX9-NEXT:    v_lshlrev_b32_e32 v31, 16, v31
+; GFX9-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
+; GFX9-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; GFX9-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; GFX9-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
+; GFX9-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; GFX9-NEXT:    v_or_b32_sdwa v4, v55, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v5, v54, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v6, v53, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v7, v52, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v8, v51, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v9, v50, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v10, v49, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v11, v48, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v12, v39, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v13, v38, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v14, v37, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v15, v36, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v16, v35, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v17, v34, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v18, v33, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v19, v32, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v20, v31, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v21, v30, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v22, v29, v22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v23, v28, v23 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v24, v27, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v25, v26, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -34022,62 +34022,62 @@ define inreg <52 x i16> @bitcast_v13f64_to_v52i16_scalar(<13 x double> inreg %a,
 ; GFX9-NEXT:    v_mov_b32_e32 v31, s43
 ; GFX9-NEXT:    v_mov_b32_e32 v28, s42
 ; GFX9-NEXT:  .LBB49_6: ; %end
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX9-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX9-NEXT:    v_lshl_or_b32 v0, v40, 16, v0
-; GFX9-NEXT:    v_lshl_or_b32 v1, v43, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v3, v42, 16, v3
-; GFX9-NEXT:    v_lshl_or_b32 v5, v41, 16, v5
+; GFX9-NEXT:    v_lshlrev_b32_e32 v40, 16, v40
+; GFX9-NEXT:    v_or_b32_sdwa v0, v40, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v40, 16, v43
+; GFX9-NEXT:    v_lshlrev_b32_e32 v54, 16, v54
+; GFX9-NEXT:    v_lshlrev_b32_e32 v52, 16, v52
+; GFX9-NEXT:    v_or_b32_sdwa v1, v40, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v2, v54, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v54, 16, v42
+; GFX9-NEXT:    v_or_b32_sdwa v4, v52, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v52, 16, v41
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX9-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX9-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX9-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX9-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX9-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX9-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; GFX9-NEXT:    v_and_b32_e32 v14, 0xffff, v14
-; GFX9-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GFX9-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX9-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GFX9-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX9-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX9-NEXT:    v_and_b32_e32 v21, 0xffff, v21
-; GFX9-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX9-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX9-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX9-NEXT:    v_and_b32_e32 v25, 0xffff, v25
-; GFX9-NEXT:    v_lshl_or_b32 v2, v54, 16, v2
-; GFX9-NEXT:    v_lshl_or_b32 v4, v52, 16, v4
-; GFX9-NEXT:    v_lshl_or_b32 v6, v50, 16, v6
-; GFX9-NEXT:    v_lshl_or_b32 v7, v55, 16, v7
-; GFX9-NEXT:    v_lshl_or_b32 v8, v48, 16, v8
-; GFX9-NEXT:    v_lshl_or_b32 v9, v53, 16, v9
-; GFX9-NEXT:    v_lshl_or_b32 v10, v38, 16, v10
-; GFX9-NEXT:    v_lshl_or_b32 v11, v51, 16, v11
-; GFX9-NEXT:    v_lshl_or_b32 v12, v36, 16, v12
-; GFX9-NEXT:    v_lshl_or_b32 v13, v49, 16, v13
-; GFX9-NEXT:    v_lshl_or_b32 v14, v34, 16, v14
-; GFX9-NEXT:    v_lshl_or_b32 v15, v39, 16, v15
-; GFX9-NEXT:    v_lshl_or_b32 v16, v32, 16, v16
-; GFX9-NEXT:    v_lshl_or_b32 v17, v37, 16, v17
-; GFX9-NEXT:    v_lshl_or_b32 v18, v30, 16, v18
-; GFX9-NEXT:    v_lshl_or_b32 v19, v35, 16, v19
-; GFX9-NEXT:    v_lshl_or_b32 v20, v29, 16, v20
-; GFX9-NEXT:    v_lshl_or_b32 v21, v33, 16, v21
-; GFX9-NEXT:    v_lshl_or_b32 v22, v27, 16, v22
-; GFX9-NEXT:    v_lshl_or_b32 v23, v31, 16, v23
-; GFX9-NEXT:    v_lshl_or_b32 v24, v26, 16, v24
-; GFX9-NEXT:    v_lshl_or_b32 v25, v28, 16, v25
+; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v50
+; GFX9-NEXT:    v_lshlrev_b32_e32 v48, 16, v48
+; GFX9-NEXT:    v_lshlrev_b32_e32 v38, 16, v38
+; GFX9-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
+; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v34
+; GFX9-NEXT:    v_lshlrev_b32_e32 v32, 16, v32
+; GFX9-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
+; GFX9-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; GFX9-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
+; GFX9-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; GFX9-NEXT:    v_or_b32_sdwa v6, v50, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v55
+; GFX9-NEXT:    v_or_b32_sdwa v8, v48, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v48, 16, v53
+; GFX9-NEXT:    v_or_b32_sdwa v10, v38, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v38, 16, v51
+; GFX9-NEXT:    v_or_b32_sdwa v12, v36, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v36, 16, v49
+; GFX9-NEXT:    v_or_b32_sdwa v14, v34, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v39
+; GFX9-NEXT:    v_or_b32_sdwa v16, v32, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v32, 16, v37
+; GFX9-NEXT:    v_or_b32_sdwa v18, v30, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v30, 16, v35
+; GFX9-NEXT:    v_or_b32_sdwa v20, v29, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v29, 16, v33
+; GFX9-NEXT:    v_or_b32_sdwa v22, v27, v22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v27, 16, v31
+; GFX9-NEXT:    v_or_b32_sdwa v24, v26, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v26, 16, v28
+; GFX9-NEXT:    v_or_b32_sdwa v3, v54, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v5, v52, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v7, v50, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v9, v48, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v11, v38, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v13, v36, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v15, v34, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v17, v32, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v19, v30, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v21, v29, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v23, v27, v23 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v25, v26, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -38274,62 +38274,62 @@ define inreg <52 x half> @bitcast_v13f64_to_v52f16_scalar(<13 x double> inreg %a
 ; GFX9-NEXT:    v_mov_b32_e32 v31, s43
 ; GFX9-NEXT:    v_mov_b32_e32 v28, s42
 ; GFX9-NEXT:  .LBB53_6: ; %end
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX9-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX9-NEXT:    v_lshl_or_b32 v0, v40, 16, v0
-; GFX9-NEXT:    v_lshl_or_b32 v1, v43, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v3, v42, 16, v3
-; GFX9-NEXT:    v_lshl_or_b32 v5, v41, 16, v5
+; GFX9-NEXT:    v_lshlrev_b32_e32 v40, 16, v40
+; GFX9-NEXT:    v_or_b32_sdwa v0, v40, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v40, 16, v43
+; GFX9-NEXT:    v_lshlrev_b32_e32 v54, 16, v54
+; GFX9-NEXT:    v_lshlrev_b32_e32 v52, 16, v52
+; GFX9-NEXT:    v_or_b32_sdwa v1, v40, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v2, v54, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v54, 16, v42
+; GFX9-NEXT:    v_or_b32_sdwa v4, v52, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v52, 16, v41
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX9-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX9-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX9-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX9-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX9-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX9-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; GFX9-NEXT:    v_and_b32_e32 v14, 0xffff, v14
-; GFX9-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GFX9-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX9-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GFX9-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX9-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX9-NEXT:    v_and_b32_e32 v21, 0xffff, v21
-; GFX9-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX9-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX9-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX9-NEXT:    v_and_b32_e32 v25, 0xffff, v25
-; GFX9-NEXT:    v_lshl_or_b32 v2, v54, 16, v2
-; GFX9-NEXT:    v_lshl_or_b32 v4, v52, 16, v4
-; GFX9-NEXT:    v_lshl_or_b32 v6, v50, 16, v6
-; GFX9-NEXT:    v_lshl_or_b32 v7, v55, 16, v7
-; GFX9-NEXT:    v_lshl_or_b32 v8, v48, 16, v8
-; GFX9-NEXT:    v_lshl_or_b32 v9, v53, 16, v9
-; GFX9-NEXT:    v_lshl_or_b32 v10, v38, 16, v10
-; GFX9-NEXT:    v_lshl_or_b32 v11, v51, 16, v11
-; GFX9-NEXT:    v_lshl_or_b32 v12, v36, 16, v12
-; GFX9-NEXT:    v_lshl_or_b32 v13, v49, 16, v13
-; GFX9-NEXT:    v_lshl_or_b32 v14, v34, 16, v14
-; GFX9-NEXT:    v_lshl_or_b32 v15, v39, 16, v15
-; GFX9-NEXT:    v_lshl_or_b32 v16, v32, 16, v16
-; GFX9-NEXT:    v_lshl_or_b32 v17, v37, 16, v17
-; GFX9-NEXT:    v_lshl_or_b32 v18, v30, 16, v18
-; GFX9-NEXT:    v_lshl_or_b32 v19, v35, 16, v19
-; GFX9-NEXT:    v_lshl_or_b32 v20, v29, 16, v20
-; GFX9-NEXT:    v_lshl_or_b32 v21, v33, 16, v21
-; GFX9-NEXT:    v_lshl_or_b32 v22, v27, 16, v22
-; GFX9-NEXT:    v_lshl_or_b32 v23, v31, 16, v23
-; GFX9-NEXT:    v_lshl_or_b32 v24, v26, 16, v24
-; GFX9-NEXT:    v_lshl_or_b32 v25, v28, 16, v25
+; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v50
+; GFX9-NEXT:    v_lshlrev_b32_e32 v48, 16, v48
+; GFX9-NEXT:    v_lshlrev_b32_e32 v38, 16, v38
+; GFX9-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
+; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v34
+; GFX9-NEXT:    v_lshlrev_b32_e32 v32, 16, v32
+; GFX9-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
+; GFX9-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; GFX9-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
+; GFX9-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; GFX9-NEXT:    v_or_b32_sdwa v6, v50, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v55
+; GFX9-NEXT:    v_or_b32_sdwa v8, v48, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v48, 16, v53
+; GFX9-NEXT:    v_or_b32_sdwa v10, v38, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v38, 16, v51
+; GFX9-NEXT:    v_or_b32_sdwa v12, v36, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v36, 16, v49
+; GFX9-NEXT:    v_or_b32_sdwa v14, v34, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v39
+; GFX9-NEXT:    v_or_b32_sdwa v16, v32, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v32, 16, v37
+; GFX9-NEXT:    v_or_b32_sdwa v18, v30, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v30, 16, v35
+; GFX9-NEXT:    v_or_b32_sdwa v20, v29, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v29, 16, v33
+; GFX9-NEXT:    v_or_b32_sdwa v22, v27, v22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v27, 16, v31
+; GFX9-NEXT:    v_or_b32_sdwa v24, v26, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v26, 16, v28
+; GFX9-NEXT:    v_or_b32_sdwa v3, v54, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v5, v52, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v7, v50, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v9, v48, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v11, v38, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v13, v36, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v15, v34, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v17, v32, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v19, v30, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v21, v29, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v23, v27, v23 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v25, v26, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -43486,62 +43486,62 @@ define inreg <52 x half> @bitcast_v52i16_to_v52f16_scalar(<52 x i16> inreg %a, i
 ; GFX9-NEXT:    v_mov_b32_e32 v42, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v43, s6
 ; GFX9-NEXT:  .LBB57_6: ; %end
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX9-NEXT:    v_lshl_or_b32 v0, v43, 16, v0
-; GFX9-NEXT:    v_lshl_or_b32 v1, v42, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v2, v41, 16, v2
-; GFX9-NEXT:    v_lshl_or_b32 v3, v40, 16, v3
+; GFX9-NEXT:    v_lshlrev_b32_e32 v43, 16, v43
+; GFX9-NEXT:    v_lshlrev_b32_e32 v42, 16, v42
+; GFX9-NEXT:    v_lshlrev_b32_e32 v41, 16, v41
+; GFX9-NEXT:    v_lshlrev_b32_e32 v40, 16, v40
+; GFX9-NEXT:    v_or_b32_sdwa v0, v43, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v1, v42, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v2, v41, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v3, v40, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX9-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX9-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX9-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX9-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX9-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX9-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX9-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; GFX9-NEXT:    v_and_b32_e32 v14, 0xffff, v14
-; GFX9-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GFX9-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX9-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GFX9-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX9-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX9-NEXT:    v_and_b32_e32 v21, 0xffff, v21
-; GFX9-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX9-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX9-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX9-NEXT:    v_and_b32_e32 v25, 0xffff, v25
-; GFX9-NEXT:    v_lshl_or_b32 v4, v55, 16, v4
-; GFX9-NEXT:    v_lshl_or_b32 v5, v54, 16, v5
-; GFX9-NEXT:    v_lshl_or_b32 v6, v53, 16, v6
-; GFX9-NEXT:    v_lshl_or_b32 v7, v52, 16, v7
-; GFX9-NEXT:    v_lshl_or_b32 v8, v51, 16, v8
-; GFX9-NEXT:    v_lshl_or_b32 v9, v50, 16, v9
-; GFX9-NEXT:    v_lshl_or_b32 v10, v49, 16, v10
-; GFX9-NEXT:    v_lshl_or_b32 v11, v48, 16, v11
-; GFX9-NEXT:    v_lshl_or_b32 v12, v39, 16, v12
-; GFX9-NEXT:    v_lshl_or_b32 v13, v38, 16, v13
-; GFX9-NEXT:    v_lshl_or_b32 v14, v37, 16, v14
-; GFX9-NEXT:    v_lshl_or_b32 v15, v36, 16, v15
-; GFX9-NEXT:    v_lshl_or_b32 v16, v35, 16, v16
-; GFX9-NEXT:    v_lshl_or_b32 v17, v34, 16, v17
-; GFX9-NEXT:    v_lshl_or_b32 v18, v33, 16, v18
-; GFX9-NEXT:    v_lshl_or_b32 v19, v32, 16, v19
-; GFX9-NEXT:    v_lshl_or_b32 v20, v31, 16, v20
-; GFX9-NEXT:    v_lshl_or_b32 v21, v30, 16, v21
-; GFX9-NEXT:    v_lshl_or_b32 v22, v29, 16, v22
-; GFX9-NEXT:    v_lshl_or_b32 v23, v28, 16, v23
-; GFX9-NEXT:    v_lshl_or_b32 v24, v27, 16, v24
-; GFX9-NEXT:    v_lshl_or_b32 v25, v26, 16, v25
+; GFX9-NEXT:    v_lshlrev_b32_e32 v55, 16, v55
+; GFX9-NEXT:    v_lshlrev_b32_e32 v54, 16, v54
+; GFX9-NEXT:    v_lshlrev_b32_e32 v53, 16, v53
+; GFX9-NEXT:    v_lshlrev_b32_e32 v52, 16, v52
+; GFX9-NEXT:    v_lshlrev_b32_e32 v51, 16, v51
+; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v50
+; GFX9-NEXT:    v_lshlrev_b32_e32 v49, 16, v49
+; GFX9-NEXT:    v_lshlrev_b32_e32 v48, 16, v48
+; GFX9-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
+; GFX9-NEXT:    v_lshlrev_b32_e32 v38, 16, v38
+; GFX9-NEXT:    v_lshlrev_b32_e32 v37, 16, v37
+; GFX9-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
+; GFX9-NEXT:    v_lshlrev_b32_e32 v35, 16, v35
+; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v34
+; GFX9-NEXT:    v_lshlrev_b32_e32 v33, 16, v33
+; GFX9-NEXT:    v_lshlrev_b32_e32 v32, 16, v32
+; GFX9-NEXT:    v_lshlrev_b32_e32 v31, 16, v31
+; GFX9-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
+; GFX9-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; GFX9-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; GFX9-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
+; GFX9-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; GFX9-NEXT:    v_or_b32_sdwa v4, v55, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v5, v54, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v6, v53, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v7, v52, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v8, v51, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v9, v50, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v10, v49, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v11, v48, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v12, v39, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v13, v38, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v14, v37, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v15, v36, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v16, v35, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v17, v34, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v18, v33, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v19, v32, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v20, v31, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v21, v30, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v22, v29, v22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v23, v28, v23 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v24, v27, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v25, v26, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -45825,62 +45825,62 @@ define inreg <52 x i16> @bitcast_v52f16_to_v52i16_scalar(<52 x half> inreg %a, i
 ; GFX9-NEXT:    v_mov_b32_e32 v42, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v43, s6
 ; GFX9-NEXT:  .LBB59_6: ; %end
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX9-NEXT:    v_lshl_or_b32 v0, v43, 16, v0
-; GFX9-NEXT:    v_lshl_or_b32 v1, v42, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v2, v41, 16, v2
-; GFX9-NEXT:    v_lshl_or_b32 v3, v40, 16, v3
+; GFX9-NEXT:    v_lshlrev_b32_e32 v43, 16, v43
+; GFX9-NEXT:    v_lshlrev_b32_e32 v42, 16, v42
+; GFX9-NEXT:    v_lshlrev_b32_e32 v41, 16, v41
+; GFX9-NEXT:    v_lshlrev_b32_e32 v40, 16, v40
+; GFX9-NEXT:    v_or_b32_sdwa v0, v43, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v1, v42, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v2, v41, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v3, v40, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX9-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX9-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX9-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX9-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX9-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX9-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX9-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; GFX9-NEXT:    v_and_b32_e32 v14, 0xffff, v14
-; GFX9-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GFX9-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX9-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GFX9-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX9-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX9-NEXT:    v_and_b32_e32 v21, 0xffff, v21
-; GFX9-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX9-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX9-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX9-NEXT:    v_and_b32_e32 v25, 0xffff, v25
-; GFX9-NEXT:    v_lshl_or_b32 v4, v55, 16, v4
-; GFX9-NEXT:    v_lshl_or_b32 v5, v54, 16, v5
-; GFX9-NEXT:    v_lshl_or_b32 v6, v53, 16, v6
-; GFX9-NEXT:    v_lshl_or_b32 v7, v52, 16, v7
-; GFX9-NEXT:    v_lshl_or_b32 v8, v51, 16, v8
-; GFX9-NEXT:    v_lshl_or_b32 v9, v50, 16, v9
-; GFX9-NEXT:    v_lshl_or_b32 v10, v49, 16, v10
-; GFX9-NEXT:    v_lshl_or_b32 v11, v48, 16, v11
-; GFX9-NEXT:    v_lshl_or_b32 v12, v39, 16, v12
-; GFX9-NEXT:    v_lshl_or_b32 v13, v38, 16, v13
-; GFX9-NEXT:    v_lshl_or_b32 v14, v37, 16, v14
-; GFX9-NEXT:    v_lshl_or_b32 v15, v36, 16, v15
-; GFX9-NEXT:    v_lshl_or_b32 v16, v35, 16, v16
-; GFX9-NEXT:    v_lshl_or_b32 v17, v34, 16, v17
-; GFX9-NEXT:    v_lshl_or_b32 v18, v33, 16, v18
-; GFX9-NEXT:    v_lshl_or_b32 v19, v32, 16, v19
-; GFX9-NEXT:    v_lshl_or_b32 v20, v31, 16, v20
-; GFX9-NEXT:    v_lshl_or_b32 v21, v30, 16, v21
-; GFX9-NEXT:    v_lshl_or_b32 v22, v29, 16, v22
-; GFX9-NEXT:    v_lshl_or_b32 v23, v28, 16, v23
-; GFX9-NEXT:    v_lshl_or_b32 v24, v27, 16, v24
-; GFX9-NEXT:    v_lshl_or_b32 v25, v26, 16, v25
+; GFX9-NEXT:    v_lshlrev_b32_e32 v55, 16, v55
+; GFX9-NEXT:    v_lshlrev_b32_e32 v54, 16, v54
+; GFX9-NEXT:    v_lshlrev_b32_e32 v53, 16, v53
+; GFX9-NEXT:    v_lshlrev_b32_e32 v52, 16, v52
+; GFX9-NEXT:    v_lshlrev_b32_e32 v51, 16, v51
+; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v50
+; GFX9-NEXT:    v_lshlrev_b32_e32 v49, 16, v49
+; GFX9-NEXT:    v_lshlrev_b32_e32 v48, 16, v48
+; GFX9-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
+; GFX9-NEXT:    v_lshlrev_b32_e32 v38, 16, v38
+; GFX9-NEXT:    v_lshlrev_b32_e32 v37, 16, v37
+; GFX9-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
+; GFX9-NEXT:    v_lshlrev_b32_e32 v35, 16, v35
+; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v34
+; GFX9-NEXT:    v_lshlrev_b32_e32 v33, 16, v33
+; GFX9-NEXT:    v_lshlrev_b32_e32 v32, 16, v32
+; GFX9-NEXT:    v_lshlrev_b32_e32 v31, 16, v31
+; GFX9-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
+; GFX9-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; GFX9-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; GFX9-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
+; GFX9-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; GFX9-NEXT:    v_or_b32_sdwa v4, v55, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v5, v54, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v6, v53, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v7, v52, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v8, v51, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v9, v50, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v10, v49, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v11, v48, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v12, v39, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v13, v38, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v14, v37, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v15, v36, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v16, v35, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v17, v34, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v18, v33, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v19, v32, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v20, v31, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v21, v30, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v22, v29, v22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v23, v28, v23 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v24, v27, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v25, v26, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

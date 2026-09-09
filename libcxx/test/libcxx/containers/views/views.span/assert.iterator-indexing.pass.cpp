@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // Make sure that std::span's iterators check for OOB accesses when the debug mode is enabled.
 
-// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators
-// UNSUPPORTED: libcpp-hardening-mode=none
+// REQUIRES: libcpp-has-abi-bounded-iterators
 
 #include <span>
 

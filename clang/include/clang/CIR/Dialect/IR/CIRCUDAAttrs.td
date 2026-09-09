@@ -68,15 +68,14 @@ def CIR_CUDABinaryHandleAttr : CIR_Attr<
   let assemblyFormat = "`<` $name `>`";
 }
 
-// Enum for device variable kinds
-def CIR_CUDADeviceVarKind : I32EnumAttr<"CUDADeviceVarKind",
+// No wrapper attribute: the kind is only ever printed by
+// CIR_CUDAVarRegistrationInfoAttr's own assembly format.
+def CIR_CUDADeviceVarKind : CIR_I32Enum<"CUDADeviceVarKind",
     "CUDA device variable kind", [
-  I32EnumAttrCase<"Variable", 0>,
-  I32EnumAttrCase<"Surface", 1>,   // Future
-  I32EnumAttrCase<"Texture", 2>,   // Future
-]> {
-  let cppNamespace = "::cir";
-}
+  I32EnumCase<"Variable", 0>,
+  I32EnumCase<"Surface", 1>,   // Future
+  I32EnumCase<"Texture", 2>,   // Future
+]>;
 
 // Attribute carrying device variable registration flags
 def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.var_registration"> {

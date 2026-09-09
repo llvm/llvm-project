@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld -z nosort-thunks %t --shared -o %t.so
+// RUN: ld.lld %t --shared -o %t.so
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s
  .syntax unified
  .global sym1
@@ -19,17 +19,17 @@ sym1:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <sym1>:
-// CHECK-NEXT:    101e0: b.w 0x101f0 <__ThumbV7PILongThunk_elsewhere>
-// CHECK-NEXT:           b.w 0x101fc <__ThumbV7PILongThunk_weakref>
+// CHECK-NEXT:    101e0: b.w 0x101fc <__ThumbV7PILongThunk_elsewhere>
+// CHECK-NEXT:           b.w 0x101f0 <__ThumbV7PILongThunk_weakref>
 // CHECK-NEXT:           blx 0x10230
 // CHECK-NEXT:           blx 0x10240
-// CHECK: <__ThumbV7PILongThunk_elsewhere>:
-// CHECK-NEXT:     101f0: movw    r12, #52
+// CHECK: <__ThumbV7PILongThunk_weakref>:
+// CHECK-NEXT:     101f0: movw    r12, #68
 // CHECK-NEXT:           movt    r12, #0
 // CHECK-NEXT:           add     r12, pc
 // CHECK-NEXT:           bx      r12
-// CHECK: <__ThumbV7PILongThunk_weakref>:
-// CHECK-NEXT:     101fc: movw    r12, #56
+// CHECK: <__ThumbV7PILongThunk_elsewhere>:
+// CHECK-NEXT:     101fc: movw    r12, #40
 // CHECK-NEXT:           movt    r12, #0
 // CHECK-NEXT:           add     r12, pc
 // CHECK-NEXT:           bx      r12
