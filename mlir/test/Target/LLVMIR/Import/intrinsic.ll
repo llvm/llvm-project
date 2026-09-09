@@ -371,6 +371,15 @@ define void @fshr_test(i32 %0, i32 %1, i32 %2, <8 x i32> %3, <8 x i32> %4, <8 x 
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @clmul_test
+define void @clmul_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
+  ; CHECK:   llvm.intr.clmul(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %5 = call i32 @llvm.clmul.i32(i32 %0, i32 %1)
+  ; CHECK:   llvm.intr.clmul(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %6 = call <8 x i32> @llvm.clmul.v8i32(<8 x i32> %2, <8 x i32> %3)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @pdep_test
 define void @pdep_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
   ; CHECK:   llvm.intr.pdep(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
@@ -1794,6 +1803,8 @@ declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare <8 x i32> @llvm.fshl.v8i32(<8 x i32>, <8 x i32>, <8 x i32>)
 declare i32 @llvm.fshr.i32(i32, i32, i32)
 declare <8 x i32> @llvm.fshr.v8i32(<8 x i32>, <8 x i32>, <8 x i32>)
+declare i32 @llvm.clmul.i32(i32, i32)
+declare <8 x i32> @llvm.clmul.v8i32(<8 x i32>, <8 x i32>)
 declare i32 @llvm.pdep.i32(i32, i32)
 declare <8 x i32> @llvm.pdep.v8i32(<8 x i32>, <8 x i32>)
 declare i32 @llvm.pext.i32(i32, i32)

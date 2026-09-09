@@ -179,6 +179,7 @@ def LLVM_CountTrailingZerosOp : LLVM_CountZerosIntrOp<"cttz">;
 def LLVM_CtPopOp : LLVM_UnaryIntrOpI<"ctpop">;
 def LLVM_FshlOp : LLVM_TernarySameArgsIntrOpI<"fshl">;
 def LLVM_FshrOp : LLVM_TernarySameArgsIntrOpI<"fshr">;
+def LLVM_ClmulOp : LLVM_BinarySameArgsIntrOpI<"clmul">;
 def LLVM_PdepOp : LLVM_BinarySameArgsIntrOpI<"pdep">;
 def LLVM_PextOp : LLVM_BinarySameArgsIntrOpI<"pext">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
