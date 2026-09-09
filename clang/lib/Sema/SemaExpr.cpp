@@ -7449,6 +7449,31 @@ Sema::ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
   return BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, InitExpr);
 }
 
+/// Whether the \p Index-th element of the semantic form of \p ILE initializes
+/// a reference member, so that its initializer is a glvalue that binds.
+static bool initializesReferenceMember(const InitListExpr *ILE,
+                                       unsigned Index) {
+  const RecordDecl *RD = ILE->getType()->getAsRecordDecl();
+  if (!RD || ILE->isTransparent())
+    return false;
+  if (RD->isUnion()) {
+    const FieldDecl *FD = ILE->getInitializedFieldInUnion();
+    return FD && FD->getType()->isReferenceType();
+  }
+  unsigned ElementNo = 0;
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    ElementNo = CXXRD->getNumBases();
+  if (Index < ElementNo)
+    return false;
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->isUnnamedBitField())
+      continue;
+    if (ElementNo++ == Index)
+      return FD->getType()->isReferenceType();
+  }
+  return false;
+}
+
 ExprResult
 Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                                SourceLocation RParenLoc, Expr *LiteralExpr) {
@@ -7541,41 +7566,54 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   //  "If the compound literal occurs outside the body of a function, the
   //  initializer list shall consist of constant expressions."
   if (IsFileScope)
-    if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
+    if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr)) {
+      // A default argument or default member initializer containing an
+      // immediate call or source_location is rebuilt at each use site, where
+      // its elements are evaluated (see BuildCXXDefaultArgExpr).
+      bool InDefaultArgOrInit =
+          isCheckingDefaultArgumentOrInitializer() ||
+          InnermostDeclarationWithDelayedImmediateInvocations().has_value();
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
+        // An immediate invocation is already a ConstantExpr and receives its
+        // value at the end of the full-expression.
+        if (isa<ConstantExpr>(Init))
+          continue;
         if (Init->isTypeDependent() || Init->isValueDependent()) {
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
           continue;
         }
-        if (!Init->isConstantInitializer(Context)) {
+        bool IsRef = initializesReferenceMember(ILE, i);
+        if (!Init->isConstantInitializer(Context, IsRef)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
         }
 
         // Store the value so CodeGen does not re-evaluate the element outside
-        // a constant context. Elements rebuilt at each use site, such as
-        // source_location::current() in a default argument, must not be cached.
-        ImmediateCallVisitor V(Context);
-        V.TraverseStmt(Init);
+        // a constant context.
+        bool DeferToUseSite = false;
+        if (InDefaultArgOrInit) {
+          ImmediateCallVisitor V(Context);
+          V.TraverseStmt(Init);
+          DeferToUseSite = V.HasImmediateCalls;
+        }
         Expr::EvalResult Eval;
-        bool Evaluated =
-            !V.HasImmediateCalls &&
-            (Init->isGLValue()
-                 ? Init->EvaluateAsLValue(Eval, Context,
-                                          /*InConstantContext=*/true)
-                 : Init->EvaluateAsRValue(Eval, Context,
-                                          /*InConstantContext=*/true));
-        // Don't cache a pointer cast to an integer; the interpreter cannot
-        // re-materialize an lvalue stored in an integer slot.
-        if (Evaluated && !Eval.HasSideEffects && Eval.Val.hasValue() &&
-            !(Eval.Val.isLValue() &&
-              Init->getType()->isIntegralOrEnumerationType()))
+        bool Evaluated = false;
+        if (!DeferToUseSite) {
+          if (IsRef)
+            Evaluated = Init->EvaluateAsLValue(Eval, Context,
+                                               /*InConstantContext=*/true);
+          else if (Init->isPRValue())
+            Evaluated = Init->EvaluateAsRValue(Eval, Context,
+                                               /*InConstantContext=*/true);
+        }
+        if (Evaluated && !Eval.HasSideEffects && Eval.Val.hasValue())
           ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
         else
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
+    }
 
   auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK,
                                               LiteralExpr, IsFileScope);

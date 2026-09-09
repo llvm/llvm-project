@@ -5863,6 +5863,28 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
       if (!this->visitDeclRef(VD, Info.asExpr()))
         return false;
       EntryType = VD->getType();
+    } else if (Base.is<TypeInfoLValue>()) {
+      EntryType = Base.getTypeInfoType();
+      if (!this->emitGetTypeid(Base.get<TypeInfoLValue>()
+                                   .getType()
+                                   ->getCanonicalTypeUnqualified()
+                                   .getTypePtr(),
+                               EntryType.getTypePtr(), Info))
+        return false;
+    } else if (!Base) {
+      // An integer cast to a pointer.
+      const Expr *E = Info.asExpr();
+      if (!E)
+        return false;
+      QualType PtrType = E->isGLValue()
+                             ? Ctx.getASTContext().getPointerType(E->getType())
+                             : E->getType();
+      uint64_t Offset = Val.getLValueOffset().getQuantity();
+      if (!this->emitConst(Offset, PT_Uint64, Info))
+        return false;
+      if (!this->emitGetIntPtr(PT_Uint64, PtrType.getTypePtr(), Info))
+        return false;
+      return true;
     } else {
       return false;
     }
@@ -5907,7 +5929,21 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
       }
     }
 
-    return true;
+    if (isPtrType(ValType))
+      return true;
+
+    // A pointer cast to an integer is stored as an lvalue; cast it the same
+    // way the source expression does.
+    if (ValType == PT_IntAP || ValType == PT_IntAPS) {
+      const Expr *E = Info.asExpr();
+      if (!E)
+        return false;
+      uint32_t BitWidth = Ctx.getBitWidth(E->getType());
+      return ValType == PT_IntAP
+                 ? this->emitCastPointerIntegralAP(BitWidth, Info)
+                 : this->emitCastPointerIntegralAPS(BitWidth, Info);
+    }
+    return this->emitCastPointerIntegral(ValType, Info);
   }
 
   return false;

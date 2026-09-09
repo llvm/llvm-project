@@ -46,6 +46,30 @@ SP sp = { g(), (const char *const[1]){__builtin_constant_p(n) ? "a" : "b"} };
 
 // CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal constant [1 x ptr] [ptr @.str{{(\.[0-9]+)?}}]
 
+// A reference member binds its element as an lvalue.
+int gv;
+struct RS { const int &r; int v; };
+RS rs = (RS){gv, __builtin_constant_p(n)};
+
+// CHECK-DAG: @rs = {{.*}}global { ptr, i32 } { ptr @gv, i32 0 }
+
+// An immediate invocation is already a ConstantExpr.
+consteval int cf() { return 3; }
+const int *cp = (const int[1]){cf()};
+
+// CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal constant [1 x i32] [i32 3]
+
+// A pointer cast to an integer is stored as an lvalue.
+struct LI { int a; const long *l; };
+LI li = { g(), (const long[1]){(long)"x"} };
+
+// CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal constant [1 x i64] [i64 ptrtoint (ptr @.str{{(\.[0-9]+)?}} to i64)]
+
+namespace std { class type_info; }
+const std::type_info *const *tp = (const std::type_info *const[1]){&typeid(int)};
+
+// CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal constant [1 x ptr] [ptr @_ZTIi]
+
 // CHECK-LABEL: define internal void @__cxx_global_var_init()
 // CHECK: store ptr [[Z2CL]], ptr getelementptr inbounds{{.*}}(i8, ptr @z2, i64 8)
 
