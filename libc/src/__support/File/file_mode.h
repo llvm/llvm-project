@@ -28,7 +28,8 @@ public:
 
     // There should be exactly one main mode ('a', 'r' or 'w') character.
     // If there are more than one main mode characters listed, then
-    // we will consider |mode| as incorrect and return 0;
+    // we will consider |mode| as incorrect and set the file's mode to zero
+    // meaning the file's mode is in an invalid state.;
     int main_mode_count = 0;
 
     for (; *mode != '\0'; ++mode) {
