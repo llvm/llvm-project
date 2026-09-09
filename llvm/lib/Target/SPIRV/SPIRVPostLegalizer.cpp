@@ -101,17 +101,18 @@ static SPIRVTypeInst deduceTypeFromResultRegister(MachineInstr *Use,
                                                   Register UseRegister,
                                                   SPIRVGlobalRegistry *GR,
                                                   MachineIRBuilder &MIB) {
-  for (const MachineOperand &MO : Use->defs()) {
-    if (!MO.isReg())
-      continue;
-    if (SPIRVTypeInst OpType = GR->getSPIRVTypeForVReg(MO.getReg())) {
-      if (SPIRVTypeInst CompType = GR->getScalarOrVectorComponentType(OpType)) {
-        const LLT &ResLLT = MIB.getMRI()->getType(UseRegister);
-        if (ResLLT.isVector())
-          return GR->getOrCreateSPIRVVectorType(
-              CompType, ResLLT.getNumElements(), MIB, false);
-        return CompType;
-      }
+
+  if (Use->getNumDefs() != 1 || !Use->getOperand(0).isReg())
+    return nullptr;
+
+  Register DefReg = Use->getOperand(0).getReg();
+  if (SPIRVTypeInst OpType = GR->getSPIRVTypeForVReg(DefReg)) {
+    if (SPIRVTypeInst CompType = GR->getScalarOrVectorComponentType(OpType)) {
+      const LLT &ResLLT = MIB.getMRI()->getType(UseRegister);
+      if (ResLLT.isVector())
+        return GR->getOrCreateSPIRVVectorType(CompType, ResLLT.getNumElements(),
+                                              MIB, false);
+      return CompType;
     }
   }
   return nullptr;
