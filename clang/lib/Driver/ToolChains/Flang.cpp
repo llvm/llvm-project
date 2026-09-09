@@ -130,35 +130,38 @@ static void renderDependencyGenerationOptions(Compilation &C,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
-                            options::OPT_ffree_form,
-                            options::OPT_ffixed_line_length_EQ,
-                            options::OPT_fopenacc,
-                            options::OPT_finput_charset_EQ,
-                            options::OPT_fimplicit_none,
-                            options::OPT_fimplicit_none_ext,
-                            options::OPT_fno_implicit_none,
-                            options::OPT_fbackslash,
-                            options::OPT_fno_backslash,
-                            options::OPT_flogical_abbreviations,
-                            options::OPT_fno_logical_abbreviations,
-                            options::OPT_fxor_operator,
-                            options::OPT_fno_xor_operator,
-                            options::OPT_falternative_parameter_statement,
-                            options::OPT_fdefault_integer_4,
-                            options::OPT_fdefault_real_4,
-                            options::OPT_fdefault_real_8,
-                            options::OPT_fdefault_integer_8,
-                            options::OPT_fdefault_double_8,
-                            options::OPT_flarge_sizes,
-                            options::OPT_fno_automatic,
-                            options::OPT_fhermetic_module_files,
-                            options::OPT_frealloc_lhs,
-                            options::OPT_fno_realloc_lhs,
-                            options::OPT_fsave_main_program,
-                            options::OPT_fd_lines_as_code,
-                            options::OPT_fd_lines_as_comments,
-                            options::OPT_fno_save_main_program});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_ffixed_form,
+                   options::OPT_ffree_form,
+                   options::OPT_ffixed_line_length_EQ,
+                   options::OPT_fopenacc,
+                   options::OPT_finput_charset_EQ,
+                   options::OPT_fimplicit_none,
+                   options::OPT_fimplicit_none_ext,
+                   options::OPT_fno_implicit_none,
+                   options::OPT_fbackslash,
+                   options::OPT_fno_backslash,
+                   options::OPT_flogical_abbreviations,
+                   options::OPT_fno_logical_abbreviations,
+                   options::OPT_fxor_operator,
+                   options::OPT_fno_xor_operator,
+                   options::OPT_falternative_parameter_statement,
+                   options::OPT_fdefault_integer_4,
+                   options::OPT_fdefault_real_4,
+                   options::OPT_fdefault_real_8,
+                   options::OPT_fdefault_integer_8,
+                   options::OPT_fdefault_double_8,
+                   options::OPT_flarge_sizes,
+                   options::OPT_fno_automatic,
+                   options::OPT_fhermetic_module_files,
+                   options::OPT_frealloc_lhs,
+                   options::OPT_fno_realloc_lhs,
+                   options::OPT_fsave_main_program,
+                   options::OPT_fd_lines_as_code,
+                   options::OPT_fd_lines_as_comments,
+                   options::OPT_fno_save_main_program,
+                   options::OPT_fprefer_intrinsic_module_use_association,
+                   options::OPT_fno_prefer_intrinsic_module_use_association});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -223,14 +226,22 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
   const auto &TC = getToolChain();
   const Driver &D = TC.getDriver();
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_module_dir, options::OPT_fdebug_module_writer,
-                   options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
-                   options::OPT_std_EQ, options::OPT_W_Joined,
-                   options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
-                   options::OPT_funderscoring, options::OPT_fno_underscoring,
-                   options::OPT_funsigned, options::OPT_fno_unsigned,
+                  {options::OPT_module_dir,
+                   options::OPT_fdebug_module_writer,
+                   options::OPT_fintrinsic_modules_path,
+                   options::OPT_pedantic,
+                   options::OPT_std_EQ,
+                   options::OPT_W_Joined,
+                   options::OPT_fconvert_EQ,
+                   options::OPT_fpass_plugin_EQ,
+                   options::OPT_funderscoring,
+                   options::OPT_fno_underscoring,
+                   options::OPT_funsigned,
+                   options::OPT_fno_unsigned,
                    options::OPT_fenumeration_type,
                    options::OPT_fno_enumeration_type,
+                   options::OPT_fout_of_bounds_subscripts,
+                   options::OPT_fno_out_of_bounds_subscripts,
                    options::OPT_fopenacc_default_none_scalars_strict,
                    options::OPT_fno_openacc_default_none_scalars_strict,
                    options::OPT_fopenacc_multiple_names_in_routine,
@@ -248,7 +259,14 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
-  if (hasDwarfNArg) {
+  // Pass on the DWARF version when debug information is being generated, or
+  // when -gdwarf-N names a version. Leaving it out means the version stays
+  // unset and the backend falls back to dwarf::DWARF_VERSION (4) instead of
+  // honouring toolchain default like clang does.
+  //
+  // Note that both conditions are needed to match clang for cases like
+  // "-gdwarf-5 -g0".
+  if (hasDwarfNArg || DebugInfoKind != llvm::codegenoptions::NoDebugInfo) {
     const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
     CmdArgs.push_back(
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
@@ -337,8 +355,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
-  Args.addOptInFlag(CmdArgs, options::OPT_ffp_sum_reassociation,
-                    options::OPT_fno_fp_sum_reassociation);
+  Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
+                  options::OPT_fno_fp_sum_reassociation);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -1233,6 +1251,19 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
                    options::OPT_fno_pseudo_probe_for_profiling, false))
     CmdArgs.push_back("-fpseudo-probe-for-profiling");
+
+  // TODO: Consider reusing Clang's addPGOAndCoverageFlags() for
+  // -fprofile-generate and other similar options handling instead of
+  // duplicating driver logic here.
+  if (Arg *PGOGenerateArg = Args.getLastArg(
+          options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
+          options::OPT_fno_profile_generate)) {
+    if (!PGOGenerateArg->getOption().matches(options::OPT_fno_profile_generate))
+      PGOGenerateArg->render(Args, CmdArgs);
+  }
+
+  addSplitMachineFunctionsArgs(TC.getDriver(), Args, CmdArgs, TC.getTriple());
+  Args.addAllArgs(CmdArgs, {options::OPT_fprofile_use_EQ});
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -1364,10 +1395,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Disable all warnings
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
   Args.AddLastArg(CmdArgs, options::OPT_w);
-
-  // recognise options: fprofile-generate -fprofile-use=
-  Args.addAllArgs(
-      CmdArgs, {options::OPT_fprofile_generate, options::OPT_fprofile_use_EQ});
 
   addPGOAndCoverageFlags(TC, JA, Args, CmdArgs);
 

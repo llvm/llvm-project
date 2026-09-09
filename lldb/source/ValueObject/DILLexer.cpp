@@ -24,10 +24,14 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "amp";
   case Kind::ampamp:
     return "ampamp";
+  case Kind::ampequal:
+    return "ampequal";
   case Kind::arrow:
     return "arrow";
   case Kind::caret:
     return "caret";
+  case Kind::caretequal:
+    return "caretequal";
   case Kind::colon:
     return "colon";
   case Kind::coloncolon:
@@ -50,6 +54,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "greaterequal";
   case Kind::greatergreater:
     return "greatergreater";
+  case Kind::greatergreaterequal:
+    return "greatergreaterequal";
   case Kind::identifier:
     return "identifier";
   case Kind::integer_constant:
@@ -68,30 +74,46 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "lessequal";
   case Kind::lessless:
     return "lessless";
+  case Kind::lesslessequal:
+    return "lesslessequal";
   case Kind::minus:
     return "minus";
   case Kind::minusequal:
     return "minusequal";
+  case Kind::minusminus:
+    return "minusminus";
   case Token::percent:
     return "percent";
+  case Token::percentequal:
+    return "percentequal";
   case Kind::period:
     return "period";
   case Kind::pipe:
     return "pipe";
+  case Kind::pipeequal:
+    return "pipeequal";
   case Kind::pipepipe:
     return "pipepipe";
   case Kind::plus:
     return "plus";
   case Kind::plusequal:
     return "plusequal";
+  case Kind::plusplus:
+    return "plusplus";
+  case Kind::question:
+    return "question";
   case Kind::r_paren:
     return "r_paren";
   case Kind::r_square:
     return "r_square";
   case Token::slash:
     return "slash";
+  case Token::slashequal:
+    return "slashequal";
   case Token::star:
     return "star";
+  case Token::starequal:
+    return "starequal";
   case Token::tilde:
     return "tilde";
   }
@@ -222,8 +244,12 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   // be ordered longest-to-shortest in the list below. E.g. '::' must come
   // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
+      {Token::greatergreaterequal, ">>="},
+      {Token::lesslessequal, "<<="},
       {Token::ampamp, "&&"},
+      {Token::ampequal, "&="},
       {Token::arrow, "->"},
+      {Token::caretequal, "^="},
       {Token::coloncolon, "::"},
       {Token::equalequal, "=="},
       {Token::exclaimequal, "!="},
@@ -232,8 +258,14 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::lessequal, "<="},
       {Token::lessless, "<<"},
       {Token::minusequal, "-="},
+      {Token::minusminus, "--"},
+      {Token::percentequal, "%="},
+      {Token::pipeequal, "|="},
       {Token::pipepipe, "||"},
       {Token::plusequal, "+="},
+      {Token::plusplus, "++"},
+      {Token::slashequal, "/="},
+      {Token::starequal, "*="},
       {Token::amp, "&"},
       {Token::caret, "^"},
       {Token::colon, ":"},
@@ -248,6 +280,7 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::period, "."},
       {Token::pipe, "|"},
       {Token::plus, "+"},
+      {Token::question, "?"},
       {Token::r_paren, ")"},
       {Token::r_square, "]"},
       {Token::slash, "/"},

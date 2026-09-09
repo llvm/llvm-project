@@ -52,8 +52,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -381,7 +379,7 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   if (MI.getOperand(1).isReg()) {
     if (MachineInstr *Def = MRI->getUniqueVRegDef(MI.getOperand(1).getReg())) {
       SkipAnding = Def->getParent() == MI.getParent() &&
-                   SIInstrInfo::isVALU(*Def, /*AllowLDSDMA=*/true);
+                   SIInstrInfo::isVALU(*Def, /*AllowLDSDMA=*/false);
     }
   }
 
