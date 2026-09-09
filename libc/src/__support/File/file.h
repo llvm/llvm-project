@@ -130,13 +130,11 @@ private:
 
 protected:
   constexpr bool write_allowed() const {
-    return mode.write_allowed() || mode.append_allowed() ||
-           mode.is_plus(); // TODO: if micheal agrees for me to convert it
-                           // change it here
+    return mode.is_write() || mode.is_append() || mode.is_update();
   }
 
   constexpr bool read_allowed() const {
-    return mode.read_allowed() || mode.is_plus();
+    return mode.is_read() || mode.is_update();
   }
 
   void reset_stream_state_unlocked(FileMode new_mode) {
