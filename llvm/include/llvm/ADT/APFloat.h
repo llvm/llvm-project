@@ -256,6 +256,12 @@ public:
     // types, there are no infinity or NaN values. The format is detailed in
     // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
     S_Float4E2M1FN,
+    // 8-bit floating point number mostly following IEEE-754 conventions with
+    // bit layout S0E5M3 as described in PTX ISA page.
+    // https://docs.nvidia.com/cuda/developer-preview/13.4/parallel-thread-execution/index.html#alternate-floating-point-data-formats
+    // Unlike IEEE-754 types, there are no infinity values, and NaN is
+    // represented with the exponent and mantissa bits set to all 1s.
+    S_Float8E5M3FNU,
     // TODO: Documentation is missing.
     S_x87DoubleExtended,
     S_MaxSemantics = S_x87DoubleExtended,
@@ -279,6 +285,7 @@ private:
   LLVM_ABI static const fltSemantics semFloat8E3M4;
   LLVM_ABI static const fltSemantics semFloatTF32;
   LLVM_ABI static const fltSemantics semFloat8E8M0FNU;
+  LLVM_ABI static const fltSemantics semFloat8E5M3FNU;
   LLVM_ABI static const fltSemantics semFloat6E3M2FN;
   LLVM_ABI static const fltSemantics semFloat6E2M3FN;
   LLVM_ABI static const fltSemantics semFloat4E2M1FN;
@@ -312,6 +319,7 @@ public:
   static const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
   static const fltSemantics &FloatTF32() { return semFloatTF32; }
   static const fltSemantics &Float8E8M0FNU() { return semFloat8E8M0FNU; }
+  static const fltSemantics &Float8E5M3FNU() { return semFloat8E5M3FNU; }
   static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
   static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
   static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
@@ -328,6 +336,14 @@ public:
   // the value of fltNonfiniteBehavior, hasZero, hasSignedRepr.
   LLVM_ABI static bool isRepresentableBy(const fltSemantics &A,
                                          const fltSemantics &B);
+
+  /// Returns whether converting a value from \p From to \p To is known to
+  /// preserve all information. If \p IgnoreNaNs is true, differences between
+  /// NaN representations are ignored, but NaNs must remain NaNs and infinities
+  /// must remain infinities.
+  LLVM_ABI static bool isLosslesslyConvertibleTo(const fltSemantics &From,
+                                                 const fltSemantics &To,
+                                                 bool IgnoreNaNs = false);
 
   /// @}
 
@@ -413,6 +429,12 @@ public:
   /// format interpretation for llvm.convert.to.arbitrary.fp and
   /// llvm.convert.from.arbitrary.fp intrinsics.
   LLVM_ABI static bool isValidArbitraryFPFormat(StringRef Format);
+
+  /// Returns the size in bits of a valid arbitrary floating-point format
+  /// string, or 0 if the string is not a valid format. Covers every format
+  /// accepted by isValidArbitraryFPFormat, not only those
+  /// getArbitraryFPSemantics can currently lower.
+  LLVM_ABI static unsigned getArbitraryFPFormatSizeInBits(StringRef Format);
 
   /// Returns the fltSemantics for a given arbitrary FP format string,
   /// or nullptr if invalid.
@@ -772,6 +794,7 @@ private:
   APInt convertFloat8E3M4APFloatToAPInt() const;
   APInt convertFloatTF32APFloatToAPInt() const;
   APInt convertFloat8E8M0FNUAPFloatToAPInt() const;
+  APInt convertFloat8E5M3FNUAPFloatToAPInt() const;
   APInt convertFloat6E3M2FNAPFloatToAPInt() const;
   APInt convertFloat6E2M3FNAPFloatToAPInt() const;
   APInt convertFloat4E2M1FNAPFloatToAPInt() const;
@@ -793,6 +816,7 @@ private:
   void initFromFloat8E3M4APInt(const APInt &api);
   void initFromFloatTF32APInt(const APInt &api);
   void initFromFloat8E8M0FNUAPInt(const APInt &api);
+  void initFromFloat8E5M3FNUAPInt(const APInt &api);
   void initFromFloat6E3M2FNAPInt(const APInt &api);
   void initFromFloat6E2M3FNAPInt(const APInt &api);
   void initFromFloat4E2M1FNAPInt(const APInt &api);
@@ -994,6 +1018,7 @@ enum class fltNanEncoding {
   // behavior described in https://arxiv.org/abs/2206.02915 .
   NegativeZero,
 };
+
 /* Represents floating point arithmetic semantics.  */
 struct fltSemantics {
   /* The largest E such that 2^E is representable; this matches the
@@ -1028,6 +1053,20 @@ struct fltSemantics {
      If both hasDenormals and hasZero are false exponent 0 is assumed to be a
      regular exponent instead of being reserved. This changes the bias by +1. */
   bool hasDenormals = true;
+
+  /* Whether the integer bit is explicitly represented between significant and
+     exponent, for example as specified by the x86 double extended precision
+     format.
+
+     For bit patterns designated as undefined under the standard the following
+     conversions will happen when converting from bits. These follow x87
+     behaviour:
+     - exponent = all 1's, integer bit 0, significand 0 ("pseudoinfinity")
+     - exponent = all 1's, integer bit 0, significand nonzero ("pseudoNaN")
+     - exponent!=0 nor all 1's, integer bit 0 ("unnormal")
+     - exponent = 0, integer bit 1 ("pseudodenormal")
+     The first three are treated as NaNs, the last one as Normal */
+  bool hasExplicitIntegerBit = false;
 };
 
 // This is a interface class that is currently forwarding functionalities from
@@ -1607,6 +1646,22 @@ public:
   int getExactLog2() const {
     return isNegative() ? INT_MIN : getExactLog2Abs();
   }
+
+  // Returns true if this value is exactly 2^N.
+  LLVM_READONLY
+  bool isPowerOf2(int N) const { return N != INT_MIN && getExactLog2() == N; }
+
+  // Returns true if this value is exactly -(2^N).
+  LLVM_READONLY
+  bool isNegPowerOf2(int N) const {
+    return N != INT_MIN && isNegative() && getExactLog2Abs() == N;
+  }
+
+  // Returns true if this value is exactly +1.0.
+  LLVM_READONLY bool isOne() const { return isPowerOf2(0); }
+
+  // Returns true if this value is exactly -1.0.
+  LLVM_READONLY bool isMinusOne() const { return isNegPowerOf2(0); }
 
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
   friend int ilogb(const APFloat &Arg);

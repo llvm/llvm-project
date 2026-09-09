@@ -255,7 +255,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -575,8 +574,18 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // funclets.
   if (MF.hasEHFunclets())
     return true;
+
+  // When the stack guard is mixed with the frame pointer, a dedicated FP is
+  // required so the guard value remains stable in the presence of dynamic
+  // stack allocations (e.g. _alloca on MSVCRT).
+  if (MFI.hasStackProtectorIndex()) {
+    const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (Subtarget.getTargetLowering()->useStackGuardMixFP())
+      return true;
+  }
+
   // Retain behavior of always omitting the FP for leaf functions when possible.
-  if (MF.getTarget().Options.DisableFramePointerElim(MF))
+  if (MF.disableFramePointerElim())
     return true;
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
@@ -635,7 +644,7 @@ bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
     return true;
 
   // Frontend has requested to preserve the frame pointer.
-  if (TM.Options.FramePointerIsReserved(MF))
+  if (MF.framePointerIsReserved())
     return true;
 
   return false;
@@ -834,7 +843,8 @@ static MCRegister getRegisterOrZero(MCRegister Reg, bool HasSVE) {
 }
 
 void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
-                                                MachineBasicBlock &MBB) const {
+                                                MachineBasicBlock &MBB,
+                                                RegScavenger *) const {
   // Insertion point.
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
 
@@ -850,12 +860,15 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   BitVector GPRsToZero(TRI.getNumRegs());
   BitVector FPRsToZero(TRI.getNumRegs());
   bool HasSVE = STI.isSVEorStreamingSVEAvailable();
+  // Without an FP unit (e.g. -mgeneral-regs-only) the FP/vector registers can't
+  // hold a value and there is no instruction to clear them, so leave them out.
+  bool HasFPR = STI.hasFPARMv8();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       // For GPRs, we only care to clear out the 64-bit register.
       if (MCRegister XReg = getRegisterOrZero(Reg, HasSVE))
         GPRsToZero.set(XReg);
-    } else if (AArch64InstrInfo::isFpOrNEON(Reg)) {
+    } else if (HasFPR && AArch64InstrInfo::isFpOrNEON(Reg)) {
       // For FPRs,
       if (MCRegister XReg = getRegisterOrZero(Reg, HasSVE))
         FPRsToZero.set(XReg);
@@ -1788,23 +1801,27 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
       unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
+      int Aligned = AlignOffset(ByteOffset, Scale);
+      int PairOffset = IsWindows ? Aligned : Aligned + StackFillDir * 2 * Scale;
+      bool PairFitsImmRange =
+          PairOffset / Scale >= -64 && PairOffset / Scale <= 63;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
-        if (AArch64::GPR64RegClass.contains(NextReg) &&
+        if (AArch64::GPR64RegClass.contains(NextReg) && PairFitsImmRange &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
-        if (AArch64::FPR64RegClass.contains(NextReg) &&
+        if (AArch64::FPR64RegClass.contains(NextReg) && PairFitsImmRange &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
-        if (AArch64::FPR128RegClass.contains(NextReg))
+        if (AArch64::FPR128RegClass.contains(NextReg) && PairFitsImmRange)
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::PPR:
@@ -2641,8 +2658,16 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       ZPRCSStackSize += SpillSize;
     else if (IsPPR)
       PPRCSStackSize += SpillSize;
-    else
-      CSStackSize += SpillSize;
+    else {
+      // A register and its super-register can both appear in SavedRegs.
+      // Only the widest register is actually spilled, so skip such
+      // sub-registers here to avoid double-counting the overlap.
+      bool SavedSuper = any_of(TRI->superregs(Reg), [&](MCPhysReg SuperReg) {
+        return SavedRegs.test(SuperReg);
+      });
+      if (!SavedSuper)
+        CSStackSize += SpillSize;
+    }
   }
 
   // Save number of saved regs, so we can easily update CSStackSize later to
@@ -2792,12 +2817,6 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
 
-  if (IsWindows && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
-    int FrameIdx = MFI.CreateStackObject(8, Align(16), true);
-    AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
-    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
-  }
-
   // Insert VG into the list of CSRs, immediately before LR if saved.
   if (requiresSaveVG(MF)) {
     CalleeSavedInfo VGInfo(AArch64::VG);
@@ -2835,8 +2854,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     // Grab 8 bytes below FP for the extended asynchronous frame info.
-    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !IsWindows &&
-        Reg == AArch64::FP) {
+    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && Reg == AArch64::FP) {
       FrameIdx = MFI.CreateStackObject(8, Alignment, true);
       AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
       MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);

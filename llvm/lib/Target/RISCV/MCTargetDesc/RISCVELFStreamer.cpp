@@ -29,10 +29,9 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
   MCAssembler &MCA = getStreamer().getAssembler();
-  const FeatureBitset &Features = STI.getFeatureBits();
   auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
-                                          MAB.getTargetOptions().getABIName()));
+  setTargetABI(
+      RISCVABI::computeTargetABI(STI, MAB.getTargetOptions().getABIName()));
   setFlagsFromFeatures(STI);
 
   // Compute the initial ISA string.  This serves two purposes:
@@ -41,8 +40,7 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   //   2. Initial symbol: seed the streamer's active ISA so a "$x<ArchString>"
   //      mapping symbol is emitted before the first instruction, recording
   //      the full ISA in the object even when no .option directive is present.
-  if (auto ParseResult = RISCVFeatures::parseFeatureBits(
-          STI.hasFeature(RISCV::Feature64Bit), Features)) {
+  if (auto ParseResult = RISCVFeatures::parseFeatureBits(STI)) {
     InitialArchString = (*ParseResult)->toString();
     ArchString = InitialArchString;
     getStreamer().setMappingSymbolArch(ArchString);

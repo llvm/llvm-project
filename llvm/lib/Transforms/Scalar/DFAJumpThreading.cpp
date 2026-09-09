@@ -61,6 +61,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -217,7 +218,14 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
         SI->getContext(), Twine(SI->getName(), ".si.unfold.false"),
         EndBlock->getParent(), EndBlock);
     NewBBs->push_back(NewBlock);
-    UncondBrInst::Create(EndBlock, NewBlock);
+    // The branch from NewBlock and the new CondBr from StartBlock collectively
+    // substitute the existing Select+Br instructions, so following the rules
+    // for updating source locations we assign each of them the merged location
+    // of the Select+Br.
+    DebugLoc SelectBranchLoc = DebugLoc::getMergedLocation(
+        StartBlockTerm->getDebugLoc(), SI->getDebugLoc());
+    Instruction *NewToEndBr = UncondBrInst::Create(EndBlock, NewBlock);
+    NewToEndBr->setDebugLoc(SelectBranchLoc);
     DTU->applyUpdates({{DominatorTree::Insert, NewBlock, EndBlock}});
 
     // StartBlock
@@ -268,6 +276,7 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     StartBlockTerm->eraseFromParent();
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlock, StartBlock);
+    BI->setDebugLoc(SelectBranchLoc);
     if (!ProfcheckDisableMetadataFixes)
       BI->setMetadata(LLVMContext::MD_prof,
                       SI->getMetadata(LLVMContext::MD_prof));
@@ -302,10 +311,15 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     //   |     /
     // EndBlock
     //  (Use)
-    UncondBrInst::Create(EndBlock, NewBlockF);
+    Instruction *NewFToEnd = UncondBrInst::Create(EndBlock, NewBlockF);
     // Insert the real conditional branch based on the original condition.
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlockF, NewBlockT);
+    // The branches from NewBlockT and NewBlockF are performing the Select
+    // logic, and so assume its source location.
+    DebugLoc SelectLoc = SI->getDebugLoc();
+    NewFToEnd->setDebugLoc(SelectLoc);
+    BI->setDebugLoc(SelectLoc);
     if (!ProfcheckDisableMetadataFixes)
       BI->setMetadata(LLVMContext::MD_prof,
                       SI->getMetadata(LLVMContext::MD_prof));
@@ -1093,7 +1107,7 @@ private:
     DuplicateBlockMap DuplicateMap;
     DefMap NewDefs;
 
-    SmallPtrSet<BasicBlock *, 16> BlocksToClean;
+    SmallSetVector<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
     for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
@@ -1122,7 +1136,7 @@ private:
   /// the predecessors, and phis in the successor blocks.
   void createExitPath(DefMap &NewDefs, const ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
-                      SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
+                      SmallSetVector<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
     APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();
@@ -1409,8 +1423,9 @@ private:
         DTUpdates.push_back({DominatorTree::Delete, LastBlock, Succ});
     }
 
+    DebugLoc SwitchLoc = Switch->getDebugLoc();
     Switch->eraseFromParent();
-    UncondBrInst::Create(NextCase, LastBlock);
+    UncondBrInst::Create(NextCase, LastBlock)->setDebugLoc(SwitchLoc);
 
     DTU->applyUpdates(DTUpdates);
   }
@@ -1520,7 +1535,7 @@ bool DFAJumpThreading::run(Function &F) {
   }
 
 #ifdef NDEBUG
-  LI->verify(DTU->getDomTree());
+  LI->verify();
 #endif
 
   SmallPtrSet<const Value *, 32> EphValues;

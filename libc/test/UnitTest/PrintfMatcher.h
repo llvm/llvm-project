@@ -10,7 +10,7 @@
 #define LLVM_LIBC_UTILS_UNITTEST_PRINTF_MATCHER_H
 
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
+#include "src/__support/printf_core/core_structs.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {

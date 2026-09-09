@@ -495,7 +495,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
     struct {
       DriverID ID;
       DriverID AliasID;
-      const void *AliasArgs;
+      unsigned AliasArgsOffset;
     } AliasTable[] = {
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
                FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
@@ -505,7 +505,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
 #undef OPTION
     };
     for (auto &E : AliasTable)
-      if (E.AliasID != DriverID::OPT_INVALID && E.AliasArgs == nullptr)
+      if (E.AliasID != DriverID::OPT_INVALID && !E.AliasArgsOffset)
         AddAlias(E.ID, E.AliasID);
 
     auto Result = std::make_unique<TableTy>();
@@ -560,8 +560,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
         dlog("  {0} #={1} *={2} Mode={3}", R.Text, R.ExactArgs, R.PrefixArgs,
              int(R.Modes));
     }
-    dlog("Table spellings={0} rules={1} string-bytes={2}", Result->size(),
-         RuleCount, Result->getAllocator().getBytesAllocated());
+    dlog("Table spellings={0} rules={1} allocator-bytes={2}", Result->size(),
+         RuleCount, Result->getAllocator().getTotalMemory());
 #endif
     // The static table will never be destroyed.
     return Result.release();

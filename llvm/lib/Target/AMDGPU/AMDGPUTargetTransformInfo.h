@@ -71,7 +71,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   AMDGPUTTIImpl CommonTTI;
   bool IsGraphics;
   bool HasFP32Denormals;
-  bool HasFP64FP16Denormals;
   static constexpr bool InlinerVectorBonusPercent = 0;
 
   static const FeatureBitset InlineFeatureIgnoreList;
@@ -160,7 +159,8 @@ public:
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
       Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) const override;
@@ -247,7 +247,7 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
@@ -266,6 +266,11 @@ public:
   int getInlinerVectorBonusPercent() const override {
     return InlinerVectorBonusPercent;
   }
+
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
+                   const Instruction *I = nullptr) const override;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
@@ -289,7 +294,7 @@ public:
                          TTI::TargetCostKind CostKind) const override;
 
   /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
-  unsigned getCacheLineSize() const override { return 128; }
+  unsigned getCacheLineSize() const override;
 
   /// How much before a load we should place the prefetch instruction.
   /// This is currently measured in number of IR instructions.

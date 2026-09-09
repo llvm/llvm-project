@@ -1,13 +1,13 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,NO_SRC1_SGPR
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,NO_SRC1_SGPR
+; RUN: llc -mtriple=amdgpu11.50 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgpu11.50 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
+; RUN: llc -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
+; RUN: llc -mtriple=amdgpu12.51 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgpu12.51 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
 
 ; GCN-LABEL: {{^}}dpp_add:
 ; GCN: global_load_{{dword|b32}} [[V:v[0-9]+]],
@@ -102,13 +102,13 @@ define amdgpu_kernel void @dpp_fadd_f16(ptr addrspace(1) %arg) {
 ; GCN: v_min{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf{{$}}
 define nofpclass(nan) float @dpp_fmin_f32(float nofpclass(nan) %x) {
 entry:
-  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %x, i32 273, i32 15, i32 15, i1 false)
+  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float +inf, float %x, i32 273, i32 15, i32 15, i1 false)
   %min1 = tail call nnan float @llvm.minnum.f32(float %x, float %dpp.shr1)
-  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min1, i32 274, i32 15, i32 15, i1 false)
+  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float +inf, float %min1, i32 274, i32 15, i32 15, i1 false)
   %min2 = tail call nnan float @llvm.minnum.f32(float %min1, float %dpp.shr2)
-  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min2, i32 276, i32 15, i32 15, i1 false)
+  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float +inf, float %min2, i32 276, i32 15, i32 15, i1 false)
   %min3 = tail call nnan float @llvm.minnum.f32(float %min2, float %dpp.shr4)
-  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min3, i32 280, i32 15, i32 15, i1 false)
+  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float +inf, float %min3, i32 280, i32 15, i32 15, i1 false)
   %min4 = tail call nnan float @llvm.minnum.f32(float %min3, float %dpp.shr8)
   ret float %min4
 }
@@ -120,13 +120,13 @@ entry:
 ; GCN: v_max{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf{{$}}
 define nofpclass(nan) float @dpp_fmax_f32(float nofpclass(nan) %x) #0 {
 entry:
-  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %x, i32 273, i32 15, i32 15, i1 false)
+  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float -inf, float %x, i32 273, i32 15, i32 15, i1 false)
   %max1 = tail call nnan float @llvm.maxnum.f32(float %x, float %dpp.shr1)
-  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max1, i32 274, i32 15, i32 15, i1 false)
+  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float -inf, float %max1, i32 274, i32 15, i32 15, i1 false)
   %max2 = tail call nnan float @llvm.maxnum.f32(float %max1, float %dpp.shr2)
-  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max2, i32 276, i32 15, i32 15, i1 false)
+  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float -inf, float %max2, i32 276, i32 15, i32 15, i1 false)
   %max3 = tail call nnan float @llvm.maxnum.f32(float %max2, float %dpp.shr4)
-  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max3, i32 280, i32 15, i32 15, i1 false)
+  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float -inf, float %max3, i32 280, i32 15, i32 15, i1 false)
   %max4 = tail call nnan float @llvm.maxnum.f32(float %max3, float %dpp.shr8)
   ret float %max4
 }
@@ -138,13 +138,13 @@ entry:
 ; GCN: v_min{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf{{$}}
 define nofpclass(nan) float @dpp_fminimum_f32(float nofpclass(nan) %x) {
 entry:
-  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %x, i32 273, i32 15, i32 15, i1 false)
+  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float +inf, float %x, i32 273, i32 15, i32 15, i1 false)
   %min1 = tail call nnan float @llvm.minimumnum.f32(float %x, float %dpp.shr1)
-  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min1, i32 274, i32 15, i32 15, i1 false)
+  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float +inf, float %min1, i32 274, i32 15, i32 15, i1 false)
   %min2 = tail call nnan float @llvm.minimumnum.f32(float %min1, float %dpp.shr2)
-  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min2, i32 276, i32 15, i32 15, i1 false)
+  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float +inf, float %min2, i32 276, i32 15, i32 15, i1 false)
   %min3 = tail call nnan float @llvm.minimumnum.f32(float %min2, float %dpp.shr4)
-  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min3, i32 280, i32 15, i32 15, i1 false)
+  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float +inf, float %min3, i32 280, i32 15, i32 15, i1 false)
   %min4 = tail call nnan float @llvm.minimumnum.f32(float %min3, float %dpp.shr8)
   ret float %min4
 }
@@ -156,13 +156,13 @@ entry:
 ; GCN: v_max{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf{{$}}
 define nofpclass(nan) float @dpp_fmaximum_f32(float nofpclass(nan) %x) #0 {
 entry:
-  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %x, i32 273, i32 15, i32 15, i1 false)
+  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float -inf, float %x, i32 273, i32 15, i32 15, i1 false)
   %max1 = tail call nnan float @llvm.maximumnum.f32(float %x, float %dpp.shr1)
-  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max1, i32 274, i32 15, i32 15, i1 false)
+  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float -inf, float %max1, i32 274, i32 15, i32 15, i1 false)
   %max2 = tail call nnan float @llvm.maximumnum.f32(float %max1, float %dpp.shr2)
-  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max2, i32 276, i32 15, i32 15, i1 false)
+  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float -inf, float %max2, i32 276, i32 15, i32 15, i1 false)
   %max3 = tail call nnan float @llvm.maximumnum.f32(float %max2, float %dpp.shr4)
-  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max3, i32 280, i32 15, i32 15, i1 false)
+  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float -inf, float %max3, i32 280, i32 15, i32 15, i1 false)
   %max4 = tail call nnan float @llvm.maximumnum.f32(float %max3, float %dpp.shr8)
   ret float %max4
 }

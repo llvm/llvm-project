@@ -22,7 +22,6 @@
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsMips.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -50,9 +49,18 @@ static bool isSignatureValid(FunctionType *FTy,
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 
+/// Table of required target features indexed by enum value.
+#define GET_INTRINSIC_TARGET_FEATURES_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
+}
+
+StringRef Intrinsic::getRequiredTargetFeatures(ID id) {
+  assert(id < num_intrinsics && "invalid intrinsic ID!");
+  return IntrinsicTargetFeaturesTable[IntrinsicTargetFeaturesOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -358,10 +366,10 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_EXTERNREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmExternref, 0));
     return;
   case IIT_FUNCREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 20));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmFuncref, 0));
     return;
   case IIT_PTR:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 0));
@@ -558,7 +566,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return Type::getPPC_FP128Ty(Context);
   case IITDescriptor::AArch64Svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
-
+  case IITDescriptor::WasmExternref:
+    return TargetExtType::get(Context, "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return TargetExtType::get(Context, "wasm.funcref");
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.IntegerWidth);
   case IITDescriptor::Vector:
@@ -1031,6 +1042,14 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return PrintMsg(isa<TargetExtType>(Ty) &&
                         cast<TargetExtType>(Ty)->getName() == "aarch64.svcount",
                     "aarch64.svcount");
+  case IITDescriptor::WasmExternref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.externref",
+                    "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.funcref",
+                    "wasm.funcref");
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
     StringRef Scalable = D.VectorWidth.isScalable() ? "vscale " : "";
@@ -1077,6 +1096,12 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     assert(OIdx == OverloadTys.size() && !IsDeferredCheck &&
            "Table consistency error");
     OverloadTys.push_back(Ty);
+
+    // Token has no mangling (see getMangledTypeStr), so it cannot be an
+    // overload type; reject it with a signature error. Label is already
+    // excluded from function signatures, so it never reaches here.
+    if (Ty->isTokenTy())
+      return PrintMsg(false, "any manglable type", OIdx);
 
     IITDescriptor::AnyKindVectorConstraint VC;
     IITDescriptor::AnyKindElementConstraint EC;
@@ -1452,5 +1477,19 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
+LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
+  OS << static_cast<FPClassTest>(Val);
+}
+
+#define GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS
+#include "llvm/IR/IntrinsicImpl.inc"
+
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+
+// Emit the default-argument values table and lookup function
+// (Intrinsic::getAllDefaultArgValues).
+#define GET_INTRINSIC_DEFAULT_ARG_VALUES
 #include "llvm/IR/IntrinsicImpl.inc"

@@ -55,9 +55,7 @@ def DeclareTargetCaptureClause : OpenMP_I32EnumAttr<
     ]>;
 
 def DeclareTargetCaptureClauseAttr : OpenMP_EnumAttr<DeclareTargetCaptureClause,
-                                                     "capture_clause"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+                                                     "capture_clause">;
 
 //===----------------------------------------------------------------------===//
 // clause_depend enum.
@@ -73,9 +71,25 @@ def ClauseDepend : OpenMP_I32EnumAttr<
       ClauseDependSink
     ]>;
 
-def ClauseDependAttr : OpenMP_EnumAttr<ClauseDepend, "clause_depend"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+def ClauseDependAttr : OpenMP_EnumAttr<ClauseDepend, "clause_depend">;
+
+//===----------------------------------------------------------------------===//
+// severity enum.
+//===----------------------------------------------------------------------===//
+
+// The values match the `severity` argument expected by the `__kmpc_error`
+// runtime entry point (1 = warning, 2 = fatal).
+def ClauseSeverityWarning : I32EnumAttrCase<"warning", 1>;
+def ClauseSeverityFatal : I32EnumAttrCase<"fatal", 2>;
+
+def ClauseSeverity : OpenMP_I32EnumAttr<
+    "ClauseSeverity",
+    "severity clause", [
+      ClauseSeverityWarning,
+      ClauseSeverityFatal
+    ]>;
+
+def ClauseSeverityAttr : OpenMP_EnumAttr<ClauseSeverity, "clause_severity">;
 
 //===----------------------------------------------------------------------===//
 // clause_requires enum.
@@ -128,6 +142,7 @@ def ClauseMapFlagsAttachAuto : I32BitEnumAttrCaseBit<"attach_auto", 15>;
 def ClauseMapFlagsRefPtr : I32BitEnumAttrCaseBit<"ref_ptr", 16>;
 def ClauseMapFlagsRefPtee : I32BitEnumAttrCaseBit<"ref_ptee", 17>;
 def ClauseMapFlagsIsDevicePtr : I32BitEnumAttrCaseBit<"is_device_ptr", 18>;
+def ClauseMapFlagsTargetParam : I32BitEnumAttrCaseBit<"target_param", 19>;
 
 def ClauseMapFlags : OpenMP_BitEnumAttr<
     "ClauseMapFlags",
@@ -151,7 +166,8 @@ def ClauseMapFlags : OpenMP_BitEnumAttr<
       ClauseMapFlagsAttachAuto,
       ClauseMapFlagsRefPtr,
       ClauseMapFlagsRefPtee,
-      ClauseMapFlagsIsDevicePtr
+      ClauseMapFlagsIsDevicePtr,
+      ClauseMapFlagsTargetParam
     ]>;
 
 def ClauseMapFlagsAttr : OpenMP_EnumAttr<ClauseMapFlags,
@@ -175,9 +191,7 @@ def ClauseTaskDepend
            ClauseTaskDependMutexInOutSet, ClauseTaskDependInOutSet]>;
 
 def ClauseTaskDependAttr : OpenMP_EnumAttr<ClauseTaskDepend,
-                                           "clause_task_depend"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+                                           "clause_task_depend">;
 
 //===----------------------------------------------------------------------===//
 // data_sharing_type enum.
@@ -195,9 +209,7 @@ def DataSharingClauseType : OpenMP_I32EnumAttr<
     ]>;
 
 def DataSharingClauseTypeAttr : OpenMP_EnumAttr<DataSharingClauseType,
-                                                "data_sharing_type"> {
-  let assemblyFormat = "`{` `type` `=` $value `}`";
-}
+                                                "data_sharing_type">;
 
 //===----------------------------------------------------------------------===//
 // device_type enum.
@@ -216,9 +228,7 @@ def DeclareTargetDeviceType : OpenMP_I32EnumAttr<
     ]>;
 
 def DeclareTargetDeviceTypeAttr : OpenMP_EnumAttr<DeclareTargetDeviceType,
-                                                  "device_type"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+                                                  "device_type">;
 
 //===----------------------------------------------------------------------===//
 // order_modifer enum.
@@ -247,9 +257,7 @@ def LinearModifier : OpenMP_I32EnumAttr<"LinearModifier", "linear modifier",
                                         [LinearModifierVal, LinearModifierRef,
                                          LinearModifierUval]>;
 
-def LinearModifierAttr : OpenMP_EnumAttr<LinearModifier, "linear_modifier"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+def LinearModifierAttr : OpenMP_EnumAttr<LinearModifier, "linear_modifier">;
 
 //===----------------------------------------------------------------------===//
 // reduction_modifier enum.
@@ -268,9 +276,7 @@ def ReductionModifier : OpenMP_I32EnumAttr<
     ]>;
 
 def ReductionModifierAttr : OpenMP_EnumAttr<ReductionModifier,
-                                            "reduction_modifier"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+                                            "reduction_modifier">;
 
 //===----------------------------------------------------------------------===//
 // sched_mod enum.
@@ -301,7 +307,7 @@ def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
 def TargetExecModeBare : I32EnumAttrCase<"bare", 0>;
 def TargetExecModeGeneric : I32EnumAttrCase<"generic", 1>;
 def TargetExecModeSpmd : I32EnumAttrCase<"spmd", 2>;
-def TargetExecModeSpmdNoLoop : I32EnumAttrCase<"no_loop", 3>;
+def TargetExecModeSpmdNoLoop : I32EnumAttrCase<"spmd_no_loop", 3>;
 
 def TargetExecMode : OpenMP_I32EnumAttr<
     "TargetExecMode",
@@ -311,6 +317,8 @@ def TargetExecMode : OpenMP_I32EnumAttr<
       TargetExecModeSpmd,
       TargetExecModeSpmdNoLoop,
     ]>;
+
+def TargetExecModeAttr : OpenMP_EnumAttr<TargetExecMode, "kernel_type">;
 
 //===----------------------------------------------------------------------===//
 // variable_capture_kind enum.
@@ -331,9 +339,7 @@ def VariableCaptureKind : OpenMP_I32EnumAttr<
     ]>;
 
 def VariableCaptureKindAttr : OpenMP_EnumAttr<VariableCaptureKind,
-                                              "variable_capture_kind"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+                                              "variable_capture_kind">;
 
 //===----------------------------------------------------------------------===//
 // access_group_modifier enum.
@@ -348,9 +354,7 @@ def AccessGroupModifier : OpenMP_I32EnumAttr<
     ]>;
 
 def AccessGroupModifierAttr : OpenMP_EnumAttr<AccessGroupModifier,
-                                            "access_group_modifier"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+                                            "access_group_modifier">;
 
 //===----------------------------------------------------------------------===//
 // fallback_modifier enum.
@@ -369,8 +373,22 @@ def FallbackModifier : OpenMP_I32EnumAttr<
     ]>;
 
 def FallbackModifierAttr : OpenMP_EnumAttr<FallbackModifier,
-                                            "fallback_modifier"> {
-  let assemblyFormat = "`(` $value `)`";
-}
+                                            "fallback_modifier">;
+
+//===----------------------------------------------------------------------===//
+// interop_type for interop construct
+//===----------------------------------------------------------------------===//
+
+def InteropTypeTarget : I32EnumAttrCase<"target", 0>;
+def InteropTypeTargetSync : I32EnumAttrCase<"targetsync", 1>;
+
+def InteropType : OpenMP_I32EnumAttr<
+    "InteropType",
+    "interop type", [
+      InteropTypeTarget,
+      InteropTypeTargetSync
+    ]>;
+
+def InteropTypeAttr : OpenMP_EnumAttr<InteropType, "interop_type">;
 
 #endif // OPENMP_ENUMS

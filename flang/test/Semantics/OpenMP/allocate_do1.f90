@@ -21,8 +21,8 @@ end module
 subroutine test_omp_do()
     use all_mod
     !$omp parallel shared(AAA,BBB,CCC,DDD,val)
-    !ERROR: ALLOCATE clause is not allowed on directive DO in OpenMP v4.5, try -fopenmp-version=50
-    !ERROR: 'allocator-simple-modifier' modifier is not supported in OpenMP v4.5, try -fopenmp-version=50
+    !ERROR: ALLOCATE clause is not allowed on DO directive in OpenMP v4.5, try -fopenmp-version=50
+    !ERROR: 'allocator-simple-modifier' modifier is not supported in OpenMP v4.5 on ALLOCATE clause, try -fopenmp-version=50
     !$omp do private(CCC, val) allocate(0:CCC, val)
     do i=1,N
         CCC(i) = AAA(i) + BBB(i)
@@ -35,8 +35,8 @@ end subroutine test_omp_do
 
 subroutine test_omp_parallel_do()
     use all_mod
-    !ERROR: ALLOCATE clause is not allowed on directive PARALLEL DO in OpenMP v4.5, try -fopenmp-version=50
-    !ERROR: 'allocator-simple-modifier' modifier is not supported in OpenMP v4.5, try -fopenmp-version=50
+    !ERROR: ALLOCATE clause is not allowed on PARALLEL DO directive in OpenMP v4.5, try -fopenmp-version=50
+    !ERROR: 'allocator-simple-modifier' modifier is not supported in OpenMP v4.5 on ALLOCATE clause, try -fopenmp-version=50
     !$omp parallel do private(CCC, val) allocate(0:CCC, val) shared(AAA,BBB,DDD)
     do i=1,N
         CCC(i) = AAA(i) + BBB(i)

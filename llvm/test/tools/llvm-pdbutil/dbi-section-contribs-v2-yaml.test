@@ -1,0 +1,25 @@
+# RUN: not llvm-pdbutil yaml2pdb %s --pdb=%t.pdb 2>&1 | FileCheck --check-prefix=CHECK-YAML2PDB %s
+
+# CHECK-YAML2PDB: Only DBI section contrib Version Ver60 is supported
+
+---
+DbiStream:
+  VerHeader:       V70
+  Age:             3
+  BuildNumber:     36402
+  PdbDllVersion:   35728
+  PdbDllRbld:      0
+  Flags:           1
+  MachineType:     Amd64
+  SectionContribs:
+    Version:         V2
+    Items:
+      - ISect:           1
+        Offset:          0
+        Size:            15
+        Characteristics: 1610612768
+        Imod:            1
+        DataCrc:         0
+        RelocCrc:        0
+        ISectCoff:       0
+...

@@ -53,14 +53,10 @@ void ExprEngine::processCallEnter(CallEnter CE, ExplodedNode *Pred) {
   // Construct an edge representing the starting location in the callee.
   BlockEdge Loc(Entry, Succ, CE.getCalleeStackFrame());
 
-  ProgramStateRef state = Pred->getState();
-
   // Construct a new node, notify checkers that analysis of the function has
   // begun, and add the resultant nodes to the worklist.
-  bool isNew;
-  ExplodedNode *Node = G.getNode(Loc, state, false, &isNew);
-  Node->addPredecessor(Pred, G);
-  if (isNew) {
+  ExplodedNode *Node = Engine.makeNode(Loc, Pred->getState(), Pred);
+  if (Node) {
     // FIXME: In the `processBeginOfFunction` callback
     // `ExprEngine::getCurrStackFrame()` can be different from the
     // `StackFrame` queried from e.g. the `ExplodedNode`s. I'm not
@@ -384,7 +380,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
     ExplodedNode *CEENode = Engine.makeNode(Loc, CEEState, N);
     if (!CEENode)
-      return;
+      continue;
 
     // Step 5: Perform the post-condition check of the CallExpr and enqueue the
     // result onto the work list.
@@ -450,20 +446,20 @@ bool ExprEngine::isHuge(AnalysisDeclContext *ADC) const {
   return Cfg->getNumBlockIDs() > AMgr.options.MaxInlinableSize;
 }
 
-void ExprEngine::examineStackFrames(const Decl *D, const StackFrame *SF,
-                                    bool &IsRecursive, unsigned &StackDepth) {
+void ExprEngine::examineStackFrames(
+    const Decl *D, llvm::iterator_range<StackFrame::parent_iterator> Frames,
+    bool &IsRecursive, unsigned &StackDepth) {
   IsRecursive = false;
   StackDepth = 0;
 
-  while (SF) {
-    const Decl *DI = SF->getDecl();
+  for (const StackFrame &Frame : Frames) {
+    const Decl *DI = Frame.getDecl();
 
     // Mark recursive (and mutually recursive) functions and always count
     // them when measuring the stack depth.
     if (DI == D) {
       IsRecursive = true;
       ++StackDepth;
-      SF = SF->getParent();
       continue;
     }
 
@@ -471,7 +467,6 @@ void ExprEngine::examineStackFrames(const Decl *D, const StackFrame *SF,
     AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(DI);
     if (!isSmall(CalleeADC))
       ++StackDepth;
-    SF = SF->getParent();
   }
 }
 
@@ -493,36 +488,33 @@ REGISTER_MAP_WITH_PROGRAMSTATE(DynamicDispatchBifurcationMap,
 REGISTER_TRAIT_WITH_PROGRAMSTATE(CTUDispatchBifurcation, bool)
 
 void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
-                              NodeBuilder &Bldr, ExplodedNode *Pred,
+                              ExplodedNodeSet &Dst, ExplodedNode *Pred,
                               ProgramStateRef State) {
-  ProgramStateRef ConservativeEvalState = nullptr;
   if (Call.isForeign() && !isSecondPhaseCTU()) {
     const auto IK = AMgr.options.getCTUPhase1Inlining();
     const bool DoInline = IK == CTUPhase1InliningKind::All ||
                           (IK == CTUPhase1InliningKind::Small &&
                            isSmall(AMgr.getAnalysisDeclContext(D)));
     if (DoInline) {
-      inlineCall(Engine.getWorkList(), Call, D, Bldr, Pred, State);
+      inlineCall(Engine.getWorkList(), Call, D, Pred, State);
       return;
     }
     const bool BState = State->get<CTUDispatchBifurcation>();
     if (!BState) { // This is the first time we see this foreign function.
       // Enqueue it to be analyzed in the second (ctu) phase.
-      inlineCall(Engine.getCTUWorkList(), Call, D, Bldr, Pred, State);
+      inlineCall(Engine.getCTUWorkList(), Call, D, Pred, State);
       // Conservatively evaluate in the first phase.
-      ConservativeEvalState = State->set<CTUDispatchBifurcation>(true);
-      conservativeEvalCall(Call, Bldr, Pred, ConservativeEvalState);
-    } else {
-      conservativeEvalCall(Call, Bldr, Pred, State);
+      State = State->set<CTUDispatchBifurcation>(true);
     }
+    Dst.insert(conservativeEvalCall(Call, Pred, State));
     return;
   }
-  inlineCall(Engine.getWorkList(), Call, D, Bldr, Pred, State);
+  inlineCall(Engine.getWorkList(), Call, D, Pred, State);
 }
 
 void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
-                            const Decl *D, NodeBuilder &Bldr,
-                            ExplodedNode *Pred, ProgramStateRef State) {
+                            const Decl *D, ExplodedNode *Pred,
+                            ProgramStateRef State) {
   assert(D);
 
   const StackFrame *CallerSF = Pred->getStackFrame();
@@ -549,16 +541,8 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   // formal arguments.
   State = State->enterStackFrame(Call, CalleeSF);
 
-  bool isNew;
-  if (ExplodedNode *N = G.getNode(Loc, State, false, &isNew)) {
-    N->addPredecessor(Pred, G);
-    if (isNew)
-      WList->enqueue(N);
-  }
-
-  // If we decided to inline the call, the successor has been manually
-  // added onto the work list so remove it from the node builder.
-  Bldr.takeNodes(Pred);
+  if (ExplodedNode *N = Engine.makeNode(Loc, State, Pred))
+    WList->enqueue(N);
 
   NumInlinedCalls++;
   Engine.FunctionSummaries->bumpNumTimesInlined(D);
@@ -781,7 +765,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     assert(RTC->getStmt() == Call.getOriginExpr());
     EvalCallOptions CallOpts; // FIXME: We won't really need those.
     std::tie(State, Target) =
-        handleConstructionContext(Call.getOriginExpr(), State, currBldrCtx, SF,
+        handleConstructionContext(Call.getOriginExpr(), State, SF,
                                   RTC->getConstructionContext(), CallOpts);
     const MemRegion *TargetR = Target.getAsRegion();
     assert(TargetR);
@@ -837,14 +821,15 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
 // Conservatively evaluate call by invalidating regions and binding
 // a conjured return value.
-void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
-                                      ExplodedNode *Pred, ProgramStateRef State) {
+ExplodedNode *ExprEngine::conservativeEvalCall(const CallEvent &Call,
+                                               ExplodedNode *Pred,
+                                               ProgramStateRef State) {
   State = Call.invalidateRegions(getNumVisitedCurrent(), State);
   State = bindReturnValue(Call, Pred->getStackFrame(), State);
 
   // And make the result node.
   static SimpleProgramPointTag PT("ExprEngine", "Conservative eval call");
-  Bldr.generateNode(Call.getProgramPoint(false, &PT), State, Pred);
+  return Engine.makeNode(Call.getProgramPoint(false, &PT), State, Pred);
 }
 
 ExprEngine::CallInlinePolicy
@@ -1129,7 +1114,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   // Do not inline if recursive or we've reached max stack frame count.
   bool IsRecursive = false;
   unsigned StackDepth = 0;
-  examineStackFrames(D, Pred->getStackFrame(), IsRecursive, StackDepth);
+  examineStackFrames(D, Pred->stackframes(), IsRecursive, StackDepth);
   if ((StackDepth >= Opts.InlineMaxStackDepth) &&
       (!isSmall(CalleeADC) || IsRecursive))
     return false;
@@ -1219,7 +1204,7 @@ static bool isTrivialObjectAssignment(const CallEvent &Call) {
   return MD->isTrivial();
 }
 
-void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
+void ExprEngine::defaultEvalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                                  const CallEvent &Call,
                                  const EvalCallOptions &CallOpts) {
   // Make sure we have the most recent state attached to the call.
@@ -1227,7 +1212,7 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
   // Special-case trivial assignment operators.
   if (isTrivialObjectAssignment(Call)) {
-    performTrivialCopy(Bldr, Pred, Call);
+    performTrivialCopy(Dst, Pred, Call);
     return;
   }
 
@@ -1247,17 +1232,17 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
         // Explore with and without inlining the call.
         if (Options.getIPAMode() == IPAK_DynamicDispatchBifurcate) {
-          BifurcateCall(RD.getDispatchRegion(), Call, D, Bldr, Pred);
+          dynDispatchBifurcate(RD.getDispatchRegion(), Call, D, Dst, Pred);
           return;
         }
 
         // Don't inline if we're not in any dynamic dispatch mode.
         if (Options.getIPAMode() != IPAK_DynamicDispatch) {
-          conservativeEvalCall(Call, Bldr, Pred, State);
+          Dst.insert(conservativeEvalCall(Call, Pred, State));
           return;
         }
       }
-      ctuBifurcate(Call, D, Bldr, Pred, State);
+      ctuBifurcate(Call, D, Dst, Pred, State);
       return;
     }
   }
@@ -1268,12 +1253,13 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
       State, dyn_cast_or_null<CXXConstructExpr>(E), Call.getStackFrame());
 
   // Also handle the return value and invalidate the regions.
-  conservativeEvalCall(Call, Bldr, Pred, State);
+  Dst.insert(conservativeEvalCall(Call, Pred, State));
 }
 
-void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
-                               const CallEvent &Call, const Decl *D,
-                               NodeBuilder &Bldr, ExplodedNode *Pred) {
+void ExprEngine::dynDispatchBifurcate(const MemRegion *BifurReg,
+                                      const CallEvent &Call, const Decl *D,
+                                      ExplodedNodeSet &Dst,
+                                      ExplodedNode *Pred) {
   assert(BifurReg);
   BifurReg = BifurReg->StripCasts();
 
@@ -1285,11 +1271,11 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   if (BState) {
     // If we are on "inline path", keep inlining if possible.
     if (*BState == DynamicDispatchModeInlined)
-      ctuBifurcate(Call, D, Bldr, Pred, State);
+      ctuBifurcate(Call, D, Dst, Pred, State);
     // If inline failed, or we are on the path where we assume we
     // don't have enough info about the receiver to inline, conjure the
     // return value and invalidate the regions.
-    conservativeEvalCall(Call, Bldr, Pred, State);
+    Dst.insert(conservativeEvalCall(Call, Pred, State));
     return;
   }
 
@@ -1298,12 +1284,12 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   ProgramStateRef IState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeInlined);
-  ctuBifurcate(Call, D, Bldr, Pred, IState);
+  ctuBifurcate(Call, D, Dst, Pred, IState);
 
   ProgramStateRef NoIState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeConservative);
-  conservativeEvalCall(Call, Bldr, Pred, NoIState);
+  Dst.insert(conservativeEvalCall(Call, Pred, NoIState));
 
   NumOfDynamicDispatchPathSplits++;
 }

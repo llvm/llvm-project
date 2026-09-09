@@ -21,7 +21,7 @@ They must be available from a list of headers, they may have different values in
 different dialects, and they may or may not be implemented by libc++. In order to
 track all of these conditions correctly and easily, we want a Single Source of
 Truth (SSoT) that defines each feature test macro, its values, the headers it
-lives in, and whether or not is is implemented by libc++. From this SSoA we
+lives in, and whether or not it is implemented by libc++. From this SSoA we
 have enough information to automatically generate the `<version>` header,
 the tests, and the documentation.
 

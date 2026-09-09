@@ -104,6 +104,13 @@ Error PseudoProbeRewriter::postEmitFinalizer() {
     parsePseudoProbe();
   updatePseudoProbes();
 
+  // The decoder's address-to-probe maps can be very large and are no longer
+  // needed once probes have been updated. Release both our reference and the
+  // one held by BinaryContext so the memory is freed before the memory-heavy
+  // debug info rewriting phase runs.
+  BC.resetPseudoProbeDecoder();
+  ProbeDecoderPtr.reset();
+
   return Error::success();
 }
 

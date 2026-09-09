@@ -23,7 +23,6 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Support/Path.h"
 
-#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
@@ -94,9 +93,9 @@ static void ParseExtendedInfo(PdbIndex &index, CompilandIndexItem &item) {
 
   // This is a private function, it shouldn't be called if the information
   // has already been parsed.
-  lldbassert(!item.m_obj_name);
-  lldbassert(!item.m_compile_opts);
-  lldbassert(item.m_build_info.empty());
+  assert(!item.m_obj_name);
+  assert(!item.m_compile_opts);
+  assert(item.m_build_info.empty());
 
   Log *log = GetLog(LLDBLog::Symbols);
   // We're looking for 3 things.  S_COMPILE3, S_OBJNAME, and S_BUILDINFO.

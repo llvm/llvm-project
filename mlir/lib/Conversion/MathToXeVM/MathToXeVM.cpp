@@ -7,13 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include "../GPUCommon/GPUOpsLowering.h"
+#include "../GPUCommon/OpToFuncCallLowering.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOXEVM
@@ -24,6 +29,35 @@ using namespace mlir;
 
 #define DEBUG_TYPE "math-to-xevm"
 
+static bool isSizeOneVector(Type type) {
+  auto vecType = dyn_cast<VectorType>(type);
+  return vecType && vecType.getShape().size() == 1 &&
+         vecType.getShape()[0] == 1 && vecType.getElementType().isFloat();
+}
+
+static bool isSPIRVCompatibleFloatOrVec(Type type) {
+  if (type.isFloat())
+    return true;
+  if (auto vecType = dyn_cast<VectorType>(type)) {
+    if (!vecType.getElementType().isFloat())
+      return false;
+    // SPIRV distinguishes between vectors and matrices: OpenCL native math
+    // intrsinics are not compatible with matrices.
+    ArrayRef<int64_t> shape = vecType.getShape();
+    if (shape.size() != 1)
+      return false;
+    // SPIRV has no size-1 vector type; such degenerate vectors are handled
+    // by unwrapping to the scalar intrinsic (see matchAndRewrite).
+    if (shape[0] == 1)
+      return true;
+    // SPIRV only allows vectors of size 2, 3, 4, 8, 16.
+    if (shape[0] == 2 || shape[0] == 3 || shape[0] == 4 || shape[0] == 8 ||
+        shape[0] == 16)
+      return true;
+  }
+  return false;
+}
+
 /// Convert math ops marked with `fast` (`afn`) to native OpenCL intrinsics.
 template <typename Op>
 struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
@@ -31,65 +65,6 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
   ConvertNativeFuncPattern(MLIRContext *context, StringRef nativeFunc,
                            PatternBenefit benefit = 1)
       : OpConversionPattern<Op>(context, benefit), nativeFunc(nativeFunc) {}
-
-  LogicalResult
-  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!isSPIRVCompatibleFloatOrVec(op.getType()))
-      return failure();
-
-    arith::FastMathFlags fastFlags = op.getFastmath();
-    if (!arith::bitEnumContainsAll(fastFlags, arith::FastMathFlags::afn))
-      return rewriter.notifyMatchFailure(op, "not a fastmath `afn` operation");
-
-    SmallVector<Type, 1> operandTypes;
-    for (auto operand : adaptor.getOperands()) {
-      Type opTy = operand.getType();
-      // This pass only supports operations on vectors that are already in SPIRV
-      // supported vector sizes: Distributing unsupported vector sizes to SPIRV
-      // supported vector sizes are done in other blocking optimization passes.
-      if (!isSPIRVCompatibleFloatOrVec(opTy))
-        return rewriter.notifyMatchFailure(
-            op, llvm::formatv("incompatible operand type: '{0}'", opTy));
-      operandTypes.push_back(opTy);
-    }
-
-    auto moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
-    auto funcOpRes = LLVM::lookupOrCreateFn(
-        rewriter, moduleOp, getMangledNativeFuncName(operandTypes),
-        operandTypes, op.getType());
-    assert(!failed(funcOpRes));
-    LLVM::LLVMFuncOp funcOp = funcOpRes.value();
-
-    auto callOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, funcOp, adaptor.getOperands());
-    // Preserve fastmath flags in our MLIR op when converting to llvm function
-    // calls, in order to allow further fastmath optimizations: We thus need to
-    // convert arith fastmath attrs into attrs recognized by llvm.
-    arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
-    mlir::NamedAttribute fastAttr = fastAttrConverter.getAttrs()[0];
-    callOp->setAttr(fastAttr.getName(), fastAttr.getValue());
-    return success();
-  }
-
-  inline bool isSPIRVCompatibleFloatOrVec(Type type) const {
-    if (type.isFloat())
-      return true;
-    if (auto vecType = dyn_cast<VectorType>(type)) {
-      if (!vecType.getElementType().isFloat())
-        return false;
-      // SPIRV distinguishes between vectors and matrices: OpenCL native math
-      // intrsinics are not compatible with matrices.
-      ArrayRef<int64_t> shape = vecType.getShape();
-      if (shape.size() != 1)
-        return false;
-      // SPIRV only allows vectors of size 2, 3, 4, 8, 16.
-      if (shape[0] == 2 || shape[0] == 3 || shape[0] == 4 || shape[0] == 8 ||
-          shape[0] == 16)
-        return true;
-    }
-    return false;
-  }
 
   inline std::string
   getMangledNativeFuncName(const ArrayRef<Type> operandTypes) const {
@@ -116,36 +91,181 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     return mangledFuncName;
   }
 
+  LogicalResult
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isSPIRVCompatibleFloatOrVec(op.getType()))
+      return failure();
+
+    arith::FastMathFlags fastFlags = op.getFastmath();
+    if (!arith::bitEnumContainsAll(fastFlags, arith::FastMathFlags::afn))
+      return rewriter.notifyMatchFailure(op, "not a fastmath `afn` operation");
+
+    Location loc = op.getLoc();
+
+    // SPIRV has no size-1 vector type: such vectors are the degenerate result
+    // of distributing/linearizing larger vectors down to a single element (e.g.
+    // by the XeGPU lowering pipeline). They have no OpenCL vector intrinsic, so
+    // unwrap them to the scalar element type and use the scalar intrinsic.
+    SmallVector<Value, 1> operands(adaptor.getOperands());
+    SmallVector<Type, 1> operandTypes;
+    bool unwrapSizeOneVec = isSizeOneVector(op.getType());
+    for (Value &operand : operands) {
+      Type opTy = operand.getType();
+      // This pass only supports operations on vectors that are already in SPIRV
+      // supported vector sizes: Distributing unsupported vector sizes to SPIRV
+      // supported vector sizes are done in other blocking optimization passes.
+      if (!isSPIRVCompatibleFloatOrVec(opTy))
+        return rewriter.notifyMatchFailure(
+            op, llvm::formatv("incompatible operand type: '{0}'", opTy));
+      if (unwrapSizeOneVec) {
+        assert(isSizeOneVector(opTy) &&
+               "expected all operands to be size-1 vectors");
+        opTy = cast<VectorType>(opTy).getElementType();
+        operand = vector::ExtractOp::create(rewriter, loc, operand,
+                                            ArrayRef<int64_t>{0});
+      }
+      operandTypes.push_back(opTy);
+    }
+
+    Type resultType = unwrapSizeOneVec
+                          ? cast<VectorType>(op.getType()).getElementType()
+                          : op.getType();
+
+    auto moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
+    auto funcOpRes = LLVM::lookupOrCreateFn(
+        rewriter, moduleOp, getMangledNativeFuncName(operandTypes),
+        operandTypes, resultType);
+    assert(!failed(funcOpRes));
+    LLVM::LLVMFuncOp funcOp = funcOpRes.value();
+
+    auto callOp = LLVM::CallOp::create(rewriter, loc, funcOp, operands);
+    // Preserve fastmath flags in our MLIR op when converting to llvm function
+    // calls, in order to allow further fastmath optimizations: We thus need to
+    // convert arith fastmath attrs into attrs recognized by llvm.
+    arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
+    SmallVector<NamedAttribute> discardableAttrs;
+    for (mlir::NamedAttribute attr : fastAttrConverter.getAttrs()) {
+      if (attr.getName() == LLVM::CallOp::getFastmathAttrName()) {
+        callOp.setFastmathFlagsAttr(
+            cast<LLVM::FastmathFlagsAttr>(attr.getValue()));
+        continue;
+      }
+      discardableAttrs.push_back(attr);
+    }
+    callOp->setDiscardableAttrs(discardableAttrs);
+
+    if (unwrapSizeOneVec) {
+      // Re-wrap the scalar result back into a size-1 vector to preserve types.
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, op.getType(),
+                                                       callOp.getResult());
+    } else {
+      rewriter.replaceOp(op, callOp);
+    }
+    return success();
+  }
+
   const StringRef nativeFunc;
 };
 
+template <typename OpTy>
+static void populateOCLExtSetOpPatterns(const LLVMTypeConverter &converter,
+                                        RewritePatternSet &patterns,
+                                        PatternBenefit benefit,
+                                        StringRef opName) {
+  std::string prefix = "__spirv_ocl_";
+  std::string mangledName = "_Z" +
+                            std::to_string(prefix.size() + opName.size()) +
+                            prefix + opName.str();
+
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter, benefit);
+  patterns.add<OpToFuncCallLowering<OpTy>>(
+      converter, mangledName + "f", mangledName + "d",
+      /*f32ApproxFunc=*/"", /*f16Func=*/"",
+      /*i32Func=*/"", benefit, LLVM::cconv::CConv::SPIR_FUNC);
+}
+
+void mlir::populateMathToScalarOCLExtSetConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
+  populateOCLExtSetOpPatterns<math::AcosOp>(converter, patterns, benefit,
+                                            "acos");
+  populateOCLExtSetOpPatterns<math::AcoshOp>(converter, patterns, benefit,
+                                             "acosh");
+  populateOCLExtSetOpPatterns<math::AsinOp>(converter, patterns, benefit,
+                                            "asin");
+  populateOCLExtSetOpPatterns<math::AsinhOp>(converter, patterns, benefit,
+                                             "asinh");
+  populateOCLExtSetOpPatterns<math::AtanOp>(converter, patterns, benefit,
+                                            "atan");
+  populateOCLExtSetOpPatterns<math::Atan2Op>(converter, patterns, benefit,
+                                             "atan2");
+  populateOCLExtSetOpPatterns<math::AtanhOp>(converter, patterns, benefit,
+                                             "atanh");
+  populateOCLExtSetOpPatterns<math::CbrtOp>(converter, patterns, benefit,
+                                            "cbrt");
+  populateOCLExtSetOpPatterns<math::CopySignOp>(converter, patterns, benefit,
+                                                "copysign");
+  populateOCLExtSetOpPatterns<math::CosOp>(converter, patterns, benefit, "cos");
+  populateOCLExtSetOpPatterns<math::CoshOp>(converter, patterns, benefit,
+                                            "cosh");
+  populateOCLExtSetOpPatterns<math::ErfOp>(converter, patterns, benefit, "erf");
+  populateOCLExtSetOpPatterns<math::ErfcOp>(converter, patterns, benefit,
+                                            "erfc");
+  populateOCLExtSetOpPatterns<math::ExpOp>(converter, patterns, benefit, "exp");
+  populateOCLExtSetOpPatterns<math::Exp2Op>(converter, patterns, benefit,
+                                            "exp2");
+  populateOCLExtSetOpPatterns<math::ExpM1Op>(converter, patterns, benefit,
+                                             "expm1");
+  populateOCLExtSetOpPatterns<math::LogOp>(converter, patterns, benefit, "log");
+  populateOCLExtSetOpPatterns<math::Log10Op>(converter, patterns, benefit,
+                                             "log10");
+  populateOCLExtSetOpPatterns<math::Log1pOp>(converter, patterns, benefit,
+                                             "log1p");
+  populateOCLExtSetOpPatterns<math::Log2Op>(converter, patterns, benefit,
+                                            "log2");
+  populateOCLExtSetOpPatterns<math::PowFOp>(converter, patterns, benefit,
+                                            "pow");
+  populateOCLExtSetOpPatterns<math::RsqrtOp>(converter, patterns, benefit,
+                                             "rsqrt");
+  populateOCLExtSetOpPatterns<math::SinOp>(converter, patterns, benefit, "sin");
+  populateOCLExtSetOpPatterns<math::SinhOp>(converter, patterns, benefit,
+                                            "sinh");
+  populateOCLExtSetOpPatterns<math::SqrtOp>(converter, patterns, benefit,
+                                            "sqrt");
+  populateOCLExtSetOpPatterns<math::TanOp>(converter, patterns, benefit, "tan");
+  populateOCLExtSetOpPatterns<math::TanhOp>(converter, patterns, benefit,
+                                            "tanh");
+}
+
 void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns,
-                                                bool convertArith) {
-  patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_exp");
-  patterns.add<ConvertNativeFuncPattern<math::CosOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_cos");
+                                                bool convertArith,
+                                                PatternBenefit benefit) {
+  patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(
+      patterns.getContext(), "__spirv_ocl_native_exp", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::CosOp>>(
+      patterns.getContext(), "__spirv_ocl_native_cos", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Exp2Op>>(
-      patterns.getContext(), "__spirv_ocl_native_exp2");
-  patterns.add<ConvertNativeFuncPattern<math::LogOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_log");
+      patterns.getContext(), "__spirv_ocl_native_exp2", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::LogOp>>(
+      patterns.getContext(), "__spirv_ocl_native_log", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Log2Op>>(
-      patterns.getContext(), "__spirv_ocl_native_log2");
+      patterns.getContext(), "__spirv_ocl_native_log2", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Log10Op>>(
-      patterns.getContext(), "__spirv_ocl_native_log10");
+      patterns.getContext(), "__spirv_ocl_native_log10", benefit);
   patterns.add<ConvertNativeFuncPattern<math::PowFOp>>(
-      patterns.getContext(), "__spirv_ocl_native_powr");
+      patterns.getContext(), "__spirv_ocl_native_powr", benefit);
   patterns.add<ConvertNativeFuncPattern<math::RsqrtOp>>(
-      patterns.getContext(), "__spirv_ocl_native_rsqrt");
-  patterns.add<ConvertNativeFuncPattern<math::SinOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_sin");
+      patterns.getContext(), "__spirv_ocl_native_rsqrt", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::SinOp>>(
+      patterns.getContext(), "__spirv_ocl_native_sin", benefit);
   patterns.add<ConvertNativeFuncPattern<math::SqrtOp>>(
-      patterns.getContext(), "__spirv_ocl_native_sqrt");
-  patterns.add<ConvertNativeFuncPattern<math::TanOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_tan");
+      patterns.getContext(), "__spirv_ocl_native_sqrt", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::TanOp>>(
+      patterns.getContext(), "__spirv_ocl_native_tan", benefit);
   if (convertArith)
     patterns.add<ConvertNativeFuncPattern<arith::DivFOp>>(
-        patterns.getContext(), "__spirv_ocl_native_divide");
+        patterns.getContext(), "__spirv_ocl_native_divide", benefit);
 }
 
 namespace {
@@ -157,10 +277,31 @@ struct ConvertMathToXeVMPass
 } // namespace
 
 void ConvertMathToXeVMPass::runOnOperation() {
+  Operation *op = getOperation();
+  MLIRContext *ctx = op->getContext();
+
+  const auto &dl = getAnalysis<DataLayoutAnalysis>();
+
   RewritePatternSet patterns(&getContext());
-  populateMathToXeVMConversionPatterns(patterns, convertArith);
+  LowerToLLVMOptions options(ctx, dl.getAtOrAbove(op));
+  LLVMTypeConverter converter(ctx, options);
   ConversionTarget target(getContext());
+
+  // Native OCL patterns should take precedence for `fast` ops even when
+  // convertToOCL is set.
+  populateMathToXeVMConversionPatterns(patterns, convertArith,
+                                       convertToOCL + 1);
+  if (convertToOCL) {
+    populateMathToScalarOCLExtSetConversionPatterns(converter, patterns, 1);
+    target
+        .addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::LogOp,
+                      LLVM::Log10Op, LLVM::Log2Op, LLVM::SinOp, LLVM::SqrtOp>();
+  }
   target.addLegalDialect<BuiltinDialect, LLVM::LLVMDialect>();
+  // The size-1-vector patterns unwrap to the scalar intrinsic via
+  // vector.extract / vector.broadcast; these must be legal for the partial
+  // conversion to succeed.
+  target.addLegalOp<vector::ExtractOp, vector::BroadcastOp>();
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();

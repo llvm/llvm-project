@@ -39,12 +39,14 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
@@ -511,11 +513,6 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
     llvm_unreachable("temporary can't have dynamic storage duration");
   }
   llvm_unreachable("unknown storage duration");
-}
-
-/// Helper method to check if the underlying ABI is AAPCS
-static bool isAAPCS(const TargetInfo &TargetInfo) {
-  return TargetInfo.getABI().starts_with("aapcs");
 }
 
 LValue CodeGenFunction::
@@ -1057,6 +1054,22 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
+/// Returns true if \p Field is reachable from \p RD either as a direct field or
+/// through a chain of nested record fields (including anonymous
+/// structs/unions). This mirrors the GEP path that getGEPIndicesToField builds,
+/// and is used to identify the right anchor expression in Base.
+static bool RecordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD == Field)
+      return true;
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType())
+      if (RecordContainsField(Ty->getAsRecordDecl(), Field))
+        return true;
+  }
+  return false;
+}
+
 namespace {
 
 /// \p StructAccessBase returns the base \p Expr of a field access. It returns
@@ -1077,17 +1090,24 @@ namespace {
 /// \p MemberExpr for \p p->ptr instead of \p p.
 class StructAccessBase
     : public ConstStmtVisitor<StructAccessBase, const Expr *> {
-  const RecordDecl *ExpectedRD;
+  /// The count field we're navigating to. We stop at the innermost expression
+  /// whose struct type transitively contains this field, so that
+  /// getGEPIndicesToField can navigate from that struct down to it.
+  const FieldDecl *CountDecl;
 
+  /// Returns true if E's record type (or pointee record type) transitively
+  /// contains CountDecl. Handles both direct containment and nested structs,
+  /// so we don't need a pre-computed RD from the caller.
   bool IsExpectedRecordDecl(const Expr *E) const {
     QualType Ty = E->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
-    return ExpectedRD == Ty->getAsRecordDecl();
+    const RecordDecl *RD = Ty->getAsRecordDecl();
+    return RD && RecordContainsField(RD, CountDecl);
   }
 
 public:
-  StructAccessBase(const RecordDecl *ExpectedRD) : ExpectedRD(ExpectedRD) {}
+  StructAccessBase(const FieldDecl *CountDecl) : CountDecl(CountDecl) {}
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
@@ -1199,22 +1219,21 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  // Find the record containing the count field. Walk up through anonymous
-  // structs/unions (which are transparent in C) but stop at named records.
-  // Using getOuterLexicalRecordContext() here would be wrong because it walks
-  // past named nested structs to the outermost record, causing a crash when a
-  // struct with a counted_by FAM is defined nested inside another struct.
-  const RecordDecl *RD = CountDecl->getParent();
-  while (RD->isAnonymousStructOrUnion()) {
-    const auto *Parent = dyn_cast<RecordDecl>(RD->getLexicalParent());
-    if (!Parent)
-      break;
-    RD = Parent;
-  }
-
-  // Find the base struct expr (i.e. p in p->a.b.c.d).
-  const Expr *StructBase = StructAccessBase(RD).Visit(Base);
+  // Walk Base to find the deepest sub-expression whose struct type transitively
+  // contains CountDecl. This is our GEP anchor — getGEPIndicesToField then
+  // builds the field indices from that struct down to CountDecl, handling any
+  // intermediate nesting without requiring us to pre-compute a RecordDecl from
+  // Base's type or from CountDecl's parent chain.
+  const Expr *StructBase = StructAccessBase(CountDecl).Visit(Base);
   if (!StructBase || StructBase->HasSideEffects(getContext()))
+    return nullptr;
+
+  // Derive the record type from the anchor expression itself.
+  QualType StructTy = StructBase->getType();
+  if (StructTy->isPointerType())
+    StructTy = StructTy->getPointeeType();
+  const RecordDecl *RD = StructTy->getAsRecordDecl();
+  if (!RD)
     return nullptr;
 
   llvm::Value *Res = nullptr;
@@ -2642,7 +2661,8 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
       Builder.CreateLoad(Ptr, LV.isVolatileQualified(), "bf.load");
 
   bool UseVolatile = LV.isVolatileQualified() &&
-                     Info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
+                     Info.VolatileStorageSize != 0 &&
+                     CodeGenUtils::isAAPCS(CGM.getTarget());
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
@@ -3044,7 +3064,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
   const bool UseVolatile =
       CGM.getCodeGenOpts().AAPCSBitfieldWidth && Dst.isVolatileQualified() &&
-      Info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
+      Info.VolatileStorageSize != 0 && CodeGenUtils::isAAPCS(CGM.getTarget());
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
@@ -3078,7 +3098,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
     // with any non-bit-field member, its container must be read exactly once
     // and written exactly once using the access width appropriate to the type
     // of the container. The two accesses are not atomic.
-    if (Dst.isVolatileQualified() && isAAPCS(CGM.getTarget()) &&
+    if (Dst.isVolatileQualified() && CodeGenUtils::isAAPCS(CGM.getTarget()) &&
         CGM.getCodeGenOpts().ForceAAPCSBitfieldLoad)
       Builder.CreateLoad(Ptr, true, "bf.load");
   }
@@ -4284,8 +4304,8 @@ void CodeGenFunction::EmitCheck(
         CGM.getDataLayout().getDefaultGlobalsAddressSpace());
     InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-    Args.push_back(InfoPtr);
-    ArgTypes.push_back(Args.back()->getType());
+    Args.push_back(Builder.CreateAddrSpaceCast(InfoPtr, CGM.VoidPtrTy));
+    ArgTypes.push_back(CGM.VoidPtrTy);
   }
 
   for (llvm::Value *DynamicArg : DynamicArgs) {
@@ -4602,9 +4622,10 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   EmitBlock(Cont);
 }
 
-llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
-  llvm::CallInst *TrapCall =
-      Builder.CreateCall(CGM.getIntrinsic(IntrID));
+llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
+                                              bool EnsureInsertPoint) {
+  llvm::Function *TrapIntrinsic = CGM.getIntrinsic(IntrID);
+  llvm::CallInst *TrapCall = Builder.CreateCall(TrapIntrinsic);
 
   if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
     auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -4614,7 +4635,28 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
 
   if (InNoMergeAttributedStmt)
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+  if (TrapIntrinsic->doesNotThrow())
+    TrapCall->setDoesNotThrow();
+  if (TrapIntrinsic->doesNotReturn()) {
+    TrapCall->setDoesNotReturn();
+    Builder.CreateUnreachable();
+    if (EnsureInsertPoint)
+      EmitBlock(createBasicBlock());
+    else
+      Builder.ClearInsertionPoint();
+  }
   return TrapCall;
+}
+
+void CodeGenFunction::EmitTrapCallAndMakeUnreachable() {
+  llvm::CallInst *TrapCall =
+      EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
+  TrapCall->setDoesNotReturn();
+  TrapCall->setDoesNotThrow();
+  if (HaveInsertPoint()) {
+    Builder.CreateUnreachable();
+    Builder.ClearInsertionPoint();
+  }
 }
 
 Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
@@ -5771,7 +5813,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     const CGRecordLayout &RL =
         CGM.getTypes().getCGRecordLayout(field->getParent());
     const CGBitFieldInfo &Info = RL.getBitFieldInfo(field);
-    const bool UseVolatile = isAAPCS(CGM.getTarget()) &&
+    const bool UseVolatile = CodeGenUtils::isAAPCS(CGM.getTarget()) &&
                              CGM.getCodeGenOpts().AAPCSBitfieldWidth &&
                              Info.VolatileStorageSize != 0 &&
                              field->getType()
@@ -6360,6 +6402,11 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   Address OutTemp = CreateIRTempWithoutCast(ExprTy);
   LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
 
+  // Start the lifetime before the copy-in so that the temporary is live when
+  // the initial value is written. This ensures the store is within the
+  // lifetime and is not killed by a store undef inserted at lifetime.start.
+  EmitLifetimeStart(OutTemp.getBasePointer());
+
   if (E->isInOut())
     EmitInitializationToLValue(E->getCastedTemporary()->getSourceExpr(),
                                TempLV);
@@ -6375,8 +6422,6 @@ LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
 
   llvm::Value *Addr = TempLV.getAddress().getBasePointer();
   llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
-
-  EmitLifetimeStart(Addr);
 
   Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast());
@@ -6575,6 +6620,21 @@ static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   E = E->IgnoreParens();
 
+  // A WebAssembly funcref is an opaque reference type and llvm only accepts
+  // function pointers as the call target. To make an indirect call through a
+  // reference type, first use the llvm.wasm.funcref.to_ptr intrinsic to make a
+  // fake function pointer to it. The backend lowers the resulting indirect call
+  // to a table.set into a single element dummy table + call_indirect 0.
+  auto ConvertFuncrefToPtr = [&](llvm::Value *CalleePtr) -> llvm::Value * {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(CalleePtr->getType());
+        TET && TET->getName() == "wasm.funcref") {
+      llvm::Function *ToPtr =
+          CGM.getIntrinsic(llvm::Intrinsic::wasm_funcref_to_ptr);
+      return Builder.CreateCall(ToPtr, {CalleePtr});
+    }
+    return CalleePtr;
+  };
+
   // Look through function-to-pointer decay.
   if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
     if (ICE->getCastKind() == CK_FunctionToPointerDecay ||
@@ -6598,8 +6658,10 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
                 dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee())) {
           GD = GlobalDecl(VD);
         }
-        CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
-        CGCallee Callee(CalleeInfo, Result.first, Result.second);
+        CGCalleeInfo CalleeInfo(FunctionType->castAs<clang::FunctionType>(),
+                                GD);
+        CGCallee Callee(CalleeInfo, ConvertFuncrefToPtr(Result.first),
+                        Result.second);
         return Callee;
       }
     }
@@ -6641,9 +6703,9 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
           dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee()))
     GD = GlobalDecl(VD);
 
-  CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
+  CGCalleeInfo calleeInfo(functionType->castAs<clang::FunctionType>(), GD);
   CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
-  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
+  CGCallee callee(calleeInfo, ConvertFuncrefToPtr(calleePtr), pointerAuth);
   return callee;
 }
 
@@ -7092,7 +7154,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
-      Args, FnType, /*ChainCall=*/Chain);
+      Args, FnType, /*ChainCall=*/Chain, getCurrentFunctionDecl());
 
   if (ResolvedFnInfo)
     *ResolvedFnInfo = &FnInfo;

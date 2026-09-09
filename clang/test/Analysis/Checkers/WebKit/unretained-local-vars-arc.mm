@@ -20,7 +20,7 @@ void foo2() {
 void foo3() {
   SomeObj *bar = provide();
   IOSurfaceRef surface;
-  // expected-warning@-1{{Local variable 'surface' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'surface' is a RetainPtr-capable type 'IOSurfaceRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
 }
 
 void foo4() {
@@ -29,7 +29,7 @@ void foo4() {
 
 void bar() {
   CFMutableArrayRef array = CFArrayCreateMutable(kCFAllocatorDefault, 10);
-  // expected-warning@-1{{Local variable 'array' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'array' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
   CFArrayAppendValue(array, nullptr);
 }
 
@@ -56,7 +56,7 @@ dispatch_queue_t provide_dispatch();
 void use_const_local() {
   NSString * const str = provide_str();
   CFDictionaryRef dict = provide_dict();
-  // expected-warning@-1{{Local variable 'dict' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'dict' is a RetainPtr-capable type 'CFDictionaryRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
   auto dispatch = provide_dispatch();
   doWork(str, dict, dispatch);
 }
@@ -78,7 +78,7 @@ void use_const_local() {
 
 - (void)bar {
   CFMutableArrayRef array = CFArrayCreateMutable(kCFAllocatorDefault, 10);
-  // expected-warning@-1{{Local variable 'array' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'array' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
   CFArrayAppendValue(array, nullptr);
 }
 

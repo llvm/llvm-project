@@ -91,6 +91,9 @@ public:
             (IsIntentIn(sym) && !IsOptional(sym) &&
                 !sym.attrs().test(semantics::Attr::VALUE)));
   }
+  bool operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
+  }
 
   bool operator()(const ImpliedDoIndex &ido) const {
     return acImpliedDos_.find(ido.name) != acImpliedDos_.end() || !context_ ||
@@ -363,6 +366,9 @@ public:
         IsConstantExpr(x.upper(), context_) && (*this)(x.parent());
   }
   bool operator()(const DescriptorInquiry &) const { return false; }
+  bool operator()(const RankOneBoundElement &x) const {
+    return false;
+  } // unreachable
   template <typename T> bool operator()(const ArrayConstructor<T> &) const {
     return false;
   }
@@ -796,6 +802,10 @@ public:
     } else {
       return "non-constant descriptor inquiry not allowed for local object";
     }
+  }
+
+  Result operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
@@ -1796,6 +1806,9 @@ public:
   }
   Result operator()(const DescriptorInquiry &) const {
     return {}; // doesn't count as a use
+  }
+  Result operator()(const RankOneBoundElement &x) const {
+    return {}; // unreachable
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {

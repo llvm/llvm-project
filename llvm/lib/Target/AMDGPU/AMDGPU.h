@@ -25,15 +25,73 @@ class GCNTargetMachine;
 class TargetMachine;
 
 // GlobalISel passes
-void initializeAMDGPUPreLegalizerCombinerPass(PassRegistry &);
-FunctionPass *createAMDGPUPreLegalizeCombiner(bool IsOptNone);
+void initializeAMDGPUPreLegalizerCombinerLegacyPass(PassRegistry &);
+FunctionPass *createAMDGPUPreLegalizeCombinerLegacyPass(bool IsOptLevelNone);
+
+class AMDGPUPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AMDGPUPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
-FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
-void initializeAMDGPURegBankCombinerPass(PassRegistry &);
+FunctionPass *createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone);
+void initializeAMDGPURegBankCombinerLegacyPass(PassRegistry &);
+
+class AMDGPURegBankCombinerPass
+    : public RequiredPassInfoMixin<AMDGPURegBankCombinerPass> {
+  bool IsOptLevelNone;
+
+public:
+  explicit AMDGPURegBankCombinerPass(bool IsOptLevelNone = false);
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
-FunctionPass *createAMDGPURegBankSelectPass();
-FunctionPass *createAMDGPURegBankLegalizePass();
+
+class AMDGPUGlobalISelDivergenceLoweringPass
+    : public RequiredPassInfoMixin<AMDGPUGlobalISelDivergenceLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createAMDGPURegBankSelectLegacyPass();
+
+class AMDGPURegBankSelectPass
+    : public RequiredPassInfoMixin<AMDGPURegBankSelectPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA().setLegalized();
+  }
+
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
+};
+FunctionPass *createAMDGPURegBankLegalizeLegacyPass();
+
+class AMDGPURegBankLegalizePass
+    : public RequiredPassInfoMixin<AMDGPURegBankLegalizePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties()
+        .setIsSSA()
+        .setLegalized()
+        .setRegBankSelected();
+  }
+
+  MachineFunctionProperties getClearedProperties() const {
+    return MachineFunctionProperties().setNoPHIs();
+  }
+};
 
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
@@ -44,7 +102,6 @@ FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModeLegacyPass();
-FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
@@ -92,7 +149,7 @@ struct AMDGPUUseNativeCallsPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class SILowerI1CopiesPass : public OptionalPassInfoMixin<SILowerI1CopiesPass> {
+class SILowerI1CopiesPass : public RequiredPassInfoMixin<SILowerI1CopiesPass> {
 public:
   SILowerI1CopiesPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
@@ -211,14 +268,14 @@ extern char &SILowerWWMCopiesLegacyID;
 void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
 extern char &SILowerI1CopiesLegacyID;
 
-void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
-extern char &AMDGPUGlobalISelDivergenceLoweringID;
+void initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUGlobalISelDivergenceLoweringLegacyID;
 
-void initializeAMDGPURegBankSelectPass(PassRegistry &);
-extern char &AMDGPURegBankSelectID;
+void initializeAMDGPURegBankSelectLegacyPass(PassRegistry &);
+extern char &AMDGPURegBankSelectLegacyID;
 
-void initializeAMDGPURegBankLegalizePass(PassRegistry &);
-extern char &AMDGPURegBankLegalizeID;
+void initializeAMDGPURegBankLegalizeLegacyPass(PassRegistry &);
+extern char &AMDGPURegBankLegalizeLegacyID;
 
 void initializeAMDGPUMarkLastScratchLoadLegacyPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
@@ -326,12 +383,10 @@ struct AMDGPULowerExecSyncPass
 
 void initializeAMDGPUSwLowerLDSLegacyPass(PassRegistry &);
 extern char &AMDGPUSwLowerLDSLegacyPassID;
-ModulePass *
-createAMDGPUSwLowerLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
+ModulePass *createAMDGPUSwLowerLDSLegacyPass();
 
 struct AMDGPUSwLowerLDSPass : OptionalPassInfoMixin<AMDGPUSwLowerLDSPass> {
-  const AMDGPUTargetMachine &TM;
-  AMDGPUSwLowerLDSPass(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
+  AMDGPUSwLowerLDSPass() = default;
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
@@ -356,7 +411,7 @@ public:
 };
 
 class AMDGPULowerKernelArgumentsPass
-    : public OptionalPassInfoMixin<AMDGPULowerKernelArgumentsPass> {
+    : public RequiredPassInfoMixin<AMDGPULowerKernelArgumentsPass> {
 private:
   TargetMachine &TM;
 
@@ -413,7 +468,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class SIModeRegisterPass : public OptionalPassInfoMixin<SIModeRegisterPass> {
+class SIModeRegisterPass : public RequiredPassInfoMixin<SIModeRegisterPass> {
 public:
   SIModeRegisterPass() = default;
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
@@ -518,7 +573,7 @@ public:
 };
 
 class SIAnnotateControlFlowPass
-    : public OptionalPassInfoMixin<SIAnnotateControlFlowPass> {
+    : public RequiredPassInfoMixin<SIAnnotateControlFlowPass> {
 private:
   const AMDGPUTargetMachine &TM;
 
@@ -622,17 +677,23 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
 
   // clang-format off
   static const bool ASAliasRules[][AMDGPUAS::MAX_AMDGPU_ADDRESS + 1] = {
-    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
-    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true},
-    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Region   */            {false, false, true,  false, false, false, false, false, false, false},
-    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false},
-    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true},
-    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false},
-    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true},
-    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true},
+    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr Reserved Reserved Reserved Reserved Reserved Barrier */
+    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true, false, false, false, false, false, false},
+    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Region   */            {false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false},
+    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false},
+    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false},
+    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Barrier  */           {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, true},
   };
   // clang-format on
   static_assert(std::size(ASAliasRules) == AMDGPUAS::MAX_AMDGPU_ADDRESS + 1);

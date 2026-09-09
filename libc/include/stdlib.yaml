@@ -116,6 +116,13 @@ functions:
     return_type: char *
     arguments:
       - type: const char *
+  - name: getloadavg
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: double[]
+      - type: int
   - name: labs
     standards:
       - stdc
@@ -185,6 +192,12 @@ functions:
       - type: void **
       - type: size_t
       - type: size_t
+  - name: putenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
   - name: qsort
     standards:
       - stdc
@@ -216,6 +229,13 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: realpath
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *__restrict
+      - type: char *__restrict
   - name: srand
     standards:
       - stdc
@@ -373,6 +393,12 @@ functions:
   - name: system
     standards:
       - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+  - name: unsetenv
+    standards:
+      - posix
     return_type: int
     arguments:
       - type: const char *

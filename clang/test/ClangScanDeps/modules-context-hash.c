@@ -17,8 +17,12 @@
 // RUN: clang-scan-deps -compilation-database %t/cdb_a.json -format experimental-full -j 1 >  %t/result_a.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_b.json -format experimental-full -j 1 > %t/result_b.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_b2.json -format experimental-full -j 1 > %t/result_b2.json
-// RUN: cat %t/result_a.json %t/result_b.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK
-// RUN: cat %t/result_b.json %t/result_b2.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=FLAG_ONLY
+// Filter each unique JSON output before concatenating for FileCheck.
+// RUN: %scan-deps-filter --fields=clang-context-hash,clang-modulemap-file,command-line,context-hash,file-deps,input-file,link-libraries,name,clang-module-deps %t/result_a.json > %t/result_a.filt.json
+// RUN: %scan-deps-filter --fields=clang-context-hash,clang-modulemap-file,command-line,context-hash,file-deps,input-file,link-libraries,name,clang-module-deps %t/result_b.json > %t/result_b.filt.json
+// RUN: %scan-deps-filter --fields=clang-context-hash,clang-modulemap-file,command-line,context-hash,file-deps,input-file,link-libraries,name,clang-module-deps %t/result_b2.json > %t/result_b2.filt.json
+// RUN: cat %t/result_a.filt.json %t/result_b.filt.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK
+// RUN: cat %t/result_b.filt.json %t/result_b2.filt.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=FLAG_ONLY
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [

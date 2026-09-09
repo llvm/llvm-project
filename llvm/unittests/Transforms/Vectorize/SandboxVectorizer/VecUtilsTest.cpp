@@ -18,9 +18,11 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -545,6 +547,20 @@ bb1:
   SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
   EXPECT_EQ(sandboxir::VecUtils::getLowest(CBA), IC);
 
+  {
+    // Check getHighest(ArrayRef<Instruction *>)
+    SmallVector<sandboxir::Instruction *> A({IA});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(A), IA);
+    SmallVector<sandboxir::Instruction *> ABC({IA, IB, IC});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(ABC), IA);
+    SmallVector<sandboxir::Instruction *> ACB({IA, IC, IB});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(ACB), IA);
+    SmallVector<sandboxir::Instruction *> CAB({IC, IA, IB});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(CAB), IA);
+    SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(CBA), IA);
+  }
+
   // Check getLowest(ArrayRef<Value *>)
   SmallVector<sandboxir::Value *> C1Only({C1});
   EXPECT_EQ(sandboxir::VecUtils::getLowest(C1Only, &BB), nullptr);
@@ -604,6 +620,93 @@ bb2:
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI2), PHI2);
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(Br), Br);
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(nullptr), nullptr);
+}
+
+TEST_F(VecUtilsTest, GetInsertPointAfterInstrs) {
+  parseIR(R"IR(
+define void @foo(i8 %v) {
+bb_phi:
+  %phi1 = phi i8 [0, %bb_phi], [1, %bb_phi]
+  %phi2 = phi i8 [0, %bb_phi], [1, %bb_phi]
+  %A = add i8 %v, 1
+  %B = add i8 %v, 2
+  %C = add i8 %v, 3
+  ret void
+
+bb_nophi:
+  %X = add i8 %v, 4
+  %Y = add i8 %v, 5
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  llvm::BasicBlock::Create(this->C, "bb_empty", &LLVMF);
+
+  sandboxir::Context Ctx(this->C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+
+  auto &BBPhi = getBasicBlockByName(F, "bb_phi");
+  auto It = BBPhi.begin();
+  auto *Phi1 = cast<sandboxir::PHINode>(&*It++);
+  auto *Phi2 = cast<sandboxir::PHINode>(&*It++);
+  auto *A = cast<sandboxir::Instruction>(&*It++);
+  auto *B = cast<sandboxir::Instruction>(&*It++);
+  auto *InstC = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  auto &BBNOPhi = getBasicBlockByName(F, "bb_nophi");
+  It = BBNOPhi.begin();
+  auto *X = cast<sandboxir::Instruction>(&*It++);
+  auto *Y = cast<sandboxir::Instruction>(&*It++);
+
+  auto &BBEmpty = getBasicBlockByName(F, "bb_empty");
+
+  auto *ArgV = F.getArg(0);
+
+  // 1. Non-PHI instructions in BB
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBPhi),
+            B->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A, B}, &BBPhi),
+            InstC->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({B, A}, &BBPhi),
+            InstC->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({InstC}, &BBPhi),
+            Ret->getIterator());
+
+  // 2. PHI instructions in BB
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi2}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(
+      sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1, Phi2}, &BBPhi),
+      A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1, B}, &BBPhi),
+            InstC->getIterator());
+
+  // 3. Fallback when BotI == nullptr (no matching instruction in BB)
+  // 3a. BB has PHIs
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({ArgV}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({X}, &BBPhi),
+            A->getIterator());
+
+  // 3b. BB has no PHIs
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBNOPhi),
+            Y->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({ArgV}, &BBNOPhi),
+            Y->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBNOPhi),
+            Y->getIterator());
+
+  // 3c. Empty BB
+  EXPECT_TRUE(BBEmpty.empty());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBEmpty),
+            BBEmpty.begin());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBEmpty),
+            BBEmpty.begin());
 }
 
 TEST_F(VecUtilsTest, GetCommonScalarType) {
@@ -790,4 +893,269 @@ bb0:
 
   EXPECT_EQ(Elms, Bndl);
   EXPECT_THAT(Lanes, testing::ElementsAre(0, 1, 5, 6, 8, 11));
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_Match) {
+  parseIR(R"IR(
+define void @match(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %add0 = fadd float %ld0, %ld0
+  %add1 = fadd float %ld1, %ld1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("match"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  std::advance(It, 2);
+  auto *Ld0 = &*It++;
+  auto *Ld1 = &*It++;
+  auto *Add0 = &*It++;
+  auto *Add1 = &*It++;
+
+  ASSERT_EQ(Add0->getOperand(0), Ld0);
+  ASSERT_EQ(Add1->getOperand(0), Ld1);
+
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  auto NextUserBundles =
+      sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed);
+  ASSERT_EQ(NextUserBundles.size(), 1u);
+  ASSERT_EQ(NextUserBundles[0].size(), 2u);
+  EXPECT_EQ(NextUserBundles[0][0], Add0);
+  EXPECT_EQ(NextUserBundles[0][1], Add1);
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_OpcodeMismatch) {
+  parseIR(R"IR(
+define void @opcode_mismatch(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %add0 = fadd float %ld0, %ld0
+  %sub1 = fsub float %ld1, %ld1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("opcode_mismatch"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  std::advance(It, 2);
+  auto *Ld0 = &*It++;
+  auto *Ld1 = &*It++;
+
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  EXPECT_TRUE(
+      sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
+          .empty());
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_TypeMismatch) {
+  parseIR(R"IR(
+define void @type_mismatch(ptr %pf, ptr %pd) {
+entry:
+  %f0 = load float, ptr %pf
+  %d1 = load double, ptr %pd
+  %add0 = fadd float %f0, %f0
+  %add1 = fadd double %d1, %d1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("type_mismatch"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  auto *F0 = &*It++;
+  auto *D1 = &*It++;
+
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  EXPECT_TRUE(sandboxir::VecUtils::getNextUserBundles({F0, D1}, IMaps, Claimed)
+                  .empty());
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_BlockMismatch) {
+  parseIR(R"IR(
+define void @block_mismatch(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %add0 = fadd float %ld0, %ld0
+  br label %bb1
+bb1:
+  %add1 = fadd float %ld1, %ld1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("block_mismatch"));
+  auto &Entry = getBasicBlockByName(*F, "entry");
+  auto It = Entry.begin();
+  std::advance(It, 2);
+  auto *Ld0 = &*It++;
+  auto *Ld1 = &*It++;
+
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  EXPECT_TRUE(
+      sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
+          .empty());
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_OperandMismatch) {
+  parseIR(R"IR(
+define void @operand_mismatch(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %add0 = fadd float %ld0, %ld1
+  %add1 = fadd float %ld0, %ld1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("operand_mismatch"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  std::advance(It, 2);
+  auto *Ld0 = &*It++;
+  auto *Ld1 = &*It++;
+
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  EXPECT_TRUE(
+      sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
+          .empty());
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_DuplicateOperandMismatch) {
+  parseIR(R"IR(
+define void @duplicate_operand_mismatch(ptr %p, float %other) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %add0 = fadd float %ld0, %ld0
+  %add1 = fadd float %ld1, %other
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("duplicate_operand_mismatch"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  std::advance(It, 2);
+  auto *Ld0 = &*It++;
+  auto *Ld1 = &*It++;
+  // Lane 0's user uses Ld0 at operands {0, 1} but lane 1's user
+  // uses Ld1 only at operand {0}, so no bundle should form.
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  EXPECT_TRUE(
+      sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
+          .empty());
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_MissingLaneUser) {
+  parseIR(R"IR(
+define void @missing_lane_user(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %add0 = fadd float %ld0, %ld0
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("missing_lane_user"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  std::advance(It, 2);
+  auto *Ld0 = &*It++;
+  auto *Ld1 = &*It++;
+
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  EXPECT_TRUE(
+      sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
+          .empty());
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_VectorizedUser) {
+  parseIR(R"IR(
+define void @vectorized_user(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %add0 = fadd float %ld0, %ld0
+  %add1 = fadd float %ld1, %ld1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("vectorized_user"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  std::advance(It, 2);
+  auto *Ld0 = &*It++;
+  auto *Ld1 = &*It++;
+  It++; // Add0, unused: only Add1 is marked vectorized below.
+  auto *Add1 = &*It++;
+
+  sandboxir::Action A(nullptr, {Add1}, {}, 0);
+  IMaps.registerVector({Add1}, &A);
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  EXPECT_TRUE(
+      sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
+          .empty());
+}
+
+TEST_F(VecUtilsTest, GetNextUserBundle_VectorizedSeedUser) {
+  parseIR(R"IR(
+define void @vectorized_seed_user(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %add0 = fadd float %ld0, %ld0
+  %add1 = fadd float %ld1, %ld1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  sandboxir::InstrMaps IMaps;
+  auto *F = Ctx.createFunction(M->getFunction("vectorized_seed_user"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  std::advance(It, 2);
+  auto *Ld0 = &*It++;
+  auto *Ld1 = &*It++;
+  auto *Add0 = &*It++;
+
+  sandboxir::Action A(nullptr, {Add0}, {}, 0);
+  IMaps.registerVector({Add0}, &A);
+  SmallPtrSet<sandboxir::Instruction *, 4> Claimed;
+  EXPECT_TRUE(
+      sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
+          .empty());
 }

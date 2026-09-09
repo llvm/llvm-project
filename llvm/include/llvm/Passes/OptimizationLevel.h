@@ -20,20 +20,11 @@
 
 namespace llvm {
 
-class OptimizationLevel final {
-  unsigned SpeedLevel = 2;
-  OptimizationLevel(unsigned SpeedLevel) : SpeedLevel(SpeedLevel) {
-    // Check that only valid values are passed.
-    assert(SpeedLevel <= 3 &&
-           "Optimization level for speed should be 0, 1, 2, or 3");
-  }
-
-public:
-  OptimizationLevel() = default;
+enum class OptimizationLevel {
   /// Disable as many optimizations as possible. This doesn't completely
   /// disable the optimizer in all cases, for example always_inline functions
   /// can be required to be inlined for correctness.
-  LLVM_ABI static const OptimizationLevel O0;
+  O0 = 0,
 
   /// Optimize quickly without destroying debuggability.
   ///
@@ -49,7 +40,8 @@ public:
   /// vectorization, or fusion don't make sense here due to the degree to
   /// which the executed code differs from the source code, and the compile
   /// time cost.
-  LLVM_ABI static const OptimizationLevel O1;
+  O1 = 1,
+
   /// Optimize for fast execution as much as possible without triggering
   /// significant incremental compile time or code size growth.
   ///
@@ -66,7 +58,7 @@ public:
   ///
   /// This is expected to be a good default optimization level for the vast
   /// majority of users.
-  LLVM_ABI static const OptimizationLevel O2;
+  O2 = 2,
   /// Optimize for fast execution as much as possible.
   ///
   /// This mode is significantly more aggressive in trading off compile time
@@ -81,18 +73,7 @@ public:
   /// order to make even significantly slower compile times at least scale
   /// reasonably. This does not preclude very substantial constant factor
   /// costs though.
-  LLVM_ABI static const OptimizationLevel O3;
-
-  bool isOptimizingForSpeed() const { return SpeedLevel > 0; }
-
-  bool operator==(const OptimizationLevel &Other) const {
-    return SpeedLevel == Other.SpeedLevel;
-  }
-  bool operator!=(const OptimizationLevel &Other) const {
-    return SpeedLevel != Other.SpeedLevel;
-  }
-
-  unsigned getSpeedupLevel() const { return SpeedLevel; }
+  O3 = 3,
 };
 } // namespace llvm
 

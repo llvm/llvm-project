@@ -8,8 +8,11 @@
 
 #include <detail/queue_impl.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
+#include <detail/global_objects.hpp>
+#include <detail/handler_impl.hpp>
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
@@ -18,42 +21,34 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-static void setKernelLaunchArgs(const detail::UnifiedRangeView &Range,
-                                ol_kernel_launch_size_args_t &ArgsToSet) {
-  assert(Range.MDims < 4 && "Invalid dimensions.");
-  uint32_t GlobalSize[3] = {1, 1, 1};
-  if (Range.MGlobalSize) {
-    for (size_t I = 0; I < Range.MDims; ++I) {
-      assert(Range.MGlobalSize[I] <= std::numeric_limits<uint32_t>::max());
-      GlobalSize[I] = static_cast<uint32_t>(Range.MGlobalSize[I]);
-    }
+thread_local bool NestedCallsDetector = false;
+class NestedCallsTracker {
+public:
+  NestedCallsTracker() {
+    if (NestedCallsDetectorRef)
+      throw sycl::exception(
+          make_error_code(errc::invalid),
+          "Calls to sycl::queue::submit cannot be nested. Command group "
+          "function objects should use the sycl::handler API instead.");
+    NestedCallsDetectorRef = true;
   }
 
-  uint32_t GroupSize[3] = {1, 1, 1};
-  if (Range.MLocalSize) {
-    for (size_t I = 0; I < Range.MDims; ++I) {
-      assert(Range.MLocalSize[I] <= std::numeric_limits<uint32_t>::max() &&
-             Range.MLocalSize[I] != 0);
-      GroupSize[I] = static_cast<uint32_t>(Range.MLocalSize[I]);
-    }
-  }
+  ~NestedCallsTracker() { NestedCallsDetectorRef = false; }
 
-  ArgsToSet.Dimensions = Range.MDims;
-  ArgsToSet.NumGroups.x = GlobalSize[0] / GroupSize[0];
-  ArgsToSet.NumGroups.y = GlobalSize[1] / GroupSize[1];
-  ArgsToSet.NumGroups.z = GlobalSize[2] / GroupSize[2];
-  ArgsToSet.GroupSize.x = GroupSize[0];
-  ArgsToSet.GroupSize.y = GroupSize[1];
-  ArgsToSet.GroupSize.z = GroupSize[2];
-  ArgsToSet.DynSharedMemory = 0;
-}
+private:
+  // Cache the TLS location to decrease amount of TLS accesses.
+  bool &NestedCallsDetectorRef = NestedCallsDetector;
+};
 
 QueueImpl::QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
                      const property_list &propList, PrivateTag)
     : MIsInorder(false), MAsyncHandler(asyncHandler), MPropList(propList),
       MDevice(deviceImpl),
       MContext(MDevice.getPlatformImpl().getDefaultContext()) {
-  callAndThrow(olCreateQueue, MDevice.getOLHandle(), &MOffloadQueue);
+  assert(MContext.getOLHandleRef() &&
+         "Queue must be associated with a valid offload context");
+  callAndThrow(olCreateQueue, MContext.getOLHandleRef(), MDevice.getOLHandle(),
+               &MOffloadQueue);
 }
 
 QueueImpl::~QueueImpl() {
@@ -64,61 +59,65 @@ QueueImpl::~QueueImpl() {
 
 backend QueueImpl::getBackend() const noexcept { return MDevice.getBackend(); }
 
+static ol_device_handle_t getHostOLDevice() {
+  const auto &HostPlatformGroups =
+      getOffloadTopologies()[OL_PLATFORM_BACKEND_HOST].getPlatformGroups();
+  assert(!HostPlatformGroups.empty() &&
+         "Host platform must contain at least one context group");
+  assert(!HostPlatformGroups.front().Devices.empty() &&
+         "Host platform context group must contain at least one device");
+  static ol_device_handle_t HostDevice =
+      HostPlatformGroups.front().Devices.front();
+  return HostDevice;
+}
+
 void QueueImpl::wait() { callAndThrow(olSyncQueue, MOffloadQueue); }
 
-static bool checkEventsPlatformMatch(std::vector<EventImplPtr> &Events,
+void QueueImpl::waitAndThrow() {
+  wait();
+  throwAsynchronous();
+}
+
+void QueueImpl::throwAsynchronous() { flushAsyncExceptions(); }
+
+static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
                                      const PlatformImpl &QueuePlatform) {
   // liboffload limitation to olWaitEvents. We can't do any extra handling for
   // cross context/platform events without host task support now.
   //   "The input events can be from any queue on any device provided by the
   //   same platform as `Queue`."
-  return std::all_of(Events.cbegin(), Events.cend(),
-                     [&QueuePlatform](const EventImplPtr &Event) {
-                       return &Event->getPlatformImpl() == &QueuePlatform;
-                     });
-}
-
-void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
-                                    const detail::UnifiedRangeView &Range) {
-  if (!checkEventsPlatformMatch(Events, MDevice.getPlatformImpl()))
+  if (!std::all_of(Events.cbegin(), Events.cend(),
+                   [&QueuePlatform](const EventImplPtr &Event) {
+                     return &Event->getPlatformImpl() == &QueuePlatform;
+                   })) {
     throw sycl::exception(
         sycl::make_error_code(sycl::errc::feature_not_supported),
         "libsycl doesn't support cross-context/platform event dependencies "
-        "now.");
-
-  // TODO: this conversion and storing of only offload events is possible only
-  // while we don't have host tasks (or features based on host tasks, like
-  // streams). With them - it is very likely we should copy EventImplPtr
-  // (shared_ptr) and keep it here. Although it may differ if host tasks will be
-  // implemented on offload level (no data now).
-  assert(MCurrentSubmitInfo.DepEvents.empty() &&
-         "Kernel submission must clean up dependencies.");
-  MCurrentSubmitInfo.DepEvents.reserve(Events.size());
-  for (auto &Event : Events) {
-    assert(Event && "Event impl object can't be nullptr");
-    MCurrentSubmitInfo.DepEvents.push_back(Event->getHandle());
+        "yet.");
   }
-  setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
+}
+
+void QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
+                                      const detail::UnifiedRangeView &Range) {
+  setKernelLaunchParams(std::move(Events), convertToOlRange(Range));
+}
+
+void QueueImpl::setKernelLaunchParams(
+    std::vector<EventImplPtr> &&Events,
+    const ol_kernel_launch_size_args_t &Range) {
+  checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
+  MCurrentSubmitInfo.DepEvents = std::move(Events);
+  MCurrentSubmitInfo.Range = Range;
 }
 
 void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                                  size_t ArgSize) {
   ol_symbol_handle_t Kernel =
       detail::ProgramAndKernelManager::getInstance().getOrCreateKernel(
-          KernelInfo, MDevice);
+          KernelInfo, MContext, MDevice);
   assert(Kernel);
 
-  // TODO: liboffload supports only in-order queues and no cross context waiting
-  // is available now that means that this code is excessive but correct. I
-  // don't want to skip it and rely on default liboffload behaviour that is
-  // applicable for in-order queue only. Once OOO queues are added this waiting
-  // must be disabled for in-order queues. Once host tasks are added - cross
-  // context dependencies should be enabled and checked as well.
-  if (!MCurrentSubmitInfo.DepEvents.empty()) {
-    callAndThrow(olWaitEvents, MOffloadQueue,
-                 MCurrentSubmitInfo.DepEvents.data(),
-                 MCurrentSubmitInfo.DepEvents.size());
-  }
+  handleEventDependencies(MCurrentSubmitInfo.DepEvents);
 
   assert(ArgData && "At least one argument must exist");
   assert(ArgSize && "Arguments size must be greater than 0");
@@ -128,23 +127,119 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   auto Result =
       olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel,
                      &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
-  // Clean up current kernel submit data to prepare structures for next
-  // submission.
-  MCurrentSubmitInfo.DepEvents.clear();
-  MCurrentSubmitInfo.Range = {};
+
   if (isFailed(Result))
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           std::string("Kernel submission (") +
                               KernelInfo.getName().data() + ") failed with " +
                               formatCodeString(Result));
 
+  MCurrentSubmitInfo.LastEvent =
+      createEvent(std::move(MCurrentSubmitInfo.DepEvents));
+}
+
+static ol_device_handle_t getAllocDevice(const void *ptr) {
+  // TODO: consider caching this information to avoid querying it every time.
+  ol_device_handle_t Device{};
+  [[maybe_unused]] ol_result_t Result =
+      callNoCheck(olGetMemInfo, ptr, OL_MEM_INFO_DEVICE,
+                  sizeof(ol_device_handle_t), &Device);
+  if (detail::isFailed(Result)) {
+    // If liboffload could not find the allocation, assume it is a host one.
+    if (Result->Code == OL_ERRC_NOT_FOUND) {
+      return getHostOLDevice();
+    }
+    checkAndThrow(Result);
+  }
+
+  assert(Device);
+  return Device;
+}
+
+std::shared_ptr<EventImpl>
+QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
+                  const std::vector<EventImplPtr> &DepEvents) {
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  if (NumBytes == 0) {
+    return submitWait(DepEvents);
+  }
+
+  if (!Dest || !Src) {
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in memcpy operation");
+  }
+
+  ol_device_handle_t DestOLDevice = getAllocDevice(Dest);
+  ol_device_handle_t SrcOLDevice = getAllocDevice(Src);
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,
+               NumBytes);
+  return createEvent();
+}
+
+EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
+                                 const std::vector<EventImplPtr> &DepEvents) {
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+
+  if (NumBytes == 0) {
+    handleEventDependencies(DepEvents);
+    return createEvent();
+  }
+  if (!Ptr) {
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in prefetch operation");
+  }
+
+  constexpr std::size_t Count = 1;
+  const void *Mems[] = {Ptr};
+  const std::size_t Sizes[] = {NumBytes};
+
+  constexpr ol_mem_migration_flags_t Flag =
+      OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
+
+  return createEvent();
+}
+
+void QueueImpl::handleEventDependencies(const std::vector<EventImplPtr> &Deps) {
+  // TODO: liboffload supports only in-order queues and no cross context waiting
+  // is available now that means that this code is excessive but correct. I
+  // don't want to skip it and rely on default liboffload behaviour that is
+  // applicable for in-order queue only. Once OOO queues are added this waiting
+  // must be disabled for in-order queues. Once host tasks are added - cross
+  // context dependencies should be enabled and checked as well.
+  if (!Deps.empty()) {
+    auto EventHandles = getSyclObjHandles(Deps);
+    callAndThrow(olWaitEvents, MOffloadQueue, EventHandles.data(),
+                 EventHandles.size());
+  }
+}
+
+EventImplPtr QueueImpl::createEvent(std::vector<EventImplPtr> &&Deps) {
   ol_event_handle_t NewEvent{};
   ol_event_flags_t Flags{};
   callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
-
-  MCurrentSubmitInfo.LastEvent =
-      EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
+  return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl(),
+                                          std::move(Deps));
 }
 
+EventImplPtr QueueImpl::submitWithHandler(const TypelessCGF &CGF) {
+  detail::HandlerImpl HandlerImplVal(*this);
+  handler Handler(HandlerImplVal);
+  {
+    NestedCallsTracker tracker;
+    CGF(Handler);
+  }
+
+  return Handler.finalize();
+}
+
+EventImplPtr QueueImpl::submitWait(const std::vector<EventImplPtr> &DepEvents) {
+  handleEventDependencies(DepEvents);
+  return createEvent(std::vector<EventImplPtr>(DepEvents));
+}
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

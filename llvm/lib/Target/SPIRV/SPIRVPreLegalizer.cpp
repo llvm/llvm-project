@@ -18,25 +18,30 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
 
 using namespace llvm;
 
 namespace {
-class SPIRVPreLegalizer : public MachineFunctionPass {
+class SPIRVPreLegalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPreLegalizer() : MachineFunctionPass(ID) {}
+  SPIRVPreLegalizerLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
 
-void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
+void SPIRVPreLegalizerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -257,7 +262,9 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
       auto SC =
-          isa<FunctionType>(ElemTy)
+          isa<FunctionType>(ElemTy) &&
+                  ST->canUseExtension(
+                      SPIRV::Extension::SPV_INTEL_function_pointers)
               ? SPIRV::StorageClass::CodeSectionINTEL
               : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
       SPIRVTypeInst AssignedPtrType =
@@ -266,7 +273,20 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       // If the ptrcast would be redundant, replace all uses with the source
       // register.
       MachineRegisterInfo *MRI = MIB.getMRI();
-      if (GR->getSPIRVTypeForVReg(Source) == AssignedPtrType) {
+      // For untyped pointers the SPIR-V pointer type does not encode the
+      // pointee, so two pointers with different element types share the same
+      // pointer type. The element type still matters because it selects the
+      // Base Type operand of OpUntyped*AccessChainKHR. Treat the cast as
+      // redundant only when the source already carries the same element type.
+      // Otherwise keep a distinct register so the element type is preserved.
+      bool Redundant =
+          AssignedPtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR
+              ? GR->getUntypedPtrElementType(Source) ==
+                    GR->getOrCreateSPIRVType(ElemTy, MIB,
+                                             SPIRV::AccessQualifier::ReadWrite,
+                                             /*EmitIR=*/true)
+              : GR->getSPIRVTypeForVReg(Source) == AssignedPtrType;
+      if (Redundant) {
         // Erase Def's assign type instruction if we are going to replace Def.
         if (MachineInstr *AssignMI = findAssignTypeInstr(Def, MRI))
           ToErase.push_back(AssignMI);
@@ -319,8 +339,15 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
         MIB.setInsertPt(*MI->getParent(), MI);
         const GlobalValue *Global = MI->getOperand(1).getGlobal();
         Type *ElementTy = toTypedPointer(GR->getDeducedGlobalValueType(Global));
-        auto *Ty = TypedPointerType::get(ElementTy,
-                                         Global->getType()->getAddressSpace());
+        unsigned AddrSpace = Global->getType()->getAddressSpace();
+        // Function pointers use CodeSectionINTEL storage class in SPIR-V when
+        // the SPV_INTEL_function_pointers extension is enabled.
+        const SPIRVSubtarget &ST = MIB.getMF().getSubtarget<SPIRVSubtarget>();
+        if (isa<Function>(Global) &&
+            ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+          AddrSpace =
+              storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL);
+        auto *Ty = TypedPointerType::get(ElementTy, AddrSpace);
         SpvType = GR->getOrCreateSPIRVType(
             Ty, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         break;
@@ -366,14 +393,23 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
       if (SpvType) {
         // check if the address space needs correction
         LLT RegType = MRI.getType(Reg);
-        if (SpvType->getOpcode() == SPIRV::OpTypePointer &&
-            RegType.isPointer() &&
+        if (SpvType.isPointer() && RegType.isPointer() &&
             storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
                 RegType.getAddressSpace()) {
-          const SPIRVSubtarget &ST =
-              MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
-          auto TSC = addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
-          SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
+          // Don't correct CodeSectionINTEL back to Function for function
+          // pointer G_GLOBAL_VALUE - the LLVM register has address space 0
+          // but the SPIR-V type was intentionally set to CodeSectionINTEL.
+          bool SkipCorrection =
+              MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
+              GR->getPointerStorageClass(SpvType) ==
+                  SPIRV::StorageClass::CodeSectionINTEL;
+          if (!SkipCorrection) {
+            const SPIRVSubtarget &ST =
+                MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
+            auto TSC =
+                addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
+            SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
+          }
         }
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
       }
@@ -391,7 +427,7 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
 static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
   if (BitWidth == 1)
     return 1; // No need to widen 1-bit values
-  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 128u);
+  return std::min(std::max<unsigned>(PowerOf2Ceil(BitWidth), 8u), 128u);
 }
 
 static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
@@ -465,6 +501,125 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 }
 } // namespace llvm
 
+// Sign-sensitive integer ops: their result depends on the value of the input
+// sign bit at position (width-1). On sub-pow2 widths the general widening
+// loop is a pure LLT relabel, which leaves the sign bit at the *original*
+// position instead of the widened MSB. These ops therefore need an explicit
+// G_SEXT_INREG on each value operand to move the sign bit up.
+//
+// Signed-vs-unsigned G_ICMP is distinguished by its predicate operand.
+//
+// TODO: follow-up PRs will add the remaining sign-sensitive opcodes
+// (e.g. G_SMIN/G_SMAX, G_SADDSAT/G_SSUBSAT, signed overflow ops).
+static bool isSignSensitiveOp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_SREM:
+    return true;
+  case TargetOpcode::G_ICMP:
+    return CmpInst::isSigned(
+        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()));
+  default:
+    return false;
+  }
+}
+
+struct SignSensitiveWideningInfo {
+  // Width before widening of each value-operand vreg (one entry per vreg).
+  DenseMap<Register, unsigned> OrigWidth;
+  // Ops whose value operand(s) need replacing, ordered for reproducible vreg
+  // numbering.
+  SmallVector<MachineInstr *> Worklist;
+};
+
+// Collect sign-sensitive ops with narrow scalar value operands and their
+// pre-widening widths, before later passes retype those vregs to pow2 LLTs
+// and the original width is no longer recoverable.
+static SignSensitiveWideningInfo
+recordSignSensitiveOperandWidths(MachineFunction &MF,
+                                 MachineRegisterInfo &MRI) {
+  SignSensitiveWideningInfo Info;
+  auto RecordIfNarrow = [&](Register Reg) {
+    LLT Ty = MRI.getType(Reg);
+    if (!Ty.isScalar())
+      return false;
+    unsigned W = Ty.getScalarSizeInBits();
+    if (widenBitWidthToNextPow2(W) == W)
+      return false;
+    Info.OrigWidth.try_emplace(Reg, W);
+    return true;
+  };
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isSignSensitiveOp(MI))
+        continue;
+      // Value operands are the trailing two, past any def or predicate.
+      unsigned N = MI.getNumOperands();
+      const MachineOperand &LHS = MI.getOperand(N - 2);
+      const MachineOperand &RHS = MI.getOperand(N - 1);
+      // Sign-sensitive opcodes carry register operands only.
+      assert(LHS.isReg() && RHS.isReg());
+      bool NeedsRewrite = RecordIfNarrow(LHS.getReg());
+      NeedsRewrite = RecordIfNarrow(RHS.getReg()) || NeedsRewrite;
+      if (NeedsRewrite)
+        Info.Worklist.push_back(&MI);
+    }
+  }
+  return Info;
+}
+
+// For every recorded sign-sensitive op, insert G_SEXT_INREG on each value
+// operand whose original width was narrower than the widened pow2 width and
+// retype the operand's vreg LLT in place to the widened width.
+//
+// Info must have been populated by recordSignSensitiveOperandWidths before
+// other passes retyped the vregs; otherwise the narrow widths needed here
+// are lost.
+//
+// TODO: handle vector operands.
+static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                                  MachineIRBuilder &MIB,
+                                  MachineRegisterInfo &MRI,
+                                  const SignSensitiveWideningInfo &Info) {
+  // Emit G_SEXT_INREG from Reg's recorded narrow width; retypes Reg to the
+  // widened width and returns the sign-extended vreg.
+  auto SignExtendReg = [&](Register Reg, unsigned OldW,
+                           MachineInstr &MI) -> Register {
+    unsigned NewW = widenBitWidthToNextPow2(OldW);
+    LLT NewLLT = LLT::scalar(NewW);
+    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
+    SPIRVTypeInst SpvTy = GR->getOrCreateSPIRVIntegerType(NewW, MIB);
+    Register SExted = MRI.createGenericVirtualRegister(NewLLT);
+    GR->assignSPIRVTypeToVReg(SpvTy, SExted, MF);
+    MRI.setRegClass(SExted, GR->getRegClass(SpvTy));
+    MRI.setType(Reg, NewLLT);
+    MIB.buildSExtInReg(SExted, Reg, OldW);
+    return SExted;
+  };
+
+  // TODO: when the same narrow vreg feeds multiple sign-sensitive ops (e.g.
+  // sdiv %x, %y and srem %x, %y), emit one shared G_SEXT_INREG instead of one
+  // per use.
+  for (MachineInstr *MI : Info.Worklist) {
+    unsigned N = MI->getNumOperands();
+    MachineOperand &LHS = MI->getOperand(N - 2);
+    MachineOperand &RHS = MI->getOperand(N - 1);
+    Register LHSReg = LHS.getReg();
+    Register RHSReg = RHS.getReg();
+    if (auto It = Info.OrigWidth.find(LHSReg); It != Info.OrigWidth.end())
+      LHS.setReg(SignExtendReg(LHSReg, It->second, *MI));
+    // Same vreg on both sides (e.g. G_ICMP slt %x, %x): reuse the sext just
+    // emitted for LHS instead of emitting a second one.
+    if (RHSReg == LHSReg) {
+      RHS.setReg(LHS.getReg());
+      continue;
+    }
+    if (auto It = Info.OrigWidth.find(RHSReg); It != Info.OrigWidth.end())
+      RHS.setReg(SignExtendReg(RHSReg, It->second, *MI));
+  }
+}
+
 static void
 generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder MIB,
@@ -488,6 +643,12 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     // integer widths of 8, 16, 32, 64. Non-standard widths (e.g., i24, i40)
     // must be widened to the next power of two.
     //
+    // Record the original widths of sign-sensitive operands before either
+    // the G_TRUNC handling or the general widening loop retypes vregs, then
+    // rewrite those ops after G_TRUNC processing using the recorded widths.
+    SignSensitiveWideningInfo SignSensitiveInfo =
+        recordSignSensitiveOperandWidths(MF, MRI);
+
     // G_TRUNC requires special handling because its semantics depend on the
     // original destination width. For example:
     //   %dst:s24 = G_TRUNC %src:s64
@@ -555,6 +716,14 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
 
         if (NewSrcWidth == NewDstWidth) {
+          // Rekey OrigWidth from DstReg to MaskedReg so widenSignSensitiveOps
+          // still sees the narrow original width after replaceRegWith.
+          if (auto It = SignSensitiveInfo.OrigWidth.find(DstReg);
+              It != SignSensitiveInfo.OrigWidth.end()) {
+            unsigned W = It->second;
+            SignSensitiveInfo.OrigWidth.erase(It);
+            SignSensitiveInfo.OrigWidth.try_emplace(MaskedReg, W);
+          }
           MRI.replaceRegWith(DstReg, MaskedReg);
           TruncToRemove.push_back(&MI);
         } else {
@@ -564,6 +733,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     }
     for (MachineInstr *MI : TruncToRemove)
       MI->eraseFromParent();
+
+    widenSignSensitiveOps(MF, GR, MIB, MRI, SignSensitiveInfo);
   }
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
@@ -590,16 +761,31 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
         Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
-        SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            ElementTy, MI,
-            addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        auto SC = addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST);
+        if (SC == SPIRV::StorageClass::Function &&
+            isa<FunctionType>(ElementTy) &&
+            ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+          SC = SPIRV::StorageClass::CodeSectionINTEL;
+        SPIRVTypeInst AssignedPtrType =
+            GR->getOrCreateSPIRVPointerType(ElementTy, MI, SC);
+
+        // For untyped pointers, store the element type for later use.
+        if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
+            !ST->isShader()) {
+          SPIRVTypeInst ElemSpvType = GR->getOrCreateSPIRVType(
+              ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite,
+              /*EmitIR=*/true);
+          GR->setUntypedPtrElementType(Reg, ElemSpvType);
+        }
+
         // The intrinsic also carries vector-of-pointer values produced by
         // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
         // the vreg's LLT.
         LLT RegTy = MRI.getType(Reg);
         if (RegTy.isValid() && RegTy.isVector())
           AssignedPtrType = GR->getOrCreateSPIRVVectorType(
-              AssignedPtrType, RegTy.getNumElements(), MIB, true);
+              AssignedPtrType, RegTy.getNumElements(), MIB,
+              /*EmitIR=*/true);
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
@@ -615,6 +801,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // G_GLOBAL_VALUE already has type info.
         if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
           updateRegType(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
+        if (Def->getOpcode() == TargetOpcode::COPY && isVector1(Ty))
+          updateRegType(passCopy(Def, &MF.getRegInfo())->getOperand(0).getReg(),
+                        Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
         MachineInstr *MdMI = MI.getPrevNode();
@@ -1116,7 +1305,7 @@ static void removeImplicitFallthroughs(MachineFunction &MF,
   }
 }
 
-bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
+static bool runPreLegalizer(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
@@ -1143,11 +1332,26 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-INITIALIZE_PASS(SPIRVPreLegalizer, DEBUG_TYPE, "SPIRV pre legalizer", false,
-                false)
+INITIALIZE_PASS(SPIRVPreLegalizerLegacy, DEBUG_TYPE, "SPIRV pre legalizer",
+                false, false)
 
-char SPIRVPreLegalizer::ID = 0;
+char SPIRVPreLegalizerLegacy::ID = 0;
 
-FunctionPass *llvm::createSPIRVPreLegalizerPass() {
-  return new SPIRVPreLegalizer();
+FunctionPass *llvm::createSPIRVPreLegalizerLegacyPass() {
+  return new SPIRVPreLegalizerLegacy();
+}
+
+bool SPIRVPreLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runPreLegalizer(MF);
+}
+
+PreservedAnalyses
+SPIRVPreLegalizerPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runPreLegalizer(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserve<GISelValueTrackingAnalysis>();
 }

@@ -9,7 +9,6 @@
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -23,7 +22,6 @@
 #include "llvm/IR/Function.h"
 #include <cassert>
 #include <optional>
-#include <vector>
 
 enum { MAX_LANES = 64 };
 
@@ -60,15 +58,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
-  MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
+  MaxNumWorkGroups = AMDGPU::getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is completely removed.
   DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
-
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
@@ -739,6 +732,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
+      HasNoWWMPoolSGPRSpillFallback(MFI.hasNoWWMPoolSGPRSpillFallback()),
       NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
       NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
@@ -798,6 +792,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+  HasNoWWMPoolSGPRSpillFallback = YamlMFI.HasNoWWMPoolSGPRSpillFallback;
   NumWaveDispatchSGPRs = YamlMFI.NumWaveDispatchSGPRs;
   NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;

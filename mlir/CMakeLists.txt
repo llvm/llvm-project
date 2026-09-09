@@ -1,5 +1,13 @@
 # MLIR project.
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "MLIR")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -95,13 +103,6 @@ append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_C_FL
 append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_CXX_FLAGS)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  # Silence a false positive GCC -Wunused-but-set-parameter warning in
-  # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
-  # for details
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
-    check_cxx_compiler_flag("-Wno-unused-but-set-parameter" CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER)
-    append_if(CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER "-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
-  endif()
   # Silence a false positive GCC -Wdeprecated-copy warning in cases where
   # a copy operator is defined through "using" a base class copy operator.
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0")

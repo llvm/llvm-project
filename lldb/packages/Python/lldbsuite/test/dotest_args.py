@@ -249,6 +249,14 @@ def create_parser():
         help="The root build directory for the tests. It will be removed before running.",
     )
     group.add_argument(
+        "--timeout",
+        dest="timeout",
+        metavar="Timeout in seconds",
+        type=float,
+        default=0,
+        help="The timeout lit is using to run this test, if any.",
+    )
+    group.add_argument(
         "--lldb-module-cache-dir",
         dest="lldb_module_cache_dir",
         metavar="The clang module cache directory used by LLDB",
@@ -345,6 +353,13 @@ def create_parser():
     X(
         "-d",
         "Suspend the process after launch to wait indefinitely for a debugger to attach",
+    )
+    group.add_argument(
+        "--debug-with",
+        dest="debug_with",
+        choices=["xcode"],
+        type=str.lower,
+        help="Suspend the process after launch, and instruct the specified debugger to attach to it",
     )
     X("-t", "Turn on tracing of lldb command and other detailed test executions")
     group.add_argument(

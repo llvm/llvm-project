@@ -77,8 +77,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
-  const TargetRegisterClass *getConstrainedRegClassForOperand(
-      const MachineOperand &MO, const MachineRegisterInfo &MRI) const override;
+  const TargetRegisterClass *
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB, bool Is64Bit) const;
@@ -176,6 +177,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags);
+  }
+
+  static bool isFPRegister(MCRegister Reg) {
+    return RISCV::FPR16RegClass.contains(Reg) ||
+           RISCV::FPR32RegClass.contains(Reg) ||
+           RISCV::FPR64RegClass.contains(Reg) ||
+           RISCV::FPR128RegClass.contains(Reg);
   }
 };
 } // namespace llvm

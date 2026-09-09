@@ -444,6 +444,26 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @matmul_unsupported_memref_pack(%A: memref<?x?xf32>,
+                                          %B: memref<?x?xf32>,
+                                          %C: memref<?x?xf32>) {
+  linalg.matmul ins(%A, %B : memref<?x?xf32>, memref<?x?xf32>)
+                outs(%C : memref<?x?xf32>)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      // expected-error @below {{data tiling failed}}
+      %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
+}
+
+// -----
+
 func.func @no_single_packing_op(%source: tensor<128x256xf32>, %dest: tensor<4x16x32x16xf32>) {
   %0 = linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %dest : tensor<128x256xf32> -> tensor<4x16x32x16xf32>
   %1 = linalg.unpack %0 inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %source : tensor<4x16x32x16xf32> -> tensor<128x256xf32>

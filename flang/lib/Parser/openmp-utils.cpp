@@ -13,7 +13,6 @@
 #include "flang/Parser/openmp-utils.h"
 
 #include "flang/Common/indirection.h"
-#include "flang/Common/template.h"
 #include "flang/Common/visit.h"
 #include "flang/Parser/tools.h"
 #include "llvm/ADT/StringRef.h"
@@ -37,6 +36,14 @@ const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object) {
   return nullptr;
 }
 
+const parser::OmpLocator *GetLocatorFromObj(const parser::OmpObject &object) {
+  return std::get_if<parser::OmpLocator>(&object.u);
+}
+
+const parser::Name *GetCommonBlockFromObj(const parser::OmpObject &object) {
+  return std::get_if<parser::Name>(&object.u);
+}
+
 const parser::ArrayElement *GetArrayElementFromObj(
     const parser::OmpObject &object) {
   if (auto *dataRef{GetDataRefFromObj(object)}) {
@@ -50,20 +57,24 @@ const parser::ArrayElement *GetArrayElementFromObj(
 
 std::optional<parser::CharBlock> GetObjectSource(
     const parser::OmpObject &object) {
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+  if (auto *name{GetCommonBlockFromObj(object)}) {
     return name->source;
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
+  } else if (auto *desg{GetDesignatorFromObj(object)}) {
     return GetLastName(*desg).source;
+  } else if (auto *locator{GetLocatorFromObj(object)}) {
+    return common::visit( //
+        common::visitors{
+            [](const parser::OmpReservedIdentifier &x) { return x.v.source; },
+            [](const parser::FunctionReference &x) { return x.source; },
+        },
+        locator->u);
   }
   return std::nullopt;
 }
 
 const parser::OmpObject *GetArgumentObject(
     const parser::OmpArgument &argument) {
-  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
-    return std::get_if<parser::OmpObject>(&locator->u);
-  }
-  return nullptr;
+  return std::get_if<parser::OmpObject>(&argument.u);
 }
 
 namespace detail {
@@ -106,12 +117,12 @@ const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
       x.u);
 }
 
-std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
+std::string GetUpperName(llvm::omp::Clause id, llvm::omp::Version version) {
   llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
   return parser::ToUpperCaseLetters(name);
 }
 
-std::string GetUpperName(llvm::omp::Directive id, unsigned version) {
+std::string GetUpperName(llvm::omp::Directive id, llvm::omp::Version version) {
   llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
   return parser::ToUpperCaseLetters(name);
 }

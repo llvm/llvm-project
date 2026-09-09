@@ -154,7 +154,7 @@ isaTransposeOpInterface(GenericOp genericOp);
 /// the category op.
 /// A linalg.generic body could be a series of unary elementwise ops e.g.
 /// `exp(neg(x))`, such as formed by linalg op fusion. Here we restrict it to
-/// detecting cases where body is is a single computation op.
+/// detecting cases where body is a single computation op.
 bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp,
                                        bool allowNonIdentityMaps = false);
 

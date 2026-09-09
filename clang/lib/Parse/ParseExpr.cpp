@@ -525,8 +525,8 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 
     if (!RHS.isInvalid() && RHSIsInitList) {
       if (ThisPrec == prec::Assignment) {
-        Diag(OpToken, diag::warn_cxx98_compat_generalized_initializer_lists)
-          << Actions.getExprRange(RHS.get());
+        Diag(OpToken, diag::compat_cxx11_generalized_initializer_lists)
+            << Actions.getExprRange(RHS.get());
       } else if (ColonLoc.isValid()) {
         Diag(ColonLoc, diag::err_init_list_bin_op)
           << /*RHS*/1 << ":"
@@ -710,7 +710,7 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
 #undef REVERTIBLE_TYPE_TRAIT
 #undef RTT_JOIN
   }
@@ -902,8 +902,10 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
         // Annotate the token and tail recurse.
         // If the token is not annotated, then it might be an expression pack
         // indexing
-        if (!TryAnnotateTypeOrScopeToken() &&
-            Tok.isOneOf(tok::annot_pack_indexing_type, tok::annot_cxxscope))
+        if (TryAnnotateTypeOrScopeToken())
+          return ExprError();
+        if (Tok.isOneOf(tok::annot_cxxscope, tok::annot_pack_indexing_type,
+                        tok::annot_template_id))
           return ParseCastExpression(ParseKind, isAddressOfOperand,
                                      CorrectionBehavior, isVectorLiteral,
                                      NotPrimaryExpression);
@@ -1386,7 +1388,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
                          << DS.getSourceRange());
 
     if (Tok.is(tok::l_brace))
-      Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+      Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
 
     Res = ParseCXXTypeConstructExpression(DS);
     break;
@@ -1563,7 +1565,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     return ExprError();
   }
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     // HACK: libstdc++ uses some of the transform-type-traits as alias
     // templates, so we need to work around this.
     if (!NextToken().is(tok::l_paren)) {
@@ -1735,7 +1737,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         if (!getLangOpts().CPlusPlus23) {
           ExprResult Idx;
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-            Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+            Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
             Idx = ParseBraceInitializer();
           } else {
             Idx = ParseExpression(); // May be a comma expression
@@ -2426,16 +2428,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
-    // Keep track of the various subcomponents we see.
-    // FIXME: Comps and D below carry the same designator chain in two
-    // different shapes. ActOnBuiltinOffsetOf should be taught to accept a
-    // Designation directly so this duplication can go away.
-    SmallVector<Sema::OffsetOfComponent, 4> Comps;
-
-    Comps.push_back(Sema::OffsetOfComponent());
-    Comps.back().isBrackets = false;
-    Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-    Comps.back().LocStart = Comps.back().LocEnd = Tok.getLocation();
     D.AddDesignator(Designator::CreateFieldDesignator(
         Tok.getIdentifierInfo(), SourceLocation(), Tok.getLocation()));
     ConsumeToken();
@@ -2444,9 +2436,7 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     while (true) {
       if (Tok.is(tok::period)) {
         // offsetof-member-designator: offsetof-member-designator '.' identifier
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = false;
-        Comps.back().LocStart = ConsumeToken();
+        SourceLocation DotLoc = ConsumeToken();
 
         if (Tok.is(tok::code_completion)) {
           TriggerCompletion(D);
@@ -2457,33 +2447,26 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           SkipUntil(tok::r_paren, StopAtSemi);
           return ExprError();
         }
-        Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-        Comps.back().LocEnd = Tok.getLocation();
         D.AddDesignator(Designator::CreateFieldDesignator(
-            Tok.getIdentifierInfo(), Comps.back().LocStart, Tok.getLocation()));
+            Tok.getIdentifierInfo(), DotLoc, Tok.getLocation()));
         ConsumeToken();
       } else if (Tok.is(tok::l_square)) {
         if (CheckProhibitedCXX11Attribute())
           return ExprError();
 
         // offsetof-member-designator: offsetof-member-design '[' expression ']'
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = true;
         BalancedDelimiterTracker ST(*this, tok::l_square);
         ST.consumeOpen();
-        Comps.back().LocStart = ST.getOpenLocation();
         Res = ParseExpression();
         if (Res.isInvalid()) {
           SkipUntil(tok::r_paren, StopAtSemi);
           return Res;
         }
-        Comps.back().U.E = Res.get();
 
         ST.consumeClose();
-        Comps.back().LocEnd = ST.getCloseLocation();
         Designator ArrayD =
-            Designator::CreateArrayDesignator(Res.get(), Comps.back().LocStart);
-        ArrayD.setRBracketLoc(Comps.back().LocEnd);
+            Designator::CreateArrayDesignator(Res.get(), ST.getOpenLocation());
+        ArrayD.setRBracketLoc(ST.getCloseLocation());
         D.AddDesignator(ArrayD);
       } else {
         // A code-completion token here (e.g. cursor right after `]`) is past
@@ -2501,9 +2484,9 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           Res = ExprError();
         } else {
           PT.consumeClose();
-          Res = Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
-                                             Ty.get(), Comps,
-                                             PT.getCloseLocation());
+          Res =
+              Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
+                                           Ty.get(), D, PT.getCloseLocation());
         }
         break;
       }
@@ -3087,8 +3070,7 @@ ExprResult Parser::ParseGenericSelectionExpression() {
     }
     const auto *LIT = cast<LocInfoType>(ControllingType.get().get());
     SourceLocation Loc = LIT->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-    Diag(Loc, getLangOpts().C2y ? diag::warn_c2y_compat_generic_with_type_arg
-                                : diag::ext_c2y_generic_with_type_arg);
+    DiagCompat(Loc, diag_compat::generic_with_type_arg);
   } else {
     // C11 6.5.1.1p3 "The controlling expression of a generic selection is
     // not evaluated."
@@ -3197,9 +3179,7 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
     }
   }
 
-  Diag(EllipsisLoc, getLangOpts().CPlusPlus17
-                        ? diag::warn_cxx14_compat_fold_expression
-                        : diag::ext_fold_expression);
+  DiagCompat(EllipsisLoc, diag_compat::fold_expression);
 
   T.consumeClose();
   return Actions.ActOnCXXFoldExpr(getCurScope(), T.getOpenLocation(), LHS.get(),
@@ -3234,7 +3214,8 @@ void Parser::injectEmbedTokens() {
 
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  llvm::function_ref<void()> ExpressionStarts,
-                                 bool FailImmediatelyOnInvalidExpr) {
+                                 bool FailImmediatelyOnInvalidExpr,
+                                 bool ParsingExpansionStmtInitList) {
   bool SawError = false;
   while (true) {
     if (ExpressionStarts)
@@ -3242,7 +3223,7 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
 
     ExprResult Expr;
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-      Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+      Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
     } else
       Expr = ParseAssignmentExpression();
@@ -3263,7 +3244,11 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       SawError = true;
       if (FailImmediatelyOnInvalidExpr)
         break;
-      SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
+
+      // We expect '}' rather than ')' at the end of an expansion-init-list.
+      SkipUntil(tok::comma,
+                ParsingExpansionStmtInitList ? tok::r_brace : tok::r_paren,
+                StopAtSemi | StopBeforeMatch);
     } else {
       Exprs.push_back(Expr.get());
     }
@@ -3273,6 +3258,11 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     // Move to the next argument, remember where the comma was.
     Token Comma = Tok;
     ConsumeToken();
+
+    // CWG 3061: Trailing commas are allowed in expansion-init-lists.
+    if (ParsingExpansionStmtInitList && Tok.is(tok::r_brace))
+      break;
+
     checkPotentialAngleBracketDelimiter(Comma);
   }
   return SawError;

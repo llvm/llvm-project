@@ -52,6 +52,9 @@ public:
 
   const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
+  bool hasQFPInstrs(const MachineFunction &MF) const;
+
   /// TargetInstrInfo overrides.
 
   /// If the specified machine instruction is a direct
@@ -83,6 +86,8 @@ public:
   bool hasStoreToStackSlot(
       const MachineInstr &MI,
       SmallVectorImpl<const MachineMemOperand *> &Accesses) const override;
+
+  using TargetInstrInfo::analyzeBranch;
 
   /// Analyze the branching code at the end of MBB, returning
   /// true if it cannot be understood (e.g. it's a switch dispatch or isn't

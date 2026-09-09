@@ -54,6 +54,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
+class ContextImpl;
 class DeviceImpl;
 
 /// A class to manage programs and kernels.
@@ -80,10 +81,13 @@ public:
   /// This method is thread-safe.
   /// \param KernelInfo a set of kernel specific data: name, corresponding
   /// device image, etc.
+  /// \param Context the context in which the underlying program must be
+  /// created.
   /// \param Device the device for which this kernel must be compiled.
   /// \return a liboffload kernel handle that is ready to be passed to kernel
   /// execution methods.
   ol_symbol_handle_t getOrCreateKernel(DeviceKernelInfo &KernelInfo,
+                                       ContextImpl &Context,
                                        DeviceImpl &Device);
 
   /// \return kernel info for the kernel with the specified name.
@@ -91,6 +95,10 @@ public:
 
   /// Release device image managers and corresponding resources.
   void releaseResources();
+
+  /// \return true if and only if at least one registered device image is
+  /// compatible with the given device.
+  bool hasCompatibleImage(const DeviceImpl &Device);
 
 protected:
   ProgramAndKernelManager() = default;

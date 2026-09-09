@@ -69,7 +69,7 @@ class TestPaths(TestBase):
         current_directory_string = current_directory_spec.GetDirectory()
         self.assertNotEqual(current_directory_string[-1:], "/")
 
-    @skipUnlessPlatform(["windows"])
+    @requirePlatform(["windows"])
     @no_debug_info_test
     def test_windows_double_slash(self):
         """Test to check the path with double slash is handled correctly"""

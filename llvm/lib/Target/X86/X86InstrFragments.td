@@ -390,6 +390,7 @@ def X86smul_flag : SDNode<"X86ISD::SMUL", SDTBinaryArithWithFlags,
 def X86umul_flag : SDNode<"X86ISD::UMUL", SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86adc_flag  : SDNode<"X86ISD::ADC",  SDTBinaryArithWithFlagsInOut>;
+def X86adox_flag : SDNode<"X86ISD::ADOX", SDTBinaryArithWithFlagsInOut>;
 def X86sbb_flag  : SDNode<"X86ISD::SBB",  SDTBinaryArithWithFlagsInOut>;
 
 def X86or_flag   : SDNode<"X86ISD::OR",   SDTBinaryArithWithFlags,
@@ -561,6 +562,11 @@ def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 def i64timmSExt32 : TImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
+
+def GetLo32XForm : SDNodeXForm<imm, [{
+  // Transformation function: get the low 32 bits.
+  return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
+}]>;
 
 def i16relocImmSExt8 : PatLeaf<(i16 relocImm), [{
   return isSExtAbsoluteSymbolRef(8, N);
@@ -884,6 +890,11 @@ def xor_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 1));
 }]>;
 
+def xor_flag_dead_result : PatFrag<(ops node:$lhs, node:$rhs),
+                                   (X86xor_flag node:$lhs, node:$rhs), [{
+  return SDValue(N, 0).use_empty();
+}]>;
+
 def and_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
                             (X86and_flag node:$lhs, node:$rhs), [{
   return hasNoCarryFlagUses(SDValue(N, 1));
@@ -1052,9 +1063,9 @@ def fpimmneg0 : FPImmLeaf<fAny, [{
 }]>;
 
 def fpimm1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+1.0);
+  return Imm.isOne();
 }]>;
 
 def fpimmneg1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-1.0);
+  return Imm.isMinusOne();
 }]>;

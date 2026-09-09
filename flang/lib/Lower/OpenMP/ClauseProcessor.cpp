@@ -18,8 +18,9 @@
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Parser/tools.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -28,6 +29,24 @@
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+static void TodoLocators(mlir::Location loc, const omp::ObjectList &objects) {
+  for (const omp::Object &object : objects) {
+    if (auto &ref = object.ref()) {
+      auto op = GetTopLevelOperation(*ref).first;
+      if (op == evaluate::operation::Operator::Call)
+        TODO(loc, "Function call locators are not supported yet");
+    }
+    semantics::Symbol *symbol = object.sym();
+    if (symbol->test(semantics::Symbol::Flag::OmpReserved)) {
+      std::string name =
+          parser::ToLowerCaseLetters(object.sym()->name().ToString());
+      if (llvm::is_contained(llvm::omp::getReservedLocatorNames(), name)) {
+        TODO(loc, "Reserved locators are not supported yet");
+      }
+    }
+  }
+}
 
 using ReductionModifier =
     Fortran::lower::omp::clause::Reduction::ReductionModifier;
@@ -75,11 +94,11 @@ getSimdModifier(const omp::clause::Schedule &clause) {
   return mlir::omp::ScheduleModifier::none;
 }
 
-static void
-genAllocateClause(lower::AbstractConverter &converter,
-                  const omp::clause::Allocate &clause,
-                  llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
-                  llvm::SmallVectorImpl<mlir::Value> &allocateOperands) {
+static void genAllocateClause(
+    lower::AbstractConverter &converter, const omp::clause::Allocate &clause,
+    llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
+    llvm::SmallVectorImpl<mlir::Value> &allocateOperands,
+    llvm::SmallVectorImpl<int64_t> &alignments, bool supportAlignment) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   lower::StatementContext stmtCtx;
@@ -87,20 +106,26 @@ genAllocateClause(lower::AbstractConverter &converter,
   auto &objects = std::get<omp::ObjectList>(clause.t);
 
   using Allocate = omp::clause::Allocate;
-  // ALIGN in this context is unimplemented
-  if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
+  auto &align = std::get<std::optional<Allocate::AlignModifier>>(clause.t);
+  if (align && !supportAlignment)
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
 
-  // Check if allocate clause has allocator specified. If so, add it
-  // to list of allocators, otherwise, add default allocator to
-  // list of allocators.
+  if (align) {
+    if (alignments.empty())
+      alignments.resize(allocateOperands.size(), 0);
+    alignments.append(objects.size(), evaluate::ToInt64(align->v).value());
+  } else if (!alignments.empty()) {
+    alignments.append(objects.size(), 0);
+  }
+
+  // Use a null handle to select the binding task's default allocator.
   using ComplexModifier = Allocate::AllocatorComplexModifier;
   if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
     mlir::Value operand = firOpBuilder.createIntegerConstant(
-        currentLocation, firOpBuilder.getI32Type(), 1);
+        currentLocation, firOpBuilder.getI32Type(), mlir::omp::kNullAllocator);
     allocatorOperands.append(objects.size(), operand);
   }
 
@@ -287,11 +312,24 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::SymMap &symMap = converter.getSymbolMap();
   Fortran::lower::SymMapScope scope(symMap);
   for (size_t i = 0; i < ranges.size(); ++i) {
+    const Fortran::semantics::Symbol &ivSym = *ranges[i].ivSym;
     mlir::Value ivVal = ivs[i];
-    mlir::Type ivTy = converter.genType(*ranges[i].ivSym);
+    mlir::Type ivTy = converter.genType(ivSym);
     if (ivVal.getType() != ivTy)
       ivVal = fir::ConvertOp::create(builder, loc, ivTy, ivVal);
-    symMap.addSymbol(*ranges[i].ivSym, ivVal, /*force=*/true);
+    // Materialize the iterator induction value in memory and declare it as an
+    // HLFIR variable so that expressions referencing the iterator identifier
+    // (e.g. array subscripts) can be lowered through the HLFIR expression path.
+    // Give the temporary a name in the compiler-generated namespace
+    // (NameUniquer::doGenerated).
+    std::string ivName = fir::NameUniquer::doGenerated(
+        converter.mangleName(ivSym) + ".omp.iter");
+    mlir::Value addr = builder.createTemporary(loc, ivTy, ivName);
+    fir::StoreOp::create(builder, loc, ivVal, addr);
+    fir::FortranVariableOpInterface declareOp =
+        hlfir::genDeclare(loc, builder, fir::ExtendedValue{addr}, ivName,
+                          fir::FortranVariableFlagsAttr{});
+    symMap.addVariableDefinition(ivSym, declareOp, /*force=*/true);
   }
 
   mlir::omp::YieldOp::create(builder, loc, bodyGen(builder, loc, ivs));
@@ -343,10 +381,6 @@ bool ClauseProcessor::processAllocator(
     return true;
   }
   return false;
-}
-
-bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
-  return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
 }
 
 bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
@@ -524,7 +558,8 @@ bool ClauseProcessor::processInclusive(
 
 bool ClauseProcessor::processInitializer(
     lower::SymMap &symMap, ReductionProcessor::GenInitValueCBTy &genInitValueCB,
-    const parser::OmpStylizedInstance *parserInitInstance) const {
+    const parser::OmpStylizedInstance *parserInitInstance,
+    unsigned instanceIdx) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
     // Extract the typed assignment from the parser-level instance, if
     // the initializer is an assignment statement (as opposed to a call).
@@ -539,13 +574,21 @@ bool ClauseProcessor::processInitializer(
             assign = &*wrapper->v;
       }
     }
-    genInitValueCB = [&, clause, assign](fir::FirOpBuilder &builder,
-                                         mlir::Location loc, mlir::Type type,
-                                         mlir::Value moldArg,
-                                         mlir::Value privArg) {
+    // A multi-type declare reduction carries one initializer instance per
+    // listed type (parallel to the combiner instances and typeNameList); select
+    // the one for the type being lowered (index instanceIdx). Single-type is
+    // index 0 of one. Capture instanceIdx by value: the callback runs later
+    // (during createDeclareReductionHelper), after this parameter's lifetime
+    // ends.
+    assert(instanceIdx < clause->v.size() &&
+           "initializer instance index out of range");
+    genInitValueCB = [&, clause, assign,
+                      instanceIdx](fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Type type,
+                                   mlir::Value moldArg, mlir::Value privArg) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
-      const StylizedInstance &inst = clause->v.front();
+      const StylizedInstance &inst = clause->v[instanceIdx];
 
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
@@ -643,6 +686,16 @@ bool ClauseProcessor::processInitializer(
                         exprResult.getType()))
                   if (ompPrivVar.getType() == refType)
                     exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                // The initializer expression may have a different but
+                // convertible scalar type than the reduction. For example a
+                // LOGICAL initializer (e.g. omp_priv = .false.) lowers to an
+                // i1 while the reduction type is !fir.logical<4>. Convert so
+                // the init region yields the reduction type, as the
+                // omp.declare_reduction verifier requires.
+                if (exprResult.getType() != type &&
+                    fir::isa_trivial(exprResult.getType()) &&
+                    fir::isa_trivial(type))
+                  exprResult = builder.createConvert(loc, type, exprResult);
                 return exprResult;
               }},
           initExpr.u);
@@ -790,6 +843,19 @@ bool ClauseProcessor::processOrdered(
     if (clause->v.has_value())
       orderedClauseValue = *evaluate::ToInt64(*clause->v);
     result.ordered = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processFull() const {
+  return findUniqueClause<omp::clause::Full>() != nullptr;
+}
+
+bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
+    if (clause->v.has_value())
+      result = evaluate::ToInt64(*clause->v);
     return true;
   }
   return false;
@@ -971,6 +1037,8 @@ bool ClauseProcessor::processAffinity(
             std::get<std::optional<omp::clause::Iterator>>(clause.t);
         collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
 
+        TodoLocators(clauseLocation, objects);
+
         for (const omp::Object &object : objects) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
@@ -1040,7 +1108,16 @@ addAlignedClause(lower::AbstractConverter &converter,
           std::get<std::optional<Aligned::Alignment>>(clause.t)) {
     mlir::Value operand = fir::getBase(
         converter.genExprValue(*alignmentValueParserExpr, stmtCtx));
-    alignment = *fir::getIntIfConstant(operand);
+    std::optional<llvm::APInt> constantAlignment =
+        fir::getIntIfConstant(operand);
+    if (!constantAlignment)
+      fir::emitFatalError(operand.getLoc(), "alignment must be a constant");
+    std::optional<std::int64_t> constantAlignment64 =
+        constantAlignment->trySExtValue();
+    if (!constantAlignment64)
+      fir::emitFatalError(operand.getLoc(),
+                          "alignment does not fit in a 64-bit integer");
+    alignment = *constantAlignment64;
   } else {
     llvm::StringMap<bool> featuresMap = getTargetFeatures(builder.getModule());
     llvm::Triple triple = fir::getTargetTriple(builder.getModule());
@@ -1071,12 +1148,13 @@ bool ClauseProcessor::processAligned(
       });
 }
 
-bool ClauseProcessor::processAllocate(
-    mlir::omp::AllocateClauseOps &result) const {
+bool ClauseProcessor::processAllocate(mlir::omp::AllocateClauseOps &result,
+                                      bool supportAlignment) const {
   return findRepeatableClause<omp::clause::Allocate>(
       [&](const omp::clause::Allocate &clause, const parser::CharBlock &) {
         genAllocateClause(converter, clause, result.allocatorVars,
-                          result.allocateVars);
+                          result.allocateVars, result.allocateAlignments,
+                          supportAlignment);
       });
 }
 
@@ -1440,12 +1518,11 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                                 loc)) {
                 const Fortran::semantics::Symbol *sym = object.sym();
                 assert(sym && "expected symbol for iterator object");
-                // We currently cannot reuse genDependVar here because
-                // buildIteratorOp maps iterator IV symbols to bare scalar
-                // values (e.g. i32), but genDependVar uses convertExprToHLFIR
-                // which expects memory-backed references. Instead, manually get
-                // the base address and compute the element coordinate from the
-                // FIR-level lowered indices.
+                // genDependVar is not reused here: getIteratorElementIndices
+                // has already lowered each subscript to a FIR-level index
+                // value, so the element coordinate is computed directly from
+                // the base address and those indices rather than re-lowering
+                // the whole designator.
                 fir::factory::AddrAndBoundsInfo info =
                     Fortran::lower::getDataOperandBaseAddr(
                         converter, builder, *sym, loc,
@@ -1646,7 +1723,7 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms))
+                inReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
@@ -1754,7 +1831,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
       std::optional<mlir::omp::LinearModifier> linearMod;
       if (explicitLinearMod)
         linearMod = *explicitLinearMod;
-      else if (semaCtx.langOptions().OpenMPVersion >= 52)
+      else if (semaCtx.langOptions().getOpenMPVersion() >= 52)
         linearMod = isDeclareSimd ? getDeclareSimdDefaultMod(*sym)
                                   : mlir::omp::LinearModifier::val;
 
@@ -1902,10 +1979,10 @@ bool ClauseProcessor::processMap(
     // default value
     Map::MapType type;
     if (directive == llvm::omp::Directive::OMPD_target_enter_data &&
-        semaCtx.langOptions().OpenMPVersion >= 52)
+        semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::To);
     else if (directive == llvm::omp::Directive::OMPD_target_exit_data &&
-             semaCtx.langOptions().OpenMPVersion >= 52)
+             semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::From);
     else
       type = mapType.value_or(Map::MapType::Tofrom);
@@ -1972,6 +2049,7 @@ bool ClauseProcessor::processMap(
     if (iterator)
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
+    TodoLocators(currentLocation, objects);
 
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
@@ -2007,6 +2085,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
 
     if (iterator)
       TODO(clauseLocation, "Iterator modifier is not supported yet");
+    TodoLocators(clauseLocation, objects);
 
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapObjects,
@@ -2052,12 +2131,9 @@ bool ClauseProcessor::processReduction(
 
         auto mod = std::get<std::optional<ReductionModifier>>(clause.t);
         if (mod.has_value()) {
-          if (mod.value() == ReductionModifier::Task)
-            TODO(currentLocation, "Reduction modifier `task` is not supported");
-          else
-            result.reductionMod = mlir::omp::ReductionModifierAttr::get(
-                converter.getFirOpBuilder().getContext(),
-                translateReductionModifier(mod.value()));
+          result.reductionMod = mlir::omp::ReductionModifierAttr::get(
+              converter.getFirOpBuilder().getContext(),
+              translateReductionModifier(mod.value()));
         }
 
         ReductionProcessor rp;
@@ -2065,7 +2141,7 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, reductionVarCache))
+                reductionSyms, &semaCtx, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
@@ -2094,7 +2170,7 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms))
+                taskReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
@@ -2136,6 +2212,15 @@ bool ClauseProcessor::processEnter(
 bool ClauseProcessor::processUseDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
+  llvm::SmallPtrSet<const semantics::Symbol *, 4> mappedCommonBlocks;
+  findRepeatableClause<omp::clause::Map>(
+      [&](const omp::clause::Map &clause, const parser::CharBlock &) {
+        for (const Object &object : std::get<ObjectList>(clause.t)) {
+          if (object.sym()->has<semantics::CommonBlockDetails>())
+            mappedCommonBlocks.insert(&object.sym()->GetUltimate());
+        }
+      });
+
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
       [&](const omp::clause::UseDeviceAddr &clause,
@@ -2143,7 +2228,21 @@ bool ClauseProcessor::processUseDeviceAddr(
         mlir::Location location = converter.genLocation(source);
         mlir::omp::ClauseMapFlags mapTypeBits =
             mlir::omp::ClauseMapFlags::return_param;
-        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
+        ObjectList objects;
+        // Keep the aggregate only when it pairs with a whole-COMMON map on
+        // this directive; otherwise preserve named-COMMON member equivalence.
+        for (const Object &object : clause.v) {
+          auto *details =
+              object.sym()->detailsIf<semantics::CommonBlockDetails>();
+          if (!details ||
+              mappedCommonBlocks.contains(&object.sym()->GetUltimate())) {
+            objects.push_back(object);
+            continue;
+          }
+          for (const auto &member : details->objects())
+            objects.push_back(Object{&*member, std::nullopt});
+        }
+        processMapObjects(stmtCtx, location, objects, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
                           useDeviceObjects);
       });

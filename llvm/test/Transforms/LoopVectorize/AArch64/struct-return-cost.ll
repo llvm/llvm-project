@@ -11,7 +11,7 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%extract_a> = extractvalue ir<%call>
 ; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%extract_b> = extractvalue ir<%call>
 ;
-; CHECK-COST: Cost of 10 for VF 2: WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>) (using library function: fixed_vec_foo)
+; CHECK-COST: Cost of 10 for VF 2: WIDEN-CALL ir<%call> = call @foo(ir<%in_val>) (using library function: fixed_vec_foo)
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
@@ -136,7 +136,7 @@ exit:
 ; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
-; CHECK-COST: Cost of 10 for VF vscale x 8: WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>, ir<true>) (using library function: scalable_vec_masked_foo)
+; CHECK-COST: Cost of 10 for VF vscale x 8: WIDEN-CALL ir<%call> = call @foo(ir<%in_val>, ir<true>) (using library function: scalable_vec_masked_foo)
 ; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 

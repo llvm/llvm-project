@@ -40,9 +40,10 @@ public:
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override {
-    elf::scanSection1<Hexagon, ELF32LE>(*this, sec);
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override {
+    elf::scanSection1<Hexagon, ELF32LE>(*this, sec, shard);
   }
   void finalizeRelocScan() override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
@@ -127,8 +128,9 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
 }
 
 template <class ELFT, class RelTy>
-void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                              unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;

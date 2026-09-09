@@ -42,6 +42,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -196,6 +197,22 @@ getDeclAtPosition(ParsedAST &AST, SourceLocation Pos, DeclRelationSet Relations,
   return Result;
 }
 
+// Returns the deepest CallExpr whose selection-tree commonAncestor is the call
+// itself at `Loc` (i.e. the cursor lands on the call's parens area, not on a
+// child like the callee identifier or an argument). Returns null otherwise.
+const CallExpr *findEnclosingCallAt(ParsedAST &AST, SourceLocation Loc) {
+  unsigned Offset = AST.getSourceManager().getDecomposedSpellingLoc(Loc).second;
+  const CallExpr *Found = nullptr;
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Offset,
+                            Offset, [&](SelectionTree ST) {
+                              if (const SelectionTree::Node *N =
+                                      ST.commonAncestor())
+                                Found = N->ASTNode.get<CallExpr>();
+                              return true;
+                            });
+  return Found;
+}
+
 // Expects Loc to be a SpellingLocation, will bail out otherwise as it can't
 // figure out a filename.
 std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
@@ -217,6 +234,52 @@ std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
   L.range = halfOpenToRange(
       SM, CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(TokLen)));
   return L;
+}
+
+std::optional<LocatedSymbol>
+locateModuleReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
+                     llvm::StringRef MainFilePath) {
+  const SourceManager &SM = AST.getSourceManager();
+  const ASTContext &Context = AST.getASTContext();
+
+  const Module *ResultModule = nullptr;
+
+  for (const ImportDecl *Import : Context.local_imports()) {
+    const Module *Imported = Import->getImportedModule();
+    ArrayRef<SourceLocation> IdentifierLocs = Import->getIdentifierLocs();
+    if (!Imported || !Imported->isNamedModule() || IdentifierLocs.empty())
+      continue;
+
+    const SourceLocation NameBegin = SM.getSpellingLoc(IdentifierLocs.front());
+    // Imports are visited in source order; bail out once we pass the cursor.
+    if (SM.isBeforeInTranslationUnit(TouchedIdentifier.location(), NameBegin))
+      break;
+
+    const std::string FullName = Imported->getFullModuleName();
+    const SourceLocation NameEnd =
+        NameBegin.getLocWithOffset(FullName.size() - 1);
+
+    if (SM.isPointWithin(TouchedIdentifier.location(), NameBegin, NameEnd)) {
+      ResultModule = Imported;
+      break;
+    }
+  }
+
+  if (!ResultModule)
+    return std::nullopt;
+
+  const SourceLocation DefinitionLoc =
+      SM.getSpellingLoc(ResultModule->DefinitionLoc);
+  auto Definition = makeLocation(Context, DefinitionLoc, MainFilePath);
+
+  if (!Definition)
+    return std::nullopt;
+
+  LocatedSymbol Result;
+  Result.Name = ResultModule->getFullModuleName();
+  Result.PreferredDeclaration = *Definition;
+  Result.Definition = *Definition;
+  return Result;
 }
 
 // Treat #included files as symbols, to enable go-to-definition on them.
@@ -418,6 +481,31 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       Result.back().Definition = makeLocation(
           AST.getASTContext(), nameLocation(*Def, SM), MainFilePath);
   };
+
+  // Special case: if the cursor lands directly on a call expression (i.e.
+  // its enclosing SelectionTree node is the CallExpr itself, not the callee
+  // identifier or an argument), and the call invokes a forwarding wrapper
+  // such as `std::make_unique<T>(...)`, navigate to the constructor of `T`
+  // that the wrapper ultimately calls. This mirrors the existing
+  // constructor-call behaviour: `Abc^()` jumps to the constructor while
+  // `A^bc()` jumps to the type. The hook does not fire when the cursor is
+  // on the wrapper's identifier; that path continues to navigate to the
+  // wrapper itself via the candidate loop below.
+  if (const auto *CE = findEnclosingCallAt(AST, CurLoc)) {
+    if (const auto *Callee = CE->getDirectCallee()) {
+      llvm::SmallPtrSet<const CXXConstructorDecl *, 1> Seen;
+      for (const auto *Ctor :
+           getForwardedConstructors(Callee, AST.ForwardingToConstructorCache))
+        if (Seen.insert(Ctor).second) {
+          LocateASTReferentMetric.record(1, "forwarded-constructor");
+          AddResultDecl(Ctor);
+        }
+    }
+  }
+  if (!Result.empty()) {
+    enhanceLocatedSymbolsFromIndex(Result, Index, MainFilePath);
+    return Result;
+  }
 
   // Emit all symbol locations (declaration or definition) from AST.
   DeclRelationSet Relations =
@@ -824,6 +912,11 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     }
   }
 
+  if (TouchedIdentifier)
+    if (auto Module =
+            locateModuleReferent(*TouchedIdentifier, AST, MainFilePath))
+      return {*std::move(Module)};
+
   ASTNodeKind NodeKind;
   auto ASTResults = locateASTReferent(*CurLoc, TouchedIdentifier, AST,
                                       MainFilePath, Index, NodeKind);
@@ -966,27 +1059,12 @@ public:
   bool forwardsToConstructor(const Decl *D) {
     if (TargetConstructors.empty())
       return false;
-    auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
-    if (FD == nullptr || !FD->isTemplateInstantiation())
+    const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+    if (!FD)
       return false;
-
-    SmallVector<const CXXConstructorDecl *, 1> *Constructors = nullptr;
-    if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
-        Entry != AST.ForwardingToConstructorCache.end())
-      Constructors = &Entry->getSecond();
-    if (Constructors == nullptr) {
-      if (auto *PT = FD->getPrimaryTemplate();
-          PT == nullptr || !isLikelyForwardingFunction(PT))
-        return false;
-
-      SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
-          searchConstructorsInForwardingFunction(FD);
-      auto Iter = AST.ForwardingToConstructorCache.try_emplace(
-          FD, std::move(FoundConstructors));
-      Constructors = &Iter.first->getSecond();
-    }
-    for (auto *Constructor : *Constructors)
-      if (TargetConstructors.contains(Constructor))
+    for (const auto *Ctor :
+         getForwardedConstructors(FD, AST.ForwardingToConstructorCache))
+      if (TargetConstructors.contains(Ctor))
         return true;
     return false;
   }
@@ -1818,8 +1896,9 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
-  // FIXME: Populate HI.detail the way we do in symbolToHierarchyItem?
+  HI.detail = printQualifiedName(ND);
   HI.kind = SK;
+  HI.tags = getSymbolTags(ND);
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
                    sourceLocToPosition(SM, DeclRange->getEnd())};
   HI.selectionRange = Range{NameBegin, NameEnd};
@@ -1873,6 +1952,7 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   HI.detail = S.Scope.empty() ? std::string()
                               : S.Scope.drop_back(2).str(); // Trailing "::"
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo);
+  HI.tags = getSymbolTags(S);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
   // (https://github.com/clangd/clangd/issues/59).
@@ -1898,8 +1978,6 @@ symbolToCallHierarchyItem(const Symbol &S, PathRef TUPath) {
   if (!Result)
     return Result;
   Result->data = S.ID.str();
-  if (S.Flags & Symbol::Deprecated)
-    Result->tags.push_back(SymbolTag::Deprecated);
   return Result;
 }
 
@@ -2148,7 +2226,7 @@ static void unwrapFindType(
     return;
 
   // If there's a specific type alias, point at that rather than unwrapping.
-  if (const auto* TDT = T->getAs<TypedefType>())
+  if (const auto *TDT = T->getAs<TypedefType>())
     return Out.push_back(QualType(TDT, 0));
 
   // Pointers etc => pointee type.
@@ -2311,24 +2389,23 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
 
 std::optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
-  std::vector<TypeHierarchyItem> Results;
-  if (!Item.data.parents)
+  if (!Index || !Item.data.parents)
     return std::nullopt;
-  if (Item.data.parents->empty())
-    return Results;
   LookupRequest Req;
   llvm::DenseMap<SymbolID, const TypeHierarchyItem::ResolveParams *> IDToData;
   for (const auto &Parent : *Item.data.parents) {
     Req.IDs.insert(Parent.symbolID);
     IDToData[Parent.symbolID] = &Parent;
   }
+  std::vector<TypeHierarchyItem> Results;
   Index->lookup(Req, [&Item, &Results, &IDToData](const Symbol &S) {
     if (auto THI = symbolToTypeHierarchyItem(S, Item.uri.file())) {
       THI->data = *IDToData.lookup(S.ID);
       Results.emplace_back(std::move(*THI));
     }
   });
-  return Results;
+  return Results.empty() ? std::nullopt
+                         : std::make_optional(std::move(Results));
 }
 
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,

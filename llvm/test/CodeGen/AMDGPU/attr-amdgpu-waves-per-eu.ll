@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck %s
 
 ; Exactly 1 wave per execution unit.
 ; CHECK-LABEL: {{^}}empty_exactly_1:

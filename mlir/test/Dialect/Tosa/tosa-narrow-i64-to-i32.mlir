@@ -32,7 +32,7 @@ func.func @test_i64_argmax_cast(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x
   // COMMON: %[[ARGMAX:.*]] = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi32>
   %0 = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi64>
   // COMMON: tosa.cast %[[ARGMAX]] : (tensor<1x513x513xi32>) -> tensor<1x513x513xf32>
-  %1 = tosa.cast %0 : (tensor<1x513x513xi64>) -> tensor<1x513x513xf32>
+  %1 = tosa.cast %0 {input_unsigned = false} : (tensor<1x513x513xi64>) -> tensor<1x513x513xf32>
   return %1 : tensor<1x513x513xf32>
 }
 
@@ -63,7 +63,7 @@ func.func @test_regions(%arg0: tensor<1x2xi32>, %arg1: tensor<1xi32>, %arg2: ten
     // COMMON: %[[ARGMAX:.*]] = tosa.argmax %arg0 {axis = 1 : i32} : (tensor<1x2xi32>) -> tensor<1xi32>
     %1 = tosa.argmax %arg0 {axis = 1 : i32} : (tensor<1x2xi32>) -> tensor<1xi64>
     // COMMON: %[[CAST:.*]] = tosa.cast %[[ARGMAX]] : (tensor<1xi32>) -> tensor<1xi32>
-    %2 = tosa.cast %1 : (tensor<1xi64>) -> tensor<1xi32>
+    %2 = tosa.cast %1 {input_unsigned = false} : (tensor<1xi64>) -> tensor<1xi32>
     // COMMON: tosa.yield %[[CAST]] : tensor<1xi32>
     tosa.yield %2 : tensor<1xi32>
   } else {
@@ -71,6 +71,27 @@ func.func @test_regions(%arg0: tensor<1x2xi32>, %arg1: tensor<1xi32>, %arg2: ten
   }
   // COMMON: return %[[IF_RESULT]] : tensor<1xi32>
   return %0 : tensor<1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_cond_if_i64_yield_with_call
+module {
+  func.func @m0() -> () {
+    return
+  }
+  func.func @test_cond_if_i64_yield_with_call(%arg0: tensor<1xi1>, %arg1: tensor<4xi64>, %arg2: tensor<4xi64>) -> () {
+    %0 = tosa.cond_if %arg0 (%arg3 = %arg1) : tensor<1xi1> (tensor<4xi64>) -> tensor<4xi64> {
+    ^bb0(%arg3: tensor<4xi64>):
+      tosa.yield %arg3 : tensor<4xi64>
+    } else {
+    ^bb0(%arg3: tensor<4xi64>):
+      tosa.yield %arg3 : tensor<4xi64>
+    }
+    // expected-error @+1 {{failed to legalize operation 'func.call'}}
+    call @m0() : () -> ()
+    return
+  }
 }
 
 // -----
@@ -146,7 +167,7 @@ func.func @test_transpose(%arg0: tensor<13x21x3xi64>) -> tensor<3x13x21xi64> {
 // CHECK-LABEL: test_transition_to_i64
 func.func @test_transition_to_i64(%arg0: tensor<1xi32>) -> tensor<1xi64> {
   // COMMON: %[[CAST:.*]] = tosa.cast %arg0 : (tensor<1xi32>) -> tensor<1xi32>
-  %0 = tosa.cast %arg0 : (tensor<1xi32>) -> tensor<1xi64>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<1xi32>) -> tensor<1xi64>
   // COMMON: %[[IDENTITY1:.*]] = tosa.identity %[[CAST]] : (tensor<1xi32>) -> tensor<1xi32>
   %1 = tosa.identity %0 : (tensor<1xi64>) -> tensor<1xi64>
   // COMMON: %[[IDENTITY2:.*]] = tosa.identity %[[IDENTITY1]] : (tensor<1xi32>) -> tensor<1xi32>
@@ -168,9 +189,23 @@ func.func @test_transition_from_i64(%arg0: tensor<1xi64>) -> tensor<1xi32> {
   // COMMON: %[[IDENTITY2:.*]] = tosa.identity %[[IDENTITY1]] : (tensor<1xi32>) -> tensor<1xi32>
   %1 = tosa.identity %0 : (tensor<1xi64>) -> tensor<1xi64>
   // COMMON: %[[OUT_CAST:.*]] = tosa.cast %[[IDENTITY2]] : (tensor<1xi32>) -> tensor<1xi32>
-  %2 = tosa.cast %1 : (tensor<1xi64>) -> tensor<1xi32>
+  %2 = tosa.cast %1 {input_unsigned = false} : (tensor<1xi64>) -> tensor<1xi32>
   // COMMON: return %[[OUT_CAST]] : tensor<1xi32>
   return %2 : tensor<1xi32>
+}
+
+// -----
+
+// CHECK-LABEL test_transition_from_i64_input_unsigned
+func.func @test_transition_from_i64_input_unsigned(%arg0: tensor<1xui64>) -> tensor<1xui64> {
+  // DEFAULT: %[[CAST:.*]] = tosa.cast %arg0 {input_unsigned = true} : (tensor<1xui64>) -> tensor<1xi32>
+  // FUNCBOUND: %[[IDENTITY:.*]] = tosa.identity %arg0 : (tensor<1xi32>) -> tensor<1xi32>
+  // DEFAULT: %[[IDENTITY:.*]] = tosa.identity %[[CAST]] : (tensor<1xi32>) -> tensor<1xi32>
+  %0 = tosa.identity %arg0 : (tensor<1xui64>) -> tensor<1xui64>
+  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[IDENTITY]] : (tensor<1xi32>) -> tensor<1xui64>
+  // DEFAULT: return %[[OUT_CAST]] : tensor<1xui64>
+  // FUNCBOUND: return %[[IDENTITY]] : tensor<1xi32>
+  return %0 : tensor<1xui64>
 }
 
 // -----

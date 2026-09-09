@@ -403,15 +403,8 @@ void Mangled::DumpDebug(Stream *s) const {
   s->Printf("%*p: Mangled mangled = ", static_cast<int>(sizeof(void *) * 2),
             static_cast<const void *>(this));
   m_mangled.DumpDebug(s);
-  s->Printf(", demangled = ");
+  s->PutCString(", demangled = ");
   m_demangled.DumpDebug(s);
-}
-
-// Return the size in byte that this object takes in memory. The size includes
-// the size of the objects it owns, and not the strings that it references
-// because they are shared strings.
-size_t Mangled::MemorySize() const {
-  return m_mangled.MemorySize() + m_demangled.MemorySize();
 }
 
 // We "guess" the language because we can't determine a symbol's language from

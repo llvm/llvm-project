@@ -18,7 +18,7 @@ print *,r
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> attributes {byref_element_type = !fir.array<?xi32>} alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_heap_Uxi32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> alloc {
 ! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           omp.yield(%[[VAL_10]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK-LABEL:   } init {
@@ -89,7 +89,7 @@ end program
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi sgt, %[[VAL_5]], %[[VAL_6]] : index
 ! CHECK:           %[[VAL_8:.*]] = arith.select %[[VAL_7]], %[[VAL_5]], %[[VAL_6]] : index
-! CHECK:           %[[VAL_9:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_8]] {fir.must_be_heap = true, uniq_name = "_QFEr.alloc"}
+! CHECK:           %[[VAL_9:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_8]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFEr.alloc"}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_9]](%[[VAL_10]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[VAL_11]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

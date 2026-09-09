@@ -168,11 +168,13 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
    * after the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
       PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes,
-      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+      PaddingBytesAfterUniformCounters, PaddingBytesAfterVTable,
+      PaddingBytesAfterVNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NumBitmapBytes, NamesSize, /*VTableSize=*/0,
-      /*VNameSize=*/0, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames,
+      DataSize, CountersSize, NumBitmapBytes, 0 /* NumUniformCounters */,
+      NamesSize, /*VTableSize=*/0, /*VNameSize=*/0, &PaddingBytesBeforeCounters,
+      &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
+      &PaddingBytesAfterUniformCounters, &PaddingBytesAfterNames,
       &PaddingBytesAfterVTable, &PaddingBytesAfterVNames);
 
   uint64_t PageAlignedCountersLength = CountersSize + PaddingBytesAfterCounters;
@@ -1312,13 +1314,12 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
 }
 
 #ifndef __APPLE__
-int __llvm_write_custom_profile(const char *Target,
-                                const __llvm_profile_data *DataBegin,
-                                const __llvm_profile_data *DataEnd,
-                                const char *CountersBegin,
-                                const char *CountersEnd, const char *NamesBegin,
-                                const char *NamesEnd,
-                                const uint64_t *VersionOverride) {
+int __llvm_write_custom_profile(
+    const char *Target, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *UniformCountersBegin,
+    const char *UniformCountersEnd, const char *NamesBegin,
+    const char *NamesEnd, const uint64_t *VersionOverride) {
   int ReturnValue = 0, FilenameLength, TargetLength;
   char *FilenameBuf, *TargetFilename;
   const char *Filename;
@@ -1404,10 +1405,11 @@ int __llvm_write_custom_profile(const char *Target,
   if (VersionOverride)
     Version = *VersionOverride;
 
-  ReturnValue = lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd,
-                                   CountersBegin, CountersEnd, NULL, NULL,
-                                   lprofGetVPDataReader(), NamesBegin, NamesEnd,
-                                   NULL, NULL, NULL, NULL, 0, Version);
+  /* Write custom data to the file */
+  ReturnValue = lprofWriteDataImpl(
+      &fileWriter, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
+      UniformCountersBegin, UniformCountersEnd, lprofGetVPDataReader(),
+      NamesBegin, NamesEnd, NULL, NULL, NULL, NULL, 0, Version);
   closeFileObject(OutputFile);
 
   // Restore SIGKILL.

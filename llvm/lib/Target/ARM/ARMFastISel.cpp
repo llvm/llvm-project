@@ -1896,7 +1896,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
     if (Subtarget->hasFPRegs() && !isVarArg) {
-      if (!TM.isAAPCS_ABI())
+      if (!Subtarget->isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
       return (Return ? RetCC_ARM_AAPCS_VFP : CC_ARM_AAPCS_VFP);
@@ -1905,9 +1905,8 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::C:
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
-    if (TM.isAAPCS_ABI()) {
-      if (Subtarget->hasFPRegs() &&
-          TM.Options.FloatABIType == FloatABI::Hard && !isVarArg)
+    if (Subtarget->isAAPCS_ABI()) {
+      if (Subtarget->hasFPRegs() && Subtarget->isTargetHardFloat() && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
       else
         return (Return ? RetCC_ARM_AAPCS: CC_ARM_AAPCS);
@@ -2425,18 +2424,18 @@ bool ARMFastISel::SelectCall(const Instruction *I,
 
     ISD::ArgFlagsTy Flags;
     unsigned ArgIdx = ArgI - CI->arg_begin();
-    if (CI->paramHasAttr(ArgIdx, Attribute::SExt))
+    if (CI->hasABIParamAttr(ArgIdx, Attribute::SExt))
       Flags.setSExt();
-    if (CI->paramHasAttr(ArgIdx, Attribute::ZExt))
+    if (CI->hasABIParamAttr(ArgIdx, Attribute::ZExt))
       Flags.setZExt();
 
     // FIXME: Only handle *easy* calls for now.
-    if (CI->paramHasAttr(ArgIdx, Attribute::InReg) ||
-        CI->paramHasAttr(ArgIdx, Attribute::StructRet) ||
-        CI->paramHasAttr(ArgIdx, Attribute::SwiftSelf) ||
-        CI->paramHasAttr(ArgIdx, Attribute::SwiftError) ||
-        CI->paramHasAttr(ArgIdx, Attribute::Nest) ||
-        CI->paramHasAttr(ArgIdx, Attribute::ByVal))
+    if (CI->hasABIParamAttr(ArgIdx, Attribute::InReg) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::StructRet) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::SwiftSelf) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::SwiftError) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::Nest) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::ByVal))
       return false;
 
     Type *ArgTy = (*ArgI)->getType();
@@ -3033,8 +3032,7 @@ bool ARMFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
 }
 
 Register ARMFastISel::ARMLowerPICELF(const GlobalValue *GV, MVT VT) {
-  // Weak symbols need GOT indirection even when hidden/DSO-local.
-  bool UseGOT_PREL = !GV->isDSOLocal() || GV->isWeakForLinker();
+  bool UseGOT_PREL = !GV->isDSOLocal();
   LLVMContext *Context = &MF->getFunction().getContext();
   unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
   unsigned PCAdj = Subtarget->isThumb() ? 4 : 8;

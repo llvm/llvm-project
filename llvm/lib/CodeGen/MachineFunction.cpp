@@ -566,25 +566,23 @@ void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-    Align BaseAlignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
-    SyncScope::ID SSID, AtomicOrdering Ordering,
-    AtomicOrdering FailureOrdering) {
+    Align BaseAlignment, const MMOMetadata &Metadata, SyncScope::ID SSID,
+    AtomicOrdering Ordering, AtomicOrdering FailureOrdering) {
   assert((!Size.hasValue() ||
           Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
          "Unexpected an unknown size to be represented using "
          "LocationSize::beforeOrAfter()");
   return new (Allocator)
-      MachineMemOperand(PtrInfo, F, Size, BaseAlignment, AAInfo, Ranges, SSID,
+      MachineMemOperand(PtrInfo, F, Size, BaseAlignment, Metadata, SSID,
                         Ordering, FailureOrdering);
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
-    MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
-    Align base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
-    SyncScope::ID SSID, AtomicOrdering Ordering,
-    AtomicOrdering FailureOrdering) {
+    MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
+    Align BaseAlignment, const MMOMetadata &Metadata, SyncScope::ID SSID,
+    AtomicOrdering Ordering, AtomicOrdering FailureOrdering) {
   return new (Allocator)
-      MachineMemOperand(PtrInfo, f, MemTy, base_alignment, AAInfo, Ranges, SSID,
+      MachineMemOperand(PtrInfo, F, MemTy, BaseAlignment, Metadata, SSID,
                         Ordering, FailureOrdering);
 }
 
@@ -596,18 +594,20 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
           Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
          "Unexpected an unknown size to be represented using "
          "LocationSize::beforeOrAfter()");
-  return new (Allocator)
-      MachineMemOperand(PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
-                        AAMDNodes(), nullptr, MMO->getSyncScopeID(),
-                        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+  return new (Allocator) MachineMemOperand(
+      PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
+      MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, LLT Ty) {
-  return new (Allocator)
-      MachineMemOperand(PtrInfo, MMO->getFlags(), Ty, MMO->getBaseAlign(),
-                        AAMDNodes(), nullptr, MMO->getSyncScopeID(),
-                        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+  return new (Allocator) MachineMemOperand(
+      PtrInfo, MMO->getFlags(), Ty, MMO->getBaseAlign(),
+      MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
@@ -625,8 +625,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
   // are anymore.
   return new (Allocator) MachineMemOperand(
       PtrInfo.getWithOffset(Offset), MMO->getFlags(), Ty, Alignment,
-      MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
-      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+      MMOMetadata(MMO->getAAInfo(), /*Ranges=*/nullptr, MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
@@ -637,8 +638,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
              MachinePointerInfo(MMO->getPseudoValue(), MMO->getOffset());
 
   return new (Allocator) MachineMemOperand(
-      MPI, MMO->getFlags(), MMO->getSize(), MMO->getBaseAlign(), AAInfo,
-      MMO->getRanges(), MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MPI, MMO->getFlags(), MMO->getSize(), MMO->getBaseAlign(),
+      MMOMetadata(AAInfo, MMO->getRanges(), MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
 }
 
@@ -647,8 +649,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                                       MachineMemOperand::Flags Flags) {
   return new (Allocator) MachineMemOperand(
       MMO->getPointerInfo(), Flags, MMO->getSize(), MMO->getBaseAlign(),
-      MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
-      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+      MMOMetadata(MMO->getAAInfo(), MMO->getRanges(), MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
@@ -744,6 +747,36 @@ bool MachineFunction::needsFrameMoves() const {
          !F.getParent()->debug_compile_units().empty();
 }
 
+bool MachineFunction::disableFramePointerElim() const {
+  FramePointerKind FP = getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+    return true;
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::NonLeafNoReserve:
+    return getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+  case FramePointerKind::Reserved:
+    return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
+}
+
+bool MachineFunction::framePointerIsReserved() const {
+  FramePointerKind FP = getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::Reserved:
+    return true;
+  case FramePointerKind::NonLeafNoReserve:
+    return getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+    return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
+}
+
 MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
   if (MDNode *Node = CB.getMetadata(llvm::LLVMContext::MD_call_target))
     CallTarget = Node;
@@ -758,8 +791,8 @@ MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
 
   for (const MDOperand &Op : CalleeTypeList->operands()) {
     MDNode *TypeMD = cast<MDNode>(Op);
-    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
-    // Compute numeric type id from generalized type id string
+    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(0));
+    // Compute numeric type id from type id string
     uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
     IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
     CalleeTypeIds.push_back(
@@ -1197,14 +1230,14 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     if (State.second)
       SubregsSeen.push_back(State.second);
 
-    assert(MRI.hasOneDef(State.first));
-    MachineInstr &Inst = *MRI.def_begin(State.first)->getParent();
-    CurInst = Inst.getIterator();
+    MachineInstr *Inst = MRI.getVRegDef(State.first);
+    assert(Inst && "Virtual register has no def");
+    CurInst = Inst->getIterator();
 
     // Any non-copy instruction is the defining instruction we're seeking.
-    if (!Inst.isCopyLike() && !TII.isCopyLikeInstr(Inst))
+    if (!Inst->isCopyLike() && !TII.isCopyLikeInstr(*Inst))
       break;
-    State = GetRegAndSubreg(Inst);
+    State = GetRegAndSubreg(*Inst);
   };
 
   // Helper lambda to apply additional subregister substitutions to a known
@@ -1230,7 +1263,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
   // instruction / operand pair after adding subregister qualifiers.
   if (State.first.isVirtual()) {
     // Virtual register def -- we can just look up where this happens.
-    MachineInstr *Inst = MRI.def_begin(State.first)->getParent();
+    MachineInstr *Inst = MRI.getVRegDef(State.first);
     for (auto &MO : Inst->all_defs()) {
       if (MO.getReg() != State.first)
         continue;
@@ -1655,7 +1688,7 @@ void MachineConstantPool::print(raw_ostream &OS) const {
     if (Constants[i].isMachineConstantPoolEntry())
       Constants[i].Val.MachineCPVal->print(OS);
     else
-      Constants[i].Val.ConstVal->printAsOperand(OS, /*PrintType=*/false);
+      Constants[i].Val.ConstVal->printAsOperand(OS);
     OS << ", align=" << Constants[i].getAlign().value();
     OS << "\n";
   }
@@ -1666,7 +1699,7 @@ void MachineConstantPool::print(raw_ostream &OS) const {
 // ProfileSummaryInfo::getEntryCount().
 //===----------------------------------------------------------------------===//
 template <>
-std::optional<Function::ProfileCount>
+std::optional<uint64_t>
 ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
     const llvm::MachineFunction *F) const {
   return F->getFunction().getEntryCount();

@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MSP430MCAsmInfo.h"
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "MSP430.h"
-#include "MSP430RegisterInfo.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
@@ -20,6 +18,7 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -576,8 +575,7 @@ unsigned MSP430AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     return Match_InvalidOperand;
 
   MCRegister Reg = Op.getReg();
-  bool isGR16 =
-      MSP430MCRegisterClasses[MSP430::GR16RegClassID].contains(Reg);
+  bool isGR16 = getMSP430MCRegisterClass(MSP430::GR16RegClassID).contains(Reg);
 
   if (isGR16 && (Kind == MCK_GR8)) {
     Op.setReg(convertGR16ToGR8(Reg));

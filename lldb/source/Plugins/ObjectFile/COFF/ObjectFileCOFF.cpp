@@ -87,7 +87,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
   }
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
-                         file->GetFilename().GetStringRef()};
+                         file->GetFilename()};
 
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
@@ -131,7 +131,7 @@ ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
     return {};
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
-                         file.GetFilename().GetStringRef()};
+                         file.GetFilename()};
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
     Log *log = GetLog(LLDBLog::Object);
@@ -145,6 +145,7 @@ ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
       unique_dyn_cast<COFFObjectFile>(std::move(*binary));
   ModuleSpecList specs;
   switch (static_cast<COFF::MachineTypes>(object->getMachine())) {
+  case COFF::IMAGE_FILE_MACHINE_I386:
     specs.Append(ModuleSpec(file, ArchSpec("i686-unknown-windows-msvc")));
     return specs;
   case COFF::IMAGE_FILE_MACHINE_AMD64:

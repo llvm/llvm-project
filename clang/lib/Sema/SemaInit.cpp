@@ -32,7 +32,6 @@
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1362,26 +1361,31 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
   // Don't complain for incomplete types, since we'll get an error elsewhere.
   if ((Index < IList->getNumInits() || CurEmbed) && !T->isIncompleteType()) {
     // We have leftover initializers
+    Expr *ExtraInit =
+        Index < IList->getNumInits() ? IList->getInit(Index) : CurEmbed;
+    SourceLocation ExtraInitLoc =
+        ExtraInit ? ExtraInit->getBeginLoc() : IList->getEndLoc();
+    SourceRange ExtraInitRange =
+        ExtraInit ? ExtraInit->getSourceRange() : IList->getSourceRange();
     bool ExtraInitsIsError = SemaRef.getLangOpts().CPlusPlus ||
           (SemaRef.getLangOpts().OpenCL && T->isVectorType());
     hadError = ExtraInitsIsError;
     if (VerifyOnly) {
       return;
-    } else if (StructuredIndex == 1 &&
+    } else if (StructuredIndex == 1 && StructuredList->getNumInits() != 0 &&
+               StructuredList->getInit(0) &&
                IsStringInit(StructuredList->getInit(0), T, SemaRef.Context) ==
                    SIF_None) {
       unsigned DK =
           ExtraInitsIsError
               ? diag::err_excess_initializers_in_char_array_initializer
               : diag::ext_excess_initializers_in_char_array_initializer;
-      SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
-          << IList->getInit(Index)->getSourceRange();
+      SemaRef.Diag(ExtraInitLoc, DK) << ExtraInitRange;
     } else if (T->isSizelessBuiltinType()) {
       unsigned DK = ExtraInitsIsError
                         ? diag::err_excess_initializers_for_sizeless_type
                         : diag::ext_excess_initializers_for_sizeless_type;
-      SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
-          << T << IList->getInit(Index)->getSourceRange();
+      SemaRef.Diag(ExtraInitLoc, DK) << T << ExtraInitRange;
     } else {
       int initKind = T->isArrayType()    ? 0
                      : T->isVectorType() ? 1
@@ -1392,8 +1396,7 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
 
       unsigned DK = ExtraInitsIsError ? diag::err_excess_initializers
                                       : diag::ext_excess_initializers;
-      SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
-          << initKind << IList->getInit(Index)->getSourceRange();
+      SemaRef.Diag(ExtraInitLoc, DK) << initKind << ExtraInitRange;
     }
   }
 
@@ -2094,7 +2097,12 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
 static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
                                      Sema &SemaRef) {
   auto *CXXRD = ElementType->getAsCXXRecordDecl();
-  if (!CXXRD)
+  // Bail out on incomplete record types: a forward-declared class has no
+  // destructor to look up, and `LookupDestructor` (via `LookupSpecialMember`)
+  // asserts that the record is fully defined. Error recovery for init lists
+  // of incomplete element types reaches this point even after the parser has
+  // already diagnosed the incompleteness.
+  if (!CXXRD || !CXXRD->hasDefinition())
     return false;
 
   CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
@@ -3977,6 +3985,7 @@ void InitializationSequence::Step::Destroy() {
   case SK_OCLSamplerInit:
   case SK_OCLZeroOpaqueType:
   case SK_ParenthesizedListInit:
+  case SK_HLSLBufferConversion:
     break;
 
   case SK_ConversionSequence:
@@ -4303,6 +4312,13 @@ void InitializationSequence::RewrapReferenceInitList(QualType T,
   S.Kind = SK_RewrapInitList;
   S.Type = T;
   S.WrappingSyntacticList = Syntactic;
+  Steps.push_back(S);
+}
+
+void InitializationSequence::AddHLSLBufferConversionStep(QualType T) {
+  Step S;
+  S.Kind = SK_HLSLBufferConversion;
+  S.Type = T;
   Steps.push_back(S);
 }
 
@@ -4985,6 +5001,8 @@ static void TryReferenceListInitialization(Sema &S,
   if (Sequence) {
     if (DestType->isRValueReferenceType() ||
         (T1Quals.hasConst() && !T1Quals.hasVolatile())) {
+      Sequence.AddReferenceBindingStep(cv1T1IgnoreAS,
+                                       /*BindingTemporary=*/true);
       if (S.getLangOpts().CPlusPlus20 &&
           isa<IncompleteArrayType>(T1->getUnqualifiedDesugaredType()) &&
           DestType->isRValueReferenceType()) {
@@ -4994,10 +5012,11 @@ static void TryReferenceListInitialization(Sema &S,
         // ..., unless T is “reference to array of unknown bound of U”, in which
         // case the type of the prvalue is the type of x in the declaration U
         // x[] H, where H is the initializer list.
-        Sequence.AddQualificationConversionStep(cv1T1, clang::VK_PRValue);
+
+        // The call to AddReferenceBindingStep above converts the rvalue to an
+        // xvalue. Convert that xvalue to the incomplete array type.
+        Sequence.AddQualificationConversionStep(cv1T1, clang::VK_XValue);
       }
-      Sequence.AddReferenceBindingStep(cv1T1IgnoreAS,
-                                       /*BindingTemporary=*/true);
       if (T1Quals.hasAddressSpace())
         Sequence.AddQualificationConversionStep(
             cv1T1, DestType->isRValueReferenceType() ? VK_XValue : VK_LValue);
@@ -6349,6 +6368,13 @@ static void TryUserDefinedConversion(Sema &S,
                                  HadMultipleCandidates);
 
   if (ConvType->isRecordType()) {
+    if (S.getLangOpts().HLSL &&
+        ConvType.getAddressSpace() == LangAS::hlsl_constant &&
+        S.Context.hasSameUnqualifiedType(ConvType, DestType)) {
+      Sequence.AddHLSLBufferConversionStep(ConvType);
+      return;
+    }
+
     //   The call is used to direct-initialize [...] the object that is the
     //   destination of the copy-initialization.
     //
@@ -8072,7 +8098,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
   case SK_ProduceObjCObject:
   case SK_StdInitializerList:
   case SK_OCLSamplerInit:
-  case SK_OCLZeroOpaqueType: {
+  case SK_OCLZeroOpaqueType:
+  case SK_HLSLBufferConversion: {
     assert(Args.size() == 1 || IsHLSLVectorOrMatrixInit);
     CurInit = Args[0];
     if (!CurInit.get()) return ExprError();
@@ -8859,6 +8886,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
         CurInit = S.MaybeBindToTemporary(CurInit.get());
       break;
     }
+    case SK_HLSLBufferConversion: {
+      CurInit = ImplicitCastExpr::Create(
+          S.Context, Step->Type.getLocalUnqualifiedType(), CK_LValueToRValue,
+          CurInit.get(),
+          /*BasePath=*/nullptr, VK_PRValue, FPOptionsOverride());
+      break;
+    }
     }
   }
 
@@ -9413,7 +9447,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         // implicit.
         if (S.isImplicitlyDeleted(Best->Function))
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_special_init)
-              << S.getSpecialMember(cast<CXXMethodDecl>(Best->Function))
+              << cast<CXXMethodDecl>(Best->Function)->getSpecialMemberKind()
               << DestType << ArgsRange;
         else {
           StringLiteral *Msg = Best->Function->getDeletedMessage();
@@ -9866,8 +9900,13 @@ void InitializationSequence::dump(raw_ostream &OS) const {
     case SK_OCLZeroOpaqueType:
       OS << "OpenCL opaque type from zero";
       break;
+
     case SK_ParenthesizedListInit:
       OS << "initialization from a parenthesized list of values";
+      break;
+
+    case SK_HLSLBufferConversion:
+      OS << "HLSL buffer conversion";
       break;
     }
 

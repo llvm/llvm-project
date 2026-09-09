@@ -39,6 +39,95 @@ TEST_F(GlobPatternTest, Wildcard) {
   EXPECT_FALSE(Pat1->match(""));
 }
 
+TEST_F(GlobPatternTest, AsLiteral) {
+  // Plain literals, including characters that are only special in context.
+  for (StringRef P : {"abc", "", "a]c", "a}c", "a,c"}) {
+    Expected<GlobPattern> Pat = GlobPattern::create(P);
+    ASSERT_TRUE((bool)Pat) << P;
+    std::optional<std::string> Lit = Pat->asLiteral();
+    ASSERT_TRUE(Lit.has_value()) << P;
+    EXPECT_EQ(*Lit, P);
+  }
+
+  // Real metacharacters are not literals.
+  for (StringRef P : {"a*c", "a?c", "a[bc]d"}) {
+    Expected<GlobPattern> Pat = GlobPattern::create(P);
+    ASSERT_TRUE((bool)Pat) << P;
+    EXPECT_FALSE(Pat->asLiteral().has_value()) << P;
+  }
+
+  // Escaped metacharacters denote a single string, with escapes resolved.
+  Expected<GlobPattern> Star = GlobPattern::create("a\\*c");
+  ASSERT_TRUE((bool)Star);
+  auto StarLit = Star->asLiteral();
+  ASSERT_TRUE(StarLit.has_value());
+  EXPECT_EQ(*StarLit, "a*c");
+  EXPECT_TRUE(Star->match("a*c"));
+  EXPECT_FALSE(Star->match("abc"));
+
+  // The motivating case: an Objective-C direct method symbol.
+  Expected<GlobPattern> Method = GlobPattern::create("-\\[C m\\]D");
+  ASSERT_TRUE((bool)Method);
+  auto MethodLit = Method->asLiteral();
+  ASSERT_TRUE(MethodLit.has_value());
+  EXPECT_EQ(*MethodLit, "-[C m]D");
+  EXPECT_TRUE(Method->match("-[C m]D"));
+
+  // An unescaped bracket expression is a character class, not this symbol.
+  Expected<GlobPattern> Class = GlobPattern::create("-[C m]D");
+  ASSERT_TRUE((bool)Class);
+  EXPECT_FALSE(Class->asLiteral().has_value());
+  EXPECT_FALSE(Class->match("-[C m]D"));
+
+  // '{' is a metacharacter only when brace expansion is enabled.
+  Expected<GlobPattern> NoBraces = GlobPattern::create("a{b,c}d");
+  ASSERT_TRUE((bool)NoBraces);
+  EXPECT_TRUE(NoBraces->asLiteral().has_value());
+  Expected<GlobPattern> Braces = GlobPattern::create("a{b,c}d", /*Max=*/1024);
+  ASSERT_TRUE((bool)Braces);
+  EXPECT_FALSE(Braces->asLiteral().has_value());
+
+  // An escaped backslash is a literal backslash.
+  Expected<GlobPattern> Backslash = GlobPattern::create("a\\\\c");
+  ASSERT_TRUE((bool)Backslash);
+  auto BackslashLit = Backslash->asLiteral();
+  ASSERT_TRUE(BackslashLit.has_value());
+  EXPECT_EQ(*BackslashLit, "a\\c");
+}
+
+TEST_F(GlobPatternTest, AsLiteralSlashAgnostic) {
+  // Without slash-agnostic matching a separator is an ordinary character.
+  Expected<GlobPattern> Plain = GlobPattern::create("a/b");
+  ASSERT_TRUE((bool)Plain);
+  auto PlainLit = Plain->asLiteral();
+  ASSERT_TRUE(PlainLit.has_value());
+  EXPECT_EQ(*PlainLit, "a/b");
+
+  // With it, '/' also matches '\\', so this denotes two strings, not one.
+  Expected<GlobPattern> Slash =
+      GlobPattern::create("a/b", std::nullopt, /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Slash);
+  EXPECT_TRUE(Slash->match("a/b"));
+  EXPECT_TRUE(Slash->match("a\\b"));
+  EXPECT_FALSE(Slash->asLiteral().has_value());
+
+  // An escaped backslash resolves to a separator, so likewise.
+  Expected<GlobPattern> Backslash =
+      GlobPattern::create("a\\\\b", std::nullopt, /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Backslash);
+  EXPECT_TRUE(Backslash->match("a\\b"));
+  EXPECT_TRUE(Backslash->match("a/b"));
+  EXPECT_FALSE(Backslash->asLiteral().has_value());
+
+  // Escaping a non-separator is still a literal in slash-agnostic mode.
+  Expected<GlobPattern> Star =
+      GlobPattern::create("a\\*b", std::nullopt, /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Star);
+  auto StarLit = Star->asLiteral();
+  ASSERT_TRUE(StarLit.has_value());
+  EXPECT_EQ(*StarLit, "a*b");
+}
+
 TEST_F(GlobPatternTest, Escape) {
   Expected<GlobPattern> Pat1 = GlobPattern::create("\\*");
   EXPECT_TRUE((bool)Pat1);
@@ -470,19 +559,5 @@ TEST_F(GlobPatternTest, SlashAgnosticMatchInverted) {
   EXPECT_FALSE(Pat->match("foo/bar/"));
   EXPECT_FALSE(Pat->match("foo/barb"));
   EXPECT_TRUE(Pat->match("foo/bar1"));
-}
-
-TEST_F(GlobPatternTest, SlashAgnosticInvertedSlash) {
-  auto Pat1 = GlobPattern::create("foo[^/]", 1024, /*SlashAgnostic=*/true);
-  ASSERT_TRUE((bool)Pat1);
-  EXPECT_FALSE(Pat1->match("foo/"));
-  EXPECT_FALSE(Pat1->match("foo\\"));
-  EXPECT_TRUE(Pat1->match("fooa"));
-
-  auto Pat2 = GlobPattern::create("foo[^\\]", 1024, /*SlashAgnostic=*/true);
-  ASSERT_TRUE((bool)Pat2);
-  EXPECT_FALSE(Pat2->match("foo/"));
-  EXPECT_FALSE(Pat2->match("foo\\"));
-  EXPECT_TRUE(Pat2->match("fooa"));
 }
 }

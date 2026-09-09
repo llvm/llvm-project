@@ -9,15 +9,15 @@ body:             |
     ; CHECK-LABEL: name: lshr_v4s32
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[COPY1]](<4 x s32>)
-    ; CHECK-NEXT: $q0 = COPY [[LSHR]](<4 x s32>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x i32>) = G_LSHR [[COPY]], [[COPY1]](<4 x i32>)
+    ; CHECK-NEXT: $q0 = COPY [[LSHR]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(<4 x s32>) = COPY $q1
-    %2:_(<4 x s32>) = G_LSHR %0, %1(<4 x s32>)
-    $q0 = COPY %2(<4 x s32>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i32>) = COPY $q1
+    %2:_(<4 x i32>) = G_LSHR %0, %1(<4 x i32>)
+    $q0 = COPY %2(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -30,15 +30,15 @@ body:             |
     ; CHECK-LABEL: name: lshr_v2s64
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<2 x s64>) = G_LSHR [[COPY]], [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: $q0 = COPY [[LSHR]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<2 x i64>) = G_LSHR [[COPY]], [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: $q0 = COPY [[LSHR]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<2 x s64>) = COPY $q0
-    %1:_(<2 x s64>) = COPY $q1
-    %2:_(<2 x s64>) = G_LSHR %0, %1(<2 x s64>)
-    $q0 = COPY %2(<2 x s64>)
+    %0:_(<2 x i64>) = COPY $q0
+    %1:_(<2 x i64>) = COPY $q1
+    %2:_(<2 x i64>) = G_LSHR %0, %1(<2 x i64>)
+    $q0 = COPY %2(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -51,15 +51,15 @@ body:             |
     ; CHECK-LABEL: name: ashr_v4s32
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x s32>) = G_ASHR [[COPY]], [[COPY1]](<4 x s32>)
-    ; CHECK-NEXT: $q0 = COPY [[ASHR]](<4 x s32>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x i32>) = G_ASHR [[COPY]], [[COPY1]](<4 x i32>)
+    ; CHECK-NEXT: $q0 = COPY [[ASHR]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(<4 x s32>) = COPY $q1
-    %2:_(<4 x s32>) = G_ASHR %0, %1(<4 x s32>)
-    $q0 = COPY %2(<4 x s32>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i32>) = COPY $q1
+    %2:_(<4 x i32>) = G_ASHR %0, %1(<4 x i32>)
+    $q0 = COPY %2(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -72,15 +72,15 @@ body:             |
     ; CHECK-LABEL: name: ashr_v2s64
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[COPY]], [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: $q0 = COPY [[ASHR]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<2 x i64>) = G_ASHR [[COPY]], [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: $q0 = COPY [[ASHR]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<2 x s64>) = COPY $q0
-    %1:_(<2 x s64>) = COPY $q1
-    %2:_(<2 x s64>) = G_ASHR %0, %1(<2 x s64>)
-    $q0 = COPY %2(<2 x s64>)
+    %0:_(<2 x i64>) = COPY $q0
+    %1:_(<2 x i64>) = COPY $q1
+    %2:_(<2 x i64>) = G_ASHR %0, %1(<2 x i64>)
+    $q0 = COPY %2(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...

@@ -158,7 +158,7 @@ protected:
 
     result.GetValueObjectList().Append(valobj_sp);
     DumpValueObjectOptions::DeclPrintingHelper helper =
-        [&valobj_sp](ConstString type, ConstString var,
+        [&valobj_sp](llvm::StringRef type, llvm::StringRef var,
                      const DumpValueObjectOptions &opts,
                      Stream &stream) -> bool {
       const ValueObject::GetExpressionPathFormat format = ValueObject::
@@ -568,6 +568,8 @@ protected:
       // modifiers above that should apply equally to synthetic and normal
       // variables, any other synthetic variable we should default to showing.
       return is_synthetic;
+    case eValueTypeSyntheticFlag:
+      llvm_unreachable("This flag was unset");
     }
     llvm_unreachable("Unexpected scope value");
   }

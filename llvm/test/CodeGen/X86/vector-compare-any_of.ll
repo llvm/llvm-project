@@ -25,10 +25,8 @@ define i64 @test_v2f64_sext(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-NEXT:    retq
   %c = fcmp ogt <2 x double> %a0, %a1
   %s = sext <2 x i1> %c to <2 x i64>
-  %1 = shufflevector <2 x i64> %s, <2 x i64> undef, <2 x i32> <i32 1, i32 undef>
-  %2 = or <2 x i64> %s, %1
-  %3 = extractelement <2 x i64> %2, i32 0
-  ret i64 %3
+  %r = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %s)
+  ret i64 %r
 }
 
 define i64 @test_v4f64_sext(<4 x double> %a0, <4 x double> %a1) {
@@ -54,12 +52,8 @@ define i64 @test_v4f64_sext(<4 x double> %a0, <4 x double> %a1) {
 ; AVX-NEXT:    retq
   %c = fcmp ogt <4 x double> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i64>
-  %1 = shufflevector <4 x i64> %s, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %2 = or <4 x i64> %s, %1
-  %3 = shufflevector <4 x i64> %2, <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %4 = or <4 x i64> %2, %3
-  %5 = extractelement <4 x i64> %4, i64 0
-  ret i64 %5
+  %r = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %s)
+  ret i64 %r
 }
 
 define i64 @test_v4f64_legal_sext(<4 x double> %a0, <4 x double> %a1) {
@@ -99,13 +93,9 @@ define i64 @test_v4f64_legal_sext(<4 x double> %a0, <4 x double> %a1) {
 ; AVX512-NEXT:    retq
   %c = fcmp ogt <4 x double> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i32>
-  %1 = shufflevector <4 x i32> %s, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %2 = or <4 x i32> %s, %1
-  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %4 = or <4 x i32> %2, %3
-  %5 = extractelement <4 x i32> %4, i64 0
-  %6 = sext i32 %5 to i64
-  ret i64 %6
+  %r = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %s)
+  %x = sext i32 %r to i64
+  ret i64 %x
 }
 
 define i32 @test_v4f32_sext(<4 x float> %a0, <4 x float> %a1) {
@@ -128,12 +118,8 @@ define i32 @test_v4f32_sext(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-NEXT:    retq
   %c = fcmp ogt <4 x float> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i32>
-  %1 = shufflevector <4 x i32> %s, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %2 = or <4 x i32> %s, %1
-  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %4 = or <4 x i32> %2, %3
-  %5 = extractelement <4 x i32> %4, i32 0
-  ret i32 %5
+  %r = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %s)
+  ret i32 %r
 }
 
 define i32 @test_v8f32_sext(<8 x float> %a0, <8 x float> %a1) {
@@ -159,14 +145,8 @@ define i32 @test_v8f32_sext(<8 x float> %a0, <8 x float> %a1) {
 ; AVX-NEXT:    retq
   %c = fcmp ogt <8 x float> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i32>
-  %1 = shufflevector <8 x i32> %s, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2 = or <8 x i32> %s, %1
-  %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4 = or <8 x i32> %2, %3
-  %5 = shufflevector <8 x i32> %4, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6 = or <8 x i32> %4, %5
-  %7 = extractelement <8 x i32> %6, i32 0
-  ret i32 %7
+  %r = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %s)
+  ret i32 %r
 }
 
 define i32 @test_v8f32_legal_sext(<8 x float> %a0, <8 x float> %a1) {
@@ -205,15 +185,9 @@ define i32 @test_v8f32_legal_sext(<8 x float> %a0, <8 x float> %a1) {
 ; AVX512-NEXT:    retq
   %c = fcmp ogt <8 x float> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i16>
-  %1 = shufflevector <8 x i16> %s, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2 = or <8 x i16> %s, %1
-  %3 = shufflevector <8 x i16> %2, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4 = or <8 x i16> %2, %3
-  %5 = shufflevector <8 x i16> %4, <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6 = or <8 x i16> %4, %5
-  %7 = extractelement <8 x i16> %6, i32 0
-  %8 = sext i16 %7 to i32
-  ret i32 %8
+  %r = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %s)
+  %x = sext i16 %r to i32
+  ret i32 %x
 }
 
 define i64 @test_v2i64_sext(<2 x i64> %a0, <2 x i64> %a1) {
@@ -255,10 +229,8 @@ define i64 @test_v2i64_sext(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX-NEXT:    retq
   %c = icmp sgt <2 x i64> %a0, %a1
   %s = sext <2 x i1> %c to <2 x i64>
-  %1 = shufflevector <2 x i64> %s, <2 x i64> undef, <2 x i32> <i32 1, i32 undef>
-  %2 = or <2 x i64> %s, %1
-  %3 = extractelement <2 x i64> %2, i32 0
-  ret i64 %3
+  %r = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %s)
+  ret i64 %r
 }
 
 define i64 @test_v4i64_sext(<4 x i64> %a0, <4 x i64> %a1) {
@@ -338,12 +310,8 @@ define i64 @test_v4i64_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX512-NEXT:    retq
   %c = icmp sgt <4 x i64> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i64>
-  %1 = shufflevector <4 x i64> %s, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %2 = or <4 x i64> %s, %1
-  %3 = shufflevector <4 x i64> %2, <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %4 = or <4 x i64> %2, %3
-  %5 = extractelement <4 x i64> %4, i64 0
-  ret i64 %5
+  %r = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %s)
+  ret i64 %r
 }
 
 define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
@@ -422,13 +390,9 @@ define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX512-NEXT:    retq
   %c = icmp sgt <4 x i64> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i32>
-  %1 = shufflevector <4 x i32> %s, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %2 = or <4 x i32> %s, %1
-  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %4 = or <4 x i32> %2, %3
-  %5 = extractelement <4 x i32> %4, i64 0
-  %6 = sext i32 %5 to i64
-  ret i64 %6
+  %r = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %s)
+  %x = sext i32 %r to i64
+  ret i64 %x
 }
 
 define i32 @test_v4i32_sext(<4 x i32> %a0, <4 x i32> %a1) {
@@ -451,12 +415,8 @@ define i32 @test_v4i32_sext(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX-NEXT:    retq
   %c = icmp sgt <4 x i32> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i32>
-  %1 = shufflevector <4 x i32> %s, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %2 = or <4 x i32> %s, %1
-  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %4 = or <4 x i32> %2, %3
-  %5 = extractelement <4 x i32> %4, i32 0
-  ret i32 %5
+  %r = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %s)
+  ret i32 %r
 }
 
 define i32 @test_v8i32_sext(<8 x i32> %a0, <8 x i32> %a1) {
@@ -506,14 +466,8 @@ define i32 @test_v8i32_sext(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX512-NEXT:    retq
   %c = icmp sgt <8 x i32> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i32>
-  %1 = shufflevector <8 x i32> %s, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2 = or <8 x i32> %s, %1
-  %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4 = or <8 x i32> %2, %3
-  %5 = shufflevector <8 x i32> %4, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6 = or <8 x i32> %4, %5
-  %7 = extractelement <8 x i32> %6, i32 0
-  ret i32 %7
+  %r = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %s)
+  ret i32 %r
 }
 
 define i32 @test_v8i32_legal_sext(<8 x i32> %a0, <8 x i32> %a1) {
@@ -566,15 +520,9 @@ define i32 @test_v8i32_legal_sext(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX512-NEXT:    retq
   %c = icmp sgt <8 x i32> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i16>
-  %1 = shufflevector <8 x i16> %s, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2 = or <8 x i16> %s, %1
-  %3 = shufflevector <8 x i16> %2, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4 = or <8 x i16> %2, %3
-  %5 = shufflevector <8 x i16> %4, <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6 = or <8 x i16> %4, %5
-  %7 = extractelement <8 x i16> %6, i32 0
-  %8 = sext i16 %7 to i32
-  ret i32 %8
+  %r = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %s)
+  %x = sext i16 %r to i32
+  ret i32 %x
 }
 
 define i16 @test_v8i16_sext(<8 x i16> %a0, <8 x i16> %a1) {
@@ -599,14 +547,8 @@ define i16 @test_v8i16_sext(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX-NEXT:    retq
   %c = icmp sgt <8 x i16> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i16>
-  %1 = shufflevector <8 x i16> %s, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2 = or <8 x i16> %s, %1
-  %3 = shufflevector <8 x i16> %2, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4 = or <8 x i16> %2, %3
-  %5 = shufflevector <8 x i16> %4, <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6 = or <8 x i16> %4, %5
-  %7 = extractelement <8 x i16> %6, i32 0
-  ret i16 %7
+  %r = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %s)
+  ret i16 %r
 }
 
 define i16 @test_v16i16_sext(<16 x i16> %a0, <16 x i16> %a1) {
@@ -660,16 +602,8 @@ define i16 @test_v16i16_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX512-NEXT:    retq
   %c = icmp sgt <16 x i16> %a0, %a1
   %s = sext <16 x i1> %c to <16 x i16>
-  %1 = shufflevector <16 x i16> %s, <16 x i16> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2 = or <16 x i16> %s, %1
-  %3 = shufflevector <16 x i16> %2, <16 x i16> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4 = or <16 x i16> %2, %3
-  %5 = shufflevector <16 x i16> %4, <16 x i16> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6 = or <16 x i16> %4, %5
-  %7 = shufflevector <16 x i16> %6, <16 x i16> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %8 = or <16 x i16> %6, %7
-  %9 = extractelement <16 x i16> %8, i32 0
-  ret i16 %9
+  %r = call i16 @llvm.vector.reduce.or.v16i16(<16 x i16> %s)
+  ret i16 %r
 }
 
 define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
@@ -724,17 +658,9 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX512-NEXT:    retq
   %c  = icmp sgt <16 x i16> %a0, %a1
   %s  = sext <16 x i1> %c to <16 x i8>
-  %1  = shufflevector <16 x i8> %s, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2  = or <16 x i8> %s, %1
-  %3  = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4  = or <16 x i8> %2, %3
-  %5  = shufflevector <16 x i8> %4, <16 x i8> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6  = or <16 x i8> %4, %5
-  %7  = shufflevector <16 x i8> %6, <16 x i8> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %8  = or <16 x i8> %6, %7
-  %9  = extractelement <16 x i8> %8, i32 0
-  %10 = sext i8 %9 to i16
-  ret i16 %10
+  %r = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %s)
+  %x = sext i8 %r to i16
+  ret i16 %x
 }
 
 define i8 @test_v16i8_sext(<16 x i8> %a0, <16 x i8> %a1) {
@@ -759,16 +685,8 @@ define i8 @test_v16i8_sext(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX-NEXT:    retq
   %c = icmp sgt <16 x i8> %a0, %a1
   %s = sext <16 x i1> %c to <16 x i8>
-  %1 = shufflevector <16 x i8> %s, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2 = or <16 x i8> %s, %1
-  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4 = or <16 x i8> %2, %3
-  %5 = shufflevector <16 x i8> %4, <16 x i8> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6 = or <16 x i8> %4, %5
-  %7 = shufflevector <16 x i8> %6, <16 x i8> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %8 = or <16 x i8> %6, %7
-  %9 = extractelement <16 x i8> %8, i32 0
-  ret i8 %9
+  %r = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %s)
+  ret i8 %r
 }
 
 define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
@@ -822,18 +740,8 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512-NEXT:    retq
   %c  = icmp sgt <32 x i8> %a0, %a1
   %s  = sext <32 x i1> %c to <32 x i8>
-  %1  = shufflevector <32 x i8> %s, <32 x i8> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2  = or <32 x i8> %s, %1
-  %3  = shufflevector <32 x i8> %2, <32 x i8> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %4  = or <32 x i8> %2, %3
-  %5  = shufflevector <32 x i8> %4, <32 x i8> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6  = or <32 x i8> %4, %5
-  %7  = shufflevector <32 x i8> %6, <32 x i8> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %8  = or <32 x i8> %6, %7
-  %9  = shufflevector <32 x i8> %8, <32 x i8> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %10 = or <32 x i8> %8, %9
-  %11 = extractelement <32 x i8> %10, i32 0
-  ret i8 %11
+  %r = call i8 @llvm.vector.reduce.or.v32i8(<32 x i8> %s)
+  ret i8 %r
 }
 
 define i1 @bool_reduction_v2f64(<2 x double> %x, <2 x double> %y) {
@@ -860,10 +768,9 @@ define i1 @bool_reduction_v2f64(<2 x double> %x, <2 x double> %y) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = fcmp ogt <2 x double> %x, %y
-  %b = shufflevector <2 x i1> %a, <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
-  %c = or <2 x i1> %a, %b
-  %d = extractelement <2 x i1> %c, i32 0
-  ret i1 %d
+  %b = bitcast <2 x i1> %a to i2
+  %c = icmp ne i2 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v4f32(<4 x float> %x, <4 x float> %y) {
@@ -890,12 +797,9 @@ define i1 @bool_reduction_v4f32(<4 x float> %x, <4 x float> %y) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = fcmp oeq <4 x float> %x, %y
-  %s1 = shufflevector <4 x i1> %a, <4 x i1> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %b = or <4 x i1> %s1, %a
-  %s2 = shufflevector <4 x i1> %b, <4 x i1> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %c = or <4 x i1> %s2, %b
-  %d = extractelement <4 x i1> %c, i32 0
-  ret i1 %d
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp ne i4 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v4f64(<4 x double> %x, <4 x double> %y) {
@@ -926,12 +830,9 @@ define i1 @bool_reduction_v4f64(<4 x double> %x, <4 x double> %y) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = fcmp oge <4 x double> %x, %y
-  %s1 = shufflevector <4 x i1> %a, <4 x i1> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %b = or <4 x i1> %s1, %a
-  %s2 = shufflevector <4 x i1> %b, <4 x i1> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %c = or <4 x i1> %s2, %b
-  %d = extractelement <4 x i1> %c, i32 0
-  ret i1 %d
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp ne i4 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v8f32(<8 x float> %x, <8 x float> %y) {
@@ -962,14 +863,9 @@ define i1 @bool_reduction_v8f32(<8 x float> %x, <8 x float> %y) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = fcmp une <8 x float> %x, %y
-  %s1 = shufflevector <8 x i1> %a, <8 x i1> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %b = or <8 x i1> %s1, %a
-  %s2 = shufflevector <8 x i1> %b, <8 x i1> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %c = or <8 x i1> %s2, %b
-  %s3 = shufflevector <8 x i1> %c, <8 x i1> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %d = or <8 x i1> %s3, %c
-  %e = extractelement <8 x i1> %d, i32 0
-  ret i1 %e
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp ne i8 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
@@ -995,10 +891,9 @@ define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
   %a = icmp ne <2 x i64> %x, %y
-  %b = shufflevector <2 x i1> %a, <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
-  %c = or <2 x i1> %a, %b
-  %d = extractelement <2 x i1> %c, i32 0
-  ret i1 %d
+  %b = bitcast <2 x i1> %a to i2
+  %c = icmp ne i2 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
@@ -1037,12 +932,9 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = icmp ugt <4 x i32> %x, %y
-  %s1 = shufflevector <4 x i1> %a, <4 x i1> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %b = or <4 x i1> %s1, %a
-  %s2 = shufflevector <4 x i1> %b, <4 x i1> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %c = or <4 x i1> %s2, %b
-  %d = extractelement <4 x i1> %c, i32 0
-  ret i1 %d
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp ne i4 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v8i16(<8 x i16> %x, <8 x i16> %y) {
@@ -1070,14 +962,9 @@ define i1 @bool_reduction_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = icmp slt <8 x i16> %x, %y
-  %s1 = shufflevector <8 x i1> %a, <8 x i1> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %b = or <8 x i1> %s1, %a
-  %s2 = shufflevector <8 x i1> %b, <8 x i1> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %c = or <8 x i1> %s2, %b
-  %s3 = shufflevector <8 x i1> %c, <8 x i1> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %d = or <8 x i1> %s3, %c
-  %e = extractelement <8 x i1> %d, i32 0
-  ret i1 %e
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp ne i8 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v16i8(<16 x i8> %x, <16 x i8> %y) {
@@ -1104,16 +991,9 @@ define i1 @bool_reduction_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = icmp sgt <16 x i8> %x, %y
-  %s1 = shufflevector <16 x i1> %a, <16 x i1> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %b = or <16 x i1> %s1, %a
-  %s2 = shufflevector <16 x i1> %b, <16 x i1> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %c = or <16 x i1> %s2, %b
-  %s3 = shufflevector <16 x i1> %c, <16 x i1> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %d = or <16 x i1> %s3, %c
-  %s4 = shufflevector <16 x i1> %d, <16 x i1> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %e = or <16 x i1> %s4, %d
-  %f = extractelement <16 x i1> %e, i32 0
-  ret i1 %f
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp ne i16 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v4i64(<4 x i64> %x, <4 x i64> %y) {
@@ -1180,12 +1060,9 @@ define i1 @bool_reduction_v4i64(<4 x i64> %x, <4 x i64> %y) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp slt <4 x i64> %x, %y
-  %s1 = shufflevector <4 x i1> %a, <4 x i1> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %b = or <4 x i1> %s1, %a
-  %s2 = shufflevector <4 x i1> %b, <4 x i1> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %c = or <4 x i1> %s2, %b
-  %d = extractelement <4 x i1> %c, i32 0
-  ret i1 %d
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp ne i4 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v8i32(<8 x i32> %x, <8 x i32> %y) {
@@ -1249,14 +1126,9 @@ define i1 @bool_reduction_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp ule <8 x i32> %x, %y
-  %s1 = shufflevector <8 x i1> %a, <8 x i1> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %b = or <8 x i1> %s1, %a
-  %s2 = shufflevector <8 x i1> %b, <8 x i1> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %c = or <8 x i1> %s2, %b
-  %s3 = shufflevector <8 x i1> %c, <8 x i1> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %d = or <8 x i1> %s3, %c
-  %e = extractelement <8 x i1> %d, i32 0
-  ret i1 %e
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp ne i8 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v16i16(<16 x i16> %x, <16 x i16> %y) {
@@ -1300,16 +1172,9 @@ define i1 @bool_reduction_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp eq <16 x i16> %x, %y
-  %s1 = shufflevector <16 x i1> %a, <16 x i1> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %b = or <16 x i1> %s1, %a
-  %s2 = shufflevector <16 x i1> %b, <16 x i1> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %c = or <16 x i1> %s2, %b
-  %s3 = shufflevector <16 x i1> %c, <16 x i1> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %d = or <16 x i1> %s3, %c
-  %s4 = shufflevector <16 x i1> %d, <16 x i1> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %e = or <16 x i1> %s4, %d
-  %f = extractelement <16 x i1> %e, i32 0
-  ret i1 %f
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp ne i16 %b, 0
+  ret i1 %c
 }
 
 define i1 @bool_reduction_v32i8(<32 x i8> %x, <32 x i8> %y) {
@@ -1353,18 +1218,9 @@ define i1 @bool_reduction_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp eq <32 x i8> %x, %y
-  %s1 = shufflevector <32 x i1> %a, <32 x i1> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %b = or <32 x i1> %s1, %a
-  %s2 = shufflevector <32 x i1> %b, <32 x i1> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %c = or <32 x i1> %s2, %b
-  %s3 = shufflevector <32 x i1> %c, <32 x i1> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %d = or <32 x i1> %s3, %c
-  %s4 = shufflevector <32 x i1> %d, <32 x i1> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %e = or <32 x i1> %s4, %d
-  %s5 = shufflevector <32 x i1> %e, <32 x i1> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %f = or <32 x i1> %s5, %e
-  %g = extractelement <32 x i1> %f, i32 0
-  ret i1 %g
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp ne i32 %b, 0
+  ret i1 %c
 }
 
 define {i32, i1} @test_v16i8_muti_uses(<16 x i8> %x, <16 x i8>%y, <16 x i8> %z) {

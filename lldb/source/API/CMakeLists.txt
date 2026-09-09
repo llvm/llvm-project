@@ -81,6 +81,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
   SBProgress.cpp
+  SBProtocolServer.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
@@ -115,6 +116,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
+  ScriptInterpreterBridge.cpp
   SystemInitializerFull.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -283,8 +285,6 @@ set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
 file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
 file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
 list(REMOVE_ITEM root_public_headers ${root_private_headers})
-# Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
-list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
 
 add_custom_command(
   OUTPUT ${lldb_header_staging_dir}
@@ -292,13 +292,17 @@ add_custom_command(
   COMMENT "LLDB headers: create staging directory for LLDB headers")
 
 add_custom_target(liblldb-header-staging-dir DEPENDS ${lldb_header_staging_dir})
+set_target_properties(liblldb-header-staging-dir PROPERTIES FOLDER "LLDB/Resources/liblldb-header-staging")
 
 find_program(unifdef_EXECUTABLE unifdef)
 
 add_custom_target(liblldb-header-staging)
+set_target_properties(liblldb-header-staging PROPERTIES FOLDER "LLDB/Resources")
 
 if (LLDB_BUILD_FRAMEWORK)
   add_custom_target(lldb-framework-fixup-all-headers)
+  set_target_properties(lldb-framework-fixup-all-headers PROPERTIES FOLDER "LLDB/Resources")
+  
   add_dependencies(lldb-framework-fixup-all-headers liblldb-header-staging)
   add_dependencies(liblldb lldb-framework-fixup-all-headers)
 endif()
@@ -310,6 +314,12 @@ foreach(header
   get_filename_component(basename ${header} NAME)
   set(staged_header ${lldb_header_staging_dir}/${basename})
 
+  if(basename STREQUAL "lldb-defines.h")
+    set(copy_command "${Python3_EXECUTABLE}"
+        ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py
+        -i ${header} -o ${staged_header}
+        -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH})
+  endif()
   if(unifdef_EXECUTABLE)
     # unifdef returns 0 when the file is unchanged and 1 if something was changed.
     # That means if we successfully remove SWIG code, the build system believes
@@ -320,6 +330,8 @@ foreach(header
   endif()
 
   add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
+  set_target_properties(liblldb-stage-header-${basename} PROPERTIES FOLDER "LLDB/Resources/liblldb-header-staging")
+
   add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums liblldb-header-staging-dir)
   add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
@@ -334,6 +346,8 @@ foreach(header
     set(output_header $<TARGET_FILE_DIR:liblldb>/Headers/${basename})
 
     add_custom_target(lldb-framework-fixup-header-${basename} DEPENDS ${staged_header})
+    set_target_properties(lldb-framework-fixup-header-${basename} PROPERTIES FOLDER "LLDB/Resources/lldb-framework-fixup-all-headers")
+
     add_dependencies(lldb-framework-fixup-header-${basename} liblldb-stage-header-${basename})
     add_dependencies(lldb-framework-fixup-all-headers lldb-framework-fixup-header-${basename})
 
@@ -344,9 +358,6 @@ foreach(header
   endif()
 endforeach()
 
-add_custom_command(TARGET liblldb-header-staging POST_BUILD
-  COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py -i ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h -o ${lldb_header_staging_dir}/lldb-defines.h -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH}
-)
 add_dependencies(liblldb liblldb-header-staging)
 
 if(LLDB_BUILD_FRAMEWORK)

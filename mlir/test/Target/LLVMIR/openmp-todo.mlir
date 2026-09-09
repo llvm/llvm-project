@@ -52,10 +52,13 @@ llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @parallel_allocate(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.parallel operation}}
+omp.private {type = private} @parallel_bad_allocator_private : i32
+
+llvm.func @parallel_bad_allocator(%allocator : f32, %x : !llvm.ptr) {
+  // expected-error@below {{OpenMP allocator operand must have integer or pointer type}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+  omp.parallel allocate(%allocator : f32 -> %x : !llvm.ptr) allocate_private_indices([0])
+      private(@parallel_bad_allocator_private %x -> %private : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -134,6 +137,34 @@ llvm.func @scan_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+llvm.func @parallel_task_reduction_modifier_byref(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause task reduction modifier with by-ref reduction in omp.parallel operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
+  omp.parallel reduction(mod: task, byref @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @single_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.single operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.single}}
@@ -165,7 +196,7 @@ llvm.func @single_private(%x : !llvm.ptr) {
 llvm.func @target_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+  omp.target kernel_type(generic) allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -190,10 +221,95 @@ atomic {
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
-llvm.func @target_in_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.target operation}}
+llvm.func @target_in_reduction_byref(%x : !llvm.ptr) {
+  %m = omp.map.info var_ptr(%x : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with byref modifier in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.target kernel_type(generic) in_reduction(byref @add_f32 %x : !llvm.ptr) map_entries(%m -> %arg : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_cleanup_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+cleanup {
+^bb2(%arg2: f32):
+  omp.yield
+}
+llvm.func @target_in_reduction_cleanup(%x : !llvm.ptr) {
+  %m = omp.map.info var_ptr(%x : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with cleanup region in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target kernel_type(generic) in_reduction(@add_cleanup_f32 %x : !llvm.ptr) map_entries(%m -> %arg : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_two_arg_init_i32 : !llvm.ptr alloc {
+^bb0(%arg: !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+} combiner {
+^bb1(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  %1 = llvm.load %arg1 : !llvm.ptr -> i32
+  %2 = llvm.add %0, %1 : i32
+  llvm.store %2, %arg0 : i32, !llvm.ptr
+  omp.yield(%arg0 : !llvm.ptr)
+}
+llvm.func @target_in_reduction_two_arg_init(%x : !llvm.ptr) {
+  %m = omp.map.info var_ptr(%x : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with two-argument initializer in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target kernel_type(generic) in_reduction(@add_two_arg_init_i32 %x : !llvm.ptr) map_entries(%m -> %arg : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_dup_map_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb0(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+llvm.func @target_in_reduction_duplicate_map(%x : !llvm.ptr) {
+  // The in_reduction variable %x has two matching map_entries entries for the
+  // same var_ptr. The translation cannot disambiguate which map block argument
+  // to redirect, so it must reject this as ambiguous.
+  %m1 = omp.map.info var_ptr(%x : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  %m2 = omp.map.info var_ptr(%x : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{in_reduction variable on omp.target has multiple matching map_entries entries; the redirect target is ambiguous}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target kernel_type(generic) in_reduction(@add_dup_map_f32 %x : !llvm.ptr) map_entries(%m1 -> %arg1, %m2 -> %arg2 : !llvm.ptr, !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -373,7 +489,7 @@ llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) 
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -398,7 +514,7 @@ llvm.func @taskloop_inreduction_byref(%lb : i32, %ub : i32, %step : i32, %x : !l
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -423,7 +539,7 @@ llvm.func @taskloop_reduction_byref(%lb : i32, %ub : i32, %step : i32, %x : !llv
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -451,7 +567,7 @@ llvm.func @taskloop_reduction_cleanup(%lb : i32, %ub : i32, %step : i32, %x : !l
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -477,7 +593,7 @@ llvm.func @taskloop_reduction_modifier(%lb : i32, %ub : i32, %step : i32, %x : !
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -505,18 +621,7 @@ llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x
       }
     }
     omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskwait_depend(%x: !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause depend in omp.taskwait operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
-  omp.taskwait depend(taskdependin -> %x : !llvm.ptr) {
-    omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -635,7 +740,7 @@ llvm.func @target_enter_data_map_iterator(%addr : !llvm.ptr) {
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_enter_data operation}}
@@ -651,7 +756,7 @@ llvm.func @target_exit_data_map_iterator(%addr : !llvm.ptr) {
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_exit_data operation}}
@@ -667,7 +772,7 @@ llvm.func @target_update_map_iterator(%addr : !llvm.ptr) {
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_update operation}}
@@ -682,14 +787,14 @@ llvm.func @target_map_iterated_unsupported(%addr : !llvm.ptr) {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
-  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
+  omp.target kernel_type(generic) map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -702,7 +807,7 @@ llvm.func @target_data_map_iterator(%addr : !llvm.ptr) {
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_data operation}}
@@ -720,7 +825,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %c10 = llvm.mlir.constant(10 : i64) : i64
     %c1 = llvm.mlir.constant(1 : i64) : i64
     %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
       omp.yield(%m : !llvm.ptr)
     } -> !omp.iterated<!llvm.ptr>
     // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.declare_mapper.info operation}}
@@ -728,7 +833,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   }
 
   llvm.func @target_data_mapper_iterator(%addr : !llvm.ptr) {
-    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) -> !llvm.ptr {name = ""}
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) name("") -> !llvm.ptr
     // expected-error@below {{LLVM Translation failed for operation: omp.target_data}}
     omp.target_data map_entries(%map : !llvm.ptr) {}
     llvm.return

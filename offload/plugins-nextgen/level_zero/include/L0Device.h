@@ -15,13 +15,12 @@
 
 #include "llvm/ADT/SmallVector.h"
 
-#include "PerThreadTable.h"
-
 #include "L0CmdListManager.h"
 #include "L0Context.h"
 #include "L0Program.h"
 #include "L0Queue.h"
 #include "PluginInterface.h"
+#include <cstdint>
 #include <limits>
 
 namespace llvm::omp::target::plugin {
@@ -75,9 +74,29 @@ struct L0DeviceIdTy {
       : zeId(Device), RootId(RootId), SubId(SubId), CCSId(CCSId) {}
 };
 
+/// Properties of a compute command queue group.
+struct ComputeQueueGroupInfoTy {
+  /// Command queue group ordinal.
+  uint32_t Ordinal = std::numeric_limits<uint32_t>::max();
+  /// Number of queues in the group.
+  uint32_t NumQueues = 0;
+  /// Maximum pattern size accepted by zeCommandListMemoryFill for this device.
+  /// 0 means value is unavailable.
+  size_t MaxMemFillPatternSize = 0;
+};
+
+/// Results of scanning a device's command queue groups.
+struct DeviceQueueConfigInfoTy {
+  /// The compute command queue group selected as the device default.
+  ComputeQueueGroupInfoTy DefaultCmdQueueGroup;
+  /// Whether any command queue group on this device supports cooperative
+  /// kernels.
+  bool SupportsCooperativeKernels = false;
+};
+
 class L0DeviceTy final : public GenericDeviceTy {
   // Level Zero Context for this Device.
-  L0ContextTy &l0Context;
+  L0ContextTy &L0Context;
 
   // Level Zero handle  for this Device.
   ze_device_handle_t zeDevice;
@@ -104,16 +123,12 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// L0 Device ID as string.
   std::string zeId;
 
-  /// Command queue group ordinals for each device.
-  static constexpr uint32_t MaxOrdinal = std::numeric_limits<uint32_t>::max();
-
-  std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
+  /// Command queue group info for this device. Value is unspecified unless the
+  /// device reached a valid initialized state.
+  DeviceQueueConfigInfoTy QueueConfig;
 
   /// Command queue index for each device.
   uint32_t ComputeIndex = 0;
-
-  /// Whether the device supports cooperative kernels.
-  bool SupportsCooperativeKernels = false;
 
   /// Lock for this device.
   std::mutex Mutex;
@@ -128,28 +143,24 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// MemAllocator for this device.
   MemAllocatorTy MemAllocator;
 
-  /// Cache of queues for this device.
-  L0QueueCacheTy QueueCache;
-
   DeviceArchTy computeArch() const;
 
-  /// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
-  std::pair<uint32_t, uint32_t> findComputeOrdinal();
+  /// Scan the device's command queue groups, selecting the default compute
+  /// group and detecting cooperative kernel support. Returns an Error if the
+  /// device exposes no compute queue group.
+  Expected<DeviceQueueConfigInfoTy> scanQueueGroups();
 
   /// Helper function to call global constructors or destructors.
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
                                  bool IsCtor);
-
-  /// Check if device supports cooperative kernels.
-  bool checkCooperativeKernelSupport();
 
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
              const std::string_view zeId, int32_t ComputeIndex)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
-        l0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
-        ComputeIndex(ComputeIndex), QueueCache(*this) {
+        L0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
+        ComputeIndex(ComputeIndex) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     DeviceProperties.pNext = nullptr;
     ComputeProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
@@ -174,10 +185,14 @@ public:
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 
-  bool supportsCooperativeKernels() const { return SupportsCooperativeKernels; }
+  uint32_t getDriverId() const override { return L0Context.getDriverId(); }
 
-  const L0ContextTy &getL0Context() const { return l0Context; }
-  L0ContextTy &getL0Context() { return l0Context; }
+  bool supportsCooperativeKernels() const {
+    return QueueConfig.SupportsCooperativeKernels;
+  }
+
+  const L0ContextTy &getL0Context() const { return L0Context; }
+  L0ContextTy &getL0Context() { return L0Context; }
 
   const std::string_view getName() const { return DeviceName; }
   const char *getNameCStr() const { return DeviceName.c_str(); }
@@ -200,9 +215,10 @@ public:
   }
   ze_module_handle_t *getGlobalModulesArray() { return GlobalModules.data(); }
 
-  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image) {
+  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image,
+                                   ze_context_handle_t ZeContext) {
     for (auto &PGM : Programs)
-      if (PGM.getMemoryBuffer() == Image)
+      if (PGM.getMemoryBuffer() == Image && PGM.getZeContext() == ZeContext)
         return &PGM;
     return nullptr;
   }
@@ -221,9 +237,9 @@ public:
     auto ImageOrErr = Builder.getELF();
     if (!ImageOrErr)
       return ImageOrErr.takeError();
-    Programs.emplace_back(ImageId, *this, std::move(*ImageOrErr),
-                          Builder.getGlobalModule(),
-                          std::move(Builder.getModules()));
+    Programs.emplace_back(
+        ImageId, *this, std::move(*ImageOrErr), Builder.getGlobalModule(),
+        std::move(Builder.getModules()), Builder.getZeContext());
     return Programs.back();
   }
 
@@ -338,18 +354,29 @@ public:
 
   const std::string_view getUuid() const { return DeviceUuid; }
 
-  uint32_t getComputeEngine() const { return ComputeOrdinal.first; }
-  uint32_t getNumComputeQueues() const { return ComputeOrdinal.second; }
+  uint32_t getComputeEngine() const {
+    return QueueConfig.DefaultCmdQueueGroup.Ordinal;
+  }
+  uint32_t getNumComputeQueues() const {
+    return QueueConfig.DefaultCmdQueueGroup.NumQueues;
+  }
+
+  size_t getMaxMemFillPatternSize() {
+    return QueueConfig.DefaultCmdQueueGroup.MaxMemFillPatternSize;
+  }
 
   void reportDeviceInfo() const;
 
   /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
-  createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false);
+  createImmCmdList(uint32_t Ordinal, uint32_t Index,
+                   ze_context_handle_t UserZeCtx, bool InOrder = false);
 
   /// Create an immediate command list for computing.
-  Expected<ze_command_list_handle_t> createImmCmdList(bool InOrder = false) {
-    return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
+  Expected<ze_command_list_handle_t>
+  createImmCmdList(ze_context_handle_t UserZeCtx, bool InOrder = false) {
+    return createImmCmdList(getComputeEngine(), getComputeIndex(), UserZeCtx,
+                            InOrder);
   }
 
   /// Release an immediate command list.
@@ -358,11 +385,12 @@ public:
     return Plugin::success();
   }
 
-  Expected<L0CmdListManagerTy *> getCmdListManager(bool InOrder = false) {
-    auto CmdListOrErr = createImmCmdList(InOrder);
+  Expected<L0CmdListManagerTy *>
+  getCmdListManager(ze_context_handle_t UserZeCtx, bool InOrder = false) {
+    auto CmdListOrErr = createImmCmdList(UserZeCtx, InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
-    return new L0CmdListManagerTy(*CmdListOrErr, l0Context);
+    return new L0CmdListManagerTy(*CmdListOrErr, L0Context);
   }
 
   Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
@@ -410,43 +438,46 @@ public:
   /// Driver related functions.
 
   /// Reurn the driver handle for this device.
-  ze_driver_handle_t getZeDriver() const { return l0Context.getZeDriver(); }
+  ze_driver_handle_t getZeDriver() const { return L0Context.getZeDriver(); }
 
   /// Return context for this device.
-  ze_context_handle_t getZeContext() const { return l0Context.getZeContext(); }
+  ze_context_handle_t getZeContext() const { return L0Context.getZeContext(); }
 
   /// Return driver API version for this device.
   ze_api_version_t getDriverAPIVersion() const {
-    return l0Context.getDriverAPIVersion();
+    return L0Context.getDriverAPIVersion();
   }
 
   /// Get a low-level L0 event from the driver associated to this device.
   Expected<ze_event_handle_t> getEvent() {
-    return l0Context.getEventPool().getEvent();
+    return L0Context.getEventPool().getEvent();
   }
   /// Get a high-level L0EventTy object from the driver associated to this
   /// device.
   Expected<L0EventTy *> getEventObject() {
-    return l0Context.getEventPool().getEventObject();
+    return L0Context.getEventPool().getEventObject();
   }
 
   /// Release a L0 event to the pool associated to this device.
   Error releaseEvent(ze_event_handle_t Event) {
-    return l0Context.getEventPool().releaseEvent(Event);
+    return L0Context.getEventPool().releaseEvent(Event);
   }
   /// Release an L0EventTy object to the pool associated to this device.
   Error releaseEventObject(L0EventTy *EventObj) {
-    return l0Context.getEventPool().releaseEventObject(EventObj);
+    return L0Context.getEventPool().releaseEventObject(EventObj);
   }
 
-  StagingBufferTy &getStagingBuffer() { return l0Context.getStagingBuffer(); }
+  StagingBufferTy &getStagingBuffer() { return L0Context.getStagingBuffer(); }
 
-  bool supportsLargeMem() const { return l0Context.supportsLargeMem(); }
+  bool supportsLargeMem() const { return L0Context.supportsLargeMem(); }
 
   /// Returns the Queue from an async info object, or creates a new one if
-  /// the async info does not have a queue yet.
-  Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
-  void releaseQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+  /// the async info does not have a queue yet. When \p UserCtx is null the
+  /// driver's default plugin-side context is used.
+  Expected<L0QueueTy *>
+  getOrCreateQueue(__tgt_async_info *AsyncInfo,
+                   LevelZeroPluginContextTy *UserCtx = nullptr);
+  void releaseQueue(L0QueueTy *Queue);
 
   // Allocation related routines.
 
@@ -468,13 +499,13 @@ public:
 
   MemAllocatorTy &getMemAllocator(int32_t Kind) {
     if (Kind == TARGET_ALLOC_HOST)
-      return l0Context.getHostMemAllocator();
+      return L0Context.getHostMemAllocator();
     return getDeviceMemAllocator();
   }
 
   MemAllocatorTy &getMemAllocator(const void *Ptr) {
     if (ZE_MEMORY_TYPE_HOST == getMemAllocType(Ptr))
-      return l0Context.getHostMemAllocator();
+      return L0Context.getHostMemAllocator();
     return getDeviceMemAllocator();
   }
 
@@ -482,11 +513,11 @@ public:
 
   // Generic device interface implementation.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy *UserCtx) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
-  Expected<void *> allocate(size_t Size, void *HstPtr,
-                            TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
   Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -507,6 +538,9 @@ public:
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataPrefetchImpl(size_t Count, const void **Mems, const size_t *Sizes,
+                         bool ToHost,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
                         bool ReleaseQueue) override;
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
@@ -515,10 +549,11 @@ public:
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Expected<bool>
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
@@ -549,7 +584,7 @@ public:
     V = 0;
     return Plugin::success();
   }
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override;
+  Expected<GenericKernelTy &> constructKernel(StringRef Name) override;
 
   Error callGlobalConstructors(GenericPluginTy &Plugin,
                                DeviceImageTy &Image) override;

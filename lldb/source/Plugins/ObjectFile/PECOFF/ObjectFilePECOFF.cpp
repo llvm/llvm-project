@@ -110,14 +110,15 @@ static PluginProperties &GetGlobalPluginProperties() {
 static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
                                  std::string &gnu_debuglink_file,
                                  uint32_t &gnu_debuglink_crc) {
-  static ConstString g_sect_name_gnu_debuglink(".gnu_debuglink");
+  static constexpr llvm::StringLiteral g_sect_name_gnu_debuglink(
+      ".gnu_debuglink");
   for (const auto &section : coff_obj.sections()) {
     auto name = section.getName();
     if (!name) {
       llvm::consumeError(name.takeError());
       continue;
     }
-    if (*name == g_sect_name_gnu_debuglink.GetStringRef()) {
+    if (*name == g_sect_name_gnu_debuglink) {
       auto content = section.getContents();
       if (!content) {
         llvm::consumeError(content.takeError());
@@ -165,7 +166,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
     auto raw_data = coff_obj.getData();
     LLDB_SCOPED_TIMERF(
         "Calculating module crc32 %s with size %" PRIu64 " KiB",
-        FileSpec(coff_obj.getFileName()).GetFilename().AsCString(""),
+        FileSpec(coff_obj.getFileName()).GetFilename().str().c_str(),
         static_cast<lldb::offset_t>(raw_data.size()) / 1024);
     gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
   }
@@ -268,7 +269,7 @@ ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
       extractor_sp->SetData(std::move(full_sp));
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
       toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
-      file.GetFilename().GetStringRef()));
+      file.GetFilename()));
 
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
@@ -304,12 +305,12 @@ ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
     module_env_option = map->GetValueForKey(name);
     if (!module_env_option) {
       // Step 2: Try with the file name in lowercase.
-      auto name_lower = name.GetStringRef().lower();
+      auto name_lower = name.lower();
       module_env_option = map->GetValueForKey(llvm::StringRef(name_lower));
     }
     if (!module_env_option) {
       // Step 3: Try with the file name with ".debug" suffix stripped.
-      auto name_stripped = name.GetStringRef();
+      auto name_stripped = name;
       if (name_stripped.consume_back_insensitive(".debug")) {
         module_env_option = map->GetValueForKey(name_stripped);
         if (!module_env_option) {
@@ -402,7 +403,7 @@ bool ObjectFilePECOFF::CreateBinary() {
   Log *log = GetLog(LLDBLog::Object);
 
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
-      toStringRef(m_data_nsp->GetData()), m_file.GetFilename().GetStringRef()));
+      toStringRef(m_data_nsp->GetData()), m_file.GetFilename()));
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", m_file);
@@ -960,30 +961,26 @@ bool ObjectFilePECOFF::IsStripped() {
 
 SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
                                              const section_header_t &sect) {
-  ConstString const_sect_name(sect_name);
-  static ConstString g_code_sect_name(".code");
-  static ConstString g_CODE_sect_name("CODE");
-  static ConstString g_data_sect_name(".data");
-  static ConstString g_DATA_sect_name("DATA");
-  static ConstString g_bss_sect_name(".bss");
-  static ConstString g_BSS_sect_name("BSS");
+  static constexpr llvm::StringLiteral g_code_sect_name(".code");
+  static constexpr llvm::StringLiteral g_CODE_sect_name("CODE");
+  static constexpr llvm::StringLiteral g_data_sect_name(".data");
+  static constexpr llvm::StringLiteral g_DATA_sect_name("DATA");
+  static constexpr llvm::StringLiteral g_bss_sect_name(".bss");
+  static constexpr llvm::StringLiteral g_BSS_sect_name("BSS");
 
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
-      ((const_sect_name == g_code_sect_name) ||
-       (const_sect_name == g_CODE_sect_name))) {
+      ((sect_name == g_code_sect_name) || (sect_name == g_CODE_sect_name))) {
     return eSectionTypeCode;
   }
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
-             ((const_sect_name == g_data_sect_name) ||
-              (const_sect_name == g_DATA_sect_name))) {
+      ((sect_name == g_data_sect_name) || (sect_name == g_DATA_sect_name))) {
     if (sect.size == 0 && sect.offset == 0)
       return eSectionTypeZeroFill;
     else
       return eSectionTypeData;
   }
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
-             ((const_sect_name == g_bss_sect_name) ||
-              (const_sect_name == g_BSS_sect_name))) {
+      ((sect_name == g_bss_sect_name) || (sect_name == g_BSS_sect_name))) {
     if (sect.size == 0)
       return eSectionTypeZeroFill;
     else
@@ -1059,7 +1056,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
       ConstString const_sect_name(sect_name);
       SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
 
-      SectionSP section_sp(new Section(
+      SectionSP section_sp = std::make_shared<Section>(
           module_sp,       // Module to which this section belongs
           this,            // Object file to which this section belongs
           idx + 1,         // Section ID is the 1 based section index.
@@ -1074,7 +1071,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
           m_sect_headers[idx]
               .size, // Size in bytes of this section as found in the file
           m_coff_header_opt.sect_alignment, // Section alignment
-          m_sect_headers[idx].flags));      // Flags for this section
+          m_sect_headers[idx].flags);       // Flags for this section
 
       uint32_t permissions = 0;
       if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
@@ -1394,7 +1391,7 @@ void ObjectFilePECOFF::DumpDependentModules(lldb_private::Stream *s) {
     s->PutCString("Dependent Modules\n");
     for (unsigned i = 0; i < num_modules; ++i) {
       auto spec = m_deps_filespec->GetFileSpecAtIndex(i);
-      s->Printf("  %s\n", spec.GetFilename().GetCString());
+      s->Format("  {0}\n", spec.GetFilename());
     }
   }
 }

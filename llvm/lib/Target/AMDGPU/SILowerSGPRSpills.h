@@ -13,7 +13,7 @@
 
 namespace llvm {
 class SILowerSGPRSpillsPass
-    : public OptionalPassInfoMixin<SILowerSGPRSpillsPass> {
+    : public RequiredPassInfoMixin<SILowerSGPRSpillsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

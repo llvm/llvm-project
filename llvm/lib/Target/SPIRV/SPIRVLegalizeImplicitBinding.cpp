@@ -13,9 +13,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizeImplicitBinding.h"
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -23,7 +23,6 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include <algorithm>
 #include <vector>
 
 using namespace llvm;
@@ -142,10 +141,9 @@ void SPIRVLegalizeImplicitBindingImpl::collectBindingInfo(Module &M) {
   InfoCollector.visit(M);
 
   // Sort the collected calls by their order ID.
-  std::sort(ImplicitBindingCalls.begin(), ImplicitBindingCalls.end(),
-            [](const CallInst *A, const CallInst *B) {
-              return getOrderId(A) < getOrderId(B);
-            });
+  llvm::sort(ImplicitBindingCalls, [](const CallInst *A, const CallInst *B) {
+    return getOrderId(A) < getOrderId(B);
+  });
 }
 
 void SPIRVLegalizeImplicitBindingImpl::verifyUniqueOrderIdPerResource(
@@ -222,8 +220,8 @@ bool SPIRVLegalizeImplicitBindingImpl::runOnModule(Module &M) {
 }
 } // namespace
 
-PreservedAnalyses SPIRVLegalizeImplicitBinding::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVLegalizeImplicitBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
   return SPIRVLegalizeImplicitBindingImpl().runOnModule(M)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();

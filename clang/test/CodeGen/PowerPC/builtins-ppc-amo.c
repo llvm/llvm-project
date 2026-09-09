@@ -8,14 +8,14 @@
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef zeroext [[VALUE:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat(ptr [[PTR]], i32 [[VALUE]], i32 0)
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_unsigned_lwat(
 // AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef zeroext [[VALUE:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat(ptr [[PTR]], i32 [[VALUE]], i32 0)
-// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6:![0-9]+]]
 // AIX-NEXT:    ret void
 //
 void test_unsigned_lwat(unsigned int *ptr, unsigned int value, unsigned int * resp) {
@@ -27,14 +27,14 @@ void test_unsigned_lwat(unsigned int *ptr, unsigned int value, unsigned int * re
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat(ptr [[PTR]], i64 [[VALUE]], i32 3)
-// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5:![0-9]+]]
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_unsigned_ldat(
 // AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat(ptr [[PTR]], i64 [[VALUE]], i32 3)
-// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5:![0-9]+]]
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7:![0-9]+]]
 // AIX-NEXT:    ret void
 //
 void test_unsigned_ldat(unsigned long int *ptr, unsigned long int value, unsigned long int * resp) {
@@ -46,14 +46,14 @@ void test_unsigned_ldat(unsigned long int *ptr, unsigned long int value, unsigne
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VALUE:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat(ptr [[PTR]], i32 [[VALUE]], i32 5)
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_signed_lwat(
 // AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VALUE:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat(ptr [[PTR]], i32 [[VALUE]], i32 5)
-// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // AIX-NEXT:    ret void
 //
 void test_signed_lwat(int *ptr, int value, int * resp) {
@@ -65,14 +65,14 @@ void test_signed_lwat(int *ptr, int value, int * resp) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat(ptr [[PTR]], i64 [[VALUE]], i32 8)
-// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_signed_ldat(
 // AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat(ptr [[PTR]], i64 [[VALUE]], i32 8)
-// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // AIX-NEXT:    ret void
 //
 void test_signed_ldat(long int *ptr, long int value, long int * resp) {
@@ -84,14 +84,14 @@ void test_signed_ldat(long int *ptr, long int value, long int * resp) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.cond(ptr [[PTR]], i32 24)
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_unsigned_lwat_cond(
 // AIX-SAME: ptr noundef [[PTR:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.cond(ptr [[PTR]], i32 24)
-// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // AIX-NEXT:    ret void
 //
 void test_unsigned_lwat_cond(unsigned int *ptr, unsigned int * resp) {
@@ -103,14 +103,14 @@ void test_unsigned_lwat_cond(unsigned int *ptr, unsigned int * resp) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.cond(ptr [[PTR]], i32 25)
-// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_unsigned_ldat_cond(
 // AIX-SAME: ptr noundef [[PTR:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.cond(ptr [[PTR]], i32 25)
-// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // AIX-NEXT:    ret void
 //
 void test_unsigned_ldat_cond(unsigned long int *ptr, unsigned long int * resp) {
@@ -122,14 +122,14 @@ void test_unsigned_ldat_cond(unsigned long int *ptr, unsigned long int * resp) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.cond(ptr [[PTR]], i32 24)
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_signed_lwat_cond(
 // AIX-SAME: ptr noundef [[PTR:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.cond(ptr [[PTR]], i32 24)
-// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // AIX-NEXT:    ret void
 //
 void test_signed_lwat_cond(int *ptr, int * resp) {
@@ -141,14 +141,14 @@ void test_signed_lwat_cond(int *ptr, int * resp) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.cond(ptr [[PTR]], i32 25)
-// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_signed_ldat_cond(
 // AIX-SAME: ptr noundef [[PTR:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.cond(ptr [[PTR]], i32 25)
-// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // AIX-NEXT:    ret void
 //
 void test_signed_ldat_cond(long int *ptr, long int * resp) {
@@ -224,14 +224,14 @@ void test_signed_stdat(long int *ptr, long int value, long int * resp) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef zeroext [[VAL1:%.*]], i32 noundef zeroext [[VAL2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.csne(ptr [[PTR]], i32 [[VAL1]], i32 [[VAL2]])
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_unsigned_lwat_csne(
 // AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef zeroext [[VAL1:%.*]], i32 noundef zeroext [[VAL2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.csne(ptr [[PTR]], i32 [[VAL1]], i32 [[VAL2]])
-// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // AIX-NEXT:    ret void
 //
 void test_unsigned_lwat_csne(unsigned int *ptr, unsigned int val1, unsigned int val2,  unsigned int * resp) {
@@ -243,14 +243,14 @@ void test_unsigned_lwat_csne(unsigned int *ptr, unsigned int val1, unsigned int 
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VAL1:%.*]], i64 noundef [[VAL2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.csne(ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]])
-// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_unsigned_ldat_csne(
 // AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VAL1:%.*]], i64 noundef [[VAL2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.csne(ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]])
-// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // AIX-NEXT:    ret void
 //
 void test_unsigned_ldat_csne(unsigned long int *ptr, unsigned long int val1, unsigned long int val2,  unsigned long int * resp) {
@@ -262,14 +262,14 @@ void test_unsigned_ldat_csne(unsigned long int *ptr, unsigned long int val1, uns
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VAL1:%.*]], i32 noundef signext [[VAL2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.csne(ptr [[PTR]], i32 [[VAL1]], i32 [[VAL2]])
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_unsigned_lwat_csne_s(
 // AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VAL1:%.*]], i32 noundef signext [[VAL2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.csne(ptr [[PTR]], i32 [[VAL1]], i32 [[VAL2]])
-// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA1]]
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA6]]
 // AIX-NEXT:    ret void
 //
 void test_unsigned_lwat_csne_s(signed int *ptr, signed int val1, signed int val2,  signed int * resp) {
@@ -281,14 +281,14 @@ void test_unsigned_lwat_csne_s(signed int *ptr, signed int val1, signed int val2
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VAL1:%.*]], i64 noundef [[VAL2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.csne(ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]])
-// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_unsigned_ldat_csne_s(
 // AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VAL1:%.*]], i64 noundef [[VAL2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.csne(ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]])
-// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA5]]
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA7]]
 // AIX-NEXT:    ret void
 //
 void test_unsigned_ldat_csne_s(signed long int *ptr, signed long int val1, signed long int val2,  signed long int * resp) {
@@ -296,17 +296,17 @@ void test_unsigned_ldat_csne_s(signed long int *ptr, signed long int val1, signe
   *resp = res;
 }
 //.
-// CHECK: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-// CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[LONG_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-// CHECK: [[META6]] = !{!"long", [[META3]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[INT_TBAA6]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[LONG_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+// CHECK: [[META8]] = !{!"long", [[META4]], i64 0}
 //.
-// AIX: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-// AIX: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
-// AIX: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// AIX: [[META4]] = !{!"Simple C/C++ TBAA"}
-// AIX: [[LONG_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-// AIX: [[META6]] = !{!"long", [[META3]], i64 0}
+// AIX: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// AIX: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// AIX: [[META5]] = !{!"Simple C/C++ TBAA"}
+// AIX: [[INT_TBAA6]] = !{[[META3]], [[META3]], i64 0}
+// AIX: [[LONG_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+// AIX: [[META8]] = !{!"long", [[META4]], i64 0}
 //.

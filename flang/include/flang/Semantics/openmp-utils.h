@@ -13,7 +13,6 @@
 #ifndef FORTRAN_SEMANTICS_OPENMP_UTILS_H
 #define FORTRAN_SEMANTICS_OPENMP_UTILS_H
 
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
@@ -24,17 +23,19 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 
 #include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace Fortran::semantics {
+class DeclTypeSpec;
 class Scope;
 class SemanticsContext;
 class Symbol;
@@ -56,28 +57,12 @@ template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
 const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
 
-template <typename T> struct WithSource {
-  template < //
-      typename U = std::remove_reference_t<T>,
-      typename = std::enable_if_t<std::is_default_constructible_v<U>>>
-  WithSource() : value(), source() {}
-  WithSource(const WithSource<T> &) = default;
-  WithSource(WithSource<T> &&) = default;
-  WithSource(const T &t, parser::CharBlock s) : value(t), source(s) {}
-  WithSource(T &&t, parser::CharBlock s) : value(std::move(t)), source(s) {}
-  WithSource &operator=(const WithSource<T> &) = default;
-  WithSource &operator=(WithSource<T> &&) = default;
-
-  using value_type = T;
-  T value;
-  parser::CharBlock source;
-};
-
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
 // extracted source for further use.
-struct SourcedActionStmt : public WithSource<const parser::ActionStmt *> {
-  using WithSource<value_type>::WithSource;
+struct SourcedActionStmt
+    : public parser::omp::WithSource<const parser::ActionStmt *> {
+  using parser::omp::WithSource<value_type>::WithSource;
   value_type stmt() const { return value; }
   operator bool() const { return stmt() != nullptr; }
 };
@@ -85,8 +70,8 @@ struct SourcedActionStmt : public WithSource<const parser::ActionStmt *> {
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x);
 SourcedActionStmt GetActionStmt(const parser::Block &block);
 
-std::string ThisVersion(unsigned version);
-std::string TryVersion(unsigned version);
+std::string ThisVersion(llvm::omp::Version version);
+std::string TryVersion(llvm::omp::Version version);
 
 const Symbol *GetObjectSymbol(
     const parser::OmpObject &object, bool ultimate = false);
@@ -116,8 +101,46 @@ bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
 
 const Symbol *GetHostSymbol(const Symbol &sym);
 
+// Resolve a user-defined reduction visible in scope under the mangled name
+// mangledName (e.g. "op.myop." for operator(.myop.), or a named reduction).
+// Follows USE associations, operator renames, private visibility, and merged
+// generics exactly as the OpenMP semantic checks do, returning the found
+// (non-ultimate) reduction symbol, or null if none is visible. When type is
+// non-null, only a reduction that supports that type is accepted (used to
+// disambiguate an operator that carries reductions for several types). When
+// ambiguous is non-null, it is set true if more than one distinct reduction
+// supports the type (an operator merged from several modules that each declare
+// a reduction for it, or a mangled reduction name that collides across
+// modules).
+const Symbol *FindUserReductionSymbol(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr,
+    bool *ambiguous = nullptr);
+
+// Resolve the user-defined reduction associated with the defined-operator
+// symbol operatorSym. Delegates to FindUserReductionSymbol from scope (the
+// scope where the reduction clause appears) with the operator's mangled
+// ("op...") name. Searching from the clause scope, not the operator's owning
+// scope, finds a reduction that is local, host-, or use-associated there (a
+// reduction may be declared in a contained procedure that host-associates the
+// operator from an enclosing module). type filters by supported type as above.
+const Symbol *FindOperatorUserReductionSymbol(const Scope &scope,
+    const Symbol &operatorSym, const DeclTypeSpec *type = nullptr);
+
+// Mangled reduction name ("op.+", "op.*", "op.AND", ...) that semantics stores
+// an intrinsic-operator user reduction under, produced by the same
+// MakeNameFromOperator the reduction-declaration semantics use so a clause-side
+// lookup matches byte-for-byte.
+parser::CharBlock MangledIntrinsicOperatorReductionName(
+    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context);
+
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
+
+// Returns true if the symbol has a temporary stack-allocated descriptor.
+// This includes assumed-shape and assumed-rank dummy arguments that are
+// not allocatable or pointer. These descriptors are created on the caller's
+// stack and become invalid after the function returns.
+bool HasTemporaryStackDescriptor(const Symbol &symbol);
 
 MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr);
 template <typename T> MaybeExpr GetEvaluateExpr(const T &inp) {
@@ -163,6 +186,129 @@ std::optional<bool> GetLogicalArgument(
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
+/// Non-constant user condition expression and source for runtime lowering.
+struct DynamicUserCondition {
+  const parser::ScalarExpr *expr;
+  parser::CharBlock source;
+};
+
+/// A context-selector feature that variant matching accepts syntactically but
+/// cannot yet honour during selection. Callers are expected to diagnose these
+/// (a lowering \c TODO or a semantic error) before calling
+/// \c MakeVariantMatchInfo, which asserts none are present.
+enum class UnsupportedSelectorFeature {
+  None,
+  /// A `target_device={...}` selector set.
+  TargetDevice,
+  /// A clause property (e.g. \c simdlen(8) in \c construct={simd(simdlen(8))})
+  /// or an extension property (e.g. \c foo(bar) in
+  /// \c implementation={my_trait(foo(bar))}).
+  ClauseOrExtensionProperty,
+};
+
+/// Scan a parsed context selector for the first feature that variant matching
+/// cannot yet honour (see \c UnsupportedSelectorFeature). Pure detection: emits
+/// no diagnostics and has no side effects on any match info.
+UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx);
+
+/// Populate \p vmi from a parsed context selector. Score modifiers are
+/// honoured (including on `condition(...)` selectors). Constant user
+/// conditions are folded into user_condition_true/false traits; a non-constant
+/// user condition is recorded as user_condition_unknown and the first such
+/// expression is returned for the caller to lower as a runtime condition.
+///
+/// The caller must first reject unsupported selector features (see
+/// \c FindUnsupportedSelectorFeature); this function asserts none are present.
+std::optional<DynamicUserCondition> MakeVariantMatchInfo(
+    llvm::omp::VariantMatchInfo &vmi,
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx);
+
+/// An `llvm::omp::OMPContext` describing the current compilation, used for
+/// OpenMP variant matching. It overrides ISA-trait matching to test against
+/// the target features.
+class OmpVariantMatchContext : public llvm::omp::OMPContext {
+public:
+  OmpVariantMatchContext(bool isDeviceCompilation, llvm::Triple targetTriple,
+      llvm::Triple targetOffloadTriple, std::string targetFeatures,
+      llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits = {});
+  OmpVariantMatchContext(const SemanticsContext &context,
+      llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits = {});
+  bool matchesISATrait(llvm::StringRef rawString) const override;
+
+private:
+  std::string features_;
+};
+
+struct MetadirectiveCandidate {
+  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
+      llvm::omp::VariantMatchInfo vmi, bool isExplicit,
+      std::optional<DynamicUserCondition> dynamicCondition = std::nullopt,
+      bool conditionShouldBeTrue = true)
+      : spec{spec}, vmi{std::move(vmi)}, isExplicit{isExplicit},
+        dynamicCondition{dynamicCondition},
+        conditionShouldBeTrue{conditionShouldBeTrue} {}
+
+  const parser::OmpDirectiveSpecification *spec{nullptr};
+  llvm::omp::VariantMatchInfo vmi;
+  bool isExplicit{false};
+  std::optional<DynamicUserCondition> dynamicCondition;
+  bool conditionShouldBeTrue{true};
+};
+
+struct MetadirectiveCandidateSet {
+  llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
+  /// Null represents either an explicit NOTHING fallback or no fallback.
+  const parser::OmpDirectiveSpecification *fallback{nullptr};
+};
+
+/// Build the statically applicable candidates for a METADIRECTIVE.
+///
+/// Returns std::nullopt when a selector is malformed or uses a feature that
+/// variant matching cannot yet model.
+std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
+    const parser::OmpClauseList &clauses, SemanticsContext &context,
+    const OmpVariantMatchContext &matchContext);
+
+std::optional<unsigned> SelectBestMetadirectiveCandidate(
+    llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<MetadirectiveCandidate> candidates,
+    const OmpVariantMatchContext &matchContext);
+
+/// Return true when repeated evaluation of \p condition cannot call a
+/// procedure or observe asynchronously changing state.
+bool IsRepeatableMetadirectiveCondition(
+    const parser::ScalarExpr &condition, SemanticsContext &context);
+
+/// Return true when two repeatable conditions normalize to the same expression.
+bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
+    const parser::ScalarExpr &right, SemanticsContext &context);
+
+/// Return candidates reachable after \p selectedIndex fails. Equal repeatable
+/// guards are pruned until a non-repeatable guard is encountered.
+llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
+    unsigned selectedIndex, llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<MetadirectiveCandidate> candidates,
+    const OmpVariantMatchContext &matchContext, SemanticsContext &context);
+
+/// Return every replacement that can be selected, retaining lower-ranked
+/// candidates after a dynamic condition. Null represents NOTHING.
+llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
+GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
+    const OmpVariantMatchContext &matchContext, SemanticsContext &context);
+
+/// True if a variant guarded by \p selector may be selected in the current
+/// compilation context.
+///
+/// False only if the complete selector is provably inapplicable. A null
+/// \p selector, or one using an unsupported feature (see
+/// \c FindUnsupportedSelectorFeature), is treated as possibly selectable.
+bool MayVariantBeSelected(
+    const parser::traits::OmpContextSelectorSpecification *selector,
+    SemanticsContext &context, OmpVariantMatchContext &matchContext);
+
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
@@ -187,14 +333,29 @@ enum struct ListItemKind : uint32_t {
 };
 
 std::optional<ListItemKind> GetArgumentListItemKind(
-    llvm::omp::Clause clause, unsigned version);
+    llvm::omp::Clause clause, llvm::omp::Version version);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool HasDataEnvironment(llvm::omp::Directive dir);
 
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
-inline bool IsDoConcurrentLegal(unsigned version) {
+/// The AT, SEVERITY, and MESSAGE clause values of an `!$omp error` directive.
+/// `at` and `severity` default to AT(compilation)/SEVERITY(fatal) when absent;
+/// `message` is null when there is no MESSAGE clause.
+struct OmpErrorArgs {
+  parser::OmpAtClause::ActionTime at{
+      parser::OmpAtClause::ActionTime::Compilation};
+  parser::OmpSeverityClause::SevLevel severity{
+      parser::OmpSeverityClause::SevLevel::Fatal};
+  const parser::Expr *message{nullptr};
+};
+
+/// Scan the clause list of an `!$omp error` directive for its AT, SEVERITY, and
+/// MESSAGE clause values.
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
+
+inline bool IsDoConcurrentLegal(llvm::omp::Version version) {
   // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
   // in OpenMP 6.0+.
   return version >= 60;
@@ -207,10 +368,11 @@ struct LoopControl {
   LoopControl(const parser::ConcurrentControl &x);
 
   const parser::Name &iv;
-  WithSource<MaybeExpr> lbound, ubound, step;
+  parser::omp::WithSource<MaybeExpr> lbound, ubound, step;
 
 private:
-  static WithSource<MaybeExpr> fromParserExpr(const parser::Expr &x);
+  static parser::omp::WithSource<MaybeExpr> fromParserExpr(
+      const parser::Expr &x);
 };
 
 std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x);
@@ -254,33 +416,33 @@ template <typename T> struct WithReason {
 
 WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version, SemanticsContext *semaCtx = nullptr);
+    llvm::omp::Version version, SemanticsContext *semaCtx = nullptr);
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version, SemanticsContext *semaCtx = nullptr);
+    llvm::omp::Version version, SemanticsContext *semaCtx = nullptr);
 WithReason<int64_t> GetHeightWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 
 /// Return the depth of the affected nest(s):
 ///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 /// Return the depth of the generated nest(s):
 ///   {generated-depth, is-perfect-nest}
 std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 /// Return the range of the affected nests in the sequence:
 ///   {first, count}.
 /// If the range is "the whole sequence", the return value will be {1, -1}.
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 /// Return the depth in which all loops must be rectangular.
 WithReason<int64_t> GetRectangularNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 
 /// Calculate the minimum length of a sequence that contains the specified
@@ -297,16 +459,23 @@ std::optional<int64_t> GetMinimumSequenceCount(
 /// Returns std::nullopt if `x` or code nested in `x` was malformed in a
 /// way that prevented the function from returning an accurate result.
 std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
-    const parser::OpenMPLoopConstruct &x, unsigned version,
+    const parser::OpenMPLoopConstruct &x, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 
+/// Returns whether the loop nest associated with `x` is a doacross loop nest,
+/// i.e. its body contains an `ordered` directive carrying a doacross
+/// dependence (the `doacross` clause, or the pre-5.2 `depend(sink/source)`
+/// equivalent) that binds to `x`. Such a nest must be perfectly nested.
+bool IsDoacrossAffected(const parser::OpenMPLoopConstruct &x);
+
 struct LoopSequence {
-  LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,
-      bool allowAllLoops = false, SemanticsContext *semaCtx = nullptr);
+  LoopSequence(const parser::ExecutionPartConstruct &root,
+      llvm::omp::Version version, bool allowAllLoops = false,
+      SemanticsContext *semaCtx = nullptr);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
-  LoopSequence(const R &range, unsigned version, bool allowAllLoops = false,
-      SemanticsContext *semaCtx = nullptr)
+  LoopSequence(const R &range, llvm::omp::Version version,
+      bool allowAllLoops = false, SemanticsContext *semaCtx = nullptr)
       : version_(version), allowAllLoops_(allowAllLoops), semaCtx_(semaCtx) {
     entry_ = std::make_unique<Construct>(range, nullptr);
     createChildrenFromRange(entry_->location);
@@ -345,7 +514,7 @@ struct LoopSequence {
 private:
   using Construct = ExecutionPartIterator::Construct;
 
-  LoopSequence(std::unique_ptr<Construct> entry, unsigned version,
+  LoopSequence(std::unique_ptr<Construct> entry, llvm::omp::Version version,
       bool allowAllLoops, SemanticsContext *semaCtx = nullptr);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
@@ -394,7 +563,7 @@ private:
   WithReason<int64_t> height_;
 
   // The core structure of the class:
-  unsigned version_; // Needed for GetXyzWithReason
+  llvm::omp::Version version_; // Needed for GetXyzWithReason
   bool allowAllLoops_;
   std::unique_ptr<Construct> entry_;
   std::vector<LoopSequence> children_;

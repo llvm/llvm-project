@@ -18,7 +18,7 @@ private:
     bool canInterpolate(const RenderStyle& from) const
     {
         auto* fromLayer = &(from.*m_layersGetter)();
-        // expected-warning@-1{{Local variable 'fromLayer' is uncounted and unsafe}}
+        // expected-warning@-1{{Local variable 'fromLayer' is a raw pointer to RefPtr-capable type 'FillLayer'}}
         return true;
     }
 

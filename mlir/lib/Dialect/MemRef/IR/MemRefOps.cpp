@@ -162,7 +162,7 @@ bubbleDownCastsPassthroughOpImpl(ConcreteOpTy op, OpBuilder &builder,
   // Create the new op and results.
   auto newOp = ConcreteOpTy::create(
       builder, op.getLoc(), TypeRange(resTy), operands, op.getProperties(),
-      llvm::to_vector_of<NamedAttribute>(op->getDiscardableAttrs()));
+      op->getDiscardableAttrDictionary().getValue());
 
   // Insert a memory-space cast to the original memory space of the op.
   MemorySpaceCastOpInterface result = castOp.cloneMemorySpaceCastOp(
@@ -377,7 +377,7 @@ void AllocaScopeOp::print(OpAsmPrinter &p) {
   p.printRegion(getBodyRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
 }
 
 ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1112,7 +1112,7 @@ llvm::SmallBitVector SubViewOp::getDroppedDims() {
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // All forms of folding require a known index.
-  auto index = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
+  std::optional<int64_t> index = getConstantIndex();
   if (!index)
     return {};
 
@@ -1123,40 +1123,38 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
 
   // Out of bound indices produce undefined behavior but are still valid IR.
   // Don't choke on them.
-  int64_t indexVal = index.getInt();
+  int64_t indexVal = index.value();
   if (indexVal < 0 || indexVal >= memrefType.getRank())
     return {};
 
   // Fold if the shape extent along the given index is known.
-  if (!memrefType.isDynamicDim(index.getInt())) {
+  if (!memrefType.isDynamicDim(indexVal)) {
     Builder builder(getContext());
-    return builder.getIndexAttr(memrefType.getShape()[index.getInt()]);
+    return builder.getIndexAttr(memrefType.getShape()[indexVal]);
   }
 
   // The size at the given index is now known to be a dynamic size.
-  unsigned unsignedIndex = index.getValue().getZExtValue();
-
   // Fold dim to the size argument for an `AllocOp`, `ViewOp`, or `SubViewOp`.
   Operation *definingOp = getSource().getDefiningOp();
 
   if (auto alloc = dyn_cast_or_null<AllocOp>(definingOp))
     return *(alloc.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto alloca = dyn_cast_or_null<AllocaOp>(definingOp))
     return *(alloca.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto view = dyn_cast_or_null<ViewOp>(definingOp))
     return *(view.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
     // The result dim is dynamic (the static case was handled above). Dropped
     // dims always have static size 1, so dynamic source sizes are never
     // dropped and map in order to the dynamic result dims. Find the k-th
     // dynamic source size, where k is the dynamic dim index of the result dim.
-    unsigned dynamicResultDimIdx = memrefType.getDynamicDimIndex(unsignedIndex);
+    unsigned dynamicResultDimIdx = memrefType.getDynamicDimIndex(indexVal);
     unsigned dynamicIdx = 0;
     for (OpFoldResult size : subview.getMixedSizes()) {
       if (llvm::isa<Attribute>(size))
@@ -1264,7 +1262,7 @@ void DmaStartOp::print(OpAsmPrinter &p) {
   if (isStrided())
     p << ", " << getStride() << ", " << getNumElementsPerStride();
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   p << " : " << getSrcMemRef().getType() << ", " << getDstMemRef().getType()
     << ", " << getTagMemRef().getType();
 }
@@ -1654,7 +1652,7 @@ void GenericAtomicRMWOp::print(OpAsmPrinter &p) {
   p << ' ' << getMemref() << "[" << getIndices()
     << "] : " << getMemref().getType() << ' ';
   p.printRegion(getRegion());
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
 }
 
 TypedValue<MemRefType> GenericAtomicRMWOp::getAccessedMemref() {
@@ -1805,6 +1803,21 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+static ParseResult parseBoolAttr(OpAsmParser &parser, BoolAttr &result) {
+  Attribute attr;
+  if (parser.parseAttribute(attr))
+    return failure();
+  result = dyn_cast<BoolAttr>(attr);
+  if (!result)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected boolean attribute");
+  return success();
+}
+
+static void printBoolAttr(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printer.printAttribute(attr);
+}
+
 OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
   /// load(memrefcast) -> load
   if (succeeded(foldMemRefCast(*this)))
@@ -1928,7 +1941,7 @@ void PrefetchOp::print(OpAsmPrinter &p) {
   p << ", locality<" << getLocalityHint();
   p << ">, " << (getIsDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      (*this)->getDiscardableAttrDictionary(),
       /*elidedAttrs=*/{"localityHint", "isWrite", "isDataCache"});
   p << " : " << getMemRefType();
 }
@@ -3805,6 +3818,8 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
           StridedLayoutAttr::get(memRefType.getContext(), offset, strides));
 }
 
+Value TransposeOp::getViewSource() { return getIn(); }
+
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
                         AffineMapAttr permutation,
                         ArrayRef<NamedAttribute> attrs) {
@@ -3822,7 +3837,8 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
 // transpose $in $permutation attr-dict : type($in) `to` type(results)
 void TransposeOp::print(OpAsmPrinter &p) {
   p << " " << getIn() << " " << getPermutation();
-  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrStrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
+                          {getPermutationAttrStrName()});
   p << " : " << getIn().getType() << " to " << getType();
 }
 

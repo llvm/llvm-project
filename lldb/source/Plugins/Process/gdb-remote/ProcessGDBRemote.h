@@ -11,11 +11,13 @@
 
 #include <atomic>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ThreadSafeValue.h"
@@ -27,6 +29,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"
@@ -38,7 +41,6 @@
 #include "GDBRemoteRegisterContext.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -136,8 +138,8 @@ public:
   void WillPublicStop() override;
 
   // Process Memory
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      Status &error) override;
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override;
 
   /// Override of DoReadMemoryRanges that uses MultiMemRead to perform this
   /// operation in a single packet.
@@ -285,10 +287,13 @@ protected:
   GDBRemoteCommunicationClient m_gdb_comm;
   std::atomic<lldb::pid_t> m_debugserver_pid;
 
+  /// Registration for the packet-history diagnostics provider, if enabled.
+  std::optional<Diagnostics::ArtifactProviderID> m_diagnostics_artifact_id;
+
   std::optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;
 
-  GDBRemoteDynamicRegisterInfoSP m_register_info_sp;
+  lldb::DynamicRegisterInfoSP m_register_info_sp;
   Broadcaster m_async_broadcaster;
   lldb::ListenerSP m_async_listener_sp;
   HostThread m_async_thread;
@@ -322,6 +327,9 @@ protected:
   lldb::CommandObjectSP m_command_sp;
   int64_t m_breakpoint_pc_offset;
   lldb::tid_t m_initial_tid; // The initial thread ID, given by stub on attach
+  lldb::tid_t m_last_stop_primary_tid =
+      LLDB_INVALID_THREAD_ID; // Thread ID from the most recent
+                              // T-packet's "thread:<tid>" key.
   bool m_use_g_packet_for_reading;
 
   bool m_allow_flash_writes;
@@ -488,6 +496,10 @@ private:
   /// breakpoints are still set.
   llvm::Error HandleAcceleratorBreakpoints(const AcceleratorActions &actions);
 
+  /// Create a new target for an accelerator and connect it to the GDB server
+  /// described by the action's connection info.
+  llvm::Error HandleAcceleratorConnection(const AcceleratorActions &actions);
+
   /// Breakpoint callback invoked when an accelerator-plugin-requested
   /// breakpoint is hit. Resolves any requested symbol values, notifies the
   /// plugin via the "jAcceleratorPluginBreakpointHit" packet, and handles the
@@ -548,19 +560,9 @@ private:
   void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,
                                lldb::ThreadSP thread_sp);
 
-  // Lists of register fields generated from the remote's target XML.
-  // Pointers to these RegisterFlags will be set in the register info passed
-  // back to the upper levels of lldb. Doing so is safe because this class will
-  // live at least as long as the debug session. We therefore do not store the
-  // data directly in the map because the map may reallocate it's storage as new
-  // entries are added. Which would invalidate any pointers set in the register
-  // info up to that point.
-  llvm::StringMap<std::unique_ptr<RegisterFlags>> m_registers_flags_types;
-
-  // Enum types are referenced by register fields. This does not store the data
-  // directly because the map may reallocate. Pointers to these are contained
-  // within instances of RegisterFlags.
-  llvm::StringMap<std::unique_ptr<FieldEnum>> m_registers_enum_types;
+  // RegisterInfo and nested register types contain non-owning pointers to these
+  // objects. Keep every parsed type alive for the lifetime of this process.
+  std::vector<std::unique_ptr<RegisterType>> m_register_types;
 };
 
 } // namespace process_gdb_remote

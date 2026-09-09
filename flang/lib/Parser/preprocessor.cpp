@@ -14,12 +14,10 @@
 #include "flang/Parser/message.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cinttypes>
 #include <cstddef>
 #include <ctime>
 #include <map>
-#include <memory>
 #include <optional>
 #include <set>
 #include <string>

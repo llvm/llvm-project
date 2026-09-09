@@ -102,8 +102,7 @@ public:
 
   /// Returns the profile count for \p CallInst.
   LLVM_ABI std::optional<uint64_t>
-  getProfileCount(const CallBase &CallInst, BlockFrequencyInfo *BFI,
-                  bool AllowSynthetic = false) const;
+  getProfileCount(const CallBase &CallInst, BlockFrequencyInfo *BFI) const;
   /// Returns true if module \c M has partial-profile sample profile.
   LLVM_ABI bool hasPartialSampleProfile() const;
   /// Returns true if the working set size of the code is considered huge.
@@ -116,11 +115,11 @@ public:
   template <typename FuncT> bool isFunctionEntryHot(const FuncT *F) const {
     if (!F || !hasProfileSummary())
       return false;
-    std::optional<Function::ProfileCount> FunctionCount = getEntryCount(F);
+    std::optional<uint64_t> FunctionCount = getEntryCount(F);
     // FIXME: The heuristic used below for determining hotness is based on
     // preliminary SPEC tuning for inliner. This will eventually be a
     // convenience method that calls isHotCount.
-    return FunctionCount && isHotCount(FunctionCount->getCount());
+    return FunctionCount && isHotCount(*FunctionCount);
   }
 
   /// Returns true if \p F contains hot code.
@@ -129,7 +128,7 @@ public:
     if (!F || !hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F))
-      if (isHotCount(FunctionCount->getCount()))
+      if (isHotCount(*FunctionCount))
         return true;
 
     if (auto TotalCallCount = getTotalCallCount(F))
@@ -149,7 +148,7 @@ public:
     if (!F || !hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F))
-      if (!isColdCount(FunctionCount->getCount()))
+      if (!isColdCount(*FunctionCount))
         return false;
 
     if (auto TotalCallCount = getTotalCallCount(F))
@@ -279,11 +278,9 @@ private:
     if (!F || !hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F)) {
-      if (isHot &&
-          isHotCountNthPercentile(PercentileCutoff, FunctionCount->getCount()))
+      if (isHot && isHotCountNthPercentile(PercentileCutoff, *FunctionCount))
         return true;
-      if (!isHot && !isColdCountNthPercentile(PercentileCutoff,
-                                              FunctionCount->getCount()))
+      if (!isHot && !isColdCountNthPercentile(PercentileCutoff, *FunctionCount))
         return false;
     }
     if (auto TotalCallCount = getTotalCallCount(F)) {
@@ -327,7 +324,7 @@ private:
   }
 
   template <typename FuncT>
-  std::optional<Function::ProfileCount> getEntryCount(const FuncT *F) const {
+  std::optional<uint64_t> getEntryCount(const FuncT *F) const {
     return F->getEntryCount();
   }
 };
@@ -350,8 +347,7 @@ ProfileSummaryInfo::getTotalCallCount<Function>(const Function *F) const {
 // here, because we cannot include MachineFunction header here, that would break
 // dependency rules.
 template <>
-std::optional<Function::ProfileCount>
-ProfileSummaryInfo::getEntryCount<MachineFunction>(
+std::optional<uint64_t> ProfileSummaryInfo::getEntryCount<MachineFunction>(
     const MachineFunction *F) const;
 
 /// An analysis pass based on legacy pass manager to deliver ProfileSummaryInfo.

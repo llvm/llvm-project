@@ -266,9 +266,6 @@ def HasVirt  : Predicate<"Subtarget->hasVirt()">,
                AssemblerPredicate<(all_of FeatureVirt)>;
 def HasGINV  : Predicate<"Subtarget->hasGINV()">,
                AssemblerPredicate<(all_of FeatureGINV)>;
-// TODO: Add support for FPOpFusion::Standard
-def AllowFPOpFusion : Predicate<"TM.Options.AllowFPOpFusion =="
-                                " FPOpFusion::Fast">;
 //===----------------------------------------------------------------------===//
 // Mips GPR size adjectives.
 // They are mutually exclusive.
@@ -535,10 +532,6 @@ class ABI_N64 {
 
 class ABI_NOT_N64 {
   list<Predicate> AdditionalPredicates = [IsNotN64];
-}
-
-class FPOP_FUSION_FAST {
-  list <Predicate> AdditionalPredicates = [AllowFPOpFusion];
 }
 
 //===----------------------------------------------------------------------===//
@@ -851,6 +844,9 @@ def ConstantImmzAsmOperandClass : AsmOperandClass {
 def Simm19Lsl2AsmOperand
     : SimmLslAsmOperandClass<19, [], 2>;
 
+def Simm18Lsl3AsmOperand
+    : SimmLslAsmOperandClass<18, [], 3>;
+
 def MipsJumpTargetAsmOperand : AsmOperandClass {
   let Name = "JumpTarget";
   let ParserMethod = "parseJumpTarget";
@@ -905,7 +901,7 @@ def simm19_lsl2 : Operand<i32> {
 def simm18_lsl3 : Operand<i32> {
   let EncoderMethod = "getSimm18Lsl3Encoding";
   let DecoderMethod = "DecodeSimm18Lsl3";
-  let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let ParserMatchClass = Simm18Lsl3AsmOperand;
 }
 
 // Zero
@@ -3022,7 +3018,7 @@ def BLEUL: CondBranchPseudo<"bleul">, ISA_MIPS2_NOT_32R6_64R6;
 def BGEUL: CondBranchPseudo<"bgeul">, ISA_MIPS2_NOT_32R6_64R6;
 def BGTUL: CondBranchPseudo<"bgtul">, ISA_MIPS2_NOT_32R6_64R6;
 
-let isCTI = 1 in
+let hasDelaySlot = 1, isCTI = 1 in
 class CondBranchImmPseudo<string instr_asm> :
   MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, ConstantImm64:$imm, brtarget:$offset),
                     !strconcat(instr_asm, "\t$rs, $imm, $offset")>;

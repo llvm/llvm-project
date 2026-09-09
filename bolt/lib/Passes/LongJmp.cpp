@@ -12,7 +12,10 @@
 
 #include "bolt/Passes/LongJmp.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "bolt/Passes/BranchLivenessUtils.h"
+#include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "longjmp"
@@ -22,14 +25,21 @@ using namespace llvm;
 namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
-extern llvm::cl::opt<unsigned> AlignText;
-extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
 static cl::opt<bool> GroupStubs("group-stubs",
                                 cl::desc("share stubs across functions"),
                                 cl::init(true), cl::cat(BoltOptCategory));
+
+static cl::opt<bool>
+    ExperimentalRelaxation("relax-exp",
+                           cl::desc("run experimental relaxation pass"),
+                           cl::init(false), cl::cat(BoltOptCategory));
+
+static cl::opt<bool> RelaxPLT("relax-plt",
+                              cl::desc("indicate PLT proximity to hot text"),
+                              cl::init(true), cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -318,7 +328,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     const BinaryContext &BC, BinaryFunctionListType &SortedFunctions,
     uint64_t DotAddress) {
   DotAddress =
-      alignTo(DotAddress, std::max<uint64_t>(opts::AlignFunctions,
+      alignTo(DotAddress, std::max<uint64_t>(BC.AlignFunctions,
                                              BC.MaxColdCodeAlignment.load()));
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
@@ -375,11 +385,11 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
     // after the last non-cold section. Account for it before assigning cold
     // fragment addresses so range checks see the hot-to-cold gap.
     if (opts::Hugify && !BC.HasFixedLoadAddress && !opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, opts::AlignText);
+      DotAddress = alignTo(DotAddress, BC.AlignText);
     DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
     ColdLayoutDone = true;
     if (opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, opts::AlignText);
+      DotAddress = alignTo(DotAddress, BC.AlignText);
   };
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
@@ -446,8 +456,7 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
     // Initial padding
     if (EstimatedTextSize <= BC.OldTextSectionSize) {
       DotAddress = BC.OldTextSectionAddress;
-      uint64_t Pad =
-          offsetToAlignment(DotAddress, llvm::Align(opts::AlignText));
+      uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(BC.AlignText));
       if (Pad + EstimatedTextSize <= BC.OldTextSectionSize) {
         DotAddress += Pad;
       }
@@ -456,7 +465,7 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
 
   if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize) {
     uint64_t TextAlign =
-        std::max<uint64_t>(opts::AlignText, BC.MaxMainCodeAlignment.load());
+        std::max<uint64_t>(BC.AlignText, BC.MaxMainCodeAlignment.load());
     DotAddress = alignTo(BC.LayoutStartAddress, TextAlign);
   }
 
@@ -665,13 +674,16 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   return Error::success();
 }
 
-void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
+bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
+                                     const BranchLivenessInfo *BLI) {
   BinaryContext &BC = BF.getBinaryContext();
   auto &MIB = BC.MIB;
 
-  // Quick path.
-  if (!BF.isSplit() && BF.estimateSize() < ShortestJumpSpan)
-    return;
+  // Quick path. Only valid for simple functions, where all branch targets are
+  // basic blocks of the function itself. A non-simple function may branch to a
+  // symbol outside of it that ends up out of range.
+  if (BF.isSimple() && !BF.isSplit() && BF.estimateSize() < ShortestJumpSpan)
+    return true;
 
   auto isBranchOffsetInRange = [&](const MCInst &Inst, int64_t Offset) {
     const unsigned Bits = MIB->getPCRelEncodingSize(Inst);
@@ -711,22 +723,32 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
     DenseMap<const BinaryBasicBlock *, BinaryBasicBlock *> FragmentTrampolines;
 
     // Create a trampoline code after \p BB or at the end of the fragment if BB
-    // is nullptr. If \p UpdateOffsets is true, update FragmentSize and offsets
-    // for basic blocks affected by the insertion of the trampoline.
+    // is nullptr. The trampoline branches to \p TargetSym. If \p TargetBB is
+    // set, it is added as a successor and registered in FragmentTrampolines.
+    // \p Offset reflects the size delta of BB caused by splitting unconditional
+    // branches, or replacing a branch with a longer instruction sequence. It is
+    // used to update the output addresses of basic blocks following the
+    // trampoline.
     auto addTrampolineAfter = [&](BinaryBasicBlock *BB,
+                                  const MCSymbol *TargetSym,
                                   BinaryBasicBlock *TargetBB, uint64_t Count,
-                                  bool UpdateOffsets = true) {
+                                  uint64_t Offset = 0) {
       FunctionTrampolines.emplace_back(BB ? BB : FF.back(),
                                        BF.createBasicBlock());
       BinaryBasicBlock *TrampolineBB = FunctionTrampolines.back().second.get();
+      const uint64_t OldBBEnd = BB ? BB->getOutputEndAddress() : 0;
+      if (BB && Offset)
+        BB->setOutputEndAddress(OldBBEnd + Offset);
+      Offset += TrampolineSize;
 
       MCInst Inst;
       {
         auto L = BC.scopeLock();
-        MIB->createUncondBranch(Inst, TargetBB->getLabel(), BC.Ctx.get());
+        MIB->createUncondBranch(Inst, TargetSym, BC.Ctx.get());
       }
       TrampolineBB->addInstruction(Inst);
-      TrampolineBB->addSuccessor(TargetBB, Count);
+      if (TargetBB)
+        TrampolineBB->addSuccessor(TargetBB, Count);
       TrampolineBB->setExecutionCount(Count);
       const uint64_t TrampolineAddress =
           BB ? BB->getOutputEndAddress() : FragmentSize;
@@ -734,13 +756,23 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       TrampolineBB->setOutputEndAddress(TrampolineAddress + TrampolineSize);
       TrampolineBB->setFragmentNum(FF.getFragmentNum());
 
-      if (!FragmentTrampolines.lookup(TargetBB))
+      // Shift the fragment-local output address range for blocks at or after
+      // the old end address.
+      auto adjustBasicBlockAddress = [](BinaryBasicBlock *BB, uint64_t Address,
+                                        uint64_t Offset) {
+        if (BB->getOutputStartAddress() < Address)
+          return;
+        BB->setOutputStartAddress(BB->getOutputStartAddress() + Offset);
+        BB->setOutputEndAddress(BB->getOutputEndAddress() + Offset);
+      };
+
+      if (TargetBB && !FragmentTrampolines.lookup(TargetBB))
         FragmentTrampolines[TargetBB] = TrampolineBB;
 
-      if (!UpdateOffsets)
+      if (!Offset)
         return TrampolineBB;
 
-      FragmentSize += TrampolineSize;
+      FragmentSize += Offset;
 
       // If the trampoline was added at the end of the fragment, offsets of
       // other fragments should stay intact.
@@ -748,13 +780,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
         return TrampolineBB;
 
       // Update offsets for blocks after BB.
-      for (BinaryBasicBlock *IBB : FF) {
-        if (IBB->getOutputStartAddress() >= TrampolineAddress) {
-          IBB->setOutputStartAddress(IBB->getOutputStartAddress() +
-                                     TrampolineSize);
-          IBB->setOutputEndAddress(IBB->getOutputEndAddress() + TrampolineSize);
-        }
-      }
+      for (BinaryBasicBlock *IBB : FF)
+        adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
 
       // Update offsets for trampolines in this fragment that are placed after
       // the new trampoline. Note that trampoline blocks are not part of the
@@ -766,33 +793,34 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
           continue;
         if (IBB == TrampolineBB)
           continue;
-        if (IBB->getOutputStartAddress() >= TrampolineAddress) {
-          IBB->setOutputStartAddress(IBB->getOutputStartAddress() +
-                                     TrampolineSize);
-          IBB->setOutputEndAddress(IBB->getOutputEndAddress() + TrampolineSize);
-        }
+        adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
       }
 
       return TrampolineBB;
     };
 
     // Pre-populate trampolines by splitting unconditional branches from the
-    // containing basic block.
-    for (BinaryBasicBlock *BB : FF) {
-      MCInst *Inst = BB->getLastNonPseudoInstr();
-      if (!Inst || !MIB->isUnconditionalBranch(*Inst))
-        continue;
+    // containing basic block. Skip for non-simple functions: this creates
+    // trampolines for targets inside the function, while in a non-simple
+    // function we only relax branches to targets outside of it.
+    if (BF.isSimple()) {
+      for (BinaryBasicBlock *BB : FF) {
+        MCInst *Inst = BB->getLastNonPseudoInstr();
+        if (!Inst || !MIB->isUnconditionalBranch(*Inst))
+          continue;
 
-      const MCSymbol *TargetSymbol = MIB->getTargetSymbol(*Inst);
-      BB->eraseInstruction(BB->findInstruction(Inst));
-      BB->setOutputEndAddress(BB->getOutputEndAddress() - TrampolineSize);
+        const MCSymbol *TargetSymbol = MIB->getTargetSymbol(*Inst);
+        BB->eraseInstruction(BB->findInstruction(Inst));
 
-      BinaryBasicBlock::BinaryBranchInfo BI;
-      BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
+        BinaryBasicBlock::BinaryBranchInfo BI;
+        BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
 
-      BinaryBasicBlock *TrampolineBB =
-          addTrampolineAfter(BB, TargetBB, BI.Count, /*UpdateOffsets*/ false);
-      BB->replaceSuccessor(TargetBB, TrampolineBB, BI.Count);
+        // Erasing the unconditional branch shrinks BB by one instruction.
+        BinaryBasicBlock *TrampolineBB =
+            addTrampolineAfter(BB, TargetBB->getLabel(), TargetBB, BI.Count,
+                               /*Offset=*/-4);
+        BB->replaceSuccessor(TargetBB, TrampolineBB, BI.Count);
+      }
     }
 
     /// Relax the branch \p Inst in basic block \p BB that targets \p TargetBB.
@@ -824,7 +852,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       // case we will need further relaxation.
       const int64_t OffsetToEnd = FragmentSize - InstAddress;
       if (Count == 0 && isBranchOffsetInRange(Inst, OffsetToEnd)) {
-        TrampolineBB = addTrampolineAfter(nullptr, TargetBB, Count);
+        TrampolineBB =
+            addTrampolineAfter(nullptr, TargetBB->getLabel(), TargetBB, Count);
         BB->replaceSuccessor(TargetBB, TrampolineBB, Count);
         auto L = BC.scopeLock();
         MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
@@ -835,7 +864,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       // If the other successor is a fall-through, invert the condition code.
       BinaryBasicBlock *NextBB =
           BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
-      bool IsReversibleBranch = MIB->isReversibleBranch(Inst);
+      bool PreserveFlags = BLI ? BLI->mustPreserveFlags(Inst) : true;
+      bool IsReversibleBranch = MIB->isReversibleBranch(Inst, PreserveFlags);
       bool ShouldReverseBranch = BB->getConditionalSuccessor(false) == NextBB;
 
       // Create a trampoline basic block for the fall-through target of the
@@ -843,23 +873,39 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       if (ShouldReverseBranch && !IsReversibleBranch) {
         const uint64_t NextCount = BB->getBranchInfo(*NextBB).Count;
         BinaryBasicBlock *FallThrough =
-            addTrampolineAfter(BB, NextBB, NextCount);
+            addTrampolineAfter(BB, NextBB->getLabel(), NextBB, NextCount);
         BB->replaceSuccessor(NextBB, FallThrough, NextCount);
       }
 
-      // Create a trampoline basic block for the taken target of the branch.
-      TrampolineBB = addTrampolineAfter(BB, TargetBB, Count);
-
       if (ShouldReverseBranch && IsReversibleBranch) {
+        const uint64_t OldBBSize = BB->estimateSize();
         BB->swapConditionalSuccessors();
-        auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(Inst, NextBB->getLabel(), BC.Ctx.get());
+        {
+          auto L = BC.scopeLock();
+          if (BLI)
+            BLI->removeAnnotation(Inst);
+          InstructionListType Code = MIB->reverseBranchCondition(
+              Inst, NextBB->getLabel(), BC.Ctx.get(), PreserveFlags);
+          BB->replaceInstruction(BB->findInstruction(&Inst), Code);
+        }
+        const uint64_t NewBBSize = BB->estimateSize();
+
+        // Create a trampoline basic block for the original taken target.
+        TrampolineBB = addTrampolineAfter(BB, TargetBB->getLabel(), TargetBB,
+                                          Count, NewBBSize - OldBBSize);
       } else {
+        // Create a trampoline basic block for the taken target of the branch.
+        TrampolineBB =
+            addTrampolineAfter(BB, TargetBB->getLabel(), TargetBB, Count);
         auto L = BC.scopeLock();
         MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
       }
       BB->replaceSuccessor(TargetBB, TrampolineBB, Count);
     };
+
+    // For non-simple functions, branch targets may be different functions,
+    // so we track trampolines by symbol rather than by basic block.
+    DenseMap<const MCSymbol *, BinaryBasicBlock *> SymbolTrampolines;
 
     bool MayNeedRelaxation;
     uint64_t NumIterations = 0;
@@ -869,7 +915,10 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       for (auto BBI = FF.begin(); BBI != FF.end(); ++BBI) {
         BinaryBasicBlock *BB = *BBI;
         uint64_t NextInstOffset = BB->getOutputStartAddress();
-        for (MCInst &Inst : *BB) {
+        // Branch reversal may replace the current instruction with a sequence.
+        // Use an index so the next instruction is reloaded after the mutation.
+        for (size_t I = 0; I < BB->size(); ++I) {
+          MCInst &Inst = *(BB->begin() + I);
           const size_t InstAddress = NextInstOffset;
           if (!MIB->isPseudo(Inst))
             NextInstOffset += 4;
@@ -884,18 +933,58 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
             continue;
 
           const MCSymbol *TargetSymbol = MIB->getTargetSymbol(Inst);
-          BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol);
-          assert(TargetBB &&
-                 "Basic block target expected for conditional branch.");
 
-          // Check if the relaxation is needed.
-          if (TargetBB->getFragmentNum() == FF.getFragmentNum() &&
-              isBlockInRange(Inst, InstAddress, *TargetBB))
-            continue;
+          if (BF.isSimple()) {
+            BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol);
+            assert(TargetBB &&
+                   "Basic block target expected for conditional branch.");
 
-          relaxBranch(BB, Inst, InstAddress, TargetBB);
+            // Check if the relaxation is needed.
+            if (TargetBB->getFragmentNum() == FF.getFragmentNum() &&
+                isBlockInRange(Inst, InstAddress, *TargetBB))
+              continue;
 
-          MayNeedRelaxation = true;
+            relaxBranch(BB, Inst, InstAddress, TargetBB);
+            MayNeedRelaxation = true;
+          } else {
+            // Skip if the target is within this function.
+            if (BF.getBasicBlockForLabel(TargetSymbol))
+              continue;
+
+            // Try to reuse an existing trampoline for this symbol.
+            BinaryBasicBlock *TrampolineBB =
+                SymbolTrampolines.lookup(TargetSymbol);
+            if (TrampolineBB &&
+                isBlockInRange(Inst, InstAddress, *TrampolineBB)) {
+              auto L = BC.scopeLock();
+              MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(),
+                                       BC.Ctx.get());
+              continue;
+            }
+
+            // Create a trampoline at the end of the function. Since the layout
+            // of a non-simple function has to be preserved, the end of the
+            // function is the only place where we can put it.
+            const int64_t OffsetToEnd = FragmentSize - InstAddress;
+            if (!isBranchOffsetInRange(Inst, OffsetToEnd)) {
+              auto L = BC.scopeLock();
+              BC.errs() << "BOLT-ERROR: cannot relax branch in non-simple "
+                           "function "
+                        << BF << ": a trampoline at the end of the function is "
+                        << OffsetToEnd << " bytes away, out of reach for a "
+                        << BitsAvailable << "-bit branch\n";
+              BC.printInstruction(BC.errs(), Inst);
+              return false;
+            }
+
+            TrampolineBB = addTrampolineAfter(/*BB=*/nullptr, TargetSymbol,
+                                              /*TargetBB=*/nullptr,
+                                              /*Count=*/0);
+            SymbolTrampolines[TargetSymbol] = TrampolineBB;
+            auto L = BC.scopeLock();
+            MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(),
+                                     BC.Ctx.get());
+          }
         }
       }
 
@@ -930,31 +1019,363 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
                          /*UpdateLayout*/ true, /*UpdateCFI*/ true,
                          /*RecomputeLPs*/ false);
   }
+
+  return true;
+}
+
+void LongJmpPass::relaxCalls(BinaryContext &BC) {
+  // Operate on a copy of binary functions. We are going to manually insert new
+  // thunks and update the list.
+  BinaryFunctionListType OutputFunctions = BC.getOutputBinaryFunctions();
+
+  // Conservatively estimate emitted function size. Assume the worst case
+  // alignment.
+  auto estimateFunctionSize = [&](const BinaryFunction &BF) -> uint64_t {
+    if (!BC.shouldEmit(BF))
+      return 0;
+    uint64_t Size = BF.estimateSize() + BF.getMaxAlignmentBytes();
+
+    // Each additional fragment can attribute extra bytes due to its alignment
+    // requirements.
+    for ([[maybe_unused]] const FunctionFragment &FF :
+         BF.getLayout().getSplitFragments())
+      Size += BF.getMaxColdAlignmentBytes();
+
+    if (BF.hasIslandsInfo()) {
+      Size += BF.estimateConstantIslandSize();
+      if (BF.getConstantIslandAlignment() > BF.getMinAlignment())
+        Size += BF.getConstantIslandAlignment() - BF.getMinAlignment();
+    }
+
+    return Size;
+  };
+
+  // Map every function to its direct callees. Note that this is different from
+  // the regular call graph as here we completely ignore indirect calls.
+  uint64_t EstimatedSize = 0;
+  DenseMap<BinaryFunction *, std::set<const MCSymbol *>> CallMap;
+  for (BinaryFunction *BF : OutputFunctions) {
+    if (!BC.shouldEmit(*BF) || BF->isPatch())
+      continue;
+
+    EstimatedSize += estimateFunctionSize(*BF);
+
+    for (const BinaryBasicBlock &BB : *BF) {
+      for (const MCInst &Inst : BB) {
+        if (!BC.MIB->isCall(Inst) || BC.MIB->isIndirectCall(Inst) ||
+            BC.MIB->isIndirectBranch(Inst))
+          continue;
+        const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
+        assert(TargetSymbol);
+
+        // Ignore internal calls that use basic block labels as a destination.
+        if (!BC.getFunctionForSymbol(TargetSymbol))
+          continue;
+
+        CallMap[BF].insert(TargetSymbol);
+      }
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << EstimatedSize
+                    << '\n');
+
+  // Build clusters in the order the functions will appear in the output.
+  std::vector<FunctionCluster> Clusters;
+  for (size_t Index = 0, NumFuncs = OutputFunctions.size(); Index < NumFuncs;
+       ++Index) {
+    const size_t BFIndex =
+        opts::HotFunctionsAtEnd ? NumFuncs - Index - 1 : Index;
+    BinaryFunction *BF = OutputFunctions[BFIndex];
+    if (!BC.shouldEmit(*BF) || BF->isPatch())
+      continue;
+
+    const uint64_t BFSize = estimateFunctionSize(*BF);
+    if (Clusters.empty() || Clusters.back().Size + BFSize > MaxClusterSize) {
+      Clusters.emplace_back(FunctionCluster());
+      Clusters.back().FirstFunctionIndex = BFIndex;
+    }
+
+    FunctionCluster &FC = Clusters.back();
+    FC.Functions.insert(BF);
+
+    // When a function is added to the cluster, we have to remove all of its
+    // symbols from the cluster callee list. These include alternative symbols
+    // (e.g. after ICF) and secondary entry point symbols.
+    for (const MCSymbol *Symbol : BF->getSymbols()) {
+      auto It = FC.Callees.find(Symbol);
+      if (It != FC.Callees.end())
+        FC.Callees.erase(It);
+    }
+    BF->forEachEntryPoint(
+        [&FC](uint64_t Offset, const MCSymbol *EntrySymbol) -> bool {
+          auto It = FC.Callees.find(EntrySymbol);
+          if (It != FC.Callees.end())
+            FC.Callees.erase(It);
+          return true;
+        });
+
+    // Update cluster callee list with added function callees.
+    for (const MCSymbol *CalleeSymbol : CallMap[BF]) {
+      BinaryFunction *Callee = BC.getFunctionForSymbol(CalleeSymbol);
+      if (!FC.Functions.count(Callee)) {
+        FC.Callees.insert(CalleeSymbol);
+      }
+    }
+
+    FC.Size += BFSize;
+    FC.LastFunctionIndex = BFIndex;
+  }
+
+  if (opts::HotFunctionsAtEnd) {
+    std::reverse(Clusters.begin(), Clusters.end());
+    llvm::for_each(Clusters, [](FunctionCluster &FC) {
+      std::swap(FC.LastFunctionIndex, FC.FirstFunctionIndex);
+    });
+  }
+
+  if (Clusters.empty())
+    return;
+
+  // Print cluster stats.
+  BC.outs() << "BOLT-INFO: built " << Clusters.size()
+            << " function cluster(s)\n";
+  uint64_t ClusterIndex = 0;
+  for (const FunctionCluster &FC : Clusters) {
+    BC.outs() << "BOLT-INFO: cluster: " << ClusterIndex++ << '\n'
+              << "BOLT-INFO:   " << FC.Functions.size() << " function(s)\n"
+              << "BOLT-INFO:   " << FC.Callees.size() << " callee(s)\n"
+              << "BOLT-INFO:   " << FC.Size << " estimated bytes\n";
+  }
+
+  if (opts::RelaxPLT) {
+    // Populate one of the clusters with PLT functions based on the proximity of
+    // the PLT section to avoid unneeded thunk redirection.
+    const size_t PLTClusterNum = opts::UseOldText ? Clusters.size() - 1 : 0;
+    auto &PLTCluster = Clusters[PLTClusterNum];
+    for (BinaryFunction &BF :
+         llvm::make_second_range(BC.getBinaryFunctions())) {
+      if (BF.isPLTFunction()) {
+        PLTCluster.Functions.insert(&BF);
+        auto It = PLTCluster.Callees.find(BF.getSymbol());
+        if (It != PLTCluster.Callees.end())
+          PLTCluster.Callees.erase(It);
+      }
+    }
+  }
+
+  // Create a thunk with +-128MB span.
+  size_t NumShortThunks = 0;
+  auto createShortThunk = [&](const MCSymbol *TargetSymbol) {
+    ++NumShortThunks;
+    BinaryFunction *ThunkBF = BC.createThunkBinaryFunction(
+        "__AArch64Thunk_" + TargetSymbol->getName().str());
+    MCInst Inst;
+    BC.MIB->createTailCall(Inst, TargetSymbol, BC.Ctx.get());
+    ThunkBF->addBasicBlock()->addInstruction(Inst);
+
+    return ThunkBF;
+  };
+
+  // Create a thunk with +-4GB span.
+  size_t NumLongThunks = 0;
+  auto createLongThunk = [&](const MCSymbol *TargetSymbol) {
+    ++NumLongThunks;
+    BinaryFunction *ThunkBF = BC.createThunkBinaryFunction(
+        "__AArch64ADRPThunk_" + TargetSymbol->getName().str());
+    InstructionListType Instructions;
+    BC.MIB->createLongTailCall(Instructions, TargetSymbol, BC.Ctx.get());
+    ThunkBF->addBasicBlock()->addInstructions(Instructions);
+
+    return ThunkBF;
+  };
+
+  for (unsigned ClusterNum = 0; ClusterNum < Clusters.size(); ++ClusterNum) {
+    FunctionCluster &FC = Clusters[ClusterNum];
+    SmallVector<const MCSymbol *, 16> Callees(FC.Callees.begin(),
+                                              FC.Callees.end());
+
+    // Generate thunks in deterministic order.
+    llvm::sort(Callees, [&BC](const MCSymbol *A, const MCSymbol *B) {
+      uint64_t EntryA;
+      uint64_t EntryB;
+      BinaryFunction *BFA = BC.getFunctionForSymbol(A, &EntryA);
+      BinaryFunction *BFB = BC.getFunctionForSymbol(B, &EntryB);
+      if (BFA == BFB) {
+        if (EntryA != EntryB)
+          return EntryA < EntryB;
+
+        // Use lexicographical order for ICF'ed symbols.
+        return A->getName() < B->getName();
+      }
+      return compareBinaryFunctionByIndex(BFA, BFB);
+    });
+
+    // Return index of adjacent cluster containing the function.
+    auto getAdjClusterWithFunction =
+        [&](const BinaryFunction *BF) -> std::optional<unsigned> {
+      if (ClusterNum > 0 && Clusters[ClusterNum - 1].Functions.count(BF))
+        return ClusterNum - 1;
+      if (ClusterNum + 1 < Clusters.size() &&
+          Clusters[ClusterNum + 1].Functions.count(BF))
+        return ClusterNum + 1;
+      return std::nullopt;
+    };
+
+    const FunctionCluster *PrevCluster =
+        ClusterNum ? &Clusters[ClusterNum - 1] : nullptr;
+
+    // Create short thunks for callees in adjacent clusters and long thunks
+    // for callees outside.
+    for (const MCSymbol *Callee : Callees) {
+      if (FC.Thunks.count(Callee))
+        continue;
+
+      BinaryFunction *Thunk = 0;
+      std::optional<unsigned> AdjCluster =
+          getAdjClusterWithFunction(BC.getFunctionForSymbol(Callee));
+      if (AdjCluster) {
+        Thunk = createShortThunk(Callee);
+      } else {
+        // Previous cluster may already have a long thunk that can be reused.
+        if (PrevCluster) {
+          auto It = PrevCluster->Thunks.find(Callee);
+          // Reuse only if previous cluster hosts this thunk.
+          if (It != PrevCluster->Thunks.end() &&
+              llvm::is_contained(PrevCluster->ThunkList, It->second)) {
+            FC.Thunks[Callee] = It->second;
+            continue;
+          }
+        }
+        Thunk = createLongThunk(Callee);
+      }
+
+      // The cluster that will host this thunk. If the current cluster is the
+      // last one, try to use the previous one. Matters when we want to have hot
+      // functions at higher addresses under HotFunctionsAtEnd.
+      FunctionCluster *ThunkCluster = &Clusters[ClusterNum];
+      if ((AdjCluster && *AdjCluster == ClusterNum - 1) ||
+          (ClusterNum && ClusterNum == Clusters.size() - 1))
+        ThunkCluster = &Clusters[ClusterNum - 1];
+      ThunkCluster->ThunkList.push_back(Thunk);
+
+      // Register thunks for all symbols associated with the function.
+      uint64_t EntryID = 0;
+      const BinaryFunction *BF = BC.getFunctionForSymbol(Callee, &EntryID);
+      if (EntryID != 0) {
+        FC.Thunks[Callee] = Thunk;
+      } else {
+        for (const MCSymbol *Symbol : BF->getSymbols()) {
+          FC.Thunks[Symbol] = Thunk;
+        }
+      }
+    }
+  }
+
+  if (NumShortThunks)
+    BC.outs() << "BOLT-INFO: " << NumShortThunks << " short thunks created\n";
+
+  if (NumLongThunks)
+    BC.outs() << "BOLT-INFO: " << NumLongThunks << " long thunks created\n";
+
+  // Replace callees with thunks.
+  for (FunctionCluster &FC : Clusters) {
+    for (BinaryFunction *BF : FC.Functions) {
+      if (!CallMap.count(BF))
+        continue;
+
+      for (BinaryBasicBlock &BB : *BF) {
+        for (MCInst &Inst : BB) {
+          if (!BC.MIB->isCall(Inst) || BC.MIB->isIndirectCall(Inst) ||
+              BC.MIB->isIndirectBranch(Inst))
+            continue;
+          const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
+          assert(TargetSymbol);
+
+          auto It = FC.Thunks.find(TargetSymbol);
+          if (It != FC.Thunks.end())
+            BC.MIB->replaceBranchTarget(Inst, It->second->getSymbol(),
+                                        BC.Ctx.get());
+        }
+      }
+    }
+  }
+
+  // Add thunks to the function list and assign a section name matching the
+  // function they follow.
+  for (const FunctionCluster &FC : llvm::reverse(Clusters)) {
+    std::string SectionName =
+        OutputFunctions[FC.LastFunctionIndex]->getCodeSectionName().str().str();
+    for (BinaryFunction *Thunk : FC.ThunkList) {
+      Thunk->setCodeSectionName(SectionName);
+    }
+
+    OutputFunctions.insert(
+        std::next(OutputFunctions.begin(), FC.LastFunctionIndex + 1),
+        FC.ThunkList.begin(), FC.ThunkList.end());
+  }
+
+  LLVM_DEBUG(dbgs() << "\nFunction layout with thunks:\n";
+             for (const auto *BF : OutputFunctions) { dbgs() << *BF << '\n'; });
+
+  BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
 
-  assert((opts::CompactCodeModel ||
+  assert((opts::CompactCodeModel || opts::ExperimentalRelaxation ||
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
 
-  if (opts::CompactCodeModel) {
+  DenseMap<BinaryFunction *, BranchLivenessInfo> BranchLiveness;
+
+  if (opts::FixBranchesWithLiveness) {
+    SmallVector<BinaryFunction *> Candidates;
+    for (auto &It : BC.getBinaryFunctions()) {
+      BinaryFunction &BF = It.second;
+      if (BC.shouldEmit(BF) && BF.isSimple() && needsBranchLiveness(BF))
+        Candidates.push_back(&BF);
+    }
+    if (!Candidates.empty()) {
+      RegAnalysis RA(BC, nullptr, nullptr);
+      for (BinaryFunction *BF : Candidates)
+        BranchLiveness.try_emplace(BF, computeBranchLiveness(*BF, RA));
+    }
+  }
+
+  auto getBranchLiveness = [&](BinaryFunction &BF) {
+    auto It = BranchLiveness.find(&BF);
+    return It == BranchLiveness.end() ? nullptr : &It->second;
+  };
+
+  if (opts::CompactCodeModel || opts::ExperimentalRelaxation) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
+    std::atomic<bool> HasFatal{false};
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-      relaxLocalBranches(BF);
+      if (HasFatal)
+        return;
+      if (!relaxLocalBranches(BF, getBranchLiveness(BF)))
+        HasFatal = true;
     };
 
     ParallelUtilities::PredicateTy SkipPredicate =
-        [&](const BinaryFunction &BF) {
-          return !BC.shouldEmit(BF) || !BF.isSimple();
-        };
+        [&](const BinaryFunction &BF) { return !BC.shouldEmit(BF); };
 
     ParallelUtilities::runOnEachFunction(
         BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
         SkipPredicate, "RelaxLocalBranches");
 
+    // The error has already been reported by relaxLocalBranches().
+    if (HasFatal)
+      return createFatalBOLTError("branch relaxation failure");
+
+    if (!opts::ExperimentalRelaxation)
+      return Error::success();
+
+    BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
+    relaxCalls(BC);
     return Error::success();
   }
 
@@ -973,7 +1394,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
       // Don't ruin non-simple functions, they can't afford to have the layout
       // changed.
       if (Modified && Func->isSimple())
-        Func->fixBranches();
+        Func->fixBranches(getBranchLiveness(*Func));
     }
   } while (Modified);
   BC.outs() << "BOLT-INFO: Inserted " << NumHotStubs

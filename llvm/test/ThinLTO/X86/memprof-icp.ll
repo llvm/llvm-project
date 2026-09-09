@@ -312,13 +312,13 @@
 
 ; IR-NOIMPORT: foo
 ; IR: define {{.*}} @_Z3fooR2B0j(
-; IR:   %[[R1:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj
+; IR:   %[[R1:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj{{$}}
 ; IR:   br i1 %[[R1]], label %if.true.direct_targ, label %if.false.orig_indirect
 ; IR: if.true.direct_targ:
 ; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD:[0-9]+]]
 ; IR-NOIMPORT: call {{.*}} @_ZN1B3barEj(
 ; IR: if.false.orig_indirect:
-; IR:   %[[R2:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj
+; IR:   %[[R2:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj{{$}}
 ; IR:   br i1 %[[R2]], label %if.true.direct_targ1, label %if.false.orig_indirect2
 ; IR: if.true.direct_targ1:
 ; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD]]
@@ -330,13 +330,13 @@
 ;; We should still compare against the original versions of bar since that is
 ;; what is in the vtable. However, we should have called the cloned versions
 ;; that perform cold allocations, which were subsequently inlined.
-; IR:   %[[R3:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj
+; IR:   %[[R3:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj{{$}}
 ; IR:   br i1 %[[R3]], label %if.true.direct_targ, label %if.false.orig_indirect
 ; IR: if.true.direct_targ:
 ; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD:[0-9]+]]
 ; IR-NOIMPORT: call {{.*}} @_ZN1B3barEj.memprof.1(
 ; IR: if.false.orig_indirect:
-; IR:   %[[R4:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj
+; IR:   %[[R4:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj{{$}}
 ; IR:   br i1 %[[R4]], label %if.true.direct_targ1, label %if.false.orig_indirect2
 ; IR: if.true.direct_targ1:
 ; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD]]

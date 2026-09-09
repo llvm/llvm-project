@@ -172,8 +172,15 @@ TEST_F(DumpDataExtractorTest, Formats) {
   // Unicode8 doesn't have a specific formatter.
   TestDump<uint8_t>(0x34, lldb::Format::eFormatUnicode8, "0x34");
   TestDump<uint16_t>(0x1122, lldb::Format::eFormatUnicode16, "U+1122");
-  TestDump<uint32_t>(0x12345678, lldb::Format::eFormatUnicode32,
-                     "U+0x12345678");
+  TestDump<uint16_t>(0xabcd, lldb::Format::eFormatUnicode16, "U+ABCD");
+  // Code points up to and including U+10FFFF use the "U+" notation of the
+  // Unicode Standard: uppercase hex, four to six digits, zero-padded to four.
+  TestDump<uint32_t>(0x12, lldb::Format::eFormatUnicode32, "U+0012");
+  TestDump<uint32_t>(0x20e3, lldb::Format::eFormatUnicode32, "U+20E3");
+  TestDump<uint32_t>(0x10FFFF, lldb::Format::eFormatUnicode32, "U+10FFFF");
+  // Values that are not valid code points fall back to plain hex.
+  TestDump<uint32_t>(0x110000, lldb::Format::eFormatUnicode32, "0x00110000");
+  TestDump<uint32_t>(0x12345678, lldb::Format::eFormatUnicode32, "0x12345678");
   TestDump<unsigned int>(654321, lldb::Format::eFormatUnsigned, "654321");
   // This pointer is printed based on the size of uint64_t, so the test is the
   // same for 32/64 bit host.

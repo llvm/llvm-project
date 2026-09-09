@@ -544,8 +544,38 @@
 // CHECK360:      {{hexagon-link|ld}}
 
 // -----------------------------------------------------------------------------
-// ffixed-r16 through ffixed-r28
+// ffixed-r6 through ffixed-r28
 // -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r6 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R6 %s
+// CHECK-R6: "-target-feature" "+reserved-r6"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r7 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R7 %s
+// CHECK-R7: "-target-feature" "+reserved-r7"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r8 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R8 %s
+// CHECK-R8: "-target-feature" "+reserved-r8"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r9 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R9 %s
+// CHECK-R9: "-target-feature" "+reserved-r9"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r10 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R10 %s
+// CHECK-R10: "-target-feature" "+reserved-r10"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r11 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R11 %s
+// CHECK-R11: "-target-feature" "+reserved-r11"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r12 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R12 %s
+// CHECK-R12: "-target-feature" "+reserved-r12"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r13 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R13 %s
+// CHECK-R13: "-target-feature" "+reserved-r13"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r14 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R14 %s
+// CHECK-R14: "-target-feature" "+reserved-r14"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r15 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R15 %s
+// CHECK-R15: "-target-feature" "+reserved-r15"
 // RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r16 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R16 %s
 // CHECK-R16: "-target-feature" "+reserved-r16"
@@ -587,7 +617,24 @@
 // CHECK-R28: "-target-feature" "+reserved-r28"
 // RUN: %clang -### --target=hexagon-unknown-elf %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK371 %s
-// CHECK371-NOT: "+reserved-r{{(1[6-9]|2[0-8])}}"
+// CHECK371-NOT: "+reserved-r{{([6-9]|1[0-9]|2[0-8])}}"
+
+// -----------------------------------------------------------------------------
+// Reserving a caller-saved register (r6-r15) warns; a callee-saved one
+// (r16-r28) does not. The warning can be silenced with -Wno-....
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r6 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-WARN-R6 %s
+// CHECK-WARN-R6: warning: reserving the caller-saved register 'ffixed-r6'
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r15 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-WARN-R15 %s
+// CHECK-WARN-R15: warning: reserving the caller-saved register 'ffixed-r15'
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r16 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-NOWARN %s
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r6 \
+// RUN:        -Wno-hexagon-reserved-caller-saved %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-NOWARN %s
+// CHECK-NOWARN-NOT: warning: reserving the caller-saved register
 
 // -----------------------------------------------------------------------------
 // mcabac

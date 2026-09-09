@@ -2096,7 +2096,8 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
 
 bool clang::CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
-    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo) {
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo,
+    Expr *SampleCountExpr) {
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType ContainedTy = QualType();
@@ -2140,7 +2141,7 @@ bool clang::CreateHLSLAttributedResourceType(
       HasResourceDimension = true;
       break;
     }
-    case attr::HLSLROV:
+    case attr::HLSLIsROV:
       if (ResAttrs.IsROV) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
         return false;
@@ -2160,6 +2161,19 @@ bool clang::CreateHLSLAttributedResourceType(
         return false;
       }
       ResAttrs.IsArray = true;
+      break;
+    case attr::HLSLIsMultiSampled:
+      if (ResAttrs.SampleCountExpr) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      // A bare [[hlsl::is_ms]] carries no count, so default it to 0, the same
+      // value Texture2DMS<T> gets from its template parameter.
+      ResAttrs.SampleCountExpr =
+          SampleCountExpr
+              ? SampleCountExpr
+              : IntegerLiteral::Create(S.Context, llvm::APInt(32, 0),
+                                       S.Context.IntTy, A->getLocation());
       break;
     case attr::HLSLIsCounter:
       if (ResAttrs.IsCounter) {
@@ -2231,15 +2245,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
-    if (!AL.isArgIdent(0)) {
-      Diag(AL.getLoc(), diag::err_attribute_argument_type)
-          << AL << AANT_ArgumentIdentifier;
+    StringRef Identifier;
+    SourceLocation ArgLoc;
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Identifier, &ArgLoc))
       return false;
-    }
-
-    IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->getIdentifierInfo()->getName();
-    SourceLocation ArgLoc = Loc->getLoc();
 
     // Validate resource class value
     ResourceClass RC;
@@ -2270,8 +2279,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     break;
   }
 
-  case ParsedAttr::AT_HLSLROV:
-    A = HLSLROVAttr::Create(getASTContext(), ACI);
+  case ParsedAttr::AT_HLSLIsROV:
+    A = HLSLIsROVAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLRawBuffer:
@@ -2284,6 +2293,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLIsArray:
     A = HLSLIsArrayAttr::Create(getASTContext(), ACI);
+    break;
+
+  case ParsedAttr::AT_HLSLIsMultiSampled:
+    A = HLSLIsMultiSampledAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -2976,23 +2989,23 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
   assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) &&
          "expected DeclRefExpr or MemberExpr");
 
-  // has a definition -> add to stack to be scanned
-  const FunctionDecl *FDWithBody = nullptr;
-  if (FD->hasBody(FDWithBody)) {
-    if (!WasAlreadyScannedInCurrentStage(FDWithBody))
-      DeclsToScan.push_back(FDWithBody);
-    return;
-  }
-
-  // no body -> diagnose availability
-  const AvailabilityAttr *AA = FindAvailabilityAttr(FD);
-  if (AA)
+  if (const AvailabilityAttr *AA = FindAvailabilityAttr(FD))
     CheckDeclAvailability(
         FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
+
+  // has a definition -> add to stack to be scanned
+  const FunctionDecl *FDWithBody = nullptr;
+  if (FD->hasBody(FDWithBody) && !WasAlreadyScannedInCurrentStage(FDWithBody))
+    DeclsToScan.push_back(FDWithBody);
 }
 
 void DiagnoseHLSLAvailability::RunOnTranslationUnit(
     const TranslationUnitDecl *TU) {
+  const TargetInfo &TargetInfo = SemaRef.getASTContext().getTargetInfo();
+  std::string &EntryName = TargetInfo.getTargetOpts().HLSLEntry;
+  bool IsLibraryShader = TargetInfo.getTriple().getEnvironment() ==
+                         llvm::Triple::EnvironmentType::Library;
+  SourceLocation EntryLoc{};
 
   // Iterate over all shader entry functions and library exports, and for those
   // that have a body (definiton), run diag scan on each, setting appropriate
@@ -3023,6 +3036,17 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
 
       // shader entry point
       if (HLSLShaderAttr *ShaderAttr = FD->getAttr<HLSLShaderAttr>()) {
+        if (!IsLibraryShader && FD->getName() == EntryName) {
+          if (EntryLoc.isValid()) {
+            SemaRef.Diag(FD->getLocation(),
+                         diag::err_hlsl_ambiguous_entry_point)
+                << EntryName;
+            SemaRef.Diag(EntryLoc, diag::note_previous_declaration_as)
+                << EntryName;
+            return;
+          }
+          EntryLoc = FD->getLocation();
+        }
         SetShaderStageContext(ShaderAttr->getType());
         RunOnFunction(FD);
         continue;
@@ -3045,6 +3069,12 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
         continue;
       }
     }
+  }
+
+  if (!IsLibraryShader && EntryLoc.isInvalid()) {
+    SemaRef.Diag(TU->getLocation(), diag::err_hlsl_missing_entry_point)
+        << EntryName;
+    return;
   }
 }
 
@@ -3279,8 +3309,8 @@ NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
 }
 
 std::optional<ExprResult>
-SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
-  QualType BaseType = BaseExpr.get()->getType();
+SemaHLSL::tryPerformConstantBufferConversion(Expr *BaseExpr) {
+  QualType BaseType = BaseExpr->getType();
   const HLSLAttributedResourceType *ResTy =
       HLSLAttributedResourceType::findHandleTypeOnResource(
           BaseType.getTypePtr());
@@ -3297,7 +3327,7 @@ SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
   auto *ConversionDecl =
       cast<CXXConversionDecl>(NamedConversionDecl->getUnderlyingDecl());
 
-  return SemaRef.BuildCXXMemberCallExpr(BaseExpr.get(), NamedConversionDecl,
+  return SemaRef.BuildCXXMemberCallExpr(BaseExpr, NamedConversionDecl,
                                         ConversionDecl,
                                         /*HadMultipleCandidates=*/false);
 }
@@ -3495,10 +3525,13 @@ static bool CheckExpectedBitWidth(Sema *S, CallExpr *TheCall,
 
 static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                        QualType ReturnType) {
-  auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
-  if (VecTyA)
+  if (auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>())
     ReturnType =
         S->Context.getExtVectorType(ReturnType, VecTyA->getNumElements());
+  else if (auto *MatTyA =
+               TheCall->getArg(0)->getType()->getAs<ConstantMatrixType>())
+    ReturnType = S->Context.getConstantMatrixType(
+        ReturnType, MatTyA->getNumRows(), MatTyA->getNumColumns());
 
   TheCall->setType(ReturnType);
 }
@@ -3686,7 +3719,8 @@ static bool CheckIndexType(Sema *S, CallExpr *TheCall, unsigned IndexArgIndex) {
 
   unsigned int ExpectedDim = 1;
   if (ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
-    ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension);
+    ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension) +
+                  (ResAttrs.IsArray ? 1 : 0);
 
   if (ActualDim != ExpectedDim) {
     S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
@@ -3722,6 +3756,19 @@ static bool CheckResourceHandle(
   return false;
 }
 
+static QualType createCounterHandleType(ASTContext &AST,
+                                        QualType MainHandleTy) {
+  assert(MainHandleTy->isHLSLAttributedResourceType() &&
+         "expected resource handle type");
+  auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
+  auto MainAttrs = MainResType->getAttrs();
+  assert(!MainAttrs.IsCounter && "cannot create a counter from a counter");
+  MainAttrs.IsCounter = true;
+  return AST.getHLSLAttributedResourceType(MainResType->getWrappedType(),
+                                           MainResType->getContainedType(),
+                                           MainAttrs);
+}
+
 static bool CheckVectorElementCount(Sema *S, QualType PassedType,
                                     QualType BaseType, unsigned ExpectedCount,
                                     SourceLocation Loc) {
@@ -3741,7 +3788,98 @@ static bool CheckVectorElementCount(Sema *S, QualType PassedType,
 
 enum class SampleKind { Sample, Bias, Grad, Level, Cmp, CmpLevelZero };
 
-static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
+static StringRef getSampleMethodName(SampleKind Kind) {
+  switch (Kind) {
+  case SampleKind::Sample:
+    return "Sample";
+  case SampleKind::Bias:
+    return "SampleBias";
+  case SampleKind::Grad:
+    return "SampleGrad";
+  case SampleKind::Level:
+    return "SampleLevel";
+  case SampleKind::Cmp:
+    return "SampleCmp";
+  case SampleKind::CmpLevelZero:
+    return "SampleCmpLevelZero";
+  }
+  llvm_unreachable("Invalid SampleKind");
+}
+
+// Returns the name of the resource method whose body the sampling or gather
+// builtin is being emitted into, which is the name the user called. This
+// matters for methods that share a builtin, like 'Gather' and 'GatherRed'.
+// Falls back to DefaultName if the builtin is used outside of a resource
+// method.
+static StringRef getCurrentResourceMethodName(Sema &S, StringRef DefaultName) {
+  const auto *MD = dyn_cast_if_present<CXXMethodDecl>(S.getCurFunctionDecl());
+  if (!MD || !MD->getDeclName().isIdentifier())
+    return DefaultName;
+
+  QualType RecordTy = S.Context.getCanonicalTagType(MD->getParent());
+  if (!RecordTy->isHLSLResourceRecord())
+    return DefaultName;
+
+  return MD->getName();
+}
+
+// Returns the element type of a typed resource's contained type. Typed resource
+// element types are scalars or vectors of scalars, so anything that is not a
+// vector is already the element type.
+static QualType getTypedResourceElementType(QualType ContainedType) {
+  if (const auto *VecTy = ContainedType->getAs<VectorType>())
+    return VecTy->getElementType();
+  return ContainedType;
+}
+
+// Sampling from and gathering on resources with a 'double' element type is not
+// supported. Such resources are still valid declarations whose contents can be
+// accessed by other means, like Load or the subscript operator.
+static bool CheckNoDoubleElementType(Sema &S, CallExpr *TheCall,
+                                     QualType ContainedType,
+                                     StringRef DefaultName) {
+  QualType EltTy = getTypedResourceElementType(ContainedType);
+  if (!EltTy->isSpecificBuiltinType(BuiltinType::Double))
+    return false;
+
+  S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_sample_double_element_type)
+      << getCurrentResourceMethodName(S, DefaultName) << ContainedType;
+  return true;
+}
+
+// Sampling textures with an integer element type was introduced in SM 6.7 as
+// part of Advanced Texture Operations. The shader model only applies to DirectX
+// targets; Vulkan has no such restriction.
+static bool CheckIntegerElementTypeShaderModel(Sema &S, CallExpr *TheCall,
+                                               QualType ContainedType,
+                                               SampleKind Kind) {
+  // Comparison sampling requires a floating point element type at every shader
+  // model, which the caller diagnoses.
+  if (Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero)
+    return false;
+
+  // 'bool' is an integer type in HLSL, but sampling bool resources is never
+  // allowed, so it must not be reported as requiring shader model 6.7.
+  QualType EltTy = getTypedResourceElementType(ContainedType);
+  if (!EltTy->isIntegerType() || EltTy->isBooleanType())
+    return false;
+
+  const TargetInfo &TI = S.Context.getTargetInfo();
+  if (!TI.getTriple().isDXIL())
+    return false;
+
+  VersionTuple SMVersion = TI.getPlatformMinVersion();
+  if (SMVersion >= VersionTuple(6, 7))
+    return false;
+
+  S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_sample_integer_element_type)
+      << getCurrentResourceMethodName(S, getSampleMethodName(Kind))
+      << ContainedType << SMVersion.getAsString();
+  return true;
+}
+
+static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall,
+                                           bool IncludeArraySlice = true) {
   // Check the texture handle.
   if (CheckResourceHandle(&S, TheCall, 0,
                           [](const HLSLAttributedResourceType *ResType) {
@@ -3763,7 +3901,8 @@ static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
 
   // Check the location.
   unsigned ExpectedDim =
-      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension) +
+      (IncludeArraySlice && ResourceTy->getAttrs().IsArray ? 1 : 0);
   if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
                               S.Context.FloatTy, ExpectedDim,
                               TheCall->getBeginLoc()))
@@ -3776,7 +3915,9 @@ static bool CheckCalculateLodBuiltin(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return true;
 
-  if (CheckTextureSamplerAndLocation(S, TheCall))
+  // CalculateLevelOfDetail location uses resource dimension only (e.g. float2
+  // for 2D), not an extra array slice component like Sample/Gather.
+  if (CheckTextureSamplerAndLocation(S, TheCall, /*IncludeArraySlice=*/false))
     return true;
 
   TheCall->setType(S.Context.FloatTy);
@@ -3852,6 +3993,10 @@ static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
          "attribute.");
   QualType ReturnType = ResourceTy->getContainedType();
 
+  if (CheckNoDoubleElementType(S, TheCall, ReturnType,
+                               IsCmp ? "GatherCmp" : "Gather"))
+    return true;
+
   if (IsCmp) {
     if (!ReturnType->hasFloatingRepresentation()) {
       S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_samplecmp_requires_float);
@@ -3882,11 +4027,23 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
   auto *ResourceTy =
       TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
 
-  // Check the location + lod (int3 for Texture2D).
-  unsigned ExpectedDim =
+  // A UAV descriptor binds a single mip slice, so a RWTexture location has no
+  // mip component to select, and TextureLoad on a UAV takes no offset.
+  bool IsUAV =
+      ResourceTy->getAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV;
+  if (IsUAV && S.checkArgCount(TheCall, 2))
+    return true;
+
+  // Check the location: int3 for Texture2D and int4 for Texture2DArray, which
+  // both carry a trailing mip level; int2 and int3 for the RWTexture forms,
+  // which do not.
+  unsigned ResourceDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
+  if (!IsUAV)
+    ++LocationDim;
   QualType CoordLODTy = TheCall->getArg(1)->getType();
-  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, ExpectedDim + 1,
+  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, LocationDim,
                               TheCall->getArg(1)->getBeginLoc()))
     return true;
 
@@ -3899,11 +4056,54 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
     return true;
   }
 
-  // Check the offset operand.
+  // Check the offset operand (int2 for 2D textures; no array slice).
   if (TheCall->getNumArgs() > 2) {
     if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
-                                S.Context.IntTy, ExpectedDim,
+                                S.Context.IntTy, ResourceDim,
                                 TheCall->getArg(2)->getBeginLoc()))
+      return true;
+  }
+
+  TheCall->setType(ResourceTy->getContainedType());
+  return false;
+}
+
+static bool CheckLoadMSBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountRange(TheCall, 3, 4))
+    return true;
+
+  // Check the multisampled texture handle.
+  if (CheckResourceHandle(&S, TheCall, 0,
+                          [](const HLSLAttributedResourceType *ResType) {
+                            return !ResType->isMultiSampled();
+                          }))
+    return true;
+
+  auto *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+  // Check the location (int2 for Texture2DMS, int3 for Texture2DMSArray).
+  // Unlike Load on regular textures, there is no mip/LOD component.
+  unsigned ResourceDim =
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
+  QualType LocationTy = TheCall->getArg(1)->getType();
+  if (CheckVectorElementCount(&S, LocationTy, S.Context.IntTy, LocationDim,
+                              TheCall->getArg(1)->getBeginLoc()))
+    return true;
+
+  // Check the sample index operand (scalar int).
+  if (!TheCall->getArg(2)->getType()->isIntegerType()) {
+    S.Diag(TheCall->getArg(2)->getBeginLoc(), diag::err_typecheck_expect_int)
+        << TheCall->getArg(2)->getType();
+    return true;
+  }
+
+  // Check the offset operand (int2 for 2D textures; no array slice).
+  if (TheCall->getNumArgs() > 3) {
+    if (CheckVectorElementCount(&S, TheCall->getArg(3)->getType(),
+                                S.Context.IntTy, ResourceDim,
+                                TheCall->getArg(3)->getBeginLoc()))
       return true;
   }
 
@@ -3974,8 +4174,9 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
     NextIdx += 2;
   }
 
-  // Check the offset operand.
-  if (TheCall->getNumArgs() > NextIdx) {
+  // Check the offset operand (if applicable).
+  if (hasResourceOffset(ResourceTy->getAttrs().ResourceDimension) &&
+      TheCall->getNumArgs() > NextIdx) {
     if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
                                 S.Context.IntTy, ExpectedDim,
                                 TheCall->getArg(NextIdx)->getBeginLoc()))
@@ -3999,6 +4200,14 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
          "Expecting a contained type for resource with a dimension "
          "attribute.");
   QualType ReturnType = ResourceTy->getContainedType();
+
+  if (CheckNoDoubleElementType(S, TheCall, ReturnType,
+                               getSampleMethodName(Kind)))
+    return true;
+
+  if (CheckIntegerElementTypeShaderModel(S, TheCall, ReturnType, Kind))
+    return true;
+
   if (Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero) {
     if (!ReturnType->hasFloatingRepresentation()) {
       S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_samplecmp_requires_float);
@@ -4090,6 +4299,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_transpose_if_memory_is_row_major: {
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().IntTy))
+      return true;
+
+    TheCall->setType(TheCall->getArg(0)->getType());
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_load_with_status: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
@@ -4134,6 +4353,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_load_level:
     return CheckLoadLevelBuiltin(SemaRef, TheCall);
+  case Builtin::BI__builtin_hlsl_resource_load_ms:
+    return CheckLoadMSBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_sample:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Sample);
   case Builtin::BI__builtin_hlsl_resource_sample_bias:
@@ -4176,17 +4397,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
     assert(TheCall->getNumArgs() == 3 && "expected 3 args");
-    ASTContext &AST = SemaRef.getASTContext();
     QualType MainHandleTy = TheCall->getArg(0)->getType();
-    auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
-    auto MainAttrs = MainResType->getAttrs();
-    assert(!MainAttrs.IsCounter && "cannot create a counter from a counter");
-    MainAttrs.IsCounter = true;
-    QualType CounterHandleTy = AST.getHLSLAttributedResourceType(
-        MainResType->getWrappedType(), MainResType->getContainedType(),
-        MainAttrs);
     // Update return type to be the attributed resource type from arg0
     // with added IsCounter flag.
+    QualType CounterHandleTy =
+        createCounterHandleType(SemaRef.getASTContext(), MainHandleTy);
     TheCall->setType(CounterHandleTy);
     break;
   }
@@ -4303,8 +4518,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_degrees:
-  case Builtin::BI__builtin_hlsl_elementwise_radians:
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_frac:
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse:
@@ -4330,18 +4543,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_lerp: {
-    if (SemaRef.checkArgCount(TheCall, 3))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-    if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
-      return true;
-    if (SemaRef.BuiltinElementwiseTernaryMath(TheCall))
-      return true;
     break;
   }
   case Builtin::BI__builtin_hlsl_mad: {
@@ -4394,18 +4595,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(RetTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_normalize: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    // return type is the same as the input type
-    TheCall->setType(ArgTyA);
-    break;
-  }
   case Builtin::BI__builtin_elementwise_fma: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckAllArgsHaveSameType(&SemaRef, TheCall)) {
@@ -4448,19 +4637,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                    CheckFloatingOrIntRepresentation))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_step: {
-    if (SemaRef.checkArgCount(TheCall, 2))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    // return type is the same as the input type
-    TheCall->setType(ArgTyA);
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_active_all_equal: {
@@ -4534,10 +4710,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_interlocked_add: {
+  case Builtin::BI__builtin_hlsl_interlocked_add:
+  case Builtin::BI__builtin_hlsl_interlocked_and:
+  case Builtin::BI__builtin_hlsl_interlocked_min:
+  case Builtin::BI__builtin_hlsl_interlocked_or:
+  case Builtin::BI__builtin_hlsl_interlocked_xor: {
     // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
-    // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
-    // When reached via the synthesized `InterlockedAdd` overload set in
+    // to `__builtin_hlsl_interlocked_op` bypass argument checking entirely.
+    // When reached via the synthesized `InterlockedOp` overload set in
     // HLSLExternalSemaSource, overload resolution has already enforced the
     // argument count, integer-type matching, and the address-space requirement
     // on `dest`. The checks below are a safety net for callers that invoke the
@@ -4558,6 +4738,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                    diag::err_builtin_invalid_arg_type)
           << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1 << /*no float*/ 0
           << DestTy;
+      return true;
+    }
+
+    // 64-bit interlocked ops require SM 6.6 on DXIL. The synthesized wrapper
+    // methods (e.g. RWByteAddressBuffer::InterlockedAdd64) are only declared
+    // on SM 6.6+, so this defensive check only fires for direct builtin
+    // calls; skip synthetic invocations (invalid source location).
+    const TargetInfo &TI = SemaRef.Context.getTargetInfo();
+    if (TheCall->getBeginLoc().isValid() &&
+        TI.getTriple().getArch() == llvm::Triple::dxil &&
+        SemaRef.Context.getTypeSize(DestTy) == 64 &&
+        TI.getPlatformMinVersion() < VersionTuple(6, 6)) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_hlsl_builtin_requires_sm)
+          << TheCall->getDirectCallee() << VersionTuple(6, 6).getAsString();
       return true;
     }
 
@@ -5146,7 +5340,7 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
 
   // Writebacks are performed with `=` binary operator, which allows for
   // overload resolution on writeback result expressions.
-  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Param->getBeginLoc(),
+  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
                            tok::equal, ArgOpV, OpV);
 
   if (Res.isInvalid())

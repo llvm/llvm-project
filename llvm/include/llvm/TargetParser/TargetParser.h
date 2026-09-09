@@ -27,6 +27,9 @@ struct BasicSubtargetFeatureKV {
   const char *Key;         ///< K-V key string
   unsigned Value;          ///< K-V integer value
   FeatureBitArray Implies; ///< K-V bit mask
+
+  /// Compare routine for std::lower_bound
+  bool operator<(StringRef S) const { return StringRef(Key) < S; }
 };
 
 /// Used to provide key value pairs for feature and CPU bit flags.

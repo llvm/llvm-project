@@ -671,6 +671,15 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         break;
       }
       default: {
+        if (C->getConstantIntValue()->isMaxValue(true)) {
+          // Applying this optimization requires calculating rhs+1, which we
+          // can't do if that overflows. Swap operands and reverse the
+          // branching condition instead.
+          std::swap(LHS, RHS);
+          CC = ISD::SETLT;
+          break;
+        }
+
         // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows
         // us to  fold the constant into the cmp instruction.
         RHS = DAG.getSignedConstant(C->getSExtValue() + 1, DL, VT);
@@ -1151,6 +1160,7 @@ bool AVRTargetLowering::isOffsetFoldingLegal(
 //             Formal Arguments Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "AVRGenCallingConv.inc"
 
 /// Registers for calling conventions, ordered in reverse as required by ABI.

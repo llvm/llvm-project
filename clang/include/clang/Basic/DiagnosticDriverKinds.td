@@ -95,6 +95,9 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
+def err_drv_sycl_no_rdc_multiple_targets : Error<
+  "'%0' is not supported with multiple SYCL offloading targets">;
+
 // SYCL Windows-specific diagnostics
 def err_drv_sycl_requires_dynamic_crt : Error<
   "SYCL requires dynamic C++ runtime (/MD or /MDd); "
@@ -171,6 +174,11 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_option_for_runtime : Warning<
   "ignoring '%0' option as it is not currently supported for runtime '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_hexagon_reserved_caller_saved_reg : Warning<
+  "reserving the caller-saved register '%0' may lead to incorrect code if it "
+  "is not also reserved in all other translation units and libraries; you are "
+  "responsible for ensuring the register is managed consistently">,
+  InGroup<DiagGroup<"hexagon-reserved-caller-saved">>;
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
@@ -404,6 +412,11 @@ def err_drv_optimization_remark_format : Error<
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
+def err_drv_dyndbg_lto : Error<"'-fdynamic-debugging' incompatible with '-flto'">;
+def err_drv_dyndbg_incompatible : Error<"'-fdynamic-debugging' incompatible with '%0'">;
+def err_drv_dyndbg_ir : Error<"'-fdynamic-debugging' incompatible with IR input">;
+def warn_drv_dyndbg_req_debug : Warning<"'-fdynamic-debugging' ignored: requires debug info">,
+    InGroup<DynamicDebugging>;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
@@ -597,8 +610,8 @@ def err_analyzer_checker_option_invalid_input : Error<
 def err_analyzer_checker_incompatible_analyzer_option : Error<
   "checker cannot be enabled with analyzer option '%0' == %1">;
 def err_analyzer_not_built_with_z3 : Error<
-  "analyzer constraint manager 'z3' is only available if LLVM was built with "
-  "-DLLVM_ENABLE_Z3_SOLVER=ON">;
+  "analyzer constraint manager 'unsupported-z3' is only available if LLVM was "
+  "built with -DLLVM_ENABLE_Z3_SOLVER=ON">;
 
 def warn_drv_needs_hvx : Warning<
   "%0 requires HVX, use -mhvx/-mhvx= to enable it">,
@@ -654,6 +667,12 @@ def remark_printing_module_graph : Remark<
 def err_module_defined_outside_of_module_source : Error<
   "module '%0' is defined in file '%1', but module declarations are only "
   "allowed in C++ module inputs; use the '.cppm' extension or '-x c++module'">;
+def err_drv_depscan_log_path_empty : Error<
+  "'-fdepscan-log-path=' requires a non-empty file path">;
+def err_drv_depscan_log_path_inconsistent : Error<
+  "'-fdepscan-log-path' set inconsistently within a dependency scan: "
+  "%select{no log path|log path '%1'}0 conflicts with "
+  "%select{no log path|log path '%3'}2 requested earlier">;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -820,6 +839,9 @@ def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 
 def err_drv_invalid_object_mode : Error<
   "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
+
+def err_drv_compile_mode_unsupported_aix : Error<
+  "32-bit compile mode is not supported. Use OBJECT_MODE=64, -maix64 or -m64">;
 
 def err_roptr_requires_data_sections: Error<"-mxcoff-roptr is supported only with -fdata-sections">;
 def err_roptr_cannot_build_shared: Error<"-mxcoff-roptr is not supported with -shared">;

@@ -10,11 +10,10 @@
 
 #include "src/unistd/close.h"
 
+#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_DGRAM
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcSocketTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

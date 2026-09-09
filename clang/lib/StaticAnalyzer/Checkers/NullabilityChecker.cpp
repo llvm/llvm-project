@@ -590,7 +590,7 @@ void NullabilityChecker::checkBeginFunction(CheckerContext &C) const {
 }
 
 // Whenever we see a load from a typed memory region that's been annotated as
-// 'nonnull', we want to trust the user on that and assume that it is is indeed
+// 'nonnull', we want to trust the user on that and assume that it is indeed
 // non-null.
 //
 // We do so even if the value is known to have been assigned to null.

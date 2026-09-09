@@ -49,7 +49,7 @@ void disableUnsupportedOptions(CompilerInvocation &CI) {
   // our compiler invocation set-up doesn't seem to work with it (leading
   // assertions in VerifyDiagnosticConsumer).
   CI.getDiagnosticOpts().VerifyDiagnostics = false;
-  CI.getDiagnosticOpts().ShowColors = false;
+  CI.getDiagnosticOpts().setShowColors(ShowColorsKind::Off);
 
   // Disable any dependency outputting, we don't want to generate files or write
   // to stdout/stderr.

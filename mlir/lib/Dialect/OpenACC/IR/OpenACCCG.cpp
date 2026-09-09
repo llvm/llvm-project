@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -77,14 +78,18 @@ struct RemoveEmptyKernelEnvironment
   }
 };
 
-static void updateComputeRegionInputOperandSegments(ComputeRegionOp op,
-                                                    PatternRewriter &rewriter,
-                                                    size_t numInput) {
+// Capture `hasStream` before erasing inputs because segment metadata is only
+// repaired at the end of the modification transaction.
+static void setComputeRegionInputOperandSegments(ComputeRegionOp op,
+                                                 PatternRewriter &rewriter,
+                                                 size_t numInput,
+                                                 bool hasStream) {
   const size_t numLaunch = op.getLaunchArgs().size();
-  op->setAttr(ComputeRegionOp::getOperandSegmentSizeAttr(),
-              rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
-                                             static_cast<int32_t>(numInput),
-                                             op.getStream() ? 1 : 0}));
+  op->setInherentAttr(
+      rewriter.getStringAttr(ComputeRegionOp::getOperandSegmentSizeAttr()),
+      rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
+                                     static_cast<int32_t>(numInput),
+                                     hasStream ? 1 : 0}));
 }
 
 struct ComputeRegionRemoveDuplicateArgs
@@ -99,33 +104,42 @@ struct ComputeRegionRemoveDuplicateArgs
     assert(body->getNumArguments() == numLaunch + numInput &&
            "region args mismatch");
 
-    bool mergedAny = false;
-    while (true) {
-      bool merged = false;
-      for (size_t j = 1; j < numInput && !merged; ++j) {
-        for (size_t i = 0; i < j; ++i) {
-          if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
-              op->getOperand(static_cast<unsigned>(numLaunch + j)))
-            continue;
-          unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
-          unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
-          rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
-                                      body->getArgument(keepIdx));
-          body->eraseArgument(dropIdx);
-          op->eraseOperand(dropIdx);
-          --numInput;
-          merged = true;
-          mergedAny = true;
+    bool hasDuplicate = false;
+    for (size_t j = 1; j < numInput && !hasDuplicate; ++j)
+      for (size_t i = 0; i < j; ++i)
+        if (op->getOperand(static_cast<unsigned>(numLaunch + i)) ==
+            op->getOperand(static_cast<unsigned>(numLaunch + j))) {
+          hasDuplicate = true;
           break;
         }
-      }
-      if (!merged)
-        break;
-    }
-
-    if (!mergedAny)
+    if (!hasDuplicate)
       return failure();
-    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+
+    const bool hasStream = static_cast<bool>(op.getStream());
+    rewriter.modifyOpInPlace(op, [&] {
+      while (true) {
+        bool merged = false;
+        for (size_t j = 1; j < numInput && !merged; ++j) {
+          for (size_t i = 0; i < j; ++i) {
+            if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
+                op->getOperand(static_cast<unsigned>(numLaunch + j)))
+              continue;
+            unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
+            unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
+            rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
+                                        body->getArgument(keepIdx));
+            body->eraseArgument(dropIdx);
+            op->eraseOperand(dropIdx);
+            --numInput;
+            merged = true;
+            break;
+          }
+        }
+        if (!merged)
+          break;
+      }
+      setComputeRegionInputOperandSegments(op, rewriter, numInput, hasStream);
+    });
     return success();
   }
 };
@@ -142,21 +156,28 @@ struct ComputeRegionRemoveUnusedArgs
     assert(body->getNumArguments() == numLaunch + numInput &&
            "region args mismatch");
 
-    bool changed = false;
-    for (size_t k = numLaunch; k < numLaunch + numInput;) {
-      if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
-        ++k;
-        continue;
+    bool hasUnused = false;
+    for (size_t k = numLaunch; k < numLaunch + numInput; ++k)
+      if (body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+        hasUnused = true;
+        break;
       }
-      body->eraseArgument(static_cast<unsigned>(k));
-      op->eraseOperand(static_cast<unsigned>(k));
-      --numInput;
-      changed = true;
-    }
-
-    if (!changed)
+    if (!hasUnused)
       return failure();
-    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+
+    const bool hasStream = static_cast<bool>(op.getStream());
+    rewriter.modifyOpInPlace(op, [&] {
+      for (size_t k = numLaunch; k < numLaunch + numInput;) {
+        if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+          ++k;
+          continue;
+        }
+        body->eraseArgument(static_cast<unsigned>(k));
+        op->eraseOperand(static_cast<unsigned>(k));
+        --numInput;
+      }
+      setComputeRegionInputOperandSegments(op, rewriter, numInput, hasStream);
+    });
     return success();
   }
 };
@@ -249,6 +270,31 @@ static void printProcessorValue(AsmPrinter &printer,
                                 const GPUParallelDimAttr &attr) {
   gpu::Processor processor = indexToGpuProcessor(attr.getValue().getInt());
   printer << gpu::stringifyProcessor(processor);
+}
+
+static FailureOr<SmallVector<GPUParallelDimAttr>>
+parseGPUParallelDimList(AsmParser &parser) {
+  SmallVector<GPUParallelDimAttr> parDims;
+  auto parseParDim = [&]() -> ParseResult {
+    GPUParallelDimAttr dim;
+    if (parseProcessorValue(parser, dim))
+      return failure();
+    parDims.push_back(dim);
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, parseParDim,
+                                     "list of OpenACC GPU parallel dimensions"))
+    return failure();
+  return parDims;
+}
+
+static void printGPUParallelDimList(AsmPrinter &printer,
+                                    ArrayRef<GPUParallelDimAttr> dims) {
+  printer << "[";
+  llvm::interleaveComma(dims, printer, [&printer](const GPUParallelDimAttr &p) {
+    printProcessorValue(printer, p);
+  });
+  printer << "]";
 }
 
 } // namespace
@@ -486,6 +532,16 @@ LogicalResult ReductionAccumulateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionAccumulateArrayOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateArrayOp::verify() {
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
@@ -698,8 +754,9 @@ void ComputeRegionOp::print(OpAsmPrinter &p) {
   p.printOptionalArrowTypeList(getResultTypes());
   p << " ";
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/getOperandSegmentSizeAttr());
+  ComputeRegionOp::printProperties(getContext(), p, getProperties(),
+                                   /*elidedProps=*/getOperandSegmentSizeAttr());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
@@ -754,11 +811,9 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   assert(numLaunchOperands + numInputOperands == regionArgs.size() &&
          "compute region args mismatch");
 
-  result.addAttribute(
-      ComputeRegionOp::getOperandSegmentSizeAttr(),
-      builder.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunchOperands),
-                                    static_cast<int32_t>(numInputOperands),
-                                    hasStream ? 1 : 0}));
+  DenseI32ArrayAttr operandSegmentSizes = builder.getDenseI32ArrayAttr(
+      {static_cast<int32_t>(numLaunchOperands),
+       static_cast<int32_t>(numInputOperands), hasStream ? 1 : 0});
 
   for (size_t i = 0; i < numLaunchOperands; ++i) {
     if (parser.resolveOperand(launchOperands[i], types[i], result.operands))
@@ -776,8 +831,75 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
       return failure();
   }
 
+  Attribute parsedProperties;
+  if (ComputeRegionOp::genericParseProperties(parser, parsedProperties))
+    return failure();
+  auto propertyDictionary = dyn_cast_or_null<DictionaryAttr>(parsedProperties);
+  if (parsedProperties && !propertyDictionary)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected properties dictionary");
+
+  NamedAttrList properties(propertyDictionary ? propertyDictionary
+                                              : builder.getDictionaryAttr({}));
+  properties.set(ComputeRegionOp::getOperandSegmentSizeAttr(),
+                 operandSegmentSizes);
+  propertyDictionary = properties.getDictionary(builder.getContext());
+  auto emitError = [&]() {
+    return mlir::emitError(result.location, "invalid properties ")
+           << propertyDictionary << " for op " << result.name.getStringRef()
+           << ": ";
+  };
+  if (failed(ComputeRegionOp::setPropertiesFromParsedAttr(
+          result.getOrAddProperties<Properties>(), propertyDictionary,
+          emitError)))
+    return failure();
+
+  auto attrsLoc = parser.getCurrentLocation();
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
+  for (StringRef attrName : ComputeRegionOp::getAttributeNames()) {
+    if (result.attributes.get(attrName))
+      return parser.emitError(attrsLoc)
+             << "inherent attribute '" << attrName
+             << "' cannot be parsed from attr-dict when strict properties in "
+                "assembly format is enabled";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPUSharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUSharedMemoryOp::verify() {
+  if (getNumCopies() <= 0)
+    return emitOpError("num_copies must be positive");
+  if (getStaticUpperBoundBytes() <= 0)
+    return emitOpError("static_upper_bound_bytes must be positive");
+
+  bool hasScaling = static_cast<bool>(getDynamicSharedMemoryScalingBytes());
+  bool hasFixed = static_cast<bool>(getDynamicSharedMemoryFixedBytes());
+  if (hasScaling != hasFixed)
+    return emitOpError(
+        "dynamic_shared_memory_scaling_bytes and "
+        "dynamic_shared_memory_fixed_bytes must both be present or both be "
+        "absent");
+  if (auto scalingAttr = getDynamicSharedMemoryScalingBytesAttr())
+    if (scalingAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_scaling_bytes must be "
+                         "non-negative");
+  if (auto fixedAttr = getDynamicSharedMemoryFixedBytesAttr())
+    if (fixedAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_fixed_bytes must be "
+                         "non-negative");
+
+  auto resultTy = cast<MemRefType>(getResult().getType());
+  auto addrSpace =
+      dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
+  if (!addrSpace ||
+      addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
+    return emitOpError("result memref must use #gpu.address_space<workgroup>");
 
   return success();
 }
@@ -793,6 +915,39 @@ LogicalResult PredicateRegionOp::verify() {
     return emitOpError("region cannot have any arguments");
   if (!getOperation()->getParentOfType<ComputeRegionOp>())
     return emitOpError("must be nested within an acc.compute_region operation");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MapInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MapInfoOp::verify() {
+  // A pointer-like var addresses the mapped object, so varType has to name that
+  // object rather than the address of it.
+  if (mlir::isa<acc::PointerLikeType>(getVar().getType()) &&
+      getVarType() == getVar().getType())
+    return emitOpError("varType must capture the element type of var");
+
+  // A descriptor operand is only meaningful together with the layout it
+  // follows. Without a kind, consumers have no way to interpret it.
+  if (getDesc() && getDescKind() == DataDescKind::none)
+    return emitOpError("desc requires a descKind other than none");
+
+  // Bounds count elements of the mapped object, which is the OpenACC
+  // descriptor layout, so it must be among the kinds named here.
+  if (!getBounds().empty() &&
+      !acc::bitEnumContainsAny(getDescKind(), DataDescKind::openacc))
+    return emitOpError("bounds require descKind openacc");
+
+  // Anything below -1 has no meaning: -1 states that the size is unknown at
+  // compile time and 0 defers it to bounds or to a descriptor.
+  if (getSize()) {
+    std::optional<int64_t> constantSize = getConstantIntValue(getSize());
+    if (constantSize && *constantSize < -1)
+      return emitOpError("size must be -1, 0, or a positive byte count");
+  }
+
   return success();
 }
 
@@ -977,26 +1132,29 @@ bool GPUParallelDimsAttr::hasOnlyThreadXLevel() const {
 }
 
 Attribute GPUParallelDimsAttr::parse(AsmParser &parser, Type type) {
-  auto delimiter = AsmParser::Delimiter::Square;
-  SmallVector<GPUParallelDimAttr> parDims;
-  auto parseParDim = [&]() -> ParseResult {
-    GPUParallelDimAttr dim;
-    if (parseProcessorValue(parser, dim))
-      return failure();
-    parDims.push_back(dim);
-    return success();
-  };
-  if (parser.parseCommaSeparatedList(delimiter, parseParDim,
-                                     "list of OpenACC GPU parallel dimensions"))
+  FailureOr<SmallVector<GPUParallelDimAttr>> parDims =
+      parseGPUParallelDimList(parser);
+  if (failed(parDims))
     return {};
-  return GPUParallelDimsAttr::get(parser.getContext(), parDims);
+  return GPUParallelDimsAttr::get(parser.getContext(), *parDims);
 }
 
 void GPUParallelDimsAttr::print(AsmPrinter &printer) const {
-  printer << "[";
-  llvm::interleaveComma(getArray(), printer,
-                        [&printer](const GPUParallelDimAttr &p) {
-                          printProcessorValue(printer, p);
-                        });
-  printer << "]";
+  printGPUParallelDimList(printer, getArray());
+}
+
+//===----------------------------------------------------------------------===//
+// ActiveParDimsAttr
+//===----------------------------------------------------------------------===//
+
+Attribute ActiveParDimsAttr::parse(AsmParser &parser, Type type) {
+  FailureOr<SmallVector<GPUParallelDimAttr>> parDims =
+      parseGPUParallelDimList(parser);
+  if (failed(parDims))
+    return {};
+  return ActiveParDimsAttr::get(parser.getContext(), *parDims);
+}
+
+void ActiveParDimsAttr::print(AsmPrinter &printer) const {
+  printGPUParallelDimList(printer, getArray());
 }

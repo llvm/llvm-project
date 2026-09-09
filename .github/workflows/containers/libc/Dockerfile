@@ -30,6 +30,7 @@ RUN apt-get update && \
     g++-12-arm-linux-gnueabihf \
     sudo \
     sccache \
+    zstd \
     wget \
     lsb-release \
     software-properties-common \
@@ -40,10 +41,70 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# The downloaded Hexagon QEMU binaries are x86_64-only. Install their runtime
+# dependencies only on x86_64 hosts.
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+    apt-get update && \
+    apt-get install -y \
+    libpixman-1-0 \
+    libslirp0 \
+    libfdt1 \
+    libglib2.0-0 \
+    libfuse3-3 \
+    libiscsi7 \
+    libaio1t64 \
+    liburing2 \
+    libcurl4 \
+    libcurl3t64-gnutls \
+    libasound2t64 \
+    libpulse0 \
+    libjack-jackd2-0 \
+    libsndio7.0 \
+    libsndfile1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libsystemd0 \
+    libapparmor1 && \
+    ln -s "$(dpkg -L libaio1t64 | grep '/libaio.so.1t64$')" \
+    "$(dirname "$(dpkg -L libaio1t64 | grep '/libaio.so.1t64$')")/libaio.so.1" && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# TODO: Switch to distribution QEMU packages once the Qualcomm fork patches
+# are upstreamed to QEMU.
+# The current QEMU binaries are x86_64-only, so do not install them on ARM.
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+    wget --remote-encoding=utf-8 -O /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst \
+    https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/23.1.0-rc1/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst && \
+    mkdir -p /tmp/hexagon-toolchain && \
+    tar -xf /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst -C /tmp/hexagon-toolchain/ && \
+    install "$(find /tmp/hexagon-toolchain -type f -name qemu-system-hexagon -print -quit)" \
+    /usr/local/bin/qemu-system-hexagon && \
+    install "$(find /tmp/hexagon-toolchain -type f -name qemu-hexagon -print -quit)" \
+    /usr/local/bin/qemu-hexagon && \
+    qemu-system-hexagon --version && \
+    qemu-hexagon --version && \
+    rm -rf /tmp/hexagon-toolchain && \
+    rm -f /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst; \
+    fi
+
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
     sudo ./llvm.sh 23 && \
     rm llvm.sh
+
+# Install the LLVM testing tools, which the llvm.sh script above does not
+# include. This provides lit along with FileCheck, not, count and split-file,
+# which are required to run the libc test suites and some CIs like precommit
+# testing CI for libc-based compiler-rt builtins. The package only symlinks
+# the tools into /usr/bin under versioned names (lit-23, FileCheck-23, ...),
+# so also symlink them under their canonical names.
+# llvm-link is required to build bitcode library for GPU targets
+RUN apt-get install -y llvm-23-tools && \
+    ln -s -t /usr/bin $(dpkg -L llvm-23-tools | grep '^/usr/lib/llvm-23/bin/') && \
+    ln -s /usr/lib/llvm-23/bin/llvm-link /usr/bin/llvm-link
 
 # Install gmp and mpfr for cross compilation
 RUN wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz && \

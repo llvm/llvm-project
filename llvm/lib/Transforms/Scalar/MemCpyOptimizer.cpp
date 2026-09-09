@@ -924,8 +924,17 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
                         ExplicitlyDereferenceableOnly) ||
       !isDereferenceablePointer(cpyDest, APInt(64, cpySize),
                                 SimplifyQuery(DL, DT, AC, C))) {
-    LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
-    return false;
+    // If the call is guaranteed to return normally (willreturn + nounwind),
+    // and there are no instructions between the call and the store that might
+    // trap or throw, execution will reach the store. Since the store would
+    // trap anyway if the pointer was not dereferenceable, we can forward the
+    // pointer to the call. Perform optimization only for non-memcpy/memset
+    // calls, as those are special cased later.
+    if (!isGuaranteedToTransferExecutionToSuccessor(C->getIterator(),
+                                                    cpyStore->getIterator())) {
+      LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
+      return false;
+    }
   }
 
   // Make sure that nothing can observe cpyDest being written early. There are
@@ -1075,7 +1084,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // If the destination wasn't sufficiently aligned then increase its alignment.
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
-    cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
+    AllocaInst *DestAlloca = cast<AllocaInst>(cpyDest);
+    DestAlloca->setAlignment(std::max(DestAlloca->getAlign(), srcAlign));
   }
 
   if (NeedMoveGEP) {
@@ -1571,6 +1581,16 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return false;
   }
 
+  // Make sure that the copied offset is actually part of the alloca. There
+  // might be an out-of-bounds copy in dead code.
+  if (Size.isFixed()) {
+    if (*SrcOffset + Size > *SrcSize)
+      return false;
+  } else if (*SrcOffset != 0) {
+    // Cannot compute an in-bounds offset on scalable sizes.
+    return false;
+  }
+
   // Check if it will be legal to combine allocas without breaking dominator.
   bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
   if (MoveSrc) {
@@ -1963,7 +1983,8 @@ bool MemCpyOptPass::isMemMoveMemSetDependency(MemMoveInst *M) {
 
   // Memset length must be sufficiently large.
   auto *MemSetLength = dyn_cast<ConstantInt>(MS->getLength());
-  if (!MemSetLength || MemSetLength->getZExtValue() < MemMoveSize)
+  if (!MemSetLength ||
+      MemSetLength->getZExtValue() < Offset.getZExtValue() + MemMoveSize)
     return false;
 
   // The destination buffer must have been memset'd.

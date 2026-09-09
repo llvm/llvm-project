@@ -1002,8 +1002,8 @@ defm VADDBF16 : avx10_fp_binop_bf16<0x58, "vadd", fadd, SchedWriteFAddSizes, 1>;
 defm VSUBBF16 : avx10_fp_binop_bf16<0x5C, "vsub", fsub, SchedWriteFAddSizes, 0>;
 defm VMULBF16 : avx10_fp_binop_bf16<0x59, "vmul", fmul, SchedWriteFMulSizes, 1>;
 defm VDIVBF16 : avx10_fp_binop_bf16<0x5E, "vdiv", fdiv, SchedWriteFDivSizes, 0>;
-defm VMINBF16 : avx10_fp_binop_bf16<0x5D, "vmin", X86fmin, SchedWriteFCmpSizes, 0>;
-defm VMAXBF16 : avx10_fp_binop_bf16<0x5F, "vmax", X86fmax, SchedWriteFCmpSizes, 0>;
+defm VMINBF16 : avx10_fp_binop_bf16<0x5D, "vmin", pseudo_fmin, SchedWriteFCmpSizes, 0>;
+defm VMAXBF16 : avx10_fp_binop_bf16<0x5F, "vmax", pseudo_fmax, SchedWriteFCmpSizes, 0>;
 }
 
 // VCOMISBF16

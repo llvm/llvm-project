@@ -198,6 +198,11 @@ struct ARMLoadStoreOptLegacy : public MachineFunctionPass {
   }
 
   StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 
 char ARMLoadStoreOptLegacy::ID = 0;
@@ -2191,6 +2196,7 @@ struct ARMPreAllocLoadStoreOptLegacy : public MachineFunctionPass {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

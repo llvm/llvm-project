@@ -13,7 +13,7 @@ from lldbsuite.test import lldbutil
 exe_name = "ProcessAttach"  # Must match Makefile
 
 
-@skipIfWasm  # attaching requires launching the inferior as a host process
+@requireNotWasm("attaching requires launching the inferior as a host process")
 class ProcessAttachTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
@@ -142,10 +142,3 @@ class ProcessAttachTestCase(TestBase):
         )
         self.runCmd("process continue")
         self.expect("v g_val", substrs=["12345"])
-
-    def tearDown(self):
-        # Destroy process before TestBase.tearDown()
-        self.dbg.GetSelectedTarget().GetProcess().Destroy()
-
-        # Call super's tearDown().
-        TestBase.tearDown(self)

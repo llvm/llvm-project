@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -65,6 +66,57 @@ struct MergeResult {
   SmallVector<Operation *> mergeOps;
   SmallVector<Value> replacements;
 };
+
+/// Per-dimension alignment of a loop tile size to a `linalg.pack` /
+/// `linalg.unpack` inner tile size, supplied by the caller (which performed the
+/// tiling and knows both the tile sizes and the inner tiles) so that
+/// pack/unpack TilingInterface implementations need not re-derive it from the
+/// materialized IR. An absent entry (or `Unknown`) means "no information": the
+/// implementation must fall back to its prior behavior for that dimension.
+///   - `Multiple`: the loop tile size is an integer multiple of the pack/unpack
+///   inner tile.
+///   - `Equal`:    the loop tile size equals the pack/unpack inner tile size.
+enum class InnerTileAlignment : int64_t { Unknown = 0, Multiple, Equal };
+
+/// Returns true iff `value` is a valid `InnerTileAlignment` enumerator.
+inline bool isValidInnerTileAlignment(int64_t value) {
+  switch (static_cast<InnerTileAlignment>(value)) {
+  case InnerTileAlignment::Unknown:
+  case InnerTileAlignment::Multiple:
+  case InnerTileAlignment::Equal:
+    return true;
+  }
+  return false;
+}
+
+/// Verifies that every entry of a raw `inner_tile_alignments` integer array is
+/// a valid `InnerTileAlignment`, emitting the standard op error on `op`
+/// otherwise.
+LogicalResult verifyInnerTileAlignments(Operation *op,
+                                        ArrayRef<int64_t> alignments);
+
+/// Maps a validated `inner_tile_alignments` integer array onto the
+/// per-dimension `InnerTileAlignment` hints consumed by the tiling driver.
+SmallVector<InnerTileAlignment>
+convertInnerTileAlignments(ArrayRef<int64_t> alignments);
+
+/// Returns the keyword spelling of an `InnerTileAlignment` (`Unknown`,
+/// `Multiple` or `Equal`) used by the `inner_tile_alignments` assembly syntax.
+StringRef stringifyInnerTileAlignment(InnerTileAlignment alignment);
+
+/// Returns the `InnerTileAlignment` for a keyword spelling, or `std::nullopt`
+/// if `keyword` is not one of `Unknown`, `Multiple` or `Equal`.
+std::optional<InnerTileAlignment>
+symbolizeInnerTileAlignment(StringRef keyword);
+
+/// Custom directive parser/printer for an `inner_tile_alignments` attribute,
+/// rendering the `DenseI64ArrayAttr` as a keyword list, e.g.
+/// `[Equal, Multiple, Unknown]` (see `InnerTileAlignment`). Shared by the
+/// transform ops that carry the hint.
+ParseResult parseInnerTileAlignmentArray(OpAsmParser &parser,
+                                         DenseI64ArrayAttr &alignments);
+void printInnerTileAlignmentArray(OpAsmPrinter &printer, Operation *op,
+                                  DenseI64ArrayAttr alignments);
 
 } // namespace mlir
 

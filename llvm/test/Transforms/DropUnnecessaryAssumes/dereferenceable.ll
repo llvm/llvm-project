@@ -53,6 +53,137 @@ define i8 @test_dereferenceable_with_align_ptr_used(ptr %p, i64 %size) {
   ret i8 %val
 }
 
+; Regression test for AssumptionCache::removeAffectedValues() crash revealed at
+; (but not caused by) def1355cf14cec28f71b8ca947b7723641c1580d
+;
+; Check that when the first AssumeInst has two op bundles that rely on %arg1,
+; removeAffectedValues() is not confused by the presence of an unrelated
+; AssumeInst that also has an %arg1 op bundle.
+define ptr @test_dup_ptr_used_elsewhere(i1 %arg, ptr %arg1) {
+; CHECK-LABEL: define ptr @test_dup_ptr_used_elsewhere(
+; CHECK-SAME: i1 [[ARG:%.*]], ptr [[ARG1:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    br i1 [[ARG]], label %[[BB3:.*]], label %[[BB4:.*]]
+; CHECK:       [[BB2:.*]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 1) ]
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br label %[[BB2]]
+;
+; DROP-DEREF-LABEL: define ptr @test_dup_ptr_used_elsewhere(
+; DROP-DEREF-SAME: i1 [[ARG:%.*]], ptr [[ARG1:%.*]]) {
+; DROP-DEREF-NEXT:  [[BB:.*:]]
+; DROP-DEREF-NEXT:    br i1 [[ARG]], label %[[BB3:.*]], label %[[BB4:.*]]
+; DROP-DEREF:       [[BB2:.*]]:
+; DROP-DEREF-NEXT:    ret ptr null
+; DROP-DEREF:       [[BB3]]:
+; DROP-DEREF-NEXT:    br label %[[BB2]]
+; DROP-DEREF:       [[BB4]]:
+; DROP-DEREF-NEXT:    br label %[[BB2]]
+;
+bbl:
+  br i1 %arg, label %bbl3, label %bbl4
+
+bbl2:
+  ret ptr null
+
+bbl3:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %arg1, i64 1), "align"(ptr %arg1, i64 8) ]
+  br label %bbl2
+
+bbl4:
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg1, i64 4) ]
+  br label %bbl2
+}
+
+; @test_dup_ptr_used_elsewhere with extra ptr
+define ptr @test_dup_ptr_used_elsewhere_extra(i1 %arg, ptr %arg1, ptr %arg2) {
+; CHECK-LABEL: define ptr @test_dup_ptr_used_elsewhere_extra(
+; CHECK-SAME: i1 [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) {
+; CHECK-NEXT:  [[BBL:.*:]]
+; CHECK-NEXT:    br i1 [[ARG]], label %[[BBL3:.*]], label %[[BBL4:.*]]
+; CHECK:       [[BBL2:.*]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[BBL3]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 1), "dereferenceable"(ptr [[ARG2]], i64 1) ]
+; CHECK-NEXT:    br label %[[BBL2]]
+; CHECK:       [[BBL4]]:
+; CHECK-NEXT:    br label %[[BBL2]]
+;
+; DROP-DEREF-LABEL: define ptr @test_dup_ptr_used_elsewhere_extra(
+; DROP-DEREF-SAME: i1 [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) {
+; DROP-DEREF-NEXT:  [[BBL:.*:]]
+; DROP-DEREF-NEXT:    br i1 [[ARG]], label %[[BBL3:.*]], label %[[BBL4:.*]]
+; DROP-DEREF:       [[BBL2:.*]]:
+; DROP-DEREF-NEXT:    ret ptr null
+; DROP-DEREF:       [[BBL3]]:
+; DROP-DEREF-NEXT:    br label %[[BBL2]]
+; DROP-DEREF:       [[BBL4]]:
+; DROP-DEREF-NEXT:    br label %[[BBL2]]
+;
+bbl:
+  br i1 %arg, label %bbl3, label %bbl4
+
+bbl2:
+  ret ptr null
+
+bbl3:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %arg1, i64 1), "align"(ptr %arg1, i64 8),
+  "dereferenceable"(ptr %arg2, i64 1), "align"(ptr %arg2, i64 8) ]
+  br label %bbl2
+
+bbl4:
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg1, i64 4), "align"(ptr %arg2, i64 4) ]
+  br label %bbl2
+}
+
+; @test_dup_ptr_used_elsewhere_extra with even more op bundles
+define ptr @test_dup_ptr_used_elsewhere_extra2(i1 %arg, ptr %arg1, ptr %arg2) {
+; CHECK-LABEL: define ptr @test_dup_ptr_used_elsewhere_extra2(
+; CHECK-SAME: i1 [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) {
+; CHECK-NEXT:  [[BBL:.*:]]
+; CHECK-NEXT:    br i1 [[ARG]], label %[[BBL3:.*]], label %[[BBL4:.*]]
+; CHECK:       [[BBL2:.*]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[BBL3]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 1), "dereferenceable"(ptr [[ARG2]], i64 1), "dereferenceable"(ptr [[ARG1]], i64 1), "dereferenceable"(ptr [[ARG2]], i64 1), "dereferenceable"(ptr [[ARG1]], i64 1) ]
+; CHECK-NEXT:    br label %[[BBL2]]
+; CHECK:       [[BBL4]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 1), "dereferenceable"(ptr [[ARG2]], i64 1) ]
+; CHECK-NEXT:    br label %[[BBL2]]
+;
+; DROP-DEREF-LABEL: define ptr @test_dup_ptr_used_elsewhere_extra2(
+; DROP-DEREF-SAME: i1 [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) {
+; DROP-DEREF-NEXT:  [[BBL:.*:]]
+; DROP-DEREF-NEXT:    br i1 [[ARG]], label %[[BBL3:.*]], label %[[BBL4:.*]]
+; DROP-DEREF:       [[BBL2:.*]]:
+; DROP-DEREF-NEXT:    ret ptr null
+; DROP-DEREF:       [[BBL3]]:
+; DROP-DEREF-NEXT:    br label %[[BBL2]]
+; DROP-DEREF:       [[BBL4]]:
+; DROP-DEREF-NEXT:    br label %[[BBL2]]
+;
+bbl:
+  br i1 %arg, label %bbl3, label %bbl4
+
+bbl2:
+  ret ptr null
+
+bbl3:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %arg1, i64 1), "align"(ptr %arg2, i64 8),
+  "dereferenceable"(ptr %arg2, i64 1), "dereferenceable"(ptr %arg1, i64 1),
+  "dereferenceable"(ptr %arg2, i64 1), "dereferenceable"(ptr %arg1, i64 1) ]
+  br label %bbl2
+
+bbl4:
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg1, i64 4), "align"(ptr %arg2, i64 4),
+  "dereferenceable"(ptr %arg1, i64 1), "dereferenceable"(ptr %arg2, i64 1) ]
+  br label %bbl2
+}
+
+
 ; Make sure newly created assumes are handled properly.
 define i8 @test_dereferenceable_with_align_cache_realloc(ptr %p, ptr %q, i1 %c) {
 ; CHECK-LABEL: define i8 @test_dereferenceable_with_align_cache_realloc(

@@ -49,7 +49,8 @@ class TargetInstrInfo;
 class TargetLowering;
 class TargetPassConfig;
 class TargetRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class ConstantFP;
 class APFloat;
 
@@ -63,6 +64,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:                                  \
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:                                  \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -80,6 +83,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:                                  \
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:                                  \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -297,9 +302,6 @@ T *getOpcodeDef(Register Reg, const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
   return dyn_cast_or_null<T>(DefMI);
 }
-
-/// Returns an APFloat from Val converted to the appropriate size.
-LLVM_ABI APFloat getAPFloatFromSize(double Val, unsigned Size);
 
 /// Modify analysis usage so it preserves passes required for the SelectionDAG
 /// fallback.
@@ -544,19 +546,17 @@ getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
 LLVM_ABI bool isConstantOrConstantVector(MachineInstr &MI,
                                          const MachineRegisterInfo &MRI);
 
-/// Determines if \p MI defines a constant integer or a splat vector of
+/// Determines if \p Def defines a constant integer or a splat vector of
 /// constant integers.
 /// \returns the scalar constant or std::nullopt.
 LLVM_ABI std::optional<APInt>
-isConstantOrConstantSplatVector(MachineInstr &MI,
-                                const MachineRegisterInfo &MRI);
+isConstantOrConstantSplatVector(Register Def, const MachineRegisterInfo &MRI);
 
-/// Determines if \p MI defines a float constant integer or a splat vector of
+/// Determines if \p Def defines a float constant integer or a splat vector of
 /// float constant integers.
 /// \returns the float constant or std::nullopt.
 LLVM_ABI std::optional<APFloat>
-isConstantOrConstantSplatVectorFP(MachineInstr &MI,
-                                  const MachineRegisterInfo &MRI);
+isConstantOrConstantSplatVectorFP(Register Def, const MachineRegisterInfo &MRI);
 
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source

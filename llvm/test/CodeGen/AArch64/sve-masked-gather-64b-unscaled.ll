@@ -134,10 +134,8 @@ define <vscale x 16 x i8> @masked_gather_nxv1i8(ptr %base, <vscale x 2 x i64> %w
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z1.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    ret
   %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %wide.offsets, i64 0)
   %ptrs = getelementptr i8, ptr %base, <vscale x 1 x i64> %offsets
@@ -153,8 +151,7 @@ define <vscale x 8 x i16> @masked_gather_nxv1i16(ptr %base, <vscale x 2 x i64> %
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z1.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %wide.offsets, i64 0)
   %ptrs = getelementptr i8, ptr %base, <vscale x 1 x i64> %offsets

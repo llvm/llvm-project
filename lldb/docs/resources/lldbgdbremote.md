@@ -646,19 +646,16 @@ $jMultiBreakpoint:{"breakpoint_requests" : ["request"[,"request"]*]}
 ```
 
 Where each `request` is one of:
-
-```
-* z0,addr,kind
-* z1,addr,kind
-* z2,addr,kind
-* z3,addr,kind
-* z4,addr,kind
-* Z0,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
-* Z1,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
-* Z2,addr,kind
-* Z3,addr,kind
-* Z4,addr,kind
-```
+* `z0,addr,kind`
+* `z1,addr,kind`
+* `z2,addr,kind`
+* `z3,addr,kind`
+* `z4,addr,kind`
+* `Z0,addr,kind[;cond_list…][;cmds:persist,cmd_list…]`
+* `Z1,addr,kind[;cond_list…][;cmds:persist,cmd_list…]`
+* `Z2,addr,kind`
+* `Z3,addr,kind`
+* `Z4,addr,kind`
 
 Each field has the same meaning as the corresponding packet in the GDB Remote
 Protocol.
@@ -825,7 +822,83 @@ This is a performance optimization, which speeds up debugging by avoiding
 multiple round-trips for retrieving thread information. The information from this
 packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
 
-### MultiMemRead
+## jAddressSpacesInfo
+
+Ask the server for the address spaces the process exposes.
+
+Most processes have a single, flat address space, but some (such as GPUs) have
+multiple address spaces where the same numeric address refers to different
+storage depending on the address space (for example global, local, private or
+generic memory). This packet lets the client discover those address spaces.
+
+This packet requires the `address-spaces+` feature from `qSupported`, which a
+server only advertises when its process exposes address spaces.
+
+The response is a JSON array of dictionaries, one per address space:
+```
+    [
+      {"name":"global","space_id":1,"is_thread_specific":false},
+      {"name":"local","space_id":2,"is_thread_specific":true}
+    ]
+```
+
+Each dictionary has the following keys:
+
+* `name`: the human readable name of the address space.
+* `space_id`: the integer identifier of the address space.
+* `is_thread_specific`: true if the address space is thread specific.
+
+The client only sends this packet when the server advertised `address-spaces+`
+in its `qSupported` response. If a server that advertised the feature has no
+address spaces to report, it replies with an unsupported (empty) response.
+
+**Priority To Implement:** Required for targets that use address spaces, not
+needed for targets that don't need address spaces.
+
+## address-spaces (qSupported feature)
+
+A server advertises `address-spaces+` in its `qSupported` response when its
+process exposes address spaces. This single feature implies both the
+`jAddressSpacesInfo` packet and the optional `address_space:<hex-id>;` suffix on
+the memory packets described below.
+
+### The `address_space` suffix
+
+To read from a specific address space, the client appends an optional
+`address_space:<hex-id>;` key-value suffix to the existing memory packets rather
+than introducing a dedicated packet, where `<hex-id>` is the address space id
+reported by `jAddressSpacesInfo`, in base 16 like the other numeric values in
+these packets. An id of `0`, or the absence of the suffix, means the default
+address space and behaves exactly as before, so address-space-unaware stubs and
+reads are unaffected.
+
+```
+send packet: $x1000,4;address_space:1a;
+read packet: $<binary encoding of the 4 bytes at 0x1000 in address space 0x1a>
+```
+
+If `jAddressSpacesInfo` reported the address space as `is_thread_specific`, a
+`thread:<hex-tid>;` key-value pair is appended to identify the thread the
+address belongs to. It is only sent for thread specific address spaces.
+
+```
+send packet: $x1000,4;address_space:1a;thread:1a2b;
+read packet: $<binary encoding of the 4 bytes at 0x1000 in address space 0x1a of thread 0x1a2b>
+```
+
+Packets that currently accept the suffix:
+
+* `m` / `x`: read memory from a specific address space.
+
+Because the suffix is an optional key-value pair on the existing packets, the
+same mechanism can be extended to other address-bearing packets (memory writes
+`M` / `X`, breakpoints `z` / `Z`, etc.) as the need arises, without introducing
+new packets or bifurcating the address-space-aware and unaware code paths.
+
+**Priority To Implement:** Required for targets that expose more than one
+address space, not needed for targets that have a single address space.
+
+## MultiMemRead
 
 Read memory from multiple memory ranges.
 
@@ -1443,13 +1516,13 @@ Key value pairs are one of:
 * `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
 * `endian`: is one of "little", "big", or "pdp"
 * `ptrsize`: an unsigned number that represents how big pointers are in bytes on the debug target
-* `hostname`: the hostname of the host that is running the GDB server if available
-* `os_build`: a string for the OS build for the remote host as a string value
-* `os_kernel`: a string describing the kernel version
+* `hostname`: optional, a hex encoded string of the hostname of the host that is running the GDB server
+* `os_build`: a hex encoded string for the OS build for the remote host as a string value
+* `os_kernel`: a hex encoded string describing the kernel version
 * `os_version`: a version string that represents the current OS version (10.8.2)
 * `watchpoint_exceptions_received`: one of "before" or "after" to specify if a watchpoint is triggered before or after the pc when it stops
 * `default_packet_timeout`: an unsigned number that specifies the default timeout in seconds
-* `distribution_id`: optional. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
+* `distribution_id`: optional hex encoded string. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
 * `osmajor`: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
 * `osminor`: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
 * `ospatch`: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
@@ -2135,10 +2208,10 @@ symbol:
 read packet: qSymbol:6578616D706C65
 ```
 
-This should be looked up by LLDB then sent back to the server. Include the name
-again, with the vaue as a hex number:
+This should be looked up by LLDB then sent back to the server. Include the value
+as a hex number, then the name of the symbol:
 ```
-read packet: qSymbol:6578616D706C65:CAFEF00D
+read packet: qSymbol:CAFEF00D:6578616D706C65
 ```
 
 If LLDB cannot find the value, it should respond with only the name. Note that
@@ -2641,6 +2714,20 @@ The packet below are supported by the
 [WAMR](https://github.com/bytecodealliance/wasm-micro-runtime) and
 [V8](https://v8.dev) Wasm runtimes.
 
+An address is 64 bits wide: an address space tag in bits 63:62, the id of the
+module instance the address belongs to in bits 61:32, and a 32-bit offset into
+that space. The tag is 0 for linear memory and 1 for the object space, which
+holds the module image, so bit 63 is always clear on the wire. A stub therefore
+reports the load address of an instance in `qXfer:libraries:read` as
+`(1 << 62) | (<instance id> << 32)`, the base of its module in the object space,
+and the same id appears in the PCs returned by `qWasmCallStack`. An id is unique
+among live instances, and zero is an id like any other. LLDB keys a module on
+the name it is reported under, so each instance needs a name of its own.
+
+An address the running code computed, such as one relative to a frame base,
+carries no id, and a stub serves it from the instance the current thread is
+executing.
+
 
 ### qWasmCallStack
 
@@ -2660,17 +2747,56 @@ stack traces.
 
 ### qWasmGlobal
 
-Get the value of a Wasm global variable for the given frame index at the given
-variable index. The indexes are encoded as base 10. The result is a hex-encoded
-little-endian value of the global.
+Get the value of a Wasm global variable at the given variable index. The indexes
+are encoded as base 10. The result is a hex-encoded little-endian value of the
+whole global, or `E<nn>`.
+
+A global index space belongs to a module instance, so an index only names a
+global together with the module instance to read it from. A stub that advertises
+`qWasmInstance+` requires that module instance to be named explicitly:
 
 ```
-send packet: $qWasmGlobal:0;2#cb
+send packet: $qWasmGlobal:2;instance:16;#32
 read packet: $e0030100#b9
 ```
 
+A stub that does not advertise `qWasmInstance+` is given a frame index instead,
+which only reaches the module instance that frame is executing:
+
+```
+send packet: $qWasmGlobal:0;2#31
+read packet: $e0030100#b9
+```
+
+A stub tells the two apart by the presence of the `instance:` key, the only key
+this packet takes. Where it is absent, the first field is a frame index rather
+than a global index. An unrecognized instance id must be answered with an error
+rather than with another instance's global.
+
 **Priority to Implement:** Only required for Wasm support. Necessary to show
 variables.
+
+
+### qWasmInstance (qSupported feature)
+
+A stub advertises `qWasmInstance+` when a query may name the module instance it
+is about, rather than only the instance some frame is executing. LLDB needs this
+to read a global of an instance with no frame on the stack, which it finds by
+name in the debug info of a module.
+
+```
+send packet: qSupported:xmlRegisters=i386,arm,mips
+read packet: qXfer:libraries:read+;qWasmInstance+;PacketSize=1000
+```
+
+An instance is named with a `;instance:<id>;` suffix in place of a frame index,
+in which the id is encoded as base 10. `qWasmGlobal` is the only packet that
+carries it today, because a global is the only Wasm state with no address to
+identify its instance. A later query for instance-scoped state carries the same
+suffix rather than adding a packet of its own.
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show the
+globals of a module instance that has no active frame.
 
 
 ### qWasmLocal
@@ -2719,6 +2845,11 @@ xADDRESS,LENGTH
 ```
 
 where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
+
+The `x` packet may also carry an optional `address_space:<hex-id>;` suffix to read
+from a non-default address space, followed by `thread:<hex-tid>;` when that
+address space is thread specific; see
+[the address-spaces feature](#address-spaces-qsupported-feature).
 
 To test if this packet is available, send a addr/len of 0:
 ```
@@ -2814,9 +2945,18 @@ packet when one is hit. Each breakpoint object has the following fields:
 Exactly one of `by_name` or `by_address` must be provided for each
 breakpoint.
 
-In future patches, each `accelerator_action` will include additional fields
-such as connection info for secondary debug sessions and synchronization
-options.
+An `accelerator_action` may also include a `connect_info` object asking the
+client to create a new target and connect to a separate GDB server that
+serves the accelerator's state (for example a GPU debug stub). It has the
+following fields:
+
+| Key             | Type   | Description |
+|-----------------|--------|-------------|
+| `connect_url`   | string | Connection URL to connect to, as used by `process connect <url>`. |
+| `platform_name` | string | Name of the platform to select when creating the accelerator target. The platform must be able to handle `triple` and is used to connect to the accelerator's GDB server. |
+| `triple`        | string | Target triple for the accelerator target, used to ensure the architecture is compatible with `platform_name`. |
+| `exe_path`      | string | Optional path to the executable to use when creating the accelerator target. If omitted, an empty target is created. |
+| `synchronous`   | bool   | If true, connect synchronously: the client blocks until the accelerator process is connected and stopped before continuing. If false, the connection is made asynchronously. |
 
 **Priority To Implement:** Required for hardware accelerator debugging
 support. Not needed for non-hardware-accelerator debugging.
@@ -2852,6 +2992,116 @@ Example:
 ```
 LLDB SENDS:    jAcceleratorPluginBreakpointHit:{"plugin_name":"mock","breakpoint":{"identifier":1,"symbol_names":[]},"symbol_values":[]}
 STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false,"actions":{"plugin_name":"mock","session_name":"","identifier":2,"breakpoints":[{"identifier":2,"by_name":{"function_name":"exit"},"symbol_names":[]}]}}
+```
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.
+
+### jAcceleratorPluginGetDynamicLoaderLibraryInfo
+
+Requests shared library information from an accelerator plugin. The client
+sends this packet when it needs to load or update the accelerator's shared
+library list. This packet requires the `accelerator-plugins+` feature from
+`qSupported`.
+
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:<json>
+STUB REPLIES:  <json_response>
+```
+
+The request JSON has the following fields:
+
+| Key           | Type   | Description |
+|---------------|--------|-------------|
+| `plugin_name` | string | Name of the accelerator plugin to query. |
+| `full`        | bool   | If true, return every library the plugin knows about. If false, return only what changed since the last query. |
+
+A plugin may track thousands of code objects, so `full` lets a client that is
+already up to date ask only for the delta instead of re-receiving the whole
+list on every stop. It is the plugin that decides what "changed since the last
+query" means, and the plugin that keeps that state.
+
+Because that state lives in the plugin and is not per-client, a client cannot
+assume it starts from a known point: an earlier client may have consumed the
+pending changes with `full=false`. The first query of a session must therefore
+use `full=true`, and a client should also use it whenever it discards its own
+module list and needs to rebuild it.
+
+The response JSON is an object with a single `library_infos` key, holding an
+array of library info objects:
+
+| Key                     | Type   | Description |
+|-------------------------|--------|-------------|
+| `pathname`              | string | Path to the object file, or a unique name for the module when it has no file on disk. |
+| `load`                  | bool   | True when the library is being loaded, false when it is being unloaded. |
+| `load_address`          | int    | (optional) Base address the whole object file is slid to. |
+| `loaded_sections`       | array  | (optional) Per-section load addresses, for object files whose sections load at independent addresses. Each entry has `names` (the section name, or a path of nested section names to descend) and `load_address`. |
+| `uuid`                  | string | (optional) UUID of the object file, if the plugin knows it. |
+| `native_memory_address` | int    | (optional) Address **in the native (host) process** where the object file image can be read, for a library that only exists in memory. |
+| `native_memory_size`    | int    | (optional) Size of that in-memory image. |
+| `file_offset`           | int    | (optional) Byte offset of the object file within `pathname`, for a library embedded in a containing file. |
+| `file_size`             | int    | (optional) Size of the object file within that containing file. |
+
+`load_address`, `loaded_sections` and neither-of-the-two are three different
+requests, and are resolved in that order:
+
+* `load_address` present: slide the whole object file to that address.
+* otherwise `loaded_sections` non-empty: load only the named sections, each at
+  its own address.
+* otherwise: load at the file addresses with no slide.
+
+An absent `loaded_sections` and an empty `loaded_sections` therefore mean the
+same thing here: no per-section addresses were supplied. A plugin that wants
+sections loaded must send a non-empty array.
+
+A module that only exists in the accelerator's memory has no file on disk, so
+`pathname` carries a unique name for it instead of a path. That name is what
+identifies the module in the target.
+
+Load `/path/to/lib.so` at address 2130706432:
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:{"plugin_name":"mock","full":true}
+STUB REPLIES:  {
+  "library_infos": [
+    {
+      "pathname": "/path/to/lib.so",
+      "load": true,
+      "load_address": 2130706432
+    }
+  ]
+}
+```
+
+Load only `.text` from `PT_LOAD[1]` and `.data` from `PT_LOAD[3]` in
+`/path/to/lib.so`, each at its own address:
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:{"plugin_name":"mock","full":true}
+STUB REPLIES:  {
+  "library_infos": [
+    {
+      "pathname": "/path/to/lib.so",
+      "load": true,
+      "loaded_sections": [
+        {"names": ["PT_LOAD[1]", ".text"], "load_address": 2130706432},
+        {"names": ["PT_LOAD[3]", ".data"], "load_address": 2130707432}
+      ]
+    }
+  ]
+}
+```
+
+Load `/path/to/lib.so` at the file addresses found in the object file, with no
+slide:
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:{"plugin_name":"mock","full":true}
+STUB REPLIES:  {
+  "library_infos": [
+    {
+      "pathname": "/path/to/lib.so",
+      "load": true
+    }
+  ]
+}
 ```
 
 **Priority To Implement:** Required for hardware accelerator debugging

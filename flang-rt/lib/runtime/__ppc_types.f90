@@ -7,6 +7,7 @@
 !===------------------------------------------------------------------------===!
 
 module __ppc_types
+  use __fortran_builtins ! implicit dependency, made explicit for CMake
   implicit none
 
   ! Set PRIVATE by default to explicitly only export what is meant

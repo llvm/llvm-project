@@ -34,7 +34,7 @@ LIBC_INLINE static uint16_t get_x87_control_word() {
   __asm fstcw w;
 #else  // !LIBC_COMPILER_IS_MSVC
   asm volatile("fnstcw %0" : "=m"(w)::);
-  MSAN_UNPOISON(&w, sizeof(w));
+  LIBC_MSAN_UNPOISON(&w, sizeof(w));
 #endif // LIBC_COMPILER_IS_MSVC
 
   return w;
@@ -55,7 +55,7 @@ LIBC_INLINE static uint16_t get_x87_status_word() {
   __asm fnstsw w;
 #else  // !LIBC_COMPILER_IS_MSVC
   asm volatile("fnstsw %0" : "=m"(w)::);
-  MSAN_UNPOISON(&w, sizeof(w));
+  LIBC_MSAN_UNPOISON(&w, sizeof(w));
 #endif // LIBC_COMPILER_IS_MSVC
 
   return w;
@@ -74,7 +74,7 @@ LIBC_INLINE static void get_x87_state_descriptor(X87StateDescriptor &s) {
   __asm fnstenv s;
 #else  // !LIBC_COMPILER_IS_MSVC
   asm volatile("fnstenv %0" : "=m"(s));
-  MSAN_UNPOISON(&s, sizeof(s));
+  LIBC_MSAN_UNPOISON(&s, sizeof(s));
 #endif // LIBC_COMPILER_IS_MSVC
 }
 

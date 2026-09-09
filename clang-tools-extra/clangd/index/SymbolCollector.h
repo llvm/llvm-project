@@ -161,9 +161,9 @@ public:
 private:
   // If D is an instantiation of a likely forwarding function, return the
   // constructors it invokes so that we can record indirect references
-  // to those as well.
-  SmallVector<const CXXConstructorDecl *, 1>
-  findIndirectConstructors(const Decl *D);
+  // to those as well. The returned ArrayRef is owned by
+  // `ForwardingToConstructorCache`.
+  ArrayRef<const CXXConstructorDecl *> findIndirectConstructors(const Decl *D);
 
   const Symbol *addDeclaration(const NamedDecl &, SymbolID,
                                bool IsMainFileSymbol);

@@ -791,6 +791,14 @@ public:
     }
   }
 
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+    for (const TemplateParameterList *TPL : D->getTemplateParameterLists())
+      dumpTemplateParameters(TPL);
+    if (D->getFriendKind() !=
+        FriendTemplateDecl::FriendTemplateEntityKind::Template)
+      VisitFriendDecl(D);
+  }
+
   void VisitObjCMethodDecl(const ObjCMethodDecl *D) {
     if (D->isThisDeclarationADefinition())
       dumpDeclContext(D);
@@ -981,6 +989,12 @@ public:
       Visit(Node->getRangeInit());
       Visit(Node->getBody());
     }
+  }
+
+  void VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *Node) {
+    Visit(Node->getExpansionPattern());
+    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+      Visit(Node->getInstantiations());
   }
 
   void VisitCallExpr(const CallExpr *Node) {

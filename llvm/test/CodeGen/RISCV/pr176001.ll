@@ -42,14 +42,14 @@ define <32 x i64> @main(i1 %tobool93.not, <32 x i64> %0, <32 x i64> %1) #0 {
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
   ; CHECK-NEXT:   liveins: $v8m8:0x0000000000000002, $v16m8:0x0000000000000006
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $v0 = COPY killed renamable $v8
+  ; CHECK-NEXT:   renamable $v0 = lr-split COPY killed renamable $v8
   ; CHECK-NEXT:   PseudoBR %bb.7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.cond.false111:
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
   ; CHECK-NEXT:   liveins: $v8m8:0x0000000000000002, $v16m8:0x0000000000000006
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $v0 = COPY killed renamable $v8
+  ; CHECK-NEXT:   renamable $v0 = lr-split COPY killed renamable $v8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.cond.end113:
   ; CHECK-NEXT:   successors: %bb.8(0x40000000), %bb.9(0x40000000)

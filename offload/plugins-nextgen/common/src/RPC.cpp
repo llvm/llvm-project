@@ -207,32 +207,40 @@ RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
 Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
-  auto RPCBufferOrErr = Device.allocate(
-      rpc::Server::allocation_size(Device.getRPCNumLanes(), NumPorts), nullptr,
-      TARGET_ALLOC_HOST);
-  if (!RPCBufferOrErr)
-    return RPCBufferOrErr.takeError();
+  void *RPCBuffer = Buffers[Device.getDeviceId()];
+  if (!RPCBuffer) {
+    auto RPCBufferOrErr = Device.allocate(
+        rpc::Server::allocation_size(Device.getRPCNumLanes(), NumPorts),
+        nullptr, TARGET_ALLOC_HOST);
+    if (!RPCBufferOrErr)
+      return RPCBufferOrErr.takeError();
 
-  void *RPCBuffer = *RPCBufferOrErr;
-  if (!RPCBuffer)
-    return plugin::Plugin::error(
-        error::ErrorCode::UNKNOWN,
-        "failed to initialize RPC server for device %d", Device.getDeviceId());
+    RPCBuffer = *RPCBufferOrErr;
+    if (!RPCBuffer)
+      return plugin::Plugin::error(
+          error::ErrorCode::UNKNOWN,
+          "failed to initialize RPC server for device %d",
+          Device.getDeviceId());
 
-  // The doorbell is used by AMDGPU targets to let the server thread be
-  // descheduled. It is optional and will be ignored if the fields are null.
-  rpc::Doorbell Doorbell{};
-  if (auto Err = Device.Plugin.initRPCDoorbell(Doorbell.value, Doorbell.mailbox,
-                                               Doorbell.event_id))
-    return Err;
+    // The doorbell is used by AMDGPU targets to let the server thread be
+    // descheduled. It is optional and will be ignored if the fields are null.
+    rpc::Doorbell Doorbell{};
+    if (auto Err = Device.Plugin.initRPCDoorbell(
+            Doorbell.value, Doorbell.mailbox, Doorbell.event_id))
+      return Err;
 
-  auto *DoorbellPtr = reinterpret_cast<rpc::Doorbell *>(
-      static_cast<uint8_t *>(RPCBuffer) + rpc::Server::doorbell_offset());
-  std::memcpy(DoorbellPtr, &Doorbell, sizeof(rpc::Doorbell));
+    auto *DoorbellPtr = reinterpret_cast<rpc::Doorbell *>(
+        static_cast<uint8_t *>(RPCBuffer) + rpc::Server::doorbell_offset());
+    std::memcpy(DoorbellPtr, &Doorbell, sizeof(rpc::Doorbell));
 
-  // Get the address of the RPC client from the device.
+    Buffers[Device.getDeviceId()] = RPCBuffer;
+    Devices[Device.getDeviceId()] = &Device;
+  }
+
+  // Each image has its own client that must point at the shared buffer.
   plugin::GlobalTy ClientGlobal("__llvm_rpc_client", sizeof(rpc::Client));
   if (auto Err =
           Handler.getGlobalMetadataFromDevice(Device, Image, ClientGlobal))
@@ -242,9 +250,6 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   if (auto Err = Device.dataSubmit(ClientGlobal.getPtr(), &client,
                                    sizeof(rpc::Client), nullptr))
     return Err;
-  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
-  Buffers[Device.getDeviceId()] = RPCBuffer;
-  Devices[Device.getDeviceId()] = &Device;
 
   return Error::success();
 }
@@ -261,6 +266,12 @@ Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   return Error::success();
 }
 
+void RPCServerTy::flushDevice(plugin::GenericDeviceTy &Device) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  if (void *Buffer = Buffers[Device.getDeviceId()])
+    flushServer(Device, Buffer, Callbacks);
+}
+
 void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   Callbacks.insert(FnPtr);
@@ -268,7 +279,7 @@ void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
 
 void RPCServerTy::setSleepFunction(std::function<void()> Sleep,
                                    std::function<void()> Wake) {
-  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  // Only called from 'initDevice', already under the BufferMutex lock.
   Thread->SleepFunction = std::move(Sleep);
   Thread->WakeFunction = std::move(Wake);
 }

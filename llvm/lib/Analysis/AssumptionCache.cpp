@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -40,6 +41,10 @@ static cl::opt<bool>
     VerifyAssumptionCache("verify-assumption-cache", cl::Hidden,
                           cl::desc("Enable verification of assumption cache"),
                           cl::init(false));
+
+static cl::opt<unsigned> MaxAssumesPerValue(
+    "max-assumes-per-value", cl::Hidden, cl::init(1024),
+    cl::desc("Maximum number of assumptions to cache for a single value"));
 
 SmallVector<AssumptionCache::ResultElem, 1> &
 AssumptionCache::getOrInsertAffectedValues(Value *V) {
@@ -108,6 +113,13 @@ void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
 
   for (auto &AV : Affected) {
     auto &AVV = getOrInsertAffectedValues(AV.Assume);
+
+    // Callers walk every entry cached for a value, including the ones left
+    // behind by erased assumptions, so cache no more of them than an analysis
+    // should walk.
+    if (AVV.size() >= MaxAssumesPerValue)
+      continue;
+
     if (llvm::none_of(AVV, [&](ResultElem &Elem) {
           return Elem.Assume == CI && Elem.Index == AV.Index;
         }))
@@ -130,12 +142,20 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
         Found = true;
         Elem.Assume = nullptr;
       }
+
+      // We need to iterate through this loop to determine the value of
+      // HasNonnull, to avoid prematurely calling AffectedValues.erase(AVI).
       HasNonnull |= !!Elem.Assume;
       if (HasNonnull && Found)
         break;
     }
-    assert(Found && "already unregistered or incorrect cache state");
-    if (!HasNonnull)
+
+    if (!Found) {
+      // It may well be the case that we fail to find an affected value in the
+      // cache. In particular, if an assume call is updated via `Use::set()`, we
+      // won't be notified that the affected value has changed and the cache
+      // will silently go stale.
+    } else if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
 }
@@ -162,9 +182,12 @@ void AssumptionCache::transferAffectedValuesInCache(Value *OV, Value *NV) {
   if (AVI == AffectedValues.end())
     return;
 
-  for (auto &A : AVI->second)
+  for (auto &A : AVI->second) {
+    if (NAVV.size() >= MaxAssumesPerValue)
+      break;
     if (!llvm::is_contained(NAVV, A))
       NAVV.push_back(A);
+  }
   AffectedValues.erase(OV);
 }
 
@@ -199,6 +222,27 @@ void AssumptionCache::scanFunction() {
     updateAffectedValues(cast<AssumeInst>(A));
 }
 
+/// Check the assumptions cached for \p F, collecting them in \p Cached. Returns
+/// a description of the first invariant violated, or nullptr if there is none.
+static const char *
+findCacheViolation(const Function &F, ArrayRef<WeakVH> Assumptions,
+                   SmallPtrSetImpl<const CallInst *> &Cached) {
+  for (const WeakVH &VH : Assumptions) {
+    if (!VH)
+      continue;
+
+    const auto *CI = cast<CallInst>(VH);
+    if (CI->getFunction() != &F)
+      return "Cached assumption not inside this function";
+    if (!match(CI, m_Intrinsic<Intrinsic::assume>()))
+      return "Cached something other than a call to @llvm.assume";
+    if (!Cached.insert(CI).second)
+      return "Cache contains multiple copies of a call";
+  }
+
+  return nullptr;
+}
+
 void AssumptionCache::registerAssumption(AssumeInst *CI) {
   // If we haven't scanned the function yet, just drop this assumption. It will
   // be found when we scan later.
@@ -215,18 +259,19 @@ void AssumptionCache::registerAssumption(AssumeInst *CI) {
 
   // We expect the number of assumptions to be small, so in an asserts build
   // check that we don't accumulate duplicates and that all assumptions point
-  // to the same function.
-  SmallPtrSet<Value *, 16> AssumptionSet;
-  for (auto &VH : AssumeHandles) {
-    if (!VH)
-      continue;
-
-    assert(&F == cast<Instruction>(VH)->getParent()->getParent() &&
-           "Cached assumption not inside this function!");
-    assert(match(cast<CallInst>(VH), m_Intrinsic<Intrinsic::assume>()) &&
-           "Cached something other than a call to @llvm.assume!");
-    assert(AssumptionSet.insert(VH).second &&
-           "Cache contains multiple copies of a call!");
+  // to the same function. Scanning the whole cache on every registration is
+  // quadratic, so stop once it outgrows that expectation unless expensive
+  // checks are enabled. Larger caches are checked by
+  // AssumptionCacheTracker::verifyAnalysis() instead.
+#ifdef EXPENSIVE_CHECKS
+  constexpr unsigned MaxAssumesToVerify = std::numeric_limits<unsigned>::max();
+#else
+  constexpr unsigned MaxAssumesToVerify = 64;
+#endif
+  if (AssumeHandles.size() <= MaxAssumesToVerify) {
+    SmallPtrSet<const CallInst *, 16> Cached;
+    if (const char *Violation = findCacheViolation(F, AssumeHandles, Cached))
+      llvm_unreachable(Violation);
   }
 #endif
 
@@ -246,9 +291,28 @@ PreservedAnalyses AssumptionPrinterPass::run(Function &F,
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
 
   OS << "Cached assumptions for function: " << F.getName() << "\n";
-  for (auto &VH : AC.assumptions())
-    if (VH)
-      OS << "  " << *cast<CallInst>(VH)->getArgOperand(0) << "\n";
+  for (auto &VH : AC.assumptions()) {
+    if (!VH)
+      continue;
+
+    auto *Assume = cast<CallInst>(VH);
+    if (!Assume->hasOperandBundles()) {
+      OS << "  " << *Assume->getArgOperand(0) << "\n";
+      continue;
+    }
+
+    assert(match(Assume->getArgOperand(0), m_One()) &&
+           "assume must have trivial cond");
+    OS << "  [ ";
+    ListSeparator LS;
+    for (const OperandBundleUse &BU : Assume->operand_bundles()) {
+      OS << LS << '"' << BU.getTagName() << "\"(";
+      interleaveComma(BU.Inputs, OS,
+                      [&](const Use &Input) { Input->printAsOperand(OS); });
+      OS << ')';
+    }
+    OS << " ]\n";
+  }
 
   return PreservedAnalyses::all();
 }
@@ -295,16 +359,18 @@ void AssumptionCacheTracker::verifyAnalysis() const {
   if (!VerifyAssumptionCache)
     return;
 
-  SmallPtrSet<const CallInst *, 4> AssumptionSet;
   for (const auto &I : AssumptionCaches) {
-    for (auto &VH : I.second->assumptions())
-      if (VH)
-        AssumptionSet.insert(cast<CallInst>(VH));
+    const Function &F = cast<Function>(*I.first);
 
-    for (const BasicBlock &B : cast<Function>(*I.first))
+    SmallPtrSet<const CallInst *, 4> Cached;
+    if (const char *Violation =
+            findCacheViolation(F, I.second->assumptions(), Cached))
+      report_fatal_error(Violation);
+
+    for (const BasicBlock &B : F)
       for (const Instruction &II : B)
         if (match(&II, m_Intrinsic<Intrinsic::assume>()) &&
-            !AssumptionSet.count(cast<CallInst>(&II)))
+            !Cached.count(cast<CallInst>(&II)))
           report_fatal_error("Assumption in scanned function not in cache");
   }
 }

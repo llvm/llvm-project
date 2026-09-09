@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc -emit-llvm -std=c++14 \
+// RUN: %clang_cc1 -triple i686-windows-msvc -emit-llvm -std=c++20 \
 // RUN:    -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases \
 // RUN:    -disable-llvm-passes -o - %s -w -fms-compatibility-version=19.00 | \
 // RUN:    FileCheck %s
@@ -95,3 +95,10 @@ struct __declspec(dllexport) ConstexprDefaultArg {
   ConstexprDefaultArg(SomeStruct = kConstexprStruct) {}
 };
 // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FConstexprDefaultArg@@QAEXXZ"
+
+consteval int constEvalFunc() { return 42; }
+struct ConstEvalDefaultArg {
+  __declspec(dllexport) ConstEvalDefaultArg(int n = constEvalFunc()) {}
+};
+// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FConstEvalDefaultArg@@QAEXXZ"
+// CHECK: call {{.*}} @"??0ConstEvalDefaultArg@@QAE@H@Z"({{.*}}, i32 noundef 42)

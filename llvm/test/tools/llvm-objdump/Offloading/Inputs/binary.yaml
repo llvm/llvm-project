@@ -4,14 +4,14 @@ Members:
     OffloadKind:    OFK_OpenMP
     String:
     - Key:            "triple"
-      Value:          "amdgcn-amd-amdhsa"
+      Value:          "amdgpu9.08-amd-amdhsa"
     - Key:            "arch"
       Value:          "gfx908"
   - ImageKind:      IMG_Bitcode
     OffloadKind:    OFK_OpenMP
     String:
     - Key:            "triple"
-      Value:          "amdgcn-amd-amdhsa"
+      Value:          "amdgpu9.0a-amd-amdhsa"
     - Key:            "arch"
       Value:          "gfx90a"
   - ImageKind:      IMG_Cubin

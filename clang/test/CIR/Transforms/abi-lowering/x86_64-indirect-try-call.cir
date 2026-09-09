@@ -1,0 +1,62 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Scalars already carry their wire form, so the call stands as written.
+  cir.func @pass_through(%arg0: !cir.ptr<!cir.func<(!s32i) -> !s32i>>,
+                         %arg1: !s32i) {
+    %0 = cir.try_call %arg0(%arg1) ^bb1, ^bb2
+        : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+  ^bb1:
+    cir.br ^bb4
+  ^bb2:
+    %1 = cir.eh.initiate : !cir.eh_token
+    cir.eh.dispatch %1 : !cir.eh_token [
+      catch_all : ^bb3
+    ]
+  ^bb3(%tok : !cir.eh_token):
+    %ct, %exn = cir.begin_catch %tok : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    cir.end_catch %ct : !cir.catch_token
+    cir.br ^bb4
+  ^bb4:
+    cir.return
+  }
+
+  // CHECK: cir.func @pass_through(%arg0: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %arg1: !s32i)
+  // CHECK:   %0 = cir.try_call %arg0(%arg1) ^bb1, ^bb2 : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+
+  // A variadic pointee is classified even with no ellipsis argument passed,
+  // and a void return is its own wire form, so this call stands as written
+  // too.
+  cir.func @variadic_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>,
+                          %arg1: !cir.ptr<!s8i>) {
+    cir.try_call %arg0(%arg1) ^bb1, ^bb2
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>) -> ()
+  ^bb1:
+    cir.br ^bb4
+  ^bb2:
+    %0 = cir.eh.initiate : !cir.eh_token
+    cir.eh.dispatch %0 : !cir.eh_token [
+      catch_all : ^bb3
+    ]
+  ^bb3(%tok : !cir.eh_token):
+    %ct, %exn = cir.begin_catch %tok : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    cir.end_catch %ct : !cir.catch_token
+    cir.br ^bb4
+  ^bb4:
+    cir.return
+  }
+
+  // CHECK: cir.func @variadic_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, %arg1: !cir.ptr<!s8i>)
+  // CHECK:   cir.try_call %arg0(%arg1) ^bb1, ^bb2 : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>) -> ()
+}

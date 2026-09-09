@@ -12,18 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVBaseInfo.h"
-#include "RISCVInstrInfo.h"
 #include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
-
-extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 
 namespace RISCVSysReg {
 #define GET_SysRegsList_IMPL
@@ -55,8 +51,9 @@ namespace RISCV {
 } // namespace RISCV
 
 namespace RISCVABI {
-ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
-                     StringRef ABIName) {
+ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
+  const Triple &TT = STI.getTargetTriple();
+  const FeatureBitset &FeatureBits = STI.getFeatureBits();
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
   bool IsRVE = FeatureBits[RISCV::FeatureStdExtE];
@@ -102,7 +99,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     return TargetABI;
 
   // If no explicit ABI is given, try to compute the default ABI.
-  auto ISAInfo = RISCVFeatures::parseFeatureBits(IsRV64, FeatureBits);
+  auto ISAInfo = RISCVFeatures::parseFeatureBits(STI);
   if (!ISAInfo)
     reportFatalUsageError(ISAInfo.takeError());
   return getTargetABI((*ISAInfo)->computeDefaultABI());
@@ -153,14 +150,15 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
-parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits) {
-  unsigned XLen = IsRV64 ? 64 : 32;
+parseFeatureBits(const MCSubtargetInfo &STI) {
+  const FeatureBitset &FeatureBits = STI.getFeatureBits();
+  unsigned XLen = FeatureBits[RISCV::Feature64Bit] ? 64 : 32;
   std::vector<std::string> FeatureVector;
   // Convert FeatureBitset to FeatureVector.
-  for (auto Feature : RISCVFeatureKV) {
+  for (const auto &Feature : STI.getAllProcessorFeatures()) {
     if (FeatureBits[Feature.Value] &&
-        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
-      FeatureVector.push_back(std::string("+") + Feature.Key);
+        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+      FeatureVector.push_back(std::string("+") + Feature.key());
   }
   return llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
 }

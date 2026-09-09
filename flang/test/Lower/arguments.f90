@@ -7,7 +7,7 @@ end
 
 ! Check that arguments are correctly set and no local allocation is happening.
 ! CHECK-LABEL: func @_QPsub1(
-! CHECK-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "a"}, %{{.*}}: !fir.ref<!fir.logical<4>> {fir.bindc_name = "b"})
+! CHECK-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "a", fir.read_only}, %{{.*}}: !fir.ref<!fir.logical<4>> {fir.bindc_name = "b"})
 ! CHECK-NOT:     fir.alloc
 ! CHECK:         return
 
@@ -31,7 +31,7 @@ integer function fct1(a, b)
 end
 
 ! CHECK-LABEL: func @_QPfct1(
-! CHECK-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "a"}, %{{.*}}: !fir.ref<!fir.logical<4>> {fir.bindc_name = "b"}) -> i32
+! CHECK-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "a", fir.read_only}, %{{.*}}: !fir.ref<!fir.logical<4>> {fir.bindc_name = "b"}) -> i32
 
 real function fct2(i)
   integer :: i(2, 5)

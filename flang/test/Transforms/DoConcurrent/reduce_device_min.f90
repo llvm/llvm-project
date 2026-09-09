@@ -28,9 +28,9 @@ end subroutine min_reduce
 ! Verify the reduction variable is mapped tofrom + ByRef (not implicit + ByCopy).
 ! CHECK: %[[MIN_VAL_MAP:.*]] = omp.map.info var_ptr(%[[MIN_VAL_DECL]]#1
 ! CHECK-SAME: map_clauses(implicit, tofrom) capture(ByRef)
-! CHECK-SAME: -> !fir.ref<f32> {name = "_QFmin_reduceEmin_val"}
+! CHECK-SAME: name("_QFmin_reduceEmin_val") -> !fir.ref<f32>
 
-! CHECK: omp.target
+! CHECK: omp.target kernel_type(spmd)
 ! CHECK-SAME: map_entries({{.*}}%[[MIN_VAL_MAP]] -> %[[MIN_VAL_ARG:[[:alnum:]]+]]{{.*}})
 
 ! CHECK: %[[MIN_VAL_DEV:.*]]:2 = hlfir.declare %[[MIN_VAL_ARG]] {{.*}} "_QFmin_reduceEmin_val"
@@ -42,4 +42,4 @@ end subroutine min_reduce
 ! CHECK:       } {omp.composite}
 ! CHECK:     } {omp.composite}
 ! CHECK:   } {omp.composite}
-! CHECK: }
+! CHECK: } {omp.combined}

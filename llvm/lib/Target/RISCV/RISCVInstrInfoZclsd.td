@@ -20,6 +20,8 @@ def GPRPairNoX0RV32Operand : AsmOperandClass {
   let ParserMethod = "parseGPRPair<false>";
   let PredicateMethod = "isGPRPairNoX0";
   let RenderMethod = "addRegOperands";
+  let DiagnosticType = "InvalidGPRPairNoX0RV32";
+  let DiagnosticString = "register pair must start with an even GPR other than x0";
 }
 
 def GPRPairNoX0RV32 : RegisterOperand<GPRPairNoX0> {
@@ -31,6 +33,8 @@ def GPRPairCRV32Operand : AsmOperandClass {
   let ParserMethod = "parseGPRPair<false>";
   let PredicateMethod = "isGPRPairC";
   let RenderMethod = "addRegOperands";
+  let DiagnosticType = "InvalidGPRPairCRV32";
+  let DiagnosticString = "register pair must start with x8, x10, x12, or x14";
 }
 
 def GPRPairCRV32 : RegisterOperand<GPRPairC> {
@@ -42,45 +46,30 @@ def GPRPairCRV32 : RegisterOperand<GPRPairC> {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZclsd, IsRV32], DecoderNamespace = "ZcOverlap" in {
-def C_LDSP_RV32 : CStackLoad<0b011, "c.ldsp", GPRPairNoX0RV32, uimm9_lsb000>,
+def C_LDSP_RV32 : CStackLoad<0b011, "c.ldsp", GPRPairNoX0RV32, uimm9_lsb000_optional>,
                   Sched<[WriteLDD, ReadMemBase]> {
   let Inst{4-2} = imm{8-6};
 }
 
-def C_SDSP_RV32 : CStackStore<0b111, "c.sdsp", GPRPairRV32, uimm9_lsb000>,
+def C_SDSP_RV32 : CStackStore<0b111, "c.sdsp", GPRPairRV32, uimm9_lsb000_optional>,
                   Sched<[WriteSTD, ReadStoreData, ReadMemBase]> {
   let Inst{9-7} = imm{8-6};
 }
 
-def C_LD_RV32 : CLoad_ri<0b011, "c.ld", GPRPairCRV32, uimm8_lsb000>,
+def C_LD_RV32 : CLoad_ri<0b011, "c.ld", GPRPairCRV32, uimm8_lsb000_optional>,
                 Sched<[WriteLDD, ReadMemBase]> {
   bits<8> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
 }
 
-def C_SD_RV32 : CStore_rri<0b111, "c.sd", GPRPairCRV32, uimm8_lsb000>,
+def C_SD_RV32 : CStore_rri<0b111, "c.sd", GPRPairCRV32, uimm8_lsb000_optional>,
                 Sched<[WriteSTD, ReadStoreData, ReadMemBase]> {
   bits<8> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
 }
 }// Predicates = [HasStdExtZclsd, IsRV32], DecoderNamespace = "ZcOverlap"
-
-//===----------------------------------------------------------------------===//
-// Assembler Pseudo Instructions
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZclsd, IsRV32] in {
-def : InstAlias<"c.ld $rd, (${rs1})",
-                (C_LD_RV32 GPRPairCRV32:$rd, BasePtrC:$rs1, 0), 0>;
-def : InstAlias<"c.sd $rs2, (${rs1})",
-                (C_SD_RV32 GPRPairCRV32:$rs2, BasePtrC:$rs1, 0), 0>;
-def : InstAlias<"c.ldsp $rd, (${rs1})",
-                (C_LDSP_RV32 GPRPairNoX0RV32:$rd, SPMem:$rs1, 0), 0>;
-def : InstAlias<"c.sdsp $rs2, (${rs1})",
-                (C_SDSP_RV32 GPRPairRV32:$rs2, SPMem:$rs1, 0), 0>;
-}
 
 //===----------------------------------------------------------------------===//
 // Compress Instruction tablegen backend.

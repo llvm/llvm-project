@@ -16,6 +16,7 @@
 
 #include "hdr/fcntl_macros.h"
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -29,16 +30,10 @@ LIBC_INLINE ErrorOr<int> dup2(int oldfd, int newfd) {
   int ret = syscall_impl<int>(SYS_dup2, oldfd, newfd);
 #elif defined(SYS_dup3)
   if (oldfd == newfd) {
-#if defined(SYS_fcntl)
-    int ret = syscall_impl<int>(SYS_fcntl, oldfd, F_GETFD);
-#elif defined(SYS_fcntl64)
-    int ret = syscall_impl<int>(SYS_fcntl64, oldfd, F_GETFD);
-#else
-#error "SYS_fcntl and SYS_fcntl64 syscalls not available."
-#endif
-    if (ret >= 0)
-      return oldfd;
-    return Error(-ret);
+    auto ret = fcntl(oldfd, F_GETFD);
+    if (!ret)
+      return Error(ret.error());
+    return oldfd;
   }
   int ret = syscall_impl<int>(SYS_dup3, oldfd, newfd, 0);
 #else

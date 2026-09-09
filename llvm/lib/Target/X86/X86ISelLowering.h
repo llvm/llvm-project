@@ -238,6 +238,8 @@ namespace llvm {
 
     bool isCtlzFast() const override;
 
+    bool preferZeroCompareBranch() const override;
+
     bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
       // If the pair to store is a mixture of float and int values, we will
       // save two bitwise instructions and one float-to-int instruction and
@@ -276,7 +278,8 @@ namespace llvm {
 
     CondMergingParams
     getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
-                                  const Value *Rhs) const override;
+                                  const Value *Rhs,
+                                  const Function *F) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
@@ -353,6 +356,9 @@ namespace llvm {
                                                     unsigned MaskIndex,
                                                     TargetLoweringOpt &TLO,
                                                     unsigned Depth) const;
+
+    unsigned getPreferredShrunkVectorSizeInBits(
+        SDValue Op, const APInt &DemandedElts) const override;
 
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
@@ -566,13 +572,16 @@ namespace llvm {
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
 
+    bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                         EVT CCVT) const override;
+
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;
 
-    /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
-    /// with this index.
-    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                 unsigned Index) const override;
+    /// Return the cost of EXTRACT_SUBVECTOR for this result type with this
+    /// index.
+    ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                 unsigned Index) const override;
 
     /// Scalar ops always have equal or better analysis/performance/power than
     /// the vector equivalent, so this always makes sense if the scalar op is
@@ -614,12 +623,14 @@ namespace llvm {
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
     Register
-    getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
-    getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override;
 
     bool needsFixedCatchObjects() const override;
 
@@ -636,13 +647,12 @@ namespace llvm {
                            const LibcallLoweringInfo &Libcalls) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
-    bool useStackGuardXorFP() const override;
+    bool useStackGuardMixFP() const override;
     void
     insertSSPDeclarations(Module &M,
                           const LibcallLoweringInfo &Libcalls) const override;
-    SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+    SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
-
 
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and
@@ -843,6 +853,7 @@ namespace llvm {
     SDValue lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue

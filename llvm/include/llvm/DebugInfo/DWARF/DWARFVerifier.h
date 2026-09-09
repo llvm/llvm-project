@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
@@ -51,15 +52,13 @@ public:
       : IncludeDetail(includeDetail) {}
   void ShowDetail(bool showDetail) { IncludeDetail = showDetail; }
   size_t GetNumCategories() const { return Aggregation.size(); }
-  LLVM_ABI void Report(StringRef category,
-                       std::function<void()> detailCallback);
+  LLVM_ABI void Report(StringRef category, function_ref<void()> detailCallback);
   LLVM_ABI void Report(StringRef category, StringRef sub_category,
-                       std::function<void()> detailCallback);
+                       function_ref<void()> detailCallback);
   LLVM_ABI void
-  EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
+  EnumerateResults(function_ref<void(StringRef, unsigned)> handleCounts);
   LLVM_ABI void EnumerateDetailedResultsFor(
-      StringRef category,
-      std::function<void(StringRef, unsigned)> handleCounts);
+      StringRef category, function_ref<void(StringRef, unsigned)> handleCounts);
   /// Return the number of errors that have been reported.
   uint64_t GetNumErrors() const { return NumErrors; }
 };

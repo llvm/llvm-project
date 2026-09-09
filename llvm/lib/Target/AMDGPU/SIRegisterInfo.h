@@ -377,8 +377,8 @@ public:
   }
 
   const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                 const MachineRegisterInfo &MRI) const override;
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *getBoolRC() const {
     return isWave32 ? &AMDGPU::SReg_32RegClass
@@ -507,11 +507,6 @@ public:
                 : 1.0);
   }
 };
-
-namespace AMDGPU {
-/// Get the size in bits of a register from the register class \p RC.
-unsigned getRegBitWidth(const TargetRegisterClass &RC);
-} // namespace AMDGPU
 
 } // End namespace llvm
 

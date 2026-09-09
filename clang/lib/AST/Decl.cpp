@@ -60,6 +60,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -1566,7 +1567,9 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   one such matching entity, the program is ill-formed. Otherwise,
   //   if no matching entity is found, the block scope entity receives
   //   external linkage.
-  if (D->getDeclContext()->isFunctionOrMethod())
+  if (D->getDeclContext()
+          ->getEnclosingNonExpansionStatementContext()
+          ->isFunctionOrMethod())
     return getLVForLocalDecl(D, computation);
 
   // C++ [basic.link]p6:
@@ -2551,12 +2554,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
   return dyn_cast_if_present<EvaluatedStmt *>(Init);
 }
 
-APValue *VarDecl::evaluateValue() const {
+const APValue *VarDecl::evaluateValue() const {
   return evaluateValueImpl(/*Notes=*/nullptr, hasConstantInitialization());
 }
 
-APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
-                                    bool IsConstantInitialization) const {
+const APValue *
+VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                           bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
   const auto *Init = getInit();
@@ -2575,9 +2579,11 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
 
   Eval->IsEvaluating = true;
 
+  SmallVector<PartialDiagnosticAt> MSWarning;
   ASTContext &Ctx = getASTContext();
   Expr::EvalResult EStatus;
   EStatus.Diag = Notes;
+  EStatus.ExtendedDiag = &MSWarning;
   bool Result =
       Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
   Eval->Evaluated = std::move(EStatus.Val);
@@ -2597,8 +2603,14 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   // failed.
   if (!Result)
     Eval->Evaluated = APValue();
-  else if (Eval->Evaluated.needsCleanup())
-    Ctx.addDestruction(&Eval->Evaluated);
+  else {
+    if (!MSWarning.empty())
+      for (auto &Info : MSWarning)
+        getASTContext().getDiagnostics().Report(Info.first,
+                                                Info.second.getDiagID());
+    if (Eval->Evaluated.needsCleanup())
+      Ctx.addDestruction(&Eval->Evaluated);
+  }
 
   Eval->IsEvaluating = false;
   Eval->WasEvaluated = true;
@@ -2606,10 +2618,10 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   return Result ? &Eval->Evaluated : nullptr;
 }
 
-APValue *VarDecl::getEvaluatedValue() const {
-  if (EvaluatedStmt *Eval = getEvaluatedStmt())
-    if (Eval->WasEvaluated)
-      return &Eval->Evaluated;
+const APValue *VarDecl::getEvaluatedValue() const {
+  if (EvaluatedStmt *Eval = getEvaluatedStmt();
+      Eval && Eval->WasEvaluated && !Eval->Evaluated.isAbsent())
+    return &Eval->Evaluated;
 
   return nullptr;
 }
@@ -3115,7 +3127,7 @@ bool FunctionDecl::isVariadic() const {
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
 FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
     ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
-    StringLiteral *DeletedMessage) {
+    FPOptionsOverride FPFeatures, StringLiteral *DeletedMessage) {
   static constexpr size_t Alignment =
       std::max({alignof(DefaultedOrDeletedFunctionInfo),
                 alignof(DeclAccessPair), alignof(StringLiteral *)});
@@ -3126,6 +3138,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
       new (Context.Allocate(Size, Alignment)) DefaultedOrDeletedFunctionInfo;
   Info->NumLookups = Lookups.size();
   Info->HasDeletedMessage = DeletedMessage != nullptr;
+  Info->FPFeatures = FPFeatures;
 
   llvm::uninitialized_copy(Lookups, Info->getTrailingObjects<DeclAccessPair>());
   if (DeletedMessage)
@@ -3151,7 +3164,7 @@ void FunctionDecl::setDeletedAsWritten(bool D, StringLiteral *Message) {
       DefaultedOrDeletedInfo->setDeletedMessage(Message);
     else
       setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo::Create(
-          getASTContext(), /*Lookups=*/{}, Message));
+          getASTContext(), /*Lookups=*/{}, FPOptionsOverride(), Message));
   }
 }
 
@@ -3269,6 +3282,61 @@ void FunctionDecl::setBody(Stmt *B) {
   Body = LazyDeclStmtPtr(B);
   if (B)
     EndRangeLoc = B->getEndLoc();
+}
+
+FunctionDecl::DefaultedFunctionKind
+FunctionDecl::getDefaultedFunctionKind() const {
+  if (auto *MD = dyn_cast<CXXMethodDecl>(this)) {
+    if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(this)) {
+      if (Ctor->isDefaultConstructor())
+        return CXXSpecialMemberKind::DefaultConstructor;
+
+      if (Ctor->isCopyConstructor())
+        return CXXSpecialMemberKind::CopyConstructor;
+
+      if (Ctor->isMoveConstructor())
+        return CXXSpecialMemberKind::MoveConstructor;
+    }
+
+    if (MD->isCopyAssignmentOperator())
+      return CXXSpecialMemberKind::CopyAssignment;
+
+    if (MD->isMoveAssignmentOperator())
+      return CXXSpecialMemberKind::MoveAssignment;
+
+    if (isa<CXXDestructorDecl>(this))
+      return CXXSpecialMemberKind::Destructor;
+  }
+
+  switch (getDeclName().getCXXOverloadedOperator()) {
+  case OO_EqualEqual:
+    return DefaultedComparisonKind::Equal;
+
+  case OO_ExclaimEqual:
+    return DefaultedComparisonKind::NotEqual;
+
+  case OO_Spaceship:
+    // No point in allowing this if <=> doesn't exist in the current language
+    // mode.
+    if (!getASTContext().getLangOpts().CPlusPlus20)
+      break;
+    return DefaultedComparisonKind::ThreeWay;
+
+  case OO_Less:
+  case OO_LessEqual:
+  case OO_Greater:
+  case OO_GreaterEqual:
+    // No point in allowing this if <=> doesn't exist in the current language
+    // mode.
+    if (!getASTContext().getLangOpts().CPlusPlus20)
+      break;
+    return DefaultedComparisonKind::Relational;
+  default:
+    break;
+  }
+
+  // Not defaultable.
+  return DefaultedFunctionKind();
 }
 
 void FunctionDecl::setIsPureVirtual(bool P) {
@@ -4002,12 +4070,9 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   if (!FTL)
     return SourceRange();
 
-  // Skip self-referential return types.
-  const SourceManager &SM = getASTContext().getSourceManager();
   SourceRange RTRange = FTL.getReturnLoc().getSourceRange();
   SourceLocation Boundary = getNameInfo().getBeginLoc();
-  if (RTRange.isInvalid() || Boundary.isInvalid() ||
-      !SM.isBeforeInTranslationUnit(RTRange.getEnd(), Boundary))
+  if (RTRange.isInvalid() || Boundary.isInvalid())
     return SourceRange();
 
   return RTRange;
@@ -4328,7 +4393,7 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
 
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
-    TemplateArgumentList *TemplateArgs, void *InsertPos,
+    TemplateArgumentList *TemplateArgs, llvm::FoldingSetInsertToken InsertToken,
     TemplateSpecializationKind TSK,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
@@ -4348,7 +4413,7 @@ void FunctionDecl::setFunctionTemplateSpecialization(
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  Template->addSpecialization(Info, InsertToken);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
@@ -4579,6 +4644,7 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
 
+  case Builtin::BI__builtin_strlcat:
   case Builtin::BIstrlcat:
   case Builtin::BI__builtin___strlcat_chk:
     return Builtin::BIstrlcat;
@@ -4658,6 +4724,8 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbzero;
       if (FnInfo->isStr("bcopy"))
         return Builtin::BIbcopy;
+      if (FnInfo->isStr("strlcat"))
+        return Builtin::BIstrlcat;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;

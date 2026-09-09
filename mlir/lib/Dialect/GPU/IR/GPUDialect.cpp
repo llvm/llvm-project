@@ -266,7 +266,7 @@ bool GPUDialect::isKernel(Operation *op) {
   if (auto gpuFunc = dyn_cast<GPUFuncOp>(op))
     return gpuFunc.isKernel();
   return static_cast<bool>(
-      op->getAttrOfType<UnitAttr>(getKernelFuncAttrName()));
+      op->getDiscardableAttrOfType<UnitAttr>(getKernelFuncAttrName()));
 }
 
 namespace {
@@ -611,26 +611,6 @@ OpFoldResult gpu::AllReduceOp::fold(FoldAdaptor /*adaptor*/) {
   return nullptr;
 }
 
-// TODO: Support optional custom attributes (without dialect prefix).
-static ParseResult parseAllReduceOperation(AsmParser &parser,
-                                           AllReduceOperationAttr &attr) {
-  StringRef enumStr;
-  if (!parser.parseOptionalKeyword(&enumStr)) {
-    std::optional<AllReduceOperation> op =
-        gpu::symbolizeAllReduceOperation(enumStr);
-    if (!op)
-      return parser.emitError(parser.getCurrentLocation(), "invalid op kind");
-    attr = AllReduceOperationAttr::get(parser.getContext(), *op);
-  }
-  return success();
-}
-
-static void printAllReduceOperation(AsmPrinter &printer, Operation *op,
-                                    AllReduceOperationAttr attr) {
-  if (attr)
-    attr.print(printer);
-}
-
 //===----------------------------------------------------------------------===//
 // SubgroupReduceOp
 //===----------------------------------------------------------------------===//
@@ -695,7 +675,8 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
     return;
   auto attrName =
       OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr();
-  auto sizeAttr = op->template getAttrOfType<DenseI32ArrayAttr>(attrName);
+  auto sizeAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+      op->getInherentAttr(attrName).value_or(Attribute{}));
 
   // Async dependencies is the only variadic operand.
   if (!sizeAttr)
@@ -703,7 +684,8 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
 
   SmallVector<int32_t, 8> sizes(sizeAttr.asArrayRef());
   ++sizes.front();
-  op->setAttr(attrName, Builder(op->getContext()).getDenseI32ArrayAttr(sizes));
+  op->setInherentAttr(StringAttr::get(op->getContext(), attrName),
+                      Builder(op->getContext()).getDenseI32ArrayAttr(sizes));
 }
 
 //===----------------------------------------------------------------------===//
@@ -715,7 +697,7 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Value getBlockSizeX, Value getBlockSizeY,
                      Value getBlockSizeZ, Value dynamicSharedMemorySize,
                      Type asyncTokenType, ValueRange asyncDependencies,
-                     TypeRange workgroupAttributions,
+                     Value asyncObject, TypeRange workgroupAttributions,
                      TypeRange privateAttributions, Value clusterSizeX,
                      Value clusterSizeY, Value clusterSizeZ,
                      FlatSymbolRefAttr module, FlatSymbolRefAttr function) {
@@ -742,6 +724,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands(clusterSizeZ);
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
+  if (asyncObject)
+    result.addOperands(asyncObject);
 
   // Add optional module and function attributes.
   if (module)
@@ -763,12 +747,13 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   for (Type argTy : privateAttributions)
     body->addArgument(argTy, result.location);
   // Fill OperandSegmentSize Attribute.
-  SmallVector<int32_t, 11> segmentSizes(11, 1);
+  SmallVector<int32_t, 12> segmentSizes(12, 1);
   segmentSizes.front() = asyncDependencies.size();
-  segmentSizes.back() = dynamicSharedMemorySize ? 1 : 0;
   segmentSizes[7] = clusterSizeX ? 1 : 0;
   segmentSizes[8] = clusterSizeY ? 1 : 0;
   segmentSizes[9] = clusterSizeZ ? 1 : 0;
+  segmentSizes[10] = dynamicSharedMemorySize ? 1 : 0;
+  segmentSizes[11] = asyncObject ? 1 : 0;
   result.addAttribute(getOperandSegmentSizeAttr(),
                       builder.getDenseI32ArrayAttr(segmentSizes));
 }
@@ -830,7 +815,23 @@ std::optional<KernelDim3> LaunchOp::getClusterSizeOperandValues() {
   return KernelDim3{operands[6], operands[7], operands[8]};
 }
 
+template <typename OpTy>
+static LogicalResult verifyLaunchAsyncModel(OpTy op) {
+  if (!op.getAsyncDependencies().empty() && !op.getAsyncToken())
+    return op.emitOpError("dependency operands require the dependency-based "
+                          "async model i.e. returning a token");
+  if (op.getAsyncToken() && op.getAsyncObject())
+    return op.emitOpError("stream-based and dependency-based async models are "
+                          "mutually exclusive");
+  if (op.getNumResults() == 0 && op.getAsyncToken())
+    return op.emitOpError("needs to be named when async keyword is specified");
+  return success();
+}
+
 LogicalResult LaunchOp::verify() {
+  if (verifyLaunchAsyncModel(*this).failed())
+    return failure();
+
   if (!(hasClusterSize()) &&
       (getClusterSizeX() || getClusterSizeY() || getClusterSizeZ()))
     return emitOpError() << "cluster size must be all present";
@@ -877,9 +878,6 @@ LogicalResult LaunchOp::verifyRegions() {
     }
   }
 
-  if (getNumResults() == 0 && getAsyncToken())
-    return emitOpError("needs to be named when async keyword is specified");
-
   return success();
 }
 
@@ -896,6 +894,9 @@ static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
 }
 
 void LaunchOp::print(OpAsmPrinter &p) {
+  if (auto asyncObject = getAsyncObject()) {
+    p << " <" << asyncObject << " : " << asyncObject.getType() << ">";
+  }
   if (getAsyncToken()) {
     p << " async";
     if (!getAsyncDependencies().empty())
@@ -942,11 +943,11 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p << ' ';
 
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
-                              LaunchOp::getOperandSegmentSizeAttr(),
-                              getWorkgroupAttributionsAttrName(),
-                              getCooperativeAttrName(), moduleAttrName,
-                              functionAttrName});
+  p.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue(), /*elidedAttrs=*/{
+          LaunchOp::getOperandSegmentSizeAttr(),
+          getWorkgroupAttributionsAttrName(), getCooperativeAttrName(),
+          moduleAttrName, functionAttrName});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -986,8 +987,9 @@ parseSizeAssignment(OpAsmParser &parser,
 }
 
 /// Parses a Launch operation.
-/// operation ::= `gpu.launch` (`async` `[` ssa-id-list `]`)?
-///       `clusters` `(` ssa-id-list `)` `in` ssa-reassignment (Optional)
+/// operation ::= `gpu.launch` (`<` ssa-use `:` type `>`)?
+///       (`async` `[` ssa-id-list `]`)?
+///       (`clusters` `(` ssa-id-list `)` `in` ssa-reassignment)?
 ///       `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
 ///       `threads` `(` ssa-id-list `)` `in` ssa-reassignment
 ///       (`dynamic_shared_memory_size` ssa-use)?
@@ -1004,6 +1006,17 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   // Region arguments to be created.
   SmallVector<OpAsmParser::UnresolvedOperand, 16> regionArgs(
       LaunchOp::kNumConfigRegionAttributes);
+
+  // Parse optional asyncObject: < value : type >
+  OpAsmParser::UnresolvedOperand asyncObjectOperand;
+  Type asyncObjectType;
+  bool hasAsyncObject = false;
+  if (succeeded(parser.parseOptionalLess())) {
+    hasAsyncObject = true;
+    if (parser.parseOperand(asyncObjectOperand) || parser.parseColon() ||
+        parser.parseType(asyncObjectType) || parser.parseGreater())
+      return failure();
+  }
 
   // Parse optional async dependencies.
   SmallVector<OpAsmParser::UnresolvedOperand, 4> asyncDependencies;
@@ -1066,6 +1079,11 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
                               result.operands))
       return failure();
   }
+
+  // Resolve the asyncObject operand
+  if (hasAsyncObject && parser.resolveOperand(asyncObjectOperand,
+                                              asyncObjectType, result.operands))
+    return failure();
 
   // Parse optional module attribute.
   StringRef moduleAttrName = getModuleAttrName(result.name);
@@ -1135,7 +1153,7 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
-  SmallVector<int32_t, 11> segmentSizes(11, 1);
+  SmallVector<int32_t, 12> segmentSizes(12, 1);
   segmentSizes.front() = asyncDependencies.size();
 
   if (!hasCluster) {
@@ -1143,7 +1161,8 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
     segmentSizes[8] = 0;
     segmentSizes[9] = 0;
   }
-  segmentSizes.back() = hasDynamicSharedMemorySize ? 1 : 0;
+  segmentSizes[10] = hasDynamicSharedMemorySize ? 1 : 0;
+  segmentSizes[11] = hasAsyncObject ? 1 : 0;
   result.addAttribute(LaunchOp::getOperandSegmentSizeAttr(),
                       parser.getBuilder().getDenseI32ArrayAttr(segmentSizes));
   return success();
@@ -1216,7 +1235,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          SymbolRefAttr kernelSymbol, KernelDim3 gridSize,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Type asyncTokenType,
-                         ValueRange asyncDependencies,
+                         ValueRange asyncDependencies, Value asyncObject,
                          std::optional<KernelDim3> clusterSize) {
   assert(kernelSymbol.getNestedReferences().size() == 1 &&
          "expected a symbol reference with a single nested reference");
@@ -1232,6 +1251,8 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
   result.addOperands(kernelOperands);
+  if (asyncObject)
+    result.addOperands(asyncObject);
 
   Properties &prop = result.getOrAddProperties<Properties>();
   prop.kernel = kernelSymbol;
@@ -1248,14 +1269,14 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
       dynamicSharedMemorySize ? 1 : 0;
   prop.operandSegmentSizes[segmentSizesLen - 2] =
       static_cast<int32_t>(kernelOperands.size());
-  prop.operandSegmentSizes[segmentSizesLen - 1] = 0;
+  prop.operandSegmentSizes[segmentSizesLen - 1] = asyncObject ? 1 : 0;
 }
 
 void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          GPUFuncOp kernelFunc, KernelDim3 gridSize,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Type asyncTokenType,
-                         ValueRange asyncDependencies,
+                         ValueRange asyncDependencies, Value asyncObject,
                          std::optional<KernelDim3> clusterSize) {
   auto kernelModule = kernelFunc->getParentOfType<GPUModuleOp>();
   auto kernelSymbol =
@@ -1263,40 +1284,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          {SymbolRefAttr::get(kernelFunc.getNameAttr())});
   build(builder, result, kernelSymbol, gridSize, getBlockSize,
         dynamicSharedMemorySize, kernelOperands, asyncTokenType,
-        asyncDependencies, clusterSize);
-}
-
-void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
-                         SymbolRefAttr kernel, KernelDim3 gridSize,
-                         KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
-                         ValueRange kernelOperands, Value asyncObject,
-                         std::optional<KernelDim3> clusterSize) {
-  // Add grid and block sizes as op operands, followed by the data operands.
-  result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
-                      getBlockSize.y, getBlockSize.z});
-  if (clusterSize.has_value())
-    result.addOperands({clusterSize->x, clusterSize->y, clusterSize->z});
-  if (dynamicSharedMemorySize)
-    result.addOperands(dynamicSharedMemorySize);
-  result.addOperands(kernelOperands);
-  if (asyncObject)
-    result.addOperands(asyncObject);
-  Properties &prop = result.getOrAddProperties<Properties>();
-  prop.kernel = kernel;
-  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
-  // Initialize the segment sizes to 1.
-  llvm::fill(prop.operandSegmentSizes, 1);
-  prop.operandSegmentSizes[0] = 0;
-  if (!clusterSize.has_value()) {
-    prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
-    prop.operandSegmentSizes[segmentSizesLen - 5] = 0;
-    prop.operandSegmentSizes[segmentSizesLen - 6] = 0;
-  }
-  prop.operandSegmentSizes[segmentSizesLen - 3] =
-      dynamicSharedMemorySize ? 1 : 0;
-  prop.operandSegmentSizes[segmentSizesLen - 2] =
-      static_cast<int32_t>(kernelOperands.size());
-  prop.operandSegmentSizes[segmentSizesLen - 1] = asyncObject ? 1 : 0;
+        asyncDependencies, asyncObject, clusterSize);
 }
 
 StringAttr LaunchFuncOp::getKernelModuleName() {
@@ -1333,11 +1321,14 @@ KernelDim3 LaunchFuncOp::getClusterSizeOperandValues() {
 }
 
 LogicalResult LaunchFuncOp::verify() {
+  if (verifyLaunchAsyncModel(*this).failed())
+    return failure();
+
   auto module = (*this)->getParentOfType<ModuleOp>();
   if (!module)
     return emitOpError("expected to belong to a module");
 
-  if (!module->getAttrOfType<UnitAttr>(
+  if (!module->getDiscardableAttrOfType<UnitAttr>(
           GPUDialect::getContainerModuleAttrName()))
     return emitOpError("expected the closest surrounding module to have the '" +
                        GPUDialect::getContainerModuleAttrName() +
@@ -1349,10 +1340,6 @@ LogicalResult LaunchFuncOp::verify() {
       return emitOpError()
              << "expects types of the cluster dimensions must be the same";
   }
-
-  if (!getAsyncDependencies().empty() && getAsyncObject())
-    return emitOpError(
-        "cannot have both async dependencies and an explicit async object");
 
   return success();
 }
@@ -1373,8 +1360,7 @@ LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   // Ignore launch ops with missing attributes here. The errors will be
   // reported by the verifiers of those ops.
-  if (!launchOp->getAttrOfType<SymbolRefAttr>(
-          LaunchFuncOp::getKernelAttrName(launchOp->getName())))
+  if (!launchOp.getKernelAttr())
     return success();
 
   // Check that `launch_func` refers to a well-formed GPU kernel container.
@@ -1635,8 +1621,8 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       ArrayRef<NamedAttribute> attrs) {
   OpBuilder::InsertionGuard g(builder);
 
-  result.addAttribute(SymbolTable::getSymbolAttrName(),
-                      builder.getStringAttr(name));
+  result.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(name);
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
   result.addAttribute(getWorkgroupAttributionsAttrName(result.name),
@@ -1710,7 +1696,7 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the function name.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1808,7 +1794,9 @@ void GPUFuncOp::print(OpAsmPrinter &p) {
 
 static DictionaryAttr getAttributionAttrs(GPUFuncOp op, unsigned index,
                                           StringAttr attrName) {
-  auto allAttrs = llvm::dyn_cast_or_null<ArrayAttr>(op->getAttr(attrName));
+  ArrayAttr allAttrs = attrName == op.getWorkgroupAttribAttrsAttrName()
+                           ? op.getWorkgroupAttribAttrsAttr()
+                           : op.getPrivateAttribAttrsAttr();
   if (!allAttrs || index >= allAttrs.size())
     return DictionaryAttr();
   return llvm::cast<DictionaryAttr>(allAttrs[index]);
@@ -1825,7 +1813,9 @@ DictionaryAttr GPUFuncOp::getPrivateAttributionAttrs(unsigned index) {
 static void setAttributionAttrs(GPUFuncOp op, unsigned index,
                                 DictionaryAttr value, StringAttr attrName) {
   MLIRContext *ctx = op.getContext();
-  auto allAttrs = llvm::dyn_cast_or_null<ArrayAttr>(op->getAttr(attrName));
+  ArrayAttr allAttrs = attrName == op.getWorkgroupAttribAttrsAttrName()
+                           ? op.getWorkgroupAttribAttrsAttr()
+                           : op.getPrivateAttribAttrsAttr();
   SmallVector<Attribute> elements;
   if (allAttrs)
     elements.append(allAttrs.begin(), allAttrs.end());
@@ -1836,7 +1826,10 @@ static void setAttributionAttrs(GPUFuncOp op, unsigned index,
   else
     elements[index] = value;
   ArrayAttr newValue = ArrayAttr::get(ctx, elements);
-  op->setAttr(attrName, newValue);
+  if (attrName == op.getWorkgroupAttribAttrsAttrName())
+    op.setWorkgroupAttribAttrsAttr(newValue);
+  else
+    op.setPrivateAttribAttrsAttr(newValue);
 }
 
 void GPUFuncOp::setworkgroupAttributionAttrs(unsigned index,
@@ -2022,7 +2015,7 @@ void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
 }
 
 LogicalResult GPUModuleOp::verify() {
-  auto targets = getOperation()->getAttrOfType<ArrayAttr>("targets");
+  auto targets = getTargetsAttr();
 
   if (!targets)
     return success();
@@ -2044,7 +2037,7 @@ void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                      Attribute offloadingHandler, ArrayAttr objects) {
   auto &properties = result.getOrAddProperties<Properties>();
   result.attributes.push_back(builder.getNamedAttr(
-      SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+      getSymNameAttrName(result.name), builder.getStringAttr(name)));
   properties.objects = objects;
   if (offloadingHandler)
     properties.offloadingHandler = offloadingHandler;
@@ -2323,9 +2316,10 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
     if (!index)
       return failure();
 
+    int64_t indexVal = index.value();
     auto memrefType = llvm::dyn_cast<MemRefType>(dimOp.getSource().getType());
-    if (!memrefType || index.value() >= memrefType.getRank() ||
-        !memrefType.isDynamicDim(index.value()))
+    if (!memrefType || indexVal < 0 || indexVal >= memrefType.getRank() ||
+        !memrefType.isDynamicDim(indexVal))
       return failure();
 
     auto alloc = dimOp.getSource().getDefiningOp<AllocOp>();
@@ -2333,7 +2327,7 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
       return failure();
 
     Value substituteOp = *(alloc.getDynamicSizes().begin() +
-                           memrefType.getDynamicDimIndex(index.value()));
+                           memrefType.getDynamicDimIndex(indexVal));
     rewriter.replaceOp(dimOp, substituteOp);
     return success();
   }
@@ -2447,8 +2441,7 @@ void WarpExecuteOnLane0Op::print(OpAsmPrinter &p) {
   p << "(" << getLaneid() << ")";
 
   SmallVector<StringRef> coreAttr = {getWarpSizeAttrName()};
-  auto warpSizeAttr = getOperation()->getAttr(getWarpSizeAttrName());
-  p << "[" << llvm::cast<IntegerAttr>(warpSizeAttr).getInt() << "]";
+  p << "[" << getWarpSize() << "]";
 
   if (!getArgs().empty())
     p << " args(" << getArgs() << " : " << getArgs().getTypes() << ")";
@@ -2458,7 +2451,8 @@ void WarpExecuteOnLane0Op::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/!getResults().empty());
-  p.printOptionalAttrDict(getOperation()->getAttrs(), coreAttr);
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue(), coreAttr);
 }
 
 ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,

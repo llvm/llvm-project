@@ -62,14 +62,13 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
 
       ```mlir
       linalg.generic #trait_attribute
-          ins(%A, %B : memref<?x?xf32, stride_specification>,
-                       memref<?x?xf32, stride_specification>)
-          outs(%C : memref<?x?xf32, stride_specification>)
+          ins(%A, %B : memref<?x?xf32>, memref<?x?xf32>)
+          outs(%C : memref<?x?xf32>)
           attrs = {other-optional-attributes}
           {region}
       ```
 
-    Where #trait_attributes is an alias of a dictionary attribute containing:
+    Where #trait_attribute is an alias of a dictionary attribute containing:
       - doc [optional]: a documentation string
       - indexing_maps: a list of AffineMapAttr, one AffineMapAttr per each input
         and output view. Such AffineMapAttr specifies the mapping between the
@@ -80,17 +79,17 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
         compile-time guarantees are provided. In the absence of such a library
         call, linalg.generic will always lower to loops.
       - iterator_types: an ArrayAttr specifying the type of the enclosing loops.
-        Each element of the list represents and iterator of one of the following
+        Each element of the list represents an iterator of one of the following
         types:
-          parallel, reduction, window
+          parallel, reduction
 
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
       ```mlir
       #matmul_accesses = [
-        (m, n, k) -> (m, k),
-        (m, n, k) -> (k, n),
-        (m, n, k) -> (m, n)
+        affine_map<(m, n, k) -> (m, k)>,
+        affine_map<(m, n, k) -> (k, n)>,
+        affine_map<(m, n, k) -> (m, n)>
       ]
       #matmul_trait = {
         doc = "C(m, n) += A(m, k) * B(k, n)",
@@ -103,10 +102,9 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     And can be reused in multiple places as:
       ```mlir
       linalg.generic #matmul_trait
-        ins(%A, %B : memref<?x?xf32, stride_specification>,
-                     memref<?x?xf32, stride_specification>)
-        outs(%C : memref<?x?xf32, stride_specification>)
-        {other-optional-attributes} {
+        ins(%A, %B : memref<?x?xf32>, memref<?x?xf32>)
+        outs(%C : memref<?x?xf32>)
+        attrs = {other-optional-attributes} {
         ^bb0(%a: f32, %b: f32, %c: f32) :
           %d = arith.mulf %a, %b: f32
           %e = arith.addf %c, %d: f32
@@ -117,9 +115,9 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     This may lower to either:
       ```mlir
       call @linalg_matmul(%A, %B, %C) :
-        (memref<?x?xf32, stride_specification>,
-         memref<?x?xf32, stride_specification>,
-         memref<?x?xf32, stride_specification>)
+        (memref<?x?xf32, strided<[?, ?], offset: ?>>,
+         memref<?x?xf32, strided<[?, ?], offset: ?>>,
+         memref<?x?xf32, strided<[?, ?], offset: ?>>)
         -> ()
       ```
 
@@ -128,12 +126,12 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     scf.for %m = %c0 to %M step %c1 {
       scf.for %n = %c0 to %N step %c1 {
         scf.for %k = %c0 to %K step %c1 {
-          %a = load %A[%m, %k] : memref<?x?xf32, stride_specification>
-          %b = load %B[%k, %n] : memref<?x?xf32, stride_specification>
-          %c = load %C[%m, %n] : memref<?x?xf32, stride_specification>
+          %a = memref.load %A[%m, %k] : memref<?x?xf32>
+          %b = memref.load %B[%k, %n] : memref<?x?xf32>
+          %c = memref.load %C[%m, %n] : memref<?x?xf32>
           %d = arith.mulf %a, %b: f32
           %e = arith.addf %c, %d: f32
-          store %e, %C[%m, %n] : memref<?x?x?xf32, stride_specification>
+          memref.store %e, %C[%m, %n] : memref<?x?xf32>
         }
       }
     }
@@ -388,6 +386,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
   }];
 
   let hasCustomAssemblyFormat = 1;
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -477,6 +476,11 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
   let summary = "Static broadcast operator";
   let description = [{
     Broadcast the input into the given shape by adding `dimensions`.
+
+    Each index in the `dimensions` attribute refers to a dimension of `init`
+    that is added by the operation. The indices must be unique and within the
+    rank of `init`; the sizes of the remaining (non-added) dimensions of
+    `init` must match the shape of `input`.
 
     Example:
     ```mlir
@@ -881,7 +885,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     AffineMapArrayAttr:$indexing_maps,
     DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
   );
-  let results = (outs Variadic<AnyShaped>:$result_tensors);
+  let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
   // NB: The only reason this op has a region - and it get populated at op build
   //     time - is that currently the LinalgOp interface exposes methods that
   //     assume a relevant region is available to be queried at any time.
@@ -1211,6 +1215,169 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
       /// Returns true if the user defined indexing maps are not equal to default maps.
       bool hasUserDefinedMaps();
     }];
+}
+
+//===----------------------------------------------------------------------===//
+// Scaled Contract op.
+//===----------------------------------------------------------------------===//
+
+def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
+    AttrSizedOperandSegments]> {
+  let summary = [{
+    Perform a scaled contraction on two inputs where their scaling is described
+    by affine maps of the two corresponding scales, accumulating into the output.
+  }];
+  let description = [{
+    Extends the semantics of `linalg.contract` by including extra scaling factors
+    for the inputs `A` and `B` described by the scales' affine maps.
+    The data types of the inputs are chosen independently from the scales.
+
+    The output element type must be floating-point. Input element types must be
+    integer or floating-point, with bitwidth no greater than the output element
+    type's bitwidth.
+
+    The semantics of contracting inputs `A` and `B` with scales `scale_A` and
+    `scale_B` on top of `C` to produce output `D` is given by:
+
+      `D[H] = (SUM_{(I ∪ J) \ H} (A[I] * scale_A[I]) * (B[J] * scale_B[J])) + C[H]`
+
+    The iteration type of each dim is inferred.
+
+    The input operands `A`, `B`, and `C` follow the standard contraction semantics
+    together with broadcasting and transposition rules.
+    See `linalg.contract` for further details.
+
+    **Affine maps for scales**
+
+    Each scale indexing map describes the scaling scheme for the corresponding
+    input `A` and `B`. The following scaling schemes are supported:
+
+    - Tensor scaling - no dimensions: a scalar value used to scale the whole input.
+    - Dimension scaling - dimension `d`: one scale value per element along `d`.
+    - Block scaling - binary expression `d floordiv B`: one scale value for every
+      `B` elements along `d` where `B` corresponds to the block size.
+
+    Scale maps may only use dimensions present in the corresponding input's map.
+    A dimension absent from the scale map indicates that a single scale value is
+    reused across the whole input dimension.
+
+    **Dim sizes for scales**
+
+    - Tensor scaling: a unit-size scale.
+    - Dimension scaling (`d`): the scale dim size equals the input dim size.
+    - Block scaling (`d floordiv B`): the scale dim size equals
+      `ceil(input_dim_size / B)`.
+
+    For dynamic shapes, all sizes are assumed to be correct at runtime.
+
+    Example scaled matmul with transposed B using semi-affine maps:
+    ```mlir
+    %D = linalg.scaled_contract
+        indexing_maps = [
+          affine_map<(m, n, k) -> (m, k)>,
+          affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>, // A - 32x128 block scale
+          affine_map<(m, n, k) -> (n, k)>,
+          affine_map<(m, n, k) -> (n)>, // B - row-wise scale
+          affine_map<(m, n, k) -> (m, n)>]
+        ins(%A, %scale_A, %B, %scale_B
+          : tensor<200x512xf8E5M2>, tensor<7x4xf8E8M0FNU>,
+            tensor<128x512xf8E5M2>, tensor<128xf8E8M0FNU>)
+        outs(%C: tensor<200x128xf32>) -> tensor<200x128xf32>
+    ```
+
+    or using expanded dimensions:
+
+    ```mlir
+    %D = linalg.scaled_contract
+        indexing_maps = [
+          affine_map<(m, n, ko, kb) -> (m, ko, kb)>, // A - 32 block dim 'kb'
+          affine_map<(m, n, ko, kb) -> (m, ko)>,
+          affine_map<(m, n, ko, kb) -> (n, ko, kb)>, // B - 32 block dim 'kb'
+          affine_map<(m, n, ko, kb) -> (n, ko)>,
+          affine_map<(m, n, ko, kb) -> (m, n)>]
+        ins(%A, %scale_A, %B, %scale_B
+          : tensor<128x4x32xf4E2M1FN>, tensor<128x4xf8E8M0FNU>,
+            tensor<64x4x32xf4E2M1FN>, tensor<64x4xf8E8M0FNU>)
+        outs(%C : tensor<128x64xf32>) -> tensor<128x64xf32>
+    ```
+
+    Numeric casting promotes inputs and scales to the accumulator/output type.
+
+    TODO: Allow control over the combining/accumulating op and possibly the
+          multiplication op.
+  }];
+
+  let arguments = (ins
+    Variadic<AnyType>:$inputs,
+    Variadic<AnyShaped>:$outputs,
+    AffineMapArrayAttr:$indexing_maps,
+    DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
+  );
+  let results = (outs Variadic<AnyShaped>:$result_tensors);
+  let regions = (region SizedRegion<1>:$combiner);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+                          attributes, regionBuilder);
+      }]>,
+    OpBuilder<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+      "ValueRange":$outputs, "ArrayAttr":$indexingMaps,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute("indexing_maps", indexingMaps);
+        buildStructuredOp($_builder, $_state, resultTensorTypes, inputs,
+                          outputs, attributes, regionBuilder);
+      }]>,
+    OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$outputs,
+      "ArrayAttr":$indexingMaps,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute("indexing_maps", indexingMaps);
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+                          attributes, regionBuilder);
+      }]>
+  ];
+  let hasCustomAssemblyFormat = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = structuredOpsBaseDecls # [{
+    // Declare/implement functions necessary for LinalgStructuredInterface.
+
+    /// Infer iterator types for each dim in the domain of IndexingMaps.
+    SmallVector<utils::IteratorType> getIteratorTypesArray();
+
+    /// IndexingMaps always depends on attr associated to current Op instance.
+    bool hasDynamicIndexingMaps() { return true; };
+    bool hasUserDefinedMaps() { return true; };
+
+    static unsigned getNumRegionArgs();
+
+    static void regionBuilder(ImplicitLocOpBuilder &b,
+                              Block &block, ArrayRef<NamedAttribute> attrs,
+                              function_ref<InFlightDiagnostic()> emitError);
+
+    static std::function<void(ImplicitLocOpBuilder &,
+                              Block &, ArrayRef<NamedAttribute>,
+                              function_ref<InFlightDiagnostic()>)>
+    getRegionBuilder() {
+      return regionBuilder;
+    }
+
+    std::string getLibraryCallName() {
+      return "op_has_no_registered_library_name";
+    }
+
+    // Implement function necessary for DestinationStyleOpInterface.
+    ::mlir::MutableOperandRange getDpsInitsMutable() {
+      return getOutputsMutable();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

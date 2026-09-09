@@ -145,9 +145,6 @@ foreach Ext = QExtsRV64 in {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtQ] in {
-  def : InstAlias<"flq $rd, (${rs1})",  (FLQ FPR128:$rd,  GPR:$rs1, 0), 0>;
-  def : InstAlias<"fsq $rs2, (${rs1})", (FSQ FPR128:$rs2, GPR:$rs1, 0), 0>;
-
   def : InstAlias<"fmv.q $rd, $rs",  (FSGNJ_Q FPR128:$rd, FPR128:$rs,
                                       FPR128:$rs)>;
   def : InstAlias<"fabs.q $rd, $rs", (FSGNJX_Q FPR128:$rd, FPR128:$rs,
@@ -165,3 +162,8 @@ let Predicates = [HasStdExtQ] in {
   def PseudoFLQ : PseudoFloatLoad<"flq", FPR128>;
   def PseudoFSQ : PseudoStore<"fsq", FPR128>;
 } // Predicates = [HasStdExtQ]
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearFPR128 : Pseudo<(outs FPR128:$rd), (ins), []>,
+                        PseudoInstExpansion<(FCVT_Q_W FPR128:$rd, X0, FRM_RNE)>;
+

@@ -1,6 +1,6 @@
 ; RUN: rm -f %t.pdb
 ; RUN: opt %s -dxil-embed -dxil-globals -S -o - | FileCheck %s
-; RUN: llc %s --filetype=obj -o %t.bc --dx-pdb-file=%t.pdb
+; RUN: llc %s --filetype=obj --dx-embed-debug -o %t.bc --dx-pdb-path=%t.pdb
 ; RUN: obj2yaml %t.bc | FileCheck %s --check-prefix=YAML
 ; RUN: llvm-objcopy --dump-section=ILDB=%t.ildb %t.bc
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.dxil %t.bc
@@ -40,11 +40,11 @@ define i32 @add(i32 %a, i32 %b) {
 !7 = !{!"hlsl.hlsl"}
 !8 = !{!"-T", !"lib_6_5", !"-g", !"hlsl.hlsl"}
 
-; Check that DXIL, ILDB and SRCI parts are emitted as a GV and used by the compiler.
+
+; Check that DXIL and ILDB parts are emitted as a GV and used by the compiler.
 
 ; CHECK: @dx.ildb = private constant [[BC_TYPE:\[[0-9]+ x i8\]]] c"BC\C0\DE{{[^"]+}}", section "ILDB", align 4
 ; CHECK: @dx.dxil = private constant [[BC_TYPE:\[[0-9]+ x i8\]]] c"BC\C0\DE{{[^"]+}}", section "DXIL", align 4
-; CHECK: @dx.srci = private constant {{\[[0-9]+ x i8\]}}
 ; CHECK: @llvm.compiler.used = appending global {{\[[0-9]+ x ptr\]}} [ptr @dx.ildb, ptr @dx.dxil
 
 ; This is using regex matches on some sizes, offsets and fields. These are all
@@ -89,13 +89,14 @@ define i32 @add(i32 %a, i32 %b) {
 ; YAML-NEXT:       DXILSize:        [[#DXILSIZE - 24]]
 ; YAML-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE,
 
-; Check that despite dx.source is stripped from DXIL, SRCI is still emitted:
-; YAML:   - Name:            SRCI
-
 ; Check that ILDB has the debug info, and DXIL does not:
 
 ; ILDB-DIS: define i32 @add(i32 %a, i32 %b)
 ; ILDB-DIS: !llvm.dbg.cu
+; ILDB-DIS: !dx.source.contents
+; ILDB-DIS: !dx.source.defines
+; ILDB-DIS: !dx.source.mainFileName
+; ILDB-DIS: !dx.source.args
 ; ILDB-DIS: !DICompileUnit
 ; ILDB-DIS: !DIFile
 ; ILDB-DIS: !"Dwarf Version"

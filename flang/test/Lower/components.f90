@@ -96,7 +96,7 @@ end subroutine
 ! CHECK:           return
 ! CHECK:         }
 
-subroutine issue772(a, x)
+subroutine component_subexpressions_once(a, x)
   ! Verify that sub-expressions inside a component reference are
   ! only evaluated once.
   type t
@@ -107,7 +107,7 @@ subroutine issue772(a, x)
   x = a(ifoo())%b(1:100:1)
   print *, a(20)%b(1:ibar():1)
 end subroutine
-! CHECK-LABEL:   func.func @_QPissue772(
+! CHECK-LABEL:   func.func @_QPcomponent_subexpressions_once(
 ! CHECK: fir.call @_QPifoo()
 ! CHECK-NOT: fir.call @_QPifoo()
 ! CHECK: fir.call @_QPibar()

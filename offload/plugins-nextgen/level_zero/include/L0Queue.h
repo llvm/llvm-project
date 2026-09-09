@@ -13,9 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
-#include "L0Defs.h"
 #include "L0Event.h"
-#include "L0Trace.h"
 #include "PluginInterface.h"
 
 #include <mutex>
@@ -27,6 +25,7 @@
 namespace llvm::omp::target::plugin {
 
 class L0DeviceTy;
+class LevelZeroPluginContextTy;
 struct L0LaunchEnvTy;
 
 /// Abstract queue that supports asynchronous command submission.
@@ -38,16 +37,24 @@ protected:
   L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
   bool CreateQueueInOrder;
+  /// Plugin-owned context this queue belongs to (never null on an active
+  /// queue).
+  LevelZeroPluginContextTy *UserCtx = nullptr;
 
 public:
   L0QueueTy(L0DeviceTy &Device, bool IsInorder = true)
       : Device(Device), CreateQueueInOrder(IsInorder) {}
   virtual ~L0QueueTy() {}
 
+  L0DeviceTy &getDevice() const { return Device; }
+
+  LevelZeroPluginContextTy *getUserCtx() const { return UserCtx; }
+  void setUserCtx(LevelZeroPluginContextTy *Ctx) { UserCtx = Ctx; }
+
   /// Clear data.
   void reset() { resetImpl(); }
 
-  Error init();
+  Error init(ze_context_handle_t UserZeCtx);
   Error deinit();
   Error synchronize() { return synchronizeImpl(); }
   Expected<bool> hasPendingWork() { return hasPendingWorkImpl(); }
@@ -69,9 +76,15 @@ public:
     return dataSubmitImpl(TgtPtr, HstPtr, Size);
   }
 
+  // Enqueue a memory fill command. Unsupported native patterns are replicated
+  // using ordered memory copies.
   Error memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
-                   size_t Size) {
-    return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
+                   size_t Size);
+
+  Error memoryPrefetch(const void *Ptr, size_t Size) {
+    if (Size == 0)
+      return Plugin::success();
+    return memoryPrefetchImpl(Ptr, Size);
   }
 
   Error dispatchLaunchKernel(ze_kernel_handle_t Kernel, L0LaunchEnvTy &KEnv,
@@ -136,6 +149,9 @@ public:
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
+  virtual Error memoryPrefetchImpl(const void *Ptr, size_t Size) {
+    return CmdList->appendMemoryPrefetch(Ptr, Size);
+  }
   virtual Error dataFenceImpl() = 0;
 
   virtual Error appendSignalEventImpl(ze_event_handle_t Event) {
@@ -144,6 +160,12 @@ public:
   virtual Error appendWaitOnEventImpl(ze_event_handle_t Event) {
     return CmdList->appendWaitOnEvent(Event);
   }
+
+private:
+  /// Fallback fill that seeds the pattern once and grows the filled region via
+  /// device copies, doubling each time.
+  Error memoryFillReplicateImpl(void *Ptr, const void *Pattern,
+                                size_t PatternSize, size_t Size);
 };
 
 class L0AsyncQueueTy : public L0QueueTy {
@@ -249,21 +271,21 @@ public:
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
   Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
+  Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
+                       size_t Size) override;
 };
 
 /// Simple cache for queue objects.
 class L0QueueCacheTy {
-  L0DeviceTy &Device;
-  llvm::SmallVector<L0QueueTy *> Queues;
+  LevelZeroPluginContextTy &UserCtx;
+  llvm::DenseMap<L0DeviceTy *, llvm::SmallVector<L0QueueTy *>> Queues;
   std::mutex Mtx;
-  CommandModeTy CachedCmdMode = CommandModeTy::InOrder;
 
 public:
-  L0QueueCacheTy(L0DeviceTy &Device) : Device(Device) {}
-  Expected<L0QueueTy *> getQueue();
+  L0QueueCacheTy(LevelZeroPluginContextTy &Ctx) : UserCtx(Ctx) {}
+  Expected<L0QueueTy *> getQueue(L0DeviceTy &Device);
   void releaseQueue(L0QueueTy *Queue);
   Error deinit();
-  void setCommandMode(CommandModeTy CmdMode) { CachedCmdMode = CmdMode; }
 };
 
 } // namespace llvm::omp::target::plugin

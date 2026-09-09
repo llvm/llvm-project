@@ -344,7 +344,7 @@ private:
       ElementCount VF = getVectorizedTypeVF(RetTy);
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
-                                      VecTy, {}, CostKind, 0, nullptr, {});
+                                      VecTy, CostKind, {}, 0, nullptr, {});
     }
 
     // Lowering to a library call (with output pointers) may require us to emit
@@ -397,10 +397,23 @@ public:
                            const Function *Callee) const override {
     const TargetMachine &TM = getTLI()->getTargetMachine();
 
-    const FeatureBitset &CallerBits =
-        TM.getSubtargetImpl(*Caller)->getFeatureBits();
-    const FeatureBitset &CalleeBits =
-        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+    const TargetSubtargetInfo *CallerSTI = TM.getSubtargetImpl(*Caller);
+    const TargetSubtargetInfo *CalleeSTI = TM.getSubtargetImpl(*Callee);
+    FeatureBitset InlineIgnoreFeatures = CallerSTI->getInlineIgnoreFeatures();
+    FeatureBitset InlineInverseFeatures = CallerSTI->getInlineInverseFeatures();
+    FeatureBitset InlineMustMatchFeatures =
+        CallerSTI->getInlineMustMatchFeatures();
+
+    FeatureBitset CallerBits =
+        (CallerSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
+    FeatureBitset CalleeBits =
+        (CalleeSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
+
+    if ((CallerBits & InlineMustMatchFeatures) !=
+        (CalleeBits & InlineMustMatchFeatures))
+      return false;
 
     // Inline a callee if its target-features are a subset of the callers
     // target-features.
@@ -567,9 +580,10 @@ public:
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
-                             ArrayRef<const Value *> Operands, Type *AccessType,
-                             TTI::TargetCostKind CostKind) const override {
-    return BaseT::getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
+                             ArrayRef<const Value *> Operands,
+                             TTI::TargetCostKind CostKind,
+                             Type *AccessType) const override {
+    return BaseT::getGEPCost(PointeeType, Ptr, Operands, CostKind, AccessType);
   }
 
   unsigned getEstimatedNumberOfCaseClusters(
@@ -668,6 +682,21 @@ public:
     EVT VT = TLI->getValueType(DL, Ty);
     return TLI->isTypeLegal(VT) &&
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
+  }
+
+  bool haveFastClmul(IntegerType *Ty) const override {
+    // FIXME: clmul should really be Promote for any bitwidth under the largest
+    // legal bitwidth for clmul. Using IndexTy instead of Ty is a hack to get
+    // around that shortcoming.
+    const DataLayout &DL = thisT()->DL;
+    IntegerType *IndexTy =
+        DL.getIndexType(Ty->getContext(), DL.getAllocaAddrSpace());
+    if (Ty->getBitWidth() > IndexTy->getBitWidth())
+      return false;
+
+    const TargetLoweringBase *TLI = getTLI();
+    EVT VT = TLI->getValueType(DL, IndexTy);
+    return TLI->isOperationLegalOrCustom(ISD::CLMUL, VT);
   }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
@@ -833,6 +862,10 @@ public:
         SimplifyAndSetOp);
   }
 
+  InstructionCost getBranchMispredictPenalty() const override {
+    return getST()->getMispredictionPenalty();
+  }
+
   std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const override {
     return std::optional<unsigned>(
@@ -888,7 +921,6 @@ public:
     return TypeSize::getFixed(32);
   }
 
-  std::optional<unsigned> getMaxVScale() const override { return std::nullopt; }
   std::optional<unsigned> getVScaleForTuning() const override {
     return std::nullopt;
   }
@@ -1011,6 +1043,14 @@ public:
 
   /// Estimate the cost of type-legalization and the legalized type.
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const {
+    auto [It, Inserted] = TypeLegalizationCostCache.try_emplace(Ty);
+    if (Inserted)
+      It->second = computeTypeLegalizationCost(Ty);
+    return It->second;
+  }
+
+private:
+  std::pair<InstructionCost, MVT> computeTypeLegalizationCost(Type *Ty) const {
     LLVMContext &C = Ty->getContext();
     EVT MTy = getTLI()->getValueType(DL, Ty);
 
@@ -1044,7 +1084,16 @@ public:
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override { return 1; }
+  /// Memoizes type legalization cost. The mapping does not depend on the IR, so
+  /// entries stay valid for the lifetime of this object.
+  mutable DenseMap<Type *, std::pair<InstructionCost, MVT>>
+      TypeLegalizationCostCache;
+
+public:
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
+    return 1;
+  }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -1181,7 +1230,7 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
@@ -1786,25 +1835,12 @@ public:
           return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
                                           AS, CostKind);
         }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID()) ||
-            ICA.getID() == Intrinsic::vp_fneg) {
+        if (ICA.getID() == Intrinsic::vp_udiv ||
+            ICA.getID() == Intrinsic::vp_sdiv ||
+            ICA.getID() == Intrinsic::vp_urem ||
+            ICA.getID() == Intrinsic::vp_srem) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
-        }
-        if (VPCastIntrinsic::isVPCast(ICA.getID())) {
-          return thisT()->getCastInstrCost(
-              *FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
-              TTI::CastContextHint::None, CostKind);
-        }
-        if (VPCmpIntrinsic::isVPCmp(ICA.getID())) {
-          // We can only handle vp_cmp intrinsics with underlying instructions.
-          if (ICA.getInst()) {
-            assert(FOp);
-            auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
-            return thisT()->getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0],
-                                               ICA.getReturnType(),
-                                               UI->getPredicate(), CostKind);
-          }
         }
       }
       if (ICA.getID() == Intrinsic::vp_load_ff) {
@@ -1854,8 +1890,7 @@ public:
             CostKind);
       }
 
-      if (ICA.getID() == Intrinsic::vp_select ||
-          ICA.getID() == Intrinsic::vp_merge) {
+      if (ICA.getID() == Intrinsic::vp_merge) {
         TTI::OperandValueInfo OpInfoX, OpInfoY;
         if (!ICA.isTypeBasedOnly()) {
           OpInfoX = TTI::getOperandInfo(ICA.getArgs()[0]);
@@ -2026,10 +2061,10 @@ public:
       if (isa<ScalableVectorType>(RetTy))
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
-      return thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
-                                     cast<VectorType>(RetTy),
-                                     cast<VectorType>(Args[0]->getType()), {},
-                                     CostKind, Index, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(
+          TTI::SK_ExtractSubvector, cast<VectorType>(RetTy),
+          cast<VectorType>(Args[0]->getType()), CostKind, {}, Index,
+          cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_insert: {
       // FIXME: Handle case where a scalable vector is inserted into a scalable
@@ -2039,7 +2074,7 @@ public:
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_InsertSubvector, cast<VectorType>(RetTy),
-          cast<VectorType>(Args[0]->getType()), {}, CostKind, Index,
+          cast<VectorType>(Args[0]->getType()), CostKind, {}, Index,
           cast<VectorType>(Args[1]->getType()));
     }
     case Intrinsic::vector_splice_left:
@@ -2050,7 +2085,7 @@ public:
       unsigned Index = COffset->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_Splice, cast<VectorType>(RetTy),
-          cast<VectorType>(Args[0]->getType()), {}, CostKind,
+          cast<VectorType>(Args[0]->getType()), CostKind, {},
           IID == Intrinsic::vector_splice_left ? Index : -Index,
           cast<VectorType>(RetTy));
     }
@@ -2065,6 +2100,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, I, 1);
@@ -2123,14 +2160,9 @@ public:
     case Intrinsic::experimental_cttz_elts: {
       EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
 
-      // If we're not expanding the intrinsic then we assume this is cheap
-      // to implement.
-      if (!getTLI()->shouldExpandCttzElements(ArgType))
-        return getTypeLegalizationCost(RetTy).first;
-
       // TODO: The costs below reflect the expansion code in
-      // SelectionDAGBuilder, but we may want to sacrifice some accuracy in
-      // favour of compile time.
+      // TargetLowering::expandCttzElts, but we may want to sacrifice some
+      // accuracy in favour of compile time.
 
       // Find the smallest "sensible" element type to use for the expansion.
       bool ZeroIsPoison = !cast<ConstantInt>(Args[1])->isZero();
@@ -2530,6 +2562,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
     case Intrinsic::experimental_vector_match: {
@@ -2537,21 +2571,15 @@ public:
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
       unsigned SearchSize = NeedleTy->getNumElements();
 
-      // If we're not expanding the intrinsic then we assume this is cheap to
-      // implement.
-      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
-      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
-        return getTypeLegalizationCost(RetTy).first;
-
       // Approximate the cost based on the expansion code in
-      // SelectionDAGBuilder.
+      // TargetLowering::expandVectorMatch.
       InstructionCost Cost = 0;
       Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
                                           CostKind, 1, nullptr, nullptr);
       Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SearchTy,
                                           CostKind, 0, nullptr, nullptr);
-      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, SearchTy, {},
-                                      CostKind, 0, nullptr);
+      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, SearchTy,
+                                      CostKind, {}, 0, nullptr);
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SearchTy, RetTy,
                                           CmpInst::ICMP_EQ, CostKind);
       Cost +=
@@ -2563,8 +2591,8 @@ public:
     }
     case Intrinsic::vector_reverse:
       return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
-                                     cast<VectorType>(ICA.getArgTypes()[0]), {},
-                                     CostKind, 0, cast<VectorType>(RetTy));
+                                     cast<VectorType>(ICA.getArgTypes()[0]),
+                                     CostKind, {}, 0, cast<VectorType>(RetTy));
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
     case Intrinsic::experimental_vector_histogram_umax:
@@ -3256,7 +3284,7 @@ public:
     // Try to find actual number of parts for non-power-of-2 elements as
     // ceil(num-of-elements/num-of-subtype-elements).
     if (auto *FTp = dyn_cast<FixedVectorType>(Tp);
-        Tp && LT.second.isFixedLengthVector() &&
+        FTp && LT.second.isFixedLengthVector() &&
         !has_single_bit(FTp->getNumElements())) {
       if (auto *SubTp = dyn_cast_if_present<FixedVectorType>(
               EVT(LT.second).getTypeForEVT(Tp->getContext()));
@@ -3329,7 +3357,7 @@ public:
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
       ShuffleCost += thisT()->getShuffleCost(
-          TTI::SK_ExtractSubvector, SubTy, Ty, {}, CostKind, NumVecElts, SubTy);
+          TTI::SK_ExtractSubvector, SubTy, Ty, CostKind, {}, NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
       ++LongVectorCount;
@@ -3345,7 +3373,7 @@ public:
     // By default reductions need one shuffle per reduction level.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 Ty, {}, CostKind, 0, Ty);
+                                                 Ty, CostKind, {}, 0, Ty);
     ArithCost +=
         NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
@@ -3420,7 +3448,7 @@ public:
       auto *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
 
       ShuffleCost += thisT()->getShuffleCost(
-          TTI::SK_ExtractSubvector, SubTy, Ty, {}, CostKind, NumVecElts, SubTy);
+          TTI::SK_ExtractSubvector, SubTy, Ty, CostKind, {}, NumVecElts, SubTy);
 
       IntrinsicCostAttributes Attrs(IID, SubTy, {SubTy, SubTy}, FMF);
       MinMaxCost += getIntrinsicInstrCost(Attrs, CostKind);
@@ -3436,7 +3464,7 @@ public:
     // architecture-dependent length.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 Ty, {}, CostKind, 0, Ty);
+                                                 Ty, CostKind, {}, 0, Ty);
     IntrinsicCostAttributes Attrs(IID, Ty, {Ty, Ty}, FMF);
     MinMaxCost += NumReduxLevels * getIntrinsicInstrCost(Attrs, CostKind);
     // The last min/max should be in vector registers and we counted it above.

@@ -12,29 +12,28 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 1 for VF 1: EMIT-SCALAR ir<%l> = load ir<%g.src>
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%iv.4> = add nuw nsw ir<%iv>, ir<4>
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%c> = icmp ule ir<%l>, ir<128>
-; CHECK:  Cost of 0 for VF 1: EMIT branch-on-cond ir<%c>
+; CHECK:  Cost of 0 for VF 1: EMIT branch-on-cond ir<%c> (!vplan.prof.estimated estimated {1073741824, 1073741824})
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%or> = or disjoint ir<%iv.4>, ir<1>
 ; CHECK:  Cost of 0 for VF 1: EMIT ir<%g.dst> = getelementptr inbounds ir<%dst>, ir<%or>
 ; CHECK:  Cost of 1 for VF 1: EMIT store ir<%iv.4>, ir<%g.dst>
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%exitcond> = icmp eq ir<%iv.next>, ir<32>
 ; CHECK:  Cost of 0 for VF 1: EMIT branch-on-cond ir<%exitcond>
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-; CHECK:  Cost of 0 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%g.src>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%g.src>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%iv.4> = add ir<%iv>, ir<4>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c> = icmp ule ir<%l>, ir<128>
 ; CHECK:  Cost of 1 for VF 2: EMIT ir<%or> = add ir<%iv.4>, ir<1>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.dst> = getelementptr ir<%dst>, ir<%or>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%g.dst>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP6]]>, ir<%iv.4>, ir<%c>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP6]]>, ir<%iv.4>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 2: IR %g.src = getelementptr inbounds i64, ptr %src, i64 %iv
@@ -43,22 +42,21 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 0 for VF 2: IR %c = icmp ule i64 %l, 128
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 1 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds ir<%g.src>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds i64, ir<%g.src>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%iv.4> = add ir<%iv>, ir<4>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c> = icmp ule ir<%l>, ir<128>
 ; CHECK:  Cost of 1 for VF 4: EMIT ir<%or> = add ir<%iv.4>, ir<1>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.dst> = getelementptr ir<%dst>, ir<%or>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer ir<%g.dst>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP6]]>, ir<%iv.4>, ir<%c>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP6]]>, ir<%iv.4>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 4: IR %g.src = getelementptr inbounds i64, ptr %src, i64 %iv
@@ -107,19 +105,18 @@ define void @test_vpinstruction_freeze_cost(ptr %src, ptr noalias %dst) {
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<32>
 ; CHECK:  Cost of 0 for VF 1: EMIT branch-on-cond ir<%ec>
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%g.src>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%g.src>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN ir<%fr> = freeze ir<%l>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%g.dst>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i64, ir<%g.dst>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP6]]>, ir<%fr>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 2: IR %g.src = getelementptr inbounds i64, ptr %src, i64 %iv
@@ -131,19 +128,18 @@ define void @test_vpinstruction_freeze_cost(ptr %src, ptr noalias %dst) {
 ; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i64 %iv.next, 32
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds ir<%g.src>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds i64, ir<%g.src>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN ir<%fr> = freeze ir<%l>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer inbounds ir<%g.dst>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer inbounds i64, ir<%g.dst>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP6]]>, ir<%fr>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 4: IR %g.src = getelementptr inbounds i64, ptr %src, i64 %iv
@@ -180,7 +176,7 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK-LABEL: 'test_vpinstruction_switch_cost'
 ; CHECK:  Cost of 0 for VF 1: EMIT-SCALAR ir<%ptr.iv> = phi [ ir<%start>, vector.ph ], [ ir<%ptr.iv.next>, loop.latch ]
 ; CHECK:  Cost of 1 for VF 1: EMIT-SCALAR ir<%l> = load ir<%ptr.iv>
-; CHECK:  Cost of 0 for VF 1: EMIT switch ir<%l>, ir<-12>, ir<13>, ir<0>
+; CHECK:  Cost of 0 for VF 1: EMIT switch ir<%l>, ir<-12>, ir<13>, ir<0> (!vplan.prof.estimated estimated {536870912, 536870912, 536870912, 536870912})
 ; CHECK:  Cost of 1 for VF 1: EMIT store ir<1>, ir<%ptr.iv>
 ; CHECK:  Cost of 1 for VF 1: EMIT store ir<0>, ir<%ptr.iv>
 ; CHECK:  Cost of 1 for VF 1: EMIT store ir<42>, ir<%ptr.iv>
@@ -193,7 +189,7 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP5:%[0-9]+]]> * ir<8>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<8>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP8:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP8:%[0-9]+]]> = vector-pointer i64, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP8]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP9:%[0-9]+]]> = icmp eq ir<%l>, ir<-12>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP10:%[0-9]+]]> = icmp eq ir<%l>, ir<13>
@@ -201,18 +197,19 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12:%[0-9]+]]> = or vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = or vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = not vp<[[VP13]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP15:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP15]]>, ir<1>, vp<[[VP11]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP16:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP16]]>, ir<0>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP17:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP17]]>, ir<42>, vp<[[VP9]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP18:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP18]]>, ir<2>, vp<[[VP14]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP15:%[0-9]+]]> = vector-pointer i64, vp<%next.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP15]]>, ir<1>, vp<[[VP11]]> (!vplan.execution.frequency 2305843009213693952 (25%, estimated))
+; CHECK:  Cost of 0 for VF 2: vp<[[VP16:%[0-9]+]]> = vector-pointer i64, vp<%next.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP16]]>, ir<0>, vp<[[VP10]]> (!vplan.execution.frequency 2305843009213693952 (25%, estimated))
+; CHECK:  Cost of 0 for VF 2: vp<[[VP17:%[0-9]+]]> = vector-pointer i64, vp<%next.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP17]]>, ir<42>, vp<[[VP9]]> (!vplan.execution.frequency 2305843009213693952 (25%, estimated))
+; CHECK:  Cost of 0 for VF 2: vp<[[VP18:%[0-9]+]]> = vector-pointer i64, vp<%next.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP18]]>, ir<2>, vp<[[VP14]]> (!vplan.execution.frequency 2305843009213693952 (25%, estimated))
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 + ((-8 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 8))<nuw><nsw>
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 + ((-8 + (-1 * (ptrtoaddr ptr %start to i64)) + (ptrtoaddr ptr %end to i64)) /u 8))<nuw><nsw>
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP4:%[0-9]+]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 2: IR %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 2: IR %l = load i64, ptr %ptr.iv, align 1
@@ -224,7 +221,7 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 1 for VF 4: vp<[[VP6]]> = DERIVED-IV ir<0> + vp<[[VP5]]> * ir<8>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP7]]> = SCALAR-STEPS vp<[[VP6]]>, ir<8>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP8]]> = vector-pointer vp<%next.gep>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP8]]> = vector-pointer i64, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP8]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP9]]> = icmp eq ir<%l>, ir<-12>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP10]]> = icmp eq ir<%l>, ir<13>
@@ -232,18 +229,19 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP12]]> = or vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP13]]> = or vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP14]]> = not vp<[[VP13]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP15]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP15]]>, ir<1>, vp<[[VP11]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP16]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP16]]>, ir<0>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP17]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP17]]>, ir<42>, vp<[[VP9]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP18]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP18]]>, ir<2>, vp<[[VP14]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP15]]> = vector-pointer i64, vp<%next.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP15]]>, ir<1>, vp<[[VP11]]> (!vplan.execution.frequency 2305843009213693952 (25%, estimated))
+; CHECK:  Cost of 0 for VF 4: vp<[[VP16]]> = vector-pointer i64, vp<%next.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP16]]>, ir<0>, vp<[[VP10]]> (!vplan.execution.frequency 2305843009213693952 (25%, estimated))
+; CHECK:  Cost of 0 for VF 4: vp<[[VP17]]> = vector-pointer i64, vp<%next.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP17]]>, ir<42>, vp<[[VP9]]> (!vplan.execution.frequency 2305843009213693952 (25%, estimated))
+; CHECK:  Cost of 0 for VF 4: vp<[[VP18]]> = vector-pointer i64, vp<%next.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP18]]>, ir<2>, vp<[[VP14]]> (!vplan.execution.frequency 2305843009213693952 (25%, estimated))
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
-; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP3]]> = EXPAND SCEV (1 + ((-8 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 8))<nuw><nsw>
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
+; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP3]]> = EXPAND SCEV (1 + ((-8 + (-1 * (ptrtoaddr ptr %start to i64)) + (ptrtoaddr ptr %end to i64)) /u 8))<nuw><nsw>
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP4]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 4: IR %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 4: IR %l = load i64, ptr %ptr.iv, align 1
@@ -299,15 +297,14 @@ define void @test_vpinstruction_extractvalue_cost(ptr noalias %dst, {i64, i64} %
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<1000>
 ; CHECK:  Cost of 0 for VF 1: EMIT branch-on-cond ir<%ec>
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%g.dst>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%g.dst>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP5]]>, ir<%add>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 2: IR %a = extractvalue { i64, i64 } %sv, 0
@@ -322,15 +319,14 @@ define void @test_vpinstruction_extractvalue_cost(ptr noalias %dst, {i64, i64} %
 ; CHECK:  Cost of 1 for VF 2: CLONE ir<%add> = add ir<%a>, ir<%b>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds ir<%g.dst>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds i64, ir<%g.dst>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP5]]>, ir<%add>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 4: IR %a = extractvalue { i64, i64 } %sv, 0

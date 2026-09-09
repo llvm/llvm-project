@@ -68,6 +68,8 @@ public:
   /// @param Bold Bold/brighter text, default false
   /// @param BG If true, change the background, default: change foreground
   /// @param Mode Enable, disable or compute whether to use colors.
+  ///
+  /// FIXME: If Color == SAVEDCOLOR, Bold == false is currently ignored.
   LLVM_CTOR_NODISCARD WithColor(
       raw_ostream &OS, raw_ostream::Colors Color = raw_ostream::SAVEDCOLOR,
       bool Bold = false, bool BG = false, ColorMode Mode = ColorMode::Auto)
@@ -117,6 +119,8 @@ public:
   /// change only the bold attribute, and keep colors untouched
   /// @param Bold Bold/brighter text, default false
   /// @param BG If true, change the background, default: change foreground
+  ///
+  /// FIXME: If Color == SAVEDCOLOR, Bold == false is currently ignored.
   LLVM_ABI WithColor &changeColor(raw_ostream::Colors Color, bool Bold = false,
                                   bool BG = false);
 

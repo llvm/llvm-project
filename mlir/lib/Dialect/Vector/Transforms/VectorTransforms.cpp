@@ -244,7 +244,7 @@ struct CombineContractResultTranspose final
   }
 };
 
-/// Merge BroadcastOp into ContractionOp user.
+/// Merge BroadcastOp (and broadcast-like ShapeCastOp) into ContractionOp user.
 /// Ex:
 /// ```
 ///   %0 = vector.broadcast %arg0 : vector<32x16xf32> to vector<8x32x16xf32>
@@ -282,21 +282,34 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
   bool changed = false;
   for (Value *operand : {&lhs, &rhs}) {
     AffineMap &map = maps[index++];
+
+    // Accept operands defined by vector.broadcast and broadcast-like
+    // vector.shape_cast.
+    auto sc = operand->getDefiningOp<vector::ShapeCastOp>();
     auto broadcast = operand->getDefiningOp<vector::BroadcastOp>();
-    if (!broadcast)
+    if (!broadcast && !sc)
       continue;
+
+    if (sc && !sc.isBroadcastLike())
+      return rewriter.notifyMatchFailure(
+          contractOp, "Operand defined via vector.shape_cast that has "
+                      "non-broadcast semantics");
+
+    // Get the source and the result types.
+    VectorType srcType = sc ? sc.getSourceVectorType()
+                            : dyn_cast<VectorType>(broadcast.getSourceType());
+    VectorType resType =
+        sc ? sc.getResultVectorType() : broadcast.getResultVectorType();
+
     // contractionOp can only take vector as operands.
-    auto srcType = dyn_cast<VectorType>(broadcast.getSourceType());
-    if (!srcType ||
-        srcType.getRank() == broadcast.getResultVectorType().getRank())
+    // auto srcType = dyn_cast<VectorType>(broadcast.getSourceVectorType());
+    if (!srcType || srcType.getRank() >= resType.getRank())
       continue;
-    int64_t rankDiff =
-        broadcast.getResultVectorType().getRank() - srcType.getRank();
+    int64_t rankDiff = resType.getRank() - srcType.getRank();
     bool innerDimBroadcast = false;
     SmallVector<AffineExpr> originalDims;
     for (const auto &dim : llvm::enumerate(srcType.getShape())) {
-      if (dim.value() !=
-          broadcast.getResultVectorType().getDimSize(rankDiff + dim.index())) {
+      if (dim.value() != resType.getDimSize(rankDiff + dim.index())) {
         innerDimBroadcast = true;
         break;
       }
@@ -311,7 +324,7 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
     // of non-unit size.
     bool nonUnitDimReductionBroadcast = false;
     for (int64_t i = 0; i < rankDiff; ++i) {
-      if (broadcast.getResultVectorType().getDimSize(i) != 1 &&
+      if (resType.getDimSize(i) != 1 &&
           isReductionIterator(contractOp.getIteratorTypes()
                                   .getValue()[map.getDimPosition(i)])) {
         nonUnitDimReductionBroadcast = true;
@@ -321,11 +334,10 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
     if (nonUnitDimReductionBroadcast)
       continue;
 
-    AffineMap broadcastMap =
-        AffineMap::get(broadcast.getResultVectorType().getRank(), 0,
-                       originalDims, contractOp.getContext());
+    AffineMap broadcastMap = AffineMap::get(resType.getRank(), 0, originalDims,
+                                            contractOp.getContext());
     map = broadcastMap.compose(map);
-    *operand = broadcast.getSource();
+    *operand = broadcast ? broadcast.getSource() : sc.getSource();
     changed = true;
   }
 
@@ -1031,39 +1043,59 @@ struct ReorderElementwiseOpsOnBroadcast final
           op, "Op doesn't have ElementwiseMappableTraits");
     if (op->getNumOperands() == 0)
       return failure();
-    if (isa<vector::FMAOp>(op)) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "Op only accepts vector types - not supported as broadcast source "
-          "might be a scalar");
-    }
 
     Type resultElemType = resultType.getElementType();
 
-    // Get the type of the first non-constant operand
+    // Select the source shape for the reordered computation. Prefer the first
+    // non-constant vector source so that scalar sources can be broadcast to its
+    // shape. The compatibility check below ensures that all vector sources have
+    // the same shape and scalable dimensions.
     Value broadcastSource;
+    Value firstBroadcastSource;
     for (Value operand : op->getOperands()) {
       Operation *definingOp = operand.getDefiningOp();
       if (!definingOp)
         return failure();
       if (definingOp->hasTrait<OpTrait::ConstantLike>())
         continue;
-      broadcastSource = getBroadcastLikeSource(operand);
-      break;
+      Value source = getBroadcastLikeSource(operand);
+      if (!source)
+        return failure();
+      if (!firstBroadcastSource)
+        firstBroadcastSource = source;
+      if (isa<VectorType>(source.getType())) {
+        broadcastSource = source;
+        break;
+      }
     }
+    // If all non-constant operands are scalar, choose the first source.
+    if (!broadcastSource)
+      broadcastSource = firstBroadcastSource;
     if (!broadcastSource)
       return failure();
     Type unbroadcastResultType =
         cloneOrReplace(broadcastSource.getType(), resultElemType);
 
-    // Make sure that all operands are broadcast from identically-shaped types:
-    //  * scalar (`vector.broadcast`), or
-    //  * vector (`vector.broadcast`).
-    // Otherwise the re-ordering wouldn't be safe.
+    // Some ops, e.g. `vector.fma`, only accept vector types. For such ops, a
+    // vector broadcast source is needed to determine the type of the reordered
+    // op. Scalar sources can then be promoted to that vector type.
+    // TODO: Support the case where all broadcast sources are scalars by
+    // promoting them to single element vectors.
+    if (isa<vector::FMAOp>(op) && !isa<VectorType>(unbroadcastResultType)) {
+      return rewriter.notifyMatchFailure(
+          op, "Op only accepts vector types, but the broadcast source is a "
+              "scalar");
+    }
+
+    // Make sure that all operands are broadcasts from compatible source types.
+    // Scalar sources are allowed when a vector source is available and are
+    // promoted to the vector source type selected above.
     if (!llvm::all_of(op->getOperands(), [broadcastSource](Value val) {
           if (auto source = getBroadcastLikeSource(val))
             return haveSameShapeAndScaling(source.getType(),
-                                           broadcastSource.getType());
+                                           broadcastSource.getType()) ||
+                   (isa<VectorType>(broadcastSource.getType()) &&
+                    !isa<VectorType>(source.getType()));
           SplatElementsAttr splatConst;
           return matchPattern(val, m_Constant(&splatConst));
         })) {
@@ -1091,7 +1123,14 @@ struct ReorderElementwiseOpsOnBroadcast final
                 rewriter, newConst, newType, operand.getLoc());
         srcValues.push_back(newConstOp->getResult(0));
       } else {
-        srcValues.push_back(operand.getDefiningOp()->getOperand(0));
+        Value source = operand.getDefiningOp()->getOperand(0);
+        if (isa<VectorType>(broadcastSource.getType()) &&
+            !isa<VectorType>(source.getType()))
+          source = vector::BroadcastOp::create(
+              rewriter, operand.getLoc(),
+              cloneOrReplace(broadcastSource.getType(), source.getType()),
+              source);
+        srcValues.push_back(source);
       }
     }
 

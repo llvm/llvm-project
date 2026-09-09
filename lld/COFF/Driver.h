@@ -125,6 +125,10 @@ private:
 
   bool isDecorated(StringRef sym);
 
+  InputFile *addObjectFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                           StringRef archiveName, uint64_t offsetInArchive,
+                           bool lazy);
+
   std::string getMapFile(const llvm::opt::InputArgList &args,
                          llvm::opt::OptSpecifier os,
                          llvm::opt::OptSpecifier osFile);

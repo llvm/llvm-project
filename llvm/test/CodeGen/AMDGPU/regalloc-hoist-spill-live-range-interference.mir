@@ -1,0 +1,45 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -passes='greedy<wwm>' \
+# RUN:   -stress-regalloc=3 -verify-regalloc -o - %s | FileCheck %s
+#
+# InlineSpiller tries to hoist the spill of %1 by storing its sibling %0 after
+# the basic block prologue. Extending the PHI-defined %0 to that insertion point
+# would overlap an interval already assigned to the same physical register.
+# Reject the hoist and spill %0 at the original copy instead.
+
+# CHECK-LABEL: name: hoist_spill_live_range_interference
+# CHECK: bb.2:
+# CHECK: SI_SPILL_WWM_V32_SAVE %0
+# CHECK-NEXT: $exec = S_AND_B64
+
+---
+name:            hoist_spill_live_range_interference
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+registers:
+  - { id: 0, class: vgpr_32, flags: [ WWM_REG ], split-from: '%2' }
+  - { id: 1, class: vgpr_32, flags: [ WWM_REG ], split-from: '%2' }
+  - { id: 2, class: vgpr_32, flags: [ WWM_REG ] }
+  - { id: 3, class: vgpr_32, flags: [ WWM_REG ] }
+  - { id: 4, class: vgpr_32, flags: [ WWM_REG ] }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $scc
+    %2:vgpr_32 = KILL
+    %0:vgpr_32 = COPY %2
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    successors: %bb.2
+    %0:vgpr_32 = COPY %2
+
+  bb.2:
+    %1:vgpr_32 = lr-split WWM_COPY %0:vgpr_32
+    $exec = S_AND_B64 $exec, $exec, implicit-def $scc
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vgpr_32 = IMPLICIT_DEF
+    KILL %2:vgpr_32, %3:vgpr_32, %4:vgpr_32
+    KILL %1:vgpr_32, %2:vgpr_32
+    S_ENDPGM 0
+...

@@ -38,7 +38,7 @@ func.func @_QPfoo() {
 // CHECK: %[[S_MAP:.*]] = omp.map.info var_ptr(%[[S_DECL]]#1
 // CHECK-SAME: map_clauses(implicit, tofrom) capture(ByRef)
 
-// CHECK: omp.target host_eval({{.*}}) map_entries({{.*}}, %[[S_MAP]] -> %[[S_TARGET_ARG:.*]] : {{.*}}) {
+// CHECK: omp.target kernel_type(spmd) host_eval({{.*}}) map_entries({{.*}}, %[[S_MAP]] -> %[[S_TARGET_ARG:.*]] : {{.*}}) {
 // CHECK:   %[[S_DEV_DECL:.*]]:2 = hlfir.declare %[[S_TARGET_ARG]]
 // CHECK:   omp.teams reduction(@[[OMP_RED]] %[[S_DEV_DECL]]#0 -> %[[RED_TEAMS_ARG:.*]] : !fir.ref<f32>) {
 // CHECK:   omp.parallel {
@@ -48,7 +48,7 @@ func.func @_QPfoo() {
 // CHECK:         %[[S_VAL:.*]] = fir.load %[[S_WS_DECL]]#0
 // CHECK:         %[[RED_RES:.*]] = arith.addf %[[S_VAL]], %{{.*}} fastmath<contract> : f32
 // CHECK:         hlfir.assign %[[RED_RES]] to %[[S_WS_DECL]]#0
-// CHECK:       }
-// CHECK:     }
-// CHECK:   }
-// CHECK: }
+// CHECK:       } {omp.composite}
+// CHECK:     } {omp.composite}
+// CHECK:   } {omp.composite}
+// CHECK: } {omp.combined}

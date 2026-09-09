@@ -36,17 +36,17 @@ jobs:
       github.event.action != 'closed'
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04:latest@sha256:571cfd8a5ec38a9f241b421c56aa821139c0fd9dcbde5f6161210884befb5ec4'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04:latest@sha256:26c16c2c1d57a0e052e01873db555dd56f1d462cbacdd496fecae0b486266a8e'
     env:
       LLVM_VERSION: 18
     steps:
       - name: Checkout Source
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
         with:
           # A full build of llvm, clang, lld, and lldb takes about 250MB
           # of ccache space. There's not much reason to have more than this,

@@ -70,7 +70,8 @@ class PseudoSourceValueManager;
 class raw_ostream;
 class SlotIndexes;
 class StringRef;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetSubtargetInfo;
 struct WinEHFuncInfo;
 
@@ -804,6 +805,14 @@ public:
   MachineFrameInfo &getFrameInfo() { return *FrameInfo; }
   const MachineFrameInfo &getFrameInfo() const { return *FrameInfo; }
 
+  /// Returns true if frame pointer elimination should be disabled for this
+  /// function.
+  LLVM_ABI bool disableFramePointerElim() const;
+
+  /// Returns true if the frame pointer must always either point to a new frame
+  /// record or be un-modified in this function.
+  LLVM_ABI bool framePointerIsReserved() const;
+
   /// getJumpTableInfo - Return the jump table info object for the current
   /// function.  This object contains information about jump tables in the
   /// current function.  If the current function has no jump tables, this will
@@ -1113,35 +1122,35 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
-      Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                BaseAlignment, Metadata, SSID, Ordering,
                                 FailureOrdering);
   }
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                BaseAlignment, Metadata, SSID, Ordering,
                                 FailureOrdering);
   }
 

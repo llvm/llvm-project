@@ -176,7 +176,6 @@ set(x86_files
   amxfp8intrin.h
   amxintrin.h
   amxmovrsintrin.h
-  amxtf32intrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
@@ -193,6 +192,8 @@ set(x86_files
   avx2intrin.h
   avx512bf16intrin.h
   avx512bitalgintrin.h
+  avx512bmmintrin.h
+  avx512bmmvlintrin.h
   avx512bwintrin.h
   avx512cdintrin.h
   avx512dqintrin.h
@@ -306,6 +307,15 @@ set(gpu_files
   nvptxintrin.h
   amdgpuintrin.h
   spirvintrin.h
+  __clang_gpu_builtin_vars.h
+  __clang_gpu_device_functions.h
+  __clang_gpu_intrinsics.h
+  __clang_gpu_runtime_wrapper.h
+  )
+
+set(gpu_hip_wrapper_files
+  hip_wrappers/hip/hip_runtime.h
+  hip_wrappers/hip/device_functions.h
   )
 
 set(windows_only_files
@@ -407,6 +417,14 @@ set(llvm_libc_wrapper_files
 
 set(zos_wrapper_files
   zos_wrappers/builtins.h
+  zos_wrappers/grp.h
+  zos_wrappers/locale.h
+  zos_wrappers/math.h
+  zos_wrappers/poll.h
+  zos_wrappers/stdlib.h
+  zos_wrappers/string.h
+  zos_wrappers/time.h
+  zos_wrappers/variant.h
 )
 
 include(GetClangResourceDir)
@@ -445,7 +463,7 @@ endfunction(copy_header_to_output_dir)
 
 function(clang_generate_header td_option td_file out_file)
   clang_tablegen(${out_file} ${td_option}
-  -I ${CLANG_SOURCE_DIR}/include/clang/Basic/
+  EXTRA_INCLUDES ${CLANG_SOURCE_DIR}/include/clang/Basic/
   SOURCE ${CLANG_SOURCE_DIR}/include/clang/Basic/${td_file})
 
   copy_header_to_output_dir(${CMAKE_CURRENT_BINARY_DIR} ${out_file})
@@ -459,7 +477,7 @@ endfunction(clang_generate_header)
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
            ${cuda_wrapper_utility_files} ${ppc_wrapper_files} ${openmp_wrapper_files}
            ${zos_wrapper_files} ${hlsl_files} ${llvm_libc_wrapper_files}
-           ${llvm_offload_wrapper_files})
+           ${llvm_offload_wrapper_files} ${gpu_hip_wrapper_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -590,7 +608,7 @@ add_header_target("systemz-resource-headers" "${systemz_files};${zos_wrapper_fil
 add_header_target("ve-resource-headers" "${ve_files}")
 add_header_target("webassembly-resource-headers" "${webassembly_files}")
 add_header_target("x86-resource-headers" "${x86_files}")
-add_header_target("gpu-resource-headers" "${gpu_files}")
+add_header_target("gpu-resource-headers" "${gpu_files};${gpu_hip_wrapper_files}")
 
 # Other header groupings
 add_header_target("hlsl-resource-headers" "${hlsl_files};${hlsl_generated_files}")
@@ -648,6 +666,11 @@ install(
 install(
   FILES ${llvm_offload_wrapper_files}
   DESTINATION ${header_install_dir}/llvm_offload_wrappers
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${gpu_hip_wrapper_files}
+  DESTINATION ${header_install_dir}/hip_wrappers/hip
   COMPONENT clang-resource-headers)
 
 install(
@@ -795,26 +818,25 @@ install(
   EXCLUDE_FROM_ALL
   COMPONENT gpu-resource-headers)
 
-if(NOT CLANG_ENABLE_HLSL)
-  set(EXCLUDE_HLSL EXCLUDE_FROM_ALL)
-endif()
+install(
+  FILES ${gpu_hip_wrapper_files}
+  DESTINATION ${header_install_dir}/hip_wrappers/hip
+  EXCLUDE_FROM_ALL
+  COMPONENT gpu-resource-headers)
 
 install(
   FILES ${hlsl_h}
   DESTINATION ${header_install_dir}
-  ${EXCLUDE_HLSL}
   COMPONENT hlsl-resource-headers)
 
 install(
   FILES ${hlsl_subdir_files}
   DESTINATION ${header_install_dir}/hlsl
-  ${EXCLUDE_HLSL}
   COMPONENT hlsl-resource-headers)
 
 install(
   FILES ${hlsl_generated_files}
   DESTINATION ${header_install_dir}/hlsl
-  ${EXCLUDE_HLSL}
   COMPONENT hlsl-resource-headers)
 
 install(

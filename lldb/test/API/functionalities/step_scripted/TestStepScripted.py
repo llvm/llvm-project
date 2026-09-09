@@ -28,6 +28,23 @@ class StepScriptedTestCase(TestBase):
         self.build()
         self.step_out_with_scripted_plan("Steps.StepScripted")
 
+    def test_constructor_error_preserves_traceback(self):
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
+
+        result = lldb.SBCommandReturnObject()
+        self.dbg.GetCommandInterpreter().HandleCommand(
+            "thread step-scripted -C Steps.FailingConstructor", result
+        )
+
+        self.assertFalse(result.Succeeded())
+        self.assertIn("Traceback (most recent call last)", result.GetError())
+        self.assertIn(
+            "ValueError: scripted plan construction failed", result.GetError()
+        )
+
     def step_out_with_scripted_plan(self, name):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", self.main_source_file

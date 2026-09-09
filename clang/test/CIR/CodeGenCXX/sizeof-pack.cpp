@@ -25,7 +25,7 @@ void test() {
   foo<>();
   foo<S1, S2, S3>();
 }
-// CIR-DAG: cir.global "private" constant cir_private @__const._Z3fooIJ2S12S22S3EEDav.values = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 4>
+// CIR-DAG: cir.global "private" constant cir_private @__const._Z3fooIJ2S12S22S3EEDav.values = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i], trailing_zeros> : !cir.array<!s32i x 4>
 // LLVM-DAG: @__const._Z3fooIJ2S12S22S3EEDav.values = private constant [4 x i32] [i32 1, i32 2, i32 3, i32 0]
 // OGCG-DAG: @__const._Z3fooIJ2S12S22S3EEDav.values = private {{.*}}constant [4 x i32] [i32 1, i32 2, i32 3, i32 0]
 // CIR-DAG: cir.global "private" constant cir_private @__const._Z3fooIJEEDav.values = #cir.zero : !cir.array<!s32i x 1>
@@ -44,7 +44,7 @@ void test() {
 // LLVM: define {{.*}}i64 @_Z3fooIJEEDav()
 // LLVM: %[[RETVAL:.*]] = alloca i64
 // LLVM: %[[VAL_ARR:.*]] = alloca [1 x i32]
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[VAL_ARR]], ptr{{.*}} @__const._Z3fooIJEEDav.values, i64 4, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAL_ARR]], ptr align 4 @__const._Z3fooIJEEDav.values, i64 4, i1 false)
 // LLVM: store i64 0, ptr %[[RETVAL]]
 // LLVM: %[[RET_LOAD:.*]] = load i64, ptr %[[RETVAL]]
 // LLVM: ret i64 %[[RET_LOAD]]
@@ -67,7 +67,7 @@ void test() {
 // LLVM: define {{.*}}i64 @_Z3fooIJ2S12S22S3EEDav()
 // LLVM: %[[RETVAL:.*]] = alloca i64
 // LLVM: %[[VAL_ARR:.*]] = alloca [4 x i32]
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[VAL_ARR]], ptr{{.*}} @__const._Z3fooIJ2S12S22S3EEDav.values, i64 16, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAL_ARR]], ptr align 4 @__const._Z3fooIJ2S12S22S3EEDav.values, i64 16, i1 false)
 // LLVM: store i64 3, ptr %[[RETVAL]]
 // LLVM: %[[RET_LOAD:.*]] = load i64, ptr %[[RETVAL]]
 // LLVM: ret i64 %[[RET_LOAD]]

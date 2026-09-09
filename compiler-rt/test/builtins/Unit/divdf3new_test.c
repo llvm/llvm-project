@@ -108,6 +108,24 @@ int main(void) {
   status |=
       test__divdf3(0x0000000000000009, 0xc022000000000000, 0x8000000000000001);
   status |=
+      test__divdf3(0x0008000000000092, 0x4010000000000000, 0x0002000000000024);
+  status |=
+      test__divdf3(0x0010000000000008, 0x4030000040000000, 0x0000fffffc000010);
+  status |=
+      test__divdf3(0x0010000000000008, 0x4030000080000000, 0x0000fffff8000040);
+  status |=
+      test__divdf3(0x0010000000000018, 0x4030000040000000, 0x0000fffffc000011);
+  status |=
+      test__divdf3(0x0010000000000018, 0x4030000080000000, 0x0000fffff8000041);
+  status |=
+      test__divdf3(0x0010000001000008, 0x401fffff80000000, 0x0002000008200022);
+  status |=
+      test__divdf3(0x0010000001000010, 0x401fffff80000000, 0x0002000008200023);
+  status |=
+      test__divdf3(0x001000000f00000a, 0x401fffff40000000, 0x000200000de00055);
+  status |=
+      test__divdf3(0x001000000f000012, 0x401fffff40000000, 0x000200000de00056);
+  status |=
       test__divdf3(0x000ffffffffffff7, 0x3feffffffffffffe, 0x000ffffffffffff8);
   status |=
       test__divdf3(0x000ffffffffffffe, 0x3feffffffffffffe, 0x000fffffffffffff);

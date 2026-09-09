@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
@@ -95,9 +96,12 @@ protected:
   DenseMap<std::pair<Value *, Value *>, PairMapValue> PairMap[NumBinaryOps];
 
   bool MadeChange;
+  UniformityInfo *UA = nullptr;
 
 public:
-  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  LLVM_ABI PreservedAnalyses runImpl(Function &F, UniformityInfo &UI);
 
 private:
   void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);
