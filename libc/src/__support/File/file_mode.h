@@ -3,6 +3,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_MODE_H
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
