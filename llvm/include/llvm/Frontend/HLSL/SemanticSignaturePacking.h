@@ -54,6 +54,11 @@ private:
 /// Packs eligible signature elements into consecutive rows.
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#stacked-packing for details.
+///
+/// On failure, Elements is left partially packed: the elements preceding the
+/// one reported by the returned SignaturePackingError keep the locations
+/// they were assigned, while that element and the ones following it retain the
+/// unallocated row and column sentinels.
 LLVM_ABI Error
 packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
