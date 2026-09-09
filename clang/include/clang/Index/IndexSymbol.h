@@ -60,6 +60,9 @@ enum class SymbolKind : uint8_t {
   NonTypeTemplateParm,
 
   Concept, /// C++20 concept.
+
+  /// One past the last valid kind. Must remain the last enumerator.
+  Count,
 };
 
 enum class SymbolLanguage : uint8_t {

@@ -150,6 +150,8 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::Module:
   case index::SymbolKind::Unknown:
     return SymbolQualitySignals::Unknown;
+  case index::SymbolKind::Count:
+    break;
   }
   llvm_unreachable("Unknown index::SymbolKind");
 }

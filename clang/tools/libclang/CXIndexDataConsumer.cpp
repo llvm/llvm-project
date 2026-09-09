@@ -1288,6 +1288,8 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
   case SymbolKind::Parameter: return CXIdxEntity_Variable;
   case SymbolKind::Concept:
     return CXIdxEntity_CXXConcept;
+  case SymbolKind::Count:
+    break;
   }
   llvm_unreachable("invalid symbol kind");
 }

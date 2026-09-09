@@ -158,6 +158,8 @@ toCompletionItemKind(index::SymbolKind Kind,
     return CompletionItemKind::TypeParameter;
   case SK::Concept:
     return CompletionItemKind::Interface;
+  case SK::Count:
+    break;
   }
   llvm_unreachable("Unhandled clang::index::SymbolKind.");
 }
