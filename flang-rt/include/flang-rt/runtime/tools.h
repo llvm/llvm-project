@@ -525,15 +525,19 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
-// Returns true when every element of 'from' is bitwise-identical to the
-// corresponding element of 'to' (returns false at the first difference).
-// Used by copy-out to skip all stores when the callee never modified the
-// data, so that an original that lives in read-only memory (e.g. a named
-// constant) is not written to by an unmodifying copy-out. The comparison is
-// bitwise, so it is exact when 'from' was originally produced from 'to' by
-// ShallowCopy() (as CopyInAssign() does): unmodified elements compare equal
-// even for NaNs and padding bytes, which a value comparison would misjudge.
-RT_API_ATTRS bool ElementsBitwiseEqual(
+// Scans for the first element of 'from' whose bit pattern differs from the
+// corresponding element of 'to', then copies that element and every element
+// after it (one fused pass). Elements before the first difference are
+// bitwise-identical and are not stored to. Used by copy-out so that an
+// unmodifying copy-out performs no stores at all — an original that lives in
+// read-only memory (e.g. a named constant) is never written to unless it was
+// actually modified — while a modifying copy-out never traverses the data
+// more than once nor stores more than the unconditional copy would. The
+// comparison is bitwise, so it is exact when 'from' was originally produced
+// from 'to' by ShallowCopy() (as CopyInAssign() does): unmodified elements
+// compare equal even for NaNs and padding bytes, which a value comparison
+// would misjudge.
+RT_API_ATTRS void ShallowCopyModifiedSuffix(
     const Descriptor &to, const Descriptor &from);
 
 // Ensures that a character string is null-terminated, allocating a /p length +1

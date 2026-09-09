@@ -569,6 +569,49 @@ TEST(Assign, RTNAME(CopyOutAssignUnconditionalEnvVar)) {
   ASSERT_EQ(munmap(page, pageSize), 0);
 }
 
+TEST(Assign, RTNAME(CopyOutAssignSkipsUnmodifiedPrefix)) {
+  // When the first modification lies beyond a read-only prefix, copy-out
+  // must not store into the unmodified prefix: two adjacent pages, the first
+  // read-only, the second writable; the variable spans both; the callee
+  // modifies only an element on the second page. Copy-out must not fault and
+  // must deliver the modification.
+  std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
+  void *pages{mmap(nullptr, 2 * pageSize, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  ASSERT_NE(pages, MAP_FAILED);
+  // Element stride 2*sizeof(double); place 'count' elements so that the
+  // first ones sit on page 1 and the last ones on page 2.
+  std::size_t perPage{pageSize / (2 * sizeof(double))};
+  std::size_t count{perPage + 4};
+  double *data{static_cast<double *>(pages)};
+  for (std::size_t j{0}; j < 2 * count; ++j) {
+    data[j] = static_cast<double>(j);
+  }
+  ASSERT_EQ(mprotect(pages, pageSize, PROT_READ), 0); // page 1 read-only
+
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{static_cast<SubscriptValue>(count)};
+  var.Establish(
+      TypeCode{TypeCategory::Real, 8}, sizeof(double), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(double) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+  // Modify only the last element; its storage is on the writable page 2.
+  *temp.OffsetElement<double>((count - 1) * sizeof(double)) = -123.0;
+
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__); // must not fault
+  EXPECT_EQ(data[2 * (count - 1)], -123.0);
+  EXPECT_EQ(data[0], 0.0);
+
+  ASSERT_EQ(mprotect(pages, pageSize, PROT_READ | PROT_WRITE), 0);
+  ASSERT_EQ(munmap(pages, 2 * pageSize), 0);
+}
+
 TEST(Assign, RTNAME(CopyOutAssignReadOnlyModifiedDies)) {
   // When the callee DID modify the temporary, copy-out falls back to the
   // whole-object copy; storing into a read-only original then faults, which

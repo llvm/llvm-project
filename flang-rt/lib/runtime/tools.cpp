@@ -284,118 +284,148 @@ static inline RT_API_ATTRS bool ElementIsModified(
   }
 }
 
+template <typename P>
+static inline RT_API_ATTRS void CopyElement(
+    char *toAt, const char *fromAt, std::size_t elementBytes) {
+  constexpr std::size_t typeElementBytes{sizeof(P)};
+  if constexpr (typeElementBytes != 1) {
+    runtime::memcpy(toAt, fromAt, typeElementBytes);
+  } else {
+    runtime::memcpy(toAt, fromAt, elementBytes);
+  }
+}
+
+// Scans for the first bitwise difference; when one is found, copies that
+// element and everything after it, reusing the scan's position (fused, one
+// pass). Elements before the first difference are bitwise-identical and are
+// not stored to, so an unmodified copy-out performs no stores at all, and a
+// copy-out never traverses the data more than once nor stores more elements
+// than the unconditional copy would.
 template <typename P, int RANK = -1>
-static RT_API_ATTRS bool ElementsBitwiseEqualInner(const Descriptor &to,
+static RT_API_ATTRS void ShallowCopyModifiedSuffixInner(const Descriptor &to,
     const Descriptor &from, bool toIsContiguous, bool fromIsContiguous) {
   std::size_t elementBytes{to.ElementBytes()};
+  std::size_t n{to.Elements()};
   if (toIsContiguous) {
-    const char *toAt{to.OffsetElement()};
+    char *toAt{to.OffsetElement()};
     if (fromIsContiguous) {
       const char *fromAt{from.OffsetElement()};
-      for (std::size_t n{to.Elements()}; n-- > 0;
-          toAt += elementBytes, fromAt += elementBytes) {
+      for (; n > 0; --n, toAt += elementBytes, fromAt += elementBytes) {
         if (ElementIsModified<P>(toAt, fromAt, elementBytes)) {
-          return false;
+          // Copy the remaining elements, including this one, in one block.
+          runtime::memcpy(toAt, fromAt, n * elementBytes);
+          return;
         }
       }
     } else {
       DescriptorIterator<RANK> fromIt{from};
-      for (std::size_t n{to.Elements()}; n-- > 0;
-          toAt += elementBytes, fromIt.Advance()) {
+      for (; n > 0; --n, toAt += elementBytes, fromIt.Advance()) {
         if (ElementIsModified<P>(
                 toAt, fromIt.template Get<char>(), elementBytes)) {
-          return false;
+          break;
         }
+      }
+      for (; n > 0; --n, toAt += elementBytes, fromIt.Advance()) {
+        CopyElement<P>(toAt, fromIt.template Get<char>(), elementBytes);
       }
     }
   } else {
     DescriptorIterator<RANK> toIt{to};
     if (fromIsContiguous) {
       const char *fromAt{from.OffsetElement()};
-      for (std::size_t n{to.Elements()}; n-- > 0;
-          toIt.Advance(), fromAt += elementBytes) {
+      for (; n > 0; --n, toIt.Advance(), fromAt += elementBytes) {
         if (ElementIsModified<P>(
                 toIt.template Get<char>(), fromAt, elementBytes)) {
-          return false;
+          break;
         }
+      }
+      for (; n > 0; --n, toIt.Advance(), fromAt += elementBytes) {
+        CopyElement<P>(toIt.template Get<char>(), fromAt, elementBytes);
       }
     } else {
       DescriptorIterator<RANK> fromIt{from};
-      for (std::size_t n{to.Elements()}; n-- > 0;
-          toIt.Advance(), fromIt.Advance()) {
+      for (; n > 0; --n, toIt.Advance(), fromIt.Advance()) {
         if (ElementIsModified<P>(toIt.template Get<char>(),
                 fromIt.template Get<char>(), elementBytes)) {
-          return false;
+          break;
         }
+      }
+      for (; n > 0; --n, toIt.Advance(), fromIt.Advance()) {
+        CopyElement<P>(toIt.template Get<char>(), fromIt.template Get<char>(),
+            elementBytes);
       }
     }
   }
-  return true;
 }
 
 template <typename P>
-static RT_API_ATTRS bool ElementsBitwiseEqualRank(const Descriptor &to,
+static RT_API_ATTRS void ShallowCopyModifiedSuffixRank(const Descriptor &to,
     const Descriptor &from, bool toIsContiguous, bool fromIsContiguous) {
   INTERNAL_CHECK(to.rank() == from.rank());
   // Mirror ShallowCopyRank's rank specialization policy.
   switch (to.rank()) {
   case 1:
-    return ElementsBitwiseEqualInner<P, 1>(
+    ShallowCopyModifiedSuffixInner<P, 1>(
         to, from, toIsContiguous, fromIsContiguous);
+    return;
   case 2:
-    return ElementsBitwiseEqualInner<P, 2>(
+    ShallowCopyModifiedSuffixInner<P, 2>(
         to, from, toIsContiguous, fromIsContiguous);
+    return;
   case 3:
-    return ElementsBitwiseEqualInner<P, 3>(
+    ShallowCopyModifiedSuffixInner<P, 3>(
         to, from, toIsContiguous, fromIsContiguous);
+    return;
   case 4:
-    return ElementsBitwiseEqualInner<P, 4>(
+    ShallowCopyModifiedSuffixInner<P, 4>(
         to, from, toIsContiguous, fromIsContiguous);
+    return;
   default:
-    return ElementsBitwiseEqualInner<P>(
+    ShallowCopyModifiedSuffixInner<P>(
         to, from, toIsContiguous, fromIsContiguous);
+    return;
   }
 }
 
-RT_API_ATTRS bool ElementsBitwiseEqual(
+RT_API_ATTRS void ShallowCopyModifiedSuffix(
     const Descriptor &to, const Descriptor &from) {
   bool toIsContiguous{to.IsContiguous()};
   bool fromIsContiguous{from.IsContiguous()};
   std::size_t elementBytes{to.ElementBytes()};
   // Same type-based dispatch as ShallowCopy() above, so the per-element
-  // comparison inlines to fixed-size operations.
+  // comparison and copy inline to fixed-size operations.
   if (to.type().IsInteger()) {
     if (elementBytes == sizeof(int64_t)) {
-      return ElementsBitwiseEqualRank<int64_t>(
+      ShallowCopyModifiedSuffixRank<int64_t>(
           to, from, toIsContiguous, fromIsContiguous);
     } else if (elementBytes == sizeof(int32_t)) {
-      return ElementsBitwiseEqualRank<int32_t>(
+      ShallowCopyModifiedSuffixRank<int32_t>(
           to, from, toIsContiguous, fromIsContiguous);
     } else if (elementBytes == sizeof(int16_t)) {
-      return ElementsBitwiseEqualRank<int16_t>(
+      ShallowCopyModifiedSuffixRank<int16_t>(
           to, from, toIsContiguous, fromIsContiguous);
 #if defined USING_NATIVE_INT128_T
     } else if (elementBytes == sizeof(__int128_t)) {
-      return ElementsBitwiseEqualRank<__int128_t>(
+      ShallowCopyModifiedSuffixRank<__int128_t>(
           to, from, toIsContiguous, fromIsContiguous);
 #endif
     } else {
-      return ElementsBitwiseEqualRank<char>(
+      ShallowCopyModifiedSuffixRank<char>(
           to, from, toIsContiguous, fromIsContiguous);
     }
   } else if (to.type().IsReal()) {
     if (elementBytes == sizeof(double)) {
-      return ElementsBitwiseEqualRank<double>(
+      ShallowCopyModifiedSuffixRank<double>(
           to, from, toIsContiguous, fromIsContiguous);
     } else if (elementBytes == sizeof(float)) {
-      return ElementsBitwiseEqualRank<float>(
+      ShallowCopyModifiedSuffixRank<float>(
           to, from, toIsContiguous, fromIsContiguous);
     } else {
-      return ElementsBitwiseEqualRank<char>(
+      ShallowCopyModifiedSuffixRank<char>(
           to, from, toIsContiguous, fromIsContiguous);
     }
   } else {
-    return ElementsBitwiseEqualRank<char>(
+    ShallowCopyModifiedSuffixRank<char>(
         to, from, toIsContiguous, fromIsContiguous);
   }
 }
