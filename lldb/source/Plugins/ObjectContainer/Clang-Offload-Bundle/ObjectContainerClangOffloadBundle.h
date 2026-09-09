@@ -65,6 +65,7 @@ protected:
     lldb_private::ArchSpec arch;
     uint64_t offset = 0;
     uint64_t size = 0;
+    lldb::DataExtractorSP extractor_sp;
   };
   std::vector<Entry> m_entries;
 

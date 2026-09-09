@@ -15,6 +15,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ObjectFile.h"
@@ -121,10 +122,31 @@ bool ObjectContainerClangOffloadBundle::FindBundleEntries(
       for (auto &bundle_entry : bundle.getEntries()) {
         if (bundle_entry.Size == 0)
           continue;
+
+        DataExtractorSP entry_extractor_sp;
+        uint64_t offset = bundle_entry.Offset;
+        if (bundle.isDecompressed()) {
+          if (!bundle.DecompressedBuffer)
+            continue;
+
+          llvm::StringRef decompressed = bundle.DecompressedBuffer->getBuffer();
+          if (offset > decompressed.size() ||
+              bundle_entry.Size > decompressed.size() - offset)
+            continue;
+
+          auto entry_data_sp = std::make_shared<DataBufferHeap>(
+              decompressed.data() + offset, bundle_entry.Size);
+          entry_extractor_sp = std::make_shared<DataExtractor>(entry_data_sp);
+          // Compressed entries have no corresponding offset in the containing
+          // file. The owned buffer above contains only the selected object.
+          offset = 0;
+        }
+
         Entry entry;
         entry.arch = ParseArchFromBundleEntryID(bundle_entry.ID);
-        entry.offset = bundle_entry.Offset;
+        entry.offset = offset;
         entry.size = bundle_entry.Size;
+        entry.extractor_sp = std::move(entry_extractor_sp);
         if (entry.arch.IsValid())
           result.push_back(std::move(entry));
       }
@@ -197,7 +219,11 @@ ModuleSpecList ObjectContainerClangOffloadBundle::GetModuleSpecifications(
 
   ModuleSpecList specs;
   for (const Entry &entry : entries) {
-    ModuleSpec spec(file, entry.arch);
+    ModuleSpec spec = entry.extractor_sp
+                          ? ModuleSpec(file, UUID(), entry.extractor_sp)
+                          : ModuleSpec(file, entry.arch);
+    if (entry.extractor_sp)
+      spec.GetArchitecture() = entry.arch;
     spec.SetObjectOffset(entry.offset);
     spec.SetObjectSize(entry.size);
     specs.Append(spec);
@@ -223,7 +249,7 @@ ObjectContainerClangOffloadBundle::GetObjectFile(const FileSpec *file) {
       bool match = (pass == 0) ? arch.IsExactMatch(entry.arch)
                                : arch.IsCompatibleMatch(entry.arch);
       if (match) {
-        DataExtractorSP extractor_sp;
+        DataExtractorSP extractor_sp = entry.extractor_sp;
         lldb::offset_t data_offset = 0;
         return ObjectFile::FindPlugin(module_sp, file, entry.offset, entry.size,
                                       extractor_sp, data_offset);
