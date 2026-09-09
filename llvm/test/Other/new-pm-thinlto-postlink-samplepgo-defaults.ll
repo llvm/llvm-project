@@ -38,6 +38,7 @@
 ; CHECK-O-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-O-NEXT: Running pass: DeadBranchEliminationPass
 ; CHECK-O-NEXT: Running pass: PromotePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running analysis: LastRunTrackingAnalysis
@@ -150,6 +151,7 @@
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
+; CHECK-O-NEXT: Running pass: DeadBranchEliminationPass
 ; CHECK-O-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: RecomputeGlobalsAAPass
