@@ -4,9 +4,9 @@
 ; select (trunc b), 0, (a & 1) -> (a & 1) & ~b
 define i32 @test_select_and_not(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_select_and_not(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[B:%.*]] to i1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TRUNC]], i32 0, i32 [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = and i32 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %trunc = trunc i32 %b to i1
@@ -50,9 +50,8 @@ define i32 @test_select_and_not_multiuse_trunc(i32 %a, i32 %b) {
 ; Inverse: select (trunc b), (a & 1), 0 -> (a & 1) & b
 define i32 @test_select_and(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_select_and(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[B:%.*]] to i1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TRUNC]], i32 [[AND]], i32 0
+; CHECK-NEXT:    [[SEL:%.*]] = and i32 [[AND]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %trunc = trunc i32 %b to i1
