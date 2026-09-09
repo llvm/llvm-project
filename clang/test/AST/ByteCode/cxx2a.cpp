@@ -276,7 +276,7 @@ namespace GH150705 {
 
 namespace DependentRequiresExpr {
   template <class T,
-            bool = []() -> bool { // both-error {{not a constant expression}}
+            bool = []() -> bool {
               if (requires { T::type; })
                 return true;
               return false;
@@ -285,7 +285,13 @@ namespace DependentRequiresExpr {
     using type = void;
   };
 
-  template <class T> using P = p<T>::type; // both-note {{while checking a default template argument}}
+  // The lambda is substituted with the dependent T of the alias, so it stays
+  // dependent, and the default template argument is not evaluated until the
+  // alias is used.
+  template <class T> using P = p<T>::type;
+  struct S { using type = int; };
+  static_assert(__is_same(P<int>, void));
+  static_assert(__is_same(P<S>, void));
 }
 
 namespace PseudoDtorOnGlobal {

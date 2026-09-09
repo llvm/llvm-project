@@ -246,6 +246,14 @@ Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
                               unsigned LambdaDependencyKind,
                               LambdaCaptureDefault CaptureDefault) {
   DeclContext *DC = CurContext->getEnclosingNonExpansionStatementContext();
+  // A deduction guide is never called or mangled, so a closure type in its
+  // signature, e.g. of the lambda in `-> A<T, decltype([](T) {})>`, must not
+  // be a local class of the guide: it becomes a template argument of the
+  // deduced class type, whose name is mangled. Create it in the context
+  // enclosing the guide instead, which is where the closure type of a lambda
+  // written in a deduction guide is created when the guide is parsed.
+  if (isa<CXXDeductionGuideDecl>(DC))
+    DC = DC->getParent();
 
   bool IsGenericLambda =
       Info && getGenericLambdaTemplateParameterList(getCurLambda(), *this);
