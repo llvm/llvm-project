@@ -182,7 +182,7 @@ public:
   }
 
   DummyProcess *GetProcess() const { return m_process; }
-  lldb::addr_t GetLine() const { return m_process->GetMemoryCacheLineSize(); }
+  uint64_t GetLineSize() const { return m_process->GetMemoryCacheLineSize(); }
 
 private:
   ArchSpec m_arch;
@@ -500,7 +500,7 @@ TEST_F(MemoryTest, TestReadRangesFromCaches) {
   CacheTestProcess proc;
   ASSERT_TRUE(proc.GetProcess());
   DummyProcess *process = proc.GetProcess();
-  const lldb::addr_t line = proc.GetLine();
+  const uint64_t line_size = proc.GetLineSize();
 
   { // An entry serves a range only if it covers it all.  A short fetch is all
     // the caller sees and all L1 keeps of the range it was for.
@@ -543,7 +543,7 @@ TEST_F(MemoryTest, TestReadRangesFromCaches) {
   { // A range ReadRanges fetched is cached, so asking for it again serves it
     // without going to the inferior.
     TestMemoryCache cache(*process);
-    process->SetMaxReadSize(4 * line);
+    process->SetMaxReadSize(4 * line_size);
     process->SetFiller(0xBB);
     process->m_reads.clear();
     llvm::SmallVector<uint8_t, 0> buffer(24, 0);
@@ -571,7 +571,7 @@ TEST_F(MemoryTest, TestReadRangesFromCaches) {
     TestMemoryCache cache(*process);
     AddCacheChunk(cache, 0x17000, 8, 0xAA);
     cache.AddInvalidRange(0x17100, 8);
-    process->SetMaxReadSize(4 * line);
+    process->SetMaxReadSize(4 * line_size);
     process->SetFiller(0xBB);
     process->m_reads.clear();
     llvm::SmallVector<uint8_t, 0> buffer(24, 0);
@@ -596,22 +596,23 @@ TEST_F(MemoryTest, TestReadRequestShape) {
   CacheTestProcess proc;
   ASSERT_TRUE(proc.GetProcess());
   DummyProcess *process = proc.GetProcess();
-  const lldb::addr_t line = proc.GetLine();
+  const uint64_t line_size = proc.GetLineSize();
 
   { // A read longer than a line that L1 cannot serve whole goes to the inferior
     // as one request for the whole range.
-    //         v base         v base + line
+    //         v base         v base + line_size
     // cache:  |AAAAAAAAAAAAAA|AA|
     // process:|BBBBBBBBBBBBBB|BBBBBBBBBBBB|BBBBBBBBBBBB|
     // buf:    |BBBBBBBBBBBBBB|BBBBBBBBBBBB|BBBBBBBBBBBB|
     TestMemoryCache cache(*process);
     Status error;
     const lldb::addr_t base = 0x15000;
-    AddCacheChunk(cache, base, line + 8, 0xAA); // a whole line plus a remainder
-    process->SetMaxReadSize(4 * line);
+    // A whole line plus a remainder.
+    AddCacheChunk(cache, base, line_size + 8, 0xAA);
+    process->SetMaxReadSize(4 * line_size);
     process->SetFiller(0xBB);
     process->m_reads.clear();
-    std::vector<uint8_t> buf(3 * line, 0);
+    std::vector<uint8_t> buf(3 * line_size, 0);
     ASSERT_EQ(cache.Read(base, buf.data(), buf.size(), error), buf.size());
     EXPECT_TRUE(AllBytesAre(buf, 0xBB));
     // One request, for exactly what the caller asked.
@@ -623,7 +624,7 @@ TEST_F(MemoryTest, TestReadRequestShape) {
     // returns the same bytes.
     process->SetMaxReadSize(0);
     process->m_reads.clear();
-    std::vector<uint8_t> again(3 * line, 0);
+    std::vector<uint8_t> again(3 * line_size, 0);
     EXPECT_EQ(cache.Read(base, again.data(), again.size(), error),
               again.size());
     EXPECT_EQ(again, buf);
@@ -638,14 +639,14 @@ TEST_F(MemoryTest, TestFlushAtTheTopOfTheAddressSpace) {
   CacheTestProcess proc;
   ASSERT_TRUE(proc.GetProcess());
   DummyProcess *process = proc.GetProcess();
-  const lldb::addr_t line = proc.GetLine();
-  const lldb::addr_t top_line = UINT64_MAX - line + 1;
+  const uint64_t line_size = proc.GetLineSize();
+  const lldb::addr_t top_line = UINT64_MAX - line_size + 1;
 
   // Only L2 is walked line by line, so seed it by reading.  The line at 0 is
   // the one a wrap would reach first.
   TestMemoryCache cache(*process);
   Status error;
-  process->SetMaxReadSize(4 * line);
+  process->SetMaxReadSize(4 * line_size);
   std::vector<uint8_t> buf(8, 0);
   cache.Read(top_line, buf.data(), buf.size(), error);
   cache.Read(0, buf.data(), buf.size(), error);
