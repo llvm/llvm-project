@@ -22,11 +22,11 @@ class PHINode;
 
 namespace llvm::slpvectorizer {
 
-/// \p Returns the first operand of \p I that does not match \p Phi. If
-/// operand is not an instruction it returns nullptr.
+/// \returns the first operand of \p I that does not match \p Phi. If
+/// the operand is not an instruction, returns nullptr.
 Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi);
 
-/// \Returns true if \p I is a candidate instruction for reduction
+/// \returns true if \p I is a candidate instruction for reduction
 /// vectorization.
 bool isReductionCandidate(Instruction *I);
 
