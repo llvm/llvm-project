@@ -2,16 +2,15 @@
 ; arguments are correctly sign/zero-extended by the callee in the z/OS
 ; XPLINK64 calling convention.
 ;
-; The XPLINK64 ABI does not require the caller to have extended the upper bits
-; of a GPR for named (non-variadic) integer arguments.  The callee therefore
-; must perform its own extension when it needs the full 64-bit value.
+; While the XPLINK64 ABI generally expects callers to extend integer arguments
+; to 64 bits, some pre-existing compilers do not always do so.  To accommodate
+; them, LLVM does not rely on the incoming value being extended; instead the
+; callee performs its own sign/zero-extension.
 ;
-; Integer formals (CCIfExtend -> CCPromoteToType<i64> with isFormalArgLowering=true):
-;   For i8/i16 formals, CCPromoteToType<i64> keeps LocVT=i32 (GR32 live-in).
-;   LowerFormalArguments truncates the GR32 to the true i8/i16 type, so the
-;   subsequent sign/zero-extend to i64 selects the narrow register-extend
-;   instructions (LGBR/LGHR/LLGCR/LLGHR) matching XL compiler output.
-;   For i32 formals, LocVT=i64 (GR64), so LGFR is used as before.
+; Integer formals with signext/zeroext attributes are promoted to i64 via
+; CCPromoteToType<i64>.  LowerFormalArguments intercepts the resulting SExt/ZExt
+; LocInfo and emits a plain TRUNCATE to the original argument type, so the
+; subsequent DAG sign/zero-extend selects the correct narrow instruction.
 ;
 ;   jbyte    (i8  signext)  lgbr  -- sign-extend byte register to 64 bits
 ;   jboolean (i8  zeroext)  llgcr -- zero-extend char register to 64 bits
