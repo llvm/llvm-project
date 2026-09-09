@@ -244,16 +244,16 @@ public:
     return isRegClass(RCID) || isInlinableImm(type);
   }
 
-  bool isRegOrInlineByHwMode(unsigned RCByHwModeIdx, MVT type) const {
-    return isRegClassByHwMode(RCByHwModeIdx) || isInlinableImm(type);
+  bool isRegOrInlineTarget(unsigned TargetRCIdx, MVT type) const {
+    return isRegClassTarget(TargetRCIdx) || isInlinableImm(type);
   }
 
   bool isRegOrImmWithInputMods(unsigned RCID, MVT type) const {
     return isRegOrInline(RCID, type) || isLiteralImm(type);
   }
 
-  bool isRegOrImmWithInputModsByHwMode(unsigned RCByHwModeIdx, MVT type) const {
-    return isRegOrInlineByHwMode(RCByHwModeIdx, type) || isLiteralImm(type);
+  bool isRegOrImmWithInputModsTarget(unsigned TargetRCIdx, MVT type) const {
+    return isRegOrInlineTarget(TargetRCIdx, type) || isLiteralImm(type);
   }
 
   bool isRegOrImmWithInt16InputMods() const {
@@ -283,7 +283,7 @@ public:
   }
 
   bool isRegOrImmWithInt64InputMods() const {
-    return isRegOrImmWithInputModsByHwMode(AMDGPU::VS_64_AlignTarget, MVT::i64);
+    return isRegOrImmWithInputModsTarget(AMDGPU::VS_64_AlignTarget, MVT::i64);
   }
 
   bool isRegOrImmWithFP16InputMods() const {
@@ -300,7 +300,7 @@ public:
   }
 
   bool isRegOrImmWithFP64InputMods() const {
-    return isRegOrImmWithInputModsByHwMode(AMDGPU::VS_64_AlignTarget, MVT::f64);
+    return isRegOrImmWithInputModsTarget(AMDGPU::VS_64_AlignTarget, MVT::f64);
   }
 
   template <bool IsFake16> bool isRegOrInlineImmWithFP16InputMods() const {
@@ -313,7 +313,7 @@ public:
   }
 
   bool isRegOrInlineImmWithFP64InputMods() const {
-    return isRegOrInlineByHwMode(AMDGPU::VS_64_AlignTarget, MVT::f64);
+    return isRegOrInlineTarget(AMDGPU::VS_64_AlignTarget, MVT::f64);
   }
 
   bool isVRegWithInputMods(unsigned RCID) const { return isRegClass(RCID); }
@@ -323,7 +323,7 @@ public:
   }
 
   bool isVRegWithFP64InputMods() const {
-    return isRegClassByHwMode(AMDGPU::VReg_64_AlignTarget);
+    return isRegClassTarget(AMDGPU::VReg_64_AlignTarget);
   }
 
   bool isPackedFP16InputMods() const {
@@ -426,7 +426,7 @@ public:
   bool isRegClass(unsigned RCID) const;
 
   // Check the register against the HwMode-resolved operand class.
-  bool isRegClassByHwMode(unsigned RCByHwModeIdx) const;
+  bool isRegClassTarget(unsigned TargetRCIdx) const;
 
   bool isInlineValue() const;
 
@@ -1628,8 +1628,8 @@ public:
 
   // Resolve a RegClassByHwModeUses index to a register class id for the active
   // HwMode; -1 if the mode has no entry.
-  int16_t getRegClassByHwMode(unsigned RCByHwModeIdx) const {
-    return MII.getRegClassByHwModeTable(HwMode)[RCByHwModeIdx];
+  int16_t getTargetRegClass(unsigned TargetRCIdx) const {
+    return MII.getRegClassByHwModeTable(HwMode)[TargetRCIdx];
   }
 
   // FIXME: This should not be used. Instead, should use queries derived from
@@ -2275,10 +2275,10 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
   return canLosslesslyConvertToFPType(FPLiteral, ExpectedType);
 }
 
-bool AMDGPUOperand::isRegClassByHwMode(unsigned RCByHwModeIdx) const {
+bool AMDGPUOperand::isRegClassTarget(unsigned TargetRCIdx) const {
   if (!isRegKind())
     return false;
-  int16_t RCID = AsmParser->getRegClassByHwMode(RCByHwModeIdx);
+  int16_t RCID = AsmParser->getTargetRegClass(TargetRCIdx);
   return RCID >= 0 && isRegClass(RCID);
 }
 
@@ -2291,7 +2291,7 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
   return isRegClass(AMDGPU::VGPR_32RegClassID) ||
          // GFX90A allows DPP on 64-bit operands.
          (AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP] &&
-          isRegClassByHwMode(AMDGPU::VReg_64_AlignTarget));
+          isRegClassTarget(AMDGPU::VReg_64_AlignTarget));
 }
 
 template <bool IsFake16>
