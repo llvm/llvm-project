@@ -1,4 +1,4 @@
-﻿! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test for https://github.com/llvm/llvm-project/issues/213324
 ! The 'visited' set in FindUnsafeIoDirectComponent used to be global ("seen
 ! anywhere") rather than path-scoped.  When a PDT was first reached via a
@@ -44,7 +44,7 @@ contains
   subroutine control_case(u)
     integer, intent(in) :: u
     type(branch(2)) :: y
-    !ERROR: Derived type 'branch(k=2_4)' in I/O cannot have an allocatable or pointer direct component 'a' unless using defined I/O
+    !ERROR: Derived type 'branch' in I/O cannot have an allocatable or pointer direct component 'a' unless using defined I/O
     write(u) y
   end subroutine
 end module
