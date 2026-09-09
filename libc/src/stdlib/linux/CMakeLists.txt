@@ -104,3 +104,18 @@ add_entrypoint_object(
     libc.src.signal.linux.signal_utils
     libc.src.unistd.environ
 )
+
+add_entrypoint_object(
+  getloadavg
+  SRCS
+    getloadavg.cpp
+  HDRS
+    ../getloadavg.h
+  DEPENDS
+    libc.hdr.types.struct_sysinfo
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sysinfo
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+

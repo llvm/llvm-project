@@ -306,8 +306,8 @@ define amdgpu_kernel void @constant_load_v3i32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b96 s[4:6], s[2:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s4
-; GFX1250-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
+; GFX1250-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v2, s6
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
 ; GFX1250-NEXT:    global_store_b96 v3, v[0:2], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 entry:
