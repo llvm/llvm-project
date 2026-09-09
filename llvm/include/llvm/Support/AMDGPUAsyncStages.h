@@ -41,8 +41,8 @@ enum Stage : uint32_t {
   // Asynchronous global stores from LDS.
   ASYNC_LDS_STORE = 3,
   RESERVED_4 = 4,
-  /// Non-format buffer loads to LDS and legacy global loads to LDS.
-  UNFORMATTED_BUFFER_GLOBAL_LOAD = 5,
+  // Buffer loads to LDS and pre-gfx1250 global loads to LDS.
+  BUFFER_GLOBAL_LOAD = 5,
   RESERVED_6 = 6,
   RESERVED_7 = 7,
   RESERVED_8 = 8,
@@ -80,7 +80,7 @@ constexpr bool isReservedStage(uint32_t S) {
   case GLOBAL_LOAD_ASYNC_TO_LDS:
   case GLOBAL_LOAD_ASYNC_TO_LDS_MCAST:
   case ASYNC_LDS_STORE:
-  case UNFORMATTED_BUFFER_GLOBAL_LOAD:
+  case BUFFER_GLOBAL_LOAD:
     return false;
   }
   llvm_unreachable("Unhandled stage");
@@ -98,8 +98,8 @@ constexpr const char *getStageName(uint32_t S) {
     return "ASYNC_LDS_STORE";
   case RESERVED_4:
     return "RESERVED_4";
-  case UNFORMATTED_BUFFER_GLOBAL_LOAD:
-    return "UNFORMATTED_BUFFER_GLOBAL_LOAD";
+  case BUFFER_GLOBAL_LOAD:
+    return "BUFFER_GLOBAL_LOAD";
   case RESERVED_6:
     return "RESERVED_6";
   case RESERVED_7:

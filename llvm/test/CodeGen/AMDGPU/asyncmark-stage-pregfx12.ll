@@ -2,14 +2,14 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.00 < %s | FileCheck %s -check-prefixes=SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck %s -check-prefixes=GISEL
 
-; Stage UNFORMATTED_BUFFER_GLOBAL_LOAD maps to LOAD_CNT, which pre-gfx12 is
-; vmcnt. Buffer async LDS loads are the operations in that stage.
+; Stage BUFFER_GLOBAL_LOAD maps to LOAD_CNT, which pre-gfx12 is vmcnt. Buffer
+; async LDS loads are the operations in that stage.
 
 ; Marks covering that stage form their own sequence; a wait covering it counts
 ; back through them and produces a vmcnt wait, not a blanket wait.
 
-define amdgpu_kernel void @stage_unformatted_buffer_load(<4 x i32> %rsrc, ptr addrspace(3) %lds, ptr addrspace(1) %out) {
-; SDAG-LABEL: stage_unformatted_buffer_load:
+define amdgpu_kernel void @stage_buffer_global_load(<4 x i32> %rsrc, ptr addrspace(3) %lds, ptr addrspace(1) %out) {
+; SDAG-LABEL: stage_buffer_global_load:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_load_dword s6, s[4:5], 0x34
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
@@ -18,20 +18,20 @@ define amdgpu_kernel void @stage_unformatted_buffer_load(<4 x i32> %rsrc, ptr ad
 ; SDAG-NEXT:    s_mov_b32 m0, s6
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    buffer_load_dword off, s[0:3], 0 lds
-; SDAG-NEXT:    ; asyncmark(stages=UNFORMATTED_BUFFER_GLOBAL_LOAD)
+; SDAG-NEXT:    ; asyncmark(stages=BUFFER_GLOBAL_LOAD)
 ; SDAG-NEXT:    buffer_load_dword off, s[0:3], 0 offset:4 glc lds
-; SDAG-NEXT:    ; asyncmark(stages=UNFORMATTED_BUFFER_GLOBAL_LOAD)
+; SDAG-NEXT:    ; asyncmark(stages=BUFFER_GLOBAL_LOAD)
 ; SDAG-NEXT:    buffer_load_dword off, s[0:3], 0 offset:8 slc lds
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s6
 ; SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
-; SDAG-NEXT:    ; wait_asyncmark(1, stages=UNFORMATTED_BUFFER_GLOBAL_LOAD)
+; SDAG-NEXT:    ; wait_asyncmark(1, stages=BUFFER_GLOBAL_LOAD)
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; SDAG-NEXT:    ds_read_b32 v0, v0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    global_store_dword v1, v0, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
-; GISEL-LABEL: stage_unformatted_buffer_load:
+; GISEL-LABEL: stage_buffer_global_load:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    s_load_dword s6, s[4:5], 0x34
 ; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
@@ -40,13 +40,13 @@ define amdgpu_kernel void @stage_unformatted_buffer_load(<4 x i32> %rsrc, ptr ad
 ; GISEL-NEXT:    s_mov_b32 m0, s6
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    buffer_load_dword off, s[0:3], 0 lds
-; GISEL-NEXT:    ; asyncmark(stages=UNFORMATTED_BUFFER_GLOBAL_LOAD)
+; GISEL-NEXT:    ; asyncmark(stages=BUFFER_GLOBAL_LOAD)
 ; GISEL-NEXT:    buffer_load_dword off, s[0:3], 0 offset:4 glc lds
-; GISEL-NEXT:    ; asyncmark(stages=UNFORMATTED_BUFFER_GLOBAL_LOAD)
+; GISEL-NEXT:    ; asyncmark(stages=BUFFER_GLOBAL_LOAD)
 ; GISEL-NEXT:    buffer_load_dword off, s[0:3], 0 offset:8 slc lds
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s6
 ; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
-; GISEL-NEXT:    ; wait_asyncmark(1, stages=UNFORMATTED_BUFFER_GLOBAL_LOAD)
+; GISEL-NEXT:    ; wait_asyncmark(1, stages=BUFFER_GLOBAL_LOAD)
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GISEL-NEXT:    ds_read_b32 v0, v0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -79,7 +79,7 @@ define amdgpu_kernel void @wait_on_empty_stage(<4 x i32> %rsrc, ptr addrspace(3)
 ; SDAG-NEXT:    buffer_load_dword off, s[0:3], 0 lds
 ; SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
 ; SDAG-NEXT:    ; asyncmark(stages=TENSOR)
-; SDAG-NEXT:    ; wait_asyncmark(0, stages=UNFORMATTED_BUFFER_GLOBAL_LOAD)
+; SDAG-NEXT:    ; wait_asyncmark(0, stages=BUFFER_GLOBAL_LOAD)
 ; SDAG-NEXT:    ds_read_b32 v0, v0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    global_store_dword v1, v0, s[0:1]
@@ -96,7 +96,7 @@ define amdgpu_kernel void @wait_on_empty_stage(<4 x i32> %rsrc, ptr addrspace(3)
 ; GISEL-NEXT:    buffer_load_dword off, s[0:3], 0 lds
 ; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
 ; GISEL-NEXT:    ; asyncmark(stages=TENSOR)
-; GISEL-NEXT:    ; wait_asyncmark(0, stages=UNFORMATTED_BUFFER_GLOBAL_LOAD)
+; GISEL-NEXT:    ; wait_asyncmark(0, stages=BUFFER_GLOBAL_LOAD)
 ; GISEL-NEXT:    ds_read_b32 v0, v0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    global_store_dword v1, v0, s[0:1]

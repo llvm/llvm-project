@@ -29,7 +29,7 @@ The stages are:
 | 1 | `GLOBAL_LOAD_ASYNC_TO_LDS` | global loads async to LDS |
 | 2 | `GLOBAL_LOAD_ASYNC_TO_LDS_MCAST` | multicast (cluster) global loads async to LDS |
 | 3 | `ASYNC_LDS_STORE` | async stores from LDS |
-| 5 | `UNFORMATTED_BUFFER_GLOBAL_LOAD` | unformatted buffer and global loads to LDS |
+| 5 | `BUFFER_GLOBAL_LOAD` | buffer loads to LDS and pre-gfx1250 global loads to LDS |
 
 Bits 4 and 6 through 10 are reserved for future async operations, and no
 operation belongs to them yet.

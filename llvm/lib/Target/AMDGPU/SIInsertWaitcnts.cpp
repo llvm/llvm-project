@@ -435,6 +435,8 @@ public:
       return AMDGPU::AsyncStage::TENSOR;
     if (!isAsyncLdsDmaWrite(MI))
       return std::nullopt;
+    if (!SIInstrInfo::usesASYNC_CNT(MI) && T == AMDGPU::LOAD_CNT)
+      return AMDGPU::AsyncStage::BUFFER_GLOBAL_LOAD;
     if (SIInstrInfo::usesASYNC_CNT(MI) && T == AMDGPU::ASYNC_CNT) {
       switch (MI.getOpcode()) {
       // Keep in sync with FLATInstructions.td.
@@ -469,8 +471,6 @@ public:
         llvm_unreachable("Async opcode has no associated async stage");
       }
     }
-    if (!SIInstrInfo::usesASYNC_CNT(MI) && T == AMDGPU::LOAD_CNT)
-      return AMDGPU::AsyncStage::UNFORMATTED_BUFFER_GLOBAL_LOAD;
     return std::nullopt;
   }
 
