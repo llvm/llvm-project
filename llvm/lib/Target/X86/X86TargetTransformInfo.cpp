@@ -1639,6 +1639,77 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // registers are the same.
     LT.first = 1;
 
+    if (LT.second.isVectorOf(MVT::i1)) {
+      // A scalar splat moves the value across in a gpr.
+      if (!Args.empty() && !Args.front()->getType()->isVectorTy()) {
+        static const CostKindCosts ScalarSplat = {1, 2, 2, 2};
+        static const CostKindCosts ScalarSplatUnpck = {2, 6, 3, 3};
+        const CostKindCosts &Costs = LT.second == MVT::v64i1 && !ST->is64Bit()
+                                         ? ScalarSplatUnpck
+                                         : ScalarSplat;
+        if (auto KindCost = Costs[CostKind])
+          return *KindCost;
+      }
+
+      // A mask lane splat sign extends the mask to a vector, splats it there
+      // and converts it back, so it is priced by lane and by subtarget.
+      static const CostKindCosts SmallLaneSplat = {1, 3, 3, 3};
+      static const CostKindCosts LaneSplat = {1, 5, 3, 3};
+      static const CostKindCosts LaneSplatVarPerm = {1, 5, 4, 4};
+      static const CostKindCosts LaneSplatPerm = {2, 8, 4, 5};
+      static const CostKindCosts LaneSplatCross = {3, 9, 5, 6};
+      static const CostKindCosts LaneSplatCrossPerm = {2, 6, 5, 7};
+
+      // The index names a lane of the whole shuffle, so fold it onto the
+      // first operand and then onto the legalized register holding it.
+      int NumSrcElts = SrcTy->getElementCount().getKnownMinValue();
+      int NumRegElts = LT.second.getVectorNumElements();
+      int Lane = Index < 0 ? Index : (Index % NumSrcElts) % NumRegElts;
+
+      if (LT.second == MVT::v64i1 && !ST->useBWIRegs()) {
+        // A legal mask register does not imply that we can use a 512-bit
+        // vector for the round trip. In this case lower1BitShuffle falls back
+        // to extracting the bit and splatting it through a GPR.
+        static const CostKindCosts ExtractAndSplat = {1, 7, 5, 5};
+        static const CostKindCosts ExtractAndSplatUnpck = {2, 10, 5, 5};
+        static const CostKindCosts ShiftMask = {1, 4, 1, 1};
+        const CostKindCosts &Costs =
+            ST->is64Bit() ? ExtractAndSplat : ExtractAndSplatUnpck;
+        InstructionCost Cost = *Costs[CostKind];
+        if (Lane != 0)
+          Cost += *ShiftMask[CostKind];
+        return Cost;
+      }
+
+      bool IsCrossSublane =
+          NumRegElts >= 32 && !ST->hasVBMI() && Lane >= 16 && Lane % 16 != 0;
+      bool IsVarPerm = ST->hasFastVariableCrossLaneShuffle() &&
+                       (NumRegElts == 8 || (NumRegElts >= 32 && ST->hasVBMI()));
+      const CostKindCosts &CrossCosts = ST->hasFastVariableCrossLaneShuffle()
+                                            ? LaneSplatCrossPerm
+                                            : LaneSplatCross;
+      const CostKindCosts &Costs = NumRegElts <= 4  ? SmallLaneSplat
+                                   : Lane == 0      ? LaneSplat
+                                   : IsCrossSublane ? CrossCosts
+                                   : IsVarPerm      ? LaneSplatVarPerm
+                                                    : LaneSplatPerm;
+      if (auto KindCost = Costs[CostKind]) {
+        InstructionCost Cost = *KindCost;
+        // When avoiding 512-bit widening, lower1BitShuffle extends v16i1 to
+        // v16i16 instead. With BW, its vpmovm2w / vpmovw2m round trip does not
+        // require DQ.
+        bool UsesBWConversions =
+            NumRegElts == 16 && ST->hasBWI() && !ST->canExtendTo512DQ();
+        if (!ST->hasDQI() && NumRegElts <= 16 && !UsesBWConversions) {
+          if (CostKind == TTI::TCK_RecipThroughput)
+            Cost += 1;
+          else if (CostKind == TTI::TCK_Latency)
+            Cost += 3;
+        }
+        return Cost;
+      }
+    }
+
     // If we're broadcasting a load then AVX/AVX2 can do this for free.
     // If many-used-load whose every use is one of a small set of operations
     // that SLP can rewrite into a single vector lane, codegen can fold it into
