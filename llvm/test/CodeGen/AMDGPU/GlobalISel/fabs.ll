@@ -170,58 +170,33 @@ define amdgpu_ps void @v_fabs_v2f16(<2 x half> %in, ptr addrspace(1) %out) {
   store <2 x half> %fabs, ptr addrspace(1) %out
   ret void
 }
+
 define amdgpu_ps void @s_fabs_v2f16(<2 x half> inreg %in) {
-; GFX11-LABEL: s_fabs_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_and_b32_e64 v0, 0x7fff7fff, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    ; use s0
-; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_fabs_v2f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX12-NEXT:    s_and_b32 s1, s1, 0x7fff
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    ; use s0
-; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_endpgm
+; GCN-LABEL: s_fabs_v2f16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_and_b32_e64 v0, 0x7fff7fff, s0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; use s0
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_endpgm
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   call void asm sideeffect "; use $0", "s"(<2 x half> %fabs)
   ret void
 }
 define amdgpu_ps void @s_fabs_v2f16_salu_use(<2 x half> inreg %in, i32 inreg %val) {
-; GFX11-LABEL: s_fabs_v2f16_salu_use:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_and_b32_e64 v0, 0x7fff7fff, s0
-; GFX11-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    ; use s0
-; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_fabs_v2f16_salu_use:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX12-NEXT:    s_and_b32 s2, s2, 0x7fff
-; GFX12-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    ; use s0
-; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_endpgm
+; GCN-LABEL: s_fabs_v2f16_salu_use:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_and_b32_e64 v0, 0x7fff7fff, s0
+; GCN-NEXT:    s_cmp_eq_u32 s1, 0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    s_cselect_b32 s0, s0, 0
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; use s0
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_endpgm
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %cond = icmp eq i32 %val, 0
   %sel = select i1 %cond, <2 x half> %fabs, <2 x half> <half 0.0, half 0.0>
