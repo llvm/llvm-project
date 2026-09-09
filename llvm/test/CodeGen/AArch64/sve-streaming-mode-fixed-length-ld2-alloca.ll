@@ -22,8 +22,8 @@ define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ; CHECK-IAENABLED-NEXT:    ptrue p0.b, vl2
 ; CHECK-IAENABLED-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x20]
 ; CHECK-IAENABLED-NEXT:    ptrue p0.s, vl2
-; CHECK-IAENABLED-NEXT:    mov z1.b, z0.b[1]
-; CHECK-IAENABLED-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-IAENABLED-NEXT:    uunpklo z0.h, z0.b
+; CHECK-IAENABLED-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-IAENABLED-NEXT:    st1b { z0.s }, p0, [x19]
 ; CHECK-IAENABLED-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-IAENABLED-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
