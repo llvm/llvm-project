@@ -284,6 +284,7 @@ ninja check-lld || exit /b 1
 REM ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || exit /b 1
 ninja package || exit /b 1
+call :verify_msi_upgrade_code || exit /b 1
 cd ..
 
 exit /b 0
@@ -377,6 +378,7 @@ REM ninja check-flang || exit /b 1
 REM ninja check-mlir || exit /b 1
 REM ninja check-lldb || exit /b 1
 ninja package || exit /b 1
+call :verify_msi_upgrade_code || exit /b 1
 
 :: generate tarball with install toolchain only off
 if "%arch%"=="amd64" (
@@ -415,6 +417,52 @@ set PATH=%PYTHONHOME%;%PATH%
 
 set "VSCMD_START_DIR=%build_dir%"
 
+exit /b 0
+
+::=============================================================================
+
+::==============================================================================
+:: Verify that the generated MSI has LLVM's permanent UpgradeCode.
+::==============================================================================
+:verify_msi_upgrade_code
+:: This code has to match the value in llvm/CMakeLists.txt
+set "expected_upgrade_code=B08613CD-8BD0-4FB6-8937-621936604DE3"
+set "msi_path="
+for %%f in (*.msi) do (
+  if defined msi_path (
+    echo Found more than one MSI in %cd%; cannot determine which one to verify.
+    exit /b 1
+  )
+  set "msi_path=%%~ff"
+)
+if not defined msi_path (
+  echo No MSI found in %cd%.
+  exit /b 1
+)
+
+:: Query the MSI's UpgradeCode through the Windows Installer COM API. WiX's
+:: dark.exe would do this too, but it is deprecated and removed in newer WiX.
+set "msi_query=SELECT Value FROM Property WHERE Property='UpgradeCode'"
+set "ps_cmd=$i = New-Object -ComObject WindowsInstaller.Installer;"
+set "ps_cmd=%ps_cmd% $db = $i.OpenDatabase($env:msi_path, 0);"
+set "ps_cmd=%ps_cmd% $v = $db.OpenView($env:msi_query);"
+set "ps_cmd=%ps_cmd% $v.Execute();"
+set "ps_cmd=%ps_cmd% $v.Fetch().StringData(1).Trim('{', '}')"
+
+set "actual_upgrade_code="
+for /f %%i in ('powershell -NoProfile -Command "%ps_cmd%"') do (
+  set "actual_upgrade_code=%%i"
+)
+if not defined actual_upgrade_code (
+  echo Failed to read the UpgradeCode from "%msi_path%".
+  exit /b 1
+)
+if /i not "%actual_upgrade_code%"=="%expected_upgrade_code%" (
+  echo Unexpected UpgradeCode %actual_upgrade_code% in "%msi_path%".
+  echo Expected %expected_upgrade_code%.
+  exit /b 1
+)
+echo Verified MSI UpgradeCode: %expected_upgrade_code%
 exit /b 0
 
 ::=============================================================================
