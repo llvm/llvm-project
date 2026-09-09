@@ -14670,7 +14670,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
         // some of the insert/extract subvectors will be turned into
         // VSLIDEUP/DOWN_VL right away and stay thru the rest of the codegen.
         // We could write additional combining rules for those VSLIDEUP/DOWN_VL
-        // but I thought it'll be a lot easier to just not generate
+        // but it'll probably be a lot easier to just not generate
         // VECTOR_INTERLEAVE2 + CONCAT_VECTORS in the first place here.
         Operands[I / 2] = lowerZvzipVZIP(V1, V2, DL, DAG, Subtarget);
       }
