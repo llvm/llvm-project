@@ -46,8 +46,10 @@
 
 #include "llvm/Transforms/Scalar/LoopFuse.h"
 #include "ScalarOptions.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -87,6 +89,8 @@ STATISTIC(
     NonEmptyPreheader,
     "Loop has a non-empty preheader with instructions that cannot be moved");
 STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
+STATISTIC(FusionTooLarge, "Fusion exceeds the combined-body cost budget");
+STATISTIC(UnknownFusionSize, "Fusion body cost could not be computed");
 STATISTIC(NonIdenticalGuards, "Candidates have different guards");
 STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block with "
                              "instructions that cannot be moved");
@@ -100,6 +104,19 @@ STATISTIC(NumSunkInsts, "Number of sunk preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
 
 namespace {
+
+enum class FusionProfitabilityResult {
+  Profitable,
+  TooLarge,
+  UnknownSize,
+};
+
+struct FusionProfitabilityInfo {
+  FusionProfitabilityResult Result =
+      FusionProfitabilityResult::Profitable;
+  std::optional<unsigned> CombinedCost;
+};
+
 /// This class is used to represent a candidate for loop fusion. When it is
 /// constructed, it checks the conditions for loop fusion to ensure that it
 /// represents a valid candidate. It caches several parts of a loop that are
@@ -666,13 +683,47 @@ private:
     }
   }
 
+  std::optional<unsigned>
+  estimateLoopCodeSize(const FusionCandidate &FC) const {
+    SmallPtrSet<const Value *, 32> EphValues;
+    CodeMetrics::collectEphemeralValues(FC.L, &AC, EphValues);
+
+    CodeMetrics Metrics;
+    for (BasicBlock *BB : FC.L->blocks())
+      Metrics.analyzeBasicBlock(BB, TTI, EphValues, false, FC.L);
+
+    if (!Metrics.NumInsts.isValid())
+      return std::nullopt;
+
+    return static_cast<unsigned>(Metrics.NumInsts.getValue());
+  }
+
   /// Determine if it is beneficial to fuse two loops.
-  ///
-  /// For now, this method simply returns true because we want to fuse as much
-  /// as possible (primarily to test the pass). This method will evolve, over
-  /// time, to add heuristics for profitability of fusion.
   bool isBeneficialFusion(const FusionCandidate &FC0,
-                          const FusionCandidate &FC1) {
+                          const FusionCandidate &FC1,
+                          FusionProfitabilityInfo &Info) const {
+    if (!Opts.loop_fusion_cost_model)
+      return true;
+
+    std::optional<unsigned> Size0 = estimateLoopCodeSize(FC0);
+    std::optional<unsigned> Size1 = estimateLoopCodeSize(FC1);
+    if (!Size0 || !Size1) {
+      Info.Result = FusionProfitabilityResult::UnknownSize;
+      return false;
+    }
+
+    Info.CombinedCost = *Size0 + *Size1;
+    LLVM_DEBUG(dbgs() << "\tEstimated combined loop-body cost: "
+                      << *Info.CombinedCost << " (maximum: "
+                      << Opts.loop_fusion_max_code_size << ")\n");
+
+    if (Opts.loop_fusion_max_code_size &&
+        *Info.CombinedCost > Opts.loop_fusion_max_code_size) {
+      Info.Result = FusionProfitabilityResult::TooLarge;
+      return false;
+    }
+
+    Info.Result = FusionProfitabilityResult::Profitable;
     return true;
   }
 
@@ -949,15 +1000,28 @@ private:
           }
         }
 
-        bool BeneficialToFuse = isBeneficialFusion(FC0, FC1);
-        LLVM_DEBUG(dbgs() << "\tFusion appears to be "
-                          << (BeneficialToFuse ? "" : "un") << "profitable!\n");
+        FusionProfitabilityInfo ProfitabilityInfo;
+        bool BeneficialToFuse =
+            isBeneficialFusion(FC0, FC1, ProfitabilityInfo);
         if (!BeneficialToFuse) {
-          ++FusionNotBeneficial;
-          reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, "FusionNotBeneficial", "Fusion is not beneficial");
+          if (ProfitabilityInfo.Result ==
+              FusionProfitabilityResult::TooLarge) {
+            ++FusionTooLarge;
+            reportFusionTooLarge(FC0, FC1, ProfitabilityInfo);
+          } else {
+            assert(ProfitabilityInfo.Result ==
+                       FusionProfitabilityResult::UnknownSize &&
+                   "Unexpected unprofitable fusion result");
+            ++UnknownFusionSize;
+            reportLoopFusion<OptimizationRemarkMissed>(
+                FC0, FC1, "UnknownFusionSize",
+                "Fusion body cost could not be computed");
+          }
           continue;
         }
+
+        LLVM_DEBUG(dbgs() << "\tFusion appears to be profitable!\n");
+
         // All analysis has completed and has determined that fusion is legal
         // and profitable. At this point, start transforming the code and
         // perform fusion.
@@ -1723,6 +1787,24 @@ private:
         << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName())) << " and "
         << NV("Cand2", StringRef(FC1.Preheader->getName())) << ": "
         << RemarkMsg);
+  }
+
+  void reportFusionTooLarge(const FusionCandidate &FC0,
+                            const FusionCandidate &FC1,
+                            const FusionProfitabilityInfo &Info) {
+    assert(Info.CombinedCost && "Expected a valid combined cost");
+
+    using namespace ore;
+    ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "FusionTooLarge",
+                                      FC0.L->getStartLoc(), FC0.Preheader)
+             << "[" << FC0.Preheader->getParent()->getName()
+             << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
+             << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
+             << ": estimated combined loop-body cost "
+             << NV("CombinedCost", *Info.CombinedCost)
+             << " exceeds the configured maximum "
+             << NV("MaximumCost",
+                   unsigned(Opts.loop_fusion_max_code_size)));
   }
 
   /// Fuse two guarded fusion candidates, creating a new fused loop.

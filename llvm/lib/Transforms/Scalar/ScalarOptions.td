@@ -259,6 +259,10 @@ defm : BoolField<"loop-flatten-widen-iv", "true",
 // LoopFuse.cpp
 defm : ValueField<"loop-fusion-peel-max-count", "uint32_t", "0",
   "Max number of iterations to be peeled from a loop, such that fusion can take place">;
+defm : BoolField<"loop-fusion-cost-model", "false",
+  "Enable the loop fusion profitability model">;
+defm : ValueField<"loop-fusion-max-code-size", "unsigned", "300",
+  "Maximum estimated combined cost of fused loop bodies (0 disables the limit)">;
 let Condition = AssertsOnly in
 defm : BoolField<"loop-fusion-verbose-debug", "false",
   "Enable verbose debugging for Loop Fusion">;
