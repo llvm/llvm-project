@@ -274,6 +274,7 @@ define void @fixed_sve_extract() #2 {
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_elt0 = extractelement <8 x i32> poison, i32 0
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_low = extractelement <8 x i32> poison, i32 3
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_high = extractelement <8 x i32> poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_elt7 = extractelement <16 x i32> poison, i32 15
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0 = extractelement <8 x float> poison, i32 0
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_low = extractelement <8 x float> poison, i32 3
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_high = extractelement <8 x float> poison, i32 4
@@ -298,6 +299,7 @@ define void @fixed_sve_extract() #2 {
 ; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ei32_elt0 = extractelement <8 x i32> poison, i32 0
 ; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ei32_low = extractelement <8 x i32> poison, i32 3
 ; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:1 for: %ei32_high = extractelement <8 x i32> poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:1 for: %ei32_elt7 = extractelement <16 x i32> poison, i32 15
 ; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0 = extractelement <8 x float> poison, i32 0
 ; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ef32_low = extractelement <8 x float> poison, i32 3
 ; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ef32_high = extractelement <8 x float> poison, i32 4
@@ -322,6 +324,7 @@ define void @fixed_sve_extract() #2 {
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ei32_elt0 = extractelement <8 x i32> poison, i32 0
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ei32_low = extractelement <8 x i32> poison, i32 3
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100001 CodeSize:2 Lat:100001 SizeLat:100001 for: %ei32_high = extractelement <8 x i32> poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100001 CodeSize:2 Lat:100001 SizeLat:100001 for: %ei32_elt7 = extractelement <16 x i32> poison, i32 15
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0 = extractelement <8 x float> poison, i32 0
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ef32_low = extractelement <8 x float> poison, i32 3
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ef32_high = extractelement <8 x float> poison, i32 4
@@ -346,6 +349,7 @@ define void @fixed_sve_extract() #2 {
 ; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_elt0 = extractelement <8 x i32> poison, i32 0
 ; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_low = extractelement <8 x i32> poison, i32 3
 ; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_high = extractelement <8 x i32> poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_elt7 = extractelement <16 x i32> poison, i32 15
 ; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0 = extractelement <8 x float> poison, i32 0
 ; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_low = extractelement <8 x float> poison, i32 3
 ; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_high = extractelement <8 x float> poison, i32 4
@@ -369,6 +373,7 @@ define void @fixed_sve_extract() #2 {
   %ei32_elt0 = extractelement <8 x i32> poison, i32 0
   %ei32_low = extractelement <8 x i32> poison, i32 3
   %ei32_high = extractelement <8 x i32> poison, i32 4
+  %ei32_elt7 = extractelement <16 x i32> poison, i32 15
   %ef32_elt0 = extractelement <8 x float> poison, i32 0
   %ef32_low = extractelement <8 x float> poison, i32 3
   %ef32_high = extractelement <8 x float> poison, i32 4

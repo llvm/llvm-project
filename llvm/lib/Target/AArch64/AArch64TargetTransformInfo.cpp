@@ -4599,28 +4599,6 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     if (Index == 0 && !Ty->getScalarType()->isIntegerTy())
       return 0;
 
-    // SVE has no scalar move to an arbitrary lane above the low 128-bit portion
-    // of a Z register, e.g. there is no equivalent of "mov z0.d[9], d0".
-    // Fixed-length vectors wider than 128 bits therefore need
-    // [splice]/index/pred/splat/cmp/pred-mov when scalarizing inserts for those
-    // lanes, so model them as more expensive than ordinary NEON lane accesses.
-    if (ST->useSVEForFixedLengthVectors()) {
-      InstructionCost Cost = CostKind == TTI::TCK_CodeSize
-                                 ? 1
-                                 : ST->getVectorInsertExtractBaseCost();
-      if (Index * Ty->getScalarSizeInBits() < 128)
-        return Cost;
-      if (Index * Ty->getScalarSizeInBits() < 512 &&
-          Opcode == Instruction::ExtractElement)
-        // Integer extracts (>128b, <512b) require extra mov from FPR -> GPR.
-        return Ty->getScalarType()->isIntegerTy() ? Cost + 1 : Cost;
-      if (Opcode == Instruction::ExtractElement)
-        return Cost + 2; // cost of mov imm + whilels + lastb
-      if (Opcode == Instruction::InsertElement)
-        return Cost + 3; // cost of insert with cmp/splice
-      llvm_unreachable("unexpected opcode");
-    }
-
     // This is recognising a LD1 single-element structure to one lane of one
     // register instruction. I.e., if this is an `insertelement` instruction,
     // and its second operand is a load, then we will generate a LD1, which
@@ -4639,6 +4617,28 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
       return CostKind == TTI::TCK_CodeSize
                  ? 2
                  : ST->getVectorInsertExtractBaseCost() + 1;
+
+    // SVE has no scalar move to an arbitrary lane above the low 128-bit portion
+    // of a Z register, e.g. there is no equivalent of "mov z0.d[9], d0".
+    // Fixed-length vectors wider than 128 bits therefore need
+    // [splice]/index/pred/splat/cmp/pred-mov when scalarizing inserts for those
+    // lanes, so model them as more expensive than ordinary NEON lane accesses.
+    if (ST->useSVEForFixedLengthVectors()) {
+      InstructionCost Cost = CostKind == TTI::TCK_CodeSize
+                                 ? 1
+                                 : ST->getVectorInsertExtractBaseCost();
+      if (Index * LT.second.getScalarSizeInBits() < 128)
+        return Cost;
+      if (Index * LT.second.getScalarSizeInBits() < 512 &&
+          Opcode == Instruction::ExtractElement)
+        // Integer extracts (>128b, <512b) require extra mov from FPR -> GPR.
+        return Ty->getScalarType()->isIntegerTy() ? Cost + 1 : Cost;
+      if (Opcode == Instruction::ExtractElement)
+        return Cost + 2; // cost of mov imm + whilels + lastb
+      if (Opcode == Instruction::InsertElement)
+        return Cost + 3; // cost of insert with cmp/splice
+      llvm_unreachable("unexpected opcode");
+    }
 
     // FIXME:
     // If the extract-element and insert-element instructions could be
