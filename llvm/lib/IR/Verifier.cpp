@@ -2292,8 +2292,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     }
     if (Attrs.hasAttribute(Attribute::ByVal)) {
       Type *ByValTy = Attrs.getByValType();
-      SmallPtrSet<Type *, 4> Visited;
-      Check(ByValTy->isSized(&Visited),
+      Check(ByValTy->isSized(),
             "Attribute 'byval' does not support unsized types!", V);
       // Check if it is or contains a target extension type that disallows being
       // used on the stack.
@@ -2303,24 +2302,21 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
             "huge 'byval' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByRef)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getByRefType()->isSized(&Visited),
+      Check(Attrs.getByRefType()->isSized(),
             "Attribute 'byref' does not support unsized types!", V);
       Check(DL.getTypeAllocSize(Attrs.getByRefType()).getKnownMinValue() <
                 (1ULL << 32),
             "huge 'byref' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::InAlloca)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getInAllocaType()->isSized(&Visited),
+      Check(Attrs.getInAllocaType()->isSized(),
             "Attribute 'inalloca' does not support unsized types!", V);
       Check(DL.getTypeAllocSize(Attrs.getInAllocaType()).getKnownMinValue() <
                 (1ULL << 32),
             "huge 'inalloca' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::Preallocated)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getPreallocatedType()->isSized(&Visited),
+      Check(Attrs.getPreallocatedType()->isSized(),
             "Attribute 'preallocated' does not support unsized types!", V);
       Check(
           DL.getTypeAllocSize(Attrs.getPreallocatedType()).getKnownMinValue() <
@@ -4038,7 +4034,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   // make sure the underlying alloca/parameter it comes from has a swifterror as
   // well.
   for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
-    if (Call.paramHasAttr(i, Attribute::SwiftError)) {
+    if (Call.hasABIParamAttr(i, Attribute::SwiftError)) {
       Value *SwiftErrorArg = Call.getArgOperand(i);
       if (auto AI = dyn_cast<AllocaInst>(SwiftErrorArg->stripInBoundsOffsets())) {
         Check(AI->isSwiftError(),
@@ -4087,7 +4083,7 @@ void Verifier::visitCallBase(CallBase &Call) {
               Call);
     }
 
-    if (Call.paramHasAttr(i, Attribute::Preallocated)) {
+    if (Call.hasABIParamAttr(i, Attribute::Preallocated)) {
       Value *ArgVal = Call.getArgOperand(i);
       bool hasOB =
           Call.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0;
@@ -4798,7 +4794,7 @@ void Verifier::verifySwiftErrorCall(CallBase &Call,
                                     const Value *SwiftErrorVal) {
   for (const auto &I : llvm::enumerate(Call.args())) {
     if (I.value() == SwiftErrorVal) {
-      Check(Call.paramHasAttr(I.index(), Attribute::SwiftError),
+      Check(Call.hasABIParamAttr(I.index(), Attribute::SwiftError),
             "swifterror value when used in a callsite should be marked "
             "with swifterror attribute",
             SwiftErrorVal, Call);
@@ -4833,8 +4829,7 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
           "Non-logical alloca disallowed for this module.");
 
   Type *Ty = AI.getAllocatedType();
-  SmallPtrSet<Type*, 4> Visited;
-  Check(Ty->isSized(&Visited), "Cannot allocate unsized type", &AI);
+  Check(Ty->isSized(), "Cannot allocate unsized type", &AI);
   // Check if it's a target extension type that disallows being used on the
   // stack.
   Check(!Ty->containsNonLocalTargetExtType(),
@@ -6462,7 +6457,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         FoundCall = true;
         size_t NumPreallocatedArgs = 0;
         for (unsigned i = 0; i < UseCall->arg_size(); i++) {
-          if (UseCall->paramHasAttr(i, Attribute::Preallocated)) {
+          if (UseCall->hasABIParamAttr(i, Attribute::Preallocated)) {
             ++NumPreallocatedArgs;
           }
         }

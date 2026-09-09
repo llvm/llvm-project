@@ -2825,6 +2825,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
@@ -3271,6 +3272,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
     break;
   case OPERAND_REG_IMM_BF16:
   case OPERAND_REG_IMM_FP16:
+  case OPERAND_REG_IMM_NOINLINE_FP16:
   case OPERAND_REG_INLINE_C_BF16:
   case OPERAND_REG_INLINE_C_FP16:
     return Imm & 0xffff;
@@ -3343,10 +3345,10 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
   case CallingConv::AMDGPU_CS_ChainPreserve:
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
-    return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
+    return CB->hasABIParamAttr(ArgNo, Attribute::InReg) ||
            CB->isByValArgument(ArgNo);
   default:
-    return CB->paramHasAttr(ArgNo, Attribute::InReg);
+    return CB->hasABIParamAttr(ArgNo, Attribute::InReg);
   }
 }
 

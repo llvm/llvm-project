@@ -40,7 +40,6 @@ struct GPUInfo {
   AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
-  StringTable::Offset BaseName; // The canonical device name for a variant.
   uint8_t MaxWavesPerEU;
   uint32_t MaxHWAddressableLocalMemorySize;
   uint8_t LDSBankCount;
@@ -173,11 +172,6 @@ Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
 
 Triple::SubArchType llvm::AMDGPU::getSubArchFromGPUName(StringRef CPU) {
   return getSubArch(parseArchAMDGCN(CPU));
-}
-
-StringRef llvm::AMDGPU::getBaseArchNameAMDGCN(GPUKind AK) {
-  const GPUInfo *Info = getAMDGPUInfo(AK);
-  return Info ? AMDGPUNameStrTab[Info->BaseName] : "";
 }
 
 AMDGPU::GPUKind
