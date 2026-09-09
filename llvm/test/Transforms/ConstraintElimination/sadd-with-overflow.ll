@@ -2,6 +2,7 @@
 ; RUN: opt -passes=constraint-elimination -S %s | FileCheck %s
 
 declare void @use(i1)
+declare void @use.agg({ i8, i1 })
 
 ; A is in [0, 100), so A + 1 does not signed-overflow (A s<= SMAX - 1).
 define i8 @sadd_no_overflow_pos_const(i8 %a) {
@@ -97,6 +98,231 @@ then:
   %s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 1)
   %v = extractvalue { i8, i1 } %s, 0
   %o = extractvalue { i8, i1 } %s, 1
+  call void @use(i1 %o)
+  ret i8 %v
+
+else:
+  ret i8 0
+}
+
+; C == SMIN, so A + C does not signed-overflow iff A s>= 0.
+define i8 @sadd_c_smin(i8 %a) {
+; CHECK-LABEL: define i8 @sadd_c_smin(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LO:%.*]] = icmp sge i8 [[A]], 0
+; CHECK-NEXT:    br i1 [[LO]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 -128)
+; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
+; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %lo = icmp sge i8 %a, 0
+  br i1 %lo, label %then, label %else
+
+then:
+  %s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 -128)
+  %v = extractvalue { i8, i1 } %s, 0
+  %o = extractvalue { i8, i1 } %s, 1
+  call void @use(i1 %o)
+  ret i8 %v
+
+else:
+  ret i8 0
+}
+
+; C == SMAX, so A + C does not signed-overflow iff A s<= 0.
+define i8 @sadd_c_smax(i8 %a) {
+; CHECK-LABEL: define i8 @sadd_c_smax(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[HI:%.*]] = icmp sle i8 [[A]], 0
+; CHECK-NEXT:    br i1 [[HI]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 127)
+; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
+; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %hi = icmp sle i8 %a, 0
+  br i1 %hi, label %then, label %else
+
+then:
+  %s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 127)
+  %v = extractvalue { i8, i1 } %s, 0
+  %o = extractvalue { i8, i1 } %s, 1
+  call void @use(i1 %o)
+  ret i8 %v
+
+else:
+  ret i8 0
+}
+
+; The upper bound is one too large.
+define i8 @sadd_pos_const_bound_too_large(i8 %a) {
+; CHECK-LABEL: define i8 @sadd_pos_const_bound_too_large(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[HI:%.*]] = icmp sle i8 [[A]], 127
+; CHECK-NEXT:    br i1 [[HI]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 1)
+; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
+; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %hi = icmp sle i8 %a, 127
+  br i1 %hi, label %then, label %else
+
+then:
+  %s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 1)
+  %v = extractvalue { i8, i1 } %s, 0
+  %o = extractvalue { i8, i1 } %s, 1
+  call void @use(i1 %o)
+  ret i8 %v
+
+else:
+  ret i8 0
+}
+
+; The lower bound is one too small.
+define i8 @sadd_neg_const_bound_too_small(i8 %a) {
+; CHECK-LABEL: define i8 @sadd_neg_const_bound_too_small(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LO:%.*]] = icmp sge i8 [[A]], -128
+; CHECK-NEXT:    br i1 [[LO]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 -1)
+; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
+; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %lo = icmp sge i8 %a, -128
+  br i1 %lo, label %then, label %else
+
+then:
+  %s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 -1)
+  %v = extractvalue { i8, i1 } %s, 0
+  %o = extractvalue { i8, i1 } %s, 1
+  call void @use(i1 %o)
+  ret i8 %v
+
+else:
+  ret i8 0
+}
+
+define i8 @sadd_unsigned_bound(i8 %a) {
+; CHECK-LABEL: define i8 @sadd_unsigned_bound(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[HI:%.*]] = icmp ult i8 [[A]], 100
+; CHECK-NEXT:    br i1 [[HI]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 1)
+; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
+; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %hi = icmp ult i8 %a, 100
+  br i1 %hi, label %then, label %else
+
+then:
+  %s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 1)
+  %v = extractvalue { i8, i1 } %s, 0
+  %o = extractvalue { i8, i1 } %s, 1
+  call void @use(i1 %o)
+  ret i8 %v
+
+else:
+  ret i8 0
+}
+
+; The second operand is not a constant.
+define i8 @sadd_variable_ops(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @sadd_variable_ops(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LO:%.*]] = icmp sge i8 [[A]], 0
+; CHECK-NEXT:    [[HI:%.*]] = icmp slt i8 [[A]], 100
+; CHECK-NEXT:    [[OK:%.*]] = and i1 [[LO]], [[HI]]
+; CHECK-NEXT:    br i1 [[OK]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
+; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %lo = icmp sge i8 %a, 0
+  %hi = icmp slt i8 %a, 100
+  %ok = and i1 %lo, %hi
+  br i1 %ok, label %then, label %else
+
+then:
+  %s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
+  %v = extractvalue { i8, i1 } %s, 0
+  %o = extractvalue { i8, i1 } %s, 1
+  call void @use(i1 %o)
+  ret i8 %v
+
+else:
+  ret i8 0
+}
+
+define i8 @sadd_aggregate_escapes(i8 %a) {
+; CHECK-LABEL: define i8 @sadd_aggregate_escapes(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LO:%.*]] = icmp sge i8 [[A]], 0
+; CHECK-NEXT:    [[HI:%.*]] = icmp slt i8 [[A]], 100
+; CHECK-NEXT:    [[OK:%.*]] = and i1 [[LO]], [[HI]]
+; CHECK-NEXT:    br i1 [[OK]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 1)
+; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
+; CHECK-NEXT:    call void @use.agg({ i8, i1 } [[S]])
+; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %lo = icmp sge i8 %a, 0
+  %hi = icmp slt i8 %a, 100
+  %ok = and i1 %lo, %hi
+  br i1 %ok, label %then, label %else
+
+then:
+  %s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 1)
+  %v = extractvalue { i8, i1 } %s, 0
+  %o = extractvalue { i8, i1 } %s, 1
+  call void @use.agg({ i8, i1 } %s)
   call void @use(i1 %o)
   ret i8 %v
 
