@@ -528,6 +528,10 @@ features cannot lower the translation-unit ABI level;
   format warnings to errors. (#GH211943)
 - Fixed a wrong code generation in `__builtin_clear_padding` wherein the
   wrong bits of the `_BitInt` type were cleared in big-endian mode.
+- Fixed an assertion failure when `__builtin_vectorelements` is applied to a
+  reference to a vector type; `vec_step` (in C++ for OpenCL) and
+  `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
+  types that their evaluation silently mishandled. (#GH216997)
 
 #### Bug Fixes to Attribute Support
 
