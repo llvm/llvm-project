@@ -78,6 +78,8 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   if (!ST.hasGFX1250Insts())
     return;
   const TargetSchedModel *SM = DAG->getSchedModel();
+  if (!SM->hasInstrSchedModel())
+    return;
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   // Gather WMMAs (numbered in program order) and ds_loads.
