@@ -482,14 +482,13 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
     bool use_DIL = target_sp->GetUseDILForCreatingValues();
     if (use_DIL) {
       Status error;
-      if (frame_sp) {
-        uint32_t expr_path_options =
-            StackFrame::eExpressionPathOptionCheckPtrVsMember |
-            StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
-        lldb::VariableSP var_sp;
-        new_value_sp = frame_sp->GetValueForVariableExpressionPath(
-            expression, eNoDynamicValues, expr_path_options, var_sp, error);
-      }
+      uint32_t expr_path_options =
+          StackFrame::eExpressionPathOptionCheckPtrVsMember |
+          StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
+      lldb::VariableSP var_sp;
+      new_value_sp = frame_sp->GetValueForVariableExpressionPath(
+          expression, options.GetFetchDynamicValue(), expr_path_options, var_sp,
+          error);
       DIL_success = new_value_sp && new_value_sp->GetError().Success();
     }
   }
