@@ -2743,7 +2743,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm FSQRT_ZPmZ  : sve_fp_2op_p_zd_HSD<0b01101, "fsqrt",  AArch64fsqrt_mt>;
 } // End HasSVE_or_SME
 
-let Predicates = [HasSVE], AddedComplexity = 1 in {
+let Predicates = [HasSVE, HasNEON], AddedComplexity = 1 in {
   // A common sequence that occurs when promoting nxv8bf16 operations.
   // NOTE: MOVIv2d_ns is not available in streaming-mode.
   def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), (extract_subvector nxv8bf16:$Zs, (i64 0)), undef)),
