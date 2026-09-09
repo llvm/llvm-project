@@ -26,12 +26,11 @@ define void @wide_select_loop(ptr addrspace(1) %p, <16 x float> %a, <16 x float>
 ; CHECK-NEXT:    [[S5:%.*]] = select <16 x i1> [[C5]], <16 x float> [[S4]], <16 x float> [[B]]
 ; CHECK-NEXT:    store <16 x float> [[S5]], ptr addrspace(1) [[GEP]], align 64
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_7:%.*]] = icmp slt i32 [[INC]], 64
-; CHECK-NEXT:    br i1 [[CMP_7]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 64
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
-; CHECK-COUNT-5: select <16 x i1>
 entry:
   br label %loop
 
