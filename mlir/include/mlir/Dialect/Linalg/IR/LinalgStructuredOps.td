@@ -524,7 +524,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
-                              mlir::ArrayRef<mlir::NamedAttribute>, 
+                              mlir::ArrayRef<mlir::NamedAttribute>,
                               function_ref<InFlightDiagnostic()> emitError) {
       OpBuilder::InsertionGuard guard(b);
       linalg::YieldOp::create(b, b.getLoc(), block.getArgument(0));
@@ -568,6 +568,12 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 
     The number of dims of the iterator-types are inferred from the rank of
     the result type.
+
+    The compute element type shall be the same as result type. For instance,
+    if input type is `f16` and result type `f32`, then input is upcast to
+    `f32` before doing the elementwise operation. Downcasting is not advised
+    but supported if user specifies, e.g. if input is `f32` and result `f16,
+    then input is truncated before doing the elementwise operation.
 
     Example:
 
@@ -1043,7 +1049,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", [
         (void)$_state.addRegion(),
         BatchMatmulOp::getDefaultIndexingMaps($_builder.getContext());
       }]>
-      
+
     ];
     let hasCustomAssemblyFormat = 1;
     let hasFolder = 1;
@@ -1174,7 +1180,7 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
           attributes, BatchReduceMatmulOp::getRegionBuilder(),
           BatchReduceMatmulOp::getDefaultIndexingMaps($_builder.getContext()));
       }]>
-      
+
     ];
     let hasCustomAssemblyFormat = 1;
     let hasFolder = 1;
