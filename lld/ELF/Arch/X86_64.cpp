@@ -379,7 +379,7 @@ void X86_64::relaxCFIJumpTables() const {
         if (!last)
           return nullptr;
 
-        for (Relocation &r : rels) {
+        for (Relocation &r : rels.drop_back()) {
           InputSection *target = getMovableSection(r);
           if (!target || target->getParent() != last->getParent())
             return nullptr;
