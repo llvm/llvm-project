@@ -1437,15 +1437,34 @@ void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic,
-    llvm::dxbc::PSV::SemanticKind SemanticKind, std::optional<unsigned> Index,
+    llvm::dxbc::PSV::SemanticKind SemanticKind,
+    llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
     SemanticSignatures &Signature) {
   switch (SemanticKind) {
   case llvm::dxbc::PSV::SemanticKind::GroupIndex: {
+    assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
+                               llvm::Triple::Amplification},
+                              Stage) &&
+           "SV_GroupIndex is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Mesh &&
+           Stage != llvm::Triple::Amplification &&
+           "FIXME: SV_GroupIndex is not yet implemented for this shader "
+           "stage");
     llvm::Function *GroupIndex =
         CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
   case llvm::dxbc::PSV::SemanticKind::DispatchThreadID: {
+    assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
+                               llvm::Triple::Amplification},
+                              Stage) &&
+           "SV_DispatchThreadID is in an unavailable stage and should have "
+           "been diagnosed by Sema");
+    assert(Stage != llvm::Triple::Mesh &&
+           Stage != llvm::Triple::Amplification &&
+           "FIXME: SV_DispatchThreadID is not yet implemented for this "
+           "shader stage");
     llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1454,6 +1473,15 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, ThreadIDIntrinsic, Type);
   }
   case llvm::dxbc::PSV::SemanticKind::GroupThreadID: {
+    assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
+                               llvm::Triple::Amplification},
+                              Stage) &&
+           "SV_GroupThreadID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Mesh &&
+           Stage != llvm::Triple::Amplification &&
+           "FIXME: SV_GroupThreadID is not yet implemented for this shader "
+           "stage");
     llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1462,6 +1490,14 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, GroupThreadIDIntrinsic, Type);
   }
   case llvm::dxbc::PSV::SemanticKind::GroupID: {
+    assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
+                               llvm::Triple::Amplification},
+                              Stage) &&
+           "SV_GroupID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Mesh &&
+           Stage != llvm::Triple::Amplification &&
+           "FIXME: SV_GroupID is not yet implemented for this shader stage");
     llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
     llvm::Function *GroupIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1470,6 +1506,15 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
   case llvm::dxbc::PSV::SemanticKind::Position:
+    assert(llvm::is_contained({llvm::Triple::Hull, llvm::Triple::Domain,
+                               llvm::Triple::Geometry, llvm::Triple::Pixel},
+                              Stage) &&
+           "SV_Position is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry &&
+           "FIXME: loading SV_Position is not yet implemented for this "
+           "shader stage");
     if (CGM.getTarget().getTriple().isSPIRV())
       return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                     Semantic->getAttrName()->getName(),
@@ -1479,6 +1524,9 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
                                       Signature);
     break;
   case llvm::dxbc::PSV::SemanticKind::VertexID:
+    assert(Stage == llvm::Triple::Vertex &&
+           "SV_VertexID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
       return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                     Semantic->getAttrName()->getName(),
@@ -1512,10 +1560,21 @@ static void createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M,
 void CGHLSLRuntime::emitSystemSemanticStore(
     IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic,
-    llvm::dxbc::PSV::SemanticKind SemanticKind, std::optional<unsigned> Index,
+    llvm::dxbc::PSV::SemanticKind SemanticKind,
+    llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
     SemanticSignatures &Signature) {
   switch (SemanticKind) {
   case llvm::dxbc::PSV::SemanticKind::Position:
+    assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
+                               llvm::Triple::Domain, llvm::Triple::Geometry,
+                               llvm::Triple::Mesh},
+                              Stage) &&
+           "SV_Position is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry && Stage != llvm::Triple::Mesh &&
+           "FIXME: storing SV_Position is not yet implemented for this "
+           "shader stage");
     if (CGM.getTarget().getTriple().isDXIL()) {
       emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
       return;
@@ -1528,6 +1587,9 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     }
     break;
   case llvm::dxbc::PSV::SemanticKind::Target:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_Target is in an unavailable stage and should have been "
+           "diagnosed by Sema");
     emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
     return;
   default:
@@ -1555,8 +1617,8 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
          "invalid semantic should have been diagnosed by Sema");
   if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
     return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index, Signature);
-  return emitSystemSemanticLoad(B, Type, Decl, Semantic, SemanticKind, Index,
-                                Signature);
+  return emitSystemSemanticLoad(B, Type, Decl, Semantic, SemanticKind,
+                                ShaderAttr->getType(), Index, Signature);
 }
 
 void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
@@ -1579,8 +1641,8 @@ void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
 
   if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
     return emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
-  emitSystemSemanticStore(B, Source, Decl, Semantic, SemanticKind, Index,
-                          Signature);
+  emitSystemSemanticStore(B, Source, Decl, Semantic, SemanticKind,
+                          ShaderAttr->getType(), Index, Signature);
 }
 
 std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
