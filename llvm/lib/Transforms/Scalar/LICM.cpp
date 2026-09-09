@@ -1704,6 +1704,7 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
   // Sink surviving candidates in reverse program order so that defs in the
   // exit block end up in their original relative order.
   bool MadeAnyChanges = false;
+  SmallVector<Value *, 16> SunkInsts;
   MemoryAccess *ExitDef = nullptr;
   MemorySSA *MSSA = MSSAU.getMemorySSA();
 
@@ -1714,8 +1715,7 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
     SafetyInfo->removeInstruction(&I);
     SafetyInfo->insertInstructionTo(&I, ExitBlock);
     I.moveBefore(*ExitBlock, ExitBlock->getFirstInsertionPt());
-    if (SE)
-      SE->forgetValue(&I);
+    SunkInsts.push_back(&I);
 
     // Update MemorySSA. Avoid the expensive getPreviousDefRecursive call by
     // caching a defining access from the preheader on the first sunk MemoryUse.
@@ -1740,6 +1740,9 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
 
     MadeAnyChanges = true;
   }
+
+  if (SE)
+    SE->forgetValues(SunkInsts);
 
   return MadeAnyChanges;
 }
