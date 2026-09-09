@@ -1891,15 +1891,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
         unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
         Instruction *StartTerm = P->getIncomingBlock(OpNum)->getTerminator();
+        Instruction *LatchTerm =
+            P->getIncomingBlock(1 - OpNum)->getTerminator();
 
         // Ok, we have a recurrence of the form {Start,op,Step}. Check for low
         // zero bits.
         RecQ.CxtI = StartTerm;
         computeKnownBits(Start, DemandedElts, Known2, RecQ, Depth + 1);
 
-        // We need to take the minimum number of known bits
+        // We need to take the minimum number of known bits.
+        // The step may be loop-variant, so make sure we don't make use of
+        // any conditions that only hold on the last iteration.
         KnownBits KnownStep(BitWidth);
-        computeKnownBits(Step, DemandedElts, KnownStep, Q, Depth + 1);
+        RecQ.CxtI = LatchTerm;
+        computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
 
         Known.Zero.setLowBits(std::min(Known2.countMinTrailingZeros(),
                                        KnownStep.countMinTrailingZeros()));

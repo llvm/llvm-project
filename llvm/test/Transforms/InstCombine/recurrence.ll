@@ -169,13 +169,16 @@ define i1 @test_loop_variant_step_with_condition() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[STEP:%.*]] = call i32 @get_step()
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[STEP]], -1
-; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LATCH:%.*]]
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LATCH]]
 ; CHECK:       latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], [[STEP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i32 [[IV]], -1
+; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
   br label %loop
