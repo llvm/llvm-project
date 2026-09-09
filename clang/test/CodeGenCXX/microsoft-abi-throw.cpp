@@ -37,19 +37,19 @@ struct Y : Z, W, virtual V {};
 void f(const Y &y) {
   // CHECK-LABEL: @"?f@@YAXABUY@@@Z"
   // CHECK: call x86_thiscallcc noundef ptr @"??0Y@@QAE@ABU0@@Z"(ptr {{[^,]*}} %[[mem:.*]], ptr
-  // CHECK: call void @_CxxThrowException(ptr %[[mem]], ptr @"_TI5?AUY@@")
+  // CHECK: call x86_stdcallcc void @_CxxThrowException(ptr %[[mem]], ptr @"_TI5?AUY@@")
   throw y;
 }
 
 void g(const int *const *y) {
   // CHECK-LABEL: @"?g@@YAXPBQBH@Z"
-  // CHECK: call void @_CxxThrowException(ptr %{{.*}}, ptr @_TIC2PAPBH)
+  // CHECK: call x86_stdcallcc void @_CxxThrowException(ptr %{{.*}}, ptr @_TIC2PAPBH)
   throw y;
 }
 
 void h(__unaligned int * __unaligned *y) {
   // CHECK-LABEL: @"?h@@YAXPFAPFAH@Z"
-  // CHECK: call void @_CxxThrowException(ptr %{{.*}}, ptr @_TIU2PAPFAH)
+  // CHECK: call x86_stdcallcc void @_CxxThrowException(ptr %{{.*}}, ptr @_TIU2PAPFAH)
   throw y;
 }
 

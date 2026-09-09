@@ -5,7 +5,7 @@ struct MyException {};
 // CHECK-LABEL: @f(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_MYEXCEPTION:%.*]], align 1
-// CHECK-NEXT:    call void @_CxxThrowException(ptr [[TMP]], ptr @"_TI1?AUMyException@@") #[[ATTR1:[0-9]+]]
+// CHECK-NEXT:    call x86_stdcallcc void @_CxxThrowException(ptr [[TMP]], ptr @"_TI1?AUMyException@@") #[[ATTR1:[0-9]+]]
 // CHECK-NEXT:    unreachable
 //
 extern "C" void f() {

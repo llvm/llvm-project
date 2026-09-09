@@ -5433,7 +5433,12 @@ llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
                                                  const llvm::Twine &name) {
   llvm::CallInst *call = Builder.CreateCall(
       callee, args, getBundlesForFunclet(callee.getCallee()), name);
-  call->setCallingConv(getRuntimeCC());
+  llvm::CallingConv::ID CC;
+  if (auto *Fn = dyn_cast<llvm::Function>(callee.getCallee()))
+    CC = Fn->getCallingConv();
+  else
+    CC = getRuntimeCC();
+  call->setCallingConv(CC);
 
   if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
     return cast<llvm::CallInst>(addConvergenceControlToken(call));
@@ -5487,15 +5492,22 @@ void CodeGenFunction::EmitNoreturnRuntimeCallOrInvoke(
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
       getBundlesForFunclet(callee.getCallee());
 
+  llvm::CallingConv::ID CC;
+  // Get the calling convention from the callee if it's a function.
+  if (auto *Fn = dyn_cast<llvm::Function>(callee.getCallee()))
+    CC = Fn->getCallingConv();
+  else
+    CC = getRuntimeCC();
+
   if (getInvokeDest()) {
     llvm::InvokeInst *invoke = Builder.CreateInvoke(
         callee, getUnreachableBlock(), getInvokeDest(), args, BundleList);
     invoke->setDoesNotReturn();
-    invoke->setCallingConv(getRuntimeCC());
+    invoke->setCallingConv(CC);
   } else {
     llvm::CallInst *call = Builder.CreateCall(callee, args, BundleList);
     call->setDoesNotReturn();
-    call->setCallingConv(getRuntimeCC());
+    call->setCallingConv(CC);
     Builder.CreateUnreachable();
   }
 }
@@ -5513,7 +5525,12 @@ CodeGenFunction::EmitRuntimeCallOrInvoke(llvm::FunctionCallee callee,
                                          ArrayRef<llvm::Value *> args,
                                          const Twine &name) {
   llvm::CallBase *call = EmitCallOrInvoke(callee, args, name);
-  call->setCallingConv(getRuntimeCC());
+  llvm::CallingConv::ID CC;
+  if (auto *Fn = dyn_cast<llvm::Function>(callee.getCallee()))
+    CC = Fn->getCallingConv();
+  else
+    CC = getRuntimeCC();
+  call->setCallingConv(CC);
   return call;
 }
 
