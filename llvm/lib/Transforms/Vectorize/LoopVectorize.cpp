@@ -3002,25 +3002,24 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   // Avoid tail folding if the trip count is known to be a multiple of any VF
   // we choose.
-  std::optional<unsigned> MaxPowerOf2RuntimeVF =
+  std::optional<uint64_t> MaxPowerOf2RuntimeVF =
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
-    std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction);
-    if (MaxVScale) {
-      MaxPowerOf2RuntimeVF = std::max<unsigned>(
-          *MaxPowerOf2RuntimeVF,
-          *MaxVScale * MaxFactors.ScalableVF.getKnownMinValue());
-    } else
+    if (std::optional<uint64_t> MaxRuntimeScalableVF =
+            getMaxRuntimeElementCount(MaxFactors.ScalableVF, *TheFunction))
+      MaxPowerOf2RuntimeVF =
+          std::max(*MaxPowerOf2RuntimeVF, *MaxRuntimeScalableVF);
+    else
       MaxPowerOf2RuntimeVF = std::nullopt; // Stick with tail-folding for now.
   }
 
-  auto NoScalarEpilogueNeeded = [this, &UserIC](unsigned MaxVF) {
+  auto NoScalarEpilogueNeeded = [this, &UserIC](uint64_t MaxRuntimeVF) {
     // Return false if the loop is neither a single-latch-exit loop nor an
     // early-exit loop as tail-folding is not supported in that case.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
-    unsigned MaxVFtimesIC = UserIC ? MaxVF * UserIC : MaxVF;
+    uint64_t MaxVFtimesIC = MaxRuntimeVF * std::max<uint64_t>(UserIC, 1);
     ScalarEvolution *SE = PSE.getSE();
     // Calling getSymbolicMaxBackedgeTakenCount enables support for loops
     // with uncountable exits. For countable loops, the symbolic maximum must
@@ -3038,7 +3037,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   };
 
   if (MaxPowerOf2RuntimeVF > 0u) {
-    assert((UserVF.isNonZero() || isPowerOf2_32(*MaxPowerOf2RuntimeVF)) &&
+    assert((UserVF.isNonZero() || isPowerOf2_64(*MaxPowerOf2RuntimeVF)) &&
            "MaxFixedVF must be a power of 2");
     if (NoScalarEpilogueNeeded(*MaxPowerOf2RuntimeVF)) {
       // Accept MaxFixedVF if we do not have a tail.
@@ -5720,7 +5719,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                  BestVF, BestUF, PSE);
   RUN_VPLAN_PASS(VPlanTransforms::optimizeForVFAndUF, BestVPlan, BestVF, BestUF,
                  PSE);
-  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   // Check if scalar epilogue is required, before simplifying constant branches.
   const bool RequiresScalarEpilogue = BestVPlan.requiresScalarEpilogue();
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
@@ -5777,13 +5776,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     RUN_VPLAN_PASS(VPlanTransforms::expandSCEVsToVPInstructions, BestVPlan,
                    *PSE.getSE());
   RUN_VPLAN_PASS(VPlanTransforms::cse, BestVPlan);
-  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   // Removing branches and incoming values may expose additional simplification
   // opportunities.
   if (RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                      /*OnlyLatches=*/EpilogueVecKind !=
                          EpilogueVectorizationKind::None))
-    RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
+    RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyKnownEVL, BestVPlan, BestVF, PSE);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
@@ -6388,7 +6387,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   if (const LoopAccessInfo *LAI = Legal->getLAI())
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
                    LAI->getSymbolicStrides(), VPDT);
-  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
 
   // Create recipes for header phis. For outer loops, reductions, recurrences
