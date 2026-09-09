@@ -290,7 +290,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
     // currently hard to figure out.
     if (getKind() != CE_CXXAllocator)
       if (isArgumentConstructedDirectly(Idx))
-        if (auto AdjIdx = getAdjustedParameterIndex(Idx))
+        if (auto AdjIdx = adjustASTArgIdxToDeclParamIdx(Idx))
           if (const TypedValueRegion *TVR =
                   getParameterLocation(*AdjIdx, BlockCount))
             ValuesToInvalidate.push_back(loc::MemRegionVal(TVR));
