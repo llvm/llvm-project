@@ -11,6 +11,10 @@ add_clang_library(MLIRCIRTargetLowering
   DEPENDS
   clangBasic
 
+  DISABLE_PCH_REUSE # PCH contains private headers
+  PRECOMPILE_HEADERS
+  [["pch.h"]]
+
   LINK_COMPONENTS
   TargetParser
 
