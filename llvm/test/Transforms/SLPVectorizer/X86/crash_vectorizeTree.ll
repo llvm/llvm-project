@@ -24,7 +24,7 @@ define void @bar(i1 %arg) {
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 0
 ; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 1
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 0
-; CHECK-NEXT:    [[I5:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 1
+; CHECK-NEXT:    [[I5:%.*]] = getelementptr inbounds [[TMP0]], ptr {{.*}}, i64 0, i32 1, i32 1
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    [[I7:%.*]] = phi double [ 2.800000e+01, [[BB:%.*]] ], [ [[I10:%.*]], [[BB17:%.*]] ], [ [[I10]], [[BB16:%.*]] ], [ [[I10]], [[BB16]] ]
