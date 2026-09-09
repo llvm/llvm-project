@@ -859,13 +859,6 @@ let CopyCost = -1 in // Don't allow copying of tile registers
 def TILE : RegisterClass<"X86", [x86amx], 8192,
                          (sequence "TMM%u", 0, 7)> {let Size = 8192;}
 
-// Block Scale Registers (ACE)
-let CopyCost = -1 in // Don't allow copying of BSR register
-def BSR : RegisterClass<"X86", [untyped], 0, (add BSR0)> {
-  let Size = 1024;
-  let isAllocatable = 0;
-}
-
 //===----------------------------------------------------------------------===//
 // Register categories.
 //

@@ -270,7 +270,6 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
   int FI = getStackSpaceFor(OrigReg);
   const TargetRegisterClass &RC = *MRI->getRegClass(OrigReg);
   Register TileReg;
-
   // Fold copy to tileload
   // BB1:
   // spill src to s
@@ -301,7 +300,7 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
       addFrameReference(MIB, FI, Row * RowSize);
 
       // tilemovrow $row, %zmm, %tmm
-      BuildMI(*UseMI->getParent(), UseMI, DL, TII->get(X86::TILEMOVROWri),
+      BuildMI(*UseMI->getParent(), UseMI, DL, TII->get(X86::TILEMOVROWtri),
               TileReg)
           .addReg(ScratchZMM, RegState::Kill)
           .addImm(Row);
