@@ -140,11 +140,10 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   }
   int fd_flags = result.value();
 
-  constexpr int REQUIRES_WRITE = file_mode.write_allowed() |
-                                 file_mode.append_allowed() |
-                                 file_mode.is_plus();
+  int REQUIRES_WRITE = file_mode.write_allowed() ||
+                       file_mode.append_allowed() || file_mode.is_plus();
 
-  constexpr int REQUIRES_READ = file_mode.write_allowed() | file_mode.is_plus();
+  int REQUIRES_READ = file_mode.write_allowed() || file_mode.is_plus();
 
   if (((fd_flags & O_ACCMODE) == O_RDONLY && REQUIRES_WRITE) ||
       ((fd_flags & O_ACCMODE) == O_WRONLY && REQUIRES_READ)) {
@@ -256,11 +255,10 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
     return EBADF;
   int fd_flags = result.value();
 
-  constexpr int REQUIRES_WRITE = file_mode.write_allowed() |
-                                 file_mode.append_allowed() |
-                                 file_mode.is_plus();
+  int REQUIRES_WRITE = file_mode.write_allowed() ||
+                       file_mode.append_allowed() || file_mode.is_plus();
 
-  constexpr int REQUIRES_READ = file_mode.write_allowed() | file_mode.is_plus();
+  int REQUIRES_READ = file_mode.write_allowed() || file_mode.is_plus();
 
   if (((fd_flags & O_ACCMODE) == O_RDONLY && REQUIRES_WRITE) ||
       ((fd_flags & O_ACCMODE) == O_WRONLY && REQUIRES_READ)) {
