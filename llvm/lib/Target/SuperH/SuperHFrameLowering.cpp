@@ -136,8 +136,7 @@ SuperHFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 
   // NOTE:  All the frame indices are relative to the stack/frame pointer
   //        post-offset. as such an extra adjustment is needed here.
-  int64_t FrameOffset = MFI.getObjectOffset(FI)+1;
-
+  int64_t FrameOffset = MFI.getObjectOffset(FI);
 
   // R14 base
   if (HasFP) {
