@@ -26,7 +26,7 @@ flag.
 
 Note that this mechanism won't enable any diagnostics on its own. Users should
 still turn on warnings in their compilations with explicit `-Wfoo` flags.
-[Controlling diagnostics pragmas](https://clang.llvm.org/docs/UsersManual.html#controlling-diagnostics-via-pragmas)
+[Controlling diagnostics pragmas](project:UsersManual.md#controlling-diagnostics-via-pragmas)
 take precedence over suppression mappings. Ensuring code author's explicit
 intent is always preserved.
 
@@ -86,4 +86,3 @@ src:*foo/*=emit
 # Only suppress for sources under bar/.
 src:*bar/*
 ```
-
