@@ -13467,11 +13467,22 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // The positive stride case is the same as isKnownPositive(Stride) returning
     // true (original behavior of the function).
     //
-    if (PredicatedIV || !NoWrap || !loopIsFiniteByAssumption(L) ||
-        !loopHasNoAbnormalExits(L))
+    if (PredicatedIV || !NoWrap || !loopHasNoAbnormalExits(L))
       return getCouldNotCompute();
 
-    if (!isKnownNonZero(Stride)) {
+    if (!loopIsFiniteByAssumption(L)) {
+      // If we cannot prove the loop is finite but predicates are allowed,
+      // we can add a predicate that the stride is positive. This ensures
+      // the loop makes forward progress and the BTC formula is correct.
+      // The predicate will be emitted as a runtime check by the consumer
+      // (e.g., the loop vectorizer), guarding the optimized loop version.
+      if (!AllowPredicates || !isLoopInvariant(Stride, L))
+        return getCouldNotCompute();
+
+      const SCEV *Zero = getZero(Stride->getType());
+      auto *P = getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero);
+      Predicates.push_back(P);
+    } else if (!isKnownNonZero(Stride)) {
       // If we have a step of zero, and RHS isn't invariant in L, we don't know
       // if it might eventually be greater than start and if so, on which
       // iteration.  We can't even produce a useful upper bound.
