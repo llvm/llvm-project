@@ -4976,16 +4976,20 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         // through the SrcOp and query the vector directly.
         SDValue InVec = SrcOp.getOperand(0);
         EVT InVecVT = InVec.getValueType();
-        // Not yet implemented for scalable vectors.
-        if (InVecVT.isScalableVector())
-          return 1;
 
-        const unsigned NumSrcElts = InVecVT.getVectorNumElements();
-        APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
-        auto *ConstEltNo = dyn_cast<ConstantSDNode>(SrcOp.getOperand(1));
-        if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
-          DemandedSrcElts =
-              APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+        APInt DemandedSrcElts;
+        if (InVecVT.isScalableVector())
+          // Demand all elements.
+          DemandedSrcElts = APInt(1, 1);
+        else {
+          unsigned NumSrcElts = InVecVT.getVectorNumElements();
+          auto *ConstEltNo = dyn_cast<ConstantSDNode>(SrcOp.getOperand(1));
+          if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
+            DemandedSrcElts =
+                APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+          else
+            DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+        }
 
         Tmp2 = ComputeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
         unsigned ExtraBits = InVec.getScalarValueSizeInBits() - VTBits;
