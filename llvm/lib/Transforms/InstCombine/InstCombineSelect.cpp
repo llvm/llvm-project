@@ -1427,7 +1427,9 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   Value *B = Cmp->getOperand(1);
 
   // Normalize "A - B" as the true value of the select.
-  if (match(FI, m_Sub(m_Specific(A), m_Specific(B)))) {
+  if (match(FI, m_Sub(m_Specific(A), m_Specific(B))) ||
+      match(FI, m_Sub(m_SExt(m_Specific(A)), m_SExt(m_Specific(B)))) ||
+      match(FI, m_Sub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B))))) {
     std::swap(FI, TI);
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
@@ -1451,33 +1453,116 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI, Builder.getTrue());
   }
 
-  // Match: (A > B) ? (A - B) : (0 - (A - B)) --> abs(A - B)
+  // With any pair of sext'd subtracts from a common narrower type:
+  // (A > B) ? (sext(A) - sext(B)) : (sext(B) - sext(A))
+  //   --> abs(sext(A) - sext(B))
+  // sext bounds the difference to [-2^n, 2^n-1] in the wider type,
+  // so nsw always holds structurally - no flag check needed.
   if (Pred == CmpInst::ICMP_SGT &&
-      match(TI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+      match(TI, m_Sub(m_SExt(m_Specific(A)), m_SExt(m_Specific(B)))) &&
+      match(FI, m_Sub(m_SExt(m_Specific(B)), m_SExt(m_Specific(A))))) {
+    TI->setHasNoUnsignedWrap(false);
+    TI->setHasNoSignedWrap(true);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI, Builder.getTrue());
+  }
+
+  // With any pair of zext'd subtracts from a common narrower type,
+  // paired with an unsigned compare:
+  // (A >u B) ? (zext(A) - zext(B)) : (zext(B) - zext(A))
+  //   --> abs(zext(A) - zext(B))
+  // zext bounds the difference to [-(2^n-1), 2^n-1] in the wider type,
+  // so nsw always holds structurally - no flag check needed.
+  if (Pred == CmpInst::ICMP_UGT &&
+      match(TI, m_Sub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B)))) &&
+      match(FI, m_Sub(m_ZExt(m_Specific(B)), m_ZExt(m_Specific(A))))) {
+    TI->setHasNoUnsignedWrap(false);
+    TI->setHasNoSignedWrap(true);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI, Builder.getTrue());
+  }
+
+  // Match: (A > B) ? (A - B) : (0 - (A - B)) --> abs(A - B)
+  // Also handles sext'd operands:
+  // (A > B) ? (sext(A) - sext(B)) : (0 - (sext(A) - sext(B)))
+  //   --> abs(sext(A) - sext(B))
+  if (Pred == CmpInst::ICMP_SGT &&
+      (match(TI, m_NSWSub(m_Specific(A), m_Specific(B))) ||
+       match(TI, m_Sub(m_SExt(m_Specific(A)), m_SExt(m_Specific(B))))) &&
+      match(FI, m_Neg(m_Specific(TI)))) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
+                                         Builder.getFalse());
+  }
+
+  // Match: (A > B) ? (zext(A) - zext(B)) : (0 - (zext(A) - zext(B)))
+  //   --> abs(zext(A) - zext(B))
+  // (A, B zero-extended from a common narrower type, unsigned compare)
+  if (Pred == CmpInst::ICMP_UGT &&
+      match(TI, m_Sub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B)))) &&
       match(FI, m_Neg(m_Specific(TI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
                                          Builder.getFalse());
   }
 
   // Match: (A < B) ? (0 - (A - B)) : (A - B) --> abs(A - B)
+  // Also handles sext'd operands:
+  // (A < B) ? (0 - (sext(A) - sext(B))) : (sext(A) - sext(B))
+  //   --> abs(sext(A) - sext(B))
   if (Pred == CmpInst::ICMP_SLT &&
-      match(FI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+      (match(FI, m_NSWSub(m_Specific(A), m_Specific(B))) ||
+       match(FI, m_Sub(m_SExt(m_Specific(A)), m_SExt(m_Specific(B))))) &&
+      match(TI, m_Neg(m_Specific(FI)))) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
+                                         Builder.getFalse());
+  }
+
+  // Match: (A < B) ? (0 - (zext(A) - zext(B))) : (zext(A) - zext(B))
+  //   --> abs(zext(A) - zext(B))
+  // (A, B zero-extended from a common narrower type, unsigned compare)
+  if (Pred == CmpInst::ICMP_ULT &&
+      match(FI, m_Sub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B)))) &&
       match(TI, m_Neg(m_Specific(FI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
                                          Builder.getFalse());
   }
 
   // Match: (A > B) ? (0 - (B - A)) : (B - A) --> abs(B - A)
+  // Also handles sext'd operands:
+  // (A > B) ? (0 - (sext(B) - sext(A))) : (sext(B) - sext(A))
+  //   --> abs(sext(B) - sext(A))
   if (Pred == CmpInst::ICMP_SGT &&
-      match(FI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+      (match(FI, m_NSWSub(m_Specific(B), m_Specific(A))) ||
+       match(FI, m_Sub(m_SExt(m_Specific(B)), m_SExt(m_Specific(A))))) &&
+      match(TI, m_Neg(m_Specific(FI)))) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
+                                         Builder.getFalse());
+  }
+
+  // Match: (A > B) ? (0 - (zext(B) - zext(A))) : (zext(B) - zext(A))
+  //   --> abs(zext(B) - zext(A))
+  // (A, B zero-extended from a common narrower type, unsigned compare)
+  if (Pred == CmpInst::ICMP_UGT &&
+      match(FI, m_Sub(m_ZExt(m_Specific(B)), m_ZExt(m_Specific(A)))) &&
       match(TI, m_Neg(m_Specific(FI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
                                          Builder.getFalse());
   }
 
   // Match: (A < B) ? (B - A) : (0 - (B - A)) --> abs(B - A)
+  // Also handles sext'd operands:
+  // (A < B) ? (sext(B) - sext(A)) : (0 - (sext(B) - sext(A)))
+  //   --> abs(sext(B) - sext(A))
   if (Pred == CmpInst::ICMP_SLT &&
-      match(TI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+      (match(TI, m_NSWSub(m_Specific(B), m_Specific(A))) ||
+       match(TI, m_Sub(m_SExt(m_Specific(B)), m_SExt(m_Specific(A))))) &&
+      match(FI, m_Neg(m_Specific(TI)))) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
+                                         Builder.getFalse());
+  }
+
+  // Match: (A < B) ? (zext(B) - zext(A)) : (0 - (zext(B) - zext(A)))
+  //   --> abs(zext(B) - zext(A))
+  // (A, B zero-extended from a common narrower type, unsigned compare)
+  if (Pred == CmpInst::ICMP_ULT &&
+      match(TI, m_Sub(m_ZExt(m_Specific(B)), m_ZExt(m_Specific(A)))) &&
       match(FI, m_Neg(m_Specific(TI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
                                          Builder.getFalse());
