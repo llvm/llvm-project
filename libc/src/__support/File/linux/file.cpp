@@ -82,11 +82,11 @@ static int map_c_mode_flags_to_linux_open_flags(const FileMode &file_mode) {
   // handle access patterns i.e whether the file should be in
   // only read, write modes or both.
   if (file_mode.is_update())
-    open_flags |= read_and_write();
+    open_flags = read_and_write();
   else if (file_mode.is_append() || file_mode.is_write())
-    open_flags |= write_only();
-  else
     open_flags = write_only();
+  else
+    open_flags = read_only();
 
   // handle the behaviour of the file when accessed i.e should the file
   // be appended to or truncate when created.
