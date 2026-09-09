@@ -691,6 +691,8 @@ private:
 /// Represents builtin instructions such as "GIReplaceReg" and "GIEraseRoot".
 enum BuiltinKind {
   BI_ReplaceReg,
+  BI_ReplaceRegWithConstant,
+  BI_ReplaceRegWithFConstant,
   BI_EraseRoot,
   BI_HasOneUse,
 };
@@ -703,10 +705,12 @@ class BuiltinPattern : public InstructionPattern {
     unsigned NumDefs;
   };
 
-  static constexpr std::array<BuiltinInfo, 3> KnownBuiltins = {{
+  static constexpr std::array<BuiltinInfo, 5> KnownBuiltins = {{
       {"GIReplaceReg", BI_ReplaceReg, 2, 1},
+      {"GIReplaceRegWithConstant", BI_ReplaceRegWithConstant, 2, 1},
+      {"GIReplaceRegWithFConstant", BI_ReplaceRegWithFConstant, 2, 1},
       {"GIEraseRoot", BI_EraseRoot, 0, 0},
-      {"GIHasOneUse", BI_HasOneUse, 1, 0},
+      {"GIHasOneUse", BI_HasOneUse, 1, 0}
   }};
 
 public:
