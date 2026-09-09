@@ -96,8 +96,8 @@ define i1 @fcmp(float %a) {
 
 define i1 @fcmp_nan(float %a) {
 ; CHECK-LABEL: @fcmp_nan(
-; CHECK-NEXT:    [[C:%.*]] = fcmp nnan oeq float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    [[FR1:%.*]] = freeze float [[A:%.*]]
+; CHECK-NEXT:    [[FR:%.*]] = fcmp oeq float [[FR1]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[FR]]
 ;
   %c = fcmp nnan oeq float %a, 0.0

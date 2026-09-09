@@ -9088,12 +9088,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     // freeze(icmp a, const)) -> icmp (freeze a), const
     // This helps generate efficient conditional jumps.
-    Instruction *CmpI = nullptr;
-    if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0)))
-      CmpI = II;
-    else if (FCmpInst *F = dyn_cast<FCmpInst>(FI->getOperand(0)))
-      CmpI = F->getFastMathFlags().none() ? F : nullptr;
-
+    CmpInst *CmpI = dyn_cast<CmpInst>(FI->getOperand(0));
     if (CmpI && CmpI->hasOneUse()) {
       auto Op0 = CmpI->getOperand(0), Op1 = CmpI->getOperand(1);
       bool Const0 = isa<ConstantInt>(Op0) || isa<ConstantFP>(Op0) ||
