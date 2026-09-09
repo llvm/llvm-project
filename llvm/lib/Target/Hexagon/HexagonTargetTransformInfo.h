@@ -38,6 +38,11 @@ class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
 
   const HexagonSubtarget &ST;
   const HexagonTargetLowering &TLI;
+  // Functions running on the HMX (matrix) unit must not acquire an HVX
+  // context: the two share a limited pool of vector units, so an HVX
+  // instruction reaching the HMX thread can block behind a barrier the
+  // HVX threads are themselves waiting on.
+  const bool IsHMX;
 
   const HexagonSubtarget *getST() const { return &ST; }
   const HexagonTargetLowering *getTLI() const { return &TLI; }
@@ -52,8 +57,9 @@ class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
 
 public:
   explicit HexagonTTIImpl(const HexagonTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getDataLayout()),
-        ST(*TM->getSubtargetImpl(F)), TLI(*ST.getTargetLowering()) {}
+      : BaseT(TM, F.getDataLayout()), ST(*TM->getSubtargetImpl(F)),
+        TLI(*ST.getTargetLowering()),
+        IsHMX(F.hasFnAttribute("hexagon_hmx")) {}
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -187,6 +193,9 @@ public:
 
   // Hexagon specific decision to generate a lookup table.
   bool shouldBuildLookupTables() const override;
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const override;
 };
 
 } // end namespace llvm

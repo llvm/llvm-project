@@ -52,7 +52,7 @@ static cl::opt<bool> HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true),
 static const unsigned FloatFactor = 4;
 
 bool HexagonTTIImpl::useHVX() const {
-  return ST.useHVXOps() && HexagonAutoHVX;
+  return ST.useHVXOps() && HexagonAutoHVX && !IsHMX;
 }
 
 bool HexagonTTIImpl::isHVXVectorType(Type *Ty) const {
@@ -454,4 +454,16 @@ HexagonTTIImpl::getInstructionCost(const User *U,
 
 bool HexagonTTIImpl::shouldBuildLookupTables() const {
   return EmitLookupTables;
+}
+
+bool HexagonTTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  // Inlining across the boundary would defeat the attribute in both
+  // directions: HVX code moved into an HMX function can take a vector unit
+  // the HMX thread needs, and an HMX body moved into a non-HMX function
+  // becomes a candidate for auto-vectorization again.
+  if (Caller->hasFnAttribute("hexagon_hmx") !=
+      Callee->hasFnAttribute("hexagon_hmx"))
+    return false;
+  return BaseT::areInlineCompatible(Caller, Callee);
 }
