@@ -278,6 +278,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.intr.bitreverse(%{{.*}}) : (i32) -> i32
   %32 = llvm.intr.bitreverse(%arg0) : (i32) -> i32
 
+// CHECK: llvm.intr.clmul(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %clmul = llvm.intr.clmul(%arg0, %arg0) : (i32, i32) -> i32
+
 // CHECK: llvm.intr.ctpop(%{{.*}}) : (i32) -> i32
   %33 = llvm.intr.ctpop(%arg0) : (i32) -> i32
 
@@ -1298,4 +1301,27 @@ llvm.func @repeated_function_metadata() attributes {
     #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>,
     #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid1">>>
   ]
+}
+
+#rt_alias_scope_domain = #llvm.alias_scope_domain<id = distinct[4]<>, description = "rt domain">
+#rt_alias_scope = #llvm.alias_scope<id = distinct[5]<>, domain = #rt_alias_scope_domain>
+#rt_access_group = #llvm.access_group<id = distinct[6]<>>
+
+// CHECK-LABEL: @masked_intrinsic_metadata_roundtrip
+llvm.func @masked_intrinsic_metadata_roundtrip(%ptr: !llvm.ptr, %mask: vector<7xi1>) {
+  // CHECK: llvm.intr.masked.load
+  // CHECK-SAME: access_groups = [#{{[^]]*}}]
+  // CHECK-SAME: alias_scopes = [#{{[^]]*}}]
+  // CHECK-SAME: noalias_scopes = [#{{[^]]*}}]
+  %0 = llvm.intr.masked.load %ptr, %mask {
+      alignment = 4 : i64,
+      access_groups = [#rt_access_group],
+      alias_scopes = [#rt_alias_scope],
+      noalias_scopes = [#rt_alias_scope]} : (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
+  // CHECK: llvm.intr.masked.store
+  // CHECK-SAME: access_groups = [#{{[^]]*}}]
+  llvm.intr.masked.store %0, %ptr, %mask {
+      alignment = 4 : i64,
+      access_groups = [#rt_access_group]} : vector<7xf32>, vector<7xi1> into !llvm.ptr
+  llvm.return
 }
