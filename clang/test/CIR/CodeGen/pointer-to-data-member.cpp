@@ -601,5 +601,3 @@ Inner test_agg_arrow(const Outer *o, Inner Outer::*p) {
 // OGCG:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
 // OGCG:   %[[RT_MEMBER:.*]] = getelementptr inbounds i8, ptr %[[O]], i64 %[[P]]
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
-
-

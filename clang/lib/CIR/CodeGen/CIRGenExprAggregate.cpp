@@ -430,8 +430,7 @@ public:
     if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI)
       VisitPointerToDataMemberBinaryOperator(e);
     else
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "AggExprEmitter: VisitBinaryOperator");
+      cgf.cgm.errorUnsupported(e, "aggregate binary expression");
   }
   void VisitPointerToDataMemberBinaryOperator(const BinaryOperator *e) {
     LValue lv = cgf.emitPointerToDataMemberBinaryExpr(e);
