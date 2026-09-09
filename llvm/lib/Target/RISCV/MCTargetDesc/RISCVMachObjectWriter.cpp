@@ -326,17 +326,26 @@ void RISCVMachObjectWriter::recordRelocation(
     // If there's any addend left to handle, inline it in the instruction's
     // immediate.
     FixedValue = Value;
-    if (!isValidInt<12>(
-            FixedValue,
-            "AUIPC out of range of corresponding %pcrel_lo instruction", Asm,
-            Fixup.getLoc()))
-      return;
+    if (!isInt<12>(FixedValue)) {
+      RequireExtraAddend = true;
+      ExtraAddendValue = FixedValue;
+      if (!isValidInt<24>(
+              ExtraAddendValue,
+              "AUIPC out of range of corresponding %pcrel_lo instruction", Asm,
+              Fixup.getLoc()))
+        return;
+    }
 
     emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ A_Base, Index,
                    IsPCRel, Log2Size, /*Type*/ MachO::RISCV_RELOC_UNSIGNED);
     // struct relocation_info (8 bytes)
     emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ B_Base, Index,
                    IsPCRel, Log2Size, /*Type*/ MachO::RISCV_RELOC_SUBTRACTOR);
+    if (RequireExtraAddend) {
+      emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ nullptr,
+                     ExtraAddendValue & 0xffffff, /*IsPCRel*/ false,
+                     /*Log2Size*/ 2, /*Type*/ MachO::RISCV_RELOC_ADDEND);
+    }
     return;
   }
 
