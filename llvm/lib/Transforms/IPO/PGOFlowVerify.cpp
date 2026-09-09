@@ -61,6 +61,11 @@ static cl::list<std::string> VerifyPGOFlowFuncList(
     "verify-pgo-flow-funcs", cl::Hidden, cl::CommaSeparated,
     cl::desc("If non-empty, only verify these functions"));
 
+static cl::opt<bool> VerifyPGOFlowDedupDiagnostics(
+    "verify-pgo-flow-dedup-diagnostics", cl::init(true), cl::Hidden,
+    cl::desc("Report each mismatch at most once and skip re-checking that "
+             "function on later passes"));
+
 static bool isStrictMismatchRemark(StringRef RemarkName) {
   return RemarkName == "BlockFrequencyMismatch" ||
          RemarkName == "EntryCountMismatch";
@@ -75,10 +80,26 @@ static void printVerifyBanner(StringRef PassName, bool Skipped) {
 
 bool PGOFlowVerifier::isHookEnabled() { return VerifyPGOFlow; }
 
-static void emitPGOFlowDiagnostic(const Function *F, StringRef RemarkName,
-                                  const Twine &Msg) {
+bool PGOFlowVerifier::shouldSkipReportedFunction(const Function *F) const {
+  if (!VerifyPGOFlowDedupDiagnostics || !F)
+    return false;
+  if (!ReportedMismatchFunctions.contains(F))
+    return false;
+  LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip '" << F->getName()
+                    << "' (already reported mismatch)\n");
+  return true;
+}
+
+void PGOFlowVerifier::emitPGOFlowDiagnostic(const Function *F,
+                                            StringRef RemarkName,
+                                            const Twine &Msg) const {
   if (!F)
     return;
+  if (VerifyPGOFlowDedupDiagnostics && isStrictMismatchRemark(RemarkName)) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: record mismatch '" << F->getName()
+                      << "' [" << RemarkName << "]\n");
+    ReportedMismatchFunctions.insert(F);
+  }
   std::string Text = Msg.str();
   if (VerifyPGOFlowPrintDiagnostics)
     errs() << "PGOFlowVerify[" << RemarkName << "] " << F->getName() << ": "
@@ -251,13 +272,13 @@ void PGOFlowVerifier::runAfterPass(const Module *M) {
     if (F.isDeclaration())
       continue;
     computeBlockFrequencies(&F);
-    if (!shouldVerifyFunction(&F) ||
+    if (!shouldVerifyFunction(&F) || shouldSkipReportedFunction(&F) ||
         skipStrictInstrProfChecks(&F, /*EmitNote=*/true))
       continue;
     validateBlockFrequencies(&F);
   }
   for (const Function &F : *M) {
-    if (!shouldVerifyFunction(&F) ||
+    if (!shouldVerifyFunction(&F) || shouldSkipReportedFunction(&F) ||
         skipStrictInstrProfChecks(&F, /*EmitNote=*/false))
       continue;
     validateEntryCountAgainstCallerSum(&F);
@@ -265,7 +286,8 @@ void PGOFlowVerifier::runAfterPass(const Module *M) {
 }
 
 void PGOFlowVerifier::runAfterPass(const Function *F) {
-  if (!F || !F->getParent() || !shouldVerifyFunction(F))
+  if (!F || !F->getParent() || !shouldVerifyFunction(F) ||
+      shouldSkipReportedFunction(F))
     return;
   if (!hasInstrProfUseSummary(F->getParent())) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip '" << F->getName()

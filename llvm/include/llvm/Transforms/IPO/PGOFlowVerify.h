@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManager.h"
@@ -57,6 +58,9 @@ private:
   bool hasInstrProfUseSummary(const Module *M) const;
 
   bool shouldVerifyFunction(const Function *F) const;
+  bool shouldSkipReportedFunction(const Function *F) const;
+  void emitPGOFlowDiagnostic(const Function *F, StringRef RemarkName,
+                             const Twine &Msg) const;
   bool hasApproximateProfile(const Function *F) const;
   bool hasU32WeightOverflow(const Function *F) const;
   bool skipStrictInstrProfChecks(const Function *F, bool EmitNote) const;
@@ -68,6 +72,8 @@ private:
   DenseMap<const Function *, AllBlockFreqInfo> FunctionBlockFreqInfoCache;
   DenseSet<const Function *> FunctionsWithU32WeightOverflow;
   mutable DenseSet<const Function *> EmittedSkipNotes;
+  /// Real mismatches already printed when `-verify-pgo-flow-dedup-diagnostics`.
+  mutable DenseSet<const Function *> ReportedMismatchFunctions;
 };
 
 /// Pipeline pass that runs the same walk as the `-verify-pgo-flow` hook.
