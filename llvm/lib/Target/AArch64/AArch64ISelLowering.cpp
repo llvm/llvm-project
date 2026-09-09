@@ -17367,26 +17367,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // i32 and try again.
   if (usesOnlyOneValue) {
     if (!isConstant) {
-      if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-          Value.getValueType() != VT) {
-        LLVM_DEBUG(
-            dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
-        return DAG.getNode(AArch64ISD::DUP, DL, VT, Value);
-      }
-
-      // This is actually a DUPLANExx operation, which keeps everything vectory.
-
-      SDValue Lane = Value.getOperand(1);
-      Value = Value.getOperand(0);
-      if (Value.getValueSizeInBits() == 64) {
-        LLVM_DEBUG(
-            dbgs() << "LowerBUILD_VECTOR: DUPLANE works on 128-bit vectors, "
-                      "widening it\n");
-        Value = WidenVector(Value, DAG);
-      }
-
-      unsigned Opcode = getDUPLANEOp(VT.getVectorElementType());
-      return DAG.getNode(Opcode, DL, VT, Value, Lane);
+      LLVM_DEBUG(
+          dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
+      return DAG.getNode(AArch64ISD::DUP, DL, VT, Value);
     }
 
     if (VT.getVectorElementType().isFloatingPoint()) {
