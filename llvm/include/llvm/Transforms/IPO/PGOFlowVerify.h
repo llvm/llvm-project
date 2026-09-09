@@ -57,6 +57,8 @@ private:
 
   void computeBlockFrequencies(const Function *F);
   void validateBlockFrequencies(const Function *F);
+  void validateEntryCountAgainstCallerSum(const Function *F);
+  const AllBlockFreqInfo *getCachedBlockFreqInfo(const Function *F) const;
 
   DenseMap<const Function *, AllBlockFreqInfo> FunctionBlockFreqInfoCache;
 };

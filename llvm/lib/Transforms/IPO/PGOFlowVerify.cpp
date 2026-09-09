@@ -18,8 +18,13 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -28,6 +33,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <numeric>
@@ -169,12 +175,23 @@ void PGOFlowVerifier::runAfterPass(const Module *M) {
                       << "' (no InstrProf use-phase summary)\n");
     return;
   }
-  for (const Function &F : *M)
-    runAfterPass(&F);
+  // Fill the per-function cache first so callee checks can see caller blocks
+  // no matter which order functions appear in the module.
+  for (const Function &F : *M) {
+    if (F.isDeclaration())
+      continue;
+    computeBlockFrequencies(&F);
+    validateBlockFrequencies(&F);
+  }
+  for (const Function &F : *M) {
+    if (F.isDeclaration())
+      continue;
+    validateEntryCountAgainstCallerSum(&F);
+  }
 }
 
 void PGOFlowVerifier::runAfterPass(const Function *F) {
-  if (!F || F->isDeclaration())
+  if (!F || F->isDeclaration() || !F->getParent())
     return;
   if (!hasInstrProfUseSummary(F->getParent())) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip '" << F->getName()
@@ -183,6 +200,8 @@ void PGOFlowVerifier::runAfterPass(const Function *F) {
   }
   computeBlockFrequencies(F);
   validateBlockFrequencies(F);
+  LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '" << F->getName()
+                    << "' (function-unit walk; need module-wide caller BFI)\n");
 }
 
 void PGOFlowVerifier::runAfterPass(const LazyCallGraph::SCC *C) {
@@ -417,6 +436,132 @@ void PGOFlowVerifier::validateBlockFrequencies(const Function *F) {
                         << " in=" << Info.NumUnknownIn
                         << " out=" << Info.NumUnknownOut << "\n");
   }
+}
+
+const PGOFlowVerifier::AllBlockFreqInfo *
+PGOFlowVerifier::getCachedBlockFreqInfo(const Function *F) const {
+  if (!F)
+    return nullptr;
+  auto It = FunctionBlockFreqInfoCache.find(F);
+  if (It == FunctionBlockFreqInfoCache.end())
+    return nullptr;
+  return &It->second;
+}
+
+void PGOFlowVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
+  if (!F)
+    return;
+
+  std::optional<uint64_t> MaybeEntryCount = F->getEntryCount();
+  if (!MaybeEntryCount) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
+                      << F->getName() << "' (no entry count)\n");
+    return;
+  }
+  uint64_t EntryCount = *MaybeEntryCount;
+
+  uint64_t Sum = 0;
+  bool IsRecursive = false;
+  bool HasAnyDirectCallsite = false;
+  bool HasUnknownCallsiteCount = false;
+
+  auto ConsiderCallsite = [&](const CallBase *CB) {
+    const BasicBlock *BB = CB->getParent();
+    if (!BB)
+      return;
+    const Function *CallerFunc = BB->getParent();
+    if (!CallerFunc)
+      return;
+    if (CallerFunc == F)
+      IsRecursive = true;
+
+    const AllBlockFreqInfo *CallerFreq = getCachedBlockFreqInfo(CallerFunc);
+    if (!CallerFreq) {
+      HasUnknownCallsiteCount = true;
+      return;
+    }
+    auto CallerBBIt = CallerFreq->find(BB);
+    if (CallerBBIt == CallerFreq->end() ||
+        CallerBBIt->second.NumUnknownIn != 0) {
+      HasUnknownCallsiteCount = true;
+      LLVM_DEBUG(dbgs() << "PGOFlowVerifier: unknown caller-block flow for '"
+                        << F->getName() << "' from '" << CallerFunc->getName()
+                        << "'\n");
+      return;
+    }
+    bool NonzeroEntry = BB == &CallerFunc->getEntryBlock() &&
+                        CallerFunc->getEntryCount() &&
+                        *CallerFunc->getEntryCount() != 0;
+    if (CallerBBIt->second.SumIn == 0 && !NonzeroEntry) {
+      LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip dead-block callsite for '"
+                        << F->getName() << "' from '" << CallerFunc->getName()
+                        << "'\n");
+      return;
+    }
+
+    uint64_t CallsiteCount = 0;
+    MDNode *MD = CB->getMetadata(LLVMContext::MD_prof);
+    // Direct sites only credit count-type branch_weights. VP aggregates
+    // every target; llvm.expect and unknown are not InstrProf counts.
+    if (isValueProfileMD(MD) || hasBranchWeightOrigin(MD) ||
+        (MD && isExplicitlyUnknownProfileMetadata(*MD)) ||
+        !extractProfTotalWeight(MD, CallsiteCount)) {
+      HasUnknownCallsiteCount = true;
+      LLVM_DEBUG(dbgs() << "PGOFlowVerifier: unknown callsite weight for '"
+                        << F->getName() << "' from '" << CallerFunc->getName()
+                        << "' block " << BB->getName() << "\n");
+      return;
+    }
+    HasAnyDirectCallsite = true;
+    Sum = SaturatingAdd(Sum, CallsiteCount);
+  };
+
+  SmallVector<const User *, 8> Worklist(F->user_begin(), F->user_end());
+  SmallPtrSet<const User *, 16> Visited;
+  while (!Worklist.empty()) {
+    const User *U = Worklist.pop_back_val();
+    if (!Visited.insert(U).second)
+      continue;
+    if (const auto *CB = dyn_cast<CallBase>(U)) {
+      if (CB->getCalledOperand()->stripPointerCastsAndAliases() != F)
+        continue;
+      ConsiderCallsite(CB);
+      continue;
+    }
+    if (isa<ConstantExpr>(U) || isa<GlobalAlias>(U)) {
+      for (const User *UU : U->users())
+        Worklist.push_back(UU);
+      continue;
+    }
+  }
+
+  if (!HasAnyDirectCallsite) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
+                      << F->getName() << "' (no direct callsite)\n");
+    return;
+  }
+  if (IsRecursive) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
+                      << F->getName() << "' (recursive)\n");
+    return;
+  }
+  // Known Sum is a lower bound. Unknown sites can hide undercount, but not
+  // a definite overcount.
+  if (HasUnknownCallsiteCount && Sum <= EntryCount) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
+                      << F->getName() << "' (unknown callsite weight)\n");
+    return;
+  }
+  if (Sum <= EntryCount) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
+                      << F->getName() << "' (caller-sum=" << Sum
+                      << " <= entry=" << EntryCount << ")\n");
+    return;
+  }
+
+  emitPGOFlowDiagnostic(F, "EntryCountMismatch",
+                        Twine("entry=") + Twine(EntryCount) +
+                            " vs caller-sum=" + Twine(Sum));
 }
 
 bool PGOFlowVerifier::hasInstrProfUseSummary(const Module *M) const {
