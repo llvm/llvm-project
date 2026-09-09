@@ -103,13 +103,9 @@ private:
   void Select(SDNode *N) override;
 
   bool trySelect(SDNode *N);
-  bool trySelectSDIV(SDNode *N);
-  bool trySelectUDIV(SDNode *N);
-  bool trySelectFrameIndex(SDNode *N);
-  bool trySelectWrapper(SDNode *N);
-  bool trySelectCMP(SDNode *N);
-  bool trySelectBRCOND(SDNode *N);
-  bool trySelectSELECT_CC(SDNode *N);
+
+  template<unsigned Opcode>
+  bool trySelect(SDNode *N);
 
   const SuperHSubtarget *Subtarget;
 };
@@ -168,7 +164,8 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
 //                             Address Lowering
 //===----------------------------------------------------------------------===//
 
-bool SuperHDAGToDAGISel::trySelectWrapper(SDNode *N) {
+template<>
+bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
   auto PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
   auto DL = SDLoc(N);
 
@@ -224,7 +221,8 @@ bool SuperHDAGToDAGISel::trySelectWrapper(SDNode *N) {
 //                          Conditionals Lowering
 //===----------------------------------------------------------------------===//
 
-bool SuperHDAGToDAGISel::trySelectCMP(SDNode *N) {
+template<>
+bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -279,7 +277,8 @@ bool SuperHDAGToDAGISel::trySelectCMP(SDNode *N) {
   return false;
 }
 
-bool SuperHDAGToDAGISel::trySelectBRCOND(SDNode *N) {
+template<>
+bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   SDValue Dest = N->getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -325,7 +324,8 @@ bool SuperHDAGToDAGISel::trySelectBRCOND(SDNode *N) {
 //                             Branch Lowering
 //===----------------------------------------------------------------------===//
 
-bool SuperHDAGToDAGISel::trySelectFrameIndex(SDNode *N) {
+template<>
+bool SuperHDAGToDAGISel::trySelect<ISD::FrameIndex>(SDNode *N) {
   auto DL = CurDAG->getDataLayout();
 
   // Get the effective address of the stack slot.
@@ -347,7 +347,12 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
   unsigned Opcode = N->getOpcode();
   SDLoc DL(N);
 
+#define SELECT(Op)                                                             \
+  case Op:                                                                     \
+    return trySelect<Op>(N)
+
   switch(Opcode) {
+  default: break;
   case ISD::GLOBAL_OFFSET_TABLE: {
     SDValue GOT = CurDAG->getTargetExternalSymbol(
         "_GLOBAL_OFFSET_TABLE_", MVT::i32, SHII::MO_GOTPC);
@@ -356,17 +361,15 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
     ReplaceNode(N, Res);
     return true;
   }
-  case ISD::FrameIndex:
-    return trySelectFrameIndex(N);
-  case SHISD::WRAPPER:
-    return trySelectWrapper(N);
-  case SHISD::CMP:
-    return trySelectCMP(N);
-  case SHISD::BRCOND:
-    return trySelectBRCOND(N);
-  default:
-    return false;
+
+  SELECT(ISD::FrameIndex);
+  SELECT(SHISD::WRAPPER);
+  SELECT(SHISD::BRCOND);
+  SELECT(SHISD::CMP);
   }
+
+#undef SELECT
+  return false;
 }
 
 void SuperHDAGToDAGISel::Select(SDNode *N) {
