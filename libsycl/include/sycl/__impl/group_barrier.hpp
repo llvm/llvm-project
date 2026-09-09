@@ -20,6 +20,7 @@
 #include <sycl/__impl/sub_group.hpp>
 #include <sycl/__spirv/spirv_types.hpp>
 
+#include <cstdint>
 #include <type_traits>
 
 void __spirv_ControlBarrier(std::uint32_t Execution, std::uint32_t Memory,
