@@ -322,7 +322,7 @@ EXIT:
 define i1 @freeze_samesign(i32 %x) {
 ; CHECK-LABEL: @freeze_samesign(
 ; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[FR]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[FR]], 42
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp samesign ult i32 %x, 42
