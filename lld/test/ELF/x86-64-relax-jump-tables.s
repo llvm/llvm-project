@@ -198,6 +198,30 @@ jmp f21.cfi
 f21.cfi:
 ret $21
 
+## All entries must match the last entry's output section.
+## f22 and f23 are in different output sections, so jt10 should not be moved
+## before f23.
+# CHECK:      <f22>:
+# CHECK-NEXT:   jmp {{.*}} <f22.cfi>
+# CHECK:      <f23>:
+# CHECK-NEXT:   jmp {{.*}} <f23.cfi>
+.section .text.jt10,"ax",@llvm_cfi_jump_table,8
+f22:
+jmp f22.cfi
+.balign 8, 0xcc
+f23:
+jmp f23.cfi
+.balign 8, 0xcc
+
+.section .text.f22,"ax",@progbits
+f22.cfi:
+ret $22
+.zero 16
+
+.section foo2,"ax",@progbits
+f23.cfi:
+ret $23
+
 # CHECK:      <f1>:
 # CHECK-NEXT: <f1.cfi>:
 # CHECK-NEXT:   retq   $0x1
