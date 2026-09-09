@@ -5,6 +5,12 @@ add_header(
 )
 
 add_header(
+  struct_user_regs_struct
+  HDR
+    struct_user_regs_struct.h
+)
+
+add_header(
   ucontext_t
   HDR
     ucontext_t.h

@@ -119,19 +119,19 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
 /// and called function attributes.
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
-  IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
-  IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
-  IsNoExt = Call->paramHasAttr(ArgIdx, Attribute::NoExt);
-  IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
-  IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
-  IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
-  IsByVal = Call->paramHasAttr(ArgIdx, Attribute::ByVal);
-  IsPreallocated = Call->paramHasAttr(ArgIdx, Attribute::Preallocated);
-  IsInAlloca = Call->paramHasAttr(ArgIdx, Attribute::InAlloca);
+  IsSExt = Call->hasABIParamAttr(ArgIdx, Attribute::SExt);
+  IsZExt = Call->hasABIParamAttr(ArgIdx, Attribute::ZExt);
+  IsNoExt = Call->hasABIParamAttr(ArgIdx, Attribute::NoExt);
+  IsInReg = Call->hasABIParamAttr(ArgIdx, Attribute::InReg);
+  IsSRet = Call->hasABIParamAttr(ArgIdx, Attribute::StructRet);
+  IsNest = Call->hasABIParamAttr(ArgIdx, Attribute::Nest);
+  IsByVal = Call->hasABIParamAttr(ArgIdx, Attribute::ByVal);
+  IsPreallocated = Call->hasABIParamAttr(ArgIdx, Attribute::Preallocated);
+  IsInAlloca = Call->hasABIParamAttr(ArgIdx, Attribute::InAlloca);
   IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
-  IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
-  IsSwiftAsync = Call->paramHasAttr(ArgIdx, Attribute::SwiftAsync);
-  IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
+  IsSwiftSelf = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftSelf);
+  IsSwiftAsync = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftAsync);
+  IsSwiftError = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftError);
   Alignment = Call->getParamStackAlign(ArgIdx);
   IndirectType = nullptr;
   assert(IsByVal + IsPreallocated + IsInAlloca + IsSRet <= 1 &&
@@ -8962,16 +8962,29 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       }
     }
 
-    // Special case: clmul(X, ~0) is equivalent to a "parallel prefix XOR" or
-    // "bitwise parity" operation.
-    if (isAllOnesOrAllOnesSplat(Y)) {
-      SDValue R = X;
-      for (unsigned I = 1; I < BW; I <<= 1) {
-        SDValue ShAmt = DAG.getShiftAmountConstant(I, VT, DL);
-        SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, R, ShAmt);
-        R = DAG.getNode(ISD::XOR, DL, VT, R, Shifted);
+    // Special case: clmul(X, Y) where Y is a known constant (splat) that forms
+    // a contiguous block of trailing ones whose length N is a power of two
+    // (e.g. i8 0xFF, i8 0x0F, ...) or equal to the operand width. In this
+    // special case, clmul(X, Y) is equivalent to a "parallel prefix XOR" or
+    // "bitwise parity" operation on X.
+    //
+    // Note: This special currently dose NOT apply when the mask is neither a
+    // power of two nor equal to the operand width because the loop inside
+    // behaves as if the mask was bit-ceiled, and "undoing" the XOR with parts
+    // of that CLMUL is a recursive problem (e.g. CLMUL with a 20-bit mask
+    // requires correction XOR with CLMUL with 12-bit mask).
+    if (auto *C = isConstOrConstSplat(Y, /*AllowUndefs=*/true)) {
+      const APInt &YVal = C->getAPIntValue();
+      unsigned N = YVal.countr_one();
+      if (YVal.isAllOnes() || (YVal.isMask() && isPowerOf2_32(N))) {
+        SDValue R = X;
+        for (unsigned I = 1; I < N; I <<= 1) {
+          SDValue ShAmt = DAG.getShiftAmountConstant(I, VT, DL);
+          SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, R, ShAmt);
+          R = DAG.getNode(ISD::XOR, DL, VT, R, Shifted);
+        }
+        return R;
       }
-      return R;
     }
 
     // NOTE: If you change this expansion, please update the cost model

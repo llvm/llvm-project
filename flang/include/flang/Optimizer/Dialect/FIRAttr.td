@@ -145,9 +145,7 @@ def fir_FortranProcedureFlagsEnum
 }
 
 def fir_FortranProcedureFlagsAttr :
-    EnumAttr<FIROpsDialect, fir_FortranProcedureFlagsEnum, "proc_attrs"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<FIROpsDialect, fir_FortranProcedureFlagsEnum, "proc_attrs">;
 
 def fir_BoxFieldAttr : I32EnumAttr<
     "BoxFieldAttr", "",
@@ -233,9 +231,7 @@ def fir_PackArrayHeuristics
 
 def fir_PackArrayHeuristicsAttr
     : EnumAttr<FIROpsDialect, fir_PackArrayHeuristics,
-               "pack_array_heuristics"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+               "pack_array_heuristics">;
 
 def fir_OpenACCSafeTempArrayCopyAttr : fir_Attr<"OpenACCSafeTempArrayCopy"> {
   let mnemonic = "acc_safe_temp_array_copy";
@@ -274,9 +270,7 @@ def LocalitySpecifierType : I32EnumAttr<
 }
 
 def LocalitySpecifierTypeAttr : EnumAttr<FIROpsDialect, LocalitySpecifierType,
-                                                "locality_specifier_type"> {
-  let assemblyFormat = "`{` `type` `=` $value `}`";
-}
+                                                "locality_specifier_type">;
 
 /// Fortran inline attribute
 def FIRinlineNone : I32BitEnumAttrCaseNone<"none">;
@@ -295,9 +289,7 @@ def fir_FortranInlineEnum
 }
 
 def fir_FortranInlineAttr
-    : EnumAttr<FIROpsDialect, fir_FortranInlineEnum, "inline_attrs"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<FIROpsDialect, fir_FortranInlineEnum, "inline_attrs">;
 
 // USE statement rename mapping: local_name => use_name
 def fir_UseRenameAttr : fir_Attr<"UseRename"> {

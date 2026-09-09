@@ -94,7 +94,7 @@ define void @SwiftError(ptr swifterror) sanitize_thread {
 define void @SwiftErrorCall(ptr swifterror) sanitize_thread {
   %swifterror_addr = alloca swifterror ptr
   store ptr null, ptr %0
-  call void @SwiftError(ptr %0)
+  call void @SwiftError(ptr swifterror %0)
   ret void
 }
 
