@@ -28,8 +28,9 @@ LLVM_LIBC_FUNCTION(size_t, strftime_l,
   LIBC_CRASH_ON_NULLPTR(format);
   LIBC_CRASH_ON_NULLPTR(timeptr);
 
-  printf_core::DropOverflowBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
-  printf_core::Writer writer(wb);
+  printf_core::Writer writer = printf_core::make_drop_overflow_writer(
+      buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::WriteBuffer<char> &wb = writer.get_write_buffer();
   auto ret = strftime_core::strftime_main(&writer, format, timeptr);
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
     wb.buff[wb.buff_cur] = '\0';
