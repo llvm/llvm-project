@@ -104,7 +104,7 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %_1, %outline_target = transform.structured.fuse_into_containing_op %matmul_fused_2 into %loop_third
         : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %func, %call = transform.loop.outline %outline_target {func_name = "outlined"}
+    %func, %call = transform.loop.outline %outline_target func_name = "outlined"
         : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
   
     transform.yield

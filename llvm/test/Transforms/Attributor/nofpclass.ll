@@ -81,7 +81,7 @@ define double @returned_qnan() {
 ; CHECK-NEXT:    ret double +qnan
 ;
   call void @unknown()
-  ret double 0x7FF8000000000000
+  ret double +qnan
 }
 
 define <2 x double> @returned_zero_vector() {
@@ -138,7 +138,7 @@ define <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double 0.000000e+00>
 ;
   call void @unknown()
-  ret <2 x double> <double 0x7FF8000000000000, double 0.0>
+  ret <2 x double> <double +qnan, double 0.0>
 }
 
 ; Return a float trivially nofpclass(nan) (call return attribute)
@@ -1792,7 +1792,7 @@ define float @shufflevector_constantdatavector_demanded0() {
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 0
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
-  %shuffle = shufflevector <3 x float> <float 1.0, float 0x7FF8000000000000, float 0.0>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+  %shuffle = shufflevector <3 x float> <float 1.0, float +qnan, float 0.0>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
   %extract = extractelement <2 x float> %shuffle, i32 0
   ret float %extract
 }
@@ -1805,7 +1805,7 @@ define float @shufflevector_constantdatavector_demanded1() {
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 1
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
-  %shuffle = shufflevector <3 x float> <float 1.0, float 0x7FF8000000000000, float 0.0>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+  %shuffle = shufflevector <3 x float> <float 1.0, float +qnan, float 0.0>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
   %extract = extractelement <2 x float> %shuffle, i32 1
   ret float %extract
 }
@@ -3620,7 +3620,7 @@ define [2 x float] @constant_data_array_1() {
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret [2 x float] [float +qnan, float +qnan]
 ;
-  ret [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+  ret [2 x float] [float +qnan, float +qnan]
 }
 
 define { float, float } @constant_data_struct_0() {
@@ -3638,7 +3638,7 @@ define { float, float } @constant_data_struct_1() {
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, float } { float +qnan, float +qnan }
 ;
-  ret { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 }
+  ret { float, float } { float +qnan, float +qnan }
 }
 
 define { float, { float, float } } @constant_data_nested_struct() {
@@ -3647,7 +3647,7 @@ define { float, { float, float } } @constant_data_nested_struct() {
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, { float, float } } { float +qnan, { float, float } { float +qnan, float +qnan } }
 ;
-  ret { float, { float, float } } { float 0x7FF8000000000000, { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 } }
+  ret { float, { float, float } } { float +qnan, { float, float } { float +qnan, float +qnan } }
 }
 
 define { float, double } @constant_data_struct_heterogeneous() {
@@ -3656,7 +3656,7 @@ define { float, double } @constant_data_struct_heterogeneous() {
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, double } { float +qnan, double +qnan }
 ;
-  ret { float, double } { float 0x7FF8000000000000, double 0x7FF8000000000000 }
+  ret { float, double } { float +qnan, double +qnan }
 }
 
 define { float, [2 x float] } @constant_data_struct_array() {
@@ -3665,7 +3665,7 @@ define { float, [2 x float] } @constant_data_struct_array() {
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, [2 x float] } { float +qnan, [2 x float] [float +qnan, float +qnan] }
 ;
-  ret { float, [2 x float] } { float 0x7FF8000000000000, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000] }
+  ret { float, [2 x float] } { float +qnan, [2 x float] [float +qnan, float +qnan] }
 }
 
 

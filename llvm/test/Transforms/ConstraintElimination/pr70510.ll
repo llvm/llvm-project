@@ -13,7 +13,7 @@ define i32 @test_loop_varying_bound_add_rec() {
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[EXIT1:%.*]], label [[FOR_LATCH]]
 ; CHECK:       for.latch:
 ; CHECK-NEXT:    [[IND2_I]] = add i64 [[IND2]], 1
-; CHECK-NEXT:    [[IND1_I]] = add i64 [[IND1]], 1
+; CHECK-NEXT:    [[IND1_I]] = add nsw i64 [[IND1]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IND1_I]], 8
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT2:%.*]], label [[FOR_HEADER]]
 ; CHECK:       exit2:
@@ -60,7 +60,7 @@ define i32 @test_loop_varying_bound_call() {
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i64 [[IND1]], [[VAL]]
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[EXIT1:%.*]], label [[FOR_LATCH]]
 ; CHECK:       for.latch:
-; CHECK-NEXT:    [[IND1_I]] = add i64 [[IND1]], 1
+; CHECK-NEXT:    [[IND1_I]] = add nsw i64 [[IND1]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IND1_I]], 8
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT2:%.*]], label [[FOR_HEADER]]
 ; CHECK:       exit2:
