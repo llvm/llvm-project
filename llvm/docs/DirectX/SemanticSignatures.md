@@ -141,8 +141,9 @@ interpretations accepted by a packing algorithm are assigned locations
 according to that algorithm's rules. If an eligible element cannot be placed,
 packing returns a `SignaturePackingError` identifying the element that failed.
 
-The packing APIs and their in-memory element representation are declared in
-[SemanticSignaturePacking.h].
+The packing APIs are declared in [SemanticSignaturePacking.h], and the
+in-memory element representation they operate on is declared in
+[SemanticSignatures.h].
 
 [SemanticSignaturePacking.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignaturePacking.h
 
