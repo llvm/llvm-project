@@ -172,6 +172,46 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
   return {Output};
 }
 
+// Write the content of a section and fill in the header fields locating it.
+// Returns whether the section has any content.
+static bool writeSectionContent(COFFParser &CP, COFFYAML::Section &S,
+                                ContiguousBlobAccumulator &CBA) {
+  if (S.SectionData.binary_size() == 0) {
+    if (S.Name == ".debug$S") {
+      assert(CP.StringsAndChecksums.hasStrings() &&
+             "Object file does not have debug string table!");
+      S.SectionData = toDebugS(S.DebugS, CP.StringsAndChecksums, CP.Allocator);
+    } else if (S.Name == ".debug$T") {
+      S.SectionData = CodeViewYAML::toDebugT(S.DebugT, CP.Allocator, S.Name);
+    } else if (S.Name == ".debug$P") {
+      S.SectionData = CodeViewYAML::toDebugT(S.DebugP, CP.Allocator, S.Name);
+    } else if (S.Name == ".debug$H" && S.DebugH) {
+      S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
+    }
+  }
+
+  bool HasContent = S.SectionData.binary_size() != 0;
+  for (const auto &E : S.StructuredData)
+    HasContent |= E.size() != 0;
+
+  if (!HasContent) {
+    // Leave SizeOfRawData unaltered. For .bss sections in object files, it
+    // carries the section size.
+    S.Header.PointerToRawData = 0;
+    return false;
+  }
+
+  CBA.padToAlignment(CP.isPE() ? CP.getFileAlignment() : 4);
+  S.Header.PointerToRawData = CBA.getOffset();
+  for (const auto &E : S.StructuredData)
+    E.writeAsBinary(CBA);
+  CBA.writeAsBinary(S.SectionData);
+  if (CP.isPE())
+    CBA.padToAlignment(CP.getFileAlignment());
+  S.Header.SizeOfRawData = CBA.getOffset() - S.Header.PointerToRawData;
+  return true;
+}
+
 template <typename T>
 static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
                                          T Header) {
@@ -360,68 +400,34 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
 
   // Output section data.
   for (COFFYAML::Section &S : CP.Obj.Sections) {
-    if (S.Name == ".debug$S") {
-      if (S.SectionData.binary_size() == 0) {
-        assert(CP.StringsAndChecksums.hasStrings() &&
-               "Object file does not have debug string table!");
-        S.SectionData =
-            toDebugS(S.DebugS, CP.StringsAndChecksums, CP.Allocator);
-      }
-    } else if (S.Name == ".debug$T") {
-      if (S.SectionData.binary_size() == 0)
-        S.SectionData = CodeViewYAML::toDebugT(S.DebugT, CP.Allocator, S.Name);
-    } else if (S.Name == ".debug$P") {
-      if (S.SectionData.binary_size() == 0)
-        S.SectionData = CodeViewYAML::toDebugT(S.DebugP, CP.Allocator, S.Name);
-    } else if (S.Name == ".debug$H") {
-      if (S.DebugH && S.SectionData.binary_size() == 0)
-        S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
+    bool HasContent = writeSectionContent(CP, S, CBA);
+    if (!HasContent || S.Relocations.empty())
+      continue;
+
+    S.Header.PointerToRelocations = CBA.getOffset();
+    if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL) {
+      S.Header.NumberOfRelocations = 0xffff;
+      CBA.write<uint32_t>(/*VirtualAddress=*/S.Relocations.size() + 1,
+                          LittleEndian);
+      CBA.write<uint32_t>(/*SymbolTableIndex=*/0, LittleEndian);
+      CBA.write<uint16_t>(/*Type=*/0, LittleEndian);
+    } else {
+      S.Header.NumberOfRelocations = S.Relocations.size();
     }
 
-    size_t DataSize = S.SectionData.binary_size();
-    for (auto E : S.StructuredData)
-      DataSize += E.size();
-    if (DataSize > 0) {
-      CBA.padToAlignment(CP.isPE() ? CP.getFileAlignment() : 4);
-      S.Header.PointerToRawData = CBA.getOffset();
-      for (auto E : S.StructuredData)
-        E.writeAsBinary(CBA);
-      CBA.writeAsBinary(S.SectionData);
-      if (CP.isPE())
-        CBA.padToAlignment(CP.getFileAlignment());
-      S.Header.SizeOfRawData = CBA.getOffset() - S.Header.PointerToRawData;
-
-      if (!S.Relocations.empty()) {
-        S.Header.PointerToRelocations = CBA.getOffset();
-        if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL) {
-          S.Header.NumberOfRelocations = 0xffff;
-          CBA.write<uint32_t>(/*VirtualAddress=*/S.Relocations.size() + 1,
-                              LittleEndian);
-          CBA.write<uint32_t>(/*SymbolTableIndex=*/0, LittleEndian);
-          CBA.write<uint16_t>(/*Type=*/0, LittleEndian);
-        } else {
-          S.Header.NumberOfRelocations = S.Relocations.size();
-        }
-
-        for (const COFFYAML::Relocation &R : S.Relocations) {
-          uint32_t SymbolTableIndex;
-          if (R.SymbolTableIndex) {
-            if (!R.SymbolName.empty())
-              WithColor::error()
-                  << "Both SymbolName and SymbolTableIndex specified\n";
-            SymbolTableIndex = *R.SymbolTableIndex;
-          } else {
-            SymbolTableIndex = SymbolTableIndexMap[R.SymbolName];
-          }
-          CBA.write(R.VirtualAddress, LittleEndian);
-          CBA.write(SymbolTableIndex, LittleEndian);
-          CBA.write(R.Type, LittleEndian);
-        }
+    for (const COFFYAML::Relocation &R : S.Relocations) {
+      uint32_t SymbolTableIndex;
+      if (R.SymbolTableIndex) {
+        if (!R.SymbolName.empty())
+          WithColor::error()
+              << "Both SymbolName and SymbolTableIndex specified\n";
+        SymbolTableIndex = *R.SymbolTableIndex;
+      } else {
+        SymbolTableIndex = SymbolTableIndexMap[R.SymbolName];
       }
-    } else {
-      // Leave SizeOfRawData unaltered. For .bss sections in object files, it
-      // carries the section size.
-      S.Header.PointerToRawData = 0;
+      CBA.write(R.VirtualAddress, LittleEndian);
+      CBA.write(SymbolTableIndex, LittleEndian);
+      CBA.write(R.Type, LittleEndian);
     }
   }
 
