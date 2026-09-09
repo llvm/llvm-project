@@ -741,9 +741,22 @@ APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
     else if (BO->getOpcode() == Instruction::Xor)
       ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
-    ConstantOffset =
-        find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
-            .trunc(BitWidth);
+    // With no pending extension, truncation distributes over add, sub and
+    // disjoint or in modular arithmetic, so any constant found in the wider
+    // operand stays valid after truncating it.
+    //
+    // With a pending sext/zext, distributing the extension into the operands
+    // of the truncated expression is unsound: the nuw/nsw flags checked by
+    // canTraceInto hold at the width of the add and say nothing about
+    // wrapping at the truncation width, e.g.
+    //   zext i64 (trunc i8 (add nuw i32 (zext i8 251), (zext i8 5)))
+    // is 0 but would be rebuilt as 251 + 5 = 256.  Only a fully constant
+    // truncated value remains exact, because then there is no remainder and
+    // the pending casts apply to the constant itself.
+    Value *TruncOp = U->getOperand(0);
+    if ((!SignExtended && !ZeroExtended) || isa<ConstantInt>(TruncOp))
+      ConstantOffset =
+          find(TruncOp, GEP, Idx, SignExtended, ZeroExtended).trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
     ConstantOffset =
         find(U->getOperand(0), GEP, Idx, /* SignExtended */ true, ZeroExtended)
