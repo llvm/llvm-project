@@ -168,7 +168,7 @@ private:
                                  MachineOperand Root, MachineInstr *InsertPt,
                                  bool ForceVGPR = false) const;
 
-  Register widenMadMixSrcIfVGPR16(Register Src, MachineInstr *InsertPt) const;
+  Register widenSrcIfVGPR16(Register Src, MachineInstr *InsertPt) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;

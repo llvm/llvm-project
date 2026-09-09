@@ -4752,11 +4752,12 @@ Register AMDGPUInstructionSelector::copyToVGPRIfSrcFolded(
   return Src;
 }
 
-/// The mix instructions read 32-bit sources. With real true16 instructions a
+/// Some instructions must have 32-bit sources. With real true16 instructions a
 /// 16-bit VALU value lives in a VGPR_16, which they cannot read, so place it in
 /// the low half of a new 32-bit VGPR.
-Register AMDGPUInstructionSelector::widenMadMixSrcIfVGPR16(
-    Register Src, MachineInstr *InsertPt) const {
+Register
+AMDGPUInstructionSelector::widenSrcIfVGPR16(Register Src,
+                                            MachineInstr *InsertPt) const {
   if (!Subtarget->useRealTrue16Insts() || MRI->getType(Src) != LLT::scalar(16))
     return Src;
 
@@ -7223,7 +7224,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
     } else {
       // op_sel already picks the low half, so use the 32-bit source directly if
       // the 16-bit value is the low half of one. Otherwise Src is genuinely 16
-      // bits wide and widenMadMixSrcIfVGPR16 widens it when the operand is
+      // bits wide and widenSrcIfVGPR16 widens it when the operand is
       // rendered.
       isExtractLoElt(*MRI, Src, Src);
     }
@@ -7245,9 +7246,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsExt(
     return {};
 
   return {{
-      [=](MachineInstrBuilder &MIB) {
-        MIB.addReg(widenMadMixSrcIfVGPR16(Src, MIB));
-      },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(widenSrcIfVGPR16(Src, MIB)); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -7260,9 +7259,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixMods(MachineOperand &Root) const {
   std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
 
   return {{
-      [=](MachineInstrBuilder &MIB) {
-        MIB.addReg(widenMadMixSrcIfVGPR16(Src, MIB));
-      },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(widenSrcIfVGPR16(Src, MIB)); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -7278,9 +7275,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsExtNeg(
     return {};
 
   return {{
-      [=](MachineInstrBuilder &MIB) {
-        MIB.addReg(widenMadMixSrcIfVGPR16(Src, MIB));
-      },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(widenSrcIfVGPR16(Src, MIB)); },
       [=](MachineInstrBuilder &MIB) {
         MIB.addImm(Mods ^ SISrcMods::NEG);
       } // src_mods
@@ -7296,9 +7291,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsNeg(
   std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
 
   return {{
-      [=](MachineInstrBuilder &MIB) {
-        MIB.addReg(widenMadMixSrcIfVGPR16(Src, MIB));
-      },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(widenSrcIfVGPR16(Src, MIB)); },
       [=](MachineInstrBuilder &MIB) {
         MIB.addImm(Mods ^ SISrcMods::NEG);
       } // src_mods
