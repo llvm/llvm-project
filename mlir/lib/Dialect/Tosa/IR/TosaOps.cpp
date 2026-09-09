@@ -2766,12 +2766,11 @@ LogicalResult tosa::SliceOp::verify() {
 
   // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
   // get_innermost_block_size<in_out_t>() != 0);
-  const auto tensorType = llvm::cast<ShapedType>(input.getType());
-  const BlockScaledType elemType = llvm::dyn_cast<BlockScaledType>(tensorType);
-  if (elemType) {
+  const auto elemType = getElementTypeOrSelf(input.getType());
+  if (const auto blockScaledType = llvm::dyn_cast<BlockScaledType>(elemType)) {
     const auto startBlock = startValues.back();
     const auto scaleBlock =
-        BlockShapeAttr::getBlockShapeValue(elemType.getBlockShape());
+        BlockShapeAttr::getBlockShapeValue(blockScaledType.getBlockShape());
     if (startBlock % scaleBlock != 0) {
       return emitOpError(
                  "expected start innermost block size to match data type "
