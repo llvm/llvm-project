@@ -201,23 +201,29 @@ void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBl
                     << " to slot " << FrameIndex
                     << " size=" << ObjectSize << "\n");
 
-  if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
+  switch(ObjectSize) {
+  default: llvm_unreachable("Cannot store this register into stack slot!");
+  case 1: {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVBSPtr))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
       .addImm(0);
-  } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
+    break;
+  }
+  case 2: {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVWSPtr))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
       .addImm(0);
-  } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
+    break;
+  }
+  case 4: {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVLSPtr))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
       .addImm(0);
-  } else {
-    llvm_unreachable("Cannot store this register into stack slot!");
+    break;
+  }
   }
 }
 
@@ -240,28 +246,31 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicB
                     << " from slot " << FrameIndex
                     << " size=" << ObjectSize << "\n");
 
-  if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
+  switch(ObjectSize) {
+  default: llvm_unreachable("Cannot load this register from stack slot!");
+  case 1: {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVBLPtr), DestReg)
       .addFrameIndex(FrameIndex)
       .addImm(0);
+    break;
+  }
 
-  } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
+  case 2: {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVWLPtr), DestReg)
       .addFrameIndex(FrameIndex)
       .addImm(0);
-
-  } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
+    break;
+  }
+  case 4: {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVLLPtr), DestReg)
       .addFrameIndex(FrameIndex)
       .addImm(0);
-  } else {
-    llvm_unreachable("Cannot load this register from stack slot!");
+    break;
+  }
   }
 }
 
 Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex) const {
-  LLVM_DEBUG(dbgs() << "isLoadFromStackSlot\n");
-
   if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
       MI.getOperand(2).getImm() == 0) {
     FrameIndex = MI.getOperand(1).getIndex();
@@ -271,8 +280,6 @@ Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &Frame
 }
 
 Register SuperHInstrInfo::isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex) const {
-  LLVM_DEBUG(dbgs() << "isStoreToStackSlot\n");
-
   if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
       MI.getOperand(1).getImm() == 0) {
     FrameIndex = MI.getOperand(0).getIndex();
