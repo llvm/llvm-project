@@ -126,11 +126,6 @@ void nvvm::printTcgen05MMACollectorBBuffer(raw_ostream &OS,
   }
 }
 
-void nvvm::printSPElemSize(raw_ostream &OS, const Constant *ImmArgVal) {
-  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal))
-    OS << getSPElemSizeName(static_cast<SPElemSize>(CI->getZExtValue()));
-}
-
 void nvvm::printSPIdxSize(raw_ostream &OS, const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal))
     OS << getSPIdxSizeName(static_cast<SPIdxSize>(CI->getZExtValue()));

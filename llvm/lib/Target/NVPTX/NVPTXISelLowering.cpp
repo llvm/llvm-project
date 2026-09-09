@@ -3197,95 +3197,134 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
-static bool needsSPCompressScalarization(SDNode *N) {
-  bool NeedsScalarize =
-      N->getValueType(0).isVector() || N->getValueType(1).isVector();
+static EVT getSPVectorPartType(EVT VT) {
+  assert(VT.isVector() && "expected a vector type");
+  EVT EltVT = VT.getVectorElementType();
+  if (EltVT == MVT::i8)
+    return MVT::v4i8;
+  if (EltVT == MVT::i16)
+    return MVT::v2i16;
+  return EltVT;
+}
+
+static unsigned getSPVectorNumParts(EVT VT) {
+  EVT PartVT = getSPVectorPartType(VT);
+  unsigned PartElts = PartVT.isVector() ? PartVT.getVectorNumElements() : 1;
+  if (VT.getVectorNumElements() % PartElts != 0)
+    report_fatal_error(
+        "SP intrinsic vector types must occupy whole 32-bit registers");
+  return VT.getVectorNumElements() / PartElts;
+}
+
+static bool needsSPVectorLowering(SDNode *N) {
+  for (EVT VT : N->values())
+    if (VT.isVector() && VT != getSPVectorPartType(VT))
+      return true;
   for (const SDValue &Operand : N->ops())
-    NeedsScalarize |= Operand.getValueType().isVector();
-  return NeedsScalarize;
+    if (EVT VT = Operand.getValueType();
+        VT.isVector() && VT != getSPVectorPartType(VT))
+      return true;
+  return false;
+}
+
+static void splitSPVector(SDValue Vector, SmallVectorImpl<SDValue> &Parts,
+                          SelectionDAG &DAG) {
+  EVT VT = Vector.getValueType();
+  EVT PartVT = getSPVectorPartType(VT);
+  if (!PartVT.isVector()) {
+    DAG.ExtractVectorElements(Vector, Parts);
+    return;
+  }
+
+  unsigned NumParts = getSPVectorNumParts(VT);
+  unsigned PartElts = PartVT.getVectorNumElements();
+  for (unsigned I = 0; I != NumParts; ++I)
+    Parts.push_back(
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Vector), PartVT, Vector,
+                    DAG.getVectorIdxConstant(I * PartElts, SDLoc(Vector))));
+}
+
+static SDValue joinSPVector(EVT VT, ArrayRef<SDValue> Parts, const SDLoc &DL,
+                            SelectionDAG &DAG) {
+  assert(Parts.size() == getSPVectorNumParts(VT) &&
+         "incorrect number of SP vector parts");
+  if (Parts.size() == 1 && Parts.front().getValueType() == VT)
+    return Parts.front();
+  if (Parts.front().getValueType().isVector())
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Parts);
+  return DAG.getBuildVector(VT, DL, Parts);
 }
 
 static SDValue lowerSPCompress(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDLoc DL(N);
 
-  if (!needsSPCompressScalarization(N))
+  if (!needsSPVectorLowering(N))
     return Op;
 
-  SmallVector<SDValue, 4> Ops;
+  SmallVector<SDValue, 16> Ops;
   for (const SDValue &Operand : N->ops()) {
     if (Operand.getValueType().isVector())
-      DAG.ExtractVectorElements(Operand, Ops);
+      splitSPVector(Operand, Ops, DAG);
     else
       Ops.push_back(Operand);
   }
 
-  if (N->getValueType(0).isVector() || N->getValueType(1).isVector()) {
-    SmallVector<EVT, 4> ResultTys;
-    for (const EVT VT : N->values()) {
-      if (VT.isVector())
-        ResultTys.append(VT.getVectorNumElements(), VT.getVectorElementType());
-      else
-        ResultTys.push_back(VT);
-    }
-
-    SDValue Lowered = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResultTys, Ops);
-
-    SmallVector<SDValue, 2> Retvals;
-    for (unsigned NewI = 0, I = 0, E = N->getNumValues(); I != E; ++I) {
-      if (EVT VT = N->getValueType(I); VT.isVector()) {
-        SmallVector<SDValue> Elements;
-        for (auto NewE = NewI + VT.getVectorNumElements(); NewI != NewE; ++NewI)
-          Elements.push_back(Lowered.getValue(NewI));
-        Retvals.push_back(DAG.getBuildVector(VT, DL, Elements));
-      } else {
-        Retvals.push_back(Lowered.getValue(NewI));
-        ++NewI;
-      }
-    }
-
-    return DAG.getMergeValues(Retvals, DL);
+  SmallVector<EVT, 16> ResultTys;
+  for (const EVT VT : N->values()) {
+    if (VT.isVector())
+      ResultTys.append(getSPVectorNumParts(VT), getSPVectorPartType(VT));
+    else
+      ResultTys.push_back(VT);
   }
 
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, N->getVTList(), Ops);
+  SDValue Lowered = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResultTys, Ops);
+
+  SmallVector<SDValue, 2> Retvals;
+  for (unsigned NewI = 0, I = 0, E = N->getNumValues(); I != E; ++I) {
+    if (EVT VT = N->getValueType(I); VT.isVector()) {
+      SmallVector<SDValue> Parts;
+      for (auto NewE = NewI + getSPVectorNumParts(VT); NewI != NewE; ++NewI)
+        Parts.push_back(Lowered.getValue(NewI));
+      Retvals.push_back(joinSPVector(VT, Parts, DL, DAG));
+    } else {
+      Retvals.push_back(Lowered.getValue(NewI));
+      ++NewI;
+    }
+  }
+
+  return DAG.getMergeValues(Retvals, DL);
 }
 
 static SDValue lowerSPDecompress(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDLoc DL(N);
   EVT ResVT0 = N->getValueType(0);
-  // Every valid layout with a scalar data result also has scalar mdata and
-  // cdata operands, so only vector results require scalarization here.
-  if (!ResVT0.isVector())
+  if (!needsSPVectorLowering(N))
     return Op;
 
-  unsigned NumElts = ResVT0.getVectorNumElements();
-  EVT EltVT = ResVT0.getVectorElementType();
-  SmallVector<EVT, 4> ListVTs(NumElts, EltVT);
+  unsigned NumParts = getSPVectorNumParts(ResVT0);
+  EVT PartVT = getSPVectorPartType(ResVT0);
+  SmallVector<EVT, 16> ListVTs(NumParts, PartVT);
   SDVTList ResVTs = DAG.getVTList(ListVTs);
 
-  SmallVector<SDValue, 4> Ops;
+  SmallVector<SDValue, 16> Ops;
   Ops.push_back(N->getOperand(0));
 
   for (unsigned I = 1; I < N->getNumOperands(); ++I) {
-    SDValue Op = N->getOperand(I);
-    EVT OpVT = Op.getValueType();
-    if (OpVT.isVector()) {
-      for (unsigned J = 0, E = OpVT.getVectorNumElements(); J != E; ++J)
-        Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                                  OpVT.getVectorElementType(), Op,
-                                  DAG.getIntPtrConstant(J, DL)));
-    } else {
-      Ops.push_back(Op);
-    }
+    SDValue Operand = N->getOperand(I);
+    if (Operand.getValueType().isVector())
+      splitSPVector(Operand, Ops, DAG);
+    else
+      Ops.push_back(Operand);
   }
 
   SDValue NewNode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResVTs, Ops);
 
-  SmallVector<SDValue, 4> ScalarRes;
-  for (unsigned I = 0; I < NumElts; ++I)
-    ScalarRes.push_back(NewNode.getValue(I));
-  return DAG.getBuildVector(ResVT0, DL, ScalarRes);
+  SmallVector<SDValue, 16> Parts;
+  for (unsigned I = 0; I < NumParts; ++I)
+    Parts.push_back(NewNode.getValue(I));
+  return joinSPVector(ResVT0, Parts, DL, DAG);
 }
 
 static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
@@ -7425,7 +7464,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
   case Intrinsic::nvvm_spcompress_sp2to4:
-    if (needsSPCompressScalarization(N))
+    if (needsSPVectorLowering(N))
       return lowerSPCompress(SDValue(N, 0), DCI.DAG);
     break;
   case Intrinsic::nvvm_spdecompress_sp1to2:
@@ -7437,7 +7476,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_spdecompress_sp2to16:
   case Intrinsic::nvvm_spdecompress_sp4to8:
   case Intrinsic::nvvm_spdecompress_sp4to16: {
-    if (N->getValueType(0).isVector())
+    if (needsSPVectorLowering(N))
       return lowerSPDecompress(SDValue(N, 0), DCI.DAG);
     break;
   }

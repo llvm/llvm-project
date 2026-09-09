@@ -446,14 +446,10 @@ void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
   }
 }
 
-static void checkSPRegTypes(SDNode *N, unsigned NumFlags, StringRef Name) {
-  for (const EVT VT : N->values())
-    if (VT != MVT::i32)
-      report_fatal_error(Twine(Name) + " expects scalarized i32 results");
-
-  for (unsigned I = 1, E = N->getNumOperands() - NumFlags; I != E; ++I)
-    if (N->getOperand(I).getValueType() != MVT::i32)
-      report_fatal_error(Twine(Name) + " expects scalarized i32 operands");
+static std::optional<unsigned> getSPDataElemSize(EVT VT) {
+  if (VT != MVT::v4i8 && VT != MVT::v2i16)
+    return std::nullopt;
+  return static_cast<unsigned>(VT.getScalarSizeInBits());
 }
 
 // Keep these lists in sync with their counterparts in NVPTXIntrinsics.td. A
@@ -491,38 +487,55 @@ static void checkSPRegTypes(SDNode *N, unsigned NumFlags, StringRef Name) {
   CASE_MACRO(128)
 
 void NVPTXDAGToDAGISel::selectSPCompress(SDNode *N) {
-  constexpr unsigned NumFlags = 2;
-  if (N->getNumOperands() < NumFlags + 2)
+  constexpr unsigned NumFlags = 1;
+  if (N->getNumOperands() < NumFlags + 3)
     report_fatal_error("Malformed spcompress intrinsic");
 
   unsigned FlagOp = N->getNumOperands() - NumFlags;
-  unsigned ElemSize =
-      cast<ConstantSDNode>(N->getOperand(FlagOp))->getZExtValue();
   unsigned IdxSize =
-      cast<ConstantSDNode>(N->getOperand(FlagOp + 1))->getZExtValue();
-  checkSPRegTypes(N, NumFlags, "spcompress");
+      cast<ConstantSDNode>(N->getOperand(FlagOp))->getZExtValue();
 
   // The data bundle contains two registers per repetition.
   unsigned DataSize = FlagOp - 2;
   unsigned RepeatFactor = DataSize / 2;
-  if (DataSize % 2 != 0 || !nvvm::isValidSPRepeatFactor(RepeatFactor))
+  EVT DataRegVT = N->getOperand(1).getValueType();
+  auto ElemSize = getSPDataElemSize(DataRegVT);
+  if (!ElemSize || DataSize % 2 != 0 ||
+      !nvvm::isValidSPRepeatFactor(RepeatFactor))
+    report_fatal_error("spcompress operand/result types do not match "
+                       "the SP intrinsic flags");
+  unsigned ElemSizeValue = *ElemSize;
+
+  for (unsigned I = 1; I <= DataSize; ++I)
+    if (N->getOperand(I).getValueType() != DataRegVT)
+      report_fatal_error("spcompress operand/result types do not match "
+                         "the SP intrinsic flags");
+  if (N->getOperand(FlagOp - 1).getValueType() != MVT::i32)
     report_fatal_error("spcompress operand/result types do not match "
                        "the SP intrinsic flags");
 
-  auto Layout = nvvm::getSPCompressLayout(ElemSize, IdxSize, RepeatFactor);
+  auto Layout = nvvm::getSPCompressLayout(ElemSizeValue, IdxSize, RepeatFactor);
   if (!Layout)
     report_fatal_error(Twine("Invalid spcompress flags: elem_size=") +
-                       Twine(ElemSize) + ", idx_size=" + Twine(IdxSize));
+                       Twine(ElemSizeValue) + ", idx_size=" + Twine(IdxSize));
 
   if (N->getNumValues() != Layout->MetadataSize + Layout->CompressedDataSize ||
       N->getNumOperands() != Layout->DataSize + NumFlags + 2)
     report_fatal_error("spcompress operand/result types do not match "
                        "the SP intrinsic flags");
+  for (unsigned I = 0; I != Layout->MetadataSize; ++I)
+    if (N->getValueType(I) != MVT::i32)
+      report_fatal_error("spcompress operand/result types do not match "
+                         "the SP intrinsic flags");
+  for (unsigned I = Layout->MetadataSize, E = N->getNumValues(); I != E; ++I)
+    if (N->getValueType(I) != DataRegVT)
+      report_fatal_error("spcompress operand/result types do not match "
+                         "the SP intrinsic flags");
 
   SDLoc DL(N);
   SmallVector<SDValue, 16> Operands;
   Operands.reserve(N->getNumOperands() - NumFlags + 2);
-  Operands.push_back(getI32Imm(ElemSize, DL));
+  Operands.push_back(getI32Imm(ElemSizeValue, DL));
   Operands.push_back(getI32Imm(IdxSize, DL));
   Operands.push_back(getI32Imm(RepeatFactor, DL));
   for (unsigned I = 1, E = N->getNumOperands() - NumFlags; I != E; ++I)
@@ -545,19 +558,22 @@ void NVPTXDAGToDAGISel::selectSPCompress(SDNode *N) {
 
 void NVPTXDAGToDAGISel::selectSPDecompress(SDNode *N, unsigned NumSrc,
                                            unsigned NumTgt) {
-  constexpr unsigned NumFlags = 2;
+  constexpr unsigned NumFlags = 1;
   if (N->getNumOperands() < NumFlags + 3)
     report_fatal_error("Malformed spdecompress intrinsic");
 
   unsigned FlagOp = N->getNumOperands() - NumFlags;
-  unsigned ElemSize =
-      cast<ConstantSDNode>(N->getOperand(FlagOp))->getZExtValue();
   unsigned IdxSize =
-      cast<ConstantSDNode>(N->getOperand(FlagOp + 1))->getZExtValue();
-  checkSPRegTypes(N, NumFlags, "spdecompress");
+      cast<ConstantSDNode>(N->getOperand(FlagOp))->getZExtValue();
+  EVT DataRegVT = N->getValueType(0);
+  auto ElemSize = getSPDataElemSize(DataRegVT);
+  if (!ElemSize)
+    report_fatal_error("spdecompress operand/result types do not match "
+                       "the SP intrinsic flags");
+  unsigned ElemSizeValue = *ElemSize;
 
   // data_size = num_tgt * elem_size * repeat_factor / 32.
-  unsigned RepeatFactorDenominator = NumTgt * ElemSize;
+  unsigned RepeatFactorDenominator = NumTgt * ElemSizeValue;
   unsigned RepeatFactorNumerator = N->getNumValues() * 32;
   if (RepeatFactorDenominator == 0 ||
       RepeatFactorNumerator % RepeatFactorDenominator != 0)
@@ -568,12 +584,12 @@ void NVPTXDAGToDAGISel::selectSPDecompress(SDNode *N, unsigned NumSrc,
     report_fatal_error("spdecompress operand/result types do not match "
                        "the SP intrinsic flags");
 
-  auto Layout = nvvm::getSPDecompressLayout(NumSrc, NumTgt, ElemSize, IdxSize,
-                                            RepeatFactor);
+  auto Layout = nvvm::getSPDecompressLayout(NumSrc, NumTgt, ElemSizeValue,
+                                            IdxSize, RepeatFactor);
   if (!Layout)
     report_fatal_error(Twine("Invalid spdecompress flags: num_src=") +
                        Twine(NumSrc) + ", num_tgt=" + Twine(NumTgt) +
-                       ", elem_size=" + Twine(ElemSize) +
+                       ", elem_size=" + Twine(ElemSizeValue) +
                        ", idx_size=" + Twine(IdxSize));
 
   if (N->getNumValues() != Layout->DataSize ||
@@ -581,11 +597,19 @@ void NVPTXDAGToDAGISel::selectSPDecompress(SDNode *N, unsigned NumSrc,
           Layout->MetadataSize + Layout->CompressedDataSize + NumFlags + 1)
     report_fatal_error("spdecompress operand/result types do not match "
                        "the SP intrinsic flags");
+  for (unsigned I = 1; I <= Layout->MetadataSize; ++I)
+    if (N->getOperand(I).getValueType() != MVT::i32)
+      report_fatal_error("spdecompress operand/result types do not match "
+                         "the SP intrinsic flags");
+  for (unsigned I = Layout->MetadataSize + 1; I != FlagOp; ++I)
+    if (N->getOperand(I).getValueType() != DataRegVT)
+      report_fatal_error("spdecompress operand/result types do not match "
+                         "the SP intrinsic flags");
 
   SDLoc DL(N);
   SmallVector<SDValue, 16> Operands;
   Operands.reserve(N->getNumOperands() - NumFlags + 4);
-  Operands.push_back(getI32Imm(ElemSize, DL));
+  Operands.push_back(getI32Imm(ElemSizeValue, DL));
   Operands.push_back(getI32Imm(IdxSize, DL));
   Operands.push_back(getI32Imm(RepeatFactor, DL));
   Operands.push_back(getI32Imm(NumSrc, DL));

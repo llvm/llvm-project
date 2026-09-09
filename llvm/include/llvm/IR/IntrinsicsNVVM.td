@@ -1317,12 +1317,9 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
 
-class NVVM_SP_ARGPROPS<ArgIndex ElemSizeIdx, ArgIndex IdxSizeIdx> {
+class NVVM_SP_IDX_ARGPROPS<ArgIndex IdxSizeIdx> {
   list<IntrinsicProperty> Prop = [
-    RangeList<ElemSizeIdx, [8, 16]>,
     RangeList<IdxSizeIdx, [2, 4]>,
-    ArgInfo<ElemSizeIdx, [ArgName<"elem_size">,
-                          ImmArgPrinter<"printSPElemSize">]>,
     ArgInfo<IdxSizeIdx, [ArgName<"idx_size">,
                          ImmArgPrinter<"printSPIdxSize">]>
   ];
@@ -4147,13 +4144,12 @@ def int_nvvm_tensormap_replace_fill_mode :
 class SPCompress :
   DefaultAttrsIntrinsicFlags<
     [llvm_anyint_ty,  // mdata
-     llvm_anyint_ty], // cdata
-    [llvm_anyint_ty,  // data
-     llvm_i32_ty],    // spdesc
-    [llvm_i32_ty,     // elem_size
-     llvm_i32_ty],    // idx_size
+     llvm_any_vector_int_ty], // cdata
+    [llvm_any_vector_int_ty,  // data
+     llvm_i32_ty],            // spdesc
+    [llvm_i32_ty],            // idx_size
     !listconcat([IntrNoMem, IntrSpeculatable],
-                NVVM_SP_ARGPROPS<ArgIndex<2>, ArgIndex<3>>.Prop)>;
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop)>;
 
 def int_nvvm_spcompress_sp2to4 : SPCompress;
 
@@ -4163,13 +4159,12 @@ def int_nvvm_spcompress_sp2to4 : SPCompress;
 
 class SPDecompress :
   DefaultAttrsIntrinsicFlags<
-    [llvm_anyint_ty], // data
+    [llvm_any_vector_int_ty], // data
     [llvm_anyint_ty,  // mdata
-     llvm_anyint_ty], // cdata
-    [llvm_i32_ty,     // elem_size
-     llvm_i32_ty],    // idx_size
+     llvm_any_vector_int_ty], // cdata
+    [llvm_i32_ty],            // idx_size
     !listconcat([IntrNoMem, IntrSpeculatable],
-                NVVM_SP_ARGPROPS<ArgIndex<2>, ArgIndex<3>>.Prop)>;
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop)>;
 
 foreach num_src = [1, 2, 4] in
   foreach num_tgt = [2, 4, 8, 16] in

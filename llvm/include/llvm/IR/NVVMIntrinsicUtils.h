@@ -335,7 +335,6 @@ LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
 LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
                                               const Constant *ImmArgVal);
 
-LLVM_ABI void printSPElemSize(raw_ostream &OS, const Constant *ImmArgVal);
 LLVM_ABI void printSPIdxSize(raw_ostream &OS, const Constant *ImmArgVal);
 LLVM_ABI void printTensormapElemType(raw_ostream &OS,
                                      const Constant *ImmArgVal);
