@@ -18375,6 +18375,12 @@ InstructionCost BoUpSLP::getSpillCost() {
         ScalarOrPseudoEntries.contains(SameTE) || !SameTE->UserTreeIndex)
       return false;
 
+    // A reordered or reuse-shuffled match materializes a separate shuffled
+    // vector that is itself live across the call; only an exact match reuses
+    // the same vector value.
+    if (!SameTE->ReorderIndices.empty() || !SameTE->ReuseShuffleIndices.empty())
+      return false;
+
     // Only permit an ordinary vectorized user.
     const TreeEntry *UserTE = SameTE->UserTreeIndex.UserTE;
     assert(UserTE && "Expected a user tree entry.");
@@ -18383,8 +18389,8 @@ InstructionCost BoUpSLP::getSpillCost() {
         UserTE->getOpcode() == Instruction::PHI)
       return false;
 
-    // Different demotion state would make the two edge costs unequal.
-    if (MinBWs.lookup(SameTE) != MinBWs.lookup(Gather))
+    // Different demoted bitwidth would make the two edge costs unequal.
+    if (MinBWs.lookup(SameTE).first != MinBWs.lookup(Gather).first)
       return false;
 
     // The spill walk does not descend through gather entries; if any ancestor
