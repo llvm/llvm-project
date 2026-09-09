@@ -6,7 +6,5 @@ RUN: %run %t-AccumulateAllocationsTest -seed=1 -runs=100000 -stop_file=%t.stop_f
 CHECK: Done {{[0-9]}} runs
 
 # Fuzzing must not stop when the stop file does not exist.
-RUN: rm -f %t.stop_file
-RUN: %device_rm -f %t.stop_file
-RUN: %run %t-AccumulateAllocationsTest -seed=1 -runs=1000 -stop_file=%t.stop_file 2>&1 | FileCheck %s --check-prefix=NOSTOP
+RUN: %run %t-AccumulateAllocationsTest -seed=1 -runs=1000 -stop_file=%t.nonexistent_stop_file 2>&1 | FileCheck %s --check-prefix=NOSTOP
 NOSTOP: Done 1000 runs
