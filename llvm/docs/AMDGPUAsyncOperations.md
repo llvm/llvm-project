@@ -37,18 +37,19 @@ operation belongs to them yet.
 Which async operations a given subtarget actually has is described in
 {ref}`AMDGPU DMA Operations <amdgpu-dma-operations>`. A stage exists on every
 subtarget that supports asyncmarks, whether or not that subtarget has any
-operation belonging to it; marking an empty stage is simply a no-op.
+operation belonging to it.
 
 ### Stage Masks
 
 Both intrinsics take a *stage mask*: an 11-bit value in which a set bit means
-"do not participate". An asyncmark leaves out the stages its mask names, and a
-wait disregards them. The mask `0` therefore names no stage and so covers all of
-them.
+"do not participate". In particular, an asyncmark *omits* the stages its 
+mask names, and a wait *ignores* them. The mask `0` therefore names no stage 
+and so omits/ignores none.
 
 A mask may set the bit of a reserved stage. Leaving out a stage whose operations
 do not exist yet is harmless, and lets a mask keep its meaning as the reserved
-bits are filled in. Setting a bit above 10 is an error.
+bits are filled in. However, omitting/ignoring bits that are neither supported
+nor reserved is an error.
 
 ### Current Sequence
 
@@ -59,32 +60,31 @@ function. The state of the sequence for a stage `S` at each program point in
 the function is called the *current sequence of* `S`.
 
 The sequences of distinct stages are independent: appending to one does not
-affect the length or contents of any other.
+affect the length or contents of any other, even though multiple sequences may
+be appended to with a single call to asyncmark (by choosing to not *omit* 
+multiple stages).
 
 ### `@llvm.amdgcn.asyncmark(i32 %K)`
 
-Produces an asyncmark in every stage that the mask `K` does not name, and
-appends it to the current sequence of each. The sequences of the stages named by
-`K` are unaffected. `K` must be a constant stage mask.
-
-Each sequence receives its own asyncmark, and those asyncmarks are then removed
-independently by later waits.
+Produces an asyncmark in every stage that the mask `K` does not *omit*, and
+appends it to the current sequence of each. The sequences of the stages 
+*omitted* by `K` are unaffected. `K` must be a constant stage mask.
 
 ### `@llvm.amdgcn.wait.asyncmark(i16 %N, i32 %K)`
 
-For every stage that the mask `K` does not name, ensures that the length of the
-current sequence of that stage is at most `N` by removing asyncmarks from the
-start of that sequence if it is more than `N`. The sequences of the stages named
-by `K` are unaffected. `K` must be a constant stage mask.
+For every stage that the mask `K` does not *ignore*, ensures that the length
+of the current sequence of that stage is at most `N` by removing asyncmarks
+from the start of that sequence if it is more than `N`. The sequences of the 
+stages *not ignored* by `K` are unaffected. `K` must be a constant stage mask.
 
 ### Completion of Asyncmarks
 
-An `asyncmark()` operation `X` that produces an asyncmark `M` in stage `S` is
-*completed-at* a `wait.asyncmark()` operation `Y` covering `S` in the same
-function body if:
+An asyncmark `M`, produced by an `asyncmark` operation `X`, is *completed-at* 
+a `wait.asyncmark()` operation `Y` with mask `B` in the same function body if:
 
 - `X` is *program-ordered* before `Y`, and
-- `M` is not in the current sequence of `S` at any operation `Z` that
+- `B` does not ignore the stage of the sequence that `M` belongs to, and
+- `M` is not in the current sequence at any operation `Z` that
   immediately follows `Y` in *program-order*.
 
 ## Completion of Async Operations
@@ -94,16 +94,11 @@ not related in *program-order* with any other operations from that thread. But
 the thread can use an asyncmark to ensure that the async operation is
 *completed-at* some later operation.
 
-An async operation `A` *initiated-by* an instruction `I` is *completed-at* some
-`wait.asyncmark()` operation `Y` if there exists an `asyncmark()` operation `X`
-in a stage `S` such that:
-- `A` belongs to `S`,
+An async operation `A`, *initiated-by* an instruction `I` is *completed-at* some
+`wait.asyncmark()` operation `Y` if there exists an `asyncmark()` operation `X`:
+
 - `I` is *program-ordered* before `X`, and
 - `X` is *completed-at* `Y`.
-
-Since an asyncmark with an empty mask is produced in every stage, an asyncmark
-and wait pair that both use the mask `0` tracks `A` whatever stage it belongs
-to.
 
 ### happens-before
 
@@ -213,8 +208,8 @@ Two kinds of async operation are in flight at once. Each is marked with a mask
 that leaves out the other, so each can be waited for without waiting for the
 other.
 
-The masks below are written as `only(...)`, meaning the mask that names every
-stage except the ones listed, so that only those are left in.
+The masks below are written with shorthand as `only(...)`, meaning the mask
+that names every stage except the ones listed, so that only those are left in.
 
 ```c++
 void foo(global int *g, local int *l, tensor_desc t) {
