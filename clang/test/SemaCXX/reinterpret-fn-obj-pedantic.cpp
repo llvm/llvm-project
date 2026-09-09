@@ -4,6 +4,6 @@ void fnptrs()
 {
   typedef void (*fnptr)();
   fnptr fp = 0;
-  void *vp = reinterpret_cast<void*>(fp); // expected-warning {{cast between pointer-to-function and pointer-to-object is an extension}}
-  (void)reinterpret_cast<fnptr>(vp); // expected-warning {{cast between pointer-to-function and pointer-to-object is an extension}}
+  void *vp = reinterpret_cast<void*>(fp); // expected-warning {{cast between pointer-to-function and pointer-to-object is a C++11 extension}}
+  (void)reinterpret_cast<fnptr>(vp); // expected-warning {{cast between pointer-to-function and pointer-to-object is a C++11 extension}}
 }
