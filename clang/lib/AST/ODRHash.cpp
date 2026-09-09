@@ -956,6 +956,15 @@ public:
   }
 
   void Visit(const Type *T) {
+    if (const auto *UsingT = dyn_cast<UsingType>(T)) {
+      // A using-declaration changes lookup, not the referenced entity. Preserve
+      // the keyword and qualifier at the use, not at the using-declaration.
+      const auto *Target = cast<TypeDecl>(UsingT->getDecl()->getTargetDecl());
+      T = Target->getASTContext()
+              .getTypeDeclType(UsingT->getKeyword(), UsingT->getQualifier(),
+                               Target)
+              .getTypePtr();
+    }
     if (handleTypedef(T))
       return;
     ID.AddInteger(T->getTypeClass());

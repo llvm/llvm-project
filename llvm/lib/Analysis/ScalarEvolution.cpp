@@ -9734,7 +9734,8 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
 
 /// Return true if we can constant fold an instruction of the specified type,
 /// assuming that all operands were constants.
-static bool CanConstantFold(const Instruction *I) {
+static bool canConstantFold(const Instruction *I,
+                            const TargetLibraryInfo *TLI) {
   if (isa<BinaryOperator, UnaryOperator, GEPOperator, FreezeInst, CmpInst,
           SelectInst, CastInst, LoadInst, ExtractElementInst, InsertElementInst,
           ExtractValueInst, InsertValueInst>(I))
@@ -9742,13 +9743,14 @@ static bool CanConstantFold(const Instruction *I) {
 
   if (const CallInst *CI = dyn_cast<CallInst>(I))
     if (const Function *F = CI->getCalledFunction())
-      return canConstantFoldCallTo(CI, F);
+      return canConstantFoldCallTo(CI, F, TLI);
   return false;
 }
 
 /// Determine whether this instruction can constant evolve within this loop
 /// assuming its operands can all constant evolve.
-static bool canConstantEvolve(Instruction *I, const Loop *L) {
+static bool canConstantEvolve(Instruction *I, const Loop *L,
+                              const TargetLibraryInfo *TLI) {
   // An instruction outside of the loop can't be derived from a loop PHI.
   if (!L->contains(I)) return false;
 
@@ -9760,7 +9762,7 @@ static bool canConstantEvolve(Instruction *I, const Loop *L) {
 
   // If we won't be able to constant fold this expression even if the operands
   // are constants, bail early.
-  return CanConstantFold(I);
+  return canConstantFold(I, TLI);
 }
 
 /// getConstantEvolvingPHIOperands - Implement getConstantEvolvingPHI by
@@ -9768,7 +9770,7 @@ static bool canConstantEvolve(Instruction *I, const Loop *L) {
 static PHINode *
 getConstantEvolvingPHIOperands(Instruction *UseInst, const Loop *L,
                                DenseMap<Instruction *, PHINode *> &PHIMap,
-                               unsigned Depth) {
+                               const TargetLibraryInfo *TLI, unsigned Depth) {
   if (Depth > MaxConstantEvolvingDepth)
     return nullptr;
 
@@ -9779,7 +9781,8 @@ getConstantEvolvingPHIOperands(Instruction *UseInst, const Loop *L,
     if (isa<Constant>(Op)) continue;
 
     Instruction *OpInst = dyn_cast<Instruction>(Op);
-    if (!OpInst || !canConstantEvolve(OpInst, L)) return nullptr;
+    if (!OpInst || !canConstantEvolve(OpInst, L, TLI))
+      return nullptr;
 
     PHINode *P = dyn_cast<PHINode>(OpInst);
     if (!P)
@@ -9790,7 +9793,7 @@ getConstantEvolvingPHIOperands(Instruction *UseInst, const Loop *L,
     if (!P) {
       // Recurse and memoize the results, whether a phi is found or not.
       // This recursive call invalidates pointers into PHIMap.
-      P = getConstantEvolvingPHIOperands(OpInst, L, PHIMap, Depth + 1);
+      P = getConstantEvolvingPHIOperands(OpInst, L, PHIMap, TLI, Depth + 1);
       PHIMap[OpInst] = P;
     }
     if (!P)
@@ -9808,16 +9811,18 @@ getConstantEvolvingPHIOperands(Instruction *UseInst, const Loop *L,
 /// way, but the operands of an operation must either be constants or a value
 /// derived from a constant PHI.  If this expression does not fit with these
 /// constraints, return null.
-static PHINode *getConstantEvolvingPHI(Value *V, const Loop *L) {
+static PHINode *getConstantEvolvingPHI(Value *V, const Loop *L,
+                                       const TargetLibraryInfo *TLI) {
   Instruction *I = dyn_cast<Instruction>(V);
-  if (!I || !canConstantEvolve(I, L)) return nullptr;
+  if (!I || !canConstantEvolve(I, L, TLI))
+    return nullptr;
 
   if (PHINode *PN = dyn_cast<PHINode>(I))
     return PN;
 
   // Record non-constant instructions contained by the loop.
   DenseMap<Instruction *, PHINode *> PHIMap;
-  return getConstantEvolvingPHIOperands(I, L, PHIMap, 0);
+  return getConstantEvolvingPHIOperands(I, L, PHIMap, TLI, 0);
 }
 
 /// EvaluateExpression - Given an expression that passes the
@@ -9837,7 +9842,8 @@ static Constant *EvaluateExpression(Value *V, const Loop *L,
 
   // An instruction inside the loop depends on a value outside the loop that we
   // weren't given a mapping for, or a value such as a call inside the loop.
-  if (!canConstantEvolve(I, L)) return nullptr;
+  if (!canConstantEvolve(I, L, TLI))
+    return nullptr;
 
   // An unmapped PHI can be due to a branch or another loop inside this loop,
   // or due to this not being the initial iteration through a loop where we
@@ -9977,7 +9983,7 @@ ScalarEvolution::getConstantEvolutionLoopExitValue(PHINode *PN,
 const SCEV *ScalarEvolution::computeExitCountExhaustively(const Loop *L,
                                                           Value *Cond,
                                                           bool ExitWhen) {
-  PHINode *PN = getConstantEvolvingPHI(Cond, L);
+  PHINode *PN = getConstantEvolvingPHI(Cond, L, &TLI);
   if (!PN) return getCouldNotCompute();
 
   // If the loop is canonicalized, the PHI will have exactly two entries.
@@ -10312,7 +10318,7 @@ SCEVUse ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     // into a SCEV.  Check to see if it's possible to symbolically evaluate
     // the arguments into constants, and if so, try to constant propagate the
     // result.  This is particularly useful for computing loop exit values.
-    if (!CanConstantFold(I))
+    if (!canConstantFold(I, &TLI))
       return V; // This is some other type of SCEVUnknown, just return it.
 
     SmallVector<Constant *, 4> Operands;
