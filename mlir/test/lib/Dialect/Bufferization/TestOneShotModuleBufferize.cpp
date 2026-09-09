@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 #include "TestAttributes.h" // TestTensorEncodingAttr, TestMemRefLayoutAttr
 #include "TestDialect.h"
