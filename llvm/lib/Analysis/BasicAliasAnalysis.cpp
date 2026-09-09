@@ -2040,15 +2040,20 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
         Var0.Val.TruncBits == 0 && Var0.Val.hasSameCastsAs(Var1.Val) &&
         !AAQI.MayBeCrossIteration && MultiplyByScaleNoWrap(Var0) &&
         MultiplyByScaleNoWrap(Var1);
-    if (Var0.hasNegatedScaleOf(Var1) && Preconditions &&
-        isKnownNonEqual(Var0.Val.V, Var1.Val.V,
-                        SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
-                                                       ? Var0.CxtI
-                                                       : Var1.CxtI)))
-      return Var0.Scale.abs();
 
     if (!Preconditions)
       return std::nullopt;
+
+    if (Var0.hasNegatedScaleOf(Var1)) {
+      if (isKnownNonEqual(Var0.Val.V, Var1.Val.V,
+                          SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
+                                                         ? Var0.CxtI
+                                                         : Var1.CxtI)))
+        return Var0.Scale.abs();
+      // Equal scales would imply the GCD equals the scale itself, leading
+      // the generalized path below not to do better than isKnownNonEqual.
+      return std::nullopt;
+    }
 
     // On the chance we have not found a min abs, fallback to the generalization
     // of the two variables case being handled to different scales:
@@ -2056,7 +2061,7 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     // where C0 = abs(Scale0)/ScaleGCD, C1 = abs(Scale1)/ScaleGCD.
     // If C0*V0 != C1*V1, then abs(VarIndex) >= ScaleGCD, leading to the min
     // absolute value being ScaleGCD.
-
+    //
     // Ensure scales, after subtraction, have opposite signs.
     bool EffectiveNeg0 = Var0.IsNegated ^ Var0.Scale.isNegative();
     bool EffectiveNeg1 = Var1.IsNegated ^ Var1.Scale.isNegative();
