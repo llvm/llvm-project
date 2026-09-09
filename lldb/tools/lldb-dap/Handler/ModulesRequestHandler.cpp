@@ -36,7 +36,7 @@ ModulesRequestHandler::Run(const std::optional<ModulesArguments> &args) const {
   const uint32_t end_module =
       module_count == 0 ? total_modules
                         : std::min(total_modules, start_module + module_count);
-  assert(start_module <= end_module); 
+  assert(start_module <= end_module);
   modules.reserve(end_module - start_module);
   for (uint32_t i = start_module; i < end_module; ++i) {
     lldb::SBModule module = dap.target.GetModuleAtIndex(i);
