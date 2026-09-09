@@ -1663,10 +1663,13 @@ void CodeGenModule::Release() {
               LangOpts.PointerAuthInitFiniAddressDiscrimination);
     }
 
-    if (LangOpts.isSignReturnAddressHardenWithLoadReturnAddress())
+    if (LangOpts.hasSignReturnAddressHardening()) {
+      TargetInfo::BranchProtectionInfo BPI(LangOpts);
       getModule().addModuleFlag(
           llvm::Module::Error, "sign-return-address-harden",
-          llvm::MDString::get(getLLVMContext(), "load-return-address"));
+          llvm::MDString::get(getLLVMContext(),
+                              BPI.getSignReturnAddressHardeningStr()));
+    }
 
     if (getTriple().isOSLinux()) {
       getModule().addModuleFlag(llvm::Module::Error, "ptrauth-sign-personality",

@@ -771,11 +771,10 @@ public:
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
 
-  /// Check if return address signing hardening is enabled and uses load from
-  /// the return address.
-  bool isSignReturnAddressHardenWithLoadReturnAddress() const {
-    return getSignReturnAddressHardening() ==
-           SignReturnAddressHardeningKind::LoadReturnAddress;
+  /// Check if return address signing hardening is enabled
+  bool hasSignReturnAddressHardening() const {
+    return getSignReturnAddressHardening() !=
+           SignReturnAddressHardeningKind::None;
   }
 
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }

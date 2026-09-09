@@ -230,8 +230,7 @@ void TargetCodeGenInfo::setBranchProtectionFnAttributes(
   if (BPI.SignReturnAddressHardening ==
       LangOptions::SignReturnAddressHardeningKind::None) {
     F.removeFnAttr("sign-return-address-harden");
-  } else if (BPI.SignReturnAddr !=
-             LangOptions::SignReturnAddressScopeKind::None) {
+  } else {
     F.addFnAttr("sign-return-address-harden",
                 BPI.getSignReturnAddressHardeningStr());
   }
