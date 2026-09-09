@@ -15,7 +15,8 @@ declare void @llvm.gcroot(ptr, ptr)
 ; CHECK: @__gc_two_roots = internal constant %gc_map.0.0 { %gc_map { i32 2, i32 0 }, [0 x ptr] zeroinitializer }
 ; CHECK: @__gc_root_with_metadata = internal constant %gc_map.1 { %gc_map { i32 1, i32 1 }, [1 x ptr] [ptr @type_tag] }
 ; CHECK: @__gc_mixed_metadata = internal constant %gc_map.1.1 { %gc_map { i32 2, i32 1 }, [1 x ptr] [ptr @type_tag] }
-; CHECK: @__gc_with_invoke = internal constant %gc_map.0.2 { %gc_map { i32 1, i32 0 }, [0 x ptr] zeroinitializer }
+; CHECK: @__gc_fat_root = internal constant %gc_map.0.2 { %gc_map { i32 2, i32 0 }, [0 x ptr] zeroinitializer }
+; CHECK: @__gc_with_invoke = internal constant %gc_map.0.3 { %gc_map { i32 1, i32 0 }, [0 x ptr] zeroinitializer }
 ;.
 define void @single_root(ptr %obj) gc "shadow-stack" {
 ; CHECK-LABEL: @single_root(
@@ -132,6 +133,34 @@ define void @no_roots() gc "shadow-stack" {
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  ret void
+}
+
+; Roots are opaque blobs of arbitrary size, so the frame map's first field is
+; the number of llvm.gcroot calls, not the size of the frame: here two roots
+; occupy three pointers' worth of the frame, and NumRoots must still be 2.
+define void @fat_root(ptr %obj) gc "shadow-stack" {
+; CHECK-LABEL: @fat_root(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GC_FRAME:%.*]] = alloca [40 x i8], align 8
+; CHECK-NEXT:    [[GC_CURRHEAD:%.*]] = load ptr, ptr @llvm_gc_root_chain, align 8
+; CHECK-NEXT:    [[GC_FRAME_MAP:%.*]] = getelementptr i8, ptr [[GC_FRAME]], i64 8
+; CHECK-NEXT:    store ptr @__gc_fat_root, ptr [[GC_FRAME_MAP]], align 8
+; CHECK-NEXT:    [[FAT:%.*]] = getelementptr i8, ptr [[GC_FRAME]], i64 16
+; CHECK-NEXT:    [[THIN:%.*]] = getelementptr i8, ptr [[GC_FRAME]], i64 32
+; CHECK-NEXT:    store ptr [[GC_CURRHEAD]], ptr [[GC_FRAME]], align 8
+; CHECK-NEXT:    store ptr [[GC_FRAME]], ptr @llvm_gc_root_chain, align 8
+; CHECK-NEXT:    store ptr [[OBJ:%.*]], ptr [[THIN]], align 8
+; CHECK-NEXT:    [[GC_SAVEDHEAD:%.*]] = load ptr, ptr [[GC_FRAME]], align 8
+; CHECK-NEXT:    store ptr [[GC_SAVEDHEAD]], ptr @llvm_gc_root_chain, align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %fat = alloca { ptr, i1 }
+  %thin = alloca ptr
+  call void @llvm.gcroot(ptr %fat, ptr null)
+  call void @llvm.gcroot(ptr %thin, ptr null)
+  store ptr %obj, ptr %thin
   ret void
 }
 

@@ -6514,14 +6514,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       auto *AI =
           dyn_cast<AllocaInst>(Call.getArgOperand(0)->stripPointerCasts());
       Check(AI, "llvm.gcroot parameter #1 must be an alloca.", Call);
+      Check(AI->isStaticAlloca(),
+            "llvm.gcroot parameter #1 must be a static alloca.", Call);
       Check(isa<Constant>(Call.getArgOperand(1)),
             "llvm.gcroot parameter #2 must be a constant.", Call);
-      if (!AI->getAllocatedType()->isPointerTy()) {
-        Check(!isa<ConstantPointerNull>(Call.getArgOperand(1)),
-              "llvm.gcroot parameter #1 must either be a pointer alloca, "
-              "or argument #2 must be a non-null constant.",
-              Call);
-      }
     }
 
     Check(Call.getParent()->getParent()->hasGC(),

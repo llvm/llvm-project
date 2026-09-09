@@ -1,4 +1,7 @@
-; RUN: not llvm-as < %s > /dev/null 2>&1
+; RUN: llvm-as < %s > /dev/null
+
+; The contents of a gc root are an opaque blob of arbitrary type and size, so
+; an aggregate root is accepted.
 
 declare void @llvm.gcroot(ptr, ptr) nounwind
 

@@ -14433,17 +14433,26 @@ the code generator, and allows some metadata to be associated with it.
 
 ##### Arguments:
 
-The first argument specifies the address of a stack object that contains
-the root pointer. The second pointer (which must be either a constant or
-a global value address) contains the meta-data to be associated with the
-root.
+The first argument specifies the address of a stack object holding the
+root, which must be a static `alloca`. LLVM attaches no meaning to the
+contents of that object: it is an opaque blob of arbitrary type which
+the runtime garbage collector may interpret in any way it likes. In
+particular it need not be, or contain, a pointer. The second pointer
+(which must be either a constant or a global value address) contains the
+meta-data to be associated with the root.
 
 ##### Semantics:
 
-At runtime, a call to this intrinsic stores a null pointer into the
-"ptrloc" location. At compile-time, the code generator generates
-information to allow the runtime to find the pointer at GC safe points.
-The '`llvm.gcroot`' intrinsic may only be used in a function which
+The frontend is responsible for initializing the "ptrloc" object before
+the first GC safe point is reached, since the collector may inspect it
+there. What it stores is up to the collector's conventions and need not
+be zero. As a defensive measure, a root which the code generator cannot
+see initialized in the entry block is zero-initialized at runtime: every
+byte of the object is set to zero. Note that this is a zero bit pattern,
+which is not necessarily the same as a null pointer value for the
+object's type. At compile-time, the code generator generates information
+to allow the runtime to find the object at GC safe points. The
+'`llvm.gcroot`' intrinsic may only be used in a function which
 {ref}`specifies a GC algorithm <gc>`.
 
 (int_gcread)=
