@@ -4,9 +4,6 @@ add_mlir_conversion_library(MLIRIndexToLLVM
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/IndexToLLVM
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_COMPONENTS
   Core
 

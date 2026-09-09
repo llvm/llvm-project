@@ -8,6 +8,17 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 [TOC]
 
+## LLVM 24
+
+### Potentially Breaking Changes
+
+- MLIR dialect, conversion, extension, and translation libraries no longer
+  depend on the aggregate `mlir-headers` target. Downstream projects that
+  relied on that incidental ordering must model generated headers explicitly:
+  link the library that owns the header, use `HEADER_LIBS` with
+  `add_mlir_library` for a header-only or circular relationship, or retain
+  `DEPENDS mlir-headers` as a conservative compatibility escape hatch.
+
 ## LLVM 21
 
 ### GPU/NVVM Changes

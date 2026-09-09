@@ -8,8 +8,6 @@ add_mlir_dialect_library(MLIRGPUTransformOps
 
   DEPENDS
   MLIRGPUTransformOpsIncGen
-  MLIRDeviceMappingInterfacesIncGen
-  MLIRGPUDeviceMapperEnumsGen
 
   LINK_LIBS PUBLIC
   MLIRGPUDialect

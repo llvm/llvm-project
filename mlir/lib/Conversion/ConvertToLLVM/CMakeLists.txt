@@ -17,9 +17,6 @@ add_mlir_conversion_library(MLIRConvertToLLVMInterface
 add_mlir_conversion_library(MLIRConvertToLLVMPass
   ConvertToLLVMPass.cpp
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRConvertToLLVMInterface

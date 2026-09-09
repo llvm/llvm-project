@@ -6,7 +6,6 @@ add_mlir_dialect_library(MLIRDLTITransformOps
 
   DEPENDS
   MLIRDLTITransformOpsIncGen
-  MLIRDLTIDialect
 
   LINK_LIBS PUBLIC
   MLIRDLTIDialect

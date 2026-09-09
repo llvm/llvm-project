@@ -5,7 +5,6 @@ add_mlir_conversion_library(MLIRControlFlowToLLVM
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/ControlFlowToLLVM
 
   DEPENDS
-  MLIRConversionPassIncGen
   intrinsics_gen
 
   LINK_COMPONENTS

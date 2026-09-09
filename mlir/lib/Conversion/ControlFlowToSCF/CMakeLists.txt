@@ -4,9 +4,6 @@ add_mlir_conversion_library(MLIRControlFlowToSCF
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/ControlFlowToSCF
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRArithDialect
