@@ -18,6 +18,5 @@
 #include "CIRGenValue.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/AST/pch.h"
 #include "llvm/Support/pch.h"
