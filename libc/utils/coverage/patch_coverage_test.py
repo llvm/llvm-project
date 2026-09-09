@@ -388,9 +388,7 @@ class TestCalculatePatchStatistics(unittest.TestCase):
         self.assertEqual(summary.total_mcdc_total_conditions, 2)
 
         sin_metric = summary.files["src/math/sin.cpp"]
-        self.assertIn(
-            "1/2 verified (C2 unverified)", sin_metric.condition_diagnostics[0]
-        )
+        self.assertIn("Line 12: C2 unverified", sin_metric.condition_diagnostics[0])
         self.assertEqual(sin_metric.unverified_decision_lines[12], ["C2"])
 
     def test_non_source_and_comment_files_skipped(self):
@@ -438,7 +436,7 @@ class TestPatchReportFormatting(unittest.TestCase):
                     total_decisions_count=1,
                     fully_verified_decisions=1,
                 ),
-                "All **5** executable lines and **2** boolean conditions",
+                "All modified executable lines and boolean conditions achieved full coverage.",
             ),
             (
                 PatchCoverageSummary(
@@ -449,7 +447,7 @@ class TestPatchReportFormatting(unittest.TestCase):
                     total_decisions_count=1,
                     fully_verified_decisions=0,
                 ),
-                "Executed **5 / 5** lines. **1 / 2** boolean conditions",
+                "All **5** modified executable lines were executed, but **1** boolean condition(s) require additional test cases",
             ),
             (
                 PatchCoverageSummary(total_covered_lines=4, total_missed_lines=1),
@@ -464,7 +462,7 @@ class TestPatchReportFormatting(unittest.TestCase):
                     total_decisions_count=1,
                     fully_verified_decisions=0,
                 ),
-                "(**1** unexecuted lines detected in patch).",
+                "(**1** unexecuted line(s) detected in patch).",
             ),
         ]
         for summary, expected in cases:
@@ -513,8 +511,8 @@ class TestPatchReportFormatting(unittest.TestCase):
         )
         table = format_breakdown_table(summary)
         self.assertIn("blob/main/libc/src/math/sin.cpp", table)
-        self.assertIn("MC/DC Conditions", table)
-        self.assertIn("N/A | N/A", table)  # strlen has no MC/DC
+        self.assertIn("MC/DC Coverage", table)
+        self.assertIn("N/A", table)  # strlen has no MC/DC
 
     def test_format_annotated_diff(self):
         """Annotated diff must output covered, missed, partial MC/DC, non-executable, and context lines."""
@@ -532,11 +530,11 @@ class TestPatchReportFormatting(unittest.TestCase):
         )
         summary = PatchCoverageSummary(files={"src/math/sin.cpp": file_metrics})
         annotated = format_annotated_diff(summary, diff_files)
-        self.assertIn("  ctx();", annotated)
-        self.assertIn("+ covered();", annotated)
-        self.assertIn("- missed();  // [MISSED]", annotated)
-        self.assertIn("! if (a && b) {}  // [PARTIAL MC/DC: C2 unverified]", annotated)
-        self.assertIn("  {", annotated)
+        self.assertIn(" ctx();", annotated)
+        self.assertIn("+covered();", annotated)
+        self.assertIn("!missed();  // <-- UNEXECUTED", annotated)
+        self.assertIn("+if (a && b) {}", annotated)
+        self.assertIn("+{", annotated)
 
 
 class TestRenderPatchReportEndToEnd(unittest.TestCase):
@@ -590,9 +588,7 @@ class TestRenderPatchReportEndToEnd(unittest.TestCase):
             )
         output = buf.getvalue()
         self.assertIn("## LLVM-libc MC/DC Patch Coverage Report", output)
-        self.assertIn(
-            "### Patch Coverage: **100.00% Line** | **100.00% MC/DC**", output
-        )
+        self.assertIn("| **MC/DC Coverage** |", output)
         self.assertIn("View Annotated Patch Diff", output)
 
     def test_render_full_report_line_coverage_only(self):
@@ -619,8 +615,8 @@ class TestRenderPatchReportEndToEnd(unittest.TestCase):
             )
         output = buf.getvalue()
         self.assertIn("## LLVM-libc Patch Coverage Report", output)
-        self.assertNotIn("MC/DC", output)
-        self.assertIn("### Patch Coverage: **100.00%**", output)
+        self.assertNotIn("MC/DC Coverage", output)
+        self.assertIn("| **Line Coverage** | **100.00%** |", output)
         self.assertIn("`libc-math-unit-tests`", output)
 
 
@@ -675,8 +671,8 @@ class TestCommandLineInterfacePatch(unittest.TestCase):
             output = buf.getvalue()
             self.assertIn("## LLVM-libc MC/DC Patch Coverage Report", output)
             self.assertIn("blob/main/libc/src/math/sin.cpp", output)
-            self.assertIn("MC/DC Conditions", output)
-            self.assertIn("Decisions (Verified / Total)", output)
+            self.assertIn("MC/DC Coverage", output)
+            self.assertIn("Condition Diagnostics", output)
 
     def test_cli_missing_files_exit(self):
         """CLI must exit with code 1 when diff file or JSON file is missing."""

@@ -448,9 +448,7 @@ def calculate_patch_statistics(
 
                 uncovered_indices = [
                     condition_index + 1
-                    for condition_index, is_covered in enumerate(
-                        decision["conditions"]
-                    )
+                    for condition_index, is_covered in enumerate(decision["conditions"])
                     if not is_covered
                 ]
 
@@ -478,9 +476,9 @@ def calculate_patch_statistics(
                         decision_start_line, decision_end_line + 1
                     ):
                         if decision_line in added_lines:
-                            file_metrics.unverified_decision_lines[
-                                decision_line
-                            ] = [f"C{idx}" for idx in uncovered_indices]
+                            file_metrics.unverified_decision_lines[decision_line] = [
+                                f"C{idx}" for idx in uncovered_indices
+                            ]
 
         summary.files[file_path] = file_metrics
 
@@ -510,25 +508,22 @@ def format_status_banner(summary: PatchCoverageSummary) -> str:
         )
         lines.append("")
         if summary.total_missed_lines == 0 and mcdc_status == "Pass":
-            lines.append("> [!NOTE]")
             lines.append(
-                "> All modified executable lines and boolean conditions achieved full coverage."
+                "All modified executable lines and boolean conditions achieved full coverage."
             )
         elif summary.total_missed_lines == 0:
             unv_count = (
                 summary.total_mcdc_total_conditions
                 - summary.total_mcdc_covered_conditions
             )
-            lines.append("> [!WARNING]")
             lines.append(
-                f"> All **{summary.total_lines}** modified executable lines were executed, but "
+                f"All **{summary.total_lines}** modified executable lines were executed, but "
                 f"**{unv_count}** boolean condition(s) require additional test cases for full MC/DC coverage. "
                 "See the **MC/DC Decision Details** section below for recommended test cases."
             )
         else:
-            lines.append("> [!CAUTION]")
             lines.append(
-                f"> **Missing Coverage:** Executed **{summary.total_covered_lines} / {summary.total_lines}** lines "
+                f"**Missing Coverage:** Executed **{summary.total_covered_lines} / {summary.total_lines}** lines "
                 f"(**{summary.total_missed_lines}** unexecuted line(s) detected in patch)."
             )
     else:
@@ -541,14 +536,12 @@ def format_status_banner(summary: PatchCoverageSummary) -> str:
         )
         lines.append("")
         if summary.total_missed_lines == 0:
-            lines.append("> [!NOTE]")
             lines.append(
-                f"> All **{summary.total_lines}** newly added or modified executable lines are covered."
+                f"All **{summary.total_lines}** newly added or modified executable lines are covered."
             )
         else:
-            lines.append("> [!CAUTION]")
             lines.append(
-                f"> **Missing Coverage:** Executed **{summary.total_covered_lines} / {summary.total_lines}** lines "
+                f"**Missing Coverage:** Executed **{summary.total_covered_lines} / {summary.total_lines}** lines "
                 f"(**{summary.total_missed_lines}** unexecuted line(s) detected in patch)."
             )
     lines.append("")
@@ -664,8 +657,7 @@ def format_breakdown_table(
             else "0"
         )
         total_unverified = (
-            summary.total_mcdc_total_conditions
-            - summary.total_mcdc_covered_conditions
+            summary.total_mcdc_total_conditions - summary.total_mcdc_covered_conditions
         )
         total_mcdc_summary = (
             f"**{total_unverified}** condition(s) unverified"
@@ -722,8 +714,7 @@ def extract_condition_expressions(line_text: str) -> List[str]:
 def format_mcdc_analysis(summary: PatchCoverageSummary) -> str:
     """Formats human-readable analysis and recommendations for MC/DC decisions."""
     has_unverified = any(
-        any(d.uncovered_indices for d in m.mcdc_details)
-        for m in summary.files.values()
+        any(d.uncovered_indices for d in m.mcdc_details) for m in summary.files.values()
     )
     if not has_unverified:
         return ""
@@ -753,7 +744,9 @@ def format_mcdc_analysis(summary: PatchCoverageSummary) -> str:
                 )
                 c_name = f" (`{c_expr}`)" if cond_idx <= len(cond_texts) else ""
                 if cond_idx in decision.uncovered_indices:
-                    lines.append(f"  - **Condition {cond_idx}{c_name}:** **Unverified**")
+                    lines.append(
+                        f"  - **Condition {cond_idx}{c_name}:** **Unverified**"
+                    )
                     lines.append(
                         f"    - *Recommendation:* Add test cases where `{c_expr}` evaluates to True and "
                         "False while keeping other conditions in the decision constant."
@@ -832,8 +825,7 @@ def render_patch_report(
 
     if summary.total_lines == 0 or not summary.files:
         print("### Summary\n")
-        print("> [!NOTE]")
-        print("> No executable lines were added or modified in this patch.")
+        print("No executable lines were added or modified in this patch.")
         return
 
     # 2. Status Banner (Executive Summary Table & Callout)

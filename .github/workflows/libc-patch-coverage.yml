@@ -301,7 +301,11 @@ jobs:
         echo "[LOG] Generated patch.diff size: $(wc -l < patch.diff 2>/dev/null || echo 0) lines"
         echo "[LOG] Generated coverage.json size: $(wc -c < coverage.json 2>/dev/null || echo 0) bytes"
 
-        # 3. Run Patch Coverage Python Script using persisted commit metadata
+        # 3. Generate interactive source HTML report via llvm-cov
+        llvm-cov-23 show -format=html -output-dir=coverage_html -instr-profile=libc_full.profdata "${EXECUTABLES[0]}" "${OBJECTS[@]}" $MODIFIED_FILES || true
+        echo "[LOG] Generated interactive coverage_html directory."
+
+        # 4. Run Patch Coverage Python Script using persisted commit metadata
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
         cat coverage_report.md >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Coverage report successfully written to GITHUB_STEP_SUMMARY."
@@ -327,6 +331,7 @@ jobs:
         name: ${{ matrix.artifact_name }}
         path: |
           coverage_report.md
+          coverage_html/
           patch.diff
           coverage.json
         if-no-files-found: ignore
