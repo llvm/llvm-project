@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2 | FileCheck %s --check-prefixes=SSE2
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-unknown-linux-gnu -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE41
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2 | FileCheck %s --check-prefixes=AVX2
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512vl | FileCheck %s --check-prefixes=AVX512
 
 ; Non-power-of-2 sub-16B vector loads are materialized by a base load plus a
 ; folded vpinsr*(mem) per remaining in-lane chunk (1B->pinsrb, 2B->pinsrw,
@@ -53,6 +54,19 @@ define void @npot_loads(ptr %p) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v7f32 = load <7 x float>, ptr %p, align 1
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f64 = load <3 x double>, ptr %p, align 1
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512-LABEL: 'npot_loads'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %pow2_v2i8 = load <2 x i8>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i8 = load <3 x i8>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i8 = load <7 x i8>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i16 = load <3 x i16>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i32 = load <3 x i32>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v7i32 = load <7 x i32>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i64 = load <3 x i64>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f32 = load <3 x float>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v7f32 = load <7 x float>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f64 = load <3 x double>, ptr %p, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %pow2_v2i8 = load <2 x i8>, ptr %p, align 1
   %v3i8 = load <3 x i8>, ptr %p, align 1
