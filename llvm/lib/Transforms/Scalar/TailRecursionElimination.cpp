@@ -155,10 +155,10 @@ static bool canTRE(Function &F) {
 }
 
 namespace {
-struct AllocaDerivedValueTracker {
+struct LocalStackValueTracker {
   // Start at a root value and walk its use-def chain to mark calls that use the
-  // value or a derived value in AllocaUsers, and places where it may escape in
-  // EscapePoints.
+  // value or a derived value in LocalStackUsers, and places where it may
+  // escape in EscapePoints.
   void walk(Value *Root) {
     SmallVector<Use *, 32> Worklist;
     SmallPtrSet<Use *, 32> Visited;
@@ -181,6 +181,18 @@ struct AllocaDerivedValueTracker {
       case Instruction::Call:
       case Instruction::Invoke: {
         auto &CB = cast<CallBase>(*I);
+        // llvm.stackrestore only assigns its argument to the stack pointer. It
+        // neither captures the value nor hands it to anything that could, so it
+        // is not an escape even though it writes memory and its argument is not
+        // marked nocapture. Without this every call after a VLA scope or a
+        // __builtin_stack_save would lose its tail marking. This is handled
+        // here rather than by marking the intrinsic's argument nocapture
+        // because llvm.stackrestore can end the lifetime of a dynamic alloca
+        // that is not passed to it, so its memory attributes are deliberately
+        // conservative and passes special-case it individually.
+        if (auto *II = dyn_cast<IntrinsicInst>(I);
+            II && II->getIntrinsicID() == Intrinsic::stackrestore)
+          continue;
         // If the alloca-derived argument is passed byval it is not an escape
         // point, or a use of an alloca. Calling with byval copies the contents
         // of the alloca into argument registers or stack slots, which exist
@@ -223,8 +235,8 @@ struct AllocaDerivedValueTracker {
   }
 
   void callUsesLocalStack(CallBase &CB, bool IsNocapture) {
-    // Add it to the list of alloca users.
-    AllocaUsers.insert(&CB);
+    // Add it to the list of calls that use the local stack.
+    LocalStackUsers.insert(&CB);
 
     // If it's nocapture then it can't capture this alloca.
     if (IsNocapture)
@@ -235,26 +247,52 @@ struct AllocaDerivedValueTracker {
       EscapePoints.insert(&CB);
   }
 
-  SmallPtrSet<Instruction *, 32> AllocaUsers;
+  SmallPtrSet<Instruction *, 32> LocalStackUsers;
   SmallPtrSet<Instruction *, 32> EscapePoints;
 };
 } // namespace
+
+/// Does \p II produce an address of the frame of the function containing it?
+/// Such an address is dangling once a tail call has torn that frame down, so a
+/// call that receives one cannot be marked tail. llvm.returnaddress is not in
+/// this class: it produces a code address, not a frame address.
+static bool returnsCurrentFrameAddress(const IntrinsicInst *II) {
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::frameaddress:
+    // A non-zero level names a frame further up the stack, which outlives the
+    // frame a tail call destroys.
+    return cast<ConstantInt>(II->getArgOperand(0))->isZero();
+  case Intrinsic::addressofreturnaddress:
+  case Intrinsic::eh_dwarf_cfa:
+  case Intrinsic::localaddress:
+  case Intrinsic::sponentry:
+  case Intrinsic::stackaddress:
+  case Intrinsic::stacksave:
+  case Intrinsic::swift_async_context_addr:
+    return true;
+  default:
+    return false;
+  }
+}
 
 static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
                       ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
 
-  // The local stack holds all alloca instructions and all byval arguments.
-  AllocaDerivedValueTracker Tracker;
+  // The local stack is reachable through allocas, through byval arguments, and
+  // through the intrinsics that hand out an address of the current frame.
+  LocalStackValueTracker Tracker;
   for (Argument &Arg : F.args()) {
     if (Arg.hasByValAttr())
       Tracker.walk(&Arg);
   }
-  for (auto &BB : F) {
-    for (auto &I : BB)
-      if (AllocaInst *AI = dyn_cast<AllocaInst>(&I))
-        Tracker.walk(AI);
+  for (Instruction &I : instructions(F)) {
+    if (isa<AllocaInst>(&I) ||
+        returnsCurrentFrameAddress(dyn_cast<IntrinsicInst>(&I)))
+      Tracker.walk(&I);
   }
 
   bool Modified = false;
@@ -320,7 +358,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
         // global anyhow.
         //
         // Note that this runs whether we know an alloca has escaped or not. If
-        // it has, then we can't trust Tracker.AllocaUsers to be accurate.
+        // it has, then we can't trust Tracker.LocalStackUsers to be accurate.
         bool SafeToTail = true;
         for (auto &Arg : CI->args()) {
           if (isa<Constant>(Arg.getUser()))
@@ -343,7 +381,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
         }
       }
 
-      if (!IsNoTail && Escaped == UNESCAPED && !Tracker.AllocaUsers.count(CI))
+      if (!IsNoTail && Escaped == UNESCAPED &&
+          !Tracker.LocalStackUsers.count(CI))
         DeferredTails.push_back(CI);
     }
 
