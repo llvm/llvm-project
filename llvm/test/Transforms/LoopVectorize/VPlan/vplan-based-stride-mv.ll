@@ -2863,11 +2863,11 @@ define void @basic_masked(ptr noalias %p.out, ptr %p, i64 %stride, i64 %x) {
 ; CHECK-NEXT:    Successor(s): if
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if:
-; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>, ir<%c>
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>, ir<%c>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>, ir<%c>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
@@ -3649,7 +3649,7 @@ define void @known_non_unit_via_load_range(ptr noalias %out, ptr %p, ptr %stride
 ; CHECK-NEXT:  Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %stride = load i64, ptr %stride.ptr, align 8, !range !0
+; CHECK-NEXT:    IR   %stride = load i64, ptr %stride.ptr, align 8, !range !1
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
