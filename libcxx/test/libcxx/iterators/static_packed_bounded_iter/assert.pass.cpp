@@ -33,7 +33,7 @@ void test() {
 
   using BoundedIter = std::__static_packed_bounded_iterator<Ptr, decltype(arr), sz>;
 
-  BoundedIter it = std::__make_static_packed_bounded_iter<Ptr, decltype(arr), sz>(Ptr(arr));
+  BoundedIter it = std::__make_static_packed_bounded_iter<Ptr, decltype(arr), sz>(Ptr(arr), 0);
 
   TEST_LIBCPP_ASSERT_FAILURE(
       it--, "__static_packed_bounded_iterator::operator--: Attempt to rewind an iterator past the start");

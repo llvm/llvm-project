@@ -31,9 +31,8 @@ constexpr bool tests() {
   Foo array[]             = {0, 1};
   Foo* b                  = array + 0;
   using BoundedIter       = std::__static_packed_bounded_iterator<Iter, decltype(array), std::size(array)>;
-  BoundedIter const iter1 = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b));
-  BoundedIter const iter2 =
-      std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b)) + 2;
+  BoundedIter const iter1 = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 0);
+  BoundedIter const iter2 = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 2);
 
   // operator==
   {

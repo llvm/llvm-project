@@ -96,7 +96,7 @@ private:
 
 public:
   template <class _Ptr2, class _Tag2, size_t _RangeCapacity2>
-  friend auto __make_static_packed_bounded_iter(_Ptr2) noexcept;
+  friend auto __make_static_packed_bounded_iter(_Ptr2, size_t) noexcept;
 
   __static_packed_bounded_iterator()
     requires is_default_constructible_v<_Ptr>
@@ -236,8 +236,8 @@ public:
 };
 
 template <class _Ptr, class _Tag, size_t _RangeCapacity>
-auto __make_static_packed_bounded_iter(_Ptr __p) noexcept {
-  return __static_packed_bounded_iterator<_Ptr, _Tag, _RangeCapacity>(__p);
+auto __make_static_packed_bounded_iter(_Ptr __base, size_t __offset) noexcept {
+  return __static_packed_bounded_iterator<_Ptr, _Tag, _RangeCapacity>(__base) + __offset;
 }
 
 _LIBCPP_END_NAMESPACE_STD

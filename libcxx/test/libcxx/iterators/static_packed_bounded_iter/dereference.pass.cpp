@@ -29,9 +29,8 @@ constexpr bool tests() {
 
   using BoundedIter = std::__static_packed_bounded_iterator<Foo*, decltype(array), std::size(array)>;
 
-  BoundedIter const iter1 = std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(Iter(b));
-  BoundedIter const iter2 =
-      std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(Iter(b)) + 5;
+  BoundedIter const iter1 = std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(Iter(b), 0);
+  BoundedIter const iter2 = std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(Iter(b), 5);
 
   // operator*
   assert(*iter1 == Foo{40});

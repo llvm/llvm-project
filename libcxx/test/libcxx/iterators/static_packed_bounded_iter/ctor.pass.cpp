@@ -32,7 +32,7 @@ using Iter = std::__static_packed_bounded_iterator<T, T, _Capacity>;
 constexpr bool test() {
   {
     Derived a[1] = {{2}};
-    auto it      = std::__make_static_packed_bounded_iter<Derived*, Derived*, 1>(a);
+    auto it      = std::__make_static_packed_bounded_iter<Derived*, Derived*, 1>(a, 0);
 
     assert(it->x == 1);
     assert(it->y == 2);
