@@ -259,7 +259,8 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
       DbgValueLocEntries.push_back(
           DbgValueLocEntry(TargetIndexLocation(Op.getIndex(), Op.getOffset())));
     } else if (Op.isGlobal()) {
-      DbgValueLocEntries.push_back(DbgValueLocEntry(Op.getGlobal()));
+      DbgValueLocEntries.push_back(DbgValueLocEntry(
+          GlobalAddressLocation(Op.getGlobal(), Op.getOffset())));
     } else if (Op.isImm())
       DbgValueLocEntries.push_back(DbgValueLocEntry(Op.getImm()));
     else if (Op.isFPImm())
@@ -3347,7 +3348,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       assert(AP.TM.getTargetTriple().isWasm());
       DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
     } else if (Entry.isGlobalAddress()) {
-      if (!DwarfExpr.addGlobalAddress(Entry.getGlobalAddress()))
+      if (!DwarfExpr.addGlobalAddress(Entry.getGlobalAddress(),
+                                      Entry.getGlobalOffset()))
         return false;
     } else if (Entry.isConstantFP()) {
       if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE() &&

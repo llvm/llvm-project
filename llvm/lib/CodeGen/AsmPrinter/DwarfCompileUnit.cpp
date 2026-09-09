@@ -928,7 +928,8 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
       DwarfExpr.addFragmentOffset(Expr);
-      if (!DwarfExpr.addGlobalAddress(Entry->getGlobalAddress()))
+      if (!DwarfExpr.addGlobalAddress(Entry->getGlobalAddress(),
+                                      Entry->getGlobalOffset()))
         return;
       DwarfExpr.addExpression(Expr);
       addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
@@ -986,7 +987,8 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
       assert(Asm->TM.getTargetTriple().isWasm());
       DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
     } else if (Entry.isGlobalAddress()) {
-      if (!DwarfExpr.addGlobalAddress(Entry.getGlobalAddress()))
+      if (!DwarfExpr.addGlobalAddress(Entry.getGlobalAddress(),
+                                      Entry.getGlobalOffset()))
         return false;
     } else {
       llvm_unreachable("Unsupported Entry type.");

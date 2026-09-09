@@ -35,6 +35,20 @@ struct TargetIndexLocation {
   }
 };
 
+/// This struct describes the address of a global, displaced by a constant.
+struct GlobalAddressLocation {
+  const GlobalValue *GV;
+  int64_t Offset;
+
+  GlobalAddressLocation() = default;
+  GlobalAddressLocation(const GlobalValue *GV, int64_t Offset)
+      : GV(GV), Offset(Offset) {}
+
+  bool operator==(const GlobalAddressLocation &Other) const {
+    return GV == Other.GV && Offset == Other.Offset;
+  }
+};
+
 /// A single location or constant within a variable location description, with
 /// either a single entry (with an optional DIExpression) used for a DBG_VALUE,
 /// or a list of entries used for a DBG_VALUE_LIST.
@@ -56,7 +70,6 @@ class DbgValueLocEntry {
     int64_t Int;
     const ConstantFP *CFP;
     const ConstantInt *CIP;
-    const GlobalValue *GV;
   } Constant;
 
   union {
@@ -64,6 +77,8 @@ class DbgValueLocEntry {
     MachineLocation Loc;
     /// Or a location from target specific location.
     TargetIndexLocation TIL;
+    /// Or the address of a global.
+    GlobalAddressLocation GAL;
   };
 
 public:
@@ -77,9 +92,8 @@ public:
   DbgValueLocEntry(MachineLocation Loc) : EntryKind(E_Location), Loc(Loc) {}
   DbgValueLocEntry(TargetIndexLocation Loc)
       : EntryKind(E_TargetIndexLocation), TIL(Loc) {}
-  DbgValueLocEntry(const GlobalValue *GV) : EntryKind(E_GlobalAddress) {
-    Constant.GV = GV;
-  }
+  DbgValueLocEntry(GlobalAddressLocation GAL)
+      : EntryKind(E_GlobalAddress), GAL(GAL) {}
 
   bool isLocation() const { return EntryKind == E_Location; }
   bool isIndirectLocation() const {
@@ -95,7 +109,8 @@ public:
   int64_t getInt() const { return Constant.Int; }
   const ConstantFP *getConstantFP() const { return Constant.CFP; }
   const ConstantInt *getConstantInt() const { return Constant.CIP; }
-  const GlobalValue *getGlobalAddress() const { return Constant.GV; }
+  const GlobalValue *getGlobalAddress() const { return GAL.GV; }
+  int64_t getGlobalOffset() const { return GAL.Offset; }
   MachineLocation getLoc() const { return Loc; }
   TargetIndexLocation getTargetIndexLocation() const { return TIL; }
   friend bool operator==(const DbgValueLocEntry &, const DbgValueLocEntry &);
@@ -275,7 +290,7 @@ inline bool operator==(const DbgValueLocEntry &A, const DbgValueLocEntry &B) {
   case DbgValueLocEntry::E_ConstantInt:
     return A.Constant.CIP == B.Constant.CIP;
   case DbgValueLocEntry::E_GlobalAddress:
-    return A.Constant.GV == B.Constant.GV;
+    return A.GAL == B.GAL;
   }
   llvm_unreachable("unhandled EntryKind");
 }

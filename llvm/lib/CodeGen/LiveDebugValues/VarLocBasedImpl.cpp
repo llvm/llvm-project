@@ -326,6 +326,14 @@ private:
       bool operator!=(const WasmLoc &Other) const { return !(*this == Other); }
     };
 
+    struct GlobalAddr {
+      const GlobalValue *GV;
+      int64_t Offset;
+      bool operator==(const GlobalAddr &Other) const {
+        return GV == Other.GV && Offset == Other.Offset;
+      }
+    };
+
     /// Identity of the variable at this location.
     const DebugVariable Var;
 
@@ -362,7 +370,7 @@ private:
       const ConstantFP *FPImm;
       const ConstantInt *CImm;
       WasmLoc WasmLocation;
-      const GlobalValue *GV;
+      GlobalAddr GlobalAddress;
       MachineLocValue() : Hash(0) {}
     };
 
@@ -381,9 +389,10 @@ private:
           return Value.SpillLocation == Other.Value.SpillLocation;
         case MachineLocKind::WasmLocKind:
           return Value.WasmLocation == Other.Value.WasmLocation;
+        case MachineLocKind::GlobalAddrKind:
+          return Value.GlobalAddress == Other.Value.GlobalAddress;
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
-        case MachineLocKind::GlobalAddrKind:
           return Value.Hash == Other.Value.Hash;
         default:
           llvm_unreachable("Invalid kind");
@@ -405,9 +414,13 @@ private:
                                  Value.WasmLocation.Offset) <
                  std::make_tuple(Other.Kind, Other.Value.WasmLocation.Index,
                                  Other.Value.WasmLocation.Offset);
+        case MachineLocKind::GlobalAddrKind:
+          return std::make_tuple(Kind, Value.GlobalAddress.GV,
+                                 Value.GlobalAddress.Offset) <
+                 std::make_tuple(Other.Kind, Other.Value.GlobalAddress.GV,
+                                 Other.Value.GlobalAddress.Offset);
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
-        case MachineLocKind::GlobalAddrKind:
           return std::tie(Kind, Value.Hash) <
                  std::tie(Other.Kind, Other.Value.Hash);
         default:
@@ -474,7 +487,7 @@ private:
         Loc.WasmLocation = {Op.getIndex(), Op.getOffset()};
       } else if (Op.isGlobal()) {
         Kind = MachineLocKind::GlobalAddrKind;
-        Loc.GV = Op.getGlobal();
+        Loc.GlobalAddress = {Op.getGlobal(), Op.getOffset()};
       } else
         llvm_unreachable("Invalid Op kind for MachineLoc.");
       return {Kind, Loc};
@@ -743,7 +756,9 @@ private:
           Out << MLoc.Value.Immediate;
           break;
         case MachineLocKind::GlobalAddrKind:
-          Out << MLoc.Value.GV->getName();
+          Out << MLoc.Value.GlobalAddress.GV->getName();
+          if (MLoc.Value.GlobalAddress.Offset)
+            Out << '+' << MLoc.Value.GlobalAddress.Offset;
           break;
         case MachineLocKind::WasmLocKind: {
           if (TII) {

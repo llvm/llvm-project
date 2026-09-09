@@ -862,7 +862,7 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
   emitOp(dwarf::DW_OP_and);
 }
 
-bool DwarfExpression::addGlobalAddress(const GlobalValue *GV) {
+bool DwarfExpression::addGlobalAddress(const GlobalValue *GV, int64_t Offset) {
   DwarfDebug &DD = CU.getDwarfDebug();
 
   // Prefer the address pool, whose index is plain data and so can be emitted
@@ -884,6 +884,17 @@ bool DwarfExpression::addGlobalAddress(const GlobalValue *GV) {
   } else {
     emitOp(dwarf::DW_OP_addr);
     emitRelocatedAddress(Sym);
+  }
+
+  // The displacement cannot be folded into the address itself: a pool entry is
+  // keyed on the symbol alone, and a DW_FORM_addr label carries no addend. Let
+  // the expression apply it instead.
+  if (Offset > 0) {
+    emitOp(dwarf::DW_OP_plus_uconst);
+    emitUnsigned(Offset);
+  } else if (Offset < 0) {
+    addSignedConstant(Offset);
+    emitOp(dwarf::DW_OP_plus);
   }
   return true;
 }

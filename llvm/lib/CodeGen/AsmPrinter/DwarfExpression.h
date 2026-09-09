@@ -320,10 +320,11 @@ public:
   /// The Index is an identifier for locals, globals or operand stack.
   void addWasmLocation(unsigned Index, uint64_t Offset);
 
-  /// Emit the address of \p GV as an implicit location description, i.e. as the
-  /// value of the described entity rather than as the address of its storage.
-  /// Returns false if the address cannot be spelled in this unit's DWARF.
-  bool addGlobalAddress(const GlobalValue *GV);
+  /// Emit the address of \p GV displaced by \p Offset as an implicit location
+  /// description, i.e. as the value of the described entity rather than as the
+  /// address of its storage. Returns false if the address cannot be spelled in
+  /// this unit's DWARF.
+  bool addGlobalAddress(const GlobalValue *GV, int64_t Offset);
 };
 
 /// DwarfExpression implementation for .debug_loc entries.
