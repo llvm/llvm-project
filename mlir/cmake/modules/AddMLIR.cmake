@@ -305,6 +305,22 @@ function(add_mlir_example_library name)
   endif()
 endfunction()
 
+function(_mlir_link_libraries_reach_mlirir out_var)
+  set(reaches_mlirir OFF)
+  foreach(lib ${ARGN})
+    if(lib STREQUAL MLIRIR)
+      set(reaches_mlirir ON)
+    elseif(TARGET ${lib})
+      get_target_property(lib_reaches_mlirir
+        ${lib} MLIR_MLIRIR_LINK_CLOSURE)
+      if(lib_reaches_mlirir)
+        set(reaches_mlirir ON)
+      endif()
+    endif()
+  endforeach()
+  set(${out_var} ${reaches_mlirir} PARENT_SCOPE)
+endfunction()
+
 # Declare an mlir library which can be compiled in libMLIR.so
 # In addition to everything that llvm_add_library accepts, this
 # also has the following option:
@@ -387,9 +403,22 @@ function(add_mlir_library name)
   _check_llvm_components_usage(${name} ${ARG_LINK_LIBS})
 
   list(APPEND ARG_DEPENDS mlir-generic-headers)
-  llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
+  _mlir_link_libraries_reach_mlirir(MLIRIR_LINK_CLOSURE ${ARG_LINK_LIBS})
+  set(PCH_REUSE_ARGS)
+  if(TARGET MLIRIR AND MLIRIR_LINK_CLOSURE AND NOT ARG_STANDALONE)
+    set(PCH_REUSE_ARGS PCH_REUSE_FROM MLIRIR)
+  endif()
+  llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs}
+    ${PCH_REUSE_ARGS}
+    DEPENDS ${ARG_DEPENDS}
+    LINK_COMPONENTS ${ARG_LINK_COMPONENTS}
+    LINK_LIBS ${ARG_LINK_LIBS})
 
   if(TARGET ${name})
+    if(name STREQUAL MLIRIR OR MLIRIR_LINK_CLOSURE)
+      set_target_properties(${name} PROPERTIES
+        MLIR_MLIRIR_LINK_CLOSURE TRUE)
+    endif()
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
     if(ARG_INSTALL_WITH_TOOLCHAIN)
       set_target_properties(${name} PROPERTIES MLIR_INSTALL_WITH_TOOLCHAIN TRUE)
@@ -746,8 +775,38 @@ endfunction(mlir_check_all_link_libraries)
 # part of the dylib (like test libraries), target_link_libraries() should be
 # used.
 function(mlir_target_link_libraries target type)
+  set(pch_compile_target ${target})
   if (TARGET obj.${target})
     target_link_libraries(obj.${target} ${type} ${ARGN})
+    set(pch_compile_target obj.${target})
+  endif()
+
+  _mlir_link_libraries_reach_mlirir(mlirir_link_closure ${ARGN})
+
+  if(TARGET MLIRIR AND mlirir_link_closure)
+    get_target_property(current_disable_all_pch ${pch_compile_target}
+      DISABLE_PRECOMPILE_HEADERS)
+    get_target_property(current_disable_pch_reuse ${pch_compile_target}
+      LLVM_DISABLE_PCH_REUSE)
+    get_target_property(current_pch_headers ${pch_compile_target}
+      PRECOMPILE_HEADERS)
+    get_target_property(current_pch_reuse ${pch_compile_target}
+      PRECOMPILE_HEADERS_REUSE_FROM)
+    set(current_pch_priority 0)
+    if(TARGET ${current_pch_reuse})
+      get_target_property(current_pch_priority ${current_pch_reuse}
+        LLVM_PCH_PRIORITY)
+    endif()
+    get_target_property(mlirir_pch_priority MLIRIR LLVM_PCH_PRIORITY)
+    if(NOT current_disable_all_pch AND NOT current_disable_pch_reuse AND
+        NOT current_pch_headers AND
+        mlirir_pch_priority GREATER current_pch_priority)
+      set_target_properties(${pch_compile_target} PROPERTIES
+        PRECOMPILE_HEADERS_REUSE_FROM MLIRIR)
+      add_dependencies(${pch_compile_target} MLIRIR)
+    endif()
+    set_target_properties(${target} PROPERTIES
+      MLIR_MLIRIR_LINK_CLOSURE TRUE)
   endif()
 
   if (MLIR_LINK_MLIR_DYLIB)
