@@ -1089,12 +1089,17 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
   // The units of $idx and $offset are in dwords.
   //
   // The index reaches the hardware through M0, and how it gets there depends on
-  // the subtarget, so SITargetLowering::finalizeLowering fills that in rather
-  // than TableGen: for v_movrel[sd] it copies the index to M0 and rewrites $idx
-  // to it, making the access a plain M0 read; under the VGPR indexing mode the
-  // s_set_gpr_idx_on it expands to clobbers M0 instead, which the access
-  // carries as an implicit def. A divergent-index access is kept inside its
-  // waterfall loop by its implicit use of EXEC (see resultDependsOnExec).
+  // the subtarget, so these carry a custom inserter rather than declaring it in
+  // TableGen: for v_movrel[sd] it copies the index to M0 and rewrites $idx to
+  // it, making the access a plain M0 read; under the VGPR indexing mode the
+  // s_set_gpr_idx_on it expands to clobbers M0 instead, which the access then
+  // carries as an implicit def.
+  //
+  // The inserter runs at FinalizeISel, which is after SIFixSGPRCopies, so a
+  // divergent index has already been made uniform by its waterfall loop and the
+  // copy lands inside that loop next to the per-iteration index. Assigning M0
+  // any earlier would defeat the waterfall: legalizeOperands decides to build it
+  // from !isSGPRReg(idx), and M0 is SGPR-class.
   //
   // Unlike SI_INDIRECT_SRC/DST and the V_INDIRECT_REG_* pseudos, the storage
   // indexed here is the whole register file rather than a tuple an operand can
@@ -1106,6 +1111,7 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
       let mayLoad = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
+      let usesCustomInserter = 1;
   }
   def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
     (outs),
@@ -1114,6 +1120,7 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
       let mayStore = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
+      let usesCustomInserter = 1;
   }
 }
 
