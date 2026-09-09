@@ -142,24 +142,18 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
 
   // constants to check whether a file descriptor was opened in read or write
   // only mode
-  const bool FD_OPENED_IN_READ_ONLY = (fd_flags & O_ACCMODE) == O_RDONLY;
-  const bool FD_OPENED_IN_WRITE_ONLY = (fd_flags & O_ACCMODE) == O_WRONLY;
+  const bool fd_opened_in_read_only = (fd_flags & O_ACCMODE) == O_RDONLY;
+  const bool fd_opened_in_write_only = (fd_flags & O_ACCMODE) == O_WRONLY;
 
-  if ((FD_OPENED_IN_READ_ONLY && file_mode.write_allowed()) ||
-      (FD_OPENED_IN_WRITE_ONLY && file_mode.read_allowed())) {
+  if ((fd_opened_in_read_only && file_mode.write_allowed()) ||
+      (fd_opened_in_write_only && file_mode.read_allowed())) {
     return Error(EINVAL);
   }
 
   bool do_seek = false;
+  const bool has_append_flag = fd_flags & O_APPEND;
 
-  // TODO: Ask Michael if this explicit value is better. I think it is more
-  // readable in the conditional statements than the bit manipulations.
-  //
-  // TODO<me>: If he agrees check for conditional statements with bit checking
-  // and rework their use.
-  const bool APPEND_MODE_IS_ENABLED_IN_FD = fd_flags & O_APPEND;
-
-  if (file_mode.is_append() && !APPEND_MODE_IS_ENABLED_IN_FD) {
+  if (file_mode.is_append() && !has_append_flag) {
     do_seek = true;
     if (!linux_syscalls::fcntl(fd, F_SETFL,
                                reinterpret_cast<void *>(fd_flags | O_APPEND))
@@ -265,11 +259,11 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
 
   // constants to check whether a file descriptor was opened in read or write
   // only mode
-  const bool FD_OPENED_IN_READ_ONLY = (fd_flags & O_ACCMODE) == O_RDONLY;
-  const bool FD_OPENED_IN_WRITE_ONLY = (fd_flags & O_ACCMODE) == O_WRONLY;
+  const bool fd_opened_in_read_only = (fd_flags & O_ACCMODE) == O_RDONLY;
+  const bool fd_opened_in_write_only = (fd_flags & O_ACCMODE) == O_WRONLY;
 
-  if ((FD_OPENED_IN_READ_ONLY && file_mode.write_allowed()) ||
-      (FD_OPENED_IN_WRITE_ONLY && file_mode.read_allowed())) {
+  if ((fd_opened_in_read_only && file_mode.write_allowed()) ||
+      (fd_opened_in_write_only && file_mode.read_allowed())) {
     return EBADF;
   }
 
