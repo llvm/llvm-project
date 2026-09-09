@@ -3,78 +3,150 @@
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func.func @entry() {
-  %inf = arith.constant 0x7F800000 : f32
-  %ninf = arith.constant 0xFF800000 : f32
+func.func @maximumf_finite() {
+  // The neutral (-inf) must order below every active lane. The masked-off lane is the
+  // largest.
+  // max(<-inf>, -5, -7, -5) = -5
   %mask = arith.constant dense<[true, true, true, false]> : vector<4xi1>
-
-  // Ordinary negative data. A neutral value anywhere above the active lanes,
-  // such as a negative subnormal, would be returned instead of the maximum.
-  %v0 = arith.constant dense<[-5.0, -7.0, -5.0, -9.0]> : vector<4xf32>
+  %v = arith.constant dense<[-5.0, -7.0, -5.0, -1.0]> : vector<4xf32>
   %0 = vector.mask %mask {
-    vector.reduction <maximumf>, %v0 : vector<4xf32> into f32
+    vector.reduction <maximumf>, %v : vector<4xf32> into f32
   } : vector<4xi1> -> f32
+  vector.print str "maximumf_finite\n"
   vector.print %0 : f32
-  // CHECK: -5
+  return
+}
+// CHECK-LABEL: maximumf_finite
+// CHECK-NEXT: -5
 
-  // Mirror image for the minimum.
-  %v1 = arith.constant dense<[5.0, 7.0, 5.0, 9.0]> : vector<4xf32>
-  %1 = vector.mask %mask {
-    vector.reduction <minimumf>, %v1 : vector<4xf32> into f32
+func.func @minimumf_finite() {
+  // min(<+inf>, 5, 7, 5) = 5
+  %mask = arith.constant dense<[true, true, true, false]> : vector<4xi1>
+  %v = arith.constant dense<[5.0, 7.0, 5.0, 1.0]> : vector<4xf32>
+  %0 = vector.mask %mask {
+    vector.reduction <minimumf>, %v : vector<4xf32> into f32
   } : vector<4xi1> -> f32
-  vector.print %1 : f32
-  // CHECK: 5
+  vector.print str "minimumf_finite\n"
+  vector.print %0 : f32
+  return
+}
+// CHECK-LABEL: minimumf_finite
+// CHECK-NEXT: 5
 
-  // Infinite active lanes: the largest finite value would win over them.
-  %v2 = vector.broadcast %ninf : f32 to vector<4xf32>
-  %2 = vector.mask %mask {
-    vector.reduction <maximumf>, %v2 : vector<4xf32> into f32
+func.func @maximumf_inf() {
+  // The neutral must be an infinity: a finite one wins over -inf lanes.
+  // max(<-inf>, -inf, -inf, -inf) = -inf
+  %mask = arith.constant dense<[true, true, true, false]> : vector<4xi1>
+  %ninf = arith.constant 0xFF800000 : f32
+  %v = vector.broadcast %ninf : f32 to vector<4xf32>
+  %0 = vector.mask %mask {
+    vector.reduction <maximumf>, %v : vector<4xf32> into f32
   } : vector<4xi1> -> f32
-  vector.print %2 : f32
-  // CHECK: -inf
+  vector.print str "maximumf_inf\n"
+  vector.print %0 : f32
+  return
+}
+// CHECK-LABEL: maximumf_inf
+// CHECK-NEXT: -inf
 
-  %v3 = vector.broadcast %inf : f32 to vector<4xf32>
-  %3 = vector.mask %mask {
-    vector.reduction <minimumf>, %v3 : vector<4xf32> into f32
+func.func @minimumf_inf() {
+  // min(<+inf>, +inf, +inf, +inf) = +inf
+  %mask = arith.constant dense<[true, true, true, false]> : vector<4xi1>
+  %inf = arith.constant 0x7F800000 : f32
+  %v = vector.broadcast %inf : f32 to vector<4xf32>
+  %0 = vector.mask %mask {
+    vector.reduction <minimumf>, %v : vector<4xf32> into f32
   } : vector<4xi1> -> f32
-  vector.print %3 : f32
-  // CHECK: inf
+  vector.print str "minimumf_inf\n"
+  vector.print %0 : f32
+  return
+}
+// CHECK-LABEL: minimumf_inf
+// CHECK-NEXT: inf
 
-  // No active lane: the result is the identity of the reduction.
-  %nomask = arith.constant dense<false> : vector<4xi1>
-  %4 = vector.mask %nomask {
-    vector.reduction <maximumf>, %v0 : vector<4xf32> into f32
+func.func @maximumf_no_active_lane() {
+  // With no active lane the neutral wins.
+  // max(<-inf>) = -inf
+  %mask = arith.constant dense<false> : vector<4xi1>
+  %v = arith.constant dense<[-5.0, -7.0, -5.0, -1.0]> : vector<4xf32>
+  %0 = vector.mask %mask {
+    vector.reduction <maximumf>, %v : vector<4xf32> into f32
   } : vector<4xi1> -> f32
-  vector.print %4 : f32
-  // CHECK: -inf
+  vector.print str "maximumf_no_active_lane\n"
+  vector.print %0 : f32
+  return
+}
+// CHECK-LABEL: maximumf_no_active_lane
+// CHECK-NEXT: -inf
 
-  %5 = vector.mask %nomask {
-    vector.reduction <minimumf>, %v1 : vector<4xf32> into f32
+func.func @minimumf_no_active_lane() {
+  // min(<+inf>) = +inf
+  %mask = arith.constant dense<false> : vector<4xi1>
+  %v = arith.constant dense<[5.0, 7.0, 5.0, 1.0]> : vector<4xf32>
+  %0 = vector.mask %mask {
+    vector.reduction <minimumf>, %v : vector<4xf32> into f32
   } : vector<4xi1> -> f32
-  vector.print %5 : f32
-  // CHECK: inf
+  vector.print str "minimumf_no_active_lane\n"
+  vector.print %0 : f32
+  return
+}
+// CHECK-LABEL: minimumf_no_active_lane
+// CHECK-NEXT: inf
 
-  // An accumulator combines with the masked reduction.
+func.func @maximumf_ninf_no_active_lane() {
+  // Under `ninf` the neutral is -FLT_MAX instead of -inf.
+  // max(<-FLT_MAX>) = -FLT_MAX
+  %mask = arith.constant dense<false> : vector<4xi1>
+  %v = arith.constant dense<[-5.0, -7.0, -5.0, -1.0]> : vector<4xf32>
+  %0 = vector.mask %mask {
+    vector.reduction <maximumf>, %v fastmath<ninf> : vector<4xf32> into f32
+  } : vector<4xi1> -> f32
+  vector.print str "maximumf_ninf_no_active_lane\n"
+  vector.print %0 : f32
+  return
+}
+// CHECK-LABEL: maximumf_ninf_no_active_lane
+// CHECK-NEXT: -3.40282e+38
+
+func.func @minimumf_ninf_no_active_lane() {
+  // min(<+FLT_MAX>) = +FLT_MAX
+  %mask = arith.constant dense<false> : vector<4xi1>
+  %v = arith.constant dense<[5.0, 7.0, 5.0, 1.0]> : vector<4xf32>
+  %0 = vector.mask %mask {
+    vector.reduction <minimumf>, %v fastmath<ninf> : vector<4xf32> into f32
+  } : vector<4xi1> -> f32
+  vector.print str "minimumf_ninf_no_active_lane\n"
+  vector.print %0 : f32
+  return
+}
+// CHECK-LABEL: minimumf_ninf_no_active_lane
+// CHECK-NEXT: 3.40282e+38
+
+func.func @maximumf_acc() {
+  // An accumulator takes the place of the neutral.
+  // max(<-3>, -5, -7, -5) = -3
+  %mask = arith.constant dense<[true, true, true, false]> : vector<4xi1>
+  %v = arith.constant dense<[-5.0, -7.0, -5.0, -1.0]> : vector<4xf32>
   %acc = arith.constant -3.0 : f32
-  %6 = vector.mask %mask {
-    vector.reduction <maximumf>, %v0, %acc : vector<4xf32> into f32
+  %0 = vector.mask %mask {
+    vector.reduction <maximumf>, %v, %acc : vector<4xf32> into f32
   } : vector<4xi1> -> f32
-  vector.print %6 : f32
-  // CHECK: -3
+  vector.print str "maximumf_acc\n"
+  vector.print %0 : f32
+  return
+}
+// CHECK-LABEL: maximumf_acc
+// CHECK-NEXT: -3
 
-  // Under `ninf` the neutral value is the largest finite value instead. It is
-  // still neutral for the finite inputs the flag restricts the reduction to.
-  %7 = vector.mask %mask {
-    vector.reduction <maximumf>, %v0 fastmath<ninf> : vector<4xf32> into f32
-  } : vector<4xi1> -> f32
-  vector.print %7 : f32
-  // CHECK: -5
-
-  %8 = vector.mask %mask {
-    vector.reduction <minimumf>, %v1 fastmath<ninf> : vector<4xf32> into f32
-  } : vector<4xi1> -> f32
-  vector.print %8 : f32
-  // CHECK: 5
-
+func.func @entry() {
+  call @maximumf_finite() : () -> ()
+  call @minimumf_finite() : () -> ()
+  call @maximumf_inf() : () -> ()
+  call @minimumf_inf() : () -> ()
+  call @maximumf_no_active_lane() : () -> ()
+  call @minimumf_no_active_lane() : () -> ()
+  call @maximumf_ninf_no_active_lane() : () -> ()
+  call @minimumf_ninf_no_active_lane() : () -> ()
+  call @maximumf_acc() : () -> ()
   return
 }
