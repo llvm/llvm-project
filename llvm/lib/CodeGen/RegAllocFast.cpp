@@ -1031,24 +1031,24 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
   if (!shouldAllocateRegister(VirtReg))
     return;
 
-  // The def is freed before the uses are allocated, so a tie is the only
-  // record left of its register. Rewrite every read of VirtReg so they agree.
+  // If there are multiple undef uses, give them the same register. The def is
+  // already freed, so take the register from the tie, not the lookup below.
   MachineInstr &MI = *MO.getParent();
   for (const MachineOperand &Tied : MI.all_uses()) {
     if (!Tied.isTied() || Tied.getReg() != VirtReg)
       continue;
-    unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&Tied));
-    MCRegister DefReg = MI.getOperand(TiedIdx).getReg().asMCReg();
+    MCRegister DefReg =
+        MI.getOperand(MI.findTiedOperandIdx(MI.getOperandNo(&Tied)))
+            .getReg()
+            .asMCReg();
     for (MachineOperand &O : MI.all_uses()) {
       if (O.getReg() != VirtReg)
         continue;
-      // A tie needs the register itself, not the subregister it names.
-      MCRegister Reg = DefReg;
-      if (unsigned SubIdx = O.getSubReg(); SubIdx && !O.isTied())
-        Reg = TRI->getSubReg(DefReg, SubIdx);
+      // The def is already narrowed, so a tie takes its register whole.
+      unsigned SubIdx = O.isTied() ? 0 : O.getSubReg();
+      O.setReg(SubIdx ? TRI->getSubReg(DefReg, SubIdx) : DefReg);
       O.setSubReg(0);
-      O.setReg(Reg);
-      O.setIsRenamable(!MRI->isReserved(Reg));
+      O.setIsRenamable(!MRI->isReserved(O.getReg()));
     }
     return;
   }
