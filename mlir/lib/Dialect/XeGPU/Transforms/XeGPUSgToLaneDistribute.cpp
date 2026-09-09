@@ -1869,6 +1869,440 @@ struct SgToLaneConvertLayout
   }
 };
 
+/// Check if layout distributes a rank-2 value with unit lane_data
+/// in row major or default order
+static bool assignsElementsToLanes(xegpu::DistributeLayoutAttr layout) {
+  if (layout.getRank() != 2)
+    return false;
+  return layout.getEffectiveLaneDataAsInt() == SmallVector<int64_t>{1, 1} &&
+         layout.getEffectiveOrderAsInt() == SmallVector<int64_t>{1, 0};
+}
+
+/// The quantities every element-to-lane redistribution needs, see
+/// `matchElementLaneRedistribution`.
+struct ElementLaneRedistribution {
+  /// Subgroup-level type of the converted value.
+  VectorType valueType;
+  /// `valueType` as distributed by `input_layout` and by `target_layout`.
+  VectorType distributedInput;
+  VectorType distributedTarget;
+  /// Effective `lane_layout` of `input_layout` and of `target_layout`. These
+  /// always differ, otherwise the conversion would already have folded.
+  SmallVector<int64_t> inputLaneLayout;
+  SmallVector<int64_t> targetLaneLayout;
+  int64_t subgroupSize;
+};
+
+/// Recognizes an `xegpu.convert_layout` that redistributes individual elements
+/// between the lanes of a subgroup, which is the common condition the three
+/// slice-attributed lowerings below have.
+/// Both input and target layouts must satisfy `assignsElementsToLanes` and must
+/// be able to distribute the value, the two can only differ in which lane
+/// owns which element.
+static FailureOr<ElementLaneRedistribution>
+matchElementLaneRedistribution(xegpu::ConvertLayoutOp op,
+                               ConversionPatternRewriter &rewriter) {
+  xegpu::DistributeLayoutAttr inputLayout = op.getEffectiveInputLayout();
+  xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
+  if (!assignsElementsToLanes(inputLayout) ||
+      !assignsElementsToLanes(targetLayout))
+    return rewriter.notifyMatchFailure(
+        op, "both layouts must be rank 2 with effective lane_data [1, 1] and "
+            "effective order [1, 0]");
+
+  auto valueType = dyn_cast<VectorType>(op.getResult().getType());
+  if (!valueType)
+    return rewriter.notifyMatchFailure(op, "value type must be a vector");
+
+  FailureOr<VectorType> distributedInput =
+      xegpu::getDistVecTypeBasedOnLaneLayout(inputLayout, valueType);
+  FailureOr<VectorType> distributedTarget =
+      xegpu::getDistVecTypeBasedOnLaneLayout(targetLayout, valueType);
+  if (failed(distributedInput) || failed(distributedTarget))
+    return rewriter.notifyMatchFailure(
+        op, "value type must be distributable by both layouts");
+
+  const auto *uArch =
+      xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
+  if (!uArch)
+    return rewriter.notifyMatchFailure(
+        op, "target attribute is required to determine the subgroup size");
+
+  ElementLaneRedistribution redistribution;
+  redistribution.valueType = valueType;
+  redistribution.distributedInput = *distributedInput;
+  redistribution.distributedTarget = *distributedTarget;
+  redistribution.inputLaneLayout = inputLayout.getEffectiveLaneLayoutAsInt();
+  redistribution.targetLaneLayout = targetLayout.getEffectiveLaneLayoutAsInt();
+  redistribution.subgroupSize = uArch->getSubgroupSize();
+  return redistribution;
+}
+
+/// Returns the lane stride of the single distributed dimension of `slice`, i.e.
+/// the distance in lane ids between two adjacent coordinates along that
+/// dimension. `slice` must have exactly one non-sliced dimension whose parent
+/// `lane_layout` extent is greater than one; the stride is the product of the
+/// parent `lane_layout` extents that precede it in the parent `order`.
+///
+/// Example: for
+///   #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2], lane_data = [4, 1, 1],
+///                              order = [0, 2, 1]>, dims = [0]>
+/// the only such dimension is parent dim 2, of extent 2. `order` makes dim 0
+/// the fastest varying, with extent 8, so lanes 0..7 hold coordinate 0 and
+/// lanes 8..15 hold coordinate 1: the stride is 8.
+static FailureOr<int64_t> getDistributedDimLaneStride(xegpu::SliceAttr slice) {
+  xegpu::SliceAttr flattened = slice.flatten();
+  auto parent = dyn_cast<xegpu::LayoutAttr>(flattened.getParent());
+  if (!parent)
+    return failure();
+
+  SmallVector<int64_t> parentLaneLayout = parent.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> parentOrder = parent.getEffectiveOrderAsInt();
+  if (parentLaneLayout.size() != parentOrder.size())
+    return failure();
+
+  ArrayRef<int64_t> slicedDims = flattened.getDims().asArrayRef();
+  std::optional<int64_t> distributedDim;
+  for (int64_t dim = 0, rank = static_cast<int64_t>(parentLaneLayout.size());
+       dim < rank; ++dim) {
+    if (llvm::is_contained(slicedDims, dim) || parentLaneLayout[dim] == 1)
+      continue;
+    if (distributedDim)
+      return failure();
+    distributedDim = dim;
+  }
+  if (!distributedDim)
+    return failure();
+
+  int64_t stride = 1;
+  for (int64_t dim : parentOrder) {
+    if (dim == *distributedDim)
+      return stride;
+    stride *= parentLaneLayout[dim];
+  }
+  return failure();
+}
+
+/// Distributes the slice-attributed `xegpu.convert_layout` whose source is
+/// fully broadcast, i.e. every lane holds the whole value, onto the rows of a
+/// subset of the lanes. Each lane keeps a single element, so no data crosses
+/// lanes and one `vector.extract` suffices.
+///
+///   xegpu.convert_layout %src
+///     <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1, 1],
+///                                                 lane_data = [2, 1, 1],
+///                                                 order = [0, 2, 1]>,
+///                                   dims = [0]>,
+///       target_layout = #xegpu.layout<lane_layout = [8, 1],
+///                                     lane_data = [1, 1]>}>
+///     : vector<8x1xf8E8M0FNU>
+///
+/// The input layout has effective `lane_layout` [1, 1], so the distributed
+/// source is the full `vector<8x1xf8E8M0FNU>`. The target spreads the 8 rows
+/// over 8 lanes, one row each, so the distributed result is
+/// `vector<1x1xf8E8M0FNU>` holding row `lane_id % 8`:
+///
+///   %flat = vector.shape_cast %src : vector<8x1xf8E8M0FNU> to
+///           vector<8xf8E8M0FNU>
+///   %lane = gpu.lane_id
+///   %row  = arith.remui %lane, %c8 : index
+///   %elem = vector.extract %flat[%row] : f8E8M0FNU from vector<8xf8E8M0FNU>
+///   %res  = vector.from_elements %elem : vector<1x1xf8E8M0FNU>
+///
+/// The source is flattened first because `xegpu-vector-linearize` cannot
+/// linearize a `vector.extract` with a dynamic position out of a rank-2 value.
+struct SgToLaneConvertLayoutBroadcastExtract
+    : public OpConversionPattern<xegpu::ConvertLayoutOp> {
+  using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::ConvertLayoutOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr inputLayout = op.getEffectiveInputLayout();
+    xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
+
+    if (!isa<xegpu::SliceAttr>(inputLayout))
+      return rewriter.notifyMatchFailure(op,
+                                         "input_layout must be #xegpu.slice");
+    if (!isa<xegpu::LayoutAttr>(targetLayout))
+      return rewriter.notifyMatchFailure(op,
+                                         "target_layout must be #xegpu.layout");
+
+    FailureOr<ElementLaneRedistribution> redistribution =
+        matchElementLaneRedistribution(op, rewriter);
+    if (failed(redistribution))
+      return failure();
+
+    if (redistribution->inputLaneLayout != SmallVector<int64_t>{1, 1})
+      return rewriter.notifyMatchFailure(
+          op, "input_layout effective lane_layout must be [1, 1]");
+    SmallVector<int64_t> targetLaneLayout = redistribution->targetLaneLayout;
+    if (targetLaneLayout[0] <= 1 || targetLaneLayout[1] != 1)
+      return rewriter.notifyMatchFailure(
+          op, "target_layout effective lane_layout must be [n, 1] with n > 1");
+    if (redistribution->distributedInput != redistribution->valueType)
+      return rewriter.notifyMatchFailure(
+          op, "distributed input_layout type must equal the value type");
+    if (redistribution->distributedTarget.getShape() != ArrayRef<int64_t>{1, 1})
+      return rewriter.notifyMatchFailure(
+          op, "distributed target_layout type must be vector<1x1>");
+    if (targetLaneLayout[0] > redistribution->subgroupSize)
+      return rewriter.notifyMatchFailure(
+          op, "target_layout effective lane_layout[0] must not exceed the "
+              "subgroup size");
+
+    VectorType valueType = redistribution->valueType;
+    Location loc = op.getLoc();
+    Value src =
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getSource()),
+                    redistribution->distributedInput);
+    auto flatType = VectorType::get({valueType.getNumElements()},
+                                    valueType.getElementType());
+    Value flat = vector::ShapeCastOp::create(rewriter, loc, flatType, src);
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    Value rowCount =
+        arith::ConstantIndexOp::create(rewriter, loc, targetLaneLayout[0]);
+    Value row = arith::RemUIOp::create(rewriter, loc, laneId, rowCount);
+    Value element = vector::ExtractOp::create(rewriter, loc, flat,
+                                              ArrayRef<OpFoldResult>{row});
+    rewriter.replaceOpWithNewOp<vector::FromElementsOp>(
+        op, redistribution->distributedTarget, element);
+    return success();
+  }
+};
+
+/// Distributes the slice-attributed `xegpu.convert_layout` whose source is
+/// broadcast over two lane groups onto the rows of a subset of the lanes. Each
+/// lane needs one element from its own group and one from the other group, so
+/// one `vector.extract` is paired with one `gpu.shuffle xor`.
+///
+///   xegpu.convert_layout %src
+///     <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2],
+///                                                 lane_data = [4, 1, 1],
+///                                                 order = [0, 2, 1]>,
+///                                   dims = [0]>,
+///       target_layout = #xegpu.layout<lane_layout = [8, 1],
+///                                     lane_data = [1, 1]>}>
+///     : vector<8x2xf8E8M0FNU>
+///
+/// The input layout has effective `lane_layout` [1, 2], so the distributed
+/// source is `vector<8x1xf8E8M0FNU>`: lane `l` holds all 8 rows of column
+/// `l / 8`. The target puts both columns of one row in a single lane, so the
+/// distributed result is `vector<1x2xf8E8M0FNU>`. Lane `l` owns `[l % 8, 0]`
+/// of its own column and gets the other column from lane `l ^ 8`, which holds
+/// the same row:
+///
+///   %flat    = vector.shape_cast %src : vector<8x1xf8E8M0FNU> to
+///              vector<8xf8E8M0FNU>
+///   %lane    = gpu.lane_id
+///   %row     = arith.remui %lane, %c8 : index
+///   %own     = vector.extract %flat[%row] : f8E8M0FNU from
+///              vector<8xf8E8M0FNU>
+///   %part, %v = gpu.shuffle xor %own, %c8_i32, %c16_i32 : f8E8M0FNU
+///   %res     = vector.from_elements %own, %part : vector<1x2xf8E8M0FNU>
+///
+/// The source is flattened first because `xegpu-vector-linearize` cannot
+/// linearize a `vector.extract` with a dynamic position out of a rank-2 value.
+///
+/// Lanes 8..15 receive the two columns in the opposite order, which is unused
+/// because the target `lane_layout` [8, 1] only occupies 8 lanes.
+struct SgToLaneConvertLayoutPartialBroadcastExtractShuffle
+    : public OpConversionPattern<xegpu::ConvertLayoutOp> {
+  using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::ConvertLayoutOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr inputLayout = op.getEffectiveInputLayout();
+    xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
+
+    auto inputSlice = dyn_cast<xegpu::SliceAttr>(inputLayout);
+    if (!inputSlice)
+      return rewriter.notifyMatchFailure(op,
+                                         "input_layout must be #xegpu.slice");
+    if (!isa<xegpu::LayoutAttr>(targetLayout))
+      return rewriter.notifyMatchFailure(op,
+                                         "target_layout must be #xegpu.layout");
+
+    FailureOr<ElementLaneRedistribution> redistribution =
+        matchElementLaneRedistribution(op, rewriter);
+    if (failed(redistribution))
+      return failure();
+
+    VectorType valueType = redistribution->valueType;
+    Type elementType = valueType.getElementType();
+    if (!elementType.isIntOrFloat() ||
+        !llvm::is_contained({8u, 16u, 32u, 64u},
+                            elementType.getIntOrFloatBitWidth()))
+      return rewriter.notifyMatchFailure(
+          op, "element type must be an int or float of bit width 8, 16, 32 or "
+              "64 to be carried by gpu.shuffle");
+
+    if (redistribution->inputLaneLayout != SmallVector<int64_t>{1, 2})
+      return rewriter.notifyMatchFailure(
+          op, "input_layout effective lane_layout must be [1, 2]");
+    SmallVector<int64_t> targetLaneLayout = redistribution->targetLaneLayout;
+    if (targetLaneLayout[0] <= 1 || targetLaneLayout[1] != 1)
+      return rewriter.notifyMatchFailure(
+          op, "target_layout effective lane_layout must be [n, 1] with n > 1");
+    if (redistribution->distributedInput.getShape() !=
+        ArrayRef<int64_t>{valueType.getDimSize(0), 1})
+      return rewriter.notifyMatchFailure(
+          op, "distributed input_layout type must be vector<shape[0]x1>");
+    if (redistribution->distributedTarget.getShape() != ArrayRef<int64_t>{1, 2})
+      return rewriter.notifyMatchFailure(
+          op, "distributed target_layout type must be vector<1x2>");
+
+    FailureOr<int64_t> stride = getDistributedDimLaneStride(inputSlice);
+    if (failed(stride))
+      return rewriter.notifyMatchFailure(
+          op, "input_layout parent must have exactly one non-sliced dimension "
+              "with lane_layout extent greater than one");
+    // The two broadcast groups must together cover the whole subgroup, so that
+    // `lane_id ^ stride` is the lane holding the other column of the same row.
+    if (*stride * redistribution->inputLaneLayout[1] !=
+        redistribution->subgroupSize)
+      return rewriter.notifyMatchFailure(
+          op, "input_layout distributed dimension lane stride times its extent "
+              "must equal the subgroup size");
+    if (targetLaneLayout[0] > *stride)
+      return rewriter.notifyMatchFailure(
+          op, "target_layout effective lane_layout[0] must not exceed the "
+              "input_layout distributed dimension lane stride");
+
+    Location loc = op.getLoc();
+    Value src =
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getSource()),
+                    redistribution->distributedInput);
+    auto flatType =
+        VectorType::get({redistribution->distributedInput.getNumElements()},
+                        valueType.getElementType());
+    Value flat = vector::ShapeCastOp::create(rewriter, loc, flatType, src);
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    Value rowCount =
+        arith::ConstantIndexOp::create(rewriter, loc, targetLaneLayout[0]);
+    Value row = arith::RemUIOp::create(rewriter, loc, laneId, rowCount);
+    Value own = vector::ExtractOp::create(rewriter, loc, flat,
+                                          ArrayRef<OpFoldResult>{row});
+    Value partner =
+        gpu::ShuffleOp::create(
+            rewriter, loc, own,
+            /*offset=*/static_cast<int32_t>(*stride),
+            /*width=*/static_cast<int32_t>(redistribution->subgroupSize),
+            /*mode=*/gpu::ShuffleMode::XOR)
+            .getShuffleResult();
+    rewriter.replaceOpWithNewOp<vector::FromElementsOp>(
+        op, redistribution->distributedTarget, ValueRange{own, partner});
+    return success();
+  }
+};
+
+/// Distributes the slice-attributed `xegpu.convert_layout` whose source is
+/// fully broadcast and whose target splits the two columns of the value over
+/// two lane groups. Each lane keeps one whole column, which is a stride-2
+/// subset of the row-major source, so the two columns are separated with one
+/// `vector.deinterleave` and the lane's group selects between them.
+///
+///   xegpu.convert_layout %src
+///     <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16],
+///                                                 lane_data = [1, 1, 1]>,
+///                                   dims = [2]>,
+///       target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2],
+///                                                  lane_data = [4, 1, 1],
+///                                                  order = [0, 2, 1]>,
+///                                    dims = [0]>}>
+///     : vector<8x2xbf16>
+///
+/// The input layout has effective `lane_layout` [1, 1], so the distributed
+/// source is the full `vector<8x2xbf16>`. The target has effective
+/// `lane_layout` [1, 2], so the distributed result is `vector<8x1xbf16>`:
+/// lanes 0..7 keep column 0 and lanes 8..15 keep column 1.
+///
+///   %flat       = vector.shape_cast %src : vector<8x2xbf16> to vector<16xbf16>
+///   %even, %odd = vector.deinterleave %flat : vector<16xbf16> ->
+///                 vector<8xbf16>
+///   %lane       = gpu.lane_id
+///   %group      = arith.divui %lane, %c8 : index
+///   %isFirst    = arith.cmpi eq, %group, %c0 : index
+///   %sel        = arith.select %isFirst, %even, %odd : vector<8xbf16>
+///   %res        = vector.shape_cast %sel : vector<8xbf16> to vector<8x1xbf16>
+struct SgToLaneConvertLayoutDeinterleaveSelect
+    : public OpConversionPattern<xegpu::ConvertLayoutOp> {
+  using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::ConvertLayoutOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr inputLayout = op.getEffectiveInputLayout();
+    xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
+
+    if (!isa<xegpu::SliceAttr>(inputLayout))
+      return rewriter.notifyMatchFailure(op,
+                                         "input_layout must be #xegpu.slice");
+    auto targetSlice = dyn_cast<xegpu::SliceAttr>(targetLayout);
+    if (!targetSlice)
+      return rewriter.notifyMatchFailure(op,
+                                         "target_layout must be #xegpu.slice");
+
+    FailureOr<ElementLaneRedistribution> redistribution =
+        matchElementLaneRedistribution(op, rewriter);
+    if (failed(redistribution))
+      return failure();
+
+    VectorType valueType = redistribution->valueType;
+    if (redistribution->inputLaneLayout != SmallVector<int64_t>{1, 1})
+      return rewriter.notifyMatchFailure(
+          op, "input_layout effective lane_layout must be [1, 1]");
+    SmallVector<int64_t> targetLaneLayout = redistribution->targetLaneLayout;
+    if (targetLaneLayout != SmallVector<int64_t>{1, 2})
+      return rewriter.notifyMatchFailure(
+          op, "target_layout effective lane_layout must be [1, 2]");
+    if (redistribution->distributedInput != valueType)
+      return rewriter.notifyMatchFailure(
+          op, "distributed input_layout type must equal the value type");
+    if (redistribution->distributedTarget.getShape() !=
+        ArrayRef<int64_t>{valueType.getDimSize(0), 1})
+      return rewriter.notifyMatchFailure(
+          op, "distributed target_layout type must be vector<shape[0]x1>");
+
+    FailureOr<int64_t> stride = getDistributedDimLaneStride(targetSlice);
+    if (failed(stride))
+      return rewriter.notifyMatchFailure(
+          op, "target_layout parent must have exactly one non-sliced dimension "
+              "with lane_layout extent greater than one");
+    // The two lane groups must together cover the whole subgroup, so that
+    // `lane_id / stride` is the index of the column the lane keeps.
+    if (*stride * targetLaneLayout[1] != redistribution->subgroupSize)
+      return rewriter.notifyMatchFailure(
+          op, "target_layout distributed dimension lane stride times its "
+              "extent must equal the subgroup size");
+
+    Location loc = op.getLoc();
+    Value src =
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getSource()),
+                    redistribution->distributedInput);
+    auto flatType = VectorType::get({valueType.getNumElements()},
+                                    valueType.getElementType());
+    Value flat = vector::ShapeCastOp::create(rewriter, loc, flatType, src);
+    auto deinterleaved = vector::DeinterleaveOp::create(rewriter, loc, flat);
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    Value strideVal = arith::ConstantIndexOp::create(rewriter, loc, *stride);
+    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Value group = arith::DivUIOp::create(rewriter, loc, laneId, strideVal);
+    Value isFirstGroup = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::eq, group, zero);
+    Value selected = arith::SelectOp::create(rewriter, loc, isFirstGroup,
+                                             deinterleaved.getRes1(),
+                                             deinterleaved.getRes2());
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+        op, redistribution->distributedTarget, selected);
+    return success();
+  }
+};
+
 // Trivially distribute `vector.interleave`
 struct SgToLaneVectorInterleave
     : public OpConversionPattern<vector::InterleaveOp> {
@@ -2187,17 +2621,20 @@ void xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
         return !xegpu::getTemporaryLayout(op->getOpResult(0));
       });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
-  patterns.add<
-      SgToLaneCreateNdDesc, SgToLaneLoadNd, SgToLaneStoreNd, SgToLaneDpas,
-      SgToLaneElementWise, SgToLaneArithConstant, SgToLanePrefetchNd,
-      SgToLaneLoadGather, SgToLaneStoreScatter, SgToLaneVectorReduction,
-      SgToLaneMultiDimReduction, SgToLaneVectorExtract, SgToLaneVectorInsert,
-      SgToLaneVectorExtractStridedSlice, SgToLaneVectorInsertStridedSlice,
-      SgToLaneLoadMatrix, SgToLaneStoreMatrix, SgToLaneConvertLayout,
-      SgToLaneVectorTranspose, SgToLaneVectorBitcast, SgToLaneVectorStep,
-      SgToLaneVectorShapeCast, SgToLaneBroadcast,
-      SgToLaneCreateMask<vector::CreateMaskOp>,
-      SgToLaneCreateMask<vector::ConstantMaskOp>, SgToLaneVectorDeinterleave,
-      SgToLaneVectorInterleave, SgToLaneDpasMx>(typeConverter,
-                                                patterns.getContext());
+  patterns
+      .add<SgToLaneCreateNdDesc, SgToLaneLoadNd, SgToLaneStoreNd, SgToLaneDpas,
+           SgToLaneElementWise, SgToLaneArithConstant, SgToLanePrefetchNd,
+           SgToLaneLoadGather, SgToLaneStoreScatter, SgToLaneVectorReduction,
+           SgToLaneMultiDimReduction, SgToLaneVectorExtract,
+           SgToLaneVectorInsert, SgToLaneVectorExtractStridedSlice,
+           SgToLaneVectorInsertStridedSlice, SgToLaneLoadMatrix,
+           SgToLaneStoreMatrix, SgToLaneConvertLayout, SgToLaneVectorTranspose,
+           SgToLaneVectorBitcast, SgToLaneVectorStep, SgToLaneVectorShapeCast,
+           SgToLaneBroadcast, SgToLaneCreateMask<vector::CreateMaskOp>,
+           SgToLaneCreateMask<vector::ConstantMaskOp>,
+           SgToLaneVectorDeinterleave, SgToLaneVectorInterleave, SgToLaneDpasMx,
+           SgToLaneConvertLayoutBroadcastExtract,
+           SgToLaneConvertLayoutPartialBroadcastExtractShuffle,
+           SgToLaneConvertLayoutDeinterleaveSelect>(typeConverter,
+                                                    patterns.getContext());
 }
