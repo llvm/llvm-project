@@ -7456,8 +7456,7 @@ class SPFactorName<int NumSrc, int NumTgt> {
   string ret = ".sp::" # NumSrc # ":" # NumTgt;
 }
 
-// mdata + cdata = ceil(repeat_factor * idx_size / elem_size) + repeat_factor,
-// where the repeat_factor operand encodes the exponent.
+// mdata + cdata = ceil(repeat_factor * idx_size / elem_size) + repeat_factor.
 // The first group is shared by .b8.b2 and .b16.b4. The next groups are the
 // additional unique counts for .b16.b2 and .b8.b4.
 defvar SPCOMPRESS_OPCODE_CASES =
@@ -7466,13 +7465,10 @@ defvar SPCOMPRESS_OPCODE_CASES =
                       [6, 12, 24, 48, 96]),
           NumResultRegs);
 
-// data = ceil(num_tgt * elem_size * repeat_factor / 32), where repeat_factor is
-// encoded as an exponent. The legal spdecompress layouts produce all
-// power-of-two data register counts from 1 to 128.
-defvar SPDECOMPRESS_OPCODE_CASES =
-    !listconcat(!foreach(lg2_rpf, !range(0, NVVM_SP_LG2_REPEAT_FACTOR_LIMIT),
-                         !shl(1, lg2_rpf)),
-                [128]);
+// data = ceil(num_tgt * elem_size * repeat_factor / 32). The legal
+// spdecompress layouts produce all power-of-two data register counts from 1 to
+// 128.
+defvar SPDECOMPRESS_OPCODE_CASES = [1, 2, 4, 8, 16, 32, 64, 128];
 
 class SPCOMPRESS_INST<int NumResultRegs, int NumSrc, int NumTgt>
     : NVPTXInst<(outs), (ins), "?", []> {

@@ -461,7 +461,6 @@ static void checkSPRegTypes(SDNode *N, unsigned NumFlags, StringRef Name) {
 // TableGen-only count reaches llvm_unreachable in the selectors below.
 #define SPCOMPRESS_OPCODE_CASES(CASE_MACRO)                                    \
   /* .b8.b2 and .b16.b4: ceil(repeat_factor / 4) + repeat_factor. */           \
-  /* The repeat_factor operand encodes the exponent. */                        \
   CASE_MACRO(2)  /* .x1 */                                                     \
   CASE_MACRO(3)  /* .x2 */                                                     \
   CASE_MACRO(5)  /* .x4 */                                                     \
@@ -492,7 +491,7 @@ static void checkSPRegTypes(SDNode *N, unsigned NumFlags, StringRef Name) {
   CASE_MACRO(128)
 
 void NVPTXDAGToDAGISel::selectSPCompress(SDNode *N) {
-  constexpr unsigned NumFlags = 3;
+  constexpr unsigned NumFlags = 2;
   if (N->getNumOperands() < NumFlags + 2)
     report_fatal_error("Malformed spcompress intrinsic");
 
@@ -501,15 +500,19 @@ void NVPTXDAGToDAGISel::selectSPCompress(SDNode *N) {
       cast<ConstantSDNode>(N->getOperand(FlagOp))->getZExtValue();
   unsigned IdxSize =
       cast<ConstantSDNode>(N->getOperand(FlagOp + 1))->getZExtValue();
-  unsigned Lg2RepeatFactor =
-      cast<ConstantSDNode>(N->getOperand(FlagOp + 2))->getZExtValue();
+  checkSPRegTypes(N, NumFlags, "spcompress");
 
-  auto Layout = nvvm::getSPCompressLayout(ElemSize, IdxSize, Lg2RepeatFactor);
+  // The data bundle contains two registers per repetition.
+  unsigned DataSize = FlagOp - 2;
+  unsigned RepeatFactor = DataSize / 2;
+  if (DataSize % 2 != 0 || !nvvm::isValidSPRepeatFactor(RepeatFactor))
+    report_fatal_error("spcompress operand/result types do not match "
+                       "the SP intrinsic flags");
+
+  auto Layout = nvvm::getSPCompressLayout(ElemSize, IdxSize, RepeatFactor);
   if (!Layout)
     report_fatal_error(Twine("Invalid spcompress flags: elem_size=") +
-                       Twine(ElemSize) + ", idx_size=" + Twine(IdxSize) +
-                       ", repeat_factor=" + Twine(Lg2RepeatFactor));
-  checkSPRegTypes(N, NumFlags, "spcompress");
+                       Twine(ElemSize) + ", idx_size=" + Twine(IdxSize));
 
   if (N->getNumValues() != Layout->MetadataSize + Layout->CompressedDataSize ||
       N->getNumOperands() != Layout->DataSize + NumFlags + 2)
@@ -521,7 +524,7 @@ void NVPTXDAGToDAGISel::selectSPCompress(SDNode *N) {
   Operands.reserve(N->getNumOperands() - NumFlags + 2);
   Operands.push_back(getI32Imm(ElemSize, DL));
   Operands.push_back(getI32Imm(IdxSize, DL));
-  Operands.push_back(getI32Imm(Lg2RepeatFactor, DL));
+  Operands.push_back(getI32Imm(RepeatFactor, DL));
   for (unsigned I = 1, E = N->getNumOperands() - NumFlags; I != E; ++I)
     Operands.push_back(N->getOperand(I));
 
@@ -542,7 +545,7 @@ void NVPTXDAGToDAGISel::selectSPCompress(SDNode *N) {
 
 void NVPTXDAGToDAGISel::selectSPDecompress(SDNode *N, unsigned NumSrc,
                                            unsigned NumTgt) {
-  constexpr unsigned NumFlags = 3;
+  constexpr unsigned NumFlags = 2;
   if (N->getNumOperands() < NumFlags + 3)
     report_fatal_error("Malformed spdecompress intrinsic");
 
@@ -551,18 +554,27 @@ void NVPTXDAGToDAGISel::selectSPDecompress(SDNode *N, unsigned NumSrc,
       cast<ConstantSDNode>(N->getOperand(FlagOp))->getZExtValue();
   unsigned IdxSize =
       cast<ConstantSDNode>(N->getOperand(FlagOp + 1))->getZExtValue();
-  unsigned Lg2RepeatFactor =
-      cast<ConstantSDNode>(N->getOperand(FlagOp + 2))->getZExtValue();
+  checkSPRegTypes(N, NumFlags, "spdecompress");
+
+  // data_size = num_tgt * elem_size * repeat_factor / 32.
+  unsigned RepeatFactorDenominator = NumTgt * ElemSize;
+  unsigned RepeatFactorNumerator = N->getNumValues() * 32;
+  if (RepeatFactorDenominator == 0 ||
+      RepeatFactorNumerator % RepeatFactorDenominator != 0)
+    report_fatal_error("spdecompress operand/result types do not match "
+                       "the SP intrinsic flags");
+  unsigned RepeatFactor = RepeatFactorNumerator / RepeatFactorDenominator;
+  if (!nvvm::isValidSPRepeatFactor(RepeatFactor))
+    report_fatal_error("spdecompress operand/result types do not match "
+                       "the SP intrinsic flags");
 
   auto Layout = nvvm::getSPDecompressLayout(NumSrc, NumTgt, ElemSize, IdxSize,
-                                            Lg2RepeatFactor);
+                                            RepeatFactor);
   if (!Layout)
     report_fatal_error(Twine("Invalid spdecompress flags: num_src=") +
                        Twine(NumSrc) + ", num_tgt=" + Twine(NumTgt) +
                        ", elem_size=" + Twine(ElemSize) +
-                       ", idx_size=" + Twine(IdxSize) +
-                       ", repeat_factor=" + Twine(Lg2RepeatFactor));
-  checkSPRegTypes(N, NumFlags, "spdecompress");
+                       ", idx_size=" + Twine(IdxSize));
 
   if (N->getNumValues() != Layout->DataSize ||
       N->getNumOperands() !=
@@ -575,7 +587,7 @@ void NVPTXDAGToDAGISel::selectSPDecompress(SDNode *N, unsigned NumSrc,
   Operands.reserve(N->getNumOperands() - NumFlags + 4);
   Operands.push_back(getI32Imm(ElemSize, DL));
   Operands.push_back(getI32Imm(IdxSize, DL));
-  Operands.push_back(getI32Imm(Lg2RepeatFactor, DL));
+  Operands.push_back(getI32Imm(RepeatFactor, DL));
   Operands.push_back(getI32Imm(NumSrc, DL));
   Operands.push_back(getI32Imm(NumTgt, DL));
   for (unsigned I = 1, E = N->getNumOperands() - NumFlags; I != E; ++I)

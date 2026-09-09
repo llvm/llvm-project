@@ -1317,20 +1317,14 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
 
-defvar NVVM_SP_LG2_REPEAT_FACTOR_LIMIT = 7;
-
-class NVVM_SP_ARGPROPS<ArgIndex ElemSizeIdx, ArgIndex IdxSizeIdx,
-                       ArgIndex RepeatFactorIdx> {
+class NVVM_SP_ARGPROPS<ArgIndex ElemSizeIdx, ArgIndex IdxSizeIdx> {
   list<IntrinsicProperty> Prop = [
     RangeList<ElemSizeIdx, [8, 16]>,
     RangeList<IdxSizeIdx, [2, 4]>,
-    Range<RepeatFactorIdx, 0, NVVM_SP_LG2_REPEAT_FACTOR_LIMIT>,
     ArgInfo<ElemSizeIdx, [ArgName<"elem_size">,
                           ImmArgPrinter<"printSPElemSize">]>,
     ArgInfo<IdxSizeIdx, [ArgName<"idx_size">,
-                         ImmArgPrinter<"printSPIdxSize">]>,
-    ArgInfo<RepeatFactorIdx, [ArgName<"repeat_factor">,
-                              ImmArgPrinter<"printSPRepeatFactor">]>
+                         ImmArgPrinter<"printSPIdxSize">]>
   ];
 }
 
@@ -4157,10 +4151,9 @@ class SPCompress :
     [llvm_anyint_ty,  // data
      llvm_i32_ty],    // spdesc
     [llvm_i32_ty,     // elem_size
-     llvm_i32_ty,     // idx_size
-     llvm_i32_ty],    // repeat_factor: 0..6 for .x1 .. .x64
+     llvm_i32_ty],    // idx_size
     !listconcat([IntrNoMem, IntrSpeculatable],
-                NVVM_SP_ARGPROPS<ArgIndex<2>, ArgIndex<3>, ArgIndex<4>>.Prop)>;
+                NVVM_SP_ARGPROPS<ArgIndex<2>, ArgIndex<3>>.Prop)>;
 
 def int_nvvm_spcompress_sp2to4 : SPCompress;
 
@@ -4174,10 +4167,9 @@ class SPDecompress :
     [llvm_anyint_ty,  // mdata
      llvm_anyint_ty], // cdata
     [llvm_i32_ty,     // elem_size
-     llvm_i32_ty,     // idx_size
-     llvm_i32_ty],    // repeat_factor: 0..6 for .x1 .. .x64
+     llvm_i32_ty],    // idx_size
     !listconcat([IntrNoMem, IntrSpeculatable],
-                NVVM_SP_ARGPROPS<ArgIndex<2>, ArgIndex<3>, ArgIndex<4>>.Prop)>;
+                NVVM_SP_ARGPROPS<ArgIndex<2>, ArgIndex<3>>.Prop)>;
 
 foreach num_src = [1, 2, 4] in
   foreach num_tgt = [2, 4, 8, 16] in

@@ -136,12 +136,6 @@ void nvvm::printSPIdxSize(raw_ostream &OS, const Constant *ImmArgVal) {
     OS << getSPIdxSizeName(static_cast<SPIdxSize>(CI->getZExtValue()));
 }
 
-void nvvm::printSPRepeatFactor(raw_ostream &OS, const Constant *ImmArgVal) {
-  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal))
-    OS << getSPRepeatFactorName(
-        static_cast<SPLg2RepeatFactor>(CI->getZExtValue()));
-}
-
 void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {
   static constexpr StringRef TensormapElemTypes[] = {
       "u8",       "u16",   "u32",       "s32",      "u64",  "s64",

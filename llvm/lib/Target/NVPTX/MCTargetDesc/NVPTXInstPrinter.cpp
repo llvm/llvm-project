@@ -513,7 +513,7 @@ void NVPTXInstPrinter::printSPQualifier(const MCInst *MI, int OpNum,
 
   if (Modifier == "repeat_factor") {
     StringRef RepeatFactor =
-        nvvm::getSPRepeatFactorName(static_cast<nvvm::SPLg2RepeatFactor>(Imm));
+        nvvm::getSPRepeatFactorName(static_cast<nvvm::SPRepeatFactor>(Imm));
     assert(!RepeatFactor.empty() && "invalid SP repeat_factor");
     O << RepeatFactor;
     return;
@@ -564,9 +564,9 @@ void NVPTXInstPrinter::printSPQualifier(const MCInst *MI, int OpNum,
     unsigned NumSrc = MI->getOperand(OpNum + 3).getImm();
     unsigned NumTgt = MI->getOperand(OpNum + 4).getImm();
     auto Layout = GetSPLayout(
-        [&](unsigned ElemSize, unsigned IdxSize, unsigned Lg2RepeatFactor) {
+        [&](unsigned ElemSize, unsigned IdxSize, unsigned RepeatFactor) {
           return nvvm::getSPDecompressLayout(NumSrc, NumTgt, ElemSize, IdxSize,
-                                             Lg2RepeatFactor);
+                                             RepeatFactor);
         });
     assert(Layout && "invalid spdecompress qualifiers");
 

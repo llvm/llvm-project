@@ -204,14 +204,14 @@ enum class SPIdxSize : uint64_t {
   B4 = 4,
 };
 
-enum class SPLg2RepeatFactor : uint64_t {
-  X1 = 0,
-  X2 = 1,
-  X4 = 2,
-  X8 = 3,
-  X16 = 4,
-  X32 = 5,
-  X64 = 6,
+enum class SPRepeatFactor : uint64_t {
+  X1 = 1,
+  X2 = 2,
+  X4 = 4,
+  X8 = 8,
+  X16 = 16,
+  X32 = 32,
+  X64 = 64,
 };
 
 struct SPOperandLayout {
@@ -243,20 +243,21 @@ inline StringRef getSPIdxSizeName(SPIdxSize IdxSize) {
   return EnumStrings(SPIdxSizeNames).toString(IdxSize);
 }
 
-inline StringRef getSPRepeatFactorName(SPLg2RepeatFactor Lg2RepeatFactor) {
-  static constexpr EnumStringDef<SPLg2RepeatFactor> SPRepeatFactorNameDefs[] = {
-      {{".x1"}, SPLg2RepeatFactor::X1},   {{".x2"}, SPLg2RepeatFactor::X2},
-      {{".x4"}, SPLg2RepeatFactor::X4},   {{".x8"}, SPLg2RepeatFactor::X8},
-      {{".x16"}, SPLg2RepeatFactor::X16}, {{".x32"}, SPLg2RepeatFactor::X32},
-      {{".x64"}, SPLg2RepeatFactor::X64},
+inline StringRef getSPRepeatFactorName(SPRepeatFactor RepeatFactor) {
+  static constexpr EnumStringDef<SPRepeatFactor> SPRepeatFactorNameDefs[] = {
+      {{".x1"}, SPRepeatFactor::X1},   {{".x2"}, SPRepeatFactor::X2},
+      {{".x4"}, SPRepeatFactor::X4},   {{".x8"}, SPRepeatFactor::X8},
+      {{".x16"}, SPRepeatFactor::X16}, {{".x32"}, SPRepeatFactor::X32},
+      {{".x64"}, SPRepeatFactor::X64},
   };
   static constexpr auto SPRepeatFactorNames =
       BUILD_ENUM_STRINGS(SPRepeatFactorNameDefs);
-  return EnumStrings(SPRepeatFactorNames).toString(Lg2RepeatFactor);
+  return EnumStrings(SPRepeatFactorNames).toString(RepeatFactor);
 }
 
-inline unsigned getSPRepeatFactor(unsigned Lg2RepeatFactor) {
-  return 1U << Lg2RepeatFactor;
+inline bool isValidSPRepeatFactor(unsigned RepeatFactor) {
+  return !getSPRepeatFactorName(static_cast<SPRepeatFactor>(RepeatFactor))
+              .empty();
 }
 
 inline bool isValidSPDecompressFactor(unsigned NumSrc, unsigned NumTgt) {
@@ -274,14 +275,12 @@ inline bool isValidSPDecompressFactor(unsigned NumSrc, unsigned NumTgt) {
 
 inline std::optional<SPOperandLayout>
 getSPCompressLayout(unsigned ElemSize, unsigned IdxSize,
-                    unsigned Lg2RepeatFactor) {
+                    unsigned RepeatFactor) {
   if (getSPElemSizeName(static_cast<SPElemSize>(ElemSize)).empty() ||
       getSPIdxSizeName(static_cast<SPIdxSize>(IdxSize)).empty() ||
-      getSPRepeatFactorName(static_cast<SPLg2RepeatFactor>(Lg2RepeatFactor))
-          .empty())
+      !isValidSPRepeatFactor(RepeatFactor))
     return std::nullopt;
 
-  unsigned RepeatFactor = getSPRepeatFactor(Lg2RepeatFactor);
   SPOperandLayout Layout = {
       divideCeil(RepeatFactor * IdxSize, ElemSize),
       RepeatFactor,
@@ -295,17 +294,15 @@ getSPCompressLayout(unsigned ElemSize, unsigned IdxSize,
 
 inline std::optional<SPOperandLayout>
 getSPDecompressLayout(unsigned NumSrc, unsigned NumTgt, unsigned ElemSize,
-                      unsigned IdxSize, unsigned Lg2RepeatFactor) {
+                      unsigned IdxSize, unsigned RepeatFactor) {
   if (!isValidSPDecompressFactor(NumSrc, NumTgt) ||
       getSPElemSizeName(static_cast<SPElemSize>(ElemSize)).empty() ||
       getSPIdxSizeName(static_cast<SPIdxSize>(IdxSize)).empty() ||
-      getSPRepeatFactorName(static_cast<SPLg2RepeatFactor>(Lg2RepeatFactor))
-          .empty())
+      !isValidSPRepeatFactor(RepeatFactor))
     return std::nullopt;
   if (NumSrc * ElemSize > 32 || (IdxSize == 2 && NumTgt > 4))
     return std::nullopt;
 
-  unsigned RepeatFactor = getSPRepeatFactor(Lg2RepeatFactor);
   unsigned DataBits = NumTgt * ElemSize * RepeatFactor;
   if (DataBits < 32 || DataBits > 4096)
     return std::nullopt;
@@ -340,8 +337,6 @@ LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
 
 LLVM_ABI void printSPElemSize(raw_ostream &OS, const Constant *ImmArgVal);
 LLVM_ABI void printSPIdxSize(raw_ostream &OS, const Constant *ImmArgVal);
-LLVM_ABI void printSPRepeatFactor(raw_ostream &OS, const Constant *ImmArgVal);
-
 LLVM_ABI void printTensormapElemType(raw_ostream &OS,
                                      const Constant *ImmArgVal);
 LLVM_ABI void printTensormapInterleaveLayout(raw_ostream &OS,
