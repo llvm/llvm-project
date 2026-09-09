@@ -68,6 +68,10 @@ public:
 
   lldb::LanguageType GetLanguage();
 
+  /// Returns true if this compile unit was compiled with optimization, false if
+  /// unoptimized or unknown.
+  bool GetIsOptimized();
+
   bool operator==(const lldb::SBCompileUnit &rhs) const;
 
   bool operator!=(const lldb::SBCompileUnit &rhs) const;

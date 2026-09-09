@@ -185,6 +185,14 @@ lldb::LanguageType SBCompileUnit::GetLanguage() {
   return lldb::eLanguageTypeUnknown;
 }
 
+bool SBCompileUnit::GetIsOptimized() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (m_opaque_ptr)
+    return m_opaque_ptr->GetIsOptimized();
+  return false;
+}
+
 bool SBCompileUnit::IsValid() const {
   LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
