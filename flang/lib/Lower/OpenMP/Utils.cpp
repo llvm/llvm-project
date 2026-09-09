@@ -42,6 +42,7 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/TargetParser/Triple.h>
 
 #include <functional>
 #include <iterator>
@@ -76,11 +77,6 @@ namespace lower {
 namespace omp {
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
-  // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have implicit
-  // default mappers available so that OpenMP offloading can correctly map them.
-  if (semantics::IsIsoCType(&typeSpec))
-    return true;
-
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
@@ -708,7 +704,7 @@ static void processTileSizesFromOpenMPConstruct(
 // can happen when COLLAPSE counts loops that a transforming construct such as
 // TILE generates from the source DO loops. getNestedDoConstruct wraps this for
 // callers that require a DO construct and asserts when none is found.
-static pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
   for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
     // In an OpenMPConstruct there can be compiler directives:
     // 1 <<OpenMPConstruct>>
@@ -1235,7 +1231,6 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
           (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
           mlir::omp::ClauseMapFlags::implicit;
       bool needsDefaultMapper =
-          isAllocOrPointer ||
           requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
       // For implicit captures, avoid synthesizing default mappers for
       // pointer entities (which can over-map pointer payloads) and for
@@ -1381,6 +1376,48 @@ static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
             llvm::dyn_cast<mlir::StringAttr>(targetTriples.front()))
       return llvm::Triple(tripleAttr.getValue());
   return llvm::Triple();
+}
+
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module) {
+  auto offloadModule =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
+  if (offloadModule.getIsTargetDevice())
+    return fir::getTargetTriple(module).isAMDGCN();
+  llvm::ArrayRef<mlir::Attribute> targetTriples =
+      offloadModule.getTargetTriples();
+  return !targetTriples.empty() &&
+         llvm::all_of(targetTriples, [](mlir::Attribute attr) {
+           auto tripleAttr = llvm::dyn_cast<mlir::StringAttr>(attr);
+           return tripleAttr && llvm::Triple(tripleAttr.getValue()).isAMDGCN();
+         });
+}
+
+static bool scopeRequiresUnifiedSharedMemory(const semantics::Scope &scope) {
+  if (const semantics::Symbol *symbol = scope.symbol()) {
+    bool requiresUSM = common::visit(
+        [](const auto &details) {
+          using Details = std::decay_t<decltype(details)>;
+          if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
+                                          Details>)
+            return details.ompRequires().test(
+                llvm::omp::Clause::OMPC_unified_shared_memory);
+          return false;
+        },
+        symbol->details());
+    if (requiresUSM)
+      return true;
+  }
+
+  return llvm::any_of(scope.children(), scopeRequiresUnifiedSharedMemory);
+}
+
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx) {
+  auto offloadModule = llvm::cast<mlir::omp::OffloadModuleInterface>(*module);
+  return mlir::omp::bitEnumContainsAny(
+             offloadModule.getRequires(),
+             mlir::omp::ClauseRequires::unified_shared_memory) ||
+         scopeRequiresUnifiedSharedMemory(semaCtx.globalScope());
 }
 
 semantics::omp::OmpVariantMatchContext makeVariantMatchContext(

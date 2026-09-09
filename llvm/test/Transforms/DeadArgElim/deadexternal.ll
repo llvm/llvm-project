@@ -62,6 +62,6 @@ define void @unused_swifterror_arg(ptr swifterror %dead_arg) {
 define void @dont_replace_by_poison() {
   %error_ptr_ref = alloca swifterror ptr
   store ptr null, ptr %error_ptr_ref
-  call void @unused_swifterror_arg(ptr %error_ptr_ref)
+  call void @unused_swifterror_arg(ptr swifterror %error_ptr_ref)
   ret void
 }

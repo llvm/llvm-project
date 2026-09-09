@@ -18,7 +18,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -31,10 +30,10 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PGOOptions.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/Coroutines/CoroAnnotationElide.h"
@@ -152,7 +151,6 @@
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
-#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
@@ -408,6 +406,16 @@ void PassBuilder::invokeFullLinkTimeOptimizationEarlyEPCallbacks(
 void PassBuilder::invokeFullLinkTimeOptimizationLastEPCallbacks(
     ModulePassManager &MPM, OptimizationLevel Level) {
   for (auto &C : FullLinkTimeOptimizationLastEPCallbacks)
+    C(MPM, Level);
+}
+void PassBuilder::invokeThinLinkTimeOptimizationEarlyEPCallbacks(
+    ModulePassManager &MPM, OptimizationLevel Level) {
+  for (auto &C : ThinLinkTimeOptimizationEarlyEPCallbacks)
+    C(MPM, Level);
+}
+void PassBuilder::invokeThinLinkTimeOptimizationLastEPCallbacks(
+    ModulePassManager &MPM, OptimizationLevel Level) {
+  for (auto &C : ThinLinkTimeOptimizationLastEPCallbacks)
     C(MPM, Level);
 }
 void PassBuilder::invokePipelineStartEPCallbacks(ModulePassManager &MPM,
@@ -1940,6 +1948,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
 
   instructionCountersPass(MPM, /* IsPreOptimization */ true);
 
+  invokeThinLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
+
   // If we are invoking this without a summary index noting that we are linking
   // with a library containing the necessary APIs, remove any MemProf related
   // attributes and metadata.
@@ -1987,6 +1997,9 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // globals in the object file.
     MPM.addPass(EliminateAvailableExternallyPass());
     MPM.addPass(GlobalDCEPass());
+
+    invokeThinLinkTimeOptimizationLastEPCallbacks(MPM, Level);
+
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
@@ -2000,6 +2013,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(
       Level, ThinOrFullLTOPhase::ThinLTOPostLink));
+
+  invokeThinLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);

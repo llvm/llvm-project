@@ -1,8 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
@@ -340,8 +338,7 @@ int test_temp_in_condition(G &obj) {
 // CIR:     %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_G>
 // CIR:     %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:     %[[LOAD_OBJ:.*]] = cir.load{{.*}} %[[OBJ]] : !cir.ptr<!cir.ptr<!rec_G>>, !cir.ptr<!rec_G>
-// CIR:     %[[COPY:.*]] = cir.call @_ZNK1G4copyEv(%[[LOAD_OBJ]]) : (!cir.ptr<!rec_G> {{.*}}) -> !rec_G
-// CIR:     cir.store{{.*}} %[[COPY]], %[[REF_TMP0]]
+// CIR:     cir.call @_ZNK1G4copyEv(%[[REF_TMP0]], %[[LOAD_OBJ]]) : (!cir.ptr<!rec_G> {{.*}}llvm.sret = !rec_G{{.*}}, !cir.ptr<!rec_G> {{.*}}) -> ()
 // CIR:     cir.cleanup.scope {
 // CIR:       %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:       cir.call @_ZN1GC1Ei(%[[REF_TMP1]], %[[ONE]]) : (!cir.ptr<!rec_G> {{.*}}, !s32i {{.*}}) -> ()
@@ -381,14 +378,13 @@ int test_temp_in_condition(G &obj) {
 // LLVM:   br label %[[SCOPE_BEGIN:.*]]
 // LLVM: [[SCOPE_BEGIN]]:
 // LLVM:   %[[LOAD_OBJ:.*]] = load ptr, ptr %[[OBJ]]
-// LLVM:   %[[COPY:.*]] = call %struct.G @_ZNK1G4copyEv(ptr {{.*}} %[[LOAD_OBJ]])
-// LLVM:   store %struct.G %[[COPY]], ptr %[[REF_TMP0]]
+// LLVM:   call void @_ZNK1G4copyEv(ptr {{.*}} sret(%struct.G) {{.*}} %[[REF_TMP0]], ptr {{.*}} %[[LOAD_OBJ]])
 // LLVM:   br label %[[CLEAN_SCOPE_ONE:.*]]
 // LLVM: [[CLEAN_SCOPE_ONE]]:
 // LLVM:   call void @_ZN1GC1Ei(ptr {{.*}} %[[REF_TMP1]], i32 {{.*}} 1)
 // LLVM:   br label %[[CLEAN_SCOPE_TWO:.*]]
 // LLVM: [[CLEAN_SCOPE_TWO]]:
-// LLVM:   %[[EQUAL:.*]] = call noundef i1 @_ZNK1GeqERKS_(ptr {{.*}} %[[REF_TMP0]], ptr {{.*}} %[[REF_TMP1]])
+// LLVM:   %[[EQUAL:.*]] = call noundef zeroext i1 @_ZNK1GeqERKS_(ptr {{.*}} %[[REF_TMP0]], ptr {{.*}} %[[REF_TMP1]])
 // LLVM:   %[[ZEXT:.*]] = zext i1 %[[EQUAL]] to i8
 // LLVM:   store i8 %[[ZEXT]], ptr %[[TMP_RESULT]]
 // LLVM:   br label %[[CLEAN_SCOPE_TWO_CLEANUP:.*]]

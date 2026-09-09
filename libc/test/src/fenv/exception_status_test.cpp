@@ -25,6 +25,9 @@
 using LlvmLibcExceptionStatusTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
 TEST_F(LlvmLibcExceptionStatusTest, RaiseAndTest) {
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
+  // Unsupported: no fenv
+#else
   // This test raises a set of exceptions and checks that the exception
   // status flags are updated. The intention is really not to invoke the
   // exception handler. Hence, we will disable all exceptions at the
@@ -149,4 +152,5 @@ TEST_F(LlvmLibcExceptionStatusTest, RaiseAndTest) {
   ASSERT_EQ(r, 0);
   s = LIBC_NAMESPACE::fetestexcept(ALL_EXCEPTS);
   ASSERT_EQ(s, ALL_EXCEPTS);
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }

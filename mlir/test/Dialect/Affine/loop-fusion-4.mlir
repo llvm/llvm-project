@@ -368,8 +368,8 @@ func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %produce
 
 // PRODUCER-CONSUMER-MAXIMAL-LABEL: func @memref_index_type
 func.func @memref_index_type() {
-  %0 = llvm.mlir.constant(2 : index) : i64
-  %2 = llvm.mlir.constant(0 : index) : i64
+  %0 = llvm.mlir.constant(2 : i64) : i64
+  %2 = llvm.mlir.constant(0 : i64) : i64
   %3 = builtin.unrealized_conversion_cast %2 : i64 to index
   %alloc = memref.alloc() alignment = 64 : memref<8x18xf32>
   %alloc_1 = memref.alloc() alignment = 64 : memref<3xf32>

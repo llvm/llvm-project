@@ -437,7 +437,6 @@ void SymbolFileNativePDB::InitializeObject() {
   } else {
     if (auto ts = *ts_or_err)
       ts->SetSymbolFile(this);
-    BuildParentMap();
   }
 }
 
@@ -2293,6 +2292,8 @@ void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
 
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
+  BuildParentMap();
+
   // We can't query for the full name because the type might reside
   // in an anonymous namespace. Search for the basename in our map and check the
   // matching types afterwards.
@@ -2829,6 +2830,10 @@ uint64_t SymbolFileNativePDB::GetDebugInfoSize(bool load_all_debug_info) {
 }
 
 void SymbolFileNativePDB::BuildParentMap() {
+  if (m_parent_map_built)
+    return;
+  m_parent_map_built = true;
+
   LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
 
   llvm::DenseMap<TypeIndex, TypeIndex> forward_to_full;
@@ -3008,6 +3013,7 @@ SymbolFileNativePDB::FindSymbolScope(PdbCompilandSymId id) {
 
 std::optional<llvm::codeview::TypeIndex>
 SymbolFileNativePDB::GetParentType(llvm::codeview::TypeIndex ti) {
+  BuildParentMap();
   auto parent_iter = m_parent_types.find(ti);
   if (parent_iter == m_parent_types.end())
     return std::nullopt;

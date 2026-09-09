@@ -1,8 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -sparsification-and-bufferization -verify-diagnostics | FileCheck %s
 
-// XFAIL: mlir-expensive-checks
-
-// Tests that mlir-opt does not crash when parsing sparse tensor encodings with symbols.
+// Tests that processing sparse tensor encodings with symbols does not crash and
+// reports a diagnostic when lowering is unsupported.
 
 // CHECK-DAG: #[[$SPARSE_0:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : compressed) }>
 // CHECK-DAG: #[[$SPARSE_1:.*]] = #sparse_tensor.encoding<{ map = [s0](d0, d1) -> (d0 * (s0 * 3) : dense, d0 : dense, d1 : compressed) }>
@@ -47,10 +46,10 @@ func.func @tensor_convert() -> memref<?xindex> {
     tensor.yield %val : f32
   } : tensor<32x32xf32>
 
-  // expected-error@+1 {{Level size mismatch between source/dest tensors}}
+  // expected-error@+1 {{failed to legalize operation 'bufferization.alloc_tensor'}}
   %J = sparse_tensor.convert %I : tensor<32x32xf32> to tensor<32x32xf32, #Sparse>
 
-  %result = sparse_tensor.positions %J { level = 0 : index }
+  %result = sparse_tensor.positions %J level = 0
     : tensor<32x32xf32, #Sparse> to memref<?xindex>
 
   return %result : memref<?xindex>

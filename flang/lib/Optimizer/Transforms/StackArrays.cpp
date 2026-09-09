@@ -492,13 +492,47 @@ llvm::LogicalResult fir::AllocMemConversion::matchAndRewrite(
   return mlir::success();
 }
 
-static bool isInLoop(mlir::Block *block) {
-  return mlir::LoopLikeOpInterface::blockIsInLoop(block);
+/// Return true if \p block can reach itself, i.e. it belongs to a control flow
+/// graph loop. This mirrors the control flow graph part of
+/// mlir::LoopLikeOpInterface::blockIsInLoop, which cannot be used here because
+/// it also walks the parent operations (see isInStackGrowingLoop).
+static bool isInCFGLoop(mlir::Block *block) {
+  llvm::DenseSet<mlir::Block *> visited;
+  llvm::SmallVector<mlir::Block *> stack{block};
+  while (!stack.empty()) {
+    mlir::Block *current = stack.pop_back_val();
+    if (!visited.insert(current).second) {
+      if (current == block)
+        return true;
+      continue;
+    }
+    for (mlir::Block *successor : current->getSuccessors())
+      stack.push_back(successor);
+  }
+  return false;
 }
 
-static bool isInLoop(mlir::Operation *op) {
-  return isInLoop(op->getBlock()) ||
-         op->getParentOfType<mlir::LoopLikeOpInterface>();
+/// Return true if a stack allocation placed in \p block would be repeated
+/// without its stack space being given back, making the stack grow. Such an
+/// allocation needs an explicit stack save/restore around it.
+static bool isInStackGrowingLoop(mlir::Block *block) {
+  while (block) {
+    if (isInCFGLoop(block))
+      return true;
+    mlir::Operation *parent = block->getParentOp();
+    if (!parent || mlir::isa<mlir::FunctionOpInterface>(parent))
+      return false;
+    // A loop whose body is an automatic allocation scope (acc.loop for
+    // instance) gives its stack space back at the end of every iteration.
+    if (mlir::isa<mlir::LoopLikeOpInterface>(parent))
+      return !parent->hasTrait<mlir::OpTrait::AutomaticAllocationScope>();
+    block = parent->getBlock();
+  }
+  return false;
+}
+
+static bool isInStackGrowingLoop(mlir::Operation *op) {
+  return isInStackGrowingLoop(op->getBlock());
 }
 
 fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
@@ -508,16 +542,19 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
   // block so that we do not allocate stack space in a loop. However,
   // the operands to the alloca may not be available that early, so insert it
   // after the last operand becomes available
-  // If the old allocmem op was in an openmp region then it should not be moved
-  // outside of that
+  // It must also stay in the block where the enclosing construct expects its
+  // stack allocations: a construct modelling parallelism (an OpenACC compute
+  // construct or an outlineable OpenMP operation for instance) needs a distinct
+  // allocation for each of its concurrent executions.
   LLVM_DEBUG(llvm::dbgs() << "StackArrays: findAllocaInsertionPoint: "
                           << oldAlloc << "\n");
 
-  // check that an Operation or Block we are about to return is not in a loop
+  // check that an Operation or Block we are about to return does not make the
+  // stack grow
   auto checkReturn = [&](auto *point) -> InsertionPoint {
-    if (isInLoop(point)) {
+    if (isInStackGrowingLoop(point)) {
       mlir::Operation *oldAllocOp = oldAlloc.getOperation();
-      if (isInLoop(oldAllocOp)) {
+      if (isInStackGrowingLoop(oldAllocOp)) {
         // where we want to put it is in a loop, and even the old location is in
         // a loop. Give up.
         return findAllocaLoopInsertionPoint(oldAlloc, freeOps);
@@ -527,8 +564,10 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
     return {point};
   };
 
-  auto oldOmpRegion =
-      oldAlloc->getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  // The earliest block where the alloca may be created, and the region it is
+  // part of, which the allocation cannot leave.
+  mlir::Block *allocaBlock = fir::getAllocaBlock(*oldAlloc->getParentRegion());
+  mlir::Region *allocaRegion = allocaBlock->getParent();
 
   // Find when the last operand value becomes available
   mlir::Block *operandsBlock = nullptr;
@@ -590,31 +629,20 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
       }
     }
 
-    // check we aren't moving out of an omp region
-    auto lastOpOmpRegion =
-        lastOperand->getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-    if (lastOpOmpRegion == oldOmpRegion)
+    // Check we aren't moving the allocation out of the region it belongs to.
+    if (allocaRegion->isAncestor(lastOperand->getParentRegion()))
       return checkReturn(lastOperand);
 
-    // Presumably this happened because the operands became ready before the
-    // start of this openmp region. (lastOpOmpRegion != oldOmpRegion) should
-    // imply that oldOmpRegion comes after lastOpOmpRegion.
-    return checkReturn(oldOmpRegion.getAllocaBlock());
+    // The operands became ready before the start of the enclosing construct.
+    LLVM_DEBUG(llvm::dbgs() << "--Last operand is defined outside of the "
+                               "region the allocation belongs to\n");
+    return checkReturn(allocaBlock);
   }
 
   // There were no value operands to the allocmem so we are safe to insert it
   // as early as we want
-
-  // handle openmp case
-  if (oldOmpRegion)
-    return checkReturn(oldOmpRegion.getAllocaBlock());
-
-  // fall back to the function entry block
-  mlir::func::FuncOp func = oldAlloc->getParentOfType<mlir::func::FuncOp>();
-  assert(func && "This analysis is run on func.func");
-  mlir::Block &entryBlock = func.getBlocks().front();
-  LLVM_DEBUG(llvm::dbgs() << "--Placing at the start of func entry block\n");
-  return checkReturn(&entryBlock);
+  LLVM_DEBUG(llvm::dbgs() << "--Placing at the start of the alloca block\n");
+  return checkReturn(allocaBlock);
 }
 
 fir::InsertionPoint fir::AllocMemConversion::findAllocaLoopInsertionPoint(

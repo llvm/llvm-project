@@ -61,9 +61,13 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
+TypeSize AllocaInst::getAllocationBaseSize(const DataLayout &DL) const {
+  return DL.getTypeAllocSize(getAllocatedType());
+}
+
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  TypeSize Size = getAllocationBaseSize(DL);
   // Zero-sized types can return early since 0 * N = 0 for any array size N.
   if (Size.isZero())
     return Size;
@@ -415,6 +419,7 @@ Value *CallBase::getArgOperandWithAttribute(Attribute::AttrKind Kind) const {
 /// Determine whether the argument or parameter has the given attribute.
 bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   assert(ArgNo < arg_size() && "Param index out of bounds!");
+  assert(!Attribute::isABIAttr(Kind) && "Use hasABIParamAttr() instead");
 
   if (Attrs.hasParamAttr(ArgNo, Kind))
     return true;

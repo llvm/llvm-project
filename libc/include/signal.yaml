@@ -20,6 +20,14 @@ macros:
     macro_header: signal-macros.h
   - macro_name: SIG_IGN
     macro_header: signal-macros.h
+  - macro_name: SIGEV_SIGNAL
+    macro_header: signal-macros.h
+  - macro_name: SIGEV_NONE
+    macro_header: signal-macros.h
+  - macro_name: SIGEV_THREAD
+    macro_header: signal-macros.h
+  - macro_name: SIGEV_THREAD_ID
+    macro_header: signal-macros.h
 types:
   - type_name: pid_t
   - type_name: sig_atomic_t
@@ -33,6 +41,7 @@ types:
   - type_name: sigset_t
   - type_name: stack_t
   - type_name: struct_sigaction
+  - type_name: struct_sigevent
   - type_name: union_sigval
 enums: []
 objects: []

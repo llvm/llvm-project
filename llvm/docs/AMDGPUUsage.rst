@@ -1014,6 +1014,13 @@ consumed by the AMDGPU backend during code generation.
        produce an error. Modules with **any** (absent flag) are compatible
        with any setting.
 
+       XNACK is disabled if ``SH_MEM_CONFIG.ADDRESS_MODE = GPUVM`` on chips
+       that support XNACK. The current default kernel driver setting is XNACK
+       disabled on the graphics ring and XNACK enabled on the compute ring.
+       If XNACK is enabled, the VMEM latency can be worse. If XNACK is
+       disabled, the 2 SGPRs otherwise reserved for the XNACK mask can be used
+       for general purposes.
+
    * - ``amdgpu.sramecc``
      - ``i32``
      - Error
@@ -1140,6 +1147,7 @@ supported for the ``amdgcn`` target.
      *reserved for downstream use (LLPC)*  12
      *reserved for future use*             13
      *reserved for future use*             14
+     Barrier                               15              N/A         N/A              32      0
      *reserved for future use*             16
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
@@ -1174,6 +1182,9 @@ supported for the ``amdgcn`` target.
 
   A global address space address has the same value when used as a flat address
   so no conversion is needed.
+
+  See also :ref:`synthetic apertures<amdgpu-synthetic-apertures>` which exist
+  in the generic address space.
 
 **Global and Constant**
   The global and constant address spaces both use global virtual addresses,
@@ -1353,12 +1364,75 @@ supported for the ``amdgcn`` target.
   a buffer strided pointer, this means that the base pointer is ``align(4)``, that
   the offset is a multiple of 4 bytes, and that the stride is a multiple of 4.
 
+**Barrier**
+  This address space represents barrier IDs (introduced in GFX12) as addresses.
+  It does not map directly to any addressable memory and is implemented using
+  :ref:`synthetic apertures<amdgpu-synthetic-apertures>`, thus pointers into
+  this address space:
+
+  * Never alias with any other pointers outside this address space.
+  * Cannot be dereferenced.
+  * Can only be consumed by intrinsics.
+
+  Pointer are 32 bits and directly correspond to valid barrier IDs. When consumed by an
+  intrinsic, all barrier pointers must, when interpreted as signed 32 bit integers,
+  have a value corresponding to a valid barrier ID on the target.
+  Otherwise, the behavior is undefined.
+
+  The ``NULL`` pointer (as a constant) can be consumed by some intrinsics and
+  corresponds to the NULL named barrier.
+
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
   file is modelled as a memory in a distinct address space because it is indexed
   by an address-like offset in place of named registers, and because register
   accesses affect LGKMcnt. This is an internal address space used only by the
   compiler. Do not use this address space for IR pointers.
+
+.. _amdgpu-synthetic-apertures:
+
+Synthetic Apertures
+~~~~~~~~~~~~~~~~~~~
+
+*Synthetic apertures* are defined that enable safe roundtrips of pointers
+from special address spaces through the generic address space. Attempting to
+dereference generic pointers obtained in this way (using e.g. `load` or
+`store`) has undefined behavior.
+
+The address size of an address spaces that use synthetic apertures can only be 32 bits
+wide or less. The full width of the source pointer is usable and preserved when converting it
+from/to the generic address space.
+
+The following synthetic apertures are defined:
+
+.. table:: AMDGPU Synthetic Apertures
+    :name: amdgpu-synthetic-apertures-table
+    :widths: 30 10 30 30
+
+    ============ ======= ============== ================================================================
+    Name         Number  Mask           Corresponding :ref:`Address Space<amdgpu-address-spaces-table>`
+    ============ ======= ============== ================================================================
+    BARRIER      1       ``0x00000001`` Barrier
+    ============ ======= ============== ================================================================
+
+Converting a pointer to generic (64 bits) using synthetic apertures is done as follows:
+
+  * The value of the source pointer (32 bits) becomes the lower 32 bits of the generic pointer.
+  * The upper 32 bits are a bitwise ``OR`` of:
+
+    * The upper 32 bits of the LDS segment aperture.
+
+      * **NOTE:** The lower 48 bits of the LDS segment aperture are expected to be zeroes.
+
+    * The relevant mask in the :ref:`above table<amdgpu-synthetic-apertures-table>`.
+
+      * **NOTE:** The upper 16 bits of the mask are expected to be zeroes.
+
+The conversion back to the original address space can simply be done by discarding the
+upper 32 bits of the generic pointer.
+
+As the LDS aperture is defined by its 16 most significant bits, we can theoretically
+support up to ``(1 << 16) - 1`` synthetic apertures safely.
 
 .. _amdgpu-memory-scopes:
 
@@ -1559,10 +1633,8 @@ Named barriers are fixed function hardware barrier objects that are available
 in gfx12.5+ in addition to the traditional default barriers.
 
 In LLVM IR, named barriers are represented by global variables of type
-``target("amdgcn.named.barrier", 0)`` in the LDS address space. Named barrier
-global variables do not occupy actual LDS memory, but their lifetime and
-allocation scope matches that of global variables in LDS. Programs in LLVM IR
-refer to named barriers using pointers.
+``target("amdgcn.named.barrier", 0)`` in the barrier address space.
+Programs in LLVM IR refer to named barriers using pointers.
 
 The following named barrier types are supported in global variables, defined
 recursively:
@@ -1573,14 +1645,14 @@ recursively:
 
 .. code-block:: llvm
 
-      @bar = addrspace(3) global target("amdgcn.named.barrier", 0) undef
-      @foo = addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] undef
-      @baz = addrspace(3) global { target("amdgcn.named.barrier", 0) } undef
+      @bar = addrspace(15) global target("amdgcn.named.barrier", 0) undef
+      @foo = addrspace(15) global [2 x target("amdgcn.named.barrier", 0)] undef
+      @baz = addrspace(15) global { target("amdgcn.named.barrier", 0) } undef
 
       ...
 
-      %foo.i = getelementptr [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(3) @foo, i32 0, i32 %i
-      call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %foo.i, i32 0)
+      %foo.i = getelementptr [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(15) @foo, i32 0, i32 %i
+      call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %foo.i, i32 0)
 
 Named barrier types may not be used in ``alloca``.
 
@@ -3309,6 +3381,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC``  0x062      ``gfx11-7-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC``    0x063      ``gfx13-generic``
      *reserved*                                 0x070      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT``   0x0eb      ``gfx1250-strict``
      ========================================== ========== =============================
 
 Sections
@@ -6714,6 +6787,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (320 * 4))
                                                      GFX125*
                                                        roundup(lds-size / (512 * 4))
+                                                     GFX13
+                                                       roundup(lds-size / (256 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
@@ -7178,7 +7253,7 @@ CFI
 
 2.  The CFI CFA is defined using an expression which evaluates to a location
     description that comprises one memory location description for the
-    ``DW_ASPACE_AMDGPU_private_lane`` address space address ``0``.
+    ``DW_ASPACE_AMDGPU_private_wave`` address space address ``0``.
 
 .. _amdgpu-amdhsa-kernel-prolog-m0:
 

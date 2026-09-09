@@ -2096,7 +2096,8 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
 
 bool clang::CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
-    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo) {
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo,
+    Expr *SampleCountExpr) {
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType ContainedTy = QualType();
@@ -2162,11 +2163,17 @@ bool clang::CreateHLSLAttributedResourceType(
       ResAttrs.IsArray = true;
       break;
     case attr::HLSLIsMultiSampled:
-      if (ResAttrs.IsMultiSampled) {
+      if (ResAttrs.SampleCountExpr) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
         return false;
       }
-      ResAttrs.IsMultiSampled = true;
+      // A bare [[hlsl::is_ms]] carries no count, so default it to 0, the same
+      // value Texture2DMS<T> gets from its template parameter.
+      ResAttrs.SampleCountExpr =
+          SampleCountExpr
+              ? SampleCountExpr
+              : IntegerLiteral::Create(S.Context, llvm::APInt(32, 0),
+                                       S.Context.IntTy, A->getLocation());
       break;
     case attr::HLSLIsCounter:
       if (ResAttrs.IsCounter) {
@@ -3749,6 +3756,19 @@ static bool CheckResourceHandle(
   return false;
 }
 
+static QualType createCounterHandleType(ASTContext &AST,
+                                        QualType MainHandleTy) {
+  assert(MainHandleTy->isHLSLAttributedResourceType() &&
+         "expected resource handle type");
+  auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
+  auto MainAttrs = MainResType->getAttrs();
+  assert(!MainAttrs.IsCounter && "cannot create a counter from a counter");
+  MainAttrs.IsCounter = true;
+  return AST.getHLSLAttributedResourceType(MainResType->getWrappedType(),
+                                           MainResType->getContainedType(),
+                                           MainAttrs);
+}
+
 static bool CheckVectorElementCount(Sema *S, QualType PassedType,
                                     QualType BaseType, unsigned ExpectedCount,
                                     SourceLocation Loc) {
@@ -4007,12 +4027,23 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
   auto *ResourceTy =
       TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
 
-  // Check the location + lod (int3 for Texture2D, int4 for Texture2DArray).
+  // A UAV descriptor binds a single mip slice, so a RWTexture location has no
+  // mip component to select, and TextureLoad on a UAV takes no offset.
+  bool IsUAV =
+      ResourceTy->getAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV;
+  if (IsUAV && S.checkArgCount(TheCall, 2))
+    return true;
+
+  // Check the location: int3 for Texture2D and int4 for Texture2DArray, which
+  // both carry a trailing mip level; int2 and int3 for the RWTexture forms,
+  // which do not.
   unsigned ResourceDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
   unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
+  if (!IsUAV)
+    ++LocationDim;
   QualType CoordLODTy = TheCall->getArg(1)->getType();
-  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, LocationDim + 1,
+  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, LocationDim,
                               TheCall->getArg(1)->getBeginLoc()))
     return true;
 
@@ -4030,6 +4061,49 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
     if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
                                 S.Context.IntTy, ResourceDim,
                                 TheCall->getArg(2)->getBeginLoc()))
+      return true;
+  }
+
+  TheCall->setType(ResourceTy->getContainedType());
+  return false;
+}
+
+static bool CheckLoadMSBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountRange(TheCall, 3, 4))
+    return true;
+
+  // Check the multisampled texture handle.
+  if (CheckResourceHandle(&S, TheCall, 0,
+                          [](const HLSLAttributedResourceType *ResType) {
+                            return !ResType->isMultiSampled();
+                          }))
+    return true;
+
+  auto *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+  // Check the location (int2 for Texture2DMS, int3 for Texture2DMSArray).
+  // Unlike Load on regular textures, there is no mip/LOD component.
+  unsigned ResourceDim =
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
+  QualType LocationTy = TheCall->getArg(1)->getType();
+  if (CheckVectorElementCount(&S, LocationTy, S.Context.IntTy, LocationDim,
+                              TheCall->getArg(1)->getBeginLoc()))
+    return true;
+
+  // Check the sample index operand (scalar int).
+  if (!TheCall->getArg(2)->getType()->isIntegerType()) {
+    S.Diag(TheCall->getArg(2)->getBeginLoc(), diag::err_typecheck_expect_int)
+        << TheCall->getArg(2)->getType();
+    return true;
+  }
+
+  // Check the offset operand (int2 for 2D textures; no array slice).
+  if (TheCall->getNumArgs() > 3) {
+    if (CheckVectorElementCount(&S, TheCall->getArg(3)->getType(),
+                                S.Context.IntTy, ResourceDim,
+                                TheCall->getArg(3)->getBeginLoc()))
       return true;
   }
 
@@ -4100,8 +4174,9 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
     NextIdx += 2;
   }
 
-  // Check the offset operand.
-  if (TheCall->getNumArgs() > NextIdx) {
+  // Check the offset operand (if applicable).
+  if (hasResourceOffset(ResourceTy->getAttrs().ResourceDimension) &&
+      TheCall->getNumArgs() > NextIdx) {
     if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
                                 S.Context.IntTy, ExpectedDim,
                                 TheCall->getArg(NextIdx)->getBeginLoc()))
@@ -4224,6 +4299,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_transpose_if_memory_is_row_major: {
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().IntTy))
+      return true;
+
+    TheCall->setType(TheCall->getArg(0)->getType());
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_load_with_status: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
@@ -4268,6 +4353,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_load_level:
     return CheckLoadLevelBuiltin(SemaRef, TheCall);
+  case Builtin::BI__builtin_hlsl_resource_load_ms:
+    return CheckLoadMSBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_sample:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Sample);
   case Builtin::BI__builtin_hlsl_resource_sample_bias:
@@ -4310,17 +4397,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
     assert(TheCall->getNumArgs() == 3 && "expected 3 args");
-    ASTContext &AST = SemaRef.getASTContext();
     QualType MainHandleTy = TheCall->getArg(0)->getType();
-    auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
-    auto MainAttrs = MainResType->getAttrs();
-    assert(!MainAttrs.IsCounter && "cannot create a counter from a counter");
-    MainAttrs.IsCounter = true;
-    QualType CounterHandleTy = AST.getHLSLAttributedResourceType(
-        MainResType->getWrappedType(), MainResType->getContainedType(),
-        MainAttrs);
     // Update return type to be the attributed resource type from arg0
     // with added IsCounter flag.
+    QualType CounterHandleTy =
+        createCounterHandleType(SemaRef.getASTContext(), MainHandleTy);
     TheCall->setType(CounterHandleTy);
     break;
   }
@@ -4514,18 +4595,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(RetTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_normalize: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    // return type is the same as the input type
-    TheCall->setType(ArgTyA);
-    break;
-  }
   case Builtin::BI__builtin_elementwise_fma: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckAllArgsHaveSameType(&SemaRef, TheCall)) {
@@ -4642,6 +4711,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_interlocked_add:
+  case Builtin::BI__builtin_hlsl_interlocked_and:
+  case Builtin::BI__builtin_hlsl_interlocked_min:
   case Builtin::BI__builtin_hlsl_interlocked_or:
   case Builtin::BI__builtin_hlsl_interlocked_xor: {
     // The builtin's prototype in Builtins.td is `void (...)`, so direct calls

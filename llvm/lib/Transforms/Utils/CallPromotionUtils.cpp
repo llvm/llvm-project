@@ -391,6 +391,12 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
     Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
   auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
 
+  // The address comparison has made the callee's address significant.
+  // Strip unnamed_addr so the symbol is recorded as address-significant
+  // and kept unique by the linker.
+  if (auto *GV = dyn_cast<GlobalValue>(Callee->stripPointerCasts()))
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+
   return versionCallSiteWithCond(CB, Cond, BranchWeights);
 }
 
@@ -470,7 +476,7 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
   for (; I < NumArgs; I++) {
     // Vararg functions can have more arguments than parameters.
     assert(Callee->isVarArg());
-    if (CB.paramHasAttr(I, Attribute::StructRet)) {
+    if (CB.hasABIParamAttr(I, Attribute::StructRet)) {
       if (FailureReason)
         *FailureReason = "SRet arg to vararg function";
       return false;
@@ -667,8 +673,15 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
   assert(!AddressPoints.empty() && "Caller should guarantee");
   IRBuilder<> Builder(&CB);
   SmallVector<Value *, 2> ICmps;
-  for (auto &AddressPoint : AddressPoints)
+  for (auto &AddressPoint : AddressPoints) {
     ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
+    // The address comparison has made the vtable address significant.
+    // Strip unnamed_addr so the vtable is recorded as address-significant
+    // and kept unique by the linker.
+    if (auto *GV =
+            dyn_cast<GlobalValue>(AddressPoint->stripInBoundsConstantOffsets()))
+      GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+  }
 
   // TODO: Perform tree height reduction if the number of ICmps is high.
   Value *Cond = Builder.CreateOr(ICmps);
