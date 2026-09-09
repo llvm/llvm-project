@@ -817,6 +817,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
 
+  if (Subtarget.hasFPU()) {
+    setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
+    if (Subtarget.use64BitRegs())
+      setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
+  }
+
   if (Subtarget.hasAltivec()) {
     for (MVT VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
       setOperationAction(ISD::AVGCEILS, VT, Legal);
@@ -1260,9 +1266,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
 
       // Test data class instructions store results in CR bits.
+      // f32/f64 are already registered Custom in the hasVSX() block above;
+      // only f128/ppcf128 need the P9 xststdcqp instruction.
       if (Subtarget.useCRBits()) {
-        setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
-        setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
         setOperationAction(ISD::IS_FPCLASS, MVT::f128, Custom);
         setOperationAction(ISD::IS_FPCLASS, MVT::ppcf128, Custom);
       }
@@ -11964,49 +11970,66 @@ static SDValue getDataClassTest(SDValue Op, FPClassTest Mask, const SDLoc &Dl,
 
 SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
                                            SelectionDAG &DAG) const {
-  assert(Subtarget.hasP9Vector() && "Test data class requires Power9");
   SDValue LHS = Op.getOperand(0);
   uint64_t RHSC = Op.getConstantOperandVal(1);
   SDLoc Dl(Op);
   FPClassTest Category = static_cast<FPClassTest>(RHSC);
-  if (LHS.getValueType() == MVT::ppcf128) {
+  EVT VT = LHS.getValueType();
+
+  // ppcf128/f128 only reach here on P9+useCRBits() targets.
+  if (VT == MVT::ppcf128) {
+    assert(Subtarget.hasP9Vector() && Subtarget.useCRBits());
     // The higher part determines the value class.
     LHS = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::f64, LHS,
                       DAG.getConstant(1, Dl, MVT::i32));
+    VT = MVT::f64;
   }
 
-  return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
-}
+  // P9 + useCRBits: xststdcdp/xststdcsp/xststdcqp cover all masks directly.
+  if (Subtarget.hasP9Vector() && Subtarget.useCRBits())
+    return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 
-// PPCTargetLowering::expandIS_FPCLASS is PPC-specific pre-legalization
-// override.
-//
-// SelectionDAGBuilder calls this early (before type legalization) whenever
-// IS_FPCLASS is not Legal or Custom for the operand type.
-//
-// We replace fcNan/~fcNan on f32/f64
-// with a floating-point self-comparison (SETUO / SETO), producing
-// cleaner code on all PPC scalar FP targets.  All other masks are delegated to
-// the generic expander.
-SDValue PPCTargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
-                                            FPClassTest Test, SDNodeFlags Flags,
-                                            const SDLoc &Dl,
-                                            SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  FPClassTest NotNan = static_cast<FPClassTest>(~fcNan);
+  // f32 on all FPU targets, f64 on use64BitRegs() targets only.
+  // LowerIS_FPCLASS is invoked during Legalize (after type-legalization), so
+  // PPC machine nodes are safe here — they are opaque to all IR optimizers
+  // and carry no FP-exception semantics, making this correct under
+  // -ffp-model=strict (unlike the generic ISD::SETUO in expandIS_FPCLASS).
+  assert((VT == MVT::f32 || VT == MVT::f64) &&
+         "unexpected type in LowerIS_FPCLASS");
 
-  // Only intercept fcNan / ~fcNan on scalar f32/f64 for non-P9 targets.
-  if ((VT != MVT::f32 && VT != MVT::f64) || (Test != fcNan && Test != NotNan))
-    return TargetLowering::expandIS_FPCLASS(ResultVT, Op, Test, Flags, Dl, DAG);
+  if (Category != fcNan && Category != ~fcNan)
+    return SDValue();
 
-  // SelectCC(Op, Op, 1, 0, SETUO) -> 1 if NaN,     0 otherwise  (fcNan)
-  // SelectCC(Op, Op, 1, 0, SETO)  -> 1 if not NaN, 0 otherwise  (~fcNan)
-  // This is pre-legalization: ResultVT (i1 or i32) will be type-legalized
-  // normally, so no need to branch on useCRBits() here. P9 targets also go here
-  // when useCRBits() is false, as custom lowering is disabled.
-  ISD::CondCode CC = (Test == fcNan) ? ISD::SETUO : ISD::SETO;
-  return DAG.getSelectCC(Dl, Op, Op, DAG.getConstant(1, Dl, ResultVT),
-                         DAG.getConstant(0, Dl, ResultVT), CC);
+  // fcNan / ~fcNan: emit a self-comparison using the best available
+  // instruction both are exception-free on PPC hardware.
+  // VSX (P8+): xscmpudp (f64 operand; extend f32 first).
+  // Non-VSX FPU: fcmpu (FCMPUS for f32, FCMPUD for f64).
+  SDValue Cmp;
+  if (Subtarget.hasVSX()) {
+    if (VT == MVT::f32)
+      LHS = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, LHS);
+    // xscmpudp Ra, Ra: FU (unordered) bit set when Ra is NaN.
+    Cmp = SDValue(DAG.getMachineNode(PPC::XSCMPUDP, Dl, MVT::i32, LHS, LHS),
+                  0);
+  } else {
+    // fcmpu Ra, Ra: FU bit set when Ra is NaN.
+    unsigned FcmpOp = (VT == MVT::f32) ? PPC::FCMPUS : PPC::FCMPUD;
+    Cmp = SDValue(DAG.getMachineNode(FcmpOp, Dl, MVT::i32, LHS, LHS), 0);
+  }
+
+  // fcNan  -> sub_un (FU): 1 when NaN
+  // ~fcNan -> sub_eq (EQ): 1 when not NaN (ordered self-compare is equal)
+  unsigned SubReg = (Category == fcNan) ? PPC::sub_un : PPC::sub_eq;
+  SDValue Bit = SDValue(
+      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Cmp,
+                         DAG.getTargetConstant(SubReg, Dl, MVT::i32)),
+      0);
+
+  EVT ResultVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  // Widen MVT::i1 -> ResultVT when !useCRBits() (legal type is i32).
+  if (ResultVT != MVT::i1)
+    return DAG.getZExtOrTrunc(Bit, Dl, ResultVT);
+  return Bit;
 }
 
 // Adjust the length value for a load/store with length to account for the
