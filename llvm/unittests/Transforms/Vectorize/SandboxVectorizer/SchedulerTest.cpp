@@ -1012,6 +1012,114 @@ define void @foo(i8 %v0) {
 #endif
 }
 
+// Setting a Use with a setOperand(), RUW, RAUW etc. can add/remove use-def
+// edges. This needs to maintain UnscheduledSuccs.
+TEST_F(SchedulerTest, MaintainUnscheduledSuccsOnUseSet_BottomUp) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v1
+  %add1 = add i8 %add0, %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Arg0 = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
+  auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
+  DAG.extend({Add0, Add1});
+  auto *N0 = DAG.getNode(Add0);
+
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 1u);
+  // Now change %add1 operand to not use %add0.
+  Add1->setOperand(0, Arg0);
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 1u);
+
+  // RAUW
+  Add0->replaceAllUsesWith(Arg0);
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 1u);
+
+  // RUWIf
+  Add0->replaceUsesWithIf(Arg0, [](const auto &U) { return true; });
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 1u);
+
+  // RUOW
+  Add1->replaceUsesOfWith(Add0, Arg0);
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N0->getNumUnscheduledDeps(), 1u);
+}
+
+// Setting a Use with a setOperand(), RUW, RAUW etc. can add/remove use-def
+// edges. This needs to maintain UnscheduledPreds.
+TEST_F(SchedulerTest, MaintainUnscheduledSuccsOnUseSet_TopDown) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v1
+  %add1 = add i8 %add0, %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Arg0 = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::TopDown);
+  auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
+  DAG.extend({Add0, Add1});
+  auto *N1 = DAG.getNode(Add1);
+
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 1u);
+  // Now change %add1 operand to not use %add0.
+  Add1->setOperand(0, Arg0);
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 1u);
+
+  // RAUW
+  Add0->replaceAllUsesWith(Arg0);
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 1u);
+
+  // RUWIf
+  Add0->replaceUsesWithIf(Arg0, [](const auto &U) { return true; });
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 1u);
+
+  // RUOW
+  Add1->replaceUsesOfWith(Add0, Arg0);
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N1->getNumUnscheduledDeps(), 1u);
+}
+
 TEST_F(SchedulerTest, NotifySetUse) {
   parseIR(C, R"IR(
 define void @foo(i8 %v0, i8 %v1) {
