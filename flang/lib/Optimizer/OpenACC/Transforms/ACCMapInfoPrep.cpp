@@ -433,9 +433,9 @@ buildMapInfo(acc::OpenACCSupport &support, ModuleOp module, Operation *entryOp,
     acc::populateSourceExtents(bounds, seqTy.getShape(), builder);
 
   Location loc = entryOp->getLoc();
-  Value size = materializeMapSize(support, module, entryOp, var, varType,
-                                  descKind, bounds, mapFlags, symbolTable,
-                                  builder);
+  Value size =
+      materializeMapSize(support, module, entryOp, var, varType, descKind,
+                         bounds, mapFlags, symbolTable, builder);
 
   return acc::MapInfoOp::create(builder, loc, entryOp->getResult(0).getType(),
                                 var, varType, mapFlags, attachPoint, desc,
