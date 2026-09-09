@@ -58,8 +58,7 @@ class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
 public:
   explicit HexagonTTIImpl(const HexagonTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(*TM->getSubtargetImpl(F)),
-        TLI(*ST.getTargetLowering()),
-        IsHMX(F.hasFnAttribute("hexagon_hmx")) {}
+        TLI(*ST.getTargetLowering()), IsHMX(F.hasFnAttribute("hexagon_hmx")) {}
 
   /// \name Scalar TTI Implementations
   /// @{
