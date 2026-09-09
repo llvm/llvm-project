@@ -1450,7 +1450,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIstrncpy:
   case Builtin::BI__builtin_strncpy:
   case Builtin::BIstpncpy:
-  case Builtin::BI__builtin_stpncpy: {
+  case Builtin::BI__builtin_stpncpy:
+  case Builtin::BIstrlcat:
+  case Builtin::BI__builtin_strlcat: {
     // Whether these functions overflow depends on the runtime strlen of the
     // string, not just the buffer size, so emitting the "always overflow"
     // diagnostic isn't quite right. We should still diagnose passing a buffer
@@ -3015,8 +3017,9 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
     if (MPT->isMemberDataPointer())
       return BinOp;
 
+    // Give the synthesized expression a valid source range for diagnostics.
     auto *MemCall = new (S.Context)
-        ParenExpr(SourceLocation(), SourceLocation(), BinOp.get());
+        ParenExpr(TheCall->getBeginLoc(), TheCall->getRParenLoc(), BinOp.get());
 
     return S.ActOnCallExpr(S.getCurScope(), MemCall, TheCall->getBeginLoc(),
                            Args.drop_front(2), TheCall->getRParenLoc());
@@ -13584,6 +13587,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (TargetBT && TargetBT->isSveVLSBuiltinType())
     Target = TargetBT->getSveEltType(Context).getTypePtr();
+
+  // Nothing to diagnose if stripping the wrappers left identical element types
+  // (e.g. a scalar splatted to a vector of its own type).
+  if (Source == Target)
+    return;
 
   // If the source is floating point...
   if (SourceBT && SourceBT->isFloatingPoint()) {

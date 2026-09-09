@@ -342,8 +342,8 @@ define inreg { i32, float } @ret_i32_float_packed(i32 %a0, i32 %a1,
 ; HARD: st %f1, [%i1]
 ; SOFT: st %o0, [%i1]
 define void @call_ret_i32_float_packed(ptr %i0, ptr %i1) {
-  %rv = call { i32, float } @ret_i32_float_packed(i32 undef, i32 undef,
-                                                  ptr undef, ptr undef)
+  %rv = call inreg { i32, float } @ret_i32_float_packed(i32 undef, i32 undef,
+                                                        ptr undef, ptr undef)
   %e0 = extractvalue { i32, float } %rv, 0
   store i32 %e0, ptr %i0
   %e1 = extractvalue { i32, float } %rv, 1
@@ -374,8 +374,8 @@ define inreg { i32, i32 } @ret_i32_packed(i32 %a0, i32 %a1,
 ; CHECK: st [[R]], [%i0]
 ; CHECK: st %o0, [%i1]
 define void @call_ret_i32_packed(ptr %i0, ptr %i1) {
-  %rv = call { i32, i32 } @ret_i32_packed(i32 undef, i32 undef,
-                                          ptr undef, ptr undef)
+  %rv = call inreg { i32, i32 } @ret_i32_packed(i32 undef, i32 undef,
+                                                ptr undef, ptr undef)
   %e0 = extractvalue { i32, i32 } %rv, 0
   store i32 %e0, ptr %i0
   %e1 = extractvalue { i32, i32 } %rv, 1
