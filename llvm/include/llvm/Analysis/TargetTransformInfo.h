@@ -792,6 +792,10 @@ public:
 
     /// Peel off the last PeelCount loop iterations.
     bool PeelLast;
+
+    /// Allow peeling the last iteration to enable widening of consecutive
+    /// loads.
+    bool AllowLoadWideningPeel;
   };
 
   /// Get target-customized preferences for the generic loop peeling
