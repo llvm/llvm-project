@@ -1,14 +1,15 @@
 ; RUN: split-file %s %t
-; RUN: llc -o - %t/issue219223_cxx.ll | FileCheck %t/issue219223_cxx.ll
-; RUN: llc -o - %t/issue219223_seh.ll | FileCheck %t/issue219223_seh.ll
-; RUN: llc -o - %t/issue219223_clr.ll | FileCheck %t/issue219223_clr.ll
-; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/single.ll | FileCheck %t/single.ll
-; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/sibling_cxx.ll | FileCheck %t/sibling_cxx.ll
-; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/sibling_seh.ll | FileCheck %t/sibling_seh.ll
-; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/sibling_clr.ll | FileCheck %t/sibling_clr.ll
+; RUN: not llc -o - %t/issue219223_cxx.ll 2>/dev/null | FileCheck %t/issue219223_cxx.ll
+; RUN: not llc -o - %t/issue219223_seh.ll 2>/dev/null | FileCheck %t/issue219223_seh.ll
+; RUN: not llc -o - %t/issue219223_clr.ll 2>/dev/null | FileCheck %t/issue219223_clr.ll
+; RUN: not opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/single.ll 2>/dev/null | FileCheck %t/single.ll
+; RUN: not opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/single.ll 2>&1 >/dev/null | FileCheck %t/single.ll --check-prefix=DIAG
+; RUN: not opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/sibling_cxx.ll 2>/dev/null | FileCheck %t/sibling_cxx.ll
+; RUN: not opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/sibling_seh.ll 2>/dev/null | FileCheck %t/sibling_seh.ll
+; RUN: not opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare < %t/sibling_clr.ll 2>/dev/null | FileCheck %t/sibling_clr.ll
 
 ;--- issue219223_cxx.ll
-target triple = "x86_64-pc-linux-gnu"
+target triple = "x86_64-pc-windows-msvc"
 
 declare i32 @__CxxFrameHandler3(...)
 declare void @f()
@@ -31,6 +32,8 @@ cont:
 ; CHECK-LABEL: empty_catchpad_cxx:
 
 ;--- issue219223_seh.ll
+target triple = "x86_64-pc-windows-msvc"
+
 declare i32 @__C_specific_handler(...)
 declare void @f()
 
@@ -52,6 +55,8 @@ cont:
 ; CHECK-LABEL: empty_catchpad_seh:
 
 ;--- issue219223_clr.ll
+target triple = "x86_64-pc-windows-msvc"
+
 declare void @ProcessCLRException(...)
 declare void @f()
 
@@ -99,6 +104,8 @@ cont:
 ; CHECK-NEXT:   unreachable
 ; CHECK: cont: ; preds = %entry
 ; CHECK-NEXT: ret void
+
+; DIAG: catchpad with unexpected arguments
 
 ;--- sibling_cxx.ll
 declare i32 @__CxxFrameHandler3(...)

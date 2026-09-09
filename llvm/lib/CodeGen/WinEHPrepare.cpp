@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -137,6 +138,7 @@ private:
                           DenseMap<BasicBlock *, Value *> &Loads, Function &F);
   bool prepareExplicitEH(Function &F);
   void colorFunclets(Function &F);
+  void diagnoseMalformedCatchpads(Function &F);
 
   bool demotePHIsOnFunclets(Function &F, bool DemoteCatchSwitchPHIOnly);
   bool cloneCommonBlocks(Function &F);
@@ -199,6 +201,9 @@ bool WinEHPrepareImpl::runOnFunction(Function &Fn) {
   // Do nothing if this is not a scope-based personality.
   if (!isScopedEHPersonality(Personality))
     return false;
+
+  // Report a diagnostic for each malformed catchpad
+  diagnoseMalformedCatchpads(Fn);
 
   DL = &Fn.getDataLayout();
   return prepareExplicitEH(Fn);
@@ -1334,6 +1339,19 @@ void WinEHPrepareImpl::verifyPreparedFunclets(Function &F) {
   }
 }
 #endif
+
+void WinEHPrepareImpl::diagnoseMalformedCatchpads(Function &F) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (CatchPadInst *CPI = dyn_cast<CatchPadInst>(&I)) {
+        if (isMalformedCatchpad(CPI, Personality)) {
+          F.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+              "catchpad with unexpected arguments", F, CPI->getDebugLoc()));
+        }
+      }
+    }
+  }
+}
 
 bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
   // Remove unreachable blocks.  It is not valuable to assign them a color and
