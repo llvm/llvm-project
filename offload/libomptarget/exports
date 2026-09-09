@@ -10,6 +10,10 @@ VERS1.0 {
     __tgt_target_data_end;
     __tgt_target_data_update;
     __tgt_target;
+    __tgt_target_kernel_async;
+    __tgt_async_info_create;
+    __tgt_async_info_synchronize;
+    __tgt_async_info_destroy;
     __tgt_target_teams;
     __tgt_target_data_begin_nowait;
     __tgt_target_data_end_nowait;

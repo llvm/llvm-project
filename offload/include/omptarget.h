@@ -412,8 +412,22 @@ void __tgt_target_data_update_nowait_mapper(
 // same action as data_end above. The following types are used; this
 // function returns 0 if it was able to transfer the execution to a
 // target and an int different from zero otherwise.
+struct __tgt_async_info_handle;
+
+__tgt_async_info_handle *__tgt_async_info_create(int64_t DeviceId);
+
+int __tgt_async_info_synchronize(__tgt_async_info_handle *Handle);
+
+void __tgt_async_info_destroy(__tgt_async_info_handle *Handle);
+
 int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
-                        int32_t ThreadLimit, void *HostPtr, KernelArgsTy *Args);
+                        int32_t ThreadLimit, void *HostPtr,
+                        KernelArgsTy *Args);
+
+int __tgt_target_kernel_async(ident_t *Loc, int64_t DeviceId,
+                              int32_t NumTeams, int32_t ThreadLimit,
+                              void *HostPtr, KernelArgsTy *Args,
+                              __tgt_async_info_handle *Handle);
 
 // Non-blocking synchronization for target nowait regions. This function
 // acquires the asynchronous context from task data of the current task being
