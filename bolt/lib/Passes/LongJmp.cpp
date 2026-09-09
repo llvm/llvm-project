@@ -1173,12 +1173,13 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
     uint64_t BBOffset = FragmentOffset;
     for (const BinaryBasicBlock *BB : FF) {
       Layout.BBLayout[BB] = {ClusterNum, BBOffset};
+      // Map the local BB label.
       if (const MCSymbol *Label = BB->getLabel())
         Layout.SymLayout[Label] = {ClusterNum, BBOffset};
-
-      // Map secondary entry points.
-      if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(*BB))
-        Layout.SymLayout[EntrySymbol] = {ClusterNum, BBOffset};
+      // Map the secondary entry point, which can differ from the BB label.
+      if (MCSymbol *Label = BF.getLabelAtOffset(BB->getOffset()))
+        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label))
+          Layout.SymLayout[EntrySymbol] = {ClusterNum, BBOffset};
 
       BBOffset += BB->estimateSize();
     }
@@ -1233,16 +1234,10 @@ LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
 
   ClusteredReferences References;
   References.LongThunkCallsByDistance.resize(Clusters.size());
-  DenseMap<const MCSymbol *, bool> ResolvableTargetCache;
-  auto isResolvableTarget = [&](const MCSymbol *TargetSymbol) {
-    auto It = ResolvableTargetCache.find(TargetSymbol);
-    if (It != ResolvableTargetCache.end())
-      return It->second;
-
-    const bool Resolvable = BC.getFunctionForSymbol(TargetSymbol) ||
-                            BC.getSymbolValue(*TargetSymbol);
-    ResolvableTargetCache[TargetSymbol] = Resolvable;
-    return Resolvable;
+  auto isPrimaryEntryTarget = [&](const MCSymbol *TargetSymbol) {
+    uint64_t EntryID = 0;
+    const BinaryFunction *BF = BC.getFunctionForSymbol(TargetSymbol, &EntryID);
+    return BF && EntryID == 0;
   };
 
   for (BinaryFunction *BF : OutputFunctions) {
@@ -1262,6 +1257,7 @@ LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
           InstOffset += 4;
 
         const bool IsCall = BC.MIB->isCall(Inst);
+        const bool IsTailCall = BC.MIB->isTailCall(Inst);
         const bool IsUncondBranch = BC.MIB->isUnconditionalBranch(Inst);
         if (!IsCall && !IsUncondBranch)
           continue;
@@ -1279,7 +1275,15 @@ LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
         const CrossClusterReference Reference{&Inst,          TargetSymbol,
                                               SourceOffset,   Target.Offset,
                                               Source.Cluster, Target.Cluster};
-        if (IsUncondBranch && Found) {
+        const bool UseBranchChain =
+            Found && (IsUncondBranch ||
+                      (IsTailCall && !isPrimaryEntryTarget(TargetSymbol)));
+        if (UseBranchChain) {
+          // A direct B to a body entry may be annotated as a tail call. It is
+          // not an ABI call boundary, so use branch chains instead of call
+          // thunks that may clobber x16/x17.
+          if (IsTailCall)
+            BC.MIB->convertTailCallToJmp(Inst);
           if (Source.Cluster == Target.Cluster)
             continue;
           if (isWithinClusterRange(SourceOffset, Target.Offset))
@@ -1289,8 +1293,7 @@ LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
           continue;
         }
 
-        if (!Found && !isResolvableTarget(TargetSymbol))
-          continue;
+        assert(IsCall && "expected call after branch-chain handling");
 
         if (Target.Cluster == Source.Cluster)
           continue;

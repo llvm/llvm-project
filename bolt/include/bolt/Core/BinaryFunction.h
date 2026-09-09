@@ -908,6 +908,12 @@ public:
   /// Returns whether there are any labels at Offset.
   bool hasLabelAt(unsigned Offset) const { return Labels.count(Offset) != 0; }
 
+  /// Return the label at \p Offset, or nullptr if none exists.
+  MCSymbol *getLabelAtOffset(unsigned Offset) const {
+    auto It = Labels.find(Offset);
+    return It == Labels.end() ? nullptr : It->second;
+  }
+
   /// Iterate over all jump tables associated with this function.
   iterator_range<std::map<uint64_t, JumpTable *>::const_iterator>
   jumpTables() const {
