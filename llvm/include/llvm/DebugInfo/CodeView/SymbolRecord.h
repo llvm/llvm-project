@@ -1111,7 +1111,7 @@ public:
       : SymbolRecord(SymbolRecordKind::AssociationSym),
         RecordOffset(RecordOffset) {}
 
-  AssociationKind AssociationKind = AssociationKind::None;
+  AssociationKind AssocKind = AssociationKind::None;
   uint32_t CodeOffset = 0;
   uint16_t Segment = 0;
 

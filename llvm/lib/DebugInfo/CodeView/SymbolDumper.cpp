@@ -708,7 +708,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                            AssociationSym &Assoc) {
-  W.printEnum("AssociationKind", static_cast<uint16_t>(Assoc.AssociationKind),
+  W.printEnum("AssocKind", static_cast<uint16_t>(Assoc.AssocKind),
               getAssociationKindNames());
   W.printHex("Offset", Assoc.CodeOffset);
   W.printHex("Segment", Assoc.Segment);

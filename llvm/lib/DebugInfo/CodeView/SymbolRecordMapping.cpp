@@ -603,7 +603,7 @@ EncodedFramePtrReg codeview::encodeFramePtrReg(RegisterId Reg, CPUType CPU) {
 
 Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
                                             AssociationSym &Assoc) {
-  error(IO.mapEnum(Assoc.AssociationKind));
+  error(IO.mapEnum(Assoc.AssocKind));
   error(IO.mapInteger(Assoc.CodeOffset));
   error(IO.mapInteger(Assoc.Segment));
 

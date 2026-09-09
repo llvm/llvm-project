@@ -627,7 +627,7 @@ template <> void SymbolRecordImpl<HotPatchFuncSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<AssociationSym>::map(IO &IO) {
-  IO.mapRequired("AssociationKind", Symbol.AssociationKind);
+  IO.mapRequired("AssocKind", Symbol.AssocKind);
   IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
 }

@@ -1009,8 +1009,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             AssociationSym &Assoc) {
   AutoIndent Indent(P, 7);
-  P.formatLine("kind = {0}, addr = {1}",
-               formatAssociationKind(Assoc.AssociationKind),
+  P.formatLine("kind = {0}, addr = {1}", formatAssociationKind(Assoc.AssocKind),
                formatSegmentOffset(Assoc.Segment, Assoc.CodeOffset));
   return Error::success();
 }
