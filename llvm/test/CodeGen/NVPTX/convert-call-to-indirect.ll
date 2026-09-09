@@ -10,7 +10,8 @@ define %struct.64 @test_return_type_mismatch(ptr %p) {
 ; CHECK-LABEL: test_return_type_mismatch(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<32>;
-; CHECK-NEXT:    $L__prototype_0 : .callprototype (.param .align 1 .b8 _[8]) _ (.param .b64 _);
+; CHECK:    $L__prototype_0:
+; CHECK-NEXT:    .callprototype (.param .align 1 .b8 _[8]) _ (.param .b64 _);
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_return_type_mismatch_param_0];
 ; CHECK-NEXT:    { // callseq 0, 0
@@ -66,7 +67,8 @@ define i64 @test_param_type_mismatch(ptr %p) {
 ; CHECK-LABEL: test_param_type_mismatch(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-NEXT:    $L__prototype_1 : .callprototype (.param .b64 _) _ (.param .b64 _);
+; CHECK:    $L__prototype_1:
+; CHECK-NEXT: .callprototype (.param .b64 _) _ (.param .b64 _);
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .b64 param0;
@@ -86,7 +88,8 @@ define i64 @test_param_count_mismatch(ptr %p) {
 ; CHECK-LABEL: test_param_count_mismatch(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
-; CHECK-NEXT:    $L__prototype_2 : .callprototype (.param .b64 _) _ (.param .b64 _, .param .b64 _);
+; CHECK:    $L__prototype_2:
+; CHECK-NEXT: .callprototype (.param .b64 _) _ (.param .b64 _, .param .b64 _);
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_count_mismatch_param_0];
 ; CHECK-NEXT:    { // callseq 2, 0
@@ -112,7 +115,8 @@ define %struct.64 @test_return_type_mismatch_variadic(ptr %p) {
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b64 %rd<33>;
-; CHECK-NEXT:    $L__prototype_3 : .callprototype (.param .align 1 .b8 _[8]) _ (.param .b64 _, .param .b64 _);
+; CHECK:    $L__prototype_3:
+; CHECK-NEXT: .callprototype (.param .align 1 .b8 _[8]) _ (.param .b64 _, .param .b64 _);
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot3;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_return_type_mismatch_variadic_param_0];

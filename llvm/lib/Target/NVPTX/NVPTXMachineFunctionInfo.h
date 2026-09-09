@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/MC/MCContext.h"
-#include <map>
 
 namespace llvm {
 class CallBase;
@@ -57,8 +56,8 @@ public:
   void addCallPrototype(unsigned Id, const CallBase *CB, MachineFunction &MF) {
     if (CallPrototypes.find(Id) == CallPrototypes.end()) {
       MCSymbol *Symbol =
-          MF.getContext().createTempSymbol("prototype_" + Twine(Id),
-                                           /*AlwaysAddSuffix=*/false);
+          MF.getContext().createTempSymbol("prototype_",
+                                           /*AlwaysAddSuffix=*/true);
       CallPrototypes.try_emplace(Id, CB, Symbol);
     }
   }

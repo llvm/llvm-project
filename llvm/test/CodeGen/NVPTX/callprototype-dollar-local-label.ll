@@ -10,9 +10,10 @@ define i32 @call_via_dollar_prototype_0(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-DAG: .visible .global .align 8 .u64 $L__prototype_0;
 ; CHECK-DAG: .visible .global .align 4 .u32 $L__prototype_00 = 7;
 ; CHECK-LABEL: call_via_dollar_prototype_0(
-; CHECK: $L__prototype_01 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _, .param .b32 _, .param .b32 _);
+; CHECK: $L__prototype_1:
+; CHECK-NEXT: .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _, .param .b32 _, .param .b32 _);
 ; CHECK: ld.global.{{u|b}}64 {{%rd[0-9]+}}, [$L__prototype_0];
-; CHECK: call (retval0), %rd{{[0-9]+}}, (param0, param1, param2, param3), $L__prototype_01;
+; CHECK: call (retval0), %rd{{[0-9]+}}, (param0, param1, param2, param3), $L__prototype_1;
   %fp = load ptr, ptr addrspace(1) @"$L__prototype_0", align 8
   %ret = call i32 %fp(i32 %a, i32 %b, i32 %c, i32 %d)
   ret i32 %ret

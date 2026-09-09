@@ -18,7 +18,8 @@ define internal i32 @foo() {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
-; CHECK-NEXT:    $L__prototype_0 : .callprototype (.param .b32 _) _ (.param .align 1 .b8 _[1], .param .b64 _);
+; CHECK:    $L__prototype_0:
+; CHECK-NEXT: .callprototype (.param .b32 _) _ (.param .align 1 .b8 _[1], .param .b64 _);
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot0;
 ; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
@@ -53,7 +54,8 @@ define internal i32 @bar() {
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
-; CHECK-NEXT:    $L__prototype_1 : .callprototype (.param .b32 _) _ (.param .align 8 .b8 _[8], .param .b64 _);
+; CHECK:    $L__prototype_1:
+; CHECK-NEXT:      .callprototype (.param .b32 _) _ (.param .align 8 .b8 _[8], .param .b64 _);
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;

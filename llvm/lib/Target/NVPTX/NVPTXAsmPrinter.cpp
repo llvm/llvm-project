@@ -255,8 +255,7 @@ private:
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
-  void emitCallPrototype(const CallBase &CB, MCSymbol *PrototypeSymbol,
-                         raw_ostream &O) const;
+  void emitCallPrototype(const CallBase &CB, MCSymbol *PrototypeSymbol) const;
   void emitJumpTable(const MachineJumpTableEntry &MJT, unsigned MJTI) const;
 
   /// Should a .noreturn directive be emitted for \p V, which is either a
@@ -592,13 +591,15 @@ void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   OutMI.setOpcode(MI->getOpcode());
-  for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I)
-    OutMI.addOperand(lowerOperand(*MI, I));
+  for (const auto &MO : MI->operands()) {
+    OutMI.addOperand(lowerOperand(MO));
+  }
 }
 
-static bool isCallPrototypeOperand(const MachineInstr &MI, unsigned OpNum) {
-  return OpNum == 3 &&
-         (MI.getOpcode() == NVPTX::CALL || MI.getOpcode() == NVPTX::CALL_conv);
+static bool isCallPrototypeOperand(const MachineOperand &MO) {
+  return MO.getOperandNo() == 3 &&
+         (MO.getParent()->getOpcode() == NVPTX::CALL ||
+          MO.getParent()->getOpcode() == NVPTX::CALL_conv);
 }
 
 MCOperand NVPTXAsmPrinter::lowerCallPrototypeArg(const MachineOperand &MO) {
@@ -610,15 +611,6 @@ MCOperand NVPTXAsmPrinter::lowerCallPrototypeArg(const MachineOperand &MO) {
   return GetSymbolRef(It->second.second);
 }
 
-MCOperand NVPTXAsmPrinter::lowerOperand(const MachineInstr &MI,
-                                        unsigned OpNum) {
-  const MachineOperand &MO = MI.getOperand(OpNum);
-  if (isCallPrototypeOperand(MI, OpNum))
-    return lowerCallPrototypeArg(MO);
-
-  return lowerOperand(MO);
-}
-
 MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
   switch (MO.getType()) {
   default:
@@ -626,6 +618,8 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
   case MachineOperand::MO_Register:
     return MCOperand::createReg(encodeVirtualRegister(MO.getReg()));
   case MachineOperand::MO_Immediate:
+    if (isCallPrototypeOperand(MO))
+      return lowerCallPrototypeArg(MO);
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
     return MCOperand::createExpr(
@@ -754,16 +748,19 @@ void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
 }
 
 void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
-                                        MCSymbol *PrototypeSymbol,
-                                        raw_ostream &O) const {
+                                        MCSymbol *PrototypeSymbol) const {
   const DataLayout &DL = getDataLayout();
   const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
   const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
   const auto PtrVT = TLI->getPointerTy(DL);
   Type *RetTy = CB.getFunctionType()->getReturnType();
 
-  PrototypeSymbol->print(O, MAI);
-  O << " : .callprototype ";
+  OutStreamer->emitLabel(PrototypeSymbol);
+
+  SmallString<128> Str;
+  raw_svector_ostream O(Str);
+
+  O << ".callprototype ";
 
   if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
     O << "()";
@@ -849,6 +846,8 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   if (shouldEmitPTXNoReturn(CB))
     O << " .noreturn";
   O << ";\n";
+
+  OutStreamer->emitRawText(O.str());
 }
 
 void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
@@ -963,14 +962,13 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
+  OutStreamer->emitRawText(O.str());
 
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
   for (const auto &Entry : MFI->getCallPrototypes()) {
     const auto &[CB, Symbol] = Entry.second;
-    emitCallPrototype(*CB, Symbol, O);
+    emitCallPrototype(*CB, Symbol);
   }
-
-  OutStreamer->emitRawText(O.str());
 
   if (const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo())
     for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables()))
