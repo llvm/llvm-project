@@ -3,12 +3,12 @@
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
 
 define i8 @call_char(){
-; CHECK-LABEL: call_char DS 0H
+; CHECK-LABEL: call_char DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,8(5)
 ; CHECK-NEXT:    lg 5,0(5)
 ; CHECK-NEXT:    lghi 1,8
@@ -22,12 +22,12 @@ define i8 @call_char(){
 }
 
 define i16 @call_short() {
-; CHECK-LABEL: call_short DS 0H
+; CHECK-LABEL: call_short DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,24(5)
 ; CHECK-NEXT:    lg 5,16(5)
 ; CHECK-NEXT:    lghi 1,16
@@ -42,12 +42,12 @@ entry:
 }
 
 define i32 @call_int() {
-; CHECK-LABEL: call_int DS 0H
+; CHECK-LABEL: call_int DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,40(5)
 ; CHECK-NEXT:    lg 5,32(5)
 ; CHECK-NEXT:    lghi 1,32
@@ -63,12 +63,12 @@ entry:
 }
 
 define i64 @call_long() {
-; CHECK-LABEL: call_long DS 0H
+; CHECK-LABEL: call_long DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,56(5)
 ; CHECK-NEXT:    lg 5,48(5)
 ; CHECK-NEXT:    lghi 1,64
@@ -85,12 +85,12 @@ entry:
 }
 
 define i32 @call_ptr(ptr %p1, ptr %p2) {
-; CHECK-LABEL: call_ptr DS 0H
+; CHECK-LABEL: call_ptr DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,72(5)
 ; CHECK-NEXT:    lg 5,64(5)
 ; CHECK-NEXT:    lgr 1,2
@@ -105,12 +105,12 @@ entry:
 }
 
 define i64 @call_integrals() {
-; CHECK-LABEL: call_integrals DS 0H
+; CHECK-LABEL: call_integrals DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,88(5)
 ; CHECK-NEXT:    lg 5,80(5)
 ; CHECK-NEXT:    lghi 1,64
@@ -128,7 +128,7 @@ entry:
 }
 
 define signext i8 @pass_char(i8 signext %arg) {
-; CHECK-LABEL: pass_char DS 0H
+; CHECK-LABEL: pass_char DS 0B
 ; CHECK:         lgr 3,1
 ; CHECK-NEXT:    b 2(7)
 entry:
@@ -136,7 +136,7 @@ entry:
 }
 
 define signext i16 @pass_short(i16 signext %arg) {
-; CHECK-LABEL: pass_short DS 0H
+; CHECK-LABEL: pass_short DS 0B
 ; CHECK:         lgr 3,1
 ; CHECK-NEXT:    b 2(7)
 entry:
@@ -144,7 +144,7 @@ entry:
 }
 
 define signext i32 @pass_int(i32 signext %arg0, i32 signext %arg1) {
-; CHECK-LABEL: pass_int DS 0H
+; CHECK-LABEL: pass_int DS 0B
 ; CHECK:         lgr 3,2
 ; CHECK-NEXT:    b 2(7)
 entry:
@@ -152,7 +152,7 @@ entry:
 }
 
 define signext i64 @pass_long(i64 signext %arg0, i64 signext %arg1, i64 signext %arg2) {
-; CHECK-LABEL: pass_long DS 0H
+; CHECK-LABEL: pass_long DS 0B
 ; CHECK:         agr 1,2
 ; CHECK-NEXT:    agr 3,1
 ; CHECK-NEXT:    b 2(7)
@@ -163,7 +163,7 @@ entry:
 }
 
 define signext i64 @pass_integrals0(i64 signext %arg0, i32 signext %arg1, i16 signext %arg2, i64 signext %arg3) {
-; CHECK-LABEL: pass_integrals0 DS 0H
+; CHECK-LABEL: pass_integrals0 DS 0B
 ; CHECK:         ag 2,2200(4)
 ; CHECK-NEXT:    lgr 3,2
 ; CHECK-NEXT:    b 2(7)
@@ -174,12 +174,12 @@ entry:
 }
 
 define float @call_float() {
-; CHECK-LABEL: call_float DS 0H
+; CHECK-LABEL: call_float DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,104(5)
 ; CHECK-NEXT:    lg 5,96(5)
 ; CHECK-NEXT:    larl 1,L#CPI11_0
@@ -195,12 +195,12 @@ entry:
 }
 
 define double @call_double() {
-; CHECK-LABEL: call_double DS 0H
+; CHECK-LABEL: call_double DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,120(5)
 ; CHECK-NEXT:    lg 5,112(5)
 ; CHECK-NEXT:    larl 1,L#{{CPI[0-9]+_[0-9]+}}
@@ -216,12 +216,12 @@ entry:
 }
 
 define fp128 @call_longdouble() {
-; CHECK-LABEL: call_longdouble DS 0H
+; CHECK-LABEL: call_longdouble DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,136(5)
 ; CHECK-NEXT:    lg 5,128(5)
 ; CHECK-NEXT:    larl 1,L#{{CPI[0-9]+_[0-9]+}}
@@ -238,12 +238,12 @@ entry:
 }
 
 define i64 @call_floats0(fp128 %arg0, double %arg1) {
-; CHECK-LABEL: call_floats0 DS 0H
+; CHECK-LABEL: call_floats0 DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,152(5)
 ; CHECK-NEXT:    lg 5,144(5)
 ; CHECK-NEXT:    larl 1,L#{{CPI[0-9]+_[0-9]+}}
@@ -264,12 +264,12 @@ entry:
 }
 
 define i64 @call_floats1(fp128 %arg0, double %arg1) {
-; CHECK-LABEL: call_floats1 DS 0H
+; CHECK-LABEL: call_floats1 DS 0B
 ; CHECK:         stmg 6,7,1872(4)
-; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:  L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lg 6,168(5)
 ; CHECK-NEXT:    lg 5,160(5)
 ; CHECK-NEXT:    lxr 1,0
@@ -286,7 +286,7 @@ entry:
 }
 
 define float @pass_float(float %arg) {
-; CHECK-LABEL: pass_float DS 0H
+; CHECK-LABEL: pass_float DS 0B
 ; CHECK:         larl  1,L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    aeb 0,0(1)
 ; CHECK-NEXT:    b 2(7)
@@ -296,7 +296,7 @@ entry:
 }
 
 define double @pass_double(double %arg) {
-; CHECK-LABEL: pass_double DS 0H
+; CHECK-LABEL: pass_double DS 0B
 ; CHECK:         larl  1,L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    adb 0,0(1)
 ; CHECK-NEXT:    b 2(7)
@@ -306,7 +306,7 @@ entry:
 }
 
 define fp128 @pass_longdouble(fp128 %arg) {
-; CHECK-LABEL: pass_longdouble DS 0H
+; CHECK-LABEL: pass_longdouble DS 0B
 ; CHECK:         larl  1,L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    lxdb 1,0(1)
 ; CHECK-NEXT:    axbr 0,1
@@ -317,7 +317,7 @@ entry:
 }
 
 define i64 @pass_floats0(fp128 %arg0, fp128 %arg1, double %arg2) {
-; CHECK-LABEL: pass_floats0 DS 0H
+; CHECK-LABEL: pass_floats0 DS 0B
 ; CHECK:         lxdb 1,2208(4)
 ; CHECK:         larl  1,L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    ld 5,0(1)
