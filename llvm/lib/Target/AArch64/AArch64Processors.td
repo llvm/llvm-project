@@ -1287,10 +1287,13 @@ def ProcessorFeatures {
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
 // optimizations. We use a fixed load latency of 4 as the a510 scheduling model
 // has a latency of 2 for most loads which is disproportionately low for many
-// cpus.
+// cpus. FeatureFuseCmpCSel is enabled under Generic, as many modern cores
+// support this fusion and it has minimal performance impact on cores that do
+// not support it.
 def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
-                      FeatureEnableSelectOptimize, FeatureFixedLoadLatency4]>;
+                      FeatureEnableSelectOptimize, FeatureFixedLoadLatency4,
+                      FeatureFuseCmpCSel]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
 def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
