@@ -729,7 +729,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const std::initializer_list<LLT> FPTypesPK16_64 = {F32, F64, F16, V2F16,
                                                      V2F64};
 
-  const LLT MinExtendedFPTy = ST.has16BitInsts() ? F16 : F32;
   const LLT I1 = LLT::integer(1);
   const LLT I16 = LLT::integer(16);
   const LLT I32 = LLT::integer(32);
@@ -1355,17 +1354,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   FCmpBuilder.widenScalarToNextPow2(1).minScalar(1, F32).scalarize(0);
 
-  // FIXME: fpow has a selection pattern that should move to custom lowering.
-  auto &ExpOps = getActionDefinitionsBuilder(G_FPOW);
-  if (ST.has16BitInsts())
-    ExpOps.customFor({{F32}, {F16}});
-  else
-    ExpOps.customFor({F32});
-  ExpOps.clampScalar(0, MinExtendedFPTy, F32).scalarize(0);
+  getActionDefinitionsBuilder(G_FPOW)
+      .customFor({F32})
+      .clampScalar(0, F32, F32)
+      .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FPOWI)
-      .clampScalar(0, MinExtendedFPTy, F32)
-      .lower();
+  getActionDefinitionsBuilder(G_FPOWI).clampScalar(0, F32, F32).lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
@@ -4281,37 +4275,61 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   return true;
 }
 
+// Keep in sync with AMDGPUTargetLowering::lowerFPOW, which documents this.
 bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
                                        MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
-  Register Src0 = MI.getOperand(1).getReg();
-  Register Src1 = MI.getOperand(2).getReg();
+  Register X = MI.getOperand(1).getReg();
+  Register Y = MI.getOperand(2).getReg();
   unsigned Flags = MI.getFlags();
-  LLT Ty = B.getMRI()->getType(Dst);
+  assert(B.getMRI()->getType(Dst) == F32);
 
-  if (Ty == F32) {
-    auto Log = B.buildFLog2(F32, Src0, Flags);
+  // Fast expansion: ignores denormals, NaN for a negative base.
+  if (allowApproxFunc(B.getMF(), Flags)) {
+    auto Log = B.buildIntrinsic(Intrinsic::amdgcn_log, {F32})
+                   .addUse(X)
+                   .setMIFlags(Flags);
     auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
+                   .addUse(Y)
                    .addUse(Log.getReg(0))
-                   .addUse(Src1)
                    .setMIFlags(Flags);
-    B.buildFExp2(Dst, Mul, Flags);
-  } else if (Ty == F16) {
-    // There's no f16 fmul_legacy, so we need to convert for it.
-    auto Log = B.buildFLog2(F16, Src0, Flags);
-    auto Ext0 = B.buildFPExt(F32, Log, Flags);
-    auto Ext1 = B.buildFPExt(F32, Src1, Flags);
-    auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
-                   .addUse(Ext0.getReg(0))
-                   .addUse(Ext1.getReg(0))
-                   .setMIFlags(Flags);
-    // The f32 product is finite whenever the original fpow was, but it can
-    // still be outside the f16 range. Drop ninf from the truncation and from
-    // the exp2, since neither can assume a finite value here.
-    unsigned FlagsNoNInf = Flags & ~MachineInstr::FmNoInfs;
-    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul, FlagsNoNInf), FlagsNoNInf);
-  } else
-    return false;
+    buildExp(B, Dst, Mul.getReg(0), Flags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  auto Abs = B.buildFAbs(F32, X, Flags);
+  auto Log = B.buildFLog2(F32, Abs, Flags);
+  auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
+                 .addUse(Y)
+                 .addUse(Log.getReg(0))
+                 .setMIFlags(Flags);
+  Register R = B.buildFExp2(F32, Mul, Flags).getReg(0);
+
+  auto One = B.buildFConstant(F32, 1.0);
+
+  auto YTrunc = B.buildIntrinsicTrunc(F32, Y);
+  auto YIsInt = B.buildFCmp(CmpInst::FCMP_OEQ, S1, YTrunc, Y);
+  auto YHalf = B.buildFMul(F32, Y, B.buildFConstant(F32, 0.5));
+  auto YHalfTrunc = B.buildIntrinsicTrunc(F32, YHalf);
+  auto YIsOdd = B.buildAnd(
+      S1, YIsInt, B.buildFCmp(CmpInst::FCMP_ONE, S1, YHalfTrunc, YHalf));
+
+  // pow(-x, odd y) = -pow(x, y).
+  auto Sign = B.buildSelect(F32, YIsOdd, X, One);
+  if (Flags & MachineInstr::FmNoNans) {
+    B.buildFCopysign(Dst, R, Sign);
+    MI.eraseFromParent();
+    return true;
+  }
+  R = B.buildFCopysign(F32, R, Sign).getReg(0);
+
+  // A negative finite base to a non-integral power is NaN. Not an ONE compare:
+  // pow(-1, NaN) needs the NaN-true behavior of !OEQ.
+  auto XNegFinite = B.buildIsFPClass(S1, X, fcNegNormal | fcNegSubnormal);
+  auto NegNonInt = B.buildAnd(S1, XNegFinite, B.buildNot(S1, YIsInt));
+  auto NaN = B.buildFConstant(F32, APFloat::getQNaN(APFloat::IEEEsingle()));
+  B.buildSelect(Dst, NegNonInt, NaN, R);
 
   MI.eraseFromParent();
   return true;
