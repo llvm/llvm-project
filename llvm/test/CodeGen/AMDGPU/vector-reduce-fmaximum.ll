@@ -83,9 +83,7 @@ define half @test_vector_reduce_fmaximum_v2half(<2 x half> %v) {
 ; GFX1170-SDAG-FAKE16-LABEL: test_vector_reduce_fmaximum_v2half:
 ; GFX1170-SDAG-FAKE16:       ; %bb.0: ; %entry
 ; GFX1170-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v2half:
@@ -107,9 +105,7 @@ define half @test_vector_reduce_fmaximum_v2half(<2 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v2half(<2 x half> %v)
@@ -220,9 +216,8 @@ define half @test_vector_reduce_fmaximum_v3half(<3 x half> %v) {
 ; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_perm_b32 v1, s0, v1, 0x5040100
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v3half:
@@ -252,9 +247,7 @@ define half @test_vector_reduce_fmaximum_v3half(<3 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    v_perm_b32 v1, s0, v1, 0x5040100
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v3half(<3 x half> %v)
@@ -389,9 +382,8 @@ define half @test_vector_reduce_fmaximum_v4half(<4 x half> %v) {
 ; GFX1170-SDAG-FAKE16:       ; %bb.0: ; %entry
 ; GFX1170-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v4half:
@@ -415,9 +407,8 @@ define half @test_vector_reduce_fmaximum_v4half(<4 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v4half(<4 x half> %v)
@@ -659,9 +650,7 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v8half:
@@ -691,9 +680,7 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v8half(<8 x half> %v)
@@ -1150,9 +1137,7 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v16half:
@@ -1192,9 +1177,7 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v16half(<16 x half> %v)

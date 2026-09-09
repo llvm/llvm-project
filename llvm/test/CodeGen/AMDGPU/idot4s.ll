@@ -1113,25 +1113,23 @@ define amdgpu_kernel void @idot4_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    v_ashrrev_i16 v5, 8, v2
 ; GFX10-DL-NEXT:    v_bfe_i32 v6, v2, 0, 8
 ; GFX10-DL-NEXT:    v_bfe_i32 v7, v1, 0, 8
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
+; GFX10-DL-NEXT:    v_ashrrev_i16 v1, 8, v1 op_sel:[0,1,0]
 ; GFX10-DL-NEXT:    v_perm_b32 v5, v5, v6, 0x5040100
 ; GFX10-DL-NEXT:    v_perm_b32 v4, v4, v7, 0x5040100
-; GFX10-DL-NEXT:    v_ashrrev_i16 v6, 8, v1
-; GFX10-DL-NEXT:    v_ashrrev_i16 v7, 8, v2
-; GFX10-DL-NEXT:    v_bfe_i32 v2, v2, 0, 8
-; GFX10-DL-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX10-DL-NEXT:    v_ashrrev_i16 v2, 8, v2 op_sel:[0,1,0]
+; GFX10-DL-NEXT:    v_bfe_i32 v6, v9, 0, 8
+; GFX10-DL-NEXT:    v_bfe_i32 v7, v8, 0, 8
 ; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v4, v4, v5
-; GFX10-DL-NEXT:    v_perm_b32 v2, v7, v2, 0x5040100
-; GFX10-DL-NEXT:    v_perm_b32 v1, v6, v1, 0x5040100
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
+; GFX10-DL-NEXT:    v_perm_b32 v2, v2, v6, 0x5040100
+; GFX10-DL-NEXT:    v_perm_b32 v1, v1, v7, 0x5040100
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-NEXT:    v_add_nc_u16 v3, v4, v3
 ; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
-; GFX10-DL-NEXT:    v_add_nc_u16 v2, v3, v5
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GFX10-DL-NEXT:    v_add_nc_u16 v1, v2, v1
-; GFX10-DL-NEXT:    v_add_nc_u16 v1, v1, v3
+; GFX10-DL-NEXT:    v_add_nc_u16 v2, v3, v4 op_sel:[0,1,0]
+; GFX10-DL-NEXT:    v_add_nc_u16 v2, v2, v1
+; GFX10-DL-NEXT:    v_add_nc_u16 v1, v2, v1 op_sel:[0,1,0]
 ; GFX10-DL-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX10-DL-NEXT:    s_endpgm
 ;
@@ -1212,17 +1210,15 @@ define amdgpu_kernel void @idot4_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-DL-FAKE16-NEXT:    v_perm_b32 v0, v7, v0, 0x5040100
 ; GFX11-DL-FAKE16-NEXT:    v_perm_b32 v1, v6, v1, 0x5040100
-; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-DL-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX11-DL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v3, v4, v3
 ; GFX11-DL-FAKE16-NEXT:    v_pk_mul_lo_u16 v0, v1, v0
-; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v1, v3, v5
-; GFX11-DL-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v0, v1, v0
-; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v0, v0, v3
+; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v1, v3, v4 op_sel:[0,1,0]
+; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v1, v1, v0
+; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v0, v1, v0 op_sel:[0,1,0]
 ; GFX11-DL-FAKE16-NEXT:    global_store_b16 v2, v0, s[4:5]
 ; GFX11-DL-FAKE16-NEXT:    s_endpgm
                                               ptr addrspace(1) %src2,

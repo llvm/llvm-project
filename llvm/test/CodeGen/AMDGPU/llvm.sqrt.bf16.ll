@@ -163,11 +163,10 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ; GFX12-FAKE16-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-SDAG-NEXT:    v_sqrt_bf16_e32 v1, v0
 ; GFX12-FAKE16-SDAG-NEXT:    v_nop
-; GFX12-FAKE16-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX12-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_2)
-; GFX12-FAKE16-SDAG-NEXT:    v_sqrt_bf16_e32 v0, v0
+; GFX12-FAKE16-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
 ; GFX12-FAKE16-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX12-FAKE16-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-SDAG-NEXT:    v_sqrt_bf16_e64 v0, v0 op_sel:[1,0]
+; GFX12-FAKE16-SDAG-NEXT:    v_nop
 ; GFX12-FAKE16-SDAG-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX12-FAKE16-SDAG-NEXT:    buffer_store_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-SDAG-NEXT:    s_endpgm

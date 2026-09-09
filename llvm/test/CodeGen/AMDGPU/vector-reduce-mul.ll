@@ -1273,16 +1273,14 @@ define i16 @test_vector_reduce_mul_v3i16(<3 x i16> %v) {
 ; GFX10-SDAG-LABEL: test_vector_reduce_mul_v3i16:
 ; GFX10-SDAG:       ; %bb.0: ; %entry
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-SDAG-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
-; GFX10-SDAG-NEXT:    v_mul_lo_u16 v0, v0, v2
+; GFX10-SDAG-NEXT:    v_pk_mul_lo_u16 v1, v0, v1
+; GFX10-SDAG-NEXT:    v_mul_lo_u16 v0, v1, v0 op_sel:[0,1,0]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: test_vector_reduce_mul_v3i16:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-GISEL-NEXT:    v_mul_lo_u16 v0, v0, v2
+; GFX10-GISEL-NEXT:    v_mul_lo_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-GISEL-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;

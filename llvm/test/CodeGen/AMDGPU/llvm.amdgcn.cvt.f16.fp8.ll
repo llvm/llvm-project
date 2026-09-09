@@ -733,9 +733,7 @@ define amdgpu_ps float @test_cvt_pk_f16_fp8_v_hi(<2 x i16> %a) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_f16_fp8 v0, v0
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_f16_fp8 v0, v0 op_sel:[1,0]
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_f16_fp8_v_hi:
@@ -753,9 +751,7 @@ define amdgpu_ps float @test_cvt_pk_f16_fp8_v_hi(<2 x i16> %a) {
 ; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f16_fp8 v0, v0
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f16_fp8 v0, v0 op_sel:[1,0]
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %a.1 = extractelement <2 x i16> %a, i32 1
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16 %a.1)
