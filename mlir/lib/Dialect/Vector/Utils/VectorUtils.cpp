@@ -188,7 +188,7 @@ AffineMap mlir::makePermutationMap(
   for (auto *forInst : enclosingLoops) {
     auto it = loopToVectorDim.find(forInst);
     if (it != loopToVectorDim.end()) {
-      enclosingLoopToVectorDim.try_emplace(it->first, it->second);
+      enclosingLoopToVectorDim.insert(*it);
     }
   }
   return ::makePermutationMap(indices, enclosingLoopToVectorDim);

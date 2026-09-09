@@ -517,6 +517,13 @@ TEST(DenseMapCustomTest, InsertRange) {
   std::map<int, int> Sorted(Src.begin(), Src.end());
   EXPECT_THAT(Sorted,
               testing::ElementsAre(testing::Pair(1, 10), testing::Pair(2, 20)));
+
+  // As polly inserts a DenseMap<BasicBlock *, BasicBlock *> into a
+  // DenseMap<AssertingVH<Value>, AssertingVH<Value>>, insert from a map whose
+  // key and value types only convert to this one's.
+  DenseMap<CtorTester, CtorTester, CtorTesterMapInfo> Convertible;
+  Convertible.insert_range(DenseMap<uint32_t, uint32_t>({{1, 10}}));
+  EXPECT_EQ(CtorTester(10), Convertible.lookup(CtorTester(1)));
 }
 
 TEST(SmallDenseMapCustomTest, InsertRange) {

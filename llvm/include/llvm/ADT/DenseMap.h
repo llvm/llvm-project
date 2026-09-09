@@ -62,6 +62,12 @@ template <typename KeyT, typename ValueT> struct DenseMapPair {
       : first(P.first), second(P.second) {}
   DenseMapPair(std::pair<KeyT, ValueT> &&P)
       : first(std::move(P.first)), second(std::move(P.second)) {}
+  template <typename U1, typename U2>
+  DenseMapPair(const DenseMapPair<U1, U2> &P)
+      : first(P.first), second(P.second) {}
+  template <typename U1, typename U2>
+  DenseMapPair(DenseMapPair<U1, U2> &&P)
+      : first(std::move(P.first)), second(std::move(P.second)) {}
 
   explicit operator std::pair<KeyT, ValueT>() const { return {first, second}; }
   explicit operator std::pair<const KeyT, ValueT>() const {
@@ -316,6 +322,20 @@ public:
     return try_emplace_impl(std::move(KV.first), std::move(KV.second));
   }
 
+  template <
+      typename B = BucketT,
+      typename = std::enable_if_t<!std::is_same_v<B, std::pair<KeyT, ValueT>>>>
+  std::pair<iterator, bool> insert(const BucketT &KV) {
+    return try_emplace_impl(KV.first, KV.second);
+  }
+
+  template <
+      typename B = BucketT,
+      typename = std::enable_if_t<!std::is_same_v<B, std::pair<KeyT, ValueT>>>>
+  std::pair<iterator, bool> insert(BucketT &&KV) {
+    return try_emplace_impl(std::move(KV.first), std::move(KV.second));
+  }
+
   // Inserts key,value pair into the map if the key isn't already in the map.
   // The value is constructed in-place if the key is not in the map, otherwise
   // it is not moved.
@@ -353,13 +373,8 @@ public:
 
   /// Range insertion of pairs.
   template <typename InputIt> void insert(InputIt I, InputIt E) {
-    for (; I != E; ++I) {
-      // Take the members rather than converting: a move iterator's operator*
-      // yields an rvalue, which forwarding carries through to each member.
-      auto &&KV = *I;
-      try_emplace(std::forward<decltype(KV)>(KV).first,
-                  std::forward<decltype(KV)>(KV).second);
-    }
+    for (; I != E; ++I)
+      insert(*I);
   }
 
   /// Inserts range of 'std::pair<KeyT, ValueT>' values into the map.

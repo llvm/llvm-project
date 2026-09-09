@@ -3730,7 +3730,7 @@ void MicrosoftVTableContext::computeVTableRelatedInformation(
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
     for (const auto &Loc : Builder.vtable_locations()) {
-      auto Insert = NewMethodLocations.try_emplace(Loc.first, Loc.second);
+      auto Insert = NewMethodLocations.insert(Loc);
       if (!Insert.second) {
         const MethodVFTableLocation &NewLoc = Loc.second;
         MethodVFTableLocation &OldLoc = Insert.first->second;
