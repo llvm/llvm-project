@@ -196,16 +196,19 @@ public:
   template <typename F>
   auto withCharProto(F &&f) const
       -> decltype(std::declval<F>()(std::declval<char>())) {
-    switch (storage_.index()) {
-    case 1:
-      return f(char{});
-    case 2:
-      return f(char16_t{});
-    case 3:
-      return f(char32_t{});
-    default:
-      DIE("unsupported character kind/monostate");
-    }
+    return common::visit(
+        common::visitors{
+            [](std::monostate) -> decltype(f(
+                                   std::declval<const std::string &>())) {
+              DIE("operation on uninitialized CharacterValueImpl");
+            },
+            [&f](auto s) {
+              using StringT = std::decay_t<decltype(s)>;
+              using CharT = typename StringT::value_type;
+              return f(CharT{});
+            },
+        },
+        storage_);
   }
 
   template <typename F>
@@ -225,17 +228,16 @@ public:
 
   template <typename F>
   auto withStdString(F &&f) const
-      -> decltype(std::declval<F>()(std::declval<const std::string &>())) {
-    switch (storage_.index()) {
-    case 1:
-      return f(std::get<std::string>(storage_));
-    case 2:
-      return f(std::get<std::u16string>(storage_));
-    case 3:
-      return f(std::get<std::u32string>(storage_));
-    default:
-      DIE("operation on uninitialized CharacterValue");
-    }
+      -> decltype(f(std::declval<const std::string &>())) {
+    return common::visit(
+        common::visitors{
+            [](std::monostate) -> decltype(f(
+                                   std::declval<const std::string &>())) {
+              DIE("operation on uninitialized CharacterValueImpl");
+            },
+            f,
+        },
+        storage_);
   }
 
 private:

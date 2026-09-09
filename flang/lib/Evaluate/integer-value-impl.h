@@ -267,24 +267,15 @@ public:
   }
 
   template <typename F>
-  auto withWord(F &&f) const
-      -> decltype(std::declval<F>()(std::declval<I64>())) {
-    switch (storage_.index()) {
-    case 1:
-      return f(std::get<I8>(storage_));
-    case 2:
-      return f(std::get<I16>(storage_));
-    case 3:
-      return f(std::get<I32>(storage_));
-    case 4:
-      return f(std::get<I64>(storage_));
-    case 5:
-      return f(std::get<I80>(storage_));
-    case 6:
-      return f(std::get<I128>(storage_));
-    default:
-      DIE("operation on uninitialized IntegerValueImpl");
-    }
+  auto withWord(F &&f) const -> decltype(f(std::declval<const I64 &>())) {
+    return common::visit(
+        common::visitors{
+            [](std::monostate) -> decltype(f(std::declval<const I64 &>())) {
+              DIE("operation on uninitialized IntegerValueImpl");
+            },
+            f,
+        },
+        storage_);
   }
 
 private:

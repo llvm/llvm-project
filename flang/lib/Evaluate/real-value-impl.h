@@ -238,17 +238,17 @@ public:
   template <typename F> auto withWord(F &&f) const {
     switch (storage_.index()) {
     case 1:
-      return f(std::get<R2>(storage_));
+      return f(std::get<1>(storage_));
     case 2:
-      return f(std::get<R3>(storage_));
+      return f(std::get<2>(storage_));
     case 3:
-      return f(std::get<R4>(storage_));
+      return f(std::get<3>(storage_));
     case 4:
-      return f(std::get<R8>(storage_));
+      return f(std::get<4>(storage_));
     case 5:
-      return f(std::get<R10>(storage_));
+      return f(std::get<5>(storage_));
     case 6:
-      return f(std::get<R16>(storage_));
+      return f(std::get<6>(storage_));
     default:
       DIE("operation on uninitialized RealValueImpl");
     }

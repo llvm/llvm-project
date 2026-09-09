@@ -15,6 +15,12 @@
 
 namespace Fortran::evaluate::value {
 
+/// Using std::monostate_t as the first type of a std::variant is a common idom
+/// to make the default-initialized state explicit, e.g. because no other of the
+/// std::variant's types is default-initializable.
+template <typename T>
+constexpr bool is_monostate = std::is_same_v<std::decay_t<T>, std::monostate>;
+
 CharacterValueImpl::CharacterValueImpl(int kind, std::size_t n, char32_t c) {
   withCharProto(kind, [this, n, c](auto ct) {
     using CharT = std::decay_t<decltype(ct)>;
@@ -24,8 +30,8 @@ CharacterValueImpl::CharacterValueImpl(int kind, std::size_t n, char32_t c) {
 
 CharacterValueImpl CharacterValueImpl::Zero(int kind) {
   return withCharProto(kind, [kind](auto c) {
-    using Char = std::decay_t<decltype(c)>;
-    return CharacterValueImpl{kind, std::basic_string<Char>{}};
+    using CharT = std::decay_t<decltype(c)>;
+    return CharacterValueImpl{kind, std::basic_string<CharT>{}};
   });
 }
 
@@ -58,11 +64,11 @@ LLVM_DUMP_METHOD void CharacterValueImpl::dump() const {
 std::size_t CharacterValueImpl::charSize() const {
   return common::visit(
       [](const auto &s) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           DIE("operation not supported on uninitialized value");
         } else {
-          return sizeof(typename std::decay_t<decltype(s)>::value_type);
+          return sizeof(typename std::decay_t<StringT>::value_type);
         }
       },
       storage_);
@@ -71,8 +77,8 @@ std::size_t CharacterValueImpl::charSize() const {
 std::size_t CharacterValueImpl::size() const {
   return common::visit(
       [](const auto &s) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           return 0;
         } else {
           return s.size();
@@ -84,8 +90,8 @@ std::size_t CharacterValueImpl::size() const {
 void *CharacterValueImpl::charData() {
   return common::visit(
       [](auto &s) -> void * {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           // No data available in monostate
           return nullptr;
         } else {
@@ -98,8 +104,8 @@ void *CharacterValueImpl::charData() {
 const void *CharacterValueImpl::charData() const {
   return common::visit(
       [](const auto &s) -> const void * {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           // No data available in monostate
           return nullptr;
         } else {
@@ -119,11 +125,9 @@ Ordering CharacterValueImpl::Compare(const CharacterValueImpl &y) const {
         // polymorhpic to what it is compared to
         if constexpr (std::is_same_v<XS, YS>) {
           return Fortran::evaluate::Compare(xs, ys);
-        } else if constexpr (std::is_same_v<XS, std::monostate> &&
-            !std::is_same_v<YS, std::monostate>) {
+        } else if constexpr (is_monostate<XS> && !is_monostate<YS>) {
           return Fortran::evaluate::Compare(YS{}, ys);
-        } else if constexpr (!std::is_same_v<XS, std::monostate> &&
-            std::is_same_v<YS, std::monostate>) {
+        } else if constexpr (!is_monostate<XS> && is_monostate<YS>) {
           return Fortran::evaluate::Compare(xs, XS{});
         } else {
           DIE("character comparison across differing kinds");
@@ -142,11 +146,9 @@ bool CharacterValueImpl::operator<(const CharacterValueImpl &y) const {
         // polymorphic to what it is compared to
         if constexpr (std::is_same_v<XS, YS>) {
           return xs < ys;
-        } else if constexpr (std::is_same_v<XS, std::monostate> &&
-            !std::is_same_v<YS, std::monostate>) {
+        } else if constexpr (is_monostate<XS> && !is_monostate<YS>) {
           return YS{} < ys;
-        } else if constexpr (!std::is_same_v<XS, std::monostate> &&
-            std::is_same_v<YS, std::monostate>) {
+        } else if constexpr (!is_monostate<XS> && is_monostate<YS>) {
           return xs < XS{};
         } else {
           DIE("character comparison across differing kinds");
@@ -165,11 +167,9 @@ bool CharacterValueImpl::operator==(const CharacterValueImpl &y) const {
         // polymorhpic to what it is compared to
         if constexpr (std::is_same_v<XS, YS>) {
           return xs == ys;
-        } else if constexpr (std::is_same_v<XS, std::monostate> &&
-            !std::is_same_v<YS, std::monostate>) {
+        } else if constexpr (is_monostate<XS> && !is_monostate<YS>) {
           return YS{} == ys;
-        } else if constexpr (!std::is_same_v<XS, std::monostate> &&
-            std::is_same_v<YS, std::monostate>) {
+        } else if constexpr (!is_monostate<XS> && is_monostate<YS>) {
           return xs == XS{};
         } else {
           DIE("character comparison across differing kinds");
@@ -188,8 +188,8 @@ void CharacterValueImpl::assign(int kind, std::size_t n, char32_t c) {
 void CharacterValueImpl::erase(std::size_t pos) {
   common::visit(
       [pos](auto &s) {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           DIE("operation not supported on uninitialized value");
         } else {
           s.erase(pos);
@@ -201,11 +201,11 @@ void CharacterValueImpl::erase(std::size_t pos) {
 void CharacterValueImpl::append(std::size_t n, char32_t c) {
   common::visit(
       [n, c](auto &s) {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           DIE("operation not supported on uninitialized value");
         } else {
-          using CharT = typename std::decay_t<decltype(s)>::value_type;
+          using CharT = typename StringT::value_type;
           s.append(n, static_cast<CharT>(c));
         }
       },
@@ -216,15 +216,15 @@ CharacterValueImpl &CharacterValueImpl::replace(
     std::size_t pos, std::size_t len, const CharacterValueImpl &other) {
   common::visit(
       [pos, len](auto &s, const auto &o) {
-        if constexpr (!std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate> &&
-            !std::is_same_v<std::decay_t<decltype(o)>, std::monostate> &&
-            std::is_same_v<std::decay_t<decltype(s)>,
-                std::decay_t<decltype(o)>>) {
+        using XS = std::decay_t<decltype(s)>;
+        using XO = std::decay_t<decltype(o)>;
+
+        if constexpr (!is_monostate<XS> && !is_monostate<XO> &&
+            std::is_same_v<XS, XO>) {
           s.replace(pos, len, o);
         } else {
-          DIE("operation not supported on uninitialized value or "
-              "values of different kinds");
+          DIE("operation not supported on uninitialized value or values of "
+              "different kinds");
         }
       },
       storage_, other.storage_);
@@ -235,7 +235,7 @@ CharacterValueImpl CharacterValueImpl::substr(std::size_t pos) const {
   return common::visit(
       [pos](const auto &s) -> CharacterValueImpl {
         using StringT = std::decay_t<decltype(s)>;
-        if constexpr (std::is_same_v<StringT, std::monostate>) {
+        if constexpr (is_monostate<StringT>) {
           DIE("operation not supported on uninitialized value");
         } else {
           return CharacterValueImpl{
@@ -250,8 +250,7 @@ CharacterValueImpl CharacterValueImpl::substr(
   return common::visit(
       [pos, len](const auto &s) -> CharacterValueImpl {
         using StringT = std::decay_t<decltype(s)>;
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        if constexpr (is_monostate<StringT>) {
           DIE("operation not supported on uninitialized value");
         } else {
           return CharacterValueImpl{
@@ -312,7 +311,7 @@ std::string CharacterValueImpl::ToStdString() const {
   return common::visit(
       [](const auto &s) {
         using StringT = std::decay_t<decltype(s)>;
-        if constexpr (std::is_same_v<StringT, std::monostate>) {
+        if constexpr (is_monostate<StringT>) {
           return std::string{};
         } else if constexpr (std::is_same_v<StringT, std::string>) {
           return s;
@@ -336,6 +335,7 @@ CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
     return withCharProto(kind, [&s](auto ct) -> CharacterValueImpl {
       using CharT = std::decay_t<decltype(ct)>;
       using StringT = std::basic_string<CharT>;
+
       // Fortran character conversion is well defined between distinct kinds
       // only when the actual characters are valid 7-bit ASCII.
       StringT str;
@@ -353,8 +353,8 @@ CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
 void CharacterValueImpl::reserve(std::size_t n) {
   common::visit(
       [n](auto &s) {
-        if constexpr (!std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (!is_monostate<StringT>) {
           s.reserve(n);
         }
       },
@@ -364,8 +364,8 @@ void CharacterValueImpl::reserve(std::size_t n) {
 char32_t CharacterValueImpl::operator[](std::size_t i) const {
   return common::visit(
       [i](const auto &s) -> char32_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           DIE("operation not supported on uninitialized value");
         } else {
           return static_cast<char32_t>(s[i]);
@@ -379,15 +379,14 @@ CharacterValueImpl CharacterValueImpl::operator+(
     const CharacterValueImpl &y) const {
   return common::visit(
       [](const auto &a, const auto &b) -> CharacterValueImpl {
-        if constexpr (std::is_same_v<std::decay_t<decltype(a)>,
-                          std::decay_t<decltype(b)>> &&
-            !std::is_same_v<std::decay_t<decltype(a)>, std::monostate>) {
-          using StringT = std::decay_t<decltype(a)>;
-          return CharacterValueImpl{
-              sizeof(typename StringT::value_type), a + b};
+        using XA = std::decay_t<decltype(a)>;
+        using XB = std::decay_t<decltype(b)>;
+
+        if constexpr (std::is_same_v<XA, XB> && !is_monostate<XA>) {
+          return CharacterValueImpl{sizeof(typename XA::value_type), a + b};
         } else {
-          DIE("operation not supported on uninitialized value or "
-              "values of different kinds");
+          DIE("operation not supported on uninitialized value or values of "
+              "different kinds");
         }
         return CharacterValueImpl{};
       },
@@ -398,9 +397,10 @@ CharacterValueImpl &CharacterValueImpl::operator+=(
     const CharacterValueImpl &y) {
   common::visit(
       [](auto &a, const auto &b) {
-        if constexpr (std::is_same_v<std::decay_t<decltype(a)>,
-                          std::decay_t<decltype(b)>> &&
-            !std::is_same_v<std::decay_t<decltype(a)>, std::monostate>) {
+        using XA = std::decay_t<decltype(a)>;
+        using XB = std::decay_t<decltype(b)>;
+
+        if constexpr (std::is_same_v<XA, XB> && !is_monostate<XA>) {
           a += b;
         } else {
           DIE("operation not supported on uninitialized value or "
@@ -414,11 +414,11 @@ CharacterValueImpl &CharacterValueImpl::operator+=(
 CharacterValueImpl &CharacterValueImpl::operator+=(char c) {
   common::visit(
       [c](auto &s) {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           DIE("operation not supported on uninitialized value");
         } else {
-          using CharT = typename std::decay_t<decltype(s)>::value_type;
+          using CharT = typename StringT::value_type;
           s.push_back(static_cast<CharT>(c));
         }
       },
@@ -429,9 +429,9 @@ CharacterValueImpl &CharacterValueImpl::operator+=(char c) {
 std::size_t CharacterValueImpl::find_first_not_of(char32_t c) const {
   return common::visit(
       [c](const auto &s) -> std::size_t {
-        if constexpr (!std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
-          using CharT = typename std::decay_t<decltype(s)>::value_type;
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (!is_monostate<StringT>) {
+          using CharT = typename StringT::value_type;
           return s.find_first_not_of(static_cast<CharT>(c));
         } else {
           DIE("Unsupported combination of character kinds");
@@ -444,9 +444,9 @@ std::size_t CharacterValueImpl::find_first_not_of(char32_t c) const {
 std::size_t CharacterValueImpl::find_last_not_of(char32_t c) const {
   return common::visit(
       [c](const auto &s) -> std::size_t {
-        if constexpr (!std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
-          using CharT = typename std::decay_t<decltype(s)>::value_type;
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (!is_monostate<StringT>) {
+          using CharT = typename StringT::value_type;
           return s.find_last_not_of(static_cast<CharT>(c));
         } else {
           DIE("Unsupported combination of character kinds");
@@ -460,13 +460,13 @@ std::size_t CharacterValueImpl::find_first_not_of(
     const CharacterValueImpl &set) const {
   return common::visit(
       [](const auto &s, const auto &p) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using XS = std::decay_t<decltype(s)>;
+        using XP = std::decay_t<decltype(p)>;
+
+        if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                                 std::decay_t<decltype(p)>> &&
-            !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
+        } else if constexpr (std::is_same_v<XS, XP>) {
           return s.find_first_not_of(p);
         } else {
           DIE("Unsupported combination of character kinds");
@@ -480,13 +480,13 @@ std::size_t CharacterValueImpl::find_last_not_of(
     const CharacterValueImpl &set) const {
   return common::visit(
       [](const auto &s, const auto &p) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using XS = std::decay_t<decltype(s)>;
+        using XP = std::decay_t<decltype(p)>;
+
+        if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                                 std::decay_t<decltype(p)>> &&
-            !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
+        } else if constexpr (std::is_same_v<XS, XP>) {
           return s.find_last_not_of(p);
         } else {
           DIE("Unsupported combination of character kinds");
@@ -499,18 +499,17 @@ std::size_t CharacterValueImpl::find_last_not_of(
 std::size_t CharacterValueImpl::find(const CharacterValueImpl &pattern) const {
   return common::visit(
       [](const auto &s, const auto &p) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
-                          std::monostate>) {
+        using XS = std::decay_t<decltype(s)>;
+        using XP = std::decay_t<decltype(p)>;
+
+        if constexpr (is_monostate<XP>) {
           // Empty string always matches beginning
           return 0;
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                                 std::monostate>) {
+        } else if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string, unless the pattern is itself an
           // empty string
           return p.empty() ? 0 : std::string::npos;
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                                 std::decay_t<decltype(p)>> &&
-            !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
+        } else if constexpr (std::is_same_v<XS, XP>) {
           return s.find(p);
         } else {
           DIE("Unsupported combination of character kinds");
@@ -523,13 +522,13 @@ std::size_t CharacterValueImpl::find(const CharacterValueImpl &pattern) const {
 std::size_t CharacterValueImpl::rfind(const CharacterValueImpl &pattern) const {
   return common::visit(
       [](const auto &s, const auto &p) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using XS = std::decay_t<decltype(s)>;
+        using XP = std::decay_t<decltype(p)>;
+
+        if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                                 std::decay_t<decltype(p)>> &&
-            !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
+        } else if constexpr (std::is_same_v<XS, XP>) {
           return s.rfind(p);
         }
         DIE("Unsupported combination of character kinds");
@@ -542,13 +541,13 @@ std::size_t CharacterValueImpl::find_first_of(
     const CharacterValueImpl &set) const {
   return common::visit(
       [](const auto &s, const auto &p) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using XS = std::decay_t<decltype(s)>;
+        using XP = std::decay_t<decltype(p)>;
+
+        if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                                 std::decay_t<decltype(p)>> &&
-            !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
+        } else if constexpr (std::is_same_v<XS, XP>) {
           return s.find_first_of(p);
         } else {
           DIE("Unsupported combination of character kinds");
@@ -562,13 +561,13 @@ std::size_t CharacterValueImpl::find_last_of(
     const CharacterValueImpl &set) const {
   return common::visit(
       [](const auto &s, const auto &p) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using XS = std::decay_t<decltype(s)>;
+        using XP = std::decay_t<decltype(p)>;
+
+        if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                                 std::decay_t<decltype(p)>> &&
-            !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
+        } else if constexpr (std::is_same_v<XS, XP>) {
           return s.find_last_of(p);
         } else {
           DIE("Unsupported combination of character kinds");
@@ -581,21 +580,19 @@ std::size_t CharacterValueImpl::find_last_of(
 void CharacterValueImpl::StoreRawBytes(
     void *dst, std::size_t size, bool *changed) const {
   common::visit(
-      [&](const auto &word) {
-        if constexpr (std::is_same_v<std::decay_t<decltype(word)>,
-                          std::monostate>) {
+      [&](const auto &s) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (is_monostate<StringT>) {
           CHECK(size == 0);
           // Nothing to store
         } else {
-          using Character = std::decay_t<decltype(word)>;
-          using CharT = typename Character::value_type;
+          using CharT = typename StringT::value_type;
           CHECK(size % sizeof(CharT) == 0);
           if (size > 0) {
-            std::size_t payloadSize{
-                std::min(size, sizeof(CharT) * word.size())};
+            std::size_t payloadSize{std::min(size, sizeof(CharT) * s.size())};
             std::size_t padSize{size - payloadSize};
 
-            Character strWithPadding{word};
+            StringT strWithPadding{s};
             strWithPadding.append(
                 padSize / sizeof(CharT), static_cast<CharT>(' '));
 

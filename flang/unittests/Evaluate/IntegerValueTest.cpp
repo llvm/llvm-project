@@ -792,6 +792,15 @@ TYPED_TEST(IntegerValueTypedKind, CompareUnsigned) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(Ordering::Equal, theanswer.CompareUnsigned(theanswer));
   EXPECT_EQ(Ordering::Less, one.CompareUnsigned(theanswer));
+
+  IntegerValue monostate;
+  EXPECT_EQ(Ordering::Equal, monostate.CompareUnsigned(monostate));
+  EXPECT_EQ(Ordering::Greater, one.CompareUnsigned(monostate));
+  EXPECT_EQ(Ordering::Equal, zero.CompareUnsigned(monostate));
+  EXPECT_EQ(Ordering::Greater, negone.CompareUnsigned(monostate));
+  EXPECT_EQ(Ordering::Less, monostate.CompareUnsigned(one));
+  EXPECT_EQ(Ordering::Equal, monostate.CompareUnsigned(zero));
+  EXPECT_EQ(Ordering::Less, monostate.CompareUnsigned(negone));
 }
 
 TYPED_TEST(IntegerValueTypedKind, CompareSigned) {
@@ -816,6 +825,15 @@ TYPED_TEST(IntegerValueTypedKind, CompareSigned) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(Ordering::Equal, theanswer.CompareSigned(theanswer));
   EXPECT_EQ(Ordering::Less, one.CompareSigned(theanswer));
+
+  IntegerValue monostate;
+  EXPECT_EQ(Ordering::Equal, monostate.CompareSigned(monostate));
+  EXPECT_EQ(Ordering::Greater, one.CompareSigned(monostate));
+  EXPECT_EQ(Ordering::Equal, zero.CompareSigned(monostate));
+  EXPECT_EQ(Ordering::Less, negone.CompareSigned(monostate));
+  EXPECT_EQ(Ordering::Less, monostate.CompareSigned(one));
+  EXPECT_EQ(Ordering::Equal, monostate.CompareSigned(zero));
+  EXPECT_EQ(Ordering::Greater, monostate.CompareSigned(negone));
 }
 
 TYPED_TEST(IntegerValueTypedKind, BitwiseComparisons) {
