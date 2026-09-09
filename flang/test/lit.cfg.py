@@ -267,15 +267,10 @@ config.substitutions.append(("%openmp_flags", "-fopenmp"))
 
 
 def flang_frontend_supports_f128():
-    flang_exe = lit.util.which("flang", config.clang_tools_dir)
-
-    if not flang_exe:
-        return False
-
     try:
         testcode = b"real(16) :: x\nend"
         flang_cmd = subprocess.run(
-            [flang_exe, "--target=" + config.target_triple, "-fsyntax-only", "-"],
+            [config.flang_exe, "--target=" + config.target_triple, "-fsyntax-only", "-"],
             input=testcode,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
