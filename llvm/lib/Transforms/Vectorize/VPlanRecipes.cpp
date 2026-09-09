@@ -29,11 +29,13 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -811,8 +813,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
                                Name);
 
-    ElementCount EC = State.VF.multiplyCoefficientBy(Multiplier);
-    auto *PredTy = VectorType::get(Builder.getInt1Ty(), EC);
+    auto *PredTy = VectorType::get(Builder.getInt1Ty(), State.VF * Multiplier);
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
                                    {VIVElem0, ScalarTC}, nullptr, Name);
@@ -1485,9 +1486,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // FIXME: The compare could also be removed if TC = M * vscale,
     // VF = N * vscale, and M <= N. Detecting that would require having the
     // trip count as a SCEV though.
-    Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
-    ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
-    if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
+    if (VPCostContext::executesAtMostOnce(*getParent()->getPlan(), VF))
       return 0;
     // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
     Type *ValTy = getOperand(0)->getScalarType();
@@ -2127,8 +2126,50 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPIRMetadata::applyMetadata(Instruction &I) const {
+  if (Metadata.empty())
+    return;
+  // The execution frequency is VPlan-internal and must not reach IR.
+  unsigned ExecFreqKind = getMDKindID(ExecutionFrequencyMDName);
   for (const auto &[Kind, Node] : Metadata)
-    I.setMetadata(Kind, Node);
+    if (Kind != ExecFreqKind)
+      I.setMetadata(Kind, Node);
+}
+
+/// Returns the execution frequency recorded in \p Node.
+static BlockFrequency getExecutionFrequencyFromMD(const MDNode *Node) {
+  uint64_t Freq =
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+  assert(Freq <= vputils::AlwaysExecutesFreq &&
+         "frequency cannot exceed the one of an always executing block");
+  return BlockFrequency(Freq);
+}
+
+void VPIRMetadata::setExecutionFrequency(std::optional<BlockFrequency> Freq,
+                                         LLVMContext &Ctx) {
+  // A recipe that never or always executes needs no annotation.
+  if (!Freq || Freq->getFrequency() == 0 ||
+      Freq->getFrequency() == vputils::AlwaysExecutesFreq)
+    return;
+  Constant *Frequency =
+      ConstantInt::get(Type::getInt64Ty(Ctx), Freq->getFrequency());
+  setMetadata(Ctx.getMDKindID(ExecutionFrequencyMDName),
+              MDNode::get(Ctx, {ConstantAsMetadata::get(Frequency)}));
+}
+
+std::optional<BlockFrequency> VPIRMetadata::getExecutionFrequency() const {
+  if (Metadata.empty())
+    return std::nullopt;
+  MDNode *Node = getMetadata(getMDKindID(ExecutionFrequencyMDName));
+  if (!Node)
+    return std::nullopt;
+  return getExecutionFrequencyFromMD(Node);
+}
+
+void VPIRMetadata::clearExecutionFrequency() {
+  if (Metadata.empty())
+    return;
+  unsigned ID = getMDKindID(ExecutionFrequencyMDName);
+  erase_if(Metadata, [ID](const auto &P) { return P.first == ID; });
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
@@ -2157,7 +2198,21 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
     assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
            "Unexpected unnamed metadata kind");
     O << "!" << MDNames[Kind] << " ";
-    Node->printAsOperand(O, M);
+    // Print the values of branch weights, which are more informative than the
+    // ID of the metadata node holding them.
+    SmallVector<uint32_t> Weights;
+    if (Kind == LLVMContext::MD_prof && extractBranchWeights(Node, Weights)) {
+      O << "{";
+      interleaveComma(Weights, O);
+      O << "}";
+    } else if (MDNames[Kind] == ExecutionFrequencyMDName) {
+      // Print the frequency together with the probability it corresponds to.
+      uint64_t Freq = getExecutionFrequencyFromMD(Node).getFrequency();
+      O << Freq
+        << format(" (%.4g%%)", 100.0 * Freq / vputils::AlwaysExecutesFreq);
+    } else {
+      Node->printAsOperand(O, M);
+    }
   });
   O << ")";
 }
@@ -3129,6 +3184,11 @@ InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
   if (vputils::onlyFirstLaneUsed(this))
     return 0;
 
+  // If the vector body executes at most once, the canonical IV is a constant
+  // and every lane's step folds away with it.
+  if (VPCostContext::executesAtMostOnce(*getParent()->getPlan(), VF))
+    return 0;
+
   // Typically the operations are:
   //   1. Add the start index to each lane value.
   //   2. Multiply the start index by the step.
@@ -3508,7 +3568,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             CondTy, Pred, Ctx.CostKind);
     }
     return CondCost + Ctx.TTI.getPartialReductionCost(
-                          Opcode, ElementTy, ElementTy, ElementTy, VF,
+                          Opcode, ElementTy, nullptr, ElementTy, VF,
                           TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind,
                           OptionalFMF);
   }

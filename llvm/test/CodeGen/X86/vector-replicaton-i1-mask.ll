@@ -2030,7 +2030,7 @@ define void @mask_replication_factor5_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512F-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm1 {%k1} {z}
 ; AVX512F-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm2 {%k3} {z}
 ; AVX512F-ONLY-NEXT:    vmovdqa64 %zmm2, 64(%rdx)
-; AVX512F-ONLY-NEXT:    vmovdqa %ymm1, 128(%rdx)
+; AVX512F-ONLY-NEXT:    vmovdqa64 %ymm1, 128(%rdx)
 ; AVX512F-ONLY-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512F-ONLY-NEXT:    vzeroupper
 ; AVX512F-ONLY-NEXT:    retq
@@ -2058,7 +2058,7 @@ define void @mask_replication_factor5_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512DQ-NEXT:    vmovdqa32 128(%rsi), %zmm1 {%k3} {z}
 ; AVX512DQ-NEXT:    vmovdqa32 64(%rsi), %zmm2 {%k2} {z}
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm2, 64(%rdx)
-; AVX512DQ-NEXT:    vmovdqa %ymm1, 128(%rdx)
+; AVX512DQ-NEXT:    vmovdqa64 %ymm1, 128(%rdx)
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
@@ -2080,7 +2080,7 @@ define void @mask_replication_factor5_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm2 {%k1} {z}
 ; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm2, 64(%rdx)
 ; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm1, (%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa %ymm0, 128(%rdx)
+; AVX512BW-ONLY-NEXT:    vmovdqa64 %ymm0, 128(%rdx)
 ; AVX512BW-ONLY-NEXT:    vzeroupper
 ; AVX512BW-ONLY-NEXT:    retq
 ;
@@ -2101,7 +2101,7 @@ define void @mask_replication_factor5_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm2 {%k1} {z}
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm2, 64(%rdx)
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm1, (%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa %ymm0, 128(%rdx)
+; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %ymm0, 128(%rdx)
 ; AVX512VBMI-ONLY-NEXT:    vzeroupper
 ; AVX512VBMI-ONLY-NEXT:    retq
   %src.mask.padded = load <64 x i1>, ptr %in.maskvec, align 64
@@ -4080,7 +4080,7 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512F-SLOW-NEXT:    vmovdqa64 %zmm3, 64(%rdx)
 ; AVX512F-SLOW-NEXT:    vmovdqa64 %zmm2, 128(%rdx)
 ; AVX512F-SLOW-NEXT:    vmovdqa64 %zmm0, (%rdx)
-; AVX512F-SLOW-NEXT:    vmovdqa %ymm1, 192(%rdx)
+; AVX512F-SLOW-NEXT:    vmovdqa64 %ymm1, 192(%rdx)
 ; AVX512F-SLOW-NEXT:    vzeroupper
 ; AVX512F-SLOW-NEXT:    retq
 ;
@@ -4113,7 +4113,7 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512F-FAST-NEXT:    vmovdqa32 64(%rsi), %zmm3 {%k3} {z}
 ; AVX512F-FAST-NEXT:    vmovdqa64 %zmm3, 64(%rdx)
 ; AVX512F-FAST-NEXT:    vmovdqa64 %zmm2, 128(%rdx)
-; AVX512F-FAST-NEXT:    vmovdqa %ymm1, 192(%rdx)
+; AVX512F-FAST-NEXT:    vmovdqa64 %ymm1, 192(%rdx)
 ; AVX512F-FAST-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512F-FAST-NEXT:    vzeroupper
 ; AVX512F-FAST-NEXT:    retq
@@ -4146,7 +4146,7 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512DQ-SLOW-NEXT:    vmovdqa32 64(%rsi), %zmm3 {%k2} {z}
 ; AVX512DQ-SLOW-NEXT:    vmovdqa64 %zmm3, 64(%rdx)
 ; AVX512DQ-SLOW-NEXT:    vmovdqa64 %zmm2, 128(%rdx)
-; AVX512DQ-SLOW-NEXT:    vmovdqa %ymm1, 192(%rdx)
+; AVX512DQ-SLOW-NEXT:    vmovdqa64 %ymm1, 192(%rdx)
 ; AVX512DQ-SLOW-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512DQ-SLOW-NEXT:    vzeroupper
 ; AVX512DQ-SLOW-NEXT:    retq
@@ -4179,7 +4179,7 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512DQ-FAST-NEXT:    vmovdqa32 64(%rsi), %zmm3 {%k2} {z}
 ; AVX512DQ-FAST-NEXT:    vmovdqa64 %zmm3, 64(%rdx)
 ; AVX512DQ-FAST-NEXT:    vmovdqa64 %zmm2, 128(%rdx)
-; AVX512DQ-FAST-NEXT:    vmovdqa %ymm1, 192(%rdx)
+; AVX512DQ-FAST-NEXT:    vmovdqa64 %ymm1, 192(%rdx)
 ; AVX512DQ-FAST-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512DQ-FAST-NEXT:    vzeroupper
 ; AVX512DQ-FAST-NEXT:    retq
@@ -4204,7 +4204,7 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm3, 64(%rdx)
 ; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm2, 128(%rdx)
 ; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm1, (%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa %ymm0, 192(%rdx)
+; AVX512BW-ONLY-NEXT:    vmovdqa64 %ymm0, 192(%rdx)
 ; AVX512BW-ONLY-NEXT:    vzeroupper
 ; AVX512BW-ONLY-NEXT:    retq
 ;
@@ -4228,7 +4228,7 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm3, 64(%rdx)
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm2, 128(%rdx)
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm1, (%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa %ymm0, 192(%rdx)
+; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %ymm0, 192(%rdx)
 ; AVX512VBMI-ONLY-NEXT:    vzeroupper
 ; AVX512VBMI-ONLY-NEXT:    retq
   %src.mask.padded = load <64 x i1>, ptr %in.maskvec, align 64

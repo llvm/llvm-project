@@ -3818,6 +3818,11 @@ public:
   /// cgroup.
   /// \param DynCGroupMem The fallback mechanism to execute if the requested
   /// cgroup memory cannot be provided.
+  /// \param OutlinedFnLoc Location scoped to the DISubprogram that the caller
+  ///        will attach to the outlined function. \p Loc is scoped to the
+  ///        parent function, so it cannot be used for code emitted inside the
+  ///        outlined function. If this is empty, such code is emitted without a
+  ///        debug location.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3833,7 +3838,8 @@ public:
       const DependenciesInfo &Dependencies = {}, bool HasNowait = false,
       Value *DynCGroupMem = nullptr,
       omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
-          omp::OMPDynGroupprivateFallbackType::Abort);
+          omp::OMPDynGroupprivateFallbackType::Abort,
+      DebugLoc OutlinedFnLoc = {});
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

@@ -1476,7 +1476,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .widenScalarToNextPow2(0)
           .scalarize(0)
           .lower();
-      if (ST.hasMinMaxI64Insts()) {
+      if (ST.useMinMaxI64Insts()) {
         getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
             .legalFor({S32, S16, S64, V2S16})
             .clampMaxNumElements(0, S16, 2)
@@ -2533,17 +2533,12 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   MachineIRBuilder &B) const {
   MachineFunction &MF = B.getMF();
 
-  // MI can either be a G_ADDRSPACE_CAST or a
-  // G_INTRINSIC @llvm.amdgcn.addrspacecast.nonnull
-  assert(MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
-         (isa<GIntrinsic>(MI) && cast<GIntrinsic>(MI).getIntrinsicID() ==
-                                     Intrinsic::amdgcn_addrspacecast_nonnull));
+  assert(MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST);
 
   const LLT I32 = LLT::integer(32);
   const LLT I64 = LLT::integer(64);
   Register Dst = MI.getOperand(0).getReg();
-  Register Src = isa<GIntrinsic>(MI) ? MI.getOperand(2).getReg()
-                                     : MI.getOperand(1).getReg();
+  Register Src = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
   unsigned DestAS = DstTy.getAddressSpace();
@@ -2555,6 +2550,10 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   const AMDGPUTargetMachine &TM
     = static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
+
+  // The source is known non-null for a G_ADDRSPACE_CAST carrying the nonnull
+  // flag; otherwise we need to guess.
+  const bool IsNonNull = MI.getFlag(MachineInstr::MIFlag::NonNull);
 
   if (TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
     MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));
@@ -2583,9 +2582,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return B.buildExtract(Dst, Src, 0).getReg(0);
     };
 
-    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
-    // G_ADDRSPACE_CAST we need to guess.
-    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    if (IsNonNull || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       castFlatToLocalOrPrivate(Dst);
       MI.eraseFromParent();
       return true;
@@ -2655,9 +2652,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return B.buildMergeLikeInstr(Dst, {SrcAsInt, ApertureReg}).getReg(0);
     };
 
-    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
-    // G_ADDRSPACE_CAST we need to guess.
-    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    if (IsNonNull || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       castLocalOrPrivateToFlat(Dst);
       MI.eraseFromParent();
       return true;
@@ -3747,9 +3742,9 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
         Ty == F16 && (!MI.getFlag(MachineInstr::FmAfn) || !ST.has16BitInsts());
     if (PromoteToF32) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
-      auto PromoteSrc = B.buildFPExt(F32, X);
+      auto PromoteSrc = B.buildFPExt(F32, X, Flags);
       legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10, Flags);
-      B.buildFPTrunc(Dst, LogVal);
+      B.buildFPTrunc(Dst, LogVal, Flags);
     } else {
       legalizeFlogUnsafe(B, Dst, X, IsLog10, Flags);
     }
@@ -4310,7 +4305,11 @@ bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
                    .addUse(Ext0.getReg(0))
                    .addUse(Ext1.getReg(0))
                    .setMIFlags(Flags);
-    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul), Flags);
+    // The f32 product is finite whenever the original fpow was, but it can
+    // still be outside the f16 range. Drop ninf from the truncation and from
+    // the exp2, since neither can assume a finite value here.
+    unsigned FlagsNoNInf = Flags & ~MachineInstr::FmNoInfs;
+    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul, FlagsNoNInf), FlagsNoNInf);
   } else
     return false;
 
@@ -4702,7 +4701,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
-  if (ST.hasVMulU64Inst() && Size == 64)
+  if (ST.useVMulU64Inst() && Size == 64)
     return true;
 
   unsigned NumParts = Size / 32;
@@ -8325,8 +8324,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
-  case Intrinsic::amdgcn_addrspacecast_nonnull:
-    return legalizeAddrSpaceCast(MI, MRI, B);
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return legalizePointerAsRsrcIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_kernarg_segment_ptr:

@@ -118,6 +118,9 @@ public:
   /// Returns the name of the given symbol operation, aborting if no symbol is
   /// present.
   static StringAttr getSymbolName(Operation *symbol);
+  /// Compatibility alias for generated interface code that still refers to the
+  /// symbol name attribute by convention.
+  static StringRef getSymbolAttrName() { return "sym_name"; }
 
   /// Sets the name of the given symbol operation.
   static void setSymbolName(Operation *symbol, StringAttr name);

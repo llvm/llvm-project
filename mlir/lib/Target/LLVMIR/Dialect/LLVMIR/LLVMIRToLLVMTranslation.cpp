@@ -285,7 +285,7 @@ static LogicalResult setMmraAttr(llvm::MDNode *node, Operation *op,
     }
     mlirMmra = ArrayAttr::get(ctx, tags);
   }
-  op->setAttr(LLVMDialect::getMmraAttrName(), mlirMmra);
+  op->setDiscardableAttr(LLVMDialect::getMmraAttrName(), mlirMmra);
   return success();
 }
 
