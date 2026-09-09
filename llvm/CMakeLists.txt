@@ -201,6 +201,17 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif ()
 endif()
 
+# Clang defaults to CLANG_ENABLE_CIR now, so we need to auto-add MLIR unless it
+# was explicitly disabled.
+if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT DEFINED CLANG_ENABLE_CIR OR CLANG_ENABLE_CIR)
+    if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+      message(STATUS "Enabling MLIR as a dependency of ClangIR")
+      list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+    endif()
+  endif()
+endif()
+
 if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling clang as a dependency of lldb")
