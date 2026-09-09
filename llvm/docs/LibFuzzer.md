@@ -272,13 +272,15 @@ The most important command line options are:
 `-malloc_limit_mb`
 : If non-zero, the fuzzer will exit if the target tries to allocate this
   number of Mb with one malloc call.
-  If zero (default) same limit as rss_limit_mb is applied.
+  If zero (default) the same limit as rss_limit_mb is applied.
 
 `-timeout_exitcode`
-: Exit code (default 77) used if libFuzzer reports a timeout.
+: Exit code (default 70) used if libFuzzer reports a timeout.
 
 `-error_exitcode`
-: Exit code (default 77) used if libFuzzer itself (not a sanitizer) reports a bug (leak, OOM, etc).
+: Exit code (default 77) used if libFuzzer itself (not a sanitizer) reports a
+  bug (leak, crash, etc). Out-of-memory uses a fixed exit code of 71 that is
+  not configurable.
 
 `-max_total_time`
 : If positive, indicates the maximum total time in seconds to run the fuzzer.
