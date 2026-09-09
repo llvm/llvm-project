@@ -3474,6 +3474,13 @@ protected:
   BoundsAttributedType(TypeClass TC, QualType Wrapped, QualType Canon);
 
 public:
+  enum BoundsAttrKind {
+    CountedBy = 0,
+    SizedBy,
+    CountedByOrNull,
+    SizedByOrNull,
+  };
+
   bool isSugared() const { return true; }
   QualType desugar() const { return WrappedTy; }
 
@@ -3510,10 +3517,7 @@ public:
 
 /// Represents a sugar type with `__counted_by` or `__sized_by` annotations,
 /// including their `_or_null` variants.
-class CountAttributedType final
-    : public BoundsAttributedType,
-      public llvm::TrailingObjects<CountAttributedType,
-                                   TypeCoupledDeclRefInfo> {
+class CountAttributedType final : public BoundsAttributedType {
   friend class ASTContext;
 
   Expr *CountExpr;
@@ -3523,27 +3527,34 @@ class CountAttributedType final
   /// __counted_by_or_null or __sized_by_or_null) \p CoupledDecls contains the
   /// list of declarations referenced by \p CountExpr, which the type depends on
   /// for the bounds information.
+  ///
+  /// \p CountExpr may be null, and \p CoupledDecls empty, for a type created by
+  /// a late-parsed attribute whose argument has not been parsed yet; such a
+  /// type is completed by \c setCountExpr once the enclosing scope is known.
+  /// See
+  /// \c Parser::CompleteLateParsedTypeAttributes.
   CountAttributedType(QualType Wrapped, QualType Canon, Expr *CountExpr,
                       bool CountInBytes, bool OrNull,
                       ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
 
-  unsigned numTrailingObjects(OverloadToken<TypeCoupledDeclRefInfo>) const {
-    return CountAttributedTypeBits.NumCoupledDecls;
+  /// Supply the count expression and its coupled declarations for a type that
+  /// was created without them by a late-parsed attribute. \p CoupledDecls must
+  /// already be allocated in the \c ASTContext, since it is retained by
+  /// reference.
+  void setCountExpr(Expr *E, ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls) {
+    assert(!CountExpr && "count expression is already set");
+    assert(E && "completing with a null count expression");
+    CountExpr = E;
+    Decls = CoupledDecls;
+    CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
   }
 
 public:
-  enum DynamicCountPointerKind {
-    CountedBy = 0,
-    SizedBy,
-    CountedByOrNull,
-    SizedByOrNull,
-  };
-
   Expr *getCountExpr() const { return CountExpr; }
   bool isCountInBytes() const { return CountAttributedTypeBits.CountInBytes; }
   bool isOrNull() const { return CountAttributedTypeBits.OrNull; }
 
-  DynamicCountPointerKind getKind() const {
+  BoundsAttrKind getKind() const {
     if (isOrNull())
       return isCountInBytes() ? SizedByOrNull : CountedByOrNull;
     return isCountInBytes() ? SizedBy : CountedBy;
