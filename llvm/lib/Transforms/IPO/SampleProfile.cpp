@@ -2295,7 +2295,8 @@ bool SampleProfileLoader::runOnFunction(Function &F,
       }
       // Try use flattened profile as a fallback when no profile is found as a
       // top-level function in Sample Reader nor Outlined function samples
-      if (!Samples && MatchingManager)
+      if (!Samples && MatchingManager &&
+          LTOPhase != ThinOrFullLTOPhase::ThinLTOPreLink)
         Samples = MatchingManager->getFlattenedSamplesFor(F);
     }
   }
