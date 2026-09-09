@@ -223,9 +223,14 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                  MIX.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  MIY.getOpcode() == AMDGPU::V_MOV_B32_e32;
 
+  // GFX11 destination-buffer forwarding can lose the interlock when the X/Y
+  // operands of SRC0 or SRC1 are distinct VGPRs with the same parity. Require
+  // opposite parity instead of merely different banks when forming the pair.
+  bool RequireDifferentSrcParity = AMDGPU::isGFX11(ST);
+
   // Check VGPR bank constraints for operand registers across both instructions.
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
-                                 IsVOPD3))
+                                 IsVOPD3, RequireDifferentSrcParity))
     return false;
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << MIX

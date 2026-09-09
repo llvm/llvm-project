@@ -18630,8 +18630,8 @@ define <20 x i16> @bitcast_v40i8_to_v20i16(<40 x i8> %a, i32 %b) #0 {
 ; GFX11-FAKE16-LABEL: bitcast_v40i8_to_v20i16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v34, v6 :: v_dual_mov_b32 v33, v3
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v52, v4 :: v_dual_mov_b32 v35, v2
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v36, v7 :: v_dual_mov_b32 v35, v2
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v52, v4 :: v_dual_mov_b32 v33, v3
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v48, v1 :: v_dual_mov_b32 v37, v0
 ; GFX11-FAKE16-NEXT:    s_clause 0x9
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v0, off, s32 offset:32
@@ -18644,11 +18644,11 @@ define <20 x i16> @bitcast_v40i8_to_v20i16(<40 x i8> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v67, off, s32 offset:12
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v71, off, s32 offset:4
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v55, off, s32
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v50, v15 :: v_dual_mov_b32 v51, v13
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v54, v14 :: v_dual_mov_b32 v53, v9
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v32, v12 :: v_dual_mov_b32 v49, v10
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v50, v15 :: v_dual_mov_b32 v49, v10
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v54, v14 :: v_dual_mov_b32 v51, v13
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v32, v12 :: v_dual_mov_b32 v53, v9
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v38, v11 :: v_dual_mov_b32 v31, v8
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v36, v7 :: v_dual_mov_b32 v39, v5
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v34, v6 :: v_dual_mov_b32 v39, v5
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(9)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v66, 8, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(8)
@@ -25069,8 +25069,8 @@ define <20 x half> @bitcast_v40i8_to_v20f16(<40 x i8> %a, i32 %b) #0 {
 ; GFX11-FAKE16-LABEL: bitcast_v40i8_to_v20f16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v34, v6 :: v_dual_mov_b32 v33, v3
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v52, v4 :: v_dual_mov_b32 v35, v2
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v36, v7 :: v_dual_mov_b32 v35, v2
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v52, v4 :: v_dual_mov_b32 v33, v3
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v48, v1 :: v_dual_mov_b32 v37, v0
 ; GFX11-FAKE16-NEXT:    s_clause 0x9
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v0, off, s32 offset:32
@@ -25083,11 +25083,11 @@ define <20 x half> @bitcast_v40i8_to_v20f16(<40 x i8> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v67, off, s32 offset:12
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v71, off, s32 offset:4
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v55, off, s32
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v50, v15 :: v_dual_mov_b32 v51, v13
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v54, v14 :: v_dual_mov_b32 v53, v9
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v32, v12 :: v_dual_mov_b32 v49, v10
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v50, v15 :: v_dual_mov_b32 v49, v10
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v54, v14 :: v_dual_mov_b32 v51, v13
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v32, v12 :: v_dual_mov_b32 v53, v9
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v38, v11 :: v_dual_mov_b32 v31, v8
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v36, v7 :: v_dual_mov_b32 v39, v5
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v34, v6 :: v_dual_mov_b32 v39, v5
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(9)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v66, 8, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(8)
@@ -29542,8 +29542,8 @@ define <5 x double> @bitcast_v40i8_to_v5f64(<40 x i8> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v69, off, s32 offset:8
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v71, off, s32 offset:4
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v70, off, s32
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v33, v15 :: v_dual_mov_b32 v32, v13
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v31, v14 :: v_dual_mov_b32 v34, v12
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v33, v15 :: v_dual_mov_b32 v34, v12
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v31, v14 :: v_dual_mov_b32 v32, v13
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v35, v11 :: v_dual_mov_b32 v36, v10
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v37, v9 :: v_dual_mov_b32 v38, v8
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v39, v7 :: v_dual_mov_b32 v48, v6
@@ -33407,8 +33407,8 @@ define <5 x i64> @bitcast_v40i8_to_v5i64(<40 x i8> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v69, off, s32 offset:8
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v71, off, s32 offset:4
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v70, off, s32
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v33, v15 :: v_dual_mov_b32 v32, v13
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v31, v14 :: v_dual_mov_b32 v34, v12
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v33, v15 :: v_dual_mov_b32 v34, v12
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v31, v14 :: v_dual_mov_b32 v32, v13
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v35, v11 :: v_dual_mov_b32 v36, v10
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v37, v9 :: v_dual_mov_b32 v38, v8
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v39, v7 :: v_dual_mov_b32 v48, v6
