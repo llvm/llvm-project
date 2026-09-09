@@ -4,10 +4,14 @@
 ; RUN:   | FileCheck %s --check-prefix=FUNC
 ; RUN: not opt < %s -passes=verify-pgo-flow -verify-pgo-flow-fatal \
 ; RUN:     -disable-output 2>&1 | FileCheck %s --check-prefix=FATAL
+; RUN: opt < %s -passes=verify-pgo-flow \
+; RUN:     -verify-pgo-flow-report-entry-count-undercount \
+; RUN:     -disable-output 2>&1 | FileCheck %s --check-prefix=UNDER
+; RUN: opt < %s -passes=verify-pgo-flow -verify-pgo-flow-aggressive \
+; RUN:     -disable-output 2>&1 | FileCheck %s --check-prefix=UNDER
 ;
-; Report only when visible direct-caller weight exceeds entry count.
-; Entry-count vs caller-sum is a module walk; function(verify-pgo-flow)
-; only checks in-function block flow.
+; Default: only caller-sum > entry. Function-unit walks skip that check.
+; UNDER also reports entry > caller-sum.
 
 ; DIAG: *** PGO Flow Verification After verify-pgo-flow ***{{$}}
 ; DIAG-NOT: PGOFlowVerify[EntryCountMismatch] ok_callee:
@@ -20,6 +24,11 @@
 ; FUNC-NOT: PGOFlowVerify[EntryCountMismatch]
 
 ; FATAL: PGOFlowVerify[EntryCountMismatch]
+
+; UNDER-NOT: PGOFlowVerify[EntryCountMismatch] ok_callee:
+; UNDER: PGOFlowVerify[EntryCountMismatch] undercount_callee: entry=10 vs caller-sum=1
+; UNDER: PGOFlowVerify[EntryCountMismatch] bad_callee: entry=1 vs caller-sum=10
+; UNDER-NOT: PGOFlowVerify[EntryCountMismatch] ok_callee:
 
 define internal i32 @ok_callee(i32 %x) !prof !0 {
 entry:

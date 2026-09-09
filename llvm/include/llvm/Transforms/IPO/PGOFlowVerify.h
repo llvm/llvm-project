@@ -66,6 +66,8 @@ private:
   bool skipStrictInstrProfChecks(const Function *F, bool EmitNote) const;
   void computeBlockFrequencies(const Function *F);
   void validateBlockFrequencies(const Function *F);
+  /// Caller-sum > entry is always reported, including a live self-call.
+  /// Undercount and recursive undercount are opt-in.
   void validateEntryCountAgainstCallerSum(const Function *F);
   const AllBlockFreqInfo *getCachedBlockFreqInfo(const Function *F) const;
 

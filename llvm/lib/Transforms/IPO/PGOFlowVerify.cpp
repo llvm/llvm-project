@@ -66,6 +66,24 @@ static cl::opt<bool> VerifyPGOFlowDedupDiagnostics(
     cl::desc("Report each mismatch at most once and skip re-checking that "
              "function on later passes"));
 
+static cl::opt<bool> VerifyPGOFlowReportEntryCountUndercount(
+    "verify-pgo-flow-report-entry-count-undercount", cl::init(false),
+    cl::Hidden,
+    cl::desc("Report when entry count is higher than the visible caller-sum"));
+
+static cl::opt<bool> VerifyPGOFlowReportRecursiveEntryCountMismatch(
+    "verify-pgo-flow-report-recursive-entry-count-mismatch", cl::init(false),
+    cl::Hidden,
+    cl::desc("Report entry-count undercount on recursive functions"));
+
+static cl::opt<bool> VerifyPGOFlowAggressive(
+    "verify-pgo-flow-aggressive", cl::init(false), cl::Hidden,
+    cl::desc("Enable optional entry-count checks (undercount, recursive)"));
+
+static bool isEnabled(const cl::opt<bool> &Flag) {
+  return Flag || VerifyPGOFlowAggressive;
+}
+
 static bool isStrictMismatchRemark(StringRef RemarkName) {
   return RemarkName == "BlockFrequencyMismatch" ||
          RemarkName == "EntryCountMismatch";
@@ -581,8 +599,6 @@ void PGOFlowVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
     const Function *CallerFunc = BB->getParent();
     if (!CallerFunc)
       return;
-    if (CallerFunc == F)
-      IsRecursive = true;
 
     const AllBlockFreqInfo *CallerFreq = getCachedBlockFreqInfo(CallerFunc);
     if (!CallerFreq) {
@@ -630,6 +646,8 @@ void PGOFlowVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
                         << "' block " << BB->getName() << "\n");
       return;
     }
+    if (CallerFunc == F)
+      IsRecursive = true;
     HasAnyDirectCallsite = true;
     Sum = SaturatingAdd(Sum, CallsiteCount);
   };
@@ -658,9 +676,15 @@ void PGOFlowVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
                       << F->getName() << "' (no direct callsite)\n");
     return;
   }
-  if (IsRecursive) {
+  if (EntryCount == Sum) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
-                      << F->getName() << "' (recursive)\n");
+                      << F->getName() << "' (caller-sum equals entry)\n");
+    return;
+  }
+  if (Sum < EntryCount && !isEnabled(VerifyPGOFlowReportEntryCountUndercount)) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
+                      << F->getName() << "' (undercount opt-in off, caller-sum="
+                      << Sum << " < entry=" << EntryCount << ")\n");
     return;
   }
   // Known Sum is a lower bound. Unknown sites can hide undercount, but not
@@ -670,10 +694,11 @@ void PGOFlowVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
                       << F->getName() << "' (unknown callsite weight)\n");
     return;
   }
-  if (Sum <= EntryCount) {
+  if (IsRecursive && Sum < EntryCount &&
+      !isEnabled(VerifyPGOFlowReportRecursiveEntryCountMismatch)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
-                      << F->getName() << "' (caller-sum=" << Sum
-                      << " <= entry=" << EntryCount << ")\n");
+                      << F->getName()
+                      << "' (recursive undercount opt-in off)\n");
     return;
   }
 
