@@ -19643,7 +19643,6 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
         User->getOpcode() != Instruction::FAdd)
       return true;
 
-    const TargetOptions &Options = getTargetMachine().Options;
     const Function *F = I->getFunction();
     const DataLayout &DL = F->getDataLayout();
     Type *Ty = User->getOperand(0)->getType();
@@ -19652,7 +19651,7 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
 
     return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
              isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-             (AllowContract || Options.AllowFPOpFusion == FPOpFusion::Fast));
+             AllowContract);
   }
   case Instruction::Load: {
     // Don't break "store (load float*)" pattern, this pattern will be combined
