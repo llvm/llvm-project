@@ -5264,7 +5264,7 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #192
 ; CHECK-BF16-GI-NEXT:    ret
-  %r = call <8 x bfloat> @llvm.powi.v8bf16.v8i32(<8 x bfloat> %a, i32 %b)
+  %r = call <8 x bfloat> @llvm.powi.v8bf16.i32(<8 x bfloat> %a, i32 %b)
   ret <8 x bfloat> %r
 }
 

@@ -25,25 +25,25 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %63:vgpr_32, %65:sreg_64_xexec = nsw V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    %64:vgpr_32, dead %66:sreg_64_xexec = nuw V_ADDC_U32_e64 %30.sub1, %0, killed %65, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = nsw V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
+    %7:vgpr_32, dead %8:sreg_64_xexec = nuw V_ADDC_U32_e64 %4.sub1, %0, killed %6, 0, implicit $exec
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
-    %161:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %163:vgpr_32, %165:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %161, 0, implicit $exec
-    %164:vgpr_32, dead %166:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, killed %165, 0, implicit $exec
-    %162:vreg_64 = REG_SEQUENCE %163, %subreg.sub0, %164, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %162, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %10:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %11:vgpr_32, %12:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %10, 0, implicit $exec
+    %13:vgpr_32, dead %14:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %12, 0, implicit $exec
+    %15:vreg_64 = REG_SEQUENCE %11, %subreg.sub0, %13, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %15, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
-    %171:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %173:vgpr_32, %175:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %171, 0, implicit $exec
-    %174:vgpr_32, dead %176:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, killed %175, 0, implicit $exec
-    %172:vreg_64 = REG_SEQUENCE %173, %subreg.sub0, %174, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %172, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %16:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %17:vgpr_32, %18:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %16, 0, implicit $exec
+    %19:vgpr_32, dead %20:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %18, 0, implicit $exec
+    %21:vreg_64 = REG_SEQUENCE %17, %subreg.sub0, %19, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %21, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 ...
 
@@ -67,25 +67,25 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
 
-    %161:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %163:vgpr_32, %165:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %161, 0, implicit $exec
-    %164:vgpr_32, dead %166:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, killed %165, 0, implicit $exec
-    %162:vreg_64 = REG_SEQUENCE %163, %subreg.sub0, %164, %subreg.sub1
+    %7:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %8:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %7, 0, implicit $exec
+    %10:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %9, 0, implicit $exec
+    %12:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %10, %subreg.sub1
 
-    %64:vgpr_32, dead %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, killed %65, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %13:vgpr_32, dead %14:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %6, 0, implicit $exec
+    %15:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %13, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %15, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
-    %161:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %163:vgpr_32, %165:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %161, 0, implicit $exec
-    %164:vgpr_32, dead %166:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, killed %165, 0, implicit $exec
-    %162:vreg_64 = REG_SEQUENCE %163, %subreg.sub0, %164, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %162, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %7:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %8:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %7, 0, implicit $exec
+    %10:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %9, 0, implicit $exec
+    %12:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %10, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %12, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 ...
 
@@ -109,13 +109,13 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, killed %65, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %66, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
+    %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %6, 0, implicit $exec
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %8, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 ...
 
@@ -139,13 +139,13 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %65, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %65, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
+    %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %6, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 
 ...
@@ -168,13 +168,13 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %65, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
+    %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 
 ...
@@ -198,12 +198,12 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %23, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
+    %7:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %3, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %7, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 
 ...
@@ -227,14 +227,14 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %24:sreg_64_xexec = COPY $sgpr0_sgpr1
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:sreg_64_xexec = COPY $sgpr0_sgpr1
 
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %24, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %23, %subreg.sub0, %23, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %30.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %5:vreg_64 = COPY $sgpr0_sgpr1
+    %6:vgpr_32, %7:sreg_64_xexec = V_ADDC_U32_e64 %5.sub1, %0, %4, 0, implicit $exec
+    %8:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %3, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %5.sub0, %8, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 
 ...
@@ -257,15 +257,15 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    $vcc = COPY %30
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %65, 0, implicit $exec
-    %31:vreg_64 = COPY $vcc
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %31.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
+    $vcc = COPY %4
+    %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
+    %9:vreg_64 = COPY $vcc
+    %10:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %9.sub0, %10, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 
 ...
@@ -288,15 +288,15 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    $vcc = COPY %30
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %65, 0, implicit $exec
-    %31:vreg_64 = COPY $vcc
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %31.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vreg_64 = COPY $sgpr0_sgpr1
+    $vcc = COPY %3
+    %4:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %3.sub0, %4, 0, implicit $exec
+    %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %3.sub1, %0, %6, 0, implicit $exec
+    %9:vreg_64 = COPY $vcc
+    %10:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %9.sub0, %10, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 
 ...
@@ -319,16 +319,16 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    $vcc_lo = COPY %30.sub0
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    %31:vgpr_32 = COPY $vcc_lo
-    %32:vreg_64 = REG_SEQUENCE %31, %subreg.sub0, %23, %subreg.sub1
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %65, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %32.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vreg_64 = COPY $sgpr0_sgpr1
+    $vcc_lo = COPY %3.sub0
+    %4:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %3.sub0, %4, 0, implicit $exec
+    %7:vgpr_32 = COPY $vcc_lo
+    %8:vreg_64 = REG_SEQUENCE %7, %subreg.sub0, %4, %subreg.sub1
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADDC_U32_e64 %3.sub1, %0, %6, 0, implicit $exec
+    %11:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %9, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %8.sub0, %11, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 ...
 
@@ -350,16 +350,16 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    $vcc_hi = COPY %30.sub0
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    %31:vgpr_32 = COPY $vcc_hi
-    %32:vreg_64 = REG_SEQUENCE %31, %subreg.sub0, %23, %subreg.sub1
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %65, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %32.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vreg_64 = COPY $sgpr0_sgpr1
+    $vcc_hi = COPY %3.sub0
+    %4:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %3.sub0, %4, 0, implicit $exec
+    %7:vgpr_32 = COPY $vcc_hi
+    %8:vreg_64 = REG_SEQUENCE %7, %subreg.sub0, %4, %subreg.sub1
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADDC_U32_e64 %3.sub1, %0, %6, 0, implicit $exec
+    %11:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %9, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %8.sub0, %11, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 ...
 
@@ -381,12 +381,52 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %22:sreg_32_xm0 = S_MOV_B32 255
-    %30:vreg_64 = COPY $sgpr0_sgpr1
-    %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_CO_U32_e64 %30.sub0, %23, 0, implicit $exec
-    $vcc = COPY %30
-    %31:vreg_64 = COPY killed $vcc
-    %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %65, 0, implicit $exec
-    %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %31.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vreg_64 = COPY $sgpr0_sgpr1
+    %4:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %3.sub0, %4, 0, implicit $exec
+    $vcc = COPY %3
+    %7:vreg_64 = COPY killed $vcc
+    %8:vgpr_32, %9:sreg_64_xexec = V_ADDC_U32_e64 %3.sub1, %0, %6, 0, implicit $exec
+    %10:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %8, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %7.sub0, %10, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+
+...
+
+# MachineSink can move the ADDC into a successor when its carry-out is dead,
+# leaving the ADD in the predecessor. Walking (MI, MISucc] then leaves the
+# ADD's MBB and used to dereference the block sentinel. The pair must stay e64.
+# GFX9-LABEL: name:            test13_add_co_addc_different_mbb
+# GFX9: V_ADD_CO_U32_e64
+# GFX9: V_ADDC_U32_e64
+# GFX9-NOT: V_ADD_CO_U32_sdwa
+# GFX9-NOT: V_ADDC_U32_e32
+---
+name:            test13_add_co_addc_different_mbb
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '%0' }
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %1:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:vgpr_32 = COPY $vgpr0
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %7:vgpr_32, dead %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %6, 0, implicit $exec
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+    S_ENDPGM 0
+
+...
+

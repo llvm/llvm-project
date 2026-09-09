@@ -107,7 +107,6 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var c_test flags)
   _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
-  libc_add_definition(compile_options "LIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -274,15 +273,20 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-      libc.test.UnitTest.ErrnoSetterMatcher)
+  list(APPEND fq_deps_list libc.test.UnitTest.LibcTest)
+  if(LIBC_UNITTEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  else()
+    list(APPEND fq_deps_list
+      libc.src.__support.StringUtil.error_to_string
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.test.UnitTest.LibcDeathTestExecutors
+    )
   endif()
   list(REMOVE_DUPLICATES fq_deps_list)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
     "${LIBC_UNITTEST_FLAGS}")
-  libc_add_definition(compile_options "LIBC_TEST=UNIT")
 
   get_link_options(link_options
     ${compile_options}
@@ -357,13 +361,7 @@ function(create_libc_unittest fq_target_name)
 
   set(link_libraries ${link_object_files})
   # Test object files will depend on LINK_LIBRARIES passed down from `add_fp_unittest`
-  foreach(lib IN LISTS LIBC_UNITTEST_LINK_LIBRARIES)
-    if(TARGET ${lib}.unit)
-      list(APPEND link_libraries ${lib}.unit)
-    else()
-      list(APPEND link_libraries ${lib})
-    endif()
-  endforeach()
+  list(APPEND link_libraries ${LIBC_UNITTEST_LINK_LIBRARIES})
 
   set_target_properties(${fq_build_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -372,12 +370,6 @@ function(create_libc_unittest fq_target_name)
     ${fq_build_target_name}
     ${fq_deps_list}
   )
-
-  # LibcUnitTest should not depend on anything in LINK_LIBRARIES.
-  list(APPEND link_libraries LibcTest.unit)
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND link_libraries LibcDeathTestExecutors.unit)
-  endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
@@ -792,7 +784,13 @@ function(add_libc_hermetic test_name)
     libc.src.string.memset
     libc.src.strings.bcmp
     libc.src.strings.bzero
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.LibcTest
+    libc.test.UnitTest.HermeticTestUtils
   )
+  if(HERMETIC_TEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  endif()
   if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
     list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
   endif()
@@ -800,6 +798,7 @@ function(add_libc_hermetic test_name)
   # Syscalls used by death tests.
   if(LIBC_TEST_SUBPROCESS_TESTS AND NOT HERMETIC_TEST_C_TEST)
     list(APPEND fq_deps_list
+      libc.test.UnitTest.LibcDeathTestExecutors
       libc.src.poll.poll
       libc.src.signal.kill
       libc.src.stdio.fflush
@@ -883,15 +882,7 @@ function(add_libc_hermetic test_name)
     ${compile_options}
     ${HERMETIC_TEST_COMPILE_OPTIONS})
 
-  set(link_libraries "")
   set(compiler_runtime "")
-  foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
-    if(TARGET ${lib}.hermetic)
-      list(APPEND link_libraries ${lib}.hermetic)
-    else()
-      list(APPEND link_libraries ${lib})
-    endif()
-  endforeach()
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
@@ -932,15 +923,11 @@ function(add_libc_hermetic test_name)
     ${fq_build_target_name}
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1
-      ${link_libraries}
-      LibcHermeticTestSupport.hermetic
+      ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
       ${compiler_runtime}
   )
-  add_dependencies(${fq_build_target_name}
-    LibcTest.hermetic
-    libc.test.UnitTest.ErrnoSetterMatcher
-    ${fq_deps_list})
+  add_dependencies(${fq_build_target_name} ${fq_deps_list})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if(LIBC_TEST_CMD)
@@ -1027,13 +1014,7 @@ function(add_libc_test test_name)
   )
   if(LLVM_LIBC_FULL_BUILD)
     if(NOT LIBC_TEST_OVERLAY_BUILD_ONLY)
-      add_libc_hermetic(
-        ${test_name}
-        LINK_LIBRARIES
-          LibcTest.hermetic
-          LibcDeathTestExecutors.hermetic
-          ${LIBC_TEST_UNPARSED_ARGUMENTS}
-      )
+      add_libc_hermetic(${test_name} ${LIBC_TEST_UNPARSED_ARGUMENTS})
     endif()
   else()
     # Overlay mode
@@ -1059,12 +1040,11 @@ function(add_libc_multi_impl_test name suite)
           ${suite}
         COMPILE_OPTIONS
           ${LIBC_COMPILE_OPTIONS_NATIVE}
-        LINK_LIBRARIES
-          LibcMemoryHelpers
         ${ARGN}
         DEPENDS
           ${fq_config_name}
           libc.src.__support.macros.sanitizer
+          libc.test.UnitTest.MemoryMatcher
       )
       get_fq_target_name(${fq_config_name}_test fq_target_name)
     else()

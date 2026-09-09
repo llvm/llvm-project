@@ -57,7 +57,8 @@ protected:
   void initCandidate(SchedCandidate &Cand, SUnit *SU, bool AtTop,
                      const RegPressureTracker &RPTracker,
                      const SIRegisterInfo *SRI, unsigned SGPRPressure,
-                     unsigned VGPRPressure, bool IsBottomUp);
+                     unsigned VGPRPressure, unsigned AGPRPressure,
+                     bool IsBottomUp);
 
   /// Estimate how many cycles \p SU must wait due to structural hazards at the
   /// current boundary cycle. Returns zero when no stall is required.
@@ -91,6 +92,8 @@ protected:
   unsigned SGPRExcessLimit;
 
   unsigned VGPRExcessLimit;
+
+  unsigned AGPRExcessLimit;
 
   unsigned TargetOccupancy;
 
@@ -135,6 +138,8 @@ public:
   unsigned SGPRCriticalLimit;
 
   unsigned VGPRCriticalLimit;
+
+  unsigned AGPRCriticalLimit;
 
   unsigned SGPRLimitBias = 0;
 

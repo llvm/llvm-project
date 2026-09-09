@@ -697,7 +697,7 @@ void test_lifetimebound_multi_level() {
     int** pp = &p;  
     int*** ppp = &pp; // expected-warning {{local variable 'pp' does not live long enough}}
     result = return_inner_ptr_addr(ppp); // expected-note {{local variable 'ppp' aliases the storage of local variable 'pp'}} \
-                                         // expected-note {{result of call to 'return_inner_ptr_addr' aliases the storage of local variable 'pp' because parameter 'ppp' is lifetimebound}}
+                                         // expected-note {{result of call to 'return_inner_ptr_addr' aliases the storage of local variable 'pp' because parameter 'ppp' is marked as lifetimebound}}
   }                   // expected-note {{local variable 'pp' is destroyed here}}
   (void)**result;     // expected-note {{used here}}
 }
@@ -822,7 +822,7 @@ void lifetimebound_simple_function() {
   {
     MyObj obj;
     v = Identity(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                       // expected-note {{result of call to 'Identity' aliases the storage of local variable 'obj' because parameter 'v' is lifetimebound}}
+                       // expected-note {{result of call to 'Identity' aliases the storage of local variable 'obj' because parameter 'v' is marked as lifetimebound}}
   }                    // expected-note {{local variable 'obj' is destroyed here}}
   v.use();             // expected-note {{later used here}}
 }
@@ -832,7 +832,7 @@ void lifetimebound_unnamed_param() {
   {
     MyObj obj;
     v = Unnamed(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                      // expected-note {{result of call to 'Unnamed' aliases the storage of local variable 'obj' because parameter '<unnamed>' is lifetimebound}}
+                      // expected-note {{result of call to 'Unnamed' aliases the storage of local variable 'obj' because parameter '<unnamed>' is marked as lifetimebound}}
   }                   // expected-note {{local variable 'obj' is destroyed here}}
   v.use();            // expected-note {{later used here}}
 }
@@ -841,8 +841,8 @@ void lifetimebound_multiple_args_definite() {
   View v;
   {
     MyObj obj1, obj2;
-    v = Choose(true,  // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj1' because parameter 'a' is lifetimebound}} \
-                      // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2' because parameter 'b' is lifetimebound}}
+    v = Choose(true,  // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj1' because parameter 'a' is marked as lifetimebound}} \
+                      // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2' because parameter 'b' is marked as lifetimebound}}
                obj1,  // expected-warning {{local variable 'obj1' does not live long enough}}
                obj2); // expected-warning {{local variable 'obj2' does not live long enough}}
   }                              // expected-note {{local variable 'obj1' is destroyed here}} \
@@ -857,8 +857,8 @@ void lifetimebound_multiple_args_potential(bool cond) {
     MyObj obj1;
     if (cond) {
       MyObj obj2;
-      v = Choose(true,             // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj1' because parameter 'a' is lifetimebound}} \
-                                   // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2' because parameter 'b' is lifetimebound}}
+      v = Choose(true,             // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj1' because parameter 'a' is marked as lifetimebound}} \
+                                   // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2' because parameter 'b' is marked as lifetimebound}}
                  obj1,             // expected-warning {{local variable 'obj1' does not live long enough}}
                  obj2);            // expected-warning {{local variable 'obj2' does not live long enough}}
     }                              // expected-note {{local variable 'obj2' is destroyed here}}
@@ -884,7 +884,7 @@ void lifetimebound_mixed_args() {
   {
     MyObj obj1, obj2;
     v = SelectFirst(obj1,        // expected-warning {{local variable 'obj1' does not live long enough}} \
-                                 // expected-note {{result of call to 'SelectFirst' aliases the storage of local variable 'obj1' because parameter 'a' is lifetimebound}}
+                                 // expected-note {{result of call to 'SelectFirst' aliases the storage of local variable 'obj1' because parameter 'a' is marked as lifetimebound}}
                     obj2);
   }                              // expected-note {{local variable 'obj1' is destroyed here}}
   v.use();                       // expected-note {{later used here}}
@@ -901,7 +901,7 @@ void lifetimebound_member_function() {
   {
     MyObj obj;
     v  = obj.getView(); // expected-warning {{local variable 'obj' does not live long enough}} \
-                        // expected-note {{result of call to 'getView' aliases the storage of local variable 'obj' because the implicit object parameter is lifetimebound}}
+                        // expected-note {{result of call to 'getView' aliases the storage of local variable 'obj' because the implicit object parameter is marked as lifetimebound}}
   }                     // expected-note {{local variable 'obj' is destroyed here}}
   v.use();              // expected-note {{later used here}}
 }
@@ -926,7 +926,7 @@ void lifetimebound_chained_calls() {
   {
     MyObj obj;
     v = Identity(Identity(Identity(obj))); // expected-warning {{local variable 'obj' does not live long enough}} \
-                                           // expected-note 3 {{result of call to 'Identity' aliases the storage of local variable 'obj' because parameter 'v' is lifetimebound}}
+                                           // expected-note 3 {{result of call to 'Identity' aliases the storage of local variable 'obj' because parameter 'v' is marked as lifetimebound}}
   }                                        // expected-note {{local variable 'obj' is destroyed here}}
   v.use();                                 // expected-note {{later used here}}
 }
@@ -936,7 +936,7 @@ void lifetimebound_with_pointers() {
   {
     MyObj obj;
     ptr = GetPointer(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                           // expected-note {{result of call to 'GetPointer' aliases the storage of local variable 'obj' because parameter 'obj' is lifetimebound}}
+                           // expected-note {{result of call to 'GetPointer' aliases the storage of local variable 'obj' because parameter 'obj' is marked as lifetimebound}}
   }                        // expected-note {{local variable 'obj' is destroyed here}}
   (void)*ptr;              // expected-note {{later used here}}
 }
@@ -946,7 +946,7 @@ void chained_assignment_lifetimebound_call() {
   {
     MyObj s;
     p = Identity(obj = &s); // expected-warning {{does not live long enough}} \
-                            // expected-note {{result of call to 'Identity' aliases the storage of local variable 's' because parameter 'v' is lifetimebound}}
+                            // expected-note {{result of call to 'Identity' aliases the storage of local variable 's' because parameter 'v' is marked as lifetimebound}}
   }                         // expected-note {{local variable 's' is destroyed here}}
   (void)*p;                 // expected-note {{later used here}}
 }
@@ -964,7 +964,7 @@ void lifetimebound_partial_safety(bool cond) {
   
   if (cond) {
     MyObj temp_obj;
-    v = Choose(true,      // expected-note {{result of call to 'Choose' aliases the storage of local variable 'temp_obj' because parameter 'b' is lifetimebound}}
+    v = Choose(true,      // expected-note {{result of call to 'Choose' aliases the storage of local variable 'temp_obj' because parameter 'b' is marked as lifetimebound}}
                safe_obj,
                temp_obj); // expected-warning {{local variable 'temp_obj' does not live long enough}}
   }                       // expected-note {{local variable 'temp_obj' is destroyed here}}
@@ -979,7 +979,7 @@ void lifetimebound_return_reference() {
     MyObj obj;
     View temp_v = obj;  // expected-warning {{local variable 'obj' does not live long enough}}
     const MyObj& ref = GetObject(temp_v); // expected-note {{local variable 'temp_v' aliases the storage of local variable 'obj'}} \
-                                          // expected-note {{result of call to 'GetObject' aliases the storage of local variable 'obj' because parameter 'v' is lifetimebound}}
+                                          // expected-note {{result of call to 'GetObject' aliases the storage of local variable 'obj' because parameter 'v' is marked as lifetimebound}}
     ptr = &ref;
   }                       // expected-note {{local variable 'obj' is destroyed here}}
   (void)*ptr;             // expected-note {{later used here}}
@@ -1034,7 +1034,7 @@ void lifetimebound_make_unique() {
   {
     MyObj obj;
     ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{local variable 'obj' does not live long enough}} \
-                                                    // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj &>' aliases the storage of local variable 'obj' because parameter 'args' is lifetimebound}}
+                                                    // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj &>' aliases the storage of local variable 'obj' because parameter 'args' is inferred as lifetimebound}}
   }                                                 // tu-note {{local variable 'obj' is destroyed here}}
   (void)ptr;                                        // tu-note {{later used here}}
 }
@@ -1052,7 +1052,7 @@ void non_lifetimebound_make_unique() {
 void lifetimebound_make_unique_temp() {
   std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // tu-warning {{temporary object does not live long enough}} \
                                                                                          // tu-note {{temporary object is destroyed here}} \
-                                                                                         // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj>' aliases the storage of temporary object because parameter 'args' is lifetimebound}}
+                                                                                         // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj>' aliases the storage of temporary object because parameter 'args' is inferred as lifetimebound}}
   (void)ptr; // tu-note {{later used here}}
 }
 
@@ -1090,7 +1090,7 @@ void lifetimebound_make_unique_multi_params() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                         // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &>' aliases the storage of local variable 'obj_short' because parameter 'args' is lifetimebound}}
+                                                                         // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &>' aliases the storage of local variable 'obj_short' because parameter 'args' is inferred as lifetimebound}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1101,7 +1101,7 @@ void lifetimebound_make_unique_multi_params2() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                            // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, int>' aliases the storage of local variable 'obj_short' because parameter 'args' is lifetimebound}}
+                                                                            // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, int>' aliases the storage of local variable 'obj_short' because parameter 'args' is inferred as lifetimebound}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1122,7 +1122,7 @@ void lifetimebound_make_unique_multi_params3_1() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is lifetimebound}}
+                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is inferred as lifetimebound}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1133,7 +1133,7 @@ void lifetimebound_make_unique_multi_params3_2() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is lifetimebound}}
+                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is inferred as lifetimebound}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1248,8 +1248,8 @@ void conditional_operator_lifetimebound(bool cond) {
   {
     MyObj a, b;
     p = Identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}} \
-                              // expected-note {{result of call to 'Identity' aliases the storage of local variable 'a' because parameter 'v' is lifetimebound}} \
-                              // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b' because parameter 'v' is lifetimebound}}
+                              // expected-note {{result of call to 'Identity' aliases the storage of local variable 'a' because parameter 'v' is marked as lifetimebound}} \
+                              // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b' because parameter 'v' is marked as lifetimebound}}
                       : &b);  // expected-warning {{local variable 'b' does not live long enough}}
   }  // expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'a' is destroyed here}}
   (void)*p;  // expected-note 2 {{later used here}}
@@ -1260,10 +1260,10 @@ void conditional_operator_lifetimebound_nested(bool cond) {
   {
     MyObj a, b;
     p = Identity(cond ? Identity(&a)    // expected-warning {{local variable 'a' does not live long enough}} \
-                                        // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'a' because parameter 'v' is lifetimebound}} \
-                                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b' because parameter 'v' is lifetimebound}}
+                                        // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'a' because parameter 'v' is marked as lifetimebound}} \
+                                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b' because parameter 'v' is marked as lifetimebound}}
                       : Identity(&b));  // expected-warning {{local variable 'b' does not live long enough}} \
-                                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b' because parameter 'v' is lifetimebound}}
+                                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b' because parameter 'v' is marked as lifetimebound}}
   }  // expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'a' is destroyed here}}
   (void)*p;  // expected-note 2 {{later used here}}
 }
@@ -1273,14 +1273,14 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   {
     MyObj a, b, c, d;
     p = Identity(cond ? Identity(cond ? &a     // expected-warning {{local variable 'a' does not live long enough}} \
-                                               // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'a' because parameter 'v' is lifetimebound}} \
-                                               // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'b' because parameter 'v' is lifetimebound}} \
-                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'c' because parameter 'v' is lifetimebound}} \
-                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'd' because parameter 'v' is lifetimebound}}
+                                               // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'a' because parameter 'v' is marked as lifetimebound}} \
+                                               // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'b' because parameter 'v' is marked as lifetimebound}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'c' because parameter 'v' is marked as lifetimebound}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'd' because parameter 'v' is marked as lifetimebound}}
                                       : &b)    // expected-warning {{local variable 'b' does not live long enough}}
                       : Identity(cond ? &c     // expected-warning {{local variable 'c' does not live long enough}} \
-                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'c' because parameter 'v' is lifetimebound}} \
-                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'd' because parameter 'v' is lifetimebound}}
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'c' because parameter 'v' is marked as lifetimebound}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'd' because parameter 'v' is marked as lifetimebound}}
                                       : &d));  // expected-warning {{local variable 'd' does not live long enough}}
   }  // expected-note {{local variable 'a' is destroyed here}} expected-note {{local variable 'd' is destroyed here}} expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'c' is destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
@@ -1475,7 +1475,7 @@ void parentheses(bool cond) {
   {
     MyObj a;
     p = ((GetPointer((a))));  // expected-warning {{local variable 'a' does not live long enough}} \
-                              // expected-note {{result of call to 'GetPointer' aliases the storage of local variable 'a' because parameter 'obj' is lifetimebound}}
+                              // expected-note {{result of call to 'GetPointer' aliases the storage of local variable 'a' because parameter 'obj' is marked as lifetimebound}}
   }                           // expected-note {{local variable 'a' is destroyed here}}
   (void)*p;                   // expected-note {{later used here}}
 
@@ -1507,7 +1507,7 @@ void use_temporary_after_destruction() {
 void passing_temporary_to_lifetime_bound_function() {
   View a = construct_view(non_trivially_destructed_temporary()); // expected-warning {{temporary object does not live long enough}} \
                 expected-note {{temporary object is destroyed here}} \
-                expected-note {{result of call to 'construct_view' aliases the storage of temporary object because parameter 'obj' is lifetimebound}}
+                expected-note {{result of call to 'construct_view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
   use(a); // expected-note {{later used here}}
 }
 
@@ -1549,7 +1549,7 @@ int **bit_cast_multilevel() {
 namespace FullExprCleanupLoc {
 void var_initializer() {
   View v = non_trivially_destructed_temporary() // expected-warning {{temporary object does not live long enough}} \
-                                                // expected-note {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is lifetimebound}}
+                                                // expected-note {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}}
                .getView(); // expected-note {{temporary object is destroyed here}}
   v.use(); // expected-note {{later used here}}
 }
@@ -1557,7 +1557,7 @@ void var_initializer() {
 void expr_statement() {
   View v;
   v = non_trivially_destructed_temporary() // expected-warning {{temporary object does not live long enough}} \
-                                           // expected-note {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is lifetimebound}}
+                                           // expected-note {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}}
           .getView(); // expected-note {{temporary object is destroyed here}}
   v.use(); // expected-note {{later used here}}
 }
@@ -1601,7 +1601,7 @@ void foobar() {
   {
     StatusOr<MyObj> string_or = getStringOr();
     view = string_or. // expected-warning {{local variable 'string_or' does not live long enough}} \
-                      // expected-note {{result of call to 'value' aliases the storage of local variable 'string_or' because the implicit object parameter is lifetimebound}}
+                      // expected-note {{result of call to 'value' aliases the storage of local variable 'string_or' because the implicit object parameter is marked as lifetimebound}}
             value();
   }                     // expected-note {{local variable 'string_or' is destroyed here}}
   (void)view;           // expected-note {{later used here}}
@@ -1677,7 +1677,7 @@ void test_user_defined_deref_uaf() {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
     p = &(*smart_ptr);  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
-                        // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is lifetimebound}}
+                        // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is marked as lifetimebound}}
   }                     // expected-note {{local variable 'smart_ptr' is destroyed here}}
   (void)*p;             // expected-note {{later used here}}
 }
@@ -1695,7 +1695,7 @@ void test_user_defined_deref_with_view() {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
     v = *smart_ptr;  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
-                     // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is lifetimebound}}
+                     // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is marked as lifetimebound}}
   }                  // expected-note {{local variable 'smart_ptr' is destroyed here}}
   v.use();           // expected-note {{later used here}}
 }
@@ -1706,7 +1706,7 @@ void test_user_defined_deref_arrow() {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
     p = smart_ptr.operator->();  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
-                                 // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is lifetimebound}}
+                                 // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is marked as lifetimebound}}
   }                              // expected-note {{local variable 'smart_ptr' is destroyed here}}
   (void)*p;                      // expected-note {{later used here}}
 }
@@ -1717,7 +1717,7 @@ void test_user_defined_deref_chained() {
     MyObj obj;
     SmartPtr<SmartPtr<MyObj>> double_ptr;
     p = &(**double_ptr);  // expected-warning {{local variable 'double_ptr' does not live long enough}} \
-                          // expected-note 2 {{expression aliases the storage of local variable 'double_ptr' because the implicit object parameter is lifetimebound}}
+                          // expected-note 2 {{expression aliases the storage of local variable 'double_ptr' because the implicit object parameter is marked as lifetimebound}}
   }                       // expected-note {{local variable 'double_ptr' is destroyed here}}
   (void)*p;               // expected-note {{later used here}}
 }
@@ -1904,15 +1904,15 @@ void wrong_use_of_move_is_permissive() {
   {
     MyObj a;
     v = std::move(a); // expected-warning {{local variable 'a' does not live long enough}} \
-                      // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is lifetimebound}}
+                      // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is inferred as lifetimebound}}
   }         // expected-note {{local variable 'a' is destroyed here}}
   (void)v;  // expected-note {{later used here}}
   const int* p;
   {
     MyObj a;
     p = std::move(a).getData(); // expected-warning {{local variable 'a' does not live long enough}} \
-                                // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is lifetimebound}} \
-                                // expected-note {{result of call to 'getData' aliases the storage of local variable 'a' because the implicit object parameter is lifetimebound}}
+                                // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is inferred as lifetimebound}} \
+                                // expected-note {{result of call to 'getData' aliases the storage of local variable 'a' because the implicit object parameter is marked as lifetimebound}}
   }         // expected-note {{local variable 'a' is destroyed here}}
   (void)p;  // expected-note {{later used here}}
 }
@@ -1924,7 +1924,7 @@ void test_release_no_uaf() {
   {
     std::unique_ptr<int> p;
     r = p.get();        // expected-warning {{local variable 'p' may not live long enough. This could be a false positive as the storage may have been moved later}} \
-                        // expected-note {{result of call to 'get' aliases the storage of local variable 'p' because the implicit object parameter is lifetimebound}}
+                        // expected-note {{result of call to 'get' aliases the storage of local variable 'p' because the implicit object parameter is inferred as lifetimebound}}
     take(p.release());  // expected-note {{potentially moved here}}
   }                     // expected-note {{local variable 'p' is destroyed here}}
   (void)*r;             // expected-note {{later used here}}
@@ -1947,10 +1947,10 @@ void bar() {
     {
         S s;
         x = s.x(); // expected-warning {{local variable 's' does not live long enough}} \
-                   // expected-note {{result of call to 'x' aliases the storage of local variable 's' because the implicit object parameter is lifetimebound}}
+                   // expected-note {{result of call to 'x' aliases the storage of local variable 's' because the implicit object parameter is marked as lifetimebound}}
         View y = S().x(); // expected-warning {{temporary object does not live long enough}} \
                              expected-note {{temporary object is destroyed here}} \
-                             expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is lifetimebound}}
+                             expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}}
         (void)y; // expected-note {{used here}}
     } // expected-note {{local variable 's' is destroyed here}}
     (void)x; // expected-note {{used here}}
@@ -2039,19 +2039,19 @@ const S& identity(const S& in [[clang::lifetimebound]]);
 
 void test_temporary() {
   const std::string& x = S().x(); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                                  // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is lifetimebound}}
+                                  // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}}
   (void)x; // expected-note {{later used here}}
 
   const std::string& y = identity(S().x()); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                                            // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is lifetimebound}} \
-                                            // expected-note {{result of call to 'identity' aliases the storage of temporary object because parameter 'in' is lifetimebound}}
+                                            // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}} \
+                                            // expected-note {{result of call to 'identity' aliases the storage of temporary object because parameter 'in' is marked as lifetimebound}}
   (void)y; // expected-note {{later used here}}
 
   std::string_view z;
   {
     S s;
     const std::string& zz = s.x(); // expected-warning {{local variable 's' does not live long enough}} \
-                                   // expected-note {{result of call to 'x' aliases the storage of local variable 's' because the implicit object parameter is lifetimebound}}
+                                   // expected-note {{result of call to 'x' aliases the storage of local variable 's' because the implicit object parameter is marked as lifetimebound}}
     z = zz;                        // expected-note {{expression aliases the storage of local variable 's'}}
   } // expected-note {{local variable 's' is destroyed here}}
   (void)z; // expected-note {{later used here}}
@@ -2061,13 +2061,13 @@ void test_lifetime_extension_ok() {
   const S& x = S();
   (void)x;
   const S& y = identity(S()); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                              // expected-note {{result of call to 'identity' aliases the storage of temporary object because parameter 'in' is lifetimebound}}
+                              // expected-note {{result of call to 'identity' aliases the storage of temporary object because parameter 'in' is marked as lifetimebound}}
   (void)y; // expected-note {{later used here}}
 }
 
 const std::string& test_return() {
   const std::string& x = S().x(); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                                  // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is lifetimebound}}
+                                  // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}}
   return x; // expected-note {{later used here}}
 }
 } // namespace reference_type_decl_ref_expr
@@ -2085,7 +2085,7 @@ void uaf() {
     S str;
     S* p = &str;  // expected-warning {{local variable 'str' does not live long enough}}
     view = p->s;  // expected-note {{local variable 'p' aliases the storage of local variable 'str'}} \
-                  // expected-note {{expression aliases the storage of local variable 'str' because the implicit object parameter is lifetimebound}}
+                  // expected-note {{expression aliases the storage of local variable 'str' because the implicit object parameter is inferred as lifetimebound}}
   } // expected-note {{local variable 'str' is destroyed here}}
   (void)view;  // expected-note {{later used here}}
 }
@@ -2112,7 +2112,7 @@ void uaf_union() {
     U u = U{"hello"};
     U* up = &u;   // expected-warning {{local variable 'u' does not live long enough}}
     view = up->s; // expected-note {{local variable 'up' aliases the storage of local variable 'u'}} \
-                  // expected-note {{expression aliases the storage of local variable 'u' because the implicit object parameter is lifetimebound}}
+                  // expected-note {{expression aliases the storage of local variable 'u' because the implicit object parameter is inferred as lifetimebound}}
   } // expected-note {{local variable 'u' is destroyed here}}
   (void)view;  // expected-note {{later used here}}
 }
@@ -2248,11 +2248,11 @@ const T* MemberFuncsTpl<T>::memberC(const T& x [[clang::lifetimebound]]) {
 void test() {
   MemberFuncsTpl<MyObj> mtf;
   const MyObj* pTMA = mtf.memberA(MyObj()); // expected-warning {{temporary object does not live long enough}} // expected-note {{temporary object is destroyed here}} \
-                                            // expected-note {{result of call to 'memberA' aliases the storage of temporary object because parameter 'x' is lifetimebound}}
+                                            // expected-note {{result of call to 'memberA' aliases the storage of temporary object because parameter 'x' is marked as lifetimebound}}
   const MyObj* pTMB = mtf.memberB(MyObj()); // tu-warning {{temporary object does not live long enough}} // tu-note {{temporary object is destroyed here}} \
-                                            // tu-note {{result of call to 'memberB' aliases the storage of temporary object because parameter 'x' is lifetimebound}}
+                                            // tu-note {{result of call to 'memberB' aliases the storage of temporary object because parameter 'x' is inferred as lifetimebound}}
   const MyObj* pTMC = mtf.memberC(MyObj()); // expected-warning {{temporary object does not live long enough}} // expected-note {{temporary object is destroyed here}} \
-                                            // expected-note {{result of call to 'memberC' aliases the storage of temporary object because parameter 'x' is lifetimebound}}
+                                            // expected-note {{result of call to 'memberC' aliases the storage of temporary object because parameter 'x' is marked as lifetimebound}}
   (void)pTMA; // expected-note {{later used here}}
   (void)pTMB; // tu-note {{later used here}}
   (void)pTMC; // expected-note {{later used here}}
@@ -2288,8 +2288,8 @@ void test_optional_arrow() {
   {
     std::optional<std::string> opt;
     p = opt->data();  // expected-warning {{local variable 'opt' does not live long enough}} \
-                      // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is lifetimebound}} \
-                      // expected-note {{result of call to 'data' aliases the storage of local variable 'opt' because the implicit object parameter is lifetimebound}}
+                      // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is inferred as lifetimebound}} \
+                      // expected-note {{result of call to 'data' aliases the storage of local variable 'opt' because the implicit object parameter is inferred as lifetimebound}}
   }                   // expected-note {{local variable 'opt' is destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 }
@@ -2299,8 +2299,8 @@ void test_optional_arrow_lifetimebound() {
   {
     std::optional<MyObj> opt;
     v = opt->getView();  // expected-warning {{local variable 'opt' does not live long enough}} \
-                         // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is lifetimebound}} \
-                         // expected-note {{result of call to 'getView' aliases the storage of local variable 'opt' because the implicit object parameter is lifetimebound}}
+                         // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is inferred as lifetimebound}} \
+                         // expected-note {{result of call to 'getView' aliases the storage of local variable 'opt' because the implicit object parameter is marked as lifetimebound}}
   }                      // expected-note {{local variable 'opt' is destroyed here}}
   v.use();               // expected-note {{later used here}}
 }
@@ -2310,8 +2310,8 @@ void test_unique_ptr_arrow() {
   {
     std::unique_ptr<std::string> up;
     p = up->data();  // expected-warning {{local variable 'up' does not live long enough}} \
-                     // expected-note {{expression aliases the storage of local variable 'up' because the implicit object parameter is lifetimebound}} \
-                     // expected-note {{result of call to 'data' aliases the storage of local variable 'up' because the implicit object parameter is lifetimebound}}
+                     // expected-note {{expression aliases the storage of local variable 'up' because the implicit object parameter is inferred as lifetimebound}} \
+                     // expected-note {{result of call to 'data' aliases the storage of local variable 'up' because the implicit object parameter is inferred as lifetimebound}}
   }                  // expected-note {{local variable 'up' is destroyed here}}
   (void)*p;          // expected-note {{later used here}}
 }
@@ -2701,8 +2701,8 @@ struct S {
 
 void indexing_with_static_operator() {
   S()(1, 2);
-  S& x = S()("1", // expected-note {{expression aliases the storage of temporary object because parameter 'a' is lifetimebound}} \
-             // expected-note {{expression aliases the storage of temporary object because parameter 'b' is lifetimebound}}
+  S& x = S()("1", // expected-note {{expression aliases the storage of temporary object because parameter 'a' is marked as lifetimebound}} \
+             // expected-note {{expression aliases the storage of temporary object because parameter 'b' is marked as lifetimebound}}
              2,   // expected-warning {{temporary object does not live long enough}}
              3);  // expected-warning {{temporary object does not live long enough}} expected-note 2 {{temporary object is destroyed here}}
 
@@ -2728,7 +2728,7 @@ S getS(const std::string &s [[clang::lifetimebound]]);
 void from_free_function() {
   S s = getS(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                    // expected-note {{temporary object is destroyed here}} \
-                                   // expected-note {{result of call to 'getS' aliases the storage of temporary object because parameter 's' is lifetimebound}}
+                                   // expected-note {{result of call to 'getS' aliases the storage of temporary object because parameter 's' is marked as lifetimebound}}
   use(s);                          // expected-note {{later used here}}
 }
 
@@ -2748,14 +2748,14 @@ void from_method() {
   Factory f;
   S s = f.make(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                      // expected-note {{temporary object is destroyed here}} \
-                                     // expected-note {{result of call to 'make' aliases the storage of temporary object because parameter 's' is lifetimebound}}
+                                     // expected-note {{result of call to 'make' aliases the storage of temporary object because parameter 's' is marked as lifetimebound}}
   use(s);                            // expected-note {{later used here}}
 }
 
 void from_static_method() {
   S s = Factory::create(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                               // expected-note {{temporary object is destroyed here}} \
-                                              // expected-note {{result of call to 'create' aliases the storage of temporary object because parameter 's' is lifetimebound}}
+                                              // expected-note {{result of call to 'create' aliases the storage of temporary object because parameter 's' is marked as lifetimebound}}
   use(s);                                     // expected-note {{later used here}}
 }
 
@@ -2764,7 +2764,7 @@ void from_lifetimebound_this_method() {
   {
     Factory f;
     value = f.makeThis(); // expected-warning {{local variable 'f' does not live long enough}} \
-                          // expected-note {{result of call to 'makeThis' aliases the storage of local variable 'f' because the implicit object parameter is lifetimebound}}
+                          // expected-note {{result of call to 'makeThis' aliases the storage of local variable 'f' because the implicit object parameter is marked as lifetimebound}}
   }                       // expected-note {{local variable 'f' is destroyed here}}
   use(value);             // expected-note {{later used here}}
 }
@@ -2774,7 +2774,7 @@ void across_scope() {
   {
     std::string str{"abc"};
     s = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
-                   // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is lifetimebound}}
+                   // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is marked as lifetimebound}}
   }                // expected-note {{local variable 'str' is destroyed here}}
   use(s);          // expected-note {{later used here}}
 }
@@ -2797,7 +2797,7 @@ void assignment_propagation() {
   {
     std::string str{"abc"};
     a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
-                   // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is lifetimebound}}
+                   // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is marked as lifetimebound}}
     b = a;         // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}
   }                // expected-note {{local variable 'str' is destroyed here}}
   use(b);          // expected-note {{later used here}}
@@ -2808,7 +2808,7 @@ void chained_defaulted_assignment_propagation() {
   {
     std::string str{"abc"};
     S a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
-                     // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is lifetimebound}}
+                     // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is marked as lifetimebound}}
     c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}} \
                      // expected-note {{expression aliases the storage of local variable 'str'}}
   }                  // expected-note {{local variable 'str' is destroyed here}}
@@ -2825,7 +2825,7 @@ void no_annotation() {
 void mix_annotated_and_not() {
   S s1 = getS(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                     // expected-note {{temporary object is destroyed here}} \
-                                    // expected-note {{result of call to 'getS' aliases the storage of temporary object because parameter 's' is lifetimebound}}
+                                    // expected-note {{result of call to 'getS' aliases the storage of temporary object because parameter 's' is marked as lifetimebound}}
   S s2 = getSNoAnnotation(std::string("temp"));
   use(s1); // expected-note {{later used here}}
   use(s2);
@@ -2837,7 +2837,7 @@ S multiple_lifetimebound_params() {
   std::string str{"abc"};
   S s = getS2(str, std::string("temp")); // expected-warning {{stack memory associated with local variable 'str' is returned}} \
                                          // expected-warning {{temporary object does not live long enough}} \
-                                         // expected-note {{result of call to 'getS2' aliases the storage of temporary object because parameter 'b' is lifetimebound}} \
+                                         // expected-note {{result of call to 'getS2' aliases the storage of temporary object because parameter 'b' is marked as lifetimebound}} \
                                          // expected-note {{temporary object is destroyed here}}
   return s;                              // expected-note {{returned here}} \
                                          // expected-note {{later used here}}
@@ -2858,7 +2858,7 @@ T make(const std::string &s [[clang::lifetimebound]]);
 void from_template_instantiation() {
   S s = make<S>(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                       // expected-note {{temporary object is destroyed here}} \
-                                      // expected-note {{result of call to 'make<track_origins_for_lifetimebound_record_type::S>' aliases the storage of temporary object because parameter 's' is lifetimebound}}
+                                      // expected-note {{result of call to 'make<track_origins_for_lifetimebound_record_type::S>' aliases the storage of temporary object because parameter 's' is marked as lifetimebound}}
   use(s);                             // expected-note {{later used here}}
 }
 
@@ -2922,7 +2922,7 @@ SAlias getSAlias(const std::string &s [[clang::lifetimebound]]);
 void from_typedef_return() {
   SAlias s = getSAlias(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                              // expected-note {{temporary object is destroyed here}} \
-                                             // expected-note {{result of call to 'getSAlias' aliases the storage of temporary object because parameter 's' is lifetimebound}}
+                                             // expected-note {{result of call to 'getSAlias' aliases the storage of temporary object because parameter 's' is marked as lifetimebound}}
   use(s);                                    // expected-note {{later used here}}
 }
 
@@ -2997,7 +2997,7 @@ std::unique_ptr<S> getUniqueS(const std::string &s [[clang::lifetimebound]]);
 void owner_return_unique_ptr_s() {
   auto ptr = getUniqueS(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                               // expected-note {{temporary object is destroyed here}} \
-                                              // expected-note {{result of call to 'getUniqueS' aliases the storage of temporary object because parameter 's' is lifetimebound}}
+                                              // expected-note {{result of call to 'getUniqueS' aliases the storage of temporary object because parameter 's' is marked as lifetimebound}}
   (void)ptr;                                  // expected-note {{later used here}}
 }
 
@@ -3014,7 +3014,7 @@ void owner_outlives_lifetimebound_source() {
   {
     std::string local;
     ups = getUniqueS(local); // expected-warning {{local variable 'local' does not live long enough}} \
-                             // expected-note {{result of call to 'getUniqueS' aliases the storage of local variable 'local' because parameter 's' is lifetimebound}}
+                             // expected-note {{result of call to 'getUniqueS' aliases the storage of local variable 'local' because parameter 's' is marked as lifetimebound}}
   } // expected-note {{local variable 'local' is destroyed here}}
   (void)ups; // expected-note {{later used here}}
 }
@@ -3809,7 +3809,7 @@ void uaf_via_lifetimebound() {
   {
     int local;
     f = capture_lifetimebound_param(local); // expected-warning {{local variable 'local' does not live long enough}} \
-                                            // expected-note {{result of call to 'capture_lifetimebound_param' aliases the storage of local variable 'local' because parameter 'x' is lifetimebound}}
+                                            // expected-note {{result of call to 'capture_lifetimebound_param' aliases the storage of local variable 'local' because parameter 'x' is marked as lifetimebound}}
   } // expected-note {{local variable 'local' is destroyed here}}
   (void)f; // expected-note {{later used here}}
 }
@@ -3873,7 +3873,7 @@ void deref_use_after_scope() {
   {
     optional<MyObj> opt;
     p = &*opt; // expected-warning {{local variable 'opt' does not live long enough}} \
-               // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is lifetimebound}}
+               // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is inferred as lifetimebound}}
   }            // expected-note {{local variable 'opt' is destroyed here}}
   (void)p->id; // expected-note {{later used here}}
 }
@@ -4004,7 +4004,6 @@ void member_capture() {
   (void)c.stored;   // expected-note {{later used here}}
 }
 
-// FIXME: Add support for simple containers without annotations.
 struct SimpleContainer {
   View stored;
   void set(View s [[clang::lifetime_capture_by_this]]);
@@ -4014,9 +4013,9 @@ void member_capture_simple_container() {
   SimpleContainer c;
   {
     MyObj local;
-    c.set(local);   
-  }                 
-  (void)c.stored;   
+    c.set(local);   // expected-warning {{local variable 'local' does not live long enough}}
+  }                 // expected-note {{destroyed here}}   
+  (void)c.stored;   // expected-note {{later used here}}
 }
 
 void captureTwo(View& into, 

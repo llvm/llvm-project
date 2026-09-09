@@ -80,8 +80,8 @@ public:
   void throwAsynchronous();
 
   /// Enqueues a kernel to liboffload.
-  /// Kernel parameters like dependencies and range must be passed in advance by
-  /// calling setKernelParameters.
+  /// Kernel dependencies and range must be passed in advance by calling
+  /// setKernelLaunchParams.
   /// \param KernelInfo a kernel info that is uniform between different
   /// submissions of the same kernel.
   /// \param ArgData a pointer to kernel argument.
@@ -97,12 +97,21 @@ public:
     return MCurrentSubmitInfo.LastEvent;
   }
 
-  /// Sets kernel parameters to be used in the next submitKernelImpl call.
-  /// Must be called prior to a submitKernelImpl call.
+  /// \brief Sets event dependencies and execution range for the next kernel
+  /// submission.
   /// \param Events a collection of events that the kernel depends on.
   /// \param Range a unified range view of the execution range.
-  void setKernelParameters(std::vector<EventImplPtr> &&Events,
-                           const detail::UnifiedRangeView &Range);
+  void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
+                             const detail::UnifiedRangeView &Range);
+
+  /// \copybrief
+  /// QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr>&&,detail::UnifiedRangeView
+  /// const&)
+  ///
+  /// \param Events a collection of events that the kernel depends on.
+  /// \param Range a pre-converted liboffload kernel launch size args struct.
+  void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
+                             const ol_kernel_launch_size_args_t &Range);
 
   /// \return the async_handler associated with this queue.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }
@@ -116,6 +125,28 @@ public:
   /// \return an event impl object that represents the status of the operation.
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
+
+  /// Submits a command group function to this queue.
+  ///
+  /// \param CGF is the command group function to invoke.
+  /// \return an event impl object representing the submitted operation.
+  EventImplPtr submitWithHandler(const TypelessCGF &CGF);
+
+  /// Submits a dependency-only wait operation to this queue.
+  ///
+  /// \param DepEvents are the events that must complete before the wait
+  /// operation completes.
+  /// \return an event impl object representing the wait operation.
+  EventImplPtr submitWait(const std::vector<EventImplPtr> &DepEvents);
+
+  /// Submits a prefetch operation for a USM pointer.
+  ///
+  /// \param Ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param NumBytes is a number of bytes to be prefetched.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr prefetch(void *Ptr, std::size_t NumBytes,
+                        const std::vector<EventImplPtr> &DepEvents);
 
 private:
   void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
@@ -131,6 +162,8 @@ private:
 
   // Submit data.
   struct KernelSubmitInfo {
+    KernelSubmitInfo() {}
+
     EventImplPtr LastEvent;
     ol_kernel_launch_size_args_t Range;
     std::vector<EventImplPtr> DepEvents;

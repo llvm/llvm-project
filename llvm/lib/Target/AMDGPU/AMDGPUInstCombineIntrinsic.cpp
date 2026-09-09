@@ -20,7 +20,6 @@
 #include "SIDefines.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
@@ -182,6 +181,9 @@ static std::optional<Instruction *>
 simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                              const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
                              IntrinsicInst &II, InstCombiner &IC) {
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+      AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
+
   // Optimize _L to _LZ when _L is zero
   if (const auto *LZMappingInfo =
           AMDGPU::getMIMGLZMappingInfo(ImageDimIntr->BaseOpcode)) {
@@ -251,12 +253,32 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
     }
   }
 
+  // Optimize the arrayed dim away when the array slice is zero, since slice 0
+  // is the base layer.  Restricted to non-atomic, non-sampled image loads and
+  // stores for now.
+  const AMDGPU::MIMGDimInfo *DimInfo =
+      AMDGPU::getMIMGDimInfo(ImageDimIntr->Dim);
+  if (!BaseOpcode->Atomic && !BaseOpcode->Sampler && BaseOpcode->Coordinates &&
+      DimInfo->NonArrayDim != ImageDimIntr->Dim) {
+    // Address is [coords..., slice, (fragid)] plus an optional mip operand.
+    // The slice is the last coordinate, so index it from CoordStart.
+    unsigned SliceIndex = ImageDimIntr->CoordStart + DimInfo->NumCoords - 1 -
+                          (DimInfo->MSAA ? 1 : 0);
+    auto *ConstantSlice = dyn_cast<ConstantInt>(II.getOperand(SliceIndex));
+    if (ConstantSlice && ConstantSlice->isZero()) {
+      if (const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
+              AMDGPU::getImageDimIntrinsicByBaseOpcode(ImageDimIntr->BaseOpcode,
+                                                       DimInfo->NonArrayDim)) {
+        return modifyIntrinsicCall(II, II, NewImageDimIntr->Intr, IC,
+                                   [&](auto &Args, auto &ArgTys) {
+                                     Args.erase(Args.begin() + SliceIndex);
+                                   });
+      }
+    }
+  }
+
   // Try to use D16
   if (ST->hasD16Images()) {
-
-    const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
-        AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
-
     if (BaseOpcode->HasD16) {
 
       // If the only use of image intrinsic is a fptrunc (with conversion to
@@ -346,8 +368,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 
   // Address is interpreted as float if the instruction has a sampler or as
   // unsigned int if there is no sampler.
-  bool HasSampler =
-      AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode)->Sampler;
+  bool HasSampler = BaseOpcode->Sampler;
   bool FloatCoord = false;
   // true means derivatives can be converted to 16 bit, coordinates not
   bool OnlyDerivatives = false;
@@ -1683,141 +1704,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           return new FPExtInst(NewCall, II.getType());
         }
       }
-    }
-
-    break;
-  }
-  case Intrinsic::amdgcn_icmp:
-  case Intrinsic::amdgcn_fcmp: {
-    const ConstantInt *CC = cast<ConstantInt>(II.getArgOperand(2));
-    // Guard against invalid arguments.
-    int64_t CCVal = CC->getZExtValue();
-    bool IsInteger = IID == Intrinsic::amdgcn_icmp;
-    if ((IsInteger && (CCVal < CmpInst::FIRST_ICMP_PREDICATE ||
-                       CCVal > CmpInst::LAST_ICMP_PREDICATE)) ||
-        (!IsInteger && (CCVal < CmpInst::FIRST_FCMP_PREDICATE ||
-                        CCVal > CmpInst::LAST_FCMP_PREDICATE)))
-      break;
-
-    Value *Src0 = II.getArgOperand(0);
-    Value *Src1 = II.getArgOperand(1);
-
-    if (auto *CSrc0 = dyn_cast<Constant>(Src0)) {
-      if (auto *CSrc1 = dyn_cast<Constant>(Src1)) {
-        Constant *CCmp = ConstantFoldCompareInstOperands(
-            (ICmpInst::Predicate)CCVal, CSrc0, CSrc1, DL);
-        if (CCmp && CCmp->isNullValue()) {
-          return IC.replaceInstUsesWith(
-              II, IC.Builder.CreateSExt(CCmp, II.getType()));
-        }
-
-        // The result of V_ICMP/V_FCMP assembly instructions (which this
-        // intrinsic exposes) is one bit per thread, masked with the EXEC
-        // register (which contains the bitmask of live threads). So a
-        // comparison that always returns true is the same as a read of the
-        // EXEC register. ballot(true) reads EXEC at the wave-size width, so
-        // zext/trunc the result to the intrinsic's return type.
-        Type *WaveTy = IC.Builder.getIntNTy(ST->getWavefrontSize());
-        Value *Ballot = IC.Builder.CreateIntrinsic(
-            Intrinsic::amdgcn_ballot, WaveTy, IC.Builder.getTrue());
-        Value *Result = IC.Builder.CreateZExtOrTrunc(Ballot, II.getType());
-        return IC.replaceInstUsesWith(II, Result);
-      }
-
-      // Canonicalize constants to RHS.
-      CmpInst::Predicate SwapPred =
-          CmpInst::getSwappedPredicate(static_cast<CmpInst::Predicate>(CCVal));
-      II.setArgOperand(0, Src1);
-      II.setArgOperand(1, Src0);
-      II.setArgOperand(
-          2, ConstantInt::get(CC->getType(), static_cast<int>(SwapPred)));
-      return &II;
-    }
-
-    if (CCVal != CmpInst::ICMP_EQ && CCVal != CmpInst::ICMP_NE)
-      break;
-
-    // Canonicalize compare eq with true value to compare != 0
-    // llvm.amdgcn.icmp(zext (i1 x), 1, eq)
-    //   -> llvm.amdgcn.icmp(zext (i1 x), 0, ne)
-    // llvm.amdgcn.icmp(sext (i1 x), -1, eq)
-    //   -> llvm.amdgcn.icmp(sext (i1 x), 0, ne)
-    Value *ExtSrc;
-    if (CCVal == CmpInst::ICMP_EQ &&
-        ((match(Src1, PatternMatch::m_One()) &&
-          match(Src0, m_ZExt(PatternMatch::m_Value(ExtSrc)))) ||
-         (match(Src1, PatternMatch::m_AllOnes()) &&
-          match(Src0, m_SExt(PatternMatch::m_Value(ExtSrc))))) &&
-        ExtSrc->getType()->isIntegerTy(1)) {
-      IC.replaceOperand(II, 1, ConstantInt::getNullValue(Src1->getType()));
-      IC.replaceOperand(II, 2,
-                        ConstantInt::get(CC->getType(), CmpInst::ICMP_NE));
-      return &II;
-    }
-
-    CmpPredicate SrcPred;
-    Value *SrcLHS;
-    Value *SrcRHS;
-
-    // Fold compare eq/ne with 0 from a compare result as the predicate to the
-    // intrinsic. The typical use is a wave vote function in the library, which
-    // will be fed from a user code condition compared with 0. Fold in the
-    // redundant compare.
-
-    // llvm.amdgcn.icmp([sz]ext ([if]cmp pred a, b), 0, ne)
-    //   -> llvm.amdgcn.[if]cmp(a, b, pred)
-    //
-    // llvm.amdgcn.icmp([sz]ext ([if]cmp pred a, b), 0, eq)
-    //   -> llvm.amdgcn.[if]cmp(a, b, inv pred)
-    if (match(Src1, PatternMatch::m_Zero()) &&
-        match(Src0, PatternMatch::m_ZExtOrSExt(
-                        m_Cmp(SrcPred, PatternMatch::m_Value(SrcLHS),
-                              PatternMatch::m_Value(SrcRHS))))) {
-      if (CCVal == CmpInst::ICMP_EQ)
-        SrcPred = CmpInst::getInversePredicate(SrcPred);
-
-      Intrinsic::ID NewIID = CmpInst::isFPPredicate(SrcPred)
-                                 ? Intrinsic::amdgcn_fcmp
-                                 : Intrinsic::amdgcn_icmp;
-
-      Type *Ty = SrcLHS->getType();
-      if (auto *CmpType = dyn_cast<IntegerType>(Ty)) {
-        // Promote to next legal integer type.
-        unsigned Width = CmpType->getBitWidth();
-        unsigned NewWidth = Width;
-
-        // Don't do anything for i1 comparisons.
-        if (Width == 1)
-          break;
-
-        if (Width <= 16)
-          NewWidth = 16;
-        else if (Width <= 32)
-          NewWidth = 32;
-        else if (Width <= 64)
-          NewWidth = 64;
-        else
-          break; // Can't handle this.
-
-        if (Width != NewWidth) {
-          IntegerType *CmpTy = IC.Builder.getIntNTy(NewWidth);
-          if (CmpInst::isSigned(SrcPred)) {
-            SrcLHS = IC.Builder.CreateSExt(SrcLHS, CmpTy);
-            SrcRHS = IC.Builder.CreateSExt(SrcRHS, CmpTy);
-          } else {
-            SrcLHS = IC.Builder.CreateZExt(SrcLHS, CmpTy);
-            SrcRHS = IC.Builder.CreateZExt(SrcRHS, CmpTy);
-          }
-        }
-      } else if (!Ty->isFloatTy() && !Ty->isDoubleTy() && !Ty->isHalfTy())
-        break;
-
-      Value *Args[] = {SrcLHS, SrcRHS,
-                       ConstantInt::get(CC->getType(), SrcPred)};
-      Value *NewCall = IC.Builder.CreateIntrinsic(
-          NewIID, {II.getType(), SrcLHS->getType()}, Args);
-      NewCall->takeName(&II);
-      return IC.replaceInstUsesWith(II, NewCall);
     }
 
     break;

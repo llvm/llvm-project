@@ -70,8 +70,9 @@ public:
 
   // Redirect base class Read/Write Memory methods to functions whose signatures
   // are more mock-friendly.
-  Status ReadMemory(addr_t Addr, void *Buf, size_t Size,
+  Status ReadMemory(const ProcessAddress &process_addr, void *Buf, size_t Size,
                     size_t &BytesRead) /*override*/ {
+    addr_t Addr = process_addr.GetValue();
     auto ExpectedMemory = this->ReadMemory(Addr, Size);
     if (!ExpectedMemory) {
       BytesRead = 0;
@@ -83,10 +84,20 @@ public:
     return Status();
   }
 
-  Status WriteMemory(addr_t Addr, const void *Buf, size_t Size,
-                     size_t &BytesWritten) /*override*/ {
+  using T::WriteMemory;
+
+  MOCK_METHOD2(ReadMemory,
+               llvm::Expected<std::vector<uint8_t>>(addr_t Addr, size_t Size));
+  MOCK_METHOD2(WriteMemory,
+               llvm::Expected<size_t>(addr_t Addr,
+                                      llvm::ArrayRef<uint8_t> Data));
+
+  Status DoWriteMemory(addr_t Addr, const void *Buf, size_t Size,
+                       size_t &BytesWritten) /*override*/ {
     auto ExpectedBytes = this->WriteMemory(
-        Addr, llvm::ArrayRef(static_cast<const uint8_t *>(Buf), Size));
+        Addr,
+        llvm::ArrayRef(const_cast<uint8_t *>(static_cast<const uint8_t *>(Buf)),
+                       Size));
     if (!ExpectedBytes) {
       BytesWritten = 0;
       return Status::FromError(ExpectedBytes.takeError());
@@ -94,12 +105,6 @@ public:
     BytesWritten = *ExpectedBytes;
     return Status();
   }
-
-  MOCK_METHOD2(ReadMemory,
-               llvm::Expected<std::vector<uint8_t>>(addr_t Addr, size_t Size));
-  MOCK_METHOD2(WriteMemory,
-               llvm::Expected<size_t>(addr_t Addr,
-                                      llvm::ArrayRef<uint8_t> Data));
 
   using T::GetSoftwareBreakpointTrapOpcode;
   llvm::Expected<std::vector<uint8_t>> ReadMemoryWithoutTrap(addr_t Addr,

@@ -31,9 +31,11 @@
 #include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -47,6 +49,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
@@ -60,6 +63,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());
   auto *PR = PassRegistry::getPassRegistry();
+  initializeDXILDebugInfoLegacyPass(*PR);
   initializeDXILIntrinsicExpansionLegacyPass(*PR);
   initializeDXILMemIntrinsicsLegacyPass(*PR);
   initializeDXILDataScalarizationLegacyPass(*PR);
@@ -128,9 +132,12 @@ public:
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
-    ScalarizerPassOptions DxilScalarOptions;
-    DxilScalarOptions.ScalarizeLoadStore = true;
-    addPass(createScalarizerPass(DxilScalarOptions));
+    if (getDirectXTargetMachine().getTargetTriple().getOSVersion() <
+        VersionTuple(6, 9)) {
+      ScalarizerPassOptions DxilScalarOptions;
+      DxilScalarOptions.ScalarizeLoadStore = true;
+      addPass(createScalarizerPass(DxilScalarOptions));
+    }
     addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILForwardHandleAccessesLegacyPass());
     if (OptLevel != CodeGenOptLevel::None) {
@@ -142,6 +149,7 @@ public:
     addPass(createDXILPostOptimizationValidationLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
+    addPass(createDXILDebugInfoLegacyPass());
   }
 };
 
@@ -170,6 +178,13 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
   TargetPassConfig *PassConfig = createPassConfig(PM);
+  PM.add(PassConfig);
+
+  if (!MMIWP)
+    MMIWP = new MachineModuleInfoWrapperPass(this);
+  PM.add(MMIWP);
+
+  PM.add(createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
   PassConfig->addCodeGenPrepare();
 
   switch (FileType) {
@@ -184,9 +199,6 @@ bool DirectXTargetMachine::addPassesToEmitFile(
       PM.add(createDXContainerGlobalsPass());
       PM.add(createDXContainerPDBPass());
 
-      if (!MMIWP)
-        MMIWP = new MachineModuleInfoWrapperPass(this);
-      PM.add(MMIWP);
       if (addAsmPrinter(PM, Out, DwoOut, FileType,
                         MMIWP->getMMI().getContext()))
         return true;

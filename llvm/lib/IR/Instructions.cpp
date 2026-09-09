@@ -61,9 +61,13 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
+TypeSize AllocaInst::getAllocationBaseSize(const DataLayout &DL) const {
+  return DL.getTypeAllocSize(getAllocatedType());
+}
+
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  TypeSize Size = getAllocationBaseSize(DL);
   // Zero-sized types can return early since 0 * N = 0 for any array size N.
   if (Size.isZero())
     return Size;
@@ -415,6 +419,7 @@ Value *CallBase::getArgOperandWithAttribute(Attribute::AttrKind Kind) const {
 /// Determine whether the argument or parameter has the given attribute.
 bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   assert(ArgNo < arg_size() && "Param index out of bounds!");
+  assert(!Attribute::isABIAttr(Kind) && "Use hasABIParamAttr() instead");
 
   if (Attrs.hasParamAttr(ArgNo, Kind))
     return true;
@@ -1406,7 +1411,9 @@ StoreInst::StoreInst(Value *Val, Value *Ptr,
                      const LoadStoreInstProperties &Props,
                      InsertPosition InsertBefore)
     : StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment, Props.Ordering,
-                Props.SSID, InsertBefore) {}
+                Props.SSID, InsertBefore) {
+  setElementwise(Props.IsElementwise);
+}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
@@ -4454,8 +4461,8 @@ LoadInst *LoadInst::cloneImpl() const {
 }
 
 StoreInst *StoreInst::cloneImpl() const {
-  return new StoreInst(getOperand(0), getOperand(1), isVolatile(), getAlign(),
-                       getOrdering(), getSyncScopeID());
+  return new StoreInst(getOperand(0), getOperand(1), getProperties(),
+                       /*InsertBefore=*/nullptr);
 }
 
 AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {

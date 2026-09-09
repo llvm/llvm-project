@@ -1,6 +1,4 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -fno-clangir-call-conv-lowering %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 // FIXME: We should run this against Windows mangling as well at one point.
 
 #pragma acc routine seq bind("BIND1")
@@ -105,24 +103,21 @@ void hasLambdas() {
 // CHECK: cir.func{{.*}} @_Z6Func121U1Vi({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F12_R_NAME:.*]]]>{{.*}}}
 //
 // CHECK: cir.func{{.*}} @_ZN8HasFuncs7MemFuncEidRS_1S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[MEMFUNC_R_NAME:.*]]]>{{.*}}}
+// CHECK:  acc.routine @[[MEMFUNC_R_NAME]] func(@_ZN8HasFuncs7MemFuncEidRS_1S) bind(@_Z3MEMP8HasFuncsidRS_1S) seq
 //
 // CHECK: cir.func{{.*}} @_ZNK8HasFuncs12ConstMemFuncEidRS_1S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[CONSTMEMFUNC_R_NAME:.*]]]>{{.*}}}
+// CHECK:  acc.routine @[[CONSTMEMFUNC_R_NAME]] func(@_ZNK8HasFuncs12ConstMemFuncEidRS_1S) bind(@_Z3MEMPK8HasFuncsidRS_1S) seq
 //
 // CHECK: cir.func{{.*}} @_ZNVK8HasFuncs15VolatileMemFuncEidRS_1S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[VOLATILEMEMFUNC_R_NAME:.*]]]>{{.*}}}
+// CHECK:  acc.routine @[[VOLATILEMEMFUNC_R_NAME]] func(@_ZNVK8HasFuncs15VolatileMemFuncEidRS_1S) bind(@_Z3MEMPVK8HasFuncsidRS_1S) seq
 //
 // CHECK: cir.func{{.*}} @_ZNKO8HasFuncs10RefMemFuncEidRS_1S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[REFMEMFUNC_R_NAME:.*]]]>{{.*}}}
+// CHECK:  acc.routine @[[REFMEMFUNC_R_NAME]] func(@_ZNKO8HasFuncs10RefMemFuncEidRS_1S) bind(@_Z3MEMPK8HasFuncsidRS_1S) seq
 //
 // CHECK: cir.func{{.*}} @_ZN8HasFuncs13StaticMemFuncEidRS_P1U({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[STATICFUNC_R_NAME:.*]]]>{{.*}}}
+// CHECK:  acc.routine @[[STATICFUNC_R_NAME]] func(@_ZN8HasFuncs13StaticMemFuncEidRS_P1U) bind(@_Z9STATICMEMP8HasFuncsidRS_P1U) seq
 //
 // CHECK: cir.func{{.*}} lambda{{.*}} @_ZZ10hasLambdasvENK3$_0clEifd({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[LAMBDA1_R_NAME:.*]]]>{{.*}}}
-//
-// CHECK: cir.func{{.*}} lambda{{.*}} @_ZZ10hasLambdasvENK3$_1clEifd({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[LAMBDA2_R_NAME:.*]]]>{{.*}}}
-//
-// CHECK:  acc.routine @[[MEMFUNC_R_NAME]] func(@_ZN8HasFuncs7MemFuncEidRS_1S) bind(@_Z3MEMP8HasFuncsidRS_1S) seq
-// CHECK:  acc.routine @[[CONSTMEMFUNC_R_NAME]] func(@_ZNK8HasFuncs12ConstMemFuncEidRS_1S) bind(@_Z3MEMPK8HasFuncsidRS_1S) seq
-// CHECK:  acc.routine @[[VOLATILEMEMFUNC_R_NAME]] func(@_ZNVK8HasFuncs15VolatileMemFuncEidRS_1S) bind(@_Z3MEMPVK8HasFuncsidRS_1S) seq
-// CHECK:  acc.routine @[[REFMEMFUNC_R_NAME]] func(@_ZNKO8HasFuncs10RefMemFuncEidRS_1S) bind(@_Z3MEMPK8HasFuncsidRS_1S) seq
-// CHECK:  acc.routine @[[STATICFUNC_R_NAME]] func(@_ZN8HasFuncs13StaticMemFuncEidRS_P1U) bind(@_Z9STATICMEMP8HasFuncsidRS_P1U) seq
 //
 // These two LOOK weird because the first argument to each of these is the
 // implicit 'this', so they look like they have the lambda mangling (and
@@ -135,6 +130,8 @@ void hasLambdas() {
 //       Z10hasLambdasv-> hasLambdas(void):: 
 //       E3$_0 -> anonymous type #0
 //       ifd -> taking args int, float, double.
+//
+// CHECK: cir.func{{.*}} lambda{{.*}} @_ZZ10hasLambdasvENK3$_1clEifd({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[LAMBDA2_R_NAME:.*]]]>{{.*}}}
 // // CHECK:  acc.routine @[[LAMBDA2_R_NAME]] func(@_ZZ10hasLambdasvENK3$_1clEifd) bind(@_Z7LAMBDA2PKZ10hasLambdasvE3$_1ifd) seq
 
 // CHECK: acc.routine @[[F2_R_NAME]] func(@_Z5Func2v) bind("BIND2") seq

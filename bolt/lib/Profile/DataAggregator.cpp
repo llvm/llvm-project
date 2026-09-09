@@ -1759,7 +1759,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
     opts::HeatmapMinAddress = KernelBaseAddr;
   }
   opts::HeatmapBlockSizes &HMBS = opts::HeatmapBlock;
-  Heatmap HM(HMBS[0], opts::HeatmapMinAddress, opts::HeatmapMaxAddress,
+  Heatmap HM(HMBS[0].Value, opts::HeatmapMinAddress, opts::HeatmapMaxAddress,
              getTextSections(BC));
   auto getSymbolValue = [&](const MCSymbol *Symbol) -> uint64_t {
     if (Symbol)
@@ -1801,21 +1801,21 @@ std::error_code DataAggregator::printLBRHeatMap() {
 
   HM.print(opts::HeatmapOutput);
   if (opts::HeatmapOutput == "-") {
-    HM.printCDF(opts::HeatmapOutput);
+    HM.printCDF(opts::HeatmapOutput, HMBS.front().Spec);
     HM.printSectionHotness(opts::HeatmapOutput);
   } else {
-    HM.printCDF(opts::HeatmapOutput + ".csv");
+    HM.printCDF(opts::HeatmapOutput + ".csv", HMBS.front().Spec);
     HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
   }
   // Provide coarse-grained heatmaps if requested via zoom-out scales
-  for (const uint64_t NewBucketSize : ArrayRef(HMBS).drop_front()) {
+  for (const auto &[NewBucketSize, Label] : ArrayRef(HMBS).drop_front()) {
     HM.resizeBucket(NewBucketSize);
     if (opts::HeatmapOutput == "-")
       HM.print(opts::HeatmapOutput);
     else
       HM.print(formatv("{0}-{1}", opts::HeatmapOutput, NewBucketSize).str());
     // Working set only; the table is emitted once, at the finest granularity.
-    HM.printCDF(nulls());
+    HM.printCDF(nulls(), Label);
   }
 
   return std::error_code();

@@ -275,11 +275,11 @@ define void @li_straightline_a(i32 zeroext %a, i32 zeroext %b) {
   %cmp0 = icmp eq i32 %a, 57
   br i1 %cmp0, label %exit, label %do_call
 do_call:
-  call i32 @foo()
+  call zeroext i32 @foo()
   %cmp1 = icmp eq i32 %b, 57
   br i1 %cmp1, label %exit, label %do_call2
 do_call2:
-  call i32 @foo()
+  call zeroext i32 @foo()
   br label %exit
 exit:
   ret void
@@ -392,13 +392,13 @@ define void @li_straightline_b(i32 zeroext %a, i32 zeroext %b) {
   %cmp0 = icmp eq i32 %a, 57
   br i1 %cmp0, label %exit, label %do_call
 do_call:
-  call i32 @foo()
+  call zeroext i32 @foo()
   br label %next
 next:
   %cmp1 = icmp eq i32 %b, 57
   br i1 %cmp1, label %exit, label %do_call2
 do_call2:
-  call i32 @foo()
+  call zeroext i32 @foo()
   br label %exit
 exit:
   ret void
@@ -494,13 +494,13 @@ define void @li_straightline_c(i32 zeroext %a) {
   %cmp0 = icmp eq i32 %a, 57
   br i1 %cmp0, label %exit, label %do_call
 do_call:
-  %b = call i32 @foo()
+  %b = call zeroext i32 @foo()
   br label %next
 next:
   %cmp1 = icmp eq i32 %b, 57
   br i1 %cmp1, label %exit, label %do_call2
 do_call2:
-  call i32 @foo()
+  call zeroext i32 @foo()
   br label %exit
 exit:
   ret void
@@ -619,7 +619,7 @@ define void @li_loop(i32 zeroext %a, i32 zeroext %b) {
   %cmp0 = icmp eq i32 %a, 57
   br i1 %cmp0, label %exit, label %do_call
 do_call:
-  call i32 @foo()
+  call zeroext i32 @foo()
   %cmp1 = icmp eq i32 %b, 57
   br i1 %cmp1, label %exit, label %do_call
 exit:

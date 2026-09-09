@@ -9,6 +9,7 @@
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Semantics/scope.h"
@@ -19,9 +20,45 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
+#include <cstdint>
+#include <limits>
 #include <vector>
 
 namespace Fortran::semantics {
+
+// Generated IR represents storage sizes and offsets as signed 64-bit integers.
+static_assert(sizeof(std::size_t) >= sizeof(std::int64_t),
+    "byte sizes and offsets are accumulated in std::size_t and must not be "
+    "narrowed");
+static constexpr std::size_t maxStorageSizeInBytes{
+    static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())};
+
+static bool IsTooBig(std::size_t bytes) {
+  return bytes > maxStorageSizeInBytes;
+}
+
+// Add sizes while tracking whether the signed 64-bit limit was exceeded.
+static std::size_t AddSizes(std::size_t x, std::size_t y, bool &tooBig) {
+  tooBig |= IsTooBig(x) || IsTooBig(y) || x > maxStorageSizeInBytes - y;
+  return x + y;
+}
+
+// A folded extent is (ub-lb+1) evaluated with signed 64-bit arithmetic, so it
+// comes out nonpositive both for an empty dimension and for one that wrapped
+// around, as in a(0:huge(0_8)). Tell those apart with the declared bounds.
+static bool IsEmptyDimension(const Symbol &symbol, int dimension) {
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    const ArraySpec &shape{object->shape()};
+    if (dimension < shape.Rank()) {
+      auto lb{evaluate::ToInt64(shape[dimension].lbound().GetExplicit())};
+      auto ub{evaluate::ToInt64(shape[dimension].ubound().GetExplicit())};
+      if (lb && ub) {
+        return *ub < *lb;
+      }
+    }
+  }
+  return true; // no constant bounds to contradict the folded extent
+}
 
 class ComputeOffsetsHelper {
 public:
@@ -34,8 +71,14 @@ private:
     SizeAndAlignment(std::size_t bytes) : size{bytes}, alignment{bytes} {}
     SizeAndAlignment(std::size_t bytes, std::size_t align)
         : size{bytes}, alignment{align} {}
+    SizeAndAlignment(std::size_t bytes, std::size_t align, const Symbol *tooBig)
+        : size{bytes}, alignment{align}, oversized{tooBig} {}
     std::size_t size{0};
     std::size_t alignment{0};
+    // Null unless the size exceeds maxStorageSizeInBytes, in which case the
+    // size is clamped to it and this is the symbol to blame in a diagnostic:
+    // for an EQUIVALENCE storage sequence, the first member found not to fit.
+    const Symbol *oversized{nullptr};
   };
   struct SymbolAndOffset {
     SymbolAndOffset(Symbol &s, std::size_t off, const EquivalenceObject &obj)
@@ -44,6 +87,7 @@ private:
     MutableSymbolRef symbol;
     std::size_t offset;
     const EquivalenceObject *object;
+    bool offsetOverflow{false};
   };
 
   void DoCommonBlock(Symbol &);
@@ -62,6 +106,7 @@ private:
   SemanticsContext &context_;
   std::size_t offset_{0};
   std::size_t alignment_{1};
+  bool sizeOverflow_{false};
   // symbol -> symbol+offset that determines its location, from EQUIVALENCE
   std::map<MutableSymbolRef, SymbolAndOffset, SymbolAddressCompare> dependents_;
   // base symbol -> SizeAndAlignment for each distinct EQUIVALENCE block
@@ -156,21 +201,46 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
     symbol->set_size(symInfo.size);
     Symbol &base{*dep.symbol};
     auto iter{equivalenceBlock_.find(base)};
-    std::size_t minBlockSize{dep.offset + symInfo.size};
+    bool blockOverflow{dep.offsetOverflow || symInfo.oversized};
+    std::size_t minBlockSize{AddSizes(dep.offset, symInfo.size, blockOverflow)};
+    const Symbol *oversized{
+        blockOverflow || IsTooBig(minBlockSize) ? &*symbol : nullptr};
     if (iter == equivalenceBlock_.end()) {
       equivalenceBlock_.emplace(
-          base, SizeAndAlignment{minBlockSize, symInfo.alignment});
+          base, SizeAndAlignment{minBlockSize, symInfo.alignment, oversized});
     } else {
       SizeAndAlignment &blockInfo{iter->second};
       blockInfo.size = std::max(blockInfo.size, minBlockSize);
       blockInfo.alignment = std::max(blockInfo.alignment, symInfo.alignment);
+      if (!blockInfo.oversized) {
+        blockInfo.oversized = oversized;
+      }
     }
   }
-  // Assign offsets for non-COMMON EQUIVALENCE blocks
+  // Complete each EQUIVALENCE block with its base object, and assign offsets
+  // for non-COMMON blocks.
   for (auto &[symbol, blockInfo] : equivalenceBlock_) {
+    // The base does not appear in dependents_.
+    SizeAndAlignment baseInfo{GetSizeAndAlignment(*symbol, true)};
+    blockInfo.size = std::max(blockInfo.size, baseInfo.size);
+    blockInfo.alignment = std::max(blockInfo.alignment, baseInfo.alignment);
+    if (!blockInfo.oversized &&
+        (baseInfo.oversized || IsTooBig(baseInfo.size))) {
+      blockInfo.oversized = &*symbol;
+    }
     if (!FindCommonBlockContaining(*symbol)) {
       DoSymbol(*symbol);
       DoEquivalenceBlockBase(*symbol, blockInfo);
+      // Each EQUIVALENCE block is lowered as one aggregate. Blame a member
+      // that does not fit rather than the base object, whose selection in
+      // DoEquivalenceSet is a layout decision that is invisible to the user.
+      if (blockInfo.oversized || IsTooBig(blockInfo.size)) {
+        const Symbol &blamed{
+            blockInfo.oversized ? *blockInfo.oversized : *symbol};
+        context_.Say(blamed.name(),
+            "The size of the storage sequence created by EQUIVALENCE with '%s' exceeds the maximum supported size of %zu bytes"_err_en_US,
+            blamed.name(), maxStorageSizeInBytes);
+      }
       offset_ = std::max(offset_, symbol->offset() + blockInfo.size);
     }
   }
@@ -200,6 +270,13 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   }
   // Ensure that the size is a multiple of the alignment
   offset_ = Align(offset_, alignment_);
+  sizeOverflow_ |= IsTooBig(offset_);
+  // Only derived-type scope sizes are materialized in generated IR.
+  if (sizeOverflow_ && scope.IsDerivedType() && scope.symbol()) {
+    context_.Say(scope.symbol()->name(),
+        "The size of derived type '%s' exceeds the maximum supported size of %zu bytes"_err_en_US,
+        scope.symbol()->name(), maxStorageSizeInBytes);
+  }
   scope.set_size(offset_);
   scope.SetAlignment(alignment_);
   // Assign offsets in COMMON blocks, unless this scope is a BLOCK construct,
@@ -212,7 +289,9 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   for (auto &[symbol, dep] : dependents_) {
     symbol->set_offset(dep.symbol->offset() + dep.offset);
     if (const auto *block{FindCommonBlockContaining(*dep.symbol)}) {
-      symbol->get<ObjectEntityDetails>().set_commonBlock(*block);
+      if (auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {
+        object->set_commonBlock(*block);
+      }
     }
   }
 }
@@ -224,7 +303,11 @@ auto ComputeOffsetsHelper::Resolve(const SymbolAndOffset &dep)
     return dep;
   } else {
     SymbolAndOffset result{Resolve(it->second)};
-    result.offset += dep.offset;
+    // Preserve overflow while resolving EQUIVALENCE chains, both the overflow
+    // already recorded for the offset being resolved and any that appears when
+    // accumulating it.
+    result.offsetOverflow |= dep.offsetOverflow;
+    result.offset = AddSizes(result.offset, dep.offset, result.offsetOverflow);
     result.object = dep.object;
     return result;
   }
@@ -234,6 +317,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   auto &details{commonBlock.get<CommonBlockDetails>()};
   offset_ = 0;
   alignment_ = 0;
+  sizeOverflow_ = false;
   std::size_t minSize{0};
   std::size_t minAlignment{0};
   UnorderedSymbolSet previous;
@@ -288,12 +372,20 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     // 8.10.2.2 point 1 (2))
     if (eqIter != equivalenceBlock_.end()) {
       SizeAndAlignment &blockInfo{eqIter->second};
-      minSize = std::max(
-          minSize, std::max(offset_, eqIter->first->offset() + blockInfo.size));
+      sizeOverflow_ |= blockInfo.oversized != nullptr;
+      std::size_t blockEnd{
+          AddSizes(eqIter->first->offset(), blockInfo.size, sizeOverflow_)};
+      minSize = std::max(minSize, std::max(offset_, blockEnd));
       minAlignment = std::max(minAlignment, blockInfo.alignment);
     }
   }
-  commonBlock.set_size(std::max(minSize, offset_));
+  std::size_t size{std::max(minSize, offset_)};
+  if (sizeOverflow_) {
+    context_.Say(details.sourceLocation(),
+        "The size of COMMON block /%s/ exceeds the maximum supported size of %zu bytes"_err_en_US,
+        commonBlock.name(), maxStorageSizeInBytes);
+  }
+  commonBlock.set_size(size);
   details.set_alignment(std::max(minAlignment, alignment_));
   context_.MapCommonBlockAndCheckConflicts(commonBlock);
 }
@@ -323,7 +415,7 @@ void ComputeOffsetsHelper::DoEquivalenceSet(const EquivalenceSet &set) {
   }
   CHECK(representative);
   const SymbolAndOffset &base{symbolOffsets[*representative]};
-  for (const auto &[symbol, offset, object] : symbolOffsets) {
+  for (const auto &[symbol, offset, object, offsetOverflow] : symbolOffsets) {
     if (symbol == base.symbol) {
       if (offset != base.offset) {
         auto x{evaluate::OffsetToDesignator(
@@ -348,8 +440,9 @@ void ComputeOffsetsHelper::DoEquivalenceSet(const EquivalenceSet &set) {
         }
       }
     } else {
-      dependents_.emplace(*symbol,
-          SymbolAndOffset{*base.symbol, base.offset - offset, *object});
+      SymbolAndOffset dependent{*base.symbol, base.offset - offset, *object};
+      dependent.offsetOverflow = base.offsetOverflow || offsetOverflow;
+      dependents_.emplace(*symbol, dependent);
     }
   }
 }
@@ -396,6 +489,8 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
     return 0;
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
+  // Oversized standalone objects are left to object emission.
+  sizeOverflow_ |= s.oversized != nullptr;
   if (s.size == 0) {
     // Zero-size symbols (e.g. CHARACTER*0) still occupy their sequential
     // position in a COMMON block or derived-type sequence. Record the current
@@ -408,10 +503,11 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
   std::size_t previousOffset{offset_};
   size_t alignVal{newAlign.value_or(s.alignment)};
   offset_ = Align(offset_, alignVal);
+  sizeOverflow_ |= IsTooBig(offset_);
   std::size_t padding{offset_ - previousOffset};
   symbol.set_size(s.size);
   symbol.set_offset(offset_);
-  offset_ += s.size;
+  offset_ = AddSizes(offset_, s.size, sizeOverflow_);
   alignment_ = std::max(alignment_, alignVal);
   return padding;
 }
@@ -442,17 +538,60 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
   auto &foldingContext{context_.foldingContext()};
   if (auto chars{evaluate::characteristics::TypeAndShape::Characterize(
           symbol, foldingContext)}) {
-    if (entire) {
-      if (auto size{ToInt64(chars->MeasureSizeInBytes(foldingContext))}) {
-        return {static_cast<std::size_t>(*size),
-            chars->type().GetAlignment(targetCharacteristics)};
+    std::size_t alignment{chars->type().GetAlignment(targetCharacteristics)};
+    // Avoid folded products, which can wrap in signed 64-bit arithmetic.
+    bool aligned{!entire || chars->Rank() > 0};
+    std::size_t size;
+    if (chars->type().category() == TypeCategory::Character && chars->LEN()) {
+      auto length{ToInt64(*chars->LEN())};
+      if (!length) {
+        return {};
       }
-    } else { // element size only
-      if (auto size{ToInt64(chars->MeasureElementSizeInBytes(
-              foldingContext, true /*aligned*/))}) {
-        return {static_cast<std::size_t>(*size),
-            chars->type().GetAlignment(targetCharacteristics)};
+      auto bytesPerCharacter{
+          static_cast<std::size_t>(targetCharacteristics.GetByteSize(
+              TypeCategory::Character, chars->type().kind()))};
+      if (*length < 0 ||
+          static_cast<std::size_t>(*length) >
+              maxStorageSizeInBytes / bytesPerCharacter) {
+        return {maxStorageSizeInBytes, alignment, &symbol};
       }
+      size = static_cast<std::size_t>(*length) * bytesPerCharacter;
+    } else {
+      auto elementSize{
+          ToInt64(chars->MeasureElementSizeInBytes(foldingContext, aligned))};
+      if (!elementSize) {
+        return {};
+      }
+      if (*elementSize < 0) {
+        return {maxStorageSizeInBytes, alignment, &symbol};
+      }
+      size = static_cast<std::size_t>(*elementSize);
+    }
+    if (!entire) { // element size only
+      return {size, alignment};
+    }
+    if (auto extents{
+            evaluate::AsConstantExtents(foldingContext, chars->shape())}) {
+      if (size == 0) { // zero-sized elements occupy no storage
+        return {0, alignment};
+      }
+      for (int dimension{0}; dimension < static_cast<int>(extents->size());
+          ++dimension) {
+        if ((*extents)[dimension] <= 0) {
+          if (!IsEmptyDimension(symbol, dimension)) {
+            return {maxStorageSizeInBytes, alignment, &symbol};
+          }
+          return {0, alignment}; // a zero-sized array occupies no storage
+        }
+      }
+      for (ConstantSubscript extent : *extents) {
+        auto n{static_cast<std::size_t>(extent)};
+        if (size > maxStorageSizeInBytes / n) {
+          return {maxStorageSizeInBytes, alignment, &symbol};
+        }
+        size *= n;
+      }
+      return {size, alignment};
     }
   }
   return {};

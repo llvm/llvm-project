@@ -1160,8 +1160,7 @@ SDValue X86TargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned I = 0, InsIndex = 0, E = RVLocs.size(); I != E;
-       ++I, ++InsIndex) {
+  for (unsigned I = 0, E = RVLocs.size(); I != E; ++I) {
     CCValAssign &VA = RVLocs[I];
     EVT CopyVT = VA.getLocVT();
 
@@ -2295,7 +2294,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
            "parameter");
     SmallVector<size_t, 4> PreallocatedOffsets;
     for (size_t i = 0; i < CLI.OutVals.size(); ++i) {
-      if (CLI.CB->paramHasAttr(i, Attribute::Preallocated)) {
+      if (CLI.CB->hasABIParamAttr(i, Attribute::Preallocated)) {
         PreallocatedOffsets.push_back(ArgLocs[i].getLocMemOffset());
       }
     }

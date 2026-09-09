@@ -8,7 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@requireNotWasm  # wasm has no memory-protection faults/signals
+@requireNotWasm("wasm has no memory-protection faults/signals")
 class CrashingInferiorTestCase(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureNetBSD

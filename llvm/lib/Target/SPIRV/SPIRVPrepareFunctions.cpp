@@ -18,7 +18,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPrepareFunctions.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -630,20 +629,21 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   CloneFunctionInto(NewF, F, VMap, CloneFunctionChangeType::LocalChangesOnly,
                     Returns);
   NewF->takeName(F);
+  NewF->setComdat(F->getComdat());
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
-  for (auto *U : make_early_inc_range(F->users())) {
-    if (CallInst *CI;
-        (CI = dyn_cast<CallInst>(U)) && CI->getCalledFunction() == F)
-      CI->mutateFunctionType(NewF->getFunctionType());
-    if (auto *C = dyn_cast<Constant>(U))
-      C->handleOperandChange(F, NewF);
-    else
-      U->replaceUsesOfWith(F, NewF);
+  for (User *U : F->users()) {
+    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
+      CB->mutateFunctionType(NewF->getFunctionType());
   }
+  // NewF keeps F's address space, so their pointer types match and
+  // RAUW is safe despite the differing signatures.
+  assert(F->getType() == NewF->getType() &&
+         "RAUW requires F and NewF to share the same pointer type");
+  F->replaceAllUsesWith(NewF);
 
   // register the mutation
   if (RetType != F->getReturnType())
@@ -903,8 +903,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   return Changed;
 }
 
-PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
-                                             ModuleAnalysisManager &AM) {
+PreservedAnalyses SPIRVPrepareFunctionsPass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto GetTTI = [&FAM](Function &F) -> const TargetTransformInfo & {
