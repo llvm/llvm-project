@@ -5038,15 +5038,31 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
       if (!ElemTy->isIncompleteType()) {
         CharUnits ElemSize = getContext().getTypeSizeInChars(ElemTy);
         if (ElemSize > CharUnits::One()) {
-          llvm::Value *ElemSizeV = llvm::ConstantInt::get(
-              BoundsVal->getType(), ElemSize.getQuantity());
-          // Use signed division for a signed count field so a negative byte
-          // count stays non-positive and is still rejected by the
-          // negative-bounds guard in EmitBoundsCheckImpl (unsigned division
-          // would turn it into a large positive count).
-          BoundsVal = CountFD->getType()->isSignedIntegerOrEnumerationType()
-                          ? Builder.CreateSDiv(BoundsVal, ElemSizeV)
-                          : Builder.CreateUDiv(BoundsVal, ElemSizeV);
+          bool CountSigned =
+              CountFD->getType()->isSignedIntegerOrEnumerationType();
+          int64_t ElemSizeQ = ElemSize.getQuantity();
+          unsigned CountWidth = BoundsVal->getType()->getIntegerBitWidth();
+
+          // The divisor must be representable in the count field's type.
+          bool ElemSizeFits =
+              CountSigned
+                  ? llvm::isIntN(CountWidth, ElemSizeQ)
+                  : llvm::isUIntN(CountWidth, static_cast<uint64_t>(ElemSizeQ));
+          if (ElemSizeFits) {
+            llvm::Value *ElemSizeV =
+                llvm::ConstantInt::get(BoundsVal->getType(), ElemSizeQ);
+            // Use signed division for a signed count field so a negative byte
+            // count stays non-positive and is still rejected by the
+            // negative-bounds guard in EmitBoundsCheckImpl (unsigned division
+            // would turn it into a large positive count).
+            BoundsVal = CountSigned ? Builder.CreateSDiv(BoundsVal, ElemSizeV)
+                                    : Builder.CreateUDiv(BoundsVal, ElemSizeV);
+          } else {
+            // No whole element fits in any representable byte count. Use a
+            // bound of 0 to always trap.
+            // FIXME: Sema should just reject this.
+            BoundsVal = llvm::ConstantInt::get(BoundsVal->getType(), 0);
+          }
         }
       } else {
         // Only 'void' can be subscripted here; it is accessed with a 1-byte
