@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/PGOFlowVerify.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -54,6 +55,10 @@ static cl::opt<bool> VerifyPGOFlowPrintDiagnostics(
 static cl::opt<bool>
     VerifyPGOFlowFatal("verify-pgo-flow-fatal", cl::init(false), cl::Hidden,
                        cl::desc("Abort after a flow-check finding"));
+
+static cl::list<std::string> VerifyPGOFlowFuncList(
+    "verify-pgo-flow-funcs", cl::Hidden, cl::CommaSeparated,
+    cl::desc("If non-empty, only verify these functions"));
 
 static void printVerifyBanner(StringRef PassName, bool Skipped) {
   if (!VerifyPGOFlowPrintDiagnostics)
@@ -167,6 +172,26 @@ void PGOFlowVerifier::runAfterPass(StringRef PassID, IRUnitRef IR) {
   }
 }
 
+bool PGOFlowVerifier::shouldVerifyFunction(const Function *F) const {
+  if (!F || F->isDeclaration())
+    return false;
+  // Non-prevailing copy. The real definition is verified instead.
+  if (F->hasAvailableExternallyLinkage()) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip '" << F->getName()
+                      << "' (available_externally)\n");
+    return false;
+  }
+  if (VerifyPGOFlowFuncList.empty())
+    return true;
+  bool Listed = any_of(VerifyPGOFlowFuncList, [&](const std::string &Name) {
+    return !Name.empty() && F->getName() == Name;
+  });
+  if (!Listed)
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip '" << F->getName()
+                      << "' (not in -verify-pgo-flow-funcs)\n");
+  return Listed;
+}
+
 void PGOFlowVerifier::runAfterPass(const Module *M) {
   if (!M)
     return;
@@ -181,17 +206,18 @@ void PGOFlowVerifier::runAfterPass(const Module *M) {
     if (F.isDeclaration())
       continue;
     computeBlockFrequencies(&F);
-    validateBlockFrequencies(&F);
+    if (shouldVerifyFunction(&F))
+      validateBlockFrequencies(&F);
   }
   for (const Function &F : *M) {
-    if (F.isDeclaration())
+    if (!shouldVerifyFunction(&F))
       continue;
     validateEntryCountAgainstCallerSum(&F);
   }
 }
 
 void PGOFlowVerifier::runAfterPass(const Function *F) {
-  if (!F || F->isDeclaration() || !F->getParent())
+  if (!F || !F->getParent() || !shouldVerifyFunction(F))
     return;
   if (!hasInstrProfUseSummary(F->getParent())) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip '" << F->getName()

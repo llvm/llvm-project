@@ -55,6 +55,7 @@ private:
   void runAfterPass(const Loop *L);
   bool hasInstrProfUseSummary(const Module *M) const;
 
+  bool shouldVerifyFunction(const Function *F) const;
   void computeBlockFrequencies(const Function *F);
   void validateBlockFrequencies(const Function *F);
   void validateEntryCountAgainstCallerSum(const Function *F);
