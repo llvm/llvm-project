@@ -355,18 +355,11 @@ def shift_const_op : GICombinePatFrag<
   !foreach(op,
            [G_SHL, G_ASHR, G_LSHR],
            (pattern (op $dst, $shifted, $amt)))>;
-def shift_result_matchdata : GIDefMatchData<"std::optional<int64_t>">;
 def shifts_too_big : GICombineRule<
-  (defs root:$root, shift_result_matchdata:$matchinfo),
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (shift_const_op $root):$mi,
          [{ return Helper.matchShiftsTooBig(*${mi}, ${matchinfo}); }]),
-  (apply [{
-    if (${matchinfo}) {
-      Helper.replaceInstWithConstant(*${mi}, *${matchinfo});
-    } else {
-      Helper.replaceInstWithUndef(*${mi});
-    }
-  }])>;
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
 
 // Fold shift (shift base x), y -> shift base, (x+y), if shifts are same
 def shift_immed_matchdata : GIDefMatchData<"RegisterImmPair">;
@@ -1422,10 +1415,10 @@ def rotate_out_of_range : GICombineRule<
 >;
 
 def icmp_to_true_false_known_bits : GICombineRule<
-  (defs root:$d, int64_matchinfo:$matchinfo),
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
   (match (G_ICMP $dst, $pred, $src1, $src2):$d,
          [{ return Helper.matchICmpToTrueFalseKnownBits(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
 def icmp_to_lhs_known_bits : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
@@ -2631,11 +2624,11 @@ def narrow_binop_xor : narrow_binop_opcode<G_XOR>;
 
 // Cast of integer.
 class integer_of_opcode<Instruction castOpcode> : GICombineRule <
-  (defs root:$root, apint_matchinfo:$matchinfo),
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (G_CONSTANT $int, $imm),
          (castOpcode $root, $int):$Cast,
          [{ return Helper.matchCastOfInteger(*${Cast}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${Cast}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
 
 def integer_of_truncate : integer_of_opcode<G_TRUNC>;
 

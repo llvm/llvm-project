@@ -724,7 +724,7 @@ public:
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
   LLVM_ABI bool matchICmpToTrueFalseKnownBits(MachineInstr &MI,
-                                              int64_t &MatchInfo) const;
+                                              BuildFnTy &MatchInfo) const;
 
   /// \returns true if a G_ICMP \p MI can be replaced with its LHS based off of
   /// KnownBits information.
@@ -971,8 +971,7 @@ public:
 
   /// Match shifts greater or equal to the range (the bitwidth of the result
   /// datatype, or the effective bitwidth of the source value).
-  LLVM_ABI bool matchShiftsTooBig(MachineInstr &MI,
-                                  std::optional<int64_t> &MatchInfo) const;
+  LLVM_ABI bool matchShiftsTooBig(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Match constant LHS ops that should be commuted.
   LLVM_ABI bool matchCommuteConstantToRHS(MachineInstr &MI) const;
@@ -1018,7 +1017,7 @@ public:
                                  BuildFnTy &MatchInfo) const;
 
   LLVM_ABI bool matchCastOfInteger(const MachineInstr &CastMI,
-                                   APInt &MatchInfo) const;
+                                   BuildFnTy &MatchInfo) const;
 
   /// Combine addos.
   LLVM_ABI bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) const;

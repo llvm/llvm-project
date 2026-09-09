@@ -362,19 +362,23 @@ bool CombinerHelper::matchNarrowBinop(const MachineInstr &TruncMI,
 }
 
 bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
-                                        APInt &MatchInfo) const {
+                                        BuildFnTy &MatchInfo) const {
   const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
 
   APInt Input = getIConstantFromReg(Cast->getSrcReg(), MRI);
 
-  LLT DstTy = MRI.getType(Cast->getReg(0));
+  Register Dst = Cast->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
 
   if (!isConstantLegalOrBeforeLegalizer(DstTy))
     return false;
 
   switch (Cast->getOpcode()) {
   case TargetOpcode::G_TRUNC: {
-    MatchInfo = Input.trunc(DstTy.getScalarSizeInBits());
+    APInt Result = Input.trunc(DstTy.getScalarSizeInBits());
+    MatchInfo = [Dst, Result](MachineIRBuilder &B) {
+      B.buildConstant(Dst, Result);
+    };
     return true;
   }
   default:
