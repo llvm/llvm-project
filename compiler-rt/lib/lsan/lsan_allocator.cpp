@@ -133,13 +133,23 @@ void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
     ReportAllocationSizeTooBig(new_size, stack);
     return nullptr;
   }
-  RegisterDeallocation(p);
-  void *new_p =
-      allocator.Reallocate(GetAllocatorCache(), p, new_size, alignment);
-  if (new_p)
-    RegisterAllocation(stack, new_p, new_size);
-  else if (new_size != 0)
-    RegisterAllocation(stack, p, new_size);
+  if (!p)
+    return Allocate(stack, new_size, alignment, false);
+  if (!new_size) {
+    Deallocate(p);
+    return nullptr;
+  }
+  // Allocate the replacement first. If it fails, p must be left completely
+  // untouched: it is still owned by the caller, so its metadata must keep the
+  // original size and allocation stack, and no free hook may be reported.
+  ChunkMetadata *m = Metadata(p);
+  CHECK(m);
+  const uptr old_size = m->requested_size;
+  void *new_p = Allocate(stack, new_size, alignment, false);
+  if (!new_p)
+    return nullptr;
+  internal_memcpy(new_p, p, Min(new_size, old_size));
+  Deallocate(p);
   return new_p;
 }
 
