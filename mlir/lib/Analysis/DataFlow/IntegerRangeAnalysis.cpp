@@ -68,7 +68,7 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
 /// ratchet pathology this widening exists to cut off (loop-carried ranges
 /// growing by one per worklist visit) terminates after at most this many
 /// extra solver iterations rather than ~2^31.
-static constexpr unsigned kIntegerRangeWideningBudget = 128;
+static constexpr unsigned kIntegerRangeWideningBudget = 1024;
 
 ChangeResult IntegerValueRangeLattice::join(const AbstractSparseLattice &rhs) {
   ChangeResult changed = Lattice::join(rhs);
