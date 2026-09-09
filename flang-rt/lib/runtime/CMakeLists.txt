@@ -120,6 +120,7 @@ set(host_sources
   execute.cpp
   extensions.cpp
   main.cpp
+  memory-map.cpp
   random.cpp
   reduce.cpp
   reduction.cpp

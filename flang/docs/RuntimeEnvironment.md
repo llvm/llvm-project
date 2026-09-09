@@ -49,6 +49,28 @@ argument.
 Set the system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY=0` to
 restore the unconditional copy-out.
 
+## `FLANG_RT_COPYOUT_READONLY_MODE`
+
+An optional compatibility mode (host only; default `0` = off). When enabled,
+the runtime consults the process memory map and skips a copy-out whose
+destination lies in read-only memory: such a store could only rewrite
+identical bytes or crash, so skipping converts the crash into a no-op for
+programs that (invalidly) modified a temporary whose original is not
+definable.
+
+* `1`: trust a one-time lazy snapshot of the memory map (restricted to
+  file-backed private read-only mappings); no system calls on the copy-out
+  path. A mapping whose protection changes after the snapshot is not seen:
+  a region that became read-only is simply not recognized (the regular
+  copy-out runs, as without this feature), and a formerly read-only region
+  that became writable is still skipped (the copy-out is lost). Both are
+  accepted, documented behaviors of this mode.
+* `2`: additionally re-confirm each snapshot hit against the current memory
+  map before skipping (system calls on hits only).
+
+Set `FLANG_RT_COPYOUT_READONLY_DIAG=1` to report the first few skipped
+copy-outs on standard error.
+
 ## `FORT_CHECK_POINTER_DEALLOCATION`
 
 Fortran requires that a pointer that appears in a `DEALLOCATE` statement
