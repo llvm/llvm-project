@@ -41,10 +41,10 @@
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
 namespace llvm::omp {
-static ClauseSet privateSet{
+static Clauses privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
-static ClauseSet privateReductionSet{
-    ClauseSet{Clause::OMPC_reduction} | privateSet};
+static Clauses privateReductionSet{
+    Clauses{Clause::OMPC_reduction} | privateSet};
 } // namespace llvm::omp
 
 namespace Fortran::semantics {
@@ -74,14 +74,14 @@ using AppliedModifier = AppliedModifierInfo::ElementTy;
 using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
 // Multimap to check the triple <current_dir, enclosing_dir, enclosing_clause>
 using DirectivesClauseTriple = std::multimap<llvm::omp::Directive,
-    std::pair<llvm::omp::Directive, const llvm::omp::ClauseSet>>;
+    std::pair<llvm::omp::Directive, const llvm::omp::Clauses>>;
 
 using OmpStructureCheckerBase = DirectiveStructureChecker<llvm::omp::Directive,
-    llvm::omp::Clause, parser::OmpClause, llvm::omp::ClauseSet>;
+    llvm::omp::Clause, parser::OmpClause, llvm::omp::Clauses>;
 
 template <>
-void IterateOverMembers(const llvm::omp::ClauseSet &set,
-    std::function<void(llvm::omp::Clause)> func);
+void IterateOverMembers(
+    const llvm::omp::Clauses &set, std::function<void(llvm::omp::Clause)> func);
 
 class OmpStructureChecker : public OmpStructureCheckerBase {
 public:
@@ -386,7 +386,7 @@ private:
       llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
-  FindMutuallyExclusiveClauses(llvm::omp::ClauseSet exclusive,
+  FindMutuallyExclusiveClauses(llvm::omp::Clauses exclusive,
       const std::vector<const parser::OmpClause *> &clauses);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
@@ -403,9 +403,9 @@ private:
   void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
-      const parser::OmpDirectiveName &name, const llvm::omp::DirectiveSet &);
+      const parser::OmpDirectiveName &name, const llvm::omp::Directives &);
 
-  bool IsCloselyNestedRegion(const llvm::omp::DirectiveSet &set);
+  bool IsCloselyNestedRegion(const llvm::omp::Directives &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
   bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
   bool InTargetRegion();
