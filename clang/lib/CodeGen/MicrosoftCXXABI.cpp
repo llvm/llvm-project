@@ -2436,6 +2436,19 @@ void MicrosoftCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
   if (CGM.getLangOpts().HLSL)
     return CGM.AddCXXDtorEntry(Dtor, Addr);
 
+  // Handle atexit overwrite by #pragma init_seg
+  if (auto *ISA = D.getAttr<InitSegAttr>()) {
+    if (const FunctionDecl *FD = ISA->getFunc()) {
+      llvm::Constant *dtorStub = CGF.createAtExitStub(D, Dtor, Addr);
+      llvm::FunctionType *ExitFnTy =
+          llvm::FunctionType::get(CGM.IntTy, dtorStub->getType(), false);
+      llvm::Constant *ExitFn = CGM.GetAddrOfFunction(FD, ExitFnTy);
+      CGF.EmitNounwindRuntimeCall(llvm::FunctionCallee(ExitFnTy, ExitFn),
+                                  dtorStub);
+      return;
+    }
+  }
+
   // The default behavior is to use atexit.
   CGF.registerGlobalDtorWithAtExit(D, Dtor, Addr);
 }
