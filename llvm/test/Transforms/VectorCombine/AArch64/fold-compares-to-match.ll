@@ -5,7 +5,7 @@
 define <vscale x 8 x i1> @match_values_nxv8i16_basic(<vscale x 8 x i16> %vec) {
 ; SVE2-LABEL: define <vscale x 8 x i1> @match_values_nxv8i16_basic(
 ; SVE2-SAME: <vscale x 8 x i16> [[VEC:%.*]]) #[[ATTR0:[0-9]+]] {
-; SVE2-NEXT:    [[OR1:%.*]] = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> [[VEC]], <8 x i16> <i16 42, i16 -6, i16 17, i16 42, i16 42, i16 42, i16 42, i16 42>, <vscale x 8 x i1> splat (i1 true))
+; SVE2-NEXT:    [[OR1:%.*]] = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v3i16(<vscale x 8 x i16> [[VEC]], <3 x i16> <i16 42, i16 -6, i16 17>, <vscale x 8 x i1> splat (i1 true))
 ; SVE2-NEXT:    ret <vscale x 8 x i1> [[OR1]]
 ;
 ; SVE-LABEL: define <vscale x 8 x i1> @match_values_nxv8i16_basic(
@@ -28,7 +28,7 @@ define <vscale x 8 x i1> @match_values_nxv8i16_basic(<vscale x 8 x i16> %vec) {
 define <vscale x 16 x i1> @match_values_nxv16i8_balanced(<vscale x 16 x i8> %vec) {
 ; SVE2-LABEL: define <vscale x 16 x i1> @match_values_nxv16i8_balanced(
 ; SVE2-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
-; SVE2-NEXT:    [[OR2:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v8i8(<vscale x 16 x i8> [[VEC]], <8 x i8> <i8 12, i8 -4, i8 29, i8 7, i8 12, i8 12, i8 12, i8 12>, <vscale x 16 x i1> splat (i1 true))
+; SVE2-NEXT:    [[OR2:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v4i8(<vscale x 16 x i8> [[VEC]], <4 x i8> <i8 12, i8 -4, i8 29, i8 7>, <vscale x 16 x i1> splat (i1 true))
 ; SVE2-NEXT:    ret <vscale x 16 x i1> [[OR2]]
 ;
 ; SVE-LABEL: define <vscale x 16 x i1> @match_values_nxv16i8_balanced(
@@ -55,9 +55,7 @@ define <vscale x 16 x i1> @match_values_nxv16i8_balanced(<vscale x 16 x i8> %vec
 define <vscale x 16 x i1> @match_values_nxv16i8_two_matches(<vscale x 16 x i8> %vec) {
 ; SVE2-LABEL: define <vscale x 16 x i1> @match_values_nxv16i8_two_matches(
 ; SVE2-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
-; SVE2-NEXT:    [[OR16:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> [[VEC]], <16 x i8> <i8 41, i8 37, i8 31, i8 29, i8 23, i8 17, i8 11, i8 7, i8 3, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41>, <vscale x 16 x i1> splat (i1 true))
-; SVE2-NEXT:    [[OR17:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> [[VEC]], <16 x i8> <i8 79, i8 73, i8 71, i8 67, i8 61, i8 59, i8 53, i8 47, i8 43, i8 79, i8 79, i8 79, i8 79, i8 79, i8 79, i8 79>, <vscale x 16 x i1> splat (i1 true))
-; SVE2-NEXT:    [[OR18:%.*]] = or <vscale x 16 x i1> [[OR16]], [[OR17]]
+; SVE2-NEXT:    [[OR18:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v18i8(<vscale x 16 x i8> [[VEC]], <18 x i8> <i8 79, i8 73, i8 71, i8 67, i8 61, i8 59, i8 53, i8 47, i8 43, i8 41, i8 37, i8 31, i8 29, i8 23, i8 17, i8 11, i8 7, i8 3>, <vscale x 16 x i1> splat (i1 true))
 ; SVE2-NEXT:    ret <vscale x 16 x i1> [[OR18]]
 ;
 ; SVE-LABEL: define <vscale x 16 x i1> @match_values_nxv16i8_two_matches(
@@ -140,9 +138,7 @@ define <vscale x 16 x i1> @match_values_nxv16i8_two_matches(<vscale x 16 x i8> %
 define <vscale x 8 x i1> @match_values_nxv8i16_two_matches(<vscale x 8 x i16> %vec) {
 ; SVE2-LABEL: define <vscale x 8 x i1> @match_values_nxv8i16_two_matches(
 ; SVE2-SAME: <vscale x 8 x i16> [[VEC:%.*]]) #[[ATTR0]] {
-; SVE2-NEXT:    [[OR4:%.*]] = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> [[VEC]], <8 x i16> <i16 44, i16 31, i16 23, i16 19, i16 12, i16 5, i16 44, i16 44>, <vscale x 8 x i1> splat (i1 true))
-; SVE2-NEXT:    [[OR9:%.*]] = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> [[VEC]], <8 x i16> <i16 -29, i16 48, i16 36, i16 27, i16 16, i16 -7, i16 -29, i16 -29>, <vscale x 8 x i1> splat (i1 true))
-; SVE2-NEXT:    [[OR10:%.*]] = or <vscale x 8 x i1> [[OR4]], [[OR9]]
+; SVE2-NEXT:    [[OR10:%.*]] = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v12i16(<vscale x 8 x i16> [[VEC]], <12 x i16> <i16 -29, i16 48, i16 36, i16 27, i16 16, i16 -7, i16 44, i16 31, i16 23, i16 19, i16 12, i16 5>, <vscale x 8 x i1> splat (i1 true))
 ; SVE2-NEXT:    ret <vscale x 8 x i1> [[OR10]]
 ;
 ; SVE-LABEL: define <vscale x 8 x i1> @match_values_nxv8i16_two_matches(

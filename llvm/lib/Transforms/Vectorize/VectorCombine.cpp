@@ -666,24 +666,11 @@ bool VectorCombine::foldDisjunctionToConstantMatch(Instruction &I) {
 
   auto *ResultTy = cast<VectorType>(I.getType());
   auto *SrcType = cast<VectorType>(CompareSource->getType());
-  ElementCount SrcElts = SrcType->getElementCount();
 
-  // Look for a match needle size (up to the size of SrcType) that's profitable.
-  InstructionCost NewCost;
-  Constant *NeedleVector;
-  SmallVector<Constant *> MatchValues(SearchValues.getArrayRef());
-  do {
-    NeedleVector = ConstantVector::get(MatchValues);
-    IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_match, ResultTy,
-                                {SrcType, NeedleVector->getType(), ResultTy});
-    NewCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
-    if (NewCost < OldCost)
-      break;
-
-    // Extend the needle vector by duplicating the first element.
-    MatchValues.resize(NextPowerOf2(MatchValues.size()), MatchValues[0]);
-  } while (MatchValues.size() <= SrcElts.getKnownMinValue());
-
+  Constant *NeedleVector = ConstantVector::get(SearchValues.getArrayRef());
+  IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_match, ResultTy,
+                              {SrcType, NeedleVector->getType(), ResultTy});
+  InstructionCost NewCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
   if (NewCost >= OldCost)
     return false;
 
