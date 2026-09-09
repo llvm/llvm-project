@@ -72,6 +72,8 @@ int linux_file_close(File *f) {
 static int map_c_mode_flags_to_linux_open_flags(FileMode mode) {
   FileMode file_mode(mode);
 
+  int open_flags = 0;
+
   if (file_mode.append_allowed()) {
     open_flags = O_CREAT | O_APPEND;
     if (file_mode.is_plus())
@@ -211,23 +213,21 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
 }
 
 int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
-  flush_unlocked();
-
-  auto modeflags = File::mode_flags(mode);
+  FileMode file_mode(mode);
 
   if (path != nullptr) {
     int old_fd = get_fd();
 
-    if (modeflags == 0) {
+    if (!file_mode.is_valid()) {
       if (old_fd >= 0) {
         linux_syscalls::close(old_fd);
         set_fd(-1);
       }
-      reset_stream_state_unlocked(modeflags);
+      reset_stream_state_unlocked(file_mode);
       return EINVAL;
     }
 
-    int open_flags = mode_flags_to_open_flags(modeflags);
+    int open_flags = map_c_mode_flags_to_linux_open_flags(file_mode);
 
     constexpr mode_t OPEN_MODE =
         S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -244,7 +244,7 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
 
         set_fd(-1);
       }
-      reset_stream_state_unlocked(modeflags);
+      reset_stream_state_unlocked(file_mode);
       return new_fd.error();
     }
 
@@ -254,23 +254,23 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
       auto dup_result = linux_syscalls::dup2(new_fd.value(), old_fd);
       if (!dup_result) {
         linux_syscalls::close(new_fd.value());
-        reset_stream_state_unlocked(modeflags);
+        reset_stream_state_unlocked(file_mode);
         return dup_result.error();
       }
       auto close_result = linux_syscalls::close(new_fd.value());
       if (!close_result) {
-        reset_stream_state_unlocked(modeflags);
+        reset_stream_state_unlocked(file_mode);
         return close_result.error();
       }
     } else {
       set_fd(new_fd.value());
     }
 
-    reset_stream_state_unlocked(modeflags);
+    reset_stream_state_unlocked(file_mode);
     return 0;
   }
 
-  if (modeflags == 0)
+  if (!file_mode.is_valid())
     return EINVAL;
 
   if (fd < 0)
@@ -281,34 +281,28 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
     return EBADF;
   int fd_flags = result.value();
 
-  using OpenMode = File::OpenMode;
-  using ModeFlags = File::ModeFlags;
+  constexpr int REQUIRES_WRITE = file_mode.write_allowed() |
+                                 file_mode.append_allowed() |
+                                 file_mode.is_plus();
 
-  constexpr ModeFlags REQUIRES_WRITE =
-      static_cast<ModeFlags>(OpenMode::WRITE) |
-      static_cast<ModeFlags>(OpenMode::APPEND) |
-      static_cast<ModeFlags>(OpenMode::PLUS);
+  constexpr int REQUIRES_READ = file_mode.write_allowed() | file_mode.is_plus();
 
-  constexpr ModeFlags REQUIRES_READ = static_cast<ModeFlags>(OpenMode::READ) |
-                                      static_cast<ModeFlags>(OpenMode::PLUS);
-
-  if (((fd_flags & O_ACCMODE) == O_RDONLY && (modeflags & REQUIRES_WRITE)) ||
-      ((fd_flags & O_ACCMODE) == O_WRONLY && (modeflags & REQUIRES_READ))) {
+  if (((fd_flags & O_ACCMODE) == O_RDONLY && REQUIRES_WRITE) ||
+      ((fd_flags & O_ACCMODE) == O_WRONLY && REQUIRES_READ)) {
     return EBADF;
   }
 
   bool do_seek = false;
-  bool is_append = modeflags & static_cast<ModeFlags>(OpenMode::APPEND);
   bool has_append_flag = fd_flags & O_APPEND;
 
-  if (is_append && !has_append_flag) {
+  if (file_mode.append_allowed() && !has_append_flag) {
     if (!linux_syscalls::fcntl(fd, F_SETFL,
                                reinterpret_cast<void *>(fd_flags | O_APPEND))
              .has_value()) {
       return EBADF;
     }
     do_seek = true;
-  } else if (!is_append && has_append_flag) {
+  } else if (!file_mode.append_allowed() && has_append_flag) {
     if (!linux_syscalls::fcntl(fd, F_SETFL,
                                reinterpret_cast<void *>(fd_flags & ~O_APPEND))
              .has_value()) {
@@ -316,7 +310,7 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
     }
   }
 
-  reset_stream_state_unlocked(modeflags);
+  reset_stream_state_unlocked(file_mode);
 
   if (do_seek) {
     auto seek_result = linux_file_seek(this, 0, SEEK_END);
