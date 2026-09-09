@@ -169,7 +169,7 @@ define void @test_remap_ne_add_case(i8 %x) !prof !0 {
 ; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
 ; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
 ; CHECK-NEXT:      i8 4, label %[[BB2]]
-; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF1]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -181,7 +181,7 @@ define void @test_remap_ne_add_case(i8 %x) !prof !0 {
 ; CHECK-NEXT:    unreachable
 ;
   %cmp = icmp ne i8 %x, 4
-  %key = select i1 %cmp, i8 %x, i8 6, !prof !1
+  %key = select i1 %cmp, i8 %x, i8 6, !prof !4
   switch i8 %key, label %bb1 [
   i8 6, label %bb2
   i8 10, label %bb3
@@ -295,13 +295,13 @@ bb4:
 ; K (the remapped-to value) has no explicit case of its own, so it already
 ; dispatches to the default destination - same as the (also absent) compared
 ; value C would. %x can be switched on directly with no case-list change.
-define void @test_remap_k_default_add(i8 %x) {
+define void @test_remap_k_default_add(i8 %x) !prof !0 {
 ; CHECK-LABEL: define void @test_remap_k_default_add(
-; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:    switch i8 [[X]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i8 1, label %[[BB1:.*]]
 ; CHECK-NEXT:      i8 2, label %[[BB2:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -313,11 +313,11 @@ define void @test_remap_k_default_add(i8 %x) {
 ; CHECK-NEXT:    unreachable
 ;
   %cmp = icmp eq i8 %x, 4
-  %key = select i1 %cmp, i8 6, i8 %x
+  %key = select i1 %cmp, i8 6, i8 %x, !prof !1
   switch i8 %key, label %default [
   i8 1, label %bb1
   i8 2, label %bb2
-  ]
+  ], !prof !2
 
 bb1:
   call void @func1()
@@ -499,12 +499,13 @@ declare void @use(i32)
 
 !0 = !{!"function_entry_count", i32 10}
 !1 = !{!"branch_weights", i32 2, i32 3}
-!2 = !{!"branch_weights", i32 5, i32 7, i32 11}
-!3 = !{!"branch_weights", i32 5, i32 0, i32 11, i32 13}
+!2 = !{!"branch_weights", i32 5, i32 11, i32 7}
+!3 = !{!"branch_weights", i32 5, i32 0, i32 11, i32 7}
+!4 = !{!"branch_weights", i32 3, i32 2}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 15, i32 21, i32 33, i32 46}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 25, i32 9, i32 35, i32 46}
 ; CHECK: [[PROF2]] = !{!"unknown", !"simplifycfg"}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 15, i32 58, i32 33, i32 39}
-; CHECK: [[PROF4]] = !{!"branch_weights", i32 10, i32 14, i32 22, i32 69}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 15, i32 46, i32 9, i32 35}
+; CHECK: [[PROF4]] = !{!"branch_weights", i32 5, i32 11, i32 7}
 ;.
