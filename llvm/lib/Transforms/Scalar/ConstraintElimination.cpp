@@ -574,7 +574,7 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
         V = Op0;
     }
 
-    if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
+    if (match(V, m_NSWAddLike(m_Value(Op0), m_Value(Op1)))) {
       if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
         return *Decomp;
       return V;
@@ -649,7 +649,7 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
 
   Value *Op1;
   ConstantInt *CI;
-  if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
+  if (match(V, m_NUWAddLike(m_Value(Op0), m_Value(Op1)))) {
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
       return *Decomp;
     return V;
@@ -676,13 +676,6 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
       return V;
 
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
-      return *Decomp;
-    return V;
-  }
-
-  // Decompose or as an add if there are no common bits between the operands.
-  if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI)))) {
-    if (auto Decomp = MergeResults(Op0, CI, IsSigned))
       return *Decomp;
     return V;
   }
@@ -998,14 +991,26 @@ getStartAndBackedgeValue(const PHINode &PN, const BasicBlock *LoopPred) {
   return {PN.getIncomingValue(StartIdx), PN.getIncomingValue(1 - StartIdx)};
 }
 
+/// Matches an increment of \p PhiM by a constant offset, captured in \p Off.
+/// The increment must be a plain IR add or [u|s]add.with.overflow.
+template <typename PhiMatchTy>
+static auto m_IncrementOf(const PhiMatchTy &PhiM, const APInt *&Off) {
+  return m_CombineOr(
+      m_c_Add(PhiM, m_APInt(Off)),
+      m_ExtractValue<0>(m_CombineOr(
+          m_c_Intrinsic<Intrinsic::uadd_with_overflow>(PhiM, m_APInt(Off)),
+          m_c_Intrinsic<Intrinsic::sadd_with_overflow>(PhiM, m_APInt(Off)))));
+}
+
 MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
   MonotonicInfo Info;
   const APInt *StepOffset = nullptr;
-  if (match(Step, m_c_Add(m_Specific(&PN), m_APInt(StepOffset)))) {
+  if (match(Step, m_IncrementOf(m_Specific(&PN), StepOffset))) {
     Info.Decreasing = StepOffset->isNegative();
-    const auto *Add = cast<OverflowingBinaryOperator>(Step);
-    Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
-    Info.Signed = Add->hasNoSignedWrap();
+    if (const auto *Add = dyn_cast<OverflowingBinaryOperator>(Step)) {
+      Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
+      Info.Signed = Add->hasNoSignedWrap();
+    }
   } else if (const auto *GEP = dyn_cast<GEPOperator>(Step)) {
     // TODO: Handle the non-increasing direction, which needs a nusw GEP with a
     // negative constant offset.
@@ -1091,11 +1096,25 @@ void State::addInfoForInductions(BasicBlock &BB) {
   const APInt *IncStep = nullptr;
   CmpPredicate Pred;
   auto IndValue =
-      m_Value(A, m_CombineOr(m_Phi(PN), m_c_Add(m_Phi(PN), m_APInt(IncStep))));
+      m_Value(A, m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep)));
 
-  if (!match(BB.getTerminator(),
-             m_Br(m_c_ICmp(Pred, IndValue, m_Value(B)), m_Value(), m_Value())))
+  auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
+  if (!Br)
     return;
+
+  auto CountingCmp = m_c_ICmp(Pred, IndValue, m_Value(B));
+  std::optional<bool> PeeledOnEdge;
+  if (!match(Br->getCondition(), CountingCmp)) {
+    // Look through AND/OR, and remember which edge requires all operands to be
+    // true.
+    if (match(Br->getCondition(), m_c_LogicalAnd(CountingCmp, m_Value())))
+      PeeledOnEdge = true;
+    else if (match(Br->getCondition(), m_c_LogicalOr(CountingCmp, m_Value())))
+      PeeledOnEdge = false;
+    else
+      return;
+  }
+
   if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
       !SE.isSCEVable(PN->getType()))
     return;
@@ -1109,15 +1128,18 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (&BB == Latch && !IncStep)
     return;
 
-  BasicBlock *InLoopSucc = nullptr;
-  if (Pred == CmpInst::ICMP_NE)
-    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(0);
-  else if (Pred == CmpInst::ICMP_EQ)
-    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(1);
-  else
+  bool ContinueOnTrue =
+      Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
+  CmpInst::Predicate ContinuePred =
+      ContinueOnTrue ? Pred.dropSameSign() : CmpInst::getInversePredicate(Pred);
+  BasicBlock *InLoopSucc = Br->getSuccessor(ContinueOnTrue ? 0 : 1);
+
+  // The peeled condition only implies the compare on the edge where the
+  // combined condition forces its operands, which must be the in-loop edge.
+  if (PeeledOnEdge && *PeeledOnEdge != ContinueOnTrue)
     return;
 
-  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
     return;
 
   BasicBlock *LoopPred = L->getLoopPredecessor();
@@ -1125,6 +1147,23 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
 
   auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
+  DomTreeNode *DTN = DT.getNode(InLoopSucc);
+
+  if (ICmpInst::isRelational(ContinuePred)) {
+    if (A != Backedge)
+      return;
+
+    // The latch condition ensures ContinuePred holds in the header on each
+    // iteration other than the first. Together with a precondition on the start
+    // value (StartValue ContinuePred B), we can add B as bound of PN.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
+
+    // A relational latch steps past B rather than landing on it, so none of the
+    // reasoning below applies.
+    return;
+  }
+
   const APInt *StepOffset = nullptr;
   const SCEV *StartSCEV = nullptr;
   if (match(Backedge, m_c_Add(m_Specific(PN), m_APInt(StepOffset)))) {
@@ -1137,8 +1176,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
                                    m_SpecificLoop(L))))
       return;
   }
-
-  DomTreeNode *DTN = DT.getNode(InLoopSucc);
 
   // If we looked through `PN + C`, only derive facts when that add is
   // really the induction's post-increment or post-decrement.
@@ -1195,55 +1232,42 @@ void State::addInfoForInductions(BasicBlock &BB) {
       return;
   }
 
-  Value *LowerBound = StartValue;
-  bool LowerBoundNUW = true, LowerBoundNSW = true;
-  if (IncStep) {
-    auto *StartC = dyn_cast<ConstantInt>(StartValue);
-    if (!StartC)
-      return;
-    bool UOverflow = false, SOverflow = false;
-    APInt Sum = StartC->getValue().uadd_ov(*StepOffset, UOverflow);
-    (void)StartC->getValue().sadd_ov(*StepOffset, SOverflow);
-    LowerBound = ConstantInt::get(StartValue->getType(), Sum);
-    LowerBoundNUW = !UOverflow;
-    LowerBoundNSW = !SOverflow;
-  }
+  // We already established that B - Start is a multiple of Step above. The loop
+  // exits once the compared value reaches B, that is at PN == B when comparing
+  // the phi, and at PN + Step == B for a post-increment. Together with the
+  // added precondition StartValue <= B for the former and the strict
+  // StartValue < B for the latter (which implies StartValue + Step <= B),
+  // neither PN nor the increment can wrap.
+  CmpInst::Predicate UPrecond = IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
+  ConditionTy StartBeforeBoundUnsigned = {UPrecond, StartValue, B};
+  ConditionTy StartBeforeBoundSigned = {ICmpInst::getSignedPredicate(UPrecond),
+                                        StartValue, B};
 
-  // AR may wrap. Add PN >= StartValue conditional on LowerBound <= B, which
-  // guarantees that the loop exits before wrapping in combination with the
-  // restrictions on B and the step above.
-  ConditionTy StartBeforeBoundULE = {CmpInst::ICMP_ULE, LowerBound, B};
-  ConditionTy StartBeforeBoundSLE = {CmpInst::ICMP_SLE, LowerBound, B};
-  if (!Info.Unsigned && LowerBoundNUW)
+  // Add PN >= StartValue, as the loop exits before wrapping.
+  if (!Info.Unsigned)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundULE));
-  if (!Info.Signed && LowerBoundNSW)
+        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundUnsigned));
+  if (!Info.Signed)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSLE));
-
-  if (LowerBoundNSW)
-    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                     B, StartBeforeBoundSLE));
-
-  if (!LowerBoundNUW)
-    return;
-
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_ULT, PN,
-                                                   B, StartBeforeBoundULE));
+        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
+  // Add PN < B, as the loop exits once the compared value reaches B.
+  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
+                                                   B, StartBeforeBoundSigned));
+  WorkList.push_back(FactOrCheck::getConditionFact(
+      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
   // must be u<= B, as other exits may only exit earlier.
   assert(!StepOffset->isNegative() && "induction must be increasing");
-  assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
-         "unsupported predicate");
+  assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
     // Bail out on non-dedicated exits.
     if (DT.dominates(&BB, EB)) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, StartBeforeBoundULE));
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, StartBeforeBoundUnsigned));
     }
   }
 }
@@ -1303,6 +1327,10 @@ static bool canStrengthenFlags(Instruction *I) {
     // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
     // canonicalized to Add.
     return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+  case Instruction::Add:
+    // NSW/NUW can be refined using constant ranges.
+    return (!BO->hasNoUnsignedWrap() || !BO->hasNoSignedWrap()) &&
+           isa<Constant>(BO->getOperand(1));
   case Instruction::Mul:
   case Instruction::Shl:
     if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
@@ -1345,13 +1373,45 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+static bool tryToStrengthenBinOpFlags(Instruction *I, Value *Op0, Value *Op1,
+                                      ConstraintInfo &Info) {
+  auto *C = dyn_cast<ConstantInt>(Op1);
+  if (!C)
+    return false;
+
+  // For a constant Op1, the ranges of Op0 for which the operation does not
+  // wrap are known exactly; check if the systems imply one of them.
+  bool Changed = false;
+  auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
+  using OBO = OverflowingBinaryOperator;
+  ConstantRange Other(C->getValue());
+  if (!I->hasNoUnsignedWrap() &&
+      doesHoldInRange(Info, Op0,
+                      ConstantRange::makeGuaranteedNoWrapRegion(
+                          Opcode, Other, OBO::NoUnsignedWrap),
+                      /*Signed=*/false)) {
+    LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+    I->setHasNoUnsignedWrap();
+    Changed = true;
+  }
+  if (!I->hasNoSignedWrap() &&
+      doesHoldInRange(Info, Op0,
+                      ConstantRange::makeGuaranteedNoWrapRegion(
+                          Opcode, Other, OBO::NoSignedWrap),
+                      /*Signed=*/true)) {
+    LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+    I->setHasNoSignedWrap();
+    Changed = true;
+  }
+  return Changed;
+}
+
 /// Try to strengthen \p I's poison generating flags using \p Info. Returns
 /// true if \p I was modified.
 static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
                                  SmallVectorImpl<Instruction *> &ToRemove) {
   assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
 
-  using OBO = OverflowingBinaryOperator;
   Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
   switch (I->getOpcode()) {
   case Instruction::Sub: {
@@ -1362,33 +1422,12 @@ static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
     I->setHasNoUnsignedWrap();
     return true;
   }
+  case Instruction::Add:
+    return tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
   case Instruction::Mul:
   case Instruction::Shl: {
     auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
-    bool Changed = false;
-    // For a constant Op1, the ranges of Op0 for which the operation does not
-    // wrap are known exactly; check if the systems imply one of them.
-    if (auto *C = dyn_cast<ConstantInt>(Op1)) {
-      ConstantRange Other(C->getValue());
-      if (!I->hasNoUnsignedWrap() &&
-          doesHoldInRange(Info, Op0,
-                          ConstantRange::makeGuaranteedNoWrapRegion(
-                              Opcode, Other, OBO::NoUnsignedWrap),
-                          /*Signed=*/false)) {
-        LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
-        I->setHasNoUnsignedWrap();
-        Changed = true;
-      }
-      if (!I->hasNoSignedWrap() &&
-          doesHoldInRange(Info, Op0,
-                          ConstantRange::makeGuaranteedNoWrapRegion(
-                              Opcode, Other, OBO::NoSignedWrap),
-                          /*Signed=*/true)) {
-        LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
-        I->setHasNoSignedWrap();
-        Changed = true;
-      }
-    }
+    bool Changed = tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
     if (!I->hasNoUnsignedWrap() && I->hasNoSignedWrap() &&
         Info.isKnownNonNegative(Op0) &&
         (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1))) {
@@ -1484,12 +1523,12 @@ void State::addInfoFor(BasicBlock &BB) {
     case Intrinsic::umax:
     case Intrinsic::smin:
     case Intrinsic::smax:
+    case Intrinsic::usub_sat:
       // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       [[fallthrough]];
     case Intrinsic::uadd_sat:
-    case Intrinsic::usub_sat:
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
       if (!isGuaranteedNotToBePoison(&I))
@@ -1925,6 +1964,25 @@ static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
   return false;
 }
 
+/// Try to replace \p USub by a plain subtract, if \p Info proves it cannot
+/// saturate. Returns true if \p USub was replaced.
+static bool checkAndReplaceUSubSat(SaturatingInst *USub, ConstraintInfo &Info,
+                                   SmallVectorImpl<Instruction *> &ToRemove) {
+  // usub.sat(A, B) is A - B exactly when A >=u B.
+  Value *A = USub->getLHS();
+  Value *B = USub->getRHS();
+  if (!checkCondition(CmpInst::ICMP_UGE, A, B, USub, Info).value_or(false))
+    return false;
+
+  IRBuilder<> Builder(USub);
+  Value *Sub = Builder.CreateSub(A, B, "", /*HasNUW=*/true,
+                                 /*HasNSW=*/Info.isKnownNonNegative(A));
+  USub->replaceAllUsesWith(Sub);
+  Sub->takeName(USub);
+  ToRemove.push_back(USub);
+  return true;
+}
+
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
@@ -2298,6 +2356,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
       } else if (auto *CmpIntr = dyn_cast<CmpIntrinsic>(Inst)) {
         Changed |= checkAndReplaceCmp(CmpIntr, Info, ToRemove);
+      } else if (match(Inst, m_Intrinsic<Intrinsic::usub_sat>())) {
+        Changed |=
+            checkAndReplaceUSubSat(cast<SaturatingInst>(Inst), Info, ToRemove);
       }
       continue;
     }
