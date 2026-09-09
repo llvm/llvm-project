@@ -1649,13 +1649,12 @@ region therefore contains only the code that runs when the exception
 *is* permitted by the specification, which is a single `cir.resume`
 operation to continue unwinding to the caller.
 
-A `cir.try` operation may have at most one filter handler, it must be
-the last handler in the handler list, and it may not be combined with a
-`catch all` handler, because a catch-all consumes every exception and
-nothing could reach the filter. The try operation created for an
-exception specification always has the filter as its only handler. A
-function-try-block on a function that also has an exception
-specification produces a separate `cir.try` operation nested inside it.
+If a `cir.try` operation has a filter handler, that filter must be its
+only handler. The filter try operation wraps the entire function body and
+exists only to check the exception specification, while each try statement
+written in the source becomes a separate `cir.try` operation nested inside it.
+A function-try-block on a function that also has an exception
+specification is nested the same way.
 
 An empty type list represents `throw()` before C++17. No exception is
 permitted by such a specification, so there is no permitted path to
@@ -1816,10 +1815,13 @@ outgoing edges rather than one. Either the exception violates the
 specification, in which case control transfers to the filter clause's
 destination, or it does not, in which case control continues along the
 dispatch operation's normal `unwind` edge. A `cir.eh.dispatch` operation
-carrying a `filter` clause therefore still requires a `catch_all` or
-`unwind` clause, and in practice always has an `unwind` clause, since
-the filter is only reached after every catch handler has failed to
-match.
+carrying a `filter` clause therefore always carries an `unwind` clause
+as well, whose destination is the flattened filter handler region.
+
+Because the filter is the only handler on the try operation, such a
+dispatch never carries catch clauses of its own. The catch clauses of a
+try statement nested inside the specification belong to that statement's
+own dispatch operation, which is chained ahead of this one.
 
 The filter handler region describes the permitted path, so it becomes
 the `unwind` destination of the dispatch operation. The destination of

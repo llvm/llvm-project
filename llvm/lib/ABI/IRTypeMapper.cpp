@@ -52,6 +52,9 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
   case abi::TypeKind::Vector:
     Result = convertVectorType(cast<abi::VectorType>(ABIType));
     break;
+  case abi::TypeKind::Tuple:
+    Result = convertTupleType(cast<abi::TupleType>(ABIType));
+    break;
   case abi::TypeKind::Record:
     Result = convertRecordType(cast<abi::RecordType>(ABIType));
     break;
@@ -79,6 +82,12 @@ llvm::Type *IRTypeMapper::convertArrayType(const abi::ArrayType *AT) {
 llvm::Type *IRTypeMapper::convertVectorType(const abi::VectorType *VT) {
   llvm::Type *ElementType = convertType(VT->getElementType());
   return llvm::VectorType::get(ElementType, VT->getNumElements());
+}
+
+llvm::Type *IRTypeMapper::convertTupleType(const abi::TupleType *TT) {
+  llvm::Type *VecTy = convertType(TT->getVectorType());
+  SmallVector<llvm::Type *, 4> Elements(TT->getNumVectors(), VecTy);
+  return llvm::StructType::get(Context, Elements);
 }
 
 llvm::Type *IRTypeMapper::convertRecordType(const abi::RecordType *RT) {
