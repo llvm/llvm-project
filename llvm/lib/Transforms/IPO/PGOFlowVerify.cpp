@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -36,8 +37,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 #include <memory>
-#include <numeric>
 #include <vector>
 
 using namespace llvm;
@@ -52,13 +53,18 @@ static cl::opt<bool> VerifyPGOFlowPrintDiagnostics(
     "verify-pgo-flow-print-diagnostics", cl::init(true), cl::Hidden,
     cl::desc("Print verify-pgo-flow banners and findings to stderr"));
 
-static cl::opt<bool>
-    VerifyPGOFlowFatal("verify-pgo-flow-fatal", cl::init(false), cl::Hidden,
-                       cl::desc("Abort after a flow-check finding"));
+static cl::opt<bool> VerifyPGOFlowFatal(
+    "verify-pgo-flow-fatal", cl::init(false), cl::Hidden,
+    cl::desc("Abort after a BlockFrequencyMismatch or EntryCountMismatch"));
 
 static cl::list<std::string> VerifyPGOFlowFuncList(
     "verify-pgo-flow-funcs", cl::Hidden, cl::CommaSeparated,
     cl::desc("If non-empty, only verify these functions"));
+
+static bool isStrictMismatchRemark(StringRef RemarkName) {
+  return RemarkName == "BlockFrequencyMismatch" ||
+         RemarkName == "EntryCountMismatch";
+}
 
 static void printVerifyBanner(StringRef PassName, bool Skipped) {
   if (!VerifyPGOFlowPrintDiagnostics)
@@ -77,7 +83,7 @@ static void emitPGOFlowDiagnostic(const Function *F, StringRef RemarkName,
   if (VerifyPGOFlowPrintDiagnostics)
     errs() << "PGOFlowVerify[" << RemarkName << "] " << F->getName() << ": "
            << Text << "\n";
-  if (VerifyPGOFlowFatal)
+  if (VerifyPGOFlowFatal && isStrictMismatchRemark(RemarkName))
     report_fatal_error(Twine("PGOFlowVerify[") + RemarkName + "] " +
                            F->getName() + ": " + Text,
                        /*gen_crash_diag=*/false);
@@ -123,32 +129,40 @@ void PGOFlowVerifier::registerCallbacks(PassInstrumentationCallbacks &PIC) {
 }
 
 void PGOFlowVerifier::invalidateFunctionFrequencyCache(IRUnitRef IR) {
+  auto DropFunction = [&](const Function *F) {
+    FunctionBlockFreqInfoCache.erase(F);
+    FunctionsWithU32WeightOverflow.erase(F);
+  };
   if (isa<Module>(IR)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: clear block-freq cache (module)\n");
     FunctionBlockFreqInfoCache.clear();
+    FunctionsWithU32WeightOverflow.clear();
+    EmittedSkipNotes.clear();
     return;
   }
   if (const auto *F = dyn_cast<Function>(IR)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: drop block-freq cache for '"
                       << F->getName() << "'\n");
-    FunctionBlockFreqInfoCache.erase(F);
+    DropFunction(F);
     return;
   }
   if (const auto *C = dyn_cast<LazyCallGraph::SCC>(IR)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: drop block-freq cache for SCC\n");
     for (const LazyCallGraph::Node &N : *C)
-      FunctionBlockFreqInfoCache.erase(&N.getFunction());
+      DropFunction(&N.getFunction());
     return;
   }
   if (const auto *L = dyn_cast<Loop>(IR)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: drop block-freq cache for loop\n");
     if (L->getHeader())
-      FunctionBlockFreqInfoCache.erase(L->getHeader()->getParent());
+      DropFunction(L->getHeader()->getParent());
     return;
   }
   LLVM_DEBUG(
       dbgs() << "PGOFlowVerifier: clear block-freq cache (unhandled IR)\n");
   FunctionBlockFreqInfoCache.clear();
+  FunctionsWithU32WeightOverflow.clear();
+  EmittedSkipNotes.clear();
 }
 
 void PGOFlowVerifier::runAfterPass(StringRef PassID, IRUnitRef IR) {
@@ -192,6 +206,37 @@ bool PGOFlowVerifier::shouldVerifyFunction(const Function *F) const {
   return Listed;
 }
 
+bool PGOFlowVerifier::hasApproximateProfile(const Function *F) const {
+  return F && hasApproximateProfileCounts(*F);
+}
+
+bool PGOFlowVerifier::hasU32WeightOverflow(const Function *F) const {
+  return F && FunctionsWithU32WeightOverflow.contains(F);
+}
+
+bool PGOFlowVerifier::skipStrictInstrProfChecks(const Function *F,
+                                                bool EmitNote) const {
+  if (hasApproximateProfile(F)) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip strict checks for '"
+                      << F->getName() << "' (approxprofile)\n");
+    if (EmitNote && EmittedSkipNotes.insert(F).second)
+      emitPGOFlowDiagnostic(
+          F, "ApproxProfileSkip",
+          "skipping strict InstrProf verification (approxprofile)");
+    return true;
+  }
+  if (hasU32WeightOverflow(F)) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip strict checks for '"
+                      << F->getName() << "' (u32 weight overflow)\n");
+    if (EmitNote && EmittedSkipNotes.insert(F).second)
+      emitPGOFlowDiagnostic(
+          F, "CountOverflowSkip",
+          "skipping strict InstrProf verification (profile count overflow)");
+    return true;
+  }
+  return false;
+}
+
 void PGOFlowVerifier::runAfterPass(const Module *M) {
   if (!M)
     return;
@@ -206,11 +251,14 @@ void PGOFlowVerifier::runAfterPass(const Module *M) {
     if (F.isDeclaration())
       continue;
     computeBlockFrequencies(&F);
-    if (shouldVerifyFunction(&F))
-      validateBlockFrequencies(&F);
+    if (!shouldVerifyFunction(&F) ||
+        skipStrictInstrProfChecks(&F, /*EmitNote=*/true))
+      continue;
+    validateBlockFrequencies(&F);
   }
   for (const Function &F : *M) {
-    if (!shouldVerifyFunction(&F))
+    if (!shouldVerifyFunction(&F) ||
+        skipStrictInstrProfChecks(&F, /*EmitNote=*/false))
       continue;
     validateEntryCountAgainstCallerSum(&F);
   }
@@ -225,6 +273,8 @@ void PGOFlowVerifier::runAfterPass(const Function *F) {
     return;
   }
   computeBlockFrequencies(F);
+  if (skipStrictInstrProfChecks(F, /*EmitNote=*/true))
+    return;
   validateBlockFrequencies(F);
   LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '" << F->getName()
                     << "' (function-unit walk; need module-wide caller BFI)\n");
@@ -332,7 +382,7 @@ void PGOFlowVerifier::computeBlockFrequencies(const Function *F) {
     if (SuccInfo.NumUnknownIn > 0)
       SuccInfo.NumUnknownIn--;
     if (Add)
-      SuccInfo.SumIn += Add;
+      SuccInfo.SumIn = SaturatingAdd(SuccInfo.SumIn, Add);
     if (ShouldProcess(Succ))
       Enqueue(Succ);
   };
@@ -391,21 +441,32 @@ void PGOFlowVerifier::computeBlockFrequencies(const Function *F) {
                         << F->getName() << "' block " << BB->getName() << "\n");
       return;
     }
-    SmallVector<uint32_t, 8> Weights32;
-    if (extractBranchWeights(*Term, Weights32) &&
-        Weights32.size() == Term->getNumSuccessors()) {
+    if (MDNode *WeightMD = getValidBranchWeightMDNode(*Term)) {
       // Outs already closed (weights applied while a backedge was unknown).
       if (Info.NumUnknownOut == 0)
         return;
       // No live flow yet.
       if (Info.SumIn == 0)
         return;
-      SmallVector<uint64_t, 8> Weights(Weights32.begin(), Weights32.end());
+      SmallVector<uint64_t, 8> Weights;
+      extractFromBranchWeightMD64(WeightMD, Weights);
+      if (Weights.size() != Term->getNumSuccessors())
+        return;
+      for (uint64_t W : Weights) {
+        if (W > std::numeric_limits<uint32_t>::max()) {
+          LLVM_DEBUG(dbgs()
+                     << "PGOFlowVerifier: u32 weight overflow in '"
+                     << F->getName() << "' block " << BB->getName() << "\n");
+          FunctionsWithU32WeightOverflow.insert(F);
+          return;
+        }
+      }
       Info.NumUnknownOut = 0;
-      Info.SumOut =
-          std::accumulate(Weights.begin(), Weights.end(), uint64_t(0));
-      for (unsigned I = 0, E = Term->getNumSuccessors(); I < E; ++I)
+      Info.SumOut = 0;
+      for (unsigned I = 0, E = Term->getNumSuccessors(); I < E; ++I) {
         ReleaseEdge(Term->getSuccessor(I), Weights[I]);
+        Info.SumOut = SaturatingAdd(Info.SumOut, Weights[I]);
+      }
       return;
     }
     if (Info.NumUnknownIn != 0)
@@ -515,6 +576,15 @@ void PGOFlowVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
                         << "'\n");
       return;
     }
+    if (hasApproximateProfile(CallerFunc) || hasU32WeightOverflow(CallerFunc)) {
+      HasUnknownCallsiteCount = true;
+      LLVM_DEBUG(dbgs() << "PGOFlowVerifier: unknown callsite for '"
+                        << F->getName() << "' (caller '"
+                        << CallerFunc->getName()
+                        << "' is approxprofile or u32-overflow)\n");
+      return;
+    }
+
     bool NonzeroEntry = BB == &CallerFunc->getEntryBlock() &&
                         CallerFunc->getEntryCount() &&
                         *CallerFunc->getEntryCount() != 0;

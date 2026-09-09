@@ -17,6 +17,7 @@
 #define LLVM_TRANSFORMS_IPO_PGOFLOWVERIFY_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -56,12 +57,17 @@ private:
   bool hasInstrProfUseSummary(const Module *M) const;
 
   bool shouldVerifyFunction(const Function *F) const;
+  bool hasApproximateProfile(const Function *F) const;
+  bool hasU32WeightOverflow(const Function *F) const;
+  bool skipStrictInstrProfChecks(const Function *F, bool EmitNote) const;
   void computeBlockFrequencies(const Function *F);
   void validateBlockFrequencies(const Function *F);
   void validateEntryCountAgainstCallerSum(const Function *F);
   const AllBlockFreqInfo *getCachedBlockFreqInfo(const Function *F) const;
 
   DenseMap<const Function *, AllBlockFreqInfo> FunctionBlockFreqInfoCache;
+  DenseSet<const Function *> FunctionsWithU32WeightOverflow;
+  mutable DenseSet<const Function *> EmittedSkipNotes;
 };
 
 /// Pipeline pass that runs the same walk as the `-verify-pgo-flow` hook.
