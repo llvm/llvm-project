@@ -5101,8 +5101,6 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
   BasicBlock *BB = SI->getParent();
 
   if (OldDest != DestFork) {
-    // Case list is changing so we should drop stale profile weights.
-    SI->setMetadata(LLVMContext::MD_prof, nullptr);
     if (!IsDefault)
       OldDest->removePredecessor(BB);
     if (IsDefault)
@@ -5119,6 +5117,62 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
           successors(SI), [&](BasicBlock *Succ) { return Succ == OldDest; });
       if (DTU && !OldDestStillTargeted)
         DTU->applyUpdates({{DominatorTree::Delete, BB, OldDest}});
+    }
+
+    // Update the profile information on the switch if we had a profile
+    // for both it and the select instruction.
+    SmallVector<uint32_t> SwitchWeights;
+    bool SwitchHasBranchWeights = extractBranchWeights(*SI, SwitchWeights);
+    // If we add a case, ensure the length of the branch weights list matches
+    // to make iterating over them easier later.
+    if (IsDefault)
+      SwitchWeights.push_back(0);
+    uint64_t SelectTrueWeight;
+    uint64_t SelectFalseWeight;
+    bool SelectHasBranchWeights =
+        extractBranchWeights(*Select, SelectTrueWeight, SelectFalseWeight);
+    uint64_t SelectTotalWeight = SelectTrueWeight + SelectFalseWeight;
+    if (Negate)
+      std::swap(SelectTrueWeight, SelectFalseWeight);
+    if (SwitchHasBranchWeights && SelectHasBranchWeights &&
+        !ProfcheckDisableMetadataFixes) {
+      // We update the branch weights by subtracting P(x=C) from the probability
+      // of case K in the switch (what C redirect to before the transformation),
+      // plugging the probability for case C into the switch (which we derive
+      // from the select), and ensuring everything is scaled to have a common
+      // denominator.
+      uint64_t SwitchTotalWeight = sum_of(SwitchWeights, uint64_t{0});
+      SmallVector<uint64_t> NewSwitchWeights;
+      NewSwitchWeights.reserve(SwitchWeights.size());
+      NewSwitchWeights.push_back(SwitchWeights[0] * SelectTotalWeight);
+      for (const auto &[SwitchCase, SwitchWeight] :
+           zip(SI->cases(), drop_begin(SwitchWeights))) {
+        if (SwitchCase.getCaseValue() == C) {
+          NewSwitchWeights.push_back(SwitchTotalWeight * SelectTrueWeight);
+        } else if (SwitchCase.getCaseValue() == K) {
+          // In reality, P(key=K) > P(x=C) should always hold, but explicitly
+          // guard against bad profiles here to prevent underflow by saturating
+          // to zero.
+          uint64_t ProbabilityKeyEqualsK = SwitchWeight * SelectTotalWeight;
+          uint64_t ProbabilityXEqualsC = SelectTrueWeight * SwitchTotalWeight;
+          uint64_t ProbabilityXEqualsK =
+              ProbabilityKeyEqualsK > ProbabilityXEqualsC
+                  ? ProbabilityKeyEqualsK - ProbabilityXEqualsC
+                  : 0;
+          NewSwitchWeights.push_back(ProbabilityXEqualsK);
+        } else {
+          NewSwitchWeights.push_back(SwitchWeight * SelectTotalWeight);
+        }
+      }
+      setFittedBranchWeights(*SI, NewSwitchWeights, /*IsExpected=*/false);
+    } else if (SwitchHasBranchWeights) {
+      // If we only have branch weights on the switch, we cannot reconstruct
+      // branch weights correctly, so mark them as unknown if the function has
+      // a profile count. Reset the branch weights first to ensure we remove
+      // the now invalid branch weights if the function is not otherwise
+      // profiled.
+      SI->setMetadata(LLVMContext::MD_prof, nullptr);
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     }
   }
 
