@@ -107,10 +107,10 @@ void SPIRVLegalizeImplicitBindingImpl::collectBindingInfo(Module &M) {
 
     switch (F.getIntrinsicID()) {
     case Intrinsic::spv_resource_handlefrombinding:
-      collectBinding(F, 0, 1);
+      collectBinding(F, /*ArgDescSetIdx*/ 0, /*ArgBindingIdx*/ 1);
       break;
     case Intrinsic::spv_resource_counterhandlefrombinding:
-      collectBinding(F, 1, 2);
+      collectBinding(F, /*ArgDescSetIdx*/ 1, /*ArgBindingIdx*/ 2);
       break;
     case Intrinsic::spv_resource_handlefromimplicitbinding:
     case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
@@ -181,7 +181,7 @@ static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
 
 bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
   // Collect all implicit binding calls.
-  SmallVector<std::pair<uint32_t, CallInst *>, 8> IBCalls;
+  SmallVector<std::pair<uint32_t, CallInst *>> IBCalls;
   bool Changed = false;
   for (Function &F : M) {
     if (!F.isDeclaration())
@@ -216,7 +216,7 @@ bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
   uint32_t LastOrderId = -1;
   uint32_t LastBinding = -1;
   uint32_t LastDescSet = -1;
-  for (auto [OrderId, CI] : IBCalls) {
+  for (auto &[OrderId, CI] : IBCalls) {
     uint32_t Binding;
     uint32_t DescSet = getDescSet(CI);
     if (OrderId == LastOrderId) {
