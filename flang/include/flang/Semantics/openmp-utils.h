@@ -246,6 +246,10 @@ private:
 void AppendConstructTraitsForDirective(
     llvm::omp::Directive, llvm::omp::VariantMatchInfo &vmi);
 
+/// Add the traits implied by a construct selector without properties.
+void AppendConstructTraitsForSelector(
+    const parser::OmpTraitSelectorName &, llvm::omp::VariantMatchInfo &vmi);
+
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
       llvm::omp::VariantMatchInfo vmi, bool isExplicit,
@@ -264,7 +268,7 @@ struct MetadirectiveCandidate {
 
 struct MetadirectiveCandidateSet {
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
-  /// Null represents either an explicit NOTHING fallback or no fallback.
+  /// Null represents either a clause-free NOTHING fallback or no fallback.
   const parser::OmpDirectiveSpecification *fallback{nullptr};
 };
 

@@ -89,12 +89,9 @@ public:
           return false;
         }
         const auto &name{std::get<parser::OmpTraitSelectorName>(selector.t)};
-        if (const auto *directive{std::get_if<llvm::omp::Directive>(&name.u)}) {
-          llvm::omp::VariantMatchInfo vmi;
-          AppendConstructTraitsForDirective(*directive, vmi);
-          sequence.append(
-              vmi.ConstructTraits.begin(), vmi.ConstructTraits.end());
-        }
+        llvm::omp::VariantMatchInfo vmi;
+        AppendConstructTraitsForSelector(name, vmi);
+        sequence.append(vmi.ConstructTraits.begin(), vmi.ConstructTraits.end());
       }
     }
 
@@ -876,7 +873,8 @@ OmpStructureChecker::GetReachableMetadirectiveReplacements(
       } else {
         continue;
       }
-      if (spec && spec->DirId() == llvm::omp::Directive::OMPD_nothing) {
+      if (spec && spec->DirId() == llvm::omp::Directive::OMPD_nothing &&
+          spec->Clauses().v.empty()) {
         spec = nullptr;
       }
       result.push_back({path, spec});

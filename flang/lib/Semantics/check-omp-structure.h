@@ -420,7 +420,7 @@ private:
 
   struct MetadirectiveReplacementBranch {
     EffectiveDirectivePath enclosingPath;
-    // Null represents an explicit or implicit NOTHING replacement.
+    // Null represents a clause-free explicit or implicit NOTHING replacement.
     const parser::OmpDirectiveSpecification *spec{nullptr};
   };
   struct MetadirectiveReplacementContext {
