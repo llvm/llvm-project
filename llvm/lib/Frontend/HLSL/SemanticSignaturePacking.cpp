@@ -50,7 +50,8 @@ Expected<unsigned> llvm::hlsl::packSignatureStacked(
     assert((Interpretation == SemanticInterpretation::Arbitrary ||
             Interpretation == SemanticInterpretation::SV ||
             Interpretation == SemanticInterpretation::SGV) &&
-           "unexpected semantic interpretation for stacked packing");
+           "unexpected semantic interpretation for stacked packing, should "
+           "have been diagnosed by Sema");
 
     if (Element.Rows > MaxSignatureRows - NextRow)
       return make_error<SignaturePackingError>(
