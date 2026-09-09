@@ -363,11 +363,12 @@ const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
                                getABIVectorKind(VT->getVectorKind()));
 }
 
-/// Converts the sizeless AArch64 SVE data and predicate builtin types,
-/// including the x2/x3/x4 tuples, to scalable LLVM ABI vector types.
+/// Converts the sizeless AArch64 SVE data and predicate builtin types.
+/// Single vectors become a scalable LLVM ABI VectorType. The x2/x3/x4
+/// forms become a TupleType of that vector.
 ///
 /// \param BT The SVE BuiltinType to convert
-/// \return LLVM ABI VectorType with a scalable element count
+/// \return LLVM ABI VectorType or TupleType
 const llvm::abi::Type *
 QualTypeMapper::convertSVEBuiltinType(const BuiltinType *BT) {
   ASTContext::BuiltinVectorTypeInfo Info = ASTCtx.getBuiltinVectorTypeInfo(BT);
@@ -386,9 +387,11 @@ QualTypeMapper::convertSVEBuiltinType(const BuiltinType *BT) {
                                       ? llvm::abi::VectorKind::SVEPredicate
                                       : llvm::abi::VectorKind::SVEData;
 
-  return Builder.getVectorType(ElementType, Info.EC,
-                               getTypeAlign(QualType(BT, 0)), VecKind,
-                               Info.NumVectors);
+  const llvm::abi::VectorType *VecTy = Builder.getVectorType(
+      ElementType, Info.EC, getTypeAlign(QualType(BT, 0)), VecKind);
+  if (Info.NumVectors == 1)
+    return VecTy;
+  return Builder.getTupleType(VecTy, Info.NumVectors);
 }
 
 /// Converts complex types to LLVM ABI complex representations.

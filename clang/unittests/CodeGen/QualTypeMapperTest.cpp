@@ -46,6 +46,12 @@ protected:
     return dyn_cast<llvm::abi::VectorType>(Mapper.convertType(QT));
   }
 
+  /// Maps \p QT and returns it as an ABI tuple type, or null if it did not
+  /// map to a tuple.
+  const llvm::abi::TupleType *mapToTuple(QualType QT) {
+    return dyn_cast<llvm::abi::TupleType>(Mapper.convertType(QT));
+  }
+
   /// Returns the underlying type of the file-scope typedef named \p Name.
   QualType lookupTypedef(StringRef Name) {
     for (Decl *D : context().getTranslationUnitDecl()->decls())
@@ -58,22 +64,34 @@ protected:
 
   /// Checks an SVE data vector of \p NF vectors of \p NumEls elements, each
   /// \p ElBits wide. \p IsFP selects whether the element is expected to be a
-  /// floating-point or an integer type.
+  /// floating-point or an integer type. NF == 1 is a VectorType; NF > 1 is
+  /// a TupleType of that vector.
   void checkDataVector(StringRef Name, QualType QT, unsigned NumEls,
                        unsigned ElBits, unsigned NF, bool IsFP) {
     SCOPED_TRACE(Name);
-    const llvm::abi::VectorType *VT = mapToVector(QT);
-    ASSERT_NE(VT, nullptr) << "did not map to a vector type";
+    const llvm::abi::VectorType *VT = nullptr;
+    if (NF == 1) {
+      VT = mapToVector(QT);
+      ASSERT_NE(VT, nullptr) << "did not map to a vector type";
+      EXPECT_EQ(VT->getSizeInBits(),
+                llvm::TypeSize::getScalable(NumEls * ElBits));
+      EXPECT_EQ(VT->getAlignment(), llvm::Align(16));
+    } else {
+      const llvm::abi::TupleType *TT = mapToTuple(QT);
+      ASSERT_NE(TT, nullptr) << "did not map to a tuple type";
+      EXPECT_EQ(TT->getNumVectors(), NF);
+      EXPECT_EQ(TT->getSizeInBits(),
+                llvm::TypeSize::getScalable(NumEls * ElBits * NF));
+      EXPECT_EQ(TT->getAlignment(), llvm::Align(16));
+      VT = TT->getVectorType();
+      ASSERT_NE(VT, nullptr);
+      EXPECT_EQ(VT->getSizeInBits(),
+                llvm::TypeSize::getScalable(NumEls * ElBits));
+    }
 
     EXPECT_EQ(VT->getVectorKind(), llvm::abi::VectorKind::SVEData);
     EXPECT_TRUE(VT->isScalable());
     EXPECT_EQ(VT->getNumElements(), llvm::ElementCount::getScalable(NumEls));
-    EXPECT_EQ(VT->getNumVectors(), NF);
-    EXPECT_EQ(VT->isTuple(), NF > 1);
-    EXPECT_EQ(VT->getSizeInBits(),
-              llvm::TypeSize::getScalable(NumEls * ElBits * NF));
-    // AAPCS64 aligns every SVE data vector, including the tuples, to 16 bytes.
-    EXPECT_EQ(VT->getAlignment(), llvm::Align(16));
 
     const llvm::abi::Type *Elt = VT->getElementType();
     EXPECT_EQ(Elt->getSizeInBits(), llvm::TypeSize::getFixed(ElBits));
@@ -85,15 +103,26 @@ protected:
   void checkPredicateVector(StringRef Name, QualType QT, unsigned NumEls,
                             unsigned NF) {
     SCOPED_TRACE(Name);
-    const llvm::abi::VectorType *VT = mapToVector(QT);
-    ASSERT_NE(VT, nullptr) << "did not map to a vector type";
+    const llvm::abi::VectorType *VT = nullptr;
+    if (NF == 1) {
+      VT = mapToVector(QT);
+      ASSERT_NE(VT, nullptr) << "did not map to a vector type";
+      EXPECT_EQ(VT->getSizeInBits(), llvm::TypeSize::getScalable(NumEls));
+      EXPECT_EQ(VT->getAlignment(), llvm::Align(2));
+    } else {
+      const llvm::abi::TupleType *TT = mapToTuple(QT);
+      ASSERT_NE(TT, nullptr) << "did not map to a tuple type";
+      EXPECT_EQ(TT->getNumVectors(), NF);
+      EXPECT_EQ(TT->getSizeInBits(), llvm::TypeSize::getScalable(NumEls * NF));
+      EXPECT_EQ(TT->getAlignment(), llvm::Align(2));
+      VT = TT->getVectorType();
+      ASSERT_NE(VT, nullptr);
+      EXPECT_EQ(VT->getSizeInBits(), llvm::TypeSize::getScalable(NumEls));
+    }
 
     EXPECT_EQ(VT->getVectorKind(), llvm::abi::VectorKind::SVEPredicate);
     EXPECT_TRUE(VT->isScalable());
     EXPECT_EQ(VT->getNumElements(), llvm::ElementCount::getScalable(NumEls));
-    EXPECT_EQ(VT->getNumVectors(), NF);
-    EXPECT_EQ(VT->getSizeInBits(), llvm::TypeSize::getScalable(NumEls * NF));
-    EXPECT_EQ(VT->getAlignment(), llvm::Align(2));
 
     const llvm::abi::Type *Elt = VT->getElementType();
     ASSERT_TRUE(Elt->isInteger());
@@ -122,8 +151,8 @@ typedef int generic_int32x4_t __attribute__((vector_size(16)));
   CodeGen::QualTypeMapper Mapper;
 };
 
-// Every SVE data vector, including the x2/x3/x4 tuples, maps to a scalable
-// vector tagged as SVE data.
+// Every SVE data vector maps to a scalable vector tagged as SVE data.
+// The x2/x3/x4 forms map to a TupleType of that vector.
 TEST_F(QualTypeMapperSVETest, DataVectors) {
 #define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
                             ElBits, NF, IsSigned)                              \
@@ -146,8 +175,8 @@ TEST_F(QualTypeMapperSVETest, DataVectors) {
 #include "clang/Basic/AArch64ACLETypes.def"
 }
 
-// Every SVE predicate, including the x2/x4 tuples, maps to a scalable vector
-// of one-bit elements tagged as an SVE predicate.
+// Every SVE predicate maps to a scalable vector of one-bit elements tagged
+// as an SVE predicate. The x2/x4 forms map to a TupleType of that vector.
 TEST_F(QualTypeMapperSVETest, PredicateVectors) {
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   checkPredicateVector(#Name, context().SingletonId, NumEls, NF);
@@ -172,11 +201,12 @@ TEST_F(QualTypeMapperSVETest, RepresentativeTypes) {
       cast<llvm::abi::IntegerType>(SVUint8->getElementType())->isSigned());
 
   // svfloat64x2_t is two <vscale x 2 x double> vectors.
-  const llvm::abi::VectorType *SVFloat64x2 =
-      mapToVector(context().SveFloat64x2Ty);
+  const llvm::abi::TupleType *SVFloat64x2 =
+      mapToTuple(context().SveFloat64x2Ty);
   ASSERT_NE(SVFloat64x2, nullptr);
   EXPECT_EQ(SVFloat64x2->getNumVectors(), 2u);
-  EXPECT_EQ(SVFloat64x2->getNumElements(), llvm::ElementCount::getScalable(2));
+  EXPECT_EQ(SVFloat64x2->getVectorType()->getNumElements(),
+            llvm::ElementCount::getScalable(2));
   EXPECT_EQ(SVFloat64x2->getSizeInBits(), llvm::TypeSize::getScalable(256));
 
   // svbool_t is <vscale x 16 x i1>.

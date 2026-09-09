@@ -20,6 +20,7 @@ using llvm::abi::FieldInfo;
 using llvm::abi::RecordFlags;
 using llvm::abi::RecordType;
 using llvm::abi::StructPacking;
+using llvm::abi::TupleType;
 using llvm::abi::TypeBuilder;
 using llvm::abi::VectorKind;
 using llvm::abi::VectorType;
@@ -137,7 +138,6 @@ TEST_F(ABITypesTest, GenericVector) {
   EXPECT_FALSE(V4I32->isSVEType());
   EXPECT_FALSE(V4I32->isScalable());
   EXPECT_FALSE(V4I32->isTuple());
-  EXPECT_EQ(V4I32->getNumVectors(), 1u);
   EXPECT_EQ(V4I32->getSizeInBits(), TypeSize::getFixed(128));
 }
 
@@ -158,16 +158,18 @@ TEST_F(ABITypesTest, SVEDataVector) {
 // svint32x3_t is three <vscale x 4 x i32> vectors.
 TEST_F(ABITypesTest, SVEDataVectorTuple) {
   const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
-  const VectorType *SVInt32x3 =
-      TB.getVectorType(I32, ElementCount::getScalable(4), Align(16),
-                       VectorKind::SVEData, /*NumVectors=*/3);
+  const VectorType *SVInt32 = TB.getVectorType(
+      I32, ElementCount::getScalable(4), Align(16), VectorKind::SVEData);
+  const TupleType *SVInt32x3 = TB.getTupleType(SVInt32, /*NumVectors=*/3);
 
-  EXPECT_TRUE(SVInt32x3->isSVEData());
   EXPECT_TRUE(SVInt32x3->isTuple());
   EXPECT_EQ(SVInt32x3->getNumVectors(), 3u);
-  // getNumElements() describes one vector of the tuple, while the size covers
-  // all of them.
-  EXPECT_EQ(SVInt32x3->getNumElements(), ElementCount::getScalable(4));
+  EXPECT_EQ(SVInt32x3->getVectorType(), SVInt32);
+  EXPECT_EQ(SVInt32x3->getAlignment(), Align(16));
+  // The contained vector keeps a per-vector element count; the tuple size
+  // covers all of the vectors.
+  EXPECT_EQ(SVInt32->getNumElements(), ElementCount::getScalable(4));
+  EXPECT_EQ(SVInt32->getSizeInBits(), TypeSize::getScalable(128));
   EXPECT_EQ(SVInt32x3->getSizeInBits(), TypeSize::getScalable(384));
 }
 
