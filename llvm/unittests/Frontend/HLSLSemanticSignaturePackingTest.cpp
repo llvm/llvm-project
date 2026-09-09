@@ -153,25 +153,28 @@ TEST_F(HLSLSemanticSignaturePackingTest, CreatesSignatureFromConfig) {
 
 TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
   // Semantics accessed through dedicated intrinsics do not consume signature
-  // rows and remain unallocated.
+  // rows and remain unallocated. The elements around them are packed as if the
+  // unallocated element was not declared at all.
 
-  // struct CSIn {
-  //   uint3 DispatchThreadID : SV_DispatchThreadID;
-  //   uint3 GroupID          : SV_GroupID;
-  //   uint GroupIndex        : SV_GroupIndex;
+  // struct VSIn {
+  //   float2 A    : A;
+  //   uint ViewID : SV_ViewID;
+  //   float3 B    : B;
   // };
   TestConfig Config(
-      Triple::EnvironmentType::Compute, IOType::In,
-      {{dxbc::PSV::SemanticKind::DispatchThreadID, /*Rows=*/1, /*Cols=*/3,
+      Triple::EnvironmentType::Vertex, IOType::In,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ViewID, /*Rows=*/1, /*Cols=*/1,
         dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined},
-       {dxbc::PSV::SemanticKind::GroupID, /*Rows=*/1, /*Cols=*/3,
-        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined},
-       {dxbc::PSV::SemanticKind::GroupIndex, /*Rows=*/1, /*Cols=*/1,
-        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined}});
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
 
-  // Expected layout: no registers are used.
-  verifyPacking(Config, /*ExpectedRows=*/0,
-                {Unallocated, Unallocated, Unallocated});
+  // Expected layout:
+  // reg0: A.xy  | unused.zw
+  // reg1: B.xyz | unused.w
+  verifyPacking(Config, /*ExpectedRows=*/2,
+                {{/*Row=*/0, /*Col=*/0}, Unallocated, {/*Row=*/1, /*Col=*/0}});
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, StacksInDeclarationOrder) {
