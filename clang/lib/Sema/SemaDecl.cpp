@@ -8957,7 +8957,6 @@ static bool CheckC23ConstexprVarType(Sema &SemaRef, SourceLocation VarLoc,
   return false;
 }
 
-/// \return whether \p AS is one of the SYCL address spaces.
 static bool isSYCLAddressSpace(LangAS AS) {
   return AS >= LangAS::sycl_global && AS <= LangAS::sycl_constant;
 }
