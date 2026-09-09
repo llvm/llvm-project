@@ -394,6 +394,15 @@ llvm.func @fshr_test(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: vector<8xi32>, %
   llvm.return
 }
 
+// CHECK-LABEL: @clmul_test
+llvm.func @clmul_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.clmul.i32
+  "llvm.intr.clmul"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.clmul.v8i32
+  "llvm.intr.clmul"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
 // CHECK-LABEL: @pdep_test
 llvm.func @pdep_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
   // CHECK: call i32 @llvm.pdep.i32
