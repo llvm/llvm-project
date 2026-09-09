@@ -33,10 +33,10 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-DISABLED-EPILOG: remark: <unknown>:0:0: Options conflict, epilogue vectorization is disallowed while epilogue tail-folding allowed!
 ;
 ; CHECK-NO-FORCED-MAIN-VF-LABEL: Checking a loop in 'test_epilogue_tf'
-; CHECK-NO-FORCED-MAIN-VF: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied without forced main/epilogue loop VF
+; CHECK-NO-FORCED-MAIN-VF-NOT: LV: epilogue tail-folding is enabled
 
 ; CHECK-NO-FORCED-EPILOGUE-VF-LABEL: Checking a loop in 'test_epilogue_tf'
-; CHECK-NO-FORCED-EPILOGUE-VF: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied without forced main/epilogue loop VF
+; CHECK-NO-FORCED-EPILOGUE-VF-NOT: LV: epilogue tail-folding is enabled
 ;
 ; CHECK-INVALID-VFs-LABEL: Checking a loop in 'test_epilogue_tf'
 ; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
@@ -152,26 +152,31 @@ for.end:
   ret i32 0
 }
 
-define i1 @early_exit(ptr %A, i64 %n, i8 %find) {
+define i64 @early_exit(ptr dereferenceable(1024) align 8 %src, i1 %cond) {
 ; CHECK-DISABLED-EARLY-EXIT-LABEL: LV: Checking a loop in 'early_exit'
 ; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: Epilogue tail-folding is not supported yet for early-exit loops
 ;
 entry:
-  br label %for.body
+  br label %loop.header
 
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %cont ]
-  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %iv
-  %val = load i8, ptr %arrayidx, align 1
-  %exitcond = icmp eq i8 %val, %find
-  br i1 %exitcond, label %exit, label %cont
+loop.header:
+  %iv = phi i64 [ %iv.next, %latch ], [ 0, %entry ]
+  %gep = getelementptr inbounds double, ptr %src, i64 %iv
+  %val = load double, ptr %gep, align 8
+  %neg = fneg double %val
+  %c.1 = fcmp une double %neg, 10.0
+  br i1 %c.1, label %latch, label %early.exit
 
-cont:
-  %iv.next = add nuw nsw i64 %iv, 1
-  %contcond = icmp ne i64 %iv.next, %n
-  br i1 %contcond, label %for.body, label %exit
+latch:
+  %iv.next = add nuw i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, 127
+  br i1 %exit.cond, label %exit, label %loop.header
+
+early.exit:
+  ret i64 %iv
+
 exit:
-  ret i1 %exitcond
+  ret i64 10
 }
 
 ; For this function, the check line is not related to epilogue tail-folding, but when vectorizing this case gets supported,
@@ -204,7 +209,6 @@ exit:
 
 define void @test_outer_loop(ptr %A, i64 %m) {
 ; CHECK-OUTER-LOOP-LABEL: Checking a loop in 'test_outer_loop'
-; CHECK-OUTER-LOOP: remark: <unknown>:0:0: Epilogue tail-folding is not supported for outer loop
 ; CHECK-OUTER-LOOP-NOT: LV: epilogue tail-folding is enabled
 ;
 entry:
