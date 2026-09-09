@@ -64,6 +64,13 @@ public:
       file_mode_ = 0;
   }
 
+  bool write_allowed() const {
+    return is_write() || is_append() || is_update();
+  }
+
+  bool read_allowed() const { return is_read() || is_update(); }
+
+protected:
   bool is_valid() const { return file_mode_ != 0; }
 
   bool is_write() const {
