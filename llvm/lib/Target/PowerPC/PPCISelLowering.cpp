@@ -11991,9 +11991,8 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
 
   // f32 on all FPU targets, f64 on use64BitRegs() targets only.
   // LowerIS_FPCLASS is invoked during Legalize (after type-legalization), so
-  // PPC machine nodes are safe here — they are opaque to all IR optimizers
-  // and carry no FP-exception semantics, making this correct under
-  // -ffp-model=strict (unlike the generic ISD::SETUO in expandIS_FPCLASS).
+  // PPC machine nodes are safe here. They carry no FP-exception semantics,
+  // making this correct under -ffp-model=strict.
   assert((VT == MVT::f32 || VT == MVT::f64) &&
          "unexpected type in LowerIS_FPCLASS");
 
