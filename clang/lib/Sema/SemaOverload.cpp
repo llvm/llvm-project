@@ -14796,10 +14796,9 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   LookupResult R(SemaRef, ULE->getName(), ULE->getNameLoc(),
                  Sema::LookupOrdinaryName);
   CXXRecordDecl *FoundInClass = nullptr;
-  if (DiagnoseTwoPhaseLookup(SemaRef, Fn->getExprLoc(), SS, R,
-                             OverloadCandidateSet::CSK_Normal,
-                             ResolvedCandidateSet, ExplicitTemplateArgs,
-                             Args, &FoundInClass)) {
+  if (DiagnoseTwoPhaseLookup(
+          SemaRef, Fn->getExprLoc(), SS, R, OverloadCandidateSet::CSK_Normal,
+          ResolvedCandidateSet, ExplicitTemplateArgs, Args, &FoundInClass)) {
     // OK, diagnosed a two-phase lookup issue.
   } else if (ResolvedCandidateSet.empty()) {
     // Try to recover from an empty lookup with typo correction.
