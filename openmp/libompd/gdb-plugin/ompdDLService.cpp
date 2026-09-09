@@ -1,5 +1,5 @@
 /*
- * ompdDLService.c -- Load libompd and look up OMPD API symbols.
+ * ompdDLService.cpp -- Load libompd and look up OMPD API symbols.
  */
 
 //===----------------------------------------------------------------------===//
@@ -12,11 +12,15 @@
 
 #include "ompdDLService.h"
 
-#include <dlfcn.h>
-#include <string.h>
+#include "llvm/Support/DynamicLibrary.h"
+
+#include <cstdio>
+#include <cstring>
+#include <string>
 
 void *ompd_library = NULL;
 
+static llvm::sys::DynamicLibrary LoadedLib;
 static char last_error[256];
 
 static void set_error(const char *msg) {
@@ -28,41 +32,35 @@ static void set_error(const char *msg) {
   last_error[sizeof(last_error) - 1] = '\0';
 }
 
-static void clear_error(void) {
-  last_error[0] = '\0';
-  (void)dlerror();
-}
+static void clear_error(void) { last_error[0] = '\0'; }
 
 int ompd_load_library(const char *name) {
-  const char *dlerr;
-
   clear_error();
   if (!name || !name[0]) {
     set_error("OMPD library path is empty");
-    ompd_library = NULL;
     return -1;
   }
 
-  ompd_library = dlopen(name, RTLD_LAZY);
-  dlerr = dlerror();
-  if (dlerr) {
-    set_error(dlerr);
-    ompd_library = NULL;
+  std::string errMsg;
+  llvm::sys::DynamicLibrary NewLib =
+      llvm::sys::DynamicLibrary::getLibrary(name, &errMsg);
+  if (!NewLib.isValid()) {
+    set_error(errMsg.empty() ? "failed to load OMPD library" : errMsg.c_str());
     return -1;
   }
-  if (!ompd_library) {
-    set_error("dlopen returned NULL");
-    return -1;
-  }
+
+  if (LoadedLib.isValid())
+    llvm::sys::DynamicLibrary::closeLibrary(LoadedLib);
+  LoadedLib = NewLib;
+  ompd_library = LoadedLib.getOSSpecificHandle();
   return 0;
 }
 
 void *ompd_get_symbol(const char *name) {
-  const char *dlerr;
   void *sym;
 
   clear_error();
-  if (!ompd_library) {
+  if (!LoadedLib.isValid()) {
     set_error("OMPD library is not loaded");
     return NULL;
   }
@@ -71,10 +69,10 @@ void *ompd_get_symbol(const char *name) {
     return NULL;
   }
 
-  sym = dlsym(ompd_library, name);
-  dlerr = dlerror();
-  if (dlerr) {
-    set_error(dlerr);
+  sym = LoadedLib.getAddressOfSymbol(name);
+  if (!sym) {
+    snprintf(last_error, sizeof(last_error), "could not find symbol '%s'",
+             name);
     return NULL;
   }
   return sym;
