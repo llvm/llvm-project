@@ -454,7 +454,6 @@ private:
   std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
   std::optional<Context::CallbackID> MoveInstrCB;
-  std::optional<Context::CallbackID> SetUseCB;
 
   std::unique_ptr<BatchAAResults> BatchAA;
 
@@ -510,8 +509,6 @@ private:
   /// Called by the callbacks when instruction \p I is about to be moved to
   /// \p To.
   LLVM_ABI void notifyMoveInstr(Instruction *I, const BBIterator &To);
-  /// Called by the callbacks when \p U's source is about to be set to \p NewSrc
-  LLVM_ABI void notifySetUse(const Use &U, Value *NewSrc);
 
 public:
   /// This constructor also registers callbacks.
@@ -525,8 +522,6 @@ public:
         [this](Instruction *I, const BBIterator &To) {
           notifyMoveInstr(I, To);
         });
-    SetUseCB = Ctx.registerSetUseCallback(
-        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
@@ -535,8 +530,6 @@ public:
       Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
     if (MoveInstrCB)
       Ctx->unregisterMoveInstrCallback(*MoveInstrCB);
-    if (SetUseCB)
-      Ctx->unregisterSetUseCallback(*SetUseCB);
   }
 
   DGNode *getNode(Instruction *I) const {
