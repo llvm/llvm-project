@@ -216,6 +216,16 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");
     return nullptr;
   }
+
+  const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
+  const int MovDstIdx =
+      AMDGPU::getNamedOperandIdx(MovMI.getOpcode(), AMDGPU::OpName::vdst);
+  if (OldIdx != -1 &&
+      TII->getOpSize(DPPOp, OldIdx) != TII->getOpSize(MovMI, MovDstIdx)) {
+    LLVM_DEBUG(dbgs() << "  failed: old operand size differs from dst\n");
+    return nullptr;
+  }
+
   int OrigOpE32 = AMDGPU::getVOPe32(OrigOp);
   // Prior checks cover Mask with VOPC condition, but not on purpose
   auto *RowMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask);
@@ -249,7 +259,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       // If we shrunk a 64bit vop3b to 32bits, just ignore the sdst
     }
 
-    const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
     if (OldIdx != -1) {
       assert(OldIdx == NumOperands);
       assert(isOfRegClass(
@@ -261,12 +270,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.addReg(CombOldVGPR.Reg, getUndefRegState(!Def),
                      CombOldVGPR.SubReg);
       ++NumOperands;
-
-      if (!TII->isOperandLegal(*DPPInst, OldIdx)) {
-        LLVM_DEBUG(dbgs() << "  failed: old operand is illegal\n");
-        Fail = true;
-        break;
-      }
     } else if (TII->isVOPC(DPPOp) || (TII->isVOP3(DPPOp) && OrigOpE32 != -1 &&
                                       TII->isVOPC(OrigOpE32))) {
       // VOPC DPP and VOPC promoted to VOP3 DPP do not have an old operand
