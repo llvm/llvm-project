@@ -197,10 +197,8 @@ Error WebAssemblyCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
 
 void WebAssemblyCodeGenPassBuilder::addPreLegalizeMachineIR(
     PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add WebAssemblyPreLegalizerCombiner when it has
-    // been ported.
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(WebAssemblyPreLegalizerCombinerPass(), PMW);
 }
 
 Error WebAssemblyCodeGenPassBuilder::addLegalizeMachineIR(
@@ -211,10 +209,8 @@ Error WebAssemblyCodeGenPassBuilder::addLegalizeMachineIR(
 
 void WebAssemblyCodeGenPassBuilder::addPreRegBankSelect(
     PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add WebAssemblyPostLegalizerCombiner when it has
-    // been ported.
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(WebAssemblyPostLegalizerCombinerPass(), PMW);
 }
 
 Error WebAssemblyCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {

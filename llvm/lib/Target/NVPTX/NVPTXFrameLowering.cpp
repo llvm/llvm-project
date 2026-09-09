@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXFrameLowering.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXRegisterInfo.h"
 #include "NVPTXSubtarget.h"

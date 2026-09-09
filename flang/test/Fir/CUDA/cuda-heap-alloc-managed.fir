@@ -1,6 +1,10 @@
 // RUN: fir-opt --cuda-heap-alloc-promotion %s | FileCheck %s --check-prefix=HEAP
 // RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s --check-prefix=LLVM
 
+// Only the managed allocator is device accessible here, so -fstack-arrays
+// cannot keep the automatic arrays on the stack.
+// RUN: fir-opt --cuda-heap-alloc-promotion=stack-arrays=true %s | FileCheck %s --check-prefix=HEAP
+
 // Same routing as cuda-heap-alloc-unified.fir, with the managed entry points.
 
 // Declarations are emitted at the top of the module, before any function.

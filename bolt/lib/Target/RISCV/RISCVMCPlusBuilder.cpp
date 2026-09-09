@@ -28,6 +28,14 @@ using namespace bolt;
 
 namespace {
 
+bool isValidCallJALR(const MCInst &Inst) {
+  if (Inst.getOpcode() != RISCV::JALR || MCPlus::getNumPrimeOperands(Inst) != 3)
+    return false;
+
+  return Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm();
+}
+
 class RISCVMCPlusBuilder : public MCPlusBuilder {
   bool isRV64() const { return STI->hasFeature(RISCV::Feature64Bit); }
   unsigned regSize() const { return isRV64() ? 8 : 4; }
@@ -39,6 +47,28 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  MCPhysReg getFlagsReg() const override { return RISCV::NoRegister; }
+
+  bool isCleanReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case RISCV::ADDI:
+      return Inst.getOperand(1).isReg() &&
+             Inst.getOperand(1).getReg() == RISCV::X0 &&
+             Inst.getOperand(2).isImm() && Inst.getOperand(2).getImm() == 0;
+    case RISCV::C_LI:
+      return Inst.getOperand(1).isImm() && Inst.getOperand(1).getImm() == 0;
+    default:
+      return false;
+    }
+  }
+
+  BitVector getRegsUsedAsParams() const override {
+    BitVector Regs(RegInfo->getNumRegs(), false);
+    for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X17; ++Reg)
+      Regs |= getAliases(Reg);
+    return Regs;
+  }
 
   std::unique_ptr<MCSymbolizer>
   createTargetSymbolizer(BinaryFunction &Function,
@@ -71,6 +101,33 @@ public:
     Regs |= getAliases(RISCV::X25);
     Regs |= getAliases(RISCV::X26);
     Regs |= getAliases(RISCV::X27);
+  }
+
+  void getDefaultLiveOut(BitVector &Regs) const override {
+    // The RISC-V psABI uses a0 (x10) and a1 (x11) to return integer and pointer
+    // values.
+    Regs |= getAliases(RISCV::X10);
+    Regs |= getAliases(RISCV::X11);
+  }
+
+  void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const override {
+    for (MCPhysReg Reg = RISCV::X1; Reg <= RISCV::X31; ++Reg) {
+      if (IncludeAlias)
+        Regs |= getAliases(Reg);
+      else
+        Regs.set(Reg);
+    }
+  }
+
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector ExclusionMask(RegInfo->getNumRegs(), false);
+    ExclusionMask |= getAliases(RISCV::X1); // return address
+    ExclusionMask |= getAliases(RISCV::X2); // stack pointer
+    ExclusionMask |= getAliases(RISCV::X3); // global pointer
+    ExclusionMask |= getAliases(RISCV::X4); // thread pointer
+    ExclusionMask |= getAliases(RISCV::X8); // frame pointer
+    ExclusionMask.flip();
+    Regs &= ExclusionMask;
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
@@ -167,6 +224,10 @@ public:
       return RISCV::C_BNEZ;
     case RISCV::C_BNEZ:
       return RISCV::C_BEQZ;
+    case RISCV::BEQI:
+      return RISCV::BNEI;
+    case RISCV::BNEI:
+      return RISCV::BEQI;
     }
   }
 
@@ -303,7 +364,61 @@ public:
 
   void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
-    return createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
+    createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
+    setTailCall(Inst);
+  }
+
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
+                                            const MCSymbol *TargetLocation,
+                                            MCContext *Ctx) override {
+    const bool IsTailCall = isTailCall(DirectCall);
+    assert(((DirectCall.getOpcode() == RISCV::PseudoCALL && !IsTailCall) ||
+            (DirectCall.getOpcode() == RISCV::PseudoTAIL && IsTailCall)) &&
+           "RISC-V direct (tail) call instruction expected");
+
+    // Load the resolved function address directly from its GOT slot:
+    //
+    //   auipc t3, %pcrel_hi(TargetLocation)
+    //   l[dw] t3, %pcrel_lo(.Lpcrel_hi)(t3)
+    //   jalr  ra, t3, 0
+    //
+    // A tail call uses zero instead of ra as the JALR destination.
+    InstructionListType Code;
+    // Use t3 (x28), the scratch register used by linker-generated RISC-V
+    // PLT/IPLT entries. It is caller-saved, is not an argument register, and
+    // the original call through the PLT already clobbers it.
+    const MCPhysReg PLTScratchReg = RISCV::X28;
+    MCSymbol *AUIPCLabel = Ctx->createNamedTempSymbol("pcrel_hi");
+
+    MCInst InstAUIPC =
+        MCInstBuilder(RISCV::AUIPC).addReg(PLTScratchReg).addImm(0);
+    // TargetLocation is already registered at the existing GOT slot, so use a
+    // direct PC-relative relocation to that slot instead of R_RISCV_GOT_HI20,
+    // which is used when starting from the referenced function symbol.
+    setOperandToSymbolRef(InstAUIPC, /*OpNum=*/1, TargetLocation,
+                          /*Addend=*/0, Ctx, ELF::R_RISCV_PCREL_HI20);
+    setInstLabel(InstAUIPC, AUIPCLabel);
+    Code.emplace_back(std::move(InstAUIPC));
+
+    // Load the call target from the GOT slot using LD on RV64 or LW on RV32.
+    MCInst InstLoad = MCInstBuilder(loadOpc())
+                          .addReg(PLTScratchReg)
+                          .addReg(PLTScratchReg)
+                          .addImm(0);
+    // Pair the I-type LD/LW immediate with the label on AUIPC. RISC-V
+    // R_RISCV_PCREL_LO12_I relocations name the corresponding HI20 location.
+    setOperandToSymbolRef(InstLoad, /*OpNum=*/2, AUIPCLabel,
+                          /*Addend=*/0, Ctx, ELF::R_RISCV_PCREL_LO12_I);
+    Code.emplace_back(std::move(InstLoad));
+
+    MCInst InstCall = MCInstBuilder(RISCV::JALR)
+                          .addReg(IsTailCall ? RISCV::X0 : RISCV::X1)
+                          .addReg(PLTScratchReg)
+                          .addImm(0);
+    moveAnnotations(std::move(DirectCall), InstCall);
+    Code.emplace_back(std::move(InstCall));
+
+    return Code;
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
@@ -382,6 +497,8 @@ public:
     case RISCV::BNE:
     case RISCV::BLT:
     case RISCV::BLTU:
+    case RISCV::BEQI:
+    case RISCV::BNEI:
       OpNum = 2;
       return true;
     }
@@ -504,7 +621,9 @@ public:
   }
 
   bool isCallAuipc(const MCInst &Inst) const {
-    if (Inst.getOpcode() != RISCV::AUIPC)
+    if (Inst.getOpcode() != RISCV::AUIPC ||
+        MCPlus::getNumPrimeOperands(Inst) != 2 || !Inst.getOperand(0).isReg() ||
+        Inst.getOperand(0).getReg() == RISCV::X0)
       return false;
 
     const auto &ImmOp = Inst.getOperand(1);
@@ -525,10 +644,9 @@ public:
   }
 
   bool isRISCVCall(const MCInst &First, const MCInst &Second) const override {
-    if (!isCallAuipc(First))
+    if (!isCallAuipc(First) || !isValidCallJALR(Second))
       return false;
 
-    assert(Second.getOpcode() == RISCV::JALR);
     return true;
   }
 

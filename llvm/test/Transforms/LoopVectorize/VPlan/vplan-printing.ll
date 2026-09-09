@@ -435,10 +435,10 @@ define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %if.end ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:    IR   %isd = getelementptr inbounds i32, ptr %src, i64 %iv, !dbg !7
-; CHECK-NEXT:    IR   %lsd = load i32, ptr %isd, align 4, !dbg !8
-; CHECK-NEXT:    IR   %psd = add nuw nsw i32 %lsd, 23, !dbg !9
-; CHECK-NEXT:    IR   %cmp1 = icmp slt i32 %lsd, 100, !dbg !10
+; CHECK-NEXT:    IR   %isd = getelementptr inbounds i32, ptr %src, i64 %iv, !dbg !{{[0-9]+}}
+; CHECK-NEXT:    IR   %lsd = load i32, ptr %isd, align 4, !dbg !{{[0-9]+}}
+; CHECK-NEXT:    IR   %psd = add nuw nsw i32 %lsd, 23, !dbg !{{[0-9]+}}
+; CHECK-NEXT:    IR   %cmp1 = icmp slt i32 %lsd, 100, !dbg !{{[0-9]+}}
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ;
