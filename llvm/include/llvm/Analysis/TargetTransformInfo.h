@@ -1953,6 +1953,13 @@ public:
   /// in the loop.
   LLVM_ABI bool preferInLoopReduction(RecurKind Kind, Type *Ty) const;
 
+  /// \returns True if a horizontal FP reduction on \p ScalarTy is narrow
+  /// enough on the target that vectorizing it at narrow width is not
+  /// profitable; false leaves it to the cost model. \p IsScalable selects the
+  /// target's scalable vector width instead of the fixed-width one.
+  LLVM_ABI bool isNarrowFPReductionUnprofitable(Type *ScalarTy,
+                                                bool IsScalable) const;
+
   /// \returns True if the target prefers reductions select kept in the loop
   /// when tail folding. i.e.
   /// loop:

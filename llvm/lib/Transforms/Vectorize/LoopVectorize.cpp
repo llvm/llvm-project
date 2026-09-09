@@ -5606,6 +5606,15 @@ LoopVectorizationPlanner::computeBestVF() {
 
   VPlan *PlanForBestVF = &FirstPlan;
 
+  // A narrow FP reduction (e.g. f64 on 128-bit-only AArch64) fed by a
+  // mostly-gappy interleaved access is not profitable at narrow width: the
+  // load fetches at least twice the used data, wasting bandwidth. Gathers and
+  // fully-used groups don't waste bandwidth; leave them to the cost model.
+  bool HasGappyInterleave = any_of(
+      IAI.getInterleaveGroups(), [](const InterleaveGroup<Instruction> *G) {
+        return G->getNumMembers() * 2 <= G->getFactor();
+      });
+
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
                                P->vectorFactors().end());
@@ -5621,6 +5630,16 @@ LoopVectorizationPlanner::computeBestVF() {
       ElementCount VF = VFs[I];
       if (VF.isScalar())
         continue;
+      if (HasGappyInterleave && VF.getKnownMinValue() <= 2 &&
+          any_of(Legal->getReductionVars(), [this, VF](const auto &R) {
+            return TTI.isNarrowFPReductionUnprofitable(
+                R.second.getRecurrenceType(), VF.isScalable());
+          })) {
+        LLVM_DEBUG(dbgs() << "LV: Not considering vector loop of width " << VF
+                          << " because of a narrow FP reduction with a gappy "
+                             "interleaved access.\n");
+        continue;
+      }
       if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
         LLVM_DEBUG(
             dbgs()

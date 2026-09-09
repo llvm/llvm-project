@@ -3657,6 +3657,27 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   llvm_unreachable("Unsupported register kind");
 }
 
+bool AArch64TTIImpl::isNarrowFPReductionUnprofitable(Type *ScalarTy,
+                                                     bool IsScalable) const {
+  if (!ScalarTy->isFloatingPointTy())
+    return false;
+  // A horizontal FP reduction over at most MaxNarrowReductionElts elements
+  // per vector register is not profitable: the reduction epilogue and operand
+  // gathering cost more than the scalar reduction.
+  constexpr unsigned MaxNarrowReductionElts = 2;
+  unsigned RegWidth;
+  if (IsScalable) {
+    if (!ST->isSVEorStreamingSVEAvailable())
+      return false;
+    // Use the target's actual SVE width so a wide-SVE target is not narrow.
+    RegWidth = std::max(ST->getMinSVEVectorSizeInBits(), 128u);
+  } else {
+    RegWidth = getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+                   .getFixedValue();
+  }
+  return RegWidth / ScalarTy->getScalarSizeInBits() <= MaxNarrowReductionElts;
+}
+
 bool AArch64TTIImpl::isSingleExtWideningInstruction(
     unsigned Opcode, Type *DstTy, ArrayRef<const Value *> Args,
     Type *SrcOverrideTy) const {
