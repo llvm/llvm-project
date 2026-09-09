@@ -507,10 +507,10 @@ entry:
   ret i32 %call
 }
 
-attributes #0 = { noinline nounwind readnone "relocation-model"="pic" }
-attributes #1 = { nounwind readonly "relocation-model"="pic" }
-attributes #2 = { noinline nounwind readonly "relocation-model"="pic" }
-attributes #3 = { nounwind "relocation-model"="pic" }
+attributes #0 = { noinline nounwind readnone }
+attributes #1 = { nounwind readonly }
+attributes #2 = { noinline nounwind readonly }
+attributes #3 = { nounwind }
 attributes #4 = { nounwind }
 attributes #5 = { nobuiltin }
 
