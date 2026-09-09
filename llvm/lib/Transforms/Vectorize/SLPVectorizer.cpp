@@ -32458,11 +32458,13 @@ private:
               auto *RdxOp = cast<Instruction>(U);
               if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
                 auto *BO = dyn_cast<BinaryOperator>(RdxOp);
-                if (BO && RdxKind == RecurKind::FAdd) {
+                InstructionsState RdxOpS = BO && RdxKind == RecurKind::FAdd
+                                               ? getSameOpcode(BO, TLI)
+                                               : InstructionsState::invalid();
+                if (RdxOpS && RdxOpS.isAddSubLikeOp()) {
                   unsigned OpIdx = BO->getOperand(1) == RdxVal ? 1 : 0;
-                  InstructionCost FMACost =
-                      canConvertToFMA(BO, getSameOpcode(BO, TLI), DT, DL, *TTI,
-                                      TLI, CostKind, OpIdx);
+                  InstructionCost FMACost = canConvertToFMA(
+                      BO, RdxOpS, DT, DL, *TTI, TLI, CostKind, OpIdx);
                   if (FMACost.isValid()) {
                     LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                     if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -32601,8 +32603,10 @@ private:
               Ops.push_back(U);
             }
             if (!Ops.empty()) {
-              FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
-                                        *TTI, TLI, CostKind, FMulOpIdx);
+              InstructionsState S = getSameOpcode(Ops, TLI);
+              if (S && S.isAddSubLikeOp())
+                FMACost = canConvertToFMA(Ops, S, DT, DL, *TTI, TLI, CostKind,
+                                          FMulOpIdx);
               if (FMACost.isValid()) {
                 // Calculate actual FMAD cost.
                 IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
