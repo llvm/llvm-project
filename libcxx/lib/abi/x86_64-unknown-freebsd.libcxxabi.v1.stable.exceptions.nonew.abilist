@@ -615,7 +615,6 @@
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexC2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexD2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__breakpointEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__do_nothingEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__get_sp_mutEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__next_primeEm', 'type': 'FUNC'}

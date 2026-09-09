@@ -49,14 +49,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-void __breakpoint() noexcept {
-#if defined(_WIN32)
-  DebugBreak();
-#else
-  raise(SIGTRAP);
-#endif // defined(_WIN32)
-}
-
 [[__gnu__::__weak__]] bool is_debugger_present() noexcept {
 #if defined(_WIN32)
 
