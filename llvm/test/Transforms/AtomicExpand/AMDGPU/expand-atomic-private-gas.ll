@@ -9,11 +9,16 @@ define void @system_atomic_store_unordered_float(ptr addrspace(5) %addr, float %
 ; GFX1200-NEXT:    store float [[VAL]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret void
 ;
-; GFX1250-LABEL: define void @system_atomic_store_unordered_float(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], float [[VAL:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    store atomic float [[VAL]], ptr [[SCRATCH_ASCAST]] unordered, align 4
-; GFX1250-NEXT:    ret void
+; GFX1250-NOGAS-LABEL: define void @system_atomic_store_unordered_float(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], float [[VAL:%.*]]) {
+; GFX1250-NOGAS-NEXT:    store float [[VAL]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret void
+;
+; GFX1250-GAS-LABEL: define void @system_atomic_store_unordered_float(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], float [[VAL:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    store atomic float [[VAL]], ptr [[SCRATCH_ASCAST]] unordered, align 4
+; GFX1250-GAS-NEXT:    ret void
 ;
   store atomic float %val, ptr addrspace(5) %addr unordered, align 4
   ret void
@@ -25,11 +30,16 @@ define void @system_atomic_store_unordered_i32(ptr addrspace(5) %addr, i32 %val)
 ; GFX1200-NEXT:    store i32 [[VAL]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret void
 ;
-; GFX1250-LABEL: define void @system_atomic_store_unordered_i32(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    store atomic i32 [[VAL]], ptr [[SCRATCH_ASCAST]] unordered, align 4
-; GFX1250-NEXT:    ret void
+; GFX1250-NOGAS-LABEL: define void @system_atomic_store_unordered_i32(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
+; GFX1250-NOGAS-NEXT:    store i32 [[VAL]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret void
+;
+; GFX1250-GAS-LABEL: define void @system_atomic_store_unordered_i32(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    store atomic i32 [[VAL]], ptr [[SCRATCH_ASCAST]] unordered, align 4
+; GFX1250-GAS-NEXT:    ret void
 ;
   store atomic i32 %val, ptr addrspace(5) %addr unordered, align 4
   ret void
@@ -41,11 +51,16 @@ define void @system_atomic_store_release_i32(ptr addrspace(5) %addr, i32 %val) {
 ; GFX1200-NEXT:    store i32 [[VAL]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret void
 ;
-; GFX1250-LABEL: define void @system_atomic_store_release_i32(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    store atomic i32 [[VAL]], ptr [[SCRATCH_ASCAST]] release, align 4
-; GFX1250-NEXT:    ret void
+; GFX1250-NOGAS-LABEL: define void @system_atomic_store_release_i32(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
+; GFX1250-NOGAS-NEXT:    store i32 [[VAL]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret void
+;
+; GFX1250-GAS-LABEL: define void @system_atomic_store_release_i32(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    store atomic i32 [[VAL]], ptr [[SCRATCH_ASCAST]] release, align 4
+; GFX1250-GAS-NEXT:    ret void
 ;
   store atomic i32 %val, ptr addrspace(5) %addr release, align 4
   ret void
@@ -57,11 +72,16 @@ define void @workgroup_atomic_store_release_i32(ptr addrspace(5) %addr, i32 %val
 ; GFX1200-NEXT:    store i32 [[VAL]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret void
 ;
-; GFX1250-LABEL: define void @workgroup_atomic_store_release_i32(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    store atomic i32 [[VAL]], ptr [[SCRATCH_ASCAST]] syncscope("workgroup") release, align 4
-; GFX1250-NEXT:    ret void
+; GFX1250-NOGAS-LABEL: define void @workgroup_atomic_store_release_i32(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
+; GFX1250-NOGAS-NEXT:    store i32 [[VAL]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret void
+;
+; GFX1250-GAS-LABEL: define void @workgroup_atomic_store_release_i32(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[VAL:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    store atomic i32 [[VAL]], ptr [[SCRATCH_ASCAST]] syncscope("workgroup") release, align 4
+; GFX1250-GAS-NEXT:    ret void
 ;
   store atomic i32 %val, ptr addrspace(5) %addr syncscope("workgroup") release, align 4
   ret void
@@ -73,11 +93,16 @@ define float @system_atomic_load_unordered_float(ptr addrspace(5) %addr) {
 ; GFX1200-NEXT:    [[VAL:%.*]] = load float, ptr addrspace(5) [[ADDR]], align 4, !invariant.load [[META0:![0-9]+]], !nontemporal [[META1:![0-9]+]]
 ; GFX1200-NEXT:    ret float [[VAL]]
 ;
-; GFX1250-LABEL: define float @system_atomic_load_unordered_float(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = load atomic float, ptr [[SCRATCH_ASCAST]] unordered, align 4, !invariant.load [[META0:![0-9]+]], !nontemporal [[META1:![0-9]+]]
-; GFX1250-NEXT:    ret float [[VAL]]
+; GFX1250-NOGAS-LABEL: define float @system_atomic_load_unordered_float(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[VAL:%.*]] = load float, ptr addrspace(5) [[ADDR]], align 4, !invariant.load [[META0:![0-9]+]], !nontemporal [[META1:![0-9]+]]
+; GFX1250-NOGAS-NEXT:    ret float [[VAL]]
+;
+; GFX1250-GAS-LABEL: define float @system_atomic_load_unordered_float(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = load atomic float, ptr [[SCRATCH_ASCAST]] unordered, align 4, !invariant.load [[META0:![0-9]+]], !nontemporal [[META1:![0-9]+]]
+; GFX1250-GAS-NEXT:    ret float [[VAL]]
 ;
   %val = load atomic float, ptr addrspace(5) %addr unordered, align 4, !invariant.load !1, !nontemporal !0
   ret float %val
@@ -89,11 +114,16 @@ define i32 @system_atomic_load_unordered_i32(ptr addrspace(5) %addr) {
 ; GFX1200-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret i32 [[VAL]]
 ;
-; GFX1250-LABEL: define i32 @system_atomic_load_unordered_i32(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = load atomic i32, ptr [[SCRATCH_ASCAST]] unordered, align 4
-; GFX1250-NEXT:    ret i32 [[VAL]]
+; GFX1250-NOGAS-LABEL: define i32 @system_atomic_load_unordered_i32(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret i32 [[VAL]]
+;
+; GFX1250-GAS-LABEL: define i32 @system_atomic_load_unordered_i32(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = load atomic i32, ptr [[SCRATCH_ASCAST]] unordered, align 4
+; GFX1250-GAS-NEXT:    ret i32 [[VAL]]
 ;
   %val = load atomic i32, ptr addrspace(5) %addr unordered, align 4
   ret i32 %val
@@ -105,11 +135,16 @@ define i32 @system_atomic_load_acquire_i32(ptr addrspace(5) %addr) {
 ; GFX1200-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret i32 [[VAL]]
 ;
-; GFX1250-LABEL: define i32 @system_atomic_load_acquire_i32(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = load atomic i32, ptr [[SCRATCH_ASCAST]] acquire, align 4
-; GFX1250-NEXT:    ret i32 [[VAL]]
+; GFX1250-NOGAS-LABEL: define i32 @system_atomic_load_acquire_i32(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret i32 [[VAL]]
+;
+; GFX1250-GAS-LABEL: define i32 @system_atomic_load_acquire_i32(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = load atomic i32, ptr [[SCRATCH_ASCAST]] acquire, align 4
+; GFX1250-GAS-NEXT:    ret i32 [[VAL]]
 ;
   %val = load atomic i32, ptr addrspace(5) %addr acquire, align 4
   ret i32 %val
@@ -121,11 +156,16 @@ define i32 @workgroup_atomic_load_acquire_i32(ptr addrspace(5) %addr) {
 ; GFX1200-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret i32 [[VAL]]
 ;
-; GFX1250-LABEL: define i32 @workgroup_atomic_load_acquire_i32(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = load atomic i32, ptr [[SCRATCH_ASCAST]] syncscope("workgroup") acquire, align 4
-; GFX1250-NEXT:    ret i32 [[VAL]]
+; GFX1250-NOGAS-LABEL: define i32 @workgroup_atomic_load_acquire_i32(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret i32 [[VAL]]
+;
+; GFX1250-GAS-LABEL: define i32 @workgroup_atomic_load_acquire_i32(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = load atomic i32, ptr [[SCRATCH_ASCAST]] syncscope("workgroup") acquire, align 4
+; GFX1250-GAS-NEXT:    ret i32 [[VAL]]
 ;
   %val = load atomic i32, ptr addrspace(5) %addr syncscope("workgroup") acquire, align 4
   ret i32 %val
@@ -143,12 +183,23 @@ define i32 @system_atomic_cmpxchg_acq_rel_acquire_i32(ptr addrspace(5) %addr, i3
 ; GFX1200-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; GFX1200-NEXT:    ret i32 [[RES]]
 ;
-; GFX1250-LABEL: define i32 @system_atomic_cmpxchg_acq_rel_acquire_i32(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[OLD:%.*]], i32 [[IN:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = cmpxchg volatile ptr [[SCRATCH_ASCAST]], i32 [[OLD]], i32 [[IN]] acq_rel acquire, align 4, !nontemporal [[META1]]
-; GFX1250-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[VAL]], 0
-; GFX1250-NEXT:    ret i32 [[RES]]
+; GFX1250-NOGAS-LABEL: define i32 @system_atomic_cmpxchg_acq_rel_acquire_i32(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[OLD:%.*]], i32 [[IN:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], [[OLD]]
+; GFX1250-NOGAS-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[IN]], i32 [[TMP1]]
+; GFX1250-NOGAS-NEXT:    store i32 [[TMP3]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP1]], 0
+; GFX1250-NOGAS-NEXT:    [[TMP5:%.*]] = insertvalue { i32, i1 } [[TMP4]], i1 [[TMP2]], 1
+; GFX1250-NOGAS-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX1250-NOGAS-NEXT:    ret i32 [[RES]]
+;
+; GFX1250-GAS-LABEL: define i32 @system_atomic_cmpxchg_acq_rel_acquire_i32(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[OLD:%.*]], i32 [[IN:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = cmpxchg volatile ptr [[SCRATCH_ASCAST]], i32 [[OLD]], i32 [[IN]] acq_rel acquire, align 4, !nontemporal [[META1]]
+; GFX1250-GAS-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[VAL]], 0
+; GFX1250-GAS-NEXT:    ret i32 [[RES]]
 ;
   %val = cmpxchg volatile ptr addrspace(5) %addr, i32 %old, i32 %in acq_rel acquire, !nontemporal !0
   %res = extractvalue { i32, i1 } %val, 0
@@ -162,11 +213,17 @@ define i32 @system_atomicrmw_xchg_acq_rel_i32(ptr addrspace(5) %addr, i32 %in) {
 ; GFX1200-NEXT:    store i32 [[IN]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret i32 [[TMP1]]
 ;
-; GFX1250-LABEL: define i32 @system_atomicrmw_xchg_acq_rel_i32(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[IN:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = atomicrmw volatile xchg ptr [[SCRATCH_ASCAST]], i32 [[IN]] acq_rel, align 4
-; GFX1250-NEXT:    ret i32 [[VAL]]
+; GFX1250-NOGAS-LABEL: define i32 @system_atomicrmw_xchg_acq_rel_i32(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[IN:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    store i32 [[IN]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret i32 [[TMP1]]
+;
+; GFX1250-GAS-LABEL: define i32 @system_atomicrmw_xchg_acq_rel_i32(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[IN:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = atomicrmw volatile xchg ptr [[SCRATCH_ASCAST]], i32 [[IN]] acq_rel, align 4
+; GFX1250-GAS-NEXT:    ret i32 [[VAL]]
 ;
   %val = atomicrmw volatile xchg ptr addrspace(5) %addr, i32 %in acq_rel
   ret i32 %val
@@ -179,11 +236,17 @@ define i16 @system_atomicrmw_xchg_acq_rel_i16(ptr addrspace(5) %addr, i16 %in) {
 ; GFX1200-NEXT:    store i16 [[IN]], ptr addrspace(5) [[ADDR]], align 2
 ; GFX1200-NEXT:    ret i16 [[TMP1]]
 ;
-; GFX1250-LABEL: define i16 @system_atomicrmw_xchg_acq_rel_i16(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], i16 [[IN:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = atomicrmw volatile xchg ptr [[SCRATCH_ASCAST]], i16 [[IN]] acq_rel, align 2
-; GFX1250-NEXT:    ret i16 [[VAL]]
+; GFX1250-NOGAS-LABEL: define i16 @system_atomicrmw_xchg_acq_rel_i16(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i16 [[IN:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[TMP1:%.*]] = load i16, ptr addrspace(5) [[ADDR]], align 2
+; GFX1250-NOGAS-NEXT:    store i16 [[IN]], ptr addrspace(5) [[ADDR]], align 2
+; GFX1250-NOGAS-NEXT:    ret i16 [[TMP1]]
+;
+; GFX1250-GAS-LABEL: define i16 @system_atomicrmw_xchg_acq_rel_i16(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], i16 [[IN:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = atomicrmw volatile xchg ptr [[SCRATCH_ASCAST]], i16 [[IN]] acq_rel, align 2
+; GFX1250-GAS-NEXT:    ret i16 [[VAL]]
 ;
   %val = atomicrmw volatile xchg ptr addrspace(5) %addr, i16 %in acq_rel
   ret i16 %val
@@ -197,11 +260,18 @@ define half @system_atomicrmw_fmax_acq_rel_half(ptr addrspace(5) %addr, half %in
 ; GFX1200-NEXT:    store half [[TMP2]], ptr addrspace(5) [[ADDR]], align 2
 ; GFX1200-NEXT:    ret half [[TMP1]]
 ;
-; GFX1250-LABEL: define half @system_atomicrmw_fmax_acq_rel_half(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], half [[IN:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = atomicrmw volatile fmax ptr [[SCRATCH_ASCAST]], half [[IN]] acq_rel, align 2
-; GFX1250-NEXT:    ret half [[VAL]]
+; GFX1250-NOGAS-LABEL: define half @system_atomicrmw_fmax_acq_rel_half(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], half [[IN:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[TMP1:%.*]] = load half, ptr addrspace(5) [[ADDR]], align 2
+; GFX1250-NOGAS-NEXT:    [[TMP2:%.*]] = call half @llvm.maxnum.f16(half [[TMP1]], half [[IN]])
+; GFX1250-NOGAS-NEXT:    store half [[TMP2]], ptr addrspace(5) [[ADDR]], align 2
+; GFX1250-NOGAS-NEXT:    ret half [[TMP1]]
+;
+; GFX1250-GAS-LABEL: define half @system_atomicrmw_fmax_acq_rel_half(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], half [[IN:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = atomicrmw volatile fmax ptr [[SCRATCH_ASCAST]], half [[IN]] acq_rel, align 2
+; GFX1250-GAS-NEXT:    ret half [[VAL]]
 ;
   %val = atomicrmw volatile fmax ptr addrspace(5) %addr, half %in acq_rel
   ret half %val
@@ -215,11 +285,18 @@ define float @system_atomicrmw_fminimum_acq_rel_float(ptr addrspace(5) %addr, fl
 ; GFX1200-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret float [[TMP1]]
 ;
-; GFX1250-LABEL: define float @system_atomicrmw_fminimum_acq_rel_float(
-; GFX1250-SAME: ptr addrspace(5) [[ADDR:%.*]], float [[IN:%.*]]) {
-; GFX1250-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
-; GFX1250-NEXT:    [[VAL:%.*]] = atomicrmw volatile fminimum ptr [[SCRATCH_ASCAST]], float [[IN]] acq_rel, align 4, !nontemporal [[META1]]
-; GFX1250-NEXT:    ret float [[VAL]]
+; GFX1250-NOGAS-LABEL: define float @system_atomicrmw_fminimum_acq_rel_float(
+; GFX1250-NOGAS-SAME: ptr addrspace(5) [[ADDR:%.*]], float [[IN:%.*]]) {
+; GFX1250-NOGAS-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    [[TMP2:%.*]] = call float @llvm.minimum.f32(float [[TMP1]], float [[IN]])
+; GFX1250-NOGAS-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1250-NOGAS-NEXT:    ret float [[TMP1]]
+;
+; GFX1250-GAS-LABEL: define float @system_atomicrmw_fminimum_acq_rel_float(
+; GFX1250-GAS-SAME: ptr addrspace(5) [[ADDR:%.*]], float [[IN:%.*]]) {
+; GFX1250-GAS-NEXT:    [[SCRATCH_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR]] to ptr
+; GFX1250-GAS-NEXT:    [[VAL:%.*]] = atomicrmw volatile fminimum ptr [[SCRATCH_ASCAST]], float [[IN]] acq_rel, align 4, !nontemporal [[META1]]
+; GFX1250-GAS-NEXT:    ret float [[VAL]]
 ;
   %val = atomicrmw volatile fminimum ptr addrspace(5) %addr, float %in acq_rel, !nontemporal !0
   ret float %val
