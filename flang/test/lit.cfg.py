@@ -266,7 +266,7 @@ if result:
 config.substitutions.append(("%openmp_flags", "-fopenmp"))
 
 
-def flang_supports_f128():
+def flang_frontend_supports_f128():
     flang_exe = lit.util.which("flang", config.clang_tools_dir)
 
     if not flang_exe:
@@ -292,7 +292,7 @@ def flang_supports_f128():
 # for LIT tests checking for F128 library support.
 if config.flang_runtime_f128_math_lib or config.have_ldbl_mant_dig_113:
     config.available_features.add("flang-supports-f128-math")
-if flang_supports_f128():
+if flang_frontend_supports_f128():
     config.available_features.add("flang-frontend-supports-f128")
 if config.flang_runtime_f128_math_lib:
     config.available_features.add(
