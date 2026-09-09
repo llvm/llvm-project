@@ -54,6 +54,17 @@ class CompileUnitAPITestCase(TestBase):
             ),
         )
 
+        self.assertNotEqual(main_cu.GetIDInModule(), lldb.LLDB_INVALID_INDEX32)
+        self.assertEqual(main_cu.GetIDInModule(), main_cu_by_name.GetIDInModule())
+        self.assertEqual(
+            main_cu.GetIDInModule(), frame0.GetCompileUnit().GetIDInModule()
+        )
+        self.assertEqual(
+            lldb.SBCompileUnit().GetIDInModule(), lldb.LLDB_INVALID_INDEX32
+        )
+
+        self.assertEqual(a_mod.GetCompileUnitAtIndex(main_cu.GetIDInModule()), main_cu)
+
     def find_main_compile_unit(self) -> lldb.SBCompileUnit:
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
@@ -70,3 +81,19 @@ class CompileUnitAPITestCase(TestBase):
         """A compile unit built without optimization reports it."""
         self.build()
         self.assertFalse(self.find_main_compile_unit().GetIsOptimized())
+
+    def test_id_is_unique_per_module(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        module = target.FindModule(lldb.SBFileSpec("a.out"))
+
+        num_cus = module.GetNumCompileUnits()
+        self.assertGreater(num_cus, 1, "test needs a module with several CUs")
+
+        ids = set()
+        for i in range(num_cus):
+            cu = module.GetCompileUnitAtIndex(i)
+            self.assertEqual(cu.GetIDInModule(), i)
+            ids.add(cu.GetIDInModule())
+        self.assertEqual(len(ids), num_cus, "IDs must be unique")

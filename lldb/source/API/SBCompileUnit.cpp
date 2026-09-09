@@ -203,6 +203,14 @@ SBCompileUnit::operator bool() const {
   return m_opaque_ptr != nullptr;
 }
 
+uint32_t SBCompileUnit::GetIDInModule() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (m_opaque_ptr)
+    return m_opaque_ptr->GetIndex();
+  return LLDB_INVALID_INDEX32;
+}
+
 bool SBCompileUnit::operator==(const SBCompileUnit &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 
