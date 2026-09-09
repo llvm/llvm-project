@@ -652,6 +652,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
   function that is not a constructor. (#GH194298)
 
+- Fixed an assertion when a defaulted comparison operator was synthesized for a
+  class with an invalid non-static data member, such as one qualified with an
+  address space. (#GH194605)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

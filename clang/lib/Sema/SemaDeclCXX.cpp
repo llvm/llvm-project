@@ -8203,6 +8203,8 @@ protected:
       //   Unnamed bit-fields are not members ...
       if (Field->isUnnamedBitField())
         continue;
+      if (Field->isInvalidDecl())
+        continue;
       // Recursively expand anonymous structs.
       if (Field->isAnonymousStructOrUnion()) {
         if (visitSubobjects(Results, Field->getType()->getAsCXXRecordDecl(),
