@@ -278,8 +278,7 @@ def flang_frontend_supports_f128():
     except OSError:
         return False
 
-    if flang_cmd.returncode == 0:
-        return True
+    return flang_cmd.returncode == 0
 
 
 # Add features and substitutions to test F128 math support.
