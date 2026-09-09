@@ -1039,16 +1039,15 @@ A bundle of one 32-bit register is represented by `i32`, and a bundle of `N`
 registers is represented by `<N x i32>`. The actual intrinsic names include
 the corresponding LLVM overload suffixes.
 
-The three trailing arguments are immediate qualifiers with the following
+The two trailing arguments are immediate qualifiers with the following
 encodings:
 
 | Argument                | Values                    | PTX qualifiers                         |
 | ----------------------- | ------------------------- | -------------------------------------- |
 | `%elem_size`            | `8`, `16`                 | `.b8`, `.b16`                          |
 | `%idx_size`             | `2`, `4`                  | `.b2`, `.b4`                           |
-| `%repeat_factor`        | `0`, `1`, ..., `6`        | `.x1`, `.x2`, ..., `.x64`              |
 
-The repeat factor `num` is `1 << %repeat_factor`.
+The PTX repeat-factor qualifier is inferred from the overloaded bundle types.
 
 #### '`llvm.nvvm.spcompress.sp2to4`' Intrinsic
 
@@ -1056,8 +1055,7 @@ The repeat factor `num` is `1 << %repeat_factor`.
 
 ```llvm
 declare {MDataTy, CDataTy} @llvm.nvvm.spcompress.sp2to4(
-    DataTy %data, i32 %spdesc, i32 immarg %elem_size,
-    i32 immarg %idx_size, i32 immarg %repeat_factor)
+    DataTy %data, i32 %spdesc, i32 immarg %elem_size, i32 immarg %idx_size)
 ```
 
 ##### Overview:
@@ -1071,6 +1069,9 @@ elements as `cdata`. The number of 32-bit registers in each bundle is:
 | `data`  | `2 * num`                                   |
 | `cdata` | `num`                                       |
 | `mdata` | `ceil(num * %idx_size / %elem_size)`        |
+
+Here, `num` is half the number of registers in `DataTy` and determines the PTX
+repeat-factor qualifier (`.x1`, `.x2`, ..., `.x64`).
 
 The combined `mdata`, `cdata`, and `data` bundle size must not exceed 253
 registers.
@@ -1101,8 +1102,7 @@ For more information, see the
 declare DataTy @llvm.nvvm.spdecompress.{sp1to2,sp1to4,sp1to8,sp1to16,
                                         sp2to4,sp2to8,sp2to16,
                                         sp4to8,sp4to16}(
-    MDataTy %mdata, CDataTy %cdata, i32 immarg %elem_size,
-    i32 immarg %idx_size, i32 immarg %repeat_factor)
+    MDataTy %mdata, CDataTy %cdata, i32 immarg %elem_size, i32 immarg %idx_size)
 ```
 
 ##### Overview:
@@ -1121,6 +1121,9 @@ is:
 | `mdata` | `ceil(X * %idx_size * num / 32)`                    |
 | `cdata` | `ceil(X * %elem_size * num / 32)`                   |
 | `data`  | `ceil(Y * %elem_size * num / 32)`                   |
+
+Here, `num` is inferred from the number of registers in `DataTy` and determines
+the PTX repeat-factor qualifier (`.x1`, `.x2`, ..., `.x64`).
 
 The following conditions must hold:
 
