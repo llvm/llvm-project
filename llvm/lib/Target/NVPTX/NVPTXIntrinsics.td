@@ -2496,17 +2496,33 @@ def INT_NVVM_ADD_D :
 
 // mixed precision
 
+// match only when the fold removes at least one explicit conversion, and the
+// extended vector is not shared.
+class FoldableFPExtendV2F32<dag ops, dag frag>
+  : PatFrag<ops, frag, [{
+      return N->hasOneUse() && (N->getOperand(0)->hasOneUse() ||
+                                N->getOperand(1)->hasOneUse());
+    }]>;
+
 // FP_EXTEND to v2f32 is scalarized before isel, leaving one of two shapes
 // behind depending on whether the source lanes share a register.
-def fpextend_v2f32_from_packed : PatFrag<(ops node:$a),
-                                         (v2f32 (build_vector
-                                           (f32 (fpextend (extractelt node:$a, 0))),
-                                           (f32 (fpextend (extractelt node:$a, 1)))))>;
+def fpextend_v2f32_from_packed
+  : FoldableFPExtendV2F32<(ops node:$a),
+                          (v2f32 (build_vector
+                            (f32 (fpextend (extractelt node:$a, 0))),
+                            (f32 (fpextend (extractelt node:$a, 1)))))>;
 
-def fpextend_v2f32_from_lanes : PatFrag<(ops node:$a0, node:$a1),
-                                        (v2f32 (build_vector
-                                          (f32 (fpextend node:$a0)),
-                                          (f32 (fpextend node:$a1))))>;
+def fpextend_v2f32_from_lanes
+  : FoldableFPExtendV2F32<(ops node:$a0, node:$a1),
+                          (v2f32 (build_vector
+                            (f32 (fpextend node:$a0)),
+                            (f32 (fpextend node:$a1))))>;
+
+// fuse downconverting add/sub only when the result of the add/sub is solely
+// used for downconverting.
+def extractelt_only_for_cvt
+  : PatFrag<(ops node:$vec, node:$lane), (extractelt node:$vec, node:$lane),
+            [{ return N->hasOneUse() && N->getOperand(0)->hasNUsesOfValue(2, 0); }]>;
 
 foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
@@ -2577,8 +2593,10 @@ foreach t = [F16X2RT, BF16X2RT] in {
       "add.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2",
       // The cvt packs its first argument into the high half of the result.
       [(set t.Ty:$dst,
-        (CvtOp (extractelt (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
-               (extractelt (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
+        (CvtOp (extractelt_only_for_cvt
+                 (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
+               (extractelt_only_for_cvt
+                 (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
                /*pzo=*/0))]>,
     Requires<[hasRubinFamilySupport]>;
 }
@@ -2715,8 +2733,8 @@ foreach t = [F16X2RT, BF16X2RT] in {
       "sub.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2",
       // The cvt packs its first argument into the high half of the result.
       [(set t.Ty:$dst,
-        (CvtOp (extractelt (SubOp v2f32:$a, v2f32:$b), 1),
-               (extractelt (SubOp v2f32:$a, v2f32:$b), 0),
+        (CvtOp (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 1),
+               (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 0),
                /*pzo=*/0))]>,
     Requires<[hasRubinFamilySupport]>;
 }
