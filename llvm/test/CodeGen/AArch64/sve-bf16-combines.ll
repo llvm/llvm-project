@@ -40,21 +40,17 @@ define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 ;
 ; BF16_STREAMING-LABEL: fmla_nxv8bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    mov z3.s, #0x80000000
-; BF16_STREAMING-NEXT:    mov z4.s, #0x80000000
+; BF16_STREAMING-NEXT:    mov z3.h, #0 // =0x0
+; BF16_STREAMING-NEXT:    uunpkhi z4.s, z2.h
+; BF16_STREAMING-NEXT:    uunpkhi z5.s, z1.h
+; BF16_STREAMING-NEXT:    uunpklo z2.s, z2.h
+; BF16_STREAMING-NEXT:    uunpklo z1.s, z1.h
 ; BF16_STREAMING-NEXT:    ptrue p0.s
-; BF16_STREAMING-NEXT:    bfmlalb z3.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    bfmlalt z4.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    mov z2.h, #0 // =0x0
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
-; BF16_STREAMING-NEXT:    bfcvtnt z1.h, p0/m, z4.s
-; BF16_STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
-; BF16_STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
-; BF16_STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
-; BF16_STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
-; BF16_STREAMING-NEXT:    fadd z2.s, z4.s, z3.s
-; BF16_STREAMING-NEXT:    fadd z0.s, z0.s, z1.s
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; BF16_STREAMING-NEXT:    zip2 z6.h, z3.h, z0.h
+; BF16_STREAMING-NEXT:    zip1 z0.h, z3.h, z0.h
+; BF16_STREAMING-NEXT:    bfmlalb z6.s, z5.h, z4.h
+; BF16_STREAMING-NEXT:    bfmlalb z0.s, z1.h, z2.h
+; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z6.s
 ; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; BF16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; BF16_STREAMING-NEXT:    ret
@@ -93,13 +89,9 @@ define <vscale x 4 x bfloat> @fmla_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale 
 ;
 ; BF16_STREAMING-LABEL: fmla_nxv4bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    mov z3.s, #0x80000000
-; BF16_STREAMING-NEXT:    ptrue p0.s
 ; BF16_STREAMING-NEXT:    lsl z0.s, z0.s, #16
-; BF16_STREAMING-NEXT:    bfmlalb z3.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
-; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    fadd z0.s, z0.s, z1.s
+; BF16_STREAMING-NEXT:    ptrue p0.s
+; BF16_STREAMING-NEXT:    bfmlalb z0.s, z1.h, z2.h
 ; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; BF16_STREAMING-NEXT:    ret
 ;
@@ -141,12 +133,9 @@ define <vscale x 2 x bfloat> @fmla_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale 
 ; BF16_STREAMING:       // %bb.0:
 ; BF16_STREAMING-NEXT:    lsl z2.s, z2.s, #16
 ; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    ptrue p0.d
 ; BF16_STREAMING-NEXT:    lsl z0.s, z0.s, #16
-; BF16_STREAMING-NEXT:    fmul z1.s, p0/m, z1.s, z2.s
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z1.s
-; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
+; BF16_STREAMING-NEXT:    ptrue p0.d
+; BF16_STREAMING-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
 ; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; BF16_STREAMING-NEXT:    ret
 ;
@@ -194,21 +183,19 @@ define <vscale x 8 x bfloat> @fmls_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 ;
 ; BF16_STREAMING-LABEL: fmls_nxv8bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    mov z3.s, #0x80000000
-; BF16_STREAMING-NEXT:    mov z4.s, #0x80000000
+; BF16_STREAMING-NEXT:    ptrue p0.h
+; BF16_STREAMING-NEXT:    mov z3.h, #0 // =0x0
+; BF16_STREAMING-NEXT:    uunpkhi z5.s, z2.h
+; BF16_STREAMING-NEXT:    uunpklo z2.s, z2.h
+; BF16_STREAMING-NEXT:    fneg z1.h, p0/m, z1.h
 ; BF16_STREAMING-NEXT:    ptrue p0.s
-; BF16_STREAMING-NEXT:    bfmlalb z3.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    bfmlalt z4.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    mov z2.h, #0 // =0x0
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
-; BF16_STREAMING-NEXT:    bfcvtnt z1.h, p0/m, z4.s
-; BF16_STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
-; BF16_STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
-; BF16_STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
-; BF16_STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
-; BF16_STREAMING-NEXT:    fsub z2.s, z4.s, z3.s
-; BF16_STREAMING-NEXT:    fsub z0.s, z0.s, z1.s
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; BF16_STREAMING-NEXT:    zip2 z6.h, z3.h, z0.h
+; BF16_STREAMING-NEXT:    zip1 z0.h, z3.h, z0.h
+; BF16_STREAMING-NEXT:    uunpkhi z4.s, z1.h
+; BF16_STREAMING-NEXT:    uunpklo z1.s, z1.h
+; BF16_STREAMING-NEXT:    bfmlalb z6.s, z4.h, z5.h
+; BF16_STREAMING-NEXT:    bfmlalb z0.s, z1.h, z2.h
+; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z6.s
 ; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; BF16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; BF16_STREAMING-NEXT:    ret
@@ -248,13 +235,10 @@ define <vscale x 4 x bfloat> @fmls_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale 
 ;
 ; BF16_STREAMING-LABEL: fmls_nxv4bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    mov z3.s, #0x80000000
 ; BF16_STREAMING-NEXT:    ptrue p0.s
 ; BF16_STREAMING-NEXT:    lsl z0.s, z0.s, #16
-; BF16_STREAMING-NEXT:    bfmlalb z3.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
-; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    fsub z0.s, z0.s, z1.s
+; BF16_STREAMING-NEXT:    fneg z1.h, p0/m, z1.h
+; BF16_STREAMING-NEXT:    bfmlalb z0.s, z1.h, z2.h
 ; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; BF16_STREAMING-NEXT:    ret
 ;
@@ -295,14 +279,12 @@ define <vscale x 2 x bfloat> @fmls_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale 
 ;
 ; BF16_STREAMING-LABEL: fmls_nxv2bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    lsl z2.s, z2.s, #16
-; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
 ; BF16_STREAMING-NEXT:    ptrue p0.d
+; BF16_STREAMING-NEXT:    lsl z2.s, z2.s, #16
 ; BF16_STREAMING-NEXT:    lsl z0.s, z0.s, #16
-; BF16_STREAMING-NEXT:    fmul z1.s, p0/m, z1.s, z2.s
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z1.s
+; BF16_STREAMING-NEXT:    fneg z1.h, p0/m, z1.h
 ; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; BF16_STREAMING-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
 ; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; BF16_STREAMING-NEXT:    ret
 ;
@@ -347,23 +329,19 @@ define <vscale x 8 x bfloat> @fmla_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale
 ;
 ; BF16_STREAMING-LABEL: fmla_sel_nxv8bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    mov z3.s, #0x80000000
-; BF16_STREAMING-NEXT:    mov z4.s, #0x80000000
+; BF16_STREAMING-NEXT:    mov z3.h, #0 // =0x0
+; BF16_STREAMING-NEXT:    uunpkhi z4.s, z2.h
+; BF16_STREAMING-NEXT:    uunpkhi z5.s, z1.h
+; BF16_STREAMING-NEXT:    uunpklo z2.s, z2.h
+; BF16_STREAMING-NEXT:    uunpklo z1.s, z1.h
 ; BF16_STREAMING-NEXT:    ptrue p1.s
+; BF16_STREAMING-NEXT:    zip2 z6.h, z3.h, z0.h
+; BF16_STREAMING-NEXT:    zip1 z3.h, z3.h, z0.h
+; BF16_STREAMING-NEXT:    bfmlalb z6.s, z5.h, z4.h
 ; BF16_STREAMING-NEXT:    bfmlalb z3.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    bfmlalt z4.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    mov z2.h, #0 // =0x0
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z3.s
-; BF16_STREAMING-NEXT:    bfcvtnt z1.h, p1/m, z4.s
-; BF16_STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
-; BF16_STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
-; BF16_STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
-; BF16_STREAMING-NEXT:    zip1 z2.h, z2.h, z0.h
-; BF16_STREAMING-NEXT:    fadd z3.s, z4.s, z3.s
-; BF16_STREAMING-NEXT:    fadd z1.s, z2.s, z1.s
+; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z6.s
 ; BF16_STREAMING-NEXT:    bfcvt z2.h, p1/m, z3.s
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z1.s
-; BF16_STREAMING-NEXT:    uzp1 z1.h, z1.h, z2.h
+; BF16_STREAMING-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; BF16_STREAMING-NEXT:    mov z0.h, p0/m, z1.h
 ; BF16_STREAMING-NEXT:    ret
 ;
@@ -397,14 +375,9 @@ define <vscale x 4 x bfloat> @fmla_sel_nxv4bf16(<vscale x 4 x i1> %pred, <vscale
 ;
 ; BF16_STREAMING-LABEL: fmla_sel_nxv4bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    mov z3.s, #0x80000000
-; BF16_STREAMING-NEXT:    ptrue p1.s
+; BF16_STREAMING-NEXT:    lsl z3.s, z0.s, #16
 ; BF16_STREAMING-NEXT:    bfmlalb z3.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    lsl z2.s, z0.s, #16
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z3.s
-; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    fadd z1.s, z2.s, z1.s
-; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z1.s
+; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z3.s
 ; BF16_STREAMING-NEXT:    ret
 ;
 ; BF16_SVE-B16B16_STREAMING-LABEL: fmla_sel_nxv4bf16:
@@ -442,12 +415,9 @@ define <vscale x 2 x bfloat> @fmla_sel_nxv2bf16(<vscale x 2 x i1> %pred, <vscale
 ; BF16_STREAMING:       // %bb.0:
 ; BF16_STREAMING-NEXT:    lsl z2.s, z2.s, #16
 ; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
+; BF16_STREAMING-NEXT:    lsl z3.s, z0.s, #16
 ; BF16_STREAMING-NEXT:    ptrue p1.d
-; BF16_STREAMING-NEXT:    fmul z1.s, p1/m, z1.s, z2.s
-; BF16_STREAMING-NEXT:    lsl z2.s, z0.s, #16
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z1.s
-; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    fadd z1.s, p1/m, z1.s, z2.s
+; BF16_STREAMING-NEXT:    fmad z1.s, p1/m, z2.s, z3.s
 ; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z1.s
 ; BF16_STREAMING-NEXT:    ret
 ;
@@ -494,23 +464,21 @@ define <vscale x 8 x bfloat> @fmls_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale
 ;
 ; BF16_STREAMING-LABEL: fmls_sel_nxv8bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    mov z3.s, #0x80000000
-; BF16_STREAMING-NEXT:    mov z4.s, #0x80000000
+; BF16_STREAMING-NEXT:    ptrue p1.h
+; BF16_STREAMING-NEXT:    mov z3.h, #0 // =0x0
+; BF16_STREAMING-NEXT:    uunpkhi z5.s, z2.h
+; BF16_STREAMING-NEXT:    uunpklo z2.s, z2.h
+; BF16_STREAMING-NEXT:    fneg z1.h, p1/m, z1.h
 ; BF16_STREAMING-NEXT:    ptrue p1.s
+; BF16_STREAMING-NEXT:    zip2 z6.h, z3.h, z0.h
+; BF16_STREAMING-NEXT:    zip1 z3.h, z3.h, z0.h
+; BF16_STREAMING-NEXT:    uunpkhi z4.s, z1.h
+; BF16_STREAMING-NEXT:    uunpklo z1.s, z1.h
+; BF16_STREAMING-NEXT:    bfmlalb z6.s, z4.h, z5.h
 ; BF16_STREAMING-NEXT:    bfmlalb z3.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    bfmlalt z4.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    mov z2.h, #0 // =0x0
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z3.s
-; BF16_STREAMING-NEXT:    bfcvtnt z1.h, p1/m, z4.s
-; BF16_STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
-; BF16_STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
-; BF16_STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
-; BF16_STREAMING-NEXT:    zip1 z2.h, z2.h, z0.h
-; BF16_STREAMING-NEXT:    fsub z3.s, z4.s, z3.s
-; BF16_STREAMING-NEXT:    fsub z1.s, z2.s, z1.s
+; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z6.s
 ; BF16_STREAMING-NEXT:    bfcvt z2.h, p1/m, z3.s
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z1.s
-; BF16_STREAMING-NEXT:    uzp1 z1.h, z1.h, z2.h
+; BF16_STREAMING-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; BF16_STREAMING-NEXT:    mov z0.h, p0/m, z1.h
 ; BF16_STREAMING-NEXT:    ret
 ;
@@ -546,14 +514,11 @@ define <vscale x 4 x bfloat> @fmls_sel_nxv4bf16(<vscale x 4 x i1> %pred, <vscale
 ;
 ; BF16_STREAMING-LABEL: fmls_sel_nxv4bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    mov z3.s, #0x80000000
 ; BF16_STREAMING-NEXT:    ptrue p1.s
+; BF16_STREAMING-NEXT:    lsl z3.s, z0.s, #16
+; BF16_STREAMING-NEXT:    fneg z1.h, p1/m, z1.h
 ; BF16_STREAMING-NEXT:    bfmlalb z3.s, z1.h, z2.h
-; BF16_STREAMING-NEXT:    lsl z2.s, z0.s, #16
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z3.s
-; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    fsub z1.s, z2.s, z1.s
-; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z1.s
+; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z3.s
 ; BF16_STREAMING-NEXT:    ret
 ;
 ; BF16_SVE-B16B16_STREAMING-LABEL: fmls_sel_nxv4bf16:
@@ -590,14 +555,12 @@ define <vscale x 2 x bfloat> @fmls_sel_nxv2bf16(<vscale x 2 x i1> %pred, <vscale
 ;
 ; BF16_STREAMING-LABEL: fmls_sel_nxv2bf16:
 ; BF16_STREAMING:       // %bb.0:
-; BF16_STREAMING-NEXT:    lsl z2.s, z2.s, #16
-; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
 ; BF16_STREAMING-NEXT:    ptrue p1.d
-; BF16_STREAMING-NEXT:    fmul z1.s, p1/m, z1.s, z2.s
-; BF16_STREAMING-NEXT:    lsl z2.s, z0.s, #16
-; BF16_STREAMING-NEXT:    bfcvt z1.h, p1/m, z1.s
+; BF16_STREAMING-NEXT:    lsl z2.s, z2.s, #16
+; BF16_STREAMING-NEXT:    lsl z3.s, z0.s, #16
+; BF16_STREAMING-NEXT:    fneg z1.h, p1/m, z1.h
 ; BF16_STREAMING-NEXT:    lsl z1.s, z1.s, #16
-; BF16_STREAMING-NEXT:    fsubr z1.s, p1/m, z1.s, z2.s
+; BF16_STREAMING-NEXT:    fmad z1.s, p1/m, z2.s, z3.s
 ; BF16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z1.s
 ; BF16_STREAMING-NEXT:    ret
 ;
