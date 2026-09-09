@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/PGOFlowVerify.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,6 +24,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -32,6 +34,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -71,6 +74,10 @@ static cl::opt<bool> VerifyPGOFlowReportEntryCountUndercount(
     cl::Hidden,
     cl::desc("Report when entry count is higher than the visible caller-sum"));
 
+static cl::opt<bool> VerifyPGOFlowCreditIndirectCallers(
+    "verify-pgo-flow-credit-indirect-callers", cl::init(false), cl::Hidden,
+    cl::desc("Add value-profiled indirect calls to the caller-sum"));
+
 static cl::opt<bool> VerifyPGOFlowReportRecursiveEntryCountMismatch(
     "verify-pgo-flow-report-recursive-entry-count-mismatch", cl::init(false),
     cl::Hidden,
@@ -78,7 +85,8 @@ static cl::opt<bool> VerifyPGOFlowReportRecursiveEntryCountMismatch(
 
 static cl::opt<bool> VerifyPGOFlowAggressive(
     "verify-pgo-flow-aggressive", cl::init(false), cl::Hidden,
-    cl::desc("Enable optional entry-count checks (undercount, recursive)"));
+    cl::desc("Enable optional entry-count checks (undercount, indirect "
+             "credit, recursive)"));
 
 static bool isEnabled(const cl::opt<bool> &Flag) {
   return Flag || VerifyPGOFlowAggressive;
@@ -171,12 +179,17 @@ void PGOFlowVerifier::invalidateFunctionFrequencyCache(IRUnitRef IR) {
   auto DropFunction = [&](const Function *F) {
     FunctionBlockFreqInfoCache.erase(F);
     FunctionsWithU32WeightOverflow.erase(F);
+    if (IndirectCallTargetCountsValid)
+      updateIndirectCallTargetsForFunction(F);
   };
   if (isa<Module>(IR)) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: clear block-freq cache (module)\n");
     FunctionBlockFreqInfoCache.clear();
     FunctionsWithU32WeightOverflow.clear();
     EmittedSkipNotes.clear();
+    IndirectCallTargetCounts.clear();
+    IndirectCallTargetContributionsByFunction.clear();
+    IndirectCallTargetCountsValid = false;
     return;
   }
   if (const auto *F = dyn_cast<Function>(IR)) {
@@ -202,6 +215,9 @@ void PGOFlowVerifier::invalidateFunctionFrequencyCache(IRUnitRef IR) {
   FunctionBlockFreqInfoCache.clear();
   FunctionsWithU32WeightOverflow.clear();
   EmittedSkipNotes.clear();
+  IndirectCallTargetCounts.clear();
+  IndirectCallTargetContributionsByFunction.clear();
+  IndirectCallTargetCountsValid = false;
 }
 
 void PGOFlowVerifier::runAfterPass(StringRef PassID, IRUnitRef IR) {
@@ -575,6 +591,108 @@ PGOFlowVerifier::getCachedBlockFreqInfo(const Function *F) const {
   return &It->second;
 }
 
+void PGOFlowVerifier::updateIndirectCallTargetsForFunction(const Function *F) {
+  if (!F)
+    return;
+
+  auto OldIt = IndirectCallTargetContributionsByFunction.find(F);
+  if (OldIt != IndirectCallTargetContributionsByFunction.end()) {
+    for (const auto &Entry : OldIt->second) {
+      uint64_t &Total = IndirectCallTargetCounts[Entry.first];
+      Total = Total < Entry.second ? 0 : Total - Entry.second;
+    }
+    OldIt->second.clear();
+  }
+
+  DenseMap<uint64_t, uint64_t> &Contribution =
+      IndirectCallTargetContributionsByFunction[F];
+  if (F->isDeclaration() || hasApproximateProfile(F) ||
+      hasU32WeightOverflow(F)) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip indirect VP credit from '"
+                      << F->getName()
+                      << "' (declaration, approxprofile, or overflow)\n");
+    return;
+  }
+
+  const AllBlockFreqInfo *Freq = getCachedBlockFreqInfo(F);
+  if (!Freq) {
+    LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip indirect VP credit from '"
+                      << F->getName() << "' (no block-freq cache)\n");
+    return;
+  }
+  for (const BasicBlock &BB : *F) {
+    auto BBIt = Freq->find(&BB);
+    if (BBIt == Freq->end() || BBIt->second.NumUnknownIn != 0)
+      continue;
+    bool NonzeroEntry = &BB == &F->getEntryBlock() && F->getEntryCount() &&
+                        *F->getEntryCount() != 0;
+    if (BBIt->second.SumIn == 0 && !NonzeroEntry) {
+      LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip leftover VP in dead block "
+                        << BB.getName() << " of '" << F->getName() << "'\n");
+      continue;
+    }
+    for (const Instruction &I : BB) {
+      const auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB || !CB->isIndirectCall())
+        continue;
+      uint64_t TotalC = 0;
+      auto VDs = getValueProfDataFromInst(*CB, IPVK_IndirectCallTarget,
+                                          std::numeric_limits<uint32_t>::max(),
+                                          TotalC);
+      if (TotalC == 0)
+        continue;
+      LLVM_DEBUG(dbgs() << "PGOFlowVerifier: VP total " << TotalC << " on '"
+                        << F->getName() << "'\n");
+      for (const InstrProfValueData &VD : VDs) {
+        Contribution[VD.Value] =
+            SaturatingAdd(Contribution[VD.Value], VD.Count);
+        IndirectCallTargetCounts[VD.Value] =
+            SaturatingAdd(IndirectCallTargetCounts[VD.Value], VD.Count);
+      }
+    }
+  }
+  LLVM_DEBUG(dbgs() << "PGOFlowVerifier: refresh VP targets from '"
+                    << F->getName() << "'\n");
+}
+
+uint64_t PGOFlowVerifier::getIndirectCallTargetCount(const Function *F) {
+  if (!F)
+    return 0;
+
+  if (!IndirectCallTargetCountsValid) {
+    LLVM_DEBUG(
+        dbgs() << "PGOFlowVerifier: build module indirect-call VP map\n");
+    IndirectCallTargetCounts.clear();
+    IndirectCallTargetContributionsByFunction.clear();
+    if (const Module *M = F->getParent()) {
+      for (const Function &Fn : *M)
+        updateIndirectCallTargetsForFunction(&Fn);
+    }
+    IndirectCallTargetCountsValid = true;
+  }
+
+  SmallDenseSet<uint64_t, 4> GUIDs;
+  auto InsertName = [&](const std::string &Name) {
+    if (!Name.empty())
+      GUIDs.insert(GlobalValue::getGUIDAssumingExternalLinkage(Name));
+  };
+  InsertName(getPGOFuncName(*F, /*InLTO=*/false));
+  InsertName(getPGOFuncName(*F, /*InLTO=*/true));
+  InsertName(getIRPGOFuncName(*F, /*InLTO=*/false));
+  InsertName(getIRPGOFuncName(*F, /*InLTO=*/true));
+
+  uint64_t Total = 0;
+  for (uint64_t GUID : GUIDs) {
+    auto It = IndirectCallTargetCounts.find(GUID);
+    if (It == IndirectCallTargetCounts.end())
+      continue;
+    Total = SaturatingAdd(Total, It->second);
+  }
+  LLVM_DEBUG(dbgs() << "PGOFlowVerifier: indirect credit for '" << F->getName()
+                    << "' is " << Total << "\n");
+  return Total;
+}
+
 void PGOFlowVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
   if (!F)
     return;
@@ -671,11 +789,15 @@ void PGOFlowVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
     }
   }
 
-  if (!HasAnyDirectCallsite) {
+  uint64_t IndirectCredit = isEnabled(VerifyPGOFlowCreditIndirectCallers)
+                                ? getIndirectCallTargetCount(F)
+                                : 0;
+  if (!HasAnyDirectCallsite && IndirectCredit == 0) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
                       << F->getName() << "' (no direct callsite)\n");
     return;
   }
+  Sum = SaturatingAdd(Sum, IndirectCredit);
   if (EntryCount == Sum) {
     LLVM_DEBUG(dbgs() << "PGOFlowVerifier: skip entry-count for '"
                       << F->getName() << "' (caller-sum equals entry)\n");

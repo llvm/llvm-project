@@ -67,8 +67,10 @@ private:
   void computeBlockFrequencies(const Function *F);
   void validateBlockFrequencies(const Function *F);
   /// Caller-sum > entry is always reported, including a live self-call.
-  /// Undercount and recursive undercount are opt-in.
+  /// Undercount, recursive undercount, and indirect credit are opt-in.
   void validateEntryCountAgainstCallerSum(const Function *F);
+  uint64_t getIndirectCallTargetCount(const Function *F);
+  void updateIndirectCallTargetsForFunction(const Function *F);
   const AllBlockFreqInfo *getCachedBlockFreqInfo(const Function *F) const;
 
   DenseMap<const Function *, AllBlockFreqInfo> FunctionBlockFreqInfoCache;
@@ -76,6 +78,10 @@ private:
   mutable DenseSet<const Function *> EmittedSkipNotes;
   /// Real mismatches already printed when `-verify-pgo-flow-dedup-diagnostics`.
   mutable DenseSet<const Function *> ReportedMismatchFunctions;
+  DenseMap<uint64_t, uint64_t> IndirectCallTargetCounts;
+  DenseMap<const Function *, DenseMap<uint64_t, uint64_t>>
+      IndirectCallTargetContributionsByFunction;
+  bool IndirectCallTargetCountsValid = false;
 };
 
 /// Pipeline pass that runs the same walk as the `-verify-pgo-flow` hook.
