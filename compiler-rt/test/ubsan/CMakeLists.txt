@@ -176,16 +176,3 @@ endif()
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"
   ${UBSAN_TESTSUITES}
   DEPENDS ${UBSAN_TEST_DEPS})
-
-# Add offload dependencies as compiler-rt is built before offload.
-function(_ubsan_depend_on_offload)
-  if(NOT TARGET check-ubsan)
-    return()
-  endif()
-  foreach(dep omp omptarget)
-    if(TARGET ${dep})
-      add_dependencies(check-ubsan ${dep})
-    endif()
-  endforeach()
-endfunction()
-cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}" CALL _ubsan_depend_on_offload)
