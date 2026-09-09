@@ -156,17 +156,6 @@ static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
   CI->eraseFromParent();
 }
 
-static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
-                                         uint32_t DescSet, uint32_t Binding) {
-  assert(CI->getIntrinsicID() ==
-             Intrinsic::spv_resource_handlefromimplicitbinding &&
-         "unexpected intrinsic");
-  assert(CI->arg_size() == 5 &&
-         "unexpected number of arguments for implicit binding intrinsic");
-  replaceWithHandleFromBinding(M, CI, DescSet, Binding, CI->getArgOperand(2),
-                               CI->getArgOperand(3), CI->getArgOperand(4));
-}
-
 // Replace the implicit counter binding call with a new call using explicit
 // binding.
 static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
@@ -188,18 +177,6 @@ static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
   NewCI->setCallingConv(CI->getCallingConv());
   CI->replaceAllUsesWith(NewCI);
   CI->eraseFromParent();
-}
-
-static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
-                                                uint32_t DescSet,
-                                                uint32_t Binding) {
-  assert(CI->getIntrinsicID() ==
-             Intrinsic::spv_resource_counterhandlefromimplicitbinding &&
-         "unexpected intrinsic");
-  assert(CI->arg_size() == 3 &&
-         "unexpected number of arguments for implicit binding intrinsic");
-  replaceWithCounterHandleFromBinding(M, CI, CI->getArgOperand(0), DescSet,
-                                      Binding);
 }
 
 bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
@@ -254,9 +231,12 @@ bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
     // Replace the implicit binding call with an explicit binding call.
     if (CI->getIntrinsicID() ==
         Intrinsic::spv_resource_handlefromimplicitbinding)
-      replaceWithHandleFromBinding(M, CI, DescSet, Binding);
+      replaceWithHandleFromBinding(M, CI, DescSet, Binding,
+                                   CI->getArgOperand(2), CI->getArgOperand(3),
+                                   CI->getArgOperand(4));
     else
-      replaceWithCounterHandleFromBinding(M, CI, DescSet, Binding);
+      replaceWithCounterHandleFromBinding(M, CI, CI->getArgOperand(0), DescSet,
+                                          Binding);
     Changed = true;
 
     LastOrderId = OrderId;
