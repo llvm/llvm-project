@@ -9997,6 +9997,20 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   if (auto P = CmpPredicate::getMatching(LPred, RPred))
     return isImpliedCondOperands(*P, L0, L1, R0, R1);
 
+  // L0 u< C sets limits to L0's bits which may imply (L0 & Mask) pred RC
+  // Example: L0 u< 13 => (L0 & 16) == 0
+  const APInt *LC, *RC, *MaskC;
+  if (match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)) &&
+      match(R0, m_And(m_Specific(L0), m_APInt(MaskC)))) {
+    ConstantRange LCRange = ConstantRange::makeExactICmpRegion(LPred, *LC);
+    ConstantRange MaskedCRange = LCRange.binaryAnd(*MaskC);
+    if (MaskedCRange.icmp(RPred, ConstantRange(*RC)))
+      return true;
+    if (MaskedCRange.icmp(ICmpInst::getInversePredicate(RPred),
+                          ConstantRange(*RC)))
+      return false;
+  }
+
   return std::nullopt;
 }
 

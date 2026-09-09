@@ -246,9 +246,6 @@ unsigned getVGPREncodingGranule(
 /// returns the allocation granule for ArchVGPRs.
 unsigned getArchVGPRAllocGranule();
 
-/// \returns Total number of VGPRs for given subtarget \p STI.
-unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI);
-
 /// Maximum number of VGPR blocks that can be allocated in dynamic VGPR mode.
 static constexpr unsigned MaxDynamicVGPRBlocks = 8;
 
@@ -1599,6 +1596,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:

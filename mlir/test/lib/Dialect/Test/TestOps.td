@@ -490,14 +490,12 @@ def PromisedInterfacesOp : TEST_Op<"promised_interfaces"> {
 def TestEnumAttr : EnumAttr<Test_Dialect, TestEnum, "enum">;
 
 def TestPrettyEnumAttr
-    : EnumAttr<Test_Dialect, TestPrettyEnum, "pretty_enum"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<Test_Dialect, TestPrettyEnum, "pretty_enum">;
 
 // Define an op that contains the enum attribute.
 def OpWithEnum : TEST_Op<"op_with_enum"> {
   let arguments = (ins TestEnumAttr:$value, OptionalAttr<AnyAttr>:$tag);
-  let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+  let assemblyFormat = "enum($value) (`tag` $tag^)? attr-dict";
 }
 
 // Define an op that prints just the symbolic value of an enum attribute whose
@@ -584,9 +582,7 @@ def OpWithSimpleEnum16Prop : TEST_Op<"op_with_simple_enum_16_prop"> {
 //===----------------------------------------------------------------------===//
 
 // Define the enum attribute.
-def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum">;
 
 // Define an op that contains the enum attribute.
 def OpWithBitEnum : TEST_Op<"op_with_bit_enum"> {
@@ -595,9 +591,7 @@ def OpWithBitEnum : TEST_Op<"op_with_bit_enum"> {
 }
 
 def TestBitEnumVerticalBarAttr
-    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar">;
 
 // Define an op that contains the enum attribute.
 def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
@@ -3764,6 +3758,12 @@ def TestOpWithCustomAttrPropDict
     OptionalAttr<TestEnumAttr>:$optionalAttr,
     I64Prop:$prop
   );
+}
+
+def TestOpWithCustomBitEnumAttrPropDict
+    : TEST_Op<"with_custom_bit_enum_attr_prop_dict"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins TestBitEnumAttr:$flags, I64Attr:$next);
 }
 
 def TestOpWithPropertiesAndInferredType

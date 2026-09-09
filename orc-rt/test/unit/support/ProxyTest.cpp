@@ -12,14 +12,18 @@
 
 #include "orc-rt/support/Proxy.h"
 
-#include "CommonTestUtils.h"
-
 #include "gtest/gtest.h"
 
 #include <optional>
 #include <utility>
 
 using namespace orc_rt;
+
+// Proxy.h only forward-declares Session and never touches it. We mock it below
+// so that we don't need to link against bedrock.
+namespace orc_rt {
+class Session {};
+} // namespace orc_rt
 
 namespace {
 
@@ -53,7 +57,7 @@ TEST(ProxyTest, DefaultConstructedProxyIsNull) {
 }
 
 TEST(ProxyTest, DispatchReportsVoidResult) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  Session S;
 
   int Tag = 0;
   Proxy<void()> P(voidDispatch, &Tag);
@@ -70,7 +74,7 @@ TEST(ProxyTest, DispatchReportsVoidResult) {
 }
 
 TEST(ProxyTest, DispatchForwardsArgsAndResult) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  Session S;
 
   int Tag = 0;
   Proxy<int(int)> P(addOneDispatch, &Tag);
@@ -82,7 +86,7 @@ TEST(ProxyTest, DispatchForwardsArgsAndResult) {
 }
 
 TEST(ProxyTest, DispatchForwardsCalleeTag) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  Session S;
 
   int Tag = 0;
   Proxy<const void *()> P(returnTagDispatch, &Tag);

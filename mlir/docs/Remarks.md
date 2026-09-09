@@ -221,6 +221,33 @@ You can also implement custom policies by inheriting from the policy interface.
 
 ***
 
+## Querying Enabled Remarks
+
+A remark is only built when its kind and category match the configured
+filters. The `remark::passed`, `remark::missed`, `remark::failed` and
+`remark::analysis` helpers perform this check themselves, so passes do not need
+to do anything. Code that produces remarks from another source, for example a
+bridge that imports remarks from a different compiler, can ask the engine what
+is enabled before doing any work:
+
+```c++
+remark::detail::RemarkEngine *engine = context.getRemarkEngine();
+if (!engine || !engine->isAnyRemarkEnabled())
+  return; // No remark engine, or no category filter is active.
+
+if (engine->isRemarkEnabled(remark::RemarkKind::RemarkPassed, "Vectorizer"))
+  remark::passed(loc, opts) << "vectorized loop";
+```
+
+| Query                                        | Answers                                              |
+|----------------------------------------------|------------------------------------------------------|
+| `isAnyRemarkEnabled()`                       | At least one category filter is active               |
+| `isAnyRemarkEnabled(category)`               | Some kind of remark is enabled for the category      |
+| `isRemarkEnabled(kind, category)`            | Remarks of `kind` are enabled for the category       |
+| `is{Passed,Missed,Analysis,Failed}OptRemarkEnabled(category)` | Per-kind query                      |
+
+***
+
 ## Enabling Remarks
 
 ### Option 1: LLVM Remark Streamer (YAML or Bitstream)

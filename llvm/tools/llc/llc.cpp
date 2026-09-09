@@ -560,8 +560,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
           << "X86 backend ignores --fp-contract setting; use IR fast-math "
              "flags instead.";
 
-    Options.BinutilsVersion =
-        TargetMachine::parseBinutilsVersion(BinutilsVersion);
+    Options.MCOptions.BinutilsVersion =
+        MCTargetOptions::parseBinutilsVersion(BinutilsVersion);
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;

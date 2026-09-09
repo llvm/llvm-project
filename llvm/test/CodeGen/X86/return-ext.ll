@@ -97,7 +97,7 @@ entry:
 
 define i32 @use_i1() {
 entry:
-  %0 = call i1 @unsigned_i1();
+  %0 = call zeroext i1 @unsigned_i1();
   %1 = zext i1 %0 to i32
   ret i32 %1
 
@@ -112,7 +112,7 @@ entry:
 
 define i32 @use_i8() {
 entry:
-  %0 = call i8 @unsigned_i8();
+  %0 = call zeroext i8 @unsigned_i8();
   %1 = zext i8 %0 to i32
   ret i32 %1
 
@@ -127,7 +127,7 @@ entry:
 
 define i32 @use_i16() {
 entry:
-  %0 = call i16 @unsigned_i16();
+  %0 = call zeroext i16 @unsigned_i16();
   %1 = zext i16 %0 to i32
   ret i32 %1
 
