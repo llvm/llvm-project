@@ -718,6 +718,8 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::concat(V Vec, S Scalar,
     Elts.push_back(VecExpr);
   }
   Elts.push_back(ScalarExpr);
+  assert(ResultTy->castAs<VectorType>()->getNumElements() == Elts.size() &&
+         "The result type must have one element per concatenated value.");
 
   auto *InitList = new (AST) InitListExpr(
       AST, SourceLocation(), Elts, SourceLocation(), /*isExplicit=*/false);
