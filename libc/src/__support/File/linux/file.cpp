@@ -76,7 +76,7 @@ static constexpr int write_only() { return O_WRONLY; }
 static constexpr int read_only() { return O_RDONLY; }
 static constexpr int create_or_truncate() { return O_CREAT | O_TRUNC; }
 
-static int map_c_mode_flags_to_linux_open_flags(FileMode file_mode) {
+static int map_c_mode_flags_to_linux_open_flags(const FileMode &file_mode) {
   int open_flags = 0;
 
   // handle access patterns i.e whether the file should be in
