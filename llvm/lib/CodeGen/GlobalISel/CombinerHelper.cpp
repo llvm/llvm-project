@@ -4653,7 +4653,7 @@ void CombinerHelper::applyRotateOutOfRange(MachineInstr &MI) const {
 }
 
 bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
-                                                   int64_t &MatchInfo) const {
+                                                   BuildFnTy &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_ICMP);
   auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
 
@@ -4686,13 +4686,25 @@ bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
 
   if (!KnownVal)
     return false;
-  MatchInfo =
-      *KnownVal
-          ? getICmpTrueVal(getTargetLowering(),
-                           /*IsVector = */
-                           MRI.getType(MI.getOperand(0).getReg()).isVector(),
-                           /* IsFP = */ false)
-          : 0;
+
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  int64_t Val = *KnownVal ? getICmpTrueVal(getTargetLowering(),
+                                           /*IsVector = */ DstTy.isVector(),
+                                           /* IsFP = */ false)
+                          : 0;
+
+  if (DstTy.isVector()) {
+    SmallVector<APInt> Csts(DstTy.getNumElements(),
+                            APInt(DstTy.getScalarSizeInBits(), Val,
+                                  /*isSigned=*/true));
+    MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+      B.buildBuildVectorConstant(Dst, Csts);
+    };
+    return true;
+  }
+
+  MatchInfo = [Dst, Val](MachineIRBuilder &B) { B.buildConstant(Dst, Val); };
   return true;
 }
 
@@ -7390,24 +7402,46 @@ getMinUselessShift(KnownBits ValueKB, unsigned Opcode,
   return ValueKB.getBitWidth() - SignificantBits;
 }
 
-bool CombinerHelper::matchShiftsTooBig(
-    MachineInstr &MI, std::optional<int64_t> &MatchInfo) const {
+bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
   Register ShiftVal = MI.getOperand(1).getReg();
   Register ShiftReg = MI.getOperand(2).getReg();
-  LLT ResTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT ResTy = MRI.getType(Dst);
+  std::optional<int64_t> Result;
   auto IsShiftTooBig = [&](const Constant *C) {
     auto *CI = dyn_cast<ConstantInt>(C);
     if (!CI)
       return false;
     if (CI->uge(ResTy.getScalarSizeInBits())) {
-      MatchInfo = std::nullopt;
+      Result = std::nullopt;
       return true;
     }
-    auto OptMaxUsefulShift = getMinUselessShift(VT->getKnownBits(ShiftVal),
-                                                MI.getOpcode(), MatchInfo);
+    auto OptMaxUsefulShift =
+        getMinUselessShift(VT->getKnownBits(ShiftVal), MI.getOpcode(), Result);
     return OptMaxUsefulShift && CI->uge(*OptMaxUsefulShift);
   };
-  return matchUnaryPredicate(MRI, ShiftReg, IsShiftTooBig);
+  if (!matchUnaryPredicate(MRI, ShiftReg, IsShiftTooBig))
+    return false;
+
+  if (!Result) {
+    MatchInfo = [Dst](MachineIRBuilder &B) { B.buildUndef(Dst); };
+    return true;
+  }
+
+  int64_t Val = *Result;
+  if (ResTy.isVector()) {
+    SmallVector<APInt> Csts(ResTy.getNumElements(),
+                            APInt(ResTy.getScalarSizeInBits(), Val,
+                                  /*isSigned=*/true));
+    MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+      B.buildBuildVectorConstant(Dst, Csts);
+    };
+    return true;
+  }
+
+  MatchInfo = [Dst, Val](MachineIRBuilder &B) { B.buildConstant(Dst, Val); };
+  return true;
 }
 
 bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
