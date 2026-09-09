@@ -2598,9 +2598,6 @@ public:
 
   void execute(VPTransformState &State) override = 0;
 
-  /// Returns the start value of the induction.
-  VPValue *getStartValue() const { return getOperand(0); }
-
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
