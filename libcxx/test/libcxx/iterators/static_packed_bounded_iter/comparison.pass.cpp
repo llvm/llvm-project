@@ -75,9 +75,25 @@ constexpr bool tests() {
   return true;
 }
 
+// Although this isn't necessarily the case anymore, the original design had a different representation in constexpr vs
+// runtime, which had an issue where if you had an iterator that was modified in constexpr, and compared it to a
+// runtime iterator that was modified in the same way but at runtime, you'd run into a situation where two iterators
+// which should compare equal, don't, because their underlying values are different despite having the same operations
+// done to it.
+// So, have a test case to "emulate" this behaviour, so that it can be updated once __static_packed_bounded_iter is
+// constexpr friendly rather than forgetting this may have been an issue, now that it technically isn't possible.
+
+static constinit Foo array[] = {3, 4};
+using It                     = std::__static_packed_bounded_iterator<Foo*, decltype(array), std::size(array)>;
+static It iter1 = std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(array, 1);
+
+constexpr void test2(It a, It b) { assert(a == b); }
+
 int main(int, char**) {
   tests<Foo*>();
   // static_assert(tests<Foo*>(), ""); TODO: This type is not constexpr.
+
+  test2(iter1, std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(array, 1));
 
   return 0;
 }
