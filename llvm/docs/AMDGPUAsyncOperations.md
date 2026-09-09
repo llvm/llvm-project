@@ -46,10 +46,14 @@ Both intrinsics take a *stage mask*: an 11-bit value in which a set bit means
 mask names, and a wait *ignores* them. The mask `0` therefore names no stage 
 and so omits/ignores none.
 
-A mask may set the bit of a reserved stage. Leaving out a stage whose operations
-do not exist yet is harmless, and lets a mask keep its meaning as the reserved
-bits are filled in. However, omitting/ignoring bits that are neither supported
-nor reserved is an error.
+Bits not specified in this table are reserved future use. While it is not
+statically forbidden to set them, doing so risks the possibility that an async
+operation currently assigned to one of the listed stages will be moved into a
+reserved stage on a future architecture. Setting reserved bits is an acceptance
+of that risk, but will also guarantee that the addition of future async stages
+will not modify program behavior.
+
+Bits set that are neither supported nor reserved is an error.
 
 ### Current Sequence
 
