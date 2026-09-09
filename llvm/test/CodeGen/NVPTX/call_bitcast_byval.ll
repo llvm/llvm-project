@@ -39,7 +39,7 @@ define void @boom() {
   ; CHECK-DAG: .param .align 2 .b8 param0[4];
   ; CHECK-DAG: st.param.b16 [param0], %rs{{[0-9]+}};
   ; CHECK-DAG: st.param.b16 [param0+2], %rs{{[0-9]+}};
-  ; CHECK-DAG: .callprototype ()_ (.param .align 2 .b8 _[4]);
+  ; CHECK-DAG: .callprototype _ (.param .align 2 .b8 _[4]);
   call void %fp(ptr byval(%"class.complex") null)
   ret void
 }
