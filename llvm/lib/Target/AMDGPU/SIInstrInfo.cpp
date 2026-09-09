@@ -9843,18 +9843,13 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
     auto NewMI = BuildMI(*MBB, Inst, DL, get(AMDGPU::REG_SEQUENCE), ResultReg);
     switch (Inst.getOpcode()) {
     case AMDGPU::S_PACK_LL_B32_B16:
-      NewMI
-          .addReg(SrcReg0, {},
-                  AMDGPU::lo16)
+      NewMI.addReg(SrcReg0, {}, AMDGPU::lo16)
           .addImm(AMDGPU::lo16)
-          .addReg(SrcReg1, {},
-                  AMDGPU::lo16)
+          .addReg(SrcReg1, {}, AMDGPU::lo16)
           .addImm(AMDGPU::hi16);
       break;
     case AMDGPU::S_PACK_LH_B32_B16:
-      NewMI
-          .addReg(SrcReg0, {},
-                  AMDGPU::lo16)
+      NewMI.addReg(SrcReg0, {}, AMDGPU::lo16)
           .addImm(AMDGPU::lo16)
           .addReg(SrcReg1, {}, AMDGPU::hi16)
           .addImm(AMDGPU::hi16);
@@ -9862,8 +9857,7 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
     case AMDGPU::S_PACK_HL_B32_B16:
       NewMI.addReg(SrcReg0, {}, AMDGPU::hi16)
           .addImm(AMDGPU::lo16)
-          .addReg(SrcReg1, {},
-                  AMDGPU::lo16)
+          .addReg(SrcReg1, {}, AMDGPU::lo16)
           .addImm(AMDGPU::hi16);
       break;
     case AMDGPU::S_PACK_HH_B32_B16:
