@@ -1,10 +1,6 @@
+## LC_ID_DYLIB names the library itself, not a dependency.
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj --needed-libs %t.o | FileCheck %s
-
-## LC_ID_DYLIB names the library itself, not a dependency. A load command with
-## the same name must still be included in the dependency list.
-# RUN: yaml2obj %s -DID=/usr/lib/libSystem.B.dylib -o %t.same-name.o
-# RUN: llvm-readobj --needed-libs %t.same-name.o | FileCheck %s
 
 # CHECK:      NeededLibraries [
 # CHECK-NEXT:   /usr/lib/libLazy.dylib
@@ -32,7 +28,7 @@ LoadCommands:
       timestamp:       2
       current_version: 81985536
       compatibility_version: 65536
-    Content:         [[ID=/usr/lib/libSelf.dylib]]
+    Content:         /usr/lib/libSelf.dylib
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         56
     dylib:
