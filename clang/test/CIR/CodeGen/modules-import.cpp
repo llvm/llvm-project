@@ -8,7 +8,7 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu \
 // RUN:   -emit-llvm -fmodule-file=m=%t.pcm %s -o %t.og.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.og.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.og.ll %s
 
 import m;
 
@@ -19,6 +19,3 @@ int use_it() { return f(); }
 
 // LLVM-LABEL: define {{.*}} i32 @_Z6use_itv()
 // LLVM:         {{%.+}} = call {{.*}} i32 @_ZW1m1fv()
-
-// OGCG-LABEL: define {{.*}} i32 @_Z6use_itv()
-// OGCG:         {{%.+}} = call {{.*}} i32 @_ZW1m1fv()
