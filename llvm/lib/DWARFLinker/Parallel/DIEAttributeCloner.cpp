@@ -253,6 +253,31 @@ size_t DIEAttributeCloner::cloneDieRefAttr(
   if (RefDIEInfo.needToPlaceInTypeTable())
     RefTypeName = RefDiePair->CU->getDieTypeEntry(RefDiePair->DieEntry);
 
+  // The importing unit's DW_TAG_module skeleton can have a different
+  // DW_AT_LLVM_include_path than the unit built from the .pcm and the import
+  // must use the latter. The type pool already merges copies, so a reference
+  // with a type entry resolves correctly. Without one, the module's anchor is
+  // the only link between the two, and it is not known until the unit
+  // describing the module has been emitted.
+  if (RefDiePair->DieEntry->getTag() == dwarf::DW_TAG_module &&
+      AttrSpec.Attr == dwarf::DW_AT_import && !OutUnit.isTypeUnit() &&
+      !RefTypeName) {
+    SmallString<128> Path;
+    if (RefDiePair->CU->getModulePath(RefDiePair->DieEntry, Path)) {
+      ModuleAnchor *Anchor =
+          InUnit.getGlobalData().getModulePool().getOrCreate(Path);
+
+      DebugInfoOutputSection.notePatchWithOffsetUpdate(
+          DebugDieModuleRefPatch{
+              AttrOutOffset, RefDiePair->CU,
+              RefDiePair->CU->getDIEIndex(RefDiePair->DieEntry), Anchor},
+          PatchesOffsets);
+      return Generator
+          .addScalarAttribute(AttrSpec.Attr, dwarf::DW_FORM_ref_addr, 0xBADDEF)
+          .second;
+    }
+  }
+
   if (OutUnit.isTypeUnit()) {
     assert(RefTypeName && "Type name for referenced DIE is not set");
     assert(InUnit.getDieTypeEntry(InputDIEIdx) &&

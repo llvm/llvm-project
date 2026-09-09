@@ -104,7 +104,7 @@ static void emitLoopMappingRemark(acc::ComputeRegionOp computeRegion,
                                   const acc::ACCToGPUMappingPolicy &policy,
                                   llvm::StringRef gpuDimSeparator) {
   acc::GPUParallelDimsAttr parDimsAttr =
-      loopOp->getAttrOfType<acc::GPUParallelDimsAttr>(
+      loopOp->getDiscardableAttrOfType<acc::GPUParallelDimsAttr>(
           acc::GPUParallelDimsAttr::name);
 
   SmallVector<acc::GPUParallelDimAttr, 1> seqParDims;

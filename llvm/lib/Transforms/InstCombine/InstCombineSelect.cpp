@@ -749,37 +749,52 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
 ///   Z may be 0 if lshr is missing.
 /// Worst-case scenario is that we will replace 5 instructions with 5 different
 /// instructions, but we got rid of select.
-static Instruction *foldSelectICmpAndAnd(Type *SelType, const ICmpInst *Cmp,
+static Instruction *foldSelectICmpAndAnd(Type *SelType, const Value *Cond,
                                          Value *TVal, Value *FVal,
                                          InstCombiner::BuilderTy &Builder) {
-  if (!(Cmp->hasOneUse() && Cmp->getOperand(0)->hasOneUse() &&
-        Cmp->getPredicate() == ICmpInst::ICMP_EQ &&
-        match(Cmp->getOperand(1), m_Zero()) && match(FVal, m_One())))
+  Value *A, *X, *Y, *Z;
+  CmpPredicate Pred;
+  unsigned NumReplaced = 1 + Cond->hasOneUse();
+  if (match(Cond, m_Trunc(m_Value(X)))) {
+    Y = ConstantInt::get(X->getType(), 1);
+    Pred = ICmpInst::ICMP_NE;
+  } else if (match(Cond,
+                   m_ICmp(Pred, m_And(m_Value(X), m_Value(Y)), m_Zero())) &&
+             ICmpInst::isEquality(Pred)) {
+    NumReplaced +=
+        Cond->hasOneUse() && cast<ICmpInst>(Cond)->getOperand(0)->hasOneUse();
+  } else
+    return nullptr;
+
+  if (Pred == ICmpInst::ICMP_NE)
+    std::swap(TVal, FVal);
+
+  if (!match(FVal, m_One()))
     return nullptr;
 
   // The TrueVal has general form of:  and %B, 1
-  Value *B;
-  if (!match(TVal, m_OneUse(m_And(m_Value(B), m_One()))))
+  if (!match(TVal, m_And(m_Value(A), m_One())))
     return nullptr;
 
-  // Where %B may be optionally shifted:  lshr %X, %Z.
-  Value *X, *Z;
-  const bool HasShift = match(B, m_OneUse(m_LShr(m_Value(X), m_Value(Z))));
+  auto TValPattern = m_CombineOr(
+      m_Deferred(X),
+      m_LShr(m_Deferred(X),
+             m_Value(Z, m_SpecificInt_ICMP_ForbidPoison(
+                            CmpInst::ICMP_ULT,
+                            APInt(SelType->getScalarSizeInBits(),
+                                  SelType->getScalarSizeInBits())))));
 
-  // The shift must be valid.
-  // TODO: This restricts the fold to constant shift amounts. Is there a way to
-  //       handle variable shifts safely? PR47012
-  if (HasShift &&
-      !match(Z, m_SpecificInt_ICMP(CmpInst::ICMP_ULT,
-                                   APInt(SelType->getScalarSizeInBits(),
-                                         SelType->getScalarSizeInBits()))))
-    return nullptr;
+  if (!match(A, TValPattern)) {
+    std::swap(X, Y);
+    if (!match(A, TValPattern))
+      return nullptr;
+  }
 
-  if (!HasShift)
-    X = B;
+  bool HasShift = A != X;
+  if (TVal->hasOneUse())
+    NumReplaced += 1 + (HasShift && A->hasOneUse());
 
-  Value *Y;
-  if (!match(Cmp->getOperand(0), m_c_And(m_Specific(X), m_Value(Y))))
+  if (NumReplaced < (4u - isa<Constant>(Y)))
     return nullptr;
 
   // ((X & Y) == 0) ? ((X >> Z) & 1) : 1 --> (X & (Y | (1 << Z))) != 0
@@ -927,6 +942,10 @@ static Value *foldSelectICmpAndBinOp(Value *CondVal, Value *TrueVal,
   bool NeedShift = C1Log != C2Log;
   bool NeedZExtTrunc = Y->getType()->getScalarSizeInBits() !=
                        V->getType()->getScalarSizeInBits();
+
+  // the demanded bits for the created shl make the and redundant
+  if (AndMask.isOne() && C2->isSignBitSet())
+    CreateAnd = false;
 
   // Make sure we don't create more instructions than we save.
   if ((NeedShift + NeedXor + NeedZExtTrunc + CreateAnd) >
@@ -2447,10 +2466,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
     return replaceInstUsesWith(SI, V);
 
-  if (Instruction *V =
-          foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))
-    return V;
-
   if (Value *V = foldSelectICmpAndZeroShl(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
@@ -2714,9 +2729,9 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
   Value *X = ExtInst->getOperand(0);
   Type *SmallType = X->getType();
   Value *Cond = Sel.getCondition();
-  auto *Cmp = dyn_cast<CmpInst>(Cond);
   if (!SmallType->isIntOrIntVectorTy(1) &&
-      (!Cmp || Cmp->getOperand(0)->getType() != SmallType))
+      (!isa<CmpInst, TruncInst>(Cond) ||
+       cast<Instruction>(Cond)->getOperand(0)->getType() != SmallType))
     return nullptr;
 
   // If the constant is the same after truncation to the smaller type and
@@ -3722,8 +3737,11 @@ static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
                       *RHSC2);
     }
   }
+  // For non-poison X in [0, 1], `trunc nuw X to i1` is not poison, but an
+  // additional `nsw` flag makes it poison for X == 1.
   Value *A;
   if (match(ValAssumedPoison, m_NUWTrunc(m_Value(A))) &&
+      !cast<TruncInst>(ValAssumedPoison)->hasNoSignedWrap() &&
       isGuaranteedNotToBePoison(A)) {
     assert(ValAssumedPoison->getType()->isIntOrIntVectorTy(1));
     return computeKnownBits(
@@ -4908,6 +4926,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))
     if (Instruction *Result = foldSelectInstWithICmp(SI, ICI))
       return Result;
+
+  if (Instruction *V =
+          foldSelectICmpAndAnd(SelType, CondVal, TrueVal, FalseVal, Builder))
+    return V;
 
   if (Value *V = foldSelectBitTest(SI, CondVal, TrueVal, FalseVal, Builder, SQ))
     return replaceInstUsesWith(SI, V);

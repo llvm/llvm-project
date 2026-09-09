@@ -3463,9 +3463,13 @@ func.func @all_true_vector_mask_no_result(%a : vector<3x4xf32>, %m : memref<3x4x
 
 // -----
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask(
+// +---------------------------------------------------------------------------
+// Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Trailing>
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit(
 // CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x4xi1> {
-func.func @fold_shape_cast_with_mask(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
+func.func @fold_shape_cast_with_mask_trailing_unit(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
 // CHECK-NOT: vector.shape_cast
 // CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
@@ -3480,9 +3484,9 @@ func.func @fold_shape_cast_with_mask(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
 
 // -----
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_scalable(
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit_scalable(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x[4]xi1> {
-func.func @fold_shape_cast_with_mask_scalable(%arg0: tensor<1x?xf32>) -> vector<1x[4]xi1> {
+func.func @fold_shape_cast_with_mask_trailing_unit_scalable(%arg0: tensor<1x?xf32>) -> vector<1x[4]xi1> {
 // CHECK-NOT: vector.shape_cast
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
@@ -3498,9 +3502,9 @@ func.func @fold_shape_cast_with_mask_scalable(%arg0: tensor<1x?xf32>) -> vector<
 // -----
 
 // Check that scalable "1" (i.e. [1]) is not folded
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_scalable_one(
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit_scalable_one(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x[1]xi1> {
-func.func @fold_shape_cast_with_mask_scalable_one(%arg0: tensor<1x?xf32>) -> vector<1x[1]xi1>{
+func.func @fold_shape_cast_with_mask_trailing_unit_scalable_one(%arg0: tensor<1x?xf32>) -> vector<1x[1]xi1>{
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
 // CHECK:           %[[VAL_3:.*]] = vector.create_mask %[[VAL_1]], %[[VAL_2]] : vector<1x[1]xi1>
@@ -3514,13 +3518,80 @@ func.func @fold_shape_cast_with_mask_scalable_one(%arg0: tensor<1x?xf32>) -> vec
 
 // -----
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1> {
-func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1>{
+// CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1> {
+func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1>{
 // CHECK-NOT: vector.shape_cast
-// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [1] : vector<4xi1>
+// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [3] : vector<4xi1>
 // CHECK:           return %[[VAL_0]] : vector<4xi1>
-  %1 = vector.constant_mask [1, 1, 1] : vector<4x1x1xi1>
+  %1 = vector.constant_mask [3, 1, 1] : vector<4x1x1xi1>
   %2 = vector.shape_cast %1 : vector<4x1x1xi1> to vector<4xi1>
+  return %2 : vector<4xi1>
+}
+
+// -----
+
+// +---------------------------------------------------------------------------
+// Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Leading>
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit(
+// CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<4x1xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit(%arg0: tensor<1x?xf32>) -> vector<4x1xi1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:     %[[VAL_3:.*]] = vector.create_mask %[[VAL_2]], %[[VAL_1]] : vector<4x1xi1>
+// CHECK:     return %[[VAL_3]] : vector<4x1xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x4x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1x4x1xi1> to vector<4x1xi1>
+  return %2 : vector<4x1xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit_scalable(
+// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<[4]x1xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit_scalable(%arg0: tensor<1x?xf32>) -> vector<[4]x1xi1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:     %[[VAL_3:.*]] = vector.create_mask %[[VAL_2]], %[[VAL_1]] : vector<[4]x1xi1>
+// CHECK:     return %[[VAL_3]] : vector<[4]x1xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x[4]x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1x[4]x1xi1> to vector<[4]x1xi1>
+  return %2 : vector<[4]x1xi1>
+}
+
+// -----
+
+// Check that scalable "1" (i.e. [1]) is not folded
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit_scalable_one(
+// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<[1]x1xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit_scalable_one(%arg0: tensor<1x?xf32>) -> vector<[1]x1xi1>{
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:           %[[VAL_3:.*]] = vector.create_mask %[[VAL_2]], %[[VAL_1]] : vector<[1]x1xi1>
+// CHECK:           return %[[VAL_3]] : vector<[1]x1xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %dim, %c1 : vector<1x[1]x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x[1]x1xi1> to vector<[1]x1xi1>
+  return %2 : vector<[1]x1xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask_leading_unit() -> vector<4xi1> {
+func.func @fold_shape_cast_with_constant_mask_leading_unit() -> vector<4xi1>{
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [3] : vector<4xi1>
+// CHECK:           return %[[VAL_0]] : vector<4xi1>
+  %1 = vector.constant_mask [1, 1, 3] : vector<1x1x4xi1>
+  %2 = vector.shape_cast %1 : vector<1x1x4xi1> to vector<4xi1>
   return %2 : vector<4xi1>
 }
 
@@ -3842,7 +3913,7 @@ func.func @from_elements_f64_to_i64_conversion() -> vector<6xi64> {
 // CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<0> : vector<1xi8>
 // CHECK-NEXT:    return %[[CST]] : vector<1xi8>
 func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
-  %cst = llvm.mlir.constant(0: i1) : i8
+  %cst = llvm.mlir.constant(0: i8) : i8
   %v = vector.from_elements %cst : vector<1xi8>
   return %v : vector<1xi8>
 }
@@ -3853,9 +3924,9 @@ func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
 // CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 1, 42]> : vector<3xi64>
 // CHECK-NEXT:    return %[[CST]] : vector<3xi64>
 func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
-  %cst0 = llvm.mlir.constant(0 : index) : i64
-  %cst1 = llvm.mlir.constant(1 : index) : i64
-  %cst42 = llvm.mlir.constant(42 : index) : i64
+  %cst0 = llvm.mlir.constant(0 : i64) : i64
+  %cst1 = llvm.mlir.constant(1 : i64) : i64
+  %cst42 = llvm.mlir.constant(42 : i64) : i64
   %v = vector.from_elements %cst0, %cst1, %cst42 : vector<3xi64>
   return %v : vector<3xi64>
 }

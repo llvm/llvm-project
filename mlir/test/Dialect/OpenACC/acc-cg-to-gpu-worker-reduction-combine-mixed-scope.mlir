@@ -35,7 +35,7 @@ func.func @mixed_scope_worker_reduction_combine(
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -74,7 +74,7 @@ func.func @worker_combine_with_single_store(%result: memref<i32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -111,7 +111,7 @@ func.func @worker_combine_with_atomic_update(%result: memref<i32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

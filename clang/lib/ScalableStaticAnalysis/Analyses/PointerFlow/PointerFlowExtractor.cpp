@@ -15,21 +15,16 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeBase.h"
-#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysis/Analyses/PointerFlow/PointerFlow.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
-#include "clang/ScalableStaticAnalysis/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/Sequence.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include <memory>
-#include <optional>
 
 namespace clang::ssaf {
 extern PointerFlowEntitySummary buildPointerFlowEntitySummary(EdgeSet Edges);
@@ -59,15 +54,16 @@ public:
   llvm::Error matchesDecl(const Decl *D, const NamedDecl *RootDecl);
 
 private:
-  std::function<EntityId(const EntityName &)> AddEntity;
+  llvm::Error addEdges(Expected<DeclPointerLevelVec> &&LHS,
+                       Expected<DeclPointerLevelVec> &&RHS);
 
-  Expected<EntityPointerLevelSet> toEPL(const NamedDecl *N,
-                                        bool IsRet = false) const;
+  Expected<DeclPointerLevelVec> toDPL(const Expr *N) const {
+    return translateDeclPointerLevel(N, Ctx, Extractor);
+  }
 
-  Expected<EntityPointerLevelSet> toEPL(const Expr *N) const;
-
-  llvm::Error addEdges(Expected<EntityPointerLevelSet> &&LHS,
-                       Expected<EntityPointerLevelSet> &&RHS);
+  static DeclPointerLevel toDPL(const NamedDecl *N, bool IsRet = false) {
+    return createDeclPointerLevel(N, IsRet);
+  }
 
   template <typename ParmsProvider, typename ArgsProvider>
   llvm::Error matchesArgsWithParams(unsigned ArgIdxStart, ParmsProvider *PP,
@@ -79,7 +75,8 @@ private:
          ++ArgIdx, ++ParmIdx) {
       if (const ParmVarDecl *PD = PP->getParamDecl(ParmIdx);
           PD && hasPtrOrArrType(PD)) {
-        if (auto Err = addEdges(toEPL(PD), toEPL(AP->getArg(ArgIdx))))
+        if (auto Err = addEdges(DeclPointerLevelVec{toDPL(PD)},
+                                toDPL(AP->getArg(ArgIdx))))
           return Err;
       }
     }
@@ -87,22 +84,8 @@ private:
   }
 };
 
-Expected<EntityPointerLevelSet> PointerFlowMatcher::toEPL(const NamedDecl *N,
-                                                          bool IsRet) const {
-  auto Ret = createEntityPointerLevel(N, Extractor, IsRet);
-
-  if (Ret)
-    return EntityPointerLevelSet{*Ret};
-  return Ret.takeError();
-}
-
-Expected<EntityPointerLevelSet> PointerFlowMatcher::toEPL(const Expr *N) const {
-  return translateEntityPointerLevel(N, Ctx, Extractor);
-}
-
-llvm::Error
-PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
-                             Expected<EntityPointerLevelSet> &&RHS) {
+llvm::Error PointerFlowMatcher::addEdges(Expected<DeclPointerLevelVec> &&LHS,
+                                         Expected<DeclPointerLevelVec> &&RHS) {
   if (!LHS && !RHS)
     return llvm::joinErrors(LHS.takeError(), RHS.takeError());
   if (!LHS)
@@ -111,15 +94,48 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
     return RHS.takeError();
   if (RHS->empty())
     return llvm::Error::success();
-  for (auto L : *LHS)
-    Results[L].insert(RHS->begin(), RHS->end());
+
+  std::vector<DeclPointerLevelVec> LVecs, RVecs;
+
+  LVecs.reserve(LHS->size());
+  for (const auto &L : *LHS)
+    LVecs.push_back(elaborateHigherDeclPointerLevels(L));
+  RVecs.reserve(RHS->size());
+  for (const auto &R : *RHS)
+    RVecs.push_back(elaborateHigherDeclPointerLevels(R));
+
+  // Imagine an assignment from pointer q to p: 'p = q'.  It encodes that if 'p'
+  // has some property, so must 'q'; moreover, if '*p/p[i]' has some property,
+  // so must '*q/q[i]' and so on.  Therefore, for each edge '(a, n) -> (b, m)'
+  // that represents an explicitly spelled place in the source code, we also add
+  // '(a, n + 1) -> (b, m + 1)',
+  // '(a, n + 2) -> (b, m + 2)', ... continuing until either 'a' or 'b' reaches
+  // its maximum pointer level, whichever happens first.
+  //
+  // Note that type checking ensures that 'p' and 'q' have
+  // identical pointer levels, but '(a, n)' and '(b, m)' may have different
+  // upper bounds on their pointer levels, when, for example, 'q' is a
+  // reinterpret-cast expression, which can have different pointer level than
+  // its sub-expression.
+
+  for (const DeclPointerLevelVec &L : LVecs)
+    for (const DeclPointerLevelVec &R : RVecs)
+      for (const auto &[LDPL, RDPL] : llvm::zip(L, R)) {
+        auto LEPL = toEntityPointerLevel(LDPL, Ctx, Extractor);
+        if (!LEPL)
+          return LEPL.takeError();
+        auto REPL = toEntityPointerLevel(RDPL, Ctx, Extractor);
+        if (!REPL)
+          return REPL.takeError();
+        Results[*LEPL].insert(*REPL);
+      }
   return llvm::Error::success();
 }
 
 /// Match and extract pointer flow.
 /// The extraction function 'XF' can be described by the following rules:
 ///
-/// XF(l = r)               := add edge "toEPL(l) -> toEPL(r))"
+/// XF(l = r)               := addEdges(toDPL(l), toDPL(r))
 /// XF(foo(a, b, ...))      := XF(Param_1 = a), XF(Param_2 = b), ...
 /// XF(return e;)           := XF(FunRet = e), where 'FunRet' is the return
 ///                                            entity of the enclosing
@@ -130,7 +146,7 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
 ///                            ctor's body will be visited separately.
 /// XF(T var = e)           := XF(var = e)
 /// XF(T var = init-list)   := see \ref
-///                            PointerFlowMatcher::matchInitializerList
+///                            PointerFlowMatcher::matchesInitializerList
 llvm::Error PointerFlowMatcher::matches(const DynTypedNode &DynNode,
                                         const NamedDecl *RootDecl) {
   if (const Stmt *S = DynNode.get<Stmt>())
@@ -145,7 +161,7 @@ llvm::Error PointerFlowMatcher::matchesStmt(const Stmt *S,
   // Match 'p = q' whenever it has pointer or array type:
   if (const auto *BO = dyn_cast<BinaryOperator>(S);
       BO && BO->getOpcode() == BO_Assign && hasPtrOrArrType(BO)) {
-    return addEdges(toEPL(BO->getLHS()), toEPL(BO->getRHS()));
+    return addEdges(toDPL(BO->getLHS()), toDPL(BO->getRHS()));
   }
 
   // Match arg-to-param passing (in CallExpr) for any pointer type argument:
@@ -172,7 +188,7 @@ llvm::Error PointerFlowMatcher::matchesStmt(const Stmt *S,
     const Expr *RetExpr = RS->getRetValue();
     if (!RetExpr || !hasPtrOrArrType(RetExpr))
       return llvm::Error::success();
-    return addEdges(toEPL(RootDecl, true), toEPL(RetExpr));
+    return addEdges(DeclPointerLevelVec{toDPL(RootDecl, true)}, toDPL(RetExpr));
   }
   return llvm::Error::success();
 }
@@ -193,7 +209,7 @@ llvm::Error PointerFlowMatcher::matchesDecl(const Decl *D,
 
     // Match initializers to variables/fields of a pointer type:
     if (InitExpr && hasPtrOrArrType(VD))
-      return addEdges(toEPL(VD), toEPL(InitExpr));
+      return addEdges(DeclPointerLevelVec{toDPL(VD)}, toDPL(InitExpr));
   }
 
   // Match C++ constructor member-initializers:
@@ -202,7 +218,8 @@ llvm::Error PointerFlowMatcher::matchesDecl(const Decl *D,
       if (E->isDelegatingInitializer())
         return matches(DynTypedNode::create(*E->getInit()), RootDecl);
       if (const FieldDecl *FD = E->getMember(); FD && hasPtrOrArrType(FD)) {
-        if (auto Err = addEdges(toEPL(E->getMember()), toEPL(E->getInit())))
+        if (auto Err = addEdges(DeclPointerLevelVec{toDPL(E->getMember())},
+                                toDPL(E->getInit())))
           return Err;
       }
     }
@@ -210,7 +227,7 @@ llvm::Error PointerFlowMatcher::matchesDecl(const Decl *D,
   return llvm::Error::success();
 }
 
-// Helper function for matchInitializerList that handles record:
+// Helper function for matchesInitializerList that handles record:
 llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
                                               const RecordDecl *RecordTy,
                                               const InitListExpr *ILE) {
@@ -242,7 +259,7 @@ llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
   return llvm::Error::success();
 }
 
-// Helper function for matchInitializerList that handles array:
+// Helper function for matchesInitializerList that handles array:
 llvm::Error matchInitializerListForArray(PointerFlowMatcher &Matcher,
                                          const ValueDecl *Array,
                                          const InitListExpr *ILE,
@@ -267,7 +284,7 @@ llvm::Error matchInitializerListForArray(PointerFlowMatcher &Matcher,
 ///
 /// The process is recursive: 'a', 'b', 'c', ...  may themselves be
 /// initializer lists.  We therefore use \p ArrayElementIndirectLevel to keep
-/// track of the pointer level the left-hand side.
+/// track of the pointer level of the left-hand side.
 llvm::Error
 PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
                                            const Expr *InitExpr,
@@ -278,20 +295,10 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
     if (!hasPtrOrArrType(InitExpr))
       return llvm::Error::success();
 
-    auto BaseEPL = toEPL(Base);
-
-    if (!BaseEPL)
-      return BaseEPL.takeError();
-
-    // Apply ArrayElementIndirectLevel to BaseEPL
-    auto R = llvm::map_range(*BaseEPL, [&ArrayElementIndirectLevel](
-                                           const EntityPointerLevel &EPL) {
-      EntityPointerLevel Result = EPL;
-      for ([[maybe_unused]] auto Ignored : llvm::seq(ArrayElementIndirectLevel))
-        Result = incrementPointerLevel(Result);
-      return Result;
-    });
-    return addEdges(EntityPointerLevelSet{R.begin(), R.end()}, toEPL(InitExpr));
+    auto BaseDPL = toDPL(Base);
+    // Apply ArrayElementIndirectLevel to BaseDPL
+    BaseDPL.PointerLevel += ArrayElementIndirectLevel;
+    return addEdges(DeclPointerLevelVec{BaseDPL}, toDPL(InitExpr));
   }
   // Note that `Base`'s type is NOT the real LHS type when
   // ArrayElementIndirectLevel > 0:

@@ -18,14 +18,18 @@ TEST(LlvmLibcPutcTest, PrintOut) {
 
   constexpr char simple[] = "A simple string written to stdout\n";
   for (const char &c : simple) {
+    if (!c)
+      break;
     result = LIBC_NAMESPACE::putchar(c);
     EXPECT_GE(result, 0);
   }
 
   constexpr char more[] = "A simple string written to stderr\n";
   for (const char &c : more) {
+    if (!c)
+      break;
     result = LIBC_NAMESPACE::fputc(
         c, reinterpret_cast<FILE *>(LIBC_NAMESPACE::stderr));
+    EXPECT_GE(result, 0);
   }
-  EXPECT_GE(result, 0);
 }

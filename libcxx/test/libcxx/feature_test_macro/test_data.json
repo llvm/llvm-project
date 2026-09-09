@@ -209,5 +209,19 @@
       }
     },
     "headers": []
+  },
+  {
+    "name": "__cpp_lib_view_interface",
+    "values": {
+       "c++29": {
+          "202606": [
+            {
+              "title": "",
+              "implemented": false
+            }
+        ]
+      }
+    },
+    "headers": ["ranges"]
   }
 ]

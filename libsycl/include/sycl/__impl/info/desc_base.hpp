@@ -16,6 +16,8 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
+#include <type_traits>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
