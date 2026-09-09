@@ -14,7 +14,7 @@ public:
   // FileMode constructor accepts the mode string as an argument.
   // It performs validation against several rules and records the `file_mode`
   // property to the specific mode.
-  explicit FileMode(const char *mode) : file_mode_(0) {
+  constexpr FileMode(const char *mode) : file_mode_(0) {
     // First character in |mode| should be 'a', 'r' or 'w'.
     if (*mode != 'a' && *mode != 'r' && *mode != 'w')
       return;
