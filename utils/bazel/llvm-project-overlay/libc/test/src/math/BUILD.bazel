@@ -717,13 +717,7 @@ math_mpfr_test(
 
 math_mpfr_test(name = "tan")
 
-math_mpfr_test(
-    name = "tanbf16",
-    hdrs = ["sdcomp26094.h"],
-    deps = [
-        "//libc:__support_cpp_array",
-    ],
-)
+math_mpfr_test(name = "tanbf16")
 
 math_mpfr_test(
     name = "tanf",
