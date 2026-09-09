@@ -653,12 +653,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
-      .widenScalarIf(
-          [=, &ST](const LegalityQuery &Query) {
-            return ST.is64Bit() && Query.Types[0].isScalar() &&
-                   Query.Types[0].getSizeInBits() == 32;
-          },
-          LegalizeMutations::changeTo(0, sXLen))
+      .minScalar(0, sXLen)
       .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
       .libcallFor({{s32, s32},
                    {s64, s32},
