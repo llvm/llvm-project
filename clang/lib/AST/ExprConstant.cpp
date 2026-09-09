@@ -2811,6 +2811,59 @@ static bool truncateBitfieldValue(EvalInfo &Info, const Expr *E,
   return true;
 }
 
+/// Helper function to check if unsigned integer constant is overflowing.
+template <typename Operation>
+static void CheckUnsignedIntArithmetic(EvalInfo &Info, const Expr *E,
+                                       const APSInt &LHS, const APSInt &RHS,
+                                       unsigned BitWidth, Operation Op,
+                                       APSInt &Result) {
+  assert(LHS.isUnsigned() && "Left hand side shall be unsigned integer");
+  // Verify if the check should be performed
+  // Note: "checkingForUndefinedBehavior" is a misleading name: currently it
+  // checks only for overflows, as the function doc confirms. Should be
+  // changed to checkingForOverflow here and elsewhere.
+  if (!Info.checkingForUndefinedBehavior()) {
+    return;
+  }
+  // Check for __attribute__((overflow_behavior(wrap))) i.e. wrapping is
+  // intended
+  if (E->getType().isWrapType()) {
+    return;
+  }
+
+  const auto *BO = dyn_cast<BinaryOperator>(E);
+  if (!BO) {
+    return;
+  }
+  const auto Opcode = BO->getOpcode();
+  // Intentionally consider only + and *, to exclude from the diagnostic
+  // things like bit shifts (already covered by shift-count-overflow) and
+  // constructions like (0u - 1) which might be intentional (wrap to max).
+  if (Opcode != BO_Add && Opcode != BO_Mul) {
+    return;
+  }
+
+  if (Info.Ctx.getDiagnostics().isIgnored(diag::warn_unsigned_integer_overflow,
+                                          E->getExprLoc())) {
+    return;
+  }
+
+  // Check for overflow
+  APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)),
+               /*IsUnsigned=*/true);
+  if (Result.extend(BitWidth) == Value) {
+    // Value didn't overflow
+    return;
+  }
+
+  Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
+                                   diag::warn_unsigned_integer_overflow)
+      << toString(LHS, 10, LHS.isSigned()) << BO->getOpcodeStr()
+      << toString(RHS, 10, RHS.isSigned())
+      << toString(Value, 10, Value.isSigned()) << E->getType()
+      << toString(Result, 10, Result.isSigned()) << E->getSourceRange();
+}
+
 /// Perform the given integer operation, which is known to need at most BitWidth
 /// bits, and check for overflow in the original type (if that type was not an
 /// unsigned type).
@@ -2821,10 +2874,14 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
                                  APSInt &Result) {
   if (LHS.isUnsigned()) {
     Result = Op(LHS, RHS);
+    CheckUnsignedIntArithmetic(Info, E, LHS, RHS, BitWidth, Op, Result);
+    // Always return true, because overflow on unsigned integers is not
+    // undefined behavior
     return true;
   }
 
-  APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)), false);
+  APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)),
+               /*IsUnsigned=*/false);
   Result = Value.trunc(LHS.getBitWidth());
   if (Result.extend(BitWidth) != Value && !E->getType().isWrapType()) {
     if (Info.checkingForUndefinedBehavior())

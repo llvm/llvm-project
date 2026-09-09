@@ -482,6 +482,15 @@ features cannot lower the translation-unit ABI level;
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
 
+- Added `-Wunsigned-integer-overflow` (off by default), which diagnoses `+`
+  and `*` between integer constant expressions whose unsigned result wraps
+  around, for example `4096u * 1024 * 1024` evaluating to `0`. Unsigned
+  wraparound is well-defined, so this is a warning only. Still, this might
+  denote a bug.
+  Wraps that are intended can be expressed with an explicit cast of the widened
+  result, with a type marked `__attribute__((overflow_behavior(wrap)))`, or
+  silenced with `#pragma clang diagnostic`.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

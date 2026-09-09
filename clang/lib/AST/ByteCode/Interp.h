@@ -331,6 +331,62 @@ PRESERVE_NONE inline bool RetVoid(InterpState &S) {
 // Add, Sub, Mul
 //===----------------------------------------------------------------------===//
 
+/// Mirrors CheckUnsignedIntArithmetic in ExprConstant.cpp
+/// Helper function to check if unsigned integer constant is overflowing.
+template <typename T, template <typename U> class OpAP>
+void checkUnsignedIntArithmetic(InterpState &S, CodePtr OpPC, unsigned Bits,
+                                const T &LHS, const T &RHS, const T &Result) {
+  static_assert(!std::is_same_v<T, FixedPoint>,
+                "Not meant for fixed point numbers");
+  assert(!T::isSigned() && "Left hand side shall be unsigned integer");
+
+  // Verify if the check should be performed
+  // Note: "checkingForUndefinedBehavior" is a misleading name: currently it
+  // checks only for overflows, as the function doc confirms. Should be
+  // changed to checkingForOverflow here and elsewhere.
+  if (!S.checkingForUndefinedBehavior())
+    return;
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  assert(E);
+  // Check for __attribute__((overflow_behavior(wrap))) i.e. wrapping is
+  // intended
+  if (E->getType().isWrapType()) {
+    return;
+  }
+
+  const auto *BO = dyn_cast<BinaryOperator>(E);
+  if (!BO) {
+    return;
+  }
+  const auto Opcode = BO->getOpcode();
+  // Intentionally consider only + and *, to exclude from the diagnostic
+  // things like bit shifts (already covered by shift-count-overflow) and
+  // constructions like (0u - 1) which might be intentional (wrap to max).
+  if (Opcode != BO_Add && Opcode != BO_Mul) {
+    return;
+  }
+
+  if (S.getASTContext().getDiagnostics().isIgnored(
+          diag::warn_unsigned_integer_overflow, E->getExprLoc())) {
+    return;
+  }
+
+  // Check for overflow
+  APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
+  if (Result.toAPSInt(Bits) == Value) {
+    // Value didn't overflow
+    return;
+  }
+
+  S.report(E->getExprLoc(), diag::warn_unsigned_integer_overflow)
+      << toString(LHS.toAPSInt(), 10, T::isSigned()) << BO->getOpcodeStr()
+      << toString(RHS.toAPSInt(), 10, T::isSigned())
+      << toString(Value, 10, Value.isSigned()) << E->getType()
+      << toString(Result.toAPSInt(), 10, Result.isSigned())
+      << E->getSourceRange();
+}
+
 template <typename T, bool (*OpFW)(T, T, unsigned, T *),
           template <typename U> class OpAP>
 bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
@@ -346,6 +402,11 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     Result = S.allocAP<T>(LHS.bitWidth());
 
   if (!OpFW(LHS, RHS, Bits, &Result)) {
+    if constexpr (!std::is_same_v<T, FixedPoint>) {
+      if (!T::isSigned()) {
+        checkUnsignedIntArithmetic<T, OpAP>(S, OpPC, Bits, LHS, RHS, Result);
+      }
+    }
     S.Stk.push<T>(Result);
     return true;
   }
