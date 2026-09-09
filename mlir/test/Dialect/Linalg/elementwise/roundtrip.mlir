@@ -1,4 +1,7 @@
 // RUN: mlir-opt %s -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -split-input-file \
+// RUN:   -test-linalg-elementwise-fusion-patterns=test-invalid-elementwise-kind-builder \
+// RUN:   | FileCheck %s
 //
 // Note - the functions are named @{unary|binary}_{identity|transpose|broadcast|transpose_a|...}_{exp|mul|div|..}
 

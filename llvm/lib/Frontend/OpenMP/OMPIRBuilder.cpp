@@ -5268,6 +5268,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
   Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
+  // Emitting the alloca moved the insertion point into the alloca block and
+  // can clear the debug loc. Restore back to Loc.DL.
+  Builder.SetCurrentDebugLocation(Loc.DL);
 
   for (auto En : enumerate(ReductionInfos)) {
     unsigned Index = En.index();
@@ -8584,6 +8587,14 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
     }
   }
 
+  // Generic mode runs the main thread on a warp of its own, past thread_limit.
+  // Reserve the widest warp any target has.
+  if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
+      hasGridValue(T))
+    MaxThreadsVal = int32_t(
+        std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
+                          int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
+
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
                                MaxThreadsVal);
@@ -9306,6 +9317,14 @@ static Expected<Function *> createOutlinedFunction(
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.SetInsertPoint(ExitBB);
+  // The body callback builds the body with its own IRBuilder and cannot reach
+  // this one directly. But a body holding another OpenMP construct, a nested
+  // parallel say, calls OpenMPIRBuilder::createParallel, and that can leave
+  // this Builder pointing at the wrong debug location, or at none at all. The
+  // epilogue below belongs to the target construct rather than to whatever the
+  // body emitted last, so re-establish the location the prologue was emitted
+  // with.
+  Builder.SetCurrentDebugLocation(OutlinedFnLoc);
 
   // Insert target deinit call in the device compilation pass.
   if (OMPBuilder.Config.isTargetDevice())

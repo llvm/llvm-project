@@ -3473,17 +3473,25 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
     Location loc = op.getLoc();
 
     // Replace uses of ifOp results in the conditionOp with the yielded values
-    // from the ifOp branches.
+    // from the ifOp branches: the after-region argument takes the `then` value,
+    // while the condition operand -- which becomes a while result once the
+    // condition is false -- takes the `else` value.
+    //
+    // The same ifOp result may be forwarded to several condition operands, so
+    // assign into the specific operand instead of replacing all uses of the
+    // ifOp result, which would also rewrite the operands not yet visited.
     for (auto [idx, arg] : llvm::enumerate(conditionOp.getArgs())) {
       auto it = llvm::find(ifOp->getResults(), arg);
-      if (it != ifOp->getResults().end()) {
-        size_t ifOpIdx = it.getIndex();
-        Value thenValue = ifOp.thenYield()->getOperand(ifOpIdx);
-        Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
-
-        rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx], elseValue);
-        rewriter.replaceAllUsesWith(op.getAfterArguments()[idx], thenValue);
-      }
+      if (it == ifOp->getResults().end())
+        continue;
+      size_t ifOpIdx = it.getIndex();
+      rewriter.replaceAllUsesWith(op.getAfterArguments()[idx],
+                                  ifOp.thenYield()->getOperand(ifOpIdx));
+      unsigned argIdx = idx;
+      Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
+      rewriter.modifyOpInPlace(conditionOp, [&] {
+        conditionOp.getArgsMutable()[argIdx].assign(elseValue);
+      });
     }
 
     // Collect additional used values from before region.

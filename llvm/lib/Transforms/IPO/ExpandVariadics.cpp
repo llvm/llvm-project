@@ -680,8 +680,8 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
 
   for (unsigned I : seq(VarargFunctionType->getNumParams(), CB->arg_size())) {
     Value *ArgVal = CB->getArgOperand(I);
-    const bool IsByVal = CB->paramHasAttr(I, Attribute::ByVal);
-    const bool IsByRef = CB->paramHasAttr(I, Attribute::ByRef);
+    const bool IsByVal = CB->hasABIParamAttr(I, Attribute::ByVal);
+    const bool IsByRef = CB->hasABIParamAttr(I, Attribute::ByRef);
 
     // The type of the value being passed, decoded from byval/byref metadata if
     // required
