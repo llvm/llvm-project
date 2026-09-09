@@ -1619,10 +1619,10 @@ high-level CIR produced by CIR generation, the flattened form produced by `cir::
 ### High-level CIR representation
 
 A function with a dynamic exception specification has its entire body
-wrapped in a `cir.try` operation whose handler is a *filter* handler.
-A filter handler is identified by a `#cir.eh_filter` handler type
-attribute, which carries the list of type info symbols naming the
-permitted types.
+wrapped in a `cir.try` operation with two handlers, a `filter` handler that
+holds the path taken when the in-flight exception is permitted, and an
+`unexpected` handler, identified that holds the path taken when the
+specification is violated.
 
 ```mlir
 cir.try {
@@ -1630,38 +1630,48 @@ cir.try {
   cir.yield
 } filter [@_ZTIi] (%eh_token : !cir.eh_token) {
   cir.resume %eh_token : !cir.eh_token
+} unexpected (%eh_token.1 : !cir.eh_token) {
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
 }
 ```
 
-The `#cir.eh_filter` attribute occupies a slot in the try operation's
-handler type list, in the same way that a `#cir.global_view` catch type,
-`catch all`, or `unwind` does. Like `unwind`, and unlike a catch
-handler, a filter handler region does not begin with `cir.begin_catch`.
-A filter does not catch the exception. It only decides whether the
-exception is permitted to continue unwinding.
+Both attributes occupy a slot in the try operation's handler type list,
+in the same way that a `#cir.global_view` catch type, `catch all`, or
+`unwind` does. Like `unwind`, and unlike a catch handler, neither region
+begins with `cir.begin_catch`. Neither handler catches the exception.
+Together they only decide whether the exception is permitted to continue
+unwinding.
 
 The test that decides whether the in-flight exception matches the filter
 is implicit in the handler type, in the same way that the type test for
 a catch handler is implicit in its `#cir.global_view` handler type.
-Neither test is expressed in the handler region. Both are materialized
-during CFG flattening and ABI lowering. The body of a filter handler
-region therefore contains only the code that runs when the exception
-*is* permitted by the specification, which is a single `cir.resume`
-operation to continue unwinding to the caller.
+Neither test is expressed in a handler region. Both are materialized
+during ABI lowering. The two regions therefore describe only the
+outcomes of that test. The filter region contains a single `cir.resume`
+operation to continue unwinding to the caller, and the unexpected region
+contains a single `cir.eh.unexpected` operation.
 
-If a `cir.try` operation has a filter handler, that filter must be its
-only handler. The filter try operation wraps the entire function body and
-exists only to check the exception specification, while each try statement
-written in the source becomes a separate `cir.try` operation nested inside it.
-A function-try-block on a function that also has an exception
-specification is nested the same way.
+The `cir.eh.unexpected` operation is a terminator that signals that the
+in-flight exception violated the exception specification of the
+enclosing function and that `std::unexpected()` must be called. Like
+`cir.eh.terminate`, it takes an `!cir.eh_token`, it is ABI-agnostic, and
+it is replaced with target-specific code during EH ABI lowering.
+
+A filter handler and an unexpected handler must appear together, with
+the filter first, and the two must be the only handlers on the try
+operation. The filter try operation wraps the entire function body and
+exists only to check the exception specification, while each try
+statement written in the source becomes a separate `cir.try` operation
+nested inside it. A function-try-block on a function that also has an
+exception specification is nested the same way.
 
 An empty type list represents `throw()` before C++17. No exception is
 permitted by such a specification, so there is no permitted path to
-describe and the handler region is terminated with `cir.unreachable`
+describe and the filter region is terminated with `cir.unreachable`
 instead of `cir.resume`. This matches Clang's LLVM IR codegen, which
 generates no resume path at all for a function whose exception
-specification permits nothing.
+specification permits nothing. The unexpected region is the same in
+both cases.
 
 #### Example: Simple dynamic exception specification
 
@@ -1688,6 +1698,8 @@ cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
     cir.yield
   } filter [@_ZTIi] (%eh_token : !cir.eh_token) {
     cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
   }
   cir.return
 }
@@ -1699,6 +1711,8 @@ cir.func @_Z7target2v() personality(@__gxx_personality_v0)
     cir.yield
   } filter [] (%eh_token : !cir.eh_token) {
     cir.unreachable
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
   }
   cir.return
 }
@@ -1707,12 +1721,12 @@ cir.func @_Z7target2v() personality(@__gxx_personality_v0)
 In `target()`, if `external()` throws an `int`, the exception is
 permitted by the specification and unwinding continues to the caller
 through the filter handler's `cir.resume` operation. If it throws any
-other type, the specification is violated and `std::unexpected()` is
-called.
+other type, the specification is violated and the unexpected handler
+calls `std::unexpected()`.
 
 In `target2()`, the specification permits nothing, so any exception
-thrown by `external()` violates it and `std::unexpected()` is always
-called. There is no permitted path, which is why the filter handler
+thrown by `external()` violates it and the unexpected handler is always
+the one reached. There is no permitted path, which is why the filter
 region holds a `cir.unreachable` rather than a `cir.resume`. The
 function itself is marked `nothrow`, because no exception can escape it.
 
@@ -1744,6 +1758,8 @@ cir.func @_Z5innerv() personality(@__gxx_personality_v0) {
     cir.yield
   } filter [@_ZTIi] (%eh_token : !cir.eh_token) {
     cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
   }
   cir.return
 }
@@ -1776,6 +1792,8 @@ cir.func @_Z5outerv() personality(@__gxx_personality_v0)
     cir.yield
   } filter [] (%eh_token.2 : !cir.eh_token) {
     cir.unreachable
+  } unexpected (%eh_token.3 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.3 : !cir.eh_token
   }
   cir.return
 }
@@ -1790,17 +1808,20 @@ specification of `outer()` is never consulted, because the exception
 does not escape the function.
 
 If `inner()` throws any other type, the inner try operation's `unwind`
-handler is reached. Its `cir.resume` operation exits the enclosing
-filter handler's try region, so, following the rules described above for
-`cir.resume` within an enclosing scope, unwinding continues into the
-filter handler rather than leaving the function. The exception is
-checked against the specification of `outer()`, which permits nothing,
-and `std::unexpected()` is called.
+handler is reached. Its `cir.resume` operation exits the region of the
+enclosing filter try operation, so, following the rules described above
+for `cir.resume` within an enclosing scope, unwinding continues into
+that operation's specification check rather than leaving the function.
+The exception is checked against the specification of `outer()`, which
+permits nothing, so the unexpected handler is reached and
+`std::unexpected()` is called.
 
 ### CFG Flattening
 
-Flattening a filter handler introduces a `filter` clause on the
-`cir.eh.dispatch` operation, and a new `cir.eh.unexpected` operation.
+Flattening a filter try operation introduces a `filter` clause on the
+`cir.eh.dispatch` operation. Both handler regions become ordinary
+blocks, so flattening only has to inline them and wire up the dispatch
+operation's successors. It does not synthesize any new operation.
 
 ```mlir
 cir.eh.dispatch %eh_token : !cir.eh_token [
@@ -1816,32 +1837,28 @@ specification, in which case control transfers to the filter clause's
 destination, or it does not, in which case control continues along the
 dispatch operation's normal `unwind` edge. A `cir.eh.dispatch` operation
 carrying a `filter` clause therefore always carries an `unwind` clause
-as well, whose destination is the flattened filter handler region.
+as well.
 
-Because the filter is the only handler on the try operation, such a
-dispatch never carries catch clauses of its own. The catch clauses of a
-try statement nested inside the specification belong to that statement's
-own dispatch operation, which is chained ahead of this one.
-
-The filter handler region describes the permitted path, so it becomes
-the `unwind` destination of the dispatch operation. The destination of
-the `filter` clause is a new block, which contains a single
-`cir.eh.unexpected` operation.
+The two clauses correspond directly to the two handler regions. The
+unexpected region becomes the destination of the `filter` clause, and
+the filter region, which describes the permitted path, becomes the
+`unwind` destination.
 
 ```mlir
-^bb4(%eh_token : !cir.eh_token):
+^bb4(%eh_token : !cir.eh_token): // Flattened unexpected region
   cir.eh.unexpected %eh_token : !cir.eh_token
+^bb5(%eh_token.1 : !cir.eh_token): // Flattened filter region
+  cir.resume %eh_token.1 : !cir.eh_token
 ```
 
-The `cir.eh.unexpected` operation is a terminator that signals that the
-in-flight exception violated the exception specification of the
-enclosing function and that `std::unexpected()` must be called. Like
-`cir.eh.terminate`, it takes the `!cir.eh_token` produced by a preceding
-`cir.eh.initiate` operation, it is ABI-agnostic, and it is replaced with
-target-specific code during EH ABI lowering.
+Because the filter and unexpected handlers are the only handlers on the
+try operation, such a dispatch never carries catch clauses of its own.
+The catch clauses of a try statement nested inside the specification
+belong to that statement's own dispatch operation, which is chained
+ahead of this one.
 
-The two cases have the same shape when the filter type list is empty.
-The handler region's `cir.unreachable` becomes the `unwind` destination
+The shape is the same when the filter type list is empty. The filter
+region's `cir.unreachable` becomes the `unwind` destination
 and the dispatch operation still carries both clauses. ABI lowering then
 makes the branch to the filter destination unconditional, which leaves
 that `unwind` destination unreachable and dead.
@@ -1857,6 +1874,8 @@ cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
     cir.yield
   } filter [@_ZTIi] (%eh_token : !cir.eh_token) {
     cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
   }
   cir.return
 }
