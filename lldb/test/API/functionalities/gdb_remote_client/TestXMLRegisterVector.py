@@ -223,6 +223,8 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_vector_ids_are_scoped_to_included_feature(self):
+        first_register = "0000c03f" "00002040"
+        second_register = "0000c03f" "00002040" "00006040" "00009040"
         process = self.setup_multidoc_test(
             {
                 "target.xml": dedent(
@@ -260,7 +262,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
                 </feature>"""
                 ),
             },
-            "0000c03f00002040" "0000c03f000020400000604000009040" + "00" * 16,
+            first_register + second_register + "00" * 16,
         )
 
         self.assert_vector_info("first", 8, 2)

@@ -99,9 +99,8 @@ public:
 
   bool GetData(DataExtractor &data) const;
 
-  /// Copy this value into \p data using \p byte_order and the byte size from
-  /// \p reg_info.
-  bool GetData(DataExtractor &data, const RegisterInfo &reg_info,
+  /// Copy \p byte_size bytes from this value into \p data using \p byte_order.
+  bool GetData(DataExtractor &data, uint32_t byte_size,
                lldb::ByteOrder byte_order) const;
 
   // Copy the register value from this object into a buffer in "dst" and obey

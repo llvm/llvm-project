@@ -188,8 +188,9 @@ RegisterTypeBuilderClang::BuildVectorType(const RegisterTypeVector *vector_type,
   bool pointer_element =
       builtin_element && (builtin_element->GetID() == "data_ptr" ||
                           builtin_element->GetID() == "code_ptr");
-  // Clang vectors can pad non-power-of-two element counts. Pointer, boolean
-  // and nested elements also need array layout to match the XML exactly.
+  // Preserve vector semantics when Clang can represent the XML shape without
+  // padding. Use an array for pointer, boolean, nested and non-power-of-two
+  // vectors so that their layout matches the XML exactly.
   bool use_vector = builtin_element && !pointer_element &&
                     builtin_element->GetID() != "bool" &&
                     llvm::has_single_bit(vector_type->GetCount());
@@ -198,9 +199,9 @@ RegisterTypeBuilderClang::BuildVectorType(const RegisterTypeVector *vector_type,
 
   auto compiler_size =
       llvm::expectedToOptional(compiler_type.GetByteSize(nullptr));
-  // Target ABI rules can still pad a Clang vector. Prefer an array when that
-  // gives the exact byte size described by the register XML.
-  if (compiler_size != expected_byte_size) {
+  // Target ABI rules can still pad a Clang vector. Fall back to an array when
+  // that gives the exact byte size described by the register XML.
+  if (use_vector && compiler_size != expected_byte_size) {
     compiler_type = type_system->CreateArrayType(
         element_type, vector_type->GetCount(), /*is_vector=*/false);
     compiler_size =

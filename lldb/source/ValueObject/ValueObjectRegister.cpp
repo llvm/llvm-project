@@ -208,38 +208,38 @@ ValueObjectRegister::ValueObjectRegister(ExecutionContextScope *exe_scope,
 ValueObjectRegister::~ValueObjectRegister() = default;
 
 CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
+  if (m_compiler_type.IsValid())
+    return m_compiler_type;
+
   ExecutionContext exe_ctx(GetExecutionContextRef());
   Target *target = exe_ctx.GetTargetPtr();
-  if (target && llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeVector>(
-                    m_reg_info.register_type)) {
-    CompilerType register_type = target->GetRegisterType(m_reg_info);
-    if (register_type.IsValid())
-      return register_type;
+  if (!target)
+    return {};
+
+  if (llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeVector>(
+          m_reg_info.register_type)) {
+    m_compiler_type = target->GetRegisterType(m_reg_info);
+    if (m_compiler_type.IsValid())
+      return m_compiler_type;
   }
 
-  if (!m_compiler_type.IsValid() && target) {
-    auto *exe_module = target->GetExecutableModulePointer();
-    if (!exe_module)
-      return m_compiler_type;
-    auto type_system_or_err =
-        exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
-    if (auto err = type_system_or_err.takeError()) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
-                     "Unable to get CompilerType from TypeSystem: {0}");
-    } else {
-      if (auto ts = *type_system_or_err)
-        m_compiler_type = ts->GetBuiltinTypeForEncodingAndBitSize(
-            m_reg_info.encoding, m_reg_info.byte_size * 8);
-    }
+  auto *exe_module = target->GetExecutableModulePointer();
+  if (!exe_module)
+    return {};
+  auto type_system_or_err =
+      exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
+                   "Unable to get CompilerType from TypeSystem: {0}");
+  } else {
+    if (auto ts = *type_system_or_err)
+      m_compiler_type = ts->GetBuiltinTypeForEncodingAndBitSize(
+          m_reg_info.encoding, m_reg_info.byte_size * 8);
   }
   return m_compiler_type;
 }
 
 ConstString ValueObjectRegister::GetTypeName() {
-  if (llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeVector>(
-          m_reg_info.register_type))
-    return GetCompilerType().GetTypeName();
-
   if (m_type_name.IsEmpty())
     m_type_name = GetCompilerType().GetTypeName();
   return m_type_name;
@@ -273,10 +273,11 @@ bool ValueObjectRegister::UpdateValue() {
       Target *target = exe_ctx.GetTargetPtr();
       const bool has_vector_type =
           llvm::isa_and_present<RegisterTypeVector>(m_reg_info.register_type);
-      // CompilerType children interpret bytes using the target's layout.
+      // Scalar registers remain in host byte order, while CompilerType vector
+      // children need target-order bytes to interpret their layout.
       const bool got_data =
           has_vector_type && target
-              ? m_reg_value.GetData(m_data, m_reg_info,
+              ? m_reg_value.GetData(m_data, m_reg_info.byte_size,
                                     target->GetArchitecture().GetByteOrder())
               : m_reg_value.GetData(m_data);
       if (got_data) {

@@ -237,7 +237,7 @@ TEST_F(RegisterTypeBuilderClangTest, BuildsPowerOfTwoVector) {
 
   ASSERT_TRUE(type);
   EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
-  EXPECT_NE(type.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_TRUE(type.IsVectorType());
   EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 4u);
 }
 
@@ -253,8 +253,8 @@ TEST_F(RegisterTypeBuilderClangTest, PreservesThreeLaneVectorLayout) {
 
   ASSERT_TRUE(type);
   EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 12u);
-  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
-  EXPECT_EQ(type.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_TRUE(type.IsArrayType());
+  EXPECT_FALSE(type.IsVectorType());
   EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 3u);
 }
 
@@ -270,12 +270,12 @@ TEST_F(RegisterTypeBuilderClangTest, BuildsNestedVectors) {
 
   ASSERT_TRUE(type);
   EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
-  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
+  EXPECT_TRUE(type.IsArrayType());
   EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 2u);
 
   CompilerType inner = type.GetArrayElementType(nullptr);
   ASSERT_TRUE(inner);
-  EXPECT_NE(inner.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_TRUE(inner.IsVectorType());
   EXPECT_EQ(llvm::expectedToOptional(inner.GetNumChildren(true, nullptr)), 2u);
 }
 
@@ -291,7 +291,7 @@ TEST_F(RegisterTypeBuilderClangTest, BuildsTargetSizedPointerVector) {
 
   ASSERT_TRUE(type);
   EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
-  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
+  EXPECT_TRUE(type.IsArrayType());
   EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 2u);
 }
 
@@ -305,8 +305,8 @@ TEST_F(RegisterTypeBuilderClangTest, BuildsBoolVectorAsArray) {
 
   ASSERT_TRUE(type);
   EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 4u);
-  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
-  EXPECT_EQ(type.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_TRUE(type.IsArrayType());
+  EXPECT_FALSE(type.IsVectorType());
   EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 4u);
 }
 
@@ -321,7 +321,7 @@ TEST_F(RegisterTypeBuilderClangTest, BuildsSingleUint128Vector) {
 
   ASSERT_TRUE(type);
   EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
-  EXPECT_NE(type.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_TRUE(type.IsVectorType());
   EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 1u);
 }
 
