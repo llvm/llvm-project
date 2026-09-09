@@ -677,7 +677,8 @@ void PipelineSolver::retreatPosition() {
     while (PipelineInstrs[CurrSyncGroupIdx].empty())
       --CurrSyncGroupIdx;
 
-    CurrConflInstNo = PipelineInstrs[CurrSyncGroupIdx].size() - 1;
+    CurrConflInstNo =
+        static_cast<int>(PipelineInstrs[CurrSyncGroupIdx].size() - 1);
   }
 }
 
@@ -922,7 +923,7 @@ bool PipelineSolver::solveGreedy() {
 unsigned PipelineSolver::computeProblemSize() {
   unsigned ProblemSize = 0;
   for (auto &PipeConflicts : PipelineInstrs) {
-    ProblemSize += PipeConflicts.size();
+    ProblemSize += static_cast<unsigned>(PipeConflicts.size());
   }
 
   return ProblemSize;
@@ -1188,18 +1189,19 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
-        return Succ.getKind() == SDep::Data;
-      });
+      unsigned SuccSize =
+          static_cast<unsigned>(llvm::count_if(SU->Succs, [](const SDep &Succ) {
+            return Succ.getKind() == SDep::Data;
+          }));
       if (SuccSize >= Size)
         return false;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          unsigned SuccSize =
+          unsigned SuccSize = static_cast<unsigned>(
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
-              });
+              }));
           if (SuccSize >= Size)
             return false;
         }
@@ -1228,18 +1230,19 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
-        return Succ.getKind() == SDep::Data;
-      });
+      unsigned SuccSize =
+          static_cast<unsigned>(llvm::count_if(SU->Succs, [](const SDep &Succ) {
+            return Succ.getKind() == SDep::Data;
+          }));
       if (SuccSize >= Size)
         return true;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          unsigned SuccSize =
+          unsigned SuccSize = static_cast<unsigned>(
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
-              });
+              }));
           if (SuccSize >= Size)
             return true;
         }
@@ -1565,7 +1568,7 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     }
   }
 
-  MFMAPipeCount = MFMAPipeSUs.size();
+  MFMAPipeCount = static_cast<unsigned>(MFMAPipeSUs.size());
 
   assert(TempExp && TempMFMA);
   assert(MFMAPipeCount > 0);
@@ -1610,17 +1613,17 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   }
 
   // The number of bit pack operations that depend on a single V_EXP
-  unsigned PackSuccCount =
+  unsigned PackSuccCount = static_cast<unsigned>(
       llvm::count_if(PackSUs, [this, &TempExp](SUnit *VPack) {
         return DAG->IsReachable(VPack, *TempExp);
-      });
+      }));
 
   // The number of bit pack operations an MFMA depends on
-  unsigned PackPredCount =
+  unsigned PackPredCount = static_cast<unsigned>(
       llvm::count_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
         auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
         return isBitPack(Opc);
-      });
+      }));
 
   auto *PackPred = llvm::find_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
     auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
@@ -1633,19 +1636,19 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   MFMAEnablement = 0;
   ExpRequirement = 0;
   // How many MFMAs depend on a single bit pack operation
-  MFMAEnablement =
+  MFMAEnablement = static_cast<unsigned>(
       llvm::count_if(PackPred->getSUnit()->Succs, [&TII](SDep &Succ) {
         return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-      });
+      }));
 
   // The number of MFMAs that depend on a single V_EXP
   MFMAEnablement *= PackSuccCount;
 
   // The number of V_EXPs required to resolve all dependencies for an MFMA
-  ExpRequirement =
+  ExpRequirement = static_cast<unsigned>(
       llvm::count_if(ExpPipeCands, [this, &PackPred](SUnit *ExpBase) {
         return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
-      });
+      }));
 
   ExpRequirement *= PackPredCount;
   return true;
@@ -2114,7 +2117,7 @@ private:
         auto Op = Elt->getInstr()->getOperand(0);
         auto Size =
             TRI.getRegSizeInBits(*TRI.getRegClassForOperandReg(MRI, Op));
-        NumBits += Size;
+        NumBits += static_cast<int>(Size);
       }
 
       if (NumBits < 128) {
@@ -2238,7 +2241,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   }
 
   if (IsInitial) {
-    DSWWithPermCount = DSWithPerms.size();
+    DSWWithPermCount = static_cast<unsigned>(DSWithPerms.size());
     auto *I = DSWithPerms.begin();
     auto *E = DSWithPerms.end();
 
@@ -2820,9 +2823,9 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
   MachineInstr &SGB = *RIter->getInstr();
   assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
-  int32_t SGMask = SGB.getOperand(0).getImm();
-  int32_t Size = SGB.getOperand(1).getImm();
-  int32_t SyncID = SGB.getOperand(2).getImm();
+  int32_t SGMask = static_cast<int32_t>(SGB.getOperand(0).getImm());
+  int32_t Size = static_cast<int32_t>(SGB.getOperand(1).getImm());
+  int32_t SyncID = static_cast<int32_t>(SGB.getOperand(2).getImm());
 
   Size++; // Make room for the SCHED_GROUP_BARRIER instruction
   auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,

@@ -439,7 +439,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       return;
     }
 
-    BitVector VOPDCapable(DAG->SUnits.size());
+    BitVector VOPDCapable(static_cast<unsigned>(DAG->SUnits.size()));
     unsigned IIdx = 0;
     // Pre-compute whether each individual instruction can be VOPD
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
@@ -456,10 +456,10 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     // Cache collected load predecessors.
     // For VOPDCapable nodes, this caches collectLoads with StopAtLoads=true
     // For loads, this caches collectLoads with StopAtLoads=false
-    BitVector LoadPredsComputed(DAG->SUnits.size());
+    BitVector LoadPredsComputed(static_cast<unsigned>(DAG->SUnits.size()));
     SmallVector<SmallPtrSet<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
 
-    BitVector Scratch(DAG->SUnits.size());
+    BitVector Scratch(static_cast<unsigned>(DAG->SUnits.size()));
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
       if (!VOPDCapable[IIdx])
