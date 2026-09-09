@@ -7555,9 +7555,12 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
         }
 
         // Store the value so CodeGen does not re-evaluate the element outside
-        // a constant context.
+        // a constant context. Elements that are rebuilt at each use site
+        // cannot be cached.
+        ImmediateCallVisitor V(Context);
+        V.TraverseStmt(Init);
         Expr::EvalResult Eval;
-        if (Init->isPRValue() &&
+        if (!V.HasImmediateCalls && Init->isPRValue() &&
             Init->EvaluateAsRValue(Eval, Context, /*InConstantContext=*/true) &&
             !Eval.HasSideEffects && Eval.Val.hasValue())
           ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));

@@ -2708,7 +2708,14 @@ bool Compiler<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
     // diagnostics or any double values.
     if (DiscardResult)
       return true;
-    return this->visitAPValue(E->getAPValueResult(), *T, E);
+    const APValue &Val = E->getAPValueResult();
+    // visitAPValue can only re-materialize an lvalue that is null or that
+    // designates a declaration.
+    if (Val.isLValue() && !Val.isNullPointer() &&
+        !(Val.hasLValuePath() &&
+          Val.getLValueBase().dyn_cast<const ValueDecl *>()))
+      return this->delegate(E->getSubExpr());
+    return this->visitAPValue(Val, *T, E);
   }
 
   // Fall back to the subexpr for non-primitive APValues.

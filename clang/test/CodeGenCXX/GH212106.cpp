@@ -41,6 +41,11 @@ void h() { Q q; }
 
 // CHECK-DAG: [[QCL:@.compoundliteral(\.[0-9]+)?]] = internal constant [1 x i32] zeroinitializer
 
+struct SP { int a; const char *const *s; };
+SP sp = { g(), (const char *const[1]){__builtin_constant_p(n) ? "a" : "b"} };
+
+// CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal constant [1 x ptr] [ptr @.str{{(\.[0-9]+)?}}]
+
 // CHECK-LABEL: define internal void @__cxx_global_var_init()
 // CHECK: store ptr [[Z2CL]], ptr getelementptr inbounds{{.*}}(i8, ptr @z2, i64 8)
 

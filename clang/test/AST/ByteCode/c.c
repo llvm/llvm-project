@@ -253,6 +253,10 @@ void unaryops(void) {
   (void)((struct ww {float x;}){3}.x--);
 }
 
+/// Elements of a file-scope compound literal carry their evaluated value.
+static long *addr_as_int = (long[]){2, (long)"x"};
+static const char **into_string = (const char *[]){&"abc"[1]};
+
 /// This used to fail because we didn't properly mark the struct
 /// initialized through a CompoundLiteralExpr as initialized.
 struct TestStruct {
