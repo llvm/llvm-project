@@ -21254,9 +21254,7 @@ constant.
 The first argument is the vector to permute. The result has the same type.
 
 The second argument is the mask. It may have any integer element type, but must
-have the same element count as the vector operand (and hence the result); in
-particular the mask and the vector operand must both be fixed vectors or both
-be scalable vectors.
+have the same element count as the vector operand (and hence the result).
 
 ##### Semantics:
 
@@ -21277,15 +21275,9 @@ speculatable and lets targets lower it directly to native variable permute
 instructions regardless of how those instructions treat out-of-range indices.
 
 Unlike `shufflevector`, this intrinsic takes a single vector operand and cannot
-change the vector length, mirroring the hardware instructions it lowers to.
-Shuffles that draw from two vectors, or that change length, are expressed by
-composing this intrinsic with '`llvm.vector.insert`' and
-'`llvm.vector.extract`'.
-
-On targets without a native variable permute, a fixed vector shuffle is
-expanded through a stack temporary and variable-indexed loads. There is no such
-expansion for scalable vector types, so a scalable shuffle requires a target
-that lowers the intrinsic natively.
+change the vector length. Shuffles that draw from two vectors, or that change
+length, are expressed by composing this intrinsic with '`llvm.vector.insert`'
+and '`llvm.vector.extract`'.
 
 #### '`llvm.experimental.vector.match.*`' Intrinsic
 

@@ -22,6 +22,7 @@
 #include "LegalizeTypes.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/DataLayout.h"
@@ -2958,45 +2959,44 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE_VAR(SDNode *N, SDValue &Lo,
   // lane on which half the index falls in:
   //   Half[i] = Idx[i] <u HalfElts ? SrcLo[Idx[i]] : SrcHi[Idx[i] - HalfElts]
   // Indices past the end of the whole source are out of range in the SrcHi
-  // shuffle too, so they stay poison. This needs HalfElts to be representable
-  // in the mask element type; for scalable vectors that is only known when the
-  // elements are wide enough to hold any element count a target can produce.
-  // A fixed HalfElts is representable: the early return above took every case
-  // where the mask element type cannot reach it.
-  if (HalfEC.isScalable() && MaskEltBits < 32) {
-    SDValue Expanded = TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
-    std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
-    return;
-  }
-
-  // Give the half masks the result half's integer element type, so that the
-  // select's condition type matches its value type as targets expect. Indices
-  // are unsigned, so extending them is always fine; truncating them is fine as
-  // long as every in-range index still fits, since out-of-range lanes are
-  // poison anyway.
-  EVT NewMaskVT = HalfVT.changeVectorElementTypeToInteger();
-  unsigned NewMaskEltBits = NewMaskVT.getScalarSizeInBits();
-  if (NewMaskVT != HalfMaskVT &&
-      (NewMaskEltBits >= MaskEltBits ||
-       (!HalfEC.isScalable() &&
-        isUIntN(NewMaskEltBits, 2 * HalfEC.getFixedValue() - 1)))) {
-    MaskLo = DAG.getZExtOrTrunc(MaskLo, DL, NewMaskVT);
-    MaskHi = DAG.getZExtOrTrunc(MaskHi, DL, NewMaskVT);
-    HalfMaskVT = NewMaskVT;
+  // shuffle too, so they stay poison.
+  //
+  // This needs HalfElts itself to be representable in the mask element type.
+  // A fixed HalfElts always is: the early return above took every case where
+  // the mask element type cannot reach it. For scalable vectors the bound comes
+  // from the function's vscale_range; if the maximum half element count does
+  // not fit, widen the mask to an element type that can hold it.
+  if (HalfEC.isScalable()) {
+    const Function &F = DAG.getMachineFunction().getFunction();
+    APInt MaxHalfElts = getVScaleRange(&F, 64).getUnsignedMax().umul_sat(
+        APInt(64, HalfEC.getKnownMinValue()));
+    if (MaxHalfElts.getActiveBits() > MaskEltBits) {
+      EVT WideEltVT = EVT::getIntegerVT(
+          *DAG.getContext(), PowerOf2Ceil(MaxHalfElts.getActiveBits()));
+      EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), WideEltVT, HalfEC);
+      MaskLo = DAG.getNode(ISD::ZERO_EXTEND, DL, WideMaskVT, MaskLo);
+      MaskHi = DAG.getNode(ISD::ZERO_EXTEND, DL, WideMaskVT, MaskHi);
+      HalfMaskVT = WideMaskVT;
+    }
   }
 
   SDValue HalfElts =
       DAG.getSplat(HalfMaskVT, DL,
                    DAG.getElementCount(DL, HalfMaskVT.getScalarType(), HalfEC));
-  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                    HalfMaskVT);
+  // The compare is done in the mask type, but the select's condition has to be
+  // whatever the target uses for selects on the result type.
+  EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                     HalfMaskVT);
+  EVT CCVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), HalfVT);
   auto ShuffleHalf = [&](SDValue Idx) {
     SDValue FromLo =
         DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, HalfVT, SrcLo, Idx);
     SDValue HiIdx = DAG.getNode(ISD::SUB, DL, HalfMaskVT, Idx, HalfElts);
     SDValue FromHi =
         DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, HalfVT, SrcHi, HiIdx);
-    SDValue InLo = DAG.getSetCC(DL, CCVT, Idx, HalfElts, ISD::SETULT);
+    SDValue InLo = DAG.getSetCC(DL, CmpVT, Idx, HalfElts, ISD::SETULT);
+    InLo = DAG.getSExtOrTrunc(InLo, DL, CCVT);
     return DAG.getSelect(DL, HalfVT, InLo, FromLo, FromHi);
   };
   Lo = ShuffleHalf(MaskLo);
