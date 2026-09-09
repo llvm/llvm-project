@@ -508,6 +508,15 @@ TEST(DenseMapCustomTest, InsertRange) {
   EXPECT_EQ(*It->second, 42);
   EXPECT_EQ(MoveOnly[0].second, nullptr);
 
+  // A move iterator over a map yields bucket rvalues instead, which must reach
+  // insert(BucketT &&) rather than be copied.
+  DenseMap<int, std::unique_ptr<int>> MoveSrc;
+  MoveSrc.try_emplace(4, std::make_unique<int>(7));
+  MoveMap.insert(std::make_move_iterator(MoveSrc.begin()),
+                 std::make_move_iterator(MoveSrc.end()));
+  EXPECT_EQ(*MoveMap.find(4)->second, 7);
+  EXPECT_EQ(MoveSrc.find(4)->second, nullptr);
+
   // Converting a bucket explicitly still reaches a vector's element type, and a
   // std::map's, whose key is const.
   DenseMap<int, int> Src({{1, 10}, {2, 20}});
