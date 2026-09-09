@@ -2611,7 +2611,7 @@ def isNotMachOAndNotTargetAEABI
 // Note that these actually pass and return int and short rather than float and
 // _Float16. This happens to work with the AAPCS calling convention where they
 // are treated equally, but may not work on other platforms. __extendhfsf2 and
-// __truncsfhf2 should be used anyway on non-GNUEABIHF targets.
+// __truncsfhf2 should be used instead on non-GNUEABIHF targets anyway.
 def GNUEABIHalfConvertCalls :
   LibcallImpls<(add __gnu_f2h_ieee, __gnu_h2f_ieee),
     isNotMachOAndNotTargetAEABI> {
