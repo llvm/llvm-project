@@ -110,6 +110,7 @@ private:
   // free-ed when close method is called on the stream.
   bool own_buf;
 
+  // Used to handle the File's mode
   FileMode mode;
 
   // Current read or write pointer.
