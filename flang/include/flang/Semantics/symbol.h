@@ -76,9 +76,7 @@ public:
     ompDeclTargetDeviceType_ = device;
   }
 
-  const llvm::omp::Clauses &ompGroupprivate() const {
-    return ompGroupprivate_;
-  }
+  const llvm::omp::Clauses &ompGroupprivate() const { return ompGroupprivate_; }
   void set_ompGroupprivate(llvm::omp::Clauses clauses) {
     ompGroupprivate_ = clauses;
   }
@@ -93,8 +91,8 @@ public:
 
   // \p dir indicates to which declarative directive the given clauses
   // belong to.
-  void printClauseSet(llvm::raw_ostream &os,
-      const llvm::omp::Clauses &clauses, llvm::omp::Directive dir,
+  void printClauseSet(llvm::raw_ostream &os, const llvm::omp::Clauses &clauses,
+      llvm::omp::Directive dir,
       parser::CharBlock name = parser::CharBlock{}) const;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const WithOmpDeclarative &);
