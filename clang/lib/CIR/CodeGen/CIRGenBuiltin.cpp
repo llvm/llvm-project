@@ -2096,7 +2096,46 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_maximum:
   case Builtin::BI__builtin_elementwise_minimum:
   case Builtin::BI__builtin_elementwise_maximumnum:
-  case Builtin::BI__builtin_elementwise_minimumnum:
+  case Builtin::BI__builtin_elementwise_minimumnum: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value op0 = emitScalarExpr(e->getArg(0));
+    mlir::Value op1 = emitScalarExpr(e->getArg(1));
+
+    auto getIntrinName = [&](unsigned builtinID) {
+      switch (builtinID) {
+      case Builtin::BI__builtin_elementwise_min:
+        if (cir::isIntOrVectorOfIntType(op0.getType())) {
+          QualType ty = e->getArg(0)->getType();
+          return ty->hasSignedIntegerRepresentation() ? "smin" : "umin";
+        }
+        return "minnum";
+      case Builtin::BI__builtin_elementwise_max:
+        if (cir::isIntOrVectorOfIntType(op0.getType())) {
+          QualType ty = e->getArg(0)->getType();
+          return ty->hasSignedIntegerRepresentation() ? "smax" : "umax";
+        }
+        return "maxnum";
+      case Builtin::BI__builtin_elementwise_minnum:
+        return "minnum";
+      case Builtin::BI__builtin_elementwise_maxnum:
+        return "maxnum";
+      case Builtin::BI__builtin_elementwise_minimum:
+        return "minimum";
+      case Builtin::BI__builtin_elementwise_maximum:
+        return "maximum";
+      case Builtin::BI__builtin_elementwise_minimumnum:
+        return "minimumnum";
+      case Builtin::BI__builtin_elementwise_maximumnum:
+        return "maximumnum";
+      default:
+        llvm_unreachable("Unhandled intrin id?");
+      };
+    };
+
+    return RValue::get(
+        builder.emitIntrinsicCallOp(loc, getIntrinName(builtinIDIfNoAsmLabel),
+                                    op0.getType(), mlir::ValueRange{op0, op1}));
+  }
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min:
   case Builtin::BI__builtin_reduce_add:
