@@ -873,8 +873,20 @@ bool BuiltinPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
   if (!InstructionPattern::checkSemantics(Loc))
     return false;
 
-  // For now all builtins just take names, no immediates.
+  // All builtins just take names, except for the second operand of
+  // GIReplaceRegWithConstant/GIReplaceRegWithFConstant, which is a literal.
   for (const auto &[Idx, Op] : enumerate(operands())) {
+    if ((I.Kind == BI_ReplaceRegWithConstant ||
+         I.Kind == BI_ReplaceRegWithFConstant) &&
+        Idx == 1) {
+      if (!Op.hasImmValue() || Op.isNamedOperand()) {
+        PrintError(Loc, "expected operand " + std::to_string(Idx) + " of '" +
+                            getInstName() + "' to be an immediate value");
+        return false;
+      }
+      continue;
+    }
+
     if (!Op.isNamedOperand() || Op.isNamedImmediate()) {
       PrintError(Loc, "expected operand " + std::to_string(Idx) + " of '" +
                           getInstName() + "' to be a name");
