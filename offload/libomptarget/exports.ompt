@@ -1,0 +1,11 @@
+VERS1.0 {
+  global:
+    libomptarget_ompt_set_trace_ompt;
+    libomptarget_ompt_start_trace;
+    libomptarget_ompt_flush_trace;
+    libomptarget_ompt_stop_trace;
+    libomptarget_ompt_set_granted_teams;
+    libomptarget_ompt_set_timestamp;
+    libomptarget_ompt_advance_buffer_cursor;
+    libomptarget_ompt_get_record_type;
+};

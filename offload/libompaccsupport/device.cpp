@@ -15,6 +15,8 @@
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "PluginManager.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
@@ -35,7 +37,8 @@
 #include <thread>
 
 #ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
+using namespace llvm::omp::target;
+using namespace ompt;
 #endif
 
 using namespace llvm::omp::target::plugin;
@@ -81,7 +84,7 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
-  int32_t Ret = RTL->init_device(RTLDeviceID);
+  int32_t Ret = RTL->init_device(RTLDeviceID, PM->getProfiler());
   if (Ret != OFFLOAD_SUCCESS)
     return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
                                      "failed to initialize device %d\n",
@@ -216,7 +219,8 @@ llvm::Expected<__tgt_device_binary>
 DeviceTy::loadBinary(__tgt_device_image *Img) {
   __tgt_device_binary Binary;
 
-  if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
+  if (RTL->load_binary(RTLDeviceID, Img, &Binary, PM->getProfiler()) !=
+      OFFLOAD_SUCCESS)
     return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
                                      "failed to load binary %p", Img);
 
@@ -257,23 +261,33 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
-  OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
-                    RegionInterface.getCallbacks<ompt_target_data_alloc>(),
-                    DeviceID, HstPtr, &TargetPtr, Size,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataAllocRAII(
+          RegionInterface.getCallbacks<ompt_target_data_alloc>(), DeviceID,
+          HstPtr, &TargetPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      InterfaceRAII TargetDataAllocTraceRAII(
+          RegionInterface.getTraceGenerators<ompt_target_data_alloc>(),
+          RTLDeviceID, HstPtr, &TargetPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
+  TargetPtr =
+      RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind, PM->getProfiler());
   return TargetPtr;
 }
 
 int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   /// RAII to establish tool anchors before and after data deletion
-  OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
-                    RegionInterface.getCallbacks<ompt_target_data_delete>(),
-                    DeviceID, TgtAllocBegin,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-
-  return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataDeleteRAII(
+          RegionInterface.getCallbacks<ompt_target_data_delete>(), DeviceID,
+          TgtAllocBegin,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      InterfaceRAII TargetDataDeleteTraceRAII(
+          RegionInterface.getTraceGenerators<ompt_target_data_delete>(),
+          DeviceID, TgtAllocBegin,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
+  return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind, PM->getProfiler());
 }
 
 // Submit data to device
@@ -289,10 +303,17 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
           omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      TracerInterfaceRAII TargetDataSubmitTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_to_device>(),
+          AsyncInfo, PM->getProfiler(), /*TracedDeviceId=*/DeviceID,
+          /*EventType=*/ompt_callback_target_data_op, omp_initial_device,
+          HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
-                                AsyncInfo);
+                                AsyncInfo, PM->getProfiler());
 }
 
 // Retrieve data from device
@@ -309,10 +330,17 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      TracerInterfaceRAII TargetDataRetrieveTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_from_device>(),
+          AsyncInfo, PM->getProfiler(), /*TracedDeviceId=*/DeviceID,
+          /*EventType=*/ompt_callback_target_data_op, DeviceID, TgtPtrBegin,
+          omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
-                                  AsyncInfo);
+                                  AsyncInfo, PM->getProfiler());
 }
 
 // Copy data from current device to destination device directly
@@ -328,13 +356,17 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
       InterfaceRAII TargetDataExchangeRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      TracerInterfaceRAII TargetDataExchangeTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_from_device>(),
+          AsyncInfo, PM->getProfiler(), /*TracedDeviceId=*/RTLDeviceID,
+          /*EventType=*/ompt_callback_target_data_op, RTLDeviceID, SrcPtr,
+          DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-  if (!AsyncInfo) {
-    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
-                              Size);
-  }
+
   return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
-                                  DstPtr, Size, AsyncInfo);
+                                  DstPtr, Size, AsyncInfo, PM->getProfiler());
 }
 
 int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
@@ -442,7 +474,8 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
     }
   }
 
-  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
+  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo,
+                            PM->getProfiler());
 }
 
 // Run region on device

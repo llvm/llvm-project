@@ -39,6 +39,8 @@
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
+class OmptTracingBufferMgr;
+
 /// Struct for the data required to handle plugins
 struct PluginManager {
   /// Type of the devices container. We hand out DeviceTy& to queries which are
@@ -48,7 +50,7 @@ struct PluginManager {
   /// Exclusive accessor type for the device container.
   using ExclusiveDevicesAccessorTy = Accessor<DeviceContainerTy>;
 
-  PluginManager() {}
+  PluginManager() = default;
 
   void init();
 
@@ -150,6 +152,16 @@ struct PluginManager {
     return count;
   }
 
+  /// Get the profiler owned by this plugin manager. Never null after init().
+  llvm::omp::target::plugin::GenericProfilerTy *getProfiler() const {
+    assert(Profiler && "Profiler not initialized");
+    return Profiler.get();
+  }
+
+  /// Forwards to the trace record manager owned by the profiler. Defined
+  /// out-of-line so this header does not need to know the OMPT profiler type.
+  OmptTracingBufferMgr *getTraceRecordManager() const;
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
@@ -175,6 +187,9 @@ private:
 
   /// Devices associated with plugins, accesses to the container are exclusive.
   ProtectedObj<DeviceContainerTy> Devices;
+
+  /// The single profiler instance, handed explicitly to the plugin API.
+  std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy> Profiler;
 
   /// References to upgraded legacy offloading entries.
   std::list<llvm::SmallVector<llvm::offloading::EntryTy, 0>> LegacyEntries;
