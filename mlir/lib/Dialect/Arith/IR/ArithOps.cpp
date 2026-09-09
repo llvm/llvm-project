@@ -1295,6 +1295,9 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
   // addf(x, -0) -> x
   if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()))
     return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
+    return getLhs();
 
   auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
@@ -1318,6 +1321,9 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   // subf(x, +0) -> x
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
     return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
+    return getLhs();
 
   auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
@@ -1334,71 +1340,6 @@ void arith::SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 namespace {
-
-// A helper for the conversion:
-//
-//    trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
-//
-// To make sure that type conversion won't lose information.
-//
-// For floating point conversion, we can't allow conversion between
-// -0 and +0. More importantly, we can't allow a conversion from
-// sNaN to qNaN. That changes semantics.
-// When `ignoreNaNs` is set, differences between NaN representations
-// may be ignored, but source non-finite values must not become
-// finite.
-static bool isLosslesslyConvertibleTo(const llvm::fltSemantics &from,
-                                      const llvm::fltSemantics &to,
-                                      bool ignoreNaNs = false) {
-  if (!llvm::APFloatBase::isRepresentableBy(from, to))
-    return false;
-
-  if ((from.hasZero && !to.hasZero) ||
-      (from.hasSignedRepr && !to.hasSignedRepr))
-    return false;
-
-  // NegativeZero NaN encoding repurposes the negative-zero bit pattern, so a
-  // conversion to such a format cannot preserve a source negative zero.
-  bool fromHasSignedZero =
-      from.hasZero && from.hasSignedRepr &&
-      from.nanEncoding != llvm::fltNanEncoding::NegativeZero;
-  bool toHasSignedZero = to.hasZero && to.hasSignedRepr &&
-                         to.nanEncoding != llvm::fltNanEncoding::NegativeZero;
-  if (fromHasSignedZero && !toHasSignedZero)
-    return false;
-
-  // isRepresentableBy compares the normalized exponent ranges. Also ensure
-  // that the smallest source value, which may be denormal, is represented
-  // exactly by the destination semantics.
-  llvm::APFloat smallestFrom = llvm::APFloat::getSmallest(from);
-  bool losesInfo = false;
-  (void)smallestFrom.convert(to, llvm::APFloat::rmNearestTiesToEven,
-                             &losesInfo);
-  if (losesInfo)
-    return false;
-
-  if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::FiniteOnly)
-    return true;
-
-  // If we're ignoring NaNs, we can return early if the nonFiniteBehavior
-  // matches.
-  if (ignoreNaNs)
-    return to.nonFiniteBehavior != llvm::fltNonfiniteBehavior::FiniteOnly;
-
-  if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754) {
-    // Converting an IEEE signaling NaN to another semantics quiets it, so the
-    // original value cannot be recovered by converting it back.
-    return false;
-  }
-
-  // NanOnly formats have no signaling NaNs. IEEE semantics can represent
-  // their quiet NaNs; conversions between NanOnly formats are conservatively
-  // accepted only when they use the same NaN encoding.
-  if (to.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754)
-    return true;
-  return to.nonFiniteBehavior == llvm::fltNonfiniteBehavior::NanOnly &&
-         from.nanEncoding == to.nanEncoding;
-}
 
 /// Narrow an extremum whose operands were extended from the result type:
 ///
@@ -1450,8 +1391,8 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
       if constexpr (std::is_same_v<TruncOp, TruncFOp>)
         ignoreNaNs =
             bitEnumContainsAll(extremumOp.getFastmath(), FastMathFlags::nnan);
-      if (!isLosslesslyConvertibleTo(narrowSemantics, wideSemantics,
-                                     ignoreNaNs))
+      if (!llvm::APFloatBase::isLosslesslyConvertibleTo(
+              narrowSemantics, wideSemantics, ignoreNaNs))
         return failure();
     }
 
@@ -1822,6 +1763,9 @@ convertFloatValue(APFloat sourceValue,
 
 OpFoldResult arith::ExtUIOp::fold(FoldAdaptor adaptor) {
   if (auto lhs = getIn().getDefiningOp<ExtUIOp>()) {
+    // Only the inner extension's nneg speaks about the surviving source; the
+    // outer flag described the already-extended value.
+    setNonNeg(lhs.getNonNeg());
     getInMutable().assign(lhs.getIn());
     return getResult();
   }
@@ -1922,6 +1866,93 @@ LogicalResult arith::ExtFOp::verify() { return verifyExtOp<FloatType>(*this); }
 // ScalingExtFOp
 //===----------------------------------------------------------------------===//
 
+/// Fold `calculate` element-wise over the operands of a scaling cast op. The
+/// `constFoldBinaryOp` helpers cannot be used: they bail out unless both
+/// operands have the same type, and `in` and `scale` never do.
+static Attribute foldScalingCastOp(
+    Attribute inAttr, Attribute scaleAttr, Type resultType,
+    function_ref<std::optional<APFloat>(const APFloat &, const APFloat &)>
+        calculate) {
+  // Poison propagates, as it does in the generic constant folders.
+  if (isa_and_nonnull<ub::PoisonAttr>(inAttr))
+    return inAttr;
+  if (isa_and_nonnull<ub::PoisonAttr>(scaleAttr))
+    return scaleAttr;
+
+  if (!inAttr || !scaleAttr || !resultType)
+    return {};
+
+  if (auto inFloat = dyn_cast<FloatAttr>(inAttr)) {
+    auto scaleFloat = dyn_cast<FloatAttr>(scaleAttr);
+    if (!scaleFloat)
+      return {};
+    std::optional<APFloat> result =
+        calculate(inFloat.getValue(), scaleFloat.getValue());
+    if (!result)
+      return {};
+    return FloatAttr::get(resultType, *result);
+  }
+
+  auto inElements = dyn_cast<DenseFPElementsAttr>(inAttr);
+  auto scaleElements = dyn_cast<DenseFPElementsAttr>(scaleAttr);
+  auto shapedResultType = dyn_cast<ShapedType>(resultType);
+  if (!inElements || !scaleElements || !shapedResultType ||
+      !shapedResultType.hasStaticShape() ||
+      inElements.getNumElements() != scaleElements.getNumElements())
+    return {};
+
+  // Both operands are splats, so avoid expanding the elements out.
+  if (inElements.isSplat() && scaleElements.isSplat()) {
+    std::optional<APFloat> result =
+        calculate(inElements.getSplatValue<APFloat>(),
+                  scaleElements.getSplatValue<APFloat>());
+    if (!result)
+      return {};
+    return DenseElementsAttr::get(shapedResultType, *result);
+  }
+
+  SmallVector<APFloat> results;
+  results.reserve(inElements.getNumElements());
+  for (const auto &[in, scale] : llvm::zip_equal(inElements, scaleElements)) {
+    std::optional<APFloat> result = calculate(in, scale);
+    if (!result)
+      return {};
+    results.push_back(*result);
+  }
+  return DenseElementsAttr::get(shapedResultType, results);
+}
+
+/// Only scales that already are f8E8M0FNU fold. What a wider scale means is
+/// unsettled -- the tree does not say whether truncating one to f8E8M0FNU
+/// rounds or takes its exponent -- so a folder should not settle it, see
+/// https://github.com/llvm/llvm-project/issues/215295.
+static bool isFoldableScalingScale(Value scale) {
+  return isa<Float8E8M0FNUType>(getElementTypeOrSelf(scale.getType()));
+}
+
+OpFoldResult arith::ScalingExtFOp::fold(FoldAdaptor adaptor) {
+  // scaling_extf(in, scale) -> mulf(extf(in), extf(scale)), matching the
+  // expansion in ExpandOps.cpp. As in arith.extf, the widening steps only fold
+  // when they are lossless.
+  if (!isFoldableScalingScale(getScale()))
+    return {};
+
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &resSemantics = resElemType.getFloatSemantics();
+  return foldScalingCastOp(
+      adaptor.getIn(), adaptor.getScale(), getType(),
+      [&resSemantics](const APFloat &in,
+                      const APFloat &scale) -> std::optional<APFloat> {
+        FailureOr<APFloat> inExt = convertFloatValue(in, resSemantics);
+        FailureOr<APFloat> scaleExt = convertFloatValue(scale, resSemantics);
+        if (failed(inExt) || failed(scaleExt))
+          return std::nullopt;
+        APFloat result(*inExt);
+        result.multiply(*scaleExt, kDefaultRoundingMode);
+        return result;
+      });
+}
+
 bool arith::ScalingExtFOp::areCastCompatible(TypeRange inputs,
                                              TypeRange outputs) {
   return checkWidthChangeCast<std::greater, FloatType>(inputs.front(), outputs);
@@ -2002,8 +2033,9 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
         cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
     // Check whether every source value round-trips through the intermediate
     // type, including signaling NaNs and signed zero.
-    if (isLosslesslyConvertibleTo(srcType.getFloatSemantics(),
-                                  intermediateType.getFloatSemantics())) {
+    if (llvm::APFloatBase::isLosslesslyConvertibleTo(
+            srcType.getFloatSemantics(),
+            intermediateType.getFloatSemantics())) {
       // truncf(extf(a)) -> truncf(a)
       if (srcType.getWidth() > resElemType.getWidth()) {
         setOperand(src);
@@ -2099,6 +2131,35 @@ LogicalResult arith::ConvertFOp::verify() {
 //===----------------------------------------------------------------------===//
 // ScalingTruncFOp
 //===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ScalingTruncFOp::fold(FoldAdaptor adaptor) {
+  // scaling_truncf(in, scale) -> truncf(in / extf(scale)), matching the
+  // expansion in ExpandOps.cpp. Unlike scaling_extf, the scale is widened to
+  // the type of `in` rather than to the result type.
+  if (!isFoldableScalingScale(getScale()))
+    return {};
+
+  auto inElemType = cast<FloatType>(getElementTypeOrSelf(getIn().getType()));
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &inSemantics = inElemType.getFloatSemantics();
+  const llvm::fltSemantics &resSemantics = resElemType.getFloatSemantics();
+  llvm::RoundingMode roundingMode =
+      convertArithRoundingModeToLLVMIR(getRoundingmode());
+  return foldScalingCastOp(
+      adaptor.getIn(), adaptor.getScale(), getType(),
+      [&](const APFloat &in, const APFloat &scale) -> std::optional<APFloat> {
+        FailureOr<APFloat> scaleExt = convertFloatValue(scale, inSemantics);
+        if (failed(scaleExt))
+          return std::nullopt;
+        APFloat quotient(in);
+        quotient.divide(*scaleExt, kDefaultRoundingMode);
+        FailureOr<APFloat> result =
+            convertFloatValue(quotient, resSemantics, roundingMode);
+        if (failed(result))
+          return std::nullopt;
+        return *result;
+      });
+}
 
 bool arith::ScalingTruncFOp::areCastCompatible(TypeRange inputs,
                                                TypeRange outputs) {

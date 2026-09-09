@@ -80,6 +80,9 @@ class LLVM_ABI GOFFObjectWriter : public MCObjectWriter {
   // The stream used to write the GOFF records.
   raw_pwrite_stream &OS;
 
+  // The stream used to write the split DWARF file.
+  raw_pwrite_stream *DwoOS = nullptr;
+
   // The RootSD section.
   MCSectionGOFF *RootSD = nullptr;
 
@@ -89,6 +92,8 @@ class LLVM_ABI GOFFObjectWriter : public MCObjectWriter {
 public:
   GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
                    raw_pwrite_stream &OS);
+  GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                   raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
   ~GOFFObjectWriter() override;
 
   void reset() override;
@@ -110,6 +115,10 @@ public:
 LLVM_ABI std::unique_ptr<MCObjectWriter>
 createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
                        raw_pwrite_stream &OS);
+
+std::unique_ptr<MCObjectWriter>
+createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                       raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
 } // namespace llvm
 
 #endif

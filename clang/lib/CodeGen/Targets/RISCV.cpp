@@ -225,6 +225,12 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
     if (Field1Ty)
       return false;
     QualType EltTy = CTy->getElementType();
+    // Only floating-point complex types (e.g. _Complex float/double) are
+    // eligible to be passed in floating-point argument registers. Complex
+    // integer types (a GNU extension) should be treated like a normal
+    // aggregate and packed into GPRs instead.
+    if (!EltTy->isRealFloatingType())
+      return false;
     if (getContext().getTypeSize(EltTy) > FLen)
       return false;
     Field1Ty = CGT.ConvertType(EltTy);

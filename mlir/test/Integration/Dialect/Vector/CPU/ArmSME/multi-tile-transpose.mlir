@@ -1,3 +1,5 @@
+// REQUIRES: arm-emulator
+
 // RUN: mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \

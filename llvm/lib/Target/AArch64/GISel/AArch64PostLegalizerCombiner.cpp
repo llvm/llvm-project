@@ -126,13 +126,13 @@ void applyExtractVecEltPairwiseAdd(
 
 bool isSignExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
-  unsigned Opc = MRI.getVRegDef(R)->getOpcode();
-  return Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG;
+  return mi_match(R, MRI, m_GSExt(m_Reg())) ||
+         mi_match(R, MRI, m_GSExtInReg(m_Reg()));
 }
 
 bool isZeroExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
-  return MRI.getVRegDef(R)->getOpcode() == TargetOpcode::G_ZEXT;
+  return mi_match(R, MRI, m_GZExt(m_Reg()));
 }
 
 bool matchAArch64MulConstCombine(
@@ -459,9 +459,8 @@ void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B, Register &SrcReg) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
-  LLT HalfTy =
-      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
-          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+  LLT HalfTy = DstTy.changeElementCount(DstTy.getElementCount() * 2)
+                   .changeElementSize(DstTy.getScalarSizeInBits() / 2);
 
   Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
   Register CastReg =

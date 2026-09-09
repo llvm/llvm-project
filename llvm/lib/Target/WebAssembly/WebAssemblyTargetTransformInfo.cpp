@@ -242,7 +242,7 @@ WebAssemblyTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
   Options.LoadSizes.append({8, 4, 2, 1});
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
 
   return Options;
 }
@@ -301,9 +301,9 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
-    TTI::VectorInstrContext VIC) const {
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI, TTI::VectorInstrContext VIC) const {
   // Canonicalize the ShuffleKind in case optimizations didn't.
   //  Otherwise, we might end up with the wrong ShuffleKind to match against.
 
@@ -314,7 +314,7 @@ InstructionCost WebAssemblyTTIImpl::getShuffleCost(
       isa<FixedVectorType>(SrcTy))
     return 1;
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
                                Args, CxtI);
 }
 

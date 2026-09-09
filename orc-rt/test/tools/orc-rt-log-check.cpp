@@ -23,9 +23,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-c/Logging.h"
+#include "orc-rt-c/support/Logging.h"
 
-#include "orc-rt-utils/CommandLine.h"
+#include "orc-rt-internal/tools/OptionParser.h"
 
 #include <iostream>
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   int UID = -1;
 
   {
-    orc_rt::CommandLineParser P;
+    orc_rt::OptionParser P;
     P.addFlag("print-backend", "Print log backend", false, PrintBackend)
         .addFlag("print-enabled-levels", "Print enabled log levels", false,
                  PrintEnabledLevels)
@@ -78,19 +78,19 @@ int main(int argc, char *argv[]) {
                   -1, UID)
         .addFlag("help", "Print help", false, PrintHelp);
 
-    if (auto Err = P.parse(argc, argv)) {
+    if (auto Err = P.parseAsMainArgs(argc, argv)) {
       std::cerr << "error: " << orc_rt::toString(std::move(Err)) << "\n";
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 1;
     }
 
     if ((PrintBackend && PrintEnabledLevels) || !P.positionals().empty()) {
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 1;
     }
 
     if (PrintHelp) {
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 0;
     }
   }

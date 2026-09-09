@@ -292,6 +292,11 @@ void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
   linalg::populateExtractSliceSinkingPatterns(patterns, defaultControlFn);
 }
 
+void transform::ApplySwapExtractSliceWithFillPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateSwapExtractSliceWithFillPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -527,8 +532,8 @@ DiagnosedSilenceableFailure transform::DecomposeInterfaceOp::applyToOne(
     transform::TransformState &state) {
   auto decomposableOp = dyn_cast<AggregatedOpInterface>(target);
   if (!decomposableOp) {
-    failed(rewriter.notifyMatchFailure(target,
-                                       "payload is not a decomposable op"));
+    (void)rewriter.notifyMatchFailure(target,
+                                      "payload is not a decomposable op");
     return emitDefaultSilenceableFailure(target);
   }
 
@@ -750,14 +755,14 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
     return status;
 
   scf::SCFTilingOptions tilingOptions;
-  tilingOptions.interchangeVector = tileInterchange;
+  tilingOptions.interchangeVector = std::move(tileInterchange);
   bool useForall = getUseForall();
   tilingOptions.setLoopType(useForall
                                 ? scf::SCFTilingOptions::LoopType::ForallOp
                                 : scf::SCFTilingOptions::LoopType::ForOp);
-  tilingOptions = tilingOptions.setTileSizes(mixedTileSizes);
+  tilingOptions.setTileSizes(mixedTileSizes);
   scf::SCFTileAndFuseOptions tileAndFuseOptions;
-  tileAndFuseOptions.tilingOptions = tilingOptions;
+  tileAndFuseOptions.tilingOptions = std::move(tilingOptions);
   // Optional caller-asserted pack/unpack inner-tile alignment (see
   // InnerTileAlignment).
   tileAndFuseOptions.tilingOptions.setInnerTileAlignments(
@@ -1675,9 +1680,13 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         if (attr.getName() == getInterfaceAttrName() ||
             attr.getName() == getOpsAttrName())
           continue;
-        if (!op->hasAttr(attr.getName()))
+        std::optional<Attribute> inherent = op->getInherentAttr(attr.getName());
+        Attribute actual = inherent.has_value()
+                               ? *inherent
+                               : op->getDiscardableAttr(attr.getName());
+        if (!actual)
           return;
-        if (op->getAttr(attr.getName()) != attr.getValue())
+        if (actual != attr.getValue())
           return;
       }
     }
@@ -2286,9 +2295,9 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
       padToMultipleOf =
           SmallVector<int64_t>(options.paddingDimensions.size(), 1);
 
-    options.padToMultipleOf = padToMultipleOf;
-    options.paddingValues = paddingValues;
-    options.nofoldFlags = nofoldFlags;
+    options.padToMultipleOf = std::move(padToMultipleOf);
+    options.paddingValues = std::move(paddingValues);
+    options.nofoldFlags = std::move(nofoldFlags);
     if (getCopyBackOp() ==
         bufferization::MaterializeInDestinationOp::getOperationName()) {
       options.copyBackOp = LinalgPaddingOptions::CopyBackOp::
@@ -2519,14 +2528,15 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
 
     // Set options.
     PadTilingInterfaceOptions options;
-    options.setPaddingValues(paddingValues)
-        .setPaddingSizes(getMixedPaddingSizes())
+    options.paddingValues = std::move(paddingValues);
+    options.setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(targetOp);
     auto maybePadOps = rewriteAsPaddedOp(
-        rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
+        rewriter, cast<TilingInterface>(targetOp.getOperation()),
+        std::move(options));
     if (failed(maybePadOps)) {
       auto diag = emitSilenceableError() << "failed to pad op";
       diag.attachNote(target->getLoc()) << "target op";
@@ -3113,8 +3123,11 @@ void SplitOp::print(OpAsmPrinter &printer) {
   else
     printer << getDynamicChunkSizes();
   printer << " ";
-  printer.printOptionalAttrDict(getOperation()->getAttrs(),
-                                {getStaticChunkSizesAttrName()});
+  NamedAttrList attrs(getOperation()->getDiscardableAttrDictionary());
+  attrs.append(getDimensionAttrName(), getDimensionAttr());
+  if (UnitAttr multiway = getMultiwayAttr())
+    attrs.append(getMultiwayAttrName(), multiway);
+  printer.printOptionalAttrDict(attrs, {getStaticChunkSizesAttrName()});
   printer << " : " << getTarget().getType();
   if (staticChunkSize == ShapedType::kDynamic)
     printer << ", " << getDynamicChunkSizes().getType();
@@ -4460,6 +4473,14 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
 
   // If rank <= 1, do nothing
   if (target.getNumLoops() <= 1) {
+    results.push_back(target);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // Only broadcasts with a 0-D input are handled; leave anything else
+  // unchanged.
+  if (auto broadcastOp = dyn_cast<linalg::BroadcastOp>(target.getOperation());
+      broadcastOp && broadcastOp.getInput().getType().getRank() != 0) {
     results.push_back(target);
     return DiagnosedSilenceableFailure::success();
   }

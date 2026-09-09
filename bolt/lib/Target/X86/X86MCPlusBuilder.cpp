@@ -2286,6 +2286,7 @@ public:
     default:
       llvm_unreachable("Invalid operand size");
       return;
+    case 1:      NewOpcode = X86::MOV8mr; break;
     case 2:      NewOpcode = X86::MOV16mr; break;
     case 4:      NewOpcode = X86::MOV32mr; break;
     case 8:      NewOpcode = X86::MOV64mr; break;
@@ -2317,6 +2318,7 @@ public:
     default:
       llvm_unreachable("Invalid operand size");
       return;
+    case 1:      NewOpcode = X86::MOV8rm; break;
     case 2:      NewOpcode = X86::MOV16rm; break;
     case 4:      NewOpcode = X86::MOV32rm; break;
     case 8:      NewOpcode = X86::MOV64rm; break;

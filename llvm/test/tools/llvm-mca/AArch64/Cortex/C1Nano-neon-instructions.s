@@ -1102,6 +1102,7 @@
 # NONSTREAMING-NEXT:  1      3     0.50                        sshll	v9.8h, v2.8b, #0
 # NONSTREAMING-NEXT:  1      3     0.50                        sshll	v12.4s, v3.4h, #4
 # NONSTREAMING-NEXT:  1      3     0.50                        sshll	v0.2d, v0.2s, #3
+# NONSTREAMING-NEXT:  1      3     0.50                        sshll	v0.8h, v1.8b, #0
 # NONSTREAMING-NEXT:  1      3     0.50                        sshll2	v28.8h, v12.16b, #7
 # NONSTREAMING-NEXT:  1      3     0.50                        sshll2	v0.4s, v0.8h, #3
 # NONSTREAMING-NEXT:  1      3     0.50                        sshll2	v17.2d, v13.4s, #22
@@ -1492,6 +1493,7 @@
 # NONSTREAMING-NEXT:  1      3     0.50                        ushll	v0.4s, v0.4h, #3
 # NONSTREAMING-NEXT:  1      3     0.50                        ushll	v18.8h, v24.8b, #4
 # NONSTREAMING-NEXT:  1      3     0.50                        ushll	v16.2d, v16.2s, #31
+# NONSTREAMING-NEXT:  1      3     0.50                        ushll	v0.8h, v1.8b, #0
 # NONSTREAMING-NEXT:  1      3     0.50                        ushll2	v31.2d, v12.4s, #11
 # NONSTREAMING-NEXT:  1      3     0.50                        ushll2	v18.4s, v22.8h, #13
 # NONSTREAMING-NEXT:  1      3     0.50                        ushll2	v0.8h, v0.16b, #3
@@ -2663,6 +2665,7 @@
 # STREAMING-NEXT:     1      4     0.50                        sshll	v9.8h, v2.8b, #0
 # STREAMING-NEXT:     1      4     0.50                        sshll	v12.4s, v3.4h, #4
 # STREAMING-NEXT:     1      4     0.50                        sshll	v0.2d, v0.2s, #3
+# STREAMING-NEXT:     1      4     0.50                        sshll	v0.8h, v1.8b, #0
 # STREAMING-NEXT:     1      4     0.50                        sshll2	v28.8h, v12.16b, #7
 # STREAMING-NEXT:     1      4     0.50                        sshll2	v0.4s, v0.8h, #3
 # STREAMING-NEXT:     1      4     0.50                        sshll2	v17.2d, v13.4s, #22
@@ -3053,6 +3056,7 @@
 # STREAMING-NEXT:     1      4     0.50                        ushll	v0.4s, v0.4h, #3
 # STREAMING-NEXT:     1      4     0.50                        ushll	v18.8h, v24.8b, #4
 # STREAMING-NEXT:     1      4     0.50                        ushll	v16.2d, v16.2s, #31
+# STREAMING-NEXT:     1      4     0.50                        ushll	v0.8h, v1.8b, #0
 # STREAMING-NEXT:     1      4     0.50                        ushll2	v31.2d, v12.4s, #11
 # STREAMING-NEXT:     1      4     0.50                        ushll2	v18.4s, v22.8h, #13
 # STREAMING-NEXT:     1      4     0.50                        ushll2	v0.8h, v0.16b, #3
@@ -3222,11 +3226,11 @@
 
 # NONSTREAMING:      Resource pressure per iteration:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     13.50  545.50  -      -     744.00 744.00 117.00 117.00 163.00
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     13.50  545.50  -      -     745.00 745.00 117.00 117.00 163.00
 
 # STREAMING:         Resource pressure per iteration:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -     112.00  -      -     169.00 135.00  -      -      -      -      -     611.00  -     22.50  363.00  -     22.50   -     13.50  545.50  -      -     318.50 318.50 73.50  73.50  38.00
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -     112.00  -      -     169.00 135.00  -      -      -      -      -     612.00  -     22.50  364.00  -     22.50   -     13.50  545.50  -      -     318.50 318.50 73.50  73.50  38.00
 
 # NONSTREAMING:      Resource pressure by instruction:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
@@ -4313,6 +4317,7 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshll	v9.8h, v2.8b, #0
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshll	v12.4s, v3.4h, #4
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshll	v0.2d, v0.2s, #3
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshll	v0.8h, v1.8b, #0
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshll2	v28.8h, v12.16b, #7
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshll2	v0.4s, v0.8h, #3
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshll2	v17.2d, v13.4s, #22
@@ -4703,6 +4708,7 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushll	v0.4s, v0.4h, #3
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushll	v18.8h, v24.8b, #4
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushll	v16.2d, v16.2s, #31
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushll	v0.8h, v1.8b, #0
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushll2	v31.2d, v12.4s, #11
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushll2	v18.4s, v22.8h, #13
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushll2	v0.8h, v0.16b, #3
@@ -5875,6 +5881,7 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sshll	v9.8h, v2.8b, #0
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sshll	v12.4s, v3.4h, #4
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sshll	v0.2d, v0.2s, #3
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sshll	v0.8h, v1.8b, #0
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sshll2	v28.8h, v12.16b, #7
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sshll2	v0.4s, v0.8h, #3
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sshll2	v17.2d, v13.4s, #22
@@ -6265,6 +6272,7 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     ushll	v0.4s, v0.4h, #3
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     ushll	v18.8h, v24.8b, #4
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     ushll	v16.2d, v16.2s, #31
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     ushll	v0.8h, v1.8b, #0
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     ushll2	v31.2d, v12.4s, #11
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     ushll2	v18.4s, v22.8h, #13
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     ushll2	v0.8h, v0.16b, #3
