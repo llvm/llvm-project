@@ -12,16 +12,16 @@ define void @f(i1 %x) vscale_range(2, 1024) !prof !0 {
 ; CHECK-SAME: i1 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {{.*}}{
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[DOTSCALAR:%.*]] = xor i1 [[X]], true
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[DOTSCALAR]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <vscale x 2 x i1> [[TMP1]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <vscale x 8 x i1> poison, i1 [[DOTSCALAR]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 65, %[[ENTRY]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [8 x i8], ptr null, i64 [[EVL_BASED_IV]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv8i64.p0(<vscale x 8 x i64> poison, ptr align 8 [[TMP4]], <vscale x 8 x i1> [[TMP1]], i32 [[TMP3]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv8i64.p0(<vscale x 8 x i64> poison, ptr align 8 [[TMP4]], <vscale x 8 x i1> [[TMP1]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[EVL_BASED_IV]], [[TMP5]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw nsw i64 [[AVL]], [[TMP5]]

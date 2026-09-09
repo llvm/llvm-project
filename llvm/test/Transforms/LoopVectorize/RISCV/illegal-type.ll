@@ -102,29 +102,29 @@ define void @uniform_store_i1(ptr noalias %dst, ptr noalias %start, i64 %N) {
 ; CHECK-LABEL: @uniform_store_i1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 256
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 63
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x ptr> poison, ptr [[START]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x ptr> [[BROADCAST_SPLATINSERT]], <32 x ptr> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <128 x ptr> poison, ptr [[START]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <128 x ptr> [[BROADCAST_SPLATINSERT]], <128 x ptr> poison, <128 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <32 x i64> <i64 0, i64 8, i64 16, i64 24, i64 32, i64 40, i64 48, i64 56, i64 64, i64 72, i64 80, i64 88, i64 96, i64 104, i64 112, i64 120, i64 128, i64 136, i64 144, i64 152, i64 160, i64 168, i64 176, i64 184, i64 192, i64 200, i64 208, i64 216, i64 224, i64 232, i64 240, i64 248>
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <32 x ptr> [[TMP2]], <32 x i64> splat (i64 256)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 512
+; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <128 x i64> <i64 0, i64 8, i64 16, i64 24, i64 32, i64 40, i64 48, i64 56, i64 64, i64 72, i64 80, i64 88, i64 96, i64 104, i64 112, i64 120, i64 128, i64 136, i64 144, i64 152, i64 160, i64 168, i64 176, i64 184, i64 192, i64 200, i64 208, i64 216, i64 224, i64 232, i64 240, i64 248, i64 256, i64 264, i64 272, i64 280, i64 288, i64 296, i64 304, i64 312, i64 320, i64 328, i64 336, i64 344, i64 352, i64 360, i64 368, i64 376, i64 384, i64 392, i64 400, i64 408, i64 416, i64 424, i64 432, i64 440, i64 448, i64 456, i64 464, i64 472, i64 480, i64 488, i64 496, i64 504, i64 512, i64 520, i64 528, i64 536, i64 544, i64 552, i64 560, i64 568, i64 576, i64 584, i64 592, i64 600, i64 608, i64 616, i64 624, i64 632, i64 640, i64 648, i64 656, i64 664, i64 672, i64 680, i64 688, i64 696, i64 704, i64 712, i64 720, i64 728, i64 736, i64 744, i64 752, i64 760, i64 768, i64 776, i64 784, i64 792, i64 800, i64 808, i64 816, i64 824, i64 832, i64 840, i64 848, i64 856, i64 864, i64 872, i64 880, i64 888, i64 896, i64 904, i64 912, i64 920, i64 928, i64 936, i64 944, i64 952, i64 960, i64 968, i64 976, i64 984, i64 992, i64 1000, i64 1008, i64 1016>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <128 x ptr> [[VECTOR_GEP]], <128 x i64> splat (i64 1024)
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 256
+; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 2048
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, <32 x ptr> [[STEP_ADD]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <32 x ptr> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <32 x i1> [[TMP7]], i64 31
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i64, <128 x ptr> [[STEP_ADD]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <128 x ptr> [[WIDE_GEP]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <128 x i1> [[TMP5]], i64 127
 ; CHECK-NEXT:    store i1 [[TMP8]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[END:%.*]], label [[SCALAR_PH]]

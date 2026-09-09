@@ -11,22 +11,22 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL1-NEXT:    br i1 [[CMP10]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; LMUL1:       for.body.preheader:
 ; LMUL1-NEXT:    [[TMP0:%.*]] = zext i32 [[SIZE]] to i64
-; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; LMUL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL1:       vector.ph:
-; LMUL1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
+; LMUL1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
 ; LMUL1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; LMUL1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
+; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i32>, ptr [[TMP2]], align 4
 ; LMUL1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
-; LMUL1-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
-; LMUL1-NEXT:    [[TMP6:%.*]] = add nsw <8 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
+; LMUL1-NEXT:    [[WIDE_LOAD1:%.*]] = load <32 x i32>, ptr [[TMP4]], align 4
+; LMUL1-NEXT:    [[TMP5:%.*]] = add nsw <32 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; LMUL1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
-; LMUL1-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP7]], align 4
-; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; LMUL1-NEXT:    store <32 x i32> [[TMP5]], ptr [[TMP7]], align 4
+; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; LMUL1-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; LMUL1-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:

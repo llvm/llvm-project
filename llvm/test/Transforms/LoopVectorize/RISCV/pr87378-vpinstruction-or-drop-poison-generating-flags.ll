@@ -11,36 +11,36 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[B]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[A]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[B]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i64> @llvm.stepvector.nxv16i64()
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[TMP6]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i64> [ [[TMP0]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1001, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[TMP25:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP25]] to i64
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP8]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT5]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP16:%.*]] = xor <vscale x 8 x i1> [[TMP13]], splat (i1 true)
-; CHECK-NEXT:    [[TMP17:%.*]] = select <vscale x 8 x i1> [[TMP16]], <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i1> [[TMP14]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> [[TMP18]], <vscale x 8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 8 x i1> [[TMP14]], splat (i1 true)
-; CHECK-NEXT:    [[TMP21:%.*]] = select <vscale x 8 x i1> [[TMP13]], <vscale x 8 x i1> [[TMP20]], <vscale x 8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = or <vscale x 8 x i1> [[TMP19]], [[TMP21]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT5]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <vscale x 16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <vscale x 16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <vscale x 16 x i1> [[TMP3]], splat (i1 true)
+; CHECK-NEXT:    [[TMP6:%.*]] = select <vscale x 16 x i1> [[TMP5]], <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule <vscale x 16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = xor <vscale x 16 x i1> [[TMP4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[TMP3]], <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = or <vscale x 16 x i1> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i16, ptr [[ARG]], i64 [[INDEX]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv8i16.p0(<vscale x 8 x i16> zeroinitializer, ptr align 2 [[TMP24]], <vscale x 8 x i1> [[TMP22]], i32 [[TMP25]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv16i16.p0(<vscale x 16 x i16> zeroinitializer, ptr align 2 [[TMP24]], <vscale x 16 x i1> [[TMP12]], i32 [[TMP25]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP8]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT6]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

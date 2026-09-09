@@ -10,7 +10,7 @@ define void @foo(ptr %arg) #0 {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ARG]], <vscale x 2 x i1> splat (i1 true), i32 3)
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4i64.p0(<vscale x 4 x i64> zeroinitializer, ptr align 8 [[ARG]], <vscale x 4 x i1> splat (i1 true), i32 3)
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -38,14 +38,14 @@ define i32 @test_remove_iv(i32 %start) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <vscale x 8 x i32> zeroinitializer, i32 [[START]], i64 0
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <vscale x 4 x i32> [[TMP2]], splat (i32 3)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP2]], i32 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <vscale x 8 x i32> [[TMP0]], splat (i32 3)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i32> [[TMP1]], <vscale x 8 x i32> [[TMP0]], i32 6)
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.xor.nxv8i32(<vscale x 8 x i32> [[TMP2]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP6]]
