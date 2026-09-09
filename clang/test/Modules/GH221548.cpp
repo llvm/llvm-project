@@ -6,6 +6,12 @@
 // RUN: %clang_cc1 -std=c++23 -emit-module-interface %t/wrap.cppm -o %t/wrap.pcm
 // RUN: %clang_cc1 -std=c++23 -fmodule-file=stdish=%t/stdish.pcm -fmodule-file=wrap=%t/wrap.pcm -emit-module-interface %t/side.cppm -o %t/side.pcm
 // RUN: %clang_cc1 -std=c++23 -fmodule-file=stdish=%t/stdish.pcm -fmodule-file=wrap=%t/wrap.pcm -fmodule-file=side=%t/side.pcm %t/use.cc -fsyntax-only -verify
+//
+// Test again with reduced BMI.
+// RUN: %clang_cc1 -std=c++23 -emit-reduced-module-interface %t/stdish.cppm -o %t/stdish.pcm
+// RUN: %clang_cc1 -std=c++23 -emit-reduced-module-interface %t/wrap.cppm -o %t/wrap.pcm
+// RUN: %clang_cc1 -std=c++23 -fmodule-file=stdish=%t/stdish.pcm -fmodule-file=wrap=%t/wrap.pcm -emit-reduced-module-interface %t/side.cppm -o %t/side.pcm
+// RUN: %clang_cc1 -std=c++23 -fmodule-file=stdish=%t/stdish.pcm -fmodule-file=wrap=%t/wrap.pcm -fmodule-file=side=%t/side.pcm %t/use.cc -fsyntax-only -verify
 
 //--- mine.h
 #pragma once
