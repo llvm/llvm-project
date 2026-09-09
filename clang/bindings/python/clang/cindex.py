@@ -3488,8 +3488,8 @@ class TranslationUnit(ClangObject):
     def get_includes(self) -> Iterator[FileInclusion]:
         """
         Return an iterable sequence of FileInclusion objects that describe the
-        sequence of inclusions in a translation unit. The first object in
-        this sequence is always the input file. Note that this method will not
+        sequence of inclusions in a translation unit. The input file itself is not
+        included in this sequence. Note that this method will not
         recursively iterate over header files included through precompiled
         headers.
         """
