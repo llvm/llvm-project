@@ -73,8 +73,8 @@ static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
       if (!CallI->isArgOperand(&U))
         continue;
       unsigned ArgNo = CallI->getArgOperandNo(&U);
-      NumOfUnsigned += CallI->paramHasAttr(ArgNo, Attribute::ZExt);
-      NumOfSigned += CallI->paramHasAttr(ArgNo, Attribute::SExt);
+      NumOfUnsigned += CallI->hasABIParamAttr(ArgNo, Attribute::ZExt);
+      NumOfSigned += CallI->hasABIParamAttr(ArgNo, Attribute::SExt);
     }
   }
   if (NumOfSigned > NumOfUnsigned)

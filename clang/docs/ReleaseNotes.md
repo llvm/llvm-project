@@ -12,10 +12,6 @@ myst:
 {#clang-release-releasenotestitle}
 # Clang {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') if env.config.project == 'Clang' else '|ReleaseNotesTitle|' }}
 
-```{contents}
-:depth: 2
-:local:
-```
 
 Written by the [LLVM Team](https://llvm.org/)
 
@@ -501,6 +497,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
 - Fixed an assertion caused by Microsoft integer literals exceeding the maximum value. (#GH212504)
+- Fixed an assertion failure when a value of a Unicode character type (`char8_t`, `char16_t`, `char32_t`) was implicitly splatted to a vector of the same element type, e.g. when comparing an `ext_vector_type` of `char32_t` with one of its elements. (#GH202317)
 - Fixed a crash when checking scalar type with excess braces. (#GH69213), (#GH137845), (#GH198767), (#GH207566), (#GH106180)
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
@@ -511,6 +508,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
+- Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -540,6 +538,13 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed false-positive module ODR diagnostics when a type is found through a
+  using-declaration in one definition and directly in another. ODR hashing also
+  now distinguishes differently qualified uses of types found through
+  using-declarations. (#GH78850)
+- Fixed an assertion when diagnosing module ODR violations for enum underlying
+  types found through using-declarations with the same name but different types.
+
 - Fixed a false type mismatch when a typedef naming an anonymous enumeration
   was used through a C++20 named module and its defining header was subsequently
   included. (#GH213299)
@@ -548,6 +553,7 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
+- Fixed a bug where we accepted ``__super`` being qualified by a scope specifier, causing codegen to assertion fail elsewhere. (#GH212988)
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a

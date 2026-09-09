@@ -1648,6 +1648,7 @@ def : InstRW<[V3Write_4c_2V02], (instrs URECPEv4i32, URSQRTEv4i32)>;
 // ASIMD reciprocal and square root estimate, D-form F32 and scalar forms
 def : InstRW<[V3Write_3c_1V02], (instrs FRECPEv1f16, FRECPEv1i32,
                                         FRECPEv1i64, FRECPEv2f32,
+                                        FRECPEv2f64, FRSQRTEv2f64,
                                         FRSQRTEv1f16, FRSQRTEv1i32,
                                         FRSQRTEv1i64, FRSQRTEv2f32)>;
 
