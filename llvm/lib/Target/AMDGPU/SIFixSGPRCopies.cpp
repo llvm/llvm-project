@@ -1184,8 +1184,11 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 }
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
-  const AMDGPU::LaneMaskConstants &LMC =
-      AMDGPU::LaneMaskConstants::get(MF.getSubtarget<GCNSubtarget>());
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+  // S_CMP_LG_U64 is only available on GFX8+. S_CMP_LG_U32 always is, and
+  // wave32 implies GFX10+ anyway.
+  bool HasCmp = ST.isWave32() || ST.hasScalarCompareEq64();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
@@ -1209,12 +1212,27 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
         continue;
       }
       if (DstReg == AMDGPU::SCC) {
-        Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
-        I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
-                    MI.getDebugLoc(), TII->get(LMC.AndOpc))
-                .addReg(Tmp, getDefRegState(true))
-                .addReg(SrcReg)
-                .addReg(LMC.ExecReg);
+        // Both lowerings below read the whole of SrcReg.
+        assert(!MI.getOperand(1).getSubReg() &&
+               "cannot lower a copy of a subregister to SCC");
+        MachineBasicBlock::iterator InsPt =
+            std::next(MachineBasicBlock::iterator(MI));
+        if (HasCmp && TII->isMaskedByExec(SrcReg, MI, *MRI)) {
+          // The source already has 0 in the bits of all inactive lanes, so
+          // SCC is just "source is non-zero". S_CMP computes that without
+          // needing a destination register.
+          I = BuildMI(*MI.getParent(), InsPt, MI.getDebugLoc(),
+                      TII->get(LMC.CmpLgOpc))
+                  .addReg(SrcReg)
+                  .addImm(0);
+        } else {
+          Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
+          I = BuildMI(*MI.getParent(), InsPt, MI.getDebugLoc(),
+                      TII->get(LMC.AndOpc))
+                  .addReg(Tmp, getDefRegState(true))
+                  .addReg(SrcReg)
+                  .addReg(LMC.ExecReg);
+        }
         MI.eraseFromParent();
       }
     }

@@ -669,20 +669,20 @@ define i32 @scmp_i128_uniform(i128 inreg %a, i128 inreg %b) {
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s4, s[0:1], s[16:17]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_i64_e64 s5, s[2:3], s[18:19]
-; GFX12-SDAG-NEXT:    v_cmp_lt_i64_e64 s6, s[2:3], s[18:19]
 ; GFX12-SDAG-NEXT:    v_cmp_lt_u64_e64 s0, s[0:1], s[16:17]
-; GFX12-SDAG-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX12-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX12-SDAG-NEXT:    v_cmp_lt_i64_e64 s4, s[2:3], s[18:19]
+; GFX12-SDAG-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-SDAG-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-SDAG-NEXT:    s_and_b32 s4, s5, exec_lo
+; GFX12-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-SDAG-NEXT:    s_and_b32 s5, s6, exec_lo
-; GFX12-SDAG-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX12-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX12-SDAG-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-SDAG-NEXT:    s_cmp_eq_u64 s[2:3], s[18:19]
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_cselect_b32 s1, s1, s4
-; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s0, s5
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, s6, s1
+; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s0, s4
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_b32 s1, s1, 1
 ; GFX12-SDAG-NEXT:    s_bitcmp1_b32 s0, 0
@@ -772,9 +772,9 @@ define i32 @scmp_i64_uniform(i64 inreg %a, i64 inreg %b) {
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_i64_e64 s4, s[0:1], s[2:3]
 ; GFX12-SDAG-NEXT:    v_cmp_ge_i64_e64 s0, s[0:1], s[2:3]
-; GFX12-SDAG-NEXT:    s_and_b32 s1, s4, exec_lo
+; GFX12-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX12-SDAG-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s1, -1
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)

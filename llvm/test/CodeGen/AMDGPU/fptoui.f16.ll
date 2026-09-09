@@ -602,7 +602,7 @@ define amdgpu_kernel void @fptoui_f16_to_i1(ptr addrspace(1) %out, half %in) {
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_f16_e64 s[4:5], 1.0, s6
-; VI-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; VI-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; VI-NEXT:    s_cselect_b32 s4, 1, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
@@ -616,7 +616,7 @@ define amdgpu_kernel void @fptoui_f16_to_i1(ptr addrspace(1) %out, half %in) {
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_f16_e64 s2, 1.0, s2
-; GFX11-TRUE16-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
@@ -632,7 +632,7 @@ define amdgpu_kernel void @fptoui_f16_to_i1(ptr addrspace(1) %out, half %in) {
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_cmp_eq_f16_e64 s2, 1.0, s2
-; GFX11-FAKE16-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s2

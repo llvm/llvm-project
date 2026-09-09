@@ -1198,7 +1198,7 @@ define amdgpu_kernel void @test_umax_ugt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_cmp_gt_u64_e64 s4, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
 ; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
@@ -1260,7 +1260,7 @@ define amdgpu_kernel void @test_umax_uge_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_cmp_ge_u64_e64 s4, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
 ; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
@@ -1322,7 +1322,7 @@ define amdgpu_kernel void @test_imax_sgt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_cmp_gt_i64_e64 s4, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
 ; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
@@ -1384,7 +1384,7 @@ define amdgpu_kernel void @test_imax_sge_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_cmp_ge_i64_e64 s4, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
 ; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
