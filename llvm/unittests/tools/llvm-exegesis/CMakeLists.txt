@@ -18,6 +18,7 @@ set(exegesis_sources
   ProgressMeterTest.cpp
   RegisterValueTest.cpp
   ResultAggregatorTest.cpp
+  PerfHelperTest.cpp
   )
 
 set(exegesis_link_libraries LLVMExegesis)
