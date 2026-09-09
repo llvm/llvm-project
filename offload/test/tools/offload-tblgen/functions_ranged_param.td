@@ -23,7 +23,7 @@ def FunctionA : Function {
   let returns = [];
 }
 
-// CHECK: inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct function_a_params_t *params) {
+// CHECK: inline offload_ostream &operator<<(offload_ostream &os, const struct function_a_params_t *params) {
 // CHECK:   os << ".OutPtr = ";
 // CHECK:   for (size_t i = 0; i < *params->pOutCount; i++) {
 // CHECK:     if (i > 0) {

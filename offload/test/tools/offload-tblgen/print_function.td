@@ -25,7 +25,7 @@ def FunctionA : Function {
 // CHECK-API-NEXT: ol_foo_handle_t* pParamHandle;
 // CHECK-API-NEXT: uint32_t** pParamPointer;
 
-// CHECK-PRINT: inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct function_a_params_t *params)
+// CHECK-PRINT: inline offload_ostream &operator<<(offload_ostream &os, const struct function_a_params_t *params)
 // CHECK-PRINT: os << ".ParamValue = ";
 // CHECK-PRINT: os << *params->pParamValue;
 // CHECK-PRINT: os << ", ";
