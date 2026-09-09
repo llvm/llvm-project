@@ -325,42 +325,6 @@ findLoopCarriedRename(MachineBasicBlock &MBB, MCRegister Reg,
   return Rename;
 }
 
-static bool isUnusedLoopRegister(MCRegister Reg, const MachineBasicBlock &MBB,
-                                 const MachineRegisterInfo &MRI,
-                                 const TargetRegisterInfo &TRI) {
-  if (!MRI.isAllocatable(Reg))
-    return false;
-
-  for (const auto &LI : MBB.liveins())
-    if (TRI.regsOverlap(Reg, LI.PhysReg))
-      return false;
-  for (const MachineBasicBlock *Succ : MBB.successors())
-    for (const auto &LI : Succ->liveins())
-      if (TRI.regsOverlap(Reg, LI.PhysReg))
-        return false;
-
-  const BitVector Pristine =
-      MBB.getParent()->getFrameInfo().getPristineRegs(*MBB.getParent());
-  for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
-    if (Pristine.test((*AI).id()))
-      return false;
-
-  for (const MachineInstr &MI : MBB) {
-    if (MI.isBundle())
-      return false;
-    for (const MachineOperand &MO : MI.operands()) {
-      if (overlapsReg(MO, Reg, TRI))
-        return false;
-      if (!MO.isRegMask())
-        continue;
-      for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
-        if (MO.clobbersPhysReg(*AI))
-          return false;
-    }
-  }
-  return true;
-}
-
 } // namespace
 
 void AggressiveAntiDepBreaker::BreakLoopCarriedAntiDependencies(
@@ -370,11 +334,31 @@ void AggressiveAntiDepBreaker::BreakLoopCarriedAntiDependencies(
       !MBB.isSuccessor(&MBB))
     return;
 
+  // Track every register unit referenced or clobbered anywhere in the block.
+  LiveRegUnits UnavailableUnits(*TRI);
+  // Preserve the conservative whole-register treatment of boundary liveness.
+  for (const auto &LI : MBB.liveins())
+    UnavailableUnits.addReg(LI.PhysReg);
+  for (const MachineBasicBlock *Succ : MBB.successors())
+    for (const auto &LI : Succ->liveins())
+      UnavailableUnits.addReg(LI.PhysReg);
+  const BitVector Pristine =
+      MBB.getParent()->getFrameInfo().getPristineRegs(*MBB.getParent());
+  for (unsigned Reg : Pristine.set_bits())
+    UnavailableUnits.addReg(MCRegister(Reg));
+
   SmallVector<MCRegister, 8> DefRegs;
   BitVector Seen(TRI->getNumRegs());
   for (MachineInstr &MI : MBB) {
     if (MI.isBundle())
       return;
+    UnavailableUnits.accumulate(MI);
+    // Keep the whole-block-unused policy for physical register operands that
+    // accumulate() ignores, such as undef uses.
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.isReg() && MO.getReg() && MO.getReg().isPhysical() &&
+          !MO.isDef() && !MO.readsReg())
+        UnavailableUnits.addReg(MO.getReg().asMCReg());
     if (MI.isDebugOrPseudoInstr())
       continue;
     for (MachineOperand &MO : MI.operands()) {
@@ -398,7 +382,7 @@ void AggressiveAntiDepBreaker::BreakLoopCarriedAntiDependencies(
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     for (MCRegister NewReg : RegClassInfo.getOrder(RC)) {
       if (NewReg == Reg || !Rename->Candidates.test(NewReg.id()) ||
-          !isUnusedLoopRegister(NewReg, MBB, MRI, *TRI))
+          !MRI.isAllocatable(NewReg) || !UnavailableUnits.available(NewReg))
         continue;
 
       LLVM_DEBUG(dbgs() << "Breaking loop-carried anti-dependence on "
@@ -406,6 +390,7 @@ void AggressiveAntiDepBreaker::BreakLoopCarriedAntiDependencies(
                         << printReg(NewReg, TRI) << '\n');
       for (MachineOperand *MO : Rename->Refs)
         MO->setReg(NewReg);
+      UnavailableUnits.addReg(NewReg);
       break;
     }
   }
