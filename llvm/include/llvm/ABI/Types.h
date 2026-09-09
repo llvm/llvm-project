@@ -223,9 +223,11 @@ enum class VectorKind {
   /// passed in Z registers. Tuples of these vectors use TupleType.
   SVEData,
 
-  /// An AArch64 SVE predicate vector, such as svbool_t. Predicate
-  /// vectors have one-bit elements and are passed in P registers.
-  /// Tuples of these vectors use TupleType.
+  /// An AArch64 SVE predicate vector, such as svbool_t. These are passed
+  /// in P registers. Sizeless predicates have one-bit elements; the
+  /// fixed-length arm_sve_vector_bits form keeps unsigned char (i8)
+  /// elements, matching the Clang AST. Both use this kind. Tuples of
+  /// these vectors use TupleType.
   SVEPredicate,
 
   /// The AArch64 __SVCount_t type. It is opaque rather than a real vector,

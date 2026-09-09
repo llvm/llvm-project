@@ -263,13 +263,20 @@ TEST_F(QualTypeMapperSVETest, FixedLengthSVEVectors) {
 
   // Clang derives the element count of a fixed-length predicate by dividing
   // the vector length in bits by the square of the char width, so a 256-bit
-  // vector length gives 4 elements.
+  // vector length gives 4 unsigned char (i8) elements. That is still tagged
+  // SVEPredicate, unlike sizeless svbool_t, which uses i1 elements.
   const llvm::abi::VectorType *FixedBool =
       mapToVector(lookupTypedef("fixed_bool_t"));
   ASSERT_NE(FixedBool, nullptr);
   EXPECT_EQ(FixedBool->getVectorKind(), llvm::abi::VectorKind::SVEPredicate);
   EXPECT_FALSE(FixedBool->isScalable());
   EXPECT_EQ(FixedBool->getNumElements(), llvm::ElementCount::getFixed(4));
+
+  const auto *FixedBoolElt =
+      dyn_cast<llvm::abi::IntegerType>(FixedBool->getElementType());
+  ASSERT_NE(FixedBoolElt, nullptr);
+  EXPECT_EQ(FixedBoolElt->getSizeInBits(), llvm::TypeSize::getFixed(8));
+  EXPECT_FALSE(FixedBoolElt->isSigned());
 }
 
 // An ordinary vector must not be mistaken for an SVE type.

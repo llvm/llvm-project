@@ -359,6 +359,10 @@ const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
   llvm::ElementCount NumElements = llvm::ElementCount::getFixed(NElems);
   llvm::Align VectorAlign = getTypeAlign(VectorQualType);
 
+  // SveFixedLengthPredicate is tagged SVEPredicate, like sizeless svbool_t.
+  // The element type is left as the AST unsigned char (i8). The builtin path
+  // below maps sizeless predicates to i1. Both match the Clang AST, but
+  // consumers that key only off VectorKind cannot assume a 1-bit element.
   return Builder.getVectorType(ElementType, NumElements, VectorAlign,
                                getABIVectorKind(VT->getVectorKind()));
 }
