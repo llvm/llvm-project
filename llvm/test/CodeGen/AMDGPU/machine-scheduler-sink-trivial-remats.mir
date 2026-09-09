@@ -13563,3 +13563,55 @@ body:             |
 
     S_ENDPGM 0
 ...
+---
+name:            dont_remat_with_convergent_user
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; GFX908-LABEL: name: dont_remat_with_convergent_user
+    ; GFX908: %full_exec:sreg_64 = S_MOV_B64 -1
+    ; GFX908-NEXT: %saved_exec:sreg_64 = S_MOV_B64 $exec
+    ; GFX908-NEXT: $exec = S_MOV_B64 %full_exec
+    ; GFX908-NEXT: %pressure:vreg_1024 = IMPLICIT_DEF
+    ; GFX908-NEXT: %narrow_exec:sreg_64 = S_MOV_B64 1
+    ; GFX908-NEXT: %candidate:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
+    ; GFX908-NEXT: $exec = S_MOV_B64 %narrow_exec
+    ; GFX908-NEXT: S_NOP 0, implicit %pressure
+    ; GFX908-NEXT: %inactive_lane:sreg_32_xm0 = V_READLANE_B32 %candidate, 1
+    ; GFX908-NEXT: S_NOP 0, implicit %inactive_lane
+    ; GFX908-NEXT: $exec = S_MOV_B64 %saved_exec
+    ; GFX908-NEXT: S_ENDPGM 0
+    ;
+    ; GFX908-GCNTRACKERS-LABEL: name: dont_remat_with_convergent_user
+    ; GFX908-GCNTRACKERS: %full_exec:sreg_64 = S_MOV_B64 -1
+    ; GFX908-GCNTRACKERS-NEXT: %saved_exec:sreg_64 = S_MOV_B64 $exec
+    ; GFX908-GCNTRACKERS-NEXT: $exec = S_MOV_B64 %full_exec
+    ; GFX908-GCNTRACKERS-NEXT: %pressure:vreg_1024 = IMPLICIT_DEF
+    ; GFX908-GCNTRACKERS-NEXT: %narrow_exec:sreg_64 = S_MOV_B64 1
+    ; GFX908-GCNTRACKERS-NEXT: %candidate:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
+    ; GFX908-GCNTRACKERS-NEXT: $exec = S_MOV_B64 %narrow_exec
+    ; GFX908-GCNTRACKERS-NEXT: S_NOP 0, implicit %pressure
+    ; GFX908-GCNTRACKERS-NEXT: %inactive_lane:sreg_32_xm0 = V_READLANE_B32 %candidate, 1
+    ; GFX908-GCNTRACKERS-NEXT: S_NOP 0, implicit %inactive_lane
+    ; GFX908-GCNTRACKERS-NEXT: $exec = S_MOV_B64 %saved_exec
+    ; GFX908-GCNTRACKERS-NEXT: S_ENDPGM 0
+    %saved_exec:sreg_64 = S_MOV_B64 $exec
+    %full_exec:sreg_64 = S_MOV_B64 -1
+    $exec = S_MOV_B64 %full_exec
+
+    %pressure:vreg_1024 = IMPLICIT_DEF
+    %candidate:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
+
+    %narrow_exec:sreg_64 = S_MOV_B64 1
+    $exec = S_MOV_B64 %narrow_exec
+
+    S_NOP 0, implicit %pressure
+
+    %inactive_lane:sreg_32_xm0 = V_READLANE_B32 %candidate, 1
+    S_NOP 0, implicit %inactive_lane
+
+    $exec = S_MOV_B64 %saved_exec
+    S_ENDPGM 0
+...

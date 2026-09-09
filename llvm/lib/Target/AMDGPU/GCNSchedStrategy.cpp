@@ -1593,6 +1593,15 @@ bool PreRARematStage::initGCNSchedStage() {
                [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
       continue;
 
+    // A convergent user (e.g., V_READLANE*) may observe the definition's lanes
+    // whose contents depend on the EXEC mask in effect at the def. Moving the
+    // def into the use's region can change EXEC across the def and thus alter
+    // those lanes, so prevent rematerialization in that case.
+    if (any_of(Users, [](const MachineInstr *UserMI) {
+          return UserMI->isConvergent();
+        }))
+      continue;
+
     // We further filter the registers that we can rematerialize based on our
     // current tracking capabilities in the stage. Users cannot themselves be
     // marked rematerializable, and no register operand of the defining MI can
