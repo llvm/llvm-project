@@ -1035,19 +1035,22 @@ the PTX `spcompress` and `spdecompress` instructions. They require PTX ISA 9.4
 and `sm_107a`.
 
 The intrinsic types representing `mdata`, `cdata`, and `data` are overloaded.
-A bundle of one 32-bit register is represented by `i32`, and a bundle of `N`
-registers is represented by `<N x i32>`. The actual intrinsic names include
-the corresponding LLVM overload suffixes.
+The packed metadata remains a bundle of 32-bit registers: one register is
+represented by `i32`, and `N` registers are represented by `<N x i32>`. The
+`cdata` and `data` bundles instead encode the element size in their scalar type.
+Each 32-bit register is represented by four `i8` lanes or two `i16` lanes, so a
+bundle of `N` registers uses `<4N x i8>` or `<2N x i16>`, respectively. The
+actual intrinsic names include the corresponding LLVM overload suffixes.
 
-The two trailing arguments are immediate qualifiers with the following
-encodings:
+The trailing argument is an immediate qualifier with the following encoding:
 
-| Argument                | Values                    | PTX qualifiers                         |
-| ----------------------- | ------------------------- | -------------------------------------- |
-| `%elem_size`            | `8`, `16`                 | `.b8`, `.b16`                          |
-| `%idx_size`             | `2`, `4`                  | `.b2`, `.b4`                           |
+| Argument    | Values   | PTX qualifiers |
+| ----------- | -------- | -------------- |
+| `%idx_size` | `2`, `4` | `.b2`, `.b4`   |
 
-The PTX repeat-factor qualifier is inferred from the overloaded bundle types.
+The PTX element-size qualifier (`.b8` or `.b16`) is inferred from the `i8` or
+`i16` element type. The repeat-factor qualifier is inferred from the bundle
+sizes.
 
 #### '`llvm.nvvm.spcompress.sp2to4`' Intrinsic
 
@@ -1055,7 +1058,7 @@ The PTX repeat-factor qualifier is inferred from the overloaded bundle types.
 
 ```llvm
 declare {MDataTy, CDataTy} @llvm.nvvm.spcompress.sp2to4(
-    DataTy %data, i32 %spdesc, i32 immarg %elem_size, i32 immarg %idx_size)
+    DataTy %data, i32 %spdesc, i32 immarg %idx_size)
 ```
 
 ##### Overview:
@@ -1064,14 +1067,16 @@ This intrinsic compresses the dense vector `%data` using 2:4 structured
 sparsity. It returns the selected element indices as `mdata` and the selected
 elements as `cdata`. The number of 32-bit registers in each bundle is:
 
-| Bundle  | Register count                              |
-| ------- | ------------------------------------------- |
-| `data`  | `2 * num`                                   |
-| `cdata` | `num`                                       |
-| `mdata` | `ceil(num * %idx_size / %elem_size)`        |
+| Bundle  | Register count                            |
+| ------- | ----------------------------------------- |
+| `data`  | `2 * num`                                 |
+| `cdata` | `num`                                     |
+| `mdata` | `ceil(num * %idx_size / elem_size)`       |
 
-Here, `num` is half the number of registers in `DataTy` and determines the PTX
-repeat-factor qualifier (`.x1`, `.x2`, ..., `.x64`).
+Here, `elem_size` is the scalar bit width of `DataTy` and `CDataTy`. Both types
+must use the same `i8` or `i16` element type. `num` is half the number of
+registers in `DataTy` and determines the PTX repeat-factor qualifier (`.x1`,
+`.x2`, ..., `.x64`).
 
 The combined `mdata`, `cdata`, and `data` bundle size must not exceed 253
 registers.
@@ -1085,8 +1090,9 @@ type:
 | 2-4  | Element data type   | `0`: f16/u8, `1`: bf16/s8, `2`: e5m2, `3`: e4m3, `4`: e3m2, `5`: e2m3     |
 | 5-31 | Reserved            | `0`                                                                       |
 
-The element data type must be consistent with `%elem_size`. When the metadata
-occupies less than 32 bits, it is zero-extended to fill its `i32` register.
+The element data type selected by `%spdesc` must be consistent with the scalar
+element type of `DataTy` and `CDataTy`. When the metadata occupies less than 32
+bits, it is zero-extended to fill its `i32` register.
 The operation treats negative zero as less than positive zero. NaN elements
 are always selected; when multiple selections satisfy the same comparison,
 the selected indices are implementation-specific.
@@ -1102,7 +1108,7 @@ For more information, see the
 declare DataTy @llvm.nvvm.spdecompress.{sp1to2,sp1to4,sp1to8,sp1to16,
                                         sp2to4,sp2to8,sp2to16,
                                         sp4to8,sp4to16}(
-    MDataTy %mdata, CDataTy %cdata, i32 immarg %elem_size, i32 immarg %idx_size)
+    MDataTy %mdata, CDataTy %cdata, i32 immarg %idx_size)
 ```
 
 ##### Overview:
@@ -1116,20 +1122,22 @@ Dense positions not selected by the metadata are set to zero.
 For an intrinsic named `spXtoY`, the number of 32-bit registers in each bundle
 is:
 
-| Bundle  | Register count                                      |
-| ------- | --------------------------------------------------- |
-| `mdata` | `ceil(X * %idx_size * num / 32)`                    |
-| `cdata` | `ceil(X * %elem_size * num / 32)`                   |
-| `data`  | `ceil(Y * %elem_size * num / 32)`                   |
+| Bundle  | Register count                                    |
+| ------- | ------------------------------------------------- |
+| `mdata` | `ceil(X * %idx_size * num / 32)`                  |
+| `cdata` | `ceil(X * elem_size * num / 32)`                  |
+| `data`  | `ceil(Y * elem_size * num / 32)`                  |
 
-Here, `num` is inferred from the number of registers in `DataTy` and determines
-the PTX repeat-factor qualifier (`.x1`, `.x2`, ..., `.x64`).
+Here, `elem_size` is the common `i8` or `i16` scalar bit width of `CDataTy` and
+`DataTy`. `num` is inferred from the number of registers in `DataTy` and
+determines the PTX repeat-factor qualifier (`.x1`, `.x2`, ..., `.x64`). Any
+unused lanes in the final `CDataTy` or `DataTy` register are padding.
 
 The following conditions must hold:
 
-- `X * %elem_size <= 32`.
+- `X * elem_size <= 32`.
 - `%idx_size` is `2` only when `Y <= 4`.
-- `32 <= Y * %elem_size * num <= 4096`.
+- `32 <= Y * elem_size * num <= 4096`.
 - The combined `mdata`, `cdata`, and `data` bundle size does not exceed 253
   registers.
 
