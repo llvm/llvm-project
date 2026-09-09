@@ -1302,11 +1302,36 @@ namespace {
   };
   constexpr int a() {
     int x = 1;
-    int f = B{x}.x;
-    B{x}; // both-warning {{expression result unused}}
-
-    return 1;
+    {
+      B b{x};
+    }
+    return x;
   }
+  static_assert(a() == 0);
+
+  constexpr int discarded() {
+    int x = 1;
+    B{x}; // both-warning {{expression result unused}}
+    return x;
+  }
+
+  /// Before the result object was allocated, this could not be evaluated at
+  /// all. The temporary 'B' is not destroyed until the end of the enclosing
+  /// full-expression, so 'x' still reads 1 here, matching legacy evaluator.
+  ///
+  /// FIXME: See https://github.com/llvm/llvm-project/issues/85601.
+  static_assert(discarded() == 1);
+
+  /// A const-qualified composite result is writable while under construction.
+  constexpr int decrement(int &x) {
+    return --x;
+  }
+  struct DMIConstComposite {
+    int a;
+    int b = decrement(a);
+  };
+  constexpr DMIConstComposite c{1};
+  static_assert(c.a == 0);
 }
 #endif
 
