@@ -1,8 +1,5 @@
 # Hardware-assisted AddressSanitizer
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

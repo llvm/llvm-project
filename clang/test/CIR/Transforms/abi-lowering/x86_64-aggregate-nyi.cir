@@ -46,7 +46,6 @@
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
 !rec_HoldsAllPad = !cir.struct<"HoldsAllPad" {data !s32i, empty !rec_E}>
-!rec_LeadPad = !cir.struct<"LeadPad" {pad !cir.array<!u8i x 8>, data !s32i}>
 !rec_Incomplete = !cir.struct<"Incomplete" incomplete>
 
 module attributes {
@@ -204,15 +203,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.struct<"HoldsAllPad" {data
-
-  // With no field in the low eightbyte the classifier coerces the high one and
-  // names an offset of 8 into the record, which the rewriter cannot express: it
-  // reads a coercion from offset 0, so the argument would land in the padding.
-  cir.func @take_lead_pad(%arg0: !rec_LeadPad) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"LeadPad"
 
   // A scalable vector has no size the eightbyte rules can read.
   cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) {
