@@ -1,7 +1,8 @@
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_MODE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_MODE_H
-#include <cstdint>
+
+#include "hdr/stdint_proxy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -53,6 +54,8 @@ public:
     if (main_mode_count != 1)
       file_mode_ = 0;
   }
+
+  bool is_valid() const { return file_mode_ != 0; }
 
   // helper function to show if file allows writing
   bool write_allowed() const {
