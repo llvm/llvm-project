@@ -1,3 +1,4 @@
+// clang-format off
 typedef int IntTypedef;
 IntTypedef g_IntVar;  // Testing globals.
 

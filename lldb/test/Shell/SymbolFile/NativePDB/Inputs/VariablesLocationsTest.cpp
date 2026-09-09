@@ -1,3 +1,4 @@
+// clang-format off
 int g_var = 2222;
 
 void __fastcall foo(short arg_0, float arg_1) {

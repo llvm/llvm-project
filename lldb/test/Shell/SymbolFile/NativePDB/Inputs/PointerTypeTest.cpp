@@ -1,7 +1,7 @@
 int main() {
   // Test pointer to array.
   int array[2][4];
-  int(*array_pointer)[2][4] = &array;
+  int (*array_pointer)[2][4] = &array;
 
   struct ST {
     int a;
