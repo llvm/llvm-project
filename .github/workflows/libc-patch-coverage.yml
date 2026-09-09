@@ -117,7 +117,13 @@ jobs:
         # Ensure upstream llvm-project remote is configured
         git remote add upstream https://github.com/llvm/llvm-project.git 2>/dev/null || true
 
-        # 1. Deterministically resolve Base and Head references against upstream llvm-project
+        # 1. Deterministically resolve Base and Head references
+        echo "[LOG] Resolving diff base and commit metadata..."
+        echo "[LOG]   Event: ${EVENT_NAME}"
+        echo "[LOG]   Repository: ${REPO_NAME}"
+        echo "[LOG]   Branch: ${BRANCH_REF}"
+        echo "[LOG]   Commit: ${COMMIT_SHA}"
+
         if [ "$EVENT_NAME" == "pull_request" ]; then
           BASE_SHA="$PR_BASE_SHA"
           HEAD_SHA="$PR_HEAD_SHA"
@@ -133,24 +139,32 @@ jobs:
             DIFF_BASE=$(git merge-base "$BASE_SHA" HEAD 2>/dev/null || echo "$BASE_SHA")
           fi
         elif [ "$BRANCH_REF" != "main" ]; then
-          # For feature branches, compare against main merge-base
-          git fetch origin main --depth=100 2>/dev/null || true
-          BASE_SHA=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD~1 2>/dev/null || echo "HEAD~1")
+          # For feature branches, attempt to resolve merge-base with main; fall back to parent commit
+          git fetch origin +refs/heads/main:refs/remotes/origin/main --depth=100 2>/dev/null || true
+          MERGE_BASE=$(git merge-base refs/remotes/origin/main HEAD 2>/dev/null || true)
+          if [ -n "$MERGE_BASE" ] && [ "$MERGE_BASE" != "$COMMIT_SHA" ]; then
+            BASE_SHA="$MERGE_BASE"
+            BASE_REF="main"
+            echo "[LOG] Resolved merge-base with main: ${BASE_SHA:0:7}"
+          else
+            BASE_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "$COMMIT_SHA")
+            BASE_REF="parent"
+            echo "[LOG] Merge-base with main unavailable in shallow clone; using parent commit: ${BASE_SHA:0:7}"
+          fi
           HEAD_SHA="$COMMIT_SHA"
-          BASE_REF="main"
           HEAD_REF="$BRANCH_REF"
-          BASE_REPO="llvm/llvm-project"
+          BASE_REPO="$REPO_NAME"
           HEAD_REPO="$REPO_NAME"
           DIFF_BASE="$BASE_SHA"
         else
-          # For direct pushes, compare the pushed commit against its parent (HEAD~1)
-          BASE_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "HEAD~1")
+          # For direct pushes to main, compare against parent commit
+          BASE_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "$COMMIT_SHA")
           HEAD_SHA="$COMMIT_SHA"
-          BASE_REF="main"
+          BASE_REF="parent"
           HEAD_REF="$BRANCH_REF"
-          BASE_REPO="llvm/llvm-project"
+          BASE_REPO="$REPO_NAME"
           HEAD_REPO="$REPO_NAME"
-          DIFF_BASE="HEAD~1"
+          DIFF_BASE="$BASE_SHA"
         fi
 
         # Persist resolved commit references for all downstream steps
@@ -164,6 +178,9 @@ jobs:
 
         echo "[LOG] Resolved Base: ${BASE_REF} (${BASE_SHA:0:7}) in ${BASE_REPO}"
         echo "[LOG] Resolved Head: ${HEAD_REF} (${HEAD_SHA:0:7}) in ${HEAD_REPO}"
+        echo "[LOG] Diff Base: ${DIFF_BASE}"
+        echo "[LOG] Git diff stat against ${DIFF_BASE}:"
+        git diff --stat "$DIFF_BASE" HEAD -- libc/src/ || true
 
         MODIFIED_FILES=$(git diff --name-only "$DIFF_BASE" HEAD -- libc/src/ || true)
         echo "[LOG] Modified files in libc/src/:"
@@ -256,7 +273,11 @@ jobs:
         OBJECTS=("${EXECUTABLES[@]:1}")
         OBJECTS=("${OBJECTS[@]/#/-object=}")
 
-        echo "[LOG] Discovered ${#EXECUTABLES[@]} instrumented binaries for llvm-cov export."
+        echo "[LOG] Discovered ${#EXECUTABLES[@]} instrumented binaries for llvm-cov export:"
+        for exe in "${EXECUTABLES[@]}"; do
+          echo "[LOG]   -> $exe"
+        done
+        echo "[LOG] Profile file libc_full.profdata exists: $([ -f libc_full.profdata ] && echo "yes ($(wc -c < libc_full.profdata) bytes)" || echo "no")"
 
         if [ ! -f libc_full.profdata ] || [ ${#EXECUTABLES[@]} -eq 0 ]; then
           echo "[LOG] Notice: Profile data or instrumented executables not found. Generating non-coverage summary."
@@ -277,6 +298,8 @@ jobs:
 
         # 2. Generate git diff for modified libc source files
         git diff "$DIFF_BASE" HEAD -- libc/src/ > patch.diff
+        echo "[LOG] Generated patch.diff size: $(wc -l < patch.diff 2>/dev/null || echo 0) lines"
+        echo "[LOG] Generated coverage.json size: $(wc -l < coverage.json 2>/dev/null || echo 0) lines"
 
         # 3. Run Patch Coverage Python Script using persisted commit metadata
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md

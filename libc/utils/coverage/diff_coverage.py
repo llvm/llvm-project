@@ -783,6 +783,30 @@ def main() -> None:
     coverage_data = CoverageJSONParser.load(arguments.json_file)
     coverage_matrix = CoverageJSONParser.extract_patch_matrix(coverage_data, diff_files)
 
+    is_ci = bool(
+        os.environ.get("GITHUB_ACTIONS")
+        or os.environ.get("LIBC_COVERAGE_VERBOSE") == "1"
+    )
+    if is_ci:
+        cov_files_count = (
+            len(coverage_data.get("data", [{}])[0].get("files", []))
+            if coverage_data.get("data")
+            else 0
+        )
+        sys.stderr.write(
+            f"[LOG] diff_coverage: Parsed {len(diff_files)} modified file(s) from '{arguments.diff_file}'.\n"
+        )
+        for fpath, hunks in diff_files.items():
+            added_lines_count = sum(
+                1 for h in hunks for prefix, _, _ in h.lines if prefix == "+"
+            )
+            sys.stderr.write(
+                f"[LOG] diff_coverage:   File '{fpath}': {len(hunks)} hunk(s), {added_lines_count} added line(s).\n"
+            )
+        sys.stderr.write(
+            f"[LOG] diff_coverage: Loaded {cov_files_count} coverage file record(s) from '{arguments.json_file}'.\n"
+        )
+
     render_patch_report(
         diff_files,
         coverage_matrix,
