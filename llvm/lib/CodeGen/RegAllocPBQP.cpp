@@ -818,8 +818,8 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
   RegisterClassInfo &RCI =
       getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
-  // freezeReservedRegs() may add reservations the shared analysis has not seen
-  // yet (e.g. AArch64 WinEH). Refresh RCI so getOrder() excludes them.
+  // freezeReservedRegs() may add reservations the shared analysis has not seen.
+  // Refresh RCI so getOrder() excludes them.
   RCI.updateReservedRegs(MF.getRegInfo().getReservedRegs());
 
   LLVM_DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
