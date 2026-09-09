@@ -21,6 +21,8 @@
 # RUN: llvm-ar rcD --format=zos %t.dir/test.a %t.dir/func.o %t.dir/data.o
 
 ## 1. Check the archive map shows each symbol with the correct inline flags.
+## TODO: Add a GOFF symbol with no attributes (flags: 0x00000000 [none]) once
+## yaml2obj gains full GOFF ESD record support.
 # RUN: llvm-nm --print-armap %t.dir/test.a | FileCheck %s --check-prefix=ARMAP
 
 # ARMAP:      Archive map
@@ -30,7 +32,7 @@
 ## 2. Test that basic archive operations still work on a GOFF archive.
 ##    llvm-ar t should list exactly the expected member names and nothing else.
 # RUN: llvm-ar t %t.dir/test.a | FileCheck %s --check-prefix=LIST \
-# RUN:   --implicit-check-not={{.+}}
+# RUN:   --implicit-check-not={{.}}
 
 # LIST: func.o
 # LIST-NEXT: data.o

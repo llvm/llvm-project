@@ -541,6 +541,10 @@ uint32_t GOFFObjectFile::getZOSSymbolArchiveAttributes(DataRefImpl Symb) const {
 
   // Bit 2 (0x4): 64-bit AMODE. If the child AMODE is unspecified,
   // query the parent ED.
+  // TODO: The parent-walk path (child ESD_AMODE_None with a parent that has
+  // ESD_AMODE_64) cannot currently be tested as GOFFObjectWriter always emits
+  // ESD_AMODE_64 directly on LD/ER records and does not set AMODE on ED records.
+  // Full coverage requires yaml2obj GOFF ESD record support.
   GOFF::ESDAmode Amode;
   ESDRecord::getAmode(SymRecord, Amode);
   if (Amode == GOFF::ESD_AMODE_None) {
