@@ -1154,7 +1154,10 @@ void CodeGenFunction::EmitNewArrayInitializer(
       if (EndOfInit.isValid()) {
         Builder.CreateStore(CurPtr.emitRawPointer(*this), EndOfInit);
       }
-      // An EmbedExpr can initialize more than one array element.
+      // A multi-element EmbedExpr initializes several array elements at once.
+      // A single-element embed can be wrapped in a conversion to a non-scalar
+      // element type (e.g. _Complex) and is emitted like any other
+      // initializer.
       const auto *EmbedS = dyn_cast<EmbedExpr>(IE->IgnoreParenImpCasts());
       if (EmbedS && EmbedS->getDataElementCount() > 1) {
         const StringLiteral *SL = EmbedS->getDataStringLiteral();
