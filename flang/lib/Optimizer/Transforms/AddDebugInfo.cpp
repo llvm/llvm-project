@@ -219,14 +219,25 @@ static bool isHostAddressable(cuf::DataAttributeAttr dataAttr) {
 }
 
 // Check if the operation belongs to a procedure that is compiled for the
-// device, whose debug info is generated separately.
-static bool isInDeviceProcedure(mlir::Operation *op) {
+// device only, whose debug info is generated separately.
+static bool isInDeviceOnlyProcedure(mlir::Operation *op) {
   auto funcOp = op->getParentOfType<mlir::func::FuncOp>();
   if (!funcOp)
     return false;
   auto procAttr =
       funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
-  return procAttr && procAttr.getValue() != cuf::ProcAttribute::Host;
+  if (!procAttr)
+    return false;
+  switch (procAttr.getValue()) {
+  case cuf::ProcAttribute::Host:
+  case cuf::ProcAttribute::HostDevice:
+    return false;
+  case cuf::ProcAttribute::Device:
+  case cuf::ProcAttribute::Global:
+  case cuf::ProcAttribute::GridGlobal:
+    return true;
+  }
+  llvm_unreachable("unknown CUDA Fortran procedure attribute");
 }
 
 // Check if a global represents a data object declared in a module.
@@ -368,7 +379,7 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
                                            mlir::Type typeToConvert,
                                            fir::cg::XDeclareOp typeGenDeclOp) {
   // Exclude variables that the host cannot address.
-  if (!isInDeviceProcedure(declOp) &&
+  if (!isInDeviceOnlyProcedure(declOp) &&
       !isHostAddressable(declOp.getDataAttrAttr()))
     return;
 
