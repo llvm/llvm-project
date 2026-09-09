@@ -30,6 +30,57 @@ entry:
   ret double %val
 }
 
+; The entry fadd is load-bearing: it makes every loop predecessor exit stable
+; from the start, which is what hid the loop exit from phase-2 intersection.
+
+define amdgpu_kernel void @loop_carried_round_mode(ptr addrspace(1) %out, double %a, double %b, i32 %n) {
+; GCN-LABEL: loop_carried_round_mode:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-NEXT:    s_load_dword s6, s[8:9], 0x18
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    s_mov_b32 s7, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    v_add_f64 v[0:1], s[2:3], v[0:1]
+; GCN-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:  .LBB2_1: ; %loop
+; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 0
+; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], s[4:5]
+; GCN-NEXT:    s_add_i32 s7, s7, 1
+; GCN-NEXT:    s_cmp_lt_i32 s7, s6
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 1
+; GCN-NEXT:    v_cvt_f32_f64_e32 v3, v[0:1]
+; GCN-NEXT:    global_store_dword v2, v3, s[0:1]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_cbranch_scc1 .LBB2_1
+; GCN-NEXT:  ; %bb.2: ; %exit
+; GCN-NEXT:    s_endpgm
+entry:
+  %e = fadd double %a, %b
+  store volatile double %e, ptr addrspace(1) %out
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %acc = phi double [ %a, %entry ], [ %sum, %loop ]
+  %sum = fadd double %acc, %b
+  %t = call float @llvm.fptrunc.round.f32.f64(double %sum, metadata !"round.upward")
+  store volatile float %t, ptr addrspace(1) %out
+  %i.next = add i32 %i, 1
+  %cc = icmp slt i32 %i.next, %n
+  br i1 %cc, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
 
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)

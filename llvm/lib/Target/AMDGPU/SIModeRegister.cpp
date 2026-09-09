@@ -372,37 +372,32 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
     // Mask bits (which represent the Mode bits with a known value) can only be
     // added by explicit SETREG instructions or the initial default value -
     // the intersection process may remove Mask bits.
-    // If we find a predecessor that has not yet had an exit value determined
-    // (this can happen for example if a block is its own predecessor) we defer
-    // use of that value as the Mask will be all zero, and we will revisit this
-    // block again later (unless the only predecessor without an exit value is
-    // this block).
-    MachineBasicBlock::pred_iterator P = MBB.pred_begin(), E = MBB.pred_end();
-    MachineBasicBlock &PB = *(*P);
-    unsigned PredBlock = PB.getNumber();
-    if ((ThisBlock == PredBlock) && (std::next(P) == E)) {
-      BlockInfo[ThisBlock]->Pred = DefaultStatus;
+    BlockData &Info = *BlockInfo[ThisBlock];
+    bool SelfPredPending = false;
+    // An entry block is also entered from the function entry, so the default
+    // applies even when it has predecessors.
+    if (MBB.isEntryBlock()) {
+      Info.Pred = DefaultStatus;
       ExitSet = true;
-    } else if (BlockInfo[PredBlock]->ExitSet) {
-      BlockInfo[ThisBlock]->Pred = BlockInfo[PredBlock]->Exit;
-      ExitSet = true;
-    } else if (PredBlock != ThisBlock)
-      RevisitRequired = true;
-
-    for (P = std::next(P); P != E; P = std::next(P)) {
-      MachineBasicBlock *Pred = *P;
-      unsigned PredBlock = Pred->getNumber();
-      if (BlockInfo[PredBlock]->ExitSet) {
-        if (BlockInfo[ThisBlock]->ExitSet) {
-          BlockInfo[ThisBlock]->Pred =
-              BlockInfo[ThisBlock]->Pred.intersect(BlockInfo[PredBlock]->Exit);
-        } else {
-          BlockInfo[ThisBlock]->Pred = BlockInfo[PredBlock]->Exit;
-        }
-        ExitSet = true;
-      } else if (PredBlock != ThisBlock)
-        RevisitRequired = true;
     }
+    for (MachineBasicBlock *Pred : MBB.predecessors()) {
+      unsigned PredBlock = Pred->getNumber();
+      const BlockData &PredInfo = *BlockInfo[PredBlock];
+      if (!PredInfo.ExitSet) {
+        if (PredBlock == ThisBlock)
+          SelfPredPending = true;
+        else
+          RevisitRequired = true;
+      } else if (ExitSet) {
+        Info.Pred = Info.Pred.intersect(PredInfo.Exit);
+      } else {
+        Info.Pred = PredInfo.Exit;
+        ExitSet = true;
+      }
+    }
+    // ExitSet gating stops an unreachable self-only block from requeuing
+    // forever, as its exit never becomes known.
+    RevisitRequired |= SelfPredPending && ExitSet;
   }
   Status TmpStatus =
       BlockInfo[ThisBlock]->Pred.merge(BlockInfo[ThisBlock]->Change);
