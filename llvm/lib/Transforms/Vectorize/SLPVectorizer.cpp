@@ -19374,7 +19374,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     // nodes already erased from NodesCosts are being deleted and do not
     // count on either side.
     CurrentGathersCost = 0;
-    for (const auto &[BVE, Values] : ValuesToInsert)
+    for (const auto &[BVE, _] : ValuesToInsert)
       CurrentGathersCost += NodesCosts.lookup(BVE);
     KeepCost += CurrentGathersCost;
     // Re-cost the gather nodes with the subtree tentatively deleted.
@@ -19386,7 +19386,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         TempDeleted.push_back(Child);
     }
     DroppedGathersCost = 0;
-    for (const auto &[BVE, Values] : ValuesToInsert) {
+    for (const auto &[BVE, _] : ValuesToInsert) {
       if (!NodesCosts.contains(BVE))
         continue;
       DroppedGathersCost += RecostEntry(BVE);

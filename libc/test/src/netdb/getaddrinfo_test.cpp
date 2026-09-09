@@ -13,6 +13,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/netdb_macros.h"
+#include "hdr/sys_socket_macros.h"
 #include "hdr/types/struct_addrinfo.h"
 #include "src/netdb/freeaddrinfo.h"
 #include "src/netdb/getaddrinfo.h"
@@ -21,11 +22,15 @@
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
-using LlvmLibcNetdbTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcGetaddrinfoTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST_F(LlvmLibcNetdbTest, GetAddrInfoReturnsEaiSystem) {
+TEST_F(LlvmLibcGetaddrinfoTest, GetAddrInfoReturnsEaiSystem) {
+  struct addrinfo hints{};
+  hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_DGRAM;
   struct addrinfo *res = nullptr;
-  ASSERT_THAT(LIBC_NAMESPACE::getaddrinfo("localhost", nullptr, nullptr, &res),
+  ASSERT_THAT(LIBC_NAMESPACE::getaddrinfo("localhost", nullptr, &hints, &res),
               Fails(ENOSYS, EAI_SYSTEM));
   EXPECT_EQ(res, nullptr);
 
