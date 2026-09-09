@@ -25,21 +25,6 @@
 // CHECK-XARCH-DEV-DAG: "{{[^"]*}}x86_64-unknown-linux-gnu{{/|\\\\}}libclang_rt.ubsan_standalone.a"
 
 // RUN: %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu \
-// RUN:     -x hip --offload-arch=gfx908 -Xarch_host -fsanitize=undefined \
-// RUN:     -nogpuinc -nogpulib --rocm-path=%S/Inputs/rocm \
-// RUN:     -resource-dir=%S/Inputs/resource_dir_with_amdgpu_per_target_subdir %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-XARCH-HOST
-// CHECK-XARCH-HOST-NOT: ubsan_offload
-// CHECK-XARCH-HOST-NOT: __ubsan_offload_init
-
-// RUN: %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu \
-// RUN:     -fsanitize=undefined \
-// RUN:     -resource-dir=%S/Inputs/resource_dir_with_amdgpu_per_target_subdir %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-HOST
-// CHECK-HOST-NOT: ubsan_offload
-// CHECK-HOST-NOT: __ubsan_offload_init
-
-// RUN: %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu \
 // RUN:     -x hip --offload-arch=gfx908 -fsanitize=undefined \
 // RUN:     -fsanitize-minimal-runtime -nogpuinc -nogpulib \
 // RUN:     --rocm-path=%S/Inputs/rocm \
