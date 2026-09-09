@@ -1023,6 +1023,7 @@ set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(spirv64_SOURCES ${GENERIC_SOURCES})
 
 set(s390x_SOURCES
+  s390/stack_chk_fail.c
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
 )
@@ -1174,6 +1175,11 @@ else ()
       if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ("${arch}" MATCHES "riscv32|sparc$"
         AND NOT CMAKE_COMPILER_IS_GNUCC))
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
+      endif()
+
+      if (ZOS)
+        list(APPEND BUILTIN_CFLAGS_${arch} -march=z13)
+
       endif()
 
       add_compiler_rt_runtime(clang_rt.builtins
