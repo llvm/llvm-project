@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64--gnu -filetype=obj --verify-machineinstrs < %s | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefixes=COMMON,X86
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -filetype=obj --verify-machineinstrs < %s | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefixes=COMMON,AMDGPU
+; RUN: llc -mtriple=amdgpu9.00--amdhsa -filetype=obj < %s | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefixes=COMMON,AMDGPU
 
 ; Check that the address spaces are correctly printed for AMDGPU.
 ; The interpretation of the address space is dependent on the target.
