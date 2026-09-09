@@ -14,10 +14,8 @@ define i8 @sadd_no_overflow_pos_const(i8 %a) {
 ; CHECK-NEXT:    [[OK:%.*]] = and i1 [[LO]], [[HI]]
 ; CHECK-NEXT:    br i1 [[OK]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 1)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    [[V:%.*]] = add nsw i8 [[A]], 1
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i8 0
@@ -49,10 +47,8 @@ define i8 @sadd_no_overflow_neg_const(i8 %a) {
 ; CHECK-NEXT:    [[OK:%.*]] = and i1 [[LO]], [[HI]]
 ; CHECK-NEXT:    br i1 [[OK]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 -1)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    [[V:%.*]] = add nsw i8 [[A]], -1
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i8 0
@@ -113,10 +109,8 @@ define i8 @sadd_c_smin(i8 %a) {
 ; CHECK-NEXT:    [[LO:%.*]] = icmp sge i8 [[A]], 0
 ; CHECK-NEXT:    br i1 [[LO]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 -128)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    [[V:%.*]] = add nsw i8 [[A]], -128
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i8 0
@@ -144,10 +138,8 @@ define i8 @sadd_c_smax(i8 %a) {
 ; CHECK-NEXT:    [[HI:%.*]] = icmp sle i8 [[A]], 0
 ; CHECK-NEXT:    br i1 [[HI]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 127)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    [[V:%.*]] = add nsw i8 [[A]], 127
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i8 0
@@ -236,10 +228,8 @@ define i8 @sadd_unsigned_bound(i8 %a) {
 ; CHECK-NEXT:    [[HI:%.*]] = icmp ult i8 [[A]], 100
 ; CHECK-NEXT:    br i1 [[HI]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 1)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    [[V:%.*]] = add nsw i8 [[A]], 1
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i8 0
@@ -303,11 +293,10 @@ define i8 @sadd_aggregate_escapes(i8 %a) {
 ; CHECK-NEXT:    [[OK:%.*]] = and i1 [[LO]], [[HI]]
 ; CHECK-NEXT:    br i1 [[OK]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[V:%.*]] = add nsw i8 [[A]], 1
 ; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 1)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
 ; CHECK-NEXT:    call void @use.agg({ i8, i1 } [[S]])
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i8 0
