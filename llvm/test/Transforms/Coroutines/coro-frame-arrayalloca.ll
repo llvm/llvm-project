@@ -68,7 +68,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    call void @consume.i32.ptr(ptr [[DATA_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @consume.double.ptr(ptr [[SUFFIX_RELOAD_ADDR]])
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 48
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 ;
