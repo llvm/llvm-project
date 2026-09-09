@@ -551,6 +551,11 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
+- Class template argument deduction through an alias template now works when
+  the right-hand side of the alias names another alias template that cannot
+  have deduction guides of its own. The deduction guides are now
+  derived from the first template in the chain that can have them. (#GH125821)
+
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed a bug where we accepted ``__super`` being qualified by a scope specifier, causing codegen to assertion fail elsewhere. (#GH212988)

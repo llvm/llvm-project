@@ -1177,13 +1177,40 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
   auto RhsType = AliasTemplate->getTemplatedDecl()->getUnderlyingType();
   TemplateDecl *Template = nullptr;
   llvm::ArrayRef<TemplateArgument> AliasRhsTemplateArgs;
-  if (const auto *TST = RhsType->getAs<TemplateSpecializationType>()) {
+  const auto *TST = RhsType->getAs<TemplateSpecializationType>();
+
+  // The RHS of the alias may name another alias template that can never have
+  // deduction guides of its own, because its defining-type-id is not of the
+  // form
+  //   [typename] [nested-name-specifier] [template] simple-template-id
+  // as required by [over.match.class.deduct]p3. e.g.
+  //   template <typename T>
+  //   using Identity = T;
+  //   template <typename T>
+  //   using C = Identity<Foo<T>>;
+  // Per [temp.alias]p2, Identity<Foo<T>> is equivalent to Foo<T>, so step
+  // through such aliases and derive the deduction guides from the first
+  // template that can actually have them (GH125821).
+  while (TST) {
+    auto *RhsAlias = dyn_cast_or_null<TypeAliasTemplateDecl>(
+        TST->getTemplateName().getAsTemplateDecl());
+    if (!RhsAlias || getRHSTemplateDeclAndArgs(SemaRef, RhsAlias).first)
+      break;
+    RhsType = TST->desugar();
+    TST = RhsType->getAs<TemplateSpecializationType>();
+  }
+
+  if (TST) {
     // Cases where the RHS of the alias is dependent. e.g.
     //   template<typename T>
     //   using AliasFoo1 = Foo<T>; // a class/type alias template specialization
-    Template = TST->getTemplateName().getAsTemplateDecl();
-    AliasRhsTemplateArgs =
-        TST->getAsNonAliasTemplateSpecializationType()->template_arguments();
+    // The RHS may not desugar to a template specialization at all (e.g. an
+    // alias of the form 'T*' whose specialization ends up being a pointer);
+    // in that case, there is no template to derive the guides from.
+    if (const auto *RhsTST = TST->getAsNonAliasTemplateSpecializationType()) {
+      Template = TST->getTemplateName().getAsTemplateDecl();
+      AliasRhsTemplateArgs = RhsTST->template_arguments();
+    }
   } else if (const auto *RT = RhsType->getAs<RecordType>()) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
