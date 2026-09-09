@@ -1793,6 +1793,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_16(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
 ; GFX12-GISEL-NEXT:    v_and_or_b32 v1, 0xffff0000, v2, v1
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_atomic_cmpswap_b32 v1, v0, v[1:2], s[0:1] offset:2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
@@ -1930,6 +1931,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_16(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_cvt_u32_u16_e32 v2, v0.h
 ; GFX12-SDAG-NEXT:    v_and_or_b32 v2, 0xffff0000, v3, v2
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_atomic_cmpswap_b32 v2, v1, v[2:3], s[0:1] offset:2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
@@ -2052,6 +2054,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_16(ptr 
 ; GFX12-GISEL-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_and_or_b32 v0, 0xffff0000, v1, v0
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
@@ -2170,6 +2173,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_16(ptr 
 ; GFX12-SDAG-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_and_or_b32 v0, 0xffff0000, v1, v0
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_atomic_cmpswap_b32 v0, v3, v[0:1], s[0:1] offset:2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
@@ -3304,6 +3308,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX12-GISEL-NEXT:    v_and_or_b32 v1, 0xffffff00, v2, v1
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_atomic_cmpswap_b32 v1, v0, v[1:2], s[0:1] offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
@@ -3450,6 +3455,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX12-SDAG-NEXT:    v_cvt_u32_u16_e32 v2, v0.h
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_and_or_b32 v2, 0xffffff00, v3, v2
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_atomic_cmpswap_b32 v2, v1, v[2:3], s[0:1] offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
@@ -3590,6 +3596,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX12-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_and_or_b32 v0, 0xffffff00, v1, v0
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
@@ -3713,6 +3720,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX12-SDAG-NEXT:    v_and_or_b32 v0, 0xffffff00, v1, v0
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_atomic_cmpswap_b32 v0, v3, v[0:1], s[0:1] offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
