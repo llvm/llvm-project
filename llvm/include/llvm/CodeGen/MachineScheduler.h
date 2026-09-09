@@ -1321,7 +1321,13 @@ protected:
   /// Candidate last picked from Bot boundary.
   SchedCandidate BotCand;
 
+  /// True unless the region is one where no schedule can bring register
+  /// pressure back under the limit, so the pressure heuristics have nothing
+  /// to win. See GenericScheduler::checkPressureIsActionable().
+  bool PressureActionable = true;
+
   void checkAcyclicLatency();
+  void checkPressureIsActionable();
 
   void initCandidate(SchedCandidate &Cand, SUnit *SU, bool AtTop,
                      const RegPressureTracker &RPTracker,
