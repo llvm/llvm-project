@@ -278,7 +278,7 @@ public:
 
   bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
-  bool isIgnorableUse(const MachineOperand &MO) const override;
+  bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const override;
 
   bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
                     MachineCycleInfo *CI) const override;
@@ -325,7 +325,13 @@ public:
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
-  std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
+  std::optional<int64_t>
+  getImmOrMaterializedImm(const MachineRegisterInfo &MRI,
+                          const MachineOperand &Op,
+                          MachineInstr **DefMI = nullptr) const;
+  std::optional<int64_t>
+  getImmOrMaterializedImm(const MachineRegisterInfo &MRI, Register Reg,
+                          MachineInstr **DefMI = nullptr) const;
 
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
@@ -424,6 +430,9 @@ public:
 
   bool reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
+
+  std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
@@ -876,13 +885,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/true));
+           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/false));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/true));
+           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/false));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
@@ -922,6 +931,17 @@ public:
   static bool isDPP(const MachineInstr &MI) { return SIInstrFlags::isDPP(MI); }
 
   bool isDPP(uint32_t Opcode) const { return SIInstrFlags::isDPP(get(Opcode)); }
+
+  // Some opcodes use Src1 for DPP instead of Src0, because the sequencer
+  // transforms them and reverse the order of their operands at runtime.
+  //
+  // Documentation is incomplete on which instructions are effected, so
+  // the implementation is derived from experimentation.
+  //
+  // Listed as target-independent pseudos; the per-subtarget MC opcodes
+  // (V_SUBREV_NC_U32_e32_gfx11 and friends) are all reached through these.
+  // Defined out of line because GCNSubtarget is incomplete here.
+  static bool isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode);
 
   static bool isTRANS(const MachineInstr &MI) {
     return SIInstrFlags::isTRANS(MI);
@@ -1870,9 +1890,6 @@ namespace AMDGPU {
   /// of a SADDR form.
   LLVM_READONLY
   int32_t getGlobalVaddrOp(uint32_t Opcode);
-
-  LLVM_READONLY
-  int32_t getVCMPXNoSDstOp(uint32_t Opcode);
 
   /// \returns ST form with only immediate offset of a FLAT Scratch instruction
   /// given an \p Opcode of an SS (SADDR) form.

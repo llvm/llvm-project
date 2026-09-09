@@ -495,8 +495,14 @@ if(WIN32 AND NOT UNIX)
   endif()
   if(CPACK_GENERATOR STREQUAL "WIX")
     set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
-    # The WIX installer needs admin privileges unless we use this flag.
-    set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval")
+    # -sval: the WIX installer needs admin privileges unless we use this flag.
+    # -dcl:high: light defaults the cabinet to MSZIP (deflate, 32 KiB window),
+    # which captures almost no redundancy between the payload's binaries.  high
+    # selects LZX with a 21-bit (2 MiB) window instead.  That is the strongest
+    # compression available here: Windows Installer has to be able to read the
+    # cabinet itself, and CAB supports only MSZIP/LZX/Quantum, so an MSI cannot
+    # use LZMA the way the NSIS generator does.
+    set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval" "-dcl:high")
   endif()
 endif()
 include(CPack)
@@ -575,6 +581,7 @@ set(LLVM_ALL_TARGETS
   ARM
   AVR
   BPF
+  DirectX
   Hexagon
   Lanai
   LoongArch
@@ -595,7 +602,6 @@ set(LLVM_ALL_TARGETS
 set(LLVM_ALL_EXPERIMENTAL_TARGETS
   ARC
   CSKY
-  DirectX
   M68k
   Xtensa
 )
@@ -839,9 +845,9 @@ if(LLVM_INDIVIDUAL_TEST_COVERAGE)
 endif()
 set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
-# On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
+# On Win32 hosts, provide an option to specify the path to the Unix tools.
 if( WIN32 AND NOT CYGWIN )
-  set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
+  set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to Unix tools for Windows")
 endif()
 set(LLVM_NATIVE_TOOL_DIR "" CACHE PATH "Path to a directory containing prebuilt matching native tools (such as llvm-tblgen)")
 
@@ -1259,9 +1265,10 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   set(TENSORFLOW_AOT_COMPILER
     "${TENSORFLOW_AOT_PATH}/../../../../bin/saved_model_cli"
     CACHE PATH "Path to the Tensorflow AOT compiler")
-  include_directories(${TENSORFLOW_AOT_PATH}/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
+  target_include_directories(tf_xla_runtime PUBLIC
+    $<BUILD_INTERFACE:${TENSORFLOW_AOT_PATH}/include>)
   install(TARGETS tf_xla_runtime EXPORT LLVMExports
     ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT tf_xla_runtime)
   install(TARGETS tf_xla_runtime EXPORT LLVMDevelopmentExports

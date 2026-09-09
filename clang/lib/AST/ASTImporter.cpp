@@ -1638,16 +1638,18 @@ ASTNodeImporter::VisitFunctionProtoType(const FunctionProtoType *T) {
 
 ExpectedType ASTNodeImporter::VisitUnresolvedUsingType(
     const UnresolvedUsingType *T) {
-  Error Err = Error::success();
-  auto ToQualifier = importChecked(Err, T->getQualifier());
-  auto *ToD = importChecked(Err, T->getDecl());
-  if (Err)
-    return std::move(Err);
+  auto ToQualifierOrErr = import(T->getQualifier());
+  if (!ToQualifierOrErr)
+    return ToQualifierOrErr.takeError();
+  auto ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
 
   if (T->isCanonicalUnqualified())
-    return Importer.getToContext().getCanonicalUnresolvedUsingType(ToD);
-  return Importer.getToContext().getUnresolvedUsingType(T->getKeyword(),
-                                                        ToQualifier, ToD);
+    return Importer.getToContext().getCanonicalUnresolvedUsingType(
+        *ToDeclOrErr);
+  return Importer.getToContext().getUnresolvedUsingType(
+      T->getKeyword(), *ToQualifierOrErr, *ToDeclOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitParenType(const ParenType *T) {
@@ -1704,14 +1706,18 @@ ExpectedType ASTNodeImporter::VisitTypeOfType(const TypeOfType *T) {
 }
 
 ExpectedType ASTNodeImporter::VisitUsingType(const UsingType *T) {
-  Error Err = Error::success();
-  auto ToQualifier = importChecked(Err, T->getQualifier());
-  auto *ToD = importChecked(Err, T->getDecl());
-  QualType ToT = importChecked(Err, T->desugar());
-  if (Err)
-    return std::move(Err);
-  return Importer.getToContext().getUsingType(T->getKeyword(), ToQualifier, ToD,
-                                              ToT);
+  auto ToQualifierOrErr = import(T->getQualifier());
+  if (!ToQualifierOrErr)
+    return ToQualifierOrErr.takeError();
+  auto ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
+
+  ExpectedType ToTypeOrErr = import(T->desugar());
+  if (!ToTypeOrErr)
+    return ToTypeOrErr.takeError();
+  return Importer.getToContext().getUsingType(
+      T->getKeyword(), *ToQualifierOrErr, *ToDeclOrErr, *ToTypeOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitDecltypeType(const DecltypeType *T) {
@@ -1748,10 +1754,14 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  Expected<TemplateDecl *> ToTypeConstraint =
-      import(T->getTypeConstraintConcept());
-  if (!ToTypeConstraint)
-    return ToTypeConstraint.takeError();
+  TemplateName ToTypeConstraint;
+  if (TemplateName FromTypeConstraint = T->getTypeConstraintConcept();
+      !FromTypeConstraint.isNull()) {
+    Expected<TemplateName> ToTypeConstraintOrErr = import(FromTypeConstraint);
+    if (!ToTypeConstraintOrErr)
+      return ToTypeConstraintOrErr.takeError();
+    ToTypeConstraint = *ToTypeConstraintOrErr;
+  }
 
   SmallVector<TemplateArgument, 2> ToTemplateArgs;
   if (Error Err = ImportTemplateArguments(T->getTypeConstraintArguments(),
@@ -1760,7 +1770,7 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
 
   return Importer.getToContext().getAutoType(
       T->getDeducedKind(), *ToDeducedTypeOrErr, T->getKeyword(),
-      *ToTypeConstraint, ToTemplateArgs);
+      ToTypeConstraint, ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
@@ -2044,9 +2054,10 @@ ExpectedType clang::ASTNodeImporter::VisitOverflowBehaviorType(
 ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
     const clang::HLSLAttributedResourceType *T) {
   Error Err = Error::success();
-  const HLSLAttributedResourceType::Attributes &ToAttrs = T->getAttrs();
+  HLSLAttributedResourceType::Attributes ToAttrs = T->getAttrs();
   QualType ToWrappedType = importChecked(Err, T->getWrappedType());
   QualType ToContainedType = importChecked(Err, T->getContainedType());
+  ToAttrs.SampleCountExpr = importChecked(Err, T->getSampleCountExpr());
   if (Err)
     return std::move(Err);
 
@@ -3722,8 +3733,8 @@ Error ASTNodeImporter::ImportTemplateInformation(
 
     TemplateSpecializationKind TSK = FTSInfo->getTemplateSpecializationKind();
     ToFD->setFunctionTemplateSpecialization(
-        std::get<0>(*FunctionAndArgsOrErr), ToTAList, /* InsertPos= */ nullptr,
-        TSK, FromTAArgsAsWritten ? &ToTAInfo : nullptr, *POIOrErr);
+        std::get<0>(*FunctionAndArgsOrErr), ToTAList, /*InsertToken=*/{}, TSK,
+        FromTAArgsAsWritten ? &ToTAInfo : nullptr, *POIOrErr);
     return Error::success();
   }
 
@@ -3764,8 +3775,8 @@ ASTNodeImporter::FindFunctionTemplateSpecialization(FunctionDecl *FromFD) {
   FunctionTemplateDecl *Template;
   TemplateArgsTy ToTemplArgs;
   std::tie(Template, ToTemplArgs) = *FunctionAndArgsOrErr;
-  void *InsertPos = nullptr;
-  auto *FoundSpec = Template->findSpecialization(ToTemplArgs, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  auto *FoundSpec = Template->findSpecialization(ToTemplArgs, InsertToken);
   return FoundSpec;
 }
 
@@ -6363,7 +6374,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     return std::move(Err);
   // Try to find an existing specialization with these template arguments and
   // template parameter list.
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
   ClassTemplateSpecializationDecl *PrevDecl = nullptr;
   ClassTemplatePartialSpecializationDecl *PartialSpec =
             dyn_cast<ClassTemplatePartialSpecializationDecl>(D);
@@ -6376,11 +6387,10 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     if (!ToTPListOrErr)
       return ToTPListOrErr.takeError();
     ToTPList = *ToTPListOrErr;
-    PrevDecl = ClassTemplate->findPartialSpecialization(TemplateArgs,
-                                                        *ToTPListOrErr,
-                                                        InsertPos);
+    PrevDecl = ClassTemplate->findPartialSpecialization(
+        TemplateArgs, *ToTPListOrErr, InsertToken);
   } else
-    PrevDecl = ClassTemplate->findSpecialization(TemplateArgs, InsertPos);
+    PrevDecl = ClassTemplate->findSpecialization(TemplateArgs, InsertToken);
 
   if (PrevDecl) {
     if (IsStructuralMatch(D, PrevDecl)) {
@@ -6441,13 +6451,13 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
       return D2;
 
-    // Update InsertPos, because preceding import calls may have invalidated
+    // Update InsertToken, because preceding import calls may have invalidated
     // it by adding new specializations.
     auto *PartSpec2 = cast<ClassTemplatePartialSpecializationDecl>(D2);
     if (!ClassTemplate->findPartialSpecialization(TemplateArgs, ToTPList,
-                                                  InsertPos))
+                                                  InsertToken))
       // Add this partial specialization to the class template.
-      ClassTemplate->AddPartialSpecialization(PartSpec2, InsertPos);
+      ClassTemplate->AddPartialSpecialization(PartSpec2, InsertToken);
     if (Expected<ClassTemplatePartialSpecializationDecl *> ToInstOrErr =
             import(PartialSpec->getInstantiatedFromMember()))
       PartSpec2->setInstantiatedFromMember(*ToInstOrErr);
@@ -6462,11 +6472,11 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
                                 PrevDecl))
       return D2;
 
-    // Update InsertPos, because preceding import calls may have invalidated
+    // Update InsertToken, because preceding import calls may have invalidated
     // it by adding new specializations.
-    if (!ClassTemplate->findSpecialization(TemplateArgs, InsertPos))
+    if (!ClassTemplate->findSpecialization(TemplateArgs, InsertToken))
       // Add this specialization to the class template.
-      ClassTemplate->AddSpecialization(D2, InsertPos);
+      ClassTemplate->AddSpecialization(D2, InsertToken);
   }
 
   D2->setSpecializationKind(D->getSpecializationKind());
@@ -6693,9 +6703,9 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     return std::move(Err);
 
   // Try to find an existing specialization with these template arguments.
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
   VarTemplateSpecializationDecl *FoundSpecialization =
-      VarTemplate->findSpecialization(TemplateArgs, InsertPos);
+      VarTemplate->findSpecialization(TemplateArgs, InsertToken);
   if (FoundSpecialization) {
     if (IsStructuralMatch(D, FoundSpecialization)) {
       VarDecl *FoundDef = FoundSpecialization->getDefinition();
@@ -6765,10 +6775,10 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return D2;
   }
 
-  // Update InsertPos, because preceding import calls may have invalidated
+  // Update InsertToken, because preceding import calls may have invalidated
   // it by adding new specializations.
-  if (!VarTemplate->findSpecialization(TemplateArgs, InsertPos))
-    VarTemplate->AddSpecialization(D2, InsertPos);
+  if (!VarTemplate->findSpecialization(TemplateArgs, InsertToken))
+    VarTemplate->AddSpecialization(D2, InsertToken);
 
   QualType T;
   if (Error Err = importInto(T, D->getType()))
@@ -10326,6 +10336,27 @@ Expected<TemplateName> ASTImporter::Import(TemplateName From) {
     return ToContext.getSubstTemplateTemplateParmPack(
         *ArgPackOrErr, *AssociatedDeclOrErr, SubstPack->getIndex(),
         SubstPack->getFinal());
+  }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = From.getAsPackIndexingTemplate();
+    auto PatternOrErr = Import(PI->getPattern());
+    if (!PatternOrErr)
+      return PatternOrErr.takeError();
+
+    auto IndexExprOrErr = Import(PI->getIndexExpr());
+    if (!IndexExprOrErr)
+      return IndexExprOrErr.takeError();
+
+    SmallVector<TemplateName, 4> Expansions;
+    for (TemplateName T : PI->getExpansions()) {
+      auto ExpansionOrErr = Import(T);
+      if (!ExpansionOrErr)
+        return ExpansionOrErr.takeError();
+      Expansions.push_back(*ExpansionOrErr);
+    }
+
+    return ToContext.getPackIndexingTemplateName(
+        *PatternOrErr, *IndexExprOrErr, PI->isFullySubstituted(), Expansions);
   }
   case TemplateName::UsingTemplate: {
     auto UsingOrError = Import(From.getAsUsingShadowDecl());

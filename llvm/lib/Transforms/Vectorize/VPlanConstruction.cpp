@@ -1363,7 +1363,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     if (isa<VPIRValue>(V))
       continue;
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
-    VPIRFlags Flags;
+    std::optional<VPIRFlags> Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
     auto *RedIt = find_if(Users, IsaPred<VPReductionPHIRecipe>);
@@ -1404,6 +1404,17 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
 }
 
+/// Add an incoming value to all phis in \p VPBB for its just-added last
+/// predecessor, re-using the value of the previously last one.
+static void addIncomingForLastPredecessor(VPBasicBlock *VPBB) {
+  for (VPRecipeBase &R : VPBB->phis()) {
+    auto *Phi = cast<VPPhi>(&R);
+    assert(Phi->getNumIncoming() == VPBB->getNumPredecessors() - 1 &&
+           "must have incoming values for all predecessors but the new one");
+    Phi->addIncoming(Phi->getIncomingValue(Phi->getNumIncoming() - 1));
+  }
+}
+
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
 /// connecting it to both vector and scalar preheaders. Updates scalar
 /// preheader phis to account for the new predecessor.
@@ -1415,13 +1426,7 @@ static void insertCheckBlockBeforeVectorLoop(VPlan &Plan,
   VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
   VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
   CheckBlockVPBB->swapSuccessors();
-  unsigned NumPreds = ScalarPH->getNumPredecessors();
-  for (VPRecipeBase &R : ScalarPH->phis()) {
-    auto *Phi = cast<VPPhi>(&R);
-    assert(Phi->getNumIncoming() == NumPreds - 1 &&
-           "must have incoming values for all predecessors");
-    Phi->addIncoming(Phi->getOperand(NumPreds - 2));
-  }
+  addIncomingForLastPredecessor(ScalarPH);
 }
 
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
@@ -1507,12 +1512,8 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      // Try to expand Step into VPInstructions in CheckBlock; otherwise fall
-      // back to a VPExpandSCEV recipe in the plan's entry block.
       VPValue *MinTripCountVPV =
-          VPSCEVExpander(Builder, *PSE.getSE(), DL).tryToExpand(Step);
-      if (!MinTripCountVPV)
-        MinTripCountVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Step);
+          VPSCEVExpander(Builder, *PSE.getSE(), DL).expand(Step);
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.
@@ -1898,6 +1899,11 @@ static bool handleFirstArgMinOrMax(
   assert(FindLastIVPhiR->getVFScaleFactor() == 1 &&
          "FindIV reduction must not be scaled");
 
+  // TODO: support for FP in handleFirstArgMinOrMax
+  if (RecurrenceDescriptor::isFloatingPointRecurrenceKind(
+          MinOrMaxPhiR->getRecurrenceKind()))
+    return false;
+
   Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
   // TODO: Support non (i.e., narrower than) canonical IV types.
   // TODO: Emit remarks for failed transformations.
@@ -2043,7 +2049,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // reduction cycle.
     RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
     assert(
-        RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
+        RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
 
     auto *MinOrMaxOp =
@@ -2061,9 +2067,16 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // ComputeReductionResult.
     assert(MinOrMaxOp->getNumUsers() == 2 &&
            "MinOrMaxOp must have exactly 2 users");
-    VPValue *MinOrMaxOpValue = MinOrMaxOp->getOperand(0);
-    if (MinOrMaxOpValue == MinOrMaxPhiR)
+    // MinOrMaxOp must combine MinOrMaxPhiR directly with the new element;
+    // reject multi-step min/max chains (e.g. max(l, max(k, phi))), which
+    // this transform does not handle.
+    VPValue *MinOrMaxOpValue;
+    if (MinOrMaxOp->getOperand(0) == MinOrMaxPhiR)
       MinOrMaxOpValue = MinOrMaxOp->getOperand(1);
+    else if (MinOrMaxOp->getOperand(1) == MinOrMaxPhiR)
+      MinOrMaxOpValue = MinOrMaxOp->getOperand(0);
+    else
+      return false;
 
     VPValue *CmpOpA;
     VPValue *CmpOpB;
@@ -2085,8 +2098,6 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     VPInstruction *MinOrMaxResult =
         findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
-    assert(is_contained(MinOrMaxPhiR->users(), MinOrMaxOp) &&
-           "one user must be MinOrMaxOp");
     assert(MinOrMaxResult && "MinOrMaxResult must be a user of MinOrMaxOp");
 
     // Cmp must be used by the select of a FindLastIV chain.
@@ -2138,6 +2149,19 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
         return Pred == CmpInst::ICMP_SLE || Pred == CmpInst::ICMP_SLT;
       case RecurKind::SMin:
         return Pred == CmpInst::ICMP_SGE || Pred == CmpInst::ICMP_SGT;
+      case RecurKind::FMax:
+      case RecurKind::FMaximumNum:
+        return Pred == CmpInst::FCMP_OLE || Pred == CmpInst::FCMP_OLT;
+      case RecurKind::FMin:
+      case RecurKind::FMinimumNum:
+        return Pred == CmpInst::FCMP_OGE || Pred == CmpInst::FCMP_OGT;
+      // minnum and maxnum need special handling due to expected sNaN behaviour
+      // minimum and maximum return NaN if either input is a NAN
+      case RecurKind::FMinNum:
+      case RecurKind::FMaxNum:
+      case RecurKind::FMinimum:
+      case RecurKind::FMaximum:
+        return false;
       default:
         llvm_unreachable("unhandled recurrence kind");
       }
@@ -2154,6 +2178,13 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       return false;
     }
 
+    if (RdxKind == RecurKind::FMaximumNum ||
+        RdxKind == RecurKind::FMinimumNum) {
+      auto *StartC = dyn_cast<VPConstant>(MinOrMaxPhiR->getStartValue());
+      if (!StartC || StartC->getConstant()->isNaN())
+        return false;
+    }
+
     auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
     auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
     auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
@@ -2165,7 +2196,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
                                FindIVRdxResult->getIterator());
 
-    bool IsStrictPredicate = ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred);
+    bool IsStrictPredicate = CmpInst::isStrictPredicate(Pred);
     if (IsStrictPredicate) {
       if (!handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
                                   cast<VPWidenIntOrFpInductionRecipe>(IVOp),
@@ -2201,7 +2232,9 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     VPBuilder B(FindIVRdxResult);
     VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
     auto *FinalMinOrMaxCmp =
-        B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
+        (RecurrenceDescriptor::isIntegerRecurrenceKind(RdxKind))
+            ? B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult)
+            : B.createFCmp(CmpInst::FCMP_OEQ, MinOrMaxExiting, MinOrMaxResult);
     VPValue *Sentinel = FindIVCmp->getOperand(1);
     VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
     auto *FinalIVSelect =

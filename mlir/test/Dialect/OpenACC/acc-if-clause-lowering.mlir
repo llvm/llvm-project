@@ -8,12 +8,12 @@ func.func @test_parallel_if(%arg0: memref<10xi32>, %cond: i1) {
   %c10 = arith.constant 10 : index
 
   %copyin = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
-  %create = acc.create varPtr(%arg0 : memref<10xi32>) -> memref<10xi32> {dataClause = #acc<data_clause acc_copyout>}
+  %create = acc.create varPtr(%arg0 : memref<10xi32>) dataClause(acc_copyout) -> memref<10xi32>
 
   // CHECK-NOT: acc.parallel if
   // CHECK: scf.if %{{.*}} {
   // CHECK:   %[[COPYIN:.*]] = acc.copyin varPtr(%{{.*}}) -> memref<10xi32>
-  // CHECK:   %[[CREATE:.*]] = acc.create varPtr(%{{.*}}) -> memref<10xi32>
+  // CHECK:   %[[CREATE:.*]] = acc.create varPtr(%{{.*}}) dataClause(acc_copyout) -> memref<10xi32>
   // CHECK:   acc.parallel dataOperands(%[[COPYIN]], %[[CREATE]] : memref<10xi32>, memref<10xi32>) {
   // CHECK:     scf.for
   // CHECK:     acc.yield
@@ -81,7 +81,7 @@ func.func @test_kernels_if(%arg0: memref<5xi32>, %cond: i1) {
   %c5 = arith.constant 5 : index
 
   %copyin = acc.copyin varPtr(%arg0 : memref<5xi32>) -> memref<5xi32>
-  %create = acc.create varPtr(%arg0 : memref<5xi32>) -> memref<5xi32> {dataClause = #acc<data_clause acc_copyout>}
+  %create = acc.create varPtr(%arg0 : memref<5xi32>) dataClause(acc_copyout) -> memref<5xi32>
 
   // CHECK-NOT: acc.kernels if
   // CHECK: scf.if %{{.*}} {
@@ -118,7 +118,7 @@ func.func @test_serial_if(%arg0: memref<8xi32>, %cond: i1) {
   %c8 = arith.constant 8 : index
 
   %copyin = acc.copyin varPtr(%arg0 : memref<8xi32>) -> memref<8xi32>
-  %create = acc.create varPtr(%arg0 : memref<8xi32>) -> memref<8xi32> {dataClause = #acc<data_clause acc_copyout>}
+  %create = acc.create varPtr(%arg0 : memref<8xi32>) dataClause(acc_copyout) -> memref<8xi32>
 
   // CHECK-NOT: acc.serial if
   // CHECK: scf.if %{{.*}} {
@@ -198,7 +198,7 @@ func.func @test_reduction_if(%r: memref<f32>, %a: memref<8xf32>, %cond: i1) {
   %c8_i32 = arith.constant 8 : i32
   %c1_i32 = arith.constant 1 : i32
 
-  %copyin = acc.copyin varPtr(%r : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_reduction>, implicit = true}
+  %copyin = acc.copyin varPtr(%r : memref<f32>) dataClause(acc_reduction) implicit(true) -> memref<f32>
 
   // CHECK: scf.if
   // CHECK:   acc.parallel
@@ -221,11 +221,11 @@ func.func @test_reduction_if(%r: memref<f32>, %a: memref<8xf32>, %cond: i1) {
       %new_r = arith.addf %r_val, %elem : f32
       memref.store %new_r, %r[] : memref<f32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
 
-  acc.copyout accPtr(%copyin : memref<f32>) to varPtr(%r : memref<f32>) {dataClause = #acc<data_clause acc_reduction>, implicit = true}
+  acc.copyout accPtr(%copyin : memref<f32>) to varPtr(%r : memref<f32>) dataClause(acc_reduction) implicit(true)
   return
 }
 

@@ -105,13 +105,9 @@ void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
 SVal ExprEngine::makeElementRegion(ProgramStateRef State, SVal LValue,
                                    QualType &Ty, bool &IsArray, unsigned Idx) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  ASTContext &Ctx = SVB.getContext();
 
-  if (const ArrayType *AT = Ctx.getAsArrayType(Ty)) {
-    while (AT) {
-      Ty = AT->getElementType();
-      AT = dyn_cast<ArrayType>(AT->getElementType());
-    }
+  if (Ty->isArrayType()) {
+    Ty = SVB.getContext().getBaseElementType(Ty);
     LValue = State->getLValue(Ty, SVB.makeArrayIndex(Idx), LValue);
     IsArray = true;
   }
@@ -602,8 +598,8 @@ void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
     }
 
     // The target region is found from construction context.
-    std::tie(State, Target) = handleConstructionContext(CE, State, currBldrCtx,
-                                                        SF, CC, CallOpts, Idx);
+    std::tie(State, Target) =
+        handleConstructionContext(CE, State, SF, CC, CallOpts, Idx);
     break;
   }
   case CXXConstructionKind::VirtualBase: {

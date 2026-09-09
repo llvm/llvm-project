@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
-#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
@@ -99,7 +98,7 @@ static cl::opt<bool>
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnablePPCGenScalarMASSEntries(
+cl::opt<bool> EnablePPCGenScalarMASSEntries(
     "enable-ppc-gen-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
              "(scalar) entries"),
@@ -417,10 +416,8 @@ void PPCPassConfig::addIRPasses() {
   // Generate PowerPC target-specific entries for scalar math functions
   // that are available in IBM MASS (scalar) library.
   if (TM->getOptLevel() == CodeGenOptLevel::Aggressive &&
-      EnablePPCGenScalarMASSEntries) {
-    TM->Options.PPCGenScalarMASSEntries = EnablePPCGenScalarMASSEntries;
+      EnablePPCGenScalarMASSEntries)
     addPass(createPPCGenScalarMASSEntriesPass());
-  }
 
   // If explicitly requested, add explicit data prefetch intrinsics.
   if (EnablePrefetch.getNumOccurrences() > 0)
@@ -595,11 +592,11 @@ bool PPCPassConfig::addLegalizeMachineIR() {
 }
 
 bool PPCPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool PPCPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }

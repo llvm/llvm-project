@@ -42,6 +42,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
@@ -2313,6 +2314,10 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
           !Var->isStaticLocal())
         return false;
 
+      // Address of a managed variable is never a constant expression.
+      if (Info.getLangOpts().CUDA && Var->hasAttr<HIPManagedAttr>())
+        return false;
+
       // In CUDA/HIP device compilation, only device side variables have
       // constant addresses.
       if (Info.getLangOpts().CUDA && Info.getLangOpts().CUDAIsDevice &&
@@ -2320,8 +2325,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         if ((!Var->hasAttr<CUDADeviceAttr>() &&
              !Var->hasAttr<CUDAConstantAttr>() &&
              !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
-             !Var->getType()->isCUDADeviceBuiltinTextureType()) ||
-            Var->hasAttr<HIPManagedAttr>())
+             !Var->getType()->isCUDADeviceBuiltinTextureType()))
           return false;
       }
     }
@@ -7613,6 +7617,8 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
   if (RD->isUnion())
     return true;
 
+  if (!ASTContext::hasLayout(RD))
+    return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
   // We don't have a good way to iterate fields in reverse, so collect all the
@@ -8007,6 +8013,8 @@ class APValueToBufferConverter {
 
   bool visitRecord(const APValue &Val, QualType Ty, CharUnits Offset) {
     const RecordDecl *RD = Ty->getAsRecordDecl();
+    if (!ASTContext::hasLayout(RD))
+      return false;
     const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
     // Visit the base classes.
@@ -9010,9 +9018,9 @@ public:
           const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
           FunctionTemplateDecl *CallOpTemplate =
               LambdaCallOp->getDescribedFunctionTemplate();
-          void *InsertPos = nullptr;
+          llvm::FoldingSetInsertToken InsertToken;
           FunctionDecl *CorrespondingCallOpSpecialization =
-              CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+              CallOpTemplate->findSpecialization(TAL->asArray(), InsertToken);
           assert(CorrespondingCallOpSpecialization &&
                  "We must always have a function call operator specialization "
                  "that corresponds to our static invoker specialization");
@@ -11358,6 +11366,7 @@ namespace {
     bool VisitCXXConstructExpr(const CXXConstructExpr *E, QualType T);
     bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
     bool VisitBinCmp(const BinaryOperator *E);
+    bool VisitTypeTraitExpr(const TypeTraitExpr *E);
     bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
     bool VisitCXXParenListOrInitListExpr(const Expr *ExprToVisit,
                                          ArrayRef<Expr *> Args);
@@ -16548,7 +16557,7 @@ static QualType getObjectType(APValue::LValueBase B) {
 /// Ex. For E = `(short*)((char*)(&foo))`, returns `&foo`
 ///
 /// Always returns an RValue with a pointer representation.
-static const Expr *ignorePointerCastsAndParens(const Expr *E) {
+const Expr *ignorePointerCastsAndParens(const Expr *E) {
   assert(E->isPRValue() && E->getType()->hasPointerRepresentation());
 
   const Expr *NoParens = E->IgnoreParens();
@@ -18456,8 +18465,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Val.countTrailingZeros(), E);
   }
 
-  case clang::X86::BI__builtin_ia32_pdep_si:
-  case clang::X86::BI__builtin_ia32_pdep_di:
   case Builtin::BI__builtin_elementwise_pdep: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
@@ -18466,8 +18473,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(llvm::APIntOps::pdep(Val, Msk), E);
   }
 
-  case clang::X86::BI__builtin_ia32_pext_si:
-  case clang::X86::BI__builtin_ia32_pext_di:
   case Builtin::BI__builtin_elementwise_pext: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
@@ -18475,6 +18480,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     return Success(llvm::APIntOps::pext(Val, Msk), E);
   }
+
   case X86::BI__builtin_ia32_ptestz128:
   case X86::BI__builtin_ia32_ptestz256:
   case X86::BI__builtin_ia32_vtestzps:
@@ -19511,6 +19517,22 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
   return DoAfter();
 }
 
+static bool EvaluateComparisonResult(EvalInfo &Info, const Expr *E,
+                                     ComparisonCategoryResult CCR,
+                                     APValue &Result) {
+  const ComparisonCategoryInfo &CmpInfo =
+      Info.Ctx.CompCategories.getInfoForType(E->getType());
+  const VarDecl *VD = CmpInfo.getValueInfo(CmpInfo.makeWeakResult(CCR))->VD;
+
+  // Check and evaluate the result as a constant expression.
+  LValue LV;
+  LV.set(VD);
+  if (!handleLValueToRValueConversion(Info, E, E->getType(), LV, Result))
+    return false;
+  return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                 ConstantExprKind::Normal);
+}
+
 bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
   if (!CheckLiteralType(Info, E))
     return false;
@@ -19533,22 +19555,23 @@ bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
       CCR = ComparisonCategoryResult::Unordered;
       break;
     }
-    // Evaluation succeeded. Lookup the information for the comparison category
-    // type and fetch the VarDecl for the result.
-    const ComparisonCategoryInfo &CmpInfo =
-        Info.Ctx.CompCategories.getInfoForType(E->getType());
-    const VarDecl *VD = CmpInfo.getValueInfo(CmpInfo.makeWeakResult(CCR))->VD;
-    // Check and evaluate the result as a constant expression.
-    LValue LV;
-    LV.set(VD);
-    if (!handleLValueToRValueConversion(Info, E, E->getType(), LV, Result))
-      return false;
-    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
-                                   ConstantExprKind::Normal);
+    return EvaluateComparisonResult(Info, E, CCR, Result);
   };
   return EvaluateComparisonBinaryOperator(Info, E, OnSuccess, [&]() {
     return ExprEvaluatorBaseTy::VisitBinCmp(E);
   });
+}
+
+bool RecordExprEvaluator::VisitTypeTraitExpr(const TypeTraitExpr *E) {
+  if (!CheckLiteralType(Info, E))
+    return false;
+
+  assert(E->isStoredAsComparisonResult() &&
+         "expected a strong_ordering type trait with a stored value");
+
+  ComparisonCategoryResult CCR = static_cast<ComparisonCategoryResult>(
+      E->getAPValue().getInt().getZExtValue());
+  return EvaluateComparisonResult(Info, E, CCR, Result);
 }
 
 bool RecordExprEvaluator::VisitCXXParenListInitExpr(
@@ -23081,7 +23104,10 @@ std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type);
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(
+        Info, this, Type,
+        /*IsDynamic=*/false);
+
   return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 
@@ -23096,31 +23122,25 @@ EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
   if (!EvaluatePointer(E, String, Info))
     return std::nullopt;
 
-  QualType CharTy = E->getType()->getPointeeType();
-
   // Fast path: if it's a string literal, search the string value.
   if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
           String.getLValueBase().dyn_cast<const Expr *>())) {
     StringRef Str = S->getBytes();
     int64_t Off = String.Offset.getQuantity();
-    if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size() &&
-        S->getCharByteWidth() == 1 &&
-        // FIXME: Add fast-path for wchar_t too.
-        Info.Ctx.hasSameUnqualifiedType(CharTy, Info.Ctx.CharTy)) {
-      Str = Str.substr(Off);
-
-      StringRef::size_type Pos = Str.find(0);
-      if (Pos != StringRef::npos)
-        Str = Str.substr(0, Pos);
-
-      if (StringResult)
+    if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size()) {
+      UnsignedOrNone ZeroIndex = S->findZeroCodeUnit(Off);
+      if (StringResult) {
+        if (ZeroIndex)
+          Str = Str.substr(Off, *ZeroIndex);
         *StringResult = Str;
-      return Str.size();
-    }
+      }
 
-    // Fall through to slow path.
+      return ZeroIndex.value_or(Str.size());
+    }
+    // For an invalid index, fall through to the offset handling below.
   }
 
+  QualType CharTy = E->getType()->getPointeeType();
   // Slow path: scan the bytes of the string looking for the terminating 0.
   for (uint64_t Strlen = 0; /**/; ++Strlen) {
     APValue Char;

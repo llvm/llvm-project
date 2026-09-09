@@ -159,6 +159,12 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     AddDependentTemplateName(*Name.getAsDependentTemplateName());
     break;
   }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    AddTemplateName(PI->getPattern());
+    AddStmt(PI->getIndexExpr());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
@@ -950,6 +956,15 @@ public:
   }
 
   void Visit(const Type *T) {
+    if (const auto *UsingT = dyn_cast<UsingType>(T)) {
+      // A using-declaration changes lookup, not the referenced entity. Preserve
+      // the keyword and qualifier at the use, not at the using-declaration.
+      const auto *Target = cast<TypeDecl>(UsingT->getDecl()->getTargetDecl());
+      T = Target->getASTContext()
+              .getTypeDeclType(UsingT->getKeyword(), UsingT->getQualifier(),
+                               Target)
+              .getTypePtr();
+    }
     if (handleTypedef(T))
       return;
     ID.AddInteger(T->getTypeClass());
@@ -1039,7 +1054,7 @@ public:
     ID.AddInteger((unsigned)T->getKeyword());
     ID.AddInteger(T->isConstrained());
     if (T->isConstrained()) {
-      AddDecl(T->getTypeConstraintConcept());
+      Hash.AddTemplateName(T->getTypeConstraintConcept());
       ID.AddInteger(T->getTypeConstraintArguments().size());
       for (const auto &TA : T->getTypeConstraintArguments())
         Hash.AddTemplateArgument(TA);

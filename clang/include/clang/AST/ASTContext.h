@@ -218,6 +218,22 @@ struct PFPField {
   FieldDecl *Field;
 };
 
+/// UniquingSet info for pools keyed on a QualType and a bool. DenseMapInfo has
+/// no bool specialization, so we cannot use the default UniquingSetInfo.
+struct QualTypeBoolInfo {
+  using KeyTy = std::pair<QualType, bool>;
+
+  template <typename T> static KeyTy getKey(const T &N) { return N.getKey(); }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return llvm::hash_combine(Key.first.getAsOpaquePtr(), Key.second);
+  }
+
+  template <typename T> static bool isEqual(const KeyTy &Key, const T &N) {
+    return Key == N.getKey();
+  }
+};
+
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
@@ -225,12 +241,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   mutable SmallVector<Type *, 0> Types;
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
-  mutable llvm::FoldingSet<ComplexType> ComplexTypes;
-  mutable llvm::FoldingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
-  mutable llvm::FoldingSet<AdjustedType> AdjustedTypes;
-  mutable llvm::FoldingSet<BlockPointerType> BlockPointerTypes;
-  mutable llvm::FoldingSet<LValueReferenceType> LValueReferenceTypes;
-  mutable llvm::FoldingSet<RValueReferenceType> RValueReferenceTypes;
+  mutable llvm::UniquingSet<ComplexType> ComplexTypes;
+  mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<AdjustedType> AdjustedTypes;
+  mutable llvm::UniquingSet<BlockPointerType> BlockPointerTypes;
+  mutable llvm::UniquingSet<LValueReferenceType, QualTypeBoolInfo>
+      LValueReferenceTypes;
+  mutable llvm::UniquingSet<RValueReferenceType, QualTypeBoolInfo>
+      RValueReferenceTypes;
   mutable llvm::FoldingSet<MemberPointerType> MemberPointerTypes;
   mutable llvm::ContextualFoldingSet<ConstantArrayType, ASTContext &>
       ConstantArrayTypes;
@@ -259,44 +277,47 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
       DependentPackIndexingTypes;
 
-  mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
-  mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
-  mutable llvm::FoldingSet<SubstTemplateTypeParmType>
-    SubstTemplateTypeParmTypes;
+  mutable llvm::UniquingSet<TemplateTypeParmType> TemplateTypeParmTypes;
+  mutable llvm::UniquingSet<ObjCTypeParamType> ObjCTypeParamTypes;
+  mutable llvm::UniquingSet<SubstTemplateTypeParmType>
+      SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
     SubstTemplateTypeParmPackTypes;
   mutable llvm::FoldingSet<SubstBuiltinTemplatePackType>
       SubstBuiltinTemplatePackTypes;
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
-  mutable llvm::FoldingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<TagTypeFoldingSetPlaceholder> TagTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<UnresolvedUsingType>>
       UnresolvedUsingTypes;
   mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
+  mutable llvm::UniquingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
-  mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
-  mutable llvm::FoldingSet<UnaryTransformType> UnaryTransformTypes;
+  mutable llvm::UniquingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
+  mutable llvm::UniquingSet<UnaryTransformType> UnaryTransformTypes;
   // An AutoType can have a dependency on another AutoType via its template
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
   // a `FoldingSet`, since both could end up in the same bucket.
-  mutable llvm::DenseMap<llvm::FoldingSetNodeID, AutoType *> AutoTypes;
+  // Keyed by an interned FoldingSetNodeIDRef rather than a FoldingSetNodeID to
+  // avoid its large inline SmallVector in every bucket.
+  mutable llvm::DenseMap<llvm::FoldingSetNodeIDRef, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
-  mutable llvm::FoldingSet<AtomicType> AtomicTypes;
+  mutable llvm::UniquingSet<AtomicType> AtomicTypes;
   mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
       AttributedTypes;
-  mutable llvm::FoldingSet<PipeType> PipeTypes;
-  mutable llvm::FoldingSet<BitIntType> BitIntTypes;
+  mutable llvm::UniquingSet<PipeType, QualTypeBoolInfo> PipeTypes;
+  mutable llvm::UniquingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
-  llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
+  mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
+      HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
@@ -310,6 +331,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
     SubstTemplateTemplateParmPacks;
   mutable llvm::ContextualFoldingSet<DeducedTemplateStorage, ASTContext &>
       DeducedTemplates;
+  mutable llvm::ContextualFoldingSet<PackIndexingTemplateStorage, ASTContext &>
+      PackIndexingTemplates;
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
@@ -1955,7 +1978,7 @@ public:
 private:
   UnresolvedUsingType *getUnresolvedUsingTypeInternal(
       ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
-      const UnresolvedUsingTypenameDecl *D, void *InsertPos,
+      const UnresolvedUsingTypenameDecl *D, llvm::FoldingSetInsertToken Token,
       const Type *CanonicalType) const;
 
   TagType *getTagTypeInternal(ElaboratedTypeKeyword Keyword,
@@ -2155,7 +2178,7 @@ public:
   /// C++11 deduced auto type.
   QualType
   getAutoType(DeducedKind DK, QualType DeducedAsType, AutoTypeKeyword Keyword,
-              TemplateDecl *TypeConstraintConcept = nullptr,
+              TemplateName TypeConstraintConcept = TemplateName(),
               ArrayRef<TemplateArgument> TypeConstraintArgs = {}) const;
 
   /// C++11 deduction pattern for 'auto' type.
@@ -2677,6 +2700,11 @@ public:
                                                 unsigned Index,
                                                 bool Final) const;
 
+  TemplateName
+  getPackIndexingTemplateName(TemplateName Pattern, Expr *IndexExpr,
+                              bool FullySubstituted = false,
+                              ArrayRef<TemplateName> Expansions = {}) const;
+
   /// Represents a TemplateName which had some of its default arguments
   /// deduced. This both represents this default argument deduction as sugar,
   /// and provides the support for it's equivalences through canonicalization.
@@ -2930,9 +2958,16 @@ public:
   /// [[gnu::ms_struct]].
   bool defaultsToMsStruct() const;
 
+  /// Whether layout (offset and size) information can be queried for \p D.
+  static bool hasLayout(const RecordDecl *D) {
+    D = D->getDefinition();
+    return D && !D->isInvalidDecl() && D->isCompleteDefinition();
+  }
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
+  /// \pre hasLayout(D)
   const ASTRecordLayout &getASTRecordLayout(const RecordDecl *D) const;
 
   /// Get or compute information about the layout of the specified
@@ -3259,12 +3294,14 @@ public:
   /// actually be an array type).
   QualType getBaseElementType(QualType QT) const;
 
-  /// Return number of constant array elements.
-  uint64_t getConstantArrayElementCount(const ConstantArrayType *CA) const;
+  /// Return number of (potentially nested) constant array elements.
+  static uint64_t getConstantArrayElementCount(const ConstantArrayType *CA);
 
-  /// Return number of elements initialized in an ArrayInitLoopExpr.
-  uint64_t
-  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) const;
+  /// Return number of elements initialized in a (potentially nested)
+  /// ArrayInitLoopExpr.
+  /// \c AILE may be null, in which case 0 is returned.
+  static uint64_t
+  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE);
 
   /// Perform adjustment on the parameter type of a function.
   ///
@@ -4051,26 +4088,27 @@ inline void operator delete[](void *Ptr, const clang::ASTContext &C, size_t) {
   C.Deallocate(Ptr);
 }
 
-/// Create the representation of a LazyGenerationalUpdatePtr.
-template <typename Owner, typename T,
-          void (clang::ExternalASTSource::*Update)(Owner)>
-typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
-    clang::LazyGenerationalUpdatePtr<Owner, T, Update>::makeValue(
-        const clang::ASTContext &Ctx, T Value) {
-  // Note, this is implemented here so that ExternalASTSource.h doesn't need to
-  // include ASTContext.h. We explicitly instantiate it for all relevant types
-  // in ASTContext.cpp.
-  if (auto *Source = Ctx.getExternalSource())
-    return new (Ctx) LazyData(Source, Value);
-  return Value;
-}
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
 
   static bool isEqual(const FoldingSetNodeID &LHS,
                       const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeIDRef> {
+  static unsigned getHashValue(FoldingSetNodeIDRef Val) {
+    return Val.computeHash();
+  }
+  static bool isEqual(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+    return LHS == RHS;
+  }
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.computeHash();
+  }
+  static bool isEqual(const FoldingSetNodeID &LHS, FoldingSetNodeIDRef RHS) {
     return LHS == RHS;
   }
 };
