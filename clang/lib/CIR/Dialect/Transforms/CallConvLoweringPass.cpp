@@ -550,7 +550,7 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
       return ArgClassification::getDirect();
-    return ArgClassification::getDirect(offset, coerced);
+    return ArgClassification::getDirect(coerced, offset);
   }
   // An extended value is always read from byte 0 of its own storage, so
   // there is no offset to honor here.

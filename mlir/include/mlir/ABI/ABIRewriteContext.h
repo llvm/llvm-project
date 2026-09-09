@@ -98,10 +98,10 @@ struct ArgClassification {
   }
 
   static ArgClassification getDirect() {
-    return getDirect(/*offset=*/0, /*coerced=*/nullptr);
+    return getDirect(/*coerced=*/nullptr, /*offset=*/0);
   }
 
-  static ArgClassification getDirect(unsigned offset, Type coerced) {
+  static ArgClassification getDirect(Type coerced, unsigned offset) {
     // isPassThrough reads only coercedType, so an offset with no coerced
     // type to read at it would be silently ignored.
     assert((!offset || coerced) &&
