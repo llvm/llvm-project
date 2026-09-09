@@ -318,20 +318,6 @@ bool PathMappingList::Remove(ConstString path, bool notify) {
   return true;
 }
 
-PathMappingList::const_iterator
-PathMappingList::FindIteratorForPath(ConstString path) const {
-  std::lock_guard<std::mutex> lock(m_pairs_mutex);
-  const_iterator pos;
-  const_iterator begin = m_pairs.begin();
-  const_iterator end = m_pairs.end();
-
-  for (pos = begin; pos != end; ++pos) {
-    if (pos->first == path)
-      break;
-  }
-  return pos;
-}
-
 PathMappingList::iterator
 PathMappingList::FindIteratorForPath(ConstString path) {
   std::lock_guard<std::mutex> lock(m_pairs_mutex);

@@ -619,7 +619,7 @@ void NativeProcessProtocol::FixupBreakpointPCAsNeeded(
     // We didn't find one at a software probe location.  Nothing to do.
     LLDB_LOG(log,
              "pid {0} no lldb software breakpoint found at current pc with "
-             "adjustment: {1}",
+             "adjustment: {1:x}",
              GetID(), breakpoint_addr);
     return;
   }
@@ -676,7 +676,8 @@ Status NativeProcessProtocol::WriteMemory(lldb::addr_t addr, const void *buf,
     // If the address is before a breakpoint site, write up to the site, or to
     // the end of the write. Whichever comes first.
     if (addr < sbp_addr) {
-      const size_t to_write = std::min(size, size_t{sbp_addr - addr});
+      const size_t to_write =
+          std::min(static_cast<addr_t>(size), sbp_addr - addr);
       size_t part_bytes_written = 0;
       error = DoWriteMemory(addr, byte_buf, to_write, part_bytes_written);
       bytes_written += part_bytes_written;

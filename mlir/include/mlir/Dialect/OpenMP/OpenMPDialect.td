@@ -18,6 +18,7 @@ def OpenMP_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
   let useStrictPropertiesInAssemblyFormat = 1;
   let useDefaultTypePrinterParser = 1;
+  let hasOperationAttrVerify = 1;
 }
 
 #endif  // OPENMP_DIALECT

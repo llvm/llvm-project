@@ -192,26 +192,6 @@ poly64x2_t test_vcombine_p64(poly64x1_t low, poly64x1_t high) {
   return vcombine_p64(low, high);
 }
 
-// CHECK-LABEL: define dso_local <1 x i64> @test_vld1_p64(
-// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <1 x i64>, ptr [[PTR]], align 8
-// CHECK-NEXT:    ret <1 x i64> [[TMP0]]
-//
-poly64x1_t test_vld1_p64(poly64_t const * ptr) {
-  return vld1_p64(ptr);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vld1q_p64(
-// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[PTR]], align 8
-// CHECK-NEXT:    ret <2 x i64> [[TMP0]]
-//
-poly64x2_t test_vld1q_p64(poly64_t const * ptr) {
-  return vld1q_p64(ptr);
-}
-
 // CHECK-LABEL: define dso_local %struct.poly64x1x2_t @test_vld2_p64(
 // CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

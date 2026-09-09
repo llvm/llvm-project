@@ -449,7 +449,8 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-LABEL: define void @multi_exit(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[B]], i64 1)
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.umax.i64(i64 [[B]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP10]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN10:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[A]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[UMIN10]], 1

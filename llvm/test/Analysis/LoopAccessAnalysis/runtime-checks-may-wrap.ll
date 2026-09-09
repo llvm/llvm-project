@@ -19,7 +19,7 @@ define void @geps_may_wrap(ptr %a, ptr %b, i64 %N) {
 ; CHECK-NEXT:          (Low: %b High: (4 + %b))
 ; CHECK-NEXT:            Member: %b
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %a High: (16 + (12 * (trunc i128 ((zext i64 %N to i128) /u 3) to i16)) + %a))
+; CHECK-NEXT:          (Low: %a High: (4 + (12 * (trunc i128 ((3 + (zext i64 %N to i128))<nuw><nsw> /u 3) to i16)) + %a))
 ; CHECK-NEXT:            Member: {%a,+,12}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.

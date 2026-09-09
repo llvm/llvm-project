@@ -14,7 +14,10 @@
 #define LLVM_CLANG_AST_INTERP_FRAME_H
 
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/Support/raw_ostream.h"
+
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace clang {
 class FunctionDecl;

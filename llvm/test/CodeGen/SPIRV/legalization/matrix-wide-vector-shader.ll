@@ -2,14 +2,31 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3 %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 @Ints9    = internal addrspace(10) global [9 x i32] poison
+@Ints9B   = internal addrspace(10) global [9 x i32] poison
 @Bools9   = internal addrspace(10) global [9 x i32] poison
+@Ints8    = internal addrspace(10) global [8 x i32] poison
+@Ints8B   = internal addrspace(10) global [8 x i32] poison
+@Bools8   = internal addrspace(10) global [8 x i32] poison
+@Floats9  = internal addrspace(10) global [9 x float] poison
+@Floats9B = internal addrspace(10) global [9 x float] poison
 @Ints12   = internal addrspace(10) global [12 x i32] poison
+@Ints12B  = internal addrspace(10) global [12 x i32] poison
 @Bools12  = internal addrspace(10) global [12 x i32] poison
+@Floats12 = internal addrspace(10) global [12 x float] poison
+@Floats12B = internal addrspace(10) global [12 x float] poison
 @Ints16   = internal addrspace(10) global [16 x i32] poison
+@Ints16B  = internal addrspace(10) global [16 x i32] poison
 @Bools16  = internal addrspace(10) global [16 x i32] poison
+@Floats16 = internal addrspace(10) global [16 x float] poison
+@Floats16B = internal addrspace(10) global [16 x float] poison
+@BoolBits16 = internal addrspace(10) global [16 x i1] poison
 
+; CHECK-DAG: %[[Bool:[0-9]+]] = OpTypeBool
 ; CHECK-DAG: %[[Int32:[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[Vec4Int32:[0-9]+]] = OpTypeVector %[[Int32]] 4
+; CHECK-DAG: %[[Vec4Bool:[0-9]+]] = OpTypeVector %[[Bool]] 4
+; CHECK-DAG: %[[Float32:[0-9]+]] = OpTypeFloat 32
+; CHECK-DAG: %[[Vec4Float32:[0-9]+]] = OpTypeVector %[[Float32]] 4
 
 ; No vector wider than 4 lanes is ever materialized for shader targets.
 ; CHECK-NOT: OpTypeVector %[[Int32]] 8
@@ -186,6 +203,18 @@ define internal void @narrow_12elem_zext() {
   ret void
 }
 
+; Standalone G_ZEXT regression: the wide result must be split before the
+; Cartesian-product legality rule accepts it.
+; CHECK-LABEL: ; -- Begin function zext_16elem
+; CHECK-COUNT-16: OpSelect %[[Int32]]
+; CHECK-NOT: OpSelect %[[Int32]]
+define internal void @zext_16elem() {
+  %bits = load <16 x i1>, ptr addrspace(10) @BoolBits16
+  %ext = zext <16 x i1> %bits to <16 x i32>
+  store <16 x i32> %ext, ptr addrspace(10) @Bools16
+  ret void
+}
+
 ; CHECK-LABEL: ; -- Begin function narrow_16elem_sext
 ; CHECK: %[[Shl0:[0-9]+]] = OpShiftLeftLogical %[[Vec4Int32]]
 ; CHECK-NEXT: %{{[0-9]+}} = OpShiftRightArithmetic %[[Vec4Int32]] %[[Shl0]]
@@ -204,6 +233,118 @@ define internal void @narrow_16elem_sext() {
   ret void
 }
 
+;--- G_ICMP/G_FCMP: split the flattened matrix into 4-lane comparisons ---
+
+; CHECK-LABEL: ; -- Begin function icmp_8elem
+; CHECK-COUNT-2: OpIEqual %[[Vec4Bool]]
+; CHECK-COUNT-2: OpSelect %[[Vec4Int32]]
+; CHECK-NOT: OpIEqual
+define internal void @icmp_8elem() {
+  %a = load <8 x i32>, ptr addrspace(10) @Ints8
+  %b = load <8 x i32>, ptr addrspace(10) @Ints8B
+  %cmp = icmp eq <8 x i32> %a, %b
+  %ext = zext <8 x i1> %cmp to <8 x i32>
+  store <8 x i32> %ext, ptr addrspace(10) @Bools8
+  ret void
+}
+
+; CHECK-LABEL: ; -- Begin function fcmp_16elem
+; CHECK-COUNT-4: OpFOrdEqual %[[Vec4Bool]]
+; CHECK-COUNT-4: OpSelect %[[Vec4Int32]]
+; CHECK-NOT: OpFOrdEqual
+define internal void @fcmp_16elem() {
+  %a = load <16 x float>, ptr addrspace(10) @Floats16
+  %b = load <16 x float>, ptr addrspace(10) @Floats16B
+  %cmp = fcmp oeq <16 x float> %a, %b
+  %ext = zext <16 x i1> %cmp to <16 x i32>
+  store <16 x i32> %ext, ptr addrspace(10) @Bools16
+  ret void
+}
+
+; CHECK-LABEL: ; -- Begin function icmp_3x3
+; CHECK-COUNT-8: OpLoad %[[Int32]]
+; CHECK: %[[ICMP_AS:[0-9]+]] = OpLoad %[[Int32]]
+; CHECK-COUNT-8: OpLoad %[[Int32]]
+; CHECK: %[[ICMP_BS:[0-9]+]] = OpLoad %[[Int32]]
+; CHECK: %[[ICMP_A0:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: %[[ICMP_A1:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: %[[ICMP_B0:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: %[[ICMP_B1:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: OpIEqual %[[Vec4Bool]] %[[ICMP_A0]] %[[ICMP_B0]]
+; CHECK: OpIEqual %[[Vec4Bool]] %[[ICMP_A1]] %[[ICMP_B1]]
+; CHECK: OpIEqual %[[Bool]] %[[ICMP_AS]] %[[ICMP_BS]]
+; CHECK-NOT: OpIEqual
+define internal void @icmp_3x3() {
+  %a = load <9 x i32>, ptr addrspace(10) @Ints9
+  %b = load <9 x i32>, ptr addrspace(10) @Ints9B
+  %cmp = icmp eq <9 x i32> %a, %b
+  %ext = zext <9 x i1> %cmp to <9 x i32>
+  store <9 x i32> %ext, ptr addrspace(10) @Bools9
+  ret void
+}
+
+; CHECK-LABEL: ; -- Begin function icmp_12elem
+; CHECK: %[[ICMP_A0:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: %[[ICMP_A1:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: %[[ICMP_A2:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: %[[ICMP_B0:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: %[[ICMP_B1:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: %[[ICMP_B2:[0-9]+]] = OpCompositeConstruct %[[Vec4Int32]]
+; CHECK: OpIEqual %[[Vec4Bool]] %[[ICMP_A0]] %[[ICMP_B0]]
+; CHECK: OpIEqual %[[Vec4Bool]] %[[ICMP_A1]] %[[ICMP_B1]]
+; CHECK: OpIEqual %[[Vec4Bool]] %[[ICMP_A2]] %[[ICMP_B2]]
+; CHECK-NOT: OpIEqual
+define internal void @icmp_12elem() {
+  %a = load <12 x i32>, ptr addrspace(10) @Ints12
+  %b = load <12 x i32>, ptr addrspace(10) @Ints12B
+  %cmp = icmp eq <12 x i32> %a, %b
+  %ext = zext <12 x i1> %cmp to <12 x i32>
+  store <12 x i32> %ext, ptr addrspace(10) @Bools12
+  ret void
+}
+
+; CHECK-LABEL: ; -- Begin function fcmp_3x3
+; CHECK-COUNT-8: OpLoad %[[Float32]]
+; CHECK: %[[FCMP_AS:[0-9]+]] = OpLoad %[[Float32]]
+; CHECK-COUNT-8: OpLoad %[[Float32]]
+; CHECK: %[[FCMP_BS:[0-9]+]] = OpLoad %[[Float32]]
+; CHECK: %[[FCMP_A0:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: %[[FCMP_A1:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: %[[FCMP_B0:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: %[[FCMP_B1:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: OpFOrdEqual %[[Vec4Bool]] %[[FCMP_A0]] %[[FCMP_B0]]
+; CHECK: OpFOrdEqual %[[Vec4Bool]] %[[FCMP_A1]] %[[FCMP_B1]]
+; CHECK: OpFOrdEqual %[[Bool]] %[[FCMP_AS]] %[[FCMP_BS]]
+; CHECK-NOT: OpFOrdEqual
+define internal void @fcmp_3x3() {
+  %a = load <9 x float>, ptr addrspace(10) @Floats9
+  %b = load <9 x float>, ptr addrspace(10) @Floats9B
+  %cmp = fcmp oeq <9 x float> %a, %b
+  %ext = zext <9 x i1> %cmp to <9 x i32>
+  store <9 x i32> %ext, ptr addrspace(10) @Bools9
+  ret void
+}
+
+; CHECK-LABEL: ; -- Begin function fcmp_12elem
+; CHECK: %[[FCMP_A0:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: %[[FCMP_A1:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: %[[FCMP_A2:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: %[[FCMP_B0:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: %[[FCMP_B1:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: %[[FCMP_B2:[0-9]+]] = OpCompositeConstruct %[[Vec4Float32]]
+; CHECK: OpFOrdEqual %[[Vec4Bool]] %[[FCMP_A0]] %[[FCMP_B0]]
+; CHECK: OpFOrdEqual %[[Vec4Bool]] %[[FCMP_A1]] %[[FCMP_B1]]
+; CHECK: OpFOrdEqual %[[Vec4Bool]] %[[FCMP_A2]] %[[FCMP_B2]]
+; CHECK-NOT: OpFOrdEqual
+define internal void @fcmp_12elem() {
+  %a = load <12 x float>, ptr addrspace(10) @Floats12
+  %b = load <12 x float>, ptr addrspace(10) @Floats12B
+  %cmp = fcmp oeq <12 x float> %a, %b
+  %ext = zext <12 x i1> %cmp to <12 x i32>
+  store <12 x i32> %ext, ptr addrspace(10) @Bools12
+  ret void
+}
+
 define void @main() #0 {
   call void @copy_bool3x3()
   call void @copy_bool_12elem()
@@ -216,6 +357,13 @@ define void @main() #0 {
   call void @bool4x4_sext()
   call void @narrow_12elem_zext()
   call void @narrow_16elem_sext()
+  call void @zext_16elem()
+  call void @icmp_8elem()
+  call void @fcmp_16elem()
+  call void @icmp_3x3()
+  call void @icmp_12elem()
+  call void @fcmp_3x3()
+  call void @fcmp_12elem()
   ret void
 }
 

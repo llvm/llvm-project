@@ -16,6 +16,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetID.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 using namespace clang;
@@ -56,7 +57,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUAddrSpaceMap = {
     {LangAS::hlsl_input, llvm::AMDGPUAS::PRIVATE_ADDRESS},
     {LangAS::hlsl_output, llvm::AMDGPUAS::PRIVATE_ADDRESS},
     {LangAS::hlsl_push_constant, llvm::AMDGPUAS::GLOBAL_ADDRESS},
-    {LangAS::amdgpu_barrier, llvm::AMDGPUAS::LOCAL_ADDRESS},
+    {LangAS::amdgpu_barrier, llvm::AMDGPUAS::BARRIER},
 };
 
 } // namespace targets
@@ -197,8 +198,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                             Triple.getSubArch())
                                       : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
                   : llvm::AMDGPU::parseArchR600(Opts.CPU)),
-      GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::FEATURE_NONE
-                                    : llvm::AMDGPU::getArchAttrR600(GPUKind)) {
+      GPUFeatures(
+          Triple.isAMDGCN()
+              ? llvm::AMDGPU::FEATURE_NONE
+              : static_cast<unsigned>(llvm::AMDGPU::getArchAttrR600(GPUKind))) {
   resetDataLayout();
 
   AddrSpaceMap = &AMDGPUAddrSpaceMap;

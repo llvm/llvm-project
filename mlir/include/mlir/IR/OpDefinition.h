@@ -1864,6 +1864,18 @@ private:
   using detect_has_print_properties =
       llvm::is_detected<has_print_properties, T>;
 
+  /// Trait to check if T provides a generated printer for the key-value
+  /// spelling of `prop-dict`.
+  template <typename T, typename... Args>
+  using has_print_properties_as_key_value_list =
+      decltype(T::_odsPrintPropertiesAsKeyValueList(
+          std::declval<MLIRContext *>(), std::declval<OpAsmPrinter &>(),
+          std::declval<const typename PropertiesSelector<T>::type &>(),
+          std::declval<ArrayRef<StringRef>>()));
+  template <typename T>
+  using detect_has_print_properties_as_key_value_list =
+      llvm::is_detected<has_print_properties_as_key_value_list, T>;
+
   /// Trait to check if parseProperties(OpAsmParser, T) exist
   template <typename T, typename... Args>
   using has_parse_properties = decltype(parseProperties(
@@ -2036,15 +2048,19 @@ public:
                                         InferredProperties<T> &properties) {}
 
   /// Print the operation properties with names not included within
-  /// 'elidedProps'. Unless overridden, this method will try to dispatch to a
-  /// `printProperties` free-function if it exists, and otherwise by converting
-  /// the properties to an Attribute.
+  /// 'elidedProps'. Unless overridden, this method first tries to dispatch to a
+  /// `printProperties` free-function, then to the generated per-field printer,
+  /// and finally converts the properties to an Attribute.
   template <typename T>
   static void printProperties(MLIRContext *ctx, OpAsmPrinter &p,
                               const T &properties,
                               ArrayRef<StringRef> elidedProps = {}) {
     if constexpr (detect_has_print_properties<T>::value)
       return printProperties(p, properties, elidedProps);
+    if constexpr (detect_has_print_properties_as_key_value_list<
+                      ConcreteType>::value)
+      return ConcreteType::_odsPrintPropertiesAsKeyValueList(ctx, p, properties,
+                                                             elidedProps);
     genericPrintProperties(
         p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
   }
