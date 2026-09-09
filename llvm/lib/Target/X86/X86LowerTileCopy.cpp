@@ -75,7 +75,7 @@ static void emitACETileReload(MachineBasicBlock &MBB,
     addFrameReference(MIB, TileSS, Row * ACETileRowSize);
 
     // tilemovrow $row, %zmm, %tmm
-    BuildMI(MBB, MI, DL, TII->get(X86::TILEMOVROWri), DstReg)
+    BuildMI(MBB, MI, DL, TII->get(X86::TILEMOVROWtri), DstReg)
         .addReg(ScratchZMM, RegState::Kill)
         .addImm(Row);
   }
