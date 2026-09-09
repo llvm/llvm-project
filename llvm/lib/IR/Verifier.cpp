@@ -654,6 +654,25 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         Check(EntsizeInt, "entsize field must be ConstantInt", GO, Props);
       }
     }
+
+    if (const MDNode *UnpaddedSize =
+            GO->getMetadata(LLVMContext::MD_sanitize_unpadded_size)) {
+      Check(UnpaddedSize->getNumOperands() == 1,
+            "sanitize.unpadded.size metadata must have one operand", GO,
+            UnpaddedSize);
+      if (UnpaddedSize->getNumOperands() == 1) {
+        const auto *Size = mdconst::dyn_extract_or_null<ConstantInt>(
+            UnpaddedSize->getOperand(0));
+        Check(Size,
+              "sanitize.unpadded.size operand must be an integer constant", GO,
+              UnpaddedSize);
+        const auto *GVar = dyn_cast<GlobalVariable>(GO);
+        if (Size && GVar && GVar->getValueType()->isSized())
+          Check(Size->getZExtValue() <= GVar->getGlobalSize(DL),
+                "sanitize.unpadded.size must not exceed the size of the global",
+                GO, UnpaddedSize);
+      }
+    }
   }
 
   Check(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
