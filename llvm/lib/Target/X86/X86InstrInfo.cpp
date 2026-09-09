@@ -1360,14 +1360,11 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
     SlotIndex Ins2Idx;
     if (InsMI2)
       Ins2Idx = LIS->InsertMachineInstrInMaps(*InsMI2);
-    bool DefinedEFLAGS = MI.definesRegister(X86::EFLAGS, /*TRI=*/nullptr) &&
-                         !NewMI->definesRegister(X86::EFLAGS, /*TRI=*/nullptr);
     SlotIndex NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
     SlotIndex ExtIdx = LIS->InsertMachineInstrInMaps(*ExtMI);
 
     // Drop the dead EFLAGS def MI had; the replacement does not define EFLAGS.
-    if (DefinedEFLAGS)
-      LIS->removePhysRegDefAt(X86::EFLAGS, NewIdx.getRegSlot());
+    LIS->removePhysRegDefAt(X86::EFLAGS, NewIdx.getRegSlot());
 
     LIS->getInterval(InRegLEA);
     LIS->getInterval(OutRegLEA);
@@ -2051,13 +2048,9 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   if (LIS) {
     // The replacement does not define EFLAGS; drop the dead EFLAGS def MI had.
     SlotIndex Idx = LIS->getInstructionIndex(MI);
-    bool DefinedEFLAGS = MI.definesRegister(X86::EFLAGS, /*TRI=*/nullptr) &&
-                         !NewMI->definesRegister(X86::EFLAGS, /*TRI=*/nullptr);
-
     LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
 
-    if (DefinedEFLAGS)
-      LIS->removePhysRegDefAt(X86::EFLAGS, Idx.getRegSlot());
+    LIS->removePhysRegDefAt(X86::EFLAGS, Idx.getRegSlot());
     if (SrcReg)
       LIS->getInterval(SrcReg);
     if (SrcReg2)
