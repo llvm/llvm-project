@@ -8,10 +8,13 @@
 ; CHECK-DAG: %[[#c17:]] = OpConstant %[[#int]] 17
 ; CHECK-DAG: %[[#v17f32:]] = OpTypeVectorIdEXT %[[#float]] %[[#c17]]
 ; CHECK-DAG: %[[#v17i32:]] = OpTypeVectorIdEXT %[[#int]] %[[#c17]]
+; CHECK-DAG: %[[#v16f32:]] = OpTypeVector %[[#float]] 16
 ; CHECK-DAG: %[[#ptr_v17i32:]] = OpTypePointer CrossWorkgroup %[[#v17i32]]
 
 @f1 = internal addrspace(1) global [4 x [17 x float] ] zeroinitializer
 @f2 = internal addrspace(1) global [4 x [17 x float] ] zeroinitializer
+@f16_1 = internal addrspace(1) global [16 x float] zeroinitializer
+@f16_2 = internal addrspace(1) global [16 x float] zeroinitializer
 @i1 = internal addrspace(1) global [4 x [17 x i32] ] zeroinitializer
 @i2 = internal addrspace(1) global [4 x [17 x i32] ] zeroinitializer
 
@@ -126,4 +129,21 @@ entry:
   ret void
 }
 
+; Verify long-vector transcendental type inference keeps the float element type.
+define void @test_long_vector_cosh() local_unnamed_addr #0 {
+; CHECK: OpFunction
+entry:
+  %2 = getelementptr [16 x float], ptr addrspace(1) @f16_1, i32 0, i32 0
+  %3 = load <16 x float>, ptr addrspace(1) %2, align 4
+
+  ; CHECK: %{{[0-9]+}} = OpExtInst %42 %1 cosh %{{[0-9]+}}
+  %4 = call <16 x float> @llvm.cosh.v16f32(<16 x float> %3)
+
+  ; CHECK: OpStore {{.*}} %{{[0-9]+}}
+  %5 = getelementptr [16 x float], ptr addrspace(1) @f16_2, i32 0, i32 0
+  store <16 x float> %4, ptr addrspace(1) %5, align 4
+  ret void
+}
+
 declare <17 x float> @llvm.experimental.constrained.fma.v16f32(<17 x float>, <17 x float>, <17 x float>, metadata, metadata)
+declare <16 x float> @llvm.cosh.v16f32(<16 x float>)
