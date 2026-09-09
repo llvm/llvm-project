@@ -780,5 +780,5 @@ ability to protect against invalid casts between polymorphic types.
 [globalsplit]: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Transforms/IPO/GlobalSplit.cpp
 [intel cet]: https://software.intel.com/en-us/blogs/2016/06/09/intel-release-new-technology-specifications-protect-rop-attacks
 [rfg]: https://xlab.tencent.com/en/2016/11/02/return-flow-guard
-[safestack]: https://clang.llvm.org/docs/SafeStack.html
+[safestack]: project:SafeStack.md
 [type metadata]: https://llvm.org/docs/TypeMetadata.html

@@ -6,7 +6,7 @@ It imports nodes of an `ASTContext` into another `ASTContext`.
 In this document, we assume basic knowledge about the Clang AST. See the {doc}`Introduction
 to the Clang AST <IntroductionToTheClangAST>` if you want to learn more
 about how the AST is structured.
-Knowledge about {doc}`matching the Clang AST <LibASTMatchers>` and the [reference for the matchers](https://clang.llvm.org/docs/LibASTMatchersReference.html) are also useful.
+Knowledge about {doc}`matching the Clang AST <LibASTMatchers>` and the [reference for the matchers](LibASTMatchersReference.html) are also useful.
 
 
 ## Introduction

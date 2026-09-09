@@ -2919,7 +2919,7 @@ allowing the programmer to pass semantic information along to the compiler for
 various uses. For example, attributes may be used to alter the code generation
 for a program construct, or to provide extra semantic information for static
 analysis. This document explains how to add a custom attribute to Clang.
-Documentation on existing attributes can be found [here](https://clang.llvm.org/docs/AttributeReference.html).
+Documentation on existing attributes can be found {doc}`here <AttributeReference>`.
 
 #### Attribute Basics
 
