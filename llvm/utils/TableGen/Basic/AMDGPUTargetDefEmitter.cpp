@@ -37,10 +37,8 @@ static void emitGPUKindEnum(raw_ostream &OS, StringRef Name) {
     OS << ((C == '-') ? '_' : toUpper(C));
 }
 
-// Feature string to enumerator, e.g. "16-bit-insts" -> "FEAT_16_BIT_INSTS". The
-// FEAT_ prefix (rather than FEATURE_) avoids colliding with the legacy
-// ArchFeatureKind enumerators (e.g. FEATURE_XNACK_ON_OFF_MODES) during the
-// migration off that bitfield. R600 uses the "R600_FEAT_" prefix.
+// Feature string to enumerator, e.g. "16-bit-insts" -> "FEAT_16_BIT_INSTS".
+// AMDGCN uses the "FEAT_" prefix, R600 the "R600_FEAT_" prefix.
 static void emitFeatureEnum(raw_ostream &OS, StringRef Prefix, StringRef Name) {
   OS << Prefix;
   for (char C : Name)
@@ -178,21 +176,6 @@ struct GPUEntry {
 };
 } // namespace
 
-// Emit the ArchFeature spellings joined with '|', or \p NoneSpelling when
-// empty.
-static void emitFeatureExpr(raw_ostream &OS, const Record *Rec,
-                            StringRef NoneSpelling) {
-  ListSeparator LS("|");
-  bool Any = false;
-  for (const Record *F : Rec->getValueAsListOfDefs("ArchFeatures")) {
-    OS << LS << F->getValueAsString("Spelling");
-    Any = true;
-  }
-
-  if (!Any)
-    OS << NoneSpelling;
-}
-
 // The frontend-visible features from def \p ListName, in bit order. Empty if
 // the def is absent.
 static std::vector<const Record *>
@@ -327,8 +310,6 @@ emitR600Table(raw_ostream &OS, const RecordKeeper &RK,
   for (const Record *R : Canon) {
     OS << "  {" << Names.GetOrAddStringOffset(R->getValueAsString("Name"))
        << ", ";
-    emitFeatureExpr(OS, R, "R600_FEATURE_NONE");
-    OS << ", ";
     emitFeatureBitset(OS, "R600FeatureBitset", "R600_FEAT_", R, FeatureIdx);
     OS << "},\n";
   }
@@ -619,8 +600,6 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     StringRef Name = R->getValueAsString("Name");
     OS << "  {" << Names.GetOrAddStringOffset(Name) << ", ";
     emitSubArch(OS, R);
-    OS << ", ";
-    emitFeatureExpr(OS, R, "FEATURE_NONE");
     OS << ", ";
     emitFeatureBitset(OS, "AMDGPUFeatureBitset", "FEAT_", R, FeatureIdx);
     OS << ", ";
