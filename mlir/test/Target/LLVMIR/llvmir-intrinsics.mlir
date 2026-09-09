@@ -591,19 +591,25 @@ llvm.func @get_active_lane_mask(%base: i64, %n: i64) -> (vector<7xi1>) {
 // CHECK-LABEL: @masked_load_store_intrinsics
 llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison)
-  %a = llvm.intr.masked.load %A, %mask { alignment = 1: i32} :
+  %a = llvm.intr.masked.load %A, %mask { alignment = 1: i64} :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison), !nontemporal !1
-  %b = llvm.intr.masked.load %A, %mask { alignment = 1: i32, nontemporal} :
+  %b = llvm.intr.masked.load %A, %mask { alignment = 1: i64, nontemporal} :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %c = llvm.intr.masked.load %A, %mask, %a { alignment = 1: i32} :
+  %c = llvm.intr.masked.load %A, %mask, %a { alignment = 1: i64} :
     (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+  // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison){{$}}
+  %d = llvm.intr.masked.load %A, %mask :
+    (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}})
-  llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32} :
+  llvm.intr.masked.store %b, %A, %mask { alignment = 1: i64} :
     vector<7xf32>, vector<7xi1> into !llvm.ptr
   // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}}), !nontemporal !{{.*}}
-  llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32, nontemporal} :
+  llvm.intr.masked.store %b, %A, %mask { alignment = 1: i64, nontemporal} :
+    vector<7xf32>, vector<7xi1> into !llvm.ptr
+  // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr %0, <7 x i1> %{{.*}}){{$}}
+  llvm.intr.masked.store %d, %A, %mask :
     vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
 }
@@ -611,13 +617,19 @@ llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
 // CHECK-LABEL: @masked_gather_scatter_intrinsics
 llvm.func @masked_gather_scatter_intrinsics(%M: vector<7 x !llvm.ptr>, %mask: vector<7xi1>) {
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison)
-  %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
+  %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i64} :
       (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %b = llvm.intr.masked.gather %M, %mask, %a { alignment = 1: i32} :
+  %b = llvm.intr.masked.gather %M, %mask, %a { alignment = 1: i64} :
       (vector<7 x !llvm.ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+  // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison){{$}}
+  %c = llvm.intr.masked.gather %M, %mask :
+      (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %{{.*}}, <7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}})
-  llvm.intr.masked.scatter %b, %M, %mask { alignment = 1: i32} :
+  llvm.intr.masked.scatter %b, %M, %mask { alignment = 1: i64} :
+      vector<7xf32>, vector<7xi1> into vector<7 x !llvm.ptr>
+  // CHECK: call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %{{.*}}, <7 x ptr> %{{.*}}, <7 x i1> %{{.*}}){{$}}
+  llvm.intr.masked.scatter %c, %M, %mask :
       vector<7xf32>, vector<7xi1> into vector<7 x !llvm.ptr>
   llvm.return
 }

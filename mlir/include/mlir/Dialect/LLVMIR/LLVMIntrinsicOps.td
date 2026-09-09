@@ -17,6 +17,7 @@ class LLVM_UnaryIntrOpBase<string func, Type element,
                            list<Trait> traits = [], bit requiresFastmath = 0> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits),
+           /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
            requiresFastmath> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$in);
   let assemblyFormat = "`(` operands `)` attr-dict `:` "
@@ -39,6 +40,7 @@ class LLVM_BinarySameArgsIntrOpBase<string func, Type element,
               list<Trait> traits = [], bit requiresFastmath = 0> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits),
+           /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
            requiresFastmath> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$a,
                         LLVM_ScalarOrVectorOf<element>:$b);
@@ -63,6 +65,7 @@ class LLVM_TernarySameArgsIntrOpBase<string func, Type element,
               list<Trait> traits = [], bit requiresFastmath = 0> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits),
+           /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
            requiresFastmath> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$a,
                        LLVM_ScalarOrVectorOf<element>:$b,
@@ -87,6 +90,7 @@ class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
 class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits),
+            /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
             /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
             /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_zero_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
@@ -94,6 +98,7 @@ class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
 }
 
 def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
+    /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
     /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
     /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_int_min_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
@@ -108,6 +113,7 @@ def LLVM_ArithmeticFenceOp
 }
 
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
+  /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
   /*immArgPositions=*/[1], /*immArgAttrNames=*/["bit"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
@@ -115,7 +121,8 @@ def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
 
 class LLVM_PowFI<string func> :
     LLVM_OneResultIntrOp<func, [], [0,1],
-        [Pure], /*requiresFastmath=*/1> {
+        [Pure], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+        /*requiresFastmath=*/1> {
     let arguments =
         (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
             AnySignlessInteger:$power,
@@ -391,6 +398,7 @@ def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end">;
 
 def LLVM_InvariantStartOp : LLVM_OneResultIntrOp<"invariant.start", [], [1],
     [DeclareOpInterfaceMethods<PromotableOpInterface>],
+    /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
     /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
     /*immArgPositions=*/[0], /*immArgAttrNames=*/["size"]> {
   let arguments = (ins I64Attr:$size, LLVM_AnyPointer:$ptr);
@@ -444,6 +452,8 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
                                !gt(hasRoundingMode, 0) : [DeclareOpInterfaceMethods<RoundingModeOpInterface>],
                                true : [])
                            # extraTraits,
+                           /*requiresAccessGroup=*/0,
+                           /*requiresAliasAnalysis=*/0,
                            /*requiresFastmath=*/1,
                            /*requiresArgAndResultAttrs=*/0,
                            /*immArgPositions=*/[],
@@ -592,6 +602,7 @@ class LLVM_ConstrainedFCmpIntrBase<string mnem>
                          "operands", "arg_0", "res",
                          "::mlir::LLVM::getI1SameShape($_self)">,
           DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>],
+        /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
         /*requiresFastmath=*/1> {
   let arguments = (ins FCmpPredicate:$predicate,
                        LLVM_Type:$arg_0,
@@ -883,6 +894,7 @@ def LLVM_ExpectOp
 def LLVM_ExpectWithProbabilityOp
   : LLVM_OneResultIntrOp<"expect.with.probability", [], [0],
                          [Pure, AllTypesMatch<["val", "expected", "res"]>],
+                         /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
                          /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                          /*immArgPositions=*/[2], /*immArgAttrNames=*/["prob"]> {
   let arguments = (ins AnySignlessInteger:$val,
@@ -1187,6 +1199,7 @@ def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore", [0]> {
 class LLVM_VecReductionBase<string mnem, Type element, bit requiresFastmath=0>
     : LLVM_OneResultIntrOp<"vector.reduce." # mnem, [], [0],
                            [Pure, SameOperandsAndResultElementType],
+                           /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
                            requiresFastmath> {
       dag commonArgs = (ins LLVM_VectorOf<element>:$in);
 }
@@ -1213,6 +1226,8 @@ class LLVM_VecReductionAccBase<string mnem, Type element>
                            /*overloadedResults=*/[],
                            /*overloadedOperands=*/[1],
                            /*traits=*/[Pure, SameOperandsAndResultElementType],
+                           /*requiresAccessGroup=*/0,
+                           /*requiresAliasAnalysis=*/0,
                            /*requiresFastmath=*/1>,
       Arguments<(ins element:$start_value,
                      LLVM_VectorOf<element>:$input,
@@ -1366,104 +1381,206 @@ def LLVM_GetActiveLaneMaskOp
 }
 
 /// Create a call to Masked Load intrinsic.
-def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
-  let arguments = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
-                   Optional<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
-                   UnitAttr:$nontemporal);
+def LLVM_MaskedLoadOp
+    : LLVM_OneResultIntrOp<"masked.load", /*overloadedResults=*/[],
+      /*overloadedOperands=*/[], /*traits=*/[],
+      /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1> {
+  dag args = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
+                  Optional<LLVM_AnyVector>:$pass_thru,
+                  OptionalAttr<I64Attr>:$alignment, UnitAttr:$nontemporal);
+  let arguments = !con(args, baseArgs);
   let results = (outs LLVM_AnyVector:$res);
+  let builders = [
+    OpBuilder<(ins "Type":$res, "Value":$data, "Value":$mask,
+                   "Value":$pass_thru, "uint64_t":$alignment,
+                   CArg<"bool", "false">:$nontemporal), [{
+      build($_builder, $_state, res, data, mask, pass_thru,
+            $_builder.getI64IntegerAttr(alignment),
+            nontemporal ? $_builder.getUnitAttr() : nullptr,
+            /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+            /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    }]>
+  ];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
 
   string llvmBuilder = [{
+    // An absent alignment attribute means the ABI alignment of the type, which
+    // LLVM spells as an absent align parameter attribute. The IRBuilder helper
+    // always attaches one, so remove it again in that case.
+    llvm::Align alignment =
+        $alignment ? llvm::Align(*$alignment) : llvm::Align(1);
     auto *inst = $pass_thru ? builder.CreateMaskedLoad(
-        $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru) :
+        $_resultType, $data, alignment, $mask, $pass_thru) :
       builder.CreateMaskedLoad(
-        $_resultType, $data, llvm::Align($alignment), $mask);
+        $_resultType, $data, alignment, $mask);
+    if (!$alignment)
+      inst->removeParamAttr(0, llvm::Attribute::Alignment);
     $res = inst;
-  }] #setNonTemporalMetadataCode;
+  }] # setNonTemporalMetadataCode
+     # setAccessGroupsMetadataCode
+     # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
     bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
-    llvm::Align alignment = intrinInst->getParamAlign(0).valueOrOne();
+    llvm::MaybeAlign alignment = intrinInst->getParamAlign(0);
     $res = LLVM::MaskedLoadOp::create($_builder, $_location,
       $_resultType, $data, $mask, $pass_thru,
-      $_builder.getI32IntegerAttr(alignment.value()),
-      nontemporal ? $_builder.getUnitAttr() : nullptr);
+      alignment ? $_builder.getI64IntegerAttr(alignment->value())
+                : ::mlir::IntegerAttr(),
+      nontemporal ? $_builder.getUnitAttr() : nullptr,
+      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
   }];
-  list<int> llvmArgIndices = [0, 1, 2, -1, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1, -1, -1, -1, -1];
 }
 
 /// Create a call to Masked Store intrinsic.
-def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
-  let arguments = (ins LLVM_AnyVector:$value, LLVM_AnyPointer:$data,
-                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment,
-                   UnitAttr:$nontemporal);
-  let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
+def LLVM_MaskedStoreOp
+    : LLVM_ZeroResultIntrOp<"masked.store", /*overloadedOperands=*/[],
+      /*traits=*/[], /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1> {
+  dag args = (ins LLVM_AnyVector:$value, LLVM_AnyPointer:$data,
+                  LLVM_VectorOf<I1>:$mask, OptionalAttr<I64Attr>:$alignment,
+                  UnitAttr:$nontemporal);
+  let arguments = !con(args, baseArgs);
+  let builders = [
+    LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder,
+    OpBuilder<(ins "Value":$value, "Value":$data, "Value":$mask,
+                   "uint64_t":$alignment,
+                   CArg<"bool", "false">:$nontemporal), [{
+      build($_builder, $_state, value, data, mask,
+            $_builder.getI64IntegerAttr(alignment),
+            nontemporal ? $_builder.getUnitAttr() : nullptr,
+            /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+            /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    }]>
+  ];
   let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` qualified(type($data))";
 
   string llvmBuilder = [{
-    auto *inst = builder.CreateMaskedStore(
-      $value, $data, llvm::Align($alignment), $mask);
-  }] #setNonTemporalMetadataCode;
+    // An absent alignment attribute means the ABI alignment of the type, which
+    // LLVM spells as an absent align parameter attribute. The IRBuilder helper
+    // always attaches one, so remove it again in that case.
+    llvm::Align alignment =
+        $alignment ? llvm::Align(*$alignment) : llvm::Align(1);
+    auto *inst = builder.CreateMaskedStore($value, $data, alignment, $mask);
+    if (!$alignment)
+      inst->removeParamAttr(1, llvm::Attribute::Alignment);
+  }] # setNonTemporalMetadataCode
+     # setAccessGroupsMetadataCode
+     # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
-    llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
+    llvm::MaybeAlign alignment = intrinInst->getParamAlign(1);
     bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
     $_op = LLVM::MaskedStoreOp::create($_builder, $_location,
-      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()),
-      nontemporal ? $_builder.getUnitAttr() : nullptr);
+      $value, $data, $mask,
+      alignment ? $_builder.getI64IntegerAttr(alignment->value())
+                : ::mlir::IntegerAttr(),
+      nontemporal ? $_builder.getUnitAttr() : nullptr,
+      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
   }];
-  list<int> llvmArgIndices = [0, 1, 2, -1, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1, -1, -1, -1, -1];
 }
 
 /// Create a call to Masked Gather intrinsic.
-def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
-  let arguments = (ins LLVM_VectorOf<LLVM_AnyPointer>:$ptrs,
-                   LLVM_VectorOf<I1>:$mask, Variadic<LLVM_AnyVector>:$pass_thru,
-                   I32Attr:$alignment);
+def LLVM_masked_gather
+    : LLVM_OneResultIntrOp<"masked.gather", /*overloadedResults=*/[],
+      /*overloadedOperands=*/[], /*traits=*/[],
+      /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1> {
+  dag args = (ins LLVM_VectorOf<LLVM_AnyPointer>:$ptrs,
+                  LLVM_VectorOf<I1>:$mask, Variadic<LLVM_AnyVector>:$pass_thru,
+                  OptionalAttr<I64Attr>:$alignment);
+  let arguments = !con(args, baseArgs);
   let results = (outs LLVM_AnyVector:$res);
-  let builders = [LLVM_OneResultOpBuilder];
+  let builders = [
+    LLVM_OneResultOpBuilder,
+    OpBuilder<(ins "Type":$res, "Value":$ptrs, "Value":$mask,
+                   "ValueRange":$pass_thru, "uint64_t":$alignment), [{
+      build($_builder, $_state, res, ptrs, mask, pass_thru,
+            $_builder.getI64IntegerAttr(alignment),
+            /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+            /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    }]>
+  ];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
 
   string llvmBuilder = [{
-    $res = $pass_thru.empty() ? builder.CreateMaskedGather(
-        $_resultType, $ptrs, llvm::Align($alignment), $mask) :
+    // An absent alignment attribute means the ABI alignment of the type, which
+    // LLVM spells as an absent align parameter attribute. The IRBuilder helper
+    // always attaches one, so remove it again in that case.
+    llvm::Align alignment =
+        $alignment ? llvm::Align(*$alignment) : llvm::Align(1);
+    auto *inst = $pass_thru.empty() ? builder.CreateMaskedGather(
+        $_resultType, $ptrs, alignment, $mask) :
       builder.CreateMaskedGather(
-        $_resultType, $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
-  }];
+        $_resultType, $ptrs, alignment, $mask, $pass_thru[0]);
+    if (!$alignment)
+      inst->removeParamAttr(0, llvm::Attribute::Alignment);
+    $res = inst;
+  }] # setAccessGroupsMetadataCode
+     # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
-    llvm::Align alignment = intrinInst->getParamAlign(0).valueOrOne();
+    llvm::MaybeAlign alignment = intrinInst->getParamAlign(0);
     $res = LLVM::masked_gather::create($_builder, $_location,
       $_resultType, $ptrs, $mask, $pass_thru,
-      $_builder.getI32IntegerAttr(alignment.value()));
+      alignment ? $_builder.getI64IntegerAttr(alignment->value())
+                : ::mlir::IntegerAttr(),
+      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
   }];
-  list<int> llvmArgIndices = [0, 1, 2, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1, -1, -1, -1];
 
   let hasVerifier = 1;
 }
 
 /// Create a call to Masked Scatter intrinsic.
-def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
-  let arguments = (ins LLVM_AnyVector:$value, LLVM_VectorOf<LLVM_AnyPointer>:$ptrs,
-                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment);
-  let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
+def LLVM_masked_scatter
+    : LLVM_ZeroResultIntrOp<"masked.scatter", /*overloadedOperands=*/[],
+      /*traits=*/[], /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1> {
+  dag args = (ins LLVM_AnyVector:$value,
+                  LLVM_VectorOf<LLVM_AnyPointer>:$ptrs,
+                  LLVM_VectorOf<I1>:$mask, OptionalAttr<I64Attr>:$alignment);
+  let arguments = !con(args, baseArgs);
+  let builders = [
+    LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder,
+    OpBuilder<(ins "Value":$value, "Value":$ptrs, "Value":$mask,
+                   "uint64_t":$alignment), [{
+      build($_builder, $_state, value, ptrs, mask,
+            $_builder.getI64IntegerAttr(alignment),
+            /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+            /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    }]>
+  ];
   let assemblyFormat = "$value `,` $ptrs `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` type($ptrs)";
 
   string llvmBuilder = [{
-    builder.CreateMaskedScatter(
-      $value, $ptrs, llvm::Align($alignment), $mask);
-  }];
+    // An absent alignment attribute means the ABI alignment of the type, which
+    // LLVM spells as an absent align parameter attribute. The IRBuilder helper
+    // always attaches one, so remove it again in that case.
+    llvm::Align alignment =
+        $alignment ? llvm::Align(*$alignment) : llvm::Align(1);
+    auto *inst = builder.CreateMaskedScatter($value, $ptrs, alignment, $mask);
+    if (!$alignment)
+      inst->removeParamAttr(1, llvm::Attribute::Alignment);
+  }] # setAccessGroupsMetadataCode
+     # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
-    llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
+    llvm::MaybeAlign alignment = intrinInst->getParamAlign(1);
     $_op = LLVM::masked_scatter::create($_builder, $_location,
-      $value, $ptrs, $mask, $_builder.getI32IntegerAttr(alignment.value()));
+      $value, $ptrs, $mask,
+      alignment ? $_builder.getI64IntegerAttr(alignment->value())
+                : ::mlir::IntegerAttr(),
+      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
   }];
-  list<int> llvmArgIndices = [0, 1, 2, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1, -1, -1, -1];
 
   let hasVerifier = 1;
 }
@@ -1471,7 +1588,8 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 /// Create a call to Masked Expand Load intrinsic.
 def LLVM_masked_expandload
   : LLVM_OneResultIntrOp<"masked.expandload", [0], [0],
-  /*traits=*/[], /*requiresFastMath=*/0, /*requiresArgAndResultAttrs=*/1,
+  /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+  /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/1,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
   dag args = (ins LLVM_AnyPointer:$ptr,
                        LLVM_VectorOf<I1>:$mask,
@@ -1583,6 +1701,7 @@ def LLVM_vector_insert
                   PredOpTrait<"it is not inserting scalable into fixed-length vectors.",
                     CPred<"!isScalableVectorType($srcvec.getType()) || "
                           "isScalableVectorType($dstvec.getType())">>],
+                  /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
                   /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                   /*immArgPositions=*/[2], /*immArgAttrNames=*/["pos"]> {
   let arguments = (ins LLVM_AnyVector:$dstvec, LLVM_AnyVector:$srcvec,
@@ -1617,6 +1736,7 @@ def LLVM_vector_extract
                   PredOpTrait<"it is not extracting scalable from fixed-length vectors.",
                     CPred<"!isScalableVectorType($res.getType()) || "
                           "isScalableVectorType($srcvec.getType())">>],
+                  /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
                   /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                   /*immArgPositions=*/[1], /*immArgAttrNames=*/["pos"]> {
   let arguments = (ins LLVM_AnyVector:$srcvec, I64Attr:$pos);
