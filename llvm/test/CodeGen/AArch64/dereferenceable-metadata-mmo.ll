@@ -19,8 +19,8 @@ define ptr @load_dereferenceable_md(ptr %p) {
 
 define ptr @load_dereferenceable_invariant_md(ptr %p) {
   ; CHECK-LABEL: name: load_dereferenceable_invariant_md
-  ; CHECK: invariant load
   ; CHECK-NOT: dereferenceable
+  ; CHECK: invariant load
   %v = load ptr, ptr %p, align 8, !dereferenceable !0, !invariant.load !1
   ret ptr %v
 }
