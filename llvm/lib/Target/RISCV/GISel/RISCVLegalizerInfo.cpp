@@ -631,6 +631,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .widenScalarToNextPow2(0)
       .minScalar(0, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
+      // The fcvt.l[u].h conversions are RV64-only, so RV32 falls back to the
+      // half-variant conversion libcalls.
+      .libcallFor({{s64, s16}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
 
