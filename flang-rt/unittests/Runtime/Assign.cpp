@@ -532,6 +532,36 @@ TEST(Assign, RTNAME(CopyOutAssignReadOnlyUnmodified)) {
 #endif
 
 #if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__)
+TEST(Assign, RTNAME(CopyOutAssignEnvVarParsing)) {
+  // Exercise the FLANG_RT_COPYOUT_MODIFIED_ONLY parsing path in
+  // ExecutionEnvironment::Configure(), rather than setting the field
+  // directly: "0" disables, "1" enables, an invalid value warns and leaves
+  // the default (enabled), and an absent variable leaves the default.
+  bool saved{executionEnvironment.copyOutModifiedOnly};
+
+  ASSERT_EQ(setenv("FLANG_RT_COPYOUT_MODIFIED_ONLY", "0", 1), 0);
+  executionEnvironment.Configure(0, nullptr, nullptr, nullptr);
+  EXPECT_FALSE(executionEnvironment.copyOutModifiedOnly);
+
+  ASSERT_EQ(setenv("FLANG_RT_COPYOUT_MODIFIED_ONLY", "1", 1), 0);
+  executionEnvironment.Configure(0, nullptr, nullptr, nullptr);
+  EXPECT_TRUE(executionEnvironment.copyOutModifiedOnly);
+
+  // Invalid value: warns, leaves the default (enabled).
+  ASSERT_EQ(setenv("FLANG_RT_COPYOUT_MODIFIED_ONLY", "2", 1), 0);
+  executionEnvironment.Configure(0, nullptr, nullptr, nullptr);
+  EXPECT_TRUE(executionEnvironment.copyOutModifiedOnly);
+
+  // Absent: default (enabled).
+  ASSERT_EQ(unsetenv("FLANG_RT_COPYOUT_MODIFIED_ONLY"), 0);
+  executionEnvironment.Configure(0, nullptr, nullptr, nullptr);
+  EXPECT_TRUE(executionEnvironment.copyOutModifiedOnly);
+
+  executionEnvironment.copyOutModifiedOnly = saved;
+}
+#endif
+
 TEST(Assign, RTNAME(CopyOutAssignUnconditionalEnvVar)) {
   // With FLANG_RT_COPYOUT_MODIFIED_ONLY=0 semantics (unconditional copy-out),
   // even an unmodified copy-out stores every element, so a read-only original
