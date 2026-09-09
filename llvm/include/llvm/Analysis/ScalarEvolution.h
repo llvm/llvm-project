@@ -1141,9 +1141,11 @@ public:
 
   /// This method should be called by the client when it has changed a loop in
   /// a way that may effect ScalarEvolution's ability to compute a trip count,
-  /// or if the loop is deleted.  This call is potentially expensive for large
-  /// loop bodies.
-  LLVM_ABI void forgetLoop(const Loop *L);
+  /// or if the loop is deleted. Pass \p MayIncreaseBackedgeTakenCount if the
+  /// transform may increase the backedge taken count of an existing loop. This
+  /// call is potentially expensive for large loop bodies.
+  LLVM_ABI void forgetLoop(const Loop *L,
+                           bool MayIncreaseBackedgeTakenCount = false);
 
   // This method invokes forgetLoop for the outermost loop of the given loop
   // \p L, making ScalarEvolution forget about all this subtree. This needs to
@@ -2369,10 +2371,15 @@ private:
   void forgetBackedgeTakenCounts(const Loop *L, bool Predicated);
 
   /// Drop memoized information for all \p SCEVs.
-  void forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs);
+  void forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs,
+                             bool DropFlagsDerivedFromOldBECount = false);
 
   /// Helper for forgetMemoizedResults.
-  void forgetMemoizedResultsImpl(const SCEV *S);
+  void forgetMemoizedResultsImpl(const SCEV *S,
+                                 bool DropFlagsDerivedFromOldBECount = false);
+
+  /// Drop nowrap flags that may have been derived from an old loop trip count.
+  void dropFlagsDerivedFromOldBECount(const SCEV *S);
 
   /// Iterate over instructions in \p Worklist and their users. Erase entries
   /// from ValueExprMap and collect SCEV expressions in \p ToForget

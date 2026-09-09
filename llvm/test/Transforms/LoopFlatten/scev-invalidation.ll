@@ -6,19 +6,18 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; Make sure loop-flatten does not create an unversioned widened loop where the
-; replacement narrow IV may wrap.
+; Make sure loop-flatten invalidates nowrap facts derived from the old smaller
+; backedge count, so loop-vectorize guards the widened flattened loop.
 define void @zext_i8(i8 %N, ptr %A) {
 ; CHECK-LABEL: @zext_i8(
-; CHECK:       for.cond1.preheader.us.lver.check:
-; CHECK-NEXT:    %flatten.mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %N, i8 %N)
-; CHECK-NEXT:    %flatten.tripcount = extractvalue { i8, i1 } %flatten.mul, 0
-; CHECK-NEXT:    %flatten.overflow = extractvalue { i8, i1 } %flatten.mul, 1
-; CHECK-NEXT:    br i1 %flatten.overflow, label %for.cond1.preheader.us.ph.lver.orig, label %for.cond1.preheader.us.ph
-; CHECK-NOT:     flatten.trunciv
+; CHECK:       %flatten.tripcount = mul i64
+; CHECK:       vector.scevcheck:
+; CHECK-NEXT:    %[[LAST:.*]] = add nsw i64 %flatten.tripcount, -1
+; CHECK-NEXT:    %[[CHECK:.*]] = icmp ugt i64 %[[LAST]], 255
+; CHECK-NEXT:    br i1 %[[CHECK]], label %scalar.ph, label %vector.ph
 ; NOVERSION-LABEL: @zext_i8(
-; NOVERSION-NOT:   flatten.tripcount
-; NOVERSION-NOT:   flatten.trunciv
+; NOVERSION:       %flatten.tripcount = mul i64
+; NOVERSION:       %flatten.trunciv = trunc i64 %indvar1 to i8
 entry:
   %cmp20.not = icmp eq i8 %N, 0
   br i1 %cmp20.not, label %common.ret, label %for.cond1.preheader.us
