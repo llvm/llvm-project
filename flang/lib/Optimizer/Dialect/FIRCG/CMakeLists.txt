@@ -3,6 +3,7 @@ add_flang_library(FIRCodeGenDialect
 
   DEPENDS
   CGOpsIncGen
+  CUFAttrsIncGen
 
   LINK_LIBS
   FIRDialect
