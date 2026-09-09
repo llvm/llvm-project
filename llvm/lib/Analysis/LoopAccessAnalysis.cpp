@@ -1756,10 +1756,11 @@ void AccessAnalysis::buildDependenceSets() {
 
 /// Check whether the access through \p Ptr has a loop invariant stride of a
 /// statically known sign.
-static const SCEV *getPtrStrideScev(
-    PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr, const Loop *Lp,
-    const DominatorTree &DT, const SymbolicStrideMap &StridesMap,
-    bool ShouldCheckWrap, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+static const SCEV *
+getPtrStrideScev(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                 const Loop *Lp, const DominatorTree &DT,
+                 const SymbolicStrideMap &StridesMap, bool ShouldCheckWrap,
+                 SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return PSE.getSE()->getZero(Type::getInt64Ty(AccessTy->getContext()));
@@ -1792,10 +1793,11 @@ static const SCEV *getPtrStrideScev(
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t> llvm::getPtrStride(
-    PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr, const Loop *Lp,
-    const DominatorTree &DT, const SymbolicStrideMap &StridesMap,
-    bool ShouldCheckWrap, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+std::optional<int64_t>
+llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                   const Loop *Lp, const DominatorTree &DT,
+                   const SymbolicStrideMap &StridesMap, bool ShouldCheckWrap,
+                   SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   const SCEV *StrideScev = getPtrStrideScev(
       PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap, Predicates);
   if (!StrideScev)
