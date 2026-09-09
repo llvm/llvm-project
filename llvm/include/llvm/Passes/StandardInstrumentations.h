@@ -32,6 +32,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -41,6 +42,7 @@ class Module;
 class Function;
 class MachineFunction;
 class PassInstrumentationCallbacks;
+class PGOFlowVerifier;
 
 /// Instrumentation to print IR before/after passes.
 ///
@@ -619,6 +621,7 @@ class StandardInstrumentations {
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
   DroppedVariableStatsIR DroppedStatsIR;
+  std::unique_ptr<PGOFlowVerifier> PGOFlowVerification;
 
   bool VerifyEach;
 
@@ -627,6 +630,7 @@ public:
   StandardInstrumentations(LLVMContext &Context, bool DebugLogging,
                            bool VerifyEach = false,
                            PrintPassOptions PrintPassOpts = PrintPassOptions());
+  LLVM_ABI ~StandardInstrumentations();
 
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
