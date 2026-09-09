@@ -160,6 +160,10 @@ struct VPlanTransforms {
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr,
               function_ref<const BranchProbabilityInfo &()> GetBPI = nullptr);
 
+  /// Add execution frequencies to each recipe in the loop body of \p Plan.
+  /// Frequencies are computed from the branch weights in \p Plan.
+  static void recordExecutionFrequencies(VPlan &Plan);
+
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
   /// fixed-order recurrences. This processes all header phis and creates
