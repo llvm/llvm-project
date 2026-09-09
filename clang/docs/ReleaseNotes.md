@@ -301,6 +301,12 @@ features cannot lower the translation-unit ABI level;
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
+- When a `constexpr` range-based for loop variable cannot be initialized by a
+  constant expression, Clang now emits a single note identifying the read of
+  the loop's implicit `__begin` variable, instead of a generic note about
+  reading a non-constexpr variable followed by a `declared here` note.
+  (#GH211926)
+
 - Fixed concept template parameters not being recognized in `-Wdocumentation`
   when mentioned in tparam comments. (#GH64087)
 
@@ -522,6 +528,10 @@ features cannot lower the translation-unit ABI level;
   format warnings to errors. (#GH211943)
 - Fixed a wrong code generation in `__builtin_clear_padding` wherein the
   wrong bits of the `_BitInt` type were cleared in big-endian mode.
+- Fixed an assertion failure when `__builtin_vectorelements` is applied to a
+  reference to a vector type; `vec_step` (in C++ for OpenCL) and
+  `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
+  types that their evaluation silently mishandled. (#GH216997)
 
 #### Bug Fixes to Attribute Support
 
@@ -552,6 +562,10 @@ features cannot lower the translation-unit ABI level;
   included. (#GH213299)
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
+
+- Fixed an assertion failure when `#embed` was used in the braced initializer
+  of an array new-expression, or of an array whose elements are of class type.
+  (#GH128985)
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
