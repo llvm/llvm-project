@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// wasi-libc's strerror returns a message for unknown errors that this test
+// does not accept.
+// XFAIL: LIBCXX-WASI-FIXME
+
 // <system_error>
 
 // class error_category

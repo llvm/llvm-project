@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// libunwind's wasm implementation does not provide _Unwind_Backtrace.
+// UNSUPPORTED: LIBCXX-WASI-FIXME
+
 // UNSUPPORTED: no-exceptions
 
 // VE only supports SjLj and doesn't provide _Unwind_Backtrace.
