@@ -998,7 +998,7 @@ InstructionCost GCNTTIImpl::getCmpSelInstrCost(
     TTI::OperandValueInfo Op2Info, const Instruction *I) const {
   // For size and latency cost kinds, return a low cost independent of vector
   // width to enable SimplifyCFG's speculativelyExecuteBB optimization.
-  if (CostKind != TTI::TCK_RecipThroughput)
+  if (CostKind == TTI::TCK_SizeAndLatency)
     return 1;
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,

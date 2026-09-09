@@ -11,7 +11,7 @@ define void @wide_select_loop(ptr addrspace(1) %p, <16 x float> %a, <16 x float>
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC_7:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x float>, ptr addrspace(1) [[P]], i32 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load <16 x float>, ptr addrspace(1) [[GEP]], align 64
 ; CHECK-NEXT:    [[C1:%.*]] = fcmp ogt <16 x float> [[V]], [[A]]
@@ -25,106 +25,8 @@ define void @wide_select_loop(ptr addrspace(1) %p, <16 x float> %a, <16 x float>
 ; CHECK-NEXT:    [[C5:%.*]] = fcmp ogt <16 x float> [[S4]], [[A]]
 ; CHECK-NEXT:    [[S5:%.*]] = select <16 x i1> [[C5]], <16 x float> [[S4]], <16 x float> [[B]]
 ; CHECK-NEXT:    store <16 x float> [[S5]], ptr addrspace(1) [[GEP]], align 64
-; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds <16 x float>, ptr addrspace(1) [[P]], i32 [[INC]]
-; CHECK-NEXT:    [[V_1:%.*]] = load <16 x float>, ptr addrspace(1) [[GEP_1]], align 64
-; CHECK-NEXT:    [[C1_1:%.*]] = fcmp ogt <16 x float> [[V_1]], [[A]]
-; CHECK-NEXT:    [[S1_1:%.*]] = select <16 x i1> [[C1_1]], <16 x float> [[V_1]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C2_1:%.*]] = fcmp ogt <16 x float> [[S1_1]], [[A]]
-; CHECK-NEXT:    [[S2_1:%.*]] = select <16 x i1> [[C2_1]], <16 x float> [[S1_1]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C3_1:%.*]] = fcmp ogt <16 x float> [[S2_1]], [[A]]
-; CHECK-NEXT:    [[S3_1:%.*]] = select <16 x i1> [[C3_1]], <16 x float> [[S2_1]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C4_1:%.*]] = fcmp ogt <16 x float> [[S3_1]], [[A]]
-; CHECK-NEXT:    [[S4_1:%.*]] = select <16 x i1> [[C4_1]], <16 x float> [[S3_1]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C5_1:%.*]] = fcmp ogt <16 x float> [[S4_1]], [[A]]
-; CHECK-NEXT:    [[S5_1:%.*]] = select <16 x i1> [[C5_1]], <16 x float> [[S4_1]], <16 x float> [[B]]
-; CHECK-NEXT:    store <16 x float> [[S5_1]], ptr addrspace(1) [[GEP_1]], align 64
-; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 [[I]], 2
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds <16 x float>, ptr addrspace(1) [[P]], i32 [[INC_1]]
-; CHECK-NEXT:    [[V_2:%.*]] = load <16 x float>, ptr addrspace(1) [[GEP_2]], align 64
-; CHECK-NEXT:    [[C1_2:%.*]] = fcmp ogt <16 x float> [[V_2]], [[A]]
-; CHECK-NEXT:    [[S1_2:%.*]] = select <16 x i1> [[C1_2]], <16 x float> [[V_2]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C2_2:%.*]] = fcmp ogt <16 x float> [[S1_2]], [[A]]
-; CHECK-NEXT:    [[S2_2:%.*]] = select <16 x i1> [[C2_2]], <16 x float> [[S1_2]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C3_2:%.*]] = fcmp ogt <16 x float> [[S2_2]], [[A]]
-; CHECK-NEXT:    [[S3_2:%.*]] = select <16 x i1> [[C3_2]], <16 x float> [[S2_2]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C4_2:%.*]] = fcmp ogt <16 x float> [[S3_2]], [[A]]
-; CHECK-NEXT:    [[S4_2:%.*]] = select <16 x i1> [[C4_2]], <16 x float> [[S3_2]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C5_2:%.*]] = fcmp ogt <16 x float> [[S4_2]], [[A]]
-; CHECK-NEXT:    [[S5_2:%.*]] = select <16 x i1> [[C5_2]], <16 x float> [[S4_2]], <16 x float> [[B]]
-; CHECK-NEXT:    store <16 x float> [[S5_2]], ptr addrspace(1) [[GEP_2]], align 64
-; CHECK-NEXT:    [[INC_2:%.*]] = add nuw nsw i32 [[I]], 3
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds <16 x float>, ptr addrspace(1) [[P]], i32 [[INC_2]]
-; CHECK-NEXT:    [[V_3:%.*]] = load <16 x float>, ptr addrspace(1) [[GEP_3]], align 64
-; CHECK-NEXT:    [[C1_3:%.*]] = fcmp ogt <16 x float> [[V_3]], [[A]]
-; CHECK-NEXT:    [[S1_3:%.*]] = select <16 x i1> [[C1_3]], <16 x float> [[V_3]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C2_3:%.*]] = fcmp ogt <16 x float> [[S1_3]], [[A]]
-; CHECK-NEXT:    [[S2_3:%.*]] = select <16 x i1> [[C2_3]], <16 x float> [[S1_3]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C3_3:%.*]] = fcmp ogt <16 x float> [[S2_3]], [[A]]
-; CHECK-NEXT:    [[S3_3:%.*]] = select <16 x i1> [[C3_3]], <16 x float> [[S2_3]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C4_3:%.*]] = fcmp ogt <16 x float> [[S3_3]], [[A]]
-; CHECK-NEXT:    [[S4_3:%.*]] = select <16 x i1> [[C4_3]], <16 x float> [[S3_3]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C5_3:%.*]] = fcmp ogt <16 x float> [[S4_3]], [[A]]
-; CHECK-NEXT:    [[S5_3:%.*]] = select <16 x i1> [[C5_3]], <16 x float> [[S4_3]], <16 x float> [[B]]
-; CHECK-NEXT:    store <16 x float> [[S5_3]], ptr addrspace(1) [[GEP_3]], align 64
-; CHECK-NEXT:    [[INC_3:%.*]] = add nuw nsw i32 [[I]], 4
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds <16 x float>, ptr addrspace(1) [[P]], i32 [[INC_3]]
-; CHECK-NEXT:    [[V_4:%.*]] = load <16 x float>, ptr addrspace(1) [[GEP_4]], align 64
-; CHECK-NEXT:    [[C1_4:%.*]] = fcmp ogt <16 x float> [[V_4]], [[A]]
-; CHECK-NEXT:    [[S1_4:%.*]] = select <16 x i1> [[C1_4]], <16 x float> [[V_4]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C2_4:%.*]] = fcmp ogt <16 x float> [[S1_4]], [[A]]
-; CHECK-NEXT:    [[S2_4:%.*]] = select <16 x i1> [[C2_4]], <16 x float> [[S1_4]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C3_4:%.*]] = fcmp ogt <16 x float> [[S2_4]], [[A]]
-; CHECK-NEXT:    [[S3_4:%.*]] = select <16 x i1> [[C3_4]], <16 x float> [[S2_4]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C4_4:%.*]] = fcmp ogt <16 x float> [[S3_4]], [[A]]
-; CHECK-NEXT:    [[S4_4:%.*]] = select <16 x i1> [[C4_4]], <16 x float> [[S3_4]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C5_4:%.*]] = fcmp ogt <16 x float> [[S4_4]], [[A]]
-; CHECK-NEXT:    [[S5_4:%.*]] = select <16 x i1> [[C5_4]], <16 x float> [[S4_4]], <16 x float> [[B]]
-; CHECK-NEXT:    store <16 x float> [[S5_4]], ptr addrspace(1) [[GEP_4]], align 64
-; CHECK-NEXT:    [[INC_4:%.*]] = add nuw nsw i32 [[I]], 5
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds <16 x float>, ptr addrspace(1) [[P]], i32 [[INC_4]]
-; CHECK-NEXT:    [[V_5:%.*]] = load <16 x float>, ptr addrspace(1) [[GEP_5]], align 64
-; CHECK-NEXT:    [[C1_5:%.*]] = fcmp ogt <16 x float> [[V_5]], [[A]]
-; CHECK-NEXT:    [[S1_5:%.*]] = select <16 x i1> [[C1_5]], <16 x float> [[V_5]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C2_5:%.*]] = fcmp ogt <16 x float> [[S1_5]], [[A]]
-; CHECK-NEXT:    [[S2_5:%.*]] = select <16 x i1> [[C2_5]], <16 x float> [[S1_5]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C3_5:%.*]] = fcmp ogt <16 x float> [[S2_5]], [[A]]
-; CHECK-NEXT:    [[S3_5:%.*]] = select <16 x i1> [[C3_5]], <16 x float> [[S2_5]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C4_5:%.*]] = fcmp ogt <16 x float> [[S3_5]], [[A]]
-; CHECK-NEXT:    [[S4_5:%.*]] = select <16 x i1> [[C4_5]], <16 x float> [[S3_5]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C5_5:%.*]] = fcmp ogt <16 x float> [[S4_5]], [[A]]
-; CHECK-NEXT:    [[S5_5:%.*]] = select <16 x i1> [[C5_5]], <16 x float> [[S4_5]], <16 x float> [[B]]
-; CHECK-NEXT:    store <16 x float> [[S5_5]], ptr addrspace(1) [[GEP_5]], align 64
-; CHECK-NEXT:    [[INC_5:%.*]] = add nuw nsw i32 [[I]], 6
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds <16 x float>, ptr addrspace(1) [[P]], i32 [[INC_5]]
-; CHECK-NEXT:    [[V_6:%.*]] = load <16 x float>, ptr addrspace(1) [[GEP_6]], align 64
-; CHECK-NEXT:    [[C1_6:%.*]] = fcmp ogt <16 x float> [[V_6]], [[A]]
-; CHECK-NEXT:    [[S1_6:%.*]] = select <16 x i1> [[C1_6]], <16 x float> [[V_6]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C2_6:%.*]] = fcmp ogt <16 x float> [[S1_6]], [[A]]
-; CHECK-NEXT:    [[S2_6:%.*]] = select <16 x i1> [[C2_6]], <16 x float> [[S1_6]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C3_6:%.*]] = fcmp ogt <16 x float> [[S2_6]], [[A]]
-; CHECK-NEXT:    [[S3_6:%.*]] = select <16 x i1> [[C3_6]], <16 x float> [[S2_6]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C4_6:%.*]] = fcmp ogt <16 x float> [[S3_6]], [[A]]
-; CHECK-NEXT:    [[S4_6:%.*]] = select <16 x i1> [[C4_6]], <16 x float> [[S3_6]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C5_6:%.*]] = fcmp ogt <16 x float> [[S4_6]], [[A]]
-; CHECK-NEXT:    [[S5_6:%.*]] = select <16 x i1> [[C5_6]], <16 x float> [[S4_6]], <16 x float> [[B]]
-; CHECK-NEXT:    store <16 x float> [[S5_6]], ptr addrspace(1) [[GEP_6]], align 64
-; CHECK-NEXT:    [[INC_6:%.*]] = add nuw nsw i32 [[I]], 7
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds <16 x float>, ptr addrspace(1) [[P]], i32 [[INC_6]]
-; CHECK-NEXT:    [[V_7:%.*]] = load <16 x float>, ptr addrspace(1) [[GEP_7]], align 64
-; CHECK-NEXT:    [[C1_7:%.*]] = fcmp ogt <16 x float> [[V_7]], [[A]]
-; CHECK-NEXT:    [[S1_7:%.*]] = select <16 x i1> [[C1_7]], <16 x float> [[V_7]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C2_7:%.*]] = fcmp ogt <16 x float> [[S1_7]], [[A]]
-; CHECK-NEXT:    [[S2_7:%.*]] = select <16 x i1> [[C2_7]], <16 x float> [[S1_7]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C3_7:%.*]] = fcmp ogt <16 x float> [[S2_7]], [[A]]
-; CHECK-NEXT:    [[S3_7:%.*]] = select <16 x i1> [[C3_7]], <16 x float> [[S2_7]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C4_7:%.*]] = fcmp ogt <16 x float> [[S3_7]], [[A]]
-; CHECK-NEXT:    [[S4_7:%.*]] = select <16 x i1> [[C4_7]], <16 x float> [[S3_7]], <16 x float> [[B]]
-; CHECK-NEXT:    [[C5_7:%.*]] = fcmp ogt <16 x float> [[S4_7]], [[A]]
-; CHECK-NEXT:    [[S5_7:%.*]] = select <16 x i1> [[C5_7]], <16 x float> [[S4_7]], <16 x float> [[B]]
-; CHECK-NEXT:    store <16 x float> [[S5_7]], ptr addrspace(1) [[GEP_7]], align 64
-; CHECK-NEXT:    [[INC_7]] = add nuw nsw i32 [[I]], 8
-; CHECK-NEXT:    [[CMP_7:%.*]] = icmp samesign ult i32 [[INC_7]], 64
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP_7:%.*]] = icmp slt i32 [[INC]], 64
 ; CHECK-NEXT:    br i1 [[CMP_7]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
