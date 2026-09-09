@@ -239,7 +239,7 @@ jobs:
     - name: Merge Profiles
       if: env.TARGETS != ''
       run: |
-        find . -name "*.profraw" > profraw_list.txt
+        find build-cov -name "*.profraw" > profraw_list.txt
         NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
         echo "[LOG] Discovered $NUM_PROFS raw profile data files."
         if [ -s profraw_list.txt ]; then

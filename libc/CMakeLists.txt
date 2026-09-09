@@ -91,6 +91,27 @@ endif()
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
 
+option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
+option(LLVM_LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
+if(LIBC_ENABLE_COVERAGE OR LLVM_LIBC_ENABLE_COVERAGE)
+  list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
+  list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
+  list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
+
+  execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} --print-libgcc-file-name --rtlib=compiler-rt
+    OUTPUT_VARIABLE COMPILER_RT_BUILTINS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE COMPILER_RT_RETURN_CODE
+  )
+  if(COMPILER_RT_RETURN_CODE EQUAL 0)
+    string(REPLACE "builtins" "profile" COMPILER_RT_PROFILE "${COMPILER_RT_BUILTINS}")
+    if(EXISTS "${COMPILER_RT_PROFILE}")
+      list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "${COMPILER_RT_PROFILE}")
+    endif()
+  endif()
+endif()
+
 set(LIBC_TEST_CMD "" CACHE STRING
   "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
 set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
