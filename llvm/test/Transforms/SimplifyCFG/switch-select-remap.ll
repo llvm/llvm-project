@@ -40,6 +40,42 @@ bb3:
   unreachable
 }
 
+define void @test_remap_profile_undeflow(i8 %x) !prof !0 {
+; CHECK-LABEL: define void @test_remap_profile_undeflow(
+; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
+; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
+; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
+; CHECK-NEXT:      i8 4, label %[[BB2]]
+; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cmp = icmp eq i8 %x, 4
+  %key = select i1 %cmp, i8 6, i8 %x, !prof !1
+  switch i8 %key, label %bb1 [
+  i8 6, label %bb2
+  i8 10, label %bb3
+  ], !prof !5
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
 define void @test_remap_only_switch_profile(i8 %x) !prof !0 {
 ; CHECK-LABEL: define void @test_remap_only_switch_profile(
 ; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
@@ -47,7 +83,7 @@ define void @test_remap_only_switch_profile(i8 %x) !prof !0 {
 ; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
 ; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
 ; CHECK-NEXT:      i8 4, label %[[BB2]]
-; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -126,7 +162,7 @@ define void @test_remap_retarget_case(i8 %x) !prof !0 {
 ; CHECK-NEXT:      i8 4, label %[[BB2:.*]]
 ; CHECK-NEXT:      i8 6, label %[[BB2]]
 ; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
-; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -301,7 +337,7 @@ define void @test_remap_k_default_add(i8 %x) !prof !0 {
 ; CHECK-NEXT:    switch i8 [[X]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i8 1, label %[[BB1:.*]]
 ; CHECK-NEXT:      i8 2, label %[[BB2:.*]]
-; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF5:![0-9]+]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -502,10 +538,12 @@ declare void @use(i32)
 !2 = !{!"branch_weights", i32 5, i32 11, i32 7}
 !3 = !{!"branch_weights", i32 5, i32 0, i32 11, i32 7}
 !4 = !{!"branch_weights", i32 3, i32 2}
+!5 = !{!"branch_weights", i32 5, i32 7, i32 11}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 25, i32 9, i32 35, i32 46}
-; CHECK: [[PROF2]] = !{!"unknown", !"simplifycfg"}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 15, i32 46, i32 9, i32 35}
-; CHECK: [[PROF4]] = !{!"branch_weights", i32 5, i32 11, i32 7}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 25, i32 0, i32 55, i32 46}
+; CHECK: [[PROF3]] = !{!"unknown", !"simplifycfg"}
+; CHECK: [[PROF4]] = !{!"branch_weights", i32 25, i32 46, i32 9, i32 35}
+; CHECK: [[PROF5]] = !{!"branch_weights", i32 5, i32 11, i32 7}
 ;.

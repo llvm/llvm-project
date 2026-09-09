@@ -5120,6 +5120,8 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
     // for both it and the select instruction.
     SmallVector<uint32_t> SwitchWeights;
     bool SwitchHasBranchWeights = extractBranchWeights(*SI, SwitchWeights);
+    // If we add a case, ensure the length of the branch weights list matches
+    // to make iterating over them easier later.
     if (IsDefault)
       SwitchWeights.push_back(0);
     uint64_t SelectTrueWeight;
@@ -5131,19 +5133,30 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
       std::swap(SelectTrueWeight, SelectFalseWeight);
     if (SwitchHasBranchWeights && SelectHasBranchWeights &&
         !ProfcheckDisableMetadataFixes) {
+      // We update the branch weights by subtracting P(x=C) from the probability
+      // of case K in the switch (what C redirect to before the transformation),
+      // plugging the probability for case C into the switch (which we derive
+      // from the select), and ensuring everything is scaled to have a common
+      // denominator.
       uint64_t SwitchTotalWeight = sum_of(SwitchWeights, uint64_t{0});
       SmallVector<uint64_t> NewSwitchWeights;
       NewSwitchWeights.reserve(SwitchWeights.size() + IsDefault);
       NewSwitchWeights.push_back(SwitchWeights[0] * SelectTotalWeight);
       for (const auto &[SwitchCase, SwitchWeight] :
-            zip(SI->cases(), drop_begin(SwitchWeights))) {
+           zip(SI->cases(), drop_begin(SwitchWeights))) {
         if (SwitchCase.getCaseValue() == C) {
           NewSwitchWeights.push_back(SwitchTotalWeight * SelectTrueWeight);
         } else if (SwitchCase.getCaseValue() == K) {
-          // TODO(boomanaiden154): Check if this would be negative to prevent
-          // underflow.
-          NewSwitchWeights.push_back(SwitchWeight * SelectTotalWeight -
-                                      SelectTrueWeight * SwitchTotalWeight);
+          // In reality, P(key=K) > P(x=C) should always hold, but explicitly
+          // guard against bad profiles here to prevent underflow by saturating
+          // to zero.
+          uint64_t ProbabilityKeyEqualsK = SwitchWeight * SelectTotalWeight;
+          uint64_t ProbabilityXEqualsC = SelectTrueWeight * SwitchTotalWeight;
+          uint64_t ProbabilityXEqualsK =
+              ProbabilityKeyEqualsK > ProbabilityXEqualsC
+                  ? ProbabilityKeyEqualsK - ProbabilityXEqualsC
+                  : 0;
+          NewSwitchWeights.push_back(ProbabilityXEqualsK);
         } else {
           NewSwitchWeights.push_back(SwitchWeight * SelectTotalWeight);
         }
