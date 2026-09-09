@@ -1053,7 +1053,7 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
 
     if (DTU) {
       std::vector<DominatorTree::UpdateType> Updates;
-      for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+      for (const auto &I : NumPerSuccessorCases)
         if (I.second == 0)
           Updates.push_back({DominatorTree::Delete, PredDef, I.first});
       DTU->applyUpdates(Updates);
@@ -1427,6 +1427,12 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   if (PredHasWeights || SuccHasWeights)
     setFittedBranchWeights(*NewSI, Weights, /*IsExpected=*/false,
                            /*ElideAllZero=*/true);
+
+  // The new switch is only known to be unpredictable if both of the comparisons
+  // it was built from were unpredictable.
+  if (MDNode *Unpredictable = PTI->getMetadata(LLVMContext::MD_unpredictable))
+    if (TI->hasMetadata(LLVMContext::MD_unpredictable))
+      NewSI->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
 
   eraseTerminatorAndDCECond(PTI);
 
@@ -5532,10 +5538,14 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
     CondBrInst *NewBI = Builder.CreateCondBr(Cond, EdgeBB, DefaultBB);
     if (HasProfile)
       setBranchWeights(*NewBI, BranchWeights, /*IsExpected=*/false);
+    if (MDNode *Unpredictable = BI->getMetadata(LLVMContext::MD_unpredictable))
+      NewBI->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
     // We don't need to update PHI nodes since we don't add any new edges.
   } else {
     // Create the new switch instruction now.
     SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
+    if (MDNode *Unpredictable = BI->getMetadata(LLVMContext::MD_unpredictable))
+      New->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
     if (HasProfile) {
       // We know the weight of the default case. We don't know the weight of the
       // other cases, but rather than completely lose profiling info, we split
