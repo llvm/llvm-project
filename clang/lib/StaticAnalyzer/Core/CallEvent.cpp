@@ -1221,8 +1221,8 @@ static const ObjCMethodDecl *findDefiningRedecl(const ObjCMethodDecl *MD) {
   // Find the redeclaration that defines the method.
   if (!MD->hasBody()) {
     for (auto *I : MD->redecls())
-      if (I->hasBody())
-        MD = cast<ObjCMethodDecl>(I);
+      if (auto * NewMD = cast<ObjCMethodDecl>(I); NewMD->hasBody())
+        MD = NewMD;
   }
   return MD;
 }

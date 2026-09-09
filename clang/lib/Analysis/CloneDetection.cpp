@@ -89,7 +89,7 @@ SourceRange StmtSequence::getSourceRange() const {
 
 void CloneDetector::analyzeCodeBody(const Decl *D) {
   assert(D);
-  assert(D->hasBody());
+  assert(D->getBody());
 
   Sequences.push_back(StmtSequence(D->getBody(), D));
 }

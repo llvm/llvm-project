@@ -921,7 +921,7 @@ uint64_t PGOHash::finalize() {
 
 void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   const Decl *D = GD.getDecl();
-  if (!D->hasBody())
+  if (!D->getBody())
     return;
 
   // Skip CUDA/HIP kernel launch stub functions.

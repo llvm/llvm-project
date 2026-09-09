@@ -3484,7 +3484,7 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   const CapturedDecl *CD = S.getCapturedDecl();
   const RecordDecl *RD = S.getCapturedRecordDecl();
   SourceLocation Loc = S.getBeginLoc();
-  assert(CD->hasBody() && "missing CapturedDecl body");
+  assert(CD->getBody() && "missing CapturedDecl body");
 
   // Build the argument list.
   ASTContext &Ctx = CGM.getContext();
