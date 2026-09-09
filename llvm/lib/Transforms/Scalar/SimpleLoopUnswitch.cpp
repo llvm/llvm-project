@@ -2789,8 +2789,11 @@ static bool collectUnswitchCandidates(
 
   BasicBlock *Header = L.getHeader();
   // Need to make sure the load instruction to be hoisted is always executed.
-  bool HeaderCondGuaranteedToExecute = isGuaranteedToTransferExecutionToSuccessor(Header->begin(), Header->getTerminator()->getIterator());
-  if (MSSAU && HeaderCondGuaranteedToExecute && !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
+  bool HeaderCondGuaranteedToExecute =
+      isGuaranteedToTransferExecutionToSuccessor(
+          Header->begin(), Header->getTerminator()->getIterator());
+  if (MSSAU && HeaderCondGuaranteedToExecute &&
+      !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
       !any_of(UnswitchCandidates, [&L](auto &TerminatorAndInvariants) {
          return TerminatorAndInvariants.TI == L.getHeader()->getTerminator();
        })) {
