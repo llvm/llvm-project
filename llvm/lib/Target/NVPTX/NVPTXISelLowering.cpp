@@ -7767,26 +7767,23 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
     [[fallthrough]];
-  case AtomicRMWInst::BinOp::And:
-  case AtomicRMWInst::BinOp::Or:
-  case AtomicRMWInst::BinOp::Xor:
+  case AtomicRMWInst::BinOp::Add:
+  case AtomicRMWInst::BinOp::Sub:
     switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
     case 32:
-      return AtomicExpansionKind::None;
     case 64:
-      if (STI.hasAtomBitwise64())
-        return AtomicExpansionKind::None;
-      return AtomicExpansionKind::CmpXChg;
+      return AtomicExpansionKind::None;
     case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::Add:
-  case AtomicRMWInst::BinOp::Sub:
+  case AtomicRMWInst::BinOp::And:
+  case AtomicRMWInst::BinOp::Or:
+  case AtomicRMWInst::BinOp::Xor:
   case AtomicRMWInst::BinOp::Max:
   case AtomicRMWInst::BinOp::Min:
   case AtomicRMWInst::BinOp::UMax:
@@ -7798,7 +7795,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     case 32:
       return AtomicExpansionKind::None;
     case 64:
-      if (STI.hasAtomMinMax64())
+      if (STI.hasAtomMinMaxAndOrXor())
         return AtomicExpansionKind::None;
       return AtomicExpansionKind::CmpXChg;
     case 128:
