@@ -149,16 +149,39 @@ bool GIMatchTableExecutor::executeMatchTable(
     assert(CurrentIdx != ~0u && "Invalid MatchTable index");
     uint8_t MatcherOpcode = MatchTable[CurrentIdx++];
     switch (MatcherOpcode) {
-    case GIM_Try: {
+    case GIM_Try:
+    case GIM_Try8:
+    case GIM_Try16: {
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": Begin try-block\n");
-      OnFailResumeAt.push_back(readU32());
+      unsigned OnFail;
+      if (MatcherOpcode == GIM_Try8) {
+        OnFail = MatchTable[CurrentIdx++];
+        OnFail += CurrentIdx;
+      } else if (MatcherOpcode == GIM_Try16) {
+        OnFail = readU16();
+        OnFail += CurrentIdx;
+      } else {
+        OnFail = readU32();
+      }
+      OnFailResumeAt.push_back(OnFail);
       break;
     }
-    case GIM_Try_CheckFeatures: {
+    case GIM_Try_CheckFeatures:
+    case GIM_Try_CheckFeatures8:
+    case GIM_Try_CheckFeatures16: {
       // This is optimized so that if the feature is not present, we don't even
       // modify OnFailResumeAt. Instead we directly jump to OnFail.
-      unsigned OnFail = readU32();
+      unsigned OnFail;
+      if (MatcherOpcode == GIM_Try_CheckFeatures8) {
+        OnFail = MatchTable[CurrentIdx++];
+        OnFail += CurrentIdx;
+      } else if (MatcherOpcode == GIM_Try_CheckFeatures16) {
+        OnFail = readU16();
+        OnFail += CurrentIdx;
+      } else {
+        OnFail = readU32();
+      }
       uint16_t ExpectedBitsetID = readU16();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx
