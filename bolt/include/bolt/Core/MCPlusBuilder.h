@@ -1751,7 +1751,8 @@ public:
     return false;
   }
 
-  /// AArch64 uses this to perform diagnostics in the LongJmp pass.
+  /// Return true if \p Inst has a particularly short branch range and may
+  /// require branch liveness information during relaxation.
   virtual bool isShortRangeBranch(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
