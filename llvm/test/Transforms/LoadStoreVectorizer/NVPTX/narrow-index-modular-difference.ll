@@ -128,3 +128,112 @@ define i32 @sext_difference_preserved(ptr %base, i32 %x, i32 %y) {
   %r = add i32 %va, %vb
   ret i32 %r
 }
+
+; The second no-wrap proof compares the nested constant and IdxDiff as signed
+; values, so it treats the i8 bit pattern for unsigned 192 as -64. At
+; %x = %p = %q = 0, the zero-extended indices are 0 and 192. Including the
+; outer 260-byte offset, the accesses are 1028 bytes apart. The incorrect
+; -64-element difference instead becomes -256 + 260 = 4 bytes and makes them
+; appear adjacent.
+define i32 @zext_nested_difference_not_preserved(
+; CHECK-LABEL: define i32 @zext_nested_difference_not_preserved(
+; CHECK-SAME: ptr noundef align 8 dereferenceable(1032) [[BASE:%.*]], i8 [[X:%.*]], i8 [[P:%.*]], i8 [[Q:%.*]]) {
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[P]], [[Q]]
+; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[EXTB:%.*]] = zext i8 [[B]] to i64
+; CHECK-NEXT:    [[PB_BASE:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB_BASE]], align 8
+; CHECK-NEXT:    [[VA1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[VB2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA1]], [[VB2]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  ptr noundef align 8 dereferenceable(1032) %base,
+  i8 %x, i8 %p, i8 %q) {
+  %y = add i8 %p, %q
+  %a = add nuw i8 %x, %y
+  %y.next = add nuw i8 %y, -64
+  %b = add nuw i8 %x, %y.next
+  %exta = zext i8 %a to i64
+  %extb = zext i8 %b to i64
+  %pa = getelementptr i32, ptr %base, i64 %exta
+  %pb.base = getelementptr i32, ptr %base, i64 %extb
+  %pb = getelementptr inbounds i8, ptr %pb.base, i64 260
+  %va = load i32, ptr %pa, align 8
+  %vb = load i32, ptr %pb, align 4
+  %r = add i32 %va, %vb
+  ret i32 %r
+}
+
+; The reverse nested match negates the signed interpretation of the nested
+; constant, so it treats unsigned 192 as -64 and expects a difference of 64.
+; At %x = %p = %q = 0, the zero-extended indices are 192 and 0. Including
+; the outer 260-byte offset on the first access, the true difference is
+; -1028 bytes. The incorrect difference instead becomes 256 - 260 = -4 bytes
+; and makes the accesses appear adjacent.
+define i32 @zext_nested_reverse_difference_not_preserved(
+; CHECK-LABEL: define i32 @zext_nested_reverse_difference_not_preserved(
+; CHECK-SAME: ptr noundef align 8 dereferenceable(1032) [[BASE:%.*]], i8 [[X:%.*]], i8 [[P:%.*]], i8 [[Q:%.*]]) {
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[P]], [[Q]]
+; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[EXTB:%.*]] = zext i8 [[B]] to i64
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB]], align 8
+; CHECK-NEXT:    [[VB1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[VA2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA2]], [[VB1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  ptr noundef align 8 dereferenceable(1032) %base,
+  i8 %x, i8 %p, i8 %q) {
+  %y = add i8 %p, %q
+  %y.next = add nuw i8 %y, -64
+  %a = add nuw i8 %x, %y.next
+  %b = add nuw i8 %x, %y
+  %exta = zext i8 %a to i64
+  %extb = zext i8 %b to i64
+  %pa.base = getelementptr i32, ptr %base, i64 %exta
+  %pa = getelementptr inbounds i8, ptr %pa.base, i64 260
+  %pb = getelementptr i32, ptr %base, i64 %extb
+  %va = load i32, ptr %pa, align 4
+  %vb = load i32, ptr %pb, align 8
+  %r = add i32 %va, %vb
+  ret i32 %r
+}
+
+; The two-constant nested match computes their difference after interpreting
+; both as signed. It therefore computes 0 - (-64) = 64 instead of the
+; zero-extended difference 0 - 192 = -192. As in the reverse case above, the
+; outer offset changes the incorrect byte difference to -4 while the true
+; accesses are 1028 bytes apart.
+define i32 @zext_nested_constants_difference_not_preserved(
+; CHECK-LABEL: define i32 @zext_nested_constants_difference_not_preserved(
+; CHECK-SAME: ptr noundef align 8 dereferenceable(1032) [[BASE:%.*]], i8 [[X:%.*]], i8 [[P:%.*]], i8 [[Q:%.*]]) {
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[P]], [[Q]]
+; CHECK-NEXT:    [[Y_B:%.*]] = add nuw i8 [[Y]], 0
+; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[X]], [[Y_B]]
+; CHECK-NEXT:    [[EXTB:%.*]] = zext i8 [[B]] to i64
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB]], align 8
+; CHECK-NEXT:    [[VB1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[VA2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA2]], [[VB1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  ptr noundef align 8 dereferenceable(1032) %base,
+  i8 %x, i8 %p, i8 %q) {
+  %y = add i8 %p, %q
+  %y.a = add nuw i8 %y, -64
+  %y.b = add nuw i8 %y, 0
+  %a = add nuw i8 %x, %y.a
+  %b = add nuw i8 %x, %y.b
+  %exta = zext i8 %a to i64
+  %extb = zext i8 %b to i64
+  %pa.base = getelementptr i32, ptr %base, i64 %exta
+  %pa = getelementptr inbounds i8, ptr %pa.base, i64 260
+  %pb = getelementptr i32, ptr %base, i64 %extb
+  %va = load i32, ptr %pa, align 4
+  %vb = load i32, ptr %pb, align 8
+  %r = add i32 %va, %vb
+  ret i32 %r
+}
