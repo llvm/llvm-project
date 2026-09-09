@@ -406,8 +406,8 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
       Header);
   // Non-outer regions with VPBBs only are supported at the moment.
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
-  DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>> Frequencies =
-      vputils::computeExecutionFrequencies(Blocks);
+  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+      Frequencies = vputils::computeExecutionFrequencies(Blocks);
 
   VPPredicator Predicator(Plan);
   for (VPBasicBlock *VPBB : Blocks) {
@@ -423,7 +423,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
 
     // Mask all VPInstructions in the block and record the frequency with
     // which the masked recipes execute.
-    std::optional<BlockFrequency> Freq = Frequencies.lookup(VPBB);
+    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
     for (VPRecipeBase &R : *VPBB) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI)

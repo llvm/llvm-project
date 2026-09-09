@@ -63,8 +63,6 @@ LLVM_ABI FramePointerKind getFramePointerUsage();
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFPMath();
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFP32Math();
 
-LLVM_ABI bool getEnableHonorSignDependentRoundingFPMath();
-
 LLVM_ABI llvm::FloatABI::ABIType getFloatABIForCalls();
 
 LLVM_ABI llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();

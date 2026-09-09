@@ -5268,6 +5268,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
   Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
+  // Emitting the alloca moved the insertion point into the alloca block and
+  // can clear the debug loc. Restore back to Loc.DL.
+  Builder.SetCurrentDebugLocation(Loc.DL);
 
   for (auto En : enumerate(ReductionInfos)) {
     unsigned Index = En.index();
@@ -8583,6 +8586,14 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
       MaxThreadsVal = Attrs.MinThreads.front();
     }
   }
+
+  // Generic mode runs the main thread on a warp of its own, past thread_limit.
+  // Reserve the widest warp any target has.
+  if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
+      hasGridValue(T))
+    MaxThreadsVal = int32_t(
+        std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
+                          int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
 
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
