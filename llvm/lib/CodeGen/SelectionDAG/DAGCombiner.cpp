@@ -5029,12 +5029,11 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
              "multiply-by-constant generated out of bounds shift");
       SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, N0,
                                 DAG.getShiftAmountConstant(ShAmt, VT, DL));
-      SDValue R =
-          TZeros ? DAG.getNode(
-                       MathOp, DL, VT, Shl,
-                       DAG.getNode(ISD::SHL, DL, VT, N0,
-                                   DAG.getShiftAmountConstant(TZeros, VT, DL)))
-                 : DAG.getNode(MathOp, DL, VT, Shl, N0);
+      SDValue R = N0;
+      if (TZeros)
+        R = DAG.getNode(ISD::SHL, DL, VT, N0,
+                        DAG.getShiftAmountConstant(TZeros, VT, DL));
+      R = DAG.getNode(MathOp, DL, VT, Shl, R);
       if (ConstValue1.isNegative())
         R = DAG.getNegative(R, DL, VT);
       return R;
