@@ -2260,22 +2260,43 @@ llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_re
 // -----
 
 llvm.func @invalid_sincos_nonhomogeneous_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f64)>
 }
 
 // -----
 
 llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> f32
 }
 
 // -----
 
 llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}
+
+// -----
+
+llvm.func @invalid_modf_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_modf_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_modf_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
 }
 
 // -----
