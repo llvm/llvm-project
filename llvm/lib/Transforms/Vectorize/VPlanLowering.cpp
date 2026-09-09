@@ -49,29 +49,30 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   VPIRValue *StartValue = nullptr;
   // VPWidenCanonicalIVRecipe is either a direct user of CanonicalIV or
   // Add (CanonicalIV, resumeValue) (like the case for tail-folded epilogue).
-  for (auto *User : LoopRegion->getCanonicalIV()->users()) {
+  auto *IV = LoopRegion->getCanonicalIV();
+  for (auto *User : IV->users()) {
     if (isa<VPWidenCanonicalIVRecipe>(User)) {
       WideCanIV = cast<VPWidenCanonicalIVRecipe>(User);
       StartValue = Plan.getZero(WideCanIV->getScalarType());
       break;
     }
-    if (isa<VPInstruction>(User)) {
-      auto *UserInstr = cast<VPInstruction>(User);
-      auto *It = find_if(UserInstr->users(), IsaPred<VPWidenCanonicalIVRecipe>);
-      if (It != UserInstr->user_end()) {
+    if (auto *UI = dyn_cast<VPInstruction>(User)) {
+      auto *It = find_if(UI->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+      if (It != UI->user_end()) {
         WideCanIV = cast<VPWidenCanonicalIVRecipe>(*It);
-        match(UserInstr, m_Add(m_VPValue(), m_VPIRValue(StartValue)));
-        assert(StartValue &&
-               "WIDEN-CANONICAL-INDUCTION is only expected to be reached "
-               "through the canonical IV directly, or through a single 'add "
-               "CanonicalIV, StartValue' introduced for epilogue-loop resume "
-               "values; found a different pattern here");
-        if (!StartValue)
+        if (!match(UI, m_c_Add(m_Specific(IV), m_VPIRValue(StartValue))) ||
+            !StartValue) {
+          assert(StartValue &&
+                 "WIDEN-CANONICAL-INDUCTION is only expected to be reached "
+                 "through the canonical IV directly, or through a single 'add "
+                 "CanonicalIV, StartValue' introduced for epilogue-loop resume "
+                 "values; found a different pattern here");
           return;
+        }
       }
     }
   }
-  if (!WideCanIV)
+  if (!WideCanIV || !StartValue)
     return;
 
   Type *CanIVTy = WideCanIV->getScalarType();
@@ -579,7 +580,12 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
-        VPValue *CanIV = WideCanIV->getCanonicalIV();
+        VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+        if (!LoopRegion)
+          continue;
+        VPValue *CanIV = LoopRegion->getCanonicalIV();
+        if (!CanIV)
+          continue;
         Type *CanIVTy = CanIV->getScalarType();
         VPValue *Step = WideCanIV->getStepValue();
         if (!Step) {
