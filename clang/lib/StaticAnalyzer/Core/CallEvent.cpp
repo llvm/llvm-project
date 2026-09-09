@@ -189,7 +189,8 @@ const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
 }
 
 const ParamVarRegion
-*CallEvent::getParameterLocation(std::optional<unsigned> Index, unsigned BlockCount) const {
+*CallEvent::getParameterLocation(std::optional<unsigned> Index,
+                                 unsigned BlockCount) const {
   if (!Index)
     return nullptr;
 
