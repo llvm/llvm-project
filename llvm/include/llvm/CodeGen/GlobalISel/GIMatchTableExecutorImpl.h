@@ -1136,6 +1136,20 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIR_BuildFConstant: {
+      uint64_t TempRegID = readULEB();
+      uint64_t Bits = readU64();
+      initializeBuilder();
+      Register TempReg = State.TempRegisters[TempRegID];
+      LLT Ty = MRI.getType(TempReg).getScalarType();
+      APFloat Val(getFltSemanticForLLT(Ty), APInt(Ty.getSizeInBits(), Bits));
+      Builder.buildFConstant(TempReg, Val);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_BuildFConstant(TempReg["
+                             << TempRegID << "], Bits=" << Bits << ")\n");
+      break;
+    }
+
     case GIR_RootToRootCopy:
     case GIR_Copy: {
       uint64_t NewInsnID =
