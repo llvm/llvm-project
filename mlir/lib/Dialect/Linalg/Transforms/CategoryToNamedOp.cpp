@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements rewriting of linalg category ops (e.g.
-// `linalg.elementwise`) to their equivalent named ops (e.g. `linalg.add`,
-// `linalg.exp`). This is the reverse of NamedToElementwise.cpp.
+// `linalg.elementwise`) to their equivalent named ops (e.g. `linalg.add`).
+// This is the reverse of NamedToElementwise.cpp.
 //
 //===----------------------------------------------------------------------===//
 
@@ -46,32 +46,6 @@ struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
     };
 
     switch (op.getKind()) {
-    case ElementwiseKind::exp:
-      return replaceWith(ExpOp{});
-    case ElementwiseKind::log:
-      return replaceWith(LogOp{});
-    case ElementwiseKind::abs:
-      return replaceWith(AbsOp{});
-    case ElementwiseKind::ceil:
-      return replaceWith(CeilOp{});
-    case ElementwiseKind::floor:
-      return replaceWith(FloorOp{});
-    case ElementwiseKind::negf:
-      return replaceWith(NegFOp{});
-    case ElementwiseKind::reciprocal:
-      return replaceWith(ReciprocalOp{});
-    case ElementwiseKind::round:
-      return replaceWith(RoundOp{});
-    case ElementwiseKind::sqrt:
-      return replaceWith(SqrtOp{});
-    case ElementwiseKind::rsqrt:
-      return replaceWith(RsqrtOp{});
-    case ElementwiseKind::square:
-      return replaceWith(SquareOp{});
-    case ElementwiseKind::tanh:
-      return replaceWith(TanhOp{});
-    case ElementwiseKind::erf:
-      return replaceWith(ErfOp{});
     case ElementwiseKind::add:
       return replaceWith(AddOp{});
     case ElementwiseKind::sub:
