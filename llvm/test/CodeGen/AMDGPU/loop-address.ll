@@ -24,7 +24,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-attributes #0 = { nounwind "relocation-model"="pic" }
+attributes #0 = { nounwind }
 
 !opencl.kernels = !{!0, !1, !2, !3}
 
