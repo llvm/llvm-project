@@ -305,6 +305,121 @@ function(add_mlir_example_library name)
   endif()
 endfunction()
 
+# Determine whether a target reaches MLIRIR through its link libraries.
+function(_mlir_links_ir name out)
+  set(seen "")
+  set(worklist ${name})
+  while(worklist)
+    list(POP_FRONT worklist current)
+    if(current IN_LIST seen OR NOT TARGET ${current})
+      continue()
+    endif()
+    list(APPEND seen ${current})
+    if(current STREQUAL "MLIRIR" OR current STREQUAL "obj.MLIRIR")
+      set(${out} TRUE PARENT_SCOPE)
+      return()
+    endif()
+    get_target_property(type ${current} TYPE)
+    set(libs "")
+    if(NOT type STREQUAL "INTERFACE_LIBRARY")
+      get_target_property(link_libs ${current} LINK_LIBRARIES)
+      if(link_libs)
+        list(APPEND libs ${link_libs})
+      endif()
+    endif()
+    get_target_property(iface_libs ${current} INTERFACE_LINK_LIBRARIES)
+    if(iface_libs)
+      list(APPEND libs ${iface_libs})
+    endif()
+    foreach(lib ${libs})
+      # Skip generator expressions; they can't be resolved at configure time.
+      if(NOT lib MATCHES "\\$<")
+        list(APPEND worklist ${lib})
+      endif()
+    endforeach()
+  endwhile()
+  set(${out} FALSE PARENT_SCOPE)
+endfunction()
+
+# Extend PCH reuse of MLIRIR's PCH to a target that reaches MLIRIR only
+# transitively. llvm_update_pch() intentionally limits reuse to direct
+# dependencies, because across LLVM subprojects a transitively reused PCH
+# pulls in unrelated headers and causes name collisions. Within MLIR that
+# concern doesn't apply: the PCH holds MLIR core headers that essentially
+# every MLIR library includes already.
+#
+# Such a target typically already reuses the LLVMSupport PCH, picked up from
+# a direct dependency. Switching it to MLIRIR's is a strict improvement:
+# mlir/IR/pch.h includes llvm/Support/pch.h, so nothing is lost.
+#
+# Does nothing if the target defines its own PCH, if PCH is disabled for it,
+# if it does not link MLIRIR, or if MLIRIR itself has no usable PCH.
+function(mlir_reuse_ir_pch name)
+  if(CMAKE_DISABLE_PRECOMPILE_HEADERS OR NOT TARGET MLIRIR OR NOT TARGET ${name})
+    return()
+  endif()
+  # Reuse creates a real target dependency, so anything MLIRIR itself builds
+  # on would form a cycle. MLIRSupport is the only such MLIR library.
+  if(name STREQUAL "MLIRIR" OR name STREQUAL "obj.MLIRIR"
+     OR name STREQUAL "MLIRSupport" OR name STREQUAL "obj.MLIRSupport")
+    return()
+  endif()
+
+  # An object library owns the compilation, so that is what carries the PCH
+  # and what needs to reuse one.
+  set(source MLIRIR)
+  if(TARGET obj.MLIRIR)
+    set(source obj.MLIRIR)
+  endif()
+  get_target_property(mlirir_pch ${source} PRECOMPILE_HEADERS)
+  if(NOT mlirir_pch)
+    return()
+  endif()
+
+  set(target ${name})
+  if(TARGET obj.${name})
+    set(target obj.${name})
+  endif()
+
+  # Don't override a PCH the target defines itself, and respect an opt-out.
+  get_target_property(existing ${target} PRECOMPILE_HEADERS)
+  get_target_property(disabled ${target} DISABLE_PRECOMPILE_HEADERS)
+  if(existing OR disabled)
+    return()
+  endif()
+
+  # Only replace a reused PCH, never a self-defined one. Anything MLIR reuses
+  # at this point comes from LLVMSupport, which MLIRIR's PCH subsumes.
+  get_target_property(reused ${target} PRECOMPILE_HEADERS_REUSE_FROM)
+  if(reused AND NOT reused STREQUAL "LLVMSupport")
+    return()
+  endif()
+
+  # The PCH pulls in MLIR IR headers, which emit out-of-line symbols that only
+  # libMLIRIR provides. A target that doesn't link MLIRIR would fail to link.
+  _mlir_links_ir(${name} links_ir)
+  if(NOT links_ir)
+    return()
+  endif()
+
+  # The PCH is compiled without RTTI/exceptions and as C++; a target that
+  # overrides any of that cannot reuse it.
+  if(LLVM_REQUIRES_RTTI OR LLVM_REQUIRES_EH)
+    return()
+  endif()
+  get_property(srcs TARGET ${target} PROPERTY SOURCES)
+  foreach(src ${srcs})
+    get_filename_component(extension ${src} EXT)
+    if(extension STREQUAL ".c" OR extension STREQUAL ".m" OR extension STREQUAL ".mm")
+      return()
+    endif()
+  endforeach()
+
+  message(DEBUG "Reusing MLIRIR PCH for ${target}")
+  set_target_properties(${target} PROPERTIES PRECOMPILE_HEADERS_REUSE_FROM "")
+  target_precompile_headers(${target} REUSE_FROM ${source})
+endfunction()
+
 # Declare an mlir library which can be compiled in libMLIR.so
 # In addition to everything that llvm_add_library accepts, this
 # also has the following option:
@@ -327,7 +442,7 @@ endfunction()
 #   Don't link against LLVMSupport.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION;OBJECT;STANDALONE"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION;OBJECT;STANDALONE;DISABLE_PCH_REUSE"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
@@ -387,7 +502,18 @@ function(add_mlir_library name)
   _check_llvm_components_usage(${name} ${ARG_LINK_LIBS})
 
   list(APPEND ARG_DEPENDS mlir-generic-headers)
-  llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
+  if(ARG_DISABLE_PCH_REUSE)
+    set(disable_pch_reuse DISABLE_PCH_REUSE)
+  endif()
+  llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} ${disable_pch_reuse} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
+
+  # llvm_update_pch() only considers direct dependencies when looking for a PCH
+  # to reuse, so libraries that reach MLIRIR only transitively don't pick up its
+  # PCH. Within MLIR that's needlessly restrictive: the PCH holds MLIR core
+  # headers, which those libraries include anyway. Extend reuse to them.
+  if(NOT ARG_DISABLE_PCH_REUSE)
+    mlir_reuse_ir_pch(${name})
+  endif()
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
@@ -446,6 +572,7 @@ endfunction(add_mlir_library)
 
 macro(add_mlir_tool name)
   llvm_add_tool(MLIR ${ARGV})
+  mlir_reuse_ir_pch(${name})
 endmacro()
 
 # Sets a variable with a transformed list of link libraries such individual
@@ -755,4 +882,10 @@ function(mlir_target_link_libraries target type)
   else()
     target_link_libraries(${target} ${type} ${ARGN})
   endif()
+
+  # Many targets (tests, unittests, and libraries that must avoid a hard
+  # dependency on libMLIR.so) get their MLIR dependencies here rather than
+  # through add_mlir_library's LINK_LIBS. Re-check PCH reuse now that the link
+  # graph is complete: the earlier attempt could not see these libraries yet.
+  mlir_reuse_ir_pch(${target})
 endfunction()

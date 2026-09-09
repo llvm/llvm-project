@@ -3,6 +3,7 @@ add_definitions(-DGTEST_NO_LLVM_SUPPORT=0)
 
 function(add_mlir_unittest test_dirname)
   add_unittest(MLIRUnitTests ${test_dirname} ${ARGN})
+  mlir_reuse_ir_pch(${test_dirname})
 endfunction()
 
 add_subdirectory(ABI)
