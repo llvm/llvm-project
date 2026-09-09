@@ -31,6 +31,9 @@ void SignaturePackingError::log(raw_ostream &OS) const {
 Error llvm::hlsl::packSignatureStacked(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy) {
+  assert(ShaderStage == Triple::Vertex && IOTy == IOType::In &&
+         "stacked packing is only valid for a vertex shader input signature");
+
   unsigned NextRow = 0;
   for (const auto &[Index, Element] : enumerate(Elements)) {
     assert(Element.StartRow == UnallocatedRow &&
