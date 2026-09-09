@@ -579,8 +579,8 @@ define <2 x half> @test_ldexp_v2f16_v2i16(<2 x half> %a, <2 x i16> %b) {
 ; GFX11-SDAG-TRUE16-LABEL: test_ldexp_v2f16_v2i16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v0.h, v1.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v0.l, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v0.h, v1.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: test_ldexp_v2f16_v2i16:
@@ -861,8 +861,8 @@ define <3 x half> @test_ldexp_v3f16_v3i16(<3 x half> %a, <3 x i16> %b) {
 ; GFX11-SDAG-TRUE16-LABEL: test_ldexp_v3f16_v3i16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v0.h, v2.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v0.l, v2.l
+; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v0.h, v2.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v1.l, v1.l, v3.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1209,10 +1209,10 @@ define <4 x half> @test_ldexp_v4f16_v4i16(<4 x half> %a, <4 x i16> %b) {
 ; GFX11-SDAG-TRUE16-LABEL: test_ldexp_v4f16_v4i16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v1.h, v1.h, v3.h
-; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v0.h, v2.h
-; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v0.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v1.l, v1.l, v3.l
+; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v0.l, v2.l
+; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v0.h, v2.h
+; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v1.h, v1.h, v3.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: test_ldexp_v4f16_v4i16:

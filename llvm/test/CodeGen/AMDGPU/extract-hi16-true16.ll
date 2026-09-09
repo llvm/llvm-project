@@ -61,8 +61,8 @@ define amdgpu_cs void @extract_hi16_f16_fadd(<2 x half> %v, ptr addrspace(1) %ou
 define amdgpu_cs void @extract_hi16_uitofp_v2i16(<2 x i16> %v, ptr addrspace(1) %out) {
 ; GFX12-TRUE16-LABEL: extract_hi16_uitofp_v2i16:
 ; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.h, v0.h
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.h, v0.h
 ; GFX12-TRUE16-NEXT:    global_store_b32 v[1:2], v0, off
 ; GFX12-TRUE16-NEXT:    s_endpgm
 ;
@@ -90,10 +90,10 @@ define amdgpu_cs void @extract_hi16_uitofp_v2i16(<2 x i16> %v, ptr addrspace(1) 
 define amdgpu_cs void @extract_hi16_uitofp_v4i16(<4 x i16> %v, ptr addrspace(1) %out) {
 ; GFX12-TRUE16-LABEL: extract_hi16_uitofp_v4i16:
 ; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v1.h, v1.h
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v1.l, v1.l
-; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.h, v0.h
+; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v1.h, v1.h
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.h, v0.h
 ; GFX12-TRUE16-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX12-TRUE16-NEXT:    s_endpgm
 ;
