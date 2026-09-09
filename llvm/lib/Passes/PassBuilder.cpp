@@ -211,6 +211,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/SafepointIRVerifier.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
@@ -532,6 +533,37 @@ public:
   }
 
   static StringRef name() { return "TriggerVerifierErrorPass"; }
+};
+
+// Test-only: corrupt branch_weights so in-function flow no longer adds up.
+// Used to check that `-verify-pgo-flow` runs after a transforming pass.
+// DO NOT USE THIS EXCEPT FOR TESTING!
+class BreakPGOFlowBranchWeightsPass
+    : public OptionalPassInfoMixin<BreakPGOFlowBranchWeightsPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    if (F.isDeclaration())
+      return PreservedAnalyses::all();
+
+    for (BasicBlock &BB : F) {
+      Instruction *Term = BB.getTerminator();
+      if (!Term)
+        continue;
+      SmallVector<uint32_t, 8> Weights;
+      if (!extractBranchWeights(*Term, Weights) ||
+          Weights.size() != Term->getNumSuccessors() || Weights.empty())
+        continue;
+      if (Weights[0] > 0)
+        --Weights[0];
+      else
+        ++Weights[0];
+      setBranchWeights(*Term, Weights, /*IsExpected=*/false);
+      return PreservedAnalyses::none();
+    }
+    return PreservedAnalyses::all();
+  }
+
+  static StringRef name() { return "BreakPGOFlowBranchWeightsPass"; }
 };
 
 // A pass requires all MachineFunctionProperties.
