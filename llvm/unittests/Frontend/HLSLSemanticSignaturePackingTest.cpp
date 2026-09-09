@@ -67,8 +67,9 @@ protected:
     return Elements;
   }
 
-  Error packStacked(SmallVectorImpl<SemanticSignatureElement> &Elements,
-                    const TestConfig &Config) {
+  Expected<unsigned>
+  packStacked(SmallVectorImpl<SemanticSignatureElement> &Elements,
+              const TestConfig &Config) {
     return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
   }
 
@@ -77,13 +78,9 @@ protected:
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
     ASSERT_EQ(Elements.size(), Locations.size());
 
-    ASSERT_THAT_ERROR(packStacked(Elements, Config), Succeeded());
-
-    unsigned Rows = 0;
-    for (const SemanticSignatureElement &Element : Elements)
-      if (Element.isAllocated())
-        Rows = std::max(Rows, Element.StartRow + Element.Rows);
-    EXPECT_EQ(Rows, ExpectedRows);
+    Expected<unsigned> Rows = packStacked(Elements, Config);
+    ASSERT_THAT_EXPECTED(Rows, Succeeded());
+    EXPECT_EQ(*Rows, ExpectedRows);
 
     unsigned Index = 0;
     for (ExpectedLocation Location : Locations) {
@@ -97,13 +94,13 @@ protected:
                           SignaturePackingError::ErrorKind ExpectedKind,
                           unsigned ExpectedElementIndex) {
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
-    Error E = packStacked(Elements, Config);
-    if (!E) {
+    Expected<unsigned> Rows = packStacked(Elements, Config);
+    if (Rows) {
       ADD_FAILURE() << "expected a SignaturePackingError";
       return;
     }
     handleAllErrors(
-        std::move(E),
+        Rows.takeError(),
         [&](const SignaturePackingError &PackingErr) {
           EXPECT_EQ(PackingErr.getErrorKind(), ExpectedKind);
           EXPECT_EQ(PackingErr.getElementIndex(), ExpectedElementIndex);

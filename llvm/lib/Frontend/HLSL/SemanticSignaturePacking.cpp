@@ -28,7 +28,7 @@ void SignaturePackingError::log(raw_ostream &OS) const {
   OS << " (element " << ElementIndex << ")";
 }
 
-Error llvm::hlsl::packSignatureStacked(
+Expected<unsigned> llvm::hlsl::packSignatureStacked(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy) {
   assert(ShaderStage == Triple::Vertex && IOTy == IOType::In &&
@@ -62,5 +62,5 @@ Error llvm::hlsl::packSignatureStacked(
     NextRow += Element.Rows;
   }
 
-  return Error::success();
+  return NextRow;
 }
