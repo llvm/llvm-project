@@ -24,9 +24,9 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/pwd/field_tokenizer.h"
+#include "src/__support/pwd/flat_file_db.h"
 #include "src/__support/str_to_integer.h"
-#include "src/pwd/field_tokenizer.h"
-#include "src/pwd/flat_file_db.h"
 #include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {

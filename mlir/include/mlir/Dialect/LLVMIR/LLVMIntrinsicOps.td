@@ -179,6 +179,8 @@ def LLVM_CountTrailingZerosOp : LLVM_CountZerosIntrOp<"cttz">;
 def LLVM_CtPopOp : LLVM_UnaryIntrOpI<"ctpop">;
 def LLVM_FshlOp : LLVM_TernarySameArgsIntrOpI<"fshl">;
 def LLVM_FshrOp : LLVM_TernarySameArgsIntrOpI<"fshr">;
+def LLVM_PdepOp : LLVM_BinarySameArgsIntrOpI<"pdep">;
+def LLVM_PextOp : LLVM_BinarySameArgsIntrOpI<"pext">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrOpF<"minnum">;
 def LLVM_MaximumOp : LLVM_BinarySameArgsIntrOpF<"maximum">;
@@ -587,7 +589,7 @@ class LLVM_ConstrainedFCmpIntrBase<string mnem>
         /*traits=*/[Pure, SameTypeOperands,
           TypesMatchWith<"result type has i1 element type and same shape as "
                          "operands", "arg_0", "res",
-                         "::getI1SameShape($_self)">,
+                         "::mlir::LLVM::getI1SameShape($_self)">,
           DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>],
         /*requiresFastmath=*/1> {
   let arguments = (ins FCmpPredicate:$predicate,
