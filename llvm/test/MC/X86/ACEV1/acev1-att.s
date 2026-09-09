@@ -143,3 +143,23 @@
 // CHECK: top4bsud %zmm0, %zmm16, %tmm1
 // CHECK: encoding: [0x62,0xb2,0x7e,0x48,0x5e,0xc8]
           top4bsud %zmm0, %zmm16, %tmm1
+
+// CHECK: ldtilecfg (%rax)
+// CHECK: encoding: [0xc4,0xe2,0x78,0x49,0x00]
+          ldtilecfg (%rax)
+
+// CHECK: sttilecfg (%rax)
+// CHECK: encoding: [0xc4,0xe2,0x79,0x49,0x00]
+          sttilecfg (%rax)
+
+// CHECK: tilezero %tmm0
+// CHECK: encoding: [0xc4,0xe2,0x7b,0x49,0xc0]
+          tilezero %tmm0
+
+// CHECK: tilezero %tmm7
+// CHECK: encoding: [0xc4,0xe2,0x7b,0x49,0xf8]
+          tilezero %tmm7
+
+// CHECK: tilerelease
+// CHECK: encoding: [0xc4,0xe2,0x78,0x49,0xc0]
+          tilerelease
