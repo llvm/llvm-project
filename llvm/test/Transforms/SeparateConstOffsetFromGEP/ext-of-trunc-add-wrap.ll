@@ -12,17 +12,14 @@
 define ptr @zext_of_lossy_trunc(ptr %p, i8 %a, i64 %iv) {
 ; CHECK-LABEL: define ptr @zext_of_lossy_trunc(
 ; CHECK-SAME: ptr [[P:%.*]], i8 [[A:%.*]], i64 [[IV:%.*]]) {
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[IV_NEXT]] to i8
 ; CHECK-NEXT:    [[AZ:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[AZ]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i8 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[IV]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i32 [[AZ]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[SUM]] to i8
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext nneg i8 [[TMP5]] to i64
-; CHECK-NEXT:    [[SUM2:%.*]] = add i64 [[TMP2]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[SUM2]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP7]]
-; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 4
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TMP6]]
 ; CHECK-NEXT:    ret ptr [[UGLYGEP3]]
 ;
   %iv.next = add nuw nsw i64 %iv, 1
@@ -42,11 +39,10 @@ define ptr @sext_of_lossy_trunc(ptr %p, i32 %x) {
 ; CHECK-LABEL: define ptr @sext_of_lossy_trunc(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[X]], 127
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i32 [[A]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SUM]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i8 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 12
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[UGLYGEP2]]
 ;
   %a = and i32 %x, 127
@@ -66,11 +62,10 @@ define ptr @sext_of_lossy_operand(ptr %p, i1 %c) {
 ; CHECK-LABEL: define ptr @sext_of_lossy_operand(
 ; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = select i1 [[C]], i32 224, i32 227
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[A]], -100
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SUM]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i8 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -400
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[UGLYGEP2]]
 ;
   %a = select i1 %c, i32 224, i32 227
@@ -89,11 +84,10 @@ define ptr @zext_of_lossless_trunc(ptr %p, i32 %x) {
 ; CHECK-LABEL: define ptr @zext_of_lossless_trunc(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[X]], 15
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i32 [[A]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SUM]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i8 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 12
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[UGLYGEP2]]
 ;
   %a = and i32 %x, 15
