@@ -6399,7 +6399,6 @@ bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
 
   auto *MF = MI.getMF();
   const auto &TLI = *MF->getSubtarget().getTargetLowering();
-  const TargetOptions &Options = MF->getTarget().Options;
   LLT DstType = MRI.getType(MI.getOperand(0).getReg());
 
   if (CanReassociate && !MI.getFlag(MachineInstr::MIFlag::FmReassoc))
@@ -6414,7 +6413,9 @@ bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
   if (!HasFMAD && !HasFMA)
     return false;
 
-  AllowFusionGlobally = Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD;
+  // FMAD (with intermediate rounding) is always safe to form; FMA requires the
+  // contract fast-math flag.
+  AllowFusionGlobally = HasFMAD;
   // If the addition is not contractable, do not combine.
   if (!AllowFusionGlobally && !MI.getFlag(MachineInstr::MIFlag::FmContract))
     return false;
