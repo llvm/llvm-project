@@ -1251,6 +1251,12 @@ llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
 // CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)
 llvm.func @nofreeattr_decl(!llvm.ptr {llvm.nofree})
 
+// CHECK-LABEL: declare void @nofreeobjattr_decl(ptr nofreeobj)
+llvm.func @nofreeobjattr_decl(!llvm.ptr {llvm.nofreeobj})
+
+// CHECK-LABEL: declare nofreeobj ptr @nofreeobjattr_ret_decl()
+llvm.func @nofreeobjattr_ret_decl() -> (!llvm.ptr {llvm.nofreeobj})
+
 // CHECK-LABEL: declare void @nonnullattr_decl(ptr nonnull)
 llvm.func @nonnullattr_decl(!llvm.ptr {llvm.nonnull})
 
