@@ -771,7 +771,7 @@ public:
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
 
-  /// Check if return address signing hardening is enabled
+  /// Check if return address authentication hardening is enabled
   bool hasSignReturnAddressHardening() const {
     return getSignReturnAddressHardening() !=
            SignReturnAddressHardeningKind::None;
