@@ -2,6 +2,6 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -finclude-default-header -x hlsl -verify -o - %s
 
 float4 main(float4 a : A) : SV_Position {
-// expected-error@-1 {{semantic 'SV_Position' is not supported as a pixel shader output; it is available as an input}}
+// expected-error@-1 {{semantic 'SV_Position' is not supported as a pixel shader output; it is only available as an input}}
   return a;
 }

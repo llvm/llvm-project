@@ -1151,11 +1151,11 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
       CurrentIOTypeName = "output";
     SmallVector<std::string, 3> ValidType;
     if (any(AllowedIOTypes & IOType::In))
-      ValidType.push_back("input");
+      ValidType.push_back("an input");
     if (any(AllowedIOTypes & IOType::Out))
-      ValidType.push_back("output");
+      ValidType.push_back("an output");
     if (any(AllowedIOTypes & IOType::PatchConstantOrPrimitive))
-      ValidType.push_back("patch constant or primitive");
+      ValidType.push_back("a patch constant or a primitive");
     Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
         << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
         << /*AvailableInStage=*/true << CurrentIOTypeName
