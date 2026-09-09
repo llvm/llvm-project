@@ -346,6 +346,17 @@ static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
     return SE.getMonotonicPredicateType(AR, ICmpInst::ICMP_UGE) ==
            ScalarEvolution::MonotonicPredicateType::MonotonicallyIncreasing;
   }
+  case scAddExpr:
+  case scMulExpr: {
+    const auto *NAry = cast<SCEVNAryExpr>(S);
+    if (!NAry->hasNoUnsignedWrap())
+      return false;
+    // With NUW, the exact sum or product fits in the type, so it is
+    // non-decreasing if every operandis.
+    return all_of(NAry->operands(), [&](const SCEV *Op) {
+      return isKnownNonDecreasingInLoop(Op, L, SE);
+    });
+  }
   default:
     return false;
   }
