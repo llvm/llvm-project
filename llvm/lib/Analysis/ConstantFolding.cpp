@@ -2424,7 +2424,10 @@ static Constant *constantFoldVectorPartialReduceAdd(Constant *Acc,
                                                     Constant *Input,
                                                     const DataLayout &DL) {
   auto *AccTy = cast<FixedVectorType>(Acc->getType());
-  auto *InputTy = cast<FixedVectorType>(Input->getType());
+  // A fixed result type does not guarantee a fixed input type.
+  auto *InputTy = dyn_cast<FixedVectorType>(Input->getType());
+  if (!InputTy)
+    return nullptr;
 
   unsigned NumAccElts = AccTy->getNumElements();
   unsigned NumInputElts = InputTy->getNumElements();
