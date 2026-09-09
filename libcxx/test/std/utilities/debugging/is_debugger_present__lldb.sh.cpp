@@ -25,7 +25,4 @@
 
 #include <debugging>
 
-int main(int, char**) {
-  static_assert(noexcept(std::is_debugger_present()));
-  return std::is_debugger_present() ? 0 : 1;
-}
+int main(int, char**) { return std::is_debugger_present() ? 0 : 1; }

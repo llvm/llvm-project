@@ -42,8 +42,6 @@ void test() {
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
   MarkAsLive(isDebuggerPresent);
   StopForDebugger(&isDebuggerPresent);
-
-  static_assert(noexcept(std::is_debugger_present()));
 }
 
 int main(int, char**) {

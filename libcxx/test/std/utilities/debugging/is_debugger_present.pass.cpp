@@ -19,7 +19,7 @@
 #include <debugging>
 
 int main(int, char**) {
-  assert(!std::is_debugger_present());
   static_assert(noexcept(std::is_debugger_present()));
+  assert(!std::is_debugger_present());
   return 0;
 }
