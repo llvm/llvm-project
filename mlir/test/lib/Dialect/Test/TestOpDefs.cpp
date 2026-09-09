@@ -14,7 +14,6 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace test;
