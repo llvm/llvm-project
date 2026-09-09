@@ -2787,7 +2787,10 @@ static bool collectUnswitchCandidates(
     AddUnswitchCandidatesForInst(BI, BI->getCondition());
   }
 
-  if (MSSAU && !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
+  BasicBlock *Header = L.getHeader();
+  // Need to make sure the load instruction to be hoisted is always executed.
+  bool HeaderCondGuaranteedToExecute = isGuaranteedToTransferExecutionToSuccessor(Header->begin(), Header->getTerminator()->getIterator());
+  if (MSSAU && HeaderCondGuaranteedToExecute && !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
       !any_of(UnswitchCandidates, [&L](auto &TerminatorAndInvariants) {
          return TerminatorAndInvariants.TI == L.getHeader()->getTerminator();
        })) {
@@ -2797,11 +2800,11 @@ static bool collectUnswitchCandidates(
           dbgs() << "simple-loop-unswitch: Found partially invariant condition "
                  << *Info->InstToDuplicate[0] << "\n");
       PartialIVInfo = *Info;
-      PartialIVCondBranch = L.getHeader()->getTerminator();
+      PartialIVCondBranch = Header->getTerminator();
       TinyPtrVector<Value *> ValsToDuplicate;
       llvm::append_range(ValsToDuplicate, Info->InstToDuplicate);
       UnswitchCandidates.push_back(
-          {L.getHeader()->getTerminator(), std::move(ValsToDuplicate)});
+          {Header->getTerminator(), std::move(ValsToDuplicate)});
     }
   }
   return !UnswitchCandidates.empty();
