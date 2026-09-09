@@ -641,11 +641,8 @@ constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
     FeatureAMX_TILE | FeatureAVX10_2;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
-// ACE v1 Features. AVX10.1 is the vector baseline required by the ACE v1
-// feature detection algorithm. AMX-TILE provides the tile registers and tile
-// management instructions that ACE reuses; per spec section 15.5.5 an ACE-only
-// implementation still reports it.
-constexpr FeatureBitset ImpliedFeaturesACEV1 = FeatureAVX10_1 | FeatureAMX_TILE;
+// ACE v1 Features
+constexpr FeatureBitset ImpliedFeaturesACEV1 = FeatureAVX10_1;
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
 constexpr FeatureBitset ImpliedFeaturesCMPCCXADD = {};

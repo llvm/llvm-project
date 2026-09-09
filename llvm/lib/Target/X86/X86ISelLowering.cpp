@@ -28664,8 +28664,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     // ACE Tile Movement Intrinsics - handle both immediate and register index
     // forms using a single intrinsic. Check if index is constant to select
     // the appropriate instruction form.
-    case Intrinsic::x86_tilemovrow_set:
-    case Intrinsic::x86_tilemovcol_set: {
+    case Intrinsic::x86_acev1_tilemovrowinsert:
+    case Intrinsic::x86_acev1_tilemovcolinsert: {
       SDLoc DL(Op);
       SDValue Chain = Op.getOperand(0);
       unsigned TileID = Op.getConstantOperandVal(2);
@@ -28673,12 +28673,12 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       SDValue Idx = Op.getOperand(4);
 
       unsigned PseudoImm, PseudoReg;
-      if (IntNo == Intrinsic::x86_tilemovrow_set) {
-        PseudoImm = X86::PTILEMOVROW;
-        PseudoReg = X86::PTILEMOVROW_REG;
+      if (IntNo == Intrinsic::x86_acev1_tilemovrowinsert) {
+        PseudoImm = X86::PTILEMOVROWtri;
+        PseudoReg = X86::PTILEMOVROWtre;
       } else {
-        PseudoImm = X86::PTILEMOVCOL;
-        PseudoReg = X86::PTILEMOVCOL_REG;
+        PseudoImm = X86::PTILEMOVCOLtri;
+        PseudoReg = X86::PTILEMOVCOLtre;
       }
 
       MachineSDNode *Node;
@@ -38847,34 +38847,34 @@ static const TileOpcodeModelEntry TileOpcodeModels[] = {
     {X86::PTILEZEROV, TileProgModelType::AMX_ManagedRA},
 
     // ACE-only DirectReg (macro API)
-    {X86::PTILEMOVCOL, TileProgModelType::ACE_DirectReg},
-    {X86::PTILEMOVCOL_REG, TileProgModelType::ACE_DirectReg},
-    {X86::PTILEMOVROW, TileProgModelType::ACE_DirectReg},
-    {X86::PTILEMOVROW_REG, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP2BF16PS, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4BUUD, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4BUSD, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4BSSD, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4BSUD, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXHF8PS, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXBHF8PS, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXHBF8PS, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXBF8PS, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXBSSPS, TileProgModelType::ACE_DirectReg},
+    {X86::PTILEMOVCOLtri, TileProgModelType::ACE_DirectReg},
+    {X86::PTILEMOVCOLtre, TileProgModelType::ACE_DirectReg},
+    {X86::PTILEMOVROWtri, TileProgModelType::ACE_DirectReg},
+    {X86::PTILEMOVROWtre, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP2BF16PStrr, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4BUUDtrr, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4BUSDtrr, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4BSSDtrr, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4BSUDtrr, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXHF8PStrri, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXBHF8PStrri, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXHBF8PStrri, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXBF8PStrri, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXBSSPStrri, TileProgModelType::ACE_DirectReg},
 
     // ACE-only ManagedRA (struct API)
-    {X86::PTILEMOVCOLV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTILEMOVROWV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP2BF16PSV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4BUUDV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4BUSDV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4BSSDV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4BSUDV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXHF8PSV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXBHF8PSV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXHBF8PSV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXBF8PSV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXBSSPSV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTILEMOVCOLtreV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTILEMOVROWtreV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP2BF16PStrrV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4BUUDtrrV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4BUSDtrrV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4BSSDtrrV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4BSUDtrrV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXHF8PStrriV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXBHF8PStrriV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXHBF8PStrriV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXBF8PStrriV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXBSSPStrriV, TileProgModelType::ACE_ManagedRA},
 };
 
 // Set tile program model based on opcode. Returns true if model was set.
@@ -39341,18 +39341,18 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case X86::PTILEZEROV:
-  case X86::PTILEMOVCOLV:
-  case X86::PTILEMOVROWV:
-  case X86::PTOP2BF16PSV:
-  case X86::PTOP4BUUDV:
-  case X86::PTOP4BUSDV:
-  case X86::PTOP4BSSDV:
-  case X86::PTOP4BSUDV:
-  case X86::PTOP4MXHF8PSV:
-  case X86::PTOP4MXBHF8PSV:
-  case X86::PTOP4MXHBF8PSV:
-  case X86::PTOP4MXBF8PSV:
-  case X86::PTOP4MXBSSPSV:
+  case X86::PTILEMOVCOLtreV:
+  case X86::PTILEMOVROWtreV:
+  case X86::PTOP2BF16PStrrV:
+  case X86::PTOP4BUUDtrrV:
+  case X86::PTOP4BUSDtrrV:
+  case X86::PTOP4BSSDtrrV:
+  case X86::PTOP4BSUDtrrV:
+  case X86::PTOP4MXHF8PStrriV:
+  case X86::PTOP4MXBHF8PStrriV:
+  case X86::PTOP4MXHBF8PStrriV:
+  case X86::PTOP4MXBF8PStrriV:
+  case X86::PTOP4MXBSSPStrriV:
     return BB;
   case X86::PTILELOADDRS:
   case X86::PTILELOADDRST1:
@@ -39484,67 +39484,67 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   // Note: BSRMOVF, BSRMOVH, BSRMOVL are handled directly by patterns on real
   // instructions
-  case X86::PTILEMOVCOL: {
+  case X86::PTILEMOVCOLtri: {
     unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
     Register SrcReg = MI.getOperand(1).getReg();
     unsigned Idx = MI.getOperand(2).getImm();
-    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVCOLri), DstReg)
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVCOLtri), DstReg)
         .addReg(SrcReg)
         .addImm(Idx);
     MI.eraseFromParent();
     return BB;
   }
-  case X86::PTILEMOVCOL_REG: {
+  case X86::PTILEMOVCOLtre: {
     unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
     Register SrcReg = MI.getOperand(1).getReg();
-    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVCOLrr), DstReg)
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVCOLtre), DstReg)
         .addReg(SrcReg)
         .addReg(MI.getOperand(2).getReg());
     MI.eraseFromParent();
     return BB;
   }
-  case X86::PTILEMOVROW: {
+  case X86::PTILEMOVROWtri: {
     unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
     Register SrcReg = MI.getOperand(1).getReg();
     unsigned Idx = MI.getOperand(2).getImm();
-    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVROWri), DstReg)
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVROWtri), DstReg)
         .addReg(SrcReg)
         .addImm(Idx);
     MI.eraseFromParent();
     return BB;
   }
-  case X86::PTILEMOVROW_REG: {
+  case X86::PTILEMOVROWtre: {
     unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
     Register SrcReg = MI.getOperand(1).getReg();
-    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVROWrr), DstReg)
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVROWtre), DstReg)
         .addReg(SrcReg)
         .addReg(MI.getOperand(2).getReg());
     MI.eraseFromParent();
     return BB;
   }
-  case X86::PTOP2BF16PS:
-  case X86::PTOP4BUUD:
-  case X86::PTOP4BUSD:
-  case X86::PTOP4BSSD:
-  case X86::PTOP4BSUD: {
+  case X86::PTOP2BF16PStrr:
+  case X86::PTOP4BUUDtrr:
+  case X86::PTOP4BUSDtrr:
+  case X86::PTOP4BSSDtrr:
+  case X86::PTOP4BSUDtrr: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected opcode!");
-    case X86::PTOP2BF16PS:
-      Opc = X86::TOP2BF16PSrrr;
+    case X86::PTOP2BF16PStrr:
+      Opc = X86::TOP2BF16PStrr;
       break;
-    case X86::PTOP4BUUD:
-      Opc = X86::TOP4BUUDrrr;
+    case X86::PTOP4BUUDtrr:
+      Opc = X86::TOP4BUUDtrr;
       break;
-    case X86::PTOP4BUSD:
-      Opc = X86::TOP4BUSDrrr;
+    case X86::PTOP4BUSDtrr:
+      Opc = X86::TOP4BUSDtrr;
       break;
-    case X86::PTOP4BSSD:
-      Opc = X86::TOP4BSSDrrr;
+    case X86::PTOP4BSSDtrr:
+      Opc = X86::TOP4BSSDtrr;
       break;
-    case X86::PTOP4BSUD:
-      Opc = X86::TOP4BSUDrrr;
+    case X86::PTOP4BSUDtrr:
+      Opc = X86::TOP4BSUDtrr;
       break;
     }
     // These instructions: TILE dst (rw), ZMM src1, ZMM src2
@@ -39557,29 +39557,29 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return BB;
   }
-  case X86::PTOP4MXHF8PS:
-  case X86::PTOP4MXBHF8PS:
-  case X86::PTOP4MXHBF8PS:
-  case X86::PTOP4MXBF8PS:
-  case X86::PTOP4MXBSSPS: {
+  case X86::PTOP4MXHF8PStrri:
+  case X86::PTOP4MXBHF8PStrri:
+  case X86::PTOP4MXHBF8PStrri:
+  case X86::PTOP4MXBF8PStrri:
+  case X86::PTOP4MXBSSPStrri: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected opcode!");
-    case X86::PTOP4MXHF8PS:
-      Opc = X86::TOP4MXHF8PSrrri;
+    case X86::PTOP4MXHF8PStrri:
+      Opc = X86::TOP4MXHF8PStrri;
       break;
-    case X86::PTOP4MXBHF8PS:
-      Opc = X86::TOP4MXBHF8PSrrri;
+    case X86::PTOP4MXBHF8PStrri:
+      Opc = X86::TOP4MXBHF8PStrri;
       break;
-    case X86::PTOP4MXHBF8PS:
-      Opc = X86::TOP4MXHBF8PSrrri;
+    case X86::PTOP4MXHBF8PStrri:
+      Opc = X86::TOP4MXHBF8PStrri;
       break;
-    case X86::PTOP4MXBF8PS:
-      Opc = X86::TOP4MXBF8PSrrri;
+    case X86::PTOP4MXBF8PStrri:
+      Opc = X86::TOP4MXBF8PStrri;
       break;
-    case X86::PTOP4MXBSSPS:
-      Opc = X86::TOP4MXBSSPSrrri;
+    case X86::PTOP4MXBSSPStrri:
+      Opc = X86::TOP4MXBSSPStrri;
       break;
     }
     // These instructions: TILE dst (rw), ZMM src1, ZMM src2, imm8

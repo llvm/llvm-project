@@ -35,15 +35,15 @@ entry:
   %t7 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
   %t8 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
 
-  %d0 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t0, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d1 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t1, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d2 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t2, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d3 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t3, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d4 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t4, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d5 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t5, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d6 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t6, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d7 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t7, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d8 = tail call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t8, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d0 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t0, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d1 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t1, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d2 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t2, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d3 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t3, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d4 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t4, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d5 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t5, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d6 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t6, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d7 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t7, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d8 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t8, <32 x bfloat> %a, <32 x bfloat> %b)
 
   ; Keep all nine results live to the end so the allocator has to spill.
   %r0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d0, i32 0)
@@ -86,15 +86,15 @@ entry:
   %t7 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
   %t8 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
 
-  %d0 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t0, <64 x i8> %a, <64 x i8> %a)
-  %d1 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t1, <64 x i8> %a, <64 x i8> %a)
-  %d2 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t2, <64 x i8> %a, <64 x i8> %a)
-  %d3 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t3, <64 x i8> %a, <64 x i8> %a)
-  %d4 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t4, <64 x i8> %a, <64 x i8> %a)
-  %d5 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t5, <64 x i8> %a, <64 x i8> %a)
-  %d6 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t6, <64 x i8> %a, <64 x i8> %a)
-  %d7 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t7, <64 x i8> %a, <64 x i8> %a)
-  %d8 = tail call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t8, <64 x i8> %a, <64 x i8> %a)
+  %d0 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t0, <64 x i8> %a, <64 x i8> %a)
+  %d1 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t1, <64 x i8> %a, <64 x i8> %a)
+  %d2 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t2, <64 x i8> %a, <64 x i8> %a)
+  %d3 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t3, <64 x i8> %a, <64 x i8> %a)
+  %d4 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t4, <64 x i8> %a, <64 x i8> %a)
+  %d5 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t5, <64 x i8> %a, <64 x i8> %a)
+  %d6 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t6, <64 x i8> %a, <64 x i8> %a)
+  %d7 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t7, <64 x i8> %a, <64 x i8> %a)
+  %d8 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t8, <64 x i8> %a, <64 x i8> %a)
 
   %r0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d0, i32 0)
   store volatile <16 x i32> %r0, ptr %out, align 64
@@ -119,6 +119,6 @@ entry:
 }
 
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
-declare x86_amx @llvm.x86.top2bf16ps.internal(i16, i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
-declare x86_amx @llvm.x86.top4bssd.internal(i16, i16, i16, x86_amx, <64 x i8>, <64 x i8>)
+declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
+declare x86_amx @llvm.x86.acev1.top4bssd.internal(i16, i16, i16, x86_amx, <64 x i8>, <64 x i8>)
 declare <16 x i32> @llvm.x86.tilemovrow.internal(i16, i16, x86_amx, i32)

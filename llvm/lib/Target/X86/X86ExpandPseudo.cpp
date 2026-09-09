@@ -699,32 +699,30 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     MI.tieOperands(0, 1);
     return true;
   }
-  // ACE internal pseudo instructions
-  // Pattern: Remove dimension operands (1-3), change opcode, re-tie operands
-  case X86::PTOP2BF16PSV:
-  case X86::PTOP4BUUDV:
-  case X86::PTOP4BUSDV:
-  case X86::PTOP4BSSDV:
-  case X86::PTOP4BSUDV: {
+  case X86::PTOP2BF16PStrrV:
+  case X86::PTOP4BUUDtrrV:
+  case X86::PTOP4BUSDtrrV:
+  case X86::PTOP4BSSDtrrV:
+  case X86::PTOP4BSUDtrrV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc = 0;
     switch (Opcode) {
-    case X86::PTOP2BF16PSV:
-      Opc = X86::TOP2BF16PSrrr;
+    case X86::PTOP2BF16PStrrV:
+      Opc = X86::TOP2BF16PStrr;
       break;
-    case X86::PTOP4BUUDV:
-      Opc = X86::TOP4BUUDrrr;
+    case X86::PTOP4BUUDtrrV:
+      Opc = X86::TOP4BUUDtrr;
       break;
-    case X86::PTOP4BUSDV:
-      Opc = X86::TOP4BUSDrrr;
+    case X86::PTOP4BUSDtrrV:
+      Opc = X86::TOP4BUSDtrr;
       break;
-    case X86::PTOP4BSSDV:
-      Opc = X86::TOP4BSSDrrr;
+    case X86::PTOP4BSSDtrrV:
+      Opc = X86::TOP4BSSDtrr;
       break;
-    case X86::PTOP4BSUDV:
-      Opc = X86::TOP4BSUDrrr;
+    case X86::PTOP4BSUDtrrV:
+      Opc = X86::TOP4BSUDtrr;
       break;
     default:
       llvm_unreachable("Unexpected ACE opcode");
@@ -733,38 +731,32 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     MI.tieOperands(0, 1);
     return true;
   }
-  // ACE TOP4MX internal pseudo instructions - have 4 dimension operands (row,
-  // col, k, imm)
-  case X86::PTOP4MXHF8PSV:
-  case X86::PTOP4MXBHF8PSV:
-  case X86::PTOP4MXHBF8PSV:
-  case X86::PTOP4MXBF8PSV:
-  case X86::PTOP4MXBSSPSV: {
+  case X86::PTOP4MXHF8PStrriV:
+  case X86::PTOP4MXBHF8PStrriV:
+  case X86::PTOP4MXHBF8PStrriV:
+  case X86::PTOP4MXBF8PStrriV:
+  case X86::PTOP4MXBSSPStrriV: {
     MI.untieRegOperand(5);
-    // Remove dimension operands 1-3, keep imm at position 4
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
-    // Now operand layout is: dst, imm, src1(acc), src2, src3
-    // Real instruction expects: dst, src1(acc), src2, src3, imm
-    // Need to move imm from position 1 to end
     unsigned ImmVal = MI.getOperand(1).getImm();
     MI.removeOperand(1);
     unsigned Opc = 0;
     switch (Opcode) {
-    case X86::PTOP4MXHF8PSV:
-      Opc = X86::TOP4MXHF8PSrrri;
+    case X86::PTOP4MXHF8PStrriV:
+      Opc = X86::TOP4MXHF8PStrri;
       break;
-    case X86::PTOP4MXBHF8PSV:
-      Opc = X86::TOP4MXBHF8PSrrri;
+    case X86::PTOP4MXBHF8PStrriV:
+      Opc = X86::TOP4MXBHF8PStrri;
       break;
-    case X86::PTOP4MXHBF8PSV:
-      Opc = X86::TOP4MXHBF8PSrrri;
+    case X86::PTOP4MXHBF8PStrriV:
+      Opc = X86::TOP4MXHBF8PStrri;
       break;
-    case X86::PTOP4MXBF8PSV:
-      Opc = X86::TOP4MXBF8PSrrri;
+    case X86::PTOP4MXBF8PStrriV:
+      Opc = X86::TOP4MXBF8PStrri;
       break;
-    case X86::PTOP4MXBSSPSV:
-      Opc = X86::TOP4MXBSSPSrrri;
+    case X86::PTOP4MXBSSPStrriV:
+      Opc = X86::TOP4MXBSSPStrri;
       break;
     default:
       llvm_unreachable("Unexpected ACE TOP4MX opcode");
@@ -774,17 +766,12 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     MI.tieOperands(0, 1);
     return true;
   }
-  // ACE TILEMOV internal pseudo instructions - output TILE, remove dimension
-  // operands
-  case X86::PTILEMOVCOLV:
-  case X86::PTILEMOVROWV: {
-    // Operand layout: dst, row, col, src(VR512), idx(GR32)
-    // Remove row, col (operands 1, 2)
+  case X86::PTILEMOVCOLtreV:
+  case X86::PTILEMOVROWtreV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
-    // Now layout: dst, src, idx - matches real instruction
-    unsigned Opc =
-        (Opcode == X86::PTILEMOVCOLV) ? X86::TILEMOVCOLrr : X86::TILEMOVROWrr;
+    unsigned Opc = (Opcode == X86::PTILEMOVCOLtreV) ? X86::TILEMOVCOLtre
+                                                    : X86::TILEMOVROWtre;
     MI.setDesc(TII->get(Opc));
     return true;
   }
