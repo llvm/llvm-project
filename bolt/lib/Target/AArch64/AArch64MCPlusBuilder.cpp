@@ -766,7 +766,7 @@ public:
     case AArch64::LDRSWl:
       AddrReg = DataReg;
       OpCode = AArch64::LDRSWui;
-      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
       break;
     default:
       llvm_unreachable("LDR (literal) or LDRSW (literal) expected");

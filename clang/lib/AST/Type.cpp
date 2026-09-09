@@ -4630,18 +4630,6 @@ SubstTemplateTypeParmType::getReplacedParameter() const {
       getReplacedTemplateParameter(getAssociatedDecl(), getIndex())));
 }
 
-void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
-                                        QualType Replacement,
-                                        const Decl *AssociatedDecl,
-                                        unsigned Index,
-                                        UnsignedOrNone PackIndex, bool Final) {
-  Replacement.Profile(ID);
-  ID.AddPointer(AssociatedDecl);
-  ID.AddInteger(Index);
-  ID.AddInteger(PackIndex.toInternalRepresentation());
-  ID.AddBoolean(Final);
-}
-
 SubstPackType::SubstPackType(TypeClass Derived, QualType Canon,
                              const TemplateArgument &ArgPack)
     : Type(Derived, Canon,
@@ -4859,22 +4847,6 @@ void ObjCObjectTypeImpl::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getBaseType(), getTypeArgsAsWritten(),
           llvm::ArrayRef(qual_begin(), getNumProtocols()),
           isKindOfTypeAsWritten());
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID,
-                                const ObjCTypeParamDecl *OTPDecl,
-                                QualType CanonicalType,
-                                ArrayRef<ObjCProtocolDecl *> protocols) {
-  ID.AddPointer(OTPDecl);
-  ID.AddPointer(CanonicalType.getAsOpaquePtr());
-  ID.AddInteger(protocols.size());
-  for (auto *proto : protocols)
-    ID.AddPointer(proto);
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getDecl(), getCanonicalTypeInternal(),
-          llvm::ArrayRef(qual_begin(), getNumProtocols()));
 }
 
 namespace {

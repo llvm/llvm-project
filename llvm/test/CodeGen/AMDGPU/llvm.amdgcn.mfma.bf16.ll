@@ -17,7 +17,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x2bf16(ptr addrspace(1) %arg) #0 {
 ; GFX908-SDAG-LABEL: test_mfma_f32_32x32x2bf16:
 ; GFX908-SDAG:       ; %bb.0: ; %bb
 ; GFX908-SDAG-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
-; GFX908-SDAG-NEXT:    v_mov_b32_e32 v4, 0
+; GFX908-SDAG-NEXT:    v_mov_b32_e32 v29, 0
 ; GFX908-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-SDAG-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x0
 ; GFX908-SDAG-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x40
@@ -27,13 +27,11 @@ define amdgpu_kernel void @test_mfma_f32_32x32x2bf16(ptr addrspace(1) %arg) #0 {
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v2, s18
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a1, v1
+; GFX908-SDAG-NEXT:    v_mov_b32_e32 v0, s22
+; GFX908-SDAG-NEXT:    v_mov_b32_e32 v1, s23
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a2, v2
-; GFX908-SDAG-NEXT:    v_mov_b32_e32 v0, s21
-; GFX908-SDAG-NEXT:    v_mov_b32_e32 v1, s22
-; GFX908-SDAG-NEXT:    v_mov_b32_e32 v2, s23
-; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a5, v0
-; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a6, v1
-; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a7, v2
+; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a6, v0
+; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a7, v1
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v0, s24
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v1, s25
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v2, s26
@@ -74,7 +72,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x2bf16(ptr addrspace(1) %arg) #0 {
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v2, s12
-; GFX908-SDAG-NEXT:    v_mov_b32_e32 v5, s20
+; GFX908-SDAG-NEXT:    v_mov_b32_e32 v4, s20
+; GFX908-SDAG-NEXT:    v_mov_b32_e32 v5, s21
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a3, v3
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a26, v0
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a27, v1
@@ -83,7 +82,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x2bf16(ptr addrspace(1) %arg) #0 {
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v1, s14
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v2, s15
 ; GFX908-SDAG-NEXT:    v_mov_b32_e32 v3, 1
-; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a4, v5
+; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a4, v4
+; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a5, v5
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a29, v0
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a30, v1
 ; GFX908-SDAG-NEXT:    v_accvgpr_write_b32 a31, v2

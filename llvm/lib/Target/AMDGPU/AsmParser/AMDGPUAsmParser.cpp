@@ -5888,17 +5888,25 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MCInst Inst;
   Inst.setLoc(IDLoc);
   unsigned Result = Match_Success;
+
+  // Order match statuses from least to most specific and keep the most
+  // specific one:
+  //   Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature
+  auto atLeastAsSpecific = [](unsigned New, unsigned Cur) {
+    auto rank = [](unsigned M) {
+      return M == Match_MnemonicFail     ? 1
+             : M == Match_InvalidOperand ? 2
+             : M == Match_MissingFeature ? 3
+                                         : 0; // Match_Success sentinel
+    };
+    return rank(New) >= rank(Cur);
+  };
+
   for (auto Variant : getMatchedVariants()) {
     uint64_t EI;
     auto R =
         MatchInstructionImpl(Operands, Inst, EI, MatchingInlineAsm, Variant);
-    // We order match statuses from least to most specific. We use most specific
-    // status as resulting
-    // Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature
-    if (R == Match_Success || R == Match_MissingFeature ||
-        (R == Match_InvalidOperand && Result != Match_MissingFeature) ||
-        (R == Match_MnemonicFail && Result != Match_InvalidOperand &&
-         Result != Match_MissingFeature)) {
+    if (R == Match_Success || atLeastAsSpecific(R, Result)) {
       Result = R;
       ErrorInfo = EI;
     }

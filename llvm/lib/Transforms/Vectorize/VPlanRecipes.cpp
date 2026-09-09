@@ -813,8 +813,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
                                Name);
 
-    ElementCount EC = State.VF.multiplyCoefficientBy(Multiplier);
-    auto *PredTy = VectorType::get(Builder.getInt1Ty(), EC);
+    auto *PredTy = VectorType::get(Builder.getInt1Ty(), State.VF * Multiplier);
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
                                    {VIVElem0, ScalarTC}, nullptr, Name);
@@ -3183,6 +3182,11 @@ InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
   // If only the first lane is used, then there won't be any code that remains
   // in the loop for the first unrolled part.
   if (vputils::onlyFirstLaneUsed(this))
+    return 0;
+
+  // If the vector body executes at most once, the canonical IV is a constant
+  // and every lane's step folds away with it.
+  if (VPCostContext::executesAtMostOnce(*getParent()->getPlan(), VF))
     return 0;
 
   // Typically the operations are:

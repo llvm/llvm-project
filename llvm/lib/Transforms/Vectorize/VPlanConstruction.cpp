@@ -1404,6 +1404,17 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
 }
 
+/// Add an incoming value to all phis in \p VPBB for its just-added last
+/// predecessor, re-using the value of the previously last one.
+static void addIncomingForLastPredecessor(VPBasicBlock *VPBB) {
+  for (VPRecipeBase &R : VPBB->phis()) {
+    auto *Phi = cast<VPPhi>(&R);
+    assert(Phi->getNumIncoming() == VPBB->getNumPredecessors() - 1 &&
+           "must have incoming values for all predecessors but the new one");
+    Phi->addIncoming(Phi->getIncomingValue(Phi->getNumIncoming() - 1));
+  }
+}
+
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
 /// connecting it to both vector and scalar preheaders. Updates scalar
 /// preheader phis to account for the new predecessor.
@@ -1415,13 +1426,7 @@ static void insertCheckBlockBeforeVectorLoop(VPlan &Plan,
   VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
   VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
   CheckBlockVPBB->swapSuccessors();
-  unsigned NumPreds = ScalarPH->getNumPredecessors();
-  for (VPRecipeBase &R : ScalarPH->phis()) {
-    auto *Phi = cast<VPPhi>(&R);
-    assert(Phi->getNumIncoming() == NumPreds - 1 &&
-           "must have incoming values for all predecessors");
-    Phi->addIncoming(Phi->getOperand(NumPreds - 2));
-  }
+  addIncomingForLastPredecessor(ScalarPH);
 }
 
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
