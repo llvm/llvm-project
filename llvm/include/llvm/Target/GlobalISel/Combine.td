@@ -1000,7 +1000,7 @@ def neg_and_one_to_sext_inreg : GICombineRule<
 // Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
 def overlapping_and: GICombineRule <
   (defs root:$root, build_fn_matchinfo:$info),
-  (match (wip_match_opcode G_AND):$root,
+  (match (G_AND $root, $src1, $src2):$root,
          [{ return Helper.matchOverlappingAnd(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
 >;
