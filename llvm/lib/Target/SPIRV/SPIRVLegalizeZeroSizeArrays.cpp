@@ -20,7 +20,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "spirv-legalize-zero-size-arrays"
 

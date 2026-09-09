@@ -3899,6 +3899,18 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
+  // From a vector to a scalarized vector will be an series of extract-element
+  // and extends.
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      DstTy.getScalarSizeInBits() > 64 && SrcTy.getScalarSizeInBits() <= 64 &&
+      DstTy.isFixedLengthVector()) {
+    InstructionCost LaneCost = getVectorInstrCost(
+        Instruction::ExtractElement, Src, CostKind, -1, nullptr, nullptr);
+    InstructionCost ExtCost = getCastInstrCost(
+        Opcode, Dst->getScalarType(), Src->getScalarType(), CCH, CostKind);
+    return DstTy.getVectorNumElements() * (LaneCost + ExtCost);
+  }
+
   if (!SrcTy.isSimple() || !DstTy.isSimple())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
@@ -5694,7 +5706,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
     if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        VT.getVectorNumElements() >= (128 / EltSize) || Alignment != Align(1))
+        Alignment != Align(1))
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
@@ -5704,22 +5716,23 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     // Check non-power-of-2 loads/stores for legal vector element types with
     // NEON. Non-power-of-2 memory ops will get broken down to a set of
     // operations on smaller power-of-2 ops, including ld1/st1.
-    LLVMContext &C = Ty->getContext();
-    InstructionCost Cost(0);
-    SmallVector<EVT> TypeWorklist;
-    TypeWorklist.push_back(VT);
-    while (!TypeWorklist.empty()) {
-      EVT CurrVT = TypeWorklist.pop_back_val();
-      unsigned CurrNumElements = CurrVT.getVectorNumElements();
-      if (isPowerOf2_32(CurrNumElements)) {
-        Cost += 1;
-        continue;
-      }
+    InstructionCost Cost = VT.getVectorNumElements() / (128 / EltSize);
+    unsigned Remainder = VT.getVectorNumElements() % (128 / EltSize);
+    if (Remainder != 0) {
+      SmallVector<std::pair<unsigned, unsigned>> TypeWorklist;
+      TypeWorklist.push_back({Remainder, 0});
+      while (!TypeWorklist.empty()) {
+        auto [CurrNumElements, Offset] = TypeWorklist.pop_back_val();
+        if (isPowerOf2_32(CurrNumElements)) {
+          // 1 per load/store + possible lane insert.
+          Cost += 1 + (Offset == 0 ? 0 : 1);
+          continue;
+        }
 
-      unsigned PrevPow2 = NextPowerOf2(CurrNumElements) / 2;
-      TypeWorklist.push_back(EVT::getVectorVT(C, EltVT, PrevPow2));
-      TypeWorklist.push_back(
-          EVT::getVectorVT(C, EltVT, CurrNumElements - PrevPow2));
+        unsigned PrevPow2 = NextPowerOf2(CurrNumElements) / 2;
+        TypeWorklist.push_back({PrevPow2, Offset});
+        TypeWorklist.push_back({CurrNumElements - PrevPow2, Offset + PrevPow2});
+      }
     }
     return Cost;
   }
@@ -5737,12 +5750,16 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   if (VecTy->isScalableTy() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
-  // Scalable VFs will emit vector.[de]interleave intrinsics, and currently we
-  // only have lowering for power-of-2 factors.
-  // TODO: Add lowering for vector.[de]interleave3 intrinsics and support in
-  // InterleavedAccessPass for ld3/st3
-  if (VecTy->isScalableTy() && !isPowerOf2_32(Factor))
-    return InstructionCost::getInvalid();
+  // Scalable VFs emit vector.[de]interleave intrinsics, for which the target
+  // supports factors up to the maximum supported interleave factor.
+  if (VecTy->isScalableTy()) {
+    if (Factor > TLI->getMaxSupportedInterleaveFactor())
+      return InstructionCost::getInvalid();
+
+    if (Factor == 3 &&
+        DL.getTypeSizeInBits(VecTy).getKnownMinValue() != (3 * 128))
+      return InstructionCost::getInvalid();
+  }
 
   // Vectorization for masked interleaved accesses is only enabled for scalable
   // VF.
@@ -6684,8 +6701,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Invalid;
 
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
-       Opcode != Instruction::FAdd && Opcode != Instruction::FSub) ||
-      OpAExtend == TTI::PR_None)
+       Opcode != Instruction::FAdd && Opcode != Instruction::FSub))
     return Invalid;
 
   // Floating-point partial reductions are invalid if `reassoc` and `contract`
@@ -6708,6 +6724,21 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (BinOp && ((*BinOp != Instruction::Mul && *BinOp != Instruction::FMul) ||
                 InputTypeA != InputTypeB))
     return Invalid;
+
+  // We only support the following element sizes.
+  if (!is_contained({8u, 16u, 32u, 64u}, AccumType->getScalarSizeInBits()))
+    return Invalid;
+
+  // If none of the operands are extended and there's no extra BinOp, just
+  // cost this as the equivalent arithmetic instruction.
+  // TODO: Depending on VF and element type, we may be able to improve on this.
+  if (!OpAExtend) {
+    assert(!OpBExtend && "Extended second operand without extended first.");
+    assert(InputTypeA == AccumType && "Type mismatch with no extensions.");
+
+    VectorType *VTy = VectorType::get(AccumType, VF);
+    return getArithmeticInstrCost(Opcode, VTy, CostKind);
+  }
 
   bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
   // USDot is natively supported with +i8mm. With plain +dotprod, SUMLA is
@@ -7217,7 +7248,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 static bool containsDecreasingPointers(Loop *TheLoop,
                                        PredicatedScalarEvolution *PSE,
                                        const DominatorTree &DT) {
-  const auto &Strides = DenseMap<Value *, const SCEV *>();
+  const auto &Strides = SymbolicStrideMap();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
     // consecutive and decreasing.

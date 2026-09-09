@@ -29,11 +29,13 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -747,6 +749,16 @@ Value *VPInstruction::generate(VPTransformState &State) {
       applyFlags(*I);
     return Res;
   }
+  if (Instruction::isCast(getOpcode())) {
+    Value *Op = State.get(getOperand(0), VPLane(0));
+    Value *Res = State.Builder.CreateCast(Instruction::CastOps(getOpcode()), Op,
+                                          getScalarType());
+    if (auto *CastOp = dyn_cast<Instruction>(Res)) {
+      applyFlags(*CastOp);
+      applyMetadata(*CastOp);
+    }
+    return Res;
+  }
 
   switch (getOpcode()) {
   case VPInstruction::Not: {
@@ -811,8 +823,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
                                Name);
 
-    ElementCount EC = State.VF.multiplyCoefficientBy(Multiplier);
-    auto *PredTy = VectorType::get(Builder.getInt1Ty(), EC);
+    auto *PredTy = VectorType::get(Builder.getInt1Ty(), State.VF * Multiplier);
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
                                    {VIVElem0, ScalarTC}, nullptr, Name);
@@ -1119,6 +1130,17 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateExtractVector(
         DstTy, Src, Builder.getInt64(State.VF.getKnownMinValue() * Part), Name);
   }
+  case VPInstruction::StepVector:
+    return State.Builder.CreateStepVector(
+        VectorType::get(getScalarType(), State.VF));
+  case VPInstruction::Intrinsic: {
+    SmallVector<Value *, 2> Args;
+    for (VPValue *Op : drop_end(operands()))
+      Args.push_back(State.get(Op, /*IsSingleScalar=*/true));
+    return State.Builder.CreateIntrinsic(getScalarType(),
+                                         vputils::getIntrinsicID(this), Args,
+                                         /*FMFSource=*/nullptr, getName());
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -1329,6 +1351,13 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
+  // NOTE: At the moment it seems only possible to expose this path for
+  // the trunc, zext and sext opcodes.
+  // TODO: Update VF arg to use onlyFirstLaneUsed once WidenCast is unified.
+  if (Instruction::isCast(getOpcode()))
+    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                      Ctx);
+
   if (Instruction::isBinaryOp(getOpcode())) {
     if (!getUnderlyingValue() && getOpcode() != Instruction::FMul) {
       // TODO: Compute cost for VPInstructions without underlying values once
@@ -1485,9 +1514,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // FIXME: The compare could also be removed if TC = M * vscale,
     // VF = N * vscale, and M <= N. Detecting that would require having the
     // trip count as a SCEV though.
-    Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
-    ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
-    if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
+    if (VPCostContext::executesAtMostOnce(*getParent()->getPlan(), VF))
       return 0;
     // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
     Type *ValTy = getOperand(0)->getScalarType();
@@ -1495,6 +1522,25 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                       CmpInst::makeCmpResultType(ValTy),
                                       CmpInst::ICMP_EQ, Ctx.CostKind);
   }
+  case VPInstruction::Intrinsic: {
+    Type *Ty = getScalarType();
+    SmallVector<Type *, 2> ArgTys;
+    for (const VPValue *Op : drop_end(operands()))
+      ArgTys.push_back(Op->getScalarType());
+    IntrinsicCostAttributes Attrs(vputils::getIntrinsicID(this), Ty, ArgTys);
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  case VPInstruction::StepVector:
+    // TODO: This isn't quite right since even if the step-vector is hoisted
+    // out of the loop it has a non-zero cost in the middle block, etc.
+    // Once the stepvector is correctly hoisted out of the vector loop by the
+    // licm transform we can add the cost here so that it doesn't incorrectly
+    // affect the choice of VF.
+    return 0;
+  case VPInstruction::WideIVStep:
+    // It isn't currently possible to expose cases where WideIVStep's cost is
+    // queried.
+    llvm_unreachable("Unhandled opcode");
   case Instruction::FCmp:
   case Instruction::ICmp:
     return getCostForRecipeWithOpcode(
@@ -1867,121 +1913,34 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::NumActiveLanes:
     O << "num-active-lanes";
     break;
-  default:
-    O << Instruction::getOpcodeName(getOpcode());
-  }
-
-  printFlags(O);
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPInstructionWithType::execute(VPTransformState &State) {
-  Type *ResultTy = getResultType();
-  if (Instruction::isCast(getOpcode())) {
-    Value *Op = State.get(getOperand(0), VPLane(0));
-    Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
-                                           Op, ResultTy);
-    if (auto *CastOp = dyn_cast<Instruction>(Cast)) {
-      applyFlags(*CastOp);
-      applyMetadata(*CastOp);
-    }
-    State.set(this, Cast, VPLane(0));
-    return;
-  }
-  switch (getOpcode()) {
-  case VPInstruction::StepVector: {
-    Value *StepVector =
-        State.Builder.CreateStepVector(VectorType::get(ResultTy, State.VF));
-    State.set(this, StepVector);
-    break;
-  }
-  case VPInstruction::Intrinsic: {
-    SmallVector<Value *, 2> Args;
-    for (VPValue *Op : drop_end(operands()))
-      Args.push_back(State.get(Op, /*IsSingleScalar=*/true));
-    Value *Call =
-        State.Builder.CreateIntrinsic(ResultTy, vputils::getIntrinsicID(this),
-                                      Args, /*FMFSource=*/nullptr, getName());
-    State.set(this, Call, true);
-    break;
-  }
-
-  default:
-    llvm_unreachable("opcode not implemented yet");
-  }
-}
-
-InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
-                                                   VPCostContext &Ctx) const {
-  // NOTE: At the moment it seems only possible to expose this path for
-  // the trunc, zext and sext opcodes. However, isScalarCast also covers
-  // int<>fp conversions, bitcasts, ptr<>int conversions, etc.
-  if (Instruction::isCast(getOpcode()))
-    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                      Ctx);
-
-  switch (getOpcode()) {
-  case VPInstruction::StepVector:
-    // TODO: This isn't quite right since even if the step-vector is hoisted
-    // out of the loop it has a non-zero cost in the middle block, etc.
-    // Once the stepvector is correctly hoisted out of the vector loop by the
-    // licm transform we can add the cost here so that it doesn't incorrectly
-    // affect the choice of VF.
-    return 0;
-  case VPInstruction::Intrinsic: {
-    Type *Ty = getScalarType();
-    SmallVector<Type *, 2> ArgTys;
-    for (const VPValue *Op : drop_end(operands()))
-      ArgTys.push_back(Op->getScalarType());
-    IntrinsicCostAttributes Attrs(vputils::getIntrinsicID(this), Ty, ArgTys);
-    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
-  }
-  default:
-    // Although VPInstructionWithType is also used for
-    // VPInstruction::WideIVStep it isn't currently possible to expose cases
-    // where the cost is queried.
-    llvm_unreachable("Unhandled opcode");
-  }
-  return 0;
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
-                                        VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
-  printAsOperand(O, SlotTracker);
-  O << " = ";
-
-  Type *ResultTy = getResultType();
-  switch (getOpcode()) {
   case VPInstruction::WideIVStep:
-    O << "wide-iv-step ";
-    printOperands(O, SlotTracker);
+    O << "wide-iv-step";
     break;
   case VPInstruction::StepVector:
-    O << "step-vector " << *ResultTy;
+    O << "step-vector " << *getScalarType();
     break;
   case VPInstruction::Intrinsic: {
-    O << "call " << *ResultTy << " @"
+    O << "call " << *getScalarType() << " @"
       << Intrinsic::getBaseName(vputils::getIntrinsicID(this)) << "(";
     interleaveComma(drop_end(operands()), O, [&O, &SlotTracker](VPValue *Op) {
       Op->printAsOperand(O, SlotTracker);
     });
     O << ")";
-    break;
+    return;
   }
   case Instruction::Load:
-    O << "load ";
-    printOperands(O, SlotTracker);
+    O << "load";
     break;
   default:
-    assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
     O << Instruction::getOpcodeName(getOpcode());
+  }
+
+  if (!operands_empty()) {
     printFlags(O);
     printOperands(O, SlotTracker);
-    O << " to " << *ResultTy;
   }
+  if (Instruction::isCast(getOpcode()))
+    O << " to " << *getScalarType();
 }
 #endif
 
@@ -2127,8 +2086,50 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPIRMetadata::applyMetadata(Instruction &I) const {
+  if (Metadata.empty())
+    return;
+  // The execution frequency is VPlan-internal and must not reach IR.
+  unsigned ExecFreqKind = getMDKindID(ExecutionFrequencyMDName);
   for (const auto &[Kind, Node] : Metadata)
-    I.setMetadata(Kind, Node);
+    if (Kind != ExecFreqKind)
+      I.setMetadata(Kind, Node);
+}
+
+/// Returns the execution frequency recorded in \p Node.
+static BlockFrequency getExecutionFrequencyFromMD(const MDNode *Node) {
+  uint64_t Freq =
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+  assert(Freq <= vputils::AlwaysExecutesFreq &&
+         "frequency cannot exceed the one of an always executing block");
+  return BlockFrequency(Freq);
+}
+
+void VPIRMetadata::setExecutionFrequency(std::optional<BlockFrequency> Freq,
+                                         LLVMContext &Ctx) {
+  // A recipe that never or always executes needs no annotation.
+  if (!Freq || Freq->getFrequency() == 0 ||
+      Freq->getFrequency() == vputils::AlwaysExecutesFreq)
+    return;
+  Constant *Frequency =
+      ConstantInt::get(Type::getInt64Ty(Ctx), Freq->getFrequency());
+  setMetadata(Ctx.getMDKindID(ExecutionFrequencyMDName),
+              MDNode::get(Ctx, {ConstantAsMetadata::get(Frequency)}));
+}
+
+std::optional<BlockFrequency> VPIRMetadata::getExecutionFrequency() const {
+  if (Metadata.empty())
+    return std::nullopt;
+  MDNode *Node = getMetadata(getMDKindID(ExecutionFrequencyMDName));
+  if (!Node)
+    return std::nullopt;
+  return getExecutionFrequencyFromMD(Node);
+}
+
+void VPIRMetadata::clearExecutionFrequency() {
+  if (Metadata.empty())
+    return;
+  unsigned ID = getMDKindID(ExecutionFrequencyMDName);
+  erase_if(Metadata, [ID](const auto &P) { return P.first == ID; });
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
@@ -2157,7 +2158,21 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
     assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
            "Unexpected unnamed metadata kind");
     O << "!" << MDNames[Kind] << " ";
-    Node->printAsOperand(O, M);
+    // Print the values of branch weights, which are more informative than the
+    // ID of the metadata node holding them.
+    SmallVector<uint32_t> Weights;
+    if (Kind == LLVMContext::MD_prof && extractBranchWeights(Node, Weights)) {
+      O << "{";
+      interleaveComma(Weights, O);
+      O << "}";
+    } else if (MDNames[Kind] == ExecutionFrequencyMDName) {
+      // Print the frequency together with the probability it corresponds to.
+      uint64_t Freq = getExecutionFrequencyFromMD(Node).getFrequency();
+      O << Freq
+        << format(" (%.4g%%)", 100.0 * Freq / vputils::AlwaysExecutesFreq);
+    } else {
+      Node->printAsOperand(O, M);
+    }
   });
   O << ")";
 }
@@ -3129,6 +3144,11 @@ InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
   if (vputils::onlyFirstLaneUsed(this))
     return 0;
 
+  // If the vector body executes at most once, the canonical IV is a constant
+  // and every lane's step folds away with it.
+  if (VPCostContext::executesAtMostOnce(*getParent()->getPlan(), VF))
+    return 0;
+
   // Typically the operations are:
   //   1. Add the start index to each lane value.
   //   2. Multiply the start index by the step.
@@ -3334,9 +3354,17 @@ InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
 
   Type *ResultTy = toVectorTy(this->getScalarType(), VF);
   Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-  return (getNumIncomingValues() - 1) *
-         Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
-                                    CmpInst::BAD_ICMP_PREDICATE, Ctx.CostKind);
+
+  InstructionCost Cost = 0;
+  for (unsigned I = 1, E = getNumIncomingValues(); I != E; ++I) {
+    CmpPredicate Pred;
+    if (!match(getMask(I), m_Cmp(Pred, m_VPValue(), m_VPValue())))
+      Pred = getScalarType()->isFloatingPointTy() ? CmpInst::BAD_FCMP_PREDICATE
+                                                  : CmpInst::BAD_ICMP_PREDICATE;
+    Cost += Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
+                                       Pred, Ctx.CostKind);
+  }
+  return Cost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3500,7 +3528,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             CondTy, Pred, Ctx.CostKind);
     }
     return CondCost + Ctx.TTI.getPartialReductionCost(
-                          Opcode, ElementTy, ElementTy, ElementTy, VF,
+                          Opcode, ElementTy, nullptr, ElementTy, VF,
                           TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind,
                           OptionalFMF);
   }

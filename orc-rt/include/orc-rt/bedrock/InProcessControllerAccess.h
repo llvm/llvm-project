@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_INPROCESSCONTROLLERACCESS_H
-#define ORC_RT_INPROCESSCONTROLLERACCESS_H
+#ifndef ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H
+#define ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H
 
-#include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/WrapperFunction.h"
-#include "orc-rt/bedrock/Error.h"
+#include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/WrapperFunction.h"
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt/bedrock/move_only_function.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/move_only_function.h"
 
 #include <mutex>
 #include <unordered_map>
@@ -142,4 +142,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_INPROCESSCONTROLLERACCESS_H
+#endif // ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H

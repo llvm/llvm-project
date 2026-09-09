@@ -1168,53 +1168,102 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
   return false; // No other 'arm.*', 'aarch64.*'.
 }
 
-static Intrinsic::ID shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F,
-                                                        StringRef Name) {
-  if (Name.consume_front("cp.async.bulk.tensor.g2s.")) {
-    Intrinsic::ID ID =
-        StringSwitch<Intrinsic::ID>(Name)
-            .Case("im2col.3d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d)
-            .Case("im2col.4d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d)
-            .Case("im2col.5d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d)
-            .Case("tile.1d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d)
-            .Case("tile.2d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d)
-            .Case("tile.3d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d)
-            .Case("tile.4d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d)
-            .Case("tile.5d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d)
-            .Default(Intrinsic::not_intrinsic);
+// The TMA G2S (global-to-shared) tensor copy modes that have legacy
+// declarations requiring an auto-upgrade. The same set applies to the
+// cluster (g2s) and CTA (g2s_cta) variants.
+#define NVVM_TMA_G2S_MODES(M)                                                  \
+  M(tile_1d, "tile.1d")                                                        \
+  M(tile_2d, "tile.2d")                                                        \
+  M(tile_3d, "tile.3d")                                                        \
+  M(tile_4d, "tile.4d")                                                        \
+  M(tile_5d, "tile.5d")                                                        \
+  M(tile_gather4_2d, "tile.gather4.2d")                                        \
+  M(im2col_3d, "im2col.3d")                                                    \
+  M(im2col_4d, "im2col.4d")                                                    \
+  M(im2col_5d, "im2col.5d")                                                    \
+  M(im2col_w_3d, "im2col.w.3d")                                                \
+  M(im2col_w_4d, "im2col.w.4d")                                                \
+  M(im2col_w_5d, "im2col.w.5d")                                                \
+  M(im2col_w_128_3d, "im2col.w.128.3d")                                        \
+  M(im2col_w_128_4d, "im2col.w.128.4d")                                        \
+  M(im2col_w_128_5d, "im2col.w.128.5d")
 
-    if (ID == Intrinsic::not_intrinsic)
-      return ID;
+// Two legacy tails are:
+//
+//   arg1, arg2, .. i64 %ch, i1 %flag_mc, i1 %flag_ch
+//   arg1, arg2, .. i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group
+//
+// The current tail appends a trailing i32 %validate_pattern, so both
+// legacy tails are recognized by an i1 at parameter N-2.
+static Intrinsic::ID
+shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F, StringRef Name,
+                                   SmallVectorImpl<Type *> &OvlTys) {
+  if (!Name.consume_front("cp.async.bulk.tensor.g2s."))
+    return Intrinsic::not_intrinsic;
 
-    // These intrinsics may need upgrade for two reasons:
-    // (1) When the address-space of the first argument is shared[AS=3]
-    //     (and we upgrade it to use shared_cluster address-space[AS=7])
-    if (F->getArg(0)->getType()->getPointerAddressSpace() ==
-        NVPTXAS::ADDRESS_SPACE_SHARED)
-      return ID;
+#define G2S_ID(ID_SUFFIX, NAME)                                                \
+  .Case(NAME, Intrinsic::nvvm_cp_async_bulk_tensor_g2s_##ID_SUFFIX)
+  // clang-format off
+  Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                        NVVM_TMA_G2S_MODES(G2S_ID)
+                        .Default(Intrinsic::not_intrinsic);
+#undef G2S_ID
+  // clang-format on
+  if (ID == Intrinsic::not_intrinsic)
+    return ID;
 
-    // (2) When there are only two boolean flag arguments at the end:
-    //
-    // The last three parameters of the older version of these
-    // intrinsics are: arg1, arg2, .. i64 ch, i1 mc_flag, i1 ch_flag
-    //
-    // The newer version reads as:
-    // arg1, arg2, .. i64 ch, i1 mc_flag, i1 ch_flag, i32 cta_group_flag
-    //
-    // So, when the type of the [N-3]rd argument is "not i1", then
-    // it is the older version and we need to upgrade.
-    size_t FlagStartIndex = F->getFunctionType()->getNumParams() - 3;
-    Type *ArgType = F->getFunctionType()->getParamType(FlagStartIndex);
-    if (!ArgType->isIntegerTy(1))
-      return ID;
-  }
+  size_t NumParams = F->getFunctionType()->getNumParams();
 
-  return Intrinsic::not_intrinsic;
+  // Parameter N-2 is i1 for both legacy tails; the current tail ends
+  // with i32 %cta_group, i32 %validate_pattern, for which N-2 is i32.
+  if (!F->getFunctionType()->getParamType(NumParams - 2)->isIntegerTy(1))
+    return Intrinsic::not_intrinsic;
+
+  // The multicast mask is the parameter immediately before the i64
+  // cache-hint: N-4 for the 2-flag tail, N-5 for the 3-flag tail.
+  ArrayRef<Type *> Params = F->getFunctionType()->params();
+  size_t MaskIdx =
+      Params[NumParams - 1]->isIntegerTy(1) ? NumParams - 4 : NumParams - 5;
+  assert(Params[MaskIdx + 1]->isIntegerTy(64) &&
+         "expected the i64 cache-hint after the multicast mask");
+  Type *MaskTy = Params[MaskIdx];
+  assert(MaskTy->isIntegerTy(16) && "unexpected multicast mask type");
+  OvlTys.push_back(MaskTy);
+
+  return ID;
 }
 
+// The legacy tail is:
+//
+//   arg1, arg2, .. i64 %ch, i1 %flag_ch
+//
+// The current tail appends a trailing i32 %validate_pattern, so the
+// legacy tail is recognized by an i1 at parameter N-1.
+static Intrinsic::ID shouldUpgradeNVPTXTMAG2SCTAIntrinsics(Function *F,
+                                                           StringRef Name) {
+  if (!Name.consume_front("cp.async.bulk.tensor.g2s.cta."))
+    return Intrinsic::not_intrinsic;
+
+#define G2S_CTA_ID(ID_SUFFIX, NAME)                                            \
+  .Case(NAME, Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_##ID_SUFFIX)
+  // clang-format off
+  Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                        NVVM_TMA_G2S_MODES(G2S_CTA_ID)
+                        .Default(Intrinsic::not_intrinsic);
+#undef G2S_CTA_ID
+  // clang-format on
+  if (ID == Intrinsic::not_intrinsic)
+    return ID;
+
+  // Parameter N-1 is i1 for the legacy tail; the current tail ends
+  // with i32 %validate_pattern, for which N-1 is i32.
+  if (!F->getFunctionType()
+           ->getParamType(F->getFunctionType()->getNumParams() - 1)
+           ->isIntegerTy(1))
+    return Intrinsic::not_intrinsic;
+
+  return ID;
+}
 // The legacy TMA reduction intrinsics encode the reduction operator in their
 // name, while the current ones take it as an immediate argument. Map the
 // operator part of a legacy name to the corresponding immediate value.
@@ -1388,6 +1437,27 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
+  FunctionType *NewFnTy = Intrinsic::getType(F->getContext(), IID);
+  FunctionType *OldFnTy = F->getFunctionType();
+  auto IsOldBF16StorageTy = [](Type *OldTy, Type *NewTy) {
+    return OldTy->getScalarType()->isIntegerTy() &&
+           OldTy->getPrimitiveSizeInBits() == NewTy->getPrimitiveSizeInBits();
+  };
+
+  if (!IsOldBF16StorageTy(OldFnTy->getReturnType(), NewFnTy->getReturnType()))
+    return false;
+
+  if (OldFnTy->getNumParams() != NewFnTy->getNumParams())
+    return false;
+
+  for (unsigned I = 0, E = OldFnTy->getNumParams(); I != E; ++I)
+    if (!IsOldBF16StorageTy(OldFnTy->getParamType(I), NewFnTy->getParamType(I)))
+      return false;
+
+  return true;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
                                                            StringRef Name) {
   if (!Name.consume_front("tcgen05.mma."))
@@ -1398,6 +1468,34 @@ static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
     return Intrinsic::not_intrinsic;
 
   return F->getIntrinsicID();
+}
+
+static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
+getNVVMFAddUpgrade(StringRef Name) {
+  auto [Modifiers, Type] = Name.rsplit('.');
+  if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
+    return std::nullopt;
+
+  std::optional<llvm::RoundingMode> RoundingMode =
+      StringSwitch<std::optional<llvm::RoundingMode>>(Modifiers.take_front(2))
+          .Case("rn", llvm::RoundingMode::NearestTiesToEven)
+          .Case("rz", llvm::RoundingMode::TowardZero)
+          .Case("rm", llvm::RoundingMode::TowardNegative)
+          .Case("rp", llvm::RoundingMode::TowardPositive)
+          .Default(std::nullopt);
+  if (!RoundingMode)
+    return std::nullopt;
+
+  Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Modifiers.drop_front(2))
+                          .Case("", Intrinsic::nvvm_fadd)
+                          .Case(".ftz", Intrinsic::nvvm_fadd_ftz)
+                          .Case(".sat", Intrinsic::nvvm_fadd_sat)
+                          .Case(".ftz.sat", Intrinsic::nvvm_fadd_ftz_sat)
+                          .Default(Intrinsic::not_intrinsic);
+  if (IID == Intrinsic::not_intrinsic)
+    return std::nullopt;
+
+  return std::make_pair(IID, *RoundingMode);
 }
 
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
@@ -1510,33 +1608,35 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
-  Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(F->getName());
-  if (IID == Intrinsic::not_intrinsic)
-    return false;
-
+static unsigned getFullArgCountForDefaultArgUpgrade(Function *F,
+                                                    Intrinsic::ID IID) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
-    return false;
+    return 0;
 
-  // Overloaded intrinsics are out of scope for the default-arg feature
-  // and will be supported in a follow-up.
   if (Intrinsic::isOverloaded(IID))
+    return 0;
+
+  unsigned FullArgCount = FirstDefault + Defaults.size();
+
+  // Only trailing default arguments can be missing.
+  if (F->arg_size() < FirstDefault || F->arg_size() >= FullArgCount)
+    return 0;
+
+  return FullArgCount;
+}
+
+static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
+  Intrinsic::ID IID = F->getIntrinsicID();
+
+  unsigned FullArgCount = getFullArgCountForDefaultArgUpgrade(F, IID);
+  if (FullArgCount == 0)
     return false;
 
-  // Get the canonical full declaration for this intrinsic.
-  Function *FullDecl = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
-
-  // If the existing declaration already has all args, nothing to upgrade
-  if (F->arg_size() >= FullDecl->arg_size())
-    return false;
-
-  // Defaults are a contiguous trailing block, so checking the first missing
-  // argument is enough.
-  if (F->arg_size() < FirstDefault)
-    return false;
-
-  NewFn = FullDecl;
+  rename(F);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+  assert(NewFn->arg_size() == FullArgCount &&
+         "total number of default args does not match intrinsic signature");
   return true;
 }
 
@@ -1579,6 +1679,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
+      if (Name.starts_with("addrspacecast.nonnull")) {
+        // Replaced with an addrspacecast instruction carrying the nonnull flag,
+        // so there's no new declaration.
+        NewFn = nullptr;
+        return true;
+      }
+
       switch (F->getIntrinsicID()) {
       default:
         break;
@@ -1614,6 +1721,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           NewFn = nullptr;
           return true;
         }
+      }
+
+      if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+        NewFn = nullptr;
+        return true;
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -1903,9 +2015,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       // Check for nvvm intrinsics that need a return type adjustment.
-      if (!F->getReturnType()->getScalarType()->isBFloatTy()) {
+      {
         Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
-        if (IID != Intrinsic::not_intrinsic) {
+        if (IID != Intrinsic::not_intrinsic &&
+            isLegacyNVPTXBF16IntSignature(F, IID)) {
           NewFn = nullptr;
           return true;
         }
@@ -1951,11 +2064,20 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
-      // Upgrade TMA copy G2S Intrinsics
-      IID = shouldUpgradeNVPTXTMAG2SIntrinsics(F, Name);
+      // Upgrade TMA copy G2S CTA intrinsics.
+      IID = shouldUpgradeNVPTXTMAG2SCTAIntrinsics(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
+      // Upgrade TMA copy G2S (cluster) intrinsics.
+      SmallVector<Type *, 1> OvlTys;
+      IID = shouldUpgradeNVPTXTMAG2SIntrinsics(F, Name, OvlTys);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OvlTys);
         return true;
       }
 
@@ -1978,6 +2100,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("fabs."))
         // nvvm.fabs.{f,ftz.f,d}
         Expand = Name == "f" || Name == "ftz.f" || Name == "d";
+      else if (Name.consume_front("add."))
+        // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+        Expand = getNVVMFAddUpgrade(Name).has_value();
       else if (Name.consume_front("ex2.approx."))
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
@@ -2231,12 +2356,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     return true;
   }
 
+  if (upgradeIntrinsicWithDefaultArgs(F, NewFn))
+    return true;
+
   //  This may not belong here. This function is effectively being overloaded
   //  to both detect an intrinsic which needs upgrading, and to provide the
   //  upgraded form of the intrinsic. We should perhaps have two separate
   //  functions for this.
-  if (upgradeIntrinsicDeclWithDefaultArgs(F, NewFn))
-    return true;
 
   return false;
 }
@@ -3057,6 +3183,16 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Intrinsic::ID IID = (Name == "fabs.ftz.f") ? Intrinsic::nvvm_fabs_ftz
                                                : Intrinsic::nvvm_fabs;
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
+  } else if (Name.consume_front("add.")) {
+    // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+    auto FAdd = getNVVMFAddUpgrade(Name);
+    assert(FAdd && "unsupported nvvm.add.* intrinsic");
+    auto [IID, RoundingMode] = *FAdd;
+    Value *A = CI->getArgOperand(0);
+    Rep = Builder.CreateIntrinsic(
+        A->getType(), IID,
+        {A, CI->getArgOperand(1),
+         Builder.getInt32(static_cast<int>(RoundingMode))});
   } else if (Name.consume_front("ex2.approx.")) {
     // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
@@ -3213,7 +3349,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
-        !F->getReturnType()->getScalarType()->isBFloatTy()) {
+        isLegacyNVPTXBF16IntSignature(F, IID)) {
       rename(F);
       Function *NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
       SmallVector<Value *, 2> Args;
@@ -5173,6 +5309,30 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   }
   }
 
+  if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+    Value *LHS = CI->getArgOperand(0);
+    Value *RHS = CI->getArgOperand(1);
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue());
+    Value *Cmp = Builder.CreateCmp(Pred, LHS, RHS);
+    CallInst *NewCall = Builder.CreateIntrinsicWithoutFolding(
+        CI->getType(), Intrinsic::amdgcn_ballot, Cmp);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
+  }
+
+  if (Name.starts_with("addrspacecast.nonnull")) {
+    if (CI->getNumOperands() < 2) // Malformed bitcode.
+      return nullptr;
+    Value *ASC = Builder.CreateAddrSpaceCast(
+        CI->getArgOperand(0), CI->getType(), "", /*IsNonNull=*/true);
+    ASC->takeName(CI);
+    return ASC;
+  }
+
   AtomicRMWInst::BinOp RMWOp =
       StringSwitch<AtomicRMWInst::BinOp>(Name)
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
@@ -5448,20 +5608,26 @@ static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
   unsigned OldArgCount = CI->arg_size();
   unsigned NewArgCount = NewFn->arg_size();
 
-  // If the caller already supplied all arguments (or more), nothing to do.
-  // This mirrors C++ semantics: an explicitly-passed value is never overridden.
-  if (OldArgCount >= NewArgCount)
-    return false;
-
-  // Start with the existing arguments from the old call.
-  SmallVector<Value *, 8> NewArgs(CI->args());
-
-  // Defaults are a contiguous trailing block, so checking the first missing
-  // argument is enough.
   if (OldArgCount < FirstDefault)
     return false;
 
-  // Fill in each missing trailing argument from the table.
+  // More arguments than the new intrinsic accepts, cannot upgrade.
+  if (OldArgCount > NewArgCount)
+    return false;
+
+  // The call already passes the defaulted arguments explicitly; only the
+  // callee is still the old, shorter declaration, so retarget it.
+  if (OldArgCount == NewArgCount) {
+    if (CI->getFunctionType() != NewFn->getFunctionType())
+      return false;
+    CI->setCalledFunction(NewFn);
+    return true;
+  }
+
+  // OldArgCount < NewArgCount: Fill in each missing trailing default
+  // argument from the table.
+  SmallVector<Value *, 8> NewArgs(CI->args());
+
   FunctionType *NewFT = NewFn->getFunctionType();
   for (unsigned Idx = OldArgCount; Idx < NewArgCount; ++Idx) {
     assert(Idx >= FirstDefault && Idx - FirstDefault < Defaults.size() &&
@@ -5600,9 +5766,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   CallInst *NewCall = nullptr;
   switch (NewFn->getIntrinsicID()) {
   default: {
-    // Last resort: try the data-driven default-arg upgrade.
-    // Handles any intrinsic annotated with ImmArg<..., DefaultValue<...>>
-    // in its .td definition, without needing a dedicated case.
     if (upgradeIntrinsicCallWithDefaultArgs(CI, NewFn, Builder))
       return;
     DefaultCase();
@@ -5899,30 +6062,22 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
   }
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d: {
+  // clang-format off
+#define G2S_CLUSTER_CASE(ID_SUFFIX, NAME)                                      \
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_##ID_SUFFIX:
+  NVVM_TMA_G2S_MODES(G2S_CLUSTER_CASE)
+#undef G2S_CLUSTER_CASE
+  {
     SmallVector<Value *, 16> Args(CI->args());
-
-    // Create AddrSpaceCast to shared_cluster if needed.
-    // This handles case (1) in shouldUpgradeNVPTXTMAG2SIntrinsics().
     unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
     if (AS == NVPTXAS::ADDRESS_SPACE_SHARED)
       Args[0] = Builder.CreateAddrSpaceCast(
           Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
 
-    // Attach the flag argument for cta_group, with a
-    // default value of 0. This handles case (2) in
-    // shouldUpgradeNVPTXTMAG2SIntrinsics().
-    size_t NumArgs = CI->arg_size();
-    Value *FlagArg = CI->getArgOperand(NumArgs - 3);
-    if (!FlagArg->getType()->isIntegerTy(1))
-      Args.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
+    // Append the missing trailing arguments with default values (cta_group,
+    // validate_pattern).
+    while (Args.size() < NewFn->getFunctionType()->getNumParams())
+      Args.push_back(Builder.getInt32(0));
 
     NewCall = Builder.CreateCall(NewFn, Args);
     NewCall->takeName(CI);
@@ -5930,6 +6085,28 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
   }
+
+#define G2S_CTA_CASE(ID_SUFFIX, NAME)                                          \
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_##ID_SUFFIX:
+  NVVM_TMA_G2S_MODES(G2S_CTA_CASE)
+#undef G2S_CTA_CASE
+  {
+    SmallVector<Value *, 16> Args(CI->args());
+    // Append the missing trailing validate_pattern argument with default
+    // value 0.
+    assert(Args.size() + 1 == NewFn->getFunctionType()->getNumParams() &&
+            "expected only the trailing validate_pattern to be missing");
+    Args.push_back(Builder.getInt32(0));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
+#undef NVVM_TMA_G2S_MODES
+    // clang-format on
+
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_2d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_3d:

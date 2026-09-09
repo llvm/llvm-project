@@ -229,11 +229,14 @@ private:
   // True when input flowed to a continuation line
   bool SkipToNextSignificantCharacter();
   void SkipCComments();
+  void WarnCComment(const char *at);
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
-  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *) const;
+  const char *SkipWhiteSpaceIncludingEmptyMacros(
+      const char *, const char **) const;
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
+  void UpdateSourcePositionAfterSkip(const char *);
   bool NextToken(TokenSequence &);
   bool HandleExponent(TokenSequence &);
   bool HandleKindSuffix(TokenSequence &);
@@ -248,6 +251,7 @@ private:
   void FortranInclude(const char *quote);
   const char *IsPreprocessorDirectiveLine(const char *) const;
   const char *FixedFormContinuationLine(bool atNewline);
+  const char *GetFreeFormContinuationLine(bool ampersand, const char *p);
   const char *FreeFormContinuationLine(bool ampersand);
   bool IsImplicitContinuation() const;
   bool FixedFormContinuation(bool atNewline);

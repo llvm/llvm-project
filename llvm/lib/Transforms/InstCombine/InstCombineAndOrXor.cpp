@@ -1911,7 +1911,18 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
   if (shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
     Value *NewOp = Builder.CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
                                        I.getName());
-    return CastInst::Create(CastOpcode, NewOp, DestTy);
+    auto *NewCast = CastInst::Create(CastOpcode, NewOp, DestTy);
+    if (auto *NewTrunc = dyn_cast<TruncInst>(NewCast)) {
+      auto *Trunc0 = cast<TruncInst>(Cast0);
+      auto *Trunc1 = cast<TruncInst>(Cast1);
+      NewTrunc->setHasNoUnsignedWrap(
+          LogicOpc == Instruction::And
+              ? Trunc0->hasNoUnsignedWrap() || Trunc1->hasNoUnsignedWrap()
+              : Trunc0->hasNoUnsignedWrap() && Trunc1->hasNoUnsignedWrap());
+      NewTrunc->setHasNoSignedWrap(Trunc0->hasNoSignedWrap() &&
+                                   Trunc1->hasNoSignedWrap());
+    }
+    return NewCast;
   }
 
   return nullptr;
@@ -3048,6 +3059,17 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
       if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
           match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
         return X;
+
+      // (shl ShVal,(X+1) & (Width-1)) | (lshr ShVal,((X & (Width-1)) ^
+      // (Width-1)))
+      {
+        Value *XPlusOne = nullptr;
+        if (match(L, m_And(m_Value(XPlusOne, m_Add(m_Value(X), m_One())),
+                           m_SpecificInt(Mask))) &&
+            match(R, m_Xor(m_And(m_Specific(X), m_SpecificInt(Mask)),
+                           m_SpecificInt(Mask))))
+          return XPlusOne;
+      }
 
       // (shl ShVal, X) | (lshr ShVal, ((-X) & (Width - 1)))
       if (match(R, m_And(m_Neg(m_Specific(L)), m_SpecificInt(Mask))))

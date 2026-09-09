@@ -1503,6 +1503,10 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation NameLoc,
         Name.getAsSubstTemplateTemplateParmPack()->getParameterPack(), NameLoc,
         TU));
 
+  case TemplateName::PackIndexingTemplate:
+    return VisitTemplateName(Name.getAsPackIndexingTemplate()->getPattern(),
+                             NameLoc, NNS);
+
   case TemplateName::DeducedTemplate:
     llvm_unreachable("DeducedTemplate shouldn't appear in source");
   }
