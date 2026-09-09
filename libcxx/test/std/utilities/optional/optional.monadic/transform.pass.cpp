@@ -321,7 +321,7 @@ constexpr bool test_ref() {
     assert(&(*o2) == &j);
   }
 
-  // optional<T> -> optional<T&> GH #220332
+  // optional<T> -> optional<T&>, https://llvm.org/PR220332
   { // &, &&
     int i = 42;
     int j = 43;
