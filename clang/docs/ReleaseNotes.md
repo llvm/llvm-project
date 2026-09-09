@@ -522,8 +522,6 @@ features cannot lower the translation-unit ABI level;
   format warnings to errors. (#GH211943)
 - Fixed a wrong code generation in `__builtin_clear_padding` wherein the
   wrong bits of the `_BitInt` type were cleared in big-endian mode.
-- Fixed a crash when `__builtin_vectorelements` is applied to a reference to a
-  vector type; this is now diagnosed as an invalid argument type. (#GH216997)
 - Fixed an assertion failure when `__builtin_vectorelements` is applied to a
   reference to a vector type. (#GH216997)
 
