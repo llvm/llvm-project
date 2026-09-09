@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-COST-LABEL: LV: Checking a loop in 'zext_i8_i16'
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i8 %0 to i32
+; CHECK-COST: Cost of 0 for VF 1: EMIT-SCALAR ir<%conv> = zext ir<%0> to i32
 ; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
