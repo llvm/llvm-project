@@ -63,3 +63,6 @@ static int b0;
 
 static int a0[] = { 4 };
 static int b0 = 5;
+
+_Thread_local int tls_redef; // expected-note {{previous definition is here}}
+_Thread_local int tls_redef; // expected-error {{redefinition of 'tls_redef'}}
