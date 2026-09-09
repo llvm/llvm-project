@@ -150,10 +150,22 @@ Fortran::common::int128_t IntegerValueImpl::ToInt128() const {
 }
 
 Ordering IntegerValueImpl::CompareSigned(const IntegerValueImpl &y) const {
-  if (IsMonostate()) {
-    DIE("uncomparable ints");
+  if (IsMonostate() && y.IsMonostate()) {
+    // Both are considered to be zero
     return Ordering::Equal;
+  } else if (IsMonostate()) {
+    switch (y.CompareToZeroSigned()) {
+    case Ordering::Less:
+      return Ordering::Greater;
+    case Ordering::Greater:
+      return Ordering::Less;
+    case Ordering::Equal:
+      return Ordering::Equal;
+    }
+  } else if (y.IsMonostate()) {
+    return CompareToZeroSigned();
   }
+
   return withWord([&](const auto &x) -> Ordering {
     using T = std::decay_t<decltype(x)>;
     return x.CompareSigned(Coerce<T>(y));
@@ -161,10 +173,15 @@ Ordering IntegerValueImpl::CompareSigned(const IntegerValueImpl &y) const {
 }
 
 Ordering IntegerValueImpl::CompareUnsigned(const IntegerValueImpl &y) const {
-  if (IsMonostate()) {
-    DIE("uncomparable ints; cast bitwidth first");
+  if (IsMonostate() && y.IsMonostate()) {
+    // Both are considered to be zero
     return Ordering::Equal;
+  } else if (IsMonostate()) {
+    return y.IsZero() ? Ordering::Equal : Ordering::Less;
+  } else if (y.IsMonostate()) {
+    return IsZero() ? Ordering::Equal : Ordering::Greater;
   }
+
   return withWord([&](const auto &x) -> Ordering {
     using T = std::decay_t<decltype(x)>;
     return x.CompareUnsigned(Coerce<T>(y));
@@ -202,7 +219,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ABS() const {
 typename IntegerValueImpl::ValueWithCarry IntegerValueImpl::AddUnsigned(
     const IntegerValueImpl &y, bool carryIn) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return ValueWithCarry{};
   }
   return withWord([&](const auto &x) -> ValueWithCarry {
@@ -228,7 +245,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::AddSigned(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SubtractSigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return ValueWithOverflow{};
   }
   return withWord([&](const auto &x) -> ValueWithOverflow {
@@ -241,7 +258,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SubtractSigned(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::DIM(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return ValueWithOverflow{};
   }
   // DIM(X,Y) = MAX(X-Y, 0)
@@ -254,7 +271,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::DIM(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SIGN(
     const IntegerValueImpl &sign) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return ValueWithOverflow{};
   }
   bool toNegative{sign.IsNegative()};
@@ -270,7 +287,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SIGN(
 typename IntegerValueImpl::Product IntegerValueImpl::MultiplySigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return Product{};
   }
   return withWord([&](const auto &x) -> Product {
@@ -284,7 +301,7 @@ typename IntegerValueImpl::Product IntegerValueImpl::MultiplySigned(
 typename IntegerValueImpl::Product IntegerValueImpl::MultiplyUnsigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return Product{};
   }
   return withWord([&](const auto &x) -> Product {
@@ -297,7 +314,7 @@ typename IntegerValueImpl::Product IntegerValueImpl::MultiplyUnsigned(
 typename IntegerValueImpl::QuotientWithRemainder IntegerValueImpl::DivideSigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return QuotientWithRemainder{};
   }
   return withWord([&](const auto &x) -> QuotientWithRemainder {
@@ -311,7 +328,7 @@ typename IntegerValueImpl::QuotientWithRemainder IntegerValueImpl::DivideSigned(
 typename IntegerValueImpl::QuotientWithRemainder
 IntegerValueImpl::DivideUnsigned(const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return QuotientWithRemainder{};
   }
   return withWord([&](const auto &x) -> QuotientWithRemainder {
@@ -325,7 +342,7 @@ IntegerValueImpl::DivideUnsigned(const IntegerValueImpl &y) const {
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::MODULO(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return ValueWithOverflow{};
   }
   return withWord([&](const auto &x) -> ValueWithOverflow {
@@ -338,7 +355,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::MODULO(
 typename IntegerValueImpl::PowerWithErrors IntegerValueImpl::Power(
     const IntegerValueImpl &e) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return PowerWithErrors{};
   }
   return withWord([&](const auto &x) -> PowerWithErrors {
@@ -358,7 +375,7 @@ IntegerValueImpl IntegerValueImpl::NOT() const {
 
 IntegerValueImpl IntegerValueImpl::IAND(const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    DIE("incompatiable ints");
+    DIE("incomparable ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) {

@@ -102,8 +102,13 @@ public:
   static constexpr std::size_t bytesStored(int kind) {
     switch (kind) {
     case 3:
+      // REAL(3) is bfloat16; RealValue uses integer as storage, therefore this
+      // case is relevant.
       return 2;
     case 10:
+      // Similarly, REAL(10) is x87 extended double precision; RealValue's
+      // storage is an integer of KIND 10, but uses 16 bytes including
+      // alignment.
       return 16;
     default:
       return kind;
