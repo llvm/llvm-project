@@ -40,8 +40,10 @@ namespace brace_initializers {
   // CHECK: CompoundLiteralExpr {{.*}} 'POD'{{$}}
   // CHECK-NEXT: InitListExpr {{.*}} 'POD' explicit{{$}}
   // CHECK-NEXT: ConstantExpr {{.*}}
+  // CHECK-NEXT: value: Int 1
   // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
   // CHECK-NEXT: ConstantExpr {{.*}}
+  // CHECK-NEXT: value: Int 2
   // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
   void test() {
@@ -137,3 +139,14 @@ namespace GH147949 {
   const S* x = (const S[]){S{S{3}}};
 }
 #endif
+
+namespace GH212106 {
+  // Elements of a file-scope compound literal carry their evaluated value.
+  struct Z { int x; const int *y; };
+  Z z = { 1, (const int[1]){__builtin_constant_p(z.x)} };
+  // CHECK: CompoundLiteralExpr {{.*}} 'const int[1]' lvalue
+  // CHECK-NEXT: InitListExpr {{.*}} 'const int[1]'
+  // CHECK-NEXT: ConstantExpr {{.*}} 'int'
+  // CHECK-NEXT: value: Int 0
+  // CHECK-NEXT: CallExpr {{.*}} 'int'
+}

@@ -2,8 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck %s
 
 // A file-scope compound literal is a constant-initialized global even when its
-// address is taken from a non-constant context, so its initializer must be
-// emitted under constant-evaluation rules.
+// address is taken from a non-constant context.
 
 struct RR { int r; };
 struct Z { int x; const RR* y; int z; };

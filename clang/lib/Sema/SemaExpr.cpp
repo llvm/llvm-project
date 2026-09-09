@@ -7544,14 +7544,25 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
-        if (!Init->isTypeDependent() && !Init->isValueDependent() &&
-            !Init->isConstantInitializer(Context)) {
+        if (Init->isTypeDependent() || Init->isValueDependent()) {
+          ILE->setInit(i, ConstantExpr::Create(Context, Init));
+          continue;
+        }
+        if (!Init->isConstantInitializer(Context)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
         }
 
-        ILE->setInit(i, ConstantExpr::Create(Context, Init));
+        // Store the value so CodeGen does not re-evaluate the element outside
+        // a constant context.
+        Expr::EvalResult Eval;
+        if (Init->isPRValue() &&
+            Init->EvaluateAsRValue(Eval, Context, /*InConstantContext=*/true) &&
+            !Eval.HasSideEffects && Eval.Val.hasValue())
+          ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
+        else
+          ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
 
   auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK,
