@@ -7555,14 +7555,23 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
         }
 
         // Store the value so CodeGen does not re-evaluate the element outside
-        // a constant context. Elements that are rebuilt at each use site
-        // cannot be cached.
+        // a constant context. Elements rebuilt at each use site, such as
+        // source_location::current() in a default argument, must not be cached.
         ImmediateCallVisitor V(Context);
         V.TraverseStmt(Init);
         Expr::EvalResult Eval;
-        if (!V.HasImmediateCalls && Init->isPRValue() &&
-            Init->EvaluateAsRValue(Eval, Context, /*InConstantContext=*/true) &&
-            !Eval.HasSideEffects && Eval.Val.hasValue())
+        bool Evaluated =
+            !V.HasImmediateCalls &&
+            (Init->isGLValue()
+                 ? Init->EvaluateAsLValue(Eval, Context,
+                                          /*InConstantContext=*/true)
+                 : Init->EvaluateAsRValue(Eval, Context,
+                                          /*InConstantContext=*/true));
+        // Don't cache a pointer cast to an integer; the interpreter cannot
+        // re-materialize an lvalue stored in an integer slot.
+        if (Evaluated && !Eval.HasSideEffects && Eval.Val.hasValue() &&
+            !(Eval.Val.isLValue() &&
+              Init->getType()->isIntegralOrEnumerationType()))
           ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
         else
           ILE->setInit(i, ConstantExpr::Create(Context, Init));

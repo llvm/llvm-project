@@ -2708,14 +2708,7 @@ bool Compiler<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
     // diagnostics or any double values.
     if (DiscardResult)
       return true;
-    const APValue &Val = E->getAPValueResult();
-    // visitAPValue can only re-materialize an lvalue that is null or that
-    // designates a declaration.
-    if (Val.isLValue() && !Val.isNullPointer() &&
-        !(Val.hasLValuePath() &&
-          Val.getLValueBase().dyn_cast<const ValueDecl *>()))
-      return this->delegate(E->getSubExpr());
-    return this->visitAPValue(Val, *T, E);
+    return this->visitAPValue(E->getAPValueResult(), *T, E);
   }
 
   // Fall back to the subexpr for non-primitive APValues.
@@ -5861,16 +5854,21 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
       return this->emitNull(ValType, 0, nullptr, Info);
 
     APValue::LValueBase Base = Val.getLValueBase();
-    ArrayRef<APValue::LValuePathEntry> Path = Val.getLValuePath();
-
-    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
-      return this->visit(BaseExpr);
-    if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+    QualType EntryType;
+    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>()) {
+      if (!this->visit(BaseExpr))
+        return false;
+      EntryType = BaseExpr->getType();
+    } else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
       if (!this->visitDeclRef(VD, Info.asExpr()))
         return false;
+      EntryType = VD->getType();
+    } else {
+      return false;
+    }
 
-      QualType EntryType = VD->getType();
-      for (auto &Entry : Path) {
+    if (Val.hasLValuePath()) {
+      for (auto &Entry : Val.getLValuePath()) {
         if (EntryType->isArrayType()) {
           uint64_t Index = Entry.getAsArrayIndex();
           QualType ElemType =
@@ -5907,9 +5905,9 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
           }
         }
       }
-
-      return true;
     }
+
+    return true;
   }
 
   return false;
