@@ -676,7 +676,25 @@ set(LLVM_ENABLE_ZSTD "ON" CACHE STRING "Use zstd for compression/decompression i
 
 set(LLVM_USE_STATIC_ZSTD FALSE CACHE BOOL "Use static version of zstd. Can be TRUE, FALSE")
 
-set(LLVM_ENABLE_LZMA "ON" CACHE STRING "Use liblzma for xz decompression if available. Can be ON, OFF, or FORCE_ON")
+# liblzma is an LLVM dependency now, so temporarily translate LLDB's older
+# LLDB_ENABLE_LZMA; its On meant required, hence FORCE_ON.
+set(LLVM_ENABLE_LZMA_DEFAULT "ON")
+if(DEFINED LLDB_ENABLE_LZMA)
+  string(TOUPPER "${LLDB_ENABLE_LZMA}" lldb_enable_lzma)
+  if(NOT lldb_enable_lzma STREQUAL "AUTO")
+    message(DEPRECATION
+      "LLDB_ENABLE_LZMA is deprecated. Set LLVM_ENABLE_LZMA (ON, OFF or "
+      "FORCE_ON) instead; liblzma is now found by LLVM, not by LLDB.")
+    if(lldb_enable_lzma)
+      set(LLVM_ENABLE_LZMA_DEFAULT "FORCE_ON")
+    else()
+      set(LLVM_ENABLE_LZMA_DEFAULT "OFF")
+    endif()
+  endif()
+  unset(lldb_enable_lzma)
+endif()
+set(LLVM_ENABLE_LZMA "${LLVM_ENABLE_LZMA_DEFAULT}" CACHE STRING "Use liblzma for xz decompression if available. Can be ON, OFF, or FORCE_ON")
+unset(LLVM_ENABLE_LZMA_DEFAULT)
 
 set(LLVM_ENABLE_CURL "OFF" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
 

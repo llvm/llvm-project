@@ -64,6 +64,20 @@ add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in L
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION ${LLDB_LIBXML2_VERSION})
 add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highlighting" TreeSitter TREESITTER_FOUND)
 
+# liblzma comes from LLVM, and a standalone build cannot change how LLVM was
+# built, so LLDB_ENABLE_LZMA can only be reported here.
+if(LLDB_BUILT_STANDALONE AND DEFINED LLDB_ENABLE_LZMA)
+  string(TOUPPER "${LLDB_ENABLE_LZMA}" lldb_enable_lzma)
+  if(NOT lldb_enable_lzma STREQUAL "AUTO")
+    message(DEPRECATION
+      "LLDB_ENABLE_LZMA is deprecated and has no effect in a standalone build. "
+      "liblzma comes from LLVM, which was built with "
+      "LLVM_ENABLE_LZMA=${LLVM_ENABLE_LZMA}.")
+  endif()
+  unset(lldb_enable_lzma)
+endif()
+message(STATUS "Enable LZMA compression support in LLDB: ${LLVM_ENABLE_LZMA}")
+
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
