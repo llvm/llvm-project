@@ -466,7 +466,7 @@ public:
       case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR:
       case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B128:
       case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR:
-        return AMDGPU::AsyncStage::ASYNC_LDS_STORE;
+        return AMDGPU::AsyncStage::GLOBAL_STORE_ASYNC_FROM_LDS;
       default:
         llvm_unreachable("Async opcode has no associated async stage");
       }

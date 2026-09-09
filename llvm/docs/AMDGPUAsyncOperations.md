@@ -28,7 +28,7 @@ The stages are:
 | 0 | `TENSOR` | tensor loads and stores |
 | 1 | `GLOBAL_LOAD_ASYNC_TO_LDS` | global loads async to LDS |
 | 2 | `GLOBAL_LOAD_ASYNC_TO_LDS_MCAST` | multicast (cluster) global loads async to LDS |
-| 3 | `ASYNC_LDS_STORE` | async stores from LDS |
+| 3 | `GLOBAL_STORE_ASYNC_FROM_LDS` | async global stores from LDS |
 | 5 | `BUFFER_GLOBAL_LOAD` | buffer loads to LDS and pre-gfx1250 global loads to LDS |
 
 Bits 4 and 6 through 10 are reserved for future async operations, and no
@@ -246,10 +246,10 @@ use the async counter, but the sequences are still separate:
 ```c++
 void foo(global int *g, local int *l) {
   async_load_to_lds(l, g);
-  asyncmark(only(GLOBAL_LOAD_ASYNC_TO_LDS));   // X
+  asyncmark(only(GLOBAL_LOAD_ASYNC_TO_LDS));    // X
 
   async_store_from_lds(g, l);
-  asyncmark(only(ASYNC_LDS_STORE));            // Y
+  asyncmark(only(GLOBAL_STORE_ASYNC_FROM_LDS)); // Y
 
   // Completes X. Y is in a different sequence and is not completed here, even
   // though both stages are tracked by the same counter.

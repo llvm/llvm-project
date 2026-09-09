@@ -157,7 +157,7 @@ define amdgpu_kernel void @same_counter_distinct_sequences(ptr addrspace(1) %glb
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[0:1] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    global_store_async_from_lds_b32 v0, v2, s[0:1] offset:4
-; SDAG-NEXT:    ; asyncmark(stages=ASYNC_LDS_STORE)
+; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_STORE_ASYNC_FROM_LDS)
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v3, v0, s[0:1] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS)
@@ -184,7 +184,7 @@ define amdgpu_kernel void @same_counter_distinct_sequences(ptr addrspace(1) %glb
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[0:1] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    global_store_async_from_lds_b32 v0, v2, s[0:1] offset:4
-; GISEL-NEXT:    ; asyncmark(stages=ASYNC_LDS_STORE)
+; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_STORE_ASYNC_FROM_LDS)
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v3, v0, s[0:1] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS)
@@ -201,7 +201,7 @@ entry:
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
   call void @llvm.amdgcn.asyncmark(i32 2045)
 
-  ; ASYNC_LDS_STORE mark #0. Same counter, different sequence.
+  ; GLOBAL_STORE_ASYNC_FROM_LDS mark #0. Same counter, different sequence.
   call void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds1, i32 4, i32 0)
   call void @llvm.amdgcn.asyncmark(i32 2039)
 
@@ -482,10 +482,10 @@ define amdgpu_kernel void @multi_stage_wait_unions_counters(<4 x i32> %sd, <8 x 
 ; SDAG-NEXT:    ; asyncmark(stages=TENSOR)
 ; SDAG-NEXT:    s_clause 0x1
 ; SDAG-NEXT:    global_store_async_from_lds_b32 v0, v1, s[16:17] offset:4
-; SDAG-NEXT:    ; asyncmark(stages=ASYNC_LDS_STORE)
+; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_STORE_ASYNC_FROM_LDS)
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v2, v0, s[16:17] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
-; SDAG-NEXT:    ; wait_asyncmark(0, stages=TENSOR|ASYNC_LDS_STORE)
+; SDAG-NEXT:    ; wait_asyncmark(0, stages=TENSOR|GLOBAL_STORE_ASYNC_FROM_LDS)
 ; SDAG-NEXT:    s_wait_asynccnt 0x1
 ; SDAG-NEXT:    s_wait_tensorcnt 0x0
 ; SDAG-NEXT:    ds_load_b32 v1, v2
@@ -512,10 +512,10 @@ define amdgpu_kernel void @multi_stage_wait_unions_counters(<4 x i32> %sd, <8 x 
 ; GISEL-NEXT:    ; asyncmark(stages=TENSOR)
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_async_from_lds_b32 v0, v1, s[16:17] offset:4
-; GISEL-NEXT:    ; asyncmark(stages=ASYNC_LDS_STORE)
+; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_STORE_ASYNC_FROM_LDS)
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v2, v0, s[16:17] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
-; GISEL-NEXT:    ; wait_asyncmark(0, stages=TENSOR|ASYNC_LDS_STORE)
+; GISEL-NEXT:    ; wait_asyncmark(0, stages=TENSOR|GLOBAL_STORE_ASYNC_FROM_LDS)
 ; GISEL-NEXT:    s_wait_asynccnt 0x1
 ; GISEL-NEXT:    s_wait_tensorcnt 0x0
 ; GISEL-NEXT:    ds_load_b32 v1, v2
@@ -535,7 +535,7 @@ entry:
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
   call void @llvm.amdgcn.asyncmark(i32 2045)
 
-  ; Covers TENSOR and ASYNC_LDS_STORE together.
+  ; Covers TENSOR and GLOBAL_STORE_ASYNC_FROM_LDS together.
   call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2038)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %glb

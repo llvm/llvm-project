@@ -22,7 +22,8 @@ void test_invocation() {
 // Every combination of stage bits is meaningful, so the masks below are just
 // the complement of the stages they cover: 2046 leaves in TENSOR alone, 2045
 // GLOBAL_LOAD_ASYNC_TO_LDS alone, and 2038 the two of TENSOR and
-// ASYNC_LDS_STORE. A mask may also name reserved stages, or every stage at once.
+// GLOBAL_STORE_ASYNC_FROM_LDS. A mask may also name reserved stages, or every
+// stage at once.
 
 // CHECK-LABEL: @test_masks(
 // CHECK-NEXT:  entry:

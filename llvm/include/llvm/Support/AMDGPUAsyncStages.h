@@ -39,7 +39,7 @@ enum Stage : uint32_t {
   // Asynchronous multicast (cluster) global loads to LDS.
   GLOBAL_LOAD_ASYNC_TO_LDS_MCAST = 2,
   // Asynchronous global stores from LDS.
-  ASYNC_LDS_STORE = 3,
+  GLOBAL_STORE_ASYNC_FROM_LDS = 3,
   RESERVED_4 = 4,
   // Buffer loads to LDS and pre-gfx1250 global loads to LDS.
   BUFFER_GLOBAL_LOAD = 5,
@@ -79,7 +79,7 @@ constexpr bool isReservedStage(uint32_t S) {
   case TENSOR:
   case GLOBAL_LOAD_ASYNC_TO_LDS:
   case GLOBAL_LOAD_ASYNC_TO_LDS_MCAST:
-  case ASYNC_LDS_STORE:
+  case GLOBAL_STORE_ASYNC_FROM_LDS:
   case BUFFER_GLOBAL_LOAD:
     return false;
   }
@@ -94,8 +94,8 @@ constexpr const char *getStageName(uint32_t S) {
     return "GLOBAL_LOAD_ASYNC_TO_LDS";
   case GLOBAL_LOAD_ASYNC_TO_LDS_MCAST:
     return "GLOBAL_LOAD_ASYNC_TO_LDS_MCAST";
-  case ASYNC_LDS_STORE:
-    return "ASYNC_LDS_STORE";
+  case GLOBAL_STORE_ASYNC_FROM_LDS:
+    return "GLOBAL_STORE_ASYNC_FROM_LDS";
   case RESERVED_4:
     return "RESERVED_4";
   case BUFFER_GLOBAL_LOAD:
