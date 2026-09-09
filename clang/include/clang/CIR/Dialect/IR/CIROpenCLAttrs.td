@@ -52,12 +52,18 @@ def CIR_OpenCLVersionAttr : CIR_Attr<"OpenCLVersion", "cl.version"> {
   let description = [{
     Represents an OpenCL language version preserved as module metadata.
 
+    The `cir.cl.cxx.version` module attribute requires a companion
+    `cir.cl.version` attribute specifying the compatible OpenCL version.
+
     Example:
     ```
     // Module compiled from OpenCL C 1.2.
     module attributes {cir.cl.version = #cir.cl.version<1, 2>} {}
     // Module compiled from C++ for OpenCL 2021.
-    module attributes {cir.cl.cxx.version = #cir.cl.version<2021, 0>} {}
+    module attributes {
+      cir.cl.cxx.version = #cir.cl.version<2021, 0>,
+      cir.cl.version = #cir.cl.version<3, 0>
+    } {}
     ```
   }];
 
