@@ -2273,875 +2273,555 @@ let hasSideEffects = 1 in {
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
+//
+// Enables encoding of instructions not directly supported by the assembler:
+//    .insn <format>, <opcode encoding>, <operands>
+//
+// Rules for these definitions:
+// - Each subformat has its own .insn directive.
+// - Operands are ordered by index (e.g. V1, I2, V3 not V1, V3, I2), since
+//   individual instructions within a format may use a different order.
+// - When instructions in a format interpret the same immediate field with
+//   different signedness, the directive uses an 'X'-type immediate, whose
+//   range is the union of the signed and unsigned cases (e.g. -128..255
+//   for imm32xx8).
+// - Where the format contains an operand not used by all instructions, it
+//   is implemented as an optional operand, *if it is trailing*. To specify
+//   a trailing optional operand, all optional operands to its left must
+//   be specified as well.
+//
+// Exceptions:
+// - Where legacy .insn directives existed that break the above rules, they
+//   have been kept for compatibility (see below)
+// - The RRF-b and RRF-e subformats have specified operand orderings in the
+//   Principles of Operation, so those orderings were used. This is kept inline.
 //===----------------------------------------------------------------------===//
-
-def InsnE : InstE<0, (outs), (ins imm64zx16:$enc), ".insn e,$enc", []>,
-            InsnDirectiveBase {
-  bits<16> enc;
-  let Inst = enc;
-}
-def InsnI : InstI<0, (outs), (ins imm64zx16:$enc, imm32zx8:$I1),
-                  ".insn i,$enc,$I1", []>,
-            InsnDirectiveBase {
-  bits<16> enc;
-  let Inst{15-8} = enc{15-8};
-}
-def InsnIE : InstIE<0, (outs), (ins imm64zx32:$enc, imm32zx4:$I1, imm32zx4:$I2),
-                    ".insn ie,$enc,$I1,$I2", []>,
-             InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-16} = enc{31-16};
-}
-def InsnMII : InstMII<0, (outs),
-                      (ins imm64zx48:$enc, imm32zx4:$M1, brtarget12bpp:$RI2,
-                          brtarget24bpp:$RI3),
-                      ".insn mii,$enc,$M1,$RI2,$RI3", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnRI : InstRIa<0, (outs), (ins imm64zx32:$enc, AnyReg:$R1, imm32sx16:$I2),
-                     ".insn ri,$enc,$R1,$I2", []>,
-             InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-24} = enc{31-24};
-  let Inst{19-16} = enc{19-16};
-}
-def InsnRIa
-    : InstRIa<0, (outs), (ins imm64zx32:$enc, AnyReg:$R1, imm32xx16:$I2),
-                       ".insn ri_a,$enc,$R1,$I2", []>,
-      InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-24} = enc{31-24};
-  let Inst{19-16} = enc{19-16};
-}
-def InsnRIb
-    : InstRIb<0, (outs), (ins imm64zx32:$enc, AnyReg:$R1, brtarget16:$RI2),
-              ".insn ri_b,$enc,$R1,$RI2", []>,
-      InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-24} = enc{31-24};
-  let Inst{19-16} = enc{19-16};
-}
-def InsnRIc
-    : InstRIc<0, (outs), (ins imm64zx32:$enc, imm32zx4:$M1, brtarget16:$RI2),
-              ".insn ri_c,$enc,$M1,$RI2", []>,
-      InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-24} = enc{31-24};
-  let Inst{19-16} = enc{19-16};
-}
-// RIE base format - legacy operand order preserved
-def InsnRIE
-    : InstRIEd<0, (outs),
-               (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$I2),
-               ".insn rie,$enc,$R1,$R3,$I2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRIEa
-    : InstRIEa<0, (outs),
-               (ins imm64zx48:$enc, AnyReg:$R1, imm32xx16:$I2, imm32zx4:$M3),
-               ".insn rie_a,$enc,$R1,$I2,$M3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRIEb : InstRIEb<0, (outs),
-                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2,
-                            imm32zx4:$M3, brtarget16:$RI4),
-                        ".insn rie_b,$enc,$R1,$R2,$M3,$RI4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRIEc : InstRIEc<0, (outs),
+let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
+  def InsnE : InstE<0, (outs),
+                    (ins imm64zx16:$enc), ".insn e,$enc", []>;
+  def InsnI : InstI<0, (outs),
+                    (ins imm64zx16:$enc, imm32zx8:$I1),
+                    ".insn i,$enc,$I1", []>;
+  def InsnIE : InstIE<0, (outs),
+                      (ins imm64zx32:$enc, imm32zx4:$I1, imm32zx4:$I2),
+                      ".insn ie,$enc,$I1,$I2", []>;
+  def InsnMII : InstMII<0, (outs),
+                        (ins imm64zx48:$enc, imm32zx4:$M1, brtarget12bpp:$RI2,
+                             brtarget24bpp:$RI3),
+                        ".insn mii,$enc,$M1,$RI2,$RI3", []>;
+  def InsnRI : InstRIa<0, (outs),
+                       (ins imm64zx32:$enc, AnyReg:$R1, imm32sx16:$I2),
+                       ".insn ri,$enc,$R1,$I2", []>;
+  def InsnRIa : InstRIa<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, imm32xx16:$I2),
+                        ".insn ri_a,$enc,$R1,$I2", []>;
+  def InsnRIb : InstRIb<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, brtarget16:$RI2),
+                        ".insn ri_b,$enc,$R1,$RI2", []>;
+  def InsnRIc : InstRIc<0, (outs),
+                        (ins imm64zx32:$enc, imm32zx4:$M1, brtarget16:$RI2),
+                        ".insn ri_c,$enc,$M1,$RI2", []>;
+  def InsnRIEa : InstRIEa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm32xx16:$I2, imm32zx4:$M3),
+                          ".insn rie_a,$enc,$R1,$I2,$M3", []>;
+  def InsnRIEb : InstRIEb<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2,
+                               imm32zx4:$M3, brtarget16:$RI4),
+                          ".insn rie_b,$enc,$R1,$R2,$M3,$RI4", []>;
+  def InsnRIEc : InstRIEc<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm32xx8:$I2,
+                               imm32zx4:$M3, brtarget16:$RI4),
+                               ".insn rie_c,$enc,$R1,$I2,$M3,$RI4", []>;
+  def InsnRIEd : InstRIEd<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm32sx16:$I2, AnyReg:$R3),
+                          ".insn rie_d,$enc,$R1,$I2,$R3", []>;
+  def InsnRIEe : InstRIEe<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, brtarget16:$RI2, AnyReg:$R3),
+                          ".insn rie_e,$enc,$R1,$RI2,$R3", []>;
+  def InsnRIEf : InstRIEf<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2,
+                               imm32zx8:$I3, imm32zx8:$I4, imm32zx8:$I5),
+                          ".insn rie_f,$enc,$R1,$R2,$I3,$I4,$I5", []>;
+  def InsnRIEg : InstRIEg<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm32sx16:$I2, imm32zx4:$M3),
+                          ".insn rie_g,$enc,$R1,$I2,$M3", []>;
+  def InsnRIL : InstRILa<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1, brtarget32:$I2),
+                         ".insn ril,$enc,$R1,$I2", []>;
+  def InsnRILa : InstRILa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm64xx32:$I2),
+                          ".insn ril_a,$enc,$R1,$I2", []>;
+  def InsnRILb : InstRILb<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, brtarget32:$RI2),
+                          ".insn ril_b,$enc,$R1,$RI2", []>;
+  def InsnRILc : InstRILc<0, (outs),
+                          (ins imm64zx48:$enc, imm32zx4:$M1, brtarget32:$RI2),
+                          ".insn ril_c,$enc,$M1,$RI2", []>;
+  def InsnRIS : InstRIS<0, (outs),
                         (ins imm64zx48:$enc, AnyReg:$R1, imm32xx8:$I2,
-                            imm32zx4:$M3, brtarget16:$RI4),
-                        ".insn rie_c,$enc,$R1,$I2,$M3,$RI4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRIEd
-    : InstRIEd<0, (outs),
-               (ins imm64zx48:$enc, AnyReg:$R1, imm32sx16:$I2, AnyReg:$R3),
-               ".insn rie_d,$enc,$R1,$I2,$R3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRIEe
-    : InstRIEe<0, (outs),
-               (ins imm64zx48:$enc, AnyReg:$R1, brtarget16:$RI2, AnyReg:$R3),
-               ".insn rie_e,$enc,$R1,$RI2,$R3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRIEf : InstRIEf<0, (outs),
-                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2,
-                            imm32zx8:$I3, imm32zx8:$I4, imm32zx8:$I5),
-                        ".insn rie_f,$enc,$R1,$R2,$I3,$I4,$I5", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRIEg
-    : InstRIEg<0, (outs),
-               (ins imm64zx48:$enc, AnyReg:$R1, imm32sx16:$I2, imm32zx4:$M3),
-               ".insn rie_g,$enc,$R1,$I2,$M3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRIL
-    : InstRILa<0, (outs), (ins imm64zx48:$enc, AnyReg:$R1, brtarget32:$I2),
-               ".insn ril,$enc,$R1,$I2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{35-32} = enc{35-32};
-}
-def InsnRILa
-    : InstRILa<0, (outs), (ins imm64zx48:$enc, AnyReg:$R1, imm64xx32:$I2),
-               ".insn ril_a,$enc,$R1,$I2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{35-32} = enc{35-32};
-}
-def InsnRILb
-    : InstRILb<0, (outs), (ins imm64zx48:$enc, AnyReg:$R1, brtarget32:$RI2),
-               ".insn ril_b,$enc,$R1,$RI2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{35-32} = enc{35-32};
-}
-def InsnRILc
-    : InstRILc<0, (outs), (ins imm64zx48:$enc, imm32zx4:$M1, brtarget32:$RI2),
-               ".insn ril_c,$enc,$M1,$RI2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{35-32} = enc{35-32};
-}
-def InsnRILU : InstRILa<0, (outs), (ins imm64zx48:$enc, AnyReg:$R1, uimm32:$I2),
-                        ".insn rilu,$enc,$R1,$I2", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{35-32} = enc{35-32};
-}
-def InsnRIS : InstRIS<0, (outs),
-                      (ins imm64zx48:$enc, AnyReg:$R1, imm32xx8:$I2,
-                          imm32zx4:$M3, (bdaddr12only $B4, $D4):$BD4),
-                      ".insn ris,$enc,$R1,$I2,$M3,$BD4", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRR : InstRR<0, (outs), (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
-                    ".insn rr,$enc,$R1,$R2", []>,
-             InsnDirectiveBase {
-  bits<16> enc;
-
-  let Inst{15-8} = enc{15-8};
-}
-def InsnRRD : InstRRD<0, (outs),
-                      (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3),
-                      ".insn rrd,$enc,$R1,$R2,$R3", []>,
-              InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-16} = enc{31-16};
-}
-def InsnRRE : InstRRE<0, (outs), (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
-                      ".insn rre,$enc,$R1,$R2", []>,
-              InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-16} = enc{31-16};
-}
-def InsnRRF : InstRRFa<0, (outs),
-                       (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
-                           imm32zx4:$M4),
-                       ".insn rrf,$enc,$R1,$R2,$R3,$M4", []>,
-              InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-16} = enc{31-16};
-}
-def InsnRRFa : InstRRFa<0, (outs),
-                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
-                            imm32zx4:$M4),
-                        ".insn rrf_a,$enc,$R1,$R2,$R3,$M4", []>,
-               InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-16} = enc{31-16};
-}
-def InsnRRFb : InstRRFb<0, (outs),
-                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
-                            imm32zx4:$M4),
-                        ".insn rrf_b,$enc,$R1,$R2,$R3,$M4", []>,
-               InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-16} = enc{31-16};
-}
-def InsnRRFc
-    : InstRRFc<0, (outs),
-               (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3),
-               ".insn rrf_c,$enc,$R1,$R2,$M3", []>,
-      InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-16} = enc{31-16};
-}
-def InsnRRFd
-    : InstRRFd<0, (outs),
-               (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M4),
-               ".insn rrf_d,$enc,$R1,$R2,$M4", []>,
-      InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-16} = enc{31-16};
-}
-def InsnRRFe : InstRRFe<0, (outs),
-                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2,
-                            imm32zx4:$M3, imm32zx4:$M4),
-                        ".insn rrf_e,$enc,$R1,$R2,$M3,$M4", []>,
-               InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-16} = enc{31-16};
-}
-def InsnRRS : InstRRS<0, (outs),
-                      (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3,
-                          (bdaddr12only $B4, $D4):$BD4),
-                      ".insn rrs,$enc,$R1,$R2,$M3,$BD4", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-// RS - legacy operand order preserved
-def InsnRS : InstRSa<0, (outs),
-                     (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3,
-                         (bdaddr12only $B2, $D2):$BD2),
-                     ".insn rs,$enc,$R1,$R3,$BD2", []>,
-             InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-24} = enc{31-24};
-}
-def InsnRSa : InstRSa<0, (outs),
-                      (ins imm64zx32:$enc, AnyReg:$R1,
-                          (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
-                      ".insn rs_a,$enc,$R1,$BD2,$R3", []>,
-              InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-24} = enc{31-24};
-}
-def InsnRSb : InstRSb<0, (outs),
-                      (ins imm64zx32:$enc, AnyReg:$R1,
-                          (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M3),
-                      ".insn rs_b,$enc,$R1,$BD2,$M3", []>,
-              InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-24} = enc{31-24};
-}
-// RRSE - legacy operand order preserved
-def InsnRSE : InstRSEa<6, (outs),
-                       (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
-                           (bdaddr12only $B2, $D2):$BD2),
-                       ".insn rse,$enc,$R1,$R3,$BD2", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-// RSI - legacy operand order preserved
-def InsnRSI
-    : InstRSI<0, (outs),
-              (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$RI2),
-              ".insn rsi,$enc,$R1,$R3,$RI2", []>,
-      InsnDirectiveBase {
-  bits<32> enc;
-
-  let Inst{31-24} = enc{31-24};
-}
-def InsnRSLa
-    : InstRSLa<0, (outs),
-               (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1),
-               ".insn rsl_a,$enc,$BDL1", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRSLb
-    : InstRSLb<0, (outs),
-               (ins imm64zx48:$enc, AnyReg:$R1,
-                   (bdladdr12onlylen8 $B2, $D2, $L2):$BDL2, imm32zx4:$M3),
-               ".insn rsl_b,$enc,$R1,$BDL2,$M3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-// RSY - legacy operand order preserved
-def InsnRSY : InstRSYa<0, (outs),
-                       (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
-                           (bdaddr20only $B2, $D2):$BD2),
-                       ".insn rsy,$enc,$R1,$R3,$BD2", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRSYa : InstRSYa<0, (outs),
+                             imm32zx4:$M3, (bdaddr12only $B4, $D4):$BD4),
+                        ".insn ris,$enc,$R1,$I2,$M3,$BD4", []>;
+  def InsnRR : InstRR<0, (outs),
+                      (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
+                      ".insn rr,$enc,$R1,$R2", []>;
+  let R2 = 0 in
+    def InsnRR_R2Opt : InstRR<0, (outs),
+                      (ins imm64zx16:$enc, AnyReg:$R1),
+                      ".insn rr,$enc,$R1", []>;
+  def InsnRRD : InstRRD<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3),
+                        ".insn rrd,$enc,$R1,$R2,$R3", []>;
+  def InsnRRE : InstRRE<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
+                        ".insn rre,$enc,$R1,$R2", []>;
+  let R2 = 0 in {
+      def InsnRRE_R2Opt : InstRRE<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1),
+                        ".insn rre,$enc,$R1", []>;
+      let R1 = 0 in {
+        def InsnRRE_R1R2Opt : InstRRE<0, (outs),
+                        (ins imm64zx32:$enc),
+                        ".insn rre,$enc", []>;
+      }
+  }
+  def InsnRRFa : InstRRFa<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
+                               imm32zx4:$M4),
+                          ".insn rrf_a,$enc,$R1,$R2,$R3,$M4", []>;
+  // For RRF-a, the POP explicitly defines a non-index operand order.
+  let M4 = 0 in {
+      def InsnRRFa_M4Opt : InstRRFa<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3),
+                          ".insn rrf_a,$enc,$R1,$R2,$R3", []>;
+      let R3 = 0 in {
+        def InsnRRFa_R3M4Opt : InstRRFa<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
+                          ".insn rrf_a,$enc,$R1,$R2", []>;
+      }
+  }
+  def InsnRRFb : InstRRFb<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, AnyReg:$R2,
+                              imm32zx4:$M4),
+                          ".insn rrf_b,$enc,$R1,$R3,$R2,$M4", []>;
+  let M4 = 0 in {
+      def InsnRRFb_M4Opt : InstRRFb<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, AnyReg:$R2),
+                          ".insn rrf_b,$enc,$R1,$R3,$R2", []>;
+  }
+  def InsnRRFc : InstRRFc<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3),
+                          ".insn rrf_c,$enc,$R1,$R2,$M3", []>;
+  let M3 = 0 in
+    def InsnRRFc_M3Opt : InstRRFc<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
+                          ".insn rrf_c,$enc,$R1,$R2", []>;
+  def InsnRRFd : InstRRFd<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M4),
+                          ".insn rrf_d,$enc,$R1,$R2,$M4", []>;
+  // For RRF-e, the POP explicitly defines a non-index operand order.
+  def InsnRRFe : InstRRFe<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, imm32zx4:$M3,
+                               AnyReg:$R2, imm32zx4:$M4),
+                          ".insn rrf_e,$enc,$R1,$M3,$R2,$M4", []>;
+  let M4 = 0 in
+    def InsnRRFe_M4Opt : InstRRFe<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, imm32zx4:$M3,
+                                AnyReg:$R2),
+                          ".insn rrf_e,$enc,$R1,$M3,$R2", []>;
+  def InsnRRS : InstRRS<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3,
+                             (bdaddr12only $B4, $D4):$BD4),
+                        ".insn rrs,$enc,$R1,$R2,$M3,$BD4", []>;
+  def InsnRSa : InstRSa<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1,
+                             (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                        ".insn rs_a,$enc,$R1,$BD2,$R3", []>;
+  let R3 = 0 in
+    def InsnRSa_R3Opt : InstRSa<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1,
+                             (bdaddr12only $B2, $D2):$BD2),
+                        ".insn rs_a,$enc,$R1,$BD2", []>;
+  def InsnRSb : InstRSb<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1,
+                             (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M3),
+                        ".insn rs_b,$enc,$R1,$BD2,$M3", []>;
+  def InsnRSLa : InstRSLa<0, (outs),
+                         (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1),
+                         ".insn rsl_a,$enc,$BDL1", []>;
+  def InsnRSLb : InstRSLb<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                              (bdladdr12onlylen8 $B2, $D2, $L2):$BDL2, imm32zx4:$M3),
+                          ".insn rsl_b,$enc,$R1,$BDL2,$M3", []>;
+  def InsnRSYa : InstRSYa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdaddr20only $B2, $D2):$BD2, AnyReg:$R3),
+                          ".insn rsy_a,$enc,$R1,$BD2,$R3", []>;
+  def InsnRSYb : InstRSYb<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdaddr20only $B2, $D2):$BD2, imm32zx4:$M3),
+                          ".insn rsy_b,$enc,$R1,$BD2,$M3", []>;
+  def InsnRXa : InstRXa<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1,
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn rx_a,$enc,$R1,$XBD2", []>;
+  def InsnRXb : InstRXb<0, (outs),
+                        (ins imm64zx32:$enc, imm32zx4:$M1,
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn rx_b,$enc,$M1,$XBD2", []>;
+  def InsnRXE : InstRXE<0, (outs),
                         (ins imm64zx48:$enc, AnyReg:$R1,
-                            (bdaddr20only $B2, $D2):$BD2, AnyReg:$R3),
-                        ".insn rsy_a,$enc,$R1,$BD2,$R3", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRSYb : InstRSYb<0, (outs),
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
+                        ".insn rxe,$enc,$R1,$XBD2,$M3", []>;
+  let M3 = 0 in
+    def InsnRXE_M3Opt : InstRXE<0, (outs),
                         (ins imm64zx48:$enc, AnyReg:$R1,
-                            (bdaddr20only $B2, $D2):$BD2, imm32zx4:$M3),
-                        ".insn rsy_b,$enc,$R1,$BD2,$M3", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRX : InstRXa<0, (outs),
-                     (ins imm64zx32:$enc, AnyReg:$R1,
-                         (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                     ".insn rx,$enc,$R1,$XBD2", []>,
-             InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-24} = enc{31-24};
-}
-def InsnRXa : InstRXa<0, (outs),
-                      (ins imm64zx32:$enc, AnyReg:$R1,
-                          (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                      ".insn rx_a,$enc,$R1,$XBD2", []>,
-              InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-24} = enc{31-24};
-}
-def InsnRXb : InstRXb<0, (outs),
-                      (ins imm64zx32:$enc, imm32zx4:$M1,
-                          (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                      ".insn rx_b,$enc,$M1,$XBD2", []>,
-              InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-24} = enc{31-24};
-}
-def InsnRXE : InstRXE<0, (outs),
-                      (ins imm64zx48:$enc, AnyReg:$R1,
-                          (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                      ".insn rxe,$enc,$R1,$XBD2", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let M3 = 0;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-// RXF - legacy operand order preserved
-def InsnRXF : InstRXF<0, (outs),
-                      (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
-                          (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                      ".insn rxf,$enc,$R1,$R3,$XBD2", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-// RXY - legacy operand order preserved
-def InsnRXY : InstRXYa<0, (outs),
-                       (ins imm64zx48:$enc, AnyReg:$R1,
-                           (bdxaddr20only $B2, $D2, $X2):$XBD2),
-                       ".insn rxy,$enc,$R1,$XBD2", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRXYa : InstRXYa<0, (outs),
-                        (ins imm64zx48:$enc, AnyReg:$R1,
-                            (bdxaddr20only $B2, $D2, $X2):$XBD2),
-                        ".insn rxy_a,$enc,$R1,$XBD2", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRXYb : InstRXYb<0, (outs),
-                        (ins imm64zx48:$enc, imm32zx4:$M1,
-                            (bdxaddr20only $B2, $D2, $X2):$XBD2),
-                        ".insn rxy_b,$enc,$M1,$XBD2", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnRXYc : InstRXYa<0, (outs),
-                        (ins imm64zx48:$enc, AnyReg:$R1,
-                            (bdxaddr20only $B2, $D2, $X2):$XBD2),
-                        ".insn rxy_c,$enc,$R1,$XBD2", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnS : InstS<0, (outs), (ins imm64zx32:$enc, (bdaddr12only $B2, $D2):$BD2),
-                  ".insn s,$enc,$BD2", []>,
-            InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-16} = enc{31-16};
-}
-def InsnSI
-    : InstSI<0, (outs),
-             (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx8:$I2),
-             ".insn si,$enc,$BD1,$I2", []>,
-      InsnDirectiveBase {
-  bits<32> enc;
-  let Inst{31-24} = enc{31-24};
-}
-def InsnSIY
-    : InstSIY<0, (outs),
-              (ins imm64zx48:$enc, (bdaddr20only $B1, $D1):$BD1, imm32xx8:$I2),
-              ".insn siy,$enc,$BD1,$I2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnSIL
-    : InstSIL<0, (outs),
-              (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx16:$I2),
-              ".insn sil,$enc,$BD1,$I2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-32} = enc{47-32};
-}
-def InsnSMI : InstSMI<0, (outs),
-                      (ins imm64zx48:$enc, imm32zx4:$M1, brtarget16bpp:$RI2,
-                          (bdaddr12only $B3, $D3):$BD3),
-                      ".insn smi,$enc,$M1,$RI2,$BD3", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnSS : InstSSd<0, (outs),
-                     (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
-                         (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
-                     ".insn ss,$enc,$RBD1,$BD2,$R3", []>,
-             InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnSSa
-    : InstSSa<0, (outs),
-              (ins imm64zx48:$enc, (bdladdr12onlylen8 $B1, $D1, $L1):$BDL1,
-                  (bdaddr12only $B2, $D2):$BD2),
-              ".insn ss_a,$enc,$BDL1,$BD2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnSSb
-    : InstSSb<0, (outs),
-              (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1,
-                  (bdladdr12onlylen4 $B2, $D2, $L2):$BDL2),
-              ".insn ss_b,$enc,$BDL1,$BDL2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnSSc
-    : InstSSc<0, (outs),
-              (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1,
-                  (bdaddr12only $B2, $D2):$BD2, imm32zx4:$I3),
-              ".insn ss_c,$enc,$BDL1,$BD2,$I3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnSSd : InstSSd<0, (outs),
-                      (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
-                          (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
-                      ".insn ss_d,$enc,$RBD1,$BD2,$R3", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnSSe
-    : InstSSe<0, (outs),
-              (ins imm64zx48:$enc, AnyReg:$R1, (bdaddr12only $B2, $D2):$BD2,
-                  AnyReg:$R3, (bdaddr12only $B4, $D4):$BD4),
-              ".insn ss_e,$enc,$R1,$BD2,$R3,$BD4", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnSSf : InstSSf<0, (outs),
-                      (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
-                          (bdladdr12onlylen8 $B2, $D2, $L2):$BDL2),
-                      ".insn ss_f,$enc,$BD1,$BDL2", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-}
-def InsnSSE : InstSSE<0, (outs),
-                      (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
-                          (bdaddr12only $B2, $D2):$BD2),
-                      ".insn sse,$enc,$BD1,$BD2", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-32} = enc{47-32};
-}
-def InsnSSF : InstSSF<0, (outs),
-                      (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
-                          (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
-                      ".insn ssf,$enc,$BD1,$BD2,$R3", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{35-32} = enc{35-32};
-}
-def InsnVRI : InstVRIe<0, (outs),
-                       (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx12:$I3,
-                           imm32zx4:$M4, imm32zx4:$M5),
-                       ".insn vri,$enc,$V1,$V2,$I3,$M4,$M5", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIa
-    : InstVRIa<0, (outs),
-               (ins imm64zx48:$enc, VR128:$V1, imm32xx16:$I2, imm32zx4:$M3),
-               ".insn vri_a,$enc,$V1,$I2,$M3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIb : InstVRIb<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, imm32zx8:$I2,
-                            imm32zx8:$I3, imm32zx4:$M4),
-                        ".insn vri_b,$enc,$V1,$I2,$I3,$M4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIc : InstVRIc<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2,
-                            VR128:$V3, imm32zx4:$M4),
-                        ".insn vri_c,$enc,$V1,$I2,$V3,$M4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRId : InstVRId<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                            imm32zx8:$I4, imm32zx4:$M5),
-                        ".insn vri_d,$enc,$V1,$V2,$V3,$I4,$M5", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIe : InstVRIe<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
-                            imm32zx12:$I3, imm32zx4:$M4, imm32zx4:$M5),
-                        ".insn vri_e,$enc,$V1,$V2,$I3,$M4,$M5", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIf : InstVRIf<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                            imm32zx8:$I4, imm32zx4:$M5),
-                        ".insn vri_f,$enc,$V1,$V2,$V3,$I4,$M5", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIg : InstVRIg<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx8:$I3,
-                            imm32zx8:$I4, imm32zx4:$M5),
-                        ".insn vri_g,$enc,$V1,$V2,$I3,$I4,$M5", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIh : InstVRIh<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2,
-                            imm32zx4:$I3, imm32zx4:$M4),
-                        ".insn vri_h,$enc,$V1,$I2,$I3,$M4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIi : InstVRIi<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, AnyReg:$R2,
-                            imm32zx8:$I3, imm32zx4:$M4),
-                        ".insn vri_i,$enc,$V1,$R2,$I3,$M4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIj : InstVRIj<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx8:$I3,
-                            imm32zx4:$M4),
-                        ".insn vri_j,$enc,$V1,$V2,$I3,$M4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIk : InstVRIk<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                            VR128:$V4, imm32zx8:$I5),
-                        ".insn vri_k,$enc,$V1,$V2,$V3,$V4,$I5", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRIl
-    : InstVRIl<0, (outs),
-               (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx16:$I3),
-               ".insn vri_l,$enc,$V1,$V2,$I3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRR : InstVRRc<0, (outs),
-                       (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                           imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),
-                       ".insn vrr,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRa : InstVRRa<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3,
-                            imm32zx4:$M4, imm32zx4:$M5),
-                        ".insn vrr_a,$enc,$V1,$V2,$M3,$M4,$M5", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRb : InstVRRb<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                            imm32zx4:$M4, imm32zx4:$M5),
-                        ".insn vrr_b,$enc,$V1,$V2,$V3,$M4,$M5", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRc : InstVRRc<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                            imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),
-                        ".insn vrr_c,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRd : InstVRRd<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                            VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
-                        ".insn vrr_d,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRe : InstVRRe<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                            VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
-                        ".insn vrr_e,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRf : InstVRRf<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, AnyReg:$R2, AnyReg:$R3),
-                        ".insn vrr_f,$enc,$V1,$R2,$R3", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRg
-    : InstVRRg<0, (outs), (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2),
-               ".insn vrr_g,$enc,$V1,$I2", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRh
-    : InstVRRh<0, (outs),
-               (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
-               ".insn vrr_h,$enc,$V1,$V2,$M3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRi : InstVRRi<0, (outs),
-                        (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V2,
-                            imm32zx4:$M3, imm32zx4:$M4),
-                        ".insn vrr_i,$enc,$R1,$V2,$M3,$M4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRj : InstVRRj<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                            imm32zx4:$M4),
-                        ".insn vrr_j,$enc,$V1,$V2,$V3,$M4", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRRk
-    : InstVRRk<0, (outs),
-               (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
-               ".insn vrr_k,$enc,$V1,$V2,$M3", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-// VRS - legacy operand order preserved
-def InsnVRS : InstVRSc<0, (outs),
-                       (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V3,
-                           (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M4),
-                       ".insn vrs,$enc,$R1,$V3,$BD2,$M4", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRSa
-    : InstVRSa<0, (outs),
-               (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
-                   VR128:$V3, imm32zx4:$M4),
-               ".insn vrs_a,$enc,$V1,$BD2,$V3,$M4", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRSb
-    : InstVRSb<0, (outs),
-               (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
-                   AnyReg:$R3, imm32zx4:$M4),
-               ".insn vrs_b,$enc,$V1,$BD2,$R3,$M4", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRSc
-    : InstVRSc<0, (outs),
-               (ins imm64zx48:$enc, AnyReg:$R1, (bdaddr12only $B2, $D2):$BD2,
-                   VR128:$V3, imm32zx4:$M4),
-               ".insn vrs_c,$enc,$R1,$BD2,$V3,$M4", []>,
-      InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRSd : InstVRSd<0, (outs),
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn rxe,$enc,$R1,$XBD2", []>;
+  def InsnRXY : InstRXYa<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1,
+                              (bdxaddr20only $B2, $D2, $X2):$XBD2),
+                         ".insn rxy,$enc,$R1,$XBD2", []>;
+  def InsnRXYa : InstRXYa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdxaddr20only $B2, $D2, $X2):$XBD2),
+                          ".insn rxy_a,$enc,$R1,$XBD2", []>;
+  def InsnRXYb : InstRXYb<0, (outs),
+                          (ins imm64zx48:$enc, imm32zx4:$M1,
+                               (bdxaddr20only $B2, $D2, $X2):$XBD2),
+                          ".insn rxy_b,$enc,$M1,$XBD2", []>;
+  // There is no InstRXYc - it is identical to InstRXYa.
+  def InsnRXYc : InstRXYa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdxaddr20only $B2, $D2, $X2):$XBD2),
+                          ".insn rxy_c,$enc,$R1,$XBD2", []>;
+  def InsnS : InstS<0, (outs),
+                    (ins imm64zx32:$enc, (bdaddr12only $B2, $D2):$BD2),
+                    ".insn s,$enc,$BD2", []>;
+  let B2 = 0, D2 = 0 in
+    def InsnS_BD2Opt : InstS<0, (outs),
+                    (ins imm64zx32:$enc),
+                    ".insn s,$enc", []>;
+  def InsnSI : InstSI<0, (outs),
+                      (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx8:$I2),
+                      ".insn si,$enc,$BD1,$I2", []>;
+  def InsnSIY : InstSIY<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr20only $B1, $D1):$BD1, imm32xx8:$I2),
+                        ".insn siy,$enc,$BD1,$I2", []>;
+  let I2 = 0 in {
+    def InsnSI_I2Opt : InstSI<0, (outs),
+                      (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1),
+                      ".insn si,$enc,$BD1", []>;
+    def InsnSIY_I2Opt : InstSIY<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr20only $B1, $D1):$BD1),
+                        ".insn siy,$enc,$BD1", []>;
+  }
+  def InsnSIL : InstSIL<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx16:$I2),
+                        ".insn sil,$enc,$BD1,$I2", []>;
+  def InsnSMI : InstSMI<0, (outs),
+                        (ins imm64zx48:$enc, imm32zx4:$M1, brtarget16bpp:$RI2,
+                             (bdaddr12only $B3, $D3):$BD3),
+                        ".insn smi,$enc,$M1,$RI2,$BD3", []>;
+  def InsnSSa : InstSSa<0, (outs),
+                        (ins imm64zx48:$enc, (bdladdr12onlylen8 $B1, $D1, $L1):$BDL1,
+                             (bdaddr12only $B2, $D2):$BD2),
+                        ".insn ss_a,$enc,$BDL1,$BD2", []>;
+  def InsnSSb : InstSSb<0, (outs),
+                        (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1,
+                             (bdladdr12onlylen4 $B2, $D2, $L2):$BDL2),
+                        ".insn ss_b,$enc,$BDL1,$BDL2", []>;
+  def InsnSSc : InstSSc<0, (outs),
+                        (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1,
+                             (bdaddr12only $B2, $D2):$BD2, imm32zx4:$I3),
+                        ".insn ss_c,$enc,$BDL1,$BD2,$I3", []>;
+  def InsnSSd : InstSSd<0, (outs),
+                        (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
+                             (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                        ".insn ss_d,$enc,$RBD1,$BD2,$R3", []>;
+  def InsnSSe : InstSSe<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, (bdaddr12only $B2, $D2):$BD2,
+                             AnyReg:$R3, (bdaddr12only $B4, $D4):$BD4),
+                        ".insn ss_e,$enc,$R1,$BD2,$R3,$BD4", []>;
+  def InsnSSf : InstSSf<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
+                             (bdladdr12onlylen8 $B2, $D2, $L2):$BDL2),
+                        ".insn ss_f,$enc,$BD1,$BDL2", []>;
+  def InsnSSE : InstSSE<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
+                             (bdaddr12only $B2, $D2):$BD2),
+                        ".insn sse,$enc,$BD1,$BD2", []>;
+  def InsnSSF : InstSSF<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
+                             (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                        ".insn ssf,$enc,$BD1,$BD2,$R3", []>;
+  def InsnVRIa : InstVRIa<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32xx16:$I2, imm32zx4:$M3),
+                          ".insn vri_a,$enc,$V1,$I2,$M3", []>;
+  let M3 = 0 in
+    def InsnVRIa_M3Opt : InstVRIa<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32xx16:$I2),
+                          ".insn vri_a,$enc,$V1,$I2", []>;
+  def InsnVRIb : InstVRIb<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32zx8:$I2,
+                               imm32zx8:$I3, imm32zx4:$M4),
+                          ".insn vri_b,$enc,$V1,$I2,$I3,$M4", []>;
+  def InsnVRIc : InstVRIc<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2,
+                               VR128:$V3, imm32zx4:$M4),
+                          ".insn vri_c,$enc,$V1,$I2,$V3,$M4", []>;
+  def InsnVRId : InstVRId<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx8:$I4, imm32zx4:$M5),
+                          ".insn vri_d,$enc,$V1,$V2,$V3,$I4,$M5", []>;
+  let M5 = 0 in {
+    def InsnVRId_M5Opt : InstVRId<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx8:$I4),
+                          ".insn vri_d,$enc,$V1,$V2,$V3,$I4", []>;
+  }
+  def InsnVRIe : InstVRIe<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
+                               imm32zx12:$I3, imm32zx4:$M4, imm32zx4:$M5),
+                          ".insn vri_e,$enc,$V1,$V2,$I3,$M4,$M5", []>;
+  def InsnVRIf : InstVRIf<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx8:$I4, imm32zx4:$M5),
+                          ".insn vri_f,$enc,$V1,$V2,$V3,$I4,$M5", []>;
+  def InsnVRIg : InstVRIg<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx8:$I3,
+                               imm32zx8:$I4, imm32zx4:$M5),
+                          ".insn vri_g,$enc,$V1,$V2,$I3,$I4,$M5", []>;
+  def InsnVRIh : InstVRIh<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2,
+                               imm32zx4:$I3),
+                          ".insn vri_h,$enc,$V1,$I2,$I3", []>;
+  def InsnVRIi : InstVRIi<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, AnyReg:$R2,
+                               imm32zx8:$I3, imm32zx4:$M4),
+                          ".insn vri_i,$enc,$V1,$R2,$I3,$M4", []>;
+  def InsnVRIj : InstVRIj<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx8:$I3,
+                               imm32zx4:$M4),
+                          ".insn vri_j,$enc,$V1,$V2,$I3,$M4", []>;
+  def InsnVRIk : InstVRIk<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               VR128:$V4, imm32zx8:$I5),
+                          ".insn vri_k,$enc,$V1,$V2,$V3,$V4,$I5", []>;
+  def InsnVRIl : InstVRIl<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx16:$I3),
+                          ".insn vri_l,$enc,$V1,$V2,$I3", []>;
+  def InsnVRRa : InstVRRa<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3,
+                               imm32zx4:$M4, imm32zx4:$M5),
+                          ".insn vrr_a,$enc,$V1,$V2,$M3,$M4,$M5", []>;
+  def InsnVRRb : InstVRRb<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx4:$M4, imm32zx4:$M5),
+                          ".insn vrr_b,$enc,$V1,$V2,$V3,$M4,$M5", []>;
+  // VRR formats with optional M fields starting at M5
+  let M5 = 0 in {
+    def InsnVRRa_M5Opt : InstVRRa<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3,
+                                imm32zx4:$M4),
+                            ".insn vrr_a,$enc,$V1,$V2,$M3,$M4", []>;
+    def InsnVRRb_M5Opt : InstVRRb<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                                imm32zx4:$M4),
+                            ".insn vrr_b,$enc,$V1,$V2,$V3,$M4", []>;
+    let M4 = 0 in {
+        def InsnVRRa_M4M5Opt : InstVRRa<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
+                          ".insn vrr_a,$enc,$V1,$V2,$M3", []>;
+        def InsnVRRb_M4M5Opt : InstVRRb<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3),
+                          ".insn vrr_b,$enc,$V1,$V2,$V3", []>;
+        let M3 = 0 in
+          def InsnVRRa_M3M4M5Opt : InstVRRa<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2),
+                          ".insn vrr_a,$enc,$V1,$V2", []>;
+    }
+  }
+  def InsnVRRc : InstVRRc<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),
+                          ".insn vrr_c,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
+  def InsnVRRd : InstVRRd<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
+                          ".insn vrr_d,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>;
+  def InsnVRRe : InstVRRe<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
+                          ".insn vrr_e,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>;
+  // VRR formats with optional M fields starting at M6
+  let M6 = 0 in {
+    def InsnVRRc_M6Opt : InstVRRc<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx4:$M4, imm32zx4:$M5),
+                          ".insn vrr_c,$enc,$V1,$V2,$V3,$M4,$M5", []>;
+    def InsnVRRd_M6Opt : InstVRRd<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               VR128:$V4, imm32zx4:$M5),
+                          ".insn vrr_d,$enc,$V1,$V2,$V3,$V4,$M5", []>;
+    def InsnVRRe_M6Opt : InstVRRe<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               VR128:$V4, imm32zx4:$M5),
+                          ".insn vrr_e,$enc,$V1,$V2,$V3,$V4,$M5", []>;
+    let M5 = 0 in {
+      def InsnVRRc_M5M6Opt : InstVRRc<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx4:$M4),
+                          ".insn vrr_c,$enc,$V1,$V2,$V3,$M4", []>;
+      def InsnVRRd_M5M6Opt : InstVRRd<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               VR128:$V4),
+                          ".insn vrr_d,$enc,$V1,$V2,$V3,$V4", []>;
+      def InsnVRRe_M5M6Opt : InstVRRe<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               VR128:$V4),
+                          ".insn vrr_e,$enc,$V1,$V2,$V3,$V4", []>;
+      let M4 = 0 in
+        def InsnVRRc_M4M5M6Opt : InstVRRc<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3),
+                          ".insn vrr_c,$enc,$V1,$V2,$V3", []>;
+    }
+  }
+  def InsnVRRf : InstVRRf<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, AnyReg:$R2, AnyReg:$R3),
+                          ".insn vrr_f,$enc,$V1,$R2,$R3", []>;
+  def InsnVRRg : InstVRRg<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2),
+                          ".insn vrr_g,$enc,$V1,$I2", []>;
+  let I2 = 0 in
+    def InsnVRRg_I2Opt : InstVRRg<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1),
+                          ".insn vrr_g,$enc,$V1", []>;
+  def InsnVRRh : InstVRRh<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
+                          ".insn vrr_h,$enc,$V1,$V2,$M3", []>;
+  let M3 = 0 in
+    def InsnVRRh_M3Opt : InstVRRh<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2),
+                          ".insn vrr_h,$enc,$V1,$V2", []>;
+  def InsnVRRi : InstVRRi<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V2,
+                               imm32zx4:$M3, imm32zx4:$M4),
+                          ".insn vrr_i,$enc,$R1,$V2,$M3,$M4", []>;
+  let M4 = 0 in
+    def InsnVRRi_M4Opt : InstVRRi<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V2,
+                               imm32zx4:$M3),
+                          ".insn vrr_i,$enc,$R1,$V2,$M3", []>;
+  def InsnVRRj : InstVRRj<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx4:$M4),
+                          ".insn vrr_j,$enc,$V1,$V2,$V3,$M4", []>;
+  def InsnVRRk : InstVRRk<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
+                          ".insn vrr_k,$enc,$V1,$V2,$M3", []>;
+  def InsnVRSa : InstVRSa<0, (outs),
+                         (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
+                              VR128:$V3, imm32zx4:$M4),
+                         ".insn vrs_a,$enc,$V1,$BD2,$V3,$M4", []>;
+  def InsnVRSb : InstVRSb<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
+                               AnyReg:$R3, imm32zx4:$M4),
+                          ".insn vrs_b,$enc,$V1,$BD2,$R3,$M4", []>;
+  let M4 = 0 in {
+    def InsnVRSa_M4Opt : InstVRSa<0, (outs),
+                         (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
+                              VR128:$V3),
+                         ".insn vrs_a,$enc,$V1,$BD2,$V3", []>;
+    def InsnVRSb_M4Opt : InstVRSb<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
+                               AnyReg:$R3),
+                          ".insn vrs_b,$enc,$V1,$BD2,$R3", []>;
+  }
+  def InsnVRSc : InstVRSc<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, (bdaddr12only $B2, $D2):$BD2,
+                               VR128:$V3, imm32zx4:$M4),
+                          ".insn vrs_c,$enc,$R1,$BD2,$V3,$M4", []>;
+  def InsnVRSd : InstVRSd<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1,
+                               (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                          ".insn vrs_d,$enc,$V1,$BD2,$R3", []>;
+  def InsnVRV : InstVRV<0, (outs),
                         (ins imm64zx48:$enc, VR128:$V1,
+                             (bdvaddr12only $B2, $D2, $V2):$VBD2, imm32zx4:$M3),
+                        ".insn vrv,$enc,$V1,$VBD2,$M3", []>;
+  def InsnVRX : InstVRX<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1,
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
+                        ".insn vrx,$enc,$V1,$XBD2,$M3", []>;
+  let M3 = 0 in {
+    def InsnVRV_M3Opt : InstVRV<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1,
+                             (bdvaddr12only $B2, $D2, $V2):$VBD2),
+                        ".insn vrv,$enc,$V1,$VBD2", []>;
+    def InsnVRX_M3Opt : InstVRX<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1,
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn vrx,$enc,$V1,$XBD2", []>;
+  }
+
+  def InsnVSI : InstVSI<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1,
+                             (bdaddr12only $B2, $D2):$BD2, imm32zx8:$I3),
+                        ".insn vsi,$enc,$V1,$BD2,$I3", []>;
+
+  // The following .insn directive definitions do not follow the rule for
+  // operand order, and/or reference the base instruction format even where
+  // that format has subformats. They are kept for backwards compatibility.
+
+  def InsnRIE : InstRIEd<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$I2),
+                         ".insn rie,$enc,$R1,$R3,$I2", []>;
+  def InsnRILU : InstRILa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, uimm32:$I2),
+                          ".insn rilu,$enc,$R1,$I2", []>;
+  def InsnRRF : InstRRFa<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
+                             imm32zx4:$M4),
+                        ".insn rrf,$enc,$R1,$R2,$R3,$M4", []>;
+  def InsnRS : InstRSa<0, (outs),
+                       (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3,
+                            (bdaddr12only $B2, $D2):$BD2),
+                      ".insn rs,$enc,$R1,$R3,$BD2", []>;
+  def InsnRSE : InstRSE<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
+                             (bdaddr12only $B2, $D2):$BD2),
+                        ".insn rse,$enc,$R1,$R3,$BD2", []>;
+  def InsnRSI : InstRSI<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$RI2),
+                        ".insn rsi,$enc,$R1,$R3,$RI2", []>;
+  def InsnRSY : InstRSYa<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
+                              (bdaddr20only $B2, $D2):$BD2),
+                        ".insn rsy,$enc,$R1,$R3,$BD2", []>;
+  def InsnRX : InstRXa<0, (outs),
+                       (ins imm64zx32:$enc, AnyReg:$R1,
+                            (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                       ".insn rx,$enc,$R1,$XBD2", []>;
+  def InsnRXF : InstRXF<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn rxf,$enc,$R1,$R3,$XBD2", []>;
+  def InsnSS : InstSSd<0, (outs),
+                       (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
                             (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
-                        ".insn vrs_d,$enc,$V1,$BD2,$R3", []>,
-               InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRV : InstVRV<0, (outs),
-                      (ins imm64zx48:$enc, VR128:$V1,
-                          (bdvaddr12only $B2, $D2, $V2):$VBD2, imm32zx4:$M3),
-                      ".insn vrv,$enc,$V1,$VBD2,$M3", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVRX : InstVRX<0, (outs),
-                      (ins imm64zx48:$enc, VR128:$V1,
-                          (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
-                      ".insn vrx,$enc,$V1,$XBD2,$M3", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
-}
-def InsnVSI : InstVSI<0, (outs),
-                      (ins imm64zx48:$enc, VR128:$V1,
-                          (bdaddr12only $B2, $D2):$BD2, imm32zx8:$I3),
-                      ".insn vsi,$enc,$V1,$BD2,$I3", []>,
-              InsnDirectiveBase {
-  bits<48> enc;
-  let Inst{47-40} = enc{47-40};
-  let Inst{7-0} = enc{7-0};
+                       ".insn ss,$enc,$RBD1,$BD2,$R3", []>;
+  def InsnVRI : InstVRIe<0, (outs),
+                         (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx12:$I3,
+                              imm32zx4:$M4, imm32zx4:$M5),
+                         ".insn vri,$enc,$V1,$V2,$I3,$M4,$M5", []>;
+  def InsnVRR : InstVRRc<0, (outs),
+                         (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                              imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),
+                         ".insn vrr,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
+  def InsnVRS : InstVRSc<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V3,
+                              (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M4),
+                         ".insn vrs,$enc,$R1,$V3,$BD2,$M4", []>;
 }
 
 //===----------------------------------------------------------------------===//

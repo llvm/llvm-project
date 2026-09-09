@@ -6,7 +6,7 @@
 //   - Representative entries from several format families to confirm format
 //     name, opcode symbol, operand count, and MCK kinds.
 //   - X-imm (union signed/unsigned) operands are mapped to the right MCK.
-//   - Entries are sorted by (format, opcode): verified with adjacent pairs.
+//   - Entries are sorted by format.
 // Checks must appear in output order (FileCheck is sequential).
 
 // Single-operand format.

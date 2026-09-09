@@ -642,13 +642,15 @@ public:
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "SystemZGenAsmMatcher.inc"
 
+namespace {
+
 // Used for the .insn directives; contains information needed to parse the
 // operands in the directive.
 struct InsnMatchEntry {
   StringRef Format;
   uint64_t Opcode;
   int32_t NumOperands;
-  MatchClassKind OperandKinds[7];
+  MatchClassKind OperandKinds[8];
 };
 
 // For equal_range comparison.
@@ -660,16 +662,16 @@ struct CompareInsn {
     return LHS < RHS.Format;
   }
   bool operator() (const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
-    if (LHS.Format != RHS.Format)
-      return LHS.Format < RHS.Format;
-    return LHS.Opcode < RHS.Opcode;
+    return LHS.Format < RHS.Format;
   }
 };
 
 // Table initializing information for parsing the .insn directive.
-static struct InsnMatchEntry InsnMatchTable[] = {
+static InsnMatchEntry InsnMatchTable[] = {
 #include "SystemZGenInsnMatchTable.inc"
 };
+
+} // end anonymous namespace
 
 void SystemZOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
@@ -1219,10 +1221,15 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
   if (EntryRange.first == EntryRange.second)
     return Error(ErrorLoc, "unrecognized format");
 
+  // Select the first format variant that matches the format name.
+  // Some format names have multiple variants to support trailing optional
+  // operands. In the InsnMatchTable, these entries appear in reverse order
+  // of their operand count, i.e. fewest operands first. We'll try to parse
+  // the shortest variant first, and switch to subsequent format variants on
+  // the fly as we discover additional operands beyond the expected count,
+  // until we either successfully parse the full .insn directive or reach the
+  // end of the format variant list and have to declare a parse error.
   struct InsnMatchEntry *Entry = EntryRange.first;
-
-  // Format should match from equal_range.
-  assert(Entry->Format == Format);
 
   // Parse the following operands using the table's information.
   for (int I = 0; I < Entry->NumOperands; I++) {
@@ -1232,7 +1239,7 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
 
     // Always expect commas as separators for operands.
     if (getLexer().isNot(AsmToken::Comma))
-      return Error(StartLoc, "unexpected token in directive");
+      return Error(StartLoc, "too few operands to .insn directive");
     Lex();
 
     // Parse operands.
@@ -1268,7 +1275,8 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
 
       // Expect immediate expression.
       if (Parser.parseExpression(Expr))
-        return Error(StartLoc, "unexpected token in directive");
+        return Error(StartLoc, "unexpected token in .insn directive");
+
       SMLoc EndLoc =
         SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
@@ -1276,9 +1284,31 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
       ResTy = ParseStatus::Success;
     }
 
+    // Could not parse this operand, parsing failure
     if (!ResTy.isSuccess())
       return true;
+
+    // If we're at the end of the operand list of the current format variant,
+    if (I + 1 == Entry->NumOperands) {
+      // peek to see if more operands are coming in the AsmString.
+      if (getLexer().is(AsmToken::Comma)) {
+        // If more are coming, check if there are more variants of the current
+        // format.
+        if ((std::next(Entry) != EntryRange.second) &&
+            (std::next(Entry)->Format == Entry->Format)) {
+          // If that is the case, move to the next format and continue parsing.
+          std::advance(Entry, 1);
+        } else {
+          // If that is not the case, more operands were supplied than any
+          // variant of this format can account for, parsing failure.
+          return Error(StartLoc, "too many operands to .insn directive");
+        }
+      }
+    }
   }
+
+  // Format should match from equal_range.
+  assert(Entry->Format == Format);
 
   // Build the instruction with the parsed operands.
   MCInst Inst = MCInstBuilder(Entry->Opcode);

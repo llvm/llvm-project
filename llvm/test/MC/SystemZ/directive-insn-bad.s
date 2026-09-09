@@ -4,17 +4,13 @@
 # CHECK: .insn not_a_format,0x0
         .insn not_a_format,0x0
 
-# CHECK: error: unexpected token in directive
+# CHECK: error: too few operands to .insn directive
 # CHECK: .insn rr,0x0101
         .insn rr,0x0101
 
-# CHECK: error: unexpected token at start of statement
+# CHECK: error: too many operands to .insn directive
 # CHECK: .insn e,0x0101,0
         .insn e,0x0101,0
-
-# CHECK: error: unexpected token in directive
-# CHECK: .insn rr,0x1800,0
-        .insn rr,0x1800,0
 
 # CHECK: error: unexpected token at start of statement
 # CHECK: .insn rr,0x1800,%r1,0(%r2)
@@ -24,7 +20,7 @@
 # CHECK: .insn rxy_a,0xe30000000016,%r1,%r2,0
         .insn rxy_a,0xe30000000016,%r1,%r2,0
 
-# CHECK: error: unknown token in expression
+# CHECK: error: unexpected token in .insn directive
 # CHECK: .insn ril_c,0xc00400000000,%r1,0
         .insn ril_c,0xc00400000000,%r1,0
 
@@ -92,10 +88,6 @@
 # CHECK: .insn rilu,0xc20b00000000,%r2,-1
         .insn rilu,0xc20b00000000,%r2,-1           # rilu expects unsigned 32-bit, negative value rejected
 
-# CHECK: error: unexpected operand type
-# CHECK: .insn sil,0xe56000000000,160(%r15),-32769
-        .insn sil,0xe56000000000,160(%r15),-32769  # sil expects unsigned 16-bit, value too negative
-
 # Test X-imm (union signed/unsigned) lower bound validation
 
 # CHECK: error: unexpected operand type
@@ -103,8 +95,26 @@
         .insn si,0x91000000,160(%r15),-129         # X8Imm lower bound (min -128)
 
 # CHECK: error: unexpected operand type
+# CHECK: .insn sil,0xe56000000000,160(%r15),-32769
+        .insn sil,0xe56000000000,160(%r15),-32769  # X16Imm lower bound
+
+# CHECK: error: unexpected operand type
 # CHECK: .insn ril_a,0xc20500000000,%r1,-2147483649
         .insn ril_a,0xc20500000000,%r1,-2147483649 # X32Imm lower bound (min -2147483648)
+
+# Test X-imm (union signed/unsigned) upper bound validation
+
+# CHECK: error: unexpected operand type
+# CHECK: .insn si,0x91000000,160(%r15),256
+        .insn si,0x91000000,160(%r15),256          # X8Imm upper bound (max 255)
+
+# CHECK: error: unexpected operand type
+# CHECK: .insn sil,0xe56000000000,160(%r15),65536
+        .insn sil,0xe56000000000,160(%r15),65536   # X16Imm upper bound (max 65535)
+
+# CHECK: error: unexpected operand type
+# CHECK: .insn ril_a,0xc20500000000,%r1,4294967296
+        .insn ril_a,0xc20500000000,%r1,4294967296  # X32Imm upper bound (max 4294967295)
 
 # Test BD-length address range validation
 

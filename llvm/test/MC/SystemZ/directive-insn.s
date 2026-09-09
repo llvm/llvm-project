@@ -164,10 +164,13 @@ label.rsi:
 #CHECK: c2 15 ff ff ff ff slfi %r1, 4294967295
       .insn ril_a,0xc20500000000,%r1,4294967295
 
-#CHECK: c0 15 ff ff ff fc    	brasl	%r1, 0xf8
+#CHECK: c2 15 00 fa ca de    	slfi	%r1, 16435934
+      .insn ril_a,0xc20500000000,%r1,(0x00fa0000 | 0xcade)
+
+#CHECK: c0 15 ff ff ff fc    	brasl	%r1, 0xfe
       .insn ril_b,0xc00500000000,%r1,-8
 
-#CHECK: c0 04 ff ff ff fc    	jgnop	0xfe
+#CHECK: c0 04 ff ff ff fc    	jgnop	0x104
       .insn ril_c,0xc00400000000,0,-8
 
 #CHECK: b3 3e 10 23  	madr	%f1, %f2, %f3
@@ -180,7 +183,7 @@ label.rsi:
       .insn rrf_a,0xb3d20000,%f1,%f2,%f3,1
 
 #CHECK: b3 f6 20 13  	iedtr	%f1, %f2, %r3
-      .insn rrf_b,0xb3f60000,%f1,%r3,%f2,0
+      .insn rrf_b,0xb3f60000,%f1,%f2,%r3,0
 
 #CHECK: b9 72 10 23  	crt	%r2, %r3, 1
       .insn rrf_c,0xb9720000,%r2,%r3,1
@@ -189,7 +192,7 @@ label.rsi:
       .insn rrf_d,0xb3e30000,%r2,%f3,1
 
 #CHECK: b3 d7 12 34  	fidtr	%f3, 1, %f4, 2
-      .insn rrf_e,0xb3d70000,%r3,%f4,1,2
+      .insn rrf_e,0xb3d70000,%f3,1,%f4,2
 
 #CHECK: 86 12 34 56  	bxh	%r1, %r2, 1110(%r3)
       .insn rs_a,0x86000000,%r1,1110(%r3),%r2
@@ -233,9 +236,9 @@ label.rsi:
 #CHECK: e9 12 34 56 78 90      pka 1110(%r3), 2192(19,%r7)
       .insn ss_f,0xe90000000000,1110(%r3),2192(19,%r7)
 
-#CHECK: c0 04 00 00 00 03      jgnop 0x17a
-      .insn ril_c,0xc00400000000,0,label.autogen_ril_c
-label.autogen_ril_c:
+#CHECK: c0 04 00 00 00 03      jgnop 0x180
+      .insn ril_c,0xc00400000000,0,label.ril_c
+label.ril_c:
 
 #CHECK: e3 12 34 56 78 16      llgf %r1, 492630(%r2,%r3)
       .insn rxy_a,0xe30000000016,%r1,492630(%r2,%r3)
@@ -294,3 +297,19 @@ label.mii.ri3:
 
 #CHECK: eb 00 fc de ab 51      tmy -344866(%r15), 0
       .insn siy,0xeb0000000051,-344866(%r15)
+
+# Test PCRel12 and PCRel24 field widths via the MII format.
+#
+# MII encoding (48 bits): op[7:0] | M1[3:0] | RI2[11:0] | RI3[23:0]
+# RI2 and RI3 are signed half-word (2-byte) offsets from the instruction.
+# The assembler accepts byte offsets and stores value/2 in the field.
+
+#CHECK: c5 07 ff 00 00 00
+      .insn mii,0xc50000000000,0,4094,0
+
+#CHECK: c5 0f ff 00 00 00
+      .insn mii,0xc50000000000,0,-2,0
+
+#CHECK: c5 00 00 ff ff ff
+      .insn mii,0xc50000000000,0,0,-2
+ 

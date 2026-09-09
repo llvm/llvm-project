@@ -99,6 +99,10 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   // result against zero, but only if the 'nsw' flag is set.
   bit CCIfNoSignedWrap = 0;
 
+  // Indicates that the instruction is a helper for an .insn directive
+  // instead of an actual instruction
+  bit IsInsnDirective = 0;
+
   let TSFlags{0}     = SimpleBDXLoad;
   let TSFlags{1}     = SimpleBDXStore;
   let TSFlags{2}     = Has20BitOffset;
@@ -188,28 +192,31 @@ def getTwoOperandOpcode : InstrMapping {
 class InstE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
+  bits<16> enc;
 
-  let Inst = op;
+  let Inst = !if(!ne(op, 0), op, enc);
 }
 
 class InstI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
+  bits<16> enc;
 
   bits<8> I1;
 
-  let Inst{15-8} = op;
+  let Inst{15-8} = !if(!ne(op, 0), op, enc{15-8});
   let Inst{7-0}  = I1;
 }
 
 class InstIE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> I1;
   bits<4> I2;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-8}  = 0;
   let Inst{7-4}   = I1;
   let Inst{3-0}   = I2;
@@ -218,12 +225,13 @@ class InstIE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstMII<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> M1;
   bits<12> RI2;
   bits<24> RI3;
 
-  let Inst{47-40} = op;
+  let Inst{47-40} = !if(!ne(op, 0), op, enc{47-40});
   let Inst{39-36} = M1;
   let Inst{35-24} = RI2;
   let Inst{23-0}  = RI3;
@@ -232,130 +240,139 @@ class InstMII<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIa<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<16> I2;
 
-  let Inst{31-24} = op{11-4};
+  let Inst{31-24} = !if(!ne(op, 0), op{11-4}, enc{31-24});
   let Inst{23-20} = R1;
-  let Inst{19-16} = op{3-0};
+  let Inst{19-16} = !if(!ne(op, 0), op{3-0}, enc{19-16});
   let Inst{15-0}  = I2;
 }
 
 class InstRIb<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<16> RI2;
 
-  let Inst{31-24} = op{11-4};
+  let Inst{31-24} = !if(!ne(op, 0), op{11-4}, enc{31-24});
   let Inst{23-20} = R1;
-  let Inst{19-16} = op{3-0};
+  let Inst{19-16} = !if(!ne(op, 0), op{3-0}, enc{19-16});
   let Inst{15-0}  = RI2;
 }
 
 class InstRIc<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> M1;
   bits<16> RI2;
 
-  let Inst{31-24} = op{11-4};
+  let Inst{31-24} = !if(!ne(op, 0), op{11-4}, enc{31-24});
   let Inst{23-20} = M1;
-  let Inst{19-16} = op{3-0};
+  let Inst{19-16} = !if(!ne(op, 0), op{3-0}, enc{19-16});
   let Inst{15-0}  = RI2;
 }
 
 class InstRIEa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<16> I2;
   bits<4> M3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = 0;
   let Inst{31-16} = I2;
   let Inst{15-12} = M3;
   let Inst{11-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRIEb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> R2;
   bits<4> M3;
   bits<16> RI4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R2;
   let Inst{31-16} = RI4;
   let Inst{15-12} = M3;
   let Inst{11-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRIEc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<8> I2;
   bits<4> M3;
   bits<16> RI4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = M3;
   let Inst{31-16} = RI4;
   let Inst{15-8}  = I2;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRIEd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> R3;
   bits<16> I2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R3;
   let Inst{31-16} = I2;
   let Inst{15-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRIEe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> R3;
   bits<16> RI2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R3;
   let Inst{31-16} = RI2;
   let Inst{15-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
                bits<8> I3Or = 0, bits<8> I4Or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> R2;
@@ -363,7 +380,7 @@ class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<8> I4;
   bits<8> I5;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R2;
   let Inst{31} = !if(I3Or{7}, 1, I3{7});
@@ -383,67 +400,72 @@ class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   let Inst{17} = !if(I4Or{1}, 1, I4{1});
   let Inst{16} = !if(I4Or{0}, 1, I4{0});
   let Inst{15-8}  = I5;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRIEg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> M3;
   bits<16> I2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = M3;
   let Inst{31-16} = I2;
   let Inst{15-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRILa<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<32> I2;
 
-  let Inst{47-40} = op{11-4};
+  let Inst{47-40} = !if(!ne(op, 0), op{11-4}, enc{47-40});
   let Inst{39-36} = R1;
-  let Inst{35-32} = op{3-0};
+  let Inst{35-32} = !if(!ne(op, 0), op{3-0}, enc{35-32});
   let Inst{31-0}  = I2;
 }
 
 class InstRILb<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<32> RI2;
 
-  let Inst{47-40} = op{11-4};
+  let Inst{47-40} = !if(!ne(op, 0), op{11-4}, enc{47-40});
   let Inst{39-36} = R1;
-  let Inst{35-32} = op{3-0};
+  let Inst{35-32} = !if(!ne(op, 0), op{3-0}, enc{35-32});
   let Inst{31-0}  = RI2;
 }
 
 class InstRILc<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> M1;
   bits<32> RI2;
 
-  let Inst{47-40} = op{11-4};
+  let Inst{47-40} = !if(!ne(op, 0), op{11-4}, enc{47-40});
   let Inst{39-36} = M1;
-  let Inst{35-32} = op{3-0};
+  let Inst{35-32} = !if(!ne(op, 0), op{3-0}, enc{35-32});
   let Inst{31-0}  = RI2;
 }
 
 class InstRIS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<8> I2;
@@ -451,23 +473,24 @@ class InstRIS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> B4;
   bits<12> D4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = M3;
   let Inst{31-28} = B4;
   let Inst{27-16} = D4;
   let Inst{15-8}  = I2;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRR<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
+  bits<16> enc;
 
   bits<4> R1;
   bits<4> R2;
 
-  let Inst{15-8} = op;
+  let Inst{15-8} = !if(!ne(op, 0), op, enc{15-8});
   let Inst{7-4}  = R1;
   let Inst{3-0}  = R2;
 }
@@ -475,12 +498,13 @@ class InstRR<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRD<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R3;
   bits<4> R2;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-12} = R1;
   let Inst{11-8}  = 0;
   let Inst{7-4}   = R3;
@@ -490,11 +514,12 @@ class InstRRD<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R2;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-8}  = 0;
   let Inst{7-4}   = R1;
   let Inst{3-0}   = R2;
@@ -503,13 +528,14 @@ class InstRRE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R2;
   bits<4> R3;
   bits<4> M4;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-12} = R3;
   let Inst{11-8}  = M4;
   let Inst{7-4}   = R1;
@@ -519,13 +545,14 @@ class InstRRFa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R2;
   bits<4> R3;
   bits<4> M4;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-12} = R3;
   let Inst{11-8}  = M4;
   let Inst{7-4}   = R1;
@@ -535,12 +562,13 @@ class InstRRFb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R2;
   bits<4> M3;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-12} = M3;
   let Inst{11-8}  = 0;
   let Inst{7-4}   = R1;
@@ -550,12 +578,13 @@ class InstRRFc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R2;
   bits<4> M4;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-12} = 0;
   let Inst{11-8}  = M4;
   let Inst{7-4}   = R1;
@@ -565,13 +594,14 @@ class InstRRFd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R2;
   bits<4> M3;
   bits<4> M4;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-12} = M3;
   let Inst{11-8}  = M4;
   let Inst{7-4}   = R1;
@@ -581,6 +611,7 @@ class InstRRFe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> R2;
@@ -588,26 +619,27 @@ class InstRRS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> B4;
   bits<12> D4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R2;
   let Inst{31-28} = B4;
   let Inst{27-16} = D4;
   let Inst{15-12} = M3;
   let Inst{11-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRXa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> X2;
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{31-24} = op;
+  let Inst{31-24} = !if(!ne(op, 0), op, enc{31-24});
   let Inst{23-20} = R1;
   let Inst{19-16} = X2;
   let Inst{15-12} = B2;
@@ -619,13 +651,14 @@ class InstRXa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> M1;
   bits<4> X2;
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{31-24} = op;
+  let Inst{31-24} = !if(!ne(op, 0), op, enc{31-24});
   let Inst{23-20} = M1;
   let Inst{19-16} = X2;
   let Inst{15-12} = B2;
@@ -637,6 +670,7 @@ class InstRXb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> X2;
@@ -644,14 +678,14 @@ class InstRXE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<12> D2;
   bits<4> M3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = X2;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2;
   let Inst{15-12} = M3;
   let Inst{11-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 
   let HasIndex = 1;
 }
@@ -659,6 +693,7 @@ class InstRXE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXF<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> R3;
@@ -666,14 +701,14 @@ class InstRXF<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R3;
   let Inst{35-32} = X2;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2;
   let Inst{15-12} = R1;
   let Inst{11-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 
   let HasIndex = 1;
 }
@@ -681,19 +716,20 @@ class InstRXF<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXYa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> X2;
   bits<4> B2;
   bits<20> D2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = X2;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2{11-0};
   let Inst{15-8}  = D2{19-12};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 
   let Has20BitOffset = 1;
   let HasIndex = 1;
@@ -702,19 +738,20 @@ class InstRXYa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXYb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> M1;
   bits<4> X2;
   bits<4> B2;
   bits<20> D2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = M1;
   let Inst{35-32} = X2;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2{11-0};
   let Inst{15-8}  = D2{19-12};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 
   let Has20BitOffset = 1;
   let HasIndex = 1;
@@ -723,13 +760,14 @@ class InstRXYb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R3;
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{31-24} = op;
+  let Inst{31-24} = !if(!ne(op, 0), op, enc{31-24});
   let Inst{23-20} = R1;
   let Inst{19-16} = R3;
   let Inst{15-12} = B2;
@@ -739,46 +777,49 @@ class InstRSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> M3;
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{31-24} = op;
+  let Inst{31-24} = !if(!ne(op, 0), op, enc{31-24});
   let Inst{23-20} = R1;
   let Inst{19-16} = M3;
   let Inst{15-12} = B2;
   let Inst{11-0}  = D2;
 }
 
-class InstRSEa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+class InstRSE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> R3;
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R3;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2;
   let Inst{15-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRSI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> R1;
   bits<4> R3;
   bits<16> RI2;
 
-  let Inst{31-24} = op;
+  let Inst{31-24} = !if(!ne(op, 0), op, enc{31-24});
   let Inst{23-20} = R1;
   let Inst{19-16} = R3;
   let Inst{15-0}  = RI2;
@@ -787,23 +828,25 @@ class InstRSI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSLa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<12> D1;
   bits<4> L1;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = L1;
   let Inst{35-32} = 0;
   let Inst{31-28} = B1;
   let Inst{27-16} = D1;
   let Inst{15-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRSLb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> B2;
@@ -811,31 +854,32 @@ class InstRSLb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<8> L2;
   bits<4> M3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-32} = L2;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2;
   let Inst{15-12} = R1;
   let Inst{11-8}  = M3;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstRSYa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> R3;
   bits<4> B2;
   bits<20> D2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R3;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2{11-0};
   let Inst{15-8}  = D2{19-12};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 
   let Has20BitOffset = 1;
 }
@@ -843,19 +887,20 @@ class InstRSYa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSYb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> M3;
   bits<4> B2;
   bits<20> D2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = M3;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2{11-0};
   let Inst{15-8}  = D2{19-12};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 
   let Has20BitOffset = 1;
 }
@@ -863,12 +908,13 @@ class InstRSYb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> B1;
   bits<12> D1;
   bits<8> I2;
 
-  let Inst{31-24} = op;
+  let Inst{31-24} = !if(!ne(op, 0), op, enc{31-24});
   let Inst{23-16} = I2;
   let Inst{15-12} = B1;
   let Inst{11-0}  = D1;
@@ -877,12 +923,13 @@ class InstSI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSIL<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<12> D1;
   bits<16> I2;
 
-  let Inst{47-32} = op;
+  let Inst{47-32} = !if(!ne(op, 0), op, enc{47-32});
   let Inst{31-28} = B1;
   let Inst{27-16} = D1;
   let Inst{15-0}  = I2;
@@ -891,17 +938,18 @@ class InstSIL<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSIY<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<20> D1;
   bits<8> I2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-32} = I2;
   let Inst{31-28} = B1;
   let Inst{27-16} = D1{11-0};
   let Inst{15-8}  = D1{19-12};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 
   let Has20BitOffset = 1;
 }
@@ -909,13 +957,14 @@ class InstSIY<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSMI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> M1;
   bits<16> RI2;
   bits<4> B3;
   bits<12> D3;
 
-  let Inst{47-40} = op;
+  let Inst{47-40} = !if(!ne(op, 0), op, enc{47-40});
   let Inst{39-36} = M1;
   let Inst{35-32} = 0;
   let Inst{31-28} = B3;
@@ -926,6 +975,7 @@ class InstSMI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<12> D1;
@@ -933,7 +983,7 @@ class InstSSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{47-40} = op;
+  let Inst{47-40} = !if(!ne(op, 0), op, enc{47-40});
   let Inst{39-32} = L1;
   let Inst{31-28} = B1;
   let Inst{27-16} = D1;
@@ -944,6 +994,7 @@ class InstSSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<12> D1;
@@ -952,7 +1003,7 @@ class InstSSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<12> D2;
   bits<4> L2;
 
-  let Inst{47-40} = op;
+  let Inst{47-40} = !if(!ne(op, 0), op, enc{47-40});
   let Inst{39-36} = L1;
   let Inst{35-32} = L2;
   let Inst{31-28} = B1;
@@ -964,6 +1015,7 @@ class InstSSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSc<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<12> D1;
@@ -972,7 +1024,7 @@ class InstSSc<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<12> D2;
   bits<4> I3;
 
-  let Inst{47-40} = op;
+  let Inst{47-40} = !if(!ne(op, 0), op, enc{47-40});
   let Inst{39-36} = L1;
   let Inst{35-32} = I3;
   let Inst{31-28} = B1;
@@ -984,6 +1036,7 @@ class InstSSc<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSd<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> B1;
@@ -992,7 +1045,7 @@ class InstSSd<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<12> D2;
   bits<4> R3;
 
-  let Inst{47-40} = op;
+  let Inst{47-40} = !if(!ne(op, 0), op, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R3;
   let Inst{31-28} = B1;
@@ -1004,6 +1057,7 @@ class InstSSd<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSe<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> B2;
@@ -1012,7 +1066,7 @@ class InstSSe<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> B4;
   bits<12> D4;
 
-  let Inst{47-40} = op;
+  let Inst{47-40} = !if(!ne(op, 0), op, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = R3;
   let Inst{31-28} = B2;
@@ -1024,6 +1078,7 @@ class InstSSe<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSf<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<12> D1;
@@ -1031,7 +1086,7 @@ class InstSSf<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<12> D2;
   bits<8> L2;
 
-  let Inst{47-40} = op;
+  let Inst{47-40} = !if(!ne(op, 0), op, enc{47-40});
   let Inst{39-32} = L2;
   let Inst{31-28} = B1;
   let Inst{27-16} = D1;
@@ -1042,13 +1097,14 @@ class InstSSf<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<12> D1;
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{47-32} = op;
+  let Inst{47-32} = !if(!ne(op, 0), op, enc{47-32});
   let Inst{31-28} = B1;
   let Inst{27-16} = D1;
   let Inst{15-12} = B2;
@@ -1058,6 +1114,7 @@ class InstSSE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSF<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> B1;
   bits<12> D1;
@@ -1065,9 +1122,9 @@ class InstSSF<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<12> D2;
   bits<4>  R3;
 
-  let Inst{47-40} = op{11-4};
+  let Inst{47-40} = !if(!ne(op, 0), op{11-4}, enc{47-40});
   let Inst{39-36} = R3;
-  let Inst{35-32} = op{3-0};
+  let Inst{35-32} = !if(!ne(op, 0), op{3-0}, enc{35-32});
   let Inst{31-28} = B1;
   let Inst{27-16} = D1;
   let Inst{15-12} = B2;
@@ -1077,11 +1134,12 @@ class InstSSF<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
+  bits<32> enc;
 
   bits<4> B2;
   bits<12> D2;
 
-  let Inst{31-16} = op;
+  let Inst{31-16} = !if(!ne(op, 0), op, enc{31-16});
   let Inst{15-12} = B2;
   let Inst{11-0}  = D2;
 }
@@ -1089,31 +1147,33 @@ class InstS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<16> I2;
   bits<4> M3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = 0;
   let Inst{31-16} = I2;
   let Inst{15-12} = M3;
   let Inst{11}    = V1{4};
   let Inst{10-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<8> I2;
   bits<8> I3;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = 0;
   let Inst{31-24} = I2;
@@ -1121,19 +1181,20 @@ class InstVRIb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15-12} = M4;
   let Inst{11}    = V1{4};
   let Inst{10-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V3;
   bits<16> I2;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V3{3-0};
   let Inst{31-16} = I2;
@@ -1141,12 +1202,13 @@ class InstVRIc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = V1{4};
   let Inst{10}    = V3{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRId<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1154,7 +1216,7 @@ class InstVRId<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<8> I4;
   bits<4> M5;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = V3{3-0};
@@ -1165,12 +1227,13 @@ class InstVRId<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V2{4};
   let Inst{9}     = V3{4};
   let Inst{8}     = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1178,7 +1241,7 @@ class InstVRIe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> M4;
   bits<4> M5;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-20} = I3;
@@ -1187,12 +1250,13 @@ class InstVRIe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = V1{4};
   let Inst{10}    = V2{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1200,7 +1264,7 @@ class InstVRIf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<8> I4;
   bits<4> M5;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = V3{3-0};
@@ -1211,12 +1275,13 @@ class InstVRIf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V2{4};
   let Inst{9}     = V3{4};
   let Inst{8}     = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1224,7 +1289,7 @@ class InstVRIg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<8> I4;
   bits<4> M5;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-24} = I4;
@@ -1233,37 +1298,39 @@ class InstVRIg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = V1{4};
   let Inst{10}    = V2{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<16> I2;
   bits<4> I3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = 0;
   let Inst{31-16} = I2;
   let Inst{15-12} = I3;
   let Inst{11}    = V1{4};
   let Inst{10-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<4> R2;
   bits<8> I3;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = R2;
   let Inst{31-24} = 0;
@@ -1271,19 +1338,20 @@ class InstVRIi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{19-12} = I3;
   let Inst{11}    = V1{4};
   let Inst{10-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
   bits<8> I3;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-24} = 0;
@@ -1292,12 +1360,13 @@ class InstVRIj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = V1{4};
   let Inst{10}    = V2{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1305,7 +1374,7 @@ class InstVRIk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<5> V4;
   bits<8> I5;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = V3{3-0};
@@ -1316,18 +1385,19 @@ class InstVRIk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V2{4};
   let Inst{9}     = V3{4};
   let Inst{8}     = V4{4};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRIl<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
   bits<16> I3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = 0;
   let Inst{35-32} = V1{3-0};
   let Inst{31-28} = V2{3-0};
@@ -1336,7 +1406,7 @@ class InstVRIl<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V1{4};
   let Inst{9}     = V2{4};
   let Inst{8}     = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 // Depending on the instruction mnemonic, certain bits may be or-ed into
@@ -1345,6 +1415,7 @@ class InstVRRa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
                bits<4> m4or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1352,7 +1423,7 @@ class InstVRRa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<4> M4;
   bits<4> M5;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-24} = 0;
@@ -1365,7 +1436,7 @@ class InstVRRa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   let Inst{11}    = V1{4};
   let Inst{10}    = V2{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 // Depending on the instruction mnemonic, certain bits may be or-ed into
@@ -1374,6 +1445,7 @@ class InstVRRb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
                bits<4> m5or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1381,7 +1453,7 @@ class InstVRRb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<4> M4;
   bits<4> M5;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = V3{3-0};
@@ -1396,12 +1468,13 @@ class InstVRRb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   let Inst{10}    = V2{4};
   let Inst{9}     = V3{4};
   let Inst{8}     = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRRc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1410,7 +1483,7 @@ class InstVRRc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> M5;
   bits<4> M6;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = V3{3-0};
@@ -1422,7 +1495,7 @@ class InstVRRc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V2{4};
   let Inst{9}     = V3{4};
   let Inst{8}     = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 // Depending on the instruction mnemonic, certain bits may be or-ed into
@@ -1431,6 +1504,7 @@ class InstVRRd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
                bits<4> m6or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1439,7 +1513,7 @@ class InstVRRd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<4> M5;
   bits<4> M6;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = V3{3-0};
@@ -1454,12 +1528,13 @@ class InstVRRd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   let Inst{10}    = V2{4};
   let Inst{9}     = V3{4};
   let Inst{8}     = V4{4};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRRe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1468,7 +1543,7 @@ class InstVRRe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> M5;
   bits<4> M6;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = V3{3-0};
@@ -1480,35 +1555,37 @@ class InstVRRe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V2{4};
   let Inst{9}     = V3{4};
   let Inst{8}     = V4{4};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRRf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<4> R2;
   bits<4> R3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = R2;
   let Inst{31-28} = R3;
   let Inst{27-12} = 0;
   let Inst{11}    = V1{4};
   let Inst{10-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRRg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<16> I2;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = 0;
   let Inst{35-32} = V1{3-0};
   let Inst{31-28} = 0;
@@ -1516,18 +1593,19 @@ class InstVRRg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = 0;
   let Inst{10}    = V1{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRRh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
   bits<4> M3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = 0;
   let Inst{35-32} = V1{3-0};
   let Inst{31-28} = V2{3-0};
@@ -1538,19 +1616,20 @@ class InstVRRh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V1{4};
   let Inst{9}     = V2{4};
   let Inst{8}     = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRRi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<5> V2;
   bits<4> M3;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = V2{3-0};
   let Inst{31-24} = 0;
@@ -1560,19 +1639,20 @@ class InstVRRi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = 0;
   let Inst{10}    = V2{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRRj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
   bits<5> V3;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = V3{3-0};
@@ -1584,18 +1664,19 @@ class InstVRRj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V2{4};
   let Inst{9}     = V3{4};
   let Inst{8}     = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRRk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
   bits<4> M3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = 0;
@@ -1607,12 +1688,13 @@ class InstVRRk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10}    = V2{4};
   let Inst{9}     = 0;
   let Inst{8}     = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRSa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<4> B2;
@@ -1620,7 +1702,7 @@ class InstVRSa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<5> V3;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V3{3-0};
   let Inst{31-28} = B2;
@@ -1629,12 +1711,13 @@ class InstVRSa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = V1{4};
   let Inst{10}    = V3{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRSb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<4> B2;
@@ -1642,7 +1725,7 @@ class InstVRSb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> R3;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = R3;
   let Inst{31-28} = B2;
@@ -1650,12 +1733,13 @@ class InstVRSb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15-12} = M4;
   let Inst{11}    = V1{4};
   let Inst{10-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRSc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<4> R1;
   bits<4> B2;
@@ -1663,7 +1747,7 @@ class InstVRSc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<5> V3;
   bits<4> M4;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = R1;
   let Inst{35-32} = V3{3-0};
   let Inst{31-28} = B2;
@@ -1672,19 +1756,20 @@ class InstVRSc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = 0;
   let Inst{10}    = V3{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRSd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<4> B2;
   bits<12> D2;
   bits<4> R3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = 0;
   let Inst{35-32} = R3;
   let Inst{31-28} = B2;
@@ -1692,12 +1777,13 @@ class InstVRSd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15-12} = V1{3-0};
   let Inst{11-9}  = 0;
   let Inst{8}     = V1{4};
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRV<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<5> V2;
@@ -1705,7 +1791,7 @@ class InstVRV<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<12> D2;
   bits<4> M3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = V2{3-0};
   let Inst{31-28} = B2;
@@ -1714,12 +1800,13 @@ class InstVRV<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11}    = V1{4};
   let Inst{10}    = V2{4};
   let Inst{9-8}   = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVRX<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<4> X2;
@@ -1727,7 +1814,7 @@ class InstVRX<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<12> D2;
   bits<4> M3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-36} = V1{3-0};
   let Inst{35-32} = X2;
   let Inst{31-28} = B2;
@@ -1735,38 +1822,27 @@ class InstVRX<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15-12} = M3;
   let Inst{11}    = V1{4};
   let Inst{10-8}  = 0;
-  let Inst{7-0}   = op{7-0};
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 class InstVSI<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
+  bits<48> enc;
 
   bits<5> V1;
   bits<4> B2;
   bits<12> D2;
   bits<8> I3;
 
-  let Inst{47-40} = op{15-8};
+  let Inst{47-40} = !if(!ne(op, 0), op{15-8}, enc{47-40});
   let Inst{39-32} = I3;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2;
   let Inst{15-12} = V1{3-0};
   let Inst{11-9}  = 0;
   let Inst{8}     = V1{4};
-  let Inst{7-0}   = op{7-0};
-}
-
-//===----------------------------------------------------------------------===//
-// Base class for all .insn directive instructions
-//===----------------------------------------------------------------------===//
-// This marker class is used to identify .insn directive instructions
-// for the SystemZInsnDirectiveEmitter. It must be the rightmost parent
-// in the inheritance list to ensure these properties take precedence over
-// the ones set by the InstFoo base classes.
-class InsnDirectiveBase {
-  bit isCodeGenOnly = 1;
-  bit hasSideEffects = 1;
+  let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 }
 
 //===----------------------------------------------------------------------===//
