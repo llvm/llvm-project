@@ -30,7 +30,6 @@ add_host_subdirectory(common
   common/HostProcess.cpp
   common/HostThread.cpp
   common/JSONTransport.cpp
-  common/LZMA.cpp
   common/LockFileBase.cpp
   common/MainLoopBase.cpp
   common/MemoryMonitor.cpp
@@ -194,9 +193,6 @@ if (HAVE_LIBDL)
 endif()
 if (LLDB_ENABLE_LIBEDIT)
   list(APPEND EXTRA_LIBS LibEdit::LibEdit)
-endif()
-if (LLDB_ENABLE_LZMA)
-  list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
 endif()
 if (WIN32)
   list(APPEND LLDB_SYSTEM_LIBS psapi)

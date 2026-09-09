@@ -98,6 +98,9 @@
 /* Define if zstd compression is available */
 #cmakedefine01 LLVM_ENABLE_ZSTD
 
+/* Define if xz (lzma) decompression is available */
+#cmakedefine01 LLVM_ENABLE_LZMA
+
 /* Define if LLVM is using tflite */
 #cmakedefine LLVM_HAVE_TFLITE
 

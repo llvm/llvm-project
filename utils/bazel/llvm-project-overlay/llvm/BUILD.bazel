@@ -524,6 +524,10 @@ cc_library(
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "//third-party:zstd",
+        # We unconditionally depend on the custom LLVM lzma wrapper. This only
+        # provides the configuration define unless lzma is enabled, in which
+        # case it also links the system liblzma.
+        "//third-party:lzma",
         "//libc:shared_math_headers_for_apfloat",
     ],
 )

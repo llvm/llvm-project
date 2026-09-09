@@ -76,6 +76,21 @@ LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
 
 } // End of namespace zstd
 
+namespace xz {
+
+/// Return true if LLVM was built with LZMA support (LLVM_ENABLE_LZMA).
+LLVM_ABI bool isAvailable();
+
+/// Decompress an xz stream. Unlike zlib and zstd, the uncompressed size does
+/// not need to be supplied by the caller: it is recovered from the stream
+/// index, and \p Output is resized to fit.
+///
+/// Requires isAvailable(); calling this otherwise is a fatal error.
+LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
+                          SmallVectorImpl<uint8_t> &Output);
+
+} // End of namespace xz
+
 enum class Format {
   Zlib,
   Zstd,
