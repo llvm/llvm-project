@@ -5,17 +5,41 @@
 
 
 define float @sink_fmul_fadd_f32(i1 %cond, float %a, float %b, float %c) {
-; CHECK-LABEL: define float @sink_fmul_fadd_f32(
-; CHECK-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[ADD:%.*]] = fadd contract float [[MUL]], [[C]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    ret float [[R]]
+; GFX8-LABEL: define float @sink_fmul_fadd_f32(
+; GFX8-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    [[MUL:%.*]] = fmul contract float [[A]], [[B]]
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[ADD:%.*]] = fadd contract float [[MUL]], [[C]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX8-NEXT:    ret float [[R]]
+;
+; GFX9-LABEL: define float @sink_fmul_fadd_f32(
+; GFX9-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX9-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP0]], [[C]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX9-NEXT:    ret float [[R]]
+;
+; GFX10-LABEL: define float @sink_fmul_fadd_f32(
+; GFX10-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX10-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP0]], [[C]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX10-NEXT:    ret float [[R]]
 ;
 entry:
   %mul = fmul contract float %a, %b
@@ -31,17 +55,41 @@ exit:
 }
 
 define float @sink_fmul_fsub_f32(i1 %cond, float %a, float %b, float %c) {
-; CHECK-LABEL: define float @sink_fmul_fsub_f32(
-; CHECK-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[SUB:%.*]] = fsub contract float [[MUL]], [[C]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi float [ [[SUB]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    ret float [[R]]
+; GFX8-LABEL: define float @sink_fmul_fsub_f32(
+; GFX8-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    [[MUL:%.*]] = fmul contract float [[A]], [[B]]
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[SUB:%.*]] = fsub contract float [[MUL]], [[C]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi float [ [[SUB]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX8-NEXT:    ret float [[R]]
+;
+; GFX9-LABEL: define float @sink_fmul_fsub_f32(
+; GFX9-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX9-NEXT:    [[SUB:%.*]] = fsub contract float [[TMP0]], [[C]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi float [ [[SUB]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX9-NEXT:    ret float [[R]]
+;
+; GFX10-LABEL: define float @sink_fmul_fsub_f32(
+; GFX10-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX10-NEXT:    [[SUB:%.*]] = fsub contract float [[TMP0]], [[C]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi float [ [[SUB]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX10-NEXT:    ret float [[R]]
 ;
 entry:
   %mul = fmul contract float %a, %b
@@ -58,17 +106,41 @@ exit:
 
 ; The fmul may be the second operand of the fsub as well.
 define float @sink_fmul_fsub_rev_f32(i1 %cond, float %a, float %b, float %c) {
-; CHECK-LABEL: define float @sink_fmul_fsub_rev_f32(
-; CHECK-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[SUB:%.*]] = fsub contract float [[C]], [[MUL]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi float [ [[SUB]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    ret float [[R]]
+; GFX8-LABEL: define float @sink_fmul_fsub_rev_f32(
+; GFX8-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    [[MUL:%.*]] = fmul contract float [[A]], [[B]]
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[SUB:%.*]] = fsub contract float [[C]], [[MUL]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi float [ [[SUB]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX8-NEXT:    ret float [[R]]
+;
+; GFX9-LABEL: define float @sink_fmul_fsub_rev_f32(
+; GFX9-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX9-NEXT:    [[SUB:%.*]] = fsub contract float [[C]], [[TMP0]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi float [ [[SUB]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX9-NEXT:    ret float [[R]]
+;
+; GFX10-LABEL: define float @sink_fmul_fsub_rev_f32(
+; GFX10-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX10-NEXT:    [[SUB:%.*]] = fsub contract float [[C]], [[TMP0]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi float [ [[SUB]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX10-NEXT:    ret float [[R]]
 ;
 entry:
   %mul = fmul contract float %a, %b
@@ -87,9 +159,9 @@ define half @sink_fmul_fadd_f16(i1 %cond, half %a, half %b, half %c) {
 ; CHECK-LABEL: define half @sink_fmul_fadd_f16(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[A:%.*]], half [[B:%.*]], half [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract half [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract half [[A]], [[B]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd contract half [[TMP0]], [[C]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -113,9 +185,9 @@ define double @sink_fmul_fadd_f64(i1 %cond, double %a, double %b, double %c) {
 ; CHECK-LABEL: define double @sink_fmul_fadd_f64(
 ; CHECK-SAME: i1 [[COND:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract double [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract double [[A]], [[B]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd contract double [[TMP0]], [[C]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -136,17 +208,41 @@ exit:
 }
 
 define <2 x float> @sink_fmul_fadd_v2f32(i1 %cond, <2 x float> %a, <2 x float> %b, <2 x float> %c) {
-; CHECK-LABEL: define <2 x float> @sink_fmul_fadd_v2f32(
-; CHECK-SAME: i1 [[COND:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract <2 x float> [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[ADD:%.*]] = fadd contract <2 x float> [[MUL]], [[C]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi <2 x float> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; GFX8-LABEL: define <2 x float> @sink_fmul_fadd_v2f32(
+; GFX8-SAME: i1 [[COND:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]]) {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    [[MUL:%.*]] = fmul contract <2 x float> [[A]], [[B]]
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[ADD:%.*]] = fadd contract <2 x float> [[MUL]], [[C]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi <2 x float> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX8-NEXT:    ret <2 x float> [[R]]
+;
+; GFX9-LABEL: define <2 x float> @sink_fmul_fadd_v2f32(
+; GFX9-SAME: i1 [[COND:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]]) {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul contract <2 x float> [[A]], [[B]]
+; GFX9-NEXT:    [[ADD:%.*]] = fadd contract <2 x float> [[TMP0]], [[C]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi <2 x float> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX9-NEXT:    ret <2 x float> [[R]]
+;
+; GFX10-LABEL: define <2 x float> @sink_fmul_fadd_v2f32(
+; GFX10-SAME: i1 [[COND:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]]) {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[TMP0:%.*]] = fmul contract <2 x float> [[A]], [[B]]
+; GFX10-NEXT:    [[ADD:%.*]] = fadd contract <2 x float> [[TMP0]], [[C]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi <2 x float> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX10-NEXT:    ret <2 x float> [[R]]
 ;
 entry:
   %mul = fmul contract <2 x float> %a, %b
@@ -163,18 +259,44 @@ exit:
 
 ; Only the operand DAGCombiner picks is a candidate.
 define float @sink_only_fusable_fmul(i1 %cond, float %a, float %b, float %c, float %d) {
-; CHECK-LABEL: define float @sink_only_fusable_fmul(
-; CHECK-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]], float [[D:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL0:%.*]] = fmul contract float [[A]], [[B]]
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul contract float [[C]], [[D]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[ADD:%.*]] = fadd contract float [[MUL0]], [[MUL1]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    ret float [[R]]
+; GFX8-LABEL: define float @sink_only_fusable_fmul(
+; GFX8-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]], float [[D:%.*]]) {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    [[MUL0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX8-NEXT:    [[MUL1:%.*]] = fmul contract float [[C]], [[D]]
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[ADD:%.*]] = fadd contract float [[MUL0]], [[MUL1]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX8-NEXT:    ret float [[R]]
+;
+; GFX9-LABEL: define float @sink_only_fusable_fmul(
+; GFX9-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]], float [[D:%.*]]) {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    [[MUL1:%.*]] = fmul contract float [[C]], [[D]]
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX9-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP0]], [[MUL1]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX9-NEXT:    ret float [[R]]
+;
+; GFX10-LABEL: define float @sink_only_fusable_fmul(
+; GFX10-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]], float [[D:%.*]]) {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    [[MUL1:%.*]] = fmul contract float [[C]], [[D]]
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX10-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP0]], [[MUL1]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX10-NEXT:    ret float [[R]]
 ;
 entry:
   %mul0 = fmul contract float %a, %b
@@ -221,17 +343,41 @@ exit:
 
 ; v_mad_f32 is exact, so with denormals flushed no fast-math flags are needed.
 define float @sink_fmul_fadd_f32_no_denormals(i1 %cond, float %a, float %b, float %c) #0 {
-; CHECK-LABEL: define float @sink_fmul_fadd_f32_no_denormals(
-; CHECK-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[MUL]], [[C]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    ret float [[R]]
+; GFX8-LABEL: define float @sink_fmul_fadd_f32_no_denormals(
+; GFX8-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[TMP0:%.*]] = fmul float [[A]], [[B]]
+; GFX8-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[C]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX8-NEXT:    ret float [[R]]
+;
+; GFX9-LABEL: define float @sink_fmul_fadd_f32_no_denormals(
+; GFX9-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul float [[A]], [[B]]
+; GFX9-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[C]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX9-NEXT:    ret float [[R]]
+;
+; GFX10-LABEL: define float @sink_fmul_fadd_f32_no_denormals(
+; GFX10-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    [[MUL:%.*]] = fmul float [[A]], [[B]]
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[ADD:%.*]] = fadd float [[MUL]], [[C]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi float [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX10-NEXT:    ret float [[R]]
 ;
 entry:
   %mul = fmul float %a, %b
@@ -248,17 +394,41 @@ exit:
 
 ; Same for v_mad_f16.
 define half @sink_fmul_fadd_f16_no_denormals(i1 %cond, half %a, half %b, half %c) #0 {
-; CHECK-LABEL: define half @sink_fmul_fadd_f16_no_denormals(
-; CHECK-SAME: i1 [[COND:%.*]], half [[A:%.*]], half [[B:%.*]], half [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[MUL]], [[C]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi half [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    ret half [[R]]
+; GFX8-LABEL: define half @sink_fmul_fadd_f16_no_denormals(
+; GFX8-SAME: i1 [[COND:%.*]], half [[A:%.*]], half [[B:%.*]], half [[C:%.*]]) #[[ATTR0]] {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[TMP0:%.*]] = fmul half [[A]], [[B]]
+; GFX8-NEXT:    [[ADD:%.*]] = fadd half [[TMP0]], [[C]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi half [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX8-NEXT:    ret half [[R]]
+;
+; GFX9-LABEL: define half @sink_fmul_fadd_f16_no_denormals(
+; GFX9-SAME: i1 [[COND:%.*]], half [[A:%.*]], half [[B:%.*]], half [[C:%.*]]) #[[ATTR0]] {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul half [[A]], [[B]]
+; GFX9-NEXT:    [[ADD:%.*]] = fadd half [[TMP0]], [[C]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi half [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX9-NEXT:    ret half [[R]]
+;
+; GFX10-LABEL: define half @sink_fmul_fadd_f16_no_denormals(
+; GFX10-SAME: i1 [[COND:%.*]], half [[A:%.*]], half [[B:%.*]], half [[C:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    [[MUL:%.*]] = fmul half [[A]], [[B]]
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[ADD:%.*]] = fadd half [[MUL]], [[C]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi half [ [[ADD]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; GFX10-NEXT:    ret half [[R]]
 ;
 entry:
   %mul = fmul half %a, %b
@@ -425,20 +595,50 @@ exit:
 
 ; The motivating shape, a loop-invariant fmul hoisted by LICM.
 define float @sink_fmul_into_loop(float %a, float %b, i32 %n) {
-; CHECK-LABEL: define float @sink_fmul_into_loop(
-; CHECK-SAME: float [[A:%.*]], float [[B:%.*]], i32 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[A]], [[B]]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ADD]] = fadd contract float [[ACC]], [[MUL]]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret float [[ADD]]
+; GFX8-LABEL: define float @sink_fmul_into_loop(
+; GFX8-SAME: float [[A:%.*]], float [[B:%.*]], i32 [[N:%.*]]) {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    [[MUL:%.*]] = fmul contract float [[A]], [[B]]
+; GFX8-NEXT:    br label %[[LOOP:.*]]
+; GFX8:       [[LOOP]]:
+; GFX8-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; GFX8-NEXT:    [[ACC:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; GFX8-NEXT:    [[ADD]] = fadd contract float [[ACC]], [[MUL]]
+; GFX8-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; GFX8-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
+; GFX8-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    ret float [[ADD]]
+;
+; GFX9-LABEL: define float @sink_fmul_into_loop(
+; GFX9-SAME: float [[A:%.*]], float [[B:%.*]], i32 [[N:%.*]]) {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br label %[[LOOP:.*]]
+; GFX9:       [[LOOP]]:
+; GFX9-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; GFX9-NEXT:    [[ACC:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX9-NEXT:    [[ADD]] = fadd contract float [[ACC]], [[TMP0]]
+; GFX9-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; GFX9-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
+; GFX9-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    ret float [[ADD]]
+;
+; GFX10-LABEL: define float @sink_fmul_into_loop(
+; GFX10-SAME: float [[A:%.*]], float [[B:%.*]], i32 [[N:%.*]]) {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    br label %[[LOOP:.*]]
+; GFX10:       [[LOOP]]:
+; GFX10-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; GFX10-NEXT:    [[ACC:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; GFX10-NEXT:    [[TMP0:%.*]] = fmul contract float [[A]], [[B]]
+; GFX10-NEXT:    [[ADD]] = fadd contract float [[ACC]], [[TMP0]]
+; GFX10-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; GFX10-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
+; GFX10-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    ret float [[ADD]]
 ;
 entry:
   %mul = fmul contract float %a, %b
@@ -458,17 +658,41 @@ exit:
 
 ; A legal v2f16 has no packed mad, and v_pk_fma_f16 needs denormals enabled.
 define <2 x half> @sink_fmul_fadd_v2f16_no_denormals(i1 %cond, <2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
-; CHECK-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_no_denormals(
-; CHECK-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract <2 x half> [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[ADD:%.*]] = fadd contract <2 x half> [[MUL]], [[C]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi <2 x half> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
-; CHECK-NEXT:    ret <2 x half> [[R]]
+; GFX8-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_no_denormals(
+; GFX8-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) #[[ATTR0]] {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[TMP0:%.*]] = fmul contract <2 x half> [[A]], [[B]]
+; GFX8-NEXT:    [[ADD:%.*]] = fadd contract <2 x half> [[TMP0]], [[C]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi <2 x half> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX8-NEXT:    ret <2 x half> [[R]]
+;
+; GFX9-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_no_denormals(
+; GFX9-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) #[[ATTR0]] {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul contract <2 x half> [[A]], [[B]]
+; GFX9-NEXT:    [[ADD:%.*]] = fadd contract <2 x half> [[TMP0]], [[C]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi <2 x half> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX9-NEXT:    ret <2 x half> [[R]]
+;
+; GFX10-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_no_denormals(
+; GFX10-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    [[MUL:%.*]] = fmul contract <2 x half> [[A]], [[B]]
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[ADD:%.*]] = fadd contract <2 x half> [[MUL]], [[C]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi <2 x half> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX10-NEXT:    ret <2 x half> [[R]]
 ;
 entry:
   %mul = fmul contract <2 x half> %a, %b
@@ -485,17 +709,41 @@ exit:
 
 ; Same without the contract flags.
 define <2 x half> @sink_fmul_fadd_v2f16_no_denormals_no_contract(i1 %cond, <2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
-; CHECK-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_no_denormals_no_contract(
-; CHECK-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x half> [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x half> [[MUL]], [[C]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi <2 x half> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
-; CHECK-NEXT:    ret <2 x half> [[R]]
+; GFX8-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_no_denormals_no_contract(
+; GFX8-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) #[[ATTR0]] {
+; GFX8-NEXT:  [[ENTRY:.*]]:
+; GFX8-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX8:       [[IF]]:
+; GFX8-NEXT:    [[TMP0:%.*]] = fmul <2 x half> [[A]], [[B]]
+; GFX8-NEXT:    [[ADD:%.*]] = fadd <2 x half> [[TMP0]], [[C]]
+; GFX8-NEXT:    br label %[[EXIT]]
+; GFX8:       [[EXIT]]:
+; GFX8-NEXT:    [[R:%.*]] = phi <2 x half> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX8-NEXT:    ret <2 x half> [[R]]
+;
+; GFX9-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_no_denormals_no_contract(
+; GFX9-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) #[[ATTR0]] {
+; GFX9-NEXT:  [[ENTRY:.*]]:
+; GFX9-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX9:       [[IF]]:
+; GFX9-NEXT:    [[TMP0:%.*]] = fmul <2 x half> [[A]], [[B]]
+; GFX9-NEXT:    [[ADD:%.*]] = fadd <2 x half> [[TMP0]], [[C]]
+; GFX9-NEXT:    br label %[[EXIT]]
+; GFX9:       [[EXIT]]:
+; GFX9-NEXT:    [[R:%.*]] = phi <2 x half> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX9-NEXT:    ret <2 x half> [[R]]
+;
+; GFX10-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_no_denormals_no_contract(
+; GFX10-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:  [[ENTRY:.*]]:
+; GFX10-NEXT:    [[MUL:%.*]] = fmul <2 x half> [[A]], [[B]]
+; GFX10-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
+; GFX10:       [[IF]]:
+; GFX10-NEXT:    [[ADD:%.*]] = fadd <2 x half> [[MUL]], [[C]]
+; GFX10-NEXT:    br label %[[EXIT]]
+; GFX10:       [[EXIT]]:
+; GFX10-NEXT:    [[R:%.*]] = phi <2 x half> [ [[ADD]], %[[IF]] ], [ zeroinitializer, %[[ENTRY]] ]
+; GFX10-NEXT:    ret <2 x half> [[R]]
 ;
 entry:
   %mul = fmul <2 x half> %a, %b
@@ -515,9 +763,9 @@ define <2 x half> @sink_fmul_fadd_v2f16_denormals(i1 %cond, <2 x half> %a, <2 x 
 ; CHECK-LABEL: define <2 x half> @sink_fmul_fadd_v2f16_denormals(
 ; CHECK-SAME: i1 [[COND:%.*]], <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], <2 x half> [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x half> [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x half> [[A]], [[B]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd contract <2 x half> [[TMP0]], [[C]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -542,9 +790,9 @@ define bfloat @sink_fmul_fadd_bf16(i1 %cond, bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-LABEL: define bfloat @sink_fmul_fadd_bf16(
 ; CHECK-SAME: i1 [[COND:%.*]], bfloat [[A:%.*]], bfloat [[B:%.*]], bfloat [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract bfloat [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract bfloat [[A]], [[B]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd contract bfloat [[TMP0]], [[C]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -565,7 +813,3 @@ exit:
 }
 
 attributes #0 = { denormal_fpenv(preservesign) }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX10: {{.*}}
-; GFX8: {{.*}}
-; GFX9: {{.*}}

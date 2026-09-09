@@ -555,6 +555,19 @@ define i32 @inlineasm(i32 %arg1) {
 
 ; // -----
 
+; CHECK-LABEL: @inlineasm_convergent
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define i32 @inlineasm_convergent(i32 %arg1) {
+  ; CHECK:  %[[RES:.+]] = llvm.inline_asm convergent asm_dialect = att "bswap $0", "=r,r" %[[ARG1]] : (i32) -> i32
+  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1) #0
+  ; CHECK: return %[[RES]]
+  ret i32 %1
+}
+
+attributes #0 = { convergent }
+
+; // -----
+
 ; CHECK-LABEL: @inlineasm2
 define void @inlineasm2() {
   %p = alloca ptr, align 8
@@ -879,6 +892,36 @@ define void @call_save_reg_params() {
 ; CHECK: llvm.call @f() {save_reg_params}
   call void @f() "save-reg-params"
   ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_uniform_work_group_size
+define void @call_uniform_work_group_size() {
+; CHECK: llvm.call @f() {uniform_work_group_size}
+  call void @f() "uniform-work-group-size"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+declare i32 @__gxx_personality_v0(...)
+
+; CHECK-LABEL: @invoke_uniform_work_group_size
+define void @invoke_uniform_work_group_size() personality ptr @__gxx_personality_v0 {
+entry:
+; CHECK: llvm.invoke @f() to ^bb1 unwind ^bb2 {uniform_work_group_size}
+  invoke void @f() "uniform-work-group-size" to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
 }
 
 ; // -----

@@ -2148,6 +2148,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::FnRetThunkExtern;
   case bitc::ATTR_KIND_FLATTEN:
     return Attribute::Flatten;
+  case bitc::ATTR_KIND_HYBRID_PATCHABLE:
+    return Attribute::HybridPatchable;
   case bitc::ATTR_KIND_INLINE_HINT:
     return Attribute::InlineHint;
   case bitc::ATTR_KIND_IN_REG:
@@ -5368,6 +5370,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoUnsignedWrap(true);
           if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
+        } else if (Opc == Instruction::AddrSpaceCast) {
+          if (Record[OpNum] & (1 << bitc::ASCI_NON_NULL))
+            cast<AddrSpaceCastInst>(I)->setNonNull(true);
         }
         if (isa<FPMathOperator>(I)) {
           uint64_t Flags = Record[OpNum];

@@ -28,7 +28,6 @@
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -265,7 +264,7 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(Register Reg) {
     return LaneBitmask::getAll();
 
   const MachineOperand &Def = *MRI->def_begin(Reg);
-  const MachineInstr &DefMI = *Def.getParent();
+  const MachineInstr &DefMI = *MRI->getVRegDef(Reg);
   if (lowersToCopies(DefMI)) {
     // Start optimisatically with no used or defined lanes for copy
     // instructions. The following dataflow analysis will add more bits.
@@ -298,8 +297,7 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(Register Reg) {
       } else {
         assert(MOReg.isVirtual());
         if (MRI->hasOneDef(MOReg)) {
-          const MachineOperand &MODef = *MRI->def_begin(MOReg);
-          const MachineInstr &MODefMI = *MODef.getParent();
+          const MachineInstr &MODefMI = *MRI->getVRegDef(MOReg);
           // Bits from copy-like operations will be added later.
           if (lowersToCopies(MODefMI) || MODefMI.isImplicitDef())
             continue;
@@ -471,8 +469,7 @@ void DeadLaneDetector::computeSubRegisterLaneBitInfo() {
     Register Reg = Register::index2VirtReg(RegIdx);
 
     // Transfer UsedLanes to operands of DefMI (backwards dataflow).
-    MachineOperand &Def = *MRI->def_begin(Reg);
-    const MachineInstr &MI = *Def.getParent();
+    const MachineInstr &MI = *MRI->getVRegDef(Reg);
     transferUsedLanesStep(MI, Info.UsedLanes);
     // Transfer DefinedLanes to users of Reg (forward dataflow).
     for (const MachineOperand &MO : MRI->use_nodbg_operands(Reg))
