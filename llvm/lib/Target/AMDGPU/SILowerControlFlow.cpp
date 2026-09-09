@@ -755,9 +755,25 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
     DTUpdates.push_back({DomTreeT::Delete, P, &MBB});
   }
   MBB.removeSuccessor(Succ);
+  // Collect registers live across MBB, while its slot indexes are still valid;
+  // their intervals span the block and must be recomputed once it is erased.
+  SmallSetVector<Register, 8> RecomputeRegs;
   if (LIS) {
+    SlotIndex StartIdx = LIS->getMBBStartIdx(&MBB);
+    for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
+      Register Reg = Register::index2VirtReg(I);
+      if (!LIS->hasInterval(Reg))
+        continue;
+      const LiveInterval &LI = LIS->getInterval(Reg);
+      if (LI.liveAt(StartIdx) || LI.liveAt(StartIdx.getPrevSlot()))
+        RecomputeRegs.insert(Reg);
+    }
+
     for (auto &I : MBB.instrs())
       LIS->RemoveMachineInstrFromMaps(I);
+
+    // Drop MBB from the slot index maps before it is erased.
+    LIS->getSlotIndexes()->removeMBBFromMaps(MBB);
   }
   if (MDT)
     MDT->applyUpdates(DTUpdates);
@@ -779,6 +795,14 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
         .addMBB(Succ);
     if (LIS)
       LIS->InsertMachineInstrInMaps(*BranchMI);
+  }
+
+  // Recompute the collected intervals now that the CFG is final.
+  if (LIS) {
+    for (Register Reg : RecomputeRegs) {
+      LIS->removeInterval(Reg);
+      LIS->createAndComputeVirtRegInterval(Reg);
+    }
   }
 
   return true;
