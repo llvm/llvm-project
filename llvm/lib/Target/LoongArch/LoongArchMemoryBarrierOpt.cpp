@@ -272,7 +272,8 @@ struct InstBarrier {
       assert(MO.isImm() && "Unexpected operand type!");
       const InlineAsm::Flag F(MO.getImm());
       if (N == Off) {
-        assert(F.isImmKind() && "Unexpected flag kind!");
+        if (!F.isImmKind())
+          return std::nullopt;
         HintOff = AsmDescOp + 1;
         Hint = MI.getOperand(HintOff).getImm();
         return std::pair(Hint, HintOff);
