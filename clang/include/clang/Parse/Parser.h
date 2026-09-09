@@ -203,6 +203,11 @@ struct LateParsedAttribute : public LateParsedDeclaration {
   SourceLocation AttrNameLoc;
   SmallVector<Decl *, 2> Decls;
 
+  /// Parameters of the prototype the attribute was written on, kept because
+  /// late parsing runs after their scope is popped and the arguments may name
+  /// one: 'void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)'.
+  SmallVector<ParmVarDecl *, 4> ProtoParams;
+
 private:
   Kind K;
 

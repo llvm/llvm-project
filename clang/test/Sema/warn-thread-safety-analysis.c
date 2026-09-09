@@ -376,6 +376,25 @@ void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
   ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
 }
 
+#ifdef LATE_PARSING
+// A requirement on a parameter may name another parameter declared later. The
+// deferred attribute has to end up on the parameter it was written on and stay
+// live, so check that the call through it is really honored rather than merely
+// accepted: the release consumes the lock, making the second one unheld.
+void late_param_cb(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
+                   struct Mutex *mu) EXCLUSIVE_LOCKS_REQUIRED(mu) { // expected-note {{mutex acquired here}}
+  release(mu); // expected-note {{mutex released here}}
+  mutex_exclusive_unlock(mu); // expected-warning {{releasing mutex 'mu' that was not held}}
+} // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
+
+// It names 'mu', not the neighbouring parameter: only 'mu' is consumed.
+void late_param_other(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
+                      struct Mutex *other, struct Mutex *mu)
+    EXCLUSIVE_LOCKS_REQUIRED(mu, other) { // expected-note {{mutex acquired here}}
+  release(mu);
+} // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
+#endif
+
 // Test unusual trylock patterns
 void do_some_work(void);
 int work_data GUARDED_BY(mu1);
