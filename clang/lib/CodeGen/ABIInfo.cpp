@@ -72,6 +72,13 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
     if (!isHomogeneousAggregate(AT->getElementType(), Base, Members))
       return false;
     Members *= NElements;
+  } else if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+    uint64_t NElements = MT->getNumElementsFlattened();
+    if (NElements == 0)
+      return false;
+    if (!isHomogeneousAggregate(MT->getElementType(), Base, Members))
+      return false;
+    Members *= NElements;
   } else if (const auto *RD = Ty->getAsRecordDecl()) {
     if (RD->hasFlexibleArrayMember())
       return false;
