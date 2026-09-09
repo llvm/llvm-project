@@ -5,7 +5,6 @@
 ; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
 
 ; TODO: these are system scope, but are compiled to gpu scope..
-; TODO: these are seq_cst, but are compiled to relaxed..
 
 
 ; CHECK-LABEL: relaxed_sys_i8
