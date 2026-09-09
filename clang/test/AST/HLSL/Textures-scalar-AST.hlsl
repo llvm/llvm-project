@@ -989,8 +989,8 @@ void main(COORD_TYPE loc, float cmp) {
   t.SampleCmp(scs, loc, cmp, OFFSET_ARG);
   t.SampleCmp(scs, loc, cmp, OFFSET_ARG, 1.0f);
   t.SampleCmpLevelZero(scs, loc, cmp, OFFSET_ARG);
-#endif
-#endif
+#endif // HAS_SAMPLE_CMP
+#endif // HAS_OFFSET
 
 #ifdef HAS_GETDIM_XY
   uint u_w, u_h, u_l;
