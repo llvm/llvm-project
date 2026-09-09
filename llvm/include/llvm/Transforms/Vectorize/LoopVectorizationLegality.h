@@ -183,9 +183,6 @@ public:
   /// error accumulates in the loop.
   LLVM_ABI bool allowReordering() const;
 
-  /// \return the per-loop FP reordering hint as a ForceKind:
-  enum ForceKind getFPReordering() const { return (ForceKind)FPReordering; }
-
   bool isPotentiallyUnsafe() const {
     // Avoid FP vectorization if the target is unsure about proper support.
     // This may be related to the SIMD unit in the target not handling

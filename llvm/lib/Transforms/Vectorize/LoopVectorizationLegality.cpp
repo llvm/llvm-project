@@ -245,7 +245,7 @@ bool LoopVectorizeHints::allowReordering() const {
   // Allow the vectorizer to change the order of operations if enabling
   // loop hints are provided
   if ((ForceKind)FPReordering != FK_Undefined)
-    return HintsAllowReordering && ((ForceKind)FPReordering == FK_Enabled);
+    return (ForceKind)FPReordering == FK_Enabled;
 
   ElementCount EC = getWidth();
   return HintsAllowReordering &&
