@@ -7,13 +7,13 @@ define void @variable_stride_no_mustprogress(i64 %n, i64 %stride) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 + (%n smax %stride)) /u %stride)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin ((-1 * %stride) + (%n smax %stride))))<nuw><nsw> + (-1 * %stride) + (%n smax %stride)) /u (1 umax %stride)) + (1 umin ((-1 * %stride) + (%n smax %stride))))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Compare predicate: %stride sgt) 0
 ; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 -1
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Compare predicate: %stride sgt) 0
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-1 + (%n smax %stride)) /u %stride)
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %stride) + (%n smax %stride))))<nuw><nsw> + (-1 * %stride) + (%n smax %stride)) /u (1 umax %stride)) + (1 umin ((-1 * %stride) + (%n smax %stride))))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Compare predicate: %stride sgt) 0
 ;
