@@ -1,0 +1,86 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+// An Indirect classification can name a non-default address space (e.g. AMDGPU
+// private for a byref argument).  The wire pointer takes that target address
+// space, and the rewriter bridges between it and the default (alloca) space
+// with cir.cast address_space rather than a memory round-trip.
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
+
+#byref_as5 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false,
+               indirect_addr_space = 5 } ]
+}
+
+#byval_as5 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = true,
+               indirect_addr_space = 5 } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // byref: the wire pointer is in AS 5; the body reads the parameter through
+  // the alloca's default-space pointer, so the block argument is cast back to
+  // the default space before its uses are rewired.
+  cir.func @takes_byref_as5(%arg0: !rec_Big) attributes { test_classify = #byref_as5 } {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_byref_as5(%[[A:.*]]: !cir.ptr<!rec_Big, target_address_space(5)> {{{.*}}llvm.byref = !rec_Big{{.*}}})
+  // CHECK: %[[C:.*]] = cir.cast address_space %[[A]] : !cir.ptr<!rec_Big, target_address_space(5)> -> !cir.ptr<!rec_Big>
+  // CHECK: cir.load %[[C]] : !cir.ptr<!rec_Big>, !rec_Big
+
+  // byval: the wire pointer is in AS 5; the callee loads it to get a local
+  // copy of the value.  The load reads straight from the AS-5 pointer.
+  cir.func @takes_byval_as5(%arg0: !rec_Big) attributes { test_classify = #byval_as5 } {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_byval_as5(%[[A:.*]]: !cir.ptr<!rec_Big, target_address_space(5)> {{{.*}}llvm.byval = !rec_Big{{.*}}})
+  // CHECK: %[[V:.*]] = cir.load %[[A]] : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+
+  // byref call site: the caller's alloca is in the default space, so it is cast
+  // up to AS 5 before being forwarded as the argument.
+  cir.func @call_byref() attributes { test_classify = #passthrough } {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_byref_as5(%1) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_byref()
+  // CHECK: %[[S:.*]] = cir.alloca
+  // CHECK: %[[CC:.*]] = cir.cast address_space %[[S]] : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK: cir.call @takes_byref_as5(%[[CC]]) : (!cir.ptr<!rec_Big, target_address_space(5)>{{.*}}) -> ()
+
+  // byval call site: a fresh copy is allocated in the default space, filled,
+  // then cast up to AS 5 for the call.
+  cir.func @call_byval(%s: !rec_Big) attributes { test_classify = #passthrough } {
+    cir.call @takes_byval_as5(%s) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_byval
+  // CHECK: %[[BV:.*]] = cir.alloca {{.*}}byval
+  // CHECK: cir.store %{{.*}}, %[[BV]]
+  // CHECK: %[[CV:.*]] = cir.cast address_space %[[BV]] : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK: cir.call @takes_byval_as5(%[[CV]]) : (!cir.ptr<!rec_Big, target_address_space(5)>{{.*}}) -> ()
+}

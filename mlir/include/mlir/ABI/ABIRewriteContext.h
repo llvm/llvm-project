@@ -75,6 +75,10 @@ struct ArgClassification {
   /// For Indirect: whether the callee gets ownership (byval).
   bool byVal = false;
 
+  /// For Indirect: the address space the pointer lives in.  0 is the default
+  /// space (no explicit attribute). A non-zero value is a target address space.
+  unsigned indirectAddrSpace = 0;
+
   /// Whether the value is passed as-is, so a rewriter can leave it alone.
   /// Only an uncoerced Direct qualifies.  Extend counts as needing a rewrite
   /// even though it only adds an attribute, because the attribute changes
@@ -87,7 +91,7 @@ struct ArgClassification {
     return kind == other.kind && coercedType == other.coercedType &&
            indirectAlign == other.indirectAlign &&
            signExtend == other.signExtend && canFlatten == other.canFlatten &&
-           byVal == other.byVal;
+           byVal == other.byVal && indirectAddrSpace == other.indirectAddrSpace;
   }
 
   static ArgClassification getDirect(Type coerced = nullptr) {
@@ -103,11 +107,13 @@ struct ArgClassification {
     return c;
   }
 
-  static ArgClassification getIndirect(llvm::Align align, bool byVal = true) {
+  static ArgClassification getIndirect(llvm::Align align, bool byVal = true,
+                                       unsigned addrSpace = 0) {
     ArgClassification c;
     c.kind = ArgKind::Indirect;
     c.indirectAlign = align;
     c.byVal = byVal;
+    c.indirectAddrSpace = addrSpace;
     return c;
   }
 

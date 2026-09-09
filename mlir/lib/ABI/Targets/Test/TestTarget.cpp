@@ -125,8 +125,8 @@ namespace {
 /// set causes a parse error (no silent ignore).  Updated when new
 /// optional keys are added to the schema.
 constexpr StringRef knownArgKeys[] = {
-    "kind",        "coerced_type",   "sign_extend",
-    "can_flatten", "indirect_align", "byval",
+    "kind",  "coerced_type",   "sign_extend",         "can_flatten",
+    "byval", "indirect_align", "indirect_addr_space",
 };
 
 bool isKnownArgKey(StringRef key) {
@@ -151,7 +151,7 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
       emitError() << "unknown key '" << na.getName().getValue()
                   << "' in classification dictionary; allowed keys are "
                   << "kind, coerced_type, sign_extend, can_flatten, "
-                  << "indirect_align, byval";
+                  << "indirect_align, byval, indirect_addr_space";
       return std::nullopt;
     }
 
@@ -193,7 +193,11 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     bool byVal = true;
     if (auto bv = argDict.getAs<BoolAttr>("byval"))
       byVal = bv.getValue();
-    return ArgClassification::getIndirect(llvm::Align(align.getInt()), byVal);
+    unsigned addrSpace = 0;
+    if (auto as = argDict.getAs<IntegerAttr>("indirect_addr_space"))
+      addrSpace = as.getInt();
+    return ArgClassification::getIndirect(llvm::Align(align.getInt()), byVal,
+                                          addrSpace);
   }
 
   if (kind == "ignore") {
