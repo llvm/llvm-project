@@ -37,25 +37,27 @@ LIBC_INLINE_VAR constexpr cpp::string_view MKTEMP_CHARSET =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz";
 
+// Minimum number of trailing 'X' characters required by POSIX.
+LIBC_INLINE_VAR constexpr size_t MIN_MKTEMP_SUFFIX = 6;
+
 /// Core helper function for creating temporary files and directories.
 ///
 /// \param tmpl Template string ending in at least six 'X' characters.
 /// \param create_fn Callable taking `const char *path` and returning
-/// `ErrorOr<T>`.
-/// \return `ErrorOr<T>` with the result of `create_fn` on success, or Error on
-/// failure.
+/// `ErrorOr<int>`.
+/// \return `ErrorOr<int>` with the result of `create_fn` on success, or Error
+/// on failure.
 template <typename CreateFn>
-LIBC_INLINE auto mktemp_core(char *tmpl, CreateFn create_fn)
-    -> decltype(create_fn(tmpl)) {
+LIBC_INLINE ErrorOr<int> mktemp_core(char *tmpl, CreateFn create_fn) {
   cpp::string_view str_view(tmpl);
   size_t len = str_view.size();
-  if (len < 6)
+  if (len < MIN_MKTEMP_SUFFIX)
     return Error(EINVAL);
 
   size_t pos = str_view.find_last_not_of('X');
   size_t count = (pos == cpp::string_view::npos) ? len : len - pos - 1;
 
-  if (count < 6)
+  if (count < MIN_MKTEMP_SUFFIX)
     return Error(EINVAL);
 
   cpp::span<char> suffix(tmpl + (len - count), count);

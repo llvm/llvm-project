@@ -53,13 +53,14 @@ TEST_F(LlvmLibcMkdtempTest, ValidTemplate) {
 TEST_F(LlvmLibcMkdtempTest, TemplateModifiedInPlace) {
   char *tmpl = LIBC_NAMESPACE::strdup(libc_make_test_file_path("tmp_XXXXXX"));
   ASSERT_NE(tmpl, nullptr);
-  char *orig = LIBC_NAMESPACE::strdup(tmpl);
-  ASSERT_NE(orig, nullptr);
-  auto cleanup = LIBC_NAMESPACE::cpp::scope_exit([&] {
+  auto cleanup_tmpl = LIBC_NAMESPACE::cpp::scope_exit([&] {
     LIBC_NAMESPACE::rmdir(tmpl);
     ::free(tmpl);
-    ::free(orig);
   });
+
+  char *orig = LIBC_NAMESPACE::strdup(tmpl);
+  ASSERT_NE(orig, nullptr);
+  auto cleanup_orig = LIBC_NAMESPACE::cpp::scope_exit([&] { ::free(orig); });
 
   size_t len = LIBC_NAMESPACE::strlen(tmpl);
   ASSERT_THAT(LIBC_NAMESPACE::mkdtemp(tmpl), Succeeds(tmpl));
@@ -91,13 +92,14 @@ TEST_F(LlvmLibcMkdtempTest, AllCharactersInCharset) {
 
 TEST_F(LlvmLibcMkdtempTest, Uniqueness) {
   char *tmpl1 = LIBC_NAMESPACE::strdup(libc_make_test_file_path("tmp_XXXXXX"));
-  char *tmpl2 = LIBC_NAMESPACE::strdup(libc_make_test_file_path("tmp_XXXXXX"));
   ASSERT_NE(tmpl1, nullptr);
-  ASSERT_NE(tmpl2, nullptr);
   auto cleanup1 = LIBC_NAMESPACE::cpp::scope_exit([&] {
     LIBC_NAMESPACE::rmdir(tmpl1);
     ::free(tmpl1);
   });
+
+  char *tmpl2 = LIBC_NAMESPACE::strdup(libc_make_test_file_path("tmp_XXXXXX"));
+  ASSERT_NE(tmpl2, nullptr);
   auto cleanup2 = LIBC_NAMESPACE::cpp::scope_exit([&] {
     LIBC_NAMESPACE::rmdir(tmpl2);
     ::free(tmpl2);
@@ -125,13 +127,14 @@ TEST_F(LlvmLibcMkdtempTest, MoreThanSixXs) {
   char *tmpl =
       LIBC_NAMESPACE::strdup(libc_make_test_file_path("tmp_XXXXXXXXXX"));
   ASSERT_NE(tmpl, nullptr);
-  char *orig = LIBC_NAMESPACE::strdup(tmpl);
-  ASSERT_NE(orig, nullptr);
-  auto cleanup = LIBC_NAMESPACE::cpp::scope_exit([&] {
+  auto cleanup_tmpl = LIBC_NAMESPACE::cpp::scope_exit([&] {
     LIBC_NAMESPACE::rmdir(tmpl);
     ::free(tmpl);
-    ::free(orig);
   });
+
+  char *orig = LIBC_NAMESPACE::strdup(tmpl);
+  ASSERT_NE(orig, nullptr);
+  auto cleanup_orig = LIBC_NAMESPACE::cpp::scope_exit([&] { ::free(orig); });
 
   size_t len = LIBC_NAMESPACE::strlen(tmpl);
   ASSERT_THAT(LIBC_NAMESPACE::mkdtemp(tmpl), Succeeds(tmpl));
