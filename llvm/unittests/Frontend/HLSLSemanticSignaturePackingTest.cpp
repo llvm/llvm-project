@@ -102,11 +102,16 @@ protected:
       ADD_FAILURE() << "expected a SignaturePackingError";
       return;
     }
-    ASSERT_TRUE(E.isA<SignaturePackingError>());
-    handleAllErrors(std::move(E), [&](const SignaturePackingError &PackingErr) {
-      EXPECT_EQ(PackingErr.getErrorKind(), ExpectedKind);
-      EXPECT_EQ(PackingErr.getElementIndex(), ExpectedElementIndex);
-    });
+    handleAllErrors(
+        std::move(E),
+        [&](const SignaturePackingError &PackingErr) {
+          EXPECT_EQ(PackingErr.getErrorKind(), ExpectedKind);
+          EXPECT_EQ(PackingErr.getElementIndex(), ExpectedElementIndex);
+        },
+        [](const ErrorInfoBase &Other) {
+          ADD_FAILURE() << "expected a SignaturePackingError, got: "
+                        << Other.message();
+        });
   }
 };
 
