@@ -21,6 +21,7 @@
 
 namespace llvm {
 class AssumptionCache;
+class BasicBlock;
 class DataLayout;
 class DominatorTree;
 class FixedVectorType;
@@ -89,6 +90,14 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                            ScalarEvolution &SE, Align CommonAlignment,
                            SmallVectorImpl<int> &ReuseShuffleIndices,
                            FixedVectorType *&StoreVecTy);
+
+/// Clusters \p VL pointers by underlying object and sorts each cluster by
+/// offset, producing \p SortedIndices when the accesses are consecutive.
+/// \p MaxDepth is the recursion limit for getUnderlyingObject.
+bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
+                            Type *ElemTy, const DataLayout &DL,
+                            ScalarEvolution &SE, unsigned MaxDepth,
+                            SmallVectorImpl<unsigned> &SortedIndices);
 
 } // namespace llvm::slpvectorizer
 

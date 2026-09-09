@@ -6428,111 +6428,6 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   return LoadsState::Gather;
 }
 
-static bool clusterSortPtrAccesses(ArrayRef<Value *> VL,
-                                   ArrayRef<BasicBlock *> BBs, Type *ElemTy,
-                                   const DataLayout &DL, ScalarEvolution &SE,
-                                   SmallVectorImpl<unsigned> &SortedIndices) {
-  assert(
-      all_of(VL, [](const Value *V) { return V->getType()->isPointerTy(); }) &&
-      "Expected list of pointer operands.");
-  // Map from bases to a vector of (Ptr, Offset, OrigIdx), which we insert each
-  // Ptr into, sort and return the sorted indices with values next to one
-  // another.
-  SmallMapVector<
-      std::pair<BasicBlock *, Value *>,
-      SmallVector<SmallVector<std::tuple<Value *, int64_t, unsigned>>>, 8>
-      Bases;
-  Bases
-      .try_emplace(std::make_pair(
-          BBs.front(), getUnderlyingObject(VL.front(), RecursionMaxDepth)))
-      .first->second.emplace_back().emplace_back(VL.front(), 0U, 0U);
-
-  SortedIndices.clear();
-  for (auto [Cnt, Ptr] : enumerate(VL.drop_front())) {
-    auto Key = std::make_pair(BBs[Cnt + 1],
-                              getUnderlyingObject(Ptr, RecursionMaxDepth));
-    bool Found = any_of(Bases.try_emplace(Key).first->second,
-                        [&, &Cnt = Cnt, &Ptr = Ptr](auto &Base) {
-                          std::optional<int64_t> Diff =
-                              getPointersDiff(ElemTy, std::get<0>(Base.front()),
-                                              ElemTy, Ptr, DL, SE,
-                                              /*StrictCheck=*/true);
-                          if (!Diff)
-                            return false;
-
-                          Base.emplace_back(Ptr, *Diff, Cnt + 1);
-                          return true;
-                        });
-
-    if (!Found) {
-      // If we haven't found enough to usefully cluster, return early.
-      if (Bases.size() > VL.size() / 2 - 1)
-        return false;
-
-      // Not found already - add a new Base
-      Bases.find(Key)->second.emplace_back().emplace_back(Ptr, 0, Cnt + 1);
-    }
-  }
-
-  if (Bases.size() == VL.size())
-    return false;
-
-  if (Bases.size() == 1 && (Bases.front().second.size() == 1 ||
-                            Bases.front().second.size() == VL.size()))
-    return false;
-
-  // For each of the bases sort the pointers by Offset and check if any of the
-  // base become consecutively allocated.
-  auto ComparePointers = [](Value *Ptr1, Value *Ptr2) {
-    SmallPtrSet<Value *, 13> FirstPointers;
-    SmallPtrSet<Value *, 13> SecondPointers;
-    Value *P1 = Ptr1;
-    Value *P2 = Ptr2;
-    unsigned Depth = 0;
-    while (!FirstPointers.contains(P2) && !SecondPointers.contains(P1)) {
-      if (P1 == P2 || Depth > RecursionMaxDepth)
-        return false;
-      FirstPointers.insert(P1);
-      SecondPointers.insert(P2);
-      P1 = getUnderlyingObject(P1, /*MaxLookup=*/1);
-      P2 = getUnderlyingObject(P2, /*MaxLookup=*/1);
-      ++Depth;
-    }
-    assert((FirstPointers.contains(P2) || SecondPointers.contains(P1)) &&
-           "Unable to find matching root.");
-    return FirstPointers.contains(P2) && !SecondPointers.contains(P1);
-  };
-  for (auto &Base : Bases) {
-    for (auto &Vec : Base.second) {
-      if (Vec.size() > 1) {
-        stable_sort(Vec, llvm::less_second());
-        int64_t InitialOffset = std::get<1>(Vec[0]);
-        bool AnyConsecutive =
-            all_of(enumerate(Vec), [InitialOffset](const auto &P) {
-              return std::get<1>(P.value()) ==
-                     int64_t(P.index()) + InitialOffset;
-            });
-        // Fill SortedIndices array only if it looks worth-while to sort the
-        // ptrs.
-        if (!AnyConsecutive)
-          return false;
-      }
-    }
-    stable_sort(Base.second, [&](const auto &V1, const auto &V2) {
-      return ComparePointers(std::get<0>(V1.front()), std::get<0>(V2.front()));
-    });
-  }
-
-  for (auto &T : Bases)
-    for (const auto &Vec : T.second)
-      for (const auto &P : Vec)
-        SortedIndices.push_back(std::get<2>(P));
-
-  assert(SortedIndices.size() == VL.size() &&
-         "Expected SortedIndices to be the size of VL");
-  return true;
-}
-
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
   assert(TE.isGather() && "Expected gather node only.");
@@ -6552,7 +6447,8 @@ BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
 
   BoUpSLP::OrdersType Order;
   if (!LoadEntriesToVectorize.contains(TE.Idx) &&
-      clusterSortPtrAccesses(Ptrs, BBs, ScalarTy, *DL, *SE, Order))
+      clusterSortPtrAccesses(Ptrs, BBs, ScalarTy, *DL, *SE, RecursionMaxDepth,
+                             Order))
     return std::move(Order);
   return std::nullopt;
 }
