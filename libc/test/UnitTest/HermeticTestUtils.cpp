@@ -19,6 +19,11 @@
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
+#if defined(LIBC_TARGET_OS_IS_LINUX)
+#include "src/__support/OSUtil/linux/syscall.h"
+#include <sys/syscall.h>
+#endif
+
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
     !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #include "src/sys/auxv/getauxval.h"
@@ -145,6 +150,27 @@ extern "C" [[gnu::const]] int *__errno_location() noexcept {
     newmem[i] = oldmem[i];
   return newmem;
 }
+
+void *calloc(size_t num, size_t size) {
+  size_t total;
+  if (__builtin_mul_overflow(num, size, &total))
+    return nullptr;
+  void *mem = malloc(total);
+  if (mem != nullptr)
+    LIBC_NAMESPACE::memset(mem, 0, total);
+  return mem;
+}
+
+int *__llvm_libc_errno() noexcept;
+int *__errno_location() { return __llvm_libc_errno(); }
+
+#if defined(LIBC_TARGET_OS_IS_LINUX)
+__attribute__((constructor)) static void __clean_hermetic_environment() {
+  for (int fd = 3; fd < 256; ++fd)
+    LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+  *__llvm_libc_errno() = 0;
+}
+#endif
 
 // The unit test framework uses pure virtual functions. Since hermetic tests
 // cannot depend C++ runtime libraries, implement dummy functions to support
