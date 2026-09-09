@@ -228,9 +228,6 @@ static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
 char MachinePipelinerLegacy::ID = 0;
-#ifndef NDEBUG
-int MachinePipeliner::NumTries = 0;
-#endif
 char &llvm::MachinePipelinerID = MachinePipelinerLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(MachinePipelinerLegacy, DEBUG_TYPE,
@@ -358,18 +355,72 @@ private:
   }
 };
 
+/// The main class in the implementation of the target independent
+/// software pipeliner pass.
+class MachinePipelinerImpl {
+public:
+  MachineFunction *MF = nullptr;
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
+  const MachineLoopInfo *MLI = nullptr;
+  const InstrItineraryData *InstrItins = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  RegisterClassInfo *RegClassInfo = nullptr;
+  LiveIntervals *LIS = nullptr;
+  AAResults *AA = nullptr;
+  const TargetMachine *TM = nullptr;
+  bool disabledByPragma = false;
+  unsigned II_setByPragma = 0;
+
+#ifndef NDEBUG
+  static int NumTries;
+#endif
+
+  /// Cache the target analysis information about the loop.
+  struct LoopInfo {
+    MachineBasicBlock *TBB = nullptr;
+    MachineBasicBlock *FBB = nullptr;
+    SmallVector<MachineOperand, 4> BrCond;
+    MachineInstr *LoopInductionVar = nullptr;
+    MachineInstr *LoopCompare = nullptr;
+    std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopPipelinerInfo =
+        nullptr;
+  };
+  LoopInfo LI;
+
+  MachinePipelinerImpl(MachineFunction &MF, const MachineLoopInfo &MLI,
+                       LiveIntervals &LIS, AAResults &AA,
+                       MachineOptimizationRemarkEmitter &ORE,
+                       RegisterClassInfo &RegClassInfo);
+
+  /// Run the software pipeliner over all loops in the function.
+  bool run();
+
+private:
+  void preprocessPhiNodes(MachineBasicBlock &B);
+  bool canPipelineLoop(MachineLoop &L);
+  bool scheduleLoop(MachineLoop &L);
+  bool swingModuloScheduler(MachineLoop &L);
+  void setPragmaPipelineOptions(MachineLoop &L);
+  bool runWindowScheduler(MachineLoop &L);
+  bool useSwingModuloScheduler();
+  bool useWindowScheduler(bool Changed);
+};
+
 } // end anonymous namespace
 
-MachinePipeliner::MachinePipeliner(MachineFunction &MF,
-                                   const MachineLoopInfo &MLI,
-                                   LiveIntervals &LIS, AAResults &AA,
-                                   MachineOptimizationRemarkEmitter &ORE,
-                                   RegisterClassInfo &RegClassInfo)
+#ifndef NDEBUG
+int MachinePipelinerImpl::NumTries = 0;
+#endif
+
+MachinePipelinerImpl::MachinePipelinerImpl(
+    MachineFunction &MF, const MachineLoopInfo &MLI, LiveIntervals &LIS,
+    AAResults &AA, MachineOptimizationRemarkEmitter &ORE,
+    RegisterClassInfo &RegClassInfo)
     : MF(&MF), ORE(&ORE), MLI(&MLI), TII(MF.getSubtarget().getInstrInfo()),
       RegClassInfo(&RegClassInfo), LIS(&LIS), AA(&AA), TM(&MF.getTarget()) {}
 
 /// The "main" function for implementing Swing Modulo Scheduling.
-bool MachinePipeliner::run() {
+bool MachinePipelinerImpl::run() {
   bool Changed = false;
   for (const auto &L : *MLI)
     Changed |= scheduleLoop(*L);
@@ -399,7 +450,7 @@ static bool runMachinePipeliner(
        MF.getSubtarget().getInstrItineraryData()->isEmpty()))
     return false;
 
-  MachinePipeliner MP(MF, GetMLI(), GetLIS(), GetAA(), GetORE(), GetRCI());
+  MachinePipelinerImpl MP(MF, GetMLI(), GetLIS(), GetAA(), GetORE(), GetRCI());
   return MP.run();
 }
 
@@ -460,7 +511,7 @@ MachinePipelinerPass::run(MachineFunction &MF,
 /// the main entry point for the algorithm.  The function identifies candidate
 /// loops, calculates the minimum initiation interval, and attempts to schedule
 /// the loop.
-bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
+bool MachinePipelinerImpl::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
   for (const auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
@@ -499,7 +550,7 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   return Changed;
 }
 
-void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
+void MachinePipelinerImpl::setPragmaPipelineOptions(MachineLoop &L) {
   // Reset the pragma for the next loop in iteration.
   disabledByPragma = false;
   II_setByPragma = 0;
@@ -605,7 +656,7 @@ static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
 /// Return true if the loop can be software pipelined.  The algorithm is
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
-bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
+bool MachinePipelinerImpl::canPipelineLoop(MachineLoop &L) {
   if (L.getNumBlocks() != 1) {
     ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
@@ -693,7 +744,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
   return true;
 }
 
-void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
+void MachinePipelinerImpl::preprocessPhiNodes(MachineBasicBlock &B) {
   MachineRegisterInfo &MRI = MF->getRegInfo();
   SlotIndexes &Slots = *LIS->getSlotIndexes();
 
@@ -727,10 +778,10 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
 /// 1. Computation and analysis of the dependence graph.
 /// 2. Ordering of the nodes (instructions).
 /// 3. Attempt to Schedule the loop.
-bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
+bool MachinePipelinerImpl::swingModuloScheduler(MachineLoop &L) {
   assert(L.getBlocks().size() == 1 && "SMS works on single blocks only.");
 
-  SwingSchedulerDAG SMS(*this, L, *LIS, *RegClassInfo, II_setByPragma,
+  SwingSchedulerDAG SMS(*MF, MLI, ORE, L, *LIS, *RegClassInfo, II_setByPragma,
                         LI.LoopPipelinerInfo.get(), AA);
 
   MachineBasicBlock *MBB = L.getHeader();
@@ -766,7 +817,7 @@ void MachinePipelinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
+bool MachinePipelinerImpl::runWindowScheduler(MachineLoop &L) {
   MachineSchedContext Context;
   Context.MF = MF;
   Context.MLI = MLI;
@@ -778,12 +829,12 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   return WS.run();
 }
 
-bool MachinePipeliner::useSwingModuloScheduler() {
+bool MachinePipelinerImpl::useSwingModuloScheduler() {
   // SwingModuloScheduler does not work when WindowScheduler is forced.
   return WindowSchedulingOption != WindowSchedulingFlag::WS_Force;
 }
 
-bool MachinePipeliner::useWindowScheduler(bool Changed) {
+bool MachinePipelinerImpl::useWindowScheduler(bool Changed) {
   // WindowScheduler does not work for following cases:
   // 1. when it is off.
   // 2. when SwingModuloScheduler is successfully scheduled.
@@ -858,7 +909,7 @@ void SwingSchedulerDAG::schedule() {
   if (MII == 0) {
     LLVM_DEBUG(dbgs() << "Invalid Minimal Initiation Interval: 0\n");
     NumFailZeroMII++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Invalid Minimal Initiation Interval: 0";
@@ -871,7 +922,7 @@ void SwingSchedulerDAG::schedule() {
     LLVM_DEBUG(dbgs() << "MII > " << SwpMaxMii
                       << ", we don't pipeline large loops\n");
     NumFailLargeMaxMII++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Minimal Initiation Interval too large: "
@@ -915,13 +966,13 @@ void SwingSchedulerDAG::schedule() {
   // check for node order issues
   checkValidNodeOrder(Circuits);
 
-  SMSchedule Schedule(Pass.MF, this);
+  SMSchedule Schedule(&MF, this);
   Scheduled = schedulePipeline(Schedule);
 
   if (!Scheduled){
     LLVM_DEBUG(dbgs() << "No schedule found, return\n");
     NumFailNoSchedule++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Unable to find schedule";
@@ -934,7 +985,7 @@ void SwingSchedulerDAG::schedule() {
   if (numStages == 0) {
     LLVM_DEBUG(dbgs() << "No overlapped iterations, skip.\n");
     NumFailZeroStage++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "No need to pipeline - no overlapped iterations in schedule.";
@@ -946,7 +997,7 @@ void SwingSchedulerDAG::schedule() {
     LLVM_DEBUG(dbgs() << "numStages:" << numStages << ">" << SwpMaxStages
                       << " : too many stages, abort\n");
     NumFailLargeMaxStage++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Too many stages in schedule: "
@@ -957,7 +1008,7 @@ void SwingSchedulerDAG::schedule() {
     return;
   }
 
-  Pass.ORE->emit([&]() {
+  ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "schedule", Loop.getStartLoc(),
                                      Loop.getHeader())
            << "Pipelined succesfully!";
@@ -2959,7 +3010,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
   if (scheduleFound) {
     Schedule.finalizeSchedule(this);
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Schedule found with Initiation Interval: "
