@@ -456,7 +456,8 @@ TEST(AssignSimpleCrash, NonAllocatableElementCountMismatch) {
 
 TEST(Assign, RTNAME(CopyOutAssign)) {
   // Copy-out writes back the elements the callee modified through the
-  // temporary and performs no stores for the elements it never touched.
+  // temporary (when nothing was modified, it performs no stores at all;
+  // see the read-only test below).
   // Discontiguous var: stride-2 view (elements 1,3,5,7) of an 8-element
   // backing array, as copy-in/copy-out creates for a non-contiguous actual.
   int data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -564,6 +565,43 @@ TEST(Assign, RTNAME(CopyOutAssignUnconditionalEnvVar)) {
 
   // The parent's temp is still allocated (the death happened in the child);
   // clean it up through the default path.
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
+  ASSERT_EQ(munmap(page, pageSize), 0);
+}
+
+TEST(Assign, RTNAME(CopyOutAssignReadOnlyModifiedDies)) {
+  // When the callee DID modify the temporary, copy-out falls back to the
+  // whole-object copy; storing into a read-only original then faults, which
+  // is the intended behavior for a program that modifies a non-definable
+  // actual argument.
+  std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
+  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  ASSERT_NE(page, MAP_FAILED);
+  double *data{static_cast<double *>(page)};
+  for (int j{0}; j < 8; ++j) {
+    data[j] = j + 1;
+  }
+  ASSERT_EQ(mprotect(page, pageSize, PROT_READ), 0);
+
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{4};
+  var.Establish(
+      TypeCode{TypeCategory::Real, 8}, sizeof(double), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(double) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+  *temp.OffsetElement<double>(1 * sizeof(double)) = -1.0;
+
+  EXPECT_DEATH(RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__), "");
+
+  // Clean up the parent's still-allocated temp against writable storage.
+  ASSERT_EQ(mprotect(page, pageSize, PROT_READ | PROT_WRITE), 0);
   RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
   ASSERT_EQ(munmap(page, pageSize), 0);
 }

@@ -839,18 +839,21 @@ void RTDEF(CopyOutAssign)(
   Terminator terminator{sourceFile, sourceLine};
   // Copyout from the temporary must not cause any finalizations
   // for LHS. The variable must be properly initialized already.
-  // Copy back only the elements that were modified through the temporary:
-  // the temporary was created as a bitwise copy of the variable (see
-  // CopyInAssign above), so an element the callee never assigned is still
-  // bit-identical to the original and must not be stored to. This keeps a
+  // Skip the copy-out entirely when the temporary is still bitwise-identical
+  // to the variable: the temporary was created as a bitwise copy (see
+  // CopyInAssign above), so it can only differ if the callee modified it, and
+  // an unmodifying copy-out must not store at all. This keeps a
   // compiler-generated copy-out from writing into read-only storage when the
   // effective argument is not definable (e.g., a named constant) and the
-  // callee, conformingly, never modified it.
+  // callee, conformingly, never modified it. When any element was modified,
+  // fall back to the plain whole-object copy: a per-element conditional
+  // store measures far slower on partially-modified data (branch
+  // misprediction), and a modified temporary means the variable is legally
+  // writable anyway.
   // FLANG_RT_COPYOUT_MODIFIED_ONLY=0 restores the unconditional copy-out.
   if (var) {
-    if (executionEnvironment.copyOutModifiedOnly) {
-      ShallowCopyModifiedElements(*var, temp);
-    } else {
+    if (!executionEnvironment.copyOutModifiedOnly ||
+        !ElementsBitwiseEqual(*var, temp)) {
       ShallowCopy(*var, temp);
     }
   }
