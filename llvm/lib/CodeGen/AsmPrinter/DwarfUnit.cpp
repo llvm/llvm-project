@@ -913,8 +913,15 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   // If DWARF address space value is other than None, add it.  The IR
   // verifier checks that DWARF address space only exists for pointer
   // or reference types.
-  if (auto AS = DTy->getDWARFAddressSpace())
-    addUInt(Buffer, dwarf::DW_AT_LLVM_address_space, dwarf::DW_FORM_data4, *AS);
+  if (auto AS = DTy->getDWARFAddressSpace()) {
+    // The AMDGPU DWARF extensions define DW_AT_LLVM_address_space for these
+    // values. Other targets keep DW_AT_address_class; NVPTX in particular
+    // emits values there that cuda-gdb consumes.
+    dwarf::Attribute Attr = Asm->TM.getTargetTriple().isAMDGPU()
+                                ? dwarf::DW_AT_LLVM_address_space
+                                : dwarf::DW_AT_address_class;
+    addUInt(Buffer, Attr, dwarf::DW_FORM_data4, *AS);
+  }
 
   // Add template alias template parameters.
   if (Tag == dwarf::DW_TAG_template_alias)
