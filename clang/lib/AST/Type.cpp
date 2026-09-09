@@ -116,17 +116,17 @@ static MemoryRegion getMemoryRegion(LangAS AS) {
 //    sycl_generic and opencl_generic) are equivalent, and
 //  - the generic address space is a superset of every other SYCL and OpenCL
 //    address space except constant.
-static bool isConvertibleOpenCLSYCLAddressSpace(LangAS A, LangAS B) {
-  MemoryRegion RegionA = getMemoryRegion(A);
-  MemoryRegion RegionB = getMemoryRegion(B);
-  if (RegionA == MemoryRegion::Unknown ||
-      RegionB == MemoryRegion::Unknown)
+static bool isConvertibleOpenCLSYCLAddressSpace(LangAS To, LangAS From) {
+  MemoryRegion ToRegion = getMemoryRegion(To);
+  MemoryRegion FromRegion = getMemoryRegion(From);
+  if (ToRegion == MemoryRegion::Unknown || FromRegion == MemoryRegion::Unknown)
     return false;
 
-  if (RegionA == RegionB)
+  if (ToRegion == FromRegion)
     return true;
 
-  return RegionA == MemoryRegion::Generic && RegionB != MemoryRegion::Constant;
+  return ToRegion == MemoryRegion::Generic &&
+         FromRegion != MemoryRegion::Constant;
 }
 
 bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
