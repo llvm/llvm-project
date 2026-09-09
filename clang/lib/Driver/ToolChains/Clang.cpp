@@ -5248,7 +5248,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   InputInfoList ExtractAPIInputs;
   InputInfoList HostOffloadingInputs;
-  const InputInfo *CudaDeviceInput = nullptr;
   const InputInfo *OpenMPDeviceInput = nullptr;
   for (const InputInfo &I : Inputs) {
     if (&I == &Input || I.getType() == types::TY_Nothing) {
@@ -5263,8 +5262,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       ExtractAPIInputs.push_back(I);
     } else if (IsHostOffloadingAction) {
       HostOffloadingInputs.push_back(I);
-    } else if ((IsCuda || IsHIP) && !CudaDeviceInput) {
-      CudaDeviceInput = &I;
     } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
       OpenMPDeviceInput = &I;
     } else {
@@ -8326,12 +8323,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Host-side offloading compilation receives all device-side outputs. Include
-  // them in the host compilation depending on the target. If the host inputs
-  // are not empty we use the new-driver scheme, otherwise use the old scheme.
-  if ((IsCuda || IsHIP) && !UsesLLVMOffloading && CudaDeviceInput) {
-    CmdArgs.push_back("-foffload-include-binary");
-    CmdArgs.push_back(CudaDeviceInput->getFilename());
-  } else if (!HostOffloadingInputs.empty()) {
+  // them in the host compilation depending on the target.
+  if (!HostOffloadingInputs.empty()) {
     bool UseOffloadIncludeBinary =
         (IsCuda || IsHIP) &&
         (!IsRDCMode || Args.hasArg(options::OPT_cuda_emit_nvcc_abi)) &&
@@ -9632,79 +9625,6 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
       JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, ArrayRef<InputInfo>(), Output));
-}
-
-void OffloadBundler::ConstructJobMultipleOutputs(
-    Compilation &C, const JobAction &JA, const InputInfoList &Outputs,
-    const InputInfoList &Inputs, const llvm::opt::ArgList &TCArgs,
-    const char *LinkingOutput) const {
-  // The version with multiple outputs is expected to refer to a unbundling job.
-  auto &UA = cast<OffloadUnbundlingJobAction>(JA);
-
-  // The unbundling command looks like this:
-  // clang-offload-bundler -type=bc
-  //   -targets=host-triple,openmp-triple1,openmp-triple2
-  //   -input=input_file
-  //   -output=unbundle_file_host
-  //   -output=unbundle_file_tgt1
-  //   -output=unbundle_file_tgt2
-  //   -unbundle
-
-  ArgStringList CmdArgs;
-
-  assert(Inputs.size() == 1 && "Expecting to unbundle a single file!");
-  InputInfo Input = Inputs.front();
-
-  // Get the type.
-  CmdArgs.push_back(TCArgs.MakeArgString(
-      Twine("-type=") + types::getTypeTempSuffix(Input.getType())));
-
-  // Get the targets.
-  SmallString<128> Triples;
-  Triples += "-targets=";
-  auto DepInfo = UA.getDependentActionsInfo();
-  for (unsigned I = 0; I < DepInfo.size(); ++I) {
-    if (I)
-      Triples += ',';
-
-    auto &Dep = DepInfo[I];
-    Triples += Action::GetOffloadKindName(Dep.DependentOffloadKind);
-    Triples += '-';
-    Triples += llvm::Triple(Dep.DependentToolChain->ComputeEffectiveClangTriple(
-                                TCArgs, Dep.DependentBoundArch))
-                   .normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
-
-    if ((Dep.DependentOffloadKind == Action::OFK_HIP ||
-         Dep.DependentOffloadKind == Action::OFK_Cuda) &&
-        !Dep.DependentBoundArch.empty()) {
-      Triples += '-';
-      Triples += Dep.DependentBoundArch.ArchName;
-    }
-  }
-
-  CmdArgs.push_back(TCArgs.MakeArgString(Triples));
-
-  // Get bundled file command.
-  CmdArgs.push_back(
-      TCArgs.MakeArgString(Twine("-input=") + Input.getFilename()));
-
-  // Get unbundled files command.
-  for (unsigned I = 0; I < Outputs.size(); ++I) {
-    SmallString<128> UB;
-    UB += "-output=";
-    UB += DepInfo[I].DependentToolChain->getInputFilename(Outputs[I]);
-    CmdArgs.push_back(TCArgs.MakeArgString(UB));
-  }
-  CmdArgs.push_back("-unbundle");
-  CmdArgs.push_back("-allow-missing-bundles");
-  if (TCArgs.hasArg(options::OPT_v))
-    CmdArgs.push_back("-verbose");
-
-  // All the inputs are encoded as commands.
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::None(),
-      TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, ArrayRef<InputInfo>(), Outputs));
 }
 
 void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,

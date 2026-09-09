@@ -158,6 +158,11 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::is_heap(pol, non_random, non_random);       // expected-error@*:* {{static assertion failed: is_heap}}
+    (void)std::is_heap(pol, non_random, non_random, pred); // expected-error@*:* {{static assertion failed: is_heap}}
+  }
+
+  {
     (void)std::is_heap_until(
         pol, non_random, non_random); // expected-error@*:* {{static assertion failed: is_heap_until}}
     (void)std::is_heap_until(
@@ -184,6 +189,13 @@ void f(non_forward_iterator non_fwd,
     (void)std::merge(pol, non_fwd, non_fwd, it, it, out, pred); // expected-error@*:* {{static assertion failed: merge}}
     (void)std::merge(pol, it, it, non_fwd, non_fwd, out, pred); // expected-error@*:* {{static assertion failed: merge}}
     (void)std::merge(pol, it, it, it, it, non_output, pred);    // expected-error@*:* {{static assertion failed: merge}}
+  }
+
+  {
+    (void)std::max_element(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: max_element}}
+    (void)std::max_element(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: max_element}}
+    (void)std::min_element(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: min_element}}
+    (void)std::min_element(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: min_element}}
   }
 
   {
