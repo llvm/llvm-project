@@ -27,12 +27,6 @@ add_mlir_dialect_library(MLIROpenACCTransforms
 
   DEPENDS
   MLIROpenACCPassIncGen
-  MLIROpenACCOpsIncGen
-  MLIROpenACCEnumsIncGen
-  MLIROpenACCAttributesIncGen
-  MLIROpenACCMPOpsInterfacesIncGen
-  MLIROpenACCOpsInterfacesIncGen
-  MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRAnalysis

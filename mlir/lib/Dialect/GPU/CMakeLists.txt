@@ -59,7 +59,6 @@ add_mlir_dialect_library(MLIRGPUTransforms
 
   DEPENDS
   MLIRGPUPassIncGen
-  MLIRParallelLoopMapperEnumsGen
 
   LINK_LIBS PUBLIC
   MLIRAMDGPUDialect

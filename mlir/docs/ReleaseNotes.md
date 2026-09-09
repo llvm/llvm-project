@@ -55,6 +55,15 @@ default rules, `attr-dict` contains only discardable attributes. See
   manually setting a triple/chipset/features combination is a low-level
   operation that should require a manual `rocdl-attach-target` call.
 
+### Potentially Breaking Changes
+
+- MLIR dialect, conversion, extension, and translation libraries no longer
+  depend on the aggregate `mlir-headers` target. Downstream projects that
+  relied on that incidental ordering must model generated headers explicitly:
+  link the library that owns the header, use `HEADER_LIBS` with
+  `add_mlir_library` for a header-only or circular relationship, or retain
+  `DEPENDS mlir-headers` as a conservative compatibility escape hatch.
+
 ## LLVM 21
 
 ### GPU/NVVM Changes

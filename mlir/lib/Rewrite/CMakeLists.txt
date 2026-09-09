@@ -14,7 +14,6 @@ add_mlir_library(MLIRRewrite
 
   DEPENDS
   mlir-generic-headers
-  MLIRConversionPassIncGen
 
   # FrozenRewritePatternSet.cpp includes PDLInterp and PDL when enabled.
   # PDLInterp's public interface also provides the PDL generated headers.

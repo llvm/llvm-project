@@ -21,7 +21,3 @@ add_mlir_dialect_library(MLIRSMT
   MLIRSideEffectInterfaces
   MLIRControlFlowInterfaces
 )
-
-add_dependencies(mlir-headers
-  MLIRSMTIncGen
-)

@@ -5,7 +5,6 @@ add_mlir_conversion_library(MLIRFuncToLLVM
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/FuncToLLVM
 
   DEPENDS
-  MLIRConversionPassIncGen
   intrinsics_gen
 
   LINK_COMPONENTS

@@ -19,9 +19,6 @@ add_mlir_translation_library(MLIRLLVMIRToNVVMTranslation
 add_mlir_translation_library(MLIRNVVMToLLVMIRTranslation
   NVVMToLLVMIRTranslation.cpp
 
-  DEPENDS
-  MLIRNVVMConversionsIncGen
-
   LINK_COMPONENTS
   Core
 

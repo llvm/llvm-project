@@ -51,7 +51,6 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen
   MLIRSPIRVEnumsIncGen
-  MLIRSPIRVImageInterfacesIncGen
   MLIRSPIRVOpsIncGen
   MLIRSPIRVOpsShardGen
   MLIRSPIRVSerializationGen

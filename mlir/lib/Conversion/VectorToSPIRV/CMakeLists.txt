@@ -6,7 +6,6 @@ add_mlir_conversion_library(MLIRVectorToSPIRV
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/VectorToSPIRV
 
   DEPENDS
-  MLIRConversionPassIncGen
   intrinsics_gen
 
   LINK_LIBS PUBLIC
