@@ -29,17 +29,17 @@
 # PDB2YAML-NEXT:         Records:
 # PDB2YAML-NEXT:           - Kind:            S_ASSOCIATION
 # PDB2YAML-NEXT:             AssociationSym:
-# PDB2YAML-NEXT:               AssocKind:       Coroutine
+# PDB2YAML-NEXT:               AssociationKind: Coroutine
 # PDB2YAML-NEXT:               Segment:         1
 # PDB2YAML-NEXT:               Offset:          0
 # PDB2YAML-NEXT:           - Kind:            S_ASSOCIATION
 # PDB2YAML-NEXT:             AssociationSym:
-# PDB2YAML-NEXT:               AssocKind:       0x3DB
+# PDB2YAML-NEXT:               AssociationKind: 0x3DB
 # PDB2YAML-NEXT:               Segment:         2
 # PDB2YAML-NEXT:               Offset:          1234
 # PDB2YAML-NEXT:           - Kind:            S_ASSOCIATION
 # PDB2YAML-NEXT:             AssociationSym:
-# PDB2YAML-NEXT:               AssocKind:       None
+# PDB2YAML-NEXT:               AssociationKind: None
 # PDB2YAML-NEXT:               Segment:         1234
 # PDB2YAML-NEXT:               Offset:          42
 
@@ -62,16 +62,16 @@ DbiStream:
         Records:
           - Kind:            S_ASSOCIATION
             AssociationSym:
-              AssocKind:       Coroutine
+              AssociationKind: Coroutine
               Segment:         1
               Offset:          0
           - Kind:            S_ASSOCIATION
             AssociationSym:
-              AssocKind:       987
+              AssociationKind: 987
               Segment:         2
               Offset:          1234
           - Kind:            S_ASSOCIATION
             AssociationSym:
-              AssocKind:       0
+              AssociationKind: 0
               Segment:         1234
               Offset:          42
