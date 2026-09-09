@@ -3324,20 +3324,29 @@ SDValue AMDGPUTargetLowering::lowerFPOW(SDValue Op, SelectionDAG &DAG) const {
   SDValue Y = Op.getOperand(1);
   SDNodeFlags Flags = Op->getFlags();
 
+  // log2(0) is -inf, which exp2 turns back into a finite result, so the core
+  // goes infinite for inputs a ninf fpow still asserts about, like pow(0, 2).
+  SDNodeFlags CoreFlags = Flags;
+  CoreFlags.setNoInfs(false);
+
   // Fast expansion: ignores denormals, NaN for a negative base.
   if (allowApproxFunc(DAG, Flags)) {
-    SDValue Log = DAG.getNode(AMDGPUISD::LOG, SL, VT, X, Flags);
-    SDValue Mul = DAG.getNode(AMDGPUISD::FMUL_LEGACY, SL, VT, Y, Log, Flags);
-    return DAG.getNode(AMDGPUISD::EXP, SL, VT, Mul, Flags);
+    SDValue Log = DAG.getNode(AMDGPUISD::LOG, SL, VT, X, CoreFlags);
+    SDValue Mul =
+        DAG.getNode(AMDGPUISD::FMUL_LEGACY, SL, VT, Y, Log, CoreFlags);
+    return DAG.getNode(AMDGPUISD::EXP, SL, VT, Mul, CoreFlags);
   }
 
   SDValue Abs = DAG.getNode(ISD::FABS, SL, VT, X, Flags);
-  SDValue Log = DAG.getNode(ISD::FLOG2, SL, VT, Abs, Flags);
-  SDValue Mul = DAG.getNode(AMDGPUISD::FMUL_LEGACY, SL, VT, Y, Log, Flags);
-  SDValue R = DAG.getNode(ISD::FEXP2, SL, VT, Mul, Flags);
+  SDValue Log = DAG.getNode(ISD::FLOG2, SL, VT, Abs, CoreFlags);
+  SDValue Mul = DAG.getNode(AMDGPUISD::FMUL_LEGACY, SL, VT, Y, Log, CoreFlags);
+  SDValue R = DAG.getNode(ISD::FEXP2, SL, VT, Mul, CoreFlags);
+
+  // A base that is never negative needs neither the sign fixup nor the NaN.
+  if (DAG.computeKnownFPClass(X, fcNegative).signBitIsZeroOrNaN())
+    return R;
 
   EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  SDValue One = DAG.getConstantFP(1.0, SL, VT);
 
   // Infinities count as integers, and every f32 >= 2^24 in magnitude is even.
   SDValue YTrunc = DAG.getNode(ISD::FTRUNC, SL, VT, Y);
@@ -3349,18 +3358,23 @@ SDValue AMDGPUTargetLowering::lowerFPOW(SDValue Op, SelectionDAG &DAG) const {
       DAG.getNode(ISD::AND, SL, SetCCVT, YIsInt,
                   DAG.getSetCC(SL, SetCCVT, YHalfTrunc, YHalf, ISD::SETONE));
 
-  // pow(-x, odd y) = -pow(x, y).
-  R = DAG.getNode(ISD::FCOPYSIGN, SL, VT, R,
-                  DAG.getNode(ISD::SELECT, SL, VT, YIsOdd, X, One));
+  // pow(-x, odd y) = -pow(x, y). Selecting the copysign lets even y fold it.
+  R = DAG.getNode(ISD::SELECT, SL, VT, YIsOdd,
+                  DAG.getNode(ISD::FCOPYSIGN, SL, VT, R, X), R);
 
   if (Flags.hasNoNaNs())
     return R;
 
   // A negative finite base to a non-integral power is NaN. -inf is excluded:
-  // the core already gives pow(+inf, y).
-  SDValue XNegFinite = DAG.getNode(
-      ISD::IS_FPCLASS, SL, SetCCVT, X,
-      DAG.getTargetConstant(fcNegNormal | fcNegSubnormal, SL, MVT::i32));
+  // the core already gives pow(+inf, y). So are subnormals when flushed.
+  FPClassTest NegFiniteMask = fcNegNormal;
+  if (!DAG.getMachineFunction()
+           .getDenormalMode(APFloat::IEEEsingle())
+           .inputsAreZero())
+    NegFiniteMask |= fcNegSubnormal;
+  SDValue XNegFinite =
+      DAG.getNode(ISD::IS_FPCLASS, SL, SetCCVT, X,
+                  DAG.getTargetConstant(NegFiniteMask, SL, MVT::i32));
   // Not a SETONE compare: pow(-1, NaN) needs the NaN-true behavior of !SETOEQ.
   SDValue NegNonInt = DAG.getNode(ISD::AND, SL, SetCCVT, XNegFinite,
                                   DAG.getNOT(SL, YIsInt, SetCCVT));

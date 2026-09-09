@@ -2383,7 +2383,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FEXP10:
     return legalizeFExp(MI, B);
   case TargetOpcode::G_FPOW:
-    return legalizeFPow(MI, B);
+    return legalizeFPow(Helper, MI);
   case TargetOpcode::G_FFLOOR:
     return legalizeFFloor(MI, MRI, B);
   case TargetOpcode::G_BUILD_VECTOR:
@@ -4276,37 +4276,50 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
 }
 
 // Keep in sync with AMDGPUTargetLowering::lowerFPOW, which documents this.
-bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
-                                       MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeFPow(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
   Register Dst = MI.getOperand(0).getReg();
   Register X = MI.getOperand(1).getReg();
   Register Y = MI.getOperand(2).getReg();
   unsigned Flags = MI.getFlags();
   assert(B.getMRI()->getType(Dst) == F32);
 
+  // log2(0) is -inf, which exp2 turns back into a finite result, so the core
+  // goes infinite for inputs a ninf fpow still asserts about, like pow(0, 2).
+  unsigned CoreFlags = Flags & ~MachineInstr::FmNoInfs;
+
   // Fast expansion: ignores denormals, NaN for a negative base.
   if (allowApproxFunc(B.getMF(), Flags)) {
     auto Log = B.buildIntrinsic(Intrinsic::amdgcn_log, {F32})
                    .addUse(X)
-                   .setMIFlags(Flags);
+                   .setMIFlags(CoreFlags);
     auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
                    .addUse(Y)
                    .addUse(Log.getReg(0))
-                   .setMIFlags(Flags);
-    buildExp(B, Dst, Mul.getReg(0), Flags);
+                   .setMIFlags(CoreFlags);
+    buildExp(B, Dst, Mul.getReg(0), CoreFlags);
     MI.eraseFromParent();
     return true;
   }
 
   auto Abs = B.buildFAbs(F32, X, Flags);
-  auto Log = B.buildFLog2(F32, Abs, Flags);
+  auto Log = B.buildFLog2(F32, Abs, CoreFlags);
   auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
                  .addUse(Y)
                  .addUse(Log.getReg(0))
-                 .setMIFlags(Flags);
-  Register R = B.buildFExp2(F32, Mul, Flags).getReg(0);
+                 .setMIFlags(CoreFlags);
 
-  auto One = B.buildFConstant(F32, 1.0);
+  // A base that is never negative needs neither the sign fixup nor the NaN.
+  if (Helper.getValueTracking()
+          ->computeKnownFPClass(X, Flags, fcNegative, 0)
+          .signBitIsZeroOrNaN()) {
+    B.buildFExp2(Dst, Mul, CoreFlags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  Register R = B.buildFExp2(F32, Mul, CoreFlags).getReg(0);
 
   auto YTrunc = B.buildIntrinsicTrunc(F32, Y);
   auto YIsInt = B.buildFCmp(CmpInst::FCMP_OEQ, S1, YTrunc, Y);
@@ -4315,18 +4328,22 @@ bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
   auto YIsOdd = B.buildAnd(
       S1, YIsInt, B.buildFCmp(CmpInst::FCMP_ONE, S1, YHalfTrunc, YHalf));
 
-  // pow(-x, odd y) = -pow(x, y).
-  auto Sign = B.buildSelect(F32, YIsOdd, X, One);
+  // pow(-x, odd y) = -pow(x, y). Selecting the copysign lets even y fold it.
+  auto Neg = B.buildFCopysign(F32, R, X);
   if (Flags & MachineInstr::FmNoNans) {
-    B.buildFCopysign(Dst, R, Sign);
+    B.buildSelect(Dst, YIsOdd, Neg, R);
     MI.eraseFromParent();
     return true;
   }
-  R = B.buildFCopysign(F32, R, Sign).getReg(0);
+  R = B.buildSelect(F32, YIsOdd, Neg, R).getReg(0);
 
-  // A negative finite base to a non-integral power is NaN. Not an ONE compare:
-  // pow(-1, NaN) needs the NaN-true behavior of !OEQ.
-  auto XNegFinite = B.buildIsFPClass(S1, X, fcNegNormal | fcNegSubnormal);
+  // A negative finite base to a non-integral power is NaN. -inf is excluded:
+  // the core already gives pow(+inf, y). So are subnormals when flushed.
+  FPClassTest NegFiniteMask = fcNegNormal;
+  if (!B.getMF().getDenormalMode(APFloat::IEEEsingle()).inputsAreZero())
+    NegFiniteMask |= fcNegSubnormal;
+  auto XNegFinite = B.buildIsFPClass(S1, X, NegFiniteMask);
+  // Not an ONE compare: pow(-1, NaN) needs the NaN-true behavior of !OEQ.
   auto NegNonInt = B.buildAnd(S1, XNegFinite, B.buildNot(S1, YIsInt));
   auto NaN = B.buildFConstant(F32, APFloat::getQNaN(APFloat::IEEEsingle()));
   B.buildSelect(Dst, NegNonInt, NaN, R);

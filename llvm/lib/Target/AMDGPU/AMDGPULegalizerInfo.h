@@ -103,7 +103,7 @@ public:
   bool legalizeFEXPF64(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
-  bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFPow(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
 
