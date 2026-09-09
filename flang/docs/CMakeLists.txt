@@ -98,8 +98,7 @@ if (LLVM_ENABLE_SPHINX)
     # CLANG_TABLEGEN_EXE variable needs to be set for clang_tablegen to run without error
     find_program(CLANG_TABLEGEN_EXE "clang-tblgen" ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
 
-    # Generate the Markdown file from TableGen (for both HTML and MAN builds).
-    # -gen-opt-docs emits MyST Markdown, so the outputs use the .md extension.
+    # Generate the Sphinx file from TableGen (for both HTML and MAN builds)
     gen_sphinx_file_from_td(FlangCommandLineReference.md -gen-opt-docs FlangOptionsDocs.td "gen-FlangCommandLineReference.md")
     gen_sphinx_file_from_td(FlangCommandLineOptions.md -gen-opt-docs FlangOptionsMan.td "gen-FlangCommandLineOptions.md")
     # clang_tablegen() (called from gen_sphinx_file_from_td()) does not create the
