@@ -448,6 +448,11 @@ def bitreverse_lshr : GICombineRule<
 
 // Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
 // Combine (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
+// The apply uses MachineIRBuilder so that buildShl(c1, c2) is
+// constant-folded by the CSE/observer infrastructure.  A MIR-pattern
+// apply creates a live G_SHL(c1, c2) that
+// hoist_logic_op_with_same_opcode_hands can reverse, causing an
+// infinite loop.
 class commute_shift_binop<Instruction binop> : GICombineRule<
   (defs root:$dst),
   (match (binop $binop_dst, $x, $c1):$binop,
@@ -456,9 +461,16 @@ class commute_shift_binop<Instruction binop> : GICombineRule<
                    isConstantOrConstantSplatVector(${c1}.getReg(), MRI) &&
                    isConstantOrConstantSplatVector(${c2}.getReg(), MRI) &&
                    Helper.isDesirableToCommuteWithShift(*${shl}); }]),
-  (apply (G_SHL GITypeOf<"$dst">:$s1, $x, $c2),
-         (G_SHL GITypeOf<"$dst">:$s2, $c1, $c2),
-         (binop $dst, $s1, $s2))>;
+  (apply [{
+    LLT Ty = MRI.getType(${dst}.getReg());
+    Register DstReg = ${dst}.getReg();
+    unsigned BinOpcode = ${binop}->getOpcode();
+    auto S1 = B.buildShl(Ty, ${x}.getReg(), ${c2}.getReg());
+    auto S2 = B.buildShl(Ty, ${c1}.getReg(), ${c2}.getReg());
+    B.buildInstr(BinOpcode, {DstReg}, {S1, S2});
+    ${shl}->eraseFromParent();
+    ${binop}->eraseFromParent();
+  }])>;
 def commute_shift_add : commute_shift_binop<G_ADD>;
 def commute_shift_or : commute_shift_binop<G_OR>;
 def commute_shift : GICombineGroup<[commute_shift_add, commute_shift_or]>;
