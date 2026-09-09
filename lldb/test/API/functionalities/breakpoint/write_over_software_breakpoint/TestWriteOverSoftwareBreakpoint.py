@@ -230,6 +230,11 @@ class TestCases(object):
 
 
 @skipIfRemote
+# x86, x86_64, s390x and all versions of Windows report a breakpoint address
+# after the breakpoint and the test fails due to
+# https://github.com/llvm/llvm-project/issues/222284.
+@skipIf(archs=["i386", "x86_64", "s390x"])
+@skipIfWindows
 class WriteOverLLDBManagedSoftwareBreakpoint(GDBProxyTestBase, TestCases):
     def respond(self, packet):
         # Pretend that the server cannot handle breakpoints, which means lldb
