@@ -11446,8 +11446,6 @@ def err_shufflevector_argument_too_large : Error<
   "of vector elements">;
 def err_shufflevector_minus_one_is_undefined_behavior_constexpr : Error<
   "index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position %0 is not permitted in a constexpr context">;
-def err_shufflevector_incompatible_mask : Error<
-  "second argument to __builtin_shufflevector must be a vector of any integer type other than boolean (was %0)">;
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;

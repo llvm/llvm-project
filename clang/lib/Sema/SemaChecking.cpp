@@ -6593,11 +6593,12 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
       auto *RHSVecType = RHSType->castAs<VectorType>();
       if (RHSVecType->getElementType()->isBooleanType() ||
           !RHSVecType->getElementType()->isIntegerType()) {
-        return ExprError(Diag(TheCall->getBeginLoc(),
-                              diag::err_shufflevector_incompatible_mask)
-                         << RHSType
-                         << SourceRange(TheCall->getArg(0)->getBeginLoc(),
-                                        TheCall->getArg(1)->getEndLoc()));
+        return ExprError(
+            Diag(TheCall->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+            << /* Arg ordinal */ 2 << /*vector of*/ 4 << /*integer*/ 1
+            << /*no fp*/ 0 << RHSType
+            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                           TheCall->getArg(1)->getEndLoc()));
       }
 
       if (RHSVecType->getNumElements() != NumElements)
