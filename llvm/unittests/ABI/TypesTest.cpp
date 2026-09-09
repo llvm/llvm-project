@@ -14,15 +14,12 @@
 #include "gtest/gtest.h"
 
 using llvm::Align;
-using llvm::ElementCount;
 using llvm::TypeSize;
 using llvm::abi::FieldInfo;
 using llvm::abi::RecordFlags;
 using llvm::abi::RecordType;
 using llvm::abi::StructPacking;
-using llvm::abi::TupleType;
 using llvm::abi::TypeBuilder;
-using llvm::abi::VectorType;
 
 namespace {
 
@@ -126,35 +123,6 @@ TEST_F(ABITypesTest, DirectVirtualBasesAndVTablePointer) {
                           /*Bases=*/{FieldInfo(Empty, 0)}, /*VBases=*/{},
                           Align(8))
                    ->isEmpty());
-}
-
-TEST_F(ABITypesTest, GenericVector) {
-  const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
-  const VectorType *V4I32 =
-      TB.getVectorType(I32, ElementCount::getFixed(4), Align(16));
-
-  EXPECT_FALSE(V4I32->isTuple());
-  EXPECT_EQ(V4I32->getNumElements(), ElementCount::getFixed(4));
-  EXPECT_EQ(V4I32->getSizeInBits(), TypeSize::getFixed(128));
-}
-
-// svint32x3_t is three <vscale x 4 x i32> vectors.
-TEST_F(ABITypesTest, VectorTuple) {
-  const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
-  const VectorType *SVInt32 =
-      TB.getVectorType(I32, ElementCount::getScalable(4), Align(16));
-  const TupleType *SVInt32x3 = TB.getTupleType(SVInt32, /*NumVectors=*/3);
-
-  EXPECT_TRUE(SVInt32x3->isTuple());
-  EXPECT_FALSE(SVInt32->isTuple());
-  EXPECT_EQ(SVInt32x3->getNumVectors(), 3u);
-  EXPECT_EQ(SVInt32x3->getVectorType(), SVInt32);
-  EXPECT_EQ(SVInt32x3->getAlignment(), Align(16));
-  // The contained vector keeps a per-vector element count; the tuple size
-  // covers all of the vectors.
-  EXPECT_EQ(SVInt32->getNumElements(), ElementCount::getScalable(4));
-  EXPECT_EQ(SVInt32->getSizeInBits(), TypeSize::getScalable(128));
-  EXPECT_EQ(SVInt32x3->getSizeInBits(), TypeSize::getScalable(384));
 }
 
 } // namespace

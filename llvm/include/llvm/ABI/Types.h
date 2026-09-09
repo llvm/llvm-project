@@ -21,7 +21,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
-#include <cassert>
 
 namespace llvm {
 namespace abi {
@@ -35,7 +34,6 @@ enum class TypeKind {
   Pointer,
   Array,
   Vector,
-  Tuple,
   Record,
 };
 
@@ -80,7 +78,6 @@ public:
   bool isPointer() const { return Kind == TypeKind::Pointer; }
   bool isArray() const { return Kind == TypeKind::Array; }
   bool isVector() const { return Kind == TypeKind::Vector; }
-  bool isTuple() const { return Kind == TypeKind::Tuple; }
   bool isRecord() const { return Kind == TypeKind::Record; }
   bool isMemberPointer() const { return Kind == TypeKind::MemberPointer; }
   bool isComplex() const { return Kind == TypeKind::Complex; }
@@ -234,38 +231,6 @@ public:
   }
 };
 
-/// A homogeneous tuple of 2, 3, or 4 identical vectors, such as the
-/// AArch64 SVE types svint32x3_t and svboolx2_t.
-///
-/// The contained vector describes one register-shaped member. Size and
-/// alignment of the tuple cover the whole group: size is NumVectors times
-/// the vector size, and alignment matches the contained vector.
-class TupleType : public Type {
-private:
-  const VectorType *Vec;
-  unsigned NumVectors;
-
-  static TypeSize computeSizeInBits(const VectorType *Vec,
-                                    unsigned NumVectors) {
-    TypeSize VecSize = Vec->getSizeInBits();
-    return TypeSize(VecSize.getKnownMinValue() * NumVectors,
-                    VecSize.isScalable());
-  }
-
-public:
-  TupleType(const VectorType *Vec, unsigned NumVectors)
-      : Type(TypeKind::Tuple, computeSizeInBits(Vec, NumVectors),
-             Vec->getAlignment()),
-        Vec(Vec), NumVectors(NumVectors) {}
-
-  const VectorType *getVectorType() const { return Vec; }
-  unsigned getNumVectors() const { return NumVectors; }
-
-  static bool classof(const Type *T) {
-    return T->getKind() == TypeKind::Tuple;
-  }
-};
-
 struct FieldInfo {
   const Type *FieldType;
   uint64_t OffsetInBits;
@@ -407,14 +372,6 @@ public:
                                   ElementCount NumElements, Align Align) {
     return new (Allocator.Allocate<VectorType>())
         VectorType(ElementType, NumElements, Align);
-  }
-
-  /// Creates a homogeneous tuple of \p NumVectors copies of \p Vec.
-  /// \p NumVectors must be 2, 3, or 4.
-  const TupleType *getTupleType(const VectorType *Vec, unsigned NumVectors) {
-    assert(NumVectors >= 2 && NumVectors <= 4 &&
-           "tuple types hold 2, 3, or 4 vectors");
-    return new (Allocator.Allocate<TupleType>()) TupleType(Vec, NumVectors);
   }
 
   const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,
