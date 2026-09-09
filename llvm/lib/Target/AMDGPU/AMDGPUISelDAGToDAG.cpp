@@ -4858,6 +4858,7 @@ static SDValue createSGPR32ToVGPR16(SDValue SReg32, SDValue LoHi16, SDLoc DL,
 // Check and legalize 16bit Register/SubregIdx in true16 mode includuing:
 // 1. 16bit register def-use chain that requires a fix (i.e. sgpr32->vgpr16)
 // 2. extract_subreg lo/hi16
+// by inserting REG_SEQUENCE and COPY_TO_REGCLASS
 // Legalization expected to be done from top-down
 bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
   // This check is required for r600 and older targets
@@ -4868,12 +4869,26 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   EVT VT = N->getValueType(0);
+  // Check only 16bit types
   if (VT != MVT::i16 && VT != MVT::f16 && VT != MVT::bf16)
     return false;
 
   const TargetRegisterClass *DstRC = nullptr;
   SDLoc DL(N);
 
+  // EXTRACT_SUBREG Src, Lo16/Hi16
+  // 1. Src is SGPR:
+  // t0 = EXTRACT_SUBREG Src, sub0
+  // t1 = COPY_TO_REGCLASS t0, VGPR32
+  // t2 = EXTRACT_SUBREG t1, Lo16/Hi16
+  // User is SGPR => select t0
+  // User is VGPR => select t2
+  // 2. Src is VGPR:
+  // t0 = EXTRACT_SUBREG Src, Lo16/Hi16
+  // t1 = EXTRACT_SUBREG Src, sub0
+  // t2 = COPY_TO_REGCLASS t1, SGPR32
+  // User is VGPR => select t0
+  // User is SGPR => select t2
   if (N->isMachineOpcode() &&
       N->getMachineOpcode() == TargetOpcode::EXTRACT_SUBREG) {
     unsigned SubIdx = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
@@ -4927,7 +4942,7 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
         // to
         // t0: sgpr_xx = ...
         // t1: sgpr_32 = extract_subreg t0, sub0
-        // t2: vgpr_32 = COPY_TO_VGPR32_PSEUDO t1
+        // t2: vgpr_32 = COPY_TO_VGPR32 t1
         // t3  ... = extract_subreg t2, lo/hi16
         // ... = t3: vgpr_16
         NewValue =
@@ -4946,16 +4961,9 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
         // t0: sgpr_xx = ...
         // t1: sgpr_32 = extract_subreg t0, sub0
         // ... = t1: sgpr_32
-        // Insert additional copy_to_regclass in case the src is a
-        // extract_subreg
-        SDValue RCImm =
-            CurDAG->getTargetConstant(AMDGPU::SGPR_32RegClassID, DL, MVT::i32);
-        NewValue = SDValue(CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL,
-                                                  VT, SReg32, RCImm),
-                           0);
         for (auto &[User, OperandNo] : UserSGPR) {
           SmallVector<SDValue, 8> NewOps(User->op_begin(), User->op_end());
-          NewOps[OperandNo] = NewValue;
+          NewOps[OperandNo] = SReg32;
           CurDAG->UpdateNodeOperands(User, NewOps);
         }
       }
@@ -5006,7 +5014,13 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
   bool IsSGPR32 = TRI->getCommonSubClass(DstRC, &AMDGPU::SGPR_32RegClass);
   bool IsVGPR16 = TRI->getCommonSubClass(DstRC, &AMDGPU::VGPR_16RegClass);
 
-  // Now fix user
+  // Fix user:
+  // 1. Def is SGPR32, Use is VGPR16:
+  // t0 = COPY_TO_REGCLASS Def, VGPR32
+  // Use = EXTRACT_SUBREG t0, Lo16/Hi16
+  // 2. Def is VGPR16, Use is SGPR32:
+  // t0 = REG_SEQUENCE Def, lo16, undef, hi16
+  // Use = COPY_TO_REGCLASS t0, SGPR32
   for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end(); UI != UE;
        ++UI) {
     SDNode *User = UI->getUser();
@@ -5030,24 +5044,10 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
 
   SDValue NewValue;
   if (IsSGPR32) {
-    // t0: sgpr_32 = ...
-    // ... = t0: vgpr_16
-    //
-    // t0: sgpr_32 = ...
-    // t1: vgpr_32 = COPY_TO_VGPR32_PSEUDO t0
-    // t2: vgpr_16 = EXTRACT_SUBREG t1, lo16
-    // ... = t2: vgpr_16
     NewValue = createSGPR32ToVGPR16(
         SDValue(N, 0), CurDAG->getTargetConstant(AMDGPU::lo16, DL, MVT::i32),
         DL, VT, CurDAG);
   } else if (IsVGPR16) {
-    // t0: vgpr_16 = ...
-    // ... = t0: sgpr_32
-    // to
-    // t0: vgpr_16 = ...
-    // t1: vgpr_32 = REG_SEQUENCE t0, lo16, undef, hi16
-    // t2: sgpr_32 = COPY_TO_REGCLASS t1
-    // ... = t2: sgpr_32
     NewValue = createVGPR16ToSGPR32(SDValue(N, 0), DL, VT, CurDAG);
   }
   for (auto &[User, OperandNo] : ToFix) {

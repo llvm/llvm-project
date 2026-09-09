@@ -1193,11 +1193,11 @@ define void @s_maximum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s1, 16
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s0, s0, s1
-; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s1, s3, s2
+; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s2, s3, s2
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.l, s0
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v1.l, s1
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v1.l, s2
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-NEXT:    ; use v0
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
