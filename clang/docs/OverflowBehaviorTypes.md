@@ -91,7 +91,7 @@ as they do on any other type:
 ```c
 const __ob_trap int a = 0;
 a = 1; // error: cannot assign to variable 'a' with const-qualified type
-       // 'const __ob_trap int'
+       // '__ob_trap const int'
 ```
 
 ## Examples
