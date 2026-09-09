@@ -14619,7 +14619,7 @@ static bool canBeDeclaredInNamespace(const DeclarationName &Name) {
 static bool DiagnoseTwoPhaseLookup(
     Sema &SemaRef, SourceLocation FnLoc, const CXXScopeSpec &SS,
     LookupResult &R, OverloadCandidateSet::CandidateSetKind CSK,
-    OverloadCandidateSet &KnownInvalidCandidateSet,
+    const OverloadCandidateSet &ResolvedCandidates,
     TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
     CXXRecordDecl **FoundInClass = nullptr) {
   if (!SemaRef.inTemplateInstantiation() || !SS.isEmpty())
@@ -14635,7 +14635,9 @@ static bool DiagnoseTwoPhaseLookup(
       R.suppressDiagnostics();
 
       OverloadCandidateSet Candidates(FnLoc, CSK);
-      for (auto &Cand : KnownInvalidCandidateSet) {
+      // We have performed a BestViableFunction over these candidates, so
+      // exclude them.
+      for (auto &Cand : ResolvedCandidates) {
         if (Cand.Function)
           Candidates.exclude(Cand.Function);
         else if (Cand.IsSurrogate)
@@ -14731,16 +14733,15 @@ static bool DiagnoseTwoPhaseLookup(
 /// was defined.
 ///
 /// Returns true if a viable candidate was found and a diagnostic was issued.
-static bool
-DiagnoseTwoPhaseOperatorLookup(Sema &SemaRef, OverloadedOperatorKind Op,
-                               SourceLocation OpLoc, ArrayRef<Expr *> Args,
-                               OverloadCandidateSet &KnownInvalidCandidateSet) {
+static bool DiagnoseTwoPhaseOperatorLookup(
+    Sema &SemaRef, OverloadedOperatorKind Op, SourceLocation OpLoc,
+    ArrayRef<Expr *> Args, const OverloadCandidateSet &ResolvedCandidateSet) {
   DeclarationName OpName =
       SemaRef.Context.DeclarationNames.getCXXOperatorName(Op);
   LookupResult R(SemaRef, OpName, OpLoc, Sema::LookupOperatorName);
   return DiagnoseTwoPhaseLookup(
       SemaRef, OpLoc, CXXScopeSpec(), R, OverloadCandidateSet::CSK_Operator,
-      KnownInvalidCandidateSet,
+      ResolvedCandidateSet,
       /*ExplicitTemplateArgs=*/nullptr, Args, /*FoundInClass=*/nullptr);
 }
 
@@ -14770,7 +14771,7 @@ static ExprResult
 BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
                       UnresolvedLookupExpr *ULE, SourceLocation LParenLoc,
                       MutableArrayRef<Expr *> Args, SourceLocation RParenLoc,
-                      OverloadCandidateSet &KnownInvalidCandidateSet,
+                      const OverloadCandidateSet &ResolvedCandidateSet,
                       bool AllowTypoCorrection) {
   // Do not try to recover if it is already building a recovery call.
   // This stops infinite loops for template instantiations like
@@ -14797,10 +14798,10 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   CXXRecordDecl *FoundInClass = nullptr;
   if (DiagnoseTwoPhaseLookup(SemaRef, Fn->getExprLoc(), SS, R,
                              OverloadCandidateSet::CSK_Normal,
-                             KnownInvalidCandidateSet, ExplicitTemplateArgs,
+                             ResolvedCandidateSet, ExplicitTemplateArgs,
                              Args, &FoundInClass)) {
     // OK, diagnosed a two-phase lookup issue.
-  } else if (KnownInvalidCandidateSet.empty()) {
+  } else if (ResolvedCandidateSet.empty()) {
     // Try to recover from an empty lookup with typo correction.
     R.clear();
     NoTypoCorrectionCCC NoTypoValidator{};
