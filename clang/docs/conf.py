@@ -30,12 +30,15 @@ extensions += [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.graphviz",
+    "llvm_sphinx.ext.absolute_links",
     "llvm_sphinx.ext.ghlinks",
 ]
 
 intersphinx_mapping = get_llvm_intersphinx_mapping(
     "llvm", "clang-tools-extra", "libcxx", "openmp"
 )
+
+llvm_sphinx_doc_url_prefixes = ("https://clang.llvm.org/docs/",)
 
 import sphinx
 
