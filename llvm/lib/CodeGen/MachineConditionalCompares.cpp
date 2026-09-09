@@ -24,7 +24,6 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -32,7 +31,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/Passes.h"
@@ -139,7 +137,6 @@ class SSACCmpConv {
   const TargetRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   const MachineBranchProbabilityInfo *MBPI;
-  MachineOptimizationRemarkEmitter *ORE;
 
   /// The physical flag/status register clobbered by ccmp candidates.
   MCRegister FlagReg;
@@ -182,10 +179,8 @@ private:
 
 public:
   /// Initialize per-function data structures.
-  void init(MachineFunction &MF, const MachineBranchProbabilityInfo *MBPI,
-            MachineOptimizationRemarkEmitter *ORE) {
+  void init(MachineFunction &MF, const MachineBranchProbabilityInfo *MBPI) {
     this->MBPI = MBPI;
-    this->ORE = ORE;
     TII = MF.getSubtarget().getInstrInfo();
     TRI = MF.getSubtarget().getRegisterInfo();
     MRI = &MF.getRegInfo();
@@ -489,14 +484,6 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   TII->convertToCCMP(*Head, SpliceStart->getIterator(), HeadTermDL, HeadCond,
                      Info, *MRI);
 
-  if (ORE)
-    ORE->emit([&]() {
-      MachineOptimizationRemark R(DEBUG_TYPE, "ConvertedCMP",
-                                  CmpMI->getDebugLoc(), CmpBB);
-      R << "convert CMP into conditional CMP";
-      return R;
-    });
-
   CmpMI->eraseFromParent();
   Head->updateTerminator(CmpBB->getNextNode());
 
@@ -517,7 +504,6 @@ class MachineConditionalCompares {
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
-  MachineOptimizationRemarkEmitter *ORE = nullptr;
   bool MinSize = false;
   SSACCmpConv CmpConv;
 
@@ -525,9 +511,8 @@ public:
   MachineConditionalCompares(const MachineBranchProbabilityInfo *MBPI,
                              MachineDominatorTree *DomTree,
                              MachineLoopInfo *Loops,
-                             MachineTraceMetrics *Traces,
-                             MachineOptimizationRemarkEmitter *ORE)
-      : MBPI(MBPI), DomTree(DomTree), Loops(Loops), Traces(Traces), ORE(ORE) {}
+                             MachineTraceMetrics *Traces)
+      : MBPI(MBPI), DomTree(DomTree), Loops(Loops), Traces(Traces) {}
 
   bool run(MachineFunction &MF);
 
@@ -667,7 +652,7 @@ bool MachineConditionalCompares::run(MachineFunction &MF) {
   MinSize = MF.getFunction().hasMinSize();
 
   bool Changed = false;
-  CmpConv.init(MF, MBPI, ORE);
+  CmpConv.init(MF, MBPI);
 
   // Visit blocks in dominator tree pre-order. The pre-order enables multiple
   // cmp-conversions from the same head block.
@@ -677,17 +662,6 @@ bool MachineConditionalCompares::run(MachineFunction &MF) {
   for (auto *I : depth_first(DomTree))
     if (tryConvert(I->getBlock()))
       Changed = true;
-
-  if (Changed && ORE) {
-    ORE->emit([&]() {
-      MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "NumOfCCMP",
-                                          MF.getFunction().getSubprogram(),
-                                          &MF.front());
-      R << "converted compare(s) to CCMP in function "
-        << ore::NV("Function", MF.getName());
-      return R;
-    });
-  }
 
   return Changed;
 }
@@ -722,7 +696,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_END(MachineConditionalComparesLegacy, DEBUG_TYPE,
                     "Machine Conditional Compares", false, false)
 
@@ -735,7 +708,6 @@ void MachineConditionalComparesLegacy::getAnalysisUsage(
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<MachineTraceMetricsWrapperPass>();
   AU.addPreserved<MachineTraceMetricsWrapperPass>();
-  AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -753,10 +725,8 @@ bool MachineConditionalComparesLegacy::runOnMachineFunction(
   MachineLoopInfo *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MachineTraceMetrics *Traces =
       &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
-  MachineOptimizationRemarkEmitter *ORE =
-      &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
-  MachineConditionalCompares Impl(MBPI, DomTree, Loops, Traces, ORE);
+  MachineConditionalCompares Impl(MBPI, DomTree, Loops, Traces);
   return Impl.run(MF);
 }
 
@@ -773,10 +743,8 @@ MachineConditionalComparesPass::run(MachineFunction &MF,
   MachineLoopInfo *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
   MachineTraceMetrics *Traces =
       &MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
-  MachineOptimizationRemarkEmitter *ORE =
-      &MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
 
-  MachineConditionalCompares Impl(MBPI, DomTree, Loops, Traces, ORE);
+  MachineConditionalCompares Impl(MBPI, DomTree, Loops, Traces);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
