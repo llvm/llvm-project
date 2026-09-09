@@ -687,21 +687,20 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX12-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX12-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-UNALIGNED-NEXT:    global_load_b96 v[12:14], v[0:1], off
 ; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v13, 8, v0
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v12, 16, v0
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v9, 8, v2
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
-; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
-; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v8.l, v2.l
-; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v1.l, v13.l
-; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v2.l, v12.l
+; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v1, 8, v12
+; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v3, 24, v12
+; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v5, 8, v13
+; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v7, 24, v13
+; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v9, 8, v14
+; GFX12-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v11, 24, v14
+; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v0.l, v12.l
+; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v2.l, v12.h
+; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v4.l, v13.l
+; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v6.l, v13.h
+; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v8.l, v14.l
+; GFX12-UNALIGNED-NEXT:    v_mov_b16_e32 v10.l, v14.h
 ; GFX12-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-NOUNALIGNED-LABEL: v_load_constant_v12i8_align8:
@@ -711,39 +710,38 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NOUNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-NOUNALIGNED-NEXT:    global_load_b96 v[12:14], v[0:1], off
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v13, 8, v0
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v12, 16, v0
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v9, 8, v2
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
-; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
-; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v8.l, v2.l
-; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v1.l, v13.l
-; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v2.l, v12.l
+; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v1, 8, v12
+; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v3, 24, v12
+; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v5, 8, v13
+; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v7, 24, v13
+; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v9, 8, v14
+; GFX12-NOUNALIGNED-NEXT:    v_lshrrev_b32_e32 v11, 24, v14
+; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v0.l, v12.l
+; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v2.l, v12.h
+; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v4.l, v13.l
+; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v6.l, v13.h
+; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v8.l, v14.l
+; GFX12-NOUNALIGNED-NEXT:    v_mov_b16_e32 v10.l, v14.h
 ; GFX12-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: v_load_constant_v12i8_align8:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
+; GFX1250-NEXT:    global_load_b96 v[12:14], v[0:1], off nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v13, 8, v0 :: v_dual_lshrrev_b32 v12, 16, v0
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v3, 24, v0 :: v_dual_lshrrev_b32 v5, 8, v1
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v6, 16, v1 :: v_dual_lshrrev_b32 v7, 24, v1
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v9, 8, v2 :: v_dual_lshrrev_b32 v10, 16, v2
-; GFX1250-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
-; GFX1250-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX1250-NEXT:    v_mov_b16_e32 v8.l, v2.l
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_mov_b16_e32 v1.l, v13.l
-; GFX1250-NEXT:    v_mov_b16_e32 v2.l, v12.l
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v1, 8, v12 :: v_dual_lshrrev_b32 v3, 24, v12
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v5, 8, v13 :: v_dual_lshrrev_b32 v7, 24, v13
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v9, 8, v14 :: v_dual_lshrrev_b32 v11, 24, v14
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v12.l
+; GFX1250-NEXT:    v_mov_b16_e32 v2.l, v12.h
+; GFX1250-NEXT:    v_mov_b16_e32 v4.l, v13.l
+; GFX1250-NEXT:    v_mov_b16_e32 v6.l, v13.h
+; GFX1250-NEXT:    v_mov_b16_e32 v8.l, v14.l
+; GFX1250-NEXT:    v_mov_b16_e32 v10.l, v14.h
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX9-LABEL: v_load_constant_v12i8_align8:
