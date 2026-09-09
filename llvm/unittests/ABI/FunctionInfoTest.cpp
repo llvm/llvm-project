@@ -12,6 +12,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace {
 
@@ -60,17 +61,26 @@ TEST_F(FunctionInfoTest, SetCanBeFlattenedRoundTrips) {
   EXPECT_TRUE(Info.getCanBeFlattened());
 }
 
-TEST_F(FunctionInfoTest, SetCanBeFlattenedChainsOffGetDirect) {
+TEST_F(FunctionInfoTest, GetDirectTakesCanBeFlattened) {
   // The spelling a classifier uses to keep an aggregate in one piece.
-  ArgInfo Info = ArgInfo::getDirect(TwoI64).setCanBeFlattened(false);
+  ArgInfo Info = ArgInfo::getDirect(TwoI64, /*Offset=*/0, std::nullopt,
+                                    /*CanBeFlattened=*/false);
   EXPECT_TRUE(Info.isDirect());
+  EXPECT_EQ(Info.getCoerceToType(), TwoI64);
+  EXPECT_EQ(Info.getDirectOffset(), 0u);
   EXPECT_FALSE(Info.getCanBeFlattened());
+
+  EXPECT_TRUE(ArgInfo::getDirect(TwoI64, /*Offset=*/0, std::nullopt,
+                                 /*CanBeFlattened=*/true)
+                  .getCanBeFlattened());
 }
 
 TEST_F(FunctionInfoTest, CanBeFlattenedSurvivesFunctionInfo) {
   std::unique_ptr<FunctionInfo> FI =
       FunctionInfo::create(llvm::CallingConv::C, TwoI64, {TwoI64, I32});
-  FI->getReturnInfo() = ArgInfo::getDirect(TwoI64).setCanBeFlattened(false);
+  // Both spellings that clear the flag land in the same place.
+  FI->getReturnInfo() = ArgInfo::getDirect(TwoI64, /*Offset=*/0, std::nullopt,
+                                           /*CanBeFlattened=*/false);
   FI->getArgInfo(0).Info = ArgInfo::getDirect(TwoI64).setCanBeFlattened(false);
   FI->getArgInfo(1).Info = ArgInfo::getDirect(I32);
 

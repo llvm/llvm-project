@@ -75,7 +75,7 @@ private:
 
   ArgInfo(Kind K = Direct)
       : TheKind(K), SignExt(false), ZeroExt(false), IndirectByVal(false),
-        IndirectRealign(false), CanBeFlattened(true) {}
+        IndirectRealign(false), CanBeFlattened(false) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -86,12 +86,16 @@ public:
   ///               return value on x86-64).
   /// \param Align  Override for the argument's alignment. If absent, the
   ///               default alignment for \p T is used.
+  /// \param CanBeFlattened Whether a record coercion may be split into one
+  ///               wire argument per field. See getCanBeFlattened.
   static ArgInfo getDirect(const Type *T = nullptr, unsigned Offset = 0,
-                           MaybeAlign Align = std::nullopt) {
+                           MaybeAlign Align = std::nullopt,
+                           bool CanBeFlattened = true) {
     ArgInfo AI(Direct);
     AI.CoercionType = T;
     AI.Alignment = Align;
     AI.DirectAttr.Offset = Offset;
+    AI.CanBeFlattened = CanBeFlattened;
     return AI;
   }
 
