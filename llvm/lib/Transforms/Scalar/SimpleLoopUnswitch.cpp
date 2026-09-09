@@ -2795,8 +2795,8 @@ static bool collectUnswitchCandidates(
   if (MSSAU && HeaderCondGuaranteedToExecute &&
       !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
       !any_of(UnswitchCandidates, [&L](auto &TerminatorAndInvariants) {
-         return TerminatorAndInvariants.TI == L.getHeader()->getTerminator();
-       })) {
+        return TerminatorAndInvariants.TI == L.getHeader()->getTerminator();
+      })) {
     MemorySSA *MSSA = MSSAU->getMemorySSA();
     if (auto Info = hasPartialIVCondition(L, MSSAThreshold, *MSSA, AA)) {
       LLVM_DEBUG(
