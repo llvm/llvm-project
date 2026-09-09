@@ -227,8 +227,7 @@ void SampleProfileProber::findInvokeNormalDests(
     auto *TI = BB.getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       auto *ND = II->getNormalDest();
-      // A self-looping invoke is the original block, not a split continuation.
-      // Still instrument it.
+      // instrument self-looping invoke in the original block
       if (ND != &BB)
         InvokeNormalDests.insert(ND);
 
