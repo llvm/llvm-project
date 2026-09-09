@@ -13,6 +13,11 @@ bb1:
   ret { ptr, i32 } zeroinitializer
 }
 
+define double @fn_with_const_pool() {
+start:
+  ret double 1.0   ; forces a constant pool entry (L#CPI1_0)
+}
+
 declare i32 @__zos_cxx_personality_v2(...)
 
 ; CHECK:      C_WSA64 CATTR ALIGN(2),FILL(0),NOTEXECUTABLE,RMODE(64),PART(.gcc_excepti
