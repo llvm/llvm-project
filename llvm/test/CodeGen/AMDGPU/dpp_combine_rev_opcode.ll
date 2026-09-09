@@ -1273,14 +1273,17 @@ define amdgpu_kernel void @dpp_shl_i64_amount(ptr addrspace(1) %arg, i32 %in) {
 ;
 ; GFX11-LABEL: dpp_shl_i64_amount:
 ; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 3, v2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_lshlrev_b32 v3, 3, v2
 ; GFX11-NEXT:    global_load_b64 v[0:1], v3, s[0:1]
+; GFX11-NEXT:    v_mov_b32_dpp v4, v2 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    _e64_dpp v[0:1], v2, v[0:1] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX11-NEXT:    v_lshlrev_b64 v[0:1], v4, v[0:1]
 ; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -1288,12 +1291,13 @@ define amdgpu_kernel void @dpp_shl_i64_amount(ptr addrspace(1) %arg, i32 %in) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_lshlrev_b32_e32 v3, 3, v2
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_lshlrev_b32 v3, 3, v2
 ; GFX12-NEXT:    global_load_b64 v[0:1], v3, s[0:1]
+; GFX12-NEXT:    v_mov_b32_dpp v4, v2 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshlrev_b64_dpp v[0:1], v2, v[0:1] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], v4, v[0:1]
 ; GFX12-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()

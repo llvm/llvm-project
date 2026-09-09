@@ -541,20 +541,26 @@ define <7 x i1> @get_active_lane_mask(i64 %0, i64 %1) {
 ; CHECK-SAME:  %[[VEC:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[MASK:[a-zA-Z0-9]+]]
 define void @masked_load_store_intrinsics(ptr %vec, <7 x i1> %mask) {
-  ; CHECK:  %[[UNDEF:.+]] = llvm.mlir.undef
-  ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[UNDEF]] {alignment = 1 : i32}
+  ; CHECK:  %[[POISON:.+]] = llvm.mlir.poison
+  ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[POISON]] {alignment = 1 : i64}
   ; CHECK-SAME:  (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
-  %1 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr %vec, i32 1, <7 x i1> %mask, <7 x float> undef)
-  ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i32}
-  %2 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr %vec, i32 4, <7 x i1> %mask, <7 x float> %1)
-  ; CHECK:  %[[VAL3:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i32, nontemporal}
-  %3 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr %vec, i32 4, <7 x i1> %mask, <7 x float> %1), !nontemporal !{i32 1}
-  ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32}
+  %1 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %vec, <7 x i1> %mask, <7 x float> poison)
+  ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i64}
+  %2 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 4 %vec, <7 x i1> %mask, <7 x float> %1)
+  ; CHECK:  %[[VAL3:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i64, nontemporal}
+  %3 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 4 %vec, <7 x i1> %mask, <7 x float> %1), !nontemporal !{i32 1}
+  ; CHECK:  %[[VAL4:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[POISON]] :
+  ; CHECK-SAME:  (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>{{$}}
+  %4 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr %vec, <7 x i1> %mask, <7 x float> poison)
+  ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i64}
   ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr
-  call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr %vec, i32 8, <7 x i1> %mask)
-  ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32, nontemporal}
-  ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr 
-  call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr %vec, i32 8, <7 x i1> %mask), !nontemporal !{i32 1}
+  call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr align 8 %vec, <7 x i1> %mask)
+  ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i64, nontemporal}
+  ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr
+  call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr align 8 %vec, <7 x i1> %mask), !nontemporal !{i32 1}
+  ; CHECK:  llvm.intr.masked.store %[[VAL4]], %[[VEC]], %[[MASK]] :
+  ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr{{$}}
+  call void @llvm.masked.store.v7f32.p0(<7 x float> %4, ptr %vec, <7 x i1> %mask)
   ret void
 }
 
@@ -562,15 +568,21 @@ define void @masked_load_store_intrinsics(ptr %vec, <7 x i1> %mask) {
 ; CHECK-SAME:  %[[VEC:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[MASK:[a-zA-Z0-9]+]]
 define void @masked_gather_scatter_intrinsics(<7 x ptr> %vec, <7 x i1> %mask) {
-  ; CHECK:  %[[UNDEF:.+]] = llvm.mlir.undef
-  ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[UNDEF]] {alignment = 1 : i32}
+  ; CHECK:  %[[POISON:.+]] = llvm.mlir.poison
+  ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[POISON]] {alignment = 1 : i64}
   ; CHECK-SAME:  (vector<7x!llvm.ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
-  %1 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %vec, i32 1, <7 x i1> %mask, <7 x float> undef)
-  ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i32}
-  %2 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %vec, i32 4, <7 x i1> %mask, <7 x float> %1)
-  ; CHECK:  llvm.intr.masked.scatter %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32}
+  %1 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 %vec, <7 x i1> %mask, <7 x float> poison)
+  ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i64}
+  %2 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 4 %vec, <7 x i1> %mask, <7 x float> %1)
+  ; CHECK:  %[[VAL3:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[POISON]] :
+  ; CHECK-SAME:  (vector<7x!llvm.ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>{{$}}
+  %3 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %vec, <7 x i1> %mask, <7 x float> poison)
+  ; CHECK:  llvm.intr.masked.scatter %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i64}
   ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into vector<7x!llvm.ptr>
-  call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %2, <7 x ptr> %vec, i32 8, <7 x i1> %mask)
+  call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %2, <7 x ptr> align 8 %vec, <7 x i1> %mask)
+  ; CHECK:  llvm.intr.masked.scatter %[[VAL3]], %[[VEC]], %[[MASK]] :
+  ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into vector<7x!llvm.ptr>{{$}}
+  call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %3, <7 x ptr> %vec, <7 x i1> %mask)
   ret void
 }
 
@@ -1845,10 +1857,10 @@ declare <48 x float> @llvm.matrix.transpose.v48f32(<48 x float>, i32 immarg, i32
 declare <48 x float> @llvm.matrix.column.major.load.v48f32.i64(ptr nocapture, i64, i1 immarg, i32 immarg, i32 immarg)
 declare void @llvm.matrix.column.major.store.v48f32.i64(<48 x float>, ptr nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
 declare <7 x i1> @llvm.get.active.lane.mask.v7i1.i64(i64, i64)
-declare <7 x float> @llvm.masked.load.v7f32.p0(ptr, i32 immarg, <7 x i1>, <7 x float>)
-declare void @llvm.masked.store.v7f32.p0(<7 x float>, ptr, i32 immarg, <7 x i1>)
-declare <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr>, i32 immarg, <7 x i1>, <7 x float>)
-declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, i32 immarg, <7 x i1>)
+declare <7 x float> @llvm.masked.load.v7f32.p0(ptr, <7 x i1>, <7 x float>)
+declare void @llvm.masked.store.v7f32.p0(<7 x float>, ptr, <7 x i1>)
+declare <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr>, <7 x i1>, <7 x float>)
+declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, <7 x i1>)
 declare <7 x float> @llvm.masked.expandload.v7f32(ptr, <7 x i1>, <7 x float>)
 declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr, <7 x i1>)
 declare void @llvm.var.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
