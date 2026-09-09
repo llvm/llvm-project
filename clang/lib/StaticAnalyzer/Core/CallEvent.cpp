@@ -189,7 +189,10 @@ const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
 }
 
 const ParamVarRegion
-*CallEvent::getParameterLocation(unsigned Index, unsigned BlockCount) const {
+*CallEvent::getParameterLocation(std::optional<unsigned> Index, unsigned BlockCount) const {
+  if (!Index)
+    return nullptr;
+
   const StackFrame *SF = getCalleeStackFrame(BlockCount);
   // We cannot construct a VarRegion without a stack frame.
   if (!SF)
@@ -197,7 +200,7 @@ const ParamVarRegion
 
   const ParamVarRegion *PVR =
       State->getStateManager().getRegionManager().getParamVarRegion(
-          getOriginExpr(), Index, SF);
+          getOriginExpr(), *Index, SF);
   return PVR;
 }
 

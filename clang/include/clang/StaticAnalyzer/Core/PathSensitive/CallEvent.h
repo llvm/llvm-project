@@ -423,7 +423,7 @@ public:
   ///
   /// \param Index refers to the index of the declared parameter of the callee.
   /// See getDeclaredParameterIndex().
-  const ParamVarRegion *getParameterLocation(unsigned Index,
+  const ParamVarRegion *getParameterLocation(std::optional<unsigned> Index,
                                              unsigned BlockCount) const;
 
   /// Returns true if on the current path, the argument was constructed by

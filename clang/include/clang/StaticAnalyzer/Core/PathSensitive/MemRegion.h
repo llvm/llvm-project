@@ -1074,7 +1074,7 @@ class ParamVarRegion : public VarRegion {
 
   const Expr *OriginExpr;
 
-  /// Index of teh declared parameter of the callee that this region stands
+  /// Index of the declared parameter of the callee that this region stands
   /// for. This is not necessarily the index of the corresponding argument
   /// in `OriginExpr`. See `CallEvent::getDeclaredParameterIndex()`.
   unsigned Index;
