@@ -413,9 +413,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   // Library functions.  These default to Expand, but we have instructions
   // for them.
-  setOperationAction({ISD::FCEIL, ISD::FPOW, ISD::FABS, ISD::FFLOOR,
-                      ISD::FROUNDEVEN, ISD::FTRUNC},
-                     {MVT::f16, MVT::f32}, Legal);
+  setOperationAction(
+      {ISD::FCEIL, ISD::FABS, ISD::FFLOOR, ISD::FROUNDEVEN, ISD::FTRUNC},
+      {MVT::f16, MVT::f32}, Legal);
   setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, MVT::f32, Legal);
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
@@ -424,8 +424,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                      {MVT::f16, MVT::f32, MVT::f64}, Expand);
 
   setOperationAction(
-      {ISD::FLOG, ISD::FLOG10, ISD::FEXP, ISD::FEXP2, ISD::FEXP10}, MVT::f32,
-      Custom);
+      {ISD::FLOG, ISD::FLOG10, ISD::FEXP, ISD::FEXP2, ISD::FEXP10, ISD::FPOW},
+      MVT::f32, Custom);
   setOperationAction({ISD::FEXP, ISD::FEXP2, ISD::FEXP10}, MVT::f64, Custom);
 
   setOperationAction(ISD::FNEARBYINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
@@ -1462,6 +1462,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
     return lowerFEXP(Op, DAG);
   case ISD::FEXP2:
     return lowerFEXP2(Op, DAG);
+  case ISD::FPOW:
+    return lowerFPOW(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
   case ISD::UINT_TO_FP: return LowerUINT_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16: return LowerFP_TO_FP16(Op, DAG);
@@ -3313,6 +3315,77 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return R;
+}
+
+// No pow instruction or libcall to fall back on. fmul_legacy returns 0 for a
+// zero operand even against an infinity or a NaN, so pow(x, 0) and pow(1, y)
+// fall out as exp2(0) = 1.
+SDValue AMDGPUTargetLowering::lowerFPOW(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert(VT == MVT::f32);
+
+  SDLoc SL(Op);
+  SDValue X = Op.getOperand(0);
+  SDValue Y = Op.getOperand(1);
+  SDNodeFlags Flags = Op->getFlags();
+
+  // log2(0) is -inf, which exp2 turns back into a finite result, so the core
+  // goes infinite for inputs a ninf fpow still asserts about, like pow(0, 2).
+  SDNodeFlags CoreFlags = Flags;
+  CoreFlags.setNoInfs(false);
+
+  // Fast expansion: ignores denormals, NaN for a negative base.
+  if (allowApproxFunc(DAG, Flags)) {
+    SDValue Log = DAG.getNode(AMDGPUISD::LOG, SL, VT, X, CoreFlags);
+    SDValue Mul =
+        DAG.getNode(AMDGPUISD::FMUL_LEGACY, SL, VT, Y, Log, CoreFlags);
+    return DAG.getNode(AMDGPUISD::EXP, SL, VT, Mul, CoreFlags);
+  }
+
+  SDValue Abs = DAG.getNode(ISD::FABS, SL, VT, X, Flags);
+  SDValue Log = DAG.getNode(ISD::FLOG2, SL, VT, Abs, CoreFlags);
+  SDValue Mul = DAG.getNode(AMDGPUISD::FMUL_LEGACY, SL, VT, Y, Log, CoreFlags);
+  SDValue R = DAG.getNode(ISD::FEXP2, SL, VT, Mul, CoreFlags);
+
+  // A base that is never negative needs neither the sign fixup nor the NaN.
+  if (DAG.computeKnownFPClass(X, fcNegative).signBitIsZeroOrNaN())
+    return R;
+
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  // Infinities count as integers, and every f32 >= 2^24 in magnitude is even.
+  SDValue YTrunc = DAG.getNode(ISD::FTRUNC, SL, VT, Y);
+  SDValue YIsInt = DAG.getSetCC(SL, SetCCVT, YTrunc, Y, ISD::SETOEQ);
+  SDValue YHalf =
+      DAG.getNode(ISD::FMUL, SL, VT, Y, DAG.getConstantFP(0.5, SL, VT));
+  SDValue YHalfTrunc = DAG.getNode(ISD::FTRUNC, SL, VT, YHalf);
+  SDValue YIsOdd =
+      DAG.getNode(ISD::AND, SL, SetCCVT, YIsInt,
+                  DAG.getSetCC(SL, SetCCVT, YHalfTrunc, YHalf, ISD::SETONE));
+
+  // pow(-x, odd y) = -pow(x, y). Selecting the copysign lets even y fold it.
+  R = DAG.getNode(ISD::SELECT, SL, VT, YIsOdd,
+                  DAG.getNode(ISD::FCOPYSIGN, SL, VT, R, X), R);
+
+  if (Flags.hasNoNaNs())
+    return R;
+
+  // A negative finite base to a non-integral power is NaN. -inf is excluded:
+  // the core already gives pow(+inf, y). So are subnormals when flushed.
+  FPClassTest NegFiniteMask = fcNegNormal;
+  if (!DAG.getMachineFunction()
+           .getDenormalMode(APFloat::IEEEsingle())
+           .inputsAreZero())
+    NegFiniteMask |= fcNegSubnormal;
+  SDValue XNegFinite =
+      DAG.getNode(ISD::IS_FPCLASS, SL, SetCCVT, X,
+                  DAG.getTargetConstant(NegFiniteMask, SL, MVT::i32));
+  // Not a SETONE compare: pow(-1, NaN) needs the NaN-true behavior of !SETOEQ.
+  SDValue NegNonInt = DAG.getNode(ISD::AND, SL, SetCCVT, XNegFinite,
+                                  DAG.getNOT(SL, YIsInt, SetCCVT));
+  SDValue NaN =
+      DAG.getConstantFP(APFloat::getQNaN(VT.getFltSemantics()), SL, VT);
+  return DAG.getNode(ISD::SELECT, SL, VT, NegNonInt, NaN, R);
 }
 
 static bool isCtlzOpc(unsigned Opc) {

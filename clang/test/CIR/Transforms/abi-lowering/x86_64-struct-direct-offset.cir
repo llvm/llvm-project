@@ -1,0 +1,123 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s --check-prefix=CIR
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Empty = !cir.struct<"Empty" {pad !u8i}>
+!rec_HiWord = !cir.struct<"HiWord" {data !rec_Empty, data !s64i}>
+!rec_LeadPad = !cir.struct<"LeadPad" {pad !cir.array<!u8i x 8>, data !s32i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // HiWord is 16 bytes: a leading ABI-empty byte, then an i64 at offset 8.
+  // The low eightbyte carries no field (NO_CLASS), so the classifier passes
+  // the value in one register taken from byte 8.
+  cir.func @take_hiword(%arg0: !rec_HiWord) -> !s64i {
+    %0 = cir.alloca "h" align(8) : !cir.ptr<!rec_HiWord>
+    cir.store %arg0, %0 : !rec_HiWord, !cir.ptr<!rec_HiWord>
+    %1 = cir.get_member %0[1] {name = "hi"} : !cir.ptr<!rec_HiWord> -> !cir.ptr<!s64i>
+    %2 = cir.load %1 : !cir.ptr<!s64i>, !s64i
+    cir.return %2 : !s64i
+  }
+
+  // CIR-LABEL: cir.func{{.*}} @take_hiword(%arg0: !s64i) -> !s64i
+  // CIR:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_HiWord>
+  // CIR:   %[[U8:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_HiWord> -> !cir.ptr<!u8i>
+  // CIR:   %[[OFF:.*]] = cir.const #cir.int<8> : !s64i
+  // CIR:   %[[GEP:.*]] = cir.ptr_stride %[[U8]], %[[OFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+  // CIR:   %[[CAST:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+  // CIR:   cir.store %arg0, %[[CAST]] : !s64i, !cir.ptr<!s64i>
+  // CIR:   %{{.*}} = cir.load %[[SLOT]] : !cir.ptr<!rec_HiWord>, !rec_HiWord
+
+  // The return value is likewise coerced from byte 8 of the local aggregate.
+  cir.func @give_hiword() -> !rec_HiWord {
+    %0 = cir.alloca "h" align(8) : !cir.ptr<!rec_HiWord>
+    %1 = cir.load %0 : !cir.ptr<!rec_HiWord>, !rec_HiWord
+    cir.return %1 : !rec_HiWord
+  }
+
+  // CIR-LABEL: cir.func{{.*}} @give_hiword() -> !s64i
+  // CIR:   %[[RSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_HiWord>
+  // CIR:   cir.store %{{.*}}, %[[RSLOT]] : !rec_HiWord, !cir.ptr<!rec_HiWord>
+  // CIR:   %[[RU8:.*]] = cir.cast bitcast %[[RSLOT]] : !cir.ptr<!rec_HiWord> -> !cir.ptr<!u8i>
+  // CIR:   %[[ROFF:.*]] = cir.const #cir.int<8> : !s64i
+  // CIR:   %[[RGEP:.*]] = cir.ptr_stride %[[RU8]], %[[ROFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+  // CIR:   %[[RCAST:.*]] = cir.cast bitcast %[[RGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+  // CIR:   %[[RVAL:.*]] = cir.load %[[RCAST]] : !cir.ptr<!s64i>, !s64i
+  // CIR:   cir.return %[[RVAL]] : !s64i
+
+  // The caller reconstructs the aggregate from the callee's i64 result, so
+  // the received register is written back to byte 8 of a slot.
+  cir.func @call_hiword() -> !s64i {
+    %0 = cir.call @give_hiword() : () -> !rec_HiWord
+    %1 = cir.alloca "r" align(8) : !cir.ptr<!rec_HiWord>
+    cir.store %0, %1 : !rec_HiWord, !cir.ptr<!rec_HiWord>
+    %2 = cir.get_member %1[1] {name = "hi"} : !cir.ptr<!rec_HiWord> -> !cir.ptr<!s64i>
+    %3 = cir.load %2 : !cir.ptr<!s64i>, !s64i
+    cir.return %3 : !s64i
+  }
+
+  // CIR-LABEL: cir.func{{.*}} @call_hiword() -> !s64i
+  // CIR:   %[[CSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_HiWord>
+  // CIR:   %[[CRET:.*]] = cir.call @give_hiword() : () -> !s64i
+  // CIR:   %[[CU8:.*]] = cir.cast bitcast %[[CSLOT]] : !cir.ptr<!rec_HiWord> -> !cir.ptr<!u8i>
+  // CIR:   %[[COFF:.*]] = cir.const #cir.int<8> : !s64i
+  // CIR:   %[[CGEP:.*]] = cir.ptr_stride %[[CU8]], %[[COFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+  // CIR:   %[[CCAST:.*]] = cir.cast bitcast %[[CGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+  // CIR:   cir.store %[[CRET]], %[[CCAST]] : !s64i, !cir.ptr<!s64i>
+  // CIR:   %{{.*}} = cir.load %[[CSLOT]] : !cir.ptr<!rec_HiWord>, !rec_HiWord
+
+  // Passing an aggregate argument runs the extraction direction at the call
+  // site: the operand's byte 8 is read out to form the register.
+  cir.func @pass_hiword(%arg0: !rec_HiWord) {
+    %0 = cir.call @take_hiword(%arg0) : (!rec_HiWord) -> !s64i
+    cir.return
+  }
+
+  // CIR-LABEL: cir.func{{.*}} @pass_hiword(%arg0: !s64i)
+  // CIR:   %[[PREC:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_HiWord>, !rec_HiWord
+  // CIR:   %[[PSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_HiWord>
+  // CIR:   cir.store %[[PREC]], %[[PSLOT]] : !rec_HiWord, !cir.ptr<!rec_HiWord>
+  // CIR:   %[[PU8:.*]] = cir.cast bitcast %[[PSLOT]] : !cir.ptr<!rec_HiWord> -> !cir.ptr<!u8i>
+  // CIR:   %[[POFF:.*]] = cir.const #cir.int<8> : !s64i
+  // CIR:   %[[PGEP:.*]] = cir.ptr_stride %[[PU8]], %[[POFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+  // CIR:   %[[PCAST:.*]] = cir.cast bitcast %[[PGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+  // CIR:   %[[PVAL:.*]] = cir.load %[[PCAST]] : !cir.ptr<!s64i>, !s64i
+  // CIR:   %{{.*}} = cir.call @take_hiword(%[[PVAL]]) : (!s64i) -> !s64i
+
+  // The same offset-8 coercion from a leading pad field rather than a nested
+  // empty record.  Only 4 live bytes in the high eightbyte, so i32 not i64.
+  cir.func @take_lead_pad(%arg0: !rec_LeadPad) -> !s32i {
+    %0 = cir.alloca "l" align(4) : !cir.ptr<!rec_LeadPad>
+    cir.store %arg0, %0 : !rec_LeadPad, !cir.ptr<!rec_LeadPad>
+    %1 = cir.get_member %0[1] {name = "data"} : !cir.ptr<!rec_LeadPad> -> !cir.ptr<!s32i>
+    %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CIR-LABEL: cir.func{{.*}} @take_lead_pad(%arg0: !s32i) -> !s32i
+  // CIR:   %[[LSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_LeadPad>
+  // CIR:   %[[LU8:.*]] = cir.cast bitcast %[[LSLOT]] : !cir.ptr<!rec_LeadPad> -> !cir.ptr<!u8i>
+  // CIR:   %[[LOFF:.*]] = cir.const #cir.int<8> : !s64i
+  // CIR:   %[[LGEP:.*]] = cir.ptr_stride %[[LU8]], %[[LOFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+  // CIR:   %[[LCAST:.*]] = cir.cast bitcast %[[LGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
+  // CIR:   cir.store %arg0, %[[LCAST]] : !s32i, !cir.ptr<!s32i>
+  // CIR:   %{{.*}} = cir.load %[[LSLOT]] : !cir.ptr<!rec_LeadPad>, !rec_LeadPad
+}
+
+// LLVM: define i64 @take_hiword(i64 %{{.+}})
+// LLVM: define i64 @give_hiword()
+// LLVM: define i64 @call_hiword()
+// LLVM:   %{{.+}} = call i64 @give_hiword()
+// LLVM: define void @pass_hiword(i64 %{{.+}})
+// LLVM:   %{{.+}} = call i64 @take_hiword(i64 %{{.+}})
+// LLVM: define i32 @take_lead_pad(i32 %{{.+}})
