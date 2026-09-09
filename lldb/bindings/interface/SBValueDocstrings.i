@@ -230,3 +230,12 @@ linked list."
     or a constant. A success result does not guarantee a write will succeed;
     other runtime conditions may still prevent a successful write."
 ) lldb::SBValue::CanSet;
+
+%feature("docstring", "
+    Create an SBValue with the given name by evaluating the expression, with
+    the execution context inherited from the current SBValue.
+    Data Inspection Language (DIL) attempts to evaluate the expression first
+    (can be disabled by setting target.experimental.use-DIL-for-creating-values
+    to false). If DIL is not called or fails, the evaluation falls back to
+    UserExpression."
+) lldb::SBValue::CreateValueFromExpression;
