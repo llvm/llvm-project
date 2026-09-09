@@ -660,9 +660,7 @@ struct CompareInsn {
     return LHS < RHS.Format;
   }
   bool operator() (const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
-    if (LHS.Format != RHS.Format)
-      return LHS.Format < RHS.Format;
-    return LHS.Opcode < RHS.Opcode;
+    return LHS.Format < RHS.Format;
   }
 };
 

@@ -2487,6 +2487,7 @@ def InsnRRE : InstRRE<0, (outs), (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
 
   let Inst{31-16} = enc{31-16};
 }
+// Alias for rrf-a. Kept for backwards compatibility.
 def InsnRRF : InstRRFa<0, (outs),
                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
                            imm32zx4:$M4),
@@ -2579,7 +2580,7 @@ def InsnRSb : InstRSb<0, (outs),
 
   let Inst{31-24} = enc{31-24};
 }
-// RRSE - legacy operand order preserved
+// RSE - legacy operand order preserved
 def InsnRSE : InstRSEa<6, (outs),
                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
                            (bdaddr12only $B2, $D2):$BD2),
@@ -2593,7 +2594,7 @@ def InsnRSE : InstRSEa<6, (outs),
 // RSI - legacy operand order preserved
 def InsnRSI
     : InstRSI<0, (outs),
-              (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$RI2),
+              (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$RI2),
               ".insn rsi,$enc,$R1,$R3,$RI2", []>,
       InsnDirectiveBase {
   bits<32> enc;
@@ -2647,6 +2648,7 @@ def InsnRSYb : InstRSYb<0, (outs),
   let Inst{47-40} = enc{47-40};
   let Inst{7-0} = enc{7-0};
 }
+// Alias for rx-a. Kept for backwards compatibility.
 def InsnRX : InstRXa<0, (outs),
                      (ins imm64zx32:$enc, AnyReg:$R1,
                          (bdxaddr12only $B2, $D2, $X2):$XBD2),
@@ -2691,7 +2693,7 @@ def InsnRXF : InstRXF<0, (outs),
   let Inst{47-40} = enc{47-40};
   let Inst{7-0} = enc{7-0};
 }
-// RXY - legacy operand order preserved
+
 def InsnRXY : InstRXYa<0, (outs),
                        (ins imm64zx48:$enc, AnyReg:$R1,
                            (bdxaddr20only $B2, $D2, $X2):$XBD2),
@@ -2719,6 +2721,7 @@ def InsnRXYb : InstRXYb<0, (outs),
   let Inst{47-40} = enc{47-40};
   let Inst{7-0} = enc{7-0};
 }
+// There is no InstRXYc - it is identical to InstRXYa.
 def InsnRXYc : InstRXYa<0, (outs),
                         (ins imm64zx48:$enc, AnyReg:$R1,
                             (bdxaddr20only $B2, $D2, $X2):$XBD2),
@@ -2767,6 +2770,7 @@ def InsnSMI : InstSMI<0, (outs),
   bits<48> enc;
   let Inst{47-40} = enc{47-40};
 }
+// Alias for ss-. Kept for backwards compatibility.
 def InsnSS : InstSSd<0, (outs),
                      (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
                          (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
@@ -2844,6 +2848,7 @@ def InsnSSF : InstSSF<0, (outs),
   let Inst{47-40} = enc{47-40};
   let Inst{35-32} = enc{35-32};
 }
+// Alias for vri-e. Kept for backwards compatibility.
 def InsnVRI : InstVRIe<0, (outs),
                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx12:$I3,
                            imm32zx4:$M4, imm32zx4:$M5),
@@ -2961,6 +2966,7 @@ def InsnVRIl
   let Inst{47-40} = enc{47-40};
   let Inst{7-0} = enc{7-0};
 }
+// Alias for vrr-c. Kept for backwards compatibility.
 def InsnVRR : InstVRRc<0, (outs),
                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
                            imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),

@@ -68,12 +68,11 @@ static StringRef getMatchClassKind(const Record &Def, const Init *Arg,
       {"bdladdr12onlylen8", "MCK_BDLAddr64Disp12Len8"},
       {"bdraddr12only", "MCK_BDRAddr64Disp12"}};
 
-  std::string ArgTextStorage = Arg->getAsString();
-  StringRef ArgText(ArgTextStorage);
-  if (!ArgText.empty() && ArgText.front() == '(') {
-    ArgText = ArgText.drop_front();
-    ArgText = ArgText.take_while([](char C) { return C != ' '; });
-  }
+  StringRef ArgText;
+  if (const DefInit *DefOp = dyn_cast<DefInit>(Arg))
+    ArgText = DefOp->getDef()->getName();
+  if (const DagInit *DagOp = dyn_cast<DagInit>(Arg))
+    ArgText = DagOp->getOperatorAsDef(Def.getLoc())->getName();
 
   // Check registered mappings
   auto It = KindMap.find(ArgText);
@@ -105,15 +104,16 @@ static InsnMatchEntry buildInsnMatchEntry(const Record &Def) {
 
 static void emitInsnDirectiveMatchTable(const RecordKeeper &RK,
                                         raw_ostream &OS) {
+  emitSourceFileHeader("Match Table for SystemZ .insn directive operand types",
+                       OS);
   // This will hold all .insn directive definitions (~100 plus margin).
   SmallVector<InsnMatchEntry, 128> Entries;
   // All .insn directive instructions inherit from InsnDirectiveBase.
-  for (const Record *Def : RK.getAllDerivedDefinitions("InsnDirectiveBase")) {
+  for (const Record *Def : RK.getAllDerivedDefinitions("InsnDirectiveBase"))
     Entries.push_back(buildInsnMatchEntry(*Def));
-  }
 
   llvm::sort(Entries, [](const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
-    return std::tie(LHS.Format, LHS.Opcode) < std::tie(RHS.Format, RHS.Opcode);
+    return LHS.Format < RHS.Format;
   });
 
   OS << "/* Format, Opcode, NumOperands, OperandKinds */\n";
