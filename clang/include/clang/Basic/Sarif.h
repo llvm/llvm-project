@@ -374,7 +374,7 @@ public:
     return *this;
   }
 
-   SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs,
+  SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs,
                                   llvm::StringRef Message = "") {
 #ifndef NDEBUG
     for (const auto &Loc : DiagLocs) {
