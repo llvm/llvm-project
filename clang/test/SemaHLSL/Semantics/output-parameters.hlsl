@@ -11,11 +11,11 @@ void ps_out(out float4 Color : SV_Target) { Color = 0; }
 
 [shader("pixel")]
 void ps_position_out(out float4 Pos : SV_Position) { Pos = 0; }
-// expected-error@-1 {{semantic 'SV_Position' is not supported as a pixel shader output; it is only available as an input}}
+// expected-error@-1 {{semantic 'SV_Position' is not supported as pixel shader outputs; it is only available as an input}}
 
 [shader("compute")][numthreads(1,1,1)]
 void cs_group_index_out(out uint GI : SV_GroupIndex) { GI = 0; }
-// expected-error@-1 {{semantic 'SV_GroupIndex' is not supported as a compute shader output; it is only available as an input}}
+// expected-error@-1 {{semantic 'SV_GroupIndex' is not supported as compute shader outputs; it is only available as an input}}
 
 // Output parameters share the output signature with the return value.
 [shader("pixel")]

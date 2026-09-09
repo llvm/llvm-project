@@ -1144,11 +1144,11 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
 
   IOType AllowedIOTypes = It->AllowedIOTypesMask;
   if (!(AllowedIOTypes & CurrentIOType)) {
-    StringRef CurrentIOTypeName = "patch constant or primitive";
+    StringRef CurrentIOTypeName = "patch constants or primitives";
     if (any(CurrentIOType & IOType::In))
-      CurrentIOTypeName = "input";
+      CurrentIOTypeName = "inputs";
     else if (any(CurrentIOType & IOType::Out))
-      CurrentIOTypeName = "output";
+      CurrentIOTypeName = "outputs";
     SmallVector<std::string, 3> ValidType;
     if (any(AllowedIOTypes & IOType::In))
       ValidType.push_back("an input");
