@@ -775,7 +775,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   auto MakeArg = [&](const unsigned I) {
     Type *Ty = CB.getArgOperand(I)->getType();
 
-    if (CB.paramHasAttr(I, Attribute::ByVal)) {
+    if (CB.isByValArgument(I)) {
       Type *ETy = CB.getParamByValType(I);
       Align ParamByValAlign = getDeviceByValParamAlign(
           &CB, ETy, I + AttributeList::FirstArgIndex, DL);

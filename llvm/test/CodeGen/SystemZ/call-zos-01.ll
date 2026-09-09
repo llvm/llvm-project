@@ -17,7 +17,7 @@ define i8 @call_char(){
 ; CHECK-NEXT:    lg 7,2072(4)
 ; CHECK-NEXT:    aghi 4,192
 ; CHECK-NEXT:    b 2(7)
-  %retval = call i8 (i8) @pass_char(i8 8)
+  %retval = call signext i8 (i8) @pass_char(i8 signext 8)
   ret i8 %retval
 }
 
@@ -37,7 +37,7 @@ define i16 @call_short() {
 ; CHECK-NEXT:    aghi 4,192
 ; CHECK-NEXT:    b 2(7)
 entry:
-  %retval = call i16 (i16) @pass_short(i16 16)
+  %retval = call signext i16 (i16) @pass_short(i16 signext 16)
   ret i16 %retval
 }
 
@@ -58,7 +58,7 @@ define i32 @call_int() {
 ; CHECK-NEXT:    aghi 4,192
 ; CHECK-NEXT:    b 2(7)
 entry:
-  %retval = call i32 (i32, i32) @pass_int(i32 32, i32 33)
+  %retval = call signext i32 (i32, i32) @pass_int(i32 signext 32, i32 signext 33)
   ret i32 %retval
 }
 
@@ -123,7 +123,7 @@ define i64 @call_integrals() {
 ; CHECK-NEXT:    aghi 4,192
 ; CHECK-NEXT:    b 2(7)
 entry:
-  %retval = call i64 (i64, i32, i16, i64) @pass_integrals0(i64 64, i32 32, i16 16, i64 128)
+  %retval = call signext i64 (i64, i32, i16, i64) @pass_integrals0(i64 signext 64, i32 signext 32, i16 signext 16, i64 signext 128)
   ret i64 %retval
 }
 

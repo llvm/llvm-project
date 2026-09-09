@@ -153,8 +153,9 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (const auto &Arg : CB.args()) {
     ISD::ArgFlagsTy Flags;
-    if (Callee)
-      addFlagsFromAttrSet(Flags, Callee->getAttributes().getParamAttrs(i));
+    // "returned" is not an ABI attribute, so we can inherit it from the callee.
+    if (Callee && Callee->hasParamAttribute(i, Attribute::Returned))
+      Flags.setReturned();
     ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, Flags};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
     if (i >= NumFixedArgs)
@@ -200,8 +201,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Align ReturnHintAlign;
 
   ISD::ArgFlagsTy RetFlags;
-  if (Callee)
-    addFlagsFromAttrSet(RetFlags, Callee->getAttributes().getRetAttrs());
   Info.OrigRet = ArgInfo{ResRegs, RetTy, 0, RetFlags};
 
   if (!Info.OrigRet.Ty->isVoidTy()) {
@@ -651,8 +650,7 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
   LLT DstTy = MRI.getType(DstRegs[0]);
   LLT CoverTy = getCoverTy(SrcTy, PartTy);
   if (SrcTy.isVector() && DstRegs.size() > 1) {
-    TypeSize FullCoverSize =
-        DstTy.getSizeInBits().multiplyCoefficientBy(DstRegs.size());
+    TypeSize FullCoverSize = DstTy.getSizeInBits() * DstRegs.size();
 
     LLT EltTy = SrcTy.getElementType();
     TypeSize EltSize = EltTy.getSizeInBits();

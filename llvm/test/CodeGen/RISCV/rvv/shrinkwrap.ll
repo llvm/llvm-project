@@ -71,7 +71,7 @@ define void @vecaddr_straightline(i32 zeroext %a, ptr %p) {
   %cmp0 = icmp eq i32 %a, 57
   br i1 %cmp0, label %exit, label %do_call
 do_call:
-  call i32 @foo()
+  call zeroext i32 @foo()
   br label %exit
 exit:
   %v3 = load <4 x i32>, ptr %gep
@@ -155,7 +155,7 @@ define void @vecaddr_loop(i32 zeroext %a, ptr %p) {
   %cmp0 = icmp eq i32 %a, 57
   br i1 %cmp0, label %exit, label %do_call
 do_call:
-  %b = call i32 @foo()
+  %b = call zeroext i32 @foo()
   %v3 = load <4 x i32>, ptr %gep
   %v4 = add <4 x i32> %v3, splat (i32 1)
   store <4 x i32> %v4, ptr %gep
