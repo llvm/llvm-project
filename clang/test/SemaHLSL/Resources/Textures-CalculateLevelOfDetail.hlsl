@@ -27,11 +27,11 @@
 //   LOD_TYPE           CalculateLevelOfDetail location type
 //
 // Check prefixes:
+//   dim1               diagnostics naming a scalar offset or location
 //   dim2               diagnostics naming a 2-component offset or location
 //                      vector
 //   dim3               diagnostics naming a 3-component offset or location
 //                      vector
-//   dim1               diagnostics naming a scalar offset or location
 
 TEXTURE<float4> tex;
 SamplerState samp;

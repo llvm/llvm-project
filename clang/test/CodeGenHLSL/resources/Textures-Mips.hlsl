@@ -1,33 +1,89 @@
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
 // RUN:   -DTEXTURE=Texture1D -DCOORD_TYPE=float -DINDEX_TYPE=int -o - %s | \
 // RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SCALAR-COORD \
-// RUN:   -DTEXTURE=Texture1D -DCOORD_DIM=1 -DLOAD_DIM=2 -DDXIL_TY=1 -DDIM=1 \
+// RUN:   -DTEXTURE=Texture1D -DCOORD_DIM=1 -DLOAD_DIM=2 \
+// RUN:   -DHANDLE_TY='target("dx.Texture", <4 x float>, 0, 0, 0, 1)' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
 // RUN:   -DCOORD_LLVM=float -DCOORD_CXX=float -DINDEX_LLVM=i32 \
 // RUN:   -DINDEX_CXX=int -DOFFSET_LLVM=i32 -DOFFSET_ZERO=0
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-pixel -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
+// RUN:   -DTEXTURE=Texture1D -DCOORD_TYPE=float -DINDEX_TYPE=int -o - %s | \
+// RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SCALAR-COORD \
+// RUN:   -DTEXTURE=Texture1D -DCOORD_DIM=1 -DLOAD_DIM=2 \
+// RUN:   -DHANDLE_TY='target("spirv.Image", float, 0, 2, 0, 0, 1, 0)' \
+// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DCOORD_LLVM=float -DCOORD_CXX=float -DINDEX_LLVM=i32 \
+// RUN:   -DINDEX_CXX=int -DOFFSET_LLVM=i32 -DOFFSET_ZERO=0
+
+// Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
 // RUN:   -DTEXTURE=Texture1DArray -DCOORD_TYPE=float2 -DINDEX_TYPE=int2 -o - \
 // RUN:   %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,COORD2,VEC-COORD -DTEXTURE=Texture1DArray \
-// RUN:   -DCOORD_DIM=2 -DLOAD_DIM=3 -DDXIL_TY=6 -DDIM=1 \
+// RUN:   -DCOORD_DIM=2 -DLOAD_DIM=3 \
+// RUN:   -DHANDLE_TY='target("dx.Texture", <4 x float>, 0, 0, 0, 6)' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
 // RUN:   -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
 // RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX="int vector[2]" \
 // RUN:   -DOFFSET_LLVM=i32 -DOFFSET_ZERO=0
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-pixel -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
+// RUN:   -DTEXTURE=Texture1DArray -DCOORD_TYPE=float2 -DINDEX_TYPE=int2 -o - \
+// RUN:   %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,COORD2,VEC-COORD -DTEXTURE=Texture1DArray \
+// RUN:   -DCOORD_DIM=2 -DLOAD_DIM=3 \
+// RUN:   -DHANDLE_TY='target("spirv.Image", float, 0, 2, 1, 0, 1, 0)' \
+// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
+// RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX="int vector[2]" \
+// RUN:   -DOFFSET_LLVM=i32 -DOFFSET_ZERO=0
+
+// Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
 // RUN:   -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -DINDEX_TYPE=int2 -o - %s | \
 // RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,COORD2,VEC-COORD \
-// RUN:   -DTEXTURE=Texture2D -DCOORD_DIM=2 -DLOAD_DIM=3 -DDXIL_TY=2 -DDIM=2 \
+// RUN:   -DTEXTURE=Texture2D -DCOORD_DIM=2 -DLOAD_DIM=3 \
+// RUN:   -DHANDLE_TY='target("dx.Texture", <4 x float>, 0, 0, 0, 2)' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
 // RUN:   -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
 // RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX="int vector[2]" \
 // RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_ZERO=zeroinitializer
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-pixel -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
+// RUN:   -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -DINDEX_TYPE=int2 -o - %s | \
+// RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,COORD2,VEC-COORD \
+// RUN:   -DTEXTURE=Texture2D -DCOORD_DIM=2 -DLOAD_DIM=3 \
+// RUN:   -DHANDLE_TY='target("spirv.Image", float, 1, 2, 0, 0, 1, 0)' \
+// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
+// RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX="int vector[2]" \
+// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_ZERO=zeroinitializer
+
+// Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
 // RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -DINDEX_TYPE=int3 -o - \
 // RUN:   %s | llvm-cxxfilt | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,COORD3,VEC-COORD -DTEXTURE=Texture2DArray \
-// RUN:   -DCOORD_DIM=3 -DLOAD_DIM=4 -DDXIL_TY=7 -DDIM=2 \
+// RUN:   -DCOORD_DIM=3 -DLOAD_DIM=4 \
+// RUN:   -DHANDLE_TY='target("dx.Texture", <4 x float>, 0, 0, 0, 7)' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
+// RUN:   -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
+// RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX="int vector[3]" \
+// RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_ZERO=zeroinitializer
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-pixel -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
+// RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -DINDEX_TYPE=int3 -o - \
+// RUN:   %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,COORD3,VEC-COORD -DTEXTURE=Texture2DArray \
+// RUN:   -DCOORD_DIM=3 -DLOAD_DIM=4 \
+// RUN:   -DHANDLE_TY='target("spirv.Image", float, 1, 2, 1, 0, 1, 0)' \
+// RUN:   -DMIPS_OFFSET='i64 8' \
 // RUN:   -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
 // RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX="int vector[3]" \
 // RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_ZERO=zeroinitializer
@@ -55,9 +111,9 @@
 //   OFFSET_LLVM        offset type in the IR
 //   OFFSET_ZERO        the all-zero offset as it appears in the IR
 //   LOAD_DIM           Load location components (COORD_DIM plus the mip level)
-//   DXIL_TY            dx.Texture resource-kind operand
-//   DIM                number of resource dimensions (offset, ddx/ddy, LOD
-//                      location)
+//   HANDLE_TY          the resource handle type in the IR
+//   MIPS_OFFSET        the offset of the `mips` field in the texture, as the
+//                      index operand of a getelementptr
 //
 // Check prefixes:
 //   COORD2             the location is built from two coordinate components
@@ -72,22 +128,22 @@ TEXTURE<float4> t;
 // `mips` caches its own copy of the resource handle, so the initializer has to
 // write `__handle` into it as well. Leaving it uninitialized makes
 // `t.mips[N][...]` load from a poison handle.
-// CHECK: define linkonce_odr hidden void @hlsl::[[TEXTURE]]<float vector[4]>::__createFromImplicitBinding(
-// CHECK: %[[NEW_HANDLE:.*]] = call target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) @llvm.dx.resource.handlefromimplicitbinding
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::__createFromImplicitBinding(
+// CHECK: %[[NEW_HANDLE:.*]] = call [[HANDLE_TY]] @llvm.{{dx|spv}}.resource.handlefromimplicitbinding
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[TMP:.*]], i32 0, i32 0
-// CHECK: store target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) %[[NEW_HANDLE]], ptr %[[HANDLE_GEP]]
+// CHECK: store [[HANDLE_TY]] %[[NEW_HANDLE]], ptr %[[HANDLE_GEP]]
 // CHECK: %[[HANDLE_GEP2:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[TMP]], i32 0, i32 0
-// CHECK: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]), ptr %[[HANDLE_GEP2]]
+// CHECK: %[[HANDLE:.*]] = load [[HANDLE_TY]], ptr %[[HANDLE_GEP2]]
 // CHECK: %[[MIPS_GEP:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[TMP]], i32 0, i32 1
 // CHECK: %[[MIPS_HANDLE_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_type", ptr %[[MIPS_GEP]], i32 0, i32 0
-// CHECK: store target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) %[[HANDLE]], ptr %[[MIPS_HANDLE_GEP]]
+// CHECK: store [[HANDLE_TY]] %[[HANDLE]], ptr %[[MIPS_HANDLE_GEP]]
 
 // CHECK: define internal {{.*}} <4 x float> @test_mips([[COORD_CXX]])([[COORD_LLVM]] {{.*}} %loc)
 // CHECK: entry:
 // CHECK: %[[LOC_ADDR:.*]] = alloca [[COORD_LLVM]]
 // CHECK: %[[REF_TMP:.*]] = alloca %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type"
 // CHECK: store [[COORD_LLVM]] %loc, ptr %[[LOC_ADDR]]
-// CHECK: call void @hlsl::[[TEXTURE]]<float vector[4]>::mips_type::operator[](int) const(ptr {{.*}} %[[REF_TMP]], ptr {{.*}} getelementptr {{.*}} (i8, ptr @t, i32 4), i32 noundef 0)
+// CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::mips_type::operator[](int) const(ptr {{.*}} %[[REF_TMP]], ptr {{.*}} getelementptr {{.*}} (i8, ptr @t, [[MIPS_OFFSET]]), i32 noundef 0)
 // CHECK: %[[V0:.*]] = load [[COORD_LLVM]], ptr %[[LOC_ADDR]]
 // CHECK: %[[CONV:.*]] = fptosi [[COORD_LLVM]] %[[V0]] to [[INDEX_LLVM]]
 // CHECK: %[[CALL:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type::operator[]([[INDEX_CXX]]) const(ptr {{.*}} %[[REF_TMP]], [[INDEX_LLVM]] {{.*}} %[[CONV]])
@@ -98,7 +154,7 @@ float4 test_mips(COORD_TYPE loc : LOC) : SV_Target {
   return t.mips[0][(INDEX_TYPE)loc];
 }
 
-// CHECK: define linkonce_odr hidden void @hlsl::[[TEXTURE]]<float vector[4]>::mips_type::operator[](int) const(ptr  {{.*}} %agg.result, ptr {{.*}} %this, i32 {{.*}} %Level)
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::mips_type::operator[](int) const(ptr  {{.*}} %agg.result, ptr {{.*}} %this, i32 {{.*}} %Level)
 // CHECK: entry:
 // CHECK: %{{.*}} = alloca ptr
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr
@@ -108,15 +164,15 @@ float4 test_mips(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK: store ptr %this, ptr %[[THIS_ADDR]]
 // CHECK: store i32 %Level, ptr %[[LEVEL_ADDR]]
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// CHECK: call void @hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type::mips_slice_type()(ptr {{.*}} %[[SLICE]])
+// CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type::mips_slice_type()(ptr {{.*}} %[[SLICE]])
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_type", ptr %[[THIS1]], i32 0, i32 0
-// CHECK: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]), ptr %[[HANDLE_GEP]]
+// CHECK: %[[HANDLE:.*]] = load [[HANDLE_TY]], ptr %[[HANDLE_GEP]]
 // CHECK: %[[HANDLE_GEP2:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type", ptr %[[SLICE]], i32 0, i32 0
-// CHECK: store target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) %[[HANDLE]], ptr %[[HANDLE_GEP2]]
+// CHECK: store [[HANDLE_TY]] %[[HANDLE]], ptr %[[HANDLE_GEP2]]
 // CHECK: %[[L_VAL:.*]] = load i32, ptr %[[LEVEL_ADDR]]
 // CHECK: %[[LEVEL_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type", ptr %[[SLICE]], i32 0, i32 1
 // CHECK: store i32 %[[L_VAL]], ptr %[[LEVEL_GEP]]
-// CHECK: call void @hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type::mips_slice_type(hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type const&)(ptr noundef nonnull align 4 dereferenceable(8) %agg.result, ptr noundef nonnull align 4 dereferenceable(8) %[[SLICE]])
+// CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type::mips_slice_type(hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type const&)(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %agg.result, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[SLICE]])
 
 // CHECK: define linkonce_odr hidden {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::mips_slice_type::operator[]([[INDEX_CXX]]) const(ptr {{.*}} %[[THIS:.*]], [[INDEX_LLVM]] noundef %[[COORD:.*]])
 // CHECK: entry:
@@ -127,7 +183,7 @@ float4 test_mips(COORD_TYPE loc : LOC) : SV_Target {
 // VEC-COORD: %[[COORD_PARAM:.*]] = load [[INDEX_LLVM]], ptr %[[COORD_ADDR]]
 // VEC-COORD: store [[INDEX_LLVM]] %[[COORD_PARAM]], ptr %[[VEC_TMP]]
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type", ptr %[[THIS1]], i32 0, i32 0
-// CHECK: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]), ptr %[[HANDLE_PTR]]
+// CHECK: %[[HANDLE:.*]] = load [[HANDLE_TY]], ptr %[[HANDLE_PTR]]
 // A 1D coordinate is a single value, so it goes straight into the location.
 // SCALAR-COORD: %[[COORD_VAL:.*]] = load i32, ptr %[[COORD_ADDR]]
 // SCALAR-COORD: %[[VECINIT3:.*]] = insertelement <[[LOAD_DIM]] x i32> poison, i32 %[[COORD_VAL]], i32 0
@@ -149,5 +205,5 @@ float4 test_mips(COORD_TYPE loc : LOC) : SV_Target {
 // SCALAR-COORD: %[[COORD_X:.*]] = extractelement <[[LOAD_DIM]] x i32> %[[VECINITL]], i64 0
 // VEC-COORD: %[[COORD_X:.*]] = shufflevector <[[LOAD_DIM]] x i32> %[[VECINITL]], <[[LOAD_DIM]] x i32> poison, [[INDEX_LLVM]] {{.*}}
 // CHECK: %[[LOD:.*]] = extractelement <[[LOAD_DIM]] x i32> %[[VECINITL]], i64 [[COORD_DIM]]
-// CHECK: %[[RES:.*]] = call {{.*}} <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_0_0_0_[[DXIL_TY]]t{{.*}}(target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) %[[HANDLE]], [[INDEX_LLVM]] %[[COORD_X]], i32 %[[LOD]], [[OFFSET_LLVM]] [[OFFSET_ZERO]])
+// CHECK: %[[RES:.*]] = call {{.*}} <4 x float> @llvm.{{dx|spv}}.resource.load.level.v4f32.{{[^(]*}}([[HANDLE_TY]] %[[HANDLE]], [[INDEX_LLVM]] %[[COORD_X]], i32 %[[LOD]], [[OFFSET_LLVM]] [[OFFSET_ZERO]])
 // CHECK: ret <4 x float> %[[RES]]
