@@ -302,8 +302,8 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 InstructionCost WebAssemblyTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args,
-    const Instruction *CxtI, TTI::VectorInstrContext VIC) const {
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   // Canonicalize the ShuffleKind in case optimizations didn't.
   //  Otherwise, we might end up with the wrong ShuffleKind to match against.
 

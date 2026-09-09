@@ -210,9 +210,8 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, bool ReVec,
 InstructionCost getVectorInstrCost(
     const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy, unsigned Opcode,
     Type *Val, const TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
-    TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) {
+    Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+    TTI::VectorInstrContext VIC) {
   if (Opcode == Instruction::ExtractElement) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
       assert(ReVec && "Only supported by REVEC.");

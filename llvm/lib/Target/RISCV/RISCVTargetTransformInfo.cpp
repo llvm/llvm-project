@@ -734,13 +734,11 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-InstructionCost
-RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                             VectorType *SrcTy, TTI::TargetCostKind CostKind,
-                             ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                             ArrayRef<const Value *> Args,
-                             const Instruction *CxtI,
-                             TTI::VectorInstrContext VIC) const {
+InstructionCost RISCVTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp) ==
               TTI::SK_Broadcast ||
           VIC != TTI::VectorInstrContext::SplatOpFolded) &&
