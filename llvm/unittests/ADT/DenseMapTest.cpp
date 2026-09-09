@@ -1176,6 +1176,23 @@ TEST(DenseMapCustomTest, InsertInvalidatesIteratorComparison) {
   Map.try_emplace(2, 20);
   EXPECT_DEATH((void)(It == Map.end()), "incomparable iterators");
 }
+
+TEST(DenseMapCustomTest, MoveConstructInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  auto It = M.find(1);
+  DenseMap<int, int> Other = std::move(M);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(DenseMapCustomTest, MoveAssignInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  auto It = M.find(1);
+  DenseMap<int, int> Other;
+  Other = std::move(M);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
 #endif
 
 } // namespace
