@@ -212,4 +212,52 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   ASSERT_FALSE(F9AA.instructionCanReach(A, F9FirstInst, F4));
 }
 
+TEST_F(AttributorTestBase, CleanupDoesNotSeedLiveCallees) {
+  for (bool SeedCaller : {false, true}) {
+    SCOPED_TRACE(SeedCaller);
+    Module &M = parseModule(R"(
+      define internal void @leaf() { ret void }
+      define internal void @sibling() { ret void }
+      define void @caller() {
+        call void @leaf()
+        call void @sibling()
+        ret void
+      }
+    )");
+    SetVector<Function *> Functions;
+    for (Function &F : M)
+      Functions.insert(&F);
+    AnalysisGetter AG;
+    CallGraphUpdater CGUpdater;
+    BumpPtrAllocator Allocator;
+    InformationCache InfoCache(M, AG, Allocator, nullptr);
+    AttributorConfig AC(CGUpdater);
+    AC.DefaultInitializeLiveInternals = false;
+    unsigned NumInitializations = 0;
+    // This callback observes markLiveInternalFunction without seeding other
+    // AAs.
+    AC.InitializationCallback = [&](Attributor &, const Function &) {
+      ++NumInitializations;
+    };
+    Attributor A(Functions, InfoCache, AC);
+    auto CallerPos = IRPosition::function(*M.getFunction("caller"));
+    EXPECT_EQ(A.lookupAAFor<AAIsDead>(CallerPos, nullptr, DepClassTy::NONE,
+                                      /*AllowInvalidState=*/true),
+              nullptr);
+    if (SeedCaller) {
+      // Control: discovering a live block during seeding still seeds callees.
+      A.getOrCreateAAFor<AAIsDead>(CallerPos);
+      EXPECT_EQ(NumInitializations, 2u);
+    }
+
+    // Without an initial AA, cleanup's dead-function check creates caller's
+    // liveness AA. Its initializer must not seed leaf or sibling.
+    EXPECT_EQ(A.run(), ChangeStatus::UNCHANGED);
+    EXPECT_NE(A.lookupAAFor<AAIsDead>(CallerPos, nullptr, DepClassTy::NONE,
+                                      /*AllowInvalidState=*/true),
+              nullptr);
+    EXPECT_EQ(NumInitializations, SeedCaller ? 2u : 0u);
+  }
+}
+
 } // namespace llvm

@@ -4673,6 +4673,9 @@ struct AAIsDeadFunction : public AAIsDead {
     if (!AssumedLiveBlocks.insert(&BB).second)
       return false;
 
+    if (!A.isDuringDeduction())
+      return true;
+
     // We assume that all of BB is (probably) live now and if there are calls to
     // internal functions we will assume that those are now live as well. This
     // is a performance optimization for blocks with calls to a lot of internal
