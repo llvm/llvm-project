@@ -1890,7 +1890,6 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ; X64-NDD-NEXT:    movzbl %ah, %ecx
 ; X64-NDD-NEXT:    addw %cx, %ax
 ; X64-NDD-NEXT:    movzbl %al, %eax
-; X64-NDD-NEXT:    movzwl %ax, %eax
 ; X64-NDD-NEXT:    retq
   %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
   %z = zext i16 %cnt to i32
