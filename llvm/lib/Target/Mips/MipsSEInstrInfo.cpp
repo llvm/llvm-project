@@ -532,22 +532,6 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Mips::BuildPairF64_64:
     expandBuildPairF64(MBB, MI, isMicroMips, true);
     break;
-  case Mips::ExtractElementF64_FPR: {
-    Register DstReg = MI.getOperand(0).getReg();
-    Register SrcReg = MI.getOperand(1).getReg();
-    int64_t Index = MI.getOperand(2).getImm();
-
-    unsigned SubRegIdx = (Index == 0) ? Mips::sub_lo : Mips::sub_hi;
-    Register SubReg = TRI->getSubReg(SrcReg, SubRegIdx);
-
-    if (SubReg && SubReg != DstReg) {
-      BuildMI(MBB, MI, MI.getDebugLoc(), get(Mips::FMOV_S), DstReg)
-          .addReg(SubReg, RegState::Kill);
-    }
-
-    MI.eraseFromParent();
-    return true;
-  }
   case Mips::ExtractElementF64:
     expandExtractElementF64(MBB, MI, isMicroMips, false);
     break;
