@@ -421,9 +421,9 @@ public:
   /// frame. The behavior is undefined if the block count is different from the
   /// one that is there when call happens. May fail; returns null on failure.
   ///
-  /// \param Index refers to the index of the declared parameter of the callee.
+  /// \param DeclParamIdx refers to the index of the declared parameter of the callee.
   /// See getDeclaredParameterIndex().
-  const ParamVarRegion *getParameterLocation(std::optional<unsigned> Index,
+  const ParamVarRegion *getParameterLocation(std::optional<unsigned> DeclParamIdx,
                                              unsigned BlockCount) const;
 
   /// Returns true if on the current path, the argument was constructed by
@@ -433,12 +433,12 @@ public:
   /// not do that because we don't know how (i.e., construction context is
   /// unavailable in the CFG or not supported by the analyzer).
   ///
-  /// \param Index index of the argument as understood by the AST.
+  /// \param ASTArgIdx index of the argument as understood by the AST.
   /// See getASTArgumentIndex().
-  bool isArgumentConstructedDirectly(unsigned Index) const {
+  bool isArgumentConstructedDirectly(unsigned ASTArgIdx) const {
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
-               getState(), {getOriginExpr(), Index}, getStackFrame())
+               getState(), {getOriginExpr(), ASTArgIdx}, getStackFrame())
         .has_value();
   }
 
