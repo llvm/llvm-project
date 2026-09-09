@@ -1031,6 +1031,28 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
   if (!shouldAllocateRegister(VirtReg))
     return;
 
+  // The def is freed before the uses are allocated, so a tie is the only
+  // record left of its register. Rewrite every read of VirtReg so they agree.
+  MachineInstr &MI = *MO.getParent();
+  for (const MachineOperand &Tied : MI.all_uses()) {
+    if (!Tied.isTied() || Tied.getReg() != VirtReg)
+      continue;
+    unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&Tied));
+    MCRegister DefReg = MI.getOperand(TiedIdx).getReg().asMCReg();
+    for (MachineOperand &O : MI.all_uses()) {
+      if (O.getReg() != VirtReg)
+        continue;
+      // A tie needs the register itself, not the subregister it names.
+      MCRegister Reg = DefReg;
+      if (unsigned SubIdx = O.getSubReg(); SubIdx && !O.isTied())
+        Reg = TRI->getSubReg(DefReg, SubIdx);
+      O.setSubReg(0);
+      O.setReg(Reg);
+      O.setIsRenamable(!MRI->isReserved(Reg));
+    }
+    return;
+  }
+
   LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
   MCRegister PhysReg;
   bool IsRenamable = true;
