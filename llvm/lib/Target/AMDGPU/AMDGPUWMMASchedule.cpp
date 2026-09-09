@@ -133,7 +133,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
       dbgs()
       << "\n--- [1] WMMA ordering ------------------------------------\n"
          "Chain each WMMA to the next in program order with an artificial\n"
-         "edge, so load placement can be reasoned about relative to fixed\n" 
+         "edge, so load placement can be reasoned about relative to fixed\n"
          "W[] positions.\n");
   auto [PrevSU, PrevPos] = *Wmmas.begin();
   for (auto *It = std::next(Wmmas.begin()); It != Wmmas.end(); ++It) {
@@ -201,8 +201,8 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
       dbgs()
       << "\n--- [3+4] ds_load -> ds_load spacing ---------------------\n"
          "Sort loads by their earliest consumer, then chain consecutive\n"
-         "loads in that order with a small latency so they don't all issue\n" 
-         "back to back and saturate the LDS bus (which would make the kernel\n" 
+         "loads in that order with a small latency so they don't all issue\n"
+         "back to back and saturate the LDS bus (which would make the kernel\n"
          "memory bound).\n");
   SUnit *Prev = nullptr;
   for (LoadInfo &LI : Loads) {
@@ -230,7 +230,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
          "[lat]: latest cycle each load could issue and still feed its\n"
          "earliest consumer in time (MinPos*wmmalat - loadlat).\n"
          "[space]: loop through the ordered loads from last to first and\n"
-         "pull any that are too close to the next one earlier in order to\n" 
+         "pull any that are too close to the next one earlier in order to\n"
          "honor the ds_load -> ds_load spacing.\n");
   for (LoadInfo &LI : Loads)
     if (LI.MinPos != UINT_MAX) {
@@ -248,8 +248,8 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     long Spaced = PrevLatest - (long)(*LDSBandwidth);
     if (Spaced < LI.LatestCycle) {
       LLVM_DEBUG(dbgs() << "[space] ds_load SU" << LI.SU->NodeNum
-                        << ": LatestCycle " << LI.LatestCycle << " -> " << Spaced
-                        << " (spaced " << (unsigned)*LDSBandwidth
+                        << ": LatestCycle " << LI.LatestCycle << " -> "
+                        << Spaced << " (spaced " << (unsigned)*LDSBandwidth
                         << " before next load's " << PrevLatest << ")\n");
       LI.LatestCycle = Spaced;
     }
@@ -303,7 +303,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
 
   LLVM_DEBUG({
     dbgs() << "\n--- [5] histogram BEFORE debunch (sets the budget) -------\n"
-              "Per WMMA position VGPR totals from the as late as possible\n" 
+              "Per WMMA position VGPR totals from the as late as possible\n"
               "schedule. The peak becomes the VGPR budget: the debunch may\n"
               "pull loads earlier as long as no position exceeds it.\n";
     dbgs() << "[5] live-VGPR histogram BEFORE slack (min VGPRs / budget = "
@@ -322,7 +322,8 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
       << "\n--- [6] debunch: pull loads earlier into budget slack ----\n"
          "For each fragment, scan earlier W[] positions while the budget\n"
          "still has room. The earliest such position gets an artificial\n"
-         "WMMA -> ds_load edge that stops the scheduler from bunching that load\n"
+         "WMMA -> ds_load edge that stops the scheduler from bunching that "
+         "load\n"
          "any earlier. 'unconstrained' = it already fits at W[0], so no edge\n"
          "is needed; the histogram is updated cumulatively so later\n"
          "fragments only use the slack that's left over.\n");
