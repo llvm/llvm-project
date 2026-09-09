@@ -2892,31 +2892,31 @@ define amdgpu_kernel void @v_insertelement_v8f16_dynamic(ptr addrspace(1) %out, 
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 7
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 6
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 7
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 5
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s6, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 4
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 5
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s7, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 3
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s8, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 2
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s8, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 3
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s9, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 1
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s10, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 0
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s10, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 1
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s5, -1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.h, v3.h, s4, s2
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.l, v3.l, s4, s3
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.h, v2.h, s4, s6
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.l, v2.l, s4, s7
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, v1.h, s4, s8
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, s4, s9
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.h, s4, s10
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, s4, s5
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.l, v3.l, s4, s2
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.h, v3.h, s4, s3
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.l, v2.l, s4, s6
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.h, v2.h, s4, s7
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, s4, s8
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, v1.h, s4, s9
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, s4, s10
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.h, s4, s5
 ; GFX11-TRUE16-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -3527,56 +3527,56 @@ define amdgpu_kernel void @v_insertelement_v16f16_dynamic(ptr addrspace(1) %out,
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v8, s[2:3]
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v8, s[2:3] offset:16
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 7
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 6
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 7
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 5
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s6, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 4
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 5
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s7, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 3
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s8, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 2
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s8, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 3
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s9, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 1
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s10, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 0
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s10, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 1
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s11, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 15
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s12, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 14
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s12, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 15
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s13, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 13
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s14, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 12
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s14, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 13
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s15, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 11
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s16, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 10
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s16, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 11
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s17, -1, 0
-; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 9
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s18, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 8
+; GFX11-TRUE16-NEXT:    s_cselect_b32 s18, -1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s5, 9
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s5, -1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.h, v3.h, s4, s2
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.l, v3.l, s4, s2
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v7.h, v7.h, s4, s12
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v7.l, v7.l, s4, s13
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v6.h, v6.h, s4, s14
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v6.l, v6.l, s4, s15
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v5.h, v5.h, s4, s16
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v5.l, v5.l, s4, s17
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v4.h, v4.h, s4, s18
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v4.l, v4.l, s4, s5
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.l, v3.l, s4, s3
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.h, v2.h, s4, s6
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.l, v2.l, s4, s7
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, v1.h, s4, s8
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, s4, s9
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.h, s4, s10
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, s4, s11
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v7.l, v7.l, s4, s12
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v7.h, v7.h, s4, s13
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v6.l, v6.l, s4, s14
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v6.h, v6.h, s4, s15
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v5.l, v5.l, s4, s16
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v5.h, v5.h, s4, s17
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v4.l, v4.l, s4, s18
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v4.h, v4.h, s4, s5
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.h, v3.h, s4, s3
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.l, v2.l, s4, s6
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.h, v2.h, s4, s7
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, s4, s8
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, v1.h, s4, s9
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, s4, s10
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.h, s4, s11
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16
 ; GFX11-TRUE16-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
