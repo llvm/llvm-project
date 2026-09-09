@@ -94,9 +94,8 @@ void ConstantInitBuilderBase::setGlobalInitializer(llvm::GlobalVariable *GV,
 
 void ConstantInitBuilderBase::resolveSelfReferences(llvm::GlobalVariable *GV) {
   for (auto &entry : SelfReferences) {
-    llvm::Constant *resolvedReference =
-      llvm::ConstantExpr::getInBoundsGetElementPtr(
-        GV->getValueType(), GV, entry.Indices);
+    llvm::Constant *resolvedReference = llvm::ConstantExpr::getInBoundsPtrAdd(
+        GV, llvm::ConstantInt::get(CGM.SizeTy, entry.Offset.getQuantity()));
     auto dummy = entry.Dummy;
     dummy->replaceAllUsesWith(resolvedReference);
     dummy->eraseFromParent();
@@ -158,9 +157,8 @@ ConstantAggregateBuilderBase::getAddrOfPosition(llvm::Type *type,
   auto dummy = new llvm::GlobalVariable(Builder.CGM.getModule(), type, true,
                                         llvm::GlobalVariable::PrivateLinkage,
                                         nullptr, "");
-  Builder.SelfReferences.emplace_back(dummy);
-  auto &entry = Builder.SelfReferences.back();
-  getGEPIndicesTo(entry.Indices, position + Begin);
+  Builder.SelfReferences.emplace_back(dummy,
+                                      getOffsetFromGlobalTo(position + Begin));
   return dummy;
 }
 
@@ -172,30 +170,8 @@ ConstantAggregateBuilderBase::getAddrOfCurrentPosition(llvm::Type *type) {
     new llvm::GlobalVariable(Builder.CGM.getModule(), type, true,
                              llvm::GlobalVariable::PrivateLinkage,
                              nullptr, "");
-  Builder.SelfReferences.emplace_back(dummy);
-  auto &entry = Builder.SelfReferences.back();
-  (void) getGEPIndicesToCurrentPosition(entry.Indices);
+  Builder.SelfReferences.emplace_back(dummy, getNextOffsetFromGlobal());
   return dummy;
-}
-
-void ConstantAggregateBuilderBase::getGEPIndicesTo(
-                               llvm::SmallVectorImpl<llvm::Constant*> &indices,
-                               size_t position) const {
-  // Recurse on the parent builder if present.
-  if (Parent) {
-    Parent->getGEPIndicesTo(indices, Begin);
-
-  // Otherwise, add an index to drill into the first level of pointer.
-  } else {
-    assert(indices.empty());
-    indices.push_back(llvm::ConstantInt::get(Builder.CGM.Int32Ty, 0));
-  }
-
-  assert(position >= Begin);
-  // We have to use i32 here because struct GEPs demand i32 indices.
-  // It's rather unlikely to matter in practice.
-  indices.push_back(llvm::ConstantInt::get(Builder.CGM.Int32Ty,
-                                           position - Begin));
 }
 
 ConstantAggregateBuilderBase::PlaceholderPosition

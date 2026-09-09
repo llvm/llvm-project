@@ -54,9 +54,10 @@ class CodeGenModule;
 class ConstantInitBuilderBase {
   struct SelfReference {
     llvm::GlobalVariable *Dummy;
-    llvm::SmallVector<llvm::Constant*, 4> Indices;
+    CharUnits Offset;
 
-    SelfReference(llvm::GlobalVariable *dummy) : Dummy(dummy) {}
+    SelfReference(llvm::GlobalVariable *Dummy, CharUnits Offset)
+        : Dummy(Dummy), Offset(Offset) {}
   };
   CodeGenModule &CGM;
   llvm::SmallVector<llvm::Constant*, 16> Buffer;
@@ -320,20 +321,11 @@ public:
   /// type can differ from the type of the actual element.
   llvm::Constant *getAddrOfPosition(llvm::Type *type, size_t position);
 
-  llvm::ArrayRef<llvm::Constant*> getGEPIndicesToCurrentPosition(
-                           llvm::SmallVectorImpl<llvm::Constant*> &indices) {
-    getGEPIndicesTo(indices, Builder.Buffer.size());
-    return indices;
-  }
-
 protected:
   llvm::Constant *finishArray(llvm::Type *eltTy);
   llvm::Constant *finishStruct(llvm::StructType *structTy);
 
 private:
-  void getGEPIndicesTo(llvm::SmallVectorImpl<llvm::Constant*> &indices,
-                       size_t position) const;
-
   llvm::Constant *getRelativeOffset(llvm::IntegerType *offsetType,
                                     llvm::Constant *target);
 
