@@ -32,32 +32,32 @@ gpu.module @test {
     %n = arith.muli %block_id_y, %c128 : index
 
     %a_tdesc = xegpu.create_nd_tdesc %arg0 : memref<4x128x512xf4E2M1FN> -> !xegpu.tensor_desc<4x128x512xf4E2M1FN>
-    %a = xegpu.load_nd %a_tdesc[%block_id_z, %m, %c0] {layout = #a} : !xegpu.tensor_desc<4x128x512xf4E2M1FN> -> vector<4x128x512xf4E2M1FN>
+    %a = xegpu.load_nd %a_tdesc[%block_id_z, %m, %c0] <{layout = #a}> : !xegpu.tensor_desc<4x128x512xf4E2M1FN> -> vector<4x128x512xf4E2M1FN>
 
     %b_tdesc = xegpu.create_nd_tdesc %arg1 : memref<4x512x128xf4E2M1FN> -> !xegpu.tensor_desc<4x512x128xf4E2M1FN>
-    %b = xegpu.load_nd %b_tdesc[%block_id_z, %c0, %n] {layout = #b} : !xegpu.tensor_desc<4x512x128xf4E2M1FN> -> vector<4x512x128xf4E2M1FN>
+    %b = xegpu.load_nd %b_tdesc[%block_id_z, %c0, %n] <{layout = #b}> : !xegpu.tensor_desc<4x512x128xf4E2M1FN> -> vector<4x512x128xf4E2M1FN>
 
     %cd_tdesc = xegpu.create_nd_tdesc %arg4 : memref<4x128x128xf32> -> !xegpu.tensor_desc<4x128x128xf32, #c>
-    %c = xegpu.load_nd %cd_tdesc[%block_id_z, %m, %n] {layout = #c} : !xegpu.tensor_desc<4x128x128xf32, #c> -> vector<4x128x128xf32>
+    %c = xegpu.load_nd %cd_tdesc[%block_id_z, %m, %n] <{layout = #c}> : !xegpu.tensor_desc<4x128x128xf32, #c> -> vector<4x128x128xf32>
 
     %a_scale_tdesc = xegpu.create_nd_tdesc %arg2 : memref<4x128x16xf8E8M0FNU> -> !xegpu.tensor_desc<4x128x16xf8E8M0FNU>
-    %scale_a = xegpu.load_nd %a_scale_tdesc[%block_id_z, %m, %c0] {layout = #a_scale_load} : !xegpu.tensor_desc<4x128x16xf8E8M0FNU> -> vector<4x128x16xf8E8M0FNU>
+    %scale_a = xegpu.load_nd %a_scale_tdesc[%block_id_z, %m, %c0] <{layout = #a_scale_load}> : !xegpu.tensor_desc<4x128x16xf8E8M0FNU> -> vector<4x128x16xf8E8M0FNU>
 
     %b_scale_tdesc = xegpu.create_nd_tdesc %arg3 : memref<4x16x128xf8E8M0FNU> -> !xegpu.tensor_desc<4x16x128xf8E8M0FNU>
-    %scale_b = xegpu.load_nd %b_scale_tdesc[%block_id_z, %c0, %n] {layout = #b_scale_load} : !xegpu.tensor_desc<4x16x128xf8E8M0FNU> -> vector<4x16x128xf8E8M0FNU>
+    %scale_b = xegpu.load_nd %b_scale_tdesc[%block_id_z, %c0, %n] <{layout = #b_scale_load}> : !xegpu.tensor_desc<4x16x128xf8E8M0FNU> -> vector<4x16x128xf8E8M0FNU>
 
     %d = xegpu.dpas_mx %a, %b, %c scale_a = %scale_a scale_b = %scale_b
-          {layout_a = #a,
+          <{layout_a = #a,
            layout_b = #b,
            layout_cd = #c,
            layout_a_scale = #a_scale,
-           layout_b_scale = #b_scale}
+           layout_b_scale = #b_scale}>
         : (vector<4x128x512xf4E2M1FN>, vector<4x512x128xf4E2M1FN>,
           vector<4x128x128xf32>,
           vector<4x128x16xf8E8M0FNU>, vector<4x16x128xf8E8M0FNU>)
         -> vector<4x128x128xf32>
 
-    xegpu.store_nd %d, %cd_tdesc[%block_id_z, %m, %n] {layout = #c} : vector<4x128x128xf32>, !xegpu.tensor_desc<4x128x128xf32, #c>
+    xegpu.store_nd %d, %cd_tdesc[%block_id_z, %m, %n] <{layout = #c}> : vector<4x128x128xf32>, !xegpu.tensor_desc<4x128x128xf32, #c>
     gpu.return
   }
 }
