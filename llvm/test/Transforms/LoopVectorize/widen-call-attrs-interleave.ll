@@ -17,8 +17,8 @@ define void @range_propagated_uf2(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> [[WIDE_LOAD1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> range(i32 0, 100) [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> range(i32 0, 100) [[WIDE_LOAD1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], i64 2
 ; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[TMP4]], align 4
