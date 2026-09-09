@@ -19,6 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 
 #include <chrono>
@@ -107,7 +108,7 @@ private:
       if (MCA) {
         bool Notify;
         {
-          std::scoped_lock Lock(MCA->M);
+          std::scoped_lock<std::mutex> Lock(MCA->M);
           --MCA->Outstanding;
           Notify = MCA->Shutdown && MCA->Outstanding == 0;
         }
@@ -894,6 +895,24 @@ TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
       });
 
   ASSERT_TRUE(OnConnectRan);
+}
+
+TEST(ControllerAccessTest, PlainAttach) {
+  // Attach a with pre-constructed ControllerAccess instance.
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  auto CA = cantFail(MockControllerAccess::Create(S, false, postOnto(Tasks)));
+  S.attach(std::move(CA), BootstrapInfo(S));
+
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      S.controllerCaller(
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
+
+  EXPECT_EQ(Result, 42);
 }
 
 TEST(ControllerAccessTest, TryAttachSuccess) {

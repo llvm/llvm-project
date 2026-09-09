@@ -66,6 +66,7 @@ namespace llvm {
 
 class AssumptionCache;
 class BlockFrequencyInfo;
+class BranchProbabilityInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -146,6 +147,7 @@ public:
   TargetTransformInfo *TTI;
   DominatorTree *DT;
   std::function<BlockFrequencyInfo &()> GetBFI;
+  std::function<const BranchProbabilityInfo &()> GetBPI;
   TargetLibraryInfo *TLI;
   DemandedBits *DB;
   AssumptionCache *AC;

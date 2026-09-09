@@ -10,7 +10,7 @@ define i32 @flag_copy_1(i32 %x, i32 %y, ptr %pz) nounwind {
 ; CHECK-NEXT:    mull %esi
 ; CHECK-NEXT:    movl (%rcx), %ecx
 ; CHECK-NEXT:    {nf} addl %eax, %ecx
-; CHECK-NEXT:    cmovol %ecx, %eax
+; CHECK-NEXT:    cmovbl %ecx, %eax
 ; CHECK-NEXT:    retq
   %o = tail call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %x, i32 %y)
   %v1 = extractvalue { i32, i1 } %o, 1
