@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple x86_64-linux-unknown -fsyntax-only -o - -verify
-// RUN: %clang_cc1 %s -fcuda-is-device -triple nvptx -fsyntax-only -o - -verify
+// RUN: %clang_cc1 %s -triple x86_64-linux-unknown -fsyntax-only -o - -verify=expected,host
+// RUN: %clang_cc1 %s -fcuda-is-device -triple nvptx -fsyntax-only -o - -verify=expected,device
 
 #include "Inputs/cuda.h"
 
@@ -70,3 +70,46 @@ __device__ double AY = a.pow(2.0, 2); // expected-error{{dynamic initialization 
 const A ca;
 const double CAX = ca.cpow(1.0, 1);
 const __device__ double CAY = ca.cpow(2.0, 2);
+
+namespace ns1 {
+  // host-note@+3 {{'value_func' declared here}}
+  // expected-note@+2 5{{'value_func' declared here}}
+  // expected-note@+1 {{candidate function not viable: call to __device__ function from __host__ function}}
+__device__ constexpr inline int value_func() {
+  return 32;
+}
+}
+
+namespace ns2 {
+  using namespace ns1;
+  // diagnosed via overloading.
+  constexpr static unsigned var0 = value_func();
+  // expected-error@-1 {{no matching function for call to 'value_func'}}
+
+  // diagnosed via SemaCUDA::checkAllowedInitializer
+  constexpr static unsigned var1 = ns1::value_func();
+  // host-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+
+  // FIXME: Inconsistency with var1 - non constexpr cases are diagnosed for both host and device.
+  static int var2 = 1 + ns1::value_func();
+  // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+  static int var3 {ns1::value_func()};
+  // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+
+  struct A {
+    unsigned b;
+  };
+  A b{ns1::value_func()};
+  // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+
+  int foo(int);
+  int nested = foo(ns1::value_func());
+  // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+
+  void foobar() {
+    // diagnosed via SemaCUDA::checkCall
+    static int var2 = 1 + ns1::value_func();
+  // host-error@-1 {{reference to __device__ function 'value_func' in __host__ function}}
+  // device-error@-2 {{reference to __device__ function 'value_func' in global initializer}}
+  }
+}
