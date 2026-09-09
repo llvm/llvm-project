@@ -39,8 +39,6 @@
 ; CHECK-NEXT:       PowerPC VSX Copy Legalization
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
-; CHECK-NEXT:       Remove unreachable machine basic blocks
-; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
