@@ -8,8 +8,8 @@
 
 #include "mlir/Analysis//FlatLinearValueConstraints.h"
 
+#include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
-#include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/Builders.h"
@@ -701,7 +701,8 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
                                            MLIRContext *context,
                                            SmallVectorImpl<AffineMap> *lbMaps,
                                            SmallVectorImpl<AffineMap> *ubMaps,
-                                           bool closedUB) {
+                                           bool closedUB,
+                                           bool allowMultiResultUB) {
   assert(offset + num <= getNumDimVars() && "invalid range");
 
   // Basic simplification.
@@ -753,9 +754,6 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
 
       // If the above fails, we'll just use the constant lower bound and the
       // constant upper bound (if they exist) as the slice bounds.
-      // TODO: being conservative for the moment in cases that
-      // lead to multiple bounds - until getConstDifference in LoopFusion.cpp is
-      // fixed (b/126426796).
       if (!lbMap || lbMap.getNumResults() != 1) {
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice lb\n");
@@ -765,7 +763,14 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
                                  getAffineConstantExpr(*lbConst, context));
         }
       }
-      if (!ubMap || ubMap.getNumResults() != 1) {
+      // An upper bound of several results is the min of them, for e.g.
+      // the bound of a tiled loop clamped at the end of the data looks like:
+      // `min(%i * 64 + 64, 1000)`. Falling back to the constant bound
+      // the way the lower one does would drop the tile-relative result and
+      // leave nothing but the extent of the data, turning a slice of a single
+      // tile into a slice of everything from the tile onwards.
+      if (!ubMap || ubMap.getNumResults() == 0 ||
+          (!allowMultiResultUB && ubMap.getNumResults() != 1)) {
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice ub\n");
         auto ubConst = getConstantBound64(BoundType::UB, pos + offset);

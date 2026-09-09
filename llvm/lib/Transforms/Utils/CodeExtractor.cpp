@@ -163,6 +163,12 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
       continue;
     }
 
+    // llvm.experimental.deoptimize must return the enclosing function's return
+    // type. Extraction changes the outlined function signature, which can make
+    // the deoptimize call invalid.
+    if (BB.getTerminatingDeoptimizeCall())
+      return false;
+
     if (const CallInst *CI = dyn_cast<CallInst>(I)) {
       // musttail calls have several restrictions, generally enforcing matching
       // calling conventions between the caller parent and musttail callee.
@@ -1052,6 +1058,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::Range:
       case Attribute::Initializes:
       case Attribute::NoExt:
+      case Attribute::NoFreeObj:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:

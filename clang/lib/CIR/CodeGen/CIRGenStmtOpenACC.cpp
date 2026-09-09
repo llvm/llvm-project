@@ -39,7 +39,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     builder.setInsertionPointToEnd(&block);
 
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
-    res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
+    if (associatedStmt)
+      res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
 
     TermOp::create(builder, end);
   }
@@ -95,7 +96,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
       LexicalScope ls{*this, start, builder.getInsertionBlock()};
       ActiveOpenACCLoopRAII activeLoop{*this, &loopOp};
 
-      res = emitStmt(loopStmt, /*useCurrentScope=*/true);
+      if (loopStmt)
+        res = emitStmt(loopStmt, /*useCurrentScope=*/true);
 
       mlir::acc::YieldOp::create(builder, end);
     }
@@ -358,7 +360,8 @@ emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
     cgf.replaceAddrOfLocalVar(
         xval, Address{alloca, argTy, cgf.getContext().getDeclAlign(xval)});
 
-    res = cgf.emitStmt(inf.WholeExpr, /*useCurrentScope=*/true);
+    if (inf.WholeExpr)
+      res = cgf.emitStmt(inf.WholeExpr, /*useCurrentScope=*/true);
 
     auto load = cir::LoadOp::create(builder, start, {alloca});
     mlir::acc::YieldOp::create(builder, end, {load});

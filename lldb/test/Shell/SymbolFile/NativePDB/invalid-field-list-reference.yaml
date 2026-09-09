@@ -1,0 +1,233 @@
+# Check that invalid references to field lists are handled gracefully.
+
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t
+# RUN: lldb-test symbols %t --find=type --name=Inner | FileCheck %s --check-prefix=INNER
+# RUN: lldb-test symbols %t --find=type --name=Outer | FileCheck %s --check-prefix=OUTER
+
+# INNER:      Found 1 types:
+# INNER-NEXT: Type{{.*}} , name = "Inner", size = 4, compiler_type = {{.*}} struct Inner {
+# INNER-NEXT:     int i;
+# INNER-NEXT: }
+
+# We should find the struct, but can't complete it.
+# OUTER:      Found 1 types:
+# OUTER-NEXT: Type{{.*}} , name = "Outer", size = 4, compiler_type = {{.*}} struct Outer
+
+# OUTER-NOT:  }
+# OUTER-NOT:  int
+
+# This was compiled with clang-cl from
+
+# > cat main.cpp
+# struct Outer {
+#   struct Inner {
+#     int i = 1;
+#   };
+#   int o = 1;
+# };
+# 
+# int main() {
+#   Outer o;
+#   Outer::Inner i;
+#   return o.o + i.i;
+# }
+# > clang-cl main.cpp /GS- /GR- /Z7 /link /nodefaultlib /entry:main
+
+# The output was trimmed to only include necessary parts.
+# Changes to references are marked with "CHANGED:".
+
+---
+StringTable:
+  - 'F:\Dev\dummy\invalid-fwd-refs\main.cpp'
+PdbStream:
+  Features:        [ VC140 ]
+DbiStream:
+  VerHeader:       V70
+  Age:             1
+  BuildNumber:     36363
+  PdbDllVersion:   0
+  PdbDllRbld:      0
+  Flags:           0
+  MachineType:     Amd64
+  Modules:
+    - Module:          'C:\Users\johannes\AppData\Local\Temp\main-1eb5ab.obj'
+      ObjFile:         'C:\Users\johannes\AppData\Local\Temp\main-1eb5ab.obj'
+      SourceFiles:
+        - 'F:\Dev\dummy\invalid-fwd-refs\main.cpp'
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      'C:\Users\johannes\AppData\Local\Temp\main-1eb5ab.obj'
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Machine:         X64
+              FrontendMajor:   22
+              FrontendMinor:   1
+              FrontendBuild:   4
+              FrontendQFE:     0
+              BackendMajor:    22014
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         ''
+          - Kind:            S_BUILDINFO
+            BuildInfoSym:
+              BuildId:         4107
+  SectionHeaders:
+    - Name:            .text
+      VirtualSize:     97
+      VirtualAddress:  4096
+      SizeOfRawData:   512
+      PointerToRawData: 1024
+      Characteristics: 1610612768
+    - Name:            .rdata
+      VirtualSize:     116
+      VirtualAddress:  8192
+      SizeOfRawData:   512
+      PointerToRawData: 1536
+      Characteristics: 1073741888
+    - Name:            .pdata
+      VirtualSize:     36
+      VirtualAddress:  12288
+      SizeOfRawData:   512
+      PointerToRawData: 2048
+      Characteristics: 1073741888
+TpiStream:
+  Version:         VC80
+  Records:
+    # 4096
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [  ]
+    # 4097
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        # CHANGED: Was 4096, now 8958 (doesn't exist).
+        # Triggers an assertion failure when reading the record as an LF_FIELDLIST.
+        ArgumentList:    8958
+    # 4098
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            Outer
+        UniqueName:      '.?AUOuter@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    # 4099
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, Nested, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            'Outer::Inner'
+        UniqueName:      '.?AUInner@Outer@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    # 4100
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            o
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4099
+            Name:            Inner
+    # 4101
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     2
+        Options:         [ None, HasConstructorOrDestructor, ContainsNestedClass, HasUniqueName ]
+        # CHANGED: Was 4100 (LF_FIELDLIST), now 4097 (LF_PROCEDURE)
+        FieldList:       4097
+        Name:            Outer
+        UniqueName:      '.?AUOuter@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+    # 4102
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            i
+    # 4103
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasConstructorOrDestructor, Nested, HasUniqueName ]
+        FieldList:       4102
+        Name:            'Outer::Inner'
+        UniqueName:      '.?AUInner@Outer@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+    # 4104
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4098
+        Attrs:           66572
+    # 4105
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4098
+        ThisType:        4104
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4096
+        ThisPointerAdjustment: 0
+    # 4106
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4098
+        Attrs:           65548
+    # 4107
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4099
+        Attrs:           66572
+    # 4108
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4099
+        ThisType:        4107
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4096
+        ThisPointerAdjustment: 0
+    # 4109
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4099
+        Attrs:           65548
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            main
+...

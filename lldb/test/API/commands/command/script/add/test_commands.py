@@ -254,6 +254,19 @@ class TwoArgGroupsCommand(ReportingCmd):
         return self.help_string
 
 
+class FailCommand(ParsedCommand):
+    program: str = "fail_cmd"
+
+    def __call__(self, debugger, args_list, exe_ctx, result):
+        result.AppendMessage("hello world")
+
+    def setup_command_definition(self):
+        parser = self.get_parser()
+        # add_argument_set is expecting a list not dict.
+        parser.add_argument_set(
+            parser.make_argument_element(lldb.eArgTypeSymbol, "plain")
+        )
+
 def __lldb_init_module(debugger, dict):
     # Register all classes that have a register_lldb_command method
     for _name, cls in inspect.getmembers(sys.modules[__name__]):

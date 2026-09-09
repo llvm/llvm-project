@@ -23,6 +23,8 @@
 #include <__iterator/iterator_with_data.h>
 #include <__iterator/segmented_iterator.h>
 #include <__memory/addressof.h>
+#include <__optional/comparison.h>
+#include <__optional/optional.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
@@ -39,7 +41,6 @@
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

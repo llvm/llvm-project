@@ -873,6 +873,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                      true /* HasGuards */, true /* UsePostIncrementRanges */);
     if (!WidePhi)
       return false;
+    SE->forgetLoop(FI.OuterLoop);
     LLVM_DEBUG(dbgs() << "Created wide phi: "; WidePhi->dump());
     LLVM_DEBUG(dbgs() << "Deleting old phi: "; WideIV.NarrowIV->dump());
     Deleted = RecursivelyDeleteDeadPHINode(WideIV.NarrowIV);
@@ -967,7 +968,7 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     // emit 'false' as the branch condition, and add our own check afterwards.
     BasicBlock *CheckBlock = FI.OuterLoop->getLoopPreheader();
     ArrayRef<RuntimePointerCheck> Checks(nullptr, nullptr);
-    LoopVersioning LVer(LAI, Checks, FI.OuterLoop, LI, DT, SE);
+    LoopVersioning LVer(LAI, Checks, FI.OuterLoop, LI, DT, SE, MSSAU);
     LVer.versionLoop();
 
     // Check for overflow by calculating the new tripcount using

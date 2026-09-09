@@ -65,7 +65,6 @@ static_library("IPO") {
     "InstrumentorStubPrinter.cpp",
     "InstrumentorUtils.cpp",
     "Internalize.cpp",
-    "LoopExtractor.cpp",
     "LowerTypeTests.cpp",
     "MemProfContextDisambiguation.cpp",
     "MergeFunctions.cpp",

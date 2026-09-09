@@ -778,6 +778,9 @@ VPRegionBlock *VPRegionBlock::clone() {
   if (getHeaderMask())
     NewRegion->createHeaderMask();
 
+  if (CanIV && !hasCanonicalIVNUW())
+    NewRegion->CanIVInfo->clearNUW();
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;
@@ -815,17 +818,23 @@ const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
 
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (!isReplicator()) {
-    // Neglect the cost of canonical IV, matching the legacy cost model.
     InstructionCost Cost = 0;
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
-    InstructionCost BackedgeCost =
-        ForceTargetInstructionCost.getNumOccurrences()
-            ? InstructionCost(ForceTargetInstructionCost)
-            : Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind);
-    LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
-                      << ": vector loop backedge\n");
-    Cost += BackedgeCost;
+    // Add the costs of the loop's backedge and canonical IV increment
+    auto AddCost = [&](InstructionCost C, const char *Name) {
+      if (ForceTargetInstructionCost.getNumOccurrences())
+        C = InstructionCost(ForceTargetInstructionCost);
+      LLVM_DEBUG(dbgs() << "Cost of " << C << " for VF " << VF << ": " << Name
+                        << "\n");
+      Cost += C;
+    };
+    AddCost(Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind),
+            "vector loop backedge");
+    if (!VPCostContext::executesAtMostOnce(*getPlan(), VF))
+      AddCost(Ctx.TTI.getArithmeticInstrCost(
+                  Instruction::Add, getCanonicalIVType(), Ctx.CostKind),
+              "canonical IV increment");
     return Cost;
   }
 
@@ -1075,18 +1084,22 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 }
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
-  // TODO: Cache if possible.
-  for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
+  // Find the vector loop region by following the last successor of each block,
+  // starting from the plan's entry. The vector code path is always the last
+  // successor of the entry (and of the min-iters bypass block, if present), and
+  // every block on the path to the region has a single predecessor. Stop at the
+  // first block with multiple predecessors: in a plain CFG that is the loop
+  // header (no region exists yet), and in a rolled CFG it is the middle block
+  // following the region.
+  for (VPBlockBase *B = Entry; B && B->getNumPredecessors() <= 1;
+       B = B->hasSuccessors() ? B->getSuccessors().back() : nullptr)
     if (auto *R = dyn_cast<VPRegionBlock>(B))
       return R->isReplicator() ? nullptr : R;
   return nullptr;
 }
 
 const VPRegionBlock *VPlan::getVectorLoopRegion() const {
-  for (const VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R->isReplicator() ? nullptr : R;
-  return nullptr;
+  return const_cast<VPlan *>(this)->getVectorLoopRegion();
 }
 
 bool VPlan::isOuterLoop() const {
@@ -1478,8 +1491,8 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
   if (isa<VPRegionValue>(VPV))
     return true;
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
-  return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
-                  DefR->getParent()->getEnclosingLoopRegion());
+  return DefR && (DefR->getParent()->getEnclosingLoopRegion() ||
+                  !DefR->getParent()->getPlan()->getVectorLoopRegion());
 }
 
 bool VPValue::isDefinedOutsideLoopRegions() const {
@@ -1762,7 +1775,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
     bool VectorizingEpilogue, MDNode *OrigLoopID,
     std::optional<unsigned> OrigAverageTripCount,
     unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
-    bool DisableRuntimeUnroll) {
+    bool DisableRuntimeUnroll, bool UnrollVectorizedLoop) {
   // Update the metadata of the scalar loop. Skip the update when vectorizing
   // the epilogue loop to ensure it is updated only once. Also skip the update
   // when the scalar loop became unreachable.
@@ -1811,9 +1824,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // emit when remarks are enabled.
   if (ORE->enabled())
     VectorLoop->addIntLoopAttribute("llvm.loop.vectorize.body", 1);
-  TargetTransformInfo::UnrollingPreferences UP;
-  TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
-  if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
+  if (!UnrollVectorizedLoop || VectorizingEpilogue)
     addRuntimeUnrollDisableMetaData(VectorLoop);
 
   // Set/update profile weights for the vector and remainder loops as original

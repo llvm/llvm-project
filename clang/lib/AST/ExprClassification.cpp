@@ -130,6 +130,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // FIXME: Is this wise? Should they get their own kind?
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
+  case Expr::DependentTemplateIdExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CXXDependentScopeMemberExprClass:
   case Expr::DependentScopeDeclRefExprClass:

@@ -25,7 +25,7 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
@@ -41,7 +41,7 @@
 #include <__utility/unreachable.h>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
+#  include <__locale_dir/locale.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

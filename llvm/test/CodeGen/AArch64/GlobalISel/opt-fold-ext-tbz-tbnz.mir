@@ -91,10 +91,10 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $h0
-    %copy:gpr(s16) = COPY $h0
+    %copy:gpr(i16) = COPY $h0
     %bit:gpr(i64) = G_CONSTANT i64 8
     %zero:gpr(i64) = G_CONSTANT i64 0
-    %ext1:gpr(i32) = G_ZEXT %copy(s16)
+    %ext1:gpr(i32) = G_ZEXT %copy(i16)
     %ext2:gpr(i64) = G_ANYEXT %ext1(i32)
     %and:gpr(i64) = G_AND %ext2, %bit
     %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i64), %zero

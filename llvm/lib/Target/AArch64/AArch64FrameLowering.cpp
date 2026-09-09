@@ -255,7 +255,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -586,7 +585,7 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   }
 
   // Retain behavior of always omitting the FP for leaf functions when possible.
-  if (MF.getTarget().Options.DisableFramePointerElim(MF))
+  if (MF.disableFramePointerElim())
     return true;
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
@@ -645,7 +644,7 @@ bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
     return true;
 
   // Frontend has requested to preserve the frame pointer.
-  if (TM.Options.FramePointerIsReserved(MF))
+  if (MF.framePointerIsReserved())
     return true;
 
   return false;
@@ -2818,12 +2817,6 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
 
-  if (IsWindows && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
-    int FrameIdx = MFI.CreateStackObject(8, Align(16), true);
-    AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
-    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
-  }
-
   // Insert VG into the list of CSRs, immediately before LR if saved.
   if (requiresSaveVG(MF)) {
     CalleeSavedInfo VGInfo(AArch64::VG);
@@ -2861,8 +2854,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     // Grab 8 bytes below FP for the extended asynchronous frame info.
-    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !IsWindows &&
-        Reg == AArch64::FP) {
+    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && Reg == AArch64::FP) {
       FrameIdx = MFI.CreateStackObject(8, Alignment, true);
       AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
       MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);

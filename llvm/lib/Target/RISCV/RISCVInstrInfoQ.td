@@ -145,9 +145,6 @@ foreach Ext = QExtsRV64 in {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtQ] in {
-  def : InstAlias<"flq $rd, (${rs1})",  (FLQ FPR128:$rd,  GPR:$rs1, 0), 0>;
-  def : InstAlias<"fsq $rs2, (${rs1})", (FSQ FPR128:$rs2, GPR:$rs1, 0), 0>;
-
   def : InstAlias<"fmv.q $rd, $rs",  (FSGNJ_Q FPR128:$rd, FPR128:$rs,
                                       FPR128:$rs)>;
   def : InstAlias<"fabs.q $rd, $rs", (FSGNJX_Q FPR128:$rd, FPR128:$rs,

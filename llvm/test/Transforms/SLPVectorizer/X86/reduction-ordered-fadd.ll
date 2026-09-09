@@ -128,14 +128,14 @@ entry:
   ret float %r6
 }
 
-define float @reduce_ordered_fadd_reassoc_no_nsz(ptr %p) {
-; CHECK-LABEL: define float @reduce_ordered_fadd_reassoc_no_nsz(
+define float @reduce_unordered_fadd_reassoc_no_nsz(ptr %p) {
+; CHECK-LABEL: define float @reduce_unordered_fadd_reassoc_no_nsz(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds float, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[P0]], align 4
-; CHECK-NEXT:    [[R6:%.*]] = call float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
-; CHECK-NEXT:    ret float [[R6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
   %p0 = getelementptr inbounds float, ptr %p, i64 0
@@ -162,4 +162,262 @@ entry:
   %r5 = fadd reassoc float %r4, %l6
   %r6 = fadd reassoc float %r5, %l7
   ret float %r6
+}
+
+
+define double @ordered_fadd_fptrunc_fpext_links(ptr %x) {
+; CHECK-LABEL: define double @ordered_fadd_fptrunc_fpext_links(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 24
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[P3]], align 8
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 56
+; CHECK-NEXT:    [[L8:%.*]] = load double, ptr [[P7]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x double> <double 1.000000e+00, double poison, double poison, double poison, double poison, double poison, double poison, double poison>, double [[L0]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP3]], <8 x double> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x double> [[TMP7]], i64 1
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd double [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fptrunc double [[OP_RDX1]] to float
+; CHECK-NEXT:    [[TMP14:%.*]] = fpext float [[TMP13]] to double
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[TMP7]], i64 2
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd double [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fptrunc double [[OP_RDX2]] to float
+; CHECK-NEXT:    [[TMP17:%.*]] = fpext float [[TMP16]] to double
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x double> [[TMP7]], i64 3
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd double [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fptrunc double [[OP_RDX3]] to float
+; CHECK-NEXT:    [[TMP20:%.*]] = fpext float [[TMP19]] to double
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <8 x double> [[TMP7]], i64 4
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = fadd double [[TMP20]], [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fptrunc double [[OP_RDX4]] to float
+; CHECK-NEXT:    [[TMP23:%.*]] = fpext float [[TMP22]] to double
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <8 x double> [[TMP7]], i64 5
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = fadd double [[TMP23]], [[TMP24]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fptrunc double [[OP_RDX5]] to float
+; CHECK-NEXT:    [[TMP26:%.*]] = fpext float [[TMP25]] to double
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <8 x double> [[TMP7]], i64 6
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = fadd double [[TMP26]], [[TMP27]]
+; CHECK-NEXT:    [[TMP28:%.*]] = fptrunc double [[OP_RDX6]] to float
+; CHECK-NEXT:    [[TMP29:%.*]] = fpext float [[TMP28]] to double
+; CHECK-NEXT:    [[L7:%.*]] = extractelement <8 x double> [[TMP7]], i64 7
+; CHECK-NEXT:    [[OP_RDX7:%.*]] = fadd double [[TMP29]], [[L7]]
+; CHECK-NEXT:    [[T7:%.*]] = fptrunc double [[OP_RDX7]] to float
+; CHECK-NEXT:    [[TMP30:%.*]] = fpext float [[T7]] to double
+; CHECK-NEXT:    [[OP_RDX8:%.*]] = fadd double [[TMP30]], [[L8]]
+; CHECK-NEXT:    [[T8:%.*]] = fptrunc double [[OP_RDX8]] to float
+; CHECK-NEXT:    [[E7:%.*]] = fpext float [[T8]] to double
+; CHECK-NEXT:    ret double [[E7]]
+;
+  %l0 = load double, ptr %x, align 8
+  %a0 = fadd double %l0, 1.000000e+00
+  %t0 = fptrunc double %a0 to float
+  %e0 = fpext float %t0 to double
+  %p1 = getelementptr inbounds i8, ptr %x, i64 8
+  %l1 = load double, ptr %p1, align 8
+  %a1 = fadd double %l1, %e0
+  %t1 = fptrunc double %a1 to float
+  %e1 = fpext float %t1 to double
+  %p2 = getelementptr inbounds i8, ptr %x, i64 16
+  %l2 = load double, ptr %p2, align 8
+  %a2 = fadd double %l2, %e1
+  %t2 = fptrunc double %a2 to float
+  %e2 = fpext float %t2 to double
+  %p3 = getelementptr inbounds i8, ptr %x, i64 24
+  %l3 = load double, ptr %p3, align 8
+  %a3 = fadd double %l3, %e2
+  %t3 = fptrunc double %a3 to float
+  %e3 = fpext float %t3 to double
+  %p4 = getelementptr inbounds i8, ptr %x, i64 32
+  %l4 = load double, ptr %p4, align 8
+  %a4 = fadd double %l4, %e3
+  %t4 = fptrunc double %a4 to float
+  %e4 = fpext float %t4 to double
+  %p5 = getelementptr inbounds i8, ptr %x, i64 40
+  %l5 = load double, ptr %p5, align 8
+  %a5 = fadd double %l5, %e4
+  %t5 = fptrunc double %a5 to float
+  %e5 = fpext float %t5 to double
+  %p6 = getelementptr inbounds i8, ptr %x, i64 48
+  %l6 = load double, ptr %p6, align 8
+  %a6 = fadd double %l6, %e5
+  %t6 = fptrunc double %a6 to float
+  %e6 = fpext float %t6 to double
+  %p7 = getelementptr inbounds i8, ptr %x, i64 56
+  %l7 = load double, ptr %p7, align 8
+  %a7 = fadd double %l7, %e6
+  %t7 = fptrunc double %a7 to float
+  %e7 = fpext float %t7 to double
+  ret double %e7
+}
+
+define double @ordered_fadd_mixed_links(ptr %x) {
+; CHECK-LABEL: define double @ordered_fadd_mixed_links(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 24
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[P3]], align 8
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 56
+; CHECK-NEXT:    [[L7:%.*]] = load double, ptr [[P7]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x double> <double 1.000000e+00, double poison, double poison, double poison, double poison, double poison, double poison, double poison>, double [[L0]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP3]], <8 x double> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[L1:%.*]] = extractelement <8 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x double> [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd double [[L1]], [[TMP11]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fptrunc double [[TMP13]] to float
+; CHECK-NEXT:    [[TMP24:%.*]] = fpext float [[TMP10]] to double
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x double> [[TMP7]], i64 2
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd double [[TMP24]], [[TMP12]]
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x double> [[TMP7]], i64 3
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd double [[OP_RDX1]], [[TMP25]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fptrunc double [[OP_RDX2]] to float
+; CHECK-NEXT:    [[TMP15:%.*]] = fpext float [[TMP14]] to double
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x double> [[TMP7]], i64 4
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd double [[TMP15]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x double> [[TMP7]], i64 5
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = fadd double [[OP_RDX3]], [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fptrunc double [[OP_RDX4]] to float
+; CHECK-NEXT:    [[TMP19:%.*]] = fpext float [[TMP18]] to double
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x double> [[TMP7]], i64 6
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = fadd double [[TMP19]], [[TMP20]]
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <8 x double> [[TMP7]], i64 7
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = fadd double [[OP_RDX5]], [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fptrunc double [[OP_RDX6]] to float
+; CHECK-NEXT:    [[TMP23:%.*]] = fpext float [[TMP22]] to double
+; CHECK-NEXT:    [[OP_RDX7:%.*]] = fadd double [[TMP23]], [[L7]]
+; CHECK-NEXT:    ret double [[OP_RDX7]]
+;
+  %l0 = load double, ptr %x, align 8
+  %a0 = fadd double %l0, 1.000000e+00
+  %t0 = fptrunc double %a0 to float
+  %e0 = fpext float %t0 to double
+  %p1 = getelementptr inbounds i8, ptr %x, i64 8
+  %l1 = load double, ptr %p1, align 8
+  %a1 = fadd double %l1, %e0
+  %p2 = getelementptr inbounds i8, ptr %x, i64 16
+  %l2 = load double, ptr %p2, align 8
+  %a2 = fadd double %l2, %a1
+  %t2 = fptrunc double %a2 to float
+  %e2 = fpext float %t2 to double
+  %p3 = getelementptr inbounds i8, ptr %x, i64 24
+  %l3 = load double, ptr %p3, align 8
+  %a3 = fadd double %l3, %e2
+  %p4 = getelementptr inbounds i8, ptr %x, i64 32
+  %l4 = load double, ptr %p4, align 8
+  %a4 = fadd double %l4, %a3
+  %t4 = fptrunc double %a4 to float
+  %e4 = fpext float %t4 to double
+  %p5 = getelementptr inbounds i8, ptr %x, i64 40
+  %l5 = load double, ptr %p5, align 8
+  %a5 = fadd double %l5, %e4
+  %p6 = getelementptr inbounds i8, ptr %x, i64 48
+  %l6 = load double, ptr %p6, align 8
+  %a6 = fadd double %l6, %a5
+  %t6 = fptrunc double %a6 to float
+  %e6 = fpext float %t6 to double
+  %p7 = getelementptr inbounds i8, ptr %x, i64 56
+  %l7 = load double, ptr %p7, align 8
+  %a7 = fadd double %l7, %e6
+  ret double %a7
+}
+
+define double @ordered_fadd_reassoc_nonelidable_casts(ptr %x) {
+; CHECK-LABEL: define double @ordered_fadd_reassoc_nonelidable_casts(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 24
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[P3]], align 8
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 56
+; CHECK-NEXT:    [[L7:%.*]] = load double, ptr [[P7]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x double> <double 1.000000e+00, double poison, double poison, double poison, double poison, double poison, double poison, double poison>, double [[L0]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP3]], <8 x double> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP7]], i64 1
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd nnan ninf double [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fptrunc nnan ninf double [[OP_RDX1]] to float
+; CHECK-NEXT:    [[TMP14:%.*]] = fpext nnan ninf float [[TMP13]] to double
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x double> [[TMP7]], i64 2
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd nnan ninf double [[TMP14]], [[TMP12]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fptrunc nnan ninf double [[OP_RDX2]] to float
+; CHECK-NEXT:    [[TMP17:%.*]] = fpext nnan ninf float [[TMP16]] to double
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[TMP7]], i64 3
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd nnan ninf double [[TMP17]], [[TMP15]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fptrunc nnan ninf double [[OP_RDX3]] to float
+; CHECK-NEXT:    [[TMP20:%.*]] = fpext nnan ninf float [[TMP19]] to double
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x double> [[TMP7]], i64 4
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = fadd nnan ninf double [[TMP20]], [[TMP18]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fptrunc nnan ninf double [[OP_RDX4]] to float
+; CHECK-NEXT:    [[TMP23:%.*]] = fpext nnan ninf float [[TMP22]] to double
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <8 x double> [[TMP7]], i64 5
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = fadd nnan ninf double [[TMP23]], [[TMP21]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fptrunc nnan ninf double [[OP_RDX5]] to float
+; CHECK-NEXT:    [[TMP26:%.*]] = fpext nnan ninf float [[TMP25]] to double
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <8 x double> [[TMP7]], i64 6
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = fadd nnan ninf double [[TMP26]], [[TMP24]]
+; CHECK-NEXT:    [[TMP28:%.*]] = fptrunc nnan ninf double [[OP_RDX6]] to float
+; CHECK-NEXT:    [[TMP29:%.*]] = fpext nnan ninf float [[TMP28]] to double
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <8 x double> [[TMP7]], i64 7
+; CHECK-NEXT:    [[OP_RDX7:%.*]] = fadd nnan ninf double [[TMP29]], [[TMP27]]
+; CHECK-NEXT:    [[T7:%.*]] = fptrunc nnan ninf double [[OP_RDX7]] to float
+; CHECK-NEXT:    [[E7:%.*]] = fpext nnan ninf float [[T7]] to double
+; CHECK-NEXT:    [[OP_RDX8:%.*]] = fadd nnan ninf double [[E7]], [[L7]]
+; CHECK-NEXT:    [[T8:%.*]] = fptrunc nnan ninf double [[OP_RDX8]] to float
+; CHECK-NEXT:    [[E8:%.*]] = fpext nnan ninf float [[T8]] to double
+; CHECK-NEXT:    ret double [[E8]]
+;
+  %l0 = load double, ptr %x, align 8
+  %a0 = fadd fast double %l0, 1.000000e+00
+  %t0 = fptrunc nnan ninf double %a0 to float
+  %e0 = fpext nnan ninf float %t0 to double
+  %p1 = getelementptr inbounds i8, ptr %x, i64 8
+  %l1 = load double, ptr %p1, align 8
+  %a1 = fadd fast double %l1, %e0
+  %t1 = fptrunc nnan ninf double %a1 to float
+  %e1 = fpext nnan ninf float %t1 to double
+  %p2 = getelementptr inbounds i8, ptr %x, i64 16
+  %l2 = load double, ptr %p2, align 8
+  %a2 = fadd fast double %l2, %e1
+  %t2 = fptrunc nnan ninf double %a2 to float
+  %e2 = fpext nnan ninf float %t2 to double
+  %p3 = getelementptr inbounds i8, ptr %x, i64 24
+  %l3 = load double, ptr %p3, align 8
+  %a3 = fadd fast double %l3, %e2
+  %t3 = fptrunc nnan ninf double %a3 to float
+  %e3 = fpext nnan ninf float %t3 to double
+  %p4 = getelementptr inbounds i8, ptr %x, i64 32
+  %l4 = load double, ptr %p4, align 8
+  %a4 = fadd fast double %l4, %e3
+  %t4 = fptrunc nnan ninf double %a4 to float
+  %e4 = fpext nnan ninf float %t4 to double
+  %p5 = getelementptr inbounds i8, ptr %x, i64 40
+  %l5 = load double, ptr %p5, align 8
+  %a5 = fadd fast double %l5, %e4
+  %t5 = fptrunc nnan ninf double %a5 to float
+  %e5 = fpext nnan ninf float %t5 to double
+  %p6 = getelementptr inbounds i8, ptr %x, i64 48
+  %l6 = load double, ptr %p6, align 8
+  %a6 = fadd fast double %l6, %e5
+  %t6 = fptrunc nnan ninf double %a6 to float
+  %e6 = fpext nnan ninf float %t6 to double
+  %p7 = getelementptr inbounds i8, ptr %x, i64 56
+  %l7 = load double, ptr %p7, align 8
+  %a7 = fadd fast double %l7, %e6
+  %t7 = fptrunc nnan ninf double %a7 to float
+  %e7 = fpext nnan ninf float %t7 to double
+  ret double %e7
 }

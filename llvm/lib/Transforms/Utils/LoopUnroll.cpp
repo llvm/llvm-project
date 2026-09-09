@@ -632,7 +632,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
   //   search the problem space.
 
   // When iterating for a solution, we stop early if we find probabilities
-  // that produce a Freq whose difference from FreqDesired is small
+  // that produce a Freq whose relative difference from FreqDesired is small
   // (FreqPrec).  Otherwise, we expect to compute a solution at least that
   // accurate (but surely far more accurate).
   const double FreqPrec = 1e-6;
@@ -663,7 +663,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     // If it computes an invalid Prob, FreqDesired is impossibly low or high.
     // Otherwise, Prob should produce nearly FreqDesired.
     assert((Prob < 0 || Prob > 1 ||
-            fabs(ComputeFreq(Prob) - FreqDesired) < FreqPrec) &&
+            fabs(ComputeFreq(Prob) - FreqDesired) / FreqDesired < FreqPrec) &&
            "Expected accurate frequency when linear case is possible");
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
@@ -682,7 +682,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     // If it computes an invalid Prob, FreqDesired is impossibly low or high.
     // Otherwise, Prob should produce nearly FreqDesired.
     assert((Prob < 0 || Prob > 1 ||
-            fabs(ComputeFreq(Prob) - FreqDesired) < FreqPrec) &&
+            fabs(ComputeFreq(Prob) - FreqDesired) / FreqDesired < FreqPrec) &&
            "Expected accurate frequency when quadratic case is possible");
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
@@ -844,7 +844,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     double FreqBefore = -1, FreqAfter = -1; // Inits expected to be unused.
     for (unsigned I = 0; I != CondLatches.size(); ++I) {
       double Freq = AdjustProb(I, ProbBefore, ProbAfter, FreqBefore, FreqAfter);
-      if (fabs(Freq - FreqDesired) < FreqPrec)
+      if (fabs(Freq - FreqDesired) / FreqDesired < FreqPrec)
         break;
     }
   } else {
@@ -855,7 +855,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     auto TryProb = [&](double Prob) {
       ProbPrev = Prob;
       double FreqDelta = ComputeFreq(Prob) - FreqDesired;
-      if (fabs(FreqDelta) < FreqPrec)
+      if (fabs(FreqDelta) / FreqDesired < FreqPrec)
         return 0;
       if (FreqDelta < 0) {
         ProbMin = Prob;
@@ -865,8 +865,11 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
       return 1;
     };
     // If Prob == 0 is too small and Prob == 1 is too large, bisect between
-    // them.  To place a hard upper limit on the search time, stop bisecting
-    // when Prob stops changing (ProbDelta) by much (ProbPrec).
+    // them.  Accuracy (relative difference) is controlled by FreqPrec above.
+    // However, to place a hard upper limit on the search time, we stop
+    // bisecting when Prob stops changing (ProbDelta) by much (ProbPrec).  In
+    // this case, we compute an absolute difference not a relative difference,
+    // which could produce more search time for smaller probabilities.
     if (TryProb(0.) < 0 && TryProb(1.) > 0) {
       assert(ProbMin == 0 && ProbMax == 1 &&
              "expected probability bounds to be initialized");

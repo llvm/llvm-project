@@ -82,12 +82,27 @@ cir.func @unary_fp_to_int_builtin_fenv(%a: !cir.float) -> !s32i {
 }
 
 // CHECK-LABEL: cir.func @ternary_fp_builtin_fenv
-cir.func @ternary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float, %c: !cir.float) {
+cir.func @ternary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float, %c: !cir.float,
+                                  %va: !cir.vector<4 x !cir.float>,
+                                  %vb: !cir.vector<4 x !cir.float>,
+                                  %vc: !cir.vector<4 x !cir.float>) {
   // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = downward, strict_except = true>}
   %0 = cir.fma %a, %b, %c : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = downward, strict_except = true>}
   // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
   // CHECK-NOT: fenv
   %1 = cir.fma %a, %b, %c : !cir.float
+  // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = downward, strict_except = true>}
+  %2 = cir.fmuladd %a, %b, %c : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = downward, strict_except = true>}
+  // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
+  // CHECK-NOT: fenv
+  %3 = cir.fmuladd %a, %b, %c : !cir.float
+  // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<strict_except = true>}
+  %4 = cir.fma %va, %vb, %vc : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<strict_except = true>}
+  // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<strict_except = true>}
+  %5 = cir.fmuladd %va, %vb, %vc : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<strict_except = true>}
+  // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>
+  // CHECK-NOT: fenv
+  %6 = cir.fmuladd %va, %vb, %vc : !cir.vector<4 x !cir.float>
   cir.return
 }
 

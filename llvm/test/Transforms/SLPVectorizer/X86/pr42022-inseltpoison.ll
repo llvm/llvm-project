@@ -122,21 +122,16 @@ define {%StructTy, %StructTy} @StructOfStruct(ptr %Ptr) {
 
 define {%StructTy, float, float} @NonHomogeneousStruct(ptr %Ptr) {
 ; CHECK-LABEL: @NonHomogeneousStruct(
-; CHECK-NEXT:    [[L0:%.*]] = load float, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[PTR]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load float, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, ptr [[PTR]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load float, ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[FADD0:%.*]] = fadd fast float [[L0]], 1.100000e+01
-; CHECK-NEXT:    [[FADD1:%.*]] = fadd fast float [[L1]], 1.200000e+01
-; CHECK-NEXT:    [[FADD2:%.*]] = fadd fast float [[L2]], 1.300000e+01
-; CHECK-NEXT:    [[FADD3:%.*]] = fadd fast float [[L3]], 1.400000e+01
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <4 x float> [[TMP1]], <float 1.100000e+01, float 1.200000e+01, float 1.300000e+01, float 1.400000e+01>
+; CHECK-NEXT:    [[FADD0:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[STRUCTIN0:%.*]] = insertvalue [[STRUCTTY:%.*]] undef, float [[FADD0]], 0
+; CHECK-NEXT:    [[FADD1:%.*]] = extractelement <4 x float> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[STRUCTIN1:%.*]] = insertvalue [[STRUCTTY]] [[STRUCTIN0]], float [[FADD1]], 1
 ; CHECK-NEXT:    [[RET0:%.*]] = insertvalue { [[STRUCTTY]], float, float } undef, [[STRUCTTY]] [[STRUCTIN1]], 0
+; CHECK-NEXT:    [[FADD2:%.*]] = extractelement <4 x float> [[TMP2]], i64 2
 ; CHECK-NEXT:    [[RET1:%.*]] = insertvalue { [[STRUCTTY]], float, float } [[RET0]], float [[FADD2]], 1
+; CHECK-NEXT:    [[FADD3:%.*]] = extractelement <4 x float> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[RET2:%.*]] = insertvalue { [[STRUCTTY]], float, float } [[RET1]], float [[FADD3]], 2
 ; CHECK-NEXT:    ret { [[STRUCTTY]], float, float } [[RET2]]
 ;

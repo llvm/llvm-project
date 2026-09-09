@@ -154,6 +154,8 @@ public:
   ProfileSummaryInfo *PSI;
   AAResults *AA;
 
+  bool CFGChanged = false;
+
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   LLVM_ABI void
   printPipeline(raw_ostream &OS,

@@ -4,6 +4,8 @@ config.library_dir = "@LIBOMPTARGET_LIBRARY_DIR@"
 config.unittest_dir = "@OFFLOAD_UNITTEST_DIR@"
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
 config.bin_llvm_tools_dir = "@LLVM_TOOLS_BINARY_DIR@"
+config.cuda_path = "@CUDA_ROOT@"
+config.operating_system = "@CMAKE_SYSTEM_NAME@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/unit/lit.cfg.py")

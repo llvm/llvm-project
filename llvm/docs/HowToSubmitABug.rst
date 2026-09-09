@@ -232,18 +232,8 @@ program is clean under various `sanitizers
 "LLVM bugs" that we have chased down ended up being bugs in the program being
 compiled, not LLVM.
 
-Once you determine that the program itself is not buggy, you should choose
-which code generator you wish to compile the program with (e.g., LLC or the JIT)
-and optionally a series of LLVM passes to run.  For example:
-
-.. code-block:: bash
-
-   bugpoint -run-llc [... optzn passes ...] file-to-test.bc --args -- [program arguments]
-
-bugpoint will try to narrow down your list of passes to the one pass that
-causes an error, and simplify the bitcode file as much as it can to assist
-you. It will print a message letting you know how to reproduce the
-resulting error.
-
-The :doc:`OptBisect <OptBisect>` page shows an alternative method for finding
-incorrect optimization passes.
+Once you determine that the program itself is not buggy, you should work on
+reducing the inputs required to reproduce the miscompilation. The
+:doc:`OptBisect <OptBisect>` page shows how to find the optimization pass
+causing the miscompile. You can use :doc:`llvm-reduce <CommandGuide/llvm-reduce>`
+to minimize the bitcode necessary to reproduce the miscompilation.
