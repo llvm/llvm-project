@@ -93,6 +93,7 @@ static int map_c_mode_flags_to_linux_open_flags(FileMode mode) {
   return open_flags;
 }
 
+// TODO: clean up
 static int mode_flags_to_open_flags(File::ModeFlags modeflags) {
   using ModeFlags = File::ModeFlags;
   int open_flags = 0;
@@ -118,11 +119,12 @@ static int mode_flags_to_open_flags(File::ModeFlags modeflags) {
 }
 
 ErrorOr<File *> openfile(const char *path, const char *mode) {
-  auto modeflags = File::mode_flags(mode);
-  if (modeflags == 0) {
+  FileMode file_mode(mode);
+
+  if (!file_mode.is_valid()) {
     return Error(EINVAL);
   }
-  int open_flags = mode_flags_to_open_flags(modeflags);
+  int open_flags = map_c_mode_flags_to_linux_open_flags(file_mode);
 
   // File created will have 0666 permissions.
   constexpr mode_t OPEN_MODE =
@@ -141,7 +143,7 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
   }
   AllocChecker ac;
   auto *file = new (ac) LinuxFile(fd.value(), buffer, File::DEFAULT_BUFFER_SIZE,
-                                  _IOFBF, true, modeflags);
+                                  _IOFBF, true, file_mode);
   if (!ac)
     return Error(ENOMEM);
   File::add_file(file);
