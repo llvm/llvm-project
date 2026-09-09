@@ -358,9 +358,10 @@ namespace {
 // memref support, look into unifying with it to improve code reuse.
 //
 /// Footprint of a memref value relative to a `root` memref reached through a
-/// chain of rank-preserving, unit-stride `memref.subview` ops: per `root`
-/// dimension, the `[offset, offset + size)` interval the value covers (a `size`
-/// may be dynamic). The root is the underlying buffer if the whole chain
+/// chain of rank-preserving `memref.subview` ops whose `strides` operand is all
+/// ones (so each result index steps one source element in every dimension): per
+/// `root` dimension, the `[offset, offset + size)` interval the value covers (a
+/// `size` may be dynamic). The root is the underlying buffer if the whole chain
 /// composes, otherwise the result of the first subview (walking toward the
 /// root) that cannot be composed. Two footprints are therefore comparable only
 /// when they resolve to the *same* root value.
@@ -373,11 +374,11 @@ struct SubviewFootprint {
 
 /// Resolve `base` through a `memref.subview` chain to a footprint, or
 /// `std::nullopt` if it cannot be modelled. Composition stops at the first
-/// subview with a dynamic offset, a non-unit stride, or a rank reduction; that
-/// subview's own result becomes the footprint root. This keeps two slices that
-/// share a common (possibly dynamically-offset) base comparable through their
-/// static offsets relative to that base. Sizes may be dynamic:
-/// such dimensions simply cannot be used to prove disjointness.
+/// subview with a dynamic offset, a `strides` operand other than all ones, or a
+/// rank reduction; that subview's own result becomes the footprint root. This
+/// keeps two slices that share a common (possibly dynamically-offset) base
+/// comparable through their static offsets relative to that base. Sizes may be
+/// dynamic: such dimensions simply cannot be used to prove disjointness.
 static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
   auto baseTy = dyn_cast<MemRefType>(base.getType());
   if (!baseTy)
@@ -392,8 +393,9 @@ static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
   while (auto sv = cur.getDefiningOp<SubViewOp>()) {
     ArrayRef<int64_t> staticOffsets = sv.getStaticOffsets();
     ArrayRef<int64_t> staticStrides = sv.getStaticStrides();
-    // Rank-reducing or non-static-offset / non-unit-stride subviews cannot be
-    // composed: stop here and use `sv`'s result as the root.
+    // Rank-reducing subviews, or those with a dynamic offset or a `strides`
+    // operand other than all ones, cannot be composed: stop here and use `sv`'s
+    // result as the root.
     if (sv.getSourceType().getRank() != sv.getType().getRank() ||
         llvm::any_of(staticOffsets, ShapedType::isDynamic) ||
         llvm::any_of(staticStrides, [](int64_t s) { return s != 1; }))
@@ -436,13 +438,13 @@ bool hasNoAliasingAccessInScope(Value base, Operation *scope,
   auto baseMemref = dyn_cast<MemrefValue>(base);
   if (!baseMemref)
     return false;
-  Value buffer = skipViewLikeOps(baseMemref);
+  Value rootBuffer = skipViewLikeOps(baseMemref);
   // Footprint of `base`, if modellable; enables the disjointness escape.
   std::optional<SubviewFootprint> baseFp = resolveSubviewFootprint(base);
 
-  // Visit the transitive users of the buffer, following views.
-  SmallVector<Operation *> worklist(buffer.getUsers().begin(),
-                                    buffer.getUsers().end());
+  // Visit the transitive users of the root buffer, following views.
+  SmallVector<Operation *> worklist(rootBuffer.getUsers().begin(),
+                                    rootBuffer.getUsers().end());
   SmallPtrSet<Operation *, 8> processed;
   while (!worklist.empty()) {
     Operation *user = worklist.pop_back_val();
@@ -459,11 +461,11 @@ bool hasNoAliasingAccessInScope(Value base, Operation *scope,
     if (!scope->isAncestor(user))
       continue;
     // In-`scope`, memory-effecting op: each of its operands that resolves to
-    // the buffer conflicts unless it is a provably-disjoint slice or (when
+    // the root buffer conflicts unless it is a provably-disjoint slice or (when
     // allowed) is only read.
     for (Value operand : user->getOperands()) {
       auto slice = dyn_cast<MemrefValue>(operand);
-      if (!slice || skipViewLikeOps(slice) != buffer)
+      if (!slice || skipViewLikeOps(slice) != rootBuffer)
         continue;
       if (baseFp) {
         std::optional<SubviewFootprint> sliceFp =
