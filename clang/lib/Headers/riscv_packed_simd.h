@@ -312,6 +312,17 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __builtin_bit_cast(rty, __x);                                       \
   }
 
+#define __packed_insert(name, ty, elt_ty, max_idx)                             \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __v, elt_ty __e,   \
+                                                         unsigned __idx)       \
+      __attribute__((__enable_if__(                                            \
+          __idx <= (max_idx),                                                  \
+          "index must be a constant integer from 0 to " #max_idx))) {          \
+    ty __r = __v;                                                              \
+    __r[__idx] = __e;                                                          \
+    return __r;                                                                \
+  }
+
 // clang-format off: macro call sites have no trailing semicolons, which
 // confuses clang-format into a deeply nested expression.
 
@@ -564,6 +575,20 @@ __packed_binary_builtin_mixed(psshl_s_u16x4, uint16x4_t, uint16x4_t, int, __buil
 __packed_binary_builtin_mixed(psshl_s_u32x2, uint32x2_t, uint32x2_t, int, __builtin_riscv_psshl_s_u32x2)
 __packed_binary_builtin_mixed(psshlr_s_u16x4, uint16x4_t, uint16x4_t, int, __builtin_riscv_psshlr_s_u16x4)
 __packed_binary_builtin_mixed(psshlr_s_u32x2, uint32x2_t, uint32x2_t, int, __builtin_riscv_psshlr_s_u32x2)
+
+/* Packed Element Insert (32-bit) */
+__packed_insert(pset_i8_i8x4, int8x4_t, int8_t, 3)
+__packed_insert(pset_u8_u8x4, uint8x4_t, uint8_t, 3)
+__packed_insert(pset_i16_i16x2, int16x2_t, int16_t, 1)
+__packed_insert(pset_u16_u16x2, uint16x2_t, uint16_t, 1)
+
+/* Packed Element Insert (64-bit) */
+__packed_insert(pset_i8_i8x8, int8x8_t, int8_t, 7)
+__packed_insert(pset_u8_u8x8, uint8x8_t, uint8_t, 7)
+__packed_insert(pset_i16_i16x4, int16x4_t, int16_t, 3)
+__packed_insert(pset_u16_u16x4, uint16x4_t, uint16_t, 3)
+__packed_insert(pset_i32_i32x2, int32x2_t, int32_t, 1)
+__packed_insert(pset_u32_u32x2, uint32x2_t, uint32_t, 1)
 
 /* Packed Logical Operations (32-bit) */
 __packed_binary_op(pand_i8x4, int8x4_t, &)
@@ -1161,6 +1186,7 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_abdsum
 #undef __packed_ternary_builtin_cast
 #undef __packed_extract
+#undef __packed_insert
 #undef __packed_reinterpret
 #undef __DEFAULT_FN_ATTRS
 
