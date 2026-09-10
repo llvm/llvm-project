@@ -2294,10 +2294,11 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 
   /// Hash the underlying data of \p Def.
   static unsigned getHashValue(const VPSingleDefRecipe *Def) {
-    hash_code Result = hash_combine(
-        Def->getVPRecipeID(), vputils::getOpcodeOrIntrinsicID(Def),
-        getGEPSourceElementType(Def), Def->getScalarType(),
-        vputils::isSingleScalar(Def), hash_combine_range(Def->operands()));
+    hash_code Result =
+        hash_combine(Def->getVPRecipeID(), vputils::getOpcodeOrIntrinsicID(Def),
+                     getGEPSourceElementType(Def), Def->getScalarType(),
+                     vputils::doesGenerateSingleScalar(Def),
+                     hash_combine_range(Def->operands()));
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
       if (RFlags->hasPredicate())
         return hash_combine(Result, RFlags->getPredicate());
@@ -2316,7 +2317,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         vputils::getOpcodeOrIntrinsicID(L) !=
             vputils::getOpcodeOrIntrinsicID(R) ||
         getGEPSourceElementType(L) != getGEPSourceElementType(R) ||
-        vputils::isSingleScalar(L) != vputils::isSingleScalar(R) ||
+        vputils::doesGenerateSingleScalar(L) !=
+            vputils::doesGenerateSingleScalar(R) ||
         !equal(L->operands(), R->operands()))
       return false;
     assert(vputils::getOpcodeOrIntrinsicID(L) &&
