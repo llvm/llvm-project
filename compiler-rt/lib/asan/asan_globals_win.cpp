@@ -12,6 +12,7 @@
 
 #include "asan_interface_internal.h"
 #if SANITIZER_WINDOWS
+#  include "asan_win_common_runtime_thunk.h"
 #  include "sanitizer_common/sanitizer_win_defs.h"
 
 namespace __asan {

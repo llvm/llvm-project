@@ -24,6 +24,7 @@
 #  include "asan_report.h"
 #  include "asan_stack.h"
 #  include "asan_thread.h"
+#  include "asan_win_common_runtime_thunk.h"
 #  include "sanitizer_common/sanitizer_libc.h"
 #  include "sanitizer_common/sanitizer_mutex.h"
 #  include "sanitizer_common/sanitizer_win.h"
@@ -413,8 +414,6 @@ static void NTAPI asan_thread_exit(void *module, DWORD reason, void *reserved) {
 #pragma section(".CRT$XLY", long, read)
 IN_SECTION(".CRT$XLY")
 void(NTAPI* __asan_tls_exit)(void*, unsigned long, void*) = asan_thread_exit;
-
-extern "C" void (*const __asan_dso_reg_hook)();
 
 WIN_FORCE_LINK(__asan_dso_reg_hook)
 
