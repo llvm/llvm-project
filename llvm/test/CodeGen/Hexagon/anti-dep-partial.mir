@@ -1,5 +1,4 @@
 # RUN: llc -mtriple=hexagon -post-RA-scheduler -run-pass post-RA-sched %s -o - | FileCheck %s
-# RUN: llc -mtriple=hexagon -post-RA-scheduler -passes=post-RA-sched %s -o - | FileCheck %s
 
 --- |
   declare void @check(i64, i32, i32, i64)
@@ -16,8 +15,6 @@ body: |
     successors:
     liveins: $r0, $r1, $d1, $d2, $r16, $r17, $r19, $r22, $r23
         $r2 = A2_add $r23, killed $r17
-        ; PSEUDO_PROBE has no SUnit and must be ignored by the breaker.
-        PSEUDO_PROBE 1, 1, 0, 0
         $r6 = M2_mpyi $r16, $r16
         $r22 = M2_accii $r22, killed $r2, 2
         $r7 = A2_tfrsi 12345678
@@ -30,7 +27,6 @@ body: |
         ; The anti-dependency on r23 between the first A2_add and the
         ; S2_asr_i_r was causing d11 to be renamed, while r22 remained
         ; unchanged. Check that the renaming of d11 does not happen.
-        ; CHECK: PSEUDO_PROBE 1, 1, 0, 0
         ; CHECK: d11
         $d0 = A2_tfrp killed $d11
         J2_call @check, implicit-def $d0, implicit-def $d1, implicit-def $d2, implicit $d0, implicit $d1, implicit $d2

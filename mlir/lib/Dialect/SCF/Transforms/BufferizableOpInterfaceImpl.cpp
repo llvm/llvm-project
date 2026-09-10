@@ -763,8 +763,7 @@ struct ForOpInterface
         rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), castedInitArgs, /*bodyBuilder=*/nullptr,
         forOp.getUnsignedCmp());
-    newForOp->setDiscardableAttrs(
-        forOp->getDiscardableAttrDictionary().getValue());
+    newForOp->setAttrs(forOp->getAttrs());
     Block *loopBody = newForOp.getBody();
 
     // Set up new iter_args. The loop body uses tensors, so wrap the (memref)

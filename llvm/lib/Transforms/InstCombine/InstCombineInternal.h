@@ -119,9 +119,7 @@ public:
   Instruction *visitUDiv(BinaryOperator &I);
   Instruction *visitSDiv(BinaryOperator &I);
   Instruction *visitFDiv(BinaryOperator &I);
-  Value *simplifyRangeCheck(CmpPredicate PredL, Value *LHS0, Value *LHS1,
-                            CmpPredicate PredR, Value *RHS0, Value *RHS1,
-                            Instruction *CxtI, bool Inverted);
+  Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
   Instruction *FoldOrOfLogicalAnds(Value *Op0, Value *Op1);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
@@ -408,16 +406,14 @@ private:
                                             const CastInst *CI2);
   Value *simplifyIntToPtrRoundTripCast(Value *Val);
 
-  Value *foldAndOrOfICmps(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
-                          bool IsLogical = false);
+  Value *foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction &I,
+                          bool IsAnd, bool IsLogical = false);
   Value *foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Xor);
 
   Value *foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd);
 
-  Value *foldAndOrOfICmpsUsingRanges(CmpPredicate PredL, Value *LHS0,
-                                     Value *LHS1, bool LHSOneUse,
-                                     CmpPredicate PredR, Value *RHS0,
-                                     Value *RHS1, bool RHSOneUse, bool IsAnd);
+  Value *foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
+                                     bool IsAnd);
 
   /// Optimize (fcmp)&(fcmp) or (fcmp)|(fcmp).
   /// NOTE: Unlike most of instcombine, this returns a Value which should

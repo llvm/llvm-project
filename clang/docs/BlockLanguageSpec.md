@@ -3,6 +3,9 @@
 
 # Language Specification for Blocks
 
+```{contents}
+:local: true
+```
 
 ## Revisions
 

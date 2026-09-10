@@ -17,12 +17,10 @@
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
@@ -44,8 +42,6 @@ protected:
   std::unique_ptr<ScalarEvolution> SE;
   std::unique_ptr<TargetLibraryInfoImpl> TLII;
   std::unique_ptr<TargetLibraryInfo> TLI;
-  std::unique_ptr<CycleInfo> CI;
-  std::unique_ptr<BranchProbabilityInfo> BPI;
 
   MapVector<PHINode *, InductionDescriptor> Inductions;
 
@@ -69,9 +65,6 @@ protected:
     LI.reset(new LoopInfo(*DT));
     AC.reset(new AssumptionCache(F));
     SE.reset(new ScalarEvolution(F, *TLI, *AC, *DT, *LI));
-    CI.reset(new CycleInfo());
-    CI->compute(F);
-    BPI.reset(new BranchProbabilityInfo(F, *CI, TLI.get(), DT.get()));
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
@@ -84,9 +77,8 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlanTransforms::buildVPlan0(
-        L, *LI, IntegerType::get(*Ctx, 64), PSE, /*LVer=*/nullptr,
-        [this]() -> const BranchProbabilityInfo & { return *BPI; });
+    auto Plan =
+        VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64), PSE);
 
     if (Style) {
       Inductions.clear();

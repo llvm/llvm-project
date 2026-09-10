@@ -17,9 +17,7 @@ class TestDAP_ubsan(DAPTestCaseBase):
         session = self.build_and_create_session()
         process_event = session.launch(LaunchArgs(program))
         stop_event = session.verify_stopped_on_exception(
-            after=process_event,
-            expected_description=r"Out of bounds index",
-            expected_text=r"^UndefinedBehaviorSanitizer$",
+            after=process_event, expected_description=r"Out of bounds index"
         )
 
         thread_id = self.expect_not_none(stop_event.body.threadId)

@@ -208,14 +208,19 @@ public:
   LLVM_ABI bool isScalableTargetExtTy() const;
 
   /// Return true if this is a type whose size is a known multiple of vscale.
+  LLVM_ABI bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   LLVM_ABI bool isScalableTy() const;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a global.
+  LLVM_ABI bool
+  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
   LLVM_ABI bool containsNonGlobalTargetExtType() const;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a local.
+  LLVM_ABI bool
+  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
   LLVM_ABI bool containsNonLocalTargetExtType() const;
 
   /// Return true if this is a FP type or a vector of FP.
@@ -318,7 +323,7 @@ public:
   /// Return true if it makes sense to take the size of this type. To get the
   /// actual size for a particular target, it is reasonable to use the
   /// DataLayout subsystem to do this.
-  bool isSized() const {
+  bool isSized(SmallPtrSetImpl<Type*> *Visited = nullptr) const {
     // If it's a primitive, it is always sized.
     if (getTypeID() == IntegerTyID || isFloatingPointTy() ||
         getTypeID() == PointerTyID || getTypeID() == X86_AMXTyID ||
@@ -330,7 +335,7 @@ public:
         !isVectorTy() && getTypeID() != TargetExtTyID)
       return false;
     // Otherwise we have to try harder to decide.
-    return isSizedDerivedType();
+    return isSizedDerivedType(Visited);
   }
 
   /// Return the basic size of this type if it is a primitive type. These are
@@ -519,7 +524,8 @@ private:
   /// Derived types like structures and arrays are sized iff all of the members
   /// of the type are sized as well. Since asking for their size is relatively
   /// uncommon, move this operation out-of-line.
-  LLVM_ABI bool isSizedDerivedType() const;
+  LLVM_ABI bool
+  isSizedDerivedType(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 };
 
 // Printing of types.

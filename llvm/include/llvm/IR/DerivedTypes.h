@@ -354,18 +354,23 @@ public:
   bool isOpaque() const { return (getSubclassData() & SCDB_HasBody) == 0; }
 
   /// isSized - Return true if this is a sized type.
-  LLVM_ABI bool isSized() const;
+  LLVM_ABI bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
   /// Returns true if this struct contains a scalable vector.
-  LLVM_ABI bool isScalableTy() const;
+  LLVM_ABI bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::isScalableTy;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a global.
-  LLVM_ABI bool containsNonGlobalTargetExtType() const;
+  LLVM_ABI bool
+  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::containsNonGlobalTargetExtType;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a local.
-  LLVM_ABI bool containsNonLocalTargetExtType() const;
+  LLVM_ABI bool
+  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::containsNonLocalTargetExtType;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not

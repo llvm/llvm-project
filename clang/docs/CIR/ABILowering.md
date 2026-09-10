@@ -1,5 +1,8 @@
 # ClangIR ABI Lowering Design Document
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

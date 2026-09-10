@@ -19,7 +19,6 @@ def AddrSpaces {
   int Constant = 4;
   int Private = 5;
   int Constant32Bit = 6;
-  int VGPR = 13;
 }
 
 

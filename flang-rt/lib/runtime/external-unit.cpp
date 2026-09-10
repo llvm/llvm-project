@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "unit-map.h"
+#include "unit.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/tools.h"

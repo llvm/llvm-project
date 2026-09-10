@@ -1,5 +1,8 @@
 # Sanitizer special case list
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

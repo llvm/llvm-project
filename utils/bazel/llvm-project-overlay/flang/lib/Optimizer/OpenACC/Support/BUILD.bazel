@@ -45,7 +45,6 @@ cc_library(
         "//mlir:ArithDialect",
         "//mlir:ControlFlowInterfaces",
         "//mlir:IR",
-        "//mlir:LLVMDialect",
         "//mlir:OpenACCDialect",
         "//mlir:OpenACCUtils",
         "//mlir:Support",

@@ -42,7 +42,6 @@ unittest("CodeGenTests") {
     "PassManagerTest.cpp",
     "RegAllocBasicTest.cpp",
     "RegAllocScoreTest.cpp",
-    "RegisterPressureTest.cpp",
     "RegisterTest.cpp",
     "RematerializerTest.cpp",
     "ScalableVectorMVTsTest.cpp",

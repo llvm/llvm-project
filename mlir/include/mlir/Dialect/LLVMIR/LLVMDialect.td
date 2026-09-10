@@ -20,7 +20,6 @@ def LLVM_Dialect : Dialect {
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 
   let discardableAttrs = (ins
     /// Attribute encoding size and type of GPU workgroup attributions.
@@ -55,7 +54,6 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
     static StringRef getNoCaptureAttrName() { return "llvm.nocapture"; }
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
-    static StringRef getNoFreeObjAttrName() { return "llvm.nofreeobj"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
     static StringRef getPreallocatedAttrName() { return "llvm.preallocated"; }
     static StringRef getRangeAttrName() { return "llvm.range"; }

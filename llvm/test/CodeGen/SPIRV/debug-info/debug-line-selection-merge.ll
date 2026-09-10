@@ -26,7 +26,6 @@
 ; CHECK-NEXT: OpFunctionParameter
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF]] [[FN]]
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V3]] [[V3]] [[V10]] [[V11]]
 ; CHECK-NEXT: OpSLessThan
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V99]] [[V99]] [[V50]] [[V51]]
@@ -35,14 +34,12 @@
 
 ; else
 ; CHECK:      OpLabel
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V6]] [[V6]] [[V5]] [[V6]]
 ; CHECK-NEXT: OpISub
 ; CHECK-NEXT: OpBranch
 
 ; then
 ; CHECK:      OpLabel
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V4]] [[V4]] [[V5]] [[V6]]
 ; CHECK-NEXT: OpIAdd
 ; CHECK-NEXT: OpBranch
@@ -50,7 +47,6 @@
 ; merge
 ; CHECK:      OpLabel
 ; CHECK-NEXT: [[PHI:%[0-9]+]] = OpPhi [[I32]]
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V9]] [[V9]] [[V3]] [[V4]]
 ; CHECK-NEXT: OpReturnValue [[PHI]]
 ; CHECK-NEXT: OpFunctionEnd

@@ -10,6 +10,9 @@ These checkers are under development and are switched off by default. They may c
 
 The {ref}`debug-checkers` package contains checkers for analyzer developers for debugging purposes.
 
+```{contents} Table of Contents
+:depth: 4
+```
 
 (default-checkers)=
 

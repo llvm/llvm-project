@@ -619,7 +619,7 @@ void NativeProcessProtocol::FixupBreakpointPCAsNeeded(
     // We didn't find one at a software probe location.  Nothing to do.
     LLDB_LOG(log,
              "pid {0} no lldb software breakpoint found at current pc with "
-             "adjustment: {1:x}",
+             "adjustment: {1}",
              GetID(), breakpoint_addr);
     return;
   }

@@ -23,9 +23,7 @@ else()
 endif()
 
 get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
-if(NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
-  export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
-endif()
+export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
 
 # Generate ClangConfig.cmake for the build tree.
 set(CLANG_CONFIG_CMAKE_DIR "${clang_cmake_builddir}")
@@ -77,8 +75,7 @@ configure_file(
 set(CLANG_CONFIG_CODE)
 set(CLANG_CONFIG_CMAKE_DIR)
 
-if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND
-    NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install_distribution_exports(Clang)
 
   install(FILES

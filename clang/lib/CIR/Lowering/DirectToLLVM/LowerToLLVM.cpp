@@ -1255,7 +1255,7 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
   llvm::StringRef llvmSyncScope = getLLVMSyncScope(adaptor.getSyncScope());
   rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
       op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
-      llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
+      llvmOrder, llvmSyncScope);
   return mlir::success();
 }
 
@@ -1453,7 +1453,7 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
       getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
   auto rmwVal = mlir::LLVM::AtomicRMWOp::create(
       rewriter, op.getLoc(), llvmBinOp, adaptor.getPtr(), adaptor.getVal(),
-      llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
+      llvmOrder, llvmSyncScope);
 
   mlir::Value result = rmwVal.getResult();
   if (!op.getFetchFirst()) {
@@ -2373,9 +2373,11 @@ cir::direct::CIRToLLVMVecMaskedLoadOpLowering::matchAndRewrite(
   unsigned alignment =
       (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmResTy));
 
+  mlir::IntegerAttr alignAttr = rewriter.getI32IntegerAttr(alignment);
+
   auto newLoad = mlir::LLVM::MaskedLoadOp::create(
       rewriter, op.getLoc(), llvmResTy, adaptor.getAddr(), adaptor.getMask(),
-      adaptor.getPassThru(), alignment);
+      adaptor.getPassThru(), alignAttr);
 
   rewriter.replaceOp(op, newLoad.getResult());
   return mlir::success();

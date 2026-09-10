@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 // FIXME: These duplicate real SubtargetFeatures and should be unified
-// (e.g. R600_FEATURE_FMA mirrors FeatureFMA).
+// (e.g. FEATURE_XNACK mirrors FeatureXNACK).
 class AMDGPUArchFeature<string spelling> {
   string Spelling = spelling;
 }

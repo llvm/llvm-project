@@ -13,7 +13,7 @@
 /// Replaces the trailing X's with random characters from the POSIX portable
 /// filename character set, opens the file exclusively, and returns an open
 /// file descriptor, retrying automatically on name collision. See:
-/// https://pubs.opengroup.org/onlinepubs/9799919799/functions/mkstemp.html
+/// https://pubs.opengroup.org/onlinepubs/9799919799/functions/mkdtemp.html
 ///
 //===----------------------------------------------------------------------===//
 

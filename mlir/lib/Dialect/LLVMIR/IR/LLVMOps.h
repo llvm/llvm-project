@@ -18,15 +18,6 @@ namespace mlir::LLVM {
 mlir::Type getI1SameShape(mlir::Type type);
 mlir::LLVM::LLVMStructType getValAndBoolStructType(mlir::Type valType);
 
-mlir::ParseResult parseCmpPredicate(mlir::OpAsmParser &parser,
-                                    mlir::LLVM::ICmpPredicateAttr &predicate);
-mlir::ParseResult parseCmpPredicate(mlir::OpAsmParser &parser,
-                                    mlir::LLVM::FCmpPredicateAttr &predicate);
-void printCmpPredicate(mlir::OpAsmPrinter &printer, mlir::Operation *,
-                       mlir::LLVM::ICmpPredicateAttr predicate);
-void printCmpPredicate(mlir::OpAsmPrinter &printer, mlir::Operation *,
-                       mlir::LLVM::FCmpPredicateAttr predicate);
-
 void printLLVMLinkage(mlir::OpAsmPrinter &p, mlir::Operation *,
                       mlir::LLVM::LinkageAttr val);
 mlir::ParseResult parseLLVMLinkage(mlir::OpAsmParser &p,

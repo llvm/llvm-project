@@ -1,6 +1,7 @@
 include(MLIRCheckHardwareFeatures)
 
 add_subdirectory(CAPI)
+add_subdirectory(lib)
 
 if (MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(python)

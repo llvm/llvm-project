@@ -1,5 +1,8 @@
 # "Clang" CFE Internals Manual
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

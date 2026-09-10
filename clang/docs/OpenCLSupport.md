@@ -6,6 +6,9 @@
 </style>
 ```
 
+```{contents}
+:local:
+```
 
 # OpenCL Support
 

@@ -16,7 +16,6 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Remark/LLVMRemarkImport.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -243,16 +242,9 @@ ModuleToObject::moduleToObject(llvm::Module &llvmModule) {
   return binaryData;
 }
 
-void ModuleToObject::setupLLVMContext(llvm::LLVMContext &llvmContext) {
-  llvmContext.setDiagnosticHandler(
-      std::make_unique<remark::LLVMToMLIRDiagnosticHandler>(&getOperation()),
-      /*RespectFilters=*/true);
-}
-
 std::optional<SmallVector<char, 0>> ModuleToObject::run() {
   // Translate the module to LLVM IR.
   llvm::LLVMContext llvmContext;
-  setupLLVMContext(llvmContext);
   std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
   if (!llvmModule) {
     getOperation().emitError() << "Failed creating the llvm::Module.";

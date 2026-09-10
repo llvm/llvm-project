@@ -1,5 +1,8 @@
 # RealtimeSanitizer
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

@@ -21,7 +21,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -45,11 +44,6 @@ static cl::opt<bool> X86StripRedundantAddressSize(
     "x86-strip-redundant-address-size",
     cl::desc("Remove redundant Address-Size override prefix"), cl::init(true),
     cl::cat(BoltOptCategory));
-
-cl::opt<bool>
-    X86ICPPIC("x86-icp-pic",
-              cl::desc("force x86 ICP to use PC-relative LEA target checks"),
-              cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -385,7 +379,7 @@ public:
     return MCII.mayStore();
   }
 
-  bool isCleanReg(const MCInst &Inst) const override {
+  bool isCleanRegXOR(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case X86::XOR16rr:
     case X86::XOR32rr:
@@ -3306,9 +3300,6 @@ public:
       const bool MinimizeCodeSize, MCContext *Ctx) override {
     const bool IsTailCall = isTailCall(CallInst);
     const bool IsJumpTable = getJumpTable(CallInst) != 0;
-    const bool UsePIC =
-        !IsJumpTable &&
-        (Ctx->getObjectFileInfo()->isPositionIndependent() || opts::X86ICPPIC);
     BlocksVectorTy Results;
 
     // Label for the current code block.
@@ -3325,8 +3316,7 @@ public:
            "There must be a vtable entry for every method "
            "in the targets vector.");
 
-    // PIC mode uses an extra lea instruction and a register.
-    if (UsePIC || (MinimizeCodeSize && !LoadElim)) {
+    if (MinimizeCodeSize && !LoadElim) {
       std::set<unsigned> UsedRegs;
 
       for (unsigned int I = 0; I < MCPlus::getNumPrimeOperands(CallInst); ++I) {
@@ -3334,22 +3324,11 @@ public:
         if (Op.isReg())
           UsedRegs.insert(Op.getReg());
       }
-      if (UsePIC) {
-        for (const MCInst *Inst : MethodFetchInsns)
-          for (const MCOperand &Op : *Inst)
-            if (Op.isReg())
-              UsedRegs.insert(Op.getReg());
-      }
-      // R10 and R11 are caller-saved under the x86-64 ABI, so the promoted
-      // sequence does not need to restore the selected scratch register after
-      // the call. Prefer R11 in PIC mode because R10 may carry the nest
-      // argument.
-      const MCPhysReg FirstReg = UsePIC ? X86::R11 : X86::R10;
-      const MCPhysReg SecondReg = UsePIC ? X86::R10 : X86::R11;
-      if (UsedRegs.count(FirstReg) == 0)
-        FuncAddrReg = FirstReg;
-      else if (UsedRegs.count(SecondReg) == 0)
-        FuncAddrReg = SecondReg;
+
+      if (UsedRegs.count(X86::R10) == 0)
+        FuncAddrReg = X86::R10;
+      else if (UsedRegs.count(X86::R11) == 0)
+        FuncAddrReg = X86::R11;
       else
         return Results;
     }
@@ -3366,41 +3345,7 @@ public:
       Results.emplace_back(NextTarget, InstructionListType());
       InstructionListType *NewCall = &Results.back().second;
 
-      if (UsePIC) {
-        assert(Targets[i].first && "PIC ICP target must have a symbol");
-        const MCSymbol *Sym = LoadElim ? VtableSyms[i].first : Targets[i].first;
-        const uint64_t Addend = LoadElim ? VtableSyms[i].second : 0;
-
-        NewCall->push_back(CallInst);
-        MCInst &Target = NewCall->back();
-        Target.clear();
-        createLea(Target, Sym, FuncAddrReg, Ctx);
-        if (Addend) {
-          const MCExpr *Expr = MCBinaryExpr::createAdd(
-              MCSymbolRefExpr::create(Sym, *Ctx),
-              MCConstantExpr::create(Addend, *Ctx), *Ctx);
-          Target.getOperand(4) = MCOperand::createExpr(Expr);
-        }
-
-        NewCall->push_back(CallInst);
-        MCInst &Compare = NewCall->back();
-        Compare.clear();
-        if (isBranchOnReg(CallInst)) {
-          Compare.setOpcode(X86::CMP64rr);
-          for (unsigned I = 0;
-               I < Info->get(CallInst.getOpcode()).getNumOperands(); ++I)
-            if (!CallInst.getOperand(I).isInst())
-              Compare.addOperand(CallInst.getOperand(I));
-          Compare.addOperand(MCOperand::createReg(FuncAddrReg));
-        } else {
-          Compare.setOpcode(X86::CMP64mr);
-          for (unsigned I = 0;
-               I < Info->get(CallInst.getOpcode()).getNumOperands(); ++I)
-            if (!CallInst.getOperand(I).isInst())
-              Compare.addOperand(CallInst.getOperand(I));
-          Compare.addOperand(MCOperand::createReg(FuncAddrReg));
-        }
-      } else if (MinimizeCodeSize && !LoadElim) {
+      if (MinimizeCodeSize && !LoadElim) {
         // Load the call target into FuncAddrReg.
         NewCall->push_back(CallInst); // Copy CallInst in order to get SMLoc
         MCInst &Target = NewCall->back();

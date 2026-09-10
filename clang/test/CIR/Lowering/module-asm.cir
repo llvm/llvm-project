@@ -3,7 +3,6 @@
 
 // RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o %t.ll %s
 // RUN: FileCheck -check-prefix=LLVM --input-file=%t.ll %s
-// REQUIRES: target={{x86_64-linux}}
 
 // CHECK: llvm.module_asm =  [".globl bar", ".globl foo"]
 // LLVM: module asm

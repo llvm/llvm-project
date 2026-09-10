@@ -58,39 +58,49 @@ bool Type::isByteTy(unsigned BitWidth) const {
   return isByteTy() && cast<ByteType>(this)->getBitWidth() == BitWidth;
 }
 
-bool Type::isScalableTy() const {
-  switch (getTypeID()) {
-  case ScalableVectorTyID:
-    return true;
-  case TargetExtTyID:
-    return isScalableTargetExtTy();
-  case ArrayTyID:
-    return cast<ArrayType>(this)->getElementType()->isScalableTy();
-  case StructTyID:
-    return cast<StructType>(this)->isScalableTy();
-  default:
-    return false;
-  }
+bool Type::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->isScalableTy(Visited);
+  if (const auto *STy = dyn_cast<StructType>(this))
+    return STy->isScalableTy(Visited);
+  return getTypeID() == ScalableVectorTyID || isScalableTargetExtTy();
 }
 
-bool Type::containsNonGlobalTargetExtType() const {
+bool Type::isScalableTy() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return isScalableTy(Visited);
+}
+
+bool Type::containsNonGlobalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->containsNonGlobalTargetExtType();
+    return ATy->getElementType()->containsNonGlobalTargetExtType(Visited);
   if (const auto *STy = dyn_cast<StructType>(this))
-    return STy->containsNonGlobalTargetExtType();
+    return STy->containsNonGlobalTargetExtType(Visited);
   if (auto *TT = dyn_cast<TargetExtType>(this))
     return !TT->hasProperty(TargetExtType::CanBeGlobal);
   return false;
 }
 
-bool Type::containsNonLocalTargetExtType() const {
+bool Type::containsNonGlobalTargetExtType() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return containsNonGlobalTargetExtType(Visited);
+}
+
+bool Type::containsNonLocalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->containsNonLocalTargetExtType();
+    return ATy->getElementType()->containsNonLocalTargetExtType(Visited);
   if (const auto *STy = dyn_cast<StructType>(this))
-    return STy->containsNonLocalTargetExtType();
+    return STy->containsNonLocalTargetExtType(Visited);
   if (auto *TT = dyn_cast<TargetExtType>(this))
     return !TT->hasProperty(TargetExtType::CanBeLocal);
   return false;
+}
+
+bool Type::containsNonLocalTargetExtType() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return containsNonLocalTargetExtType(Visited);
 }
 
 const fltSemantics &Type::getFltSemantics() const {
@@ -252,17 +262,17 @@ bool Type::isFirstClassType() const {
   }
 }
 
-bool Type::isSizedDerivedType() const {
+bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
   if (auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->isSized();
+    return ATy->getElementType()->isSized(Visited);
 
   if (auto *VTy = dyn_cast<VectorType>(this))
-    return VTy->getElementType()->isSized();
+    return VTy->getElementType()->isSized(Visited);
 
   if (auto *TTy = dyn_cast<TargetExtType>(this))
-    return TTy->getLayoutType()->isSized();
+    return TTy->getLayoutType()->isSized(Visited);
 
-  return cast<StructType>(this)->isSized();
+  return cast<StructType>(this)->isSized(Visited);
 }
 
 //===----------------------------------------------------------------------===//
@@ -491,15 +501,18 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   return ST;
 }
 
-bool StructType::isScalableTy() const {
+bool StructType::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   if ((getSubclassData() & SCDB_ContainsScalableVector) != 0)
     return true;
 
   if ((getSubclassData() & SCDB_NotContainsScalableVector) != 0)
     return false;
 
+  if (!Visited.insert(this).second)
+    return false;
+
   for (Type *Ty : elements()) {
-    if (Ty->isScalableTy()) {
+    if (Ty->isScalableTy(Visited)) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsScalableVector);
       return true;
@@ -515,15 +528,19 @@ bool StructType::isScalableTy() const {
   return false;
 }
 
-bool StructType::containsNonGlobalTargetExtType() const {
+bool StructType::containsNonGlobalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
   if ((getSubclassData() & SCDB_ContainsNonGlobalTargetExtType) != 0)
     return true;
 
   if ((getSubclassData() & SCDB_NotContainsNonGlobalTargetExtType) != 0)
     return false;
 
+  if (!Visited.insert(this).second)
+    return false;
+
   for (Type *Ty : elements()) {
-    if (Ty->containsNonGlobalTargetExtType()) {
+    if (Ty->containsNonGlobalTargetExtType(Visited)) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsNonGlobalTargetExtType);
       return true;
@@ -539,15 +556,19 @@ bool StructType::containsNonGlobalTargetExtType() const {
   return false;
 }
 
-bool StructType::containsNonLocalTargetExtType() const {
+bool StructType::containsNonLocalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
   if ((getSubclassData() & SCDB_ContainsNonLocalTargetExtType) != 0)
     return true;
 
   if ((getSubclassData() & SCDB_NotContainsNonLocalTargetExtType) != 0)
     return false;
 
+  if (!Visited.insert(this).second)
+    return false;
+
   for (Type *Ty : elements()) {
-    if (Ty->containsNonLocalTargetExtType()) {
+    if (Ty->containsNonLocalTargetExtType(Visited)) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsNonLocalTargetExtType);
       return true;
@@ -698,10 +719,13 @@ StructType *StructType::create(ArrayRef<Type*> Elements) {
   return create(Elements[0]->getContext(), Elements, StringRef());
 }
 
-bool StructType::isSized() const {
+bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
   if ((getSubclassData() & SCDB_IsSized) != 0)
     return true;
   if (isOpaque())
+    return false;
+
+  if (Visited && !Visited->insert(const_cast<StructType*>(this)).second)
     return false;
 
   // Okay, our struct is sized if all of the elements are, but if one of the
@@ -721,7 +745,7 @@ bool StructType::isSized() const {
     // types and is handled by the if-statement before this for-loop.
     if (Ty->isScalableTy())
       return false;
-    if (!Ty->isSized())
+    if (!Ty->isSized(Visited))
       return false;
   }
 
@@ -1084,11 +1108,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
         TargetExtType::CanBeGlobal);
   if (Name.starts_with("dx."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
-                          TargetExtType::CanBeLocal);
+                          TargetExtType::CanBeLocal,
+                          TargetExtType::IsTokenLike);
 
   // Opaque types in the AMDGPU name space.
-  // NOTE: If the size of the type is changed, it must be also updated in
-  // AMDGPUMemoryUtils.h !
   if (Name == "amdgcn.named.barrier") {
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
                           TargetExtType::CanBeGlobal);

@@ -1,5 +1,8 @@
 # ClangIR Cleanup and Exception Handling Design
 
+```{contents}
+:local: true
+```
 
 ## Overview
 

@@ -62,8 +62,6 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(RegisterId)
 LLVM_YAML_DECLARE_ENUM_TRAITS(TrampolineType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
 LLVM_YAML_DECLARE_ENUM_TRAITS(JumpTableEntrySize)
-LLVM_YAML_DECLARE_ENUM_TRAITS(SourceLanguage)
-LLVM_YAML_DECLARE_ENUM_TRAITS(EncodedFramePtrReg)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
@@ -205,22 +203,6 @@ void ScalarEnumerationTraits<JumpTableEntrySize>::enumeration(
   auto ThunkNames = getJumpTableEntrySizeNames();
   for (const auto &E : ThunkNames) {
     io.enumCase(FC, E.name(), static_cast<JumpTableEntrySize>(E.value()));
-  }
-}
-
-void ScalarEnumerationTraits<SourceLanguage>::enumeration(IO &IO,
-                                                          SourceLanguage &L) {
-  auto Names = getSourceLanguageNames();
-  for (const auto &E : Names) {
-    IO.enumCase(L, E.name(), static_cast<SourceLanguage>(E.value()));
-  }
-}
-
-void ScalarEnumerationTraits<EncodedFramePtrReg>::enumeration(
-    IO &IO, EncodedFramePtrReg &R) {
-  auto Names = getEncodedFramePtrRegNames();
-  for (const auto &E : Names) {
-    IO.enumCase(R, E.name(), static_cast<EncodedFramePtrReg>(E.value()));
   }
 }
 
@@ -503,14 +485,7 @@ template <> void SymbolRecordImpl<Compile2Sym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<Compile3Sym>::map(IO &IO) {
-  CompileSym3Flags Flags = Symbol.getFlags();
-  SourceLanguage Lang = Symbol.getLanguage();
-  IO.mapRequired("Flags", Flags);
-  IO.mapOptional("Language", Lang, SourceLanguage::C);
-  if (!IO.outputting()) {
-    Symbol.Flags = Flags;
-    Symbol.setLanguage(Lang);
-  }
+  IO.mapRequired("Flags", Symbol.Flags);
   IO.mapRequired("Machine", Symbol.Machine);
   IO.mapRequired("FrontendMajor", Symbol.VersionFrontendMajor);
   IO.mapRequired("FrontendMinor", Symbol.VersionFrontendMinor);
@@ -532,17 +507,7 @@ template <> void SymbolRecordImpl<FrameProcSym>::map(IO &IO) {
   IO.mapRequired("OffsetOfExceptionHandler", Symbol.OffsetOfExceptionHandler);
   IO.mapRequired("SectionIdOfExceptionHandler",
                  Symbol.SectionIdOfExceptionHandler);
-  FrameProcedureOptions Flags = Symbol.getFlags();
-  EncodedFramePtrReg LocalFP = Symbol.getEncodedLocalFramePtrReg();
-  EncodedFramePtrReg ParamFP = Symbol.getEncodedParamFramePtrReg();
-  IO.mapRequired("Flags", Flags);
-  IO.mapOptional("LocalFramePtrReg", LocalFP, EncodedFramePtrReg::None);
-  IO.mapOptional("ParamFramePtrReg", ParamFP, EncodedFramePtrReg::None);
-  if (!IO.outputting()) {
-    Symbol.setFlags(Flags);
-    Symbol.setEncodedLocalFramePtrReg(LocalFP);
-    Symbol.setEncodedParamFramePtrReg(ParamFP);
-  }
+  IO.mapRequired("Flags", Symbol.Flags);
 }
 
 template <> void SymbolRecordImpl<CallSiteInfoSym>::map(IO &IO) {

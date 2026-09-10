@@ -6405,7 +6405,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       const DataLayout &DL = TheModule->getDataLayout();
       unsigned AS = Record.size() == 5 ? Record[4] : DL.getAllocaAddrSpace();
 
-      if (!Align && !Ty->isSized())
+      SmallPtrSet<Type *, 4> Visited;
+      if (!Align && !Ty->isSized(&Visited))
         return error("alloca of unsized type");
       if (!Align)
         Align = DL.getPrefTypeAlign(Ty);
@@ -6450,7 +6451,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      if (!Align && !Ty->isSized())
+      SmallPtrSet<Type *, 4> Visited;
+      if (!Align && !Ty->isSized(&Visited))
         return error("load of unsized type");
       if (!Align)
         Align = TheModule->getDataLayout().getABITypeAlign(Ty);
@@ -6535,7 +6537,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      if (!Align && !Val->getType()->isSized())
+      SmallPtrSet<Type *, 4> Visited;
+      if (!Align && !Val->getType()->isSized(&Visited))
         return error("store of unsized type");
       if (!Align)
         Align = TheModule->getDataLayout().getABITypeAlign(Val->getType());

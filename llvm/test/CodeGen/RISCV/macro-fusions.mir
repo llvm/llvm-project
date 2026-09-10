@@ -1,12 +1,12 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
-# RUN:   -debug-only=machine-scheduler -run-pass=machine-scheduler 2>&1 \
+# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
 # RUN:   -mattr=+fusion-lui-addi,+fusion-auipc-addi,+fusion-zexth,+fusion-zextw,+fusion-shifted-zextw,+fusion-ld-add \
 # RUN:   -mattr=+fusion-add-load,+fusion-auipc-load,+fusion-lui-load,+fusion-addi-load \
 # RUN:   -mattr=+zba,+fusion-shxadd-load \
 # RUN:   | FileCheck %s
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
-# RUN:   -debug-only=machine-scheduler -run-pass=machine-scheduler 2>&1 \
+# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
 # RUN:   -mattr=+zba,+fusion-bfext | FileCheck --check-prefixes=CHECK-BFEXT %s
 
 # CHECK: lui_addi:%bb.0

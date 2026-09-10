@@ -1,3 +1,3 @@
-C_SOURCES := main.c other.c
+C_SOURCES := main.c
 
 include Makefile.rules

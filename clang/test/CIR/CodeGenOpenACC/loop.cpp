@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   // CHECK: cir.func{{.*}} @acc_loop(%[[ARG_A:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_B:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_C:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_N:.*]]: !s32i {{.*}}) {{.*}}{

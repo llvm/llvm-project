@@ -140,8 +140,6 @@ class IRTranslatorImpl {
     }
 
     OffsetListT *getOffsets(const Value &V) {
-      assert(V.getType()->isAggregateType() &&
-             "Offsets are for aggregate values");
       auto [It, Inserted] = TypeToOffsets.try_emplace(V.getType());
       if (!Inserted)
         return It->second;
@@ -763,11 +761,14 @@ class IRTranslatorImpl {
 
     auto Reg = MRI->createGenericVirtualRegister(LLT::token());
     Regs.push_back(Reg);
+    auto &Offsets = *VMap.getOffsets(Token);
+    if (Offsets.empty())
+      Offsets.push_back(0);
     return Reg;
   }
 
-  /// Allocate empty vregs for \p Val. For aggregate values, also populate
-  /// their offsets.
+  /// Allocate some vregs and offsets in the VMap. Then populate just the
+  /// offsets while leaving the vregs empty.
   ValueToVRegInfo::VRegListT &allocateVRegs(const Value &Val);
 
   /// Get the frame index that represents \p Val.
@@ -936,11 +937,6 @@ IRTranslatorImpl::allocateVRegs(const Value &Val) {
   if (VRegsIt != VMap.vregs_end())
     return *VRegsIt->second;
   auto *Regs = VMap.getVRegs(Val);
-  if (!Val.getType()->isAggregateType()) {
-    Regs->push_back(0);
-    return *Regs;
-  }
-
   auto *Offsets = VMap.getOffsets(Val);
   SmallVector<LLT, 4> SplitTys;
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
@@ -960,6 +956,7 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
 
   // Create entry for this type.
   auto *VRegs = VMap.getVRegs(Val);
+  auto *Offsets = VMap.getOffsets(Val);
 
   if (!Val.getType()->isTokenTy())
     assert(Val.getType()->isSized() &&
@@ -968,6 +965,8 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
   // Fast-path values that lower to a single vreg.
   if (!Val.getType()->isAggregateType()) {
     LLT Ty = getLLTForType(*Val.getType(), *DL);
+    if (Offsets->empty())
+      Offsets->push_back(0);
     VRegs->push_back(MRI->createGenericVirtualRegister(Ty));
     if (isa<Constant>(Val)) {
       bool Success = translate(cast<Constant>(Val), VRegs->front());
@@ -983,7 +982,6 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
   }
 
   SmallVector<LLT, 4> SplitTys;
-  auto *Offsets = VMap.getOffsets(Val);
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
                    Offsets->empty() ? Offsets : nullptr);
 
@@ -2319,6 +2317,7 @@ bool IRTranslatorImpl::translateCopy(const User &U, Register Src,
   auto &Regs = *VMap.getVRegs(U);
   if (Regs.empty()) {
     Regs.push_back(Src);
+    VMap.getOffsets(U)->push_back(0);
   } else {
     // If we already assigned a vreg for this instruction, we can't change that.
     // Emit a copy to satisfy the users we already emitted.

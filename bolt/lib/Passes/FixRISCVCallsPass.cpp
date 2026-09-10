@@ -55,8 +55,6 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         auto L = BC.scopeLock();
 
         MIB->createNoop(*II);
-        // Mark the replacement NOP for removal by the later RemoveNops pass.
-        MIB->addAnnotation(*II, "NOP", static_cast<uint32_t>(1));
 
         if (MIB->isTailCall(*NextII))
           MIB->createTailCall(*NextII, Target, Ctx);

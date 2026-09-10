@@ -79,21 +79,3 @@ struct S {
 
 bool b = (S{} < S{}); // expected-error {{object of type 'S' cannot be compared because its 'operator<=>' is implicitly deleted}}
 }
-
-namespace GH147127{
-union A {
-  bool operator==(const A&) const = default;
-};
-
-A a;
-bool b = a == a;
-}
-
-namespace GH194605 {
-struct S {
-  int [[clang::address_space(1)]] i; // expected-error {{field may not be qualified with an address space}}
-  bool operator==(const S &) const = default;
-};
-
-static_assert(S{} == S{});
-}

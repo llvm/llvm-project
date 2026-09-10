@@ -7,6 +7,11 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
+// On Alpha the fast unwinder walks a frame layout the target does not use, so
+// every trace but the access one stops early. Fixed by
+// https://github.com/llvm/llvm-project/pull/220231.
+// XFAIL: alpha-target-arch
+
 #include <stdlib.h>
 
 char *p;

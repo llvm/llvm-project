@@ -101,15 +101,8 @@ static bool isMarshalLike(Operation *op) {
   return resIsMemRef || argIsMemRef;
 }
 
-/// True when \p a and \p b access the same pointee (or boxed) element type.
-/// Used to distinguish a transparent address wrapper from storage association.
-static bool sameAccessedElementType(Type a, Type b) {
-  return fir::unwrapPassByRefType(a) == fir::unwrapPassByRefType(b);
-}
-
 /// Peel zero-offset views (e.g. fir.declare) down to the underlying address
-/// producer, e.g. fir.array_coor. Stops at a view that changes the accessed
-/// element type (e.g. !fir.ref<complex<f32>> to !fir.ref<f32>).
+/// producer, e.g. fir.array_coor.
 static Value peelZeroOffsetViews(Value memref) {
   while (Operation *defOp = memref.getDefiningOp()) {
     auto result = cast<OpResult>(memref);
@@ -119,10 +112,7 @@ static Value peelZeroOffsetViews(Value memref) {
     if (!view || isMarshalLike(defOp) || isa<fir::VolatileCastOp>(defOp) ||
         view.getViewOffset(result) != 0)
       break;
-    Value source = view.getViewSource(result);
-    if (!sameAccessedElementType(memref.getType(), source.getType()))
-      break;
-    memref = source;
+    memref = view.getViewSource(result);
   }
   return memref;
 }
@@ -1530,17 +1520,14 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
         "FIRToMemRef: expected defining op or block argument for FIR memref");
   }
 
-  // If a zero-offset same-type view wraps an fir.array_coor, dispatch on the
-  // array_coor so bounds-aware lowering runs. Storage-association converts
-  // (e.g. a complex element passed as a real dummy) stay as the view so marshal
-  // keeps the access type.
+  // If a zero-offset view (fir.declare, ref-to-ref fir.convert, ...) wraps an
+  // fir.array_coor, dispatch on the array_coor so bounds-aware lowering runs.
+  // Otherwise leave firMemref as the view so marshal keeps its naming.
   Value peeled = peelZeroOffsetViews(firMemref);
   if (auto arrayCoorOp =
           dyn_cast_or_null<fir::ArrayCoorOp>(peeled.getDefiningOp())) {
-    if (sameAccessedElementType(firMemref.getType(), arrayCoorOp.getType())) {
-      firMemref = peeled;
-      memrefOp = arrayCoorOp;
-    }
+    firMemref = peeled;
+    memrefOp = arrayCoorOp;
   }
 
   if (auto arrayCoorOp = dyn_cast<fir::ArrayCoorOp>(memrefOp)) {

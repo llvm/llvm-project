@@ -357,22 +357,8 @@ def OptionalGroupB : TestFormat_Op<[{
 //  CHECK-NEXT:   odsPrinter << ' ';
 //  CHECK-NEXT:   odsPrinter.printAttributeWithoutType(getAAttr());
 //  CHECK-NEXT: }
-//       CHECK: elidedAttrs.push_back("a");
-//   CHECK-NOT: elidedAttrs.push_back("a");
-//       CHECK: _odsPrinter.printOptionalAttrDict
 def OptionalGroupC : TestFormat_Op<[{
   ($a^)? attr-dict
-}]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
-
-// CHECK-LABEL: OptionalGroupCPropDict::print
-//       CHECK: elidedProps.push_back("a");
-//   CHECK-NOT: elidedProps.push_back("a");
-//       CHECK: printProperties
-//       CHECK: elidedAttrs.push_back("a");
-//   CHECK-NOT: elidedAttrs.push_back("a");
-//       CHECK: _odsPrinter.printOptionalAttrDict
-def OptionalGroupCPropDict : TestFormat_Op<[{
-  ($a^)? prop-dict attr-dict
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
 
 // CHECK-LABEL: OptionalGroupD::parse

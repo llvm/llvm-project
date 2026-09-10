@@ -1754,157 +1754,13 @@ function(canonicalize_tool_name name output)
   set(${output} "${nameUPPER}" PARENT_SCOPE)
 endfunction(canonicalize_tool_name)
 
-# Collect the targets named by a link item. Generator expressions cannot be
-# evaluated at configure time, so conservatively collect tokens that name
-# targets. This handles the link expressions used by LLVM's CMake helpers,
-# including LINK_ONLY and BUILD_INTERFACE.
-function(_llvm_link_item_targets output item)
-  if(item MATCHES "\\$<")
-    string(REGEX MATCHALL "[A-Za-z_][A-Za-z0-9_.+-]*(::[A-Za-z0-9_.+-]+)*"
-      candidates "${item}")
-  else()
-    set(candidates "${item}")
-  endif()
-
-  set(result)
-  foreach(candidate ${candidates})
-    if(TARGET "${candidate}")
-      get_target_property(aliased_target "${candidate}" ALIASED_TARGET)
-      if(aliased_target)
-        set(candidate "${aliased_target}")
-      endif()
-      list(APPEND result "${candidate}")
-    endif()
-  endforeach()
-  list(REMOVE_DUPLICATES result)
-  set(${output} ${result} PARENT_SCOPE)
-endfunction()
-
-# Install only the dependency-project targets reachable from a project's
-# exported targets. Add them to the consuming project's exports and use its
-# distribution policy. CMake follows their existing build dependencies, even
-# across directories added with EXCLUDE_FROM_ALL.
-function(llvm_install_dependency_target_closure)
-  cmake_parse_arguments(ARG ""
-    "PROJECT;COMPONENT"
-    "ROOT_TARGETS;EXTRA_BUILD_TARGETS" ${ARGN})
-
-  if(NOT LLVM_DEPENDENCY_ONLY_PROJECTS OR NOT ARG_ROOT_TARGETS)
-    return()
-  endif()
-
-  set(queue ${ARG_ROOT_TARGETS})
-  set(visited)
-  set(dependency_targets)
-  string(TOUPPER "${ARG_PROJECT}" project_upper)
-  set(dependency_source_dirs)
-  foreach(project ${LLVM_DEPENDENCY_ONLY_PROJECTS})
-    canonicalize_tool_name("${project}" dependency_upper)
-    get_property(source_dir GLOBAL PROPERTY
-      LLVM_PROJECT_${dependency_upper}_SOURCE_DIR)
-    file(REAL_PATH "${source_dir}" source_dir)
-    list(APPEND dependency_source_dirs "${source_dir}")
-  endforeach()
-  while(queue)
-    list(POP_FRONT queue target)
-    if(NOT TARGET "${target}")
-      continue()
-    endif()
-    get_target_property(aliased_target "${target}" ALIASED_TARGET)
-    if(aliased_target)
-      set(target "${aliased_target}")
-    endif()
-    if("${target}" IN_LIST visited)
-      continue()
-    endif()
-    list(APPEND visited "${target}")
-
-    get_target_property(source_dir "${target}" SOURCE_DIR)
-    file(REAL_PATH "${source_dir}" source_dir)
-    set(is_dependency_target OFF)
-    foreach(project_source_dir ${dependency_source_dirs})
-      string(FIND "${source_dir}/" "${project_source_dir}/" source_prefix)
-      if(source_prefix EQUAL 0)
-        set(is_dependency_target ON)
-        break()
-      endif()
-    endforeach()
-
-    if(is_dependency_target)
-      get_target_property(target_type "${target}" TYPE)
-      if(target_type MATCHES
-          "^(EXECUTABLE|STATIC_LIBRARY|SHARED_LIBRARY|MODULE_LIBRARY|INTERFACE_LIBRARY|OBJECT_LIBRARY)$")
-        get_target_property(is_imported "${target}" IMPORTED)
-        if(NOT is_imported)
-          list(APPEND dependency_targets "${target}")
-        endif()
-      endif()
-    endif()
-
-    foreach(property LINK_LIBRARIES INTERFACE_LINK_LIBRARIES)
-      get_target_property(items "${target}" ${property})
-      if(items MATCHES "-NOTFOUND$")
-        set(items)
-      endif()
-      foreach(item ${items})
-        _llvm_link_item_targets(link_targets "${item}")
-        list(APPEND queue ${link_targets})
-      endforeach()
-    endforeach()
-  endwhile()
-
-  list(REMOVE_DUPLICATES dependency_targets)
-  add_custom_target(${ARG_COMPONENT} ALL
-    DEPENDS ${dependency_targets} ${ARG_EXTRA_BUILD_TARGETS})
-  set_target_properties(${ARG_COMPONENT} PROPERTIES
-    FOLDER "LLVM/Dependency Install")
-
-  foreach(target ${dependency_targets})
-    # A shared dependency may already be packaged by another enabled consumer.
-    get_target_property(exported "${target}" LLVM_DEPENDENCY_EXPORTED)
-    if(exported)
-      continue()
-    endif()
-    set_property(TARGET "${target}" PROPERTY LLVM_DEPENDENCY_EXPORTED ON)
-    set_property(GLOBAL APPEND PROPERTY ${project_upper}_EXPORTS "${target}")
-
-    set(export_arg)
-    if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-      get_target_export_arg(${target} ${ARG_PROJECT} export_arg
-        UMBRELLA ${ARG_COMPONENT})
-    else()
-      # A binary-only install still needs shared libraries and runtime tools.
-      get_target_property(target_type "${target}" TYPE)
-      if(NOT target_type MATCHES "^(EXECUTABLE|SHARED_LIBRARY|MODULE_LIBRARY)$")
-        continue()
-      endif()
-    endif()
-    install(TARGETS ${target} ${export_arg}
-      COMPONENT ${ARG_COMPONENT}
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-      LIBRARY DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"
-      ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"
-      OBJECTS DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"
-      FRAMEWORK DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
-  endforeach()
-  if(NOT LLVM_ENABLE_IDE)
-    add_llvm_install_targets(install-${ARG_COMPONENT}
-      DEPENDS ${ARG_COMPONENT} COMPONENT ${ARG_COMPONENT})
-  endif()
-endfunction()
-
 # Custom add_subdirectory wrapper
 # Takes in a project name (i.e. LLVM), the subdirectory name, and an optional
 # path if it differs from the name.
 function(add_llvm_subdirectory project type name)
   set(add_llvm_external_dir "${ARGN}")
-  set(exclude_from_all)
   if("${add_llvm_external_dir}" STREQUAL "")
     set(add_llvm_external_dir ${name})
-  endif()
-  if("${name}" IN_LIST LLVM_ENABLE_PROJECTS AND
-     "${name}" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
-    set(exclude_from_all EXCLUDE_FROM_ALL)
   endif()
   canonicalize_tool_name(${name} nameUPPER)
   set(canonical_full_name ${project}_${type}_${nameUPPER})
@@ -1920,10 +1776,7 @@ function(add_llvm_subdirectory project type name)
            "Whether to build ${name} as part of ${project}" On)
     mark_as_advanced(${project}_${type}_${name}_BUILD)
     if(${canonical_full_name}_BUILD)
-      set_property(GLOBAL PROPERTY LLVM_PROJECT_${nameUPPER}_SOURCE_DIR
-        "${CMAKE_CURRENT_SOURCE_DIR}/${add_llvm_external_dir}")
-      add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${add_llvm_external_dir}
-                       ${add_llvm_external_dir} ${exclude_from_all})
+      add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${add_llvm_external_dir} ${add_llvm_external_dir})
     endif()
   else()
     set(LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR
@@ -1941,10 +1794,7 @@ function(add_llvm_subdirectory project type name)
       ${${canonical_full_name}_BUILD_DEFAULT})
     if (${canonical_full_name}_BUILD)
       if(EXISTS ${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR})
-        set_property(GLOBAL PROPERTY LLVM_PROJECT_${nameUPPER}_SOURCE_DIR
-          "${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR}")
-        add_subdirectory(${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR}
-                         ${add_llvm_external_dir} ${exclude_from_all})
+        add_subdirectory(${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR} ${add_llvm_external_dir})
       elseif(NOT "${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR}" STREQUAL "")
         message(WARNING "Nonexistent directory for ${name}: ${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR}")
       endif()

@@ -194,8 +194,7 @@ static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
                                               ArrayRef<Value> operands,
                                               ArrayRef<Type> resultTypes) {
   OperationState res(loc, op->getName().getStringRef(), operands, resultTypes,
-                     op->getDiscardableAttrDictionary().getValue());
-  res.propertiesAttr = op->getPropertiesAsAttribute();
+                     op->getAttrs());
   return rewriter.create(res);
 }
 

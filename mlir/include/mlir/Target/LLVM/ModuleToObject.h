@@ -53,12 +53,6 @@ public:
 protected:
   // Hooks to be implemented by derived classes.
 
-  /// Hook for configuring the LLVM context, called by `run` before translating
-  /// the operation. By default it installs a
-  /// `remark::LLVMToMLIRDiagnosticHandler` to report LLVM diagnostics and
-  /// remarks through MLIR.
-  virtual void setupLLVMContext(llvm::LLVMContext &llvmContext);
-
   /// Hook for computing the Datalayout
   virtual void setDataLayoutAndTriple(llvm::Module &module);
 

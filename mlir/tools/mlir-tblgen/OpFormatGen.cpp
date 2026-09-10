@@ -2683,8 +2683,6 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
   // Default-valued attributes will not be printed when their value matches the
   // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
-    if (fmt.usedAttributes.contains(&namedAttr))
-      continue;
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
@@ -2736,8 +2734,6 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
   // Default-valued attributes will not be printed when their value matches the
   // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
-    if (fmt.usedAttributes.contains(&namedAttr))
-      continue;
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;

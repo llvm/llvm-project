@@ -1,5 +1,8 @@
 # ClangIR Code Duplication Roadmap
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

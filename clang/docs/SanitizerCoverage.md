@@ -1,5 +1,8 @@
 # SanitizerCoverage
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

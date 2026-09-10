@@ -251,7 +251,6 @@ def hasConvertWithStochasticRounding
 
 def hasConvertWithPZOSupport : PredOr<[hasRubinFamilySupport]>;
 
-def hasMBarrierLayoutSupport : PredAnd<[PTX93, SM90]>;
 
 //===----------------------------------------------------------------------===//
 // Some Common Instruction Class Templates

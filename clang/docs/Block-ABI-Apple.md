@@ -1,5 +1,8 @@
 # Block Implementation Specification
 
+```{contents}
+:local: true
+```
 
 ## History
 

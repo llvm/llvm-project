@@ -3,7 +3,6 @@
 
 !s64i = !cir.int<s, 64>
 !s32i = !cir.int<s, 32>
-!s8i = !cir.int<s, 8>
 !rec_TwoLong = !cir.struct<"TwoLong" {data !s64i, data !s64i}>
 !rec_ThreeInt = !cir.struct<"ThreeInt" {data !s32i, data !s32i, data !s32i}>
 !rec_OneInt = !cir.struct<"OneInt" {data !s32i}>
@@ -137,51 +136,6 @@ cir.func @caller_two_long() attributes { test_classify = #passthrough } {
 // CHECK:         %[[F0:.*]] = cir.load %[[P0]] : !cir.ptr<!s64i>, !s64i
 // CHECK:         %[[P1:.*]] = cir.get_member %[[S]][1]
 // CHECK:         %[[F1:.*]] = cir.load %[[P1]] : !cir.ptr<!s64i>, !s64i
-// CHECK:         cir.call @takes_two_long(%[[F0]], %[[F1]]) : (!s64i, !s64i) -> ()
-
-// Caller whose operand loads through a cast that preserves the storage, so
-// the members are read from the address the load used.
-
-cir.func @caller_two_long_through_cast()
-    attributes { test_classify = #passthrough } {
-  %raw = cir.alloca "raw" align(8) : !cir.ptr<!cir.array<!s8i x 16>>
-  %s = cir.cast bitcast %raw
-      : !cir.ptr<!cir.array<!s8i x 16>> -> !cir.ptr<!rec_TwoLong>
-  %v = cir.load %s : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
-  cir.call @takes_two_long(%v) : (!rec_TwoLong) -> ()
-  cir.return
-}
-
-// CHECK-LABEL: cir.func{{.*}} @caller_two_long_through_cast()
-// CHECK:         %[[RAW:.*]] = cir.alloca "raw" {{.*}}: !cir.ptr<!cir.array<!s8i x 16>>
-// CHECK:         %[[S:.*]] = cir.cast bitcast %[[RAW]]
-// CHECK-NOT:     cir.load %[[S]] : !cir.ptr<!rec_TwoLong>
-// CHECK:         %[[P0:.*]] = cir.get_member %[[S]][0]
-// CHECK:         %[[F0:.*]] = cir.load %[[P0]] : !cir.ptr<!s64i>, !s64i
-// CHECK:         %[[P1:.*]] = cir.get_member %[[S]][1]
-// CHECK:         %[[F1:.*]] = cir.load %[[P1]] : !cir.ptr<!s64i>, !s64i
-// CHECK:         cir.call @takes_two_long(%[[F0]], %[[F1]]) : (!s64i, !s64i) -> ()
-
-// Operand loaded through an address-space cast: the field pointers take their
-// address space from the address the load used.
-
-cir.func @caller_two_long_addrspace()
-    attributes { test_classify = #passthrough } {
-  %raw = cir.alloca "raw" align(8) : !cir.ptr<!rec_TwoLong>
-  %s = cir.cast address_space %raw
-      : !cir.ptr<!rec_TwoLong> -> !cir.ptr<!rec_TwoLong, target_address_space(5)>
-  %v = cir.load %s : !cir.ptr<!rec_TwoLong, target_address_space(5)>, !rec_TwoLong
-  cir.call @takes_two_long(%v) : (!rec_TwoLong) -> ()
-  cir.return
-}
-
-// CHECK-LABEL: cir.func{{.*}} @caller_two_long_addrspace()
-// CHECK:         %[[S:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!rec_TwoLong> -> !cir.ptr<!rec_TwoLong, target_address_space(5)>
-// CHECK-NOT:     cir.load %[[S]] : !cir.ptr<!rec_TwoLong, target_address_space(5)>
-// CHECK:         %[[P0:.*]] = cir.get_member %[[S]][0] {{.*}}: !cir.ptr<!rec_TwoLong, target_address_space(5)> -> !cir.ptr<!s64i, target_address_space(5)>
-// CHECK:         %[[F0:.*]] = cir.load %[[P0]] : !cir.ptr<!s64i, target_address_space(5)>, !s64i
-// CHECK:         %[[P1:.*]] = cir.get_member %[[S]][1] {{.*}}: !cir.ptr<!rec_TwoLong, target_address_space(5)> -> !cir.ptr<!s64i, target_address_space(5)>
-// CHECK:         %[[F1:.*]] = cir.load %[[P1]] : !cir.ptr<!s64i, target_address_space(5)>, !s64i
 // CHECK:         cir.call @takes_two_long(%[[F0]], %[[F1]]) : (!s64i, !s64i) -> ()
 
 // Expand composed with Ignore: the middle arg is dropped; the two Expand

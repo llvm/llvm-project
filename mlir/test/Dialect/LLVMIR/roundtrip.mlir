@@ -278,9 +278,6 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.intr.bitreverse(%{{.*}}) : (i32) -> i32
   %32 = llvm.intr.bitreverse(%arg0) : (i32) -> i32
 
-// CHECK: llvm.intr.clmul(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
-  %clmul = llvm.intr.clmul(%arg0, %arg0) : (i32, i32) -> i32
-
 // CHECK: llvm.intr.ctpop(%{{.*}}) : (i32) -> i32
   %33 = llvm.intr.ctpop(%arg0) : (i32) -> i32
 
@@ -539,23 +536,23 @@ func.func @zero() {
 
 // CHECK-LABEL: @atomic_load
 func.func @atomic_load(%ptr : !llvm.ptr) {
-  // CHECK: llvm.load %{{.*}} atomic monotonic <alignment = 4> : !llvm.ptr -> f32
-  %0 = llvm.load %ptr atomic monotonic <alignment = 4> : !llvm.ptr -> f32
-  // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr -> f32
-  %1 = llvm.load volatile %ptr atomic syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr -> f32
-  // CHECK: llvm.load %{{.*}} atomic monotonic <alignment = 4> : !llvm.ptr -> i128
-  %2 = llvm.load %ptr atomic monotonic <alignment = 4> : !llvm.ptr -> i128
+  // CHECK: llvm.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  %0 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load volatile %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
+  // CHECK: llvm.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> i128
+  %2 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> i128
   llvm.return
 }
 
 // CHECK-LABEL: @atomic_store
 func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
-  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic <alignment = 4> : f32, !llvm.ptr
-  llvm.store %val, %ptr atomic monotonic <alignment = 4> : f32, !llvm.ptr
-  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic <alignment = 16> : f32, !llvm.ptr
-  llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic <alignment = 16> : f32, !llvm.ptr
-  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic <alignment = 4> : i256, !llvm.ptr
-  llvm.store %large_val, %ptr atomic monotonic <alignment = 4> : i256, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : i256, !llvm.ptr
+  llvm.store %large_val, %ptr atomic monotonic {alignment = 4 : i64} : i256, !llvm.ptr
   llvm.return
 }
 
@@ -563,8 +560,8 @@ func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
 func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
   %0 = llvm.atomicrmw fadd %ptr, %f32 monotonic : !llvm.ptr, f32
-  // CHECK: llvm.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr, f32
-  %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr, f32
+  // CHECK: llvm.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
+  %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
   // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
   %2 = llvm.atomicrmw fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
   // CHECK: llvm.atomicrmw fminimumnum %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
@@ -576,22 +573,22 @@ func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
 func.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %new : i32) {
   // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
   %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.ptr, i32
-  // CHECK: llvm.cmpxchg weak volatile %{{.*}}, %{{.*}}, %{{.*}} syncscope("singlethread") acq_rel monotonic <alignment = 16> : !llvm.ptr, i32
-  %1 = llvm.cmpxchg weak volatile %ptr, %cmp, %new syncscope("singlethread") acq_rel monotonic <alignment = 16> : !llvm.ptr, i32
+  // CHECK: llvm.cmpxchg weak volatile %{{.*}}, %{{.*}}, %{{.*}} syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32
+  %1 = llvm.cmpxchg weak volatile %ptr, %cmp, %new syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
 // CHECK-LABEL: @invariant_load
 func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
-  // CHECK: llvm.load %{{.+}} invariant <alignment = 4> : !llvm.ptr -> i32
-  %0 = llvm.load %ptr invariant <alignment = 4> : !llvm.ptr -> i32
+  // CHECK: llvm.load %{{.+}} invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+  %0 = llvm.load %ptr invariant {alignment = 4 : i64} : !llvm.ptr -> i32
   func.return %0 : i32
 }
 
 // CHECK-LABEL: @invariant_group_load
 func.func @invariant_group_load(%ptr : !llvm.ptr) -> i32 {
-  // CHECK: llvm.load %{{.+}} invariant_group <alignment = 4> : !llvm.ptr -> i32
-  %0 = llvm.load %ptr invariant_group <alignment = 4> : !llvm.ptr -> i32
+  // CHECK: llvm.load %{{.+}} invariant_group {alignment = 4 : i64} : !llvm.ptr -> i32
+  %0 = llvm.load %ptr invariant_group {alignment = 4 : i64} : !llvm.ptr -> i32
   func.return %0 : i32
 }
 
@@ -732,53 +729,53 @@ llvm.func @useInlineAsm(%arg0: i32) {
 
 // CHECK-LABEL: @fastmathFlags
 func.func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: vector<2 x f32>, %arg4: vector<2 x f32>) {
-// CHECK: {{.*}} = llvm.fadd %arg0, %arg1 fastmath<fast> : f32
-// CHECK: {{.*}} = llvm.fsub %arg0, %arg1 fastmath<fast> : f32
-// CHECK: {{.*}} = llvm.fmul %arg0, %arg1 fastmath<fast> : f32
-// CHECK: {{.*}} = llvm.fdiv %arg0, %arg1 fastmath<fast> : f32
-// CHECK: {{.*}} = llvm.frem %arg0, %arg1 fastmath<fast> : f32
-  %0 = llvm.fadd %arg0, %arg1 fastmath<fast> : f32
-  %1 = llvm.fsub %arg0, %arg1 fastmath<fast> : f32
-  %2 = llvm.fmul %arg0, %arg1 fastmath<fast> : f32
-  %3 = llvm.fdiv %arg0, %arg1 fastmath<fast> : f32
-  %4 = llvm.frem %arg0, %arg1 fastmath<fast> : f32
+// CHECK: {{.*}} = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: {{.*}} = llvm.fsub %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: {{.*}} = llvm.fmul %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: {{.*}} = llvm.fdiv %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: {{.*}} = llvm.frem %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+  %0 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+  %1 = llvm.fsub %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+  %2 = llvm.fmul %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+  %3 = llvm.fdiv %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+  %4 = llvm.frem %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
 
-// CHECK: %[[SCALAR_PRED0:.+]] = llvm.fcmp "oeq" %arg0, %arg1 fastmath<fast> : f32
-  %5 = llvm.fcmp "oeq" %arg0, %arg1 fastmath<fast> : f32
+// CHECK: %[[SCALAR_PRED0:.+]] = llvm.fcmp "oeq" %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+  %5 = llvm.fcmp "oeq" %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
 // CHECK: %{{.*}} = llvm.add %[[SCALAR_PRED0]], %[[SCALAR_PRED0]] : i1
   %typecheck_5 = llvm.add %5, %5 : i1
-// CHECK: %[[VEC_PRED0:.+]] = llvm.fcmp "oeq" %arg3, %arg4 fastmath<fast> : vector<2xf32>
-  %vcmp = llvm.fcmp "oeq" %arg3, %arg4 fastmath<fast> : vector<2xf32>
+// CHECK: %[[VEC_PRED0:.+]] = llvm.fcmp "oeq" %arg3, %arg4 {fastmathFlags = #llvm.fastmath<fast>} : vector<2xf32>
+  %vcmp = llvm.fcmp "oeq" %arg3, %arg4 {fastmathFlags = #llvm.fastmath<fast>} : vector<2xf32>
 // CHECK: %{{.*}} = llvm.add %[[VEC_PRED0]], %[[VEC_PRED0]] : vector<2xi1>
   %typecheck_vcmp = llvm.add %vcmp, %vcmp : vector<2xi1>
 
-// CHECK: {{.*}} = llvm.fneg %arg0 fastmath<fast> : f32
-  %6 = llvm.fneg %arg0 fastmath<fast> : f32
+// CHECK: {{.*}} = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<fast>} : f32
+  %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<fast>} : f32
 
 // CHECK: {{.*}} = llvm.call @foo(%arg2) {fastmathFlags = #llvm.fastmath<fast>} : (i32) -> !llvm.struct<(i32, f64, i32)>
   %7 = llvm.call @foo(%arg2) {fastmathFlags = #llvm.fastmath<fast>} : (i32) -> !llvm.struct<(i32, f64, i32)>
 
 // CHECK: {{.*}} = llvm.fadd %arg0, %arg1 : f32
-  %8 = llvm.fadd %arg0, %arg1 fastmath<none> : f32
-// CHECK: {{.*}} = llvm.fadd %arg0, %arg1 fastmath<nnan, ninf> : f32
-  %9 = llvm.fadd %arg0, %arg1 fastmath<nnan,ninf> : f32
+  %8 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<none>} : f32
+// CHECK: {{.*}} = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %9 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<nnan,ninf>} : f32
 
 // CHECK: {{.*}} = llvm.fneg %arg0 : f32
-  %10 = llvm.fneg %arg0 fastmath<none> : f32
+  %10 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<none>} : f32
 
-// CHECK: {{.*}} = llvm.intr.sin(%arg0) fastmath<fast> : (f32) -> f32
-  %11 = llvm.intr.sin(%arg0) fastmath<fast> : (f32) -> f32
-// CHECK: {{.*}} = llvm.intr.sin(%arg0) fastmath<afn> : (f32) -> f32
-  %12 = llvm.intr.sin(%arg0) fastmath<afn> : (f32) -> f32
+// CHECK: {{.*}} = llvm.intr.sin(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  %11 = llvm.intr.sin(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+// CHECK: {{.*}} = llvm.intr.sin(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> f32
+  %12 = llvm.intr.sin(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> f32
 
-// CHECK: {{.*}} = llvm.intr.vector.reduce.fmin(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
-  %13 = llvm.intr.vector.reduce.fmin(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
-// CHECK: {{.*}} = llvm.intr.vector.reduce.fmax(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
-  %14 = llvm.intr.vector.reduce.fmax(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
-// CHECK: {{.*}} = llvm.intr.vector.reduce.fminimum(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
-  %15 = llvm.intr.vector.reduce.fminimum(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
-// CHECK: {{.*}} = llvm.intr.vector.reduce.fmaximum(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
-  %16 = llvm.intr.vector.reduce.fmaximum(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
+// CHECK: {{.*}} = llvm.intr.vector.reduce.fmin(%arg3) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %13 = llvm.intr.vector.reduce.fmin(%arg3) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+// CHECK: {{.*}} = llvm.intr.vector.reduce.fmax(%arg3) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %14 = llvm.intr.vector.reduce.fmax(%arg3) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+// CHECK: {{.*}} = llvm.intr.vector.reduce.fminimum(%arg3) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %15 = llvm.intr.vector.reduce.fminimum(%arg3) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+// CHECK: {{.*}} = llvm.intr.vector.reduce.fmaximum(%arg3) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %16 = llvm.intr.vector.reduce.fmaximum(%arg3) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
   return
 }
 
@@ -1301,34 +1298,4 @@ llvm.func @repeated_function_metadata() attributes {
     #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>,
     #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid1">>>
   ]
-}
-
-#rt_alias_scope_domain = #llvm.alias_scope_domain<id = distinct[4]<>, description = "rt domain">
-#rt_alias_scope = #llvm.alias_scope<id = distinct[5]<>, domain = #rt_alias_scope_domain>
-#rt_access_group = #llvm.access_group<id = distinct[6]<>>
-
-// CHECK-LABEL: @masked_intrinsic_metadata_roundtrip
-llvm.func @masked_intrinsic_metadata_roundtrip(%ptr: !llvm.ptr, %mask: vector<7xi1>) {
-  // CHECK: llvm.intr.masked.load
-  // CHECK-SAME: access_groups = [#{{[^]]*}}]
-  // CHECK-SAME: alias_scopes = [#{{[^]]*}}]
-  // CHECK-SAME: noalias_scopes = [#{{[^]]*}}]
-  %0 = llvm.intr.masked.load(%ptr, %mask), alignment(4) <
-      access_groups = [#rt_access_group],
-      alias_scopes = [#rt_alias_scope],
-      noalias_scopes = [#rt_alias_scope]> : (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
-  // CHECK: llvm.intr.masked.store
-  // CHECK-SAME: access_groups = [#{{[^]]*}}]
-  llvm.intr.masked.store(%0, %ptr, %mask), alignment(4) <
-      access_groups = [#rt_access_group]> : vector<7xf32>, vector<7xi1> into !llvm.ptr
-  llvm.return
-}
-
-// CHECK-LABEL: @masked_nontemporal_no_alignment
-llvm.func @masked_nontemporal_no_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>) {
-  // CHECK: llvm.intr.masked.load(%{{.*}}, %{{.*}}) <nontemporal> :
-  %0 = llvm.intr.masked.load(%ptr, %mask) <nontemporal> : (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
-  // CHECK: llvm.intr.masked.store(%{{.*}}, %{{.*}}, %{{.*}}) <nontemporal> :
-  llvm.intr.masked.store(%0, %ptr, %mask) <nontemporal> : vector<7xf32>, vector<7xi1> into !llvm.ptr
-  llvm.return
 }

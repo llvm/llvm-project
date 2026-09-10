@@ -39,6 +39,10 @@ static cl::opt<unsigned> FunctionSizeThreshold(
              "or equal than this threshold."),
     cl::init(50));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
+
 #define DEBUG_TYPE "jump-table-to-switch"
 
 STATISTIC(NumEligibleJumpTables, "The number of jump tables seen by the pass "
@@ -189,7 +193,8 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   // Only set branch weights on the switch if we have non-zero branch weights.
   // We can have no non-zero branch weights while having VP metadata if for
   // example, all of the functions are external and not instrumented.
-  if (HadProfile && llvm::any_of(BranchWeights, not_equal_to(0))) {
+  if (HadProfile && !ProfcheckDisableMetadataFixes &&
+      llvm::any_of(BranchWeights, not_equal_to(0))) {
     setBranchWeights(*Switch, downscaleWeights(BranchWeights),
                      /*IsExpected=*/false);
   } else

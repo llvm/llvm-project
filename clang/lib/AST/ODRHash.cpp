@@ -434,21 +434,28 @@ public:
     for (auto Param : Method->parameters())
       Hash.AddSubDecl(Param);
 
-    const bool IsDefinition = Method->isThisDeclarationADefinition();
-    Hash.AddBoolean(IsDefinition);
-    if (IsDefinition) {
-      AddStmt(Method->getBody());
+    if (Method->hasBody()) {
+      const bool IsDefinition = Method->isThisDeclarationADefinition();
+      Hash.AddBoolean(IsDefinition);
+      if (IsDefinition) {
+        Stmt *Body = Method->getBody();
+        Hash.AddBoolean(Body);
+        if (Body)
+          AddStmt(Body);
 
-      // Filter out sub-Decls which will not be processed in order to get an
-      // accurate count of Decl's.
-      llvm::SmallVector<const Decl *, 16> Decls;
-      for (Decl *SubDecl : Method->decls())
-        if (ODRHash::isSubDeclToBeProcessed(SubDecl, Method))
-          Decls.push_back(SubDecl);
+        // Filter out sub-Decls which will not be processed in order to get an
+        // accurate count of Decl's.
+        llvm::SmallVector<const Decl *, 16> Decls;
+        for (Decl *SubDecl : Method->decls())
+          if (ODRHash::isSubDeclToBeProcessed(SubDecl, Method))
+            Decls.push_back(SubDecl);
 
-      ID.AddInteger(Decls.size());
-      for (auto SubDecl : Decls)
-        Hash.AddSubDecl(SubDecl);
+        ID.AddInteger(Decls.size());
+        for (auto SubDecl : Decls)
+          Hash.AddSubDecl(SubDecl);
+      }
+    } else {
+      Hash.AddBoolean(false);
     }
 
     Inherited::VisitObjCMethodDecl(Method);

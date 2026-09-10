@@ -676,14 +676,13 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 }
 
 /// Converts the frequency \p Freq with which a block is entered to branch
-/// weights for the branch guarding it, or nullptr if \p Freq is unknown or
-/// estimated.
+/// weights for the branch guarding it, or nullptr if \p Freq is unknown.
 static MDNode *
-convertFrequencyToBranchWeights(std::optional<VPExecutionFrequency> Freq,
+convertFrequencyToBranchWeights(std::optional<BlockFrequency> Freq,
                                 LLVMContext &Ctx) {
-  if (!Freq || Freq->IsEstimated)
+  if (!Freq)
     return nullptr;
-  BranchProbability P = vputils::getExecutionProbability(Freq->Freq);
+  BranchProbability P = vputils::getExecutionProbability(*Freq);
 
   // Use the numerators of P and its complement as weights and reduce them via
   // gcd to keep them small. Neither is zero, as P is neither zero nor one.
@@ -994,7 +993,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
         if (U.usesFirstLaneOnly(DefR))
           return true;
-        auto *VPI = dyn_cast<VPInstruction>(&U);
+        auto *VPI = dyn_cast<VPInstructionWithType>(&U);
         return VPI && Instruction::isCast(VPI->getOpcode());
       });
 

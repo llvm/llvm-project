@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRMaskingOpInterfaceIncGen
   MLIRVectorOpsIncGen
   MLIRVectorAttributesIncGen
-  MLIRVectorIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect

@@ -1,5 +1,8 @@
 # Pointer Authentication
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

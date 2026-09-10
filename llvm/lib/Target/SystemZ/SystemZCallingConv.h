@@ -91,7 +91,7 @@ inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                 ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   if (LocVT != MVT::i64) {
     LocVT = MVT::i64;
-    LocInfo = CCValAssign::AExt;
+    LocInfo = CCValAssign::ZExt;
   }
   return false;
 }

@@ -1103,8 +1103,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
     ArrayRef<const Expr *> InitExprs =
         ILE ? ILE->inits() : CPLIE->getInitExprs();
-    InitListElements =
-        ILE ? ILE->getNumInitsWithEmbedExpanded() : InitExprs.size();
+    InitListElements = InitExprs.size();
 
     // If this is a multi-dimensional array new, we will initialize multiple
     // elements with each init list element.
@@ -1139,14 +1138,6 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
     CharUnits StartAlign = CurPtr.getAlignment();
     unsigned i = 0;
-    auto AdvanceToNextElement = [&]() {
-      CurPtr = Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
-                                                 CurPtr.emitRawPointer(*this),
-                                                 Builder.getSize(1),
-                                                 "array.exp.next"),
-                       CurPtr.getElementType(),
-                       StartAlign.alignmentAtOffset((++i) * ElementSize));
-    };
     for (const Expr *IE : InitExprs) {
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
@@ -1154,32 +1145,17 @@ void CodeGenFunction::EmitNewArrayInitializer(
       if (EndOfInit.isValid()) {
         Builder.CreateStore(CurPtr.emitRawPointer(*this), EndOfInit);
       }
-      // A multi-element EmbedExpr initializes several array elements at once.
-      // A single-element embed can be wrapped in a conversion to a non-scalar
-      // element type (e.g. _Complex) and is emitted like any other
-      // initializer.
-      const auto *EmbedS = dyn_cast<EmbedExpr>(IE->IgnoreParenImpCasts());
-      if (EmbedS && EmbedS->getDataElementCount() > 1) {
-        const StringLiteral *SL = EmbedS->getDataStringLiteral();
-        llvm::Type *DataTy = ConvertType(EmbedS->getType());
-        for (unsigned I = EmbedS->getStartingElementPos(),
-                      End = I + EmbedS->getDataElementCount();
-             I != End; ++I) {
-          llvm::Value *Val = EmitScalarConversion(
-              llvm::ConstantInt::get(DataTy, SL->getCodeUnit(I)),
-              EmbedS->getType(), ElementType, EmbedS->getLocation());
-          EmitStoreOfScalar(Val, MakeAddrLValue(CurPtr, ElementType),
-                            /*isInit=*/true);
-          AdvanceToNextElement();
-        }
-        continue;
-      }
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two
       // initialization loops.
       StoreAnyExprIntoOneUnit(*this, IE, IE->getType(), CurPtr,
                               AggValueSlot::DoesNotOverlap);
-      AdvanceToNextElement();
+      CurPtr = Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
+                                                 CurPtr.emitRawPointer(*this),
+                                                 Builder.getSize(1),
+                                                 "array.exp.next"),
+                       CurPtr.getElementType(),
+                       StartAlign.alignmentAtOffset((++i) * ElementSize));
     }
 
     // The remaining elements are filled with the array filler expression.
@@ -1615,8 +1591,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
           cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
               ->getZExtSize();
     } else if (ILE || CPLIE) {
-      minElements = ILE ? ILE->getNumInitsWithEmbedExpanded()
-                        : CPLIE->getInitExprs().size();
+      minElements = ILE ? ILE->getNumInits() : CPLIE->getInitExprs().size();
     }
   }
 

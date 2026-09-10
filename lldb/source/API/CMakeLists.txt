@@ -352,7 +352,7 @@ foreach(header
     add_dependencies(lldb-framework-fixup-all-headers lldb-framework-fixup-header-${basename})
 
     add_custom_command(TARGET lldb-framework-fixup-header-${basename} POST_BUILD
-      COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.py -i ${staged_header} -o ${output_header}
+      COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.py -f lldb_main -i ${staged_header} -o ${output_header}
       COMMENT "LLDB.framework: Fix up and copy framework headers"
     )
   endif()

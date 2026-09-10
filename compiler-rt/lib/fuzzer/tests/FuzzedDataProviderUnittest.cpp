@@ -425,33 +425,6 @@ TEST(FuzzedDataProvider, ConsumeFloatingPoint) {
                                        -13.37, 31.337));
 }
 
-TEST(FuzzedDataProvider, ConsumeFloatingPointInRangeUpperBound) {
-  const std::vector<uint8_t> AllOnes(32, 0xff);
-  FuzzedDataProvider DataProv(AllOnes.data(), AllOnes.size());
-
-  // |max - min| overflows, and min + range + range overflows to infinity.
-  EXPECT_EQ(std::numeric_limits<float>::max(),
-            DataProv.ConsumeFloatingPointInRange<float>(
-                float(-1.3036394e+38), std::numeric_limits<float>::max()));
-  EXPECT_EQ(std::numeric_limits<double>::max(),
-            DataProv.ConsumeFloatingPointInRange<double>(
-                double(-1.3036394035928049e+308),
-                std::numeric_limits<double>::max()));
-
-  // |max - min| overflows, and the result is finite but above |max|.
-  EXPECT_EQ(float(2.2690335e+37),
-            DataProv.ConsumeFloatingPointInRange<float>(float(-3.1759686e+38),
-                                                        float(2.2690335e+37)));
-
-  // |max - min| does not overflow, but rounds to -min, so min + range is 0.
-  EXPECT_EQ(float(-1.0), DataProv.ConsumeFloatingPointInRange<float>(
-                             float(-1e20), float(-1.0)));
-  EXPECT_EQ(double(-1.0), DataProv.ConsumeFloatingPointInRange<double>(
-                              double(-1e30), double(-1.0)));
-
-  EXPECT_EQ(size_t(1), DataProv.remaining_bytes());
-}
-
 TEST(FuzzedDataProvider, ConsumeData) {
   FuzzedDataProvider DataProv(Data, sizeof(Data));
   uint8_t Buffer[10] = {};
