@@ -108,8 +108,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
-    transform.print %transformed {name = "transformed"}: !transform.any_op
+    transform.print %img2col_tensor_producer name = "tensor_producer": !transform.any_op
+    transform.print %transformed name = "transformed": !transform.any_op
     transform.yield
   }
 }
@@ -364,8 +364,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
-    transform.print %transformed {name = "transformed"}: !transform.any_op
+    transform.print %img2col_tensor_producer name = "tensor_producer": !transform.any_op
+    transform.print %transformed name = "transformed": !transform.any_op
     transform.yield
   }
 }
@@ -429,8 +429,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
-    transform.print %transformed {name = "transformed"}: !transform.any_op
+    transform.print %img2col_tensor_producer name = "tensor_producer": !transform.any_op
+    transform.print %transformed name = "transformed": !transform.any_op
     transform.yield
   }
 }
@@ -467,8 +467,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
-    transform.print %transformed {name = "transformed"}: !transform.any_op
+    transform.print %img2col_tensor_producer name = "tensor_producer": !transform.any_op
+    transform.print %transformed name = "transformed": !transform.any_op
     transform.yield
   }
 }
@@ -510,8 +510,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
-    transform.print %transformed {name = "transformed"}: !transform.any_op
+    transform.print %img2col_tensor_producer name = "tensor_producer": !transform.any_op
+    transform.print %transformed name = "transformed": !transform.any_op
     transform.yield
   }
 }
@@ -551,8 +551,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
-    transform.print %transformed {name = "transformed"}: !transform.any_op
+    transform.print %img2col_tensor_producer name = "tensor_producer": !transform.any_op
+    transform.print %transformed name = "transformed": !transform.any_op
     transform.yield
   }
 }

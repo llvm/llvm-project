@@ -23,7 +23,7 @@ func.func @storage_specifier_passthrough(%arg0: tensor<32x32xf32, #CSR>,
   %init = tensor.empty() : tensor<32x32xf32>
   %out = linalg.fill ins(%cst : f32) outs(%init : tensor<32x32xf32>)
       -> tensor<32x32xf32>
-  %3 = linalg.add
+  %3 = linalg.elementwise kind=#linalg.elementwise_kind<add>
       ins(%arg0, %arg1 : tensor<32x32xf32, #CSR>, tensor<32x32xf32, #CSR>)
       outs(%out : tensor<32x32xf32>) -> tensor<32x32xf32>
   return %3 : tensor<32x32xf32>

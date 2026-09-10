@@ -1095,8 +1095,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          OtherVT, Expand);
       }
 
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
 
@@ -1194,8 +1195,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          OtherVT, Expand);
       }
 
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
       setOperationAction({ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT},
                          VT, Custom);
@@ -1379,8 +1381,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
                          VT, Custom);
 
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
       setOperationAction({ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE_LEFT,
                           ISD::VECTOR_SPLICE_RIGHT},
@@ -1427,10 +1430,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
                           ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
-                          ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
                           ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE_LEFT,
                           ISD::VECTOR_SPLICE_RIGHT, ISD::VECTOR_COMPRESS},
                          VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
       MVT EltVT = VT.getVectorElementType();
@@ -1480,11 +1485,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                           ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_DEINTERLEAVE,
-                          ISD::VECTOR_INTERLEAVE, ISD::VECTOR_REVERSE,
+                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
                           ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT,
                           ISD::VECTOR_COMPRESS},
                          VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
       setOperationAction(
           {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM}, VT,
           Legal);
@@ -1607,8 +1614,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             {ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE}, VT,
             Custom);
 
-        setOperationAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                           VT, Custom);
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+            {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
                            VT, Custom);
@@ -1786,8 +1794,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
         setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
 
-        setOperationAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                           VT, Custom);
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+            {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
         setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
                             ISD::MGATHER, ISD::MSCATTER},
@@ -1994,7 +2003,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         ElementCount EC = VT.getVectorElementCount();
         unsigned Scale = VT.getVectorElementType() == MVT::i64 ? 8 : 4;
-        MVT ArgVT = MVT::getVectorVT(MVT::i8, EC.multiplyCoefficientBy(Scale));
+        MVT ArgVT = MVT::getVectorVT(MVT::i8, EC * Scale);
         setPartialReduceMLAAction(MLAOps, VT, ArgVT, Custom);
       }
     }
@@ -5959,8 +5968,7 @@ static SDValue getWideningSpread(SDValue V, unsigned Factor, unsigned Index,
     Result = DAG.getNode(ISD::SHL, DL, WideVT, Result,
                          DAG.getConstant(EltBits * Index, DL, WideVT));
   // Make sure to use original element type
-  MVT ResultVT = MVT::getVectorVT(VT.getVectorElementType(),
-                                  EC.multiplyCoefficientBy(Factor));
+  MVT ResultVT = MVT::getVectorVT(VT.getVectorElementType(), EC * Factor);
   return DAG.getBitcast(ResultVT, Result);
 }
 
@@ -6044,13 +6052,12 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   // Bitcast from <vscale x n * ty*2> to <vscale x 2*n x ty>
   MVT ResultContainerVT = MVT::getVectorVT(
       VecVT.getVectorElementType(), // Make sure to use original type
-      VecContainerVT.getVectorElementCount().multiplyCoefficientBy(2));
+      VecContainerVT.getVectorElementCount() * 2);
   Interleaved = DAG.getBitcast(ResultContainerVT, Interleaved);
 
   // Convert back to a fixed vector if needed
-  MVT ResultVT =
-      MVT::getVectorVT(VecVT.getVectorElementType(),
-                       VecVT.getVectorElementCount().multiplyCoefficientBy(2));
+  MVT ResultVT = MVT::getVectorVT(VecVT.getVectorElementType(),
+                                  VecVT.getVectorElementCount() * 2);
   if (ResultVT.isFixedLengthVector())
     Interleaved =
         convertFromScalableVector(ResultVT, Interleaved, DAG, Subtarget);
@@ -14444,8 +14451,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   // Concatenate the vectors as one vector to deinterleave
   MVT ConcatVT =
       MVT::getVectorVT(VecVT.getVectorElementType(),
-                       VecVT.getVectorElementCount().multiplyCoefficientBy(
-                           PowerOf2Ceil(Factor)));
+                       VecVT.getVectorElementCount() * PowerOf2Ceil(Factor));
   if (Ops.size() < PowerOf2Ceil(Factor))
     Ops.append(PowerOf2Ceil(Factor) - Factor, DAG.getUNDEF(VecVT));
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Ops);
@@ -14498,8 +14504,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   MachinePointerInfo PtrInfo;
   if (IsFixedVector) {
     // Calculating the stack size.
-    ElementCount ActualConcatEC =
-        VecVT.getVectorElementCount().multiplyCoefficientBy(Factor);
+    ElementCount ActualConcatEC = VecVT.getVectorElementCount() * Factor;
     EVT ConcatEVT = EVT::getVectorVT(
         *DAG.getContext(), VecVT.getVectorElementType(), ActualConcatEC);
     StackPtr = DAG.CreateStackTemporary(ConcatEVT.getStoreSize(), Alignment);
@@ -14728,9 +14733,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
                                         DAG, Subtarget);
   } else {
     // Otherwise, fallback to using vrgathere16.vv
-    MVT ConcatVT =
-      MVT::getVectorVT(VecVT.getVectorElementType(),
-                       VecVT.getVectorElementCount().multiplyCoefficientBy(2));
+    MVT ConcatVT = MVT::getVectorVT(VecVT.getVectorElementType(),
+                                    VecVT.getVectorElementCount() * 2);
     SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT,
                                  Op.getOperand(0), Op.getOperand(1));
 
@@ -20036,7 +20040,7 @@ static SDValue performSETCCCombine(SDNode *N,
         isPowerOf2_32(-uint32_t(AndRHSInt)) && (N1Int & AndRHSInt) == N1Int) {
       unsigned ShiftBits = llvm::countr_zero(AndRHSInt);
       int64_t NewC = SignExtend64<32>(N1Int) >> ShiftBits;
-      if (NewC >= -2048 && NewC <= 2048) {
+      if (ShiftBits != 0 && NewC >= -2048 && NewC <= 2048) {
         SDValue SExt =
             DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, OpVT, N0.getOperand(0),
                         DAG.getValueType(MVT::i32));

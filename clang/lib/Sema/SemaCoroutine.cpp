@@ -1058,9 +1058,15 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
   // A type-dependent operand can init to either void or non-void.
   // Delay selecting return_void or return_value until template init
   // rebuilds the co_return statement with the operand type.
-  if (E && !isa<InitListExpr>(E) && E->isTypeDependent())
+  if (E && !isa<InitListExpr>(E) && E->isTypeDependent()) {
+    // Still finish the full-expression, so that potential captures in the
+    // operand are turned into actual captures of the enclosing lambda.
+    ExprResult FE = ActOnFinishFullExpr(E, /*DiscardedValue=*/false);
+    if (FE.isInvalid())
+      return StmtError();
     return new (Context)
-        CoreturnStmt(Loc, E, /*PromiseCall=*/nullptr, IsImplicit);
+        CoreturnStmt(Loc, FE.get(), /*PromiseCall=*/nullptr, IsImplicit);
+  }
 
   VarDecl *Promise = FSI->CoroutinePromise;
   ExprResult PC;
