@@ -7,6 +7,9 @@ add_mlir_dialect_library(MLIRLinalgDialect
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
 
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/Linalg/IR/pch.h"]]
+
   DEPENDS
   MLIRLinalgInterfacesIncGen
   MLIRLinalgOpsAttributesIncGen

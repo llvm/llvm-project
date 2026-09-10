@@ -63,6 +63,16 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRSupport
   )
 
+# LLVM headers are more expensive to parse than other dialect headers. Prefer
+# this PCH even when another dialect PCH is layered on Arith.
+get_target_property(mlir_llvm_pch_priority MLIRLLVMDialect LLVM_PCH_PRIORITY)
+if(mlir_llvm_pch_priority)
+  math(EXPR mlir_llvm_pch_priority "${mlir_llvm_pch_priority} + 2")
+  set_property(TARGET MLIRLLVMDialect PROPERTY LLVM_PCH_PRIORITY
+    ${mlir_llvm_pch_priority})
+endif()
+unset(mlir_llvm_pch_priority)
+
 set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)
 foreach(index RANGE 7)
   set(NVVM_SHARDED_SRC NVVMOps.${index}.cpp)

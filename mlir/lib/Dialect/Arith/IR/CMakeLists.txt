@@ -19,6 +19,9 @@ add_mlir_dialect_library(MLIRArithDialect
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Arith
 
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/Arith/IR/pch.h"]]
+
   DEPENDS
   MLIRArithOpsIncGen
   MLIRArithOpsInterfacesIncGen
