@@ -132,10 +132,6 @@ public:
   bool AnyNonDefaultMode = false;
   bool AnyWritesRoundMode = false;
 
-  bool enforceCallBoundary() const {
-    return AnyNonDefaultMode && !AnyWritesRoundMode;
-  }
-
   bool run(MachineFunction &MF);
 
   void processBlockPhase1(MachineBasicBlock &MBB, const SIInstrInfo *TII);
@@ -502,7 +498,7 @@ void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
   }
 
   // Restore the default at the sites recorded in Phase 1.
-  if (!enforceCallBoundary())
+  if (!AnyNonDefaultMode || AnyWritesRoundMode)
     return;
   for (auto &[MI, ChangeAtSite] : BlockInfo[ThisBlock]->BoundarySites) {
     Status AtSite = BlockInfo[ThisBlock]->Pred.merge(ChangeAtSite);
@@ -510,9 +506,10 @@ void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
       continue;
     insertSetreg(MBB, MI, TII, AtSite.delta(DefaultStatus));
     // Phase 1 modelled the site as mode preserving, so put the mode back.
-    if (!MI->isTerminator())
+    if (!MI->isTerminator()) {
       insertSetreg(MBB, std::next(MI->getIterator()), TII,
                    DefaultStatus.delta(AtSite));
+    }
   }
 }
 
