@@ -9504,6 +9504,35 @@ conflicting floating-point ABIs is rejected. For example:
 !0 = !{i32 1, !"float-abi", !"hard"}
 ```
 
+### Thread Model Module Flags Metadata
+
+This module flag describes the threading model that the module was
+compiled for, which may influence how atomic operations are
+lowered. The value is a string and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"posix"`
+  - The POSIX threading model: the module may run in a multi-threaded
+    environment.
+
+* - `"single"`
+  - The single-threaded model: the module runs in a known single-threaded
+    environment, so atomic operations may be lowered to their non-atomic
+    equivalents.
+```
+
+When the flag is absent, the target's default thread model is used. The flag
+must use the `error` merge behavior. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"thread-model", !"single"}
+```
+
 ### Target ABI Module Flags Metadata
 
 This module flag names the target ABI that the module was compiled

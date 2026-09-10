@@ -2139,6 +2139,17 @@ Verifier::visitModuleFlag(const MDNode *Op,
     return;
   }
 
+  if (Name == "thread-model") {
+    Check(MFB == Module::Error,
+          "thread-model module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "thread-model metadata requires a string argument");
+    if (Value)
+      Check(parseThreadModel(Value->getString()).has_value(),
+            "invalid thread-model metadata value", Op);
+    return;
+  }
+
   if (Name == "target-abi") {
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
     Check(Value && !Value->getString().empty(),
