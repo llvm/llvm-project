@@ -120,6 +120,41 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
   return false;
 }
 
+// Return true if the EVEX form of \p MI can encode its memory displacement as
+// a compressed disp8*N (1 byte) while the VEX/legacy twin would be forced to
+// spend a full disp32 (4 bytes). In that window the EVEX encoding is strictly
+// shorter overall, despite its 1-2 byte larger prefix, so compressing it to
+// VEX would grow code size. Mirrors isDispOrCDisp8 in X86MCCodeEmitter.cpp.
+static bool hasShorterEVEXViaCDisp8(const MachineInstr &MI) {
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  unsigned CD8_Scale =
+      (TSFlags & X86II::CD8_Scale_Mask) >> X86II::CD8_Scale_Shift;
+  CD8_Scale = CD8_Scale ? 1U << (CD8_Scale - 1) : 0U;
+  // Without a CD8 scale > 1 there is no displacement advantage over VEX.
+  if (CD8_Scale <= 1)
+    return false;
+
+  int MemOpIdx = X86::getFirstAddrOperandIdx(MI);
+  if (MemOpIdx < 0)
+    return false;
+
+  const MachineOperand &Disp = MI.getOperand(MemOpIdx + X86::AddrDisp);
+  // Only a constant displacement can be range-checked here; symbolic ones
+  // (globals, constant pool, jump tables, ...) are resolved later.
+  if (!Disp.isImm())
+    return false;
+
+  int64_t Val = Disp.getImm();
+  // VEX can already use a disp8 in this range, so EVEX offers no saving.
+  if (isInt<8>(Val))
+    return false;
+  // EVEX can use disp8*N only when the value is a multiple of N and the scaled
+  // value fits in a signed byte.
+  if (Val % static_cast<int64_t>(CD8_Scale) != 0)
+    return false;
+  return isInt<8>(Val / static_cast<int64_t>(CD8_Scale));
+}
+
 // Do any custom cleanup needed to finalize the conversion.
 static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   (void)NewOpc;
@@ -314,6 +349,21 @@ static bool isCompressibleBlendVUse(unsigned BlendOpc, unsigned UseOpc) {
   }
 }
 
+static bool isCompressibleMaskedBlendUse(unsigned BlendOpc, unsigned UseOpc) {
+  switch (BlendOpc) {
+  case X86::VBLENDVPSrrr:
+    return UseOpc == X86::VPBLENDMDZ128rrk || UseOpc == X86::VBLENDMPSZ128rrk;
+  case X86::VBLENDVPSYrrr:
+    return UseOpc == X86::VPBLENDMDZ256rrk || UseOpc == X86::VBLENDMPSZ256rrk;
+  case X86::VBLENDVPDrrr:
+    return UseOpc == X86::VPBLENDMQZ128rrk || UseOpc == X86::VBLENDMPDZ128rrk;
+  case X86::VBLENDVPDYrrr:
+    return UseOpc == X86::VPBLENDMQZ256rrk || UseOpc == X86::VBLENDMPDZ256rrk;
+  default:
+    return false;
+  }
+}
+
 // Try to compress mask producer chains:
 //   vpmov*2m %xmm0, %k0       ->  (erase this)
 //   kmov* %k0, %eax           ->  vmovmskp* %xmm0, %eax
@@ -414,6 +464,7 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
 
   MachineInstr *KMovMI = nullptr;
   MachineInstr *BlendMI = nullptr;
+  bool BlendIsMaskedBlend = false;
 
   for (MachineInstr &CurMI : llvm::make_range(
            std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
@@ -431,13 +482,23 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
         KMovMI = &CurMI;
         // continue scanning to ensure
         // there are no *other* uses of the mask later in the block.
-      } else if (!IsSignMaskCmp && isCompressibleBlendVUse(BlendOpc, UseOpc) &&
-                 CurMI.getOperand(2).getReg() == MaskReg &&
-                 !usesExtendedRegister(CurMI) &&
-                 checkPredicate(BlendOpc, &ST)) {
-        BlendMI = &CurMI;
       } else {
-        return false;
+        bool IsMaskedMove =
+            !IsSignMaskCmp && isCompressibleBlendVUse(BlendOpc, UseOpc);
+        bool IsMaskedBlend =
+            !IsSignMaskCmp && isCompressibleMaskedBlendUse(BlendOpc, UseOpc);
+
+        if (!IsMaskedMove && !IsMaskedBlend)
+          return false;
+
+        unsigned MaskOpIdx = IsMaskedBlend ? 1 : 2;
+        if (CurMI.getOperand(MaskOpIdx).getReg() == MaskReg &&
+            !usesExtendedRegister(CurMI) && checkPredicate(BlendOpc, &ST)) {
+          BlendMI = &CurMI;
+          BlendIsMaskedBlend = IsMaskedBlend;
+        } else {
+          return false;
+        }
       }
     }
 
@@ -504,12 +565,12 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
   } else if (BlendMI) {
     const MachineOperand &MaskVec = MI.getOperand(1);
     const MachineOperand &Dst = BlendMI->getOperand(0);
-    const MachineOperand &Passthru = BlendMI->getOperand(1);
+    const MachineOperand &Passthru =
+        BlendMI->getOperand(BlendIsMaskedBlend ? 2 : 1);
     const MachineOperand &Src = BlendMI->getOperand(3);
 
     // Build a replacement instead of changing BlendMI in place because
-    // VMOV*rrk has a tied passthrough operand and a different operand order
-    // than VBLENDV.
+    // masked VMOV and VPBLENDM have different operand layouts from VBLENDV.
     auto MIB =
         BuildMI(MBB, *BlendMI, BlendMI->getDebugLoc(), TII->get(BlendOpc))
             .addReg(Dst.getReg(), getRegState(Dst))
@@ -538,6 +599,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
 
   // Instructions with mask or 512-bit vector can't be converted to VEX.
   if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
+    return false;
+
+  // Keep the EVEX encoding when there's 1-byte compressed disp8*N.
+  if (hasShorterEVEXViaCDisp8(MI))
     return false;
 
   // Specialized mask-producing folds to MOVMSK/VBLENDV first.

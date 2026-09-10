@@ -2,6 +2,8 @@ add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
   IR/LLVMOps.cpp
+  IR/NVVMOps.cpp
+  IR/ROCDLOps.cpp
   )
 
 set(LLVM_TARGET_DEFINITIONS IR/LLVMOps.cpp)
@@ -12,7 +14,6 @@ foreach(index RANGE 7)
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRLLVMOpsShardGen)
-
 add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
@@ -38,6 +39,8 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMTypesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
+  MLIRLLVMConversionsIncGen
+  MLIRLLVMIntrinsicConversionsIncGen
 
   LINK_COMPONENTS
   BinaryFormat
@@ -57,10 +60,20 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRSupport
   )
 
+set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)
+foreach(index RANGE 7)
+  set(NVVM_SHARDED_SRC NVVMOps.${index}.cpp)
+  list(APPEND NVVM_SHARDED_SRCS ${NVVM_SHARDED_SRC})
+  tablegen(MLIR_SRC_SHARDER ${NVVM_SHARDED_SRC}
+    -op-shard-index=${index})
+endforeach()
+add_public_tablegen_target(MLIRNVVMOpsShardGen)
+
 add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
   IR/NVVMRequiresSMTraits.cpp
+  ${NVVM_SHARDED_SRCS}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -68,6 +81,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRNVVMOpsIncGen
+  MLIRNVVMOpsShardGen
   MLIRNVVMConversionsIncGen
   MLIRBasicPtxBuilderInterfaceIncGen
   MLIRNVVMRequiresSMTraitsIncGen
@@ -87,8 +101,18 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRInferIntRangeInterface
   )
 
+set(LLVM_TARGET_DEFINITIONS IR/ROCDLOps.cpp)
+foreach(index RANGE 7)
+  set(ROCDL_SHARDED_SRC ROCDLOps.${index}.cpp)
+  list(APPEND ROCDL_SHARDED_SRCS ${ROCDL_SHARDED_SRC})
+  tablegen(MLIR_SRC_SHARDER ${ROCDL_SHARDED_SRC}
+    -op-shard-index=${index})
+endforeach()
+add_public_tablegen_target(MLIRROCDLOpsShardGen)
+
 add_mlir_dialect_library(MLIRROCDLDialect
   IR/ROCDLDialect.cpp
+  ${ROCDL_SHARDED_SRCS}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -96,6 +120,7 @@ add_mlir_dialect_library(MLIRROCDLDialect
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRROCDLOpsIncGen
+  MLIRROCDLOpsShardGen
   MLIRROCDLConversionsIncGen
   intrinsics_gen
 
@@ -116,7 +141,6 @@ add_mlir_dialect_library(MLIRVCIXDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
   DEPENDS
-  MLIRGPUCompilationAttrInterfacesIncGen
   MLIRVCIXOpsIncGen
   MLIRVCIXConversionsIncGen
   intrinsics_gen

@@ -35,6 +35,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 #define DEBUG_TYPE "amdgpu-legalinfo"
 
@@ -729,7 +730,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const std::initializer_list<LLT> FPTypesPK16_64 = {F32, F64, F16, V2F16,
                                                      V2F64};
 
-  const LLT MinExtendedFPTy = ST.has16BitInsts() ? F16 : F32;
   const LLT I1 = LLT::integer(1);
   const LLT I16 = LLT::integer(16);
   const LLT I32 = LLT::integer(32);
@@ -1355,17 +1355,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   FCmpBuilder.widenScalarToNextPow2(1).minScalar(1, F32).scalarize(0);
 
-  // FIXME: fpow has a selection pattern that should move to custom lowering.
-  auto &ExpOps = getActionDefinitionsBuilder(G_FPOW);
-  if (ST.has16BitInsts())
-    ExpOps.customFor({{F32}, {F16}});
-  else
-    ExpOps.customFor({F32});
-  ExpOps.clampScalar(0, MinExtendedFPTy, F32).scalarize(0);
+  getActionDefinitionsBuilder(G_FPOW)
+      .customFor({F32})
+      .clampScalar(0, F32, F32)
+      .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FPOWI)
-      .clampScalar(0, MinExtendedFPTy, F32)
-      .lower();
+  getActionDefinitionsBuilder(G_FPOWI).clampScalar(0, F32, F32).lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
@@ -2389,7 +2384,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FEXP10:
     return legalizeFExp(MI, B);
   case TargetOpcode::G_FPOW:
-    return legalizeFPow(MI, B);
+    return legalizeFPow(Helper, MI);
   case TargetOpcode::G_FFLOOR:
     return legalizeFFloor(MI, MRI, B);
   case TargetOpcode::G_BUILD_VECTOR:
@@ -2411,7 +2406,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SET_FPENV:
     return legalizeSetFPEnv(MI, MRI, B);
   case TargetOpcode::G_TRAP:
-    return legalizeTrap(MI, MRI, B);
+    return legalizeTrap(Helper, MI);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
   default:
@@ -2421,24 +2416,41 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   llvm_unreachable("expected switch to return");
 }
 
-Register AMDGPULegalizerInfo::getSegmentAperture(
-  unsigned AS,
-  MachineRegisterInfo &MRI,
-  MachineIRBuilder &B) const {
+Register AMDGPULegalizerInfo::getSegmentAperture(unsigned AS,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B) const {
+  unsigned BaseAS = AS;
+  unsigned SANum = AMDGPU::getSyntheticApertureNumber(AS);
+  if (SANum != AMDGPU::SyntheticAperture::None)
+    BaseAS = AMDGPUAS::LOCAL_ADDRESS;
+
+  Register Aperture = getBaseSegmentAperture(BaseAS, MRI, B);
+
+  if (SANum != AMDGPU::SyntheticAperture::None) {
+    const LLT S32 = LLT::scalar(32);
+    auto Tag = B.buildConstant(S32, SANum);
+    return B.buildOr(S32, Aperture, Tag).getReg(0);
+  }
+
+  return Aperture;
+}
+
+Register AMDGPULegalizerInfo::getBaseSegmentAperture(
+    unsigned AS, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   MachineFunction &MF = B.getMF();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const LLT I32 = LLT::integer(32);
   const LLT I64 = LLT::integer(64);
 
-  assert(AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS);
+  bool IsLDS = (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::BARRIER);
+  assert(IsLDS || AS == AMDGPUAS::PRIVATE_ADDRESS);
 
   if (ST.hasApertureRegs()) {
     // Note: this register is somewhat broken. When used as a 32-bit operand,
     // it only returns zeroes. The real value is in the upper 32 bits.
     // Thus, we must emit extract the high 32 bits.
-    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
-                                       ? AMDGPU::SRC_SHARED_BASE
-                                       : AMDGPU::SRC_PRIVATE_BASE;
+    const unsigned ApertureRegNo =
+        IsLDS ? AMDGPU::SRC_SHARED_BASE : AMDGPU::SRC_PRIVATE_BASE;
     assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
             !ST.hasGloballyAddressableScratch()) &&
            "Cannot use src_private_base with globally addressable scratch!");
@@ -2493,7 +2505,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /
   // private_segment_aperture_base_hi.
-  uint32_t StructOffset = (AS == AMDGPUAS::LOCAL_ADDRESS) ? 0x40 : 0x44;
+  uint32_t StructOffset = IsLDS ? 0x40 : 0x44;
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       PtrInfo,
@@ -2561,7 +2573,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   }
 
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
-      (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
+      (DestAS == AMDGPUAS::LOCAL_ADDRESS || DestAS == AMDGPUAS::BARRIER ||
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
     auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
@@ -2578,7 +2590,6 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
         return B.buildIntToPtr(Dst, Sub).getReg(0);
       }
 
-      // Extract low 32-bits of the pointer.
       return B.buildExtract(Dst, Src, 0).getReg(0);
     };
 
@@ -2605,7 +2616,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   }
 
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
-      (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
+      (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::BARRIER ||
        SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
       // Coerce the type of the low half of the result so we can use
@@ -3343,10 +3354,27 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   MachineFunction &MF = B.getMF();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
+  if (AS == AMDGPUAS::BARRIER) {
+    const GlobalVariable *GVar = cast<GlobalVariable>(GV);
+    if (!AMDGPU::isNamedBarrier(*GVar)) {
+      const Function &Fn = MF.getFunction();
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn, "unsupported use of BARRIER address space", MI.getDebugLoc(),
+          DS_Error));
+      B.buildUndef(DstReg);
+      MI.eraseFromParent();
+      return true;
+    }
+
+    B.buildConstant(DstReg,
+                    MFI->allocateBarrierGlobal(B.getDataLayout(), *GVar));
+    MI.eraseFromParent();
+    return true;
+  }
+
   if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        GV->getName() != "llvm.amdgcn.module.lds" &&
-        !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
+        GV->getName() != "llvm.amdgcn.module.lds") {
       const Function &Fn = MF.getFunction();
       Fn.getContext().diagnose(DiagnosticInfoUnsupported(
           Fn, "local memory global used by non-kernel function",
@@ -4281,37 +4309,78 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
-                                       MachineIRBuilder &B) const {
+// Keep in sync with AMDGPUTargetLowering::lowerFPOW, which documents this.
+bool AMDGPULegalizerInfo::legalizeFPow(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
   Register Dst = MI.getOperand(0).getReg();
-  Register Src0 = MI.getOperand(1).getReg();
-  Register Src1 = MI.getOperand(2).getReg();
+  Register X = MI.getOperand(1).getReg();
+  Register Y = MI.getOperand(2).getReg();
   unsigned Flags = MI.getFlags();
-  LLT Ty = B.getMRI()->getType(Dst);
+  assert(B.getMRI()->getType(Dst) == F32);
 
-  if (Ty == F32) {
-    auto Log = B.buildFLog2(F32, Src0, Flags);
+  // log2(0) is -inf, which exp2 turns back into a finite result, so the core
+  // goes infinite for inputs a ninf fpow still asserts about, like pow(0, 2).
+  unsigned CoreFlags = Flags & ~MachineInstr::FmNoInfs;
+
+  // Fast expansion: ignores denormals, NaN for a negative base.
+  if (allowApproxFunc(B.getMF(), Flags)) {
+    auto Log = B.buildIntrinsic(Intrinsic::amdgcn_log, {F32})
+                   .addUse(X)
+                   .setMIFlags(CoreFlags);
     auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
+                   .addUse(Y)
                    .addUse(Log.getReg(0))
-                   .addUse(Src1)
-                   .setMIFlags(Flags);
-    B.buildFExp2(Dst, Mul, Flags);
-  } else if (Ty == F16) {
-    // There's no f16 fmul_legacy, so we need to convert for it.
-    auto Log = B.buildFLog2(F16, Src0, Flags);
-    auto Ext0 = B.buildFPExt(F32, Log, Flags);
-    auto Ext1 = B.buildFPExt(F32, Src1, Flags);
-    auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
-                   .addUse(Ext0.getReg(0))
-                   .addUse(Ext1.getReg(0))
-                   .setMIFlags(Flags);
-    // The f32 product is finite whenever the original fpow was, but it can
-    // still be outside the f16 range. Drop ninf from the truncation and from
-    // the exp2, since neither can assume a finite value here.
-    unsigned FlagsNoNInf = Flags & ~MachineInstr::FmNoInfs;
-    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul, FlagsNoNInf), FlagsNoNInf);
-  } else
-    return false;
+                   .setMIFlags(CoreFlags);
+    buildExp(B, Dst, Mul.getReg(0), CoreFlags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  auto Abs = B.buildFAbs(F32, X, Flags);
+  auto Log = B.buildFLog2(F32, Abs, CoreFlags);
+  auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
+                 .addUse(Y)
+                 .addUse(Log.getReg(0))
+                 .setMIFlags(CoreFlags);
+
+  // A base that is never negative needs neither the sign fixup nor the NaN.
+  if (Helper.getValueTracking()
+          ->computeKnownFPClass(X, Flags, fcNegative, 0)
+          .signBitIsZeroOrNaN()) {
+    B.buildFExp2(Dst, Mul, CoreFlags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  Register R = B.buildFExp2(F32, Mul, CoreFlags).getReg(0);
+
+  auto YTrunc = B.buildIntrinsicTrunc(F32, Y);
+  auto YIsInt = B.buildFCmp(CmpInst::FCMP_OEQ, S1, YTrunc, Y);
+  auto YHalf = B.buildFMul(F32, Y, B.buildFConstant(F32, 0.5));
+  auto YHalfTrunc = B.buildIntrinsicTrunc(F32, YHalf);
+  auto YIsOdd = B.buildAnd(
+      S1, YIsInt, B.buildFCmp(CmpInst::FCMP_ONE, S1, YHalfTrunc, YHalf));
+
+  // pow(-x, odd y) = -pow(x, y). Selecting the copysign lets even y fold it.
+  auto Neg = B.buildFCopysign(F32, R, X);
+  if (Flags & MachineInstr::FmNoNans) {
+    B.buildSelect(Dst, YIsOdd, Neg, R);
+    MI.eraseFromParent();
+    return true;
+  }
+  R = B.buildSelect(F32, YIsOdd, Neg, R).getReg(0);
+
+  // A negative finite base to a non-integral power is NaN. -inf is excluded:
+  // the core already gives pow(+inf, y). So are subnormals when flushed.
+  FPClassTest NegFiniteMask = fcNegNormal;
+  if (!B.getMF().getDenormalMode(APFloat::IEEEsingle()).inputsAreZero())
+    NegFiniteMask |= fcNegSubnormal;
+  auto XNegFinite = B.buildIsFPClass(S1, X, NegFiniteMask);
+  // Not an ONE compare: pow(-1, NaN) needs the NaN-true behavior of !OEQ.
+  auto NegNonInt = B.buildAnd(S1, XNegFinite, B.buildNot(S1, YIsInt));
+  auto NaN = B.buildFConstant(F32, APFloat::getQNaN(APFloat::IEEEsingle()));
+  B.buildSelect(Dst, NegNonInt, NaN, R);
 
   MI.eraseFromParent();
   return true;
@@ -7744,19 +7813,22 @@ bool AMDGPULegalizerInfo::legalizeSBufferPrefetch(LegalizerHelper &Helper,
 }
 
 // TODO: Move to selection
-bool AMDGPULegalizerInfo::legalizeTrap(MachineInstr &MI,
-                                       MachineRegisterInfo &MRI,
-                                       MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrap(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
   if (!ST.hasTrapHandler() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
-    return legalizeTrapEndpgm(MI, MRI, B);
+    return legalizeTrapEndpgm(Helper, MI);
 
   return ST.supportsGetDoorbellID() ?
          legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);
 }
 
-bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrapEndpgm(LegalizerHelper &Helper,
+                                             MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  GISelChangeObserver &Observer = Helper.Observer;
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock &BB = B.getMBB();
   MachineFunction *MF = BB.getParent();
@@ -7771,7 +7843,18 @@ bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
   // We need a block split to make the real endpgm a terminator. We also don't
   // want to break phis in successor blocks, so we can't just delete to the
   // end of the block.
+  // An instruction's parent block is part of its CSE profile, so notify
+  // observers about the instructions moved by the split.
+  SmallVector<MachineInstr *, 8> MovedInstrs;
+  MachineBasicBlock::iterator SplitPoint(&MI);
+  ++SplitPoint;
+  for (auto I = SplitPoint, E = BB.end(); I != E; ++I) {
+    Observer.changingInstr(*I);
+    MovedInstrs.push_back(&*I);
+  }
   BB.splitAt(MI, false /*UpdateLiveIns*/);
+  for (MachineInstr *MovedMI : MovedInstrs)
+    Observer.changedInstr(*MovedMI);
   MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
   MF->push_back(TrapBB);
   BuildMI(*TrapBB, TrapBB->end(), DL, B.getTII().get(AMDGPU::S_ENDPGM))

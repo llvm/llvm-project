@@ -70,6 +70,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Diagnostics
 
+- Query-based custom clang-tidy checks can now be enabled with the
+  `Diagnostics.ClangTidy.ExperimentalCustomChecks` clangd configuration option.
+  Custom checks are subject to `FastCheckFilter`, and therefore require
+  `FastCheckFilter: Loose` or `None` to run.
+
 #### Semantic Highlighting
 
 #### Compile flags
@@ -236,6 +241,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.
+
+  - Added the {option}`AllowTrailingUnderscore`, which permits a
+    single trailing underscore on any identifier.
 
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
