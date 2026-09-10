@@ -208,12 +208,22 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
     return createIntCast(rewriter, value, memType);
   }
 
-  // Boolean vectors use `iN` as storage type
+  // Boolean vectors use:
+  //  * `iN` for fixed-width vectors,
+  //  * `<vscale x N x i1>` for scalable vectors,
+  // as storage type.
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(origType)) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
-      uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
-      auto resultTy = mlir::IntegerType::get(origType.getContext(), bytePadded);
-      value = emitBoolVecConversion(rewriter, value, resultTy.getWidth());
+      mlir::Type resultTy;
+      if (vecTy.getIsScalable())
+        resultTy = mlir::VectorType::get(
+            vecTy.getSize(), vecTy.getElementType(), vecTy.getIsScalable());
+      else {
+        uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
+        resultTy = mlir::IntegerType::get(origType.getContext(), bytePadded);
+        value = emitBoolVecConversion(
+            rewriter, value, dyn_cast<mlir::IntegerType>(resultTy).getWidth());
+      }
       return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), resultTy,
                                            value);
     }
