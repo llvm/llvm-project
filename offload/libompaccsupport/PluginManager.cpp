@@ -17,6 +17,7 @@
 #include "Shared/Profile.h"
 #include "device.h"
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -464,20 +465,25 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
               REPORT() << "Failed to write symbol for USM " << Entry.SymbolName;
         } else if (Entry.Address) {
           if (Device.RTL->get_function(Binary, Entry.SymbolName,
-                                       &DeviceEntry.Address) != OFFLOAD_SUCCESS)
+                                       &DeviceEntry.Address) !=
+              OFFLOAD_SUCCESS) {
             REPORT() << "Failed to load kernel " << Entry.SymbolName;
+            continue;
+          }
 
           // Read this kernel's launch-geometry properties once, from its
           // "<name>_kernel_environment" device global, and cache them on
           // the device for use at launch time.
-          std::string EnvName =
-              std::string(Entry.SymbolName) + "_kernel_environment";
+
+          SmallString<128> EnvName(Entry.SymbolName);
+          EnvName += "_kernel_environment";
           KernelEnvironmentTy KernelEnv{};
           void *KernelEnvPtr = nullptr;
           bool ReadOk =
               Device.RTL->get_global(Binary, sizeof(KernelEnv), EnvName.c_str(),
                                      &KernelEnvPtr) == OFFLOAD_SUCCESS &&
-              Device.RTL->data_retrieve(DeviceId, &KernelEnv, KernelEnvPtr,
+              Device.RTL->data_retrieve(Device.RTLDeviceID, &KernelEnv,
+                                        KernelEnvPtr,
                                         sizeof(KernelEnv)) == OFFLOAD_SUCCESS;
           if (!ReadOk) {
             KernelEnv = KernelEnvironmentTy{};
@@ -500,7 +506,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           }
 
           llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
-              Device.RTL->getDevice(DeviceId);
+              Device.RTL->getDevice(Device.RTLDeviceID);
           auto *Kernel =
               reinterpret_cast<llvm::omp::target::plugin::GenericKernelTy *>(
                   DeviceEntry.Address);
@@ -518,8 +524,6 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
                                       int32_t(GenericDevice.getThreadLimit()))
                            : GenericDevice.getThreadLimit(),
                        Kernel->getMaxThreads());
-          // Pref = Config.Pref > 0 ? max(Config.Pref, Device.Pref)
-          //                        : Device.Pref.
           LaunchInfo.PreferredNumThreads =
               Cfg.MinThreads > 0
                   ? std::max(Cfg.MinThreads,
