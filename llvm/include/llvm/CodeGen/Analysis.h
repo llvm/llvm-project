@@ -21,7 +21,6 @@
 namespace llvm {
 template <typename T> class SmallVectorImpl;
 class Constant;
-class DataLayout;
 class GlobalValue;
 class LLT;
 class MachineBasicBlock;
@@ -122,16 +121,22 @@ LLVM_ABI ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
 /// reference to its symbol, so that a variable holding that address can be
 /// described for the whole of its scope rather than only from wherever the
 /// address happens to be materialized.
-LLVM_ABI bool canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV);
+///
+/// Whether the symbol alone denotes the runtime address depends on \p MF: the
+/// relocation model decides whether a base has to be added to it, and the
+/// debug format and DWARF version decide whether the result can be spelled as
+/// a value rather than as a place to load from.
+LLVM_ABI bool canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
+                                                  const MachineFunction &MF);
 
 /// If \p C is the address of a global, possibly displaced by a constant,
 /// return that global and set \p Offset to the displacement in bytes. Returns
-/// nullptr if \p C is not such an address, or if the global's address cannot
-/// be described per canDescribeGlobalAddressInDebugInfo(); \p Offset is then
-/// meaningless.
-LLVM_ABI const GlobalValue *getDescribableGlobalAddress(const Constant *C,
-                                                        int64_t &Offset,
-                                                        const DataLayout &DL);
+/// nullptr if \p C is not such an address, or if the global's address cannot be
+/// described per canDescribeGlobalAddressInDebugInfo(). \p Offset is set to
+/// zero in those cases, so it only carries a displacement alongside a global.
+LLVM_ABI const GlobalValue *
+getDescribableGlobalAddress(const Constant *C, int64_t &Offset,
+                            const MachineFunction &MF);
 
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with

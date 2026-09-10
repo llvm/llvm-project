@@ -865,6 +865,13 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
 bool DwarfExpression::addGlobalAddress(const GlobalValue *GV, int64_t Offset) {
   DwarfDebug &DD = CU.getDwarfDebug();
 
+  // This is an implicit location, and finalize() spells that with
+  // DW_OP_stack_value, which DWARF 4 introduced. Before it, the expression
+  // would read as the address the variable lives at rather than as its value,
+  // and there is no older spelling to fall back on.
+  if (DwarfVersion < 4)
+    return false;
+
   // Prefer the address pool, whose index is plain data and so can be emitted
   // into either output form. Before DWARF 5 the pool is only available under
   // split DWARF, leaving a relocated DW_OP_addr as the only spelling -- which

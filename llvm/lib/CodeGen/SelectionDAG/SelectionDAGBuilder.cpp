@@ -1659,10 +1659,12 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
     // The address of a global is a link-time constant, and so is a constant
     // displacement from one. The displacement rides along in the expression
     // rather than in the operand, so that it survives into a DBG_INSTR_REF.
+    // A global whose address cannot be described this way falls through to be
+    // described by whatever materializes it instead.
     if (const auto *C = dyn_cast<Constant>(V)) {
-      int64_t Offset = 0;
-      if (const GlobalValue *GV =
-              getDescribableGlobalAddress(C, Offset, DAG.getDataLayout())) {
+      int64_t Offset;
+      if (const GlobalValue *GV = getDescribableGlobalAddress(
+              C, Offset, DAG.getMachineFunction())) {
         if (Offset) {
           SmallVector<uint64_t, 3> Ops;
           DIExpression::appendOffset(Ops, Offset);

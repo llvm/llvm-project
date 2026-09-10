@@ -9,6 +9,22 @@
 ; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF5
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=4 -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF4
+;; Describing the address as the variable's value needs DW_OP_stack_value, so
+;; neither the module flag nor the -dwarf-version override may pick this
+;; representation below DWARF 4. A bare DW_OP_addr would read as the address the
+;; variable lives at, so the implicit-check-nots below exclude it -- spelled
+;; with its operand, since a bare DW_OP_addr is also a prefix of DW_OP_addrx.
+; RUN: sed -e 's/!"Dwarf Version", i32 5/!"Dwarf Version", i32 3/' %s \
+; RUN:   | llc -O2 -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel \
+; RUN:   | FileCheck %s --check-prefix=DWARF3-MIR \
+; RUN:       --implicit-check-not='DBG_VALUE @'
+; RUN: sed -e 's/!"Dwarf Version", i32 5/!"Dwarf Version", i32 3/' %s \
+; RUN:   | llc -O2 -mtriple=x86_64-unknown-linux-gnu -filetype=obj \
+; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF3 \
+; RUN:       --implicit-check-not='DW_OP_addr 0x'
+; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=2 -filetype=obj \
+; RUN:   < %s | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF2 \
+; RUN:       --implicit-check-not='DW_OP_addr 0x'
 
 @g = global i64 0, align 8
 @tls = thread_local global i64 0, align 8
@@ -47,6 +63,24 @@ entry:
 ; DWARF5: DW_TAG_variable
 ; DWARF5-NEXT: DW_AT_location (DW_OP_addrx 0x1, DW_OP_stack_value)
 ; DWARF5-NEXT: DW_AT_name ("y")
+;
+;; Below DWARF 4 the register the address is materialized into is still a valid
+;; location, and rejecting the symbol early is what keeps it available. Both the
+;; module flag and the -dwarf-version override reject, so both end up here.
+; DWARF3-MIR-LABEL: name: global_stored
+; DWARF3-MIR: DBG_INSTR_REF ![[#]], !DIExpression(DW_OP_LLVM_arg, 0)
+;
+; DWARF3-LABEL: DW_AT_name ("global_stored")
+; DWARF3: DW_TAG_variable
+; DWARF3-NEXT: DW_AT_location (0x{{[0-9a-f]+}}:
+; DWARF3-NEXT: DW_OP_reg[[#]] R{{[A-Z0-9]+}})
+; DWARF3-NEXT: DW_AT_name ("y")
+;
+; DWARF2-LABEL: DW_AT_name ("global_stored")
+; DWARF2: DW_TAG_variable
+; DWARF2-NEXT: DW_AT_location (0x{{[0-9a-f]+}}:
+; DWARF2-NEXT: DW_OP_reg[[#]] R{{[A-Z0-9]+}})
+; DWARF2-NEXT: DW_AT_name ("y")
 define void @global_stored() !dbg !12 {
 entry:
     #dbg_value(ptr @g, !13, !DIExpression(), !14)

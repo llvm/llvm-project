@@ -110,7 +110,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   }();
 
   bool IsIndirect = true;
-  int64_t GlobalOffset = 0;
+  int64_t GlobalOffset;
   if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
@@ -123,7 +123,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   } else if (isa<ConstantPointerNull>(NumericConstant)) {
     MIB.addImm(0);
   } else if (const GlobalValue *GV = getDescribableGlobalAddress(
-                 NumericConstant, GlobalOffset, getMF().getDataLayout())) {
+                 NumericConstant, GlobalOffset, getMF())) {
     // The address of a global is a direct link-time constant. A displacement
     // from it rides along in the expression rather than in the operand.
     MIB.addGlobalAddress(GV);

@@ -5,7 +5,8 @@
 ; RUN:    -experimental-debug-variable-locations=true | FileCheck %s
 
 ;; The address of a global is emitted as a location in its own right, so none of
-;; these locations depend on an instruction and both modes agree.
+;; these locations depend on an instruction and both modes agree. That needs
+;; DW_OP_stack_value to describe, hence the DWARF 5 module flag below.
 
 ;--------------------------------------------------------------------
 ; Adapted from sdag-dangling-dbgvalue.ll to test dbg.assign intrinsics. This
@@ -161,7 +162,7 @@ attributes #1 = { nounwind readnone speculatable }
 !9 = !{!10, !11}
 !10 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !8, file: !3, line: 2, baseType: !6, size: 32)
 !11 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !8, file: !3, line: 3, baseType: !6, size: 32, offset: 32)
-!12 = !{i32 2, !"Dwarf Version", i32 2}
+!12 = !{i32 2, !"Dwarf Version", i32 5}
 !13 = !{i32 2, !"Debug Info Version", i32 3}
 !14 = !{i32 1, !"wchar_size", i32 4}
 !15 = !{i32 7, !"PIC Level", i32 2}

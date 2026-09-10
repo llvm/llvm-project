@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -23,6 +24,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -529,8 +531,9 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
   return true;
 }
 
-bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV) {
-  // Only a definitions have an address a symbol reference can name.
+bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
+                                               const MachineFunction &MF) {
+  // Only definitions have an address a symbol reference can name.
   if (GV->isDeclarationForLinker())
     return false;
   // A thread-local's address is not known until it is resolved against a
@@ -545,23 +548,67 @@ bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV) {
   // symbol's own address is not the value of the pointer.
   if (isa<GlobalIFunc>(GV))
     return false;
+
+  const Module &M = *MF.getFunction().getParent();
+  const TargetMachine &TM = MF.getTarget();
+
+  // CodeView has no way to name a symbol in a local variable's location, so
+  // choosing one here would leave the variable with no location at all.
+  if (M.getCodeViewFlag())
+    return false;
+
+  // Saying that the variable holds this address, rather than that it lives at
+  // it, needs DW_OP_stack_value, which DWARF 4 introduced. Nothing older can
+  // express the difference, so leave those versions to describe the variable by
+  // wherever the address is materialized instead. DwarfExpression refuses the
+  // same versions; deciding here only picks the better of the two fallbacks,
+  // while a materialized location is still available to fall back on.
+  // FIXME: Share this resolution with DwarfDebug's, which has to match.
+  unsigned DwarfVersion = TM.Options.MCOptions.DwarfVersion;
+  if (!DwarfVersion)
+    DwarfVersion = M.getDwarfVersion();
+  if (!DwarfVersion)
+    DwarfVersion = dwarf::DWARF_VERSION;
+  if (DwarfVersion < 4)
+    return false;
+
+  // On some targets a global does not live at its symbol's address; a base
+  // known only at run time has to be added to it. DwarfCompileUnit builds
+  // those addends for global variables, but they need a relocation, which a
+  // location list cannot carry, so a local pointing at such a global has to
+  // keep being described by whatever register holds the computed address.
+  if (TM.getTargetTriple().isWasm() && TM.getRelocationModel() == Reloc::PIC_)
+    return false;
+  if (TM.getRelocationModel() == Reloc::RWPI ||
+      TM.getRelocationModel() == Reloc::ROPI_RWPI) {
+    // Only writable globals are addressed relative to the static base;
+    // read-only ones keep an absolute address. An alias may name either, so
+    // give up rather than chase it.
+    const auto *GO = dyn_cast<GlobalObject>(GV);
+    if (!GO || !TM.getObjFileLowering()->getKindForGlobal(GO, TM).isReadOnly())
+      return false;
+  }
+
   return true;
 }
 
-const GlobalValue *llvm::getDescribableGlobalAddress(const Constant *C,
-                                                     int64_t &Offset,
-                                                     const DataLayout &DL) {
+const GlobalValue *
+llvm::getDescribableGlobalAddress(const Constant *C, int64_t &Offset,
+                                  const MachineFunction &MF) {
+  Offset = 0;
   if (!C->getType()->isPointerTy())
     return nullptr;
 
   // Non-inbounds offsets are stripped as well, which is the default. The
   // inbounds flag constrains what the program may do with the pointer, not
   // what its value is, and describing an address needs only the value.
-  const auto *GV =
-      dyn_cast<GlobalValue>(GetPointerBaseWithConstantOffset(C, Offset, DL));
-  if (!GV || !canDescribeGlobalAddressInDebugInfo(GV))
+  int64_t GVOffset;
+  const auto *GV = dyn_cast<GlobalValue>(
+      GetPointerBaseWithConstantOffset(C, GVOffset, MF.getDataLayout()));
+  if (!GV || !canDescribeGlobalAddressInDebugInfo(GV, MF))
     return nullptr;
 
+  Offset = GVOffset;
   return GV;
 }
 

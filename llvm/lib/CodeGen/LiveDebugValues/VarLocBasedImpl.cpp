@@ -374,8 +374,8 @@ private:
       MachineLocValue() : Hash(0) {}
     };
 
-    /// A single machine location; its Kind is either a register, spill
-    /// location, or immediate value.
+    /// A single machine location; its Kind is a register, a spill location, an
+    /// immediate value, a WebAssembly local, or the address of a global.
     /// If the VarLoc is not a NonEntryValueKind, then it will use only a
     /// single MachineLoc of RegisterKind.
     struct MachineLoc {
@@ -399,30 +399,32 @@ private:
         }
       }
       bool operator<(const MachineLoc &Other) const {
+        // Order by kind first, and only then by the payload. Which union member
+        // is the active one depends on the kind, so reading either side's
+        // payload is only well defined once both kinds are known to agree.
+        if (Kind != Other.Kind)
+          return Kind < Other.Kind;
         switch (Kind) {
         case MachineLocKind::SpillLocKind:
           return std::make_tuple(
-                     Kind, Value.SpillLocation.SpillBase,
+                     Value.SpillLocation.SpillBase,
                      Value.SpillLocation.SpillOffset.getFixed(),
                      Value.SpillLocation.SpillOffset.getScalable()) <
                  std::make_tuple(
-                     Other.Kind, Other.Value.SpillLocation.SpillBase,
+                     Other.Value.SpillLocation.SpillBase,
                      Other.Value.SpillLocation.SpillOffset.getFixed(),
                      Other.Value.SpillLocation.SpillOffset.getScalable());
         case MachineLocKind::WasmLocKind:
-          return std::make_tuple(Kind, Value.WasmLocation.Index,
-                                 Value.WasmLocation.Offset) <
-                 std::make_tuple(Other.Kind, Other.Value.WasmLocation.Index,
-                                 Other.Value.WasmLocation.Offset);
+          return std::tie(Value.WasmLocation.Index, Value.WasmLocation.Offset) <
+                 std::tie(Other.Value.WasmLocation.Index,
+                          Other.Value.WasmLocation.Offset);
         case MachineLocKind::GlobalAddrKind:
-          return std::make_tuple(Kind, Value.GlobalAddress.GV,
-                                 Value.GlobalAddress.Offset) <
-                 std::make_tuple(Other.Kind, Other.Value.GlobalAddress.GV,
-                                 Other.Value.GlobalAddress.Offset);
+          return std::tie(Value.GlobalAddress.GV, Value.GlobalAddress.Offset) <
+                 std::tie(Other.Value.GlobalAddress.GV,
+                          Other.Value.GlobalAddress.Offset);
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
-          return std::tie(Kind, Value.Hash) <
-                 std::tie(Other.Kind, Other.Value.Hash);
+          return Value.Hash < Other.Value.Hash;
         default:
           llvm_unreachable("Invalid kind");
         }
@@ -1461,7 +1463,8 @@ void VarLocBasedLDV::transferDebugValue(const MachineInstr &MI,
         return (MO.isReg() && MO.getReg()) || MO.isImm() || MO.isFPImm() ||
                MO.isCImm() || MO.isTargetIndex() || MO.isGlobal();
       })) {
-    // Use normal VarLoc constructor for registers and immediates.
+    // Use the normal VarLoc constructor for every operand kind MachineLoc can
+    // hold directly: registers, immediates, WebAssembly locals and globals.
     VarLoc VL(MI);
     // End all previous ranges of VL.Var.
     OpenRanges.erase(VL);
