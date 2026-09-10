@@ -100,6 +100,7 @@
 //   LOD_TYPE           CalculateLevelOfDetail location type
 //   TEXTURE            resource type name
 //   GRAD_CXX           ddx/ddy type in the C++ signature
+//   GRAD_LLVM          ddx/ddy type in the IR
 //   DXIL_TY            dx.Texture resource-kind operand
 //   RW                 dx.Texture UAV operand
 //   ARRAYED            spirv.Image Arrayed operand

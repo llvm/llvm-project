@@ -78,9 +78,13 @@
 //   INDEX_ARG          a literal operator[] index
 //   TEXTURE            resource type name
 //   INDEX_TYPE         operator[] index type
+//   TRUNC_TYPE         the operator[] index type as the truncating cast of
+//                      INDEX_ARG spells it; only used by UAV-TRUNC
 //   LOCATION_TYPE      Load location type
 //   DIM_NAME           hlsl::dimension spelling
 //   RW                 dx.Texture UAV operand
+//   HAS_GETDIM         defined for types that have the GetDimensions
+//                      overloads
 //
 // Check prefixes:
 //   SRV                read-only (SRV) textures
