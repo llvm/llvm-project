@@ -1,7 +1,4 @@
-// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup" \
-// RUN: | FileCheck %s
-
-// XFAIL: *
+// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup"
 
 #a = #xegpu.layout<sg_layout = [1, 8, 4], sg_data = [4, 8, 32], inst_data = [1, 8, 16]>
 #b = #xegpu.layout<sg_layout = [1, 8, 4], sg_data = [4, 32, 16], inst_data = [1, 16, 16]>

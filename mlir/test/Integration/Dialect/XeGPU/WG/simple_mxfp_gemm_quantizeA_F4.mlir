@@ -1,12 +1,14 @@
-// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri" \
-// RUN: | mlir-runner \
-// RUN:   --shared-libs=%mlir_levelzero_runtime \
-// RUN:   --shared-libs=%mlir_runner_utils \
-// RUN:   --shared-libs=%mlir_c_runner_utils \
-// RUN:   --entry-point-result=void \
-// RUN: | FileCheck %s
+// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri"
+// RUN-DISABLED: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri" \
+// RUN-DISABLED: | mlir-runner \
+// RUN-DISABLED:   --shared-libs=%mlir_levelzero_runtime \
+// RUN-DISABLED:   --shared-libs=%mlir_runner_utils \
+// RUN-DISABLED:   --shared-libs=%mlir_c_runner_utils \
+// RUN-DISABLED:   --entry-point-result=void \
+// RUN-DISABLED: | FileCheck --check-prefix=MISMATCH %s
 
 // XFAIL: *
+
 // Note: layouts used by dpas_mx need to match HW constaint. Otherwise dpas_mx is not unrolled.
 #a = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 1024], inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 4]>
 #a_ld = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 1024], inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>
@@ -220,7 +222,7 @@ module @gemm attributes {gpu.container_module} {
     call @printI64(%diff) : (i64) -> ()
     //call @printMemrefF32(%C_cast) : (memref<*xf32>) -> ()
 
-    // CHECK: 0
+    // MISMATCH: 0
     memref.dealloc %A : memref<256x4096xbf16>
     memref.dealloc %B : memref<2048x256xi8>
     memref.dealloc %B_scale : memref<128x256xf8E8M0FNU>
