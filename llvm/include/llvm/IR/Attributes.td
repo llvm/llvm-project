@@ -22,8 +22,7 @@ def ParamAttr : AttrProperty;
 /// Can be used as return attribute.
 def RetAttr : AttrProperty;
 
-/// This is an ABI-affecting attribute.
-def ABIAttr : AttrProperty;
+
 
 /// Intersection rules. Used for example in sinking/hoisting two
 /// callbases to find a set of attributes that apply to both.
@@ -45,6 +44,8 @@ def IntersectMin : AttrProperty;
 
 /// When intersecting rely on some specially defined code.
 def IntersectCustom : AttrProperty;
+
+
 
 /// Attribute base class.
 class Attr<string S, AttrProperty I, list<AttrProperty> P> {
@@ -102,10 +103,10 @@ def AlwaysInline : EnumAttr<"alwaysinline", IntersectPreserve, [FnAttr]>;
 def Builtin : EnumAttr<"builtin", IntersectPreserve, [FnAttr]>;
 
 /// Pass structure by value.
-def ByVal : TypeAttr<"byval", IntersectPreserve, [ParamAttr, ABIAttr]>;
+def ByVal : TypeAttr<"byval", IntersectPreserve, [ParamAttr]>;
 
 /// Mark in-memory ABI type.
-def ByRef : TypeAttr<"byref", IntersectPreserve, [ParamAttr, ABIAttr]>;
+def ByRef : TypeAttr<"byref", IntersectPreserve, [ParamAttr]>;
 
 /// Parameter or return value may not contain uninitialized or poison bits.
 def NoUndef : EnumAttr<"noundef", IntersectAnd, [ParamAttr, RetAttr]>;
@@ -144,7 +145,7 @@ def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", IntersectPreserve, [FnAtt
 def HybridPatchable : EnumAttr<"hybrid_patchable", IntersectPreserve, [FnAttr]>;
 
 /// Pass structure in an alloca.
-def InAlloca : TypeAttr<"inalloca", IntersectPreserve, [ParamAttr, ABIAttr]>;
+def InAlloca : TypeAttr<"inalloca", IntersectPreserve, [ParamAttr]>;
 
 /// Pointer argument memory is initialized.
 def Initializes : ConstantRangeListAttr<"initializes", IntersectPreserve, [ParamAttr]>;
@@ -153,7 +154,7 @@ def Initializes : ConstantRangeListAttr<"initializes", IntersectPreserve, [Param
 def InlineHint : EnumAttr<"inlinehint", IntersectAnd, [FnAttr]>;
 
 /// Force argument to be passed in register.
-def InReg : EnumAttr<"inreg", IntersectPreserve, [ParamAttr, RetAttr, ABIAttr]>;
+def InReg : EnumAttr<"inreg", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Build jump-instruction tables and replace refs.
 def JumpTable : EnumAttr<"jumptable", IntersectPreserve, [FnAttr]>;
@@ -171,7 +172,7 @@ def MinSize : EnumAttr<"minsize", IntersectPreserve, [FnAttr]>;
 def Naked : EnumAttr<"naked", IntersectPreserve, [FnAttr]>;
 
 /// Nested function static chain.
-def Nest : EnumAttr<"nest", IntersectPreserve, [ParamAttr, ABIAttr]>;
+def Nest : EnumAttr<"nest", IntersectPreserve, [ParamAttr]>;
 
 /// Considered to not alias after call.
 def NoAlias : EnumAttr<"noalias", IntersectAnd, [ParamAttr, RetAttr]>;
@@ -197,7 +198,7 @@ def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 def NoDuplicate : EnumAttr<"noduplicate", IntersectPreserve, [FnAttr]>;
 
 /// No extension needed before/after call (high bits are undefined).
-def NoExt : EnumAttr<"noext", IntersectPreserve, [ParamAttr, RetAttr, ABIAttr]>;
+def NoExt : EnumAttr<"noext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Function does not deallocate memory.
 /// Argument cannot be freed based on the argument pointer.
@@ -280,8 +281,7 @@ def OptimizeForSize : EnumAttr<"optsize", IntersectPreserve, [FnAttr]>;
 def OptimizeNone : EnumAttr<"optnone", IntersectPreserve, [FnAttr]>;
 
 /// Similar to byval but without a copy.
-def Preallocated : TypeAttr<"preallocated", IntersectPreserve,
-                            [FnAttr, ParamAttr, ABIAttr]>;
+def Preallocated : TypeAttr<"preallocated", IntersectPreserve, [FnAttr, ParamAttr]>;
 
 /// Parameter or return value is within the specified range.
 def Range : ConstantRangeAttr<"range", IntersectCustom, [ParamAttr, RetAttr]>;
@@ -308,13 +308,11 @@ def SafeStack : EnumAttr<"safestack", IntersectPreserve, [FnAttr]>;
 def ShadowCallStack : EnumAttr<"shadowcallstack", IntersectPreserve, [FnAttr]>;
 
 /// Sign extended before/after call.
-def SExt : EnumAttr<"signext", IntersectPreserve,
-                    [ParamAttr, RetAttr, ABIAttr]>;
+def SExt : EnumAttr<"signext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Alignment of stack for function (3 bits)  stored as log2 of alignment with
 /// +1 bias 0 means unaligned (different from alignstack=(1)).
-def StackAlignment : IntAttr<"alignstack", IntersectPreserve,
-                             [FnAttr, ParamAttr, RetAttr, ABIAttr]>;
+def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr, RetAttr]>;
 
 /// Function can be speculated.
 def Speculatable : EnumAttr<"speculatable", IntersectAnd, [FnAttr]>;
@@ -332,7 +330,7 @@ def StackProtectStrong : EnumAttr<"sspstrong", IntersectPreserve, [FnAttr]>;
 def StrictFP : EnumAttr<"strictfp", IntersectPreserve, [FnAttr]>;
 
 /// Hidden pointer to structure to return.
-def StructRet : TypeAttr<"sret", IntersectPreserve, [ParamAttr, ABIAttr]>;
+def StructRet : TypeAttr<"sret", IntersectPreserve, [ParamAttr]>;
 
 /// AddressSanitizer is on.
 def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
@@ -376,13 +374,13 @@ def SpeculativeLoadHardening : EnumAttr<"speculative_load_hardening",
                                         [FnAttr]>;
 
 /// Argument is swift error.
-def SwiftError : EnumAttr<"swifterror", IntersectPreserve, [ParamAttr, ABIAttr]>;
+def SwiftError : EnumAttr<"swifterror", IntersectPreserve, [ParamAttr]>;
 
 /// Argument is swift self/context.
-def SwiftSelf : EnumAttr<"swiftself", IntersectPreserve, [ParamAttr, ABIAttr]>;
+def SwiftSelf : EnumAttr<"swiftself", IntersectPreserve, [ParamAttr]>;
 
 /// Argument is swift async context.
-def SwiftAsync : EnumAttr<"swiftasync", IntersectPreserve, [ParamAttr, ABIAttr]>;
+def SwiftAsync : EnumAttr<"swiftasync", IntersectPreserve, [ParamAttr]>;
 
 /// Function must be in a unwind table.
 def UWTable : IntAttr<"uwtable", IntersectPreserve, [FnAttr]>;
@@ -400,8 +398,7 @@ def Writable : EnumAttr<"writable", IntersectAnd, [ParamAttr]>;
 def WriteOnly : EnumAttr<"writeonly", IntersectAnd, [ParamAttr]>;
 
 /// Zero extended before/after call.
-def ZExt : EnumAttr<"zeroext", IntersectPreserve,
-                    [ParamAttr, RetAttr, ABIAttr]>;
+def ZExt : EnumAttr<"zeroext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Function is required to make Forward Progress.
 def MustProgress : EnumAttr<"mustprogress", IntersectAnd, [FnAttr]>;

@@ -66,8 +66,9 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   string(REPLACE ";" "$<SEMICOLON>" experimental_targets_to_build_arg
          "${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD}")
 
+  # Forward only requested roots; the cross build re-adds dependencies.
   string(REPLACE ";" "$<SEMICOLON>" llvm_enable_projects_arg
-         "${LLVM_ENABLE_PROJECTS}")
+         "${LLVM_REQUESTED_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_external_projects_arg
          "${LLVM_EXTERNAL_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_enable_runtimes_arg
