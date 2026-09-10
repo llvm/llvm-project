@@ -7616,7 +7616,9 @@ assumed not to alias if the they both have entries for that domain in their
 `alias.scope` list and their `alias.scope` lists have no scopes in common for that
 domain. Equivalently, an instruction with a set of scopes from a disjoint-scope
 domain in its `alias.scope` list implicitly has all other scopes in that domain
-in its `noalias` set.
+in its `noalias` set. This removes the need to spell out the complement of each
+alias scope when there is a set of N objects that mutually don't alias each other,
+simplifying the IR and reducing its size for this straightforward case.
 
 Because scopes in one domain don't affect scopes in other domains, separate
 domains can be used to compose multiple independent noalias sets.  This is
@@ -7631,13 +7633,6 @@ self-reference can be used to create globally unique domain names. The second
 entry is an `i1` constant that marks the domain as having disjoint scopes when
 it is `true`. A descriptive string may optionally be provided as a third list
 entry.
-
-If an alias scope domain has disjoint scopes, tagging an instruction with an
-`alias.scope` within that domain implicitly tags that instruction with a
-`noalias` set containing all scopes in that domain not present in the
-instruction's `!alias.scope` list. This makes it unnecessary to spell out the
-complement of each scope when a group of N pointers is known to be mutually
-non-aliasing.
 
 String names should not be used with disjoint-scope domains, as they will be
 uniqued accross different invocations of the same function, and this is unlikely
@@ -7698,8 +7693,10 @@ And, with a domain whose scopes are disjoint,
 !6 = !{!2, !3}
 !7 = !{!1, !3}
 
-; These two instructions don't alias, because tagging them with !1 and !2
-; implicitly tags them with !noalias !6 and !noalias !7, respectively:
+; These two instructions don't alias, because tagging them with !4 and !5
+; means that they are both tagged with scopes from a disjoint domain (!1 and !2,
+; respectively) and have no scoes from that domain in common. This is equivalent
+; to tagging them them with !noalias !6 and !noalias !7, respectively:
 %0 = load float, ptr %a, align 4, !alias.scope !4
 store float %0, ptr %b, align 4, !alias.scope !5
 
