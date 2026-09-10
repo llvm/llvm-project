@@ -3026,39 +3026,109 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   Type *SelType = Sel.getType();
 
   // Match select ?, TC, FC where the constants are equal but negated.
-  // TODO: Generalize to handle a negated variable operand?
   const APFloat *TC, *FC;
-  if (!match(TVal, m_APFloatAllowPoison(TC)) ||
-      !match(FVal, m_APFloatAllowPoison(FC)) ||
-      !abs(*TC).bitwiseIsEqual(abs(*FC)))
+
+  if (match(TVal, m_APFloatAllowPoison(TC)) &&
+      match(FVal, m_APFloatAllowPoison(FC)) &&
+      abs(*TC).bitwiseIsEqual(abs(*FC))) {
+
+    assert(TC != FC && "Expected equal select arms to simplify");
+
+    Value *X;
+    const APInt *C;
+    bool IsTrueIfSignSet;
+    CmpPredicate Pred;
+
+    if (!match(Cond, m_OneUse(m_ICmp(Pred, m_ElementWiseBitCast(m_Value(X)),
+                                     m_APInt(C)))) ||
+        !isSignBitCheck(Pred, *C, IsTrueIfSignSet) || X->getType() != SelType)
+      return nullptr;
+
+    if (IsTrueIfSignSet ^ TC->isNegative())
+      X = Builder.CreateFNeg(X);
+
+    Value *MagArg = ConstantFP::get(SelType, abs(*TC));
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        Sel.getModule(), Intrinsic::copysign, Sel.getType());
+
+    return CallInst::Create(F, {MagArg, X});
+  }
+
+  // Match either:
+  //
+  //   select signbit(bitcast(X) ^ bitcast(Y)), -Y, Y
+  //
+  // or:
+  //
+  //   select signbit(bitcast(X) ^ bitcast(Y)), Y, -Y
+  //
+  // The first form is:
+  //
+  //   copysign(Y, X)
+  //
+  // while the second form is:
+  //
+  //   copysign(Y, -X)
+
+  Value *Y;
+  bool TrueValueIsNegated;
+
+  if (match(TVal, m_FNeg(m_Value(Y))) && match(FVal, m_Specific(Y))) {
+    // select XOR, -Y, Y
+    TrueValueIsNegated = true;
+  } else if (match(TVal, m_Value(Y)) && match(FVal, m_FNeg(m_Specific(Y)))) {
+    // select XOR, Y, -Y
+    TrueValueIsNegated = false;
+  } else {
     return nullptr;
+  }
 
-  assert(TC != FC && "Expected equal select arms to simplify");
-
+  // Match the sign-bit check of X ^ Y. Y is already known from the
+  // select arms, so XOR's commutativity cannot cause X and Y to be
+  // confused.
   Value *X;
   const APInt *C;
   bool IsTrueIfSignSet;
   CmpPredicate Pred;
-  if (!match(Cond, m_OneUse(m_ICmp(Pred, m_ElementWiseBitCast(m_Value(X)),
+
+  if (!match(Cond, m_OneUse(m_ICmp(Pred,
+                                   m_c_Xor(m_ElementWiseBitCast(m_Value(X)),
+                                           m_ElementWiseBitCast(m_Specific(Y))),
                                    m_APInt(C)))) ||
-      !isSignBitCheck(Pred, *C, IsTrueIfSignSet) || X->getType() != SelType)
+      !isSignBitCheck(Pred, *C, IsTrueIfSignSet) || X->getType() != SelType ||
+      Y->getType() != SelType)
     return nullptr;
 
-  // If needed, negate the value that will be the sign argument of the copysign:
-  // (bitcast X) <  0 ? -TC :  TC --> copysign(TC,  X)
-  // (bitcast X) <  0 ?  TC : -TC --> copysign(TC, -X)
-  // (bitcast X) >= 0 ? -TC :  TC --> copysign(TC, -X)
-  // (bitcast X) >= 0 ?  TC : -TC --> copysign(TC,  X)
-  // Note: FMF from the select can not be propagated to the new instructions.
-  if (IsTrueIfSignSet ^ TC->isNegative())
+  // The XOR sign bit is set when X and Y have different signs.
+  //
+  // For:
+  //
+  //   select XOR, -Y, Y
+  //
+  // we want:
+  //
+  //   copysign(Y, X)
+  //
+  // For:
+  //
+  //   select XOR, Y, -Y
+  //
+  // we want:
+  //
+  //   copysign(Y, -X)
+  //
+  // Also account for predicates where the condition is true when
+  // the sign bit is clear rather than set.
+  if (!IsTrueIfSignSet)
+    TrueValueIsNegated = !TrueValueIsNegated;
+
+  if (!TrueValueIsNegated)
     X = Builder.CreateFNeg(X);
 
-  // Canonicalize the magnitude argument as the positive constant since we do
-  // not care about its sign.
-  Value *MagArg = ConstantFP::get(SelType, abs(*TC));
   Function *F = Intrinsic::getOrInsertDeclaration(
       Sel.getModule(), Intrinsic::copysign, Sel.getType());
-  return CallInst::Create(F, { MagArg, X });
+
+  return CallInst::Create(F, {Y, X});
 }
 
 Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
