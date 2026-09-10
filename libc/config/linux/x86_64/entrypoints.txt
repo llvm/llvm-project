@@ -243,6 +243,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.memalignment
+    libc.src.stdlib.mkdtemp
     libc.src.stdlib.mkstemp
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
@@ -380,6 +381,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
     libc.src.sys.stat.fstat
+    libc.src.sys.stat.futimens
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
@@ -1332,6 +1334,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
+    libc.src.pthread.pthread_getattr_np
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
@@ -1585,6 +1588,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd._exit
     libc.src.unistd.environ
+    libc.src.unistd.execl
     libc.src.unistd.execv
     libc.src.unistd.fork
     libc.src.unistd.getopt
@@ -1633,6 +1637,10 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
+
+      # glob.h entrypoints
+      libc.src.glob.glob
+      libc.src.glob.globfree
 
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
