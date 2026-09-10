@@ -708,7 +708,23 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     KnownBits KnownRange(MMO->getMemoryType().getScalarSizeInBits());
     if (const MDNode *Ranges = MMO->getRanges())
       computeKnownBitsFromRangeMetadata(*Ranges, KnownRange);
-    Known = KnownRange.anyext(Known.getBitWidth());
+
+    if (MMO->isAtomic()) {
+      switch (TL.getExtendForAtomicOps()) {
+      case ISD::NodeType::ZERO_EXTEND:
+        Known = KnownRange.zext(Known.getBitWidth());
+        break;
+      case ISD::NodeType::SIGN_EXTEND:
+        Known = KnownRange.sext(Known.getBitWidth());
+        break;
+      default:
+        Known = KnownRange.anyext(Known.getBitWidth());
+        break;
+      }
+    } else {
+      Known = KnownRange.anyext(Known.getBitWidth());
+    }
+
     break;
   }
   case TargetOpcode::G_SEXTLOAD:
