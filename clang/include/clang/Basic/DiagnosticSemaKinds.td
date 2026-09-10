@@ -11587,6 +11587,9 @@ def err_ppc_invalid_arg_type : Error<
 def err_ppc_feature_no_runtime_detection : Error<
   "feature '%0' cannot be used with 'target_clones' because it has no "
   "runtime detection; use 'target' attribute instead">;
+def err_ppc_multiple_negative_category2 : Error<
+  "only one negative form of runtime-disableable features (vsx, htm) is allowed in 'target_clones'; "
+  "'%0' conflicts with '%1'">;
 
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;

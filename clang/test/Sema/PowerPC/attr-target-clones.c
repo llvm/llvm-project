@@ -213,6 +213,13 @@ valid_mixed_features_1(void);
 void __attribute__((target_clones("vsx", "no-crypto", "default")))
 valid_mixed_features_2(void);
 
+// expected-error@+1 {{only one negative form of runtime-disableable features (vsx, htm) is allowed in 'target_clones'; 'no-vsx' conflicts with 'no-htm'}}
+void __attribute__((target_clones("no-htm", "no-vsx", "default")))
+mixed_features_3(void);
+
+void __attribute__((target_clones("htm", "no-vsx", "default")))
+valid_mixed_features_4(void);
+
 // Test features with CPU specifications
 void __attribute__((target_clones("altivec", "cpu=pwr8", "default")))
 valid_feature_with_cpu_1(void);

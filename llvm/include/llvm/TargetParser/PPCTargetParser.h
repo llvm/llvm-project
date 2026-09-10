@@ -44,6 +44,10 @@ LLVM_ABI std::optional<llvm::StringMap<bool>>
 getPPCDefaultTargetFeatures(const Triple &T, StringRef CPUName);
 
 LLVM_ABI bool isValidFeatureName(StringRef Name);
+
+// Return true for target features that can be disabled at runtime.
+// For example, VSX can be disabled via the allow_vmx tunable using the schedo command.
+LLVM_ABI bool canDisableFeatureOnAIX(StringRef Name);
 } // namespace PPC
 } // namespace llvm
 
