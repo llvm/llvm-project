@@ -1225,9 +1225,9 @@ static BlockFrequency scaleKeepingNonZero(BlockFrequency Freq,
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
   assert(!Blocks.empty() && "expected at least the header block");
-  // Push each block's frequency along its outgoing edges. Blocks is a DAG in
-  // reverse post-order (the loop region's backedge is implicit), so a block's
-  // frequency is final by the time it is visited.
+  // Push each block's frequency along its outgoing edges. Blocks is in reverse
+  // post-order and forms a DAG with the backedge from the latch (the last
+  // block) ignored, so a block's frequency is final by the time it is visited.
   DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
       Frequencies;
   Frequencies.reserve(Blocks.size());
@@ -1242,10 +1242,11 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
     auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
     bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
     for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
-      // Ignore edges leaving Blocks, i.e. a plain CFG's edges to the middle
-      // block or to an exit block.
+      // Ignore the backedge to the header (already treated as always executing)
+      // and edges leaving Blocks, i.e. a plain CFG's edges to the middle block
+      // or to an exit block.
       auto It = Frequencies.find(Succ);
-      if (It == Frequencies.end())
+      if (Succ == Blocks.front() || It == Frequencies.end())
         continue;
       std::optional<VPExecutionFrequency> &SuccFreq = It->second;
       // An unknown edge or predecessor poisons the successor.

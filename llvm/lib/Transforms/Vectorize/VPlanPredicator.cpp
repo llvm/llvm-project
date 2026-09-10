@@ -417,15 +417,16 @@ void VPPredicator::run() {
       createBlockInMask(VPBB);
 
     VPValue *BlockMask = getBlockInMask(VPBB);
-    // Mask all VPInstructions in the block. The execution frequency recorded
-    // during VPlan0 construction only stays meaningful for recipes that remain
-    // predicated once the CFG is linearized below; drop it from the others.
+    // Mask all VPInstructions in the block.
     for (VPRecipeBase &R : *VPBB) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI)
         continue;
       if (BlockMask)
         VPI->addMask(BlockMask);
+
+      // Drop the execution frequency of unmasked VPInstructions, as they
+      // always execute.
       if (!VPI->isMasked())
         VPI->clearExecutionFrequency();
     }
