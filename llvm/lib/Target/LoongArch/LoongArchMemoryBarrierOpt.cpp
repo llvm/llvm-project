@@ -434,8 +434,7 @@ static void updateMB(InstBarrier &I, BarrierHint Hint, MachineFunction *MF) {
   }
   MachineOperand &MO = I.MI->getOperand(InlineAsm::MIOp_AsmString);
   auto New = I.OpName.str() + " " + llvm::utostr(Hint.Hint);
-  auto Sym = MF->createExternalSymbolName(New);
-  MO = MachineOperand::CreateES(Sym);
+  MO.ChangeToES(MF->createExternalSymbolName(New), MO.getTargetFlags());
 }
 
 // Replace AMO to AMO_DB
@@ -451,8 +450,7 @@ static void replaceAM(InstBarrier &I, MachineFunction *MF) {
     return;
   MachineOperand &MO = I.MI->getOperand(InlineAsm::MIOp_AsmString);
   auto New = I.OpName.str() + " " + I.Operands.str();
-  auto Sym = MF->createExternalSymbolName(New);
-  MO = MachineOperand::CreateES(Sym);
+  MO.ChangeToES(MF->createExternalSymbolName(New), MO.getTargetFlags());
 }
 
 bool LoongArchMemoryBarrierOpt::eliminateRedundantBarrier(
