@@ -69,13 +69,6 @@ int linux_file_close(File *f) {
   return retval;
 }
 
-// helper methods for manipulating linux file flags
-static constexpr int create_and_append() { return O_CREAT | O_APPEND; }
-static constexpr int read_and_write() { return O_RDWR; }
-static constexpr int write_only() { return O_WRONLY; }
-static constexpr int read_only() { return O_RDONLY; }
-static constexpr int create_or_truncate() { return O_CREAT | O_TRUNC; }
-
 static int map_c_mode_flags_to_linux_open_flags(const FileMode &file_mode) {
   int open_flags = 0;
 
@@ -106,11 +99,8 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
   }
   int open_flags = map_c_mode_flags_to_linux_open_flags(file_mode);
 
-  // File created will have 0666 permissions.
-  constexpr mode_t OPEN_MODE =
-      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
-  ErrorOr<int> fd = linux_syscalls::open(path, open_flags, OPEN_MODE);
+  ErrorOr<int> fd =
+      linux_syscalls::open(path, open_flags, LinuxFileFlags::OPEN_MODE);
   if (!fd)
     return Error(fd.error());
 
@@ -143,20 +133,16 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   }
   int fd_flags = result.value();
 
-  // constants to check whether a file descriptor was opened in read or write
-  // only mode
-  const bool fd_opened_in_read_only = (fd_flags & O_ACCMODE) == O_RDONLY;
-  const bool fd_opened_in_write_only = (fd_flags & O_ACCMODE) == O_WRONLY;
-
-  if ((fd_opened_in_read_only && file_mode.write_allowed()) ||
-      (fd_opened_in_write_only && file_mode.read_allowed())) {
+  if ((LinuxFileFlags::is_file_descriptor_opened_in_read_only(fd_flags) &&
+       file_mode.write_allowed()) ||
+      (LinuxFileFlags::is_file_descriptor_opened_in_write_only(fd_flags) &&
+       file_mode.read_allowed())) {
     return Error(EINVAL);
   }
 
   bool do_seek = false;
-  const bool has_append_flag = fd_flags & O_APPEND;
-
-  if (file_mode.is_append() && !has_append_flag) {
+  if (file_mode.is_append() &&
+      !LinuxFileFlags::file_has_append_flag(fd_flags)) {
     do_seek = true;
     if (!linux_syscalls::fcntl(fd, F_SETFL,
                                reinterpret_cast<void *>(fd_flags | O_APPEND))
@@ -208,10 +194,8 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
 
     int open_flags = map_c_mode_flags_to_linux_open_flags(file_mode);
 
-    constexpr mode_t OPEN_MODE =
-        S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
-    ErrorOr<int> new_fd = linux_syscalls::open(path, open_flags, OPEN_MODE);
+    ErrorOr<int> new_fd =
+        linux_syscalls::open(path, open_flags, LinuxFileFlags::OPEN_MODE);
 
     // If the new file fails to open, POSIX says we still have to close the old
     // file.
@@ -260,18 +244,15 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
     return EBADF;
   int fd_flags = result.value();
 
-  // constants to check whether a file descriptor was opened in read or write
-  // only mode
-  const bool fd_opened_in_read_only = (fd_flags & O_ACCMODE) == O_RDONLY;
-  const bool fd_opened_in_write_only = (fd_flags & O_ACCMODE) == O_WRONLY;
-
-  if ((fd_opened_in_read_only && file_mode.write_allowed()) ||
-      (fd_opened_in_write_only && file_mode.read_allowed())) {
+  if ((LinuxFileFlags::is_file_descriptor_opened_in_read_only(fd_flags) &&
+       file_mode.write_allowed()) ||
+      (LinuxFileFlags::is_file_descriptor_opened_in_write_only(fd_flags) &&
+       file_mode.read_allowed())) {
     return EBADF;
   }
 
   bool do_seek = false;
-  bool has_append_flag = fd_flags & O_APPEND;
+  bool has_append_flag = LinuxFileFlags::file_has_append_flag(fd_flags);
 
   if (file_mode.is_append() && !has_append_flag) {
     if (!linux_syscalls::fcntl(fd, F_SETFL,
