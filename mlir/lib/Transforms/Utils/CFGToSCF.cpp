@@ -306,9 +306,9 @@ public:
         continue;
       }
 
-      // Otherwise undef values for any unused block arguments used by other
+      // Otherwise poison values for any unused block arguments used by other
       // entry blocks.
-      newSuccOperands[index] = getUndefValue(argument.getType());
+      newSuccOperands[index] = getPoisonValue(argument.getType());
     }
 
     edge.setSuccessor(multiplexerBlock);
@@ -363,8 +363,8 @@ private:
   /// Callback used to create a constant suitable as flag for
   /// the interfaces `createCFGSwitchOp`.
   function_ref<Value(unsigned)> getSwitchValue;
-  /// Callback used to create undefined values of a given type.
-  function_ref<Value(Type)> getUndefValue;
+  /// Callback used to create poison values of a given type.
+  function_ref<Value(Type)> getPoisonValue;
 
   /// Mapping of the block arguments of an entry block to the corresponding
   /// block arguments in the multiplexer block. Block arguments of an entry
@@ -378,11 +378,11 @@ private:
 
   EdgeMultiplexer(Block *multiplexerBlock,
                   function_ref<Value(unsigned)> getSwitchValue,
-                  function_ref<Value(Type)> getUndefValue,
+                  function_ref<Value(Type)> getPoisonValue,
                   llvm::SmallMapVector<Block *, unsigned, 4> &&entries,
                   Value dispatchFlag)
       : multiplexerBlock(multiplexerBlock), getSwitchValue(getSwitchValue),
-        getUndefValue(getUndefValue), blockArgMapping(std::move(entries)),
+        getPoisonValue(getPoisonValue), blockArgMapping(std::move(entries)),
         discriminator(dispatchFlag) {}
 };
 
@@ -430,7 +430,7 @@ public:
 
     // If `returnLikeOp` is an unreachable terminator and an exit block of
     // another return-like operation already exists, it is turned into a branch
-    // to that exit block with undefined operands instead of getting an exit
+    // to that exit block with poison operands instead of getting an exit
     // block of its own.
     if (interface.isUnreachableTerminator(returnLikeOp) &&
         !orderedExitBlocks.empty()) {
@@ -755,7 +755,7 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
           // but previously dominated an exit block with a use.
           // In this case, add a block argument to the latch and go through all
           // predecessors. If the value dominates the predecessor, pass the
-          // value as a successor operand, otherwise pass undef.
+          // value as a successor operand, otherwise pass poison.
           // The above is unnecessary if the value is a block argument of the
           // latch or if `value` dominates all predecessors.
           Value argument = value;
@@ -796,7 +796,7 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
   }
 
   // New block arguments may have been added to the loop header.
-  // Adjust the entry edges to pass undef values to these.
+  // Adjust the entry edges to pass poison values to these.
   for (auto iter = loopHeader->pred_begin(); iter != loopHeader->pred_end();
        ++iter) {
     // Latch successor arguments have already been handled.
