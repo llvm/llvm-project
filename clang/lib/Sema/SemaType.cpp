@@ -9688,19 +9688,26 @@ static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
   }
 }
 
-/// Return the (possibly nested) constant array type in \p T whose size cannot
-/// be represented, if any. BuildArrayType can only check the element count if
-/// the element type is still incomplete when the array type is formed.
-static const ConstantArrayType *findArrayTypeTooLarge(const ASTContext &Context,
-                                                      QualType T) {
-  const auto *CAT = dyn_cast<ConstantArrayType>(T.getCanonicalType());
+/// If \p T is (or contains) a constant array type whose size in bytes cannot
+/// be represented within ConstantArrayType::getMaxSizeBits, return the
+/// offending array type. Nested arrays are checked from the inside out, since
+/// the size of an outer array can only be computed once its element's size is
+/// known to fit. BuildArrayType can only check the element count if the
+/// element type is still incomplete when the array type is formed, so the
+/// size has to be rechecked once the element type is completed.
+static const ConstantArrayType *
+getOversizedConstantArray(const ASTContext &Context, QualType T) {
+  if (T->isDependentType() || T->isVariablyModifiedType() ||
+      T->isUndeducedType())
+    return nullptr;
+
+  const ConstantArrayType *CAT = Context.getAsConstantArrayType(T);
   if (!CAT)
     return nullptr;
 
-  // Check nested arrays from the inside out.
   QualType ElementType = CAT->getElementType();
   if (const ConstantArrayType *Inner =
-          findArrayTypeTooLarge(Context, ElementType))
+          getOversizedConstantArray(Context, ElementType))
     return Inner;
 
   if (ConstantArrayType::getNumAddressingBits(Context, ElementType,
@@ -9764,16 +9771,18 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
 
     // The element type may have been incomplete when the array type was
     // formed, in which case BuildArrayType could not check the array's size.
-    if (T->isConstantArrayType() && !T->isDependentType() &&
-        !T->isVariablyModifiedType() && !T->isUndeducedType()) {
-      if (const ConstantArrayType *CAT = findArrayTypeTooLarge(Context, T)) {
-        if (Diagnoser)
-          Diag(Loc, diag::err_array_too_large)
-              << toString(CAT->getSize(), 10, /*Signed=*/false,
-                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                          /*InsertSeparators=*/true);
-        return true;
+    if (const ConstantArrayType *CAT = getOversizedConstantArray(Context, T)) {
+      if (Diagnoser) {
+        CharUnits ElementSize =
+            Context.getTypeSizeInChars(CAT->getElementType());
+        llvm::APInt SizeInBytes = CAT->getSize().zext(128) *
+                                  llvm::APInt(128, ElementSize.getQuantity());
+        uint64_t MaxSizeInBytes = uint64_t(1)
+                                  << ConstantArrayType::getMaxSizeBits(Context);
+        Diag(Loc, diag::err_array_size_too_large)
+            << SizeInBytes << llvm::APInt(64, MaxSizeInBytes);
       }
+      return true;
     }
     return false;
   }
