@@ -5,6 +5,8 @@
 // the object type of an object pointer or object reference type. This test
 // exercises that appropriate diagnostics are issued for other uses.
 
+using fn_t = void();
+
 //===----------------------------------------------------------------------===//
 // sycl_global
 //===----------------------------------------------------------------------===//
@@ -46,6 +48,12 @@ struct global_members {
   // expected-error@+1{{'clang::sycl_global' attribute cannot be applied to a declaration}}
   [[clang::sycl_global]] int dm;
 };
+
+// expected-error@+1{{function type may not be qualified with an address space}}
+fn_t [[clang::sycl_global]] *global_fp1;
+
+// expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+void (* [[clang::sycl_global]] global_fp2)();
 
 // expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
 int [[clang::sycl_global]] global_object;
@@ -117,6 +125,12 @@ struct local_members {
   [[clang::sycl_local]] int dm;
 };
 
+// expected-error@+1{{function type may not be qualified with an address space}}
+fn_t [[clang::sycl_local]] *local_fp1;
+
+// expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+void (* [[clang::sycl_local]] local_fp2)();
+
 // expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
 int [[clang::sycl_local]] local_object;
 
@@ -186,6 +200,12 @@ struct private_members {
   // expected-error@+1{{'clang::sycl_private' attribute cannot be applied to a declaration}}
   [[clang::sycl_private]] int dm;
 };
+
+// expected-error@+1{{function type may not be qualified with an address space}}
+fn_t [[clang::sycl_private]] *private_fp1;
+
+// expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+void (* [[clang::sycl_private]] private_fp2)();
 
 // expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
 int [[clang::sycl_private]] private_object;
@@ -257,6 +277,12 @@ struct generic_members {
   [[clang::sycl_generic]] int dm;
 };
 
+// expected-error@+1{{function type may not be qualified with an address space}}
+fn_t [[clang::sycl_generic]] *generic_fp1;
+
+// expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+void (* [[clang::sycl_generic]] generic_fp2)();
+
 // expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
 int [[clang::sycl_generic]] generic_object;
 
@@ -326,6 +352,12 @@ struct constant_members {
   // expected-error@+1{{'clang::sycl_constant' attribute cannot be applied to a declaration}}
   [[clang::sycl_constant]] int dm;
 };
+
+// expected-error@+1{{function type may not be qualified with an address space}}
+fn_t [[clang::sycl_constant]] *constant_fp1;
+
+// expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+void (* [[clang::sycl_constant]] constant_fp2)();
 
 // expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
 int [[clang::sycl_constant]] constant_object;
