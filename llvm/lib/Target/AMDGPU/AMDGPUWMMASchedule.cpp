@@ -264,7 +264,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     Register R = LI.SU->getInstr()->getOperand(0).getReg();
     FragInfo &F = Frags[R];
     if (F.Subloads.empty() && R.isVirtual())
-      F.VGPRs = TRI.getRegSizeInBits(*MRI.getRegClass(R)) / 32;
+      F.VGPRs = TRI.getRegClassWeight(MRI.getRegClass(R)).RegWeight;
     F.MinPos = std::min(F.MinPos, LI.MinPos);
     F.MaxPos = std::max(F.MaxPos, LI.MaxPos);
     F.LatestCycle = std::min(F.LatestCycle, LI.LatestCycle);
