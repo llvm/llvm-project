@@ -168,6 +168,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::offload_bundle:
   case file_magic::offload_bundle_compressed:
   case file_magic::spirv_object:
+  case file_magic::zstd:
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::tapi_file:
     return errorCodeToError(object_error::invalid_file_type);

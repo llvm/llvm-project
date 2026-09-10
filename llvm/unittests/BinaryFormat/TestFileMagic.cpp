@@ -6,9 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -92,6 +96,7 @@ const char tapi_file[] = "--- !tapi-tbd-v1\n";
 const char tapi_file_tbd_v1[] = "---\narchs: [";
 const char spirv_object_le[] = "\x03\x02\x23\x07";
 const char spirv_object_be[] = "\x07\x23\x02\x03";
+const char zstd[] = "\x28\xb5\x2f\xfd";
 
 TEST_F(MagicTest, Magic) {
   struct type {
@@ -126,9 +131,10 @@ TEST_F(MagicTest, Magic) {
       {"macho_type_0x10001", macho_type_0x10001, sizeof(macho_type_0x10001),
        file_magic::macho_object},
       {"spirv_object_le", spirv_object_le, sizeof(spirv_object_le),
-       file_magic ::spirv_object},
+       file_magic::spirv_object},
       {"spirv_object_be", spirv_object_be, sizeof(spirv_object_be),
-       file_magic ::spirv_object},
+       file_magic::spirv_object},
+      DEFINE(zstd),
       DEFINE(windows_resource),
       DEFINE(pdb),
       {"ms_dos_stub_broken", ms_dos_stub_broken, sizeof(ms_dos_stub_broken),
@@ -152,5 +158,24 @@ TEST_F(MagicTest, Magic) {
     file.close();
     EXPECT_EQ(i->magic, identify_magic(magic));
     ASSERT_NO_ERROR(fs::remove(Twine(file_pathname)));
+  }
+}
+
+TEST_F(MagicTest, ZstdCompressedBlob) {
+  if (!compression::zstd::isAvailable())
+    GTEST_SKIP() << "zstd is not available";
+
+  static const int Levels[] = {compression::zstd::NoCompression,
+                               compression::zstd::BestSpeedCompression,
+                               compression::zstd::DefaultCompression,
+                               compression::zstd::BestSizeCompression};
+
+  StringRef Input("hello, world!");
+  for (int Level : Levels) {
+    SmallVector<uint8_t, 0> Compressed;
+    compression::zstd::compress(arrayRefFromStringRef(Input), Compressed,
+                                Level);
+    EXPECT_EQ(file_magic::zstd, identify_magic(toStringRef(Compressed)))
+        << "level=" << Level;
   }
 }

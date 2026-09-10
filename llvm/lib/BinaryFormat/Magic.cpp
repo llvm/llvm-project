@@ -270,6 +270,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::coff_object;
     break;
 
+  case 0x28: // Zstandard compressed frame magic 0xFD2FB528, little-endian.
+    if (startswith(Magic, "\x28\xb5\x2f\xfd"))
+      return file_magic::zstd;
+    break;
+
   case '_': {
     const char OBMagic[] = "__CLANG_OFFLOAD_BUNDLE__";
     if (Magic.size() >= sizeof(OBMagic) && startswith(Magic, OBMagic))

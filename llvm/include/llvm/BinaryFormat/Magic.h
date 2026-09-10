@@ -60,6 +60,7 @@ struct file_magic {
     offload_bundle,            ///< Clang offload bundle file
     offload_bundle_compressed, ///< Compressed clang offload bundle file
     spirv_object,              ///< A binary SPIR-V file
+    zstd,                      ///< Zstandard compressed frame
   };
 
   bool is_object() const { return V != unknown; }
