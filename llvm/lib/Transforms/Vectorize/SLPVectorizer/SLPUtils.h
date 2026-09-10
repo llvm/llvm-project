@@ -36,7 +36,9 @@ class DebugLoc;
 class Instruction;
 class InsertElementInst;
 class IRBuilderBase;
+class Loop;
 class PHINode;
+class ScalarEvolution;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -422,6 +424,15 @@ bool isFirstInsertElement(const InsertElementInst *IE1,
 /// \returns the debug location of \p PN, or an unknown location if it has
 /// none.
 DebugLoc getDebugLocFromPHI(PHINode &PN);
+
+/// \returns the innermost loop starting from \p L for which at least one value
+/// in \p VL is not loop-invariant.
+const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL);
+
+/// \returns an estimated trip count for \p L, bounded by the loop-aware budget
+/// \p LoopAwareTripCount. Returns 1 when the budget is 0.
+unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
+                          unsigned LoopAwareTripCount);
 
 } // namespace llvm::slpvectorizer
 
