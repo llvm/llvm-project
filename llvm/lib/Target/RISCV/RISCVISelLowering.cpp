@@ -19253,6 +19253,29 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
+// Fold (vmxor_vl (setcc_vl a, b, cc), vmset_vl) -> (setcc_vl a, b, !cc) for
+// integer compares. The NOT also flips the masked-off lanes, which the inverted
+// compare copies unchanged from the passthru. So the passthru must be undef,
+// but any mask is fine.
+static SDValue combineVMNOTOfSetCC(SDNode *N, SelectionDAG &DAG) {
+  SDValue Cmp = N->getOperand(0);
+  if (Cmp.getOpcode() == RISCVISD::VMSET_VL)
+    Cmp = N->getOperand(1);
+  else if (N->getOperand(1).getOpcode() != RISCVISD::VMSET_VL)
+    return SDValue();
+
+  if (Cmp.getOpcode() != RISCVISD::SETCC_VL || !Cmp.hasOneUse() ||
+      !Cmp.getOperand(0).getValueType().isInteger() ||
+      !Cmp.getOperand(3).isUndef())
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
+  CC = ISD::getSetCCInverse(CC, Cmp.getOperand(0).getValueType());
+  return DAG.getNode(RISCVISD::SETCC_VL, SDLoc(N), Cmp.getValueType(),
+                     {Cmp.getOperand(0), Cmp.getOperand(1), DAG.getCondCode(CC),
+                      Cmp.getOperand(3), Cmp.getOperand(4), Cmp.getOperand(5)});
+}
+
 static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -25260,6 +25283,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return N->getOperand(0);
     break;
   }
+  case RISCVISD::VMXOR_VL:
+    return combineVMNOTOfSetCC(N, DAG);
   case RISCVISD::VMERGE_VL: {
     // vmerge_vl allones, x, y, passthru, vl -> vmv_v_v passthru, x, vl
     SDValue Mask = N->getOperand(0);
