@@ -570,11 +570,24 @@ bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
   if (sd_match(Node,
                m_And(m_Add(m_Value(), m_Value()), m_ConstInt(ConstMask)))) {
     uint64_t ConstMaskVal = ConstMask.getZExtValue();
-    if (ConstMaskVal != 255 && ConstMaskVal != 65535)
-      return false;
 
-    uint64_t PAddOpcode = (ConstMaskVal == 255) ? RISCV::PADD_B : RISCV::PADD_H;
-    uint64_t MinZeroBits = (ConstMaskVal == 255) ? 24 : 16;
+    uint64_t PAddOpcode;
+    uint64_t MinZeroBits;
+
+    bool IsRV32 = Subtarget->isRV32();
+
+    switch (ConstMaskVal) {
+    case ((1ll << 8) - 1):
+      PAddOpcode = RISCV::PADD_B;
+      MinZeroBits = (IsRV32 ? 24 : 56);
+      break;
+    case ((1ll << 16) - 1):
+      PAddOpcode = RISCV::PADD_H;
+      MinZeroBits = (IsRV32 ? 16 : 48);
+      break;
+    default:
+      return false;
+    }
 
     auto hasEnoughZeroBits = [MinZeroBits](SDNode *Node, SDValue Op) -> bool {
       VTSDNode *ChainedNode = dyn_cast<VTSDNode>(Op);
