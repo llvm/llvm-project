@@ -763,15 +763,6 @@ TEST(DWARFExpression, OversizedLEB128Constants) {
 }
 
 TEST(DWARFExpression, RejectsOversizedLEB128Operand) {
-  auto evaluate = [](llvm::ArrayRef<uint8_t> expr) {
-    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
-                            /*addr_size=*/8);
-    return DWARFExpression::Evaluate(
-        /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
-        /*unit=*/nullptr, lldb::eRegisterKindLLDB,
-        /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr);
-  };
-
   std::vector<uint8_t> oversized_uleb = {DW_OP_lit0,
                                          DW_OP_plus_uconst,
                                          0x80,
@@ -786,7 +777,7 @@ TEST(DWARFExpression, RejectsOversizedLEB128Operand) {
                                          0x02,
                                          DW_OP_stack_value};
   EXPECT_THAT_EXPECTED(
-      evaluate(oversized_uleb),
+      Evaluate(oversized_uleb),
       llvm::FailedWithMessage(
           "unable to decode operands for DW_OP_plus_uconst at offset 0x1"));
 
@@ -794,13 +785,13 @@ TEST(DWARFExpression, RejectsOversizedLEB128Operand) {
                                     0x80,        0x80, 0x80, 0x80,
                                     0x80,        0x80, 0x02, DW_OP_stack_value};
   EXPECT_THAT_EXPECTED(
-      evaluate(oversized_sleb),
+      Evaluate(oversized_sleb),
       llvm::FailedWithMessage(
           "unable to decode operands for DW_OP_breg0 at offset 0x0"));
 
   const uint8_t unterminated_constant[] = {DW_OP_constu, 0x80};
   EXPECT_THAT_EXPECTED(
-      evaluate(unterminated_constant),
+      Evaluate(unterminated_constant),
       llvm::FailedWithMessage(
           "unable to decode operands for DW_OP_constu at offset 0x0"));
 }
