@@ -199,10 +199,9 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
 }
 
 llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
-PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
+PlatformDarwin::LocateScriptingResourcesInPythonDir(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
-    const FileSpec &symfile_spec) {
-
+    llvm::StringRef python_dir) {
   assert(target.GetDebugger().GetScriptInterpreter() &&
          "Trying to locate scripting resources but no ScriptInterpreter is "
          "available.");
@@ -217,14 +216,9 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
 
     StreamString path_string;
     StreamString original_path_string;
-    // for OSX we are going to be in
-    // .dSYM/Contents/Resources/DWARF/<basename> let us go to
-    // .dSYM/Contents/Resources/Python/<basename>.py and see if the
-    // file exists
-    path_string.Format("{0}/../Python/{1}.py", symfile_spec.GetDirectory(),
+    path_string.Format("{0}/{1}.py", python_dir,
                        sanitized_name.GetSanitizedName());
-    original_path_string.Format("{0}/../Python/{1}.py",
-                                symfile_spec.GetDirectory(),
+    original_path_string.Format("{0}/{1}.py", python_dir,
                                 sanitized_name.GetOriginalName());
 
     FileSpec script_fspec(path_string.GetString());
@@ -232,8 +226,8 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     FileSpec orig_script_fspec(original_path_string.GetString());
     FileSystem::Instance().Resolve(orig_script_fspec);
 
-    WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
-                                         orig_script_fspec, script_fspec);
+    Platform::WarnIfInvalidUnsanitizedScriptExists(
+        feedback_stream, sanitized_name, orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
       LoadScriptFromSymFile load_style =
@@ -253,6 +247,52 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
   }
 
   return file_specs;
+}
+
+/// Returns the root of the innermost bundle containing \c path that can carry
+/// scripting resources, if any. Callers that care which kind of bundle it is
+/// can read the extension back off the returned FileSpec.
+static std::optional<FileSpec> GetBundleRoot(const FileSpec &path) {
+  static constexpr llvm::StringLiteral kBundleExtensions[] = {".dSYM",
+                                                              ".framework"};
+
+  const std::string path_string = path.GetPath();
+  if (llvm::none_of(kBundleExtensions, [&](llvm::StringRef extension) {
+        return llvm::StringRef(path_string).contains(extension);
+      }))
+    return std::nullopt;
+
+  FileSpec bundle = path;
+  while (bundle.RemoveLastPathComponent()) {
+    if (llvm::is_contained(kBundleExtensions, bundle.GetFileNameExtension()))
+      return bundle;
+  }
+
+  return std::nullopt;
+}
+
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
+    Stream &feedback_stream, FileSpec module_spec, const Target &target,
+    const FileSpec &symfile_spec) {
+  // On macOS, the symbol file FileSpec will point to
+  // .dSYM/Contents/Resources/DWARF/<basename>, so look for the python resource
+  // next to it in .dSYM/Contents/Resources/Python/<basename>.py.
+  return LocateScriptingResourcesInPythonDir(
+      feedback_stream, std::move(module_spec), target,
+      llvm::formatv("{0}/../Python", symfile_spec.GetDirectory()).str());
+}
+
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesFromFramework(
+    Stream &feedback_stream, FileSpec module_spec, const Target &target,
+    const FileSpec &framework_spec) {
+  // On macOS, "Resources" is a symlink into the currently selected version,
+  // which FileSystem::Resolve follows; on platforms with flat bundles it is a
+  // real directory. Either way the same relative path applies.
+  return LocateScriptingResourcesInPythonDir(
+      feedback_stream, std::move(module_spec), target,
+      llvm::formatv("{0}/Resources/Python", framework_spec.GetPath()).str());
 }
 
 llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
@@ -278,54 +318,61 @@ PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
   if (!module_spec)
     return empty;
 
-  SymbolFile *symfile = module.GetSymbolFile();
-  if (!symfile)
-    return empty;
+  // A dSYM's scripts take priority over the ones inside the bundle itself.
+  // The symbol file is only needed to find them, so it must not gate the
+  // framework lookup below.
+  if (SymbolFile *symfile = module.GetSymbolFile()) {
+    if (ObjectFile *objfile = symfile->GetObjectFile()) {
+      const FileSpec &symfile_spec = objfile->GetFileSpec();
+      if (symfile_spec &&
+          llvm::StringRef(symfile_spec.GetPath())
+              .contains_insensitive(".dSYM/Contents/Resources/DWARF") &&
+          FileSystem::Instance().Exists(symfile_spec)) {
+        llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs =
+            LocateExecutableScriptingResourcesFromDSYM(
+                feedback_stream, module_spec, *target, symfile_spec);
+        if (!file_specs.empty())
+          return file_specs;
+      }
+    }
+  }
 
-  ObjectFile *objfile = symfile->GetObjectFile();
-  if (!objfile)
-    return empty;
-
-  const FileSpec &symfile_spec = objfile->GetFileSpec();
-  if (symfile_spec &&
-      llvm::StringRef(symfile_spec.GetPath())
-          .contains_insensitive(".dSYM/Contents/Resources/DWARF") &&
-      FileSystem::Instance().Exists(symfile_spec))
-    return LocateExecutableScriptingResourcesFromDSYM(
-        feedback_stream, module_spec, *target, symfile_spec);
+  // Scripts inside a framework are a distribution mechanism of their own: they
+  // require neither debug info nor a symbol file, which a shipping framework
+  // generally lacks.
+  if (std::optional<FileSpec> bundle_spec = GetBundleRoot(module_spec);
+      bundle_spec && bundle_spec->GetFileNameExtension() == ".framework")
+    return LocateExecutableScriptingResourcesFromFramework(
+        feedback_stream, module_spec, *target, *bundle_spec);
 
   return empty;
 }
 
 bool PlatformDarwin::IsSymbolFileTrusted(Module &module) {
 #if defined(__APPLE__)
-  SymbolFile *symfile = module.GetSymbolFile();
-  if (!symfile)
-    return false;
+  auto is_trusted_bundle = [](const FileSpec &path) {
+    std::optional<FileSpec> bundle_spec = GetBundleRoot(path);
+    if (!bundle_spec)
+      return false;
 
-  ObjectFile *objfile = symfile->GetObjectFile();
-  if (!objfile)
-    return false;
+    if (!HostInfoMacOSX::IsBundleCodeSignTrusted(*bundle_spec))
+      return false;
 
-  std::string symfile_path = objfile->GetFileSpec().GetPath();
-  llvm::StringRef path_ref(symfile_path);
-
-  // Find the .dSYM bundle root from the symfile path, which is typically
-  // .dSYM/Contents/Resources/DWARF/<name>.
-  auto pos = path_ref.find(".dSYM/");
-  if (pos == llvm::StringRef::npos)
-    return false;
-
-  FileSpec bundle_spec(path_ref.substr(0, pos + 5));
-
-  if (HostInfoMacOSX::IsBundleCodeSignTrusted(bundle_spec)) {
     LLDB_LOG(GetLog(LLDBLog::Modules),
-             "dSYM bundle '{0}' has valid trusted code signature",
-             bundle_spec.GetPath());
+             "{0} bundle '{1}' has valid trusted code signature",
+             bundle_spec->GetFileNameExtension(), bundle_spec->GetPath());
     return true;
-  }
+  };
 
-  return false;
+  // Trust follows whichever bundle could supply a script, so the two candidate
+  // locations are keyed off different paths: a dSYM is reached through the
+  // symbol file, a framework through the module itself.
+  if (SymbolFile *symfile = module.GetSymbolFile())
+    if (ObjectFile *objfile = symfile->GetObjectFile())
+      if (is_trusted_bundle(objfile->GetFileSpec()))
+        return true;
+
+  return is_trusted_bundle(module.GetFileSpec());
 #else
   return false;
 #endif

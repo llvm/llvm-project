@@ -9,4 +9,5 @@ add_lldb_library(lldbSBUtilityHelpers
     lldbHost
     lldbUtilityHelpers
     llvm_gtest
+    LLVMTestingSupport
   )
