@@ -111,16 +111,20 @@ private:
   LIBC_INLINE void coalesce_and_insert(BlockRef block, size_t store_index) {
     block.mark_free(store_index);
 
-    BlockRef prev = block.prev_free();
-    if (prev && can_merge(prev, store_index)) {
+    // A block too small to be tracked is owned by no store, so it may sit
+    // between two blocks of the same store (e.g. alignment padding left next
+    // to a quarantined block). Absorbing it exposes the block beyond, which
+    // may be mergeable too, so keep going.
+    for (BlockRef prev = block.prev_free();
+         prev && can_merge(prev, store_index); prev = block.prev_free()) {
       // Removing a block too small to be tracked is a no-op.
       free_stores[store_index].remove(prev);
       block = prev;
       block.merge_next();
     }
 
-    BlockRef next = block.next();
-    if (!next.used() && can_merge(next, store_index)) {
+    for (BlockRef next = block.next();
+         !next.used() && can_merge(next, store_index); next = block.next()) {
       free_stores[store_index].remove(next);
       block.merge_next();
     }

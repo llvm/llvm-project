@@ -32,6 +32,7 @@ using LIBC_NAMESPACE::BlockRef;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
+using LIBC_NAMESPACE::FreeStore;
 using LIBC_NAMESPACE::cpp::byte;
 using LIBC_NAMESPACE::cpp::span;
 
@@ -423,5 +424,62 @@ TEST(LlvmLibcFreeListHeap, RotationSmokeTest) {
     ASSERT_NE(large_ptr, static_cast<void *>(nullptr));
     allocator.integrity_check();
     allocator.free(large_ptr);
+  }
+}
+
+// Padding split off by an aligned allocation may be too small to track and
+// hence owned by no store. If left between a quarantined block A and the
+// aligned block B, freeing B into A's store must coalesce all three rather
+// than stop at [A][padding + B].
+TEST(LlvmLibcFreeListHeap, CoalescesAcrossUntrackedPadding) {
+  constexpr size_t MIN_ALIGN = BlockRef::MIN_ALIGN;
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1 &&
+                MIN_ALIGN < FreeStore::MIN_OUTER_SIZE) {
+    constexpr size_t N = 2048;
+    constexpr size_t ALIGNMENT = 2 * MIN_ALIGN;
+
+    // X's usable space must be one MIN_ALIGN unit short of ALIGNMENT; which
+    // size of A gets there depends on where the heap starts, so try a few.
+    bool tested = false;
+    for (size_t a_size = 2 * MIN_ALIGN; a_size <= 8 * MIN_ALIGN && !tested;
+         a_size += MIN_ALIGN) {
+      byte buf[N] = {byte(0)};
+      FreeListHeap allocator(buf);
+
+      void *a = allocator.allocate(a_size);
+      void *x = allocator.allocate(8 * MIN_ALIGN);
+      void *fence = allocator.allocate(MIN_ALIGN);
+      ASSERT_NE(a, static_cast<void *>(nullptr));
+      ASSERT_NE(x, static_cast<void *>(nullptr));
+      ASSERT_NE(fence, static_cast<void *>(nullptr));
+      if (reinterpret_cast<uintptr_t>(x) % ALIGNMENT != MIN_ALIGN)
+        continue;
+      tested = true;
+
+      // Quarantine X, rotate (a failing request still rotates), then
+      // quarantine A in the other store.
+      allocator.free(x);
+      ASSERT_EQ(allocator.allocate(N), static_cast<void *>(nullptr));
+      allocator.free(a);
+
+      // Carve B out of X, leaving one MIN_ALIGN unit of untracked padding.
+      void *b = allocator.aligned_allocate(ALIGNMENT, ALIGNMENT);
+      ASSERT_NE(b, static_cast<void *>(nullptr));
+      ASSERT_EQ(b, static_cast<void *>(static_cast<byte *>(x) + MIN_ALIGN));
+
+      BlockRef block_a = BlockRef::from_usable_space(a);
+      BlockRef block_b = BlockRef::from_usable_space(b);
+      BlockRef padding = block_b.prev_free();
+      ASSERT_NE(padding.addr(), BlockRef().addr());
+      ASSERT_EQ(padding.prev_free().addr(), block_a.addr());
+      ASSERT_TRUE(FreeStore::too_small(padding));
+      ASSERT_FALSE(FreeStore::too_small(block_a));
+      BlockRef after_b = block_b.next();
+
+      allocator.free(b);
+      EXPECT_EQ(block_a.next().addr(), after_b.addr());
+      allocator.integrity_check();
+    }
+    EXPECT_TRUE(tested);
   }
 }
