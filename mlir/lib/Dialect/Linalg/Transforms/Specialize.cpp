@@ -259,7 +259,7 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
           genericOp, "unary elementwise operation cannot be specialized to a "
                      "category op");
 
-    // Boolean-typed `linalg.add` and `linalg.mul` require special handling.
+    // Boolean-typed `ADD` and `MUL` require special handling.
     bool allBool = llvm::all_of(
         op->getOperands(), [](Value v) { return v.getType().isInteger(1); });
 
