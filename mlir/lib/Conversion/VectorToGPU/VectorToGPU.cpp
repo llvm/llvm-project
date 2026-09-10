@@ -344,9 +344,6 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
   DenseMap<Operation *, SmallVector<Operation *>> backwardSliceCache;
   DenseMap<Operation *, SmallVector<Operation *>> forwardSliceCache;
   DenseMap<Operation *, bool> supportsMMAMatrixTypeCache;
-  // Once we have expanded a seed to its full use/def component, every op in
-  // that component would rediscover the same set again.
-  DenseSet<Operation *> analyzedOps;
 
   auto getCachedBackwardSlice =
       [&](Operation *currentOp) -> ArrayRef<Operation *> {
@@ -399,7 +396,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
     if (!isa<vector::ContractionOp>(nestedOp) &&
         !elementwiseSupportsMMAMatrixType(nestedOp))
       return;
-    if (analyzedOps.contains(nestedOp))
+    if (backwardSliceCache.contains(nestedOp))
       return;
 
     SetVector<Operation *> dependentOps;
@@ -410,9 +407,6 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
       dependentOps.insert_range(getCachedBackwardSlice(currentOp));
       dependentOps.insert_range(getCachedForwardSlice(currentOp));
     }
-
-    analyzedOps.insert_range(dependentOps);
-
     // If any instruction cannot use MMA matrix type drop the whole
     // chain. MMA matrix are stored in an opaque type so they cannot be used
     // by all operations.
