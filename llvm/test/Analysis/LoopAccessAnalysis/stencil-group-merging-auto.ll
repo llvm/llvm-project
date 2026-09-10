@@ -34,6 +34,7 @@ define void @stencil_auto_threshold(ptr %a, ptr %out, i64 %n, i64 %cdj) {
 ; AUTOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; AUTOMERGE-NEXT:      SCEV assumptions:
 ; AUTOMERGE-NEXT:      Compare predicate: %cdj sgt) 0
+; AUTOMERGE-NEXT:      Compare predicate: %cdj sle) 1537228672809129301
 ; AUTOMERGE-EMPTY:
 ; AUTOMERGE-NEXT:      Expressions re-written:
 ;

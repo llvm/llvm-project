@@ -945,9 +945,8 @@ static bool addScaledStencilTerm(const SCEV *Term, int64_t Mult, unsigned Depth,
 /// on the same base strides.
 /// Relies on SCEV's canonical form: AddExpr operands are flattened (N-ary),
 /// MulExpr has the constant operand first when present.
-/// Returns std::nullopt if a constant does not fit in int64_t or a multiplier
-/// or coefficient update overflows (we commit to the signed interpretation;
-/// values that need more than 64 significant bits are out of scope).
+/// Returns std::nullopt if a constant, multiplier, or coefficient update does
+/// not fit in int64_t.
 static std::optional<StencilDecomposition>
 decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   // A "Start" is always loop-invariant (getStartAndEndForAccess asserts it), so
@@ -961,13 +960,42 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   return D;
 }
 
+/// Find a common upper limit M for the positive strides in D. If every stride
+/// is between 1 and M, the decomposed offset fits in the signed index type.
+/// This lets isNeverAbove compare offsets as ordinary signed integers.
+///
+/// Subtract abs(Constant) from SignedMax, then divide the remaining budget by
+/// the sum of absolute coefficients:
+///   M = (SignedMax - abs(Constant)) / sum(abs(Coefficient)).
+/// For example, both 8 + 4*s and 8 - 4*s get M = (SignedMax - 8) / 4.
+///
+/// Return nullopt if abs(Constant) exceeds SignedMax or no positive stride
+/// fits. Otherwise, if all coefficients are zero, no stride limit is needed;
+/// return SignedMax.
+static std::optional<APInt>
+getStencilStrideUpperLimit(const StencilDecomposition &D, unsigned BitWidth) {
+  uint64_t SignedMax = maxIntN(BitWidth);
+  uint64_t AbsConstant = AbsoluteValue(D.Constant);
+  if (AbsConstant > SignedMax)
+    return std::nullopt;
+  uint64_t Budget = SignedMax - AbsConstant;
+  uint64_t CoeffSum = 0;
+  for (const auto &[Stride, Coeff] : D.Coefficients) {
+    uint64_t AbsCoeff = AbsoluteValue(Coeff);
+    if (AbsCoeff > Budget - CoeffSum)
+      return std::nullopt;
+    CoeffSum += AbsCoeff;
+  }
+  return APInt(BitWidth, CoeffSum ? Budget / CoeffSum : SignedMax);
+}
+
 /// Return true if offset A is never higher than offset B.
 /// A and B are these sums:
 ///   A = A.Constant + CoefA_1 * stride_1 + CoefA_2 * stride_2 + ...
 ///   B = B.Constant + CoefB_1 * stride_1 + CoefB_2 * stride_2 + ...
 /// A stride missing from a member's map has coefficient 0. Every stride
-/// is 1 or more: strides are integers, and the merge adds an "s > 0"
-/// predicate for each stride that is not already known positive.
+/// is 1 or more: the caller proves or predicates each stride to be positive
+/// and that the whole expression does not overflow.
 /// Example:
 ///   A: 0   - 80*s1
 ///   B: -40 - 40*s1
@@ -1069,8 +1097,8 @@ collectCandidateMembers(ArrayRef<StencilDecomposition> Offsets, bool ForMin) {
 /// After = NumExternalChecks + NewPredicates + NumBoundOperands:
 /// - the merged group keeps the same IDs, so it is checked against exactly
 ///   the same external groups;
-/// - one predicate per stride we must prove positive, unless an earlier
-///   DepSet already paid for it (\p CommittedStridePredicates);
+/// - one check per stride needing a lower or upper limit, unless an earlier
+///   DepSet already paid for either limit;
 /// - a umin over k members costs k-1 compare+selects, same for the umax.
 ///   \p NumBoundOperands is the sum of the two. A single candidate costs
 ///   nothing: the bound is that member's own address.
@@ -1079,8 +1107,10 @@ collectCandidateMembers(ArrayRef<StencilDecomposition> Offsets, bool ForMin) {
 static std::pair<unsigned, unsigned> computeStencilMergeCost(
     const RuntimePointerChecking &RtCheck, ArrayRef<unsigned> GroupIndices,
     const SmallDenseSet<unsigned, 4> &MergedGroupIndices,
-    ArrayRef<const SCEV *> LocalStridesNeedingPreds,
-    const SmallDenseSet<const SCEV *, 4> &CommittedStridePredicates,
+    ArrayRef<const SCEV *> LocalStrideLowerLimits,
+    const SmallMapVector<const SCEV *, APInt, 4> &LocalStrideUpperLimits,
+    const SmallDenseSet<const SCEV *, 4> &StrideLowerLimits,
+    const SmallMapVector<const SCEV *, APInt, 4> &StrideUpperLimits,
     unsigned NumBoundOperands) {
   ArrayRef<RuntimeCheckingPtrGroup> CheckingGroups = RtCheck.CheckingGroups;
   unsigned NumGroups = GroupIndices.size();
@@ -1098,11 +1128,18 @@ static std::pair<unsigned, unsigned> computeStencilMergeCost(
     }
   }
 
-  // Each not-yet-committed positive-stride predicate becomes one extra runtime
-  // check, so it counts against the saving.
+  // Charge once per stride, even when both limits need runtime predicates.
+  // Later DepSets can narrow an upper limit without adding another check.
+  const auto NeedsNewCheck = [&](const SCEV *Stride) {
+    return !StrideLowerLimits.contains(Stride) &&
+           !StrideUpperLimits.contains(Stride);
+  };
   unsigned NewPredicates = 0;
-  for (const SCEV *Stride : LocalStridesNeedingPreds)
-    if (!CommittedStridePredicates.contains(Stride))
+  for (const SCEV *Stride : LocalStrideLowerLimits)
+    if (NeedsNewCheck(Stride))
+      ++NewPredicates;
+  for (const auto &[Stride, UpperLimit] : LocalStrideUpperLimits)
+    if (!is_contained(LocalStrideLowerLimits, Stride) && NeedsNewCheck(Stride))
       ++NewPredicates;
 
   LLVM_DEBUG(dbgs() << "LAA:   Cost model: NumGroups=" << NumGroups
@@ -1121,14 +1158,15 @@ static std::pair<unsigned, unsigned> computeStencilMergeCost(
 /// decided the merge is profitable. Constructs the bounding group over
 /// \p AllMembers with bounds [\p MergedLow, \p MergedHigh], and registers with
 /// \p PSE a positive-stride SCEV predicate for each stride in
-/// \p LocalStridesNeedingPreds that has not already been committed (tracked in
-/// \p CommittedStridePredicates across DepSets). Returns the new group.
-static RuntimeCheckingPtrGroup buildMergedStencilGroup(
-    const RuntimePointerChecking &RtCheck, PredicatedScalarEvolution &PSE,
-    ArrayRef<unsigned> AllMembers, const SCEV *MergedLow,
-    const SCEV *MergedHigh, ArrayRef<unsigned> GroupIndices,
-    ArrayRef<const SCEV *> LocalStridesNeedingPreds,
-    SmallDenseSet<const SCEV *, 4> &CommittedStridePredicates) {
+/// \p LocalStrideLowerLimits that has not already been committed (tracked in
+/// \p StrideLowerLimits across DepSets). Returns the new group.
+static RuntimeCheckingPtrGroup
+buildMergedStencilGroup(const RuntimePointerChecking &RtCheck,
+                        PredicatedScalarEvolution &PSE,
+                        ArrayRef<unsigned> AllMembers, const SCEV *MergedLow,
+                        const SCEV *MergedHigh, ArrayRef<unsigned> GroupIndices,
+                        ArrayRef<const SCEV *> LocalStrideLowerLimits,
+                        SmallDenseSet<const SCEV *, 4> &StrideLowerLimits) {
   RuntimeCheckingPtrGroup CandidateGroup(AllMembers[0], RtCheck);
   CandidateGroup.Low = MergedLow;
   CandidateGroup.High = MergedHigh;
@@ -1140,8 +1178,8 @@ static RuntimeCheckingPtrGroup buildMergedStencilGroup(
   // Register the positive-stride SCEV predicates with PSE, skipping any stride
   // an earlier DepSet already added a predicate for.
   ScalarEvolution &SE = *PSE.getSE();
-  for (const SCEV *Stride : LocalStridesNeedingPreds) {
-    if (!CommittedStridePredicates.insert(Stride).second)
+  for (const SCEV *Stride : LocalStrideLowerLimits) {
+    if (!StrideLowerLimits.insert(Stride).second)
       continue;
     const SCEV *Zero = SE.getZero(Stride->getType());
     PSE.addPredicate(*SE.getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero));
@@ -1180,7 +1218,8 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
   //   - keep the members that can hold the lowest or the highest address at
   //     runtime (the candidate members), and build the merged bounds as a
   //     umin over their Start values and a umax over their End values,
-  //     adding predicates for strides that are not already known positive;
+  //     adding predicates for strides not already known positive and within
+  //     their limits;
   //   - commit the merge only if the local cost model reduces the number of
   //     checks after accounting for any new predicates.
 
@@ -1245,8 +1284,11 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
 
   SmallDenseSet<unsigned, 4> MergedGroupIndices;
   SmallVector<RuntimeCheckingPtrGroup, 2> NewMergedGroups;
-  // Track strides that already have committed predicates (across all DepSets).
-  SmallDenseSet<const SCEV *, 4> CommittedStridePredicates;
+  // Track lower limits from accepted DepSets. Each is 1, so store only strides.
+  SmallDenseSet<const SCEV *, 4> StrideLowerLimits;
+  // Accepted DepSets may narrow these limits. Emit their predicates only
+  // after all DepSets have been analyzed.
+  SmallMapVector<const SCEV *, APInt, 4> StrideUpperLimits;
 
   for (auto &[DepAliasKey, GroupIndices] : DepSetToGroups) {
     [[maybe_unused]] auto [DepId, ASId] = DepAliasKey;
@@ -1309,6 +1351,11 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     unsigned Member0 = AllMembers[0];
     const SCEV *BaseLow = Pointers[Member0].Start;
     const SCEV *BaseHigh = Pointers[Member0].End;
+
+    // Keep stencil decomposition and stride-limit arithmetic within 64 bits.
+    // All offsets relative to BaseLow have the same index width.
+    if (SE->getTypeSizeInBits(BaseLow->getType()) > 64)
+      continue;
 
     LLVM_DEBUG(dbgs() << "LAA: Analyzing DepSet(" << DepId << "," << ASId
                       << ") with " << AllMembers.size()
@@ -1377,7 +1424,8 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     MemberOffsets.reserve(AllMembers.size());
     // The base member's offset from itself is zero: Constant 0, no strides.
     MemberOffsets.emplace_back();
-    SmallSetVector<const SCEV *, 4> LocalStridesNeedingPreds;
+    SmallSetVector<const SCEV *, 4> LocalStrideLowerLimits;
+    SmallMapVector<const SCEV *, APInt, 4> LocalStrideUpperLimits;
 
     // Decompose one member's offset (relative to BaseLow) and append it to
     // MemberOffsets. Returns false if the offset is not in stencil form (so
@@ -1393,9 +1441,26 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
         return false;
       }
 
-      for (const auto &[Stride, Coeff] : DLow->Coefficients)
+      auto UpperLimit = getStencilStrideUpperLimit(
+          *DLow, SE->getTypeSizeInBits(LowOffset->getType()));
+      if (!UpperLimit)
+        return false;
+
+      for (const auto &[Stride, Coeff] : DLow->Coefficients) {
+        // Require a positive stride if needed. The lower limit is always 1.
         if (!SE->isKnownPositive(Stride))
-          LocalStridesNeedingPreds.insert(Stride);
+          LocalStrideLowerLimits.insert(Stride);
+
+        // Check whether an upper-limit predicate is needed.
+        if (!Coeff || SE->isKnownPredicate(ICmpInst::ICMP_SLE, Stride,
+                                           SE->getConstant(*UpperLimit)))
+          continue;
+        auto [It, Inserted] =
+            LocalStrideUpperLimits.insert({Stride, *UpperLimit});
+        // Keep the smallest limit seen so far.
+        if (!Inserted && UpperLimit->ult(It->second))
+          It->second = *UpperLimit;
+      }
 
       LLVM_DEBUG(dbgs() << "LAA:   Member " << Idx
                         << ": Const=" << DLow->Constant
@@ -1427,10 +1492,10 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     // single merged group actually reduces the number of runtime checks. Run
     // it before building the merged bounds: a rejected DepSet then creates no
     // umin/umax expressions that would only be thrown away.
-    auto [ChecksBefore, ChecksAfter] =
-        computeStencilMergeCost(*this, GroupIndices, MergedGroupIndices,
-                                LocalStridesNeedingPreds.getArrayRef(),
-                                CommittedStridePredicates, NumBoundOperands);
+    auto [ChecksBefore, ChecksAfter] = computeStencilMergeCost(
+        *this, GroupIndices, MergedGroupIndices,
+        LocalStrideLowerLimits.getArrayRef(), LocalStrideUpperLimits,
+        StrideLowerLimits, StrideUpperLimits, NumBoundOperands);
     if (ChecksAfter >= ChecksBefore) {
       LLVM_DEBUG(dbgs() << "LAA:   Not beneficial, skipping DepSet\n");
       continue;
@@ -1465,9 +1530,18 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     // Build the merged group and register its positive-stride predicates.
     NewMergedGroups.push_back(buildMergedStencilGroup(
         *this, PSE, AllMembers, MergedLow, MergedHigh, GroupIndices,
-        LocalStridesNeedingPreds.getArrayRef(), CommittedStridePredicates));
+        LocalStrideLowerLimits.getArrayRef(), StrideLowerLimits));
+    for (const auto &[Stride, UpperLimit] : LocalStrideUpperLimits) {
+      auto [It, Inserted] = StrideUpperLimits.insert({Stride, UpperLimit});
+      if (!Inserted && UpperLimit.ult(It->second))
+        It->second = UpperLimit;
+    }
     MergedGroupIndices.insert(GroupIndices.begin(), GroupIndices.end());
   }
+
+  for (const auto &[Stride, UpperLimit] : StrideUpperLimits)
+    PSE.addPredicate(*SE->getComparePredicate(ICmpInst::ICMP_SLE, Stride,
+                                              SE->getConstant(UpperLimit)));
 
   // Rebuild CheckingGroups if we merged anything.
   if (!NewMergedGroups.empty()) {
