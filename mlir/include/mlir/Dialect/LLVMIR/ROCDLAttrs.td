@@ -93,6 +93,10 @@ def ROCDL_Gfx942CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_Gfx942CachePolicy,
                                      "gfx942_cache_policy">;
 
+def ROCDL_BufferInvCachePolicyAttr
+    : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_BufferInvCachePolicy,
+                                     "buffer_inv_cache_policy">;
+
 def ROCDL_Gfx12CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_Gfx12CachePolicy,
                                      "gfx12_cache_policy">;

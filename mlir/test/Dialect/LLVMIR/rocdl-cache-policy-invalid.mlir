@@ -36,3 +36,11 @@ llvm.func @atomic_buffer_rejects_gfx12(%rsrc : vector<4xi32>,
   %0 = rocdl.raw.buffer.atomic.smax %vdata, %rsrc, %offset, %soffset, gfx12<nt> : i32
   llvm.return
 }
+
+// -----
+
+llvm.func @buffer_inv_rejects_unsupported_policy() {
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values for attribute 'cpol'}}
+  rocdl.buffer.inv nt
+  llvm.return
+}
