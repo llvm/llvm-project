@@ -838,7 +838,9 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
        << "    Msg << \"Attempting to emit \" << &" << Target.getName()
        << "InstrNameData[" << Target.getName() << "InstrNameIndices[Opcode]]\n"
        << "        << \" instruction but the \";\n"
-       << "    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i)\n"
+       << "    for (unsigned i = 0, e = "
+          "static_cast<unsigned>(MissingFeatures.size());\n"
+       << "         i != e; ++i)\n"
        << "      if (MissingFeatures.test(i))\n"
        << "        Msg << SubtargetFeatureNames[i] << \" \";\n"
        << "    Msg << \"predicate(s) are not met\";\n"
