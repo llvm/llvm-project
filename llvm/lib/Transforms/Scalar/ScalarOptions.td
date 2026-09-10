@@ -263,6 +263,8 @@ defm : BoolField<"loop-fusion-cost-model", "false",
   "Enable the loop fusion profitability model">;
 defm : ValueField<"loop-fusion-max-code-size", "unsigned", "300",
   "Maximum estimated combined cost of fused loop bodies (0 disables the limit)">;
+defm : ValueField<"loop-fusion-min-reused-values", "unsigned", "1",
+  "Minimum number of distinct values reused across fused loops">;
 let Condition = AssertsOnly in
 defm : BoolField<"loop-fusion-verbose-debug", "false",
   "Enable verbose debugging for Loop Fusion">;
