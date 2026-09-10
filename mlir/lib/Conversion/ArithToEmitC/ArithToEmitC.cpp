@@ -459,16 +459,16 @@ public:
     if (!newRetTy)
       return rewriter.notifyMatchFailure(uiBinOp,
                                          "converting result type failed");
-    if (!isa<IntegerType>(newRetTy)) {
-      return rewriter.notifyMatchFailure(uiBinOp, "expected integer type");
+    if (!isa<IntegerType, emitc::SizeTType>(newRetTy)) {
+      return rewriter.notifyMatchFailure(uiBinOp, "unsupported result type");
     }
     Type unsignedType =
         adaptIntegralTypeSignedness(newRetTy, /*needsUnsigned=*/true);
     if (!unsignedType)
       return rewriter.notifyMatchFailure(uiBinOp,
                                          "converting result type failed");
-    Value lhsAdapted = adaptValueType(uiBinOp.getLhs(), rewriter, unsignedType);
-    Value rhsAdapted = adaptValueType(uiBinOp.getRhs(), rewriter, unsignedType);
+    Value lhsAdapted = adaptValueType(adaptor.getLhs(), rewriter, unsignedType);
+    Value rhsAdapted = adaptValueType(adaptor.getRhs(), rewriter, unsignedType);
 
     auto newDivOp = EmitCOp::create(rewriter, uiBinOp.getLoc(), unsignedType,
                                     ArrayRef<Value>{lhsAdapted, rhsAdapted});

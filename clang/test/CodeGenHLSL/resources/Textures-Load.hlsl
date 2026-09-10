@@ -28,6 +28,15 @@
 // RUN:   -DTEXTURE=Texture2DArray -D#LOAD_DIM=4 -DCOORD_DIM=3 \
 // RUN:   -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DDXIL_TY=7 -DRW=0 -DENTRY_DIM=2 \
 // RUN:   -DDIM=2
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
+// RUN:   -DHAS_OFFSET -DOFFSET_ARG="int3(1, 1, 1)" -DTEXTURE=Texture3D \
+// RUN:   -DLOAD_ARG="int4(loc, 0, 0)" -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,SRV,WIDE-LOC,DXIL,DXIL-SRV \
+// RUN:   -DTEXTURE=Texture3D -D#LOAD_DIM=4 -DCOORD_DIM=3 \
+// RUN:   -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DDXIL_TY=4 -DRW=0 \
+// RUN:   -DENTRY_DIM=2 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
 // RUN:   -DHAS_OFFSET -DOFFSET_ARG="int2(1, 1)" -DTEXTURE=Texture2DArray \
@@ -38,6 +47,16 @@
 // RUN:   -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DARRAYED=1 -DSAMPLED=1 \
 // RUN:   -DFORMAT1=0 -DFORMAT3=0 -DFORMAT6=0 -DFORMAT21=0 -DFORMAT24=0 \
 // RUN:   -DFORMAT25=0 -DSPV_DIM=1 -DENTRY_DIM=2 -DDIM=2
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
+// RUN:   -DHAS_OFFSET -DOFFSET_ARG="int3(1, 1, 1)" -DTEXTURE=Texture3D \
+// RUN:   -DLOAD_ARG="int4(loc, 0, 0)" -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,SRV,WIDE-LOC,SPIRV,SPIRV-SRV \
+// RUN:   -DTEXTURE=Texture3D -D#LOAD_DIM=4 -DCOORD_DIM=3 \
+// RUN:   -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DARRAYED=0 -DSAMPLED=1 \
+// RUN:   -DFORMAT1=0 -DFORMAT3=0 -DFORMAT6=0 -DFORMAT21=0 -DFORMAT24=0 \
+// RUN:   -DFORMAT25=0 -DSPV_DIM=2 -DENTRY_DIM=2 -DDIM=3
 
 // RWTexture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
@@ -64,6 +83,13 @@
 // RUN:   | FileCheck %s --check-prefixes=CHECK,UAV,WIDE-LOC,DXIL,DXIL-UAV \
 // RUN:   -DTEXTURE=RWTexture2DArray -D#LOAD_DIM=3 -DCOORD_DIM=3 \
 // RUN:   -DDXIL_TY=7 -DRW=1 -DENTRY_DIM=2 -DDIM=2
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
+// RUN:   -DTEXTURE=RWTexture3D -DLOAD_ARG="int3(loc, 0)" -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,UAV,WIDE-LOC,DXIL,DXIL-UAV \
+// RUN:   -DTEXTURE=RWTexture3D -D#LOAD_DIM=3 -DCOORD_DIM=3 -DDXIL_TY=4 -DRW=1 \
+// RUN:   -DENTRY_DIM=2 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
 // RUN:   -DTEXTURE=RWTexture2DArray -DLOAD_ARG="int3(loc, 0)" -o - %s \
@@ -73,6 +99,14 @@
 // RUN:   -DARRAYED=1 -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 \
 // RUN:   -DFORMAT21=21 -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=1 -DENTRY_DIM=2 \
 // RUN:   -DDIM=2
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
+// RUN:   -DTEXTURE=RWTexture3D -DLOAD_ARG="int3(loc, 0)" -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,UAV,WIDE-LOC,SPIRV,SPIRV-UAV \
+// RUN:   -DTEXTURE=RWTexture3D -D#LOAD_DIM=3 -DCOORD_DIM=3 -DARRAYED=0 \
+// RUN:   -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 \
+// RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=2 -DENTRY_DIM=2 -DDIM=3
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -267,7 +301,7 @@ int test_load_int(ENTRY_TYPE loc : LOC) {
 
 // CHECK: define linkonce_odr hidden {{.*}} i32 @hlsl::[[TEXTURE]]<int>::Load(int vector[[[#LOAD_DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]])
 // DXIL: %[[RES:.*]] = call i32 @llvm.dx.resource.load.level.i32.tdx.Texture_i32_{{.*}}("dx.Texture", i32, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call i32 @llvm.spv.resource.load.level.i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT24]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call i32 @llvm.spv.resource.load.level.i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT24]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
 // CHECK: ret i32 %[[RES]]
 
 #ifdef HAS_OFFSET
@@ -281,36 +315,36 @@ int test_load_offset_int(ENTRY_TYPE loc : LOC) {
 
 // SRV: define linkonce_odr hidden {{.*}} i32 @hlsl::[[TEXTURE]]<int>::Load(int vector[[[#LOAD_DIM]]], int vector[[[DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]], <[[DIM]] x i32> {{.*}} %[[OFFSET:.*]])
 // DXIL-SRV: %[[RES:.*]] = call i32 @llvm.dx.resource.load.level.i32.tdx.Texture_i32_{{.*}}("dx.Texture", i32, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
-// SPIRV-SRV: %[[RES:.*]] = call i32 @llvm.spv.resource.load.level.i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT24]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
+// SPIRV-SRV: %[[RES:.*]] = call i32 @llvm.spv.resource.load.level.i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT24]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
 // SRV: ret i32 %[[RES]]
 
 TEXTURE<int2> t_int2;
 
-// CHECK: define hidden {{.*}} <[[DIM]] x i32> @test_load_int2(int vector[[[ENTRY_DIM]]])
-// CHECK: %[[CALL:.*]] = call {{.*}} <[[DIM]] x i32> @hlsl::[[TEXTURE]]<int vector[[[DIM]]]>::Load(int vector[[[#LOAD_DIM]]])(ptr {{.*}} @t_int2, <[[#LOAD_DIM]] x i32> noundef %{{.*}})
-// CHECK: ret <[[DIM]] x i32> %[[CALL]]
+// CHECK: define hidden {{.*}} <2 x i32> @test_load_int2(int vector[[[ENTRY_DIM]]])
+// CHECK: %[[CALL:.*]] = call {{.*}} <2 x i32> @hlsl::[[TEXTURE]]<int vector[2]>::Load(int vector[[[#LOAD_DIM]]])(ptr {{.*}} @t_int2, <[[#LOAD_DIM]] x i32> noundef %{{.*}})
+// CHECK: ret <2 x i32> %[[CALL]]
 int2 test_load_int2(ENTRY_TYPE loc : LOC) {
   return t_int2.Load(LOAD_ARG);
 }
 
-// CHECK: define linkonce_odr hidden {{.*}} <[[DIM]] x i32> @hlsl::[[TEXTURE]]<int vector[[[DIM]]]>::Load(int vector[[[#LOAD_DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]])
-// DXIL: %[[RES:.*]] = call <[[DIM]] x i32> @llvm.dx.resource.load.level.v2i32.tdx.Texture_v2i32_{{.*}}("dx.Texture", <[[DIM]] x i32>, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call <[[DIM]] x i32> @llvm.spv.resource.load.level.v2i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT25]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
-// CHECK: ret <[[DIM]] x i32> %[[RES]]
+// CHECK: define linkonce_odr hidden {{.*}} <2 x i32> @hlsl::[[TEXTURE]]<int vector[2]>::Load(int vector[[[#LOAD_DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]])
+// DXIL: %[[RES:.*]] = call <2 x i32> @llvm.dx.resource.load.level.v2i32.tdx.Texture_v2i32_{{.*}}("dx.Texture", <2 x i32>, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call <2 x i32> @llvm.spv.resource.load.level.v2i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT25]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
+// CHECK: ret <2 x i32> %[[RES]]
 
 #ifdef HAS_OFFSET
-// SRV: define hidden {{.*}} <[[DIM]] x i32> @test_load_offset_int2(int vector[[[ENTRY_DIM]]])
-// SRV: %[[CALL:.*]] = call {{.*}} <[[DIM]] x i32> @hlsl::[[TEXTURE]]<int vector[[[DIM]]]>::Load(int vector[[[#LOAD_DIM]]], int vector[[[DIM]]])(ptr {{.*}} @t_int2, <[[#LOAD_DIM]] x i32> noundef %{{.*}}, <[[DIM]] x i32> noundef splat (i32 1))
-// SRV: ret <[[DIM]] x i32> %[[CALL]]
+// SRV: define hidden {{.*}} <2 x i32> @test_load_offset_int2(int vector[[[ENTRY_DIM]]])
+// SRV: %[[CALL:.*]] = call {{.*}} <2 x i32> @hlsl::[[TEXTURE]]<int vector[2]>::Load(int vector[[[#LOAD_DIM]]], int vector[[[DIM]]])(ptr {{.*}} @t_int2, <[[#LOAD_DIM]] x i32> noundef %{{.*}}, <[[DIM]] x i32> noundef splat (i32 1))
+// SRV: ret <2 x i32> %[[CALL]]
 int2 test_load_offset_int2(ENTRY_TYPE loc : LOC) {
   return t_int2.Load(LOAD_ARG, OFFSET_ARG);
 }
 #endif
 
-// SRV: define linkonce_odr hidden {{.*}} <[[DIM]] x i32> @hlsl::[[TEXTURE]]<int vector[[[DIM]]]>::Load(int vector[[[#LOAD_DIM]]], int vector[[[DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]], <[[DIM]] x i32> {{.*}} %[[OFFSET:.*]])
-// DXIL-SRV: %[[RES:.*]] = call <[[DIM]] x i32> @llvm.dx.resource.load.level.v2i32.tdx.Texture_v2i32_{{.*}}("dx.Texture", <[[DIM]] x i32>, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
-// SPIRV-SRV: %[[RES:.*]] = call <[[DIM]] x i32> @llvm.spv.resource.load.level.v2i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT25]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
-// SRV: ret <[[DIM]] x i32> %[[RES]]
+// SRV: define linkonce_odr hidden {{.*}} <2 x i32> @hlsl::[[TEXTURE]]<int vector[2]>::Load(int vector[[[#LOAD_DIM]]], int vector[[[DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]], <[[DIM]] x i32> {{.*}} %[[OFFSET:.*]])
+// DXIL-SRV: %[[RES:.*]] = call <2 x i32> @llvm.dx.resource.load.level.v2i32.tdx.Texture_v2i32_{{.*}}("dx.Texture", <2 x i32>, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
+// SPIRV-SRV: %[[RES:.*]] = call <2 x i32> @llvm.spv.resource.load.level.v2i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT25]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
+// SRV: ret <2 x i32> %[[RES]]
 
 TEXTURE<int3> t_int3;
 
@@ -323,7 +357,7 @@ int3 test_load_int3(ENTRY_TYPE loc : LOC) {
 
 // CHECK: define linkonce_odr hidden {{.*}} <3 x i32> @hlsl::[[TEXTURE]]<int vector[3]>::Load(int vector[[[#LOAD_DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]])
 // DXIL: %[[RES:.*]] = call <3 x i32> @llvm.dx.resource.load.level.v3i32.tdx.Texture_v3i32_{{.*}}("dx.Texture", <3 x i32>, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.load.level.v3i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], 0) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.load.level.v3i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], 0) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
 // CHECK: ret <3 x i32> %[[RES]]
 
 #ifdef HAS_OFFSET
@@ -337,7 +371,7 @@ int3 test_load_offset_int3(ENTRY_TYPE loc : LOC) {
 
 // SRV: define linkonce_odr hidden {{.*}} <3 x i32> @hlsl::[[TEXTURE]]<int vector[3]>::Load(int vector[[[#LOAD_DIM]]], int vector[[[DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]], <[[DIM]] x i32> {{.*}} %[[OFFSET:.*]])
 // DXIL-SRV: %[[RES:.*]] = call <3 x i32> @llvm.dx.resource.load.level.v3i32.tdx.Texture_v3i32_{{.*}}("dx.Texture", <3 x i32>, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
-// SPIRV-SRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.load.level.v3i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], 0) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
+// SPIRV-SRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.load.level.v3i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], 0) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
 // SRV: ret <3 x i32> %[[RES]]
 
 TEXTURE<int4> t_int4;
@@ -351,7 +385,7 @@ int4 test_load_int4(ENTRY_TYPE loc : LOC) {
 
 // CHECK: define linkonce_odr hidden {{.*}} <4 x i32> @hlsl::[[TEXTURE]]<int vector[4]>::Load(int vector[[[#LOAD_DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]])
 // DXIL: %[[RES:.*]] = call <4 x i32> @llvm.dx.resource.load.level.v4i32.tdx.Texture_v4i32_{{.*}}("dx.Texture", <4 x i32>, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call <4 x i32> @llvm.spv.resource.load.level.v4i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT21]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call <4 x i32> @llvm.spv.resource.load.level.v4i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT21]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 {{[^,]*}}, <[[DIM]] x i32> zeroinitializer)
 // CHECK: ret <4 x i32> %[[RES]]
 
 #ifdef HAS_OFFSET
@@ -365,5 +399,5 @@ int4 test_load_offset_int4(ENTRY_TYPE loc : LOC) {
 
 // SRV: define linkonce_odr hidden {{.*}} <4 x i32> @hlsl::[[TEXTURE]]<int vector[4]>::Load(int vector[[[#LOAD_DIM]]], int vector[[[DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[#LOAD_DIM]] x i32> {{.*}} %[[LOAD:.*]], <[[DIM]] x i32> {{.*}} %[[OFFSET:.*]])
 // DXIL-SRV: %[[RES:.*]] = call <4 x i32> @llvm.dx.resource.load.level.v4i32.tdx.Texture_v4i32_{{.*}}("dx.Texture", <4 x i32>, [[RW]], 0, 1, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
-// SPIRV-SRV: %[[RES:.*]] = call <4 x i32> @llvm.spv.resource.load.level.v4i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT21]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
+// SPIRV-SRV: %[[RES:.*]] = call <4 x i32> @llvm.spv.resource.load.level.v4i32.tspirv.SignedImage_i32_{{.*}}("spirv.SignedImage", i32, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT21]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <[[DIM]] x i32> %{{.*}})
 // SRV: ret <4 x i32> %[[RES]]

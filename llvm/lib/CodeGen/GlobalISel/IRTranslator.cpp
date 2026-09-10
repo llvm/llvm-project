@@ -129,19 +129,25 @@ class IRTranslatorImpl {
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
     VRegListT *getVRegs(const Value &V) {
-      auto It = ValToVRegs.find(&V);
-      if (It != ValToVRegs.end())
+      auto [It, Inserted] = ValToVRegs.try_emplace(&V);
+      if (!Inserted)
         return It->second;
 
-      return insertVRegs(V);
+      // We placement new using our fast allocator since we never try to free
+      // the vectors until translation is finished.
+      It->second = new (VRegAlloc.Allocate()) VRegListT();
+      return It->second;
     }
 
     OffsetListT *getOffsets(const Value &V) {
-      auto It = TypeToOffsets.find(V.getType());
-      if (It != TypeToOffsets.end())
+      assert(V.getType()->isAggregateType() &&
+             "Offsets are for aggregate values");
+      auto [It, Inserted] = TypeToOffsets.try_emplace(V.getType());
+      if (!Inserted)
         return It->second;
 
-      return insertOffsets(V);
+      It->second = new (OffsetAlloc.Allocate()) OffsetListT();
+      return It->second;
     }
 
     const_vreg_iterator findVRegs(const Value &V) const {
@@ -149,6 +155,8 @@ class IRTranslatorImpl {
     }
 
     bool contains(const Value &V) const { return ValToVRegs.contains(&V); }
+
+    void reserveVRegs(unsigned NumValues) { ValToVRegs.reserve(NumValues); }
 
     void reset() {
       ValToVRegs.clear();
@@ -158,23 +166,6 @@ class IRTranslatorImpl {
     }
 
   private:
-    VRegListT *insertVRegs(const Value &V) {
-      assert(!ValToVRegs.contains(&V) && "Value already exists");
-
-      // We placement new using our fast allocator since we never try to free
-      // the vectors until translation is finished.
-      auto *VRegList = new (VRegAlloc.Allocate()) VRegListT();
-      ValToVRegs[&V] = VRegList;
-      return VRegList;
-    }
-
-    OffsetListT *insertOffsets(const Value &V) {
-      assert(!TypeToOffsets.contains(V.getType()) && "Type already exists");
-
-      auto *OffsetList = new (OffsetAlloc.Allocate()) OffsetListT();
-      TypeToOffsets[V.getType()] = OffsetList;
-      return OffsetList;
-    }
     SpecificBumpPtrAllocator<VRegListT> VRegAlloc;
     SpecificBumpPtrAllocator<OffsetListT> OffsetAlloc;
 
@@ -774,14 +765,11 @@ class IRTranslatorImpl {
 
     auto Reg = MRI->createGenericVirtualRegister(LLT::token());
     Regs.push_back(Reg);
-    auto &Offsets = *VMap.getOffsets(Token);
-    if (Offsets.empty())
-      Offsets.push_back(0);
     return Reg;
   }
 
-  /// Allocate some vregs and offsets in the VMap. Then populate just the
-  /// offsets while leaving the vregs empty.
+  /// Allocate empty vregs for \p Val. For aggregate values, also populate
+  /// their offsets.
   ValueToVRegInfo::VRegListT &allocateVRegs(const Value &Val);
 
   /// Get the frame index that represents \p Val.
@@ -950,6 +938,11 @@ IRTranslatorImpl::allocateVRegs(const Value &Val) {
   if (VRegsIt != VMap.vregs_end())
     return *VRegsIt->second;
   auto *Regs = VMap.getVRegs(Val);
+  if (!Val.getType()->isAggregateType()) {
+    Regs->push_back(0);
+    return *Regs;
+  }
+
   auto *Offsets = VMap.getOffsets(Val);
   SmallVector<LLT, 4> SplitTys;
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
@@ -969,7 +962,6 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
 
   // Create entry for this type.
   auto *VRegs = VMap.getVRegs(Val);
-  auto *Offsets = VMap.getOffsets(Val);
 
   if (!Val.getType()->isTokenTy())
     assert(Val.getType()->isSized() &&
@@ -978,8 +970,6 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
   // Fast-path values that lower to a single vreg.
   if (!Val.getType()->isAggregateType()) {
     LLT Ty = getLLTForType(*Val.getType(), *DL);
-    if (Offsets->empty())
-      Offsets->push_back(0);
     VRegs->push_back(MRI->createGenericVirtualRegister(Ty));
     if (isa<Constant>(Val)) {
       bool Success = translate(cast<Constant>(Val), VRegs->front());
@@ -995,6 +985,7 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
   }
 
   SmallVector<LLT, 4> SplitTys;
+  auto *Offsets = VMap.getOffsets(Val);
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
                    Offsets->empty() ? Offsets : nullptr);
 
@@ -2330,7 +2321,6 @@ bool IRTranslatorImpl::translateCopy(const User &U, Register Src,
   auto &Regs = *VMap.getVRegs(U);
   if (Regs.empty()) {
     Regs.push_back(Src);
-    VMap.getOffsets(U)->push_back(0);
   } else {
     // If we already assigned a vreg for this instruction, we can't change that.
     // Emit a copy to satisfy the users we already emitted.
@@ -5085,10 +5075,14 @@ bool IRTranslatorImpl::runOnMachineFunction(
 
   bool IsVarArg = F.isVarArg();
   bool HasMustTailInVarArgFn = false;
+  // Use arguments and instructions to estimate the number of mapped values and
+  // virtual registers.
+  unsigned NumValues = F.arg_size();
 
   // Create all blocks, in IR order, to preserve the layout.
   FuncInfo.MBBMap.resize(F.getMaxBlockNumber());
   for (const BasicBlock &BB: F) {
+    NumValues += BB.size();
     auto *&MBB = FuncInfo.MBBMap[BB.getNumber()];
 
     MBB = MF->CreateMachineBasicBlock(&BB);
@@ -5106,6 +5100,9 @@ bool IRTranslatorImpl::runOnMachineFunction(
     if (!HasMustTailInVarArgFn)
       HasMustTailInVarArgFn = checkForMustTailInVarArgFn(IsVarArg, BB);
   }
+
+  VMap.reserveVRegs(NumValues);
+  MRI->reserveVirtRegs(NumValues);
 
   MF->getFrameInfo().setHasMustTailInVarArgFunc(HasMustTailInVarArgFn);
 

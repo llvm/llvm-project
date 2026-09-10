@@ -19,19 +19,30 @@
 #include "orc-rt/support/sps/SPSWrapperFunctionBuffer.h"
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
+// The signature shared by ORC_RT_SPS_ALLOC_ACTION_DECL and _IMPL. Writing it
+// once keeps the declaration and definition from drifting apart.
+#define ORC_RT_SPS_ALLOC_ACTION_SIG(Name)                                      \
+  orc_rt_WrapperFunctionBuffer Name(const char *ArgData, size_t ArgSize)
+
+/// Declare an allocation-action wrapper function. The name has C linkage, so it
+/// is the same function regardless of which namespace the declaration appears
+/// in.
+#define ORC_RT_SPS_ALLOC_ACTION_DECL(Name)                                     \
+  extern "C" ORC_RT_C_EXPORT ORC_RT_SPS_ALLOC_ACTION_SIG(Name);
+
 /// Define an allocation-action wrapper function with the given Name that
 /// uses SPS to deserialize its arguments and dispatches to Handle.
 ///
-/// SPSArgs is a parenthesized comma-separated list of SPS argument types
-/// (the parens are stripped by ORC_RT_DEPAREN before being expanded into
-/// the SPSAllocActionFunction template instantiation):
+/// SPSArgs is a parenthesized comma-separated list of SPS argument types:
 ///
 ///     static Error checkEq(int32_t X, int32_t Y);
-///     ORC_RT_SPS_ALLOC_ACTION(check_eq_action, (int32_t, int32_t), checkEq)
+///     ORC_RT_SPS_ALLOC_ACTION_IMPL(check_eq_action,
+///                                  (int32_t, int32_t),
+///                                  checkEq)
 ///
-#define ORC_RT_SPS_ALLOC_ACTION(Name, SPSArgs, Handle)                         \
-  static orc_rt_WrapperFunctionBuffer Name(const char *ArgData,                \
-                                           size_t ArgSize) {                   \
+#define ORC_RT_SPS_ALLOC_ACTION_IMPL(Name, SPSArgs, Handle)                    \
+  ORC_RT_SPS_ALLOC_ACTION_DECL(Name)                                           \
+  extern "C" ORC_RT_SPS_ALLOC_ACTION_SIG(Name) {                               \
     return orc_rt::SPSAllocActionFunction<ORC_RT_DEPAREN(SPSArgs)>::handle(    \
                ArgData, ArgSize, Handle)                                       \
         .release();                                                            \
