@@ -232,11 +232,6 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 LLVM_ABI_FOR_TEST VPValue *
 reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
 
-inline VPValue *reconstructSSA(VPBasicBlock *VPBB,
-                               DenseMap<VPBasicBlock *, VPValue *> &&Defs) {
-  return reconstructSSA(VPBB, Defs);
-}
-
 /// Denominator of the frequencies computed by computeExecutionFrequencies, i.e.
 /// the frequency of a block that always executes. Wider than
 /// BranchProbability's 31-bit one, which truncates rarely executed blocks to 0.

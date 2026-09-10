@@ -1384,9 +1384,8 @@ VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
 
   // Multiple predecessors, create a join.
   Type *Ty = Defs.begin()->second->getScalarType();
-  auto *Phi = new VPPhi({}, VPIRFlags::getDefaultFlags(Instruction::PHI, Ty),
-                        DebugLoc::getUnknown(), "", Ty);
-  VPBB->insert(Phi, VPBB->getFirstNonPhi());
+  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+                   .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
   Defs[VPBB] = Phi;
   for (auto *Pred : VPBB->predecessors())
     Phi->addIncoming(reconstructSSA(cast<VPBasicBlock>(Pred), Defs));
@@ -1396,8 +1395,11 @@ VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
   if (all_equal(Phi->incoming_values())) {
     VPValue *Common = Phi->getIncomingValue(0);
     Phi->replaceAllUsesWith(Common);
-    Phi->eraseFromParent();
+    for (auto &[_, V] : Defs)
+      if (V == Phi)
+        V = Common;
     Defs[VPBB] = Common;
+    Phi->eraseFromParent();
     return Common;
   }
 
