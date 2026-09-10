@@ -2494,9 +2494,9 @@ foreach ftz = ["", "ftz"] in {
 def INT_NVVM_ADD_D :
   F_MATH_2_RNDOP_TY<"add.${rnd}.f64", F64RT, int_nvvm_fadd>;
 
-// mixed precision
+// Mixed Precision
 
-// match only when the fold removes at least one explicit conversion, and the
+// Match only when the fold removes at least one explicit conversion, and the
 // extended vector is not shared.
 class FoldableFPExtendV2F32<dag ops, dag frag>
   : PatFrag<ops, frag, [{
@@ -2504,7 +2504,7 @@ class FoldableFPExtendV2F32<dag ops, dag frag>
                                 N->getOperand(1)->hasOneUse());
     }]>;
 
-// FP_EXTEND to v2f32 is scalarized before isel, leaving one of two shapes
+// FP_EXTEND to v2f32 is scalarized before ISEL, leaving one of two patterns
 // behind depending on whether the source lanes share a register.
 def fpextend_v2f32_from_packed
   : FoldableFPExtendV2F32<(ops node:$a),
@@ -2518,7 +2518,7 @@ def fpextend_v2f32_from_lanes
                             (f32 (fpextend node:$a0)),
                             (f32 (fpextend node:$a1))))>;
 
-// fuse downconverting add/sub only when the result of the add/sub is solely
+// Fuse downconverting add/sub only when the result of the add/sub is solely
 // used for downconverting.
 def extractelt_only_for_cvt
   : PatFrag<(ops node:$vec, node:$lane), (extractelt node:$vec, node:$lane),
@@ -2542,17 +2542,20 @@ foreach rnd = FPRoundingModes in {
     foreach t = [F16X2RT, BF16X2RT] in {
       def INT_NVVM_MIXED_ADD_ # rnd # _f32x2_ # t.PtxType :
         BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b),
-          "add." # rnd # ".f32x2." # t.PtxType # ".f32x2",
-          [(set v2f32:$dst,
-            (int_nvvm_fadd (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b,
-                          rnd_imm))]>;
+          "add." # rnd # ".f32x2." # t.PtxType # ".f32x2">;
+
+      defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_" # rnd #
+                                       "_f32x2_" # t.PtxType);
+
+      def : Pat<(v2f32 (int_nvvm_fadd (fpextend_v2f32_from_packed t.Ty:$a),
+                                      v2f32:$b, rnd_imm)),
+                (Inst $a, $b)>;
 
       def : Pat<(v2f32 (int_nvvm_fadd
                         (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
                                                     t.Ty.ElementType:$a1),
                         v2f32:$b, rnd_imm)),
-                (!cast<Instruction>("INT_NVVM_MIXED_ADD_" # rnd # "_f32x2_" #
-                                    t.PtxType) (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
     }
   }
 }
@@ -2579,27 +2582,31 @@ let Predicates = [hasRubinFamilySupport, doNoF32FTZ] in
   }
 
 
-// mixed precision - downconverting
+// Mixed precision - Downconverting
 
 // f16x2 - rz rounding mode, only with ftz
 // bf16x2 - rz rounding mode, without ftz
-foreach t = [F16X2RT, BF16X2RT] in {
-  defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
-  defvar AddOp = !cast<Intrinsic>("int_nvvm_fadd" # !if(!eq(ftz, ""), "", "_ftz"));
-  defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+let Predicates = [hasRubinFamilySupport] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
+    defvar AddOp = !cast<Intrinsic>("int_nvvm_fadd" # !if(!eq(ftz, ""), "", "_ftz"));
+    defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
 
-  def INT_NVVM_MIXED_ADD_rz_ # t.PtxType # _f32x2 :
-    BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
-      "add.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2",
-      // The cvt packs its first argument into the high half of the result.
-      [(set t.Ty:$dst,
-        (CvtOp (extractelt_only_for_cvt
-                 (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
-               (extractelt_only_for_cvt
-                 (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
-               /*pzo=*/0))]>,
-    Requires<[hasRubinFamilySupport]>;
-}
+    def INT_NVVM_MIXED_ADD_rz_ # t.PtxType # _f32x2 :
+      BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
+        "add.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2">;
+
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_rz_" # t.PtxType #
+                                     "_f32x2");
+
+    // The cvt packs its first argument into the upper half of the result.
+    def : Pat<(CvtOp (extractelt_only_for_cvt
+                       (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
+                     (extractelt_only_for_cvt
+                       (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
+                     /*pzo=*/0),
+              (Inst $a, $b)>;
+  }
 
 //
 // Sub
@@ -2661,7 +2668,7 @@ def INT_NVVM_SUB_D :
     (ins FPRoundingMode:$rnd), "sub.${rnd}.f64",
     [(set f64:$dst, (int_nvvm_fadd f64:$a, (f64 (fneg f64:$b)), timm:$rnd))]>;
 
-// mixed precision
+// Mixed Precision
 
 foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
@@ -2684,16 +2691,19 @@ foreach rnd = FPRoundingModes in {
 
       def INT_NVVM_MIXED_SUB_ # rnd # _f32x2_ # t.PtxType :
         BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b),
-          "sub." # rnd # ".f32x2." # t.PtxType # ".f32x2",
-          [(set v2f32:$dst,
-            (SubOp (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b))]>;
+          "sub." # rnd # ".f32x2." # t.PtxType # ".f32x2">;
+
+      defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_" # rnd #
+                                       "_f32x2_" # t.PtxType);
+
+      def : Pat<(v2f32 (SubOp (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b)),
+                (Inst $a, $b)>;
 
       def : Pat<(v2f32 (SubOp
                         (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
                                                     t.Ty.ElementType:$a1),
                         v2f32:$b)),
-                (!cast<Instruction>("INT_NVVM_MIXED_SUB_" # rnd # "_f32x2_" #
-                                    t.PtxType) (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
     }
   }
 }
@@ -2719,25 +2729,29 @@ let Predicates = [hasRubinFamilySupport, doNoF32FTZ] in
               (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
   }
 
-// mixed precision - downconverting
+// Mixed precision - Downconverting
 
 // f16x2 - rz rounding mode, only with ftz
 // bf16x2 - rz rounding mode, without ftz
-foreach t = [F16X2RT, BF16X2RT] in {
-  defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
-  defvar SubOp = !cast<SDNode>("sub_rz" # !if(!eq(ftz, ""), "", "_ftz"));
-  defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+let Predicates = [hasRubinFamilySupport] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
+    defvar SubOp = !cast<SDNode>("sub_rz" # !if(!eq(ftz, ""), "", "_ftz"));
+    defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
 
-  def INT_NVVM_MIXED_SUB_rz_ # t.PtxType # _f32x2 :
-    BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
-      "sub.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2",
-      // The cvt packs its first argument into the high half of the result.
-      [(set t.Ty:$dst,
-        (CvtOp (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 1),
-               (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 0),
-               /*pzo=*/0))]>,
-    Requires<[hasRubinFamilySupport]>;
-}
+    def INT_NVVM_MIXED_SUB_rz_ # t.PtxType # _f32x2 :
+      BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
+        "sub.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2">;
+
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_rz_" # t.PtxType #
+                                     "_f32x2");
+
+    // The cvt packs its first argument into the upper half of the result.
+    def : Pat<(CvtOp (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 1),
+                     (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 0),
+                     /*pzo=*/0),
+              (Inst $a, $b)>;
+  }
 
 //
 // BFIND
