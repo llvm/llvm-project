@@ -113,7 +113,7 @@ class LongJmpPass : public BinaryFunctionPass {
     /// Thunks located before this cluster.
     BinaryFunctionListType BackwardThunkList;
 
-    /// Call thunks used by this cluster.
+    /// Call thunks emitted by this cluster.
     ///
     /// <Function Symbol> -> <Thunk Function>.
     DenseMap<const MCSymbol *, BinaryFunction *> CallThunks;

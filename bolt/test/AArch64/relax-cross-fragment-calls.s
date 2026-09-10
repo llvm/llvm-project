@@ -44,10 +44,10 @@
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HFE
 # RUN: llvm-readelf -S %t.bolt | FileCheck %s --check-prefix=CHECK-SECTIONS
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_short_call_D,__AArch64_backward_short_call_A,__AArch64_backward_long_call_A,__AArch64_backward_long_call_D \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_short_call_D_0,__AArch64_backward_short_call_A_1,__AArch64_backward_long_call_A_0,__AArch64_backward_long_call_D_1 \
 # RUN:   %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_short_call_A,__AArch64_forward_short_call_D,__AArch64_backward_short_call_A,__AArch64_forward_long_call_D \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_short_call_D_0,__AArch64_forward_short_call_A_1,__AArch64_backward_short_call_A_2,__AArch64_forward_long_call_D_0 \
 # RUN:   %t.hfe.bolt | FileCheck %s --check-prefix=CHECK-HFE-OUTPUT
 
 # CHECK-BOLT: BOLT-INFO: built 4 function fragment cluster(s)
@@ -175,60 +175,60 @@ D:
 
 # CHECK-OUTPUT:      <A>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <B>
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_D>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_D_0>
 
 # CHECK-OUTPUT:      <B>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <C>
 
-# CHECK-OUTPUT:      <__AArch64_forward_short_call_D>:
+# CHECK-OUTPUT:      <__AArch64_forward_short_call_D_0>:
 # CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <D>
 
-# CHECK-OUTPUT:      <__AArch64_backward_short_call_A>:
+# CHECK-OUTPUT:      <__AArch64_backward_short_call_A_1>:
 # CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
 
 # CHECK-OUTPUT:      <C>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
 
 # CHECK-OUTPUT:      <D>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_short_call_A>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_short_call_A_1>
 
 # CHECK-OUTPUT:      <A.cold.0>:
 
 # CHECK-OUTPUT:      <B.cold.0>:
 # CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x2
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_0>
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <D>
 
-# CHECK-OUTPUT:      <__AArch64_backward_long_call_A>:
+# CHECK-OUTPUT:      <__AArch64_backward_long_call_A_0>:
 # CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} br x16
 
-# CHECK-OUTPUT:      <__AArch64_backward_long_call_D>:
+# CHECK-OUTPUT:      <__AArch64_backward_long_call_D_1>:
 # CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} br x16
 
 # CHECK-OUTPUT:      <C.cold.0>:
 # CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x3
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_0>
 
 # CHECK-OUTPUT:      <D.cold.0>:
 # CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x4
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A>
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_D>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_0>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_D_1>
 
 # CHECK-HFE-OUTPUT:      <A.cold.0>:
 
 # CHECK-HFE-OUTPUT:      <B.cold.0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x2
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_A>
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_long_call_D>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_A_1>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_long_call_D_0>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_short_call_A>:
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_short_call_A_1>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_long_call_D>:
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_long_call_D_0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} br x16
@@ -240,23 +240,23 @@ D:
 # CHECK-HFE-OUTPUT:      <D.cold.0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x4
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_long_call_D>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_long_call_D_0>
 
 # CHECK-HFE-OUTPUT:      <A>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <B>
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_D>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_D_0>
 
 # CHECK-HFE-OUTPUT:      <B>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <C>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_short_call_D>:
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_short_call_D_0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <D>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_backward_short_call_A>:
+# CHECK-HFE-OUTPUT:      <__AArch64_backward_short_call_A_2>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
 
 # CHECK-HFE-OUTPUT:      <C>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
 
 # CHECK-HFE-OUTPUT:      <D>:
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_short_call_A>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_short_call_A_2>
