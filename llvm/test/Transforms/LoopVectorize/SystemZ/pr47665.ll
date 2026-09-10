@@ -12,7 +12,6 @@ define void @test(ptr noalias %p, ptr noalias %q, i40 %a) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[FOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[FOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 9)
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -49,6 +48,7 @@ define void @test(ptr noalias %p, ptr noalias %q, i40 %a) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void

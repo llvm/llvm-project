@@ -74,30 +74,30 @@ exit:
 define i16 @test_incomplete_chain_without_mul(ptr noalias %dst, ptr %A, ptr %B) #0 {
 ; CHECK-LABEL: define i16 @test_incomplete_chain_without_mul(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:  [[VECTOR_PH:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[BROADCAST_SPLAT]] to <16 x i16>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i16> [[TMP1]], i64 15
-; CHECK-NEXT:    store i16 [[TMP2]], ptr [[DST]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[B]], align 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i8> poison, i8 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT1]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[BROADCAST_SPLAT2]] to <16 x i16>
+; CHECK-NEXT:    br label %[[VECTOR_BODY1:.*]]
+; CHECK:       [[VECTOR_BODY1]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY1]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i16> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY1]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <16 x i16> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <16 x i16> [[TMP5]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP7]] = add <16 x i16> [[TMP6]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i16 [[TMP2]], ptr [[DST]], align 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[TMP7]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
