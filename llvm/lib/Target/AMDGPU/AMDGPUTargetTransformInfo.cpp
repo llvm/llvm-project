@@ -388,6 +388,18 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   return 128;
 }
 
+bool GCNTTIImpl::isLegalToVectorizeLoad(LoadInst *LI) const {
+  // Simple (non-atomic, non-volatile) loads are always legal.
+  if (LI->isSimple())
+    return true;
+  // Allow unordered and monotonic atomic loads to be vectorized. These
+  // orderings impose no cross address ordering constraints, so merging
+  // adjacent accesses into a wider load is safe. Alignment constraints are
+  // enforced by splitChainByAlignment; the merged size is capped by
+  // getMaxAtomicVectorSizeInBits.
+  return !LI->isVolatile() && !isStrongerThanMonotonic(LI->getOrdering());
+}
+
 bool GCNTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
                                             Align Alignment,
                                             unsigned AddrSpace) const {
@@ -411,6 +423,10 @@ bool GCNTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
                                               Align Alignment,
                                               unsigned AddrSpace) const {
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
+}
+
+unsigned GCNTTIImpl::getMaxAtomicVectorSizeInBits(unsigned AddrSpace) const {
+  return ST->getTargetLowering()->getMaxAtomicSizeInBitsSupported();
 }
 
 uint64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
