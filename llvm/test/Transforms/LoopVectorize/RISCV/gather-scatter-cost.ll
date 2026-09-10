@@ -28,9 +28,6 @@ define void @predicated_uniform_load(ptr %src, i32 %n, ptr %dst, i1 %cond) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[COND:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT1]], splat (i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[BOXES]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[NBRBOXES]], i64 0
@@ -39,15 +36,15 @@ define void @predicated_uniform_load(ptr %src, i32 %n, ptr %dst, i1 %cond) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ [[TMP3]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[LOOP_LATCH8:%.*]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
-; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_THEN7:%.*]], label [[LOOP_ELSE6:%.*]]
-; CHECK:       loop.else6:
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 4 x i1> [[TMP13]], i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP_THEN7:%.*]], label [[LOOP_ELSE6:%.*]]
+; CHECK:       loop.else4:
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[LOOP_LATCH8]]
-; CHECK:       loop.then7:
+; CHECK:       loop.then5:
 ; CHECK-NEXT:    br label [[LOOP_LATCH8]]
-; CHECK:       loop.latch8:
+; CHECK:       loop.latch6:
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <vscale x 4 x i32> [ [[WIDE_MASKED_GATHER]], [[LOOP_ELSE6]] ], [ poison, [[LOOP_THEN7]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[LOOP_ELSE6]] ], [ [[BROADCAST_SPLAT1]], [[LOOP_THEN7]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[LOOP_ELSE6]] ], [ splat (i1 true), [[LOOP_THEN7]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP14]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[TMP15]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[PREDPHI]], <vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT4]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP10]]

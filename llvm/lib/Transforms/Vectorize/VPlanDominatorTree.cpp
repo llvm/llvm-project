@@ -11,6 +11,10 @@
 
 using namespace llvm;
 
+VPDominanceFrontier::VPDominanceFrontier(const DomTreeT &VPDT) {
+  analyze(VPDT);
+}
+
 VPPostDominanceFrontier::VPPostDominanceFrontier(const DomTreeT &VPDT) {
   analyze(VPDT);
 }

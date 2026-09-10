@@ -141,8 +141,6 @@ define void @inv_val_store_to_inv_address_conditional_inv(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[NTRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i1> poison, i1 [[CMP]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT2]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> poison, i32 [[K]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -151,12 +149,12 @@ define void @inv_val_store_to_inv_address_conditional_inv(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META12:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_STORE7:%.*]], label [[COND_STORE_K6:%.*]]
-; CHECK:       cond_store_k6:
+; CHECK:       cond_store_k4:
 ; CHECK-NEXT:    br label [[LATCH8]]
-; CHECK:       cond_store7:
+; CHECK:       cond_store5:
 ; CHECK-NEXT:    br label [[LATCH8]]
-; CHECK:       latch8:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i1> [ zeroinitializer, [[COND_STORE_K6]] ], [ [[BROADCAST_SPLAT3]], [[COND_STORE7]] ]
+; CHECK:       latch6:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i1> [ zeroinitializer, [[COND_STORE_K6]] ], [ splat (i1 true), [[COND_STORE7]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[BROADCAST_SPLAT]], <4 x i32> [[BROADCAST_SPLAT5]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[A]], align 4, !alias.scope [[META12]]

@@ -9,9 +9,6 @@ define void @main(i1 %cond, ptr %arr) {
 ; CHECK-NEXT:  [[BB_0:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[COND]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB_32:.*]] ]
@@ -22,7 +19,7 @@ define void @main(i1 %cond, ptr %arr) {
 ; CHECK-NEXT:    br label %[[BB_32]]
 ; CHECK:       [[BB_32]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP5]], %[[BB_21]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP0]], %[[BB_21]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ splat (i1 true), %[[BB_21]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> splat (i32 7)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP1]], align 4

@@ -1160,31 +1160,17 @@ define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-NEXT:  vp<[[VP2:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT branch-on-cond ir<%c>
+; CHECK-NEXT:      EMIT branch-on-cond ir<%c> (!vplan.prof.estimated estimated {1073741824, 1073741824})
 ; CHECK-NEXT:    Successor(s): loop.then, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.then:
-; CHECK-NEXT:    Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:    <xVFxUF> pred.store: {
-; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%c>
-; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        REPLICATE ir<%l1> = load ir<%src>
-; CHECK-NEXT:        REPLICATE ir<%l2> = trunc ir<%l1>
-; CHECK-NEXT:        REPLICATE ir<%cmp> = icmp eq ir<%l1>, ir<0>
-; CHECK-NEXT:        REPLICATE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
-; CHECK-NEXT:        REPLICATE store ir<%sel>, ir<%dst>
-; CHECK-NEXT:      Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.store.continue:
-; CHECK-NEXT:      No successors
-; CHECK-NEXT:    }
-; CHECK-NEXT:    Successor(s): loop.then.1
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.then.1:
+; CHECK-NEXT:      REPLICATE ir<%l1> = load ir<%src>
+; CHECK-NEXT:      REPLICATE ir<%l2> = trunc ir<%l1>
+; CHECK-NEXT:      REPLICATE ir<%cmp> = icmp eq ir<%l1>, ir<0>
+; CHECK-NEXT:      REPLICATE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
+; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = extract-last-part ir<%sel>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = extract-last-lane vp<[[VP3]]>
+; CHECK-NEXT:      CLONE store vp<[[VP4]]>, ir<%dst>
 ; CHECK-NEXT:    Successor(s): loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.latch:
@@ -1262,7 +1248,7 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%pred>
+; CHECK-NEXT:        BRANCH-ON-MASK ir<%pred> (!vplan.execution.frequency 3458764513820540928 (37.5%, estimated))
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
@@ -1351,7 +1337,7 @@ define void @merge_with_dead_gep_between_regions(i32 %n, i32 %k, ptr noalias %sr
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%cond>
+; CHECK-NEXT:        BRANCH-ON-MASK ir<%cond> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
@@ -1450,7 +1436,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%c.1>
+; CHECK-NEXT:        BRANCH-ON-MASK ir<%c.1> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:

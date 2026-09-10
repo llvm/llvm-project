@@ -19,8 +19,6 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[TMP0]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = or <vscale x 4 x i1> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT2]]
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[LATCH12:.*]] ]
@@ -47,13 +45,13 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; IF-EVL-NEXT:    [[PREDPHI8:%.*]] = select <vscale x 4 x i1> [[TMP4]], <vscale x 4 x i32> [[TMP12]], <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br i1 [[C3]], label %[[LOAD_V210:.*]], label %[[LATCH12]]
 ; IF-EVL:       [[LOAD_V210]]:
-; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[SRC2]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP18]], <vscale x 4 x i1> [[BROADCAST_SPLAT4]], i32 [[TMP7]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP7]])
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = add <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], [[PREDPHI8]]
 ; IF-EVL-NEXT:    br label %[[LATCH12]]
 ; IF-EVL:       [[LATCH12]]:
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = phi <vscale x 4 x i32> [ poison, %[[LOAD_V17]] ], [ [[TMP19]], %[[LOAD_V210]] ]
-; IF-EVL-NEXT:    [[TMP16:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[LOAD_V17]] ], [ [[BROADCAST_SPLAT4]], %[[LOAD_V210]] ]
+; IF-EVL-NEXT:    [[TMP16:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[LOAD_V17]] ], [ splat (i1 true), %[[LOAD_V210]] ]
 ; IF-EVL-NEXT:    [[PREDPHI9:%.*]] = select <vscale x 4 x i1> [[TMP16]], <vscale x 4 x i32> [[TMP15]], <vscale x 4 x i32> [[PREDPHI8]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[PREDPHI9]], ptr align 4 [[TMP20]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP7]])
@@ -87,8 +85,6 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; NO-VP-NEXT:    [[TMP9:%.*]] = or <vscale x 4 x i1> [[BROADCAST_SPLAT2]], [[BROADCAST_SPLAT4]]
 ; NO-VP-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 4 x i1> [[TMP9]], i64 0
 ; NO-VP-NEXT:    [[TMP25:%.*]] = freeze i1 [[TMP24]]
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3]], i64 0
-; NO-VP-NEXT:    [[TMP12:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH12:.*]] ]
@@ -117,13 +113,13 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; NO-VP-NEXT:    [[PREDPHI6:%.*]] = select <vscale x 4 x i1> [[TMP27]], <vscale x 4 x i32> [[TMP26]], <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    br i1 [[C3]], label %[[LOAD_V210:.*]], label %[[LATCH12]]
 ; NO-VP:       [[LOAD_V210]]:
-; NO-VP-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[SRC2]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[WIDE_MASKED_LOAD7:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP16]], <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i32> poison)
+; NO-VP-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[WIDE_MASKED_LOAD7:%.*]] = load <vscale x 4 x i32>, ptr [[TMP28]], align 4
 ; NO-VP-NEXT:    [[TMP17:%.*]] = add <vscale x 4 x i32> [[WIDE_MASKED_LOAD7]], [[PREDPHI6]]
 ; NO-VP-NEXT:    br label %[[LATCH12]]
 ; NO-VP:       [[LATCH12]]:
 ; NO-VP-NEXT:    [[TMP22:%.*]] = phi <vscale x 4 x i32> [ poison, %[[LOAD_V2_CHECK9]] ], [ [[TMP17]], %[[LOAD_V210]] ]
-; NO-VP-NEXT:    [[TMP23:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[LOAD_V2_CHECK9]] ], [ [[TMP12]], %[[LOAD_V210]] ]
+; NO-VP-NEXT:    [[TMP23:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[LOAD_V2_CHECK9]] ], [ splat (i1 true), %[[LOAD_V210]] ]
 ; NO-VP-NEXT:    [[PREDPHI8:%.*]] = select <vscale x 4 x i1> [[TMP23]], <vscale x 4 x i32> [[TMP22]], <vscale x 4 x i32> [[PREDPHI6]]
 ; NO-VP-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[PREDPHI8]], ptr [[TMP18]], align 4

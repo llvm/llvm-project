@@ -215,13 +215,9 @@ define void @bound_is_addrec_of_sibling_loop(ptr %a, ptr %b, i64 %n, i64 %d, i1 
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and ir<%n>, ir<3>
 ; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP5]]>
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast ir<%d>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = broadcast ir<%n>
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = broadcast ir<%cond>
-; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP9:%[0-9]+]]> = call llvm.masked.udiv(vp<[[VP7]]>, vp<[[VP6]]>, vp<[[VP8]]>)
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = broadcast ir<%iv.1.lcssa>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = step-vector i64
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = broadcast ir<4>
+; CHECK-NEXT:    CLONE ir<%q> = udiv ir<%n>, ir<%d>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = step-vector i64
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = broadcast ir<4>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
