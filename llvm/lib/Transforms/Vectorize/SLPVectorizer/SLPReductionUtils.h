@@ -15,8 +15,13 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPREDUCTIONUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPREDUCTIONUTILS_H
 
+#include <optional>
+
 namespace llvm {
+class BasicBlock;
+class DominatorTree;
 class Instruction;
+class LoopInfo;
 class PHINode;
 } // namespace llvm
 
@@ -29,6 +34,17 @@ Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi);
 /// \returns true if \p I is a candidate instruction for reduction
 /// vectorization.
 bool isReductionCandidate(Instruction *I);
+
+/// \returns the number of elements of the homogeneous aggregate built by
+/// \p InsertInst (insertelement or insertvalue), or std::nullopt if it is not
+/// a homogeneous aggregate.
+std::optional<unsigned> getAggregateSize(Instruction *InsertInst);
+
+/// Try to get a reduction instruction from phi node \p P in block \p ParentBB,
+/// considering incoming values from \p ParentBB or the containing loop latch.
+/// \returns a candidate reduction value, or nullptr if none.
+Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                               BasicBlock *ParentBB, LoopInfo *LI);
 
 } // namespace llvm::slpvectorizer
 
