@@ -7,12 +7,20 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* Compiler-abstraction macros used by the ORC runtime C API headers.         *|
+|* Compiler-abstraction macros for the ORC runtime C API, plus the            *|
+|* general-purpose ones that are usable from both C and C++. Macros specific  *|
+|* to the C++ API live in orc-rt/support/Compiler.h, which includes this      *|
+|* header.                                                                    *|
+|*                                                                            *|
+|* Some of the macros below were swiped from llvm/Support/Compiler.h.         *|
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
 #ifndef ORC_RT_C_SUPPORT_COMPILER_H
 #define ORC_RT_C_SUPPORT_COMPILER_H
+
+/* For assert, used by ORC_RT_UNREACHABLE below. */
+#include <assert.h>
 
 /* ORC_RT_HAS_BUILTIN(X) expands to 1 if the compiler provides the builtin X,
    and to 0 otherwise.
@@ -83,6 +91,49 @@
   __attribute__((format(printf, FmtIdx, FirstArg)))
 #else
 #define ORC_RT_FORMAT_PRINTF(FmtIdx, FirstArg)
+#endif
+
+/* ORC_RT_LIKELY(EXPR) / ORC_RT_UNLIKELY(EXPR) hint to the optimizer which way a
+   condition is expected to go. */
+#if ORC_RT_HAS_BUILTIN(__builtin_expect)
+#define ORC_RT_LIKELY(EXPR) __builtin_expect(!!(EXPR), 1)
+#define ORC_RT_UNLIKELY(EXPR) __builtin_expect(!!(EXPR), 0)
+#else
+#define ORC_RT_LIKELY(EXPR) (EXPR)
+#define ORC_RT_UNLIKELY(EXPR) (EXPR)
+#endif
+
+/* ORC_RT_WEAK_IMPORT marks a symbol that may be absent at run time, so that
+   referencing it yields null rather than failing to load. */
+#if defined(__APPLE__)
+#define ORC_RT_WEAK_IMPORT __attribute__((weak_import))
+#elif defined(_WIN32)
+#define ORC_RT_WEAK_IMPORT
+#else
+#define ORC_RT_WEAK_IMPORT __attribute__((weak))
+#endif
+
+/* ORC_RT_BUILTIN_UNREACHABLE: an optimizer hint that the current location is
+   not reachable. */
+#if ORC_RT_HAS_BUILTIN(__builtin_unreachable) || defined(__GNUC__)
+#define ORC_RT_BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define ORC_RT_BUILTIN_UNREACHABLE __assume(0)
+#else
+#define ORC_RT_BUILTIN_UNREACHABLE
+#endif
+
+/* ORC_RT_UNREACHABLE(MSG): marks a point the program must never reach. In
+   +Asserts builds it aborts with MSG; otherwise it lowers to
+   ORC_RT_BUILTIN_UNREACHABLE. */
+#ifndef NDEBUG
+#define ORC_RT_UNREACHABLE(MSG)                                                \
+  do {                                                                         \
+    assert(0 && (MSG));                                                        \
+    ORC_RT_BUILTIN_UNREACHABLE;                                                \
+  } while (0)
+#else
+#define ORC_RT_UNREACHABLE(MSG) ORC_RT_BUILTIN_UNREACHABLE
 #endif
 
 #endif /* ORC_RT_C_SUPPORT_COMPILER_H */
