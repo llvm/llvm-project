@@ -9,23 +9,15 @@ define void @store_factor2_64bit(ptr %ptr, <2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-COMPAT-LABEL: store_factor2_64bit:
 ; CHECK-COMPAT:       // %bb.0:
 ; CHECK-COMPAT-NEXT:    ptrue p0.s, vl2
-; CHECK-COMPAT-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-COMPAT-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-COMPAT-NEXT:    adrp x8, .LCPI0_0
-; CHECK-COMPAT-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-COMPAT-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
-; CHECK-COMPAT-NEXT:    tbl z0.s, { z0.s }, z1.s
-; CHECK-COMPAT-NEXT:    str q0, [x0]
+; CHECK-COMPAT-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
+; CHECK-COMPAT-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
+; CHECK-COMPAT-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-COMPAT-NEXT:    ret
 ;
 ; CHECK-STREAMING-LABEL: store_factor2_64bit:
 ; CHECK-STREAMING:       // %bb.0:
 ; CHECK-STREAMING-NEXT:    ptrue p0.s, vl2
-; CHECK-STREAMING-NEXT:    adrp x8, .LCPI0_0
-; CHECK-STREAMING-NEXT:    splice z0.s, p0, { z0.s, z1.s }
-; CHECK-STREAMING-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
-; CHECK-STREAMING-NEXT:    tbl z0.s, { z0.s }, z1.s
-; CHECK-STREAMING-NEXT:    str q0, [x0]
+; CHECK-STREAMING-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-STREAMING-NEXT:    ret
   %interleaved = call <4 x i32> @llvm.vector.interleave2.v4i32(
       <2 x i32> %v0, <2 x i32> %v1)
@@ -36,30 +28,16 @@ define void @store_factor2_64bit(ptr %ptr, <2 x i32> %v0, <2 x i32> %v1) {
 define void @store_factor2_128bit(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-COMPAT-LABEL: store_factor2_128bit:
 ; CHECK-COMPAT:       // %bb.0:
-; CHECK-COMPAT-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-COMPAT-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-COMPAT-NEXT:    mov z2.s, z1.s[3]
-; CHECK-COMPAT-NEXT:    mov z3.s, z0.s[3]
-; CHECK-COMPAT-NEXT:    mov z4.s, z1.s[2]
-; CHECK-COMPAT-NEXT:    mov z5.s, z0.s[2]
-; CHECK-COMPAT-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-COMPAT-NEXT:    zip1 z2.s, z3.s, z2.s
-; CHECK-COMPAT-NEXT:    zip1 z3.s, z5.s, z4.s
-; CHECK-COMPAT-NEXT:    zip1 z1.d, z3.d, z2.d
-; CHECK-COMPAT-NEXT:    stp q0, q1, [x0]
+; CHECK-COMPAT-NEXT:    ptrue p0.s, vl4
+; CHECK-COMPAT-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
+; CHECK-COMPAT-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
+; CHECK-COMPAT-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-COMPAT-NEXT:    ret
 ;
 ; CHECK-STREAMING-LABEL: store_factor2_128bit:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    mov z2.s, z1.s[3]
-; CHECK-STREAMING-NEXT:    mov z3.s, z0.s[3]
-; CHECK-STREAMING-NEXT:    mov z4.s, z1.s[2]
-; CHECK-STREAMING-NEXT:    mov z5.s, z0.s[2]
-; CHECK-STREAMING-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-STREAMING-NEXT:    zip1 z2.s, z3.s, z2.s
-; CHECK-STREAMING-NEXT:    zip1 z3.s, z5.s, z4.s
-; CHECK-STREAMING-NEXT:    zip1 z1.d, z3.d, z2.d
-; CHECK-STREAMING-NEXT:    stp q0, q1, [x0]
+; CHECK-STREAMING-NEXT:    ptrue p0.s, vl4
+; CHECK-STREAMING-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-STREAMING-NEXT:    ret
   %interleaved = call <8 x i32> @llvm.vector.interleave2.v8i32(
       <4 x i32> %v0, <4 x i32> %v1)
@@ -157,40 +135,22 @@ define void @masked_store_factor2_64bit(ptr %ptr, <2 x i32> %v0, <2 x i32> %v1, 
 ; CHECK-COMPAT-LABEL: masked_store_factor2_64bit:
 ; CHECK-COMPAT:       // %bb.0:
 ; CHECK-COMPAT-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-COMPAT-NEXT:    mov z3.s, z2.s[1]
 ; CHECK-COMPAT-NEXT:    ptrue p0.s, vl2
-; CHECK-COMPAT-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-COMPAT-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-COMPAT-NEXT:    adrp x8, .LCPI6_0
-; CHECK-COMPAT-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-COMPAT-NEXT:    ptrue p0.s, vl4
-; CHECK-COMPAT-NEXT:    zip1 z2.h, z2.h, z3.h
-; CHECK-COMPAT-NEXT:    zip1 z2.h, z2.h, z2.h
-; CHECK-COMPAT-NEXT:    uunpklo z2.s, z2.h
+; CHECK-COMPAT-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
 ; CHECK-COMPAT-NEXT:    lsl z2.s, z2.s, #31
-; CHECK-COMPAT-NEXT:    asr z1.s, z2.s, #31
-; CHECK-COMPAT-NEXT:    ldr q2, [x8, :lo12:.LCPI6_0]
-; CHECK-COMPAT-NEXT:    tbl z0.s, { z0.s }, z2.s
-; CHECK-COMPAT-NEXT:    cmpne p1.s, p0/z, z1.s, #0
-; CHECK-COMPAT-NEXT:    st1w { z0.s }, p1, [x0]
+; CHECK-COMPAT-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
+; CHECK-COMPAT-NEXT:    asr z2.s, z2.s, #31
+; CHECK-COMPAT-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-COMPAT-NEXT:    st2w { z0.s, z1.s }, p1, [x0]
 ; CHECK-COMPAT-NEXT:    ret
 ;
 ; CHECK-STREAMING-LABEL: masked_store_factor2_64bit:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    mov z3.s, z2.s[1]
-; CHECK-STREAMING-NEXT:    ptrue p0.s, vl2
-; CHECK-STREAMING-NEXT:    adrp x8, .LCPI6_0
-; CHECK-STREAMING-NEXT:    splice z0.s, p0, { z0.s, z1.s }
-; CHECK-STREAMING-NEXT:    ptrue p0.s, vl4
-; CHECK-STREAMING-NEXT:    zip1 z2.h, z2.h, z3.h
-; CHECK-STREAMING-NEXT:    zip1 z2.h, z2.h, z2.h
-; CHECK-STREAMING-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-STREAMING-NEXT:    lsl z2.s, z2.s, #31
-; CHECK-STREAMING-NEXT:    asr z1.s, z2.s, #31
-; CHECK-STREAMING-NEXT:    ldr q2, [x8, :lo12:.LCPI6_0]
-; CHECK-STREAMING-NEXT:    tbl z0.s, { z0.s }, z2.s
-; CHECK-STREAMING-NEXT:    cmpne p1.s, p0/z, z1.s, #0
-; CHECK-STREAMING-NEXT:    st1w { z0.s }, p1, [x0]
+; CHECK-STREAMING-NEXT:    ptrue p0.s, vl2
+; CHECK-STREAMING-NEXT:    asr z2.s, z2.s, #31
+; CHECK-STREAMING-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-STREAMING-NEXT:    st2w { z0.s, z1.s }, p1, [x0]
 ; CHECK-STREAMING-NEXT:    ret
   %interleaved = call <4 x i32> @llvm.vector.interleave2.v4i32(
       <2 x i32> %v0, <2 x i32> %v1)
@@ -204,61 +164,25 @@ define void @masked_store_factor2_64bit(ptr %ptr, <2 x i32> %v0, <2 x i32> %v1, 
 define void @masked_store_factor2_128bit(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i1> %mask) {
 ; CHECK-COMPAT-LABEL: masked_store_factor2_128bit:
 ; CHECK-COMPAT:       // %bb.0:
-; CHECK-COMPAT-NEXT:    adrp x8, .LCPI7_0
 ; CHECK-COMPAT-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-COMPAT-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-COMPAT-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-COMPAT-NEXT:    mov z4.s, z1.s[3]
-; CHECK-COMPAT-NEXT:    mov z5.s, z0.s[3]
-; CHECK-COMPAT-NEXT:    ldr q3, [x8, :lo12:.LCPI7_0]
-; CHECK-COMPAT-NEXT:    mov z6.s, z1.s[2]
-; CHECK-COMPAT-NEXT:    mov z7.s, z0.s[2]
 ; CHECK-COMPAT-NEXT:    ptrue p0.s, vl4
-; CHECK-COMPAT-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-COMPAT-NEXT:    mov x8, #4 // =0x4
-; CHECK-COMPAT-NEXT:    tbl z3.h, { z2.h }, z3.h
-; CHECK-COMPAT-NEXT:    zip1 z2.h, z2.h, z2.h
-; CHECK-COMPAT-NEXT:    zip1 z4.s, z5.s, z4.s
-; CHECK-COMPAT-NEXT:    zip1 z5.s, z7.s, z6.s
+; CHECK-COMPAT-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
 ; CHECK-COMPAT-NEXT:    uunpklo z2.s, z2.h
-; CHECK-COMPAT-NEXT:    uunpklo z3.s, z3.h
+; CHECK-COMPAT-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-COMPAT-NEXT:    lsl z2.s, z2.s, #31
-; CHECK-COMPAT-NEXT:    lsl z3.s, z3.s, #31
 ; CHECK-COMPAT-NEXT:    asr z2.s, z2.s, #31
-; CHECK-COMPAT-NEXT:    asr z3.s, z3.s, #31
-; CHECK-COMPAT-NEXT:    cmpne p2.s, p0/z, z2.s, #0
-; CHECK-COMPAT-NEXT:    cmpne p1.s, p0/z, z3.s, #0
-; CHECK-COMPAT-NEXT:    zip1 z3.d, z5.d, z4.d
-; CHECK-COMPAT-NEXT:    st1w { z3.s }, p1, [x0, x8, lsl #2]
-; CHECK-COMPAT-NEXT:    st1w { z0.s }, p2, [x0]
+; CHECK-COMPAT-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-COMPAT-NEXT:    st2w { z0.s, z1.s }, p1, [x0]
 ; CHECK-COMPAT-NEXT:    ret
 ;
 ; CHECK-STREAMING-LABEL: masked_store_factor2_128bit:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    adrp x8, .LCPI7_0
-; CHECK-STREAMING-NEXT:    mov z4.s, z1.s[3]
-; CHECK-STREAMING-NEXT:    mov z5.s, z0.s[3]
-; CHECK-STREAMING-NEXT:    ldr q3, [x8, :lo12:.LCPI7_0]
-; CHECK-STREAMING-NEXT:    mov z6.s, z1.s[2]
-; CHECK-STREAMING-NEXT:    mov z7.s, z0.s[2]
-; CHECK-STREAMING-NEXT:    ptrue p0.s, vl4
-; CHECK-STREAMING-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-STREAMING-NEXT:    mov x8, #4 // =0x4
-; CHECK-STREAMING-NEXT:    tbl z3.h, { z2.h }, z3.h
-; CHECK-STREAMING-NEXT:    zip1 z2.h, z2.h, z2.h
-; CHECK-STREAMING-NEXT:    zip1 z4.s, z5.s, z4.s
-; CHECK-STREAMING-NEXT:    zip1 z5.s, z7.s, z6.s
 ; CHECK-STREAMING-NEXT:    uunpklo z2.s, z2.h
-; CHECK-STREAMING-NEXT:    uunpklo z3.s, z3.h
+; CHECK-STREAMING-NEXT:    ptrue p0.s, vl4
 ; CHECK-STREAMING-NEXT:    lsl z2.s, z2.s, #31
-; CHECK-STREAMING-NEXT:    lsl z3.s, z3.s, #31
 ; CHECK-STREAMING-NEXT:    asr z2.s, z2.s, #31
-; CHECK-STREAMING-NEXT:    asr z3.s, z3.s, #31
-; CHECK-STREAMING-NEXT:    cmpne p2.s, p0/z, z2.s, #0
-; CHECK-STREAMING-NEXT:    cmpne p1.s, p0/z, z3.s, #0
-; CHECK-STREAMING-NEXT:    zip1 z3.d, z5.d, z4.d
-; CHECK-STREAMING-NEXT:    st1w { z3.s }, p1, [x0, x8, lsl #2]
-; CHECK-STREAMING-NEXT:    st1w { z0.s }, p2, [x0]
+; CHECK-STREAMING-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-STREAMING-NEXT:    st2w { z0.s, z1.s }, p1, [x0]
 ; CHECK-STREAMING-NEXT:    ret
   %interleaved = call <8 x i32> @llvm.vector.interleave2.v8i32(
       <4 x i32> %v0, <4 x i32> %v1)

@@ -206,16 +206,16 @@ define void @interleave6_v3fp32(ptr %dst,  <vscale x 3 x float> %a,  <vscale x 3
 ; CHECK-NEXT:    addvl x9, sp, #31
 ; CHECK-NEXT:    rdvl x10, #4
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    st3w { z24.s - z26.s }, p0, [sp, #3, mul vl]
-; CHECK-NEXT:    ldr z1, [sp, #5, mul vl]
-; CHECK-NEXT:    ldr z2, [sp, #4, mul vl]
-; CHECK-NEXT:    ldr z0, [sp, #3, mul vl]
-; CHECK-NEXT:    st3w { z5.s - z7.s }, p0, [sp]
+; CHECK-NEXT:    st3w { z24.s - z26.s }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    st3w { z5.s - z7.s }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    cntw x8, all, mul #3
-; CHECK-NEXT:    ldr z3, [sp, #2, mul vl]
-; CHECK-NEXT:    ldr z4, [sp, #1, mul vl]
-; CHECK-NEXT:    ldr z5, [sp]
+; CHECK-NEXT:    ldr z3, [sp, #5, mul vl]
+; CHECK-NEXT:    ldr z4, [sp, #4, mul vl]
+; CHECK-NEXT:    ldr z5, [sp, #3, mul vl]
 ; CHECK-NEXT:    add x9, x9, x8
 ; CHECK-NEXT:    str z1, [sp, #36, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #35, mul vl]

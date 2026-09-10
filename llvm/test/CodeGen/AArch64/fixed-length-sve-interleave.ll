@@ -5,20 +5,15 @@
 define void @store_factor2_intrinsic(ptr %ptr, <16 x i16> %v0, <16 x i16> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: store_factor2_intrinsic:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v5.16b, v2.16b
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI0_0
-; CHECK-NEXT:    ldr z4, [x8]
-; CHECK-NEXT:    splice z1.h, p0, z1.h, z3.h
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    tbl z1.h, { z1.h }, z4.h
-; CHECK-NEXT:    tbl z0.h, { z0.h }, z4.h
-; CHECK-NEXT:    str z1, [x0, #1, mul vl]
-; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov v4.16b, v0.16b
+; CHECK-NEXT:    splice z5.h, p0, z5.h, z3.h
+; CHECK-NEXT:    splice z4.h, p0, z4.h, z1.h
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    st2h { z4.h, z5.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.vec = call <32 x i16> @llvm.vector.interleave2.v32i16(<16 x i16> %v0, <16 x i16> %v1)
   store <32 x i16> %interleaved.vec, ptr %ptr, align 4
