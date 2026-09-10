@@ -21,7 +21,7 @@
 // CHECK:               %[[VAL_13:.*]] = affine.min #[[$MIN_MAP]](%[[VAL_11]])
 // CHECK:               %[[VAL_14:.*]] = tensor.extract_slice %[[VAL_0]]{{\[}}%[[VAL_8]], %[[VAL_11]], 0] [2, %[[VAL_13]], 256] [1, 1, 1] : tensor<16x64x256xf32> to tensor<2x?x256xf32>
 // CHECK:               %[[VAL_15:.*]] = tensor.extract_slice %[[VAL_12]]{{\[}}%[[VAL_8]], %[[VAL_11]], 0] [2, %[[VAL_13]], 256] [1, 1, 1] : tensor<16x64x256xf32> to tensor<2x?x256xf32>
-// CHECK:               %[[VAL_16:.*]] = linalg.softmax dimension(1) ins(%[[VAL_14]] : tensor<2x?x256xf32>) outs(%[[VAL_15]] : tensor<2x?x256xf32>) -> tensor<2x?x256xf32>
+// CHECK:               %[[VAL_16:.*]] = linalg.softmax dimension(2) ins(%[[VAL_14]] : tensor<2x?x256xf32>) outs(%[[VAL_15]] : tensor<2x?x256xf32>) -> tensor<2x?x256xf32>
 // CHECK:               %[[VAL_17:.*]] = tensor.insert_slice %[[VAL_16]] into %[[VAL_12]]{{\[}}%[[VAL_8]], %[[VAL_11]], 0] [2, %[[VAL_13]], 256] [1, 1, 1] : tensor<2x?x256xf32> into tensor<16x64x256xf32>
 // CHECK:               scf.yield %[[VAL_17]] : tensor<16x64x256xf32>
 // CHECK:             }
@@ -32,7 +32,7 @@
 func.func @softmax(%arg0: tensor<16x64x256xf32>) -> tensor<16x64x256xf32> {
   %0 = tensor.empty() : tensor<16x64x256xf32>
   %1 = linalg.softmax
-         dimension(1) ins(%arg0 : tensor<16x64x256xf32>) outs(%0 : tensor<16x64x256xf32>) -> tensor<16x64x256xf32>
+         dimension(2) ins(%arg0 : tensor<16x64x256xf32>) outs(%0 : tensor<16x64x256xf32>) -> tensor<16x64x256xf32>
   return %1 : tensor<16x64x256xf32>
 }
 
@@ -40,6 +40,71 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loop:2 = transform.structured.tile_using_for %0 tile_sizes [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Check that explicitly tiling the full reduction dimension is allowed.
+
+// CHECK-LABEL: func.func @softmax_full_reduction_tile(
+// CHECK:         scf.for
+// CHECK:           tensor.extract_slice
+// CHECK:           linalg.softmax dimension(1)
+func.func @softmax_full_reduction_tile(
+    %input: tensor<8x4xf32>) -> tensor<8x4xf32> {
+  %init = tensor.empty() : tensor<8x4xf32>
+  %result = linalg.softmax dimension(1)
+      ins(%input : tensor<8x4xf32>)
+      outs(%init : tensor<8x4xf32>) -> tensor<8x4xf32>
+  return %result : tensor<8x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %root: !transform.any_op {transform.readonly}) {
+    %softmax = transform.structured.match
+        ops{["linalg.softmax"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %tiled, %loops:2 = transform.structured.tile_using_for %softmax
+        tile_sizes [2, 4]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op,
+                                  !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Check that an untiled dynamic reduction dimension is recognized as the full
+// reduction dimension.
+
+// CHECK-LABEL: func.func @softmax_dynamic(
+// CHECK:         scf.for
+// CHECK:           tensor.extract_slice
+// CHECK:           linalg.softmax dimension(1)
+func.func @softmax_dynamic(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %dim1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
+  %empty = tensor.empty(%dim0, %dim1) : tensor<?x?xf32>
+  %result = linalg.softmax dimension(1)
+      ins(%arg0 : tensor<?x?xf32>)
+      outs(%empty : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %result : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %root: !transform.any_op {transform.readonly}) {
+    %softmax = transform.structured.match
+        ops{["linalg.softmax"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %tiled, %loop = transform.structured.tile_using_for %softmax
+        tile_sizes [2]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -73,7 +138,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:               linalg.yield %[[VAL_19]] : f32
 // CHECK:             } -> tensor<2x4x256xf32>
 // CHECK:             %[[VAL_20:.*]] = tensor.extract_slice %[[VAL_7]]{{\[}}%[[VAL_8]], %[[VAL_9]], 0] [2, 4, 256] [1, 1, 1] : tensor<16x64x256xf32> to tensor<2x4x256xf32>
-// CHECK:             %[[VAL_21:.*]] = linalg.softmax dimension(1) ins(%[[VAL_22:.*]] : tensor<2x4x256xf32>) outs(%[[VAL_20]] : tensor<2x4x256xf32>) -> tensor<2x4x256xf32>
+// CHECK:             %[[VAL_21:.*]] = linalg.softmax dimension(2) ins(%[[VAL_22:.*]] : tensor<2x4x256xf32>) outs(%[[VAL_20]] : tensor<2x4x256xf32>) -> tensor<2x4x256xf32>
 // CHECK:             scf.forall.in_parallel {
 // CHECK:               tensor.parallel_insert_slice %[[VAL_21]] into %[[VAL_7]]{{\[}}%[[VAL_8]], %[[VAL_9]], 0] [2, 4, 256] [1, 1, 1] : tensor<2x4x256xf32> into tensor<16x64x256xf32>
 // CHECK:             }
@@ -98,7 +163,7 @@ func.func @softmax_tile_n_fuse(%arg0: tensor<16x64x256xf32>) -> tensor<16x64x256
 
   %0 = tensor.empty() : tensor<16x64x256xf32>
   %1 = linalg.softmax
-         dimension(1) ins(%eltwise : tensor<16x64x256xf32>) outs(%0 : tensor<16x64x256xf32>) -> tensor<16x64x256xf32>
+         dimension(2) ins(%eltwise : tensor<16x64x256xf32>) outs(%0 : tensor<16x64x256xf32>) -> tensor<16x64x256xf32>
   return %1 : tensor<16x64x256xf32>
 }
 
@@ -135,14 +200,14 @@ module attributes {transform.with_named_sequence} {
 // CHECK:               %[[VAL_9:.*]] = affine.min #[[$MIN_MAP]](%[[VAL_8]])
 // CHECK:               %[[VAL_10:.*]] = memref.subview %[[VAL_0]]{{\[}}%[[VAL_7]], %[[VAL_8]], 0] [2, %[[VAL_9]], 256] [1, 1, 1] : memref<16x64x256xf32> to memref<2x?x256xf32, strided<[16384, 256, 1], offset: ?>>
 // CHECK:               %[[VAL_11:.*]] = memref.subview %[[VAL_1]]{{\[}}%[[VAL_7]], %[[VAL_8]], 0] [2, %[[VAL_9]], 256] [1, 1, 1] : memref<16x64x256xf32> to memref<2x?x256xf32, strided<[16384, 256, 1], offset: ?>>
-// CHECK:               linalg.softmax dimension(1) ins(%[[VAL_10]] : memref<2x?x256xf32, strided<[16384, 256, 1], offset: ?>>) outs(%[[VAL_11]] : memref<2x?x256xf32, strided<[16384, 256, 1], offset: ?>>)
+// CHECK:               linalg.softmax dimension(2) ins(%[[VAL_10]] : memref<2x?x256xf32, strided<[16384, 256, 1], offset: ?>>) outs(%[[VAL_11]] : memref<2x?x256xf32, strided<[16384, 256, 1], offset: ?>>)
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
 func.func @softmax_memref(%arg0: memref<16x64x256xf32>, %arg1: memref<16x64x256xf32>) {
   linalg.softmax
-    dimension(1) ins(%arg0 : memref<16x64x256xf32>) outs(%arg1 : memref<16x64x256xf32>)
+    dimension(2) ins(%arg0 : memref<16x64x256xf32>) outs(%arg1 : memref<16x64x256xf32>)
   return
 }
 
