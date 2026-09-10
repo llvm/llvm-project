@@ -27,14 +27,6 @@ struct fltSemantics;
 class MachineFunction;
 class MemoryBuffer;
 
-namespace FPOpFusion {
-enum FPOpFusionMode {
-  Fast,     // Enable fusion of FP ops wherever it's profitable.
-  Standard, // Only allow fusion of 'blessed' ops (currently just fmuladd).
-  Strict    // Never fuse FP-ops.
-};
-}
-
 namespace JumpTable {
 enum JumpTableType {
   Single,     // Use a single table for all indirect jumptable calls.
@@ -320,24 +312,6 @@ public:
 
   /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
   unsigned LoopAlignment = 0;
-
-  /// AllowFPOpFusion - This flag is set by the -fp-contract=xxx option.
-  /// This controls the creation of fused FP ops that store intermediate
-  /// results in higher precision than IEEE allows (E.g. FMAs).
-  ///
-  /// Fast mode - allows formation of fused FP ops whenever they're
-  /// profitable.
-  /// Standard mode - allow fusion only for 'blessed' FP ops. At present the
-  /// only blessed op is the fmuladd intrinsic. In the future more blessed ops
-  /// may be added.
-  /// Strict mode - allow fusion only if/when it can be proven that the excess
-  /// precision won't effect the result.
-  ///
-  /// Note: This option only controls formation of fused ops by the
-  /// optimizers.  Fused operations that are explicitly specified (e.g. FMA
-  /// via the llvm.fma.* intrinsic) will always be honored, regardless of
-  /// the value of this option.
-  FPOpFusion::FPOpFusionMode AllowFPOpFusion = FPOpFusion::Standard;
 
   /// ThreadModel - This flag specifies the type of threading model to assume
   /// for things like atomics

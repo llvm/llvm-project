@@ -4501,6 +4501,7 @@ libc_support_library(
     hdrs = ["src/__support/wctype_utils.h"],
     deps = [
         ":__support_cpp_array",
+        ":__support_cpp_bit",
         ":__support_cpp_string_view",
         ":__support_macros_attributes",
         ":__support_macros_config",

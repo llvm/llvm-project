@@ -65,8 +65,6 @@ LLVM_ABI DenormalMode::DenormalModeKind getDenormalFP32Math();
 
 LLVM_ABI llvm::FloatABI::ABIType getFloatABIForCalls();
 
-LLVM_ABI llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();
-
 LLVM_ABI SwiftAsyncFramePointerMode getSwiftAsyncFramePointer();
 
 LLVM_ABI bool getDontPlaceZerosInBSS();

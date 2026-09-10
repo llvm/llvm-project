@@ -247,7 +247,7 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
 // (mostly related to WWM CSR handling) that differentiate it from using
 // a plain `amdgcn.init.exec -1`.
 def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
-    IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
+    IntrHasSideEffects, IntrNoMem, IntrConvergent, IntrNoCallback, IntrNoFree, IntrWillReturn]>;
 
 def int_amdgcn_wavefrontsize
     : ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
@@ -4256,10 +4256,13 @@ let TargetFeatures = "wmma-n16-insts" in {
   def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
   def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_i32_ty>;
   def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_i64_ty>;
+} // End TargetFeatures = "wmma-n16-insts"
+
+let TargetFeatures = "wmma-f4-insts" in {
   def int_amdgcn_wmma_f32_32x16x128_f4       : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
   def int_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i32_ty>;
   def int_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i64_ty>;
-} // End TargetFeatures = "wmma-n16-insts"
+} // End TargetFeatures = "wmma-f4-insts"
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :

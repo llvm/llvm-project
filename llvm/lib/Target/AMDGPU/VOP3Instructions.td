@@ -1932,6 +1932,18 @@ let SubtargetPredicate = isGFX1250Plus in {
   }
 } // End SubtargetPredicate = isGFX1250Plus
 
+let SubtargetPredicate = HasFP6BF6ToF16BF16F32ConversionScaleInsts,
+    ReadsModeReg = 0, Constraints = "@earlyclobber $vdst" in {
+  let WaveSizePredicate = isWave32 in {
+    defm V_CVT_SCALE_PK32_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_bf6", VOP_V32BF16_V6I32_I32, null_frag>;
+    defm V_CVT_SCALE_PK32_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_fp6", VOP_V32BF16_V6I32_I32, null_frag>;
+    defm V_CVT_SCALE_PK32_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_bf6",  VOP_V32F16_V6I32_I32,  null_frag>;
+    defm V_CVT_SCALE_PK32_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_fp6",  VOP_V32F16_V6I32_I32,  null_frag>;
+    defm V_CVT_SCALE_PK32_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_bf6",  VOP_V32F32_V6I32_I32,  null_frag>;
+    defm V_CVT_SCALE_PK32_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_fp6",  VOP_V32F32_V6I32_I32,  null_frag>;
+  } // End WaveSizePredicate = isWave32
+} // End SubtargetPredicate = HasFP6BF6ToF16BF16F32ConversionScaleInsts
+
 let SubtargetPredicate = HasTensorCvtLutInsts in {
   defm V_PERM_PK16_B4_U4 : VOP3Inst<"v_perm_pk16_b4_u4", VOP3_V2I32_I32_I32_V2I32, int_amdgcn_perm_pk16_b4_u4>;
   defm V_PERM_PK16_B6_U4 : VOP3Inst<"v_perm_pk16_b6_u4", VOP3_V3I32_I32_I64_V2I32, int_amdgcn_perm_pk16_b6_u4>;
@@ -2510,6 +2522,12 @@ let WaveSizePredicate = isWave32 in {
   defm V_CVT_SCALEF32_SR_PK32_FP6_BF16 : VOP3Only_Real_Base_gfx13<0x2a7>;
   defm V_CVT_SCALEF32_SR_PK32_FP6_F16  : VOP3Only_Real_Base_gfx13<0x2a8>;
   defm V_CVT_SCALEF32_SR_PK32_FP6_F32  : VOP3Only_Real_Base_gfx13<0x2a9>;
+  defm V_CVT_SCALE_PK32_BF16_BF6       : VOP3Only_ScaleSel_Real_gfx13<0x2b3>;
+  defm V_CVT_SCALE_PK32_BF16_FP6       : VOP3Only_ScaleSel_Real_gfx13<0x2b4>;
+  defm V_CVT_SCALE_PK32_F16_BF6        : VOP3Only_ScaleSel_Real_gfx13<0x2b5>;
+  defm V_CVT_SCALE_PK32_F16_FP6        : VOP3Only_ScaleSel_Real_gfx13<0x2b6>;
+  defm V_CVT_SCALE_PK32_F32_BF6        : VOP3Only_ScaleSel_Real_gfx13<0x2b7>;
+  defm V_CVT_SCALE_PK32_F32_FP6        : VOP3Only_ScaleSel_Real_gfx13<0x2b8>;
 } // End WaveSizePredicate = isWave32
 
 //===----------------------------------------------------------------------===//
