@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -stop-after=finalize-isel -debug-only=isel -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -disable-promote-alloca-to-vector -stop-after=finalize-isel -debug-only=isel -o /dev/null %s 2>&1 | FileCheck %s
 
 define i64 @i64_test(i64 %i) nounwind readnone {
   %loc = alloca i64, addrspace(5)
