@@ -90,6 +90,134 @@ func.func @loaded_unmanaged_descriptor() {
   return
 }
 
+// An assumed-shape dummy arrives as a box parameter. Mapping that box is a
+// descriptor map recovered from var: no separate desc operand and no attach
+// slot, because the specification leaves this descriptor unmanaged on the
+// device.
+// CHECK-LABEL: func.func @assumed_shape_dummy
+// CHECK-SAME: %[[BOX:.*]]: !fir.box<!fir.array<?xf32>>
+// CHECK: acc.map_info var(%[[BOX]] : !fir.box<!fir.array<?xf32>>)
+// CHECK-NOT: varPtrPtr
+// CHECK-NOT: desc(
+// CHECK-SAME: elementSize(4)
+// CHECK-SAME: descKind(cfi)
+// CHECK-SAME: mapFlags(to)
+// CHECK-NOT: ptr_and_obj
+// IDEMP-LABEL: func.func @assumed_shape_dummy
+// IDEMP-COUNT-1: acc.map_info
+// IDEMP-NOT: acc.copyin
+func.func @assumed_shape_dummy(%box: !fir.box<!fir.array<?xf32>>) {
+  %copy = acc.copyin var(%box : !fir.box<!fir.array<?xf32>>)
+      dataClause(acc_copyin) name("a") -> !fir.box<!fir.array<?xf32>>
+  acc.data dataOperands(%copy : !fir.box<!fir.array<?xf32>>) {
+    acc.terminator
+  }
+  return
+}
+
+// The base address taken out of that same box parameter is a plain object map:
+// there is no descriptor slot to attach through, and the box itself is not
+// named. An explicit clause keeps the unknown size of a dynamic extent.
+// CHECK-LABEL: func.func @assumed_shape_base_address
+// CHECK-SAME: %[[BOX:.*]]: !fir.box<!fir.array<?xf32>>
+// CHECK: %[[DATA:.*]] = fir.box_addr %[[BOX]]
+// CHECK: %[[SIZE:.*]] = arith.constant -1 : i64
+// CHECK: acc.map_info varPtr(%[[DATA]] : !fir.ref<!fir.array<?xf32>>)
+// CHECK-NOT: varPtrPtr
+// CHECK-NOT: desc(
+// CHECK-SAME: size(%[[SIZE]] : i64)
+// CHECK-SAME: elementSize(4)
+// CHECK-SAME: descKind(none)
+// CHECK-SAME: mapFlags(to)
+// IDEMP-LABEL: func.func @assumed_shape_base_address
+// IDEMP-COUNT-1: acc.map_info
+// IDEMP-NOT: acc.copyin
+func.func @assumed_shape_base_address(%box: !fir.box<!fir.array<?xf32>>) {
+  %data = fir.box_addr %box : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+  %copy = acc.copyin varPtr(%data : !fir.ref<!fir.array<?xf32>>)
+      dataClause(acc_copyin) name("a") -> !fir.ref<!fir.array<?xf32>>
+  acc.data dataOperands(%copy : !fir.ref<!fir.array<?xf32>>) {
+    acc.terminator
+  }
+  return
+}
+
+// A polymorphic dummy arrives as a class parameter. It behaves like the
+// assumed-shape box: mapping the class is a descriptor map recovered from var,
+// with no separate desc operand and no attach slot.
+// CHECK-LABEL: func.func @polymorphic_dummy
+// CHECK-SAME: %[[CLASS:.*]]: !fir.class<!fir.type<_QMtypesTbase{i:i32}>>
+// CHECK: acc.map_info var(%[[CLASS]] : !fir.class<!fir.type<_QMtypesTbase{i:i32}>>)
+// CHECK-NOT: varPtrPtr
+// CHECK-NOT: desc(
+// CHECK-SAME: elementSize(4)
+// CHECK-SAME: descKind(cfi)
+// CHECK-SAME: mapFlags(to)
+// CHECK-NOT: ptr_and_obj
+// IDEMP-LABEL: func.func @polymorphic_dummy
+// IDEMP-COUNT-1: acc.map_info
+// IDEMP-NOT: acc.copyin
+func.func @polymorphic_dummy(%class: !fir.class<!fir.type<_QMtypesTbase{i:i32}>>) {
+  %copy = acc.copyin var(%class : !fir.class<!fir.type<_QMtypesTbase{i:i32}>>)
+      dataClause(acc_copyin) name("p") -> !fir.class<!fir.type<_QMtypesTbase{i:i32}>>
+  acc.data dataOperands(%copy : !fir.class<!fir.type<_QMtypesTbase{i:i32}>>) {
+    acc.terminator
+  }
+  return
+}
+
+// The base address taken out of that class parameter is likewise a plain
+// object map, sized from the record type.
+// CHECK-LABEL: func.func @polymorphic_base_address
+// CHECK-SAME: %[[CLASS:.*]]: !fir.class<!fir.type<_QMtypesTbase{i:i32}>>
+// CHECK: %[[DATA:.*]] = fir.box_addr %[[CLASS]]
+// CHECK: %[[SIZE:.*]] = arith.constant 4 : i64
+// CHECK: acc.map_info varPtr(%[[DATA]] : !fir.ref<!fir.type<_QMtypesTbase{i:i32}>>)
+// CHECK-NOT: varPtrPtr
+// CHECK-NOT: desc(
+// CHECK-SAME: size(%[[SIZE]] : i64)
+// CHECK-SAME: descKind(none)
+// CHECK-SAME: mapFlags(to)
+// IDEMP-LABEL: func.func @polymorphic_base_address
+// IDEMP-COUNT-1: acc.map_info
+// IDEMP-NOT: acc.copyin
+func.func @polymorphic_base_address(%class: !fir.class<!fir.type<_QMtypesTbase{i:i32}>>) {
+  %data = fir.box_addr %class : (!fir.class<!fir.type<_QMtypesTbase{i:i32}>>) -> !fir.ref<!fir.type<_QMtypesTbase{i:i32}>>
+  %copy = acc.copyin varPtr(%data : !fir.ref<!fir.type<_QMtypesTbase{i:i32}>>)
+      dataClause(acc_copyin) name("p") -> !fir.ref<!fir.type<_QMtypesTbase{i:i32}>>
+  acc.data dataOperands(%copy : !fir.ref<!fir.type<_QMtypesTbase{i:i32}>>) {
+    acc.terminator
+  }
+  return
+}
+
+// A polymorphic ALLOCATABLE is a class whose descriptor the specification does
+// require to be maintained on the device, so the pointee map keeps its attach
+// slot and names the descriptor. The distinction is the entity, not whether
+// the descriptor is a box or a class.
+// CHECK-LABEL: func.func @polymorphic_allocatable
+// CHECK-SAME: %[[SLOT:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtypesTbase{i:i32}>>>>
+// CHECK: %[[CLASS:.*]] = fir.load %[[SLOT]]
+// CHECK: %[[DATA:.*]] = fir.box_addr %[[CLASS]]
+// CHECK: acc.map_info varPtr(%[[DATA]] : !fir.heap<!fir.type<_QMtypesTbase{i:i32}>>)
+// CHECK-SAME: varPtrPtr(%[[SLOT]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtypesTbase{i:i32}>>>>)
+// CHECK-SAME: desc(%[[CLASS]] : !fir.class<!fir.heap<!fir.type<_QMtypesTbase{i:i32}>>>)
+// CHECK-SAME: descKind(cfi)
+// CHECK-SAME: mapFlags(to,ptr_and_obj)
+// IDEMP-LABEL: func.func @polymorphic_allocatable
+// IDEMP-COUNT-1: acc.map_info
+// IDEMP-NOT: acc.copyin
+func.func @polymorphic_allocatable(%slot: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtypesTbase{i:i32}>>>>) {
+  %box = fir.load %slot : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtypesTbase{i:i32}>>>>
+  %data = fir.box_addr %box : (!fir.class<!fir.heap<!fir.type<_QMtypesTbase{i:i32}>>>) -> !fir.heap<!fir.type<_QMtypesTbase{i:i32}>>
+  %copy = acc.copyin varPtr(%data : !fir.heap<!fir.type<_QMtypesTbase{i:i32}>>)
+      dataClause(acc_copyin) name("p") -> !fir.heap<!fir.type<_QMtypesTbase{i:i32}>>
+  acc.data dataOperands(%copy : !fir.heap<!fir.type<_QMtypesTbase{i:i32}>>) {
+    acc.terminator
+  }
+  return
+}
+
 // Mapping descriptor storage itself has no second indirection operand. The
 // descriptor is recovered from var and supplies both CFI and ptr_and_obj facts.
 // CHECK-LABEL: func.func @descriptor_storage
