@@ -761,6 +761,22 @@ static bool getTBAAStructFieldAsInt64(const MDOperand &Op, uint64_t &Out) {
   return true;
 }
 
+// Return true if Tag is a struct-path TBAA access tag: two type nodes (base
+// and access) followed by constant integer fields (offset, and an optional
+// size and/or immutability flag). A !tbaa.struct field operand need not be
+// such a tag, so validate before reusing it as !tbaa.
+static bool isValidTBAAAccessTag(const MDNode *Tag) {
+  unsigned NumOps = Tag->getNumOperands();
+  if (NumOps < 3 || NumOps > 5)
+    return false;
+  if (!isa_and_nonnull<MDNode>(Tag->getOperand(0)) ||
+      !isa_and_nonnull<MDNode>(Tag->getOperand(1)))
+    return false;
+  return all_of(drop_begin(Tag->operands(), 2), [](const MDOperand &Op) {
+    return mdconst::dyn_extract_or_null<ConstantInt>(Op) != nullptr;
+  });
+}
+
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
@@ -837,7 +853,7 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
     MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
     if (!getTBAAStructFieldAsInt64(M->getOperand(I), FieldOffset) ||
         !getTBAAStructFieldAsInt64(M->getOperand(I + 1), FieldSize) ||
-        !FieldTag || FieldOffset != Offset ||
+        !FieldTag || !isValidTBAAAccessTag(FieldTag) || FieldOffset != Offset ||
         (CommonTag && FieldTag != CommonTag))
       break;
     CommonTag = FieldTag;
