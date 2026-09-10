@@ -49,8 +49,7 @@ int main() {
   context ctx3(plt);
   check(ctx3);
 
-  context ctx4({dev, dev2}, dummyAsyncHandler,
-               {/* explicit properties list */});
+  context ctx4({dev, dev2}, dummyAsyncHandler, {});
   check(ctx4);
 
   std::cout << "Passed" << std::endl;

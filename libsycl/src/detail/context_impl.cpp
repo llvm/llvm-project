@@ -23,15 +23,18 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
   std::vector<ol_device_handle_t> DeviceIds;
   DeviceIds.reserve(MDevices.size());
   for (DeviceImpl *D : MDevices) {
+    assert(D && "Device list must not contain null entries");
     DeviceIds.push_back(D->getOLHandle());
   }
 
   auto Result = callNoCheck(olCreateContext, DeviceIds.size(), DeviceIds.data(),
                             &MOffloadContext);
   if (isFailed(Result)) {
-    throw sycl::exception(make_error_code(errc::invalid),
-                          "Failed to create SYCL context: " +
-                              formatCodeString(Result));
+    if (Result->Code == OL_ERRC_INVALID_SIZE) {
+      throw sycl::exception(make_error_code(errc::invalid),
+                            "Device list must not be empty");
+    }
+    checkAndThrow(Result);
   }
 }
 
