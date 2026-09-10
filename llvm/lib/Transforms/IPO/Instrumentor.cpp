@@ -50,7 +50,6 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/IPO/InstrumentorUtils.h"
-#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -246,30 +245,31 @@ static Regex createRegex(StringRef Str, StringRef Name, LLVMContext &Ctx) {
 }
 
 void InstrumentorImpl::linkRuntime() {
-  const auto RuntimeBitcode = IConf.RuntimeBitcode->getString();
-  if (RuntimeBitcode.empty())
+  ArrayRef<StringRef> RuntimeBitcodes = IConf.RuntimeBitcodes->getStringList();
+  if (RuntimeBitcodes.empty())
     return;
 
-  SMDiagnostic Err;
-  auto RTM = parseIRFile(RuntimeBitcode, Err, M.getContext());
-  if (!RTM) {
-    IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
-        Twine("Failed to parse runtime bitcode file '") + RuntimeBitcode +
-            Twine("':\n") + M.getName(),
-        DS_Error));
-    return;
-  }
+  for (StringRef RuntimeBitcode : RuntimeBitcodes) {
+    if (RuntimeBitcode.empty())
+      continue;
 
-  auto InternalizeCallback = [&](Module &M, const StringSet<> &GVS) {
-    internalizeModule(M, [&GVS](const GlobalValue &GV) {
-      return !GV.hasName() || !GVS.count(GV.getName());
-    });
-  };
+    SMDiagnostic Err;
+    auto RTM = parseIRFile(RuntimeBitcode, Err, M.getContext());
+    if (!RTM) {
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+          Twine("Failed to parse runtime bitcode file '") + RuntimeBitcode +
+              Twine("':\n") + M.getName(),
+          DS_Error));
+      return;
+    }
 
-  if (Linker::linkModules(M, std::move(RTM), 0, InternalizeCallback)) {
-    IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
-        "Failed to link in runtime bitcode", DS_Error));
-    return;
+    if (Linker::linkModules(M, std::move(RTM))) {
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+          Twine("Failed to link in runtime bitcode file '") + RuntimeBitcode +
+              "'",
+          DS_Error));
+      return;
+    }
   }
 
   if (!IConf.InlineRuntimeEagerly->getBool())
@@ -535,6 +535,8 @@ bool InstrumentorImpl::instrument() {
   for (Function &Fn : M)
     Changed |= instrumentFunction(Fn);
 
+  Changed |= IConf.instrumentBeforeRuntimeLink(M, IIRB);
+
   linkRuntime();
 
   return Changed;
@@ -624,6 +626,17 @@ BaseConfigurationOption::createStringOption(InstrumentationConfig &IConf,
   auto BCO =
       std::make_unique<BaseConfigurationOption>(Name, Description, STRING);
   BCO->setString(DefaultValue);
+  IConf.addBaseChoice(BCO.get());
+  return BCO;
+}
+
+std::unique_ptr<BaseConfigurationOption>
+BaseConfigurationOption::createStringListOption(
+    InstrumentationConfig &IConf, StringRef Name, StringRef Description,
+    ArrayRef<StringRef> DefaultValue) {
+  auto BCO =
+      std::make_unique<BaseConfigurationOption>(Name, Description, STRING_LIST);
+  BCO->setStringList(DefaultValue);
   IConf.addBaseChoice(BCO.get());
   return BCO;
 }
