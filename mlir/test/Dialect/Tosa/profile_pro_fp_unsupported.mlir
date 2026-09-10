@@ -7,31 +7,31 @@
 // -----
 func.func @test_const_f16() -> tensor<3x11x11x3xf16> {
   // expected-error@+1 {{'tosa.const' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = "tosa.const"() {values = dense<2.0> : tensor<3x11x11x3xf16>} : () -> tensor<3x11x11x3xf16>
+  %0 = "tosa.const"() <{values = dense<2.0> : tensor<3x11x11x3xf16>}> : () -> tensor<3x11x11x3xf16>
   return %0 : tensor<3x11x11x3xf16>
 }
 
 // -----
 func.func @test_const_f32() -> tensor<3x11x11x3xf32> {
   // expected-error@+1 {{'tosa.const' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = "tosa.const"() {values = dense<3.0> : tensor<3x11x11x3xf32>} : () -> tensor<3x11x11x3xf32>
+  %0 = "tosa.const"() <{values = dense<3.0> : tensor<3x11x11x3xf32>}> : () -> tensor<3x11x11x3xf32>
   return %0 : tensor<3x11x11x3xf32>
 }
 
 // -----
 func.func @test_avg_pool2d(%arg0: tensor<1x7x7x9xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x7x7x9xf32> {
   // expected-error@+1 {{'tosa.avg_pool2d' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.avg_pool2d %arg0, %arg1, %arg2 {acc_type = f32, kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} : (tensor<1x7x7x9xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x7x7x9xf32>
+  %0 = tosa.avg_pool2d %arg0, %arg1, %arg2 kernel([2, 2]) stride([1, 1]) pad([0, 1, 0, 1]) acc_type(f32) : (tensor<1x7x7x9xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x7x7x9xf32>
   return %0 : tensor<1x7x7x9xf32>
 }
 
 // -----
 func.func @test_avg_pool2d_adaptive(%arg0: tensor<1x7x7x9xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x7x7x9xf32> {
-  %kernel = tosa.const_shape {values = dense<[2, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %pad = tosa.const_shape {values = dense<[0, 1, 0, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %kernel = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %stride = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %pad = tosa.const_shape values(dense<[0, 1, 0, 1]> : tensor<4xindex>) : () -> !tosa.shape<4>
   // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.avg_pool2d_adaptive %arg0, %arg1, %arg2, %kernel, %stride, %pad {acc_type = f32} :
+  %0 = tosa.avg_pool2d_adaptive %arg0, %arg1, %arg2, %kernel, %stride, %pad acc_type(f32) :
        (tensor<1x7x7x9xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x7x7x9xf32>
   return %0 : tensor<1x7x7x9xf32>
 }
@@ -39,21 +39,21 @@ func.func @test_avg_pool2d_adaptive(%arg0: tensor<1x7x7x9xf32>, %arg1: tensor<1x
 // -----
 func.func @test_conv2d(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
   // expected-error@+1 {{'tosa.conv2d' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(f32) local_bound(true) : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
   return %0 : tensor<1x4x4x8xf32>
 }
 
 // -----
 func.func @test_conv3d(%arg0: tensor<1x4x8x21x17xf16>, %arg1: tensor<34x1x1x1x17xf16>, %arg2: tensor<34xf16>, %arg3: tensor<1xf16>, %arg4: tensor<1xf16>) -> tensor<1x4x8x21x34xf16> {
   // expected-error@+1 {{'tosa.conv3d' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>} : (tensor<1x4x8x21x17xf16>, tensor<34x1x1x1x17xf16>, tensor<34xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x4x8x21x34xf16>
+  %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x8x21x17xf16>, tensor<34x1x1x1x17xf16>, tensor<34xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x4x8x21x34xf16>
   return %0 : tensor<1x4x8x21x34xf16>
 }
 
 // -----
 func.func @test_depthwise_conv2d(%arg0: tensor<1x4x4x4xf16>, %arg1: tensor<1x1x4x2xf16>, %arg2: tensor<8xf16>, %arg3: tensor<1xf16>, %arg4: tensor<1xf16>) -> tensor<1x4x4x8xf16> {
   // expected-error@+1 {{'tosa.depthwise_conv2d' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f16, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x4x4x4xf16>, tensor<1x1x4x2xf16>, tensor<8xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x4x4x8xf16>
+  %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(f16) : (tensor<1x4x4x4xf16>, tensor<1x1x4x2xf16>, tensor<8xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x4x4x8xf16>
   return %0 : tensor<1x4x4x8xf16>
 }
 
@@ -78,28 +78,28 @@ func.func @test_sigmoid(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
 // -----
 func.func @test_transpose_conv2d(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x32x16xf32> {
   // expected-error@+1 {{'tosa.transpose_conv2d' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: 1, 32, 32, 16>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 out_pad([0, 0, 0, 0]) stride([1, 1]) acc_type(f32) {out_shape = array<i64: 1, 32, 32, 16>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
   return %0 : tensor<1x32x32x16xf32>
 }
 
 // -----
 func.func @test_max_pool2d(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
   // expected-error@+1 {{'tosa.max_pool2d' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.max_pool2d %arg0 {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32>
+  %0 = tosa.max_pool2d %arg0 kernel([1, 1]) stride([1, 1]) pad([0, 0, 0, 0]) : (tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32>
   return %0 : tensor<1x32x32x8xf32>
 }
 
 // -----
 func.func @test_transpose_conv2d(%arg0: tensor<1x32x32x8xf16>, %arg1: tensor<16x1x1x8xf16>, %arg2: tensor<16xf16>, %arg3: tensor<1xf16>, %arg4: tensor<1xf16>) -> tensor<1x32x32x16xf16> {
   // expected-error@+1 {{'tosa.transpose_conv2d' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f16, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf16>, tensor<16x1x1x8xf16>, tensor<16xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x32x32x16xf16>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 out_pad([0, 0, 0, 0]) stride([1, 1]) acc_type(f16) : (tensor<1x32x32x8xf16>, tensor<16x1x1x8xf16>, tensor<16xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x32x32x16xf16>
   return %0 : tensor<1x32x32x16xf16>
 }
 
 // -----
 func.func @test_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
   // expected-error@+1 {{'tosa.clamp' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.clamp %arg0 {min_val = 0.0 : f32, max_val = 1.0 : f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
+  %0 = tosa.clamp %arg0 min_val(0.0 : f32) max_val(1.0 : f32) : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
 
@@ -113,14 +113,14 @@ func.func @test_add(%arg0: tensor<13x21x1xf32>, %arg1: tensor<13x21x3xf32>) -> t
 // -----
 func.func @test_concat(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x21x3xf32>) -> tensor<26x21x3xf32> {
   // expected-error@+1 {{'tosa.concat' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xf32>, tensor<13x21x3xf32>) -> tensor<26x21x3xf32>
+  %0 = tosa.concat %arg0, %arg1 axis(0) : (tensor<13x21x3xf32>, tensor<13x21x3xf32>) -> tensor<26x21x3xf32>
   return %0 : tensor<26x21x3xf32>
 }
 
 // -----
 func.func @test_cast_i32_f32(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
+  %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
 
@@ -246,29 +246,29 @@ func.func @test_greater(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x1x3xf32>) -
 // -----
 func.func @test_reduce_max(%arg0: tensor<13x21x3xf16>) -> tensor<1x21x3xf16> {
   // expected-error@+1 {{'tosa.reduce_max' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<13x21x3xf16>) -> tensor<1x21x3xf16>
+  %0 = tosa.reduce_max %arg0 axis(0) : (tensor<13x21x3xf16>) -> tensor<1x21x3xf16>
   return %0 : tensor<1x21x3xf16>
 }
 
 // -----
 func.func @test_reduce_sum(%arg0: tensor<13x21x3xf32>) -> tensor<1x21x3xf32> {
   // expected-error@+1 {{'tosa.reduce_sum' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.reduce_sum %arg0 {axis = 0 : i32} : (tensor<13x21x3xf32>) -> tensor<1x21x3xf32>
+  %0 = tosa.reduce_sum %arg0 axis(0) : (tensor<13x21x3xf32>) -> tensor<1x21x3xf32>
   return %0 : tensor<1x21x3xf32>
 }
 
 // -----
 func.func @test_concat(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x21x3xf32>) -> tensor<26x21x3xf32> {
   // expected-error@+1 {{'tosa.concat' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xf32>, tensor<13x21x3xf32>) -> tensor<26x21x3xf32>
+  %0 = tosa.concat %arg0, %arg1 axis(0) : (tensor<13x21x3xf32>, tensor<13x21x3xf32>) -> tensor<26x21x3xf32>
   return %0 : tensor<26x21x3xf32>
 }
 
 // -----
 func.func @test_pad(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
-  %padding = tosa.const_shape {values = dense<0> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %padding = tosa.const_shape values(dense<0> : tensor<6xindex>) : () -> !tosa.shape<6>
   // expected-error@+1 {{'tosa.const' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+  %pad_const = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.pad' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.pad %arg0, %padding, %pad_const : (tensor<13x21x3xf32>, !tosa.shape<6>, tensor<1xf32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
@@ -276,7 +276,7 @@ func.func @test_pad(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
 
 // -----
 func.func @test_reshape(%arg0: tensor<13x21x3xf32>) -> tensor<1x819xf32> {
-  %1 = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %1 = tosa.const_shape values(dense<[1, 819]> : tensor<2xindex>) : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reshape %arg0, %1 : (tensor<13x21x3xf32>, !tosa.shape<2>) -> tensor<1x819xf32>
   return %0 : tensor<1x819xf32>
@@ -285,14 +285,14 @@ func.func @test_reshape(%arg0: tensor<13x21x3xf32>) -> tensor<1x819xf32> {
 // -----
 func.func @test_reverse(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
   // expected-error@+1 {{'tosa.reverse' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
+  %0 = tosa.reverse %arg0 axis(0) : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
 
 // -----
 func.func @test_slice(%arg0: tensor<13x21x3xf32>) -> tensor<4x11x1xf32> {
-  %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[4, 11, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %start = tosa.const_shape values(dense<[6, 8, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
   %2 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xf32>
   return %2 : tensor<4x11x1xf32>
@@ -300,7 +300,7 @@ func.func @test_slice(%arg0: tensor<13x21x3xf32>) -> tensor<4x11x1xf32> {
 
 // -----
 func.func @test_tile(%arg0: tensor<13x21x3xf32>) -> tensor<39x21x6xf32> {
-  %cst = tosa.const_shape { values = dense<[3, 1, 2]> : tensor<3xindex> } : () -> !tosa.shape<3>
+  %cst = tosa.const_shape values(dense<[3, 1, 2]> : tensor<3xindex>) : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.tile' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.tile %arg0, %cst: (tensor<13x21x3xf32>, !tosa.shape<3>) -> tensor<39x21x6xf32>
   return %0 : tensor<39x21x6xf32>
@@ -309,7 +309,7 @@ func.func @test_tile(%arg0: tensor<13x21x3xf32>) -> tensor<39x21x6xf32> {
 // -----
 func.func @test_transpose(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21xf32> {
   // expected-error@+1 {{'tosa.transpose' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1>}: (tensor<13x21x3xf32>) -> tensor<3x13x21xf32>
+  %1 = tosa.transpose %arg0 perms([2, 0, 1]) : (tensor<13x21x3xf32>) -> tensor<3x13x21xf32>
   return %1 : tensor<3x13x21xf32>
 }
 
@@ -329,10 +329,10 @@ func.func @test_scatter(%arg0: tensor<13x28x3xf32>, %arg1: tensor<13x26xi32>, %a
 
 // -----
 func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
-  %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %scale = tosa.const_shape values(dense<[4, 2, 4, 2]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %offset = tosa.const_shape values(dense<[-1, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %border = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = BILINEAR } : (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf32>
+  %1 = tosa.resize %arg0, %scale, %offset, %border mode<BILINEAR> : (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }

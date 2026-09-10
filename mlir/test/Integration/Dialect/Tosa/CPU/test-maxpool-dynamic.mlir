@@ -21,20 +21,12 @@
 func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 func.func @max_pool_static(%arg0: !tensor_type) -> (!tensor_type) {
-  %0 = tosa.max_pool2d %arg0 {
-    pad = array<i64: 1, 1, 1, 1>,
-    kernel = array<i64: 3, 3>,
-    stride = array<i64: 1, 1>
-  } : (tensor<1x4x4x1xf32>) -> tensor<1x4x4x1xf32>
+  %0 = tosa.max_pool2d %arg0 kernel([3, 3]) stride([1, 1]) pad([1, 1, 1, 1]) : (tensor<1x4x4x1xf32>) -> tensor<1x4x4x1xf32>
   return %0 : tensor<1x4x4x1xf32>
 }
 
 func.func @max_pool_dynamic(%arg0: tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>) {
-  %0 = tosa.max_pool2d %arg0 {
-    pad = array<i64: 1, 1, 1, 1>,
-    kernel = array<i64: 3, 3>,
-    stride = array<i64: 1, 1>
-  } : (tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  %0 = tosa.max_pool2d %arg0 kernel([3, 3]) stride([1, 1]) pad([1, 1, 1, 1]) : (tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
   return %0 : tensor<?x?x?x?xf32>
 }
 
@@ -109,4 +101,3 @@ func.func @main() {
 
   return
 }
-
