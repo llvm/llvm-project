@@ -39,9 +39,9 @@ constexpr int KindPos(int kind) {
 // Tests
 //===----------------------------------------------------------------------===//
 
-TEST(LogicalValue, DefaultConstructionIsMonostate) {
+TEST(LogicalValue, DefaultConstructionIsNull) {
   LogicalValue x;
-  EXPECT_TRUE(x.IsMonostate());
+  EXPECT_TRUE(x.IsNull());
   EXPECT_FALSE(x.IsTrue());
 }
 
@@ -49,7 +49,7 @@ TEST_P(LogicalValueKind, ConstructFromBool) {
   const int kind{GetParam()};
 
   LogicalValue truth{kind, true};
-  EXPECT_FALSE(truth.IsMonostate());
+  EXPECT_FALSE(truth.IsNull());
   EXPECT_EQ(kind, truth.kind());
   EXPECT_TRUE(truth.IsTrue());
 
@@ -111,7 +111,7 @@ TEST_P(LogicalValueKind, Zero) {
   const int kind{GetParam()};
 
   LogicalValue zero{LogicalValue::Zero(kind)};
-  EXPECT_FALSE(zero.IsMonostate());
+  EXPECT_FALSE(zero.IsNull());
   EXPECT_EQ(kind, zero.kind());
   EXPECT_FALSE(zero.IsTrue());
   EXPECT_TRUE(zero.IsCanonical());

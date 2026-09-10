@@ -34,8 +34,7 @@ public:
   ComplexValue &operator=(ComplexValue &&) = default;
 
   ComplexValue(const RealValue &r, const RealValue &i)
-      : re_{r},
-        im_{r.IsMonostate() ? i : RealValue::Convert(r.kind(), i).value} {}
+      : re_{r}, im_{r.IsNull() ? i : RealValue::Convert(r.kind(), i).value} {}
 
   explicit ComplexValue(const RealValue &r)
       : ComplexValue{r, RealValue::Zero(r.kind())} {}
@@ -53,7 +52,7 @@ public:
   }
 
   /// Creates a complex value (+0.0 + +0.0i) of a given kind. This is
-  /// different from the default-ctor which creates a "monostate" that
+  /// different from the default-ctor which creates a null state that
   /// represents zero of unknown kind.
   static ComplexValue Zero(int kind) {
     RealValue zero{RealValue::Zero(kind)};
@@ -68,9 +67,9 @@ public:
 
   /// Whether this object represents a default-initialized value (zero) of
   /// not-yet-known kind.
-  bool IsMonostate() const {
-    CHECK(re_.IsMonostate() == im_.IsMonostate());
-    return re_.IsMonostate();
+  bool IsNull() const {
+    CHECK(re_.IsNull() == im_.IsNull());
+    return re_.IsNull();
   }
 
   /// The kind of the value currently stored.

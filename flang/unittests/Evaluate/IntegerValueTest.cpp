@@ -61,9 +61,9 @@ INSTANTIATE_TEST_SUITE_P(IntegerValueKind, IntegerValueKind,
 // Construction, assignment and kind inquiries
 //===----------------------------------------------------------------------===//
 
-TEST(IntegerValue, Monostate) {
+TEST(IntegerValue, Nullstate) {
   IntegerValue x;
-  EXPECT_TRUE(x.IsMonostate());
+  EXPECT_TRUE(x.IsNull());
   EXPECT_TRUE(x.IsZero());
   EXPECT_FALSE(x.IsNegative());
   EXPECT_EQ(0u, x.ToUInt64());
@@ -147,7 +147,7 @@ TYPED_TEST(IntegerValueTypedKind, Zero) {
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(kind, zero.kind());
-  EXPECT_FALSE(zero.IsMonostate());
+  EXPECT_FALSE(zero.IsNull());
   EXPECT_TRUE(zero.IsZero());
   EXPECT_EQ(SignedT(0), zero.ToSInt<SignedT>());
 }
@@ -2130,7 +2130,7 @@ TEST_P(IntegerValueKindPair, MixedKindOperandsAreCoerced) {
   EXPECT_EQ(Ordering::Greater, x.CompareSigned(allOnes));
   EXPECT_EQ(IntegerValue(receiver, 0x5a - 1), x.AddSigned(allOnes).value);
 
-  // A monostate operand behaves as a zero of the receiver's width.
+  // A null state operand behaves as a zero of the receiver's width.
   EXPECT_EQ(x, x.IOR(IntegerValue{}));
 }
 

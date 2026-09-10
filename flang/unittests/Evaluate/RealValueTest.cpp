@@ -130,9 +130,9 @@ static void ExpectSameAsHost(const RealValue &got, HostT expected) {
 // Construction, assignment and kind inquiries
 //===----------------------------------------------------------------------===//
 
-TEST(RealValue, DefaultConstructionIsMonostate) {
+TEST(RealValue, DefaultConstructionIsNull) {
   RealValue x;
-  EXPECT_TRUE(x.IsMonostate());
+  EXPECT_TRUE(x.IsNull());
   EXPECT_TRUE(x.IsZero());
   EXPECT_FALSE(x.IsNegative());
   EXPECT_FALSE(x.IsNotANumber());
@@ -182,7 +182,7 @@ TEST(RealValue, KindCheckingConstructors) {
 TEST_P(RealValueKind, Zero) {
   const int kind{GetParam()};
   RealValue zero{RealValue::Zero(kind)};
-  EXPECT_FALSE(zero.IsMonostate());
+  EXPECT_FALSE(zero.IsNull());
   EXPECT_EQ(kind, zero.kind());
   EXPECT_TRUE(zero.IsZero());
   EXPECT_FALSE(zero.IsNegative());

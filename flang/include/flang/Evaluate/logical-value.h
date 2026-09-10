@@ -45,7 +45,7 @@ public:
   LogicalValue(int kind, const Word &w) : word_(kind, w) {}
 
   /// Creates a logical with value 'false' of a given kind. This is in contrast
-  /// to the default-ctor which creates a "monostate" that represents 'false' of
+  /// to the default-ctor which creates a null state that represents 'false' of
   /// a not-yet-known kind.
   static LogicalValue Zero(int kind) { return LogicalValue{kind, false}; }
 
@@ -57,7 +57,7 @@ public:
 
   /// Whether this object represents a default-initialized value ('false') of
   /// unknown kind.
-  bool IsMonostate() const { return word_.IsMonostate(); }
+  bool IsNull() const { return word_.IsNull(); }
 
   /// The kind of the value currently stored.
   int kind() const { return word_.kind(); }

@@ -56,7 +56,7 @@ public:
   RealValue(int kind, double x);
 
   /// Creates a floating-point with value +0.0 of a given kind. In contrast, the
-  /// default ctor creates a "monostate" that represents +0.0 of unknown kind.
+  /// default ctor creates a null state that represents +0.0 of unknown kind.
   static RealValue Zero(int kind);
 
   /// Creates a floating-point with value -0.0 of a given kind.
@@ -72,7 +72,7 @@ public:
 
   /// Whether this object represents a default-initialized value (zero) or
   /// unknown value.
-  bool IsMonostate() const;
+  bool IsNull() const;
 
   /// The kind of the value currently stored.
   int kind() const;

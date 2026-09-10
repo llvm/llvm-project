@@ -42,7 +42,7 @@ public:
 
   // ctors
 
-  /// A default-initialized CharacterValue is in a so-called "monostate"; it
+  /// A default-initialized CharacterValue is in a null state; it
   /// represents an empty string, but its kind is not yet known. Not all
   /// operations are supported in this state.
   CharacterValue();
@@ -68,7 +68,7 @@ public:
 
   /// Whether this object represents a default-initialized value (zero) of
   /// not-yet-known kind.
-  bool IsMonostate() const;
+  bool IsNull() const;
 
   /// The kind of the value currently stored.
   int kind() const;
@@ -204,7 +204,7 @@ public:
     case 4:
       return f(char32_t{});
     default:
-      DIE("unsupported character kind/monostate");
+      DIE("unsupported character kind/null state");
     }
   }
 
@@ -217,7 +217,7 @@ public:
     case 4:
       return f(*AsU32String());
     default:
-      DIE("unsupported kind/monostate");
+      DIE("unsupported kind/null state");
     }
   }
 

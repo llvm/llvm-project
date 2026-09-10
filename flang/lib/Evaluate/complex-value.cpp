@@ -24,7 +24,7 @@ LLVM_DUMP_METHOD void ComplexValue::dump() const {
 
 ValueWithRealFlags<ComplexValue> ComplexValue::FromInteger(
     int kind, const IntegerValue &n, bool isUnsigned, Rounding rounding) {
-  CHECK(!n.IsMonostate());
+  CHECK(!n.IsNull());
 
   ValueWithRealFlags<ComplexValue> result;
   result.value.re_ = RealValue::FromInteger(kind, n, isUnsigned, rounding)
@@ -35,7 +35,7 @@ ValueWithRealFlags<ComplexValue> ComplexValue::FromInteger(
 
 ValueWithRealFlags<ComplexValue> ComplexValue::Add(
     const ComplexValue &y, Rounding rounding) const {
-  CHECK(!IsMonostate());
+  CHECK(!IsNull());
 
   RealFlags flags;
   RealValue reSum{re_.Add(y.re_, rounding).AccumulateFlags(flags)};
@@ -45,7 +45,7 @@ ValueWithRealFlags<ComplexValue> ComplexValue::Add(
 
 ValueWithRealFlags<ComplexValue> ComplexValue::Subtract(
     const ComplexValue &y, Rounding rounding) const {
-  CHECK(!IsMonostate());
+  CHECK(!IsNull());
 
   RealFlags flags;
   RealValue reDiff{re_.Subtract(y.re_, rounding).AccumulateFlags(flags)};
@@ -55,7 +55,7 @@ ValueWithRealFlags<ComplexValue> ComplexValue::Subtract(
 
 ValueWithRealFlags<ComplexValue> ComplexValue::Multiply(
     const ComplexValue &y, Rounding rounding) const {
-  CHECK(!IsMonostate());
+  CHECK(!IsNull());
 
   // (a + ib)*(c + id) -> ac - bd + i(ad + bc)
   RealFlags flags;
@@ -70,7 +70,7 @@ ValueWithRealFlags<ComplexValue> ComplexValue::Multiply(
 
 ValueWithRealFlags<ComplexValue> ComplexValue::Divide(
     const ComplexValue &that, Rounding rounding) const {
-  CHECK(!IsMonostate());
+  CHECK(!IsNull());
 
   // (a + ib)/(c + id) -> [(a+ib)*(c-id)] / [(c+id)*(c-id)]
   //   -> [ac+bd+i(bc-ad)] / (cc+dd)  -- note (cc+dd) is real
@@ -128,8 +128,8 @@ ValueWithRealFlags<ComplexValue> ComplexValue::Divide(
 
 ValueWithRealFlags<ComplexValue> ComplexValue::KahanSummation(
     const ComplexValue &y, ComplexValue &correction, Rounding rounding) const {
-  CHECK(!y.IsMonostate());
-  CHECK(!correction.IsMonostate());
+  CHECK(!y.IsNull());
+  CHECK(!correction.IsNull());
 
   RealFlags flags;
   RealValue reSum{re_.KahanSummation(y.re_, correction.re_, rounding)
@@ -140,7 +140,7 @@ ValueWithRealFlags<ComplexValue> ComplexValue::KahanSummation(
 }
 
 std::string ComplexValue::DumpHexadecimal() const {
-  CHECK(!IsMonostate());
+  CHECK(!IsNull());
 
   std::string result{'('};
   result += re_.DumpHexadecimal();
@@ -152,7 +152,7 @@ std::string ComplexValue::DumpHexadecimal() const {
 
 llvm::raw_ostream &ComplexValue::AsFortran(
     llvm::raw_ostream &o, int kind) const {
-  CHECK(!IsMonostate());
+  CHECK(!IsNull());
 
   re_.AsFortran(o << '(', kind);
   im_.AsFortran(o << ',', kind);
@@ -161,7 +161,7 @@ llvm::raw_ostream &ComplexValue::AsFortran(
 
 void ComplexValue::StoreRawBytes(
     void *dst, [[maybe_unused]] size_t expectedSize, bool *changed) const {
-  CHECK(!IsMonostate());
+  CHECK(!IsNull());
   CHECK(re_.bits() == im_.bits());
   CHECK(expectedSize == re_.bytesStored() + im_.bytesStored());
 
