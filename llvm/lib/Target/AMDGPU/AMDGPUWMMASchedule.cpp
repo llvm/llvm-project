@@ -82,7 +82,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   // Gather WMMAs (numbered in program order) and ds_loads.
-  MapVector<SUnit *, unsigned> Wmmas; // Ordered WMMA SUnits
+  SmallVector<SUnit *> Wmmas; // Ordered WMMA SUnits
   SmallVector<LoadInfo> Loads;
   std::optional<unsigned> WmmaLatency;
 
@@ -95,7 +95,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     if (TII->isMFMAorWMMA(*MI)) {
       if (!WmmaLatency)
         WmmaLatency = SM->computeInstrLatency(MI);
-      Wmmas.insert({&SU, Wmmas.size()});
+      Wmmas.push_back(&SU);
       continue;
     }
 
@@ -128,14 +128,14 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
          "Chain each WMMA to the next in program order with an artificial\n"
          "edge, so load placement can be reasoned about relative to fixed\n"
          "W[] positions.\n");
-  auto [PrevSU, PrevPos] = *Wmmas.begin();
-  for (auto *It = std::next(Wmmas.begin()); It != Wmmas.end(); ++It) {
-    auto [SU, Pos] = *It;
+  SUnit *PrevSU = Wmmas.front();
+  for (unsigned Pos = 1; Pos < Wmmas.size(); ++Pos) {
+    SUnit *SU = Wmmas[Pos];
+    unsigned PrevPos = Pos - 1;
     DAG->addEdge(SU, SDep(PrevSU, SDep::Artificial));
     LLVM_DEBUG(dbgs() << "[1] WMMA W[" << PrevPos << "] SU" << PrevSU->NodeNum
                       << " -> W[" << Pos << "] SU" << SU->NodeNum << "\n");
     PrevSU = SU;
-    PrevPos = Pos;
   }
 
   // For each load, find earliest and latest consuming WMMA positions, and
@@ -153,17 +153,18 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     for (const SDep &D : LI.SU->Succs) {
       if (D.getKind() != SDep::Data)
         continue;
-      auto *It = Wmmas.find(D.getSUnit());
+      auto It = llvm::find(Wmmas, D.getSUnit());
       // Check to see if successor is a WMMA
       if (It == Wmmas.end())
         continue;
-      LI.MinPos = std::min(LI.MinPos, It->second);
-      LI.MaxPos = std::max(LI.MaxPos, It->second);
+      unsigned Pos = static_cast<unsigned>(std::distance(Wmmas.begin(), It));
+      LI.MinPos = std::min(LI.MinPos, Pos);
+      LI.MaxPos = std::max(LI.MaxPos, Pos);
       Consumers.push_back(D.getSUnit());
     }
     if (LI.MinPos == UINT_MAX)
       continue;
-    SUnit *EarliestConsumer = Wmmas.begin()[LI.MinPos].first;
+    SUnit *EarliestConsumer = Wmmas[LI.MinPos];
     const unsigned LoadLatency = SM->computeInstrLatency(LI.SU->getInstr());
     // Correct latency of edges between ds_load and earliest WMMA consumer
     for (SDep &S : LI.SU->Succs)
@@ -350,7 +351,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     if (Earliest == 0)
       continue;
     for (SUnit *L : F.Subloads)
-      DAG->addEdge(L, SDep(Wmmas.begin()[Earliest].first, SDep::Artificial));
+      DAG->addEdge(L, SDep(Wmmas[Earliest], SDep::Artificial));
   }
 
   LLVM_DEBUG({
