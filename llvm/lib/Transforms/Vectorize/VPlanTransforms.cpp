@@ -1056,20 +1056,13 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
   return nullptr;
 }
 
-static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
-                                               PredicatedScalarEvolution &PSE,
-                                               VPValue *ResumeTC,
-                                               const Loop *L) {
-  VPValue *Incoming;
-  if (!match(Op, m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)),
-                             m_ExtractLane(m_LastActiveLane(m_HeaderMask()),
-                                           m_VPValue(Incoming)))))
-    return nullptr;
-
-  const SCEV *IncomingSCEV = vputils::getSCEVExprForVPValue(Incoming, PSE, L);
+static VPValue *computeLoopExitValueForSCEV(VPlan &Plan, VPValue *Op,
+                                            PredicatedScalarEvolution &PSE,
+                                            VPValue *ResumeTC, const Loop *L,
+                                            const SCEV *S) {
   const SCEV *Start, *Step;
-  if (!match(IncomingSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
-                                               m_SpecificLoop(L))))
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
+                                    m_SpecificLoop(L))))
     return nullptr;
 
   auto *ExtractR = cast<VPInstruction>(Op);
@@ -1090,6 +1083,67 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
       {/*HasNUW=*/true, /*HasNSW=*/false}, DebugLoc::getUnknown());
   return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartVPV, ExitCount,
                                  StepVPV);
+}
+
+static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
+                                               PredicatedScalarEvolution &PSE,
+                                               VPValue *ResumeTC,
+                                               const Loop *L) {
+  VPValue *Incoming;
+  if (!match(Op, m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)),
+                             m_ExtractLane(m_LastActiveLane(m_HeaderMask()),
+                                           m_VPValue(Incoming)))))
+    return nullptr;
+
+  const SCEV *IncomingSCEV = vputils::getSCEVExprForVPValue(Incoming, PSE, L);
+  return computeLoopExitValueForSCEV(Plan, Op, PSE, ResumeTC, L, IncomingSCEV);
+}
+
+/// Try to scalarize an integer comparison extracted from the last active lane
+/// by computing the scalar value of an induction-derived operand.
+static VPValue *
+optimizeLatchExitInductionCompare(VPlan &Plan, VPValue *Op,
+                                  PredicatedScalarEvolution &PSE,
+                                  VPValue *ResumeTC, const Loop *L) {
+  VPValue *Incoming;
+  if (!match(Op, m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)),
+                             m_ExtractLane(m_LastActiveLane(m_HeaderMask()),
+                                           m_VPValue(Incoming)))))
+    return nullptr;
+
+  CmpPredicate Pred;
+  VPValue *LHS, *RHS;
+  if (!match(Incoming, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))))
+    return nullptr;
+
+  const SCEV *LHSSCEV = vputils::getSCEVExprForVPValue(LHS, PSE, L);
+  const SCEV *RHSSCEV = vputils::getSCEVExprForVPValue(RHS, PSE, L);
+  bool LHSIsAddRec = isa<SCEVAddRecExpr>(LHSSCEV);
+  bool RHSIsAddRec = isa<SCEVAddRecExpr>(RHSSCEV);
+  if (LHSIsAddRec == RHSIsAddRec ||
+      isa<SCEVCouldNotCompute>(LHSIsAddRec ? RHSSCEV : LHSSCEV))
+    return nullptr;
+
+  const SCEV *AddRecSCEV = LHSIsAddRec ? LHSSCEV : RHSSCEV;
+  VPValue *Invariant = LHSIsAddRec ? RHS : LHS;
+  const SCEV *InvariantSCEV = LHSIsAddRec ? RHSSCEV : LHSSCEV;
+  // The invariant operand is reused in the middle block, so restrict it to a
+  // live-in that is known to be loop-invariant.
+  if (!isa<VPIRValue>(Invariant) ||
+      !PSE.getSE()->isLoopInvariant(InvariantSCEV, L))
+    return nullptr;
+
+  VPValue *ScalarAddRec =
+      computeLoopExitValueForSCEV(Plan, Op, PSE, ResumeTC, L, AddRecSCEV);
+  if (!ScalarAddRec)
+    return nullptr;
+
+  auto *ExtractR = cast<VPInstruction>(Op);
+  VPBuilder Builder(ExtractR);
+  if (!LHSIsAddRec)
+    std::swap(ScalarAddRec, Invariant);
+  return Builder.createICmp(Pred, ScalarAddRec, Invariant,
+                            ExtractR->getDebugLoc());
 }
 
 void VPlanTransforms::optimizeInductionLiveOutUsers(
@@ -1134,6 +1188,9 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
               Plan, ExitIRI->getOperand(Idx), EndValues, PSE);
           if (!Escape)
             Escape = optimizeLatchExitIVUserViaSCEV(
+                Plan, ExitIRI->getOperand(Idx), PSE, ResumeTC, L);
+          if (!Escape)
+            Escape = optimizeLatchExitInductionCompare(
                 Plan, ExitIRI->getOperand(Idx), PSE, ResumeTC, L);
         } else {
           Escape = optimizeEarlyExitInductionUser(
