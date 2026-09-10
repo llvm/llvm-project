@@ -62,13 +62,14 @@ runtime. Setting `-DLIBC_ENABLE_COVERAGE_MCDC=ON` additionally enables
 
 ### Prerequisites & Toolchain Setup
 
-Generating coverage reports requires Clang, LLVM profile tools, CMake, and
+Generating coverage reports requires Clang 24, LLVM profile tools, CMake, and
 Ninja:
 
-* **Compiler:** Clang 24+ (or Clang built from HEAD). In full-build mode,
-  compiler-rt must match the compiler version and cannot rely on distro-built
-  libraries with glibc source fortification.
-* **LLVM Utilities:** Matching major versions of `llvm-profdata` and `llvm-cov`.
+* **Compiler:** Clang 24 (or Clang built from HEAD). Full-build hermetic tests
+  link `libclang_rt.profile.a`, which must match the compiler version and cannot
+  rely on distro-built libraries with glibc source fortification.
+* **LLVM Utilities:** Matching Clang 24 versions of `llvm-profdata` and
+  `llvm-cov`.
 * **Linker:** `lld` is recommended when configuring full-build mode.
 * **Build System:** CMake 3.28+ and Ninja.
 
@@ -94,14 +95,14 @@ export LLVM_COV=llvm-cov
 
 Subsequent merge and report commands reference `$LLVM_PROFDATA` and `$LLVM_COV`.
 
-#### Building Clang with Profiling Support (Full-Build Mode)
+#### Building Clang 24 with Profiling Support
 
 Full-build hermetic tests link `libclang_rt.profile.a`. Distro-built compiler-rt
 packages on distributions like Debian or Ubuntu are built with glibc source
 fortification enabled, which LLVM-libc does not support because it introduces
 unresolved symbols such as `__vfprintf_chk`. Furthermore, compiler-rt must
 match the exact version of the compiler used to build. The recommended approach
-is building Clang, lld, and compiler-rt from HEAD:
+is building Clang 24, lld, and compiler-rt from HEAD:
 
 ```bash
 cmake -G Ninja -S llvm -B build-clang \
@@ -134,28 +135,24 @@ rm -f libc_full.profdata libc_mcdc.profdata libc_single.profdata \
 Standard coverage measures physical line execution and conditional branch
 outcomes across all LLVM-libc entrypoints and internal support utilities.
 
-### 1. CMake Configuration
+### 1. Clean Prior Profile Artifacts
 
-Configures CMake to build LLVM-libc with code coverage enabled. Both overlay
-mode (`LLVM_LIBC_FULL_BUILD=OFF`) and full-build mode
-(`LLVM_LIBC_FULL_BUILD=ON`) are supported:
+Removes previously generated raw profile counters and profile data to maintain
+a clean baseline:
 
-#### Option A: Overlay Mode (Default)
 ```bash
-cmake -G Ninja -S runtimes -B build-cov \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DLLVM_ENABLE_RUNTIMES="libc" \
-  -DLLVM_LIBC_FULL_BUILD=OFF \
-  -DLIBC_ENABLE_COVERAGE=ON
+rm -f build-cov/libc_cov_*.profraw libc_cov_*.profraw profraw_list.txt libc_full.profdata
 ```
 
-#### Option B: Full-Build Mode
+### 2. Configure Full-Build Coverage with Clang 24
+
+Configures CMake to build LLVM-libc with code coverage enabled using Clang 24
+and LLD:
+
 ```bash
 cmake -G Ninja -S runtimes -B build-cov \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_C_COMPILER="$PWD/build-clang/bin/clang" \
+  -DCMAKE_CXX_COMPILER="$PWD/build-clang/bin/clang++" \
   -DLLVM_USE_LINKER=lld \
   -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_RUNTIMES="libc" \
@@ -163,43 +160,42 @@ cmake -G Ninja -S runtimes -B build-cov \
   -DLIBC_ENABLE_COVERAGE=ON
 ```
 
-### 2. Build and Execute Tests
+### 3. Export Environment Variables
 
-Compiles and executes test executables in parallel. Select the test target
-corresponding to your build mode:
-
-* **Overlay Mode (`LLVM_LIBC_FULL_BUILD=OFF`):** Execute `libc-unit-tests`.
-* **Full-Build Mode (`LLVM_LIBC_FULL_BUILD=ON`):** Execute
-  `libc-hermetic-tests`.
+Exports the profile output pattern and Clang 24 tool paths:
 
 ```bash
 export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+export LLVM_PROFDATA="$PWD/build-clang/bin/llvm-profdata"
+export LLVM_COV="$PWD/build-clang/bin/llvm-cov"
+```
 
-# Option A: Run unit tests (overlay mode)
-ninja -k 0 -C build-cov libc-unit-tests
+### 4. Build and Execute Hermetic Tests
 
-# Option B: Run hermetic tests (full-build mode)
+Compiles and executes the full hermetic test suite:
+
+```bash
 ninja -k 0 -C build-cov libc-hermetic-tests
 ```
 
 :::{note}
 The `-k 0` flag ensures Ninja continues executing all remaining test targets
 even if an individual edge-case test encounters an error. To only compile test
-binaries without immediately executing them, use
-`ninja -C build-cov libc-unit-tests-build` (or `libc-hermetic-tests-build`).
+binaries without executing them, use
+`ninja -C build-cov libc-hermetic-tests-build`.
 :::
 
-### 3. Merge Profile Counters
+### 5. Merge Profile Counters
 
 Scans the build tree for all generated `.profraw` files and indexes them into a
 unified, sparse `.profdata` archive using `$LLVM_PROFDATA`:
 
 ```bash
-find build-cov/ -name "libc_cov_*.profraw" > profraw_list.txt
+find build-cov -name "libc_cov_*.profraw" > profraw_list.txt
 "$LLVM_PROFDATA" merge -sparse -f profraw_list.txt -o libc_full.profdata
 ```
 
-### 4. Generate Coverage Reports
+### 6. Generate Coverage Reports
 
 Collects all compiled test binary paths and invokes `$LLVM_COV` to correlate
 recorded profile counters against the libc source tree:
@@ -215,6 +211,7 @@ done
 Reports can be generated in different formats:
 
 #### Option 1: Terminal Summary Report
+
 Prints an aggregated terminal summary showing line, region, and branch coverage
 percentages for each file:
 
@@ -236,6 +233,7 @@ To restrict the terminal report to a specific source file:
 ```
 
 #### Option 2: Interactive HTML Dashboard
+
 Generates an interactive HTML dashboard containing sortable directory metrics
 and syntax-highlighted source views:
 
@@ -262,29 +260,23 @@ as `if (A && B)`). It verifies that each individual sub-condition evaluates to
 both true and false and independently affects the outcome of the enclosing
 decision.
 
-### 1. CMake Configuration
+### 1. Clean Prior Profile Artifacts
 
-Configures CMake with `-DLIBC_ENABLE_COVERAGE_MCDC=ON` alongside profiling
-flags, enabling the compiler frontend to generate boolean condition bitmaps for
-compound decisions:
+Removes previous MC/DC profile counters and profile data:
 
-#### Option A: Overlay Mode (Default)
 ```bash
-cmake -G Ninja -S runtimes -B build-cov-mcdc \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DLLVM_ENABLE_RUNTIMES="libc" \
-  -DLLVM_LIBC_FULL_BUILD=OFF \
-  -DLIBC_ENABLE_COVERAGE=ON \
-  -DLIBC_ENABLE_COVERAGE_MCDC=ON
+rm -f build-cov-mcdc/libc_cov_*.profraw libc_cov_*.profraw profraw_list.txt libc_mcdc.profdata
 ```
 
-#### Option B: Full-Build Mode
+### 2. Configure Full-Build Coverage with MC/DC using Clang 24
+
+Configures CMake with `-DLIBC_ENABLE_COVERAGE_MCDC=ON` alongside profiling
+flags using Clang 24 and LLD:
+
 ```bash
 cmake -G Ninja -S runtimes -B build-cov-mcdc \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_C_COMPILER="$PWD/build-clang/bin/clang" \
+  -DCMAKE_CXX_COMPILER="$PWD/build-clang/bin/clang++" \
   -DLLVM_USE_LINKER=lld \
   -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_RUNTIMES="libc" \
@@ -293,36 +285,36 @@ cmake -G Ninja -S runtimes -B build-cov-mcdc \
   -DLIBC_ENABLE_COVERAGE_MCDC=ON
 ```
 
-### 2. Build and Execute Tests
+### 3. Export Environment Variables
 
-Compiles and executes test executables in parallel with MC/DC instrumentation
-enabled. Select the test target corresponding to your build mode:
-
-* **Overlay Mode (`LLVM_LIBC_FULL_BUILD=OFF`):** Execute `libc-unit-tests`.
-* **Full-Build Mode (`LLVM_LIBC_FULL_BUILD=ON`):** Execute
-  `libc-hermetic-tests`.
+Exports the profile output pattern and Clang 24 tool paths:
 
 ```bash
 export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+export LLVM_PROFDATA="$PWD/build-clang/bin/llvm-profdata"
+export LLVM_COV="$PWD/build-clang/bin/llvm-cov"
+```
 
-# Option A: Run unit tests (overlay mode)
-ninja -k 0 -C build-cov-mcdc libc-unit-tests
+### 4. Build and Execute Hermetic Tests
 
-# Option B: Run hermetic tests (full-build mode)
+Compiles and executes test executables in parallel with MC/DC instrumentation
+enabled:
+
+```bash
 ninja -k 0 -C build-cov-mcdc libc-hermetic-tests
 ```
 
-### 3. Merge Profiles
+### 5. Merge Profile Counters
 
 Indexes and merges all MC/DC `.profraw` files into a unified
 `libc_mcdc.profdata` archive for report generation:
 
 ```bash
-find build-cov-mcdc/ -name "libc_cov_*.profraw" > profraw_list.txt
+find build-cov-mcdc -name "libc_cov_*.profraw" > profraw_list.txt
 "$LLVM_PROFDATA" merge -sparse -f profraw_list.txt -o libc_mcdc.profdata
 ```
 
-### 4. Generate Reports
+### 6. Generate MC/DC Coverage Reports
 
 Maps MC/DC bitmap records to source AST decisions and evaluates condition
 independence pairs:
@@ -338,6 +330,7 @@ done
 Reports can be generated in two formats depending on your needs:
 
 #### Option 1: Terminal Summary Report
+
 Displays the terminal coverage summary including MC/DC Condition and Missed
 Condition percentages:
 
@@ -351,6 +344,7 @@ Condition percentages:
 ```
 
 #### Option 2: Interactive HTML Dashboard
+
 Produces an HTML report with expandable MC/DC decision truth tables and test
 vector coverage breakdowns:
 
@@ -375,7 +369,7 @@ xdg-open coverage_mcdc_html/index.html
 ## Running Coverage for a Single Test
 
 When developing or modifying a specific function, coverage can be collected for
-a single test without building and executing the entire test suite.
+a single hermetic test without building and executing the entire test suite.
 
 The commands below use `libc.test.src.ctype.isalpha_test` (which tests
 `libc/src/ctype/isalpha.cpp`) as an example. You can test any other entrypoint
@@ -385,7 +379,15 @@ by substituting the target name and source file path:
 * **Source path pattern:** `libc/<path_to_source>/<source_file>.cpp`
   (e.g. `libc/src/string/strlen.cpp`)
 
-### 1. Build and Execute the Targeted Test
+### 1. Clean Prior Profile Artifacts
+
+Removes previously generated raw profile counters:
+
+```bash
+rm -f libc_cov_*.profraw profraw_list.txt libc_single.profdata
+```
+
+### 2. Build and Execute the Targeted Test
 
 Compiles and runs only the specified test binary, immediately writing execution
 profile counters to disk upon completion:
@@ -393,17 +395,16 @@ profile counters to disk upon completion:
 ```bash
 export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
 
-# For a standard coverage build
+# Standard coverage build
 ninja -C build-cov libc.test.src.ctype.isalpha_test
 
-# For an MC/DC build
+# MC/DC coverage build
 ninja -C build-cov-mcdc libc.test.src.ctype.isalpha_test
 ```
 
-### 2. Merge the Profile
+### 3. Merge the Profile
 
-Merges the single test's raw profile into an indexed database for targeted
-inspection (searching whichever build directory was compiled):
+Merges the single test's raw profile into an indexed database:
 
 ```bash
 find build-cov/ build-cov-mcdc/ \
@@ -411,12 +412,10 @@ find build-cov/ build-cov-mcdc/ \
 "$LLVM_PROFDATA" merge -sparse -f profraw_list.txt -o libc_single.profdata
 ```
 
-### 3. View the Terminal Report
-
-Reports can be viewed as an overall file summary or an annotated line-by-line
-breakdown:
+### 4. View Coverage Reports
 
 #### Option 1: Summary Table Report
+
 ```bash
 BIN_DIR="build-cov/libc/test/src/ctype"
 "$LLVM_COV" report \
@@ -426,6 +425,7 @@ BIN_DIR="build-cov/libc/test/src/ctype"
 ```
 
 #### Option 2: Line-by-Line & Truth Table View
+
 ```bash
 BIN_DIR="build-cov-mcdc/libc/test/src/ctype"
 "$LLVM_COV" show \
