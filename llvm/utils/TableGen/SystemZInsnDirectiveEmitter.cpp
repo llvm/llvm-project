@@ -35,52 +35,28 @@ static StringRef getFormatName(const Record &Def) {
   return AsmString.take_until([](char C) { return C == ','; });
 }
 
-static StringRef getMatchClassKind(const Record &Def, const Init *Arg,
-                                   unsigned OperandIndex) {
-  static const StringMap<StringRef> KindMap = {
-      {"AnyReg", "MCK_AnyReg"},
-      {"VR128", "MCK_VR128"},
-      {"brtarget12", "MCK_PCRel12"},
-      {"brtarget12bpp", "MCK_PCRel12"},
-      {"brtarget16", "MCK_PCRel16"},
-      {"brtarget16bpp", "MCK_PCRel16"},
-      {"brtarget24bpp", "MCK_PCRel24"},
-      {"brtarget32", "MCK_PCRel32"},
-      {"uimm32", "MCK_U32Imm"},
-      {"imm32zx4", "MCK_U4Imm"},
-      {"imm32zx8", "MCK_U8Imm"},
-      {"imm32sx8", "MCK_S8Imm"},
-      {"imm32xx8", "MCK_X8Imm"},
-      {"imm32zx12", "MCK_U12Imm"},
-      {"imm32zx16", "MCK_U16Imm"},
-      {"imm32sx16", "MCK_S16Imm"},
-      {"imm32xx16", "MCK_X16Imm"},
-      {"imm64zx16", "MCK_U16Imm"},
-      {"imm64zx32", "MCK_U32Imm"},
-      {"imm64xx32", "MCK_X32Imm"},
-      {"imm64zx48", "MCK_U48Imm"},
-      {"bdxaddr12only", "MCK_BDXAddr64Disp12"},
-      {"bdxaddr20only", "MCK_BDXAddr64Disp20"},
-      {"bdaddr12only", "MCK_BDAddr64Disp12"},
-      {"bdaddr20only", "MCK_BDAddr64Disp20"},
-      {"bdvaddr12only", "MCK_BDVAddr64Disp12"},
-      {"bdladdr12onlylen4", "MCK_BDLAddr64Disp12Len4"},
-      {"bdladdr12onlylen8", "MCK_BDLAddr64Disp12Len8"},
-      {"bdraddr12only", "MCK_BDRAddr64Disp12"}};
+static std::string getMatchClassKind(const Record &Def, const Init *Arg,
+                                     unsigned OperandIndex) {
 
-  StringRef ArgText;
+  // Obtain record of operand.
+  const Record *OpRec;
   if (const DefInit *DefOp = dyn_cast<DefInit>(Arg))
-    ArgText = DefOp->getDef()->getName();
-  if (const DagInit *DagOp = dyn_cast<DagInit>(Arg))
-    ArgText = DagOp->getOperatorAsDef(Def.getLoc())->getName();
+    OpRec = DefOp->getDef();
+  else if (const DagInit *DagOp = dyn_cast<DagInit>(Arg))
+    OpRec = DagOp->getOperatorAsDef(Def.getLoc());
+  else
+    PrintFatalError(&Def, "Unexpected Init Type (neither def nor dag) in .insn "
+                          "directive operand");
 
-  // Check registered mappings
-  auto It = KindMap.find(ArgText);
-  if (It != KindMap.end())
-    return It->second;
+  // Get name of ParserMatchClass associated with operand.
+  StringRef MC = OpRec->getValueAsDef("ParserMatchClass")->getName();
 
-  PrintFatalError(&Def, "unsupported operand kind in .insn directive operand " +
-                            Twine(OperandIndex) + ": " + ArgText);
+  // Drop AsmOperandSuffix if present.
+  if (MC.ends_with("AsmOperand"))
+    MC = MC.drop_back(10);
+
+  // Prepend MCK_ and return.
+  return "MCK_" + std::string(MC);
 }
 
 static InsnMatchEntry buildInsnMatchEntry(const Record &Def) {
@@ -97,7 +73,7 @@ static InsnMatchEntry buildInsnMatchEntry(const Record &Def) {
 
   for (unsigned I = 0; I < InOperands->getNumArgs(); ++I)
     Entry.OperandKinds.push_back(
-        getMatchClassKind(Def, InOperands->getArg(I), I).str());
+        getMatchClassKind(Def, InOperands->getArg(I), I));
 
   return Entry;
 }
