@@ -367,8 +367,8 @@ class RVPPairShift_ri<bits<3> f, bit direction, string opcodestr,
 }
 
 class RVPPairShiftW_ri<bits<3> f, bit direction, string opcodestr,
-                       bit DefVXSAT = 0>
-    : RVPPairShift_ri<f, direction, opcodestr, uimm5, DefVXSAT> {
+                       Operand ImmType = uimm5, bit DefVXSAT = 0>
+    : RVPPairShift_ri<f, direction, opcodestr, ImmType, DefVXSAT> {
   bits<5> shamt;
 
   let Inst{26-25} = 0b01;
@@ -376,8 +376,8 @@ class RVPPairShiftW_ri<bits<3> f, bit direction, string opcodestr,
 }
 
 class RVPPairShiftH_ri<bits<3> f, bit direction, string opcodestr,
-                       bit DefVXSAT = 0>
-    : RVPPairShift_ri<f, direction, opcodestr, uimm4, DefVXSAT> {
+                       Operand ImmType = uimm4, bit DefVXSAT = 0>
+    : RVPPairShift_ri<f, direction, opcodestr, ImmType, DefVXSAT> {
   bits<4> shamt;
 
   let Inst{26-24} = 0b001;
@@ -1457,8 +1457,10 @@ let append Predicates = [IsRV32] in {
   def PSRARI_DH    : RVPPairShiftH_ri<0b101, 0b1, "psrari.dh">;
   def PSRARI_DW    : RVPPairShiftW_ri<0b101, 0b1, "psrari.dw">;
 
-  def PSATI_DH     : RVPPairShiftH_ri<0b110, 0b1, "psati.dh", DefVXSAT=1>;
-  def PSATI_DW     : RVPPairShiftW_ri<0b110, 0b1, "psati.dw", DefVXSAT=1>;
+  def PSATI_DH     : RVPPairShiftH_ri<0b110, 0b1, "psati.dh", uimm4_plus1,
+                                      DefVXSAT=1>;
+  def PSATI_DW     : RVPPairShiftW_ri<0b110, 0b1, "psati.dw", uimm5_plus1,
+                                      DefVXSAT=1>;
 
   def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, 0b1, "psrl.dhs">;
   def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, 0b1, "psrl.dws">;
