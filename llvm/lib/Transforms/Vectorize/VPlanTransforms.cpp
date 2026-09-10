@@ -496,12 +496,16 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     // If only one of the two is known, the higher one is unknown, so the
     // result must be unknown too.
     VPBranchOnMaskRecipe *Guard2 = Region2->getEntryBranchOnMask();
-    std::optional<BlockFrequency> Freq1 =
+    std::optional<VPExecutionFrequency> Freq1 =
         Region1->getEntryBranchOnMask()->getExecutionFrequency();
-    std::optional<BlockFrequency> Freq2 = Guard2->getExecutionFrequency();
+    std::optional<VPExecutionFrequency> Freq2 = Guard2->getExecutionFrequency();
     if (Freq1 && Freq2) {
-      if (*Freq2 < *Freq1)
+      if (Freq2->Freq < Freq1->Freq) {
+        // Freq1's frequency is taken, but it is only as trustworthy as the
+        // less trustworthy of the two.
+        Freq1.emplace(Freq1->Freq, Freq1->IsEstimated || Freq2->IsEstimated);
         Guard2->setExecutionFrequency(Freq1, Plan.getContext());
+      }
     } else if (Freq2) {
       Guard2->clearExecutionFrequency();
     }
