@@ -217,11 +217,20 @@ void OmpStructureChecker::EndPendingLoopDirectiveScope() {
   CHECK(!pendingLoopDirectiveScopeStarts_.empty());
   std::size_t firstDirectiveGroup{pendingLoopDirectiveScopeStarts_.back()};
   pendingLoopDirectiveScopeStarts_.pop_back();
+  CHECK(firstDirectiveGroup <= pendingLoopDirectiveGroups_.size());
   if (firstDirectiveGroup < pendingLoopDirectiveGroups_.size()) {
     // Diagnose directives that were recorded in this scope but not consumed
     // by one of its executable constructs, preserving directives from an
     // enclosing scope.
     CheckPendingLoopDirectivesWithoutLoop(firstDirectiveGroup);
+  }
+}
+
+void OmpStructureChecker::UpdatePendingLoopDirectiveScopeStarts() {
+  // Removing a suffix can consume groups that preceded an active scope.
+  // Rebase its boundary so newly added groups still belong to that scope.
+  for (std::size_t &start : pendingLoopDirectiveScopeStarts_) {
+    start = std::min(start, pendingLoopDirectiveGroups_.size());
   }
 }
 
@@ -275,6 +284,7 @@ void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
   // nested one such as an interface body does not reset them.
   if (partStack_.empty()) {
     pendingLoopDirectiveGroups_.clear();
+    UpdatePendingLoopDirectiveScopeStarts();
   }
   partStack_.push_back(PartKind::SpecificationPart);
 }

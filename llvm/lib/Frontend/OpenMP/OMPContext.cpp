@@ -292,6 +292,22 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
       // TODO: Verify SIMD
     }
 
+    // A complete ordered match can have several embeddings in the context.
+    // Match backwards to choose the highest-valued one for scoring. Keep the
+    // forward scan's partial matches for the match_any extension.
+    if (ConstructMatches &&
+        ConstructMatches->size() == VMI.ConstructTraits.size()) {
+      ConstructIdx = NoConstructTraits;
+      for (unsigned I = VMI.ConstructTraits.size(); I > 0; --I) {
+        TraitProperty Property = VMI.ConstructTraits[I - 1];
+        while (ConstructIdx > 0 &&
+               Ctx.ConstructTraits[ConstructIdx - 1] != Property)
+          --ConstructIdx;
+        assert(ConstructIdx > 0 && "Previously matched construct not found!");
+        (*ConstructMatches)[I - 1] = --ConstructIdx;
+      }
+    }
+
     if (MK == MK_ALL)
       assert(
           isSubset<TraitProperty>(VMI.ConstructTraits, Ctx.ConstructTraits) &&
@@ -349,7 +365,9 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
       // TODO: Handling separately.
       break;
     case TraitSet::invalid:
-      llvm_unreachable("Unknown trait set is not to be used!");
+      // An unknown property can be applicable under match_any or match_none,
+      // but contributes no score of its own.
+      continue;
     }
 
     // device={kind(any)} is "as if" no kind selector was specified.

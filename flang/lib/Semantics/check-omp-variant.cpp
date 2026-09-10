@@ -791,8 +791,6 @@ OmpStructureChecker::GetUniqueEffectiveDirectivePaths(
     // matches after a failure for match_any scoring, as well as successful
     // prefixes for matching after inner directives are appended.
     std::vector<unsigned> signature;
-    signature.reserve(
-        1 + 2 * contextTraits.size() * metadirectiveConstructSelectors_.size());
     signature.push_back(contextTraits.size());
     for (const ConstructTraitSequence &selector :
         metadirectiveConstructSelectors_) {
@@ -814,6 +812,24 @@ OmpStructureChecker::GetUniqueEffectiveDirectivePaths(
         } else {
           // Reserve zero for an unmatched property.
           signature.push_back(++contextIndex);
+        }
+      }
+
+      // Scoring uses the highest-valued complete ordered match. Retain that
+      // match for every selector prefix, since appended inner constructs can
+      // complete a selector that does not yet match the current context.
+      for (std::size_t prefixSize{1}; prefixSize <= selector.size();
+          ++prefixSize) {
+        contextIndex = contextTraits.size();
+        for (std::size_t i{prefixSize}; i > 0; --i) {
+          while (contextIndex > 0 &&
+              contextTraits[contextIndex - 1] != selector[i - 1]) {
+            --contextIndex;
+          }
+          signature.push_back(contextIndex);
+          if (contextIndex > 0) {
+            --contextIndex;
+          }
         }
       }
     }
@@ -1069,6 +1085,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   // their reachable directives against it.
   std::vector<PendingLoopDirectiveGroup> pending;
   pending.swap(pendingLoopDirectiveGroups_);
+  UpdatePendingLoopDirectiveScopeStarts();
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
@@ -1187,6 +1204,7 @@ void OmpStructureChecker::CheckPendingLoopDirectivesWithoutLoop(
     }
   }
   pendingLoopDirectiveGroups_.erase(first, pendingLoopDirectiveGroups_.end());
+  UpdatePendingLoopDirectiveScopeStarts();
 }
 
 static const parser::traits::OmpContextSelectorSpecification *

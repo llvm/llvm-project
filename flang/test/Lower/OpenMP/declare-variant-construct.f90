@@ -61,6 +61,26 @@ contains
   subroutine vsub_do_simd
   end subroutine vsub_do_simd
 
+  subroutine base_repeated
+    !$omp declare variant (vsub_lo) &
+    !$omp& match(user={condition(score(1): .true.)})
+    !$omp declare variant (vsub_par) match(construct={parallel})
+  end subroutine base_repeated
+
+  ! The inner PARALLEL raises the construct score above the user score.
+  ! CHECK-LABEL: func.func @_QMmPtest_repeated_parallel(
+  ! CHECK: omp.parallel
+  ! CHECK: omp.parallel
+  ! CHECK-NOT: fir.call @_QMmPvsub_lo
+  ! CHECK: fir.call @_QMmPvsub_par()
+  subroutine test_repeated_parallel
+    !$omp parallel
+      !$omp parallel
+        call base_repeated()
+      !$omp end parallel
+    !$omp end parallel
+  end subroutine test_repeated_parallel
+
   ! The combined directive selector decomposes to {target, teams}; it matches
   ! only when both constructs enclose the call.
 
