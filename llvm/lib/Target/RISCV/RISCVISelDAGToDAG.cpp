@@ -148,12 +148,6 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
       // selectNegImm. Skip INT64_MIN too, whose negation is itself.
       if (isInt<32>(Imm) || Imm == INT64_MIN)
         break;
-      // dyn_cast<ConstantSDNode> also matches TargetConstant, which is encoded
-      // into the instruction rather than materialized. No TargetConstant is
-      // this wide (the largest are intrinsic IDs, which fit in 32 bits), so the
-      // reasoning below about materializing/reusing the constant is sound.
-      assert(N1C->getOpcode() == ISD::Constant &&
-             "Unexpected wide TargetConstant");
       // A constant is anchored if it has a user other than an ADD, i.e. it is
       // materialized regardless of this fold. N1C is the (unique) node for Imm,
       // so the positive side needs no search.
@@ -179,6 +173,12 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
       // Reuse is only free if -Imm is already in the DAG.
       if (!NegC)
         break;
+      // dyn_cast<ConstantSDNode> also matches TargetConstant, which is encoded
+      // into the instruction rather than materialized, so reusing it would not
+      // remove a materialization. No TargetConstant is this wide (the largest
+      // are intrinsic IDs, which fit in 32 bits), so assert it is a Constant.
+      assert(NegC->getOpcode() == ISD::Constant &&
+             "Unexpected wide TargetConstant");
       // Pick which of Imm/-Imm should be the surviving constant, so exactly
       // one of the pair is materialized and any ADDs of the other reuse it:
       //  - if -Imm is materialized anyway, reuse it (rewrite to SUB);
