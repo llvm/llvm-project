@@ -163,9 +163,12 @@ done:
 /// whether we should emit a diagnostic for \c K and \c DeclVersion in
 /// the context of \c Ctx. For example, we should emit an unavailable diagnostic
 /// in a deprecated context, but not the other way around.
-static bool ShouldDiagnoseAvailabilityInContext(
-    Sema &S, AvailabilityResult K, VersionTuple DeclVersion,
-    const IdentifierInfo *DeclEnv, Decl *Ctx, const NamedDecl *OffendingDecl) {
+static bool ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
+                                                VersionTuple DeclVersion,
+                                                const IdentifierInfo *DeclEnv,
+                                                Decl *Ctx,
+                                                const NamedDecl *OffendingDecl,
+                                                bool InAttrArg) {
   assert(K != AR_Available && "Expected an unavailable declaration here!");
 
   // If this was defined using CF_OPTIONS, etc. then ignore the diagnostic.
@@ -210,7 +213,7 @@ static bool ShouldDiagnoseAvailabilityInContext(
             AA->getEffectiveEnvironment() == DeclEnv)
           return true;
     } else if (K == AR_Deprecated) {
-      if (C->isDeprecated())
+      if (!InAttrArg && C->isDeprecated())
         return true;
       // Don't emit deprecated warnings when defining special member functions.
       if (const auto *FD = dyn_cast<FunctionDecl>(C); FD && FD->isDefaulted())
@@ -227,7 +230,7 @@ static bool ShouldDiagnoseAvailabilityInContext(
       }
     }
 
-    if (C->isUnavailable())
+    if (!InAttrArg && C->isUnavailable())
       return true;
     return false;
   };
@@ -408,14 +411,14 @@ createAttributeInsertion(const NamedDecl *D, const SourceManager &SM,
 /// may not be the same as ReferringDecl, i.e. if an EnumDecl is annotated and
 /// we refer to a member EnumConstantDecl, ReferringDecl is the EnumConstantDecl
 /// and OffendingDecl is the EnumDecl.
-static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
-                                      Decl *Ctx, const NamedDecl *ReferringDecl,
+static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K, Decl *Ctx,
+                                      const NamedDecl *ReferringDecl,
                                       const NamedDecl *OffendingDecl,
                                       StringRef Message,
                                       ArrayRef<SourceLocation> Locs,
                                       const ObjCInterfaceDecl *UnknownObjCClass,
                                       const ObjCPropertyDecl *ObjCProperty,
-                                      bool ObjCPropertyAccess) {
+                                      bool ObjCPropertyAccess, bool InAttrArg) {
   // Diagnostics for deprecated or unavailable.
   unsigned diag, diag_message, diag_fwdclass_message;
   unsigned diag_available_here = diag::note_availability_specified_here;
@@ -436,7 +439,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   }
 
   if (!ShouldDiagnoseAvailabilityInContext(S, K, DeclVersion, IIEnv, Ctx,
-                                           OffendingDecl))
+                                           OffendingDecl, InAttrArg))
     return;
 
   SourceLocation Loc = Locs.front();
@@ -712,7 +715,7 @@ void Sema::handleDelayedAvailabilityCheck(DelayedDiagnostic &DD, Decl *Ctx) {
       *this, DD.getAvailabilityResult(), Ctx, DD.getAvailabilityReferringDecl(),
       DD.getAvailabilityOffendingDecl(), DD.getAvailabilityMessage(),
       DD.getAvailabilitySelectorLocs(), DD.getUnknownObjCClass(),
-      DD.getObjCProperty(), false);
+      DD.getObjCProperty(), false, DD.getAvailabilityInAttrArg());
 }
 
 static void EmitAvailabilityWarning(Sema &S, AvailabilityResult AR,
@@ -723,19 +726,19 @@ static void EmitAvailabilityWarning(Sema &S, AvailabilityResult AR,
                                     const ObjCInterfaceDecl *UnknownObjCClass,
                                     const ObjCPropertyDecl *ObjCProperty,
                                     bool ObjCPropertyAccess) {
+  bool InAttrArg = S.isInsideAttrContext();
   // Delay if we're currently parsing a declaration.
   if (S.DelayedDiagnostics.shouldDelayDiagnostics()) {
-    S.DelayedDiagnostics.add(
-        DelayedDiagnostic::makeAvailability(
-            AR, Locs, ReferringDecl, OffendingDecl, UnknownObjCClass,
-            ObjCProperty, Message, ObjCPropertyAccess));
+    S.DelayedDiagnostics.add(DelayedDiagnostic::makeAvailability(
+        AR, Locs, ReferringDecl, OffendingDecl, UnknownObjCClass, ObjCProperty,
+        Message, ObjCPropertyAccess, InAttrArg));
     return;
   }
 
   Decl *Ctx = cast<Decl>(S.getCurLexicalContext());
-  DoEmitAvailabilityWarning(S, AR, Ctx, ReferringDecl, OffendingDecl,
-                            Message, Locs, UnknownObjCClass, ObjCProperty,
-                            ObjCPropertyAccess);
+  DoEmitAvailabilityWarning(S, AR, Ctx, ReferringDecl, OffendingDecl, Message,
+                            Locs, UnknownObjCClass, ObjCProperty,
+                            ObjCPropertyAccess, InAttrArg);
 }
 
 namespace {
@@ -905,7 +908,8 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     // emit a diagnostic.
     if (!ShouldDiagnoseAvailabilityInContext(SemaRef, Result, Introduced,
                                              AA->getEffectiveEnvironment(), Ctx,
-                                             OffendingDecl))
+                                             OffendingDecl,
+                                             /*InAttrArg=*/false))
       return;
 
     const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
