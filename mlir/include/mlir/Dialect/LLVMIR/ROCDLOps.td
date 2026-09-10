@@ -322,6 +322,22 @@ def ROCDL_SWaitcntOp : ROCDL_ConcreteNonMemIntrOp<"s.waitcnt", [], 0, [0], ["bit
   }];
 }
 
+def ROCDL_BufferInvOp :
+  ROCDL_ConcreteNonMemIntrOp<"buffer.inv", [], 0, [0], ["cpol"]>,
+  Arguments<(ins ROCDL_BufferInvCachePolicyAttr:$cpol)> {
+  let summary = "Invalidate vector caches";
+  let description = [{
+    Issues `buffer_inv` with the selected `sc0` and `sc1` cache-policy flags.
+    The flags may be combined; `none` selects neither.
+
+    Example:
+    ```mlir
+    rocdl.buffer.inv sc0|sc1
+    ```
+  }];
+  let assemblyFormat = "enum($cpol) attr-dict";
+}
+
 def ROCDL_SSleepOp : ROCDL_ConcreteNonMemIntrOp<"s.sleep", [], 0, [0], ["count"]>,
   Arguments<(ins I32Attr:$count)> {
   let assemblyFormat = "attr-dict $count";

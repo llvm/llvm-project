@@ -208,6 +208,16 @@ def ROCDL_Gfx942CachePolicy : ROCDL_I32BitEnum<"Gfx942CachePolicy",
   let printBitEnumQuoted = 0;
 }
 
+def ROCDL_BufferInvCachePolicy : ROCDL_I32BitEnum<"BufferInvCachePolicy",
+    "buffer invalidate cache policy bits",
+    [
+      ROCDL_Gfx942CachePolicyNone,
+      ROCDL_Gfx942CachePolicySC0,
+      ROCDL_Gfx942CachePolicySC1
+    ]> {
+  let printBitEnumQuoted = 0;
+}
+
 def ROCDL_Gfx12CachePolicyNone : I32BitEnumCaseNone<"none">;
 def ROCDL_Gfx12CachePolicyNT : I32BitEnumCaseBit<"nt", 0>;
 def ROCDL_Gfx12CachePolicyHT : I32BitEnumCaseBit<"ht", 1>;
