@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMPasses
   CodeGenPassBuilder.cpp
+  InstructionChangePrinter.cpp
   PassBuilder.cpp
   PassBuilderBindings.cpp
   PassBuilderPipelines.cpp

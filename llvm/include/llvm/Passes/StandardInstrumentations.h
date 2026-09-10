@@ -32,6 +32,8 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
+#include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -213,7 +215,8 @@ public:
 // 8.  To compare two IR representations (of type \p T).
 template <typename IRUnitT> class LLVM_ABI ChangeReporter {
 protected:
-  ChangeReporter(bool RunInVerboseMode) : VerboseMode(RunInVerboseMode) {}
+  ChangeReporter(bool RunInVerboseMode, bool ReuseAfterAsBefore = false)
+      : ReuseAfterAsBefore(ReuseAfterAsBefore), VerboseMode(RunInVerboseMode) {}
 
 public:
   virtual ~ChangeReporter();
@@ -255,6 +258,14 @@ protected:
 
   // Stack of IRs before passes and whether they matched the filters.
   std::vector<BeforeIR> BeforeStack;
+  struct SnapshotCache {
+    IRUnitRef IR;
+    IRUnitT Representation;
+  };
+  std::optional<SnapshotCache> CachedSnapshot;
+  // Nested passes may mutate an outer IR unit between its callbacks.
+  unsigned ActivePasses = 0;
+  const bool ReuseAfterAsBefore;
   // Is this the first IR seen?
   bool InitialIR = true;
 
@@ -291,8 +302,7 @@ protected:
 // included in this representation but it is massaged before reporting.
 class LLVM_ABI IRChangedPrinter : public TextChangeReporter<std::string> {
 public:
-  IRChangedPrinter(bool VerboseMode)
-      : TextChangeReporter<std::string>(VerboseMode) {}
+  IRChangedPrinter(bool VerboseMode);
   ~IRChangedPrinter() override;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
@@ -304,6 +314,10 @@ protected:
   void handleAfter(StringRef PassID, std::string &Name,
                    const std::string &Before, const std::string &After,
                    IRUnitRef) override;
+
+private:
+  class InstructionChangeReporter;
+  std::unique_ptr<InstructionChangeReporter> InstructionChanges;
 };
 
 class LLVM_ABI IRChangedTester : public IRChangedPrinter {
