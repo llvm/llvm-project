@@ -711,10 +711,10 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 
     if (MMO->isAtomic()) {
       switch (TL.getExtendForAtomicOps()) {
-      case ISD::NodeType::ZERO_EXTEND:
+      case ISD::ZERO_EXTEND:
         Known = KnownRange.zext(Known.getBitWidth());
         break;
-      case ISD::NodeType::SIGN_EXTEND:
+      case ISD::SIGN_EXTEND:
         Known = KnownRange.sext(Known.getBitWidth());
         break;
       default:
