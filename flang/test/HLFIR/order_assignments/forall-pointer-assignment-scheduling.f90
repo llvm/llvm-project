@@ -80,6 +80,8 @@ subroutine test_need_to_save_lhs_and_rhs(n, a)
  forall(i=1:n) a(a(n+1-i)%p%i)%p => a(modulo(-2*i, n+1))%p
 end subroutine
 ! CHECK: ------------ scheduling forall in _QMforall_pointersPtest_need_to_save_lhs_and_rhs ------------
+! CHECK-NEXT: unknown effect: fir.call @_FortranAReportFatalUserError
+! CHECK-NEXT: unknown effect: fir.call @_FortranAReportFatalUserError
 ! CHECK-NEXT: conflict: R/W
 ! CHECK-NEXT: run 1 save    : forall/region_assign1/rhs
 ! CHECK-NEXT: conflict: R/W
