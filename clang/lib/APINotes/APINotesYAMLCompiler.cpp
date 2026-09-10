@@ -18,7 +18,7 @@
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
@@ -28,6 +28,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 using namespace clang;
@@ -810,22 +811,6 @@ bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
 namespace {
 using namespace api_notes;
 
-static void appendDuplicateKeyPart(llvm::raw_ostream &OS,
-                                   llvm::StringRef Part) {
-  OS << Part.size() << ':' << Part;
-}
-
-static std::string
-getFunctionSelectorDuplicateKey(llvm::StringRef Name,
-                                const FunctionSelector &Selector) {
-  llvm::SmallString<64> Key;
-  llvm::raw_svector_ostream OS(Key);
-  appendDuplicateKeyPart(OS, Name);
-  std::string SelectorText = Selector.format();
-  appendDuplicateKeyPart(OS, SelectorText);
-  return Key.str().str();
-}
-
 class YAMLConverter {
   const Module &M;
   APINotesWriter Writer;
@@ -1222,16 +1207,16 @@ public:
       Writer.addField(TagCtxID, Field.Name, FI, SwiftVersion);
     }
 
-    llvm::StringSet<> KnownMethodSelectors;
+    llvm::DenseSet<std::pair<llvm::StringRef, FunctionSelector>>
+        KnownMethodSelectors;
     for (const auto &CXXMethod : T.Methods) {
       auto WhereSelector = getWhereSelector(CXXMethod, /*AllowObject=*/true);
       if (!WhereSelector)
         continue;
 
       if (WhereSelector->Parameters || WhereSelector->Object) {
-        std::string DuplicateKey =
-            getFunctionSelectorDuplicateKey(CXXMethod.Name, *WhereSelector);
-        if (!KnownMethodSelectors.insert(DuplicateKey).second) {
+        if (!KnownMethodSelectors.insert({CXXMethod.Name, *WhereSelector})
+                 .second) {
           emitError(llvm::Twine("multiple API notes entries for C++ method '") +
                     CXXMethod.Name + "' with " + WhereSelector->format());
           continue;
@@ -1311,16 +1296,16 @@ public:
 
     // Write all global functions.
     llvm::StringSet<> KnownNameOnlyFunctions;
-    llvm::StringSet<> KnownFunctionSelectors;
+    llvm::DenseSet<std::pair<llvm::StringRef, FunctionSelector>>
+        KnownFunctionSelectors;
     for (const auto &Function : TLItems.Functions) {
       auto WhereSelector = getWhereSelector(Function, /*AllowObject=*/false);
       if (!WhereSelector)
         continue;
 
       if (WhereSelector->Parameters) {
-        std::string DuplicateKey =
-            getFunctionSelectorDuplicateKey(Function.Name, *WhereSelector);
-        if (!KnownFunctionSelectors.insert(DuplicateKey).second) {
+        if (!KnownFunctionSelectors.insert({Function.Name, *WhereSelector})
+                 .second) {
           emitError(
               llvm::Twine("multiple API notes entries for global function '") +
               Function.Name + "' with " + WhereSelector->format());
