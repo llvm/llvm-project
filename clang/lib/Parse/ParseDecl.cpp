@@ -4896,6 +4896,54 @@ void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
   OutAttrs.takeAllAppendingFrom(Attrs);
 }
 
+void Parser::CompleteLateParsedTypeAttributes(
+    SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs) {
+  for (LateParsedTypeAttribute *LTA : LateTypeAttrs) {
+    // Read these out before parsing, which destroys the attribute. The type is
+    // null if construction rejected the attribute, in which case the diagnostic
+    // has already been emitted and there is nothing to complete.
+    BoundsAttributedType *BATy = LTA->TypeToComplete;
+    // Rejected during construction (already diagnosed); the cached tokens are
+    // self-contained, so there is nothing to drain — just discard it.
+    if (!BATy) {
+      delete LTA;
+      continue;
+    }
+    // The fields were
+    // attached in ParseStructDeclaration as each declarator was completed; more
+    // than one appears when several declarators share a
+    // declaration-specifier-position attribute.
+    SmallVector<Decl *, 2> Fields(LTA->Decls);
+
+    AttributeFactory AF;
+    ParsedAttributes Attrs(AF);
+    ParseLexedTypeAttribute(*LTA, Attrs);
+    delete LTA;
+
+    // An unparseable argument leaves no attribute behind; already diagnosed.
+    if (Attrs.empty())
+      continue;
+    assert(Attrs.size() == 1);
+
+    Expr *Arg = Attrs[0].getArgAsExpr(0);
+    assert(Arg);
+
+    // No field means the attribute never reached a field declarator (for
+    // instance the type was rejected during construction, which unwraps the
+    // node and leaves it unreferenced), so nothing is left to complete.
+    bool Valid = !Fields.empty();
+    for (Decl *FD : Fields)
+      Valid &= Actions.ActOnLateParsedTypeAttrArgument(
+          BATy, cast<FieldDecl>(FD), Arg);
+
+    if (Valid)
+      Attrs[0].setUsedAsTypeAttr();
+    else
+      Attrs[0].setInvalid();
+  }
+  LateTypeAttrs.clear();
+}
+
 void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {
   // Delegate to the Parser that created this attribute
   Self->ParseLexedTypeAttribute(*this, OutAttrs);

@@ -232,6 +232,16 @@ public:
 /// is replaced with a concrete type (e.g., CountAttributedType).
 struct LateParsedTypeAttribute : public LateParsedAttribute {
 
+  /// The type built for this attribute during type construction, still missing
+  /// the argument that hasn't been parsed yet. Filled in by
+  /// `Parser::ProcessLateParsedTypeAttrCallback` and completed once the
+  /// enclosing scope makes the argument parseable. Null if type construction
+  /// rejected the attribute.
+  ///
+  /// Held as the base class so the parser stays agnostic about which bounds
+  /// attribute this is; Sema dispatches on the concrete kind when completing.
+  BoundsAttributedType *TypeToComplete = nullptr;
+
   explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
                                    SourceLocation Loc)
       : LateParsedAttribute(P, Name, Loc, Kind::Type) {}
@@ -1523,6 +1533,11 @@ private:
 
   void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
                                ParsedAttributes &OutAttrs);
+
+  /// Complete every late-parsed type attribute queued for the record whose body
+  /// just closed. Consumes and clears \p LateTypeAttrs.
+  void CompleteLateParsedTypeAttributes(
+      SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs);
 
   /// Parse cached tokens for a late-parsed attribute and return the parsed
   /// attributes. Shared implementation used by both ParseLexedAttribute and
