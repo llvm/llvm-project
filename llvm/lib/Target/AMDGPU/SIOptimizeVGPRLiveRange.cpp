@@ -173,7 +173,6 @@ public:
     AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -201,23 +200,20 @@ SIOptimizeVGPRLiveRange::getElseTarget(MachineBasicBlock *MBB) const {
 
 bool SIOptimizeVGPRLiveRange::isLiveThrough(
     Register Reg, const MachineBasicBlock *MBB) const {
-  if (LIS) {
-    const LiveInterval &LI = LIS->getInterval(Reg);
-    return LIS->isLiveInToMBB(LI, MBB) && LIS->isLiveOutOfMBB(LI, MBB);
-  }
+  if (!LIS)
+    return LV->getVarInfo(Reg).AliveBlocks.test(MBB->getNumber());
 
-  return LV->getVarInfo(Reg).AliveBlocks.test(MBB->getNumber());
+  const LiveInterval &LI = LIS->getInterval(Reg);
+  return LIS->isLiveInToMBB(LI, MBB) && LIS->isLiveOutOfMBB(LI, MBB);
 }
 
 bool SIOptimizeVGPRLiveRange::isLiveIntoMBB(
     Register Reg, const MachineBasicBlock *MBB) const {
-  if (LIS) {
-    // A PHI operand use is at the end of the predecessor block.
-    const LiveInterval &LI = LIS->getInterval(Reg);
-    return LIS->isLiveInToMBB(LI, MBB);
-  }
+  if (!LIS)
+    return LV->getVarInfo(Reg).isLiveIn(*MBB, Reg, *MRI);
 
-  return LV->getVarInfo(Reg).isLiveIn(*MBB, Reg, *MRI);
+  const LiveInterval &LI = LIS->getInterval(Reg);
+  return LIS->isLiveInToMBB(LI, MBB);
 }
 
 void SIOptimizeVGPRLiveRange::collectElseRegionBlocks(
@@ -713,7 +709,6 @@ SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<LiveIntervalsAnalysis>();
-  PA.preserve<LiveVariablesAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
