@@ -523,6 +523,10 @@ defm F32ToF16BF16ConversionSRInsts : AMDGPUSubtargetFeature<"f32-to-f16bf16-cvt-
   "Has f32 to f16bf16 conversion scale instructions"
 >;
 
+defm FP6BF6ToF16BF16F32ConversionScaleInsts : AMDGPUSubtargetFeature<"fp6bf6-to-f16bf16f32-cvt-scale-insts",
+  "Has fp6bf6 to f16bf16f32 conversion scale instructions"
+>;
+
 defm AshrPkInsts : AMDGPUSubtargetFeature<"ashr-pk-insts",
   "Has Arithmetic Shift Pack instructions"
 >;
@@ -2611,6 +2615,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtSrPkBF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToFP6BF6ConversionScaleInsts,
+   FeatureFP6BF6ToF16BF16F32ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,
    FeatureSWakeupBarrier,
    FeatureClusters,
