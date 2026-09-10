@@ -71,6 +71,10 @@ public:
       file_mode_ = 0;
   }
 
+  static const FileMode APPEND_MODE;
+  static const FileMode READ_MODE;
+  static const FileMode WRITE_MODE;
+
   constexpr bool write_allowed() const {
     return is_write() || is_append() || is_update();
   }
@@ -138,6 +142,10 @@ private:
   // currently opened file)
   Mode file_mode_;
 };
+
+inline constexpr FileMode FileMode::APPEND_MODE("a");
+inline constexpr FileMode FileMode::READ_MODE("r");
+inline constexpr FileMode FileMode::WRITE_MODE("w");
 
 } // namespace LIBC_NAMESPACE_DECL
 
