@@ -9,11 +9,29 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "Protocol/ProtocolRequests.h"
-#include "ProtocolUtils.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/Host/PosixApi.h" // Adds PATH_MAX for windows
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+
+static std::optional<CompileUnit>
+CreateCompileUnit(const lldb::SBCompileUnit &unit) {
+  const lldb::SBFileSpec file_spec = unit.GetFileSpec();
+  if (!file_spec.IsValid())
+    return std::nullopt;
+
+  std::array<char, PATH_MAX> path_buffer{};
+  const uint32_t path_size =
+      file_spec.GetPath(path_buffer.data(), path_buffer.size());
+
+  CompileUnit result;
+  result.id = unit.GetIDInModule();
+  result.compileUnitPath = std::string(path_buffer.data(), path_size);
+  return result;
+}
 
 /// The `compileUnits` request returns the compile units of the module named by
 /// `moduleId`, narrowed to `compileUnitIds` when specified.

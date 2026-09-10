@@ -1045,7 +1045,7 @@ llvm::json::Value toJSON(const ExceptionDetails &);
 
 struct CompileUnit {
   /// Identifier within the module. Not unique across modules.
-  uint32_t id = 0;
+  uint32_t id = LLDB_INVALID_INDEX32;
 
   /// Path of compile unit.
   String compileUnitPath;

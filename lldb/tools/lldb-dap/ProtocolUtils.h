@@ -17,7 +17,6 @@
 #include "Protocol/ProtocolTypes.h"
 
 #include "lldb/API/SBAddress.h"
-#include "lldb/API/SBCompileUnit.h"
 #include "lldb/lldb-types.h"
 
 namespace lldb_dap {
@@ -41,9 +40,6 @@ namespace lldb_dap {
 std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
                                              lldb::SBModule &module,
                                              bool id_only = false);
-
-std::optional<protocol::CompileUnit>
-CreateCompileUnit(const lldb::SBCompileUnit &unit);
 
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
