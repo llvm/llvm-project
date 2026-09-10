@@ -180,22 +180,17 @@ public:
   lookupGlobalVariable(llvm::StringRef Name,
                        std::optional<Context> Ctx = std::nullopt);
 
-  /// Look for information regarding the given global function.
+  /// Look for information regarding the given global function, optionally
+  /// using an exact parameter selector.
   ///
   /// \param Name The name of the global function.
+  /// \param Parameters An exact ordered parameter selector. An empty array
+  /// uses an exact zero-parameter key; std::nullopt uses the name-only key.
   ///
   /// \returns information about the global function, if known.
-  VersionedInfo<GlobalFunctionInfo>
-  lookupGlobalFunction(llvm::StringRef Name,
-                       std::optional<Context> Ctx = std::nullopt);
-
-  /// Look for information regarding the given global function with an exact
-  /// parameter selector. An empty parameter list uses an exact zero-parameter
-  /// key, and a non-empty list uses an exact ordered parameter key.
-  VersionedInfo<GlobalFunctionInfo>
-  lookupGlobalFunction(llvm::StringRef Name,
-                       llvm::ArrayRef<std::string> Parameters,
-                       std::optional<Context> Ctx = std::nullopt);
+  VersionedInfo<GlobalFunctionInfo> lookupGlobalFunction(
+      llvm::StringRef Name, std::optional<Context> Ctx = std::nullopt,
+      std::optional<llvm::ArrayRef<std::string>> Parameters = std::nullopt);
 
   /// Build the selector key for the given global function.
   std::optional<APINotesFunctionSelectorKey>

@@ -2466,17 +2466,13 @@ auto APINotesReader::lookupGlobalVariable(llvm::StringRef Name,
   return {Implementation->SwiftVersion, *Known};
 }
 
-auto APINotesReader::lookupGlobalFunction(llvm::StringRef Name,
-                                          std::optional<Context> Ctx)
-    -> VersionedInfo<GlobalFunctionInfo> {
-  return lookupGlobalFunctionImpl(Name, Ctx, FunctionSelector());
-}
-
 auto APINotesReader::lookupGlobalFunction(
-    llvm::StringRef Name, llvm::ArrayRef<std::string> Parameters,
-    std::optional<Context> Ctx) -> VersionedInfo<GlobalFunctionInfo> {
+    llvm::StringRef Name, std::optional<Context> Ctx,
+    std::optional<llvm::ArrayRef<std::string>> Parameters)
+    -> VersionedInfo<GlobalFunctionInfo> {
   FunctionSelector Selector;
-  Selector.setParameters(Parameters);
+  if (Parameters)
+    Selector.setParameters(*Parameters);
   return lookupGlobalFunctionImpl(Name, Ctx, Selector);
 }
 

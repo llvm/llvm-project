@@ -1210,8 +1210,8 @@ void Sema::ProcessAPINotes(Decl *D) {
             processExactAPINotes<api_notes::GlobalFunctionInfo>(
                 *this, FD, *ParameterSelectorCandidates,
                 [&](ArrayRef<std::string> Parameters) {
-                  return Reader->lookupGlobalFunction(FD->getName(), Parameters,
-                                                      APINotesContext);
+                  return Reader->lookupGlobalFunction(
+                      FD->getName(), APINotesContext, Parameters);
                 });
 
           if (ParameterSelectorCandidates) {

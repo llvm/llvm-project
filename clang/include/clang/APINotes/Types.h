@@ -1028,6 +1028,10 @@ inline bool operator!=(FunctionObjectSelector LHS, FunctionObjectSelector RHS) {
   return !(LHS == RHS);
 }
 
+inline llvm::hash_code hash_value(const FunctionObjectSelector &Selector) {
+  return llvm::hash_combine(Selector.Const, Selector.Volatile, Selector.Ref);
+}
+
 inline std::string FunctionObjectSelector::format() const {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
@@ -1080,6 +1084,16 @@ inline bool operator==(const FunctionSelector &LHS,
 inline bool operator!=(const FunctionSelector &LHS,
                        const FunctionSelector &RHS) {
   return !(LHS == RHS);
+}
+
+inline llvm::hash_code hash_value(const FunctionSelector &Selector) {
+  auto Hash = llvm::hash_combine(static_cast<bool>(Selector.Parameters),
+                                 Selector.Object);
+  if (Selector.Parameters)
+    Hash = llvm::hash_combine(
+        Hash, llvm::hash_combine_range(Selector.Parameters->begin(),
+                                       Selector.Parameters->end()));
+  return Hash;
 }
 
 inline std::string FunctionSelector::format() const {
@@ -1193,6 +1207,18 @@ struct ObjCSelectorRef {
 } // namespace clang
 
 namespace llvm {
+template <> struct DenseMapInfo<clang::api_notes::FunctionSelector> {
+  static unsigned
+  getHashValue(const clang::api_notes::FunctionSelector &Selector) {
+    return hash_value(Selector);
+  }
+
+  static bool isEqual(const clang::api_notes::FunctionSelector &LHS,
+                      const clang::api_notes::FunctionSelector &RHS) {
+    return LHS == RHS;
+  }
+};
+
 template <> struct DenseMapInfo<clang::api_notes::FunctionTableKey> {
   static unsigned getHashValue(const clang::api_notes::FunctionTableKey &Key) {
     return Key.hashValue();
