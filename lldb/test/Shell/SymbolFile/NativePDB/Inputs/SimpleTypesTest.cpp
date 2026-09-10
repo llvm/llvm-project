@@ -2,14 +2,14 @@
 typedef unsigned long ULongArrayTypedef[10];
 ULongArrayTypedef ULongArrayVar;
 
-typedef long double*& RefTypedef;
-long double* LongDoublePtrVar = 0;
+typedef long double *&RefTypedef;
+long double *LongDoublePtrVar = 0;
 RefTypedef RefVar = LongDoublePtrVar;
 
-typedef long long (*FuncPtrTypedef)(int&, unsigned char**, short[], const double, volatile bool);
+typedef long long (*FuncPtrTypedef)(int &, unsigned char **, short[], const double, volatile bool);
 FuncPtrTypedef FuncVar;
 
-typedef char (*VarArgsFuncTypedef)(void*, long, unsigned short, unsigned int, ...);
+typedef char (*VarArgsFuncTypedef)(void *, long, unsigned short, unsigned int, ...);
 VarArgsFuncTypedef VarArgsFuncVar;
 
 typedef float (*VarArgsFuncTypedefA)(...);
@@ -47,6 +47,4 @@ WChar32Typedef WC32Var;
 typedef wchar_t WCharTypedef;
 WCharTypedef WCVar;
 
-int main() {
-  return 0;
-}
+int main() { return 0; }

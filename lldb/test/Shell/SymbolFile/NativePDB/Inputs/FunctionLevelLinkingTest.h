@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef FUNCTION_LEVEL_LINKING_TEST_H
 #define FUNCTION_LEVEL_LINKING_TEST_H
 

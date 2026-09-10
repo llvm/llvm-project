@@ -1,3 +1,4 @@
+// clang-format off
 #include "FunctionLevelLinkingTest.h"
 
 int foo() {

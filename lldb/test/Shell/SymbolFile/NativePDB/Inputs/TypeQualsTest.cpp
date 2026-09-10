@@ -1,3 +1,4 @@
+// clang-format off
 // Rank > 0 array
 typedef volatile int* RankNArray[10][100];
 RankNArray ArrayVar;
