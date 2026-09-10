@@ -728,6 +728,9 @@ public:
   /// Returns true if we have any interleave groups.
   bool hasGroups() const { return !InterleaveGroups.empty(); }
 
+  /// Returns true if \p Stride is allowed in an interleaved group.
+  LLVM_ABI static bool isStrided(int Stride);
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
   /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
@@ -814,9 +817,6 @@ private:
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
       const SymbolicStrideMap &Strides,
       SmallVectorImpl<const SCEVPredicate *> *Predicates);
-
-  /// Returns true if \p Stride is allowed in an interleaved group.
-  LLVM_ABI static bool isStrided(int Stride);
 
   /// Returns true if \p BB is a predicated block.
   bool isPredicated(BasicBlock *BB) const {
