@@ -234,3 +234,25 @@ func.func private @test_alloc_with_multiple_results() -> () {
   memref.dealloc %alloc2 : memref<64xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @allocation_alias_in_successor_block(
+// CHECK:         %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT:    test.buffer_based
+// CHECK-NEXT:    memref.dealloc %[[ALLOC]]
+// CHECK-NEXT:    cf.br ^bb3(%[[ALLOC]] : memref<2xf32>)
+func.func @allocation_alias_in_successor_block(
+    %arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+  cf.cond_br %arg0, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb3(%arg1 : memref<2xf32>)
+^bb2:
+  %alloc = memref.alloc() : memref<2xf32>
+  test.buffer_based in(%arg1 : memref<2xf32>) out(%alloc : memref<2xf32>)
+  memref.dealloc %alloc : memref<2xf32>
+  cf.br ^bb3(%alloc : memref<2xf32>)
+^bb3(%0: memref<2xf32>):
+  test.copy(%0, %arg2) : (memref<2xf32>, memref<2xf32>)
+  return
+}
