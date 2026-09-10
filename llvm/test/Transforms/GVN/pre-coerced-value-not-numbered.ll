@@ -10,7 +10,7 @@
 @g = external global i64
 
 define void @test_coerced_value_not_numbered(i64 noundef %x) {
-; CHECK-LABEL: define void @f(
+; CHECK-LABEL: define void @test_coerced_value_not_numbered(
 ; CHECK-SAME: i64 noundef [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ARR:%.*]] = alloca [256 x i8], align 1
