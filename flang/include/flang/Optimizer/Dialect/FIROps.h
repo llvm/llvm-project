@@ -21,6 +21,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include <variant>
 
 namespace fir {
 
@@ -62,7 +63,26 @@ struct VolatileMemoryResource
 };
 
 class CoordinateIndicesAdaptor;
+class SliceDimsAdaptor;
+class SlicePathAdaptor;
 using IntOrValue = llvm::PointerUnion<mlir::IntegerAttr, mlir::Value>;
+
+class SlicePathElement {
+public:
+  SlicePathElement(mlir::StringAttr value) : value(value) {}
+  SlicePathElement(mlir::Value value) : value(value) {}
+  SlicePathElement(SliceOperandKindAttr value) : value(value) {}
+
+  template <typename T>
+  T dyn_cast() const {
+    if (const auto *result = std::get_if<T>(&value))
+      return *result;
+    return {};
+  }
+
+private:
+  std::variant<mlir::StringAttr, mlir::Value, SliceOperandKindAttr> value;
+};
 
 } // namespace fir
 
@@ -70,6 +90,53 @@ using IntOrValue = llvm::PointerUnion<mlir::IntegerAttr, mlir::Value>;
 #include "flang/Optimizer/Dialect/FIROps.h.inc"
 
 namespace fir {
+class SliceDim {
+public:
+  SliceDim(bool triplet, mlir::ValueRange operands)
+      : triplet(triplet), operands(operands) {}
+
+  bool isTriplet() const { return triplet; }
+  bool isIndex() const { return !triplet; }
+  mlir::ValueRange getOperands() const { return operands; }
+  mlir::Value getIndex() const {
+    assert(isIndex());
+    return operands.front();
+  }
+  mlir::Value getLowerBound() const {
+    assert(isTriplet());
+    return operands[0];
+  }
+  mlir::Value getUpperBound() const {
+    assert(isTriplet());
+    return operands[1];
+  }
+  mlir::Value getStride() const {
+    assert(isTriplet());
+    return operands[2];
+  }
+
+private:
+  bool triplet;
+  mlir::ValueRange operands;
+};
+
+class SliceDimsAdaptor {
+public:
+  using const_iterator = llvm::SmallVector<SliceDim>::const_iterator;
+
+  SliceDimsAdaptor(mlir::ArrayAttr operandMap, mlir::ValueRange operands,
+                   unsigned rank);
+
+  const SliceDim &operator[](size_t index) const { return dims[index]; }
+  size_t size() const { return dims.size(); }
+  bool empty() const { return dims.empty(); }
+  const_iterator begin() const { return dims.begin(); }
+  const_iterator end() const { return dims.end(); }
+
+private:
+  llvm::SmallVector<SliceDim> dims;
+};
+
 class CoordinateIndicesAdaptor {
 public:
   using value_type = IntOrValue;
@@ -148,6 +215,26 @@ public:
 private:
   mlir::DenseI32ArrayAttr fieldIndices;
   mlir::ValueRange values;
+};
+
+/// A logical view of the mixed record-field and integer-value path encoded by
+/// fir.slice.
+class SlicePathAdaptor {
+public:
+  using value_type = SlicePathElement;
+  using const_iterator = llvm::SmallVector<SlicePathElement>::const_iterator;
+
+  SlicePathAdaptor(mlir::ArrayAttr operandMap, mlir::ValueRange operands,
+                   unsigned rank);
+
+  value_type operator[](size_t index) const { return path[index]; }
+  size_t size() const { return path.size(); }
+  bool empty() const { return path.empty(); }
+  const_iterator begin() const { return path.begin(); }
+  const_iterator end() const { return path.end(); }
+
+private:
+  llvm::SmallVector<SlicePathElement> path;
 };
 
 struct LocalitySpecifierOperands {

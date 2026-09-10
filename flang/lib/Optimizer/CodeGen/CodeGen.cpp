@@ -3664,50 +3664,6 @@ private:
   }
 };
 
-/// Convert `fir.field_index`. The conversion depends on whether the size of
-/// the record is static or dynamic.
-struct FieldIndexOpConversion : public fir::FIROpConversion<fir::FieldIndexOp> {
-  using FIROpConversion::FIROpConversion;
-
-  // NB: most field references should be resolved by this point
-  llvm::LogicalResult
-  matchAndRewrite(fir::FieldIndexOp field, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    auto recTy = mlir::cast<fir::RecordType>(field.getOnType());
-    unsigned index = recTy.getFieldIndex(field.getFieldId());
-
-    if (!fir::hasDynamicSize(recTy)) {
-      // Derived type has compile-time constant layout. Return index of the
-      // component type in the parent type (to be used in GEP).
-      rewriter.replaceOp(field, mlir::ValueRange{genConstantOffset(
-                                    field.getLoc(), rewriter, index)});
-      return mlir::success();
-    }
-
-    // Derived type has compile-time constant layout. Call the compiler
-    // generated function to determine the byte offset of the field at runtime.
-    // This returns a non-constant.
-    mlir::FlatSymbolRefAttr symAttr = mlir::SymbolRefAttr::get(
-        field.getContext(), getOffsetMethodName(recTy, field.getFieldId()));
-    mlir::NamedAttribute callAttr = rewriter.getNamedAttr("callee", symAttr);
-    mlir::NamedAttribute fieldAttr = rewriter.getNamedAttr(
-        "field", mlir::IntegerAttr::get(lowerTy().indexType(), index));
-    auto builderAttrs = getLLVMCallBuilderAttributes(
-        rewriter, {callAttr, fieldAttr}, adaptor.getOperands().size());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        field, mlir::TypeRange{lowerTy().offsetType()}, adaptor.getOperands(),
-        builderAttrs.properties, builderAttrs.discardableAttributes);
-    return mlir::success();
-  }
-
-  // Re-Construct the name of the compiler generated method that calculates the
-  // offset
-  inline static std::string getOffsetMethodName(fir::RecordType recTy,
-                                                llvm::StringRef field) {
-    return recTy.getName().str() + "P." + field.str() + ".offset";
-  }
-};
-
 /// Convert `fir.end`
 struct FirEndOpConversion : public fir::FIROpConversion<fir::FirEndOp> {
   using FIROpConversion::FIROpConversion;
@@ -5122,9 +5078,9 @@ void fir::populateFIRToLLVMConversionPatterns(
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       CreateBoxOpConversion, DivcOpConversion, EmboxOpConversion,
       EmboxCharOpConversion, EmboxProcOpConversion, EqvOpConversion,
-      ExtractValueOpConversion, FakeUseOpConversion, FieldIndexOpConversion,
-      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
-      GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
+      ExtractValueOpConversion, FakeUseOpConversion, FirEndOpConversion,
+      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+      InsertOnRangeOpConversion, IsPresentOpConversion,
       LenParamIndexOpConversion, LoadOpConversion, LogicalAndOpConversion,
       LogicalOrOpConversion, MulcOpConversion, NegcOpConversion,
       NeqvOpConversion, NoReassocOpConversion, PrefetchOpConversion,

@@ -14,7 +14,7 @@ func.func @char_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,20>>>, index) -> (index, index, index)
-  %1 = fir.slice %c1, %0#1, %c1_i64 substr %c1_i64, %c7_i64 : (index, index, i64, i64, i64) -> !fir.slice<1>
+  %1 = fir.slice %c1, %0#1, %c1_i64, %c1_i64, %c7_i64 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<substring>]} : (index, index, i64, i64, i64) -> !fir.slice<1>
 
 // Only test the computation of the base address offset computation accounting for the substring
 
@@ -43,8 +43,7 @@ func.func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}
   %c9_i64 = arith.constant 9 : i64
   %c60_i64 = arith.constant 60 : i64
   %c3_i64 = arith.constant 3 : i64
-  %0 = fir.field_index c, !fir.type<t{i:i32,c:!fir.char<1,10>}>
-  %1 = fir.slice %c3_i64, %c60_i64, %c9_i64 path %0 substr %c1_i64, %c7_i64 : (i64, i64, i64, !fir.field, i64, i64) -> !fir.slice<1>
+  %1 = fir.slice %c3_i64, %c60_i64, %c9_i64, %c1_i64, %c7_i64 {operand_map = [#fir.slice_operand<triplet>, "c", #fir.slice_operand<substring>]} : (i64, i64, i64, i64, i64) -> !fir.slice<1>
 
 // Only test the computation of the base address offset computation accounting for the substring of the component
 
@@ -76,7 +75,7 @@ func.func @index_substr(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,20>>>, index) -> (index, index, index)
-  %1 = fir.slice %c1, %0#1, %c1_i64 substr %c1_i64, %c7_index : (index, index, i64, i64, index) -> !fir.slice<1>
+  %1 = fir.slice %c1, %0#1, %c1_i64, %c1_i64, %c7_index {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<substring>]} : (index, index, i64, i64, index) -> !fir.slice<1>
   %2 = fir.rebox %arg0 [%1] : (!fir.box<!fir.array<?x!fir.char<1,20>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   fir.call @bar(%2) : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> ()
   return

@@ -166,16 +166,6 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
   let hasCustomAssemblyFormat = 1;
 }
 
-def fir_FieldType : FIR_Type<"Field", "field"> {
-  let summary = "A field (in a RecordType) argument's type";
-
-  let description = [{
-    The type of a field name. Implementations may defer the layout of a Fortran
-    derived type until runtime. This implies that the runtime must be able to
-    determine the offset of fields within the entity.
-  }];
-}
-
 def fir_HeapType : FIR_Type<"Heap", "heap"> {
   let summary = "Reference to an ALLOCATABLE attribute type";
 
@@ -669,13 +659,13 @@ def AnyEmboxLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
 def AnyEmboxArg : Type<AnyEmboxLike.predicate, "embox argument type">;
 
 def AnyComponentLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
-    Index.predicate, fir_IntegerType.predicate, fir_FieldType.predicate]>,
+    Index.predicate, fir_IntegerType.predicate]>,
     "any coordinate index">;
 def AnyComponentType : Type<AnyComponentLike.predicate, "coordinate type">;
 
 def AnyCoordinateLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
-    Index.predicate, fir_IntegerType.predicate, fir_FieldType.predicate,
-    fir_LenType.predicate]>, "any coordinate index">;
+    Index.predicate, fir_IntegerType.predicate, fir_LenType.predicate]>,
+    "any coordinate index">;
 def AnyCoordinateType : Type<AnyCoordinateLike.predicate, "coordinate type">;
 
 // The legal types of global symbols

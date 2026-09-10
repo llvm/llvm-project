@@ -1684,11 +1684,7 @@ def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [Pure]> {
     Note that the entity ssa-value must be of compile-time known size in order
     to use this operation.
 
-    ```
-      %f = fir.field_index field, !fir.type<X{field:i32}>
-      %s = ... : !fir.type<X>
-      %v = fir.extract_value %s, %f : (!fir.type<X>, !fir.field) -> i32
-    ```
+    Record components are identified directly by string attributes in `coor`.
   }];
 
   let arguments = (ins
@@ -1698,41 +1694,6 @@ def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [Pure]> {
 
   let assemblyFormat = [{
     $adt `,` $coor attr-dict `:` functional-type(operands, results)
-  }];
-}
-
-def fir_FieldIndexOp : fir_OneResultOp<"field_index", [Pure]> {
-  let summary = "create a field index value from a field identifier";
-
-  let description = [{
-    Generate a field (offset) value from an identifier.  Field values may be
-    lowered into exact offsets when the layout of a Fortran derived type is
-    known at compile-time. The type of a field value is `!fir.field` and
-    these values can be used with the `fir.coordinate_of`, `fir.extract_value`,
-    or `fir.insert_value` instructions to compute (abstract) addresses of
-    subobjects.
-
-    ```
-      %f = fir.field_index field, !fir.type<X{field:i32}>
-    ```
-  }];
-
-  let arguments = (ins
-    StrAttr:$field_id,
-    TypeAttr:$on_type,
-    Variadic<AnyIntegerType>:$typeparams
-  );
-
-  let hasCustomAssemblyFormat = 1;
-
-  let builders = [OpBuilder<(ins "llvm::StringRef":$fieldName,
-      "mlir::Type":$recTy, CArg<"mlir::ValueRange","{}">:$operands)>];
-
-  let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getFieldAttrName() { return "field_id"; }
-    static constexpr llvm::StringRef getTypeAttrName() { return "on_type"; }
-    llvm::StringRef getFieldName() { return getFieldId(); }
-    llvm::SmallVector<mlir::Attribute> getAttributes();
   }];
 }
 
@@ -1877,66 +1838,63 @@ def fir_ShiftOp : fir_Op<"shift", [Pure]> {
   let hasVerifier = 1;
 }
 
-def fir_SliceOp : fir_Op<"slice", [Pure, AttrSizedOperandSegments]> {
+def fir_SliceOp : fir_Op<"slice", [Pure]> {
 
   let summary = "generate an abstract slice vector of type `!fir.slice`";
 
   let description = [{
-    The array slicing arguments are an ordered list of integral type values
-    that must be a multiple of 3 in length.  Each such triple is defined as:
-    the lower bound, the upper bound, and the stride for that dimension, as in
-    Fortran syntax. Both bounds are inclusive. The array slice information is
-    given in the same row-to-column order as Fortran. This abstract slice value
-    must be applied to a reified object, so all slice information must be
-    specified.  The extent must be nonnegative and the stride must not be zero.
+    The operands and the optional `operand_map` describe the designator in
+    source order. A triplet map entry consumes the lower bound, upper bound,
+    and stride of an array dimension. An index entry consumes one operand and
+    denotes either a rank-reducing array subscript or an index into an array or
+    tuple component. A substring entry consumes the offset and width. Record
+    components are encoded directly as StringAttr map entries. Real and
+    imaginary complex-part entries consume no operands.
+
+    When `operand_map` is absent, all operands are interpreted as triplets.
+    This avoids creating an attribute for the common array-section case.
 
     ```
       %d = fir.slice %lo, %hi, %step : (index, index, index) -> !fir.slice<1>
     ```
 
-    To support generalized slicing of Fortran's dynamic derived types, a slice
-    op can be given a component path (narrowing from the product type of the
-    original array to the specific elemental type of the sliced projection).
-
-    ```
-      %fld = fir.field_index component, !fir.type<t{...component:ct...}>
-      %d = fir.slice %lo, %hi, %step path %fld :
-          (index, index, index, !fir.field) -> !fir.slice<1>
-    ```
-
-    Projections of `!fir.char` type can be further narrowed to invariant
-    substrings.
-
-    ```
-      %d = fir.slice %lo, %hi, %step substr %offset, %width :
-          (index, index, index, index, index) -> !fir.slice<1>
-    ```
+    The map is an ArrayAttr containing `#fir.slice_operand<...>` attributes and
+    StringAttr component names. For example, a triplet followed by component
+    `a`, an index into `a`, and its real part has map
+    `[#fir.slice_operand<triplet>, "a", #fir.slice_operand<index>,
+    #fir.slice_operand<real>]`.
   }];
 
   let arguments = (ins
-    Variadic<AnyIntegerType>:$triples,
-    Variadic<AnyComponentType>:$fields,
-    Variadic<AnyIntegerType>:$substr
+    Variadic<AnyIntegerType>:$operands,
+    OptionalAttr<ArrayAttr>:$operand_map
   );
 
   let results = (outs fir_SliceType);
 
   let assemblyFormat = [{
-    $triples (`path` $fields^)? (`substr` $substr^)? attr-dict `:`
-      functional-type(operands, results)
+    $operands attr-dict `:` functional-type($operands, results)
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::ValueRange":$triples,
       CArg<"mlir::ValueRange", "{}">:$fields,
-      CArg<"mlir::ValueRange", "{}">:$substr)>
+      CArg<"mlir::ValueRange", "{}">:$substr)>,
+    OpBuilder<(ins "mlir::ValueRange":$triples,
+      "llvm::ArrayRef<fir::SlicePathElement>":$path,
+      CArg<"mlir::ValueRange", "{}">:$substr)>,
+    OpBuilder<(ins "mlir::ValueRange":$operands, "mlir::ArrayAttr":$operandMap,
+      "unsigned":$rank)>
   ];
 
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    unsigned getOutRank() { return getOutputRank(getTriples()); }
-    static unsigned getOutputRank(mlir::ValueRange triples);
+    unsigned getOutRank();
+    unsigned getInputRank();
+    SliceDimsAdaptor getDims();
+    mlir::OperandRange getSubstr();
+    SlicePathAdaptor getPath();
   }];
 }
 

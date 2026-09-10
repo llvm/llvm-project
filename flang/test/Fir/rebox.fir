@@ -19,7 +19,7 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %c6 = arith.constant 6 : index
   %c80 = arith.constant 80 : index
   %undef = fir.undefined index
-  %0 = fir.slice %c5, %undef, %undef, %c6, %c80, %c3 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %0 = fir.slice %c5, %c6, %c80, %c3 {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index) -> !fir.slice<2>
   %1 = fir.shift %c3, %c4 : (index, index) -> !fir.shift<2>
 
   // CHECK: %[[EXTRA_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 6
@@ -151,7 +151,7 @@ func.func @test_cmplx_1(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
   %c1_i32 = arith.constant 0 : i32
   %c0 = arith.constant 0 : index
   %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?xcomplex<f32>>>, index) -> (index, index, index)
-  %1 = fir.slice %c1, %0#1, %c1 path %c1_i32 : (index, index, index, i32) -> !fir.slice<1>
+  %1 = fir.slice %c1, %0#1, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<real>]} : (index, index, index) -> !fir.slice<1>
   %2 = fir.rebox %arg0 [%1] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
   // CHECK: %[[INSTRIDE_0_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i64 0, i32 1
   // CHECK: %[[INSTRIDE_0:.*]] = load i64, ptr %[[INSTRIDE_0_GEP]]
@@ -191,7 +191,7 @@ func.func @test_cmplx_2(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
   %c5 = arith.constant 5 : index
   %c60 = arith.constant 60 : index
   %c1_i32 = arith.constant 1 : i32
-  %0 = fir.slice %c7, %c60, %c5 path %c1_i32 : (index, index, index, i32) -> !fir.slice<1>
+  %0 = fir.slice %c7, %c60, %c5 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<imaginary>]} : (index, index, index) -> !fir.slice<1>
   %1 = fir.rebox %arg0 [%0] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.slice<1>) -> !fir.box<!fir.array<11xf32>>
   %2 = fir.convert %1 : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
   // CHECK: %[[INSTRIDE_0_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 0, i32 2

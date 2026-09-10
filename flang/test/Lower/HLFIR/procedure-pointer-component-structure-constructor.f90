@@ -53,7 +53,6 @@
 
 ! CHECK-LABEL:  fir.global internal @_QFECv1 constant : !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}> {
 ! CHECK:    %[[VAL_0:.*]] = fir.undefined !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
-! CHECK:    %[[VAL_1:.*]] = fir.field_index pp1, !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
 ! CHECK:    %[[VAL_2:.*]] = fir.zero_bits (!fir.ref<i32>) -> i32
 ! CHECK:    %[[VAL_3:.*]] = fir.emboxproc %[[VAL_2]] : ((!fir.ref<i32>) -> i32) -> !fir.boxproc<(!fir.ref<i32>) -> i32>
 ! CHECK:    %[[VAL_4:.*]] = fir.insert_value %[[VAL_0]], %[[VAL_3]], ["pp1", !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>] : (!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>, !fir.boxproc<(!fir.ref<i32>) -> i32>) -> !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
@@ -62,7 +61,6 @@
 
 ! CHECK-LABEL:  fir.global internal @_QQro._QMmTdt.0 constant : !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}> {
 ! CHECK:    %[[VAL_0:.*]] = fir.undefined !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
-! CHECK:    %[[VAL_1:.*]] = fir.field_index pp1, !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
 ! CHECK:    %[[VAL_2:.*]] = fir.address_of(@_QMmPfun) : (!fir.ref<i32>) -> i32
 ! CHECK:    %[[VAL_3:.*]] = fir.emboxproc %[[VAL_2]] : ((!fir.ref<i32>) -> i32) -> !fir.boxproc<() -> ()>
 ! CHECK:    %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<i32>) -> i32>

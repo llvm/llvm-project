@@ -467,20 +467,23 @@ what it can look like in pseudo LLVM IR code.
   %2 = fir.box_tdesc %arg0 : (!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>) -> !fir.tdesc<none>
   %3 = fir.box_tdesc %arg0 : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> !fir.tdesc<none>
   %4 = fir.convert %3 : (!fir.tdesc<none>) -> !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>
-  %5 = fir.field_index binding, !fir.type<_QM__fortran_type_infoTderivedtype{}>
-  %6 = fir.coordinate_of %4, %5 : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>>
-  %7 = fir.load %6 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>>
-  %8 = fir.box_addr %7 : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>) -> !fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>
+  %5 = fir.coordinate_of %4, binding : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>>
+  %6 = fir.load %5 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>>
+  %7 = fir.box_addr %6 : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>) -> !fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>
   %c0 = arith.constant 0 : index
-  %9 = fir.coordinate_of %8, %c0 : (!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>
-  %10 = fir.field_index proc, !fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>
-  %11 = fir.coordinate_of %9, %10 : (!fir.ref<!fir.type<_QM__fortran_type_infoTbinding{}>>, !fir.field) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>
-  %12 = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
-  %13 = fir.coordinate_of %11, %12 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
-  %14 = fir.load %13 : !fir.ref<i64>
-  %15 = fir.convert %14 : (i64) -> ((!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ())
-  fir.call %15(%arg0) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
+  %8 = fir.coordinate_of %7, %c0 : (!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>, index) -> !fir.ref<!fir.type<_QM__fortran_type_infoTbinding{}>>
+  %9 = fir.coordinate_of %8, proc : (!fir.ref<!fir.type<_QM__fortran_type_infoTbinding{}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>
+  %10 = fir.coordinate_of %9, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>) -> !fir.ref<i64>
+  %11 = fir.load %10 : !fir.ref<i64>
+  %12 = fir.convert %11 : (i64) -> ((!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ())
+  fir.call %12(%arg0) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
 ```
+
+Each `fir.coordinate_of` carries the name of the component it selects directly
+in its operand list, so no separate offset value is created. Component names
+can be interleaved with the integer SSA values indexing arrays, which means the
+three last selections above can also be written as a single addressing
+operation with the whole path `%c0, proc, __address`.
 
 **LLVMIR**
 ```

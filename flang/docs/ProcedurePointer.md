@@ -407,16 +407,15 @@ end subroutine proc_pointer_component
 ```
 func.func @proc_pointer_component(%arg0 : !fir.boxproc<(!fir.ref<i32>) -> f32>, %arg1: !fir.ref<i32>) {
   %0 = fir.alloca !fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>
-  %1 = fir.field_index solve, !fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>
-  %2 = fir.coordinate_of %0, %1 : (!fir.ref<!fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>>, !fir.field) -> !fir.ref<!fir.boxproc<() -> ()>>
-  %3 = fir.convert %arg0 : (!fir.boxproc<(!fir.ref<i32>) -> f32>) ->  !fir.boxproc<() -> ()>
-  fir.store %3 to %2 : !fir.ref<!fir.boxproc<() -> ()>>
-  %4 = fir.field_index solve, !fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>
-  %5 = fir.coordinate_of %0, %4 : (!fir.ref<!fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>>, !fir.field) -> !fir.ref<!fir.boxproc<() -> ()>>
-  %6 = fir.load %5 : !fir.ref<!fir.boxproc<() -> ()>>
-  %7 = fir.convert %6 : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<i32>) -> f32>
-  %8 = fir.box_addr %7 : (!fir.boxproc<(!fir.ref<i32>) -> f32>) -> ((!fir.ref<i32>) -> f32)
-  %9 = fir.call %8(%arg1) : (!fir.ref<i32>) -> f32
+  // The name of the component is part of the addressing operation.
+  %1 = fir.coordinate_of %0, solve : (!fir.ref<!fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.boxproc<() -> ()>>
+  %2 = fir.convert %arg0 : (!fir.boxproc<(!fir.ref<i32>) -> f32>) ->  !fir.boxproc<() -> ()>
+  fir.store %2 to %1 : !fir.ref<!fir.boxproc<() -> ()>>
+  %3 = fir.coordinate_of %0, solve : (!fir.ref<!fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.boxproc<() -> ()>>
+  %4 = fir.load %3 : !fir.ref<!fir.boxproc<() -> ()>>
+  %5 = fir.convert %4 : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<i32>) -> f32>
+  %6 = fir.box_addr %5 : (!fir.boxproc<(!fir.ref<i32>) -> f32>) -> ((!fir.ref<i32>) -> f32)
+  %7 = fir.call %6(%arg1) : (!fir.ref<i32>) -> f32
   return
 }
 ```

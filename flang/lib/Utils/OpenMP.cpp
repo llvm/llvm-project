@@ -282,11 +282,14 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
 
   const auto getFieldRef = [&](mlir::Value rec, llvm::StringRef fieldName,
                                mlir::Type fieldTy, mlir::Type recType) {
-    mlir::Value field = fir::FieldIndexOp::create(firOpBuilder, loc,
-        fir::FieldType::get(recType.getContext()), fieldName, recType,
-        fir::getTypeParams(rec));
-    return fir::CoordinateOp::create(
-        firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
+    fir::RecordType recordType = mlir::cast<fir::RecordType>(recType);
+    unsigned fieldIndex = recordType.getFieldIndex(fieldName);
+    assert(fieldIndex < recordType.getNumFields() &&
+        "missing field in OpenMP runtime record type");
+    fir::IntOrValue field = firOpBuilder.getI32IntegerAttr(fieldIndex);
+    return fir::CoordinateOp::create(firOpBuilder, loc,
+        firOpBuilder.getRefType(fieldTy), rec,
+        llvm::ArrayRef<fir::IntOrValue>{field});
   };
 
   llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;

@@ -91,7 +91,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "u"})
 }
 
 // Rank-reducing slice: the middle dimension is scalar-selected by the slice
-// (its upper bound is fir.undefined). The canonicalization pulls in the embox
+// (encoded by an index operand-map entry). The canonicalization pulls in the embox
 // and rewrites the rank-2 array_coor into a rank-3 array_coor on the original
 // 3D reference, with the scalar dim's index synthesized from the slice's
 // lower bound.
@@ -113,7 +113,7 @@ func.func @_QPtest4() {
   %1 = fir.shape %c100, %c100, %c100 : (index, index, index) -> !fir.shape<3>
   %2 = fir.declare %0(%1) {uniq_name = "_QFtest4Eu"} : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<100x100x100xi32>>
   %3 = fir.undefined index
-  %4 = fir.slice %c1, %c100, %c1, %c1, %3, %3, %c1, %c100, %c1 : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
+  %4 = fir.slice %c1, %c100, %c1, %c1, %c1, %c100, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index, index, index, index) -> !fir.slice<3>
   %5 = fir.embox %2(%1) [%4] : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>, !fir.slice<3>) -> !fir.box<!fir.array<100x100xi32>>
   fir.do_loop %arg0 = %c1 to %c100 step %c1 unordered {
     fir.do_loop %arg1 = %c1 to %c100 step %c1 unordered {
@@ -612,8 +612,7 @@ func.func @test20(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
 // CHECK:           %[[VAL_5:.*]] = arith.constant 16 : index
 // CHECK:           %[[VAL_6:.*]] = arith.constant 6 : index
 // CHECK:           %[[VAL_7:.*]] = fir.shape_shift %[[VAL_3]], %[[VAL_5]], %[[VAL_4]], %[[VAL_6]] : (index, index, index, index) -> !fir.shapeshift<2>
-// CHECK:           %[[VAL_8:.*]] = fir.undefined index
-// CHECK:           %[[VAL_9:.*]] = fir.slice %[[VAL_3]], %[[VAL_1]], %[[VAL_3]], %[[VAL_2]], %[[VAL_8]], %[[VAL_8]] : (index, index, index, i64, index, index) -> !fir.slice<2>
+// CHECK:           %[[VAL_9:.*]] = fir.slice %[[VAL_3]], %[[VAL_1]], %[[VAL_3]], %[[VAL_2]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
 // CHECK:           %[[VAL_10:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_7]]) {{\[}}%[[VAL_9]]] %[[VAL_3]], %[[VAL_2]] : (!fir.ref<!fir.array<16x6xf32>>, !fir.shapeshift<2>, !fir.slice<2>, index, i64) -> !fir.ref<f32>
 // CHECK:           return %[[VAL_10]] : !fir.ref<f32>
 // CHECK:         }
@@ -624,7 +623,7 @@ func.func @test21_box_addr_rank_reducing(%arg0: !fir.ref<!fir.array<16x6xf32>>, 
   %c6 = arith.constant 6 : index
   %ss = fir.shape_shift %c1, %c16, %c_neg2, %c6 : (index, index, index, index) -> !fir.shapeshift<2>
   %u = fir.undefined index
-  %s = fir.slice %c1, %m, %c1, %i, %u, %u : (index, index, index, i64, index, index) -> !fir.slice<2>
+  %s = fir.slice %c1, %m, %c1, %i {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
   %b = fir.embox %arg0(%ss) [%s] : (!fir.ref<!fir.array<16x6xf32>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
   %ba = fir.box_addr %b : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
   %sh1 = fir.shape %m : (index) -> !fir.shape<1>
@@ -641,8 +640,7 @@ func.func @test21_box_addr_rank_reducing(%arg0: !fir.ref<!fir.array<16x6xf32>>, 
 // CHECK:           %[[T22_C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[T22_C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[T22_C100:.*]] = arith.constant 100 : index
-// CHECK:           %[[T22_U:.*]] = fir.undefined index
-// CHECK:           %[[T22_SL:.*]] = fir.slice %[[T22_C1]], %[[T22_C100]], %[[T22_C1]], %{{.*}}, %[[T22_U]], %[[T22_U]], %[[T22_C1]], %[[T22_C100]], %[[T22_C1]] : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
+// CHECK:           %[[T22_SL:.*]] = fir.slice %[[T22_C1]], %[[T22_C100]], %[[T22_C1]], %{{.*}}, %[[T22_C1]], %[[T22_C100]], %[[T22_C1]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index, index, index, index) -> !fir.slice<3>
 // CHECK:           %[[T22_BD0:.*]]:3 = fir.box_dims %{{.*}}, %[[T22_C0]]
 // CHECK:           %[[T22_BD1:.*]]:3 = fir.box_dims %{{.*}}, %[[T22_C1]]
 // CHECK:           %[[T22_BD2:.*]]:3 = fir.box_dims %{{.*}}, %[[T22_C2]]
@@ -654,7 +652,7 @@ func.func @test22_rebox_rank_reducing(%arg0: !fir.box<!fir.array<?x?x?xf32>>, %j
   %c1 = arith.constant 1 : index
   %c100 = arith.constant 100 : index
   %u = fir.undefined index
-  %s = fir.slice %c1, %c100, %c1, %j, %u, %u, %c1, %c100, %c1 : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
+  %s = fir.slice %c1, %c100, %c1, %j, %c1, %c100, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index, index, index, index) -> !fir.slice<3>
   %r = fir.rebox %arg0 [%s] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xf32>>
   %ac = fir.array_coor %r %c1, %c1 : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
   return %ac : !fir.ref<f32>
@@ -671,8 +669,7 @@ func.func @test22_rebox_rank_reducing(%arg0: !fir.box<!fir.array<?x?x?xf32>>, %j
 // CHECK-SAME:                      %[[VAL_1:.*]]: index) -> !fir.ref<f32> {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_4:.*]] = fir.undefined index
-// CHECK:           %[[VAL_5:.*]] = fir.slice %[[VAL_2]], %[[VAL_3]], %[[VAL_2]], %[[VAL_1]], %[[VAL_4]], %[[VAL_4]], %[[VAL_2]], %[[VAL_3]], %[[VAL_2]] : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
+// CHECK:           %[[VAL_5:.*]] = fir.slice %[[VAL_2]], %[[VAL_3]], %[[VAL_2]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_2]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index, index, index, index) -> !fir.slice<3>
 // CHECK:           %[[VAL_6:.*]] = fir.shift %[[VAL_2]], %[[VAL_2]], %[[VAL_2]] : (index, index, index) -> !fir.shift<3>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_6]]) {{\[}}%[[VAL_5]]] %[[VAL_2]], %[[VAL_1]], %[[VAL_2]] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>, !fir.slice<3>, index, index, index) -> !fir.ref<f32>
 // CHECK:           return %[[VAL_7]] : !fir.ref<f32>
@@ -681,7 +678,7 @@ func.func @test23_rebox_rank_reducing_with_shift(%arg0: !fir.box<!fir.array<?x?x
   %c1 = arith.constant 1 : index
   %c100 = arith.constant 100 : index
   %u = fir.undefined index
-  %s = fir.slice %c1, %c100, %c1, %j, %u, %u, %c1, %c100, %c1 : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
+  %s = fir.slice %c1, %c100, %c1, %j, %c1, %c100, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index, index, index, index) -> !fir.slice<3>
   %sh = fir.shift %c1, %c1, %c1 : (index, index, index) -> !fir.shift<3>
   %r = fir.rebox %arg0(%sh) [%s] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xf32>>
   %ac = fir.array_coor %r %c1, %c1 : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
@@ -700,8 +697,7 @@ func.func @test23_rebox_rank_reducing_with_shift(%arg0: !fir.box<!fir.array<?x?x
 // CHECK:           %[[VAL_9:.*]] = arith.constant -2 : index
 // CHECK:           %[[VAL_10:.*]] = arith.constant 5 : index
 // CHECK:           %[[VAL_11:.*]] = fir.shape_shift %[[VAL_8]], %[[VAL_7]], %[[VAL_9]], %[[VAL_7]], %[[VAL_10]], %[[VAL_7]] : (index, index, index, index, index, index) -> !fir.shapeshift<3>
-// CHECK:           %[[VAL_12:.*]] = fir.undefined index
-// CHECK:           %[[VAL_13:.*]] = fir.slice %[[VAL_6]], %[[VAL_1]], %[[VAL_6]], %[[VAL_2]], %[[VAL_12]], %[[VAL_12]], %[[VAL_6]], %[[VAL_3]], %[[VAL_6]] : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
+// CHECK:           %[[VAL_13:.*]] = fir.slice %[[VAL_6]], %[[VAL_1]], %[[VAL_6]], %[[VAL_2]], %[[VAL_6]], %[[VAL_3]], %[[VAL_6]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index, index, index, index) -> !fir.slice<3>
 // CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_4]], %c9 : index
 // CHECK:           %[[VAL_15:.*]] = arith.addi %[[VAL_5]], %c4 : index
 // CHECK:           %[[VAL_16:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_11]]) {{\[}}%[[VAL_13]]] %[[VAL_14]], %[[VAL_2]], %[[VAL_15]] : (!fir.ref<!fir.array<20x20x20xf32>>, !fir.shapeshift<3>, !fir.slice<3>, index, index, index) -> !fir.ref<f32>
@@ -717,7 +713,7 @@ func.func @test24_rank_reducing_shifted_nonscalar(
   %c5 = arith.constant 5 : index
   %ss = fir.shape_shift %c10, %c20, %c_neg2, %c20, %c5, %c20 : (index, index, index, index, index, index) -> !fir.shapeshift<3>
   %u = fir.undefined index
-  %s = fir.slice %c1, %m, %c1, %j, %u, %u, %c1, %n, %c1 : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
+  %s = fir.slice %c1, %m, %c1, %j, %c1, %n, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index, index, index, index) -> !fir.slice<3>
   %b = fir.embox %arg0(%ss) [%s] : (!fir.ref<!fir.array<20x20x20xf32>>, !fir.shapeshift<3>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xf32>>
   %ac = fir.array_coor %b %i, %k : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
   return %ac : !fir.ref<f32>
@@ -756,8 +752,7 @@ func.func @test25_box_addr_char_typeparams(%arg0: !fir.box<!fir.array<?x!fir.cha
 // CHECK:           %[[VAL_6:.*]] = arith.constant 16 : index
 // CHECK:           %[[VAL_7:.*]] = arith.constant 6 : index
 // CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_4]], %[[VAL_6]], %[[VAL_5]], %[[VAL_7]] : (index, index, index, index) -> !fir.shapeshift<2>
-// CHECK:           %[[VAL_9:.*]] = fir.undefined index
-// CHECK:           %[[VAL_10:.*]] = fir.slice %[[VAL_4]], %[[VAL_1]], %[[VAL_4]], %[[VAL_2]], %[[VAL_9]], %[[VAL_9]] : (index, index, index, i64, index, index) -> !fir.slice<2>
+// CHECK:           %[[VAL_10:.*]] = fir.slice %[[VAL_4]], %[[VAL_1]], %[[VAL_4]], %[[VAL_2]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
 // CHECK:           %[[VAL_11:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_8]]) {{\[}}%[[VAL_10]]] %[[VAL_4]], %[[VAL_2]] typeparams %[[VAL_3]] : (!fir.ref<!fir.array<16x6x!fir.char<1,?>>>, !fir.shapeshift<2>, !fir.slice<2>, index, i64, index) -> !fir.ref<!fir.char<1,?>>
 // CHECK:           return %[[VAL_11]] : !fir.ref<!fir.char<1,?>>
 // CHECK:         }
@@ -770,7 +765,7 @@ func.func @test26_box_addr_char_rank_reducing_typeparams(
   %c6 = arith.constant 6 : index
   %ss = fir.shape_shift %c1, %c16, %c_neg2, %c6 : (index, index, index, index) -> !fir.shapeshift<2>
   %u = fir.undefined index
-  %s = fir.slice %c1, %m, %c1, %i, %u, %u : (index, index, index, i64, index, index) -> !fir.slice<2>
+  %s = fir.slice %c1, %m, %c1, %i {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
   %b = fir.embox %arg0(%ss) [%s] : (!fir.ref<!fir.array<16x6x!fir.char<1,?>>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   %ba = fir.box_addr %b : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
   %sh1 = fir.shape %m : (index) -> !fir.shape<1>
@@ -812,8 +807,7 @@ func.func @test27_box_addr_derived_typeparams(
 // CHECK:           %[[VAL_6:.*]] = arith.constant 16 : index
 // CHECK:           %[[VAL_7:.*]] = arith.constant 6 : index
 // CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_4]], %[[VAL_6]], %[[VAL_5]], %[[VAL_7]] : (index, index, index, index) -> !fir.shapeshift<2>
-// CHECK:           %[[VAL_9:.*]] = fir.undefined index
-// CHECK:           %[[VAL_10:.*]] = fir.slice %[[VAL_4]], %[[VAL_1]], %[[VAL_4]], %[[VAL_2]], %[[VAL_9]], %[[VAL_9]] : (index, index, index, i64, index, index) -> !fir.slice<2>
+// CHECK:           %[[VAL_10:.*]] = fir.slice %[[VAL_4]], %[[VAL_1]], %[[VAL_4]], %[[VAL_2]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
 // CHECK:           %[[VAL_11:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_8]]) {{\[}}%[[VAL_10]]] %[[VAL_4]], %[[VAL_2]] typeparams %[[VAL_3]] : (!fir.ref<!fir.array<16x6x!fir.type<dt(l:i32){x:i32}>>>, !fir.shapeshift<2>, !fir.slice<2>, index, i64, i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>>
 // CHECK:           return %[[VAL_11]] : !fir.ref<!fir.type<dt(l:i32){x:i32}>>
 // CHECK:         }
@@ -826,7 +820,7 @@ func.func @test28_box_addr_derived_rank_reducing_typeparams(
   %c6 = arith.constant 6 : index
   %ss = fir.shape_shift %c1, %c16, %c_neg2, %c6 : (index, index, index, index) -> !fir.shapeshift<2>
   %u = fir.undefined index
-  %s = fir.slice %c1, %m, %c1, %i, %u, %u : (index, index, index, i64, index, index) -> !fir.slice<2>
+  %s = fir.slice %c1, %m, %c1, %i {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
   %b = fir.embox %arg0(%ss) [%s] : (!fir.ref<!fir.array<16x6x!fir.type<dt(l:i32){x:i32}>>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>
   %ba = fir.box_addr %b : (!fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>) -> !fir.ref<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>
   %sh1 = fir.shape %m : (index) -> !fir.shape<1>
@@ -859,8 +853,7 @@ func.func @test29_merged_box_addr_no_fold(%arg0: !fir.ref<!fir.array<4x3xf32>>) 
 // CHECK:           %[[T29_C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[T29_C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[T29_C2:.*]] = arith.constant 2 : index
-// CHECK:           %[[T29_U:.*]] = fir.undefined index
-// CHECK:           %[[T29_SL:.*]] = fir.slice %{{.*}}, %{{.*}}, %[[T29_C1]], %[[T29_C2]], %[[T29_U]], %[[T29_U]] : (index, index, index, index, index, index) -> !fir.slice<2>
+// CHECK:           %[[T29_SL:.*]] = fir.slice %{{.*}}, %{{.*}}, %[[T29_C1]], %[[T29_C2]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index) -> !fir.slice<2>
 // CHECK:           %[[T29_BD0:.*]]:3 = fir.box_dims %{{.*}}, %[[T29_C0]]
 // CHECK:           %[[T29_BD1:.*]]:3 = fir.box_dims %{{.*}}, %[[T29_C1]]
 // CHECK:           %[[T29_SH:.*]] = fir.shape %[[T29_BD0]]#1, %[[T29_BD1]]#1 : (index, index) -> !fir.shape<2>
@@ -873,7 +866,7 @@ func.func @test30_rebox_rank_reducing_2d(
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %u = fir.undefined index
-  %s = fir.slice %si, %ei, %c1, %c2, %u, %u : (index, index, index, index, index, index) -> !fir.slice<2>
+  %s = fir.slice %si, %ei, %c1, %c2 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index) -> !fir.slice<2>
   %b = fir.rebox %arg0 [%s] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
   %ac = fir.array_coor %b %row : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
   return %ac : !fir.ref<f32>

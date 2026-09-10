@@ -409,14 +409,10 @@ genComponentDefaultInit(Fortran::lower::AbstractConverter &converter,
   }
   assert(componentValue && "must have been computed");
   componentValue = builder.createConvert(loc, componentTy, componentValue);
-  auto fieldTy = fir::FieldType::get(recTy.getContext());
-  // FIXME: type parameters must come from the derived-type-spec
-  auto field =
-      fir::FieldIndexOp::create(builder, loc, fieldTy, name, recTy,
-                                /*typeParams=*/mlir::ValueRange{} /*TODO*/);
-  return fir::InsertValueOp::create(
-      builder, loc, recTy, insertInto, componentValue,
-      builder.getArrayAttr(field.getAttributes()));
+  auto field = builder.getArrayAttr(
+      {builder.getStringAttr(name), mlir::TypeAttr::get(recTy)});
+  return fir::InsertValueOp::create(builder, loc, recTy, insertInto,
+                                    componentValue, field);
 }
 
 static mlir::Value genDefaultInitializerValue(
@@ -894,12 +890,11 @@ static void genDerivedTypeComponentInit(
       std::string name = converter.getRecordTypeFieldName(*symPtr);
       mlir::Type compFirTy = currentRecTy.getType(name);
       assert(compFirTy && "Component field type not found in RecordType");
-      auto fieldIdx = fir::FieldIndexOp::create(
-          builder, loc, fir::FieldType::get(currentRecTy.getContext()), name,
-          currentRecTy, mlir::ValueRange{});
-      currentAddr =
-          fir::CoordinateOp::create(builder, loc, builder.getRefType(compFirTy),
-                                    currentAddr, mlir::ValueRange{fieldIdx});
+      fir::IntOrValue fieldIdx =
+          builder.getI32IntegerAttr(currentRecTy.getFieldIndex(name));
+      currentAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(compFirTy), currentAddr,
+          llvm::ArrayRef<fir::IntOrValue>{fieldIdx});
       currentRecTy = mlir::dyn_cast<fir::RecordType>(compFirTy);
     }
     mlir::Type finalCompFirTy = fir::unwrapPassByRefType(currentAddr.getType());

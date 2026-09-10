@@ -91,13 +91,11 @@ end subroutine
 ! CHECK-LABEL:   fir.global @_QMtestEtest_module_var : !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}> {
 ! CHECK:  %[[VAL_0:.*]] = fir.undefined !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
 ! CHECK:  %[[VAL_1:.*]] = fir.zero_bits i32
-! CHECK:  %[[VAL_2:.*]] = fir.field_index i
 ! CHECK:  %[[VAL_3:.*]] = fir.insert_value %[[VAL_0]], %[[VAL_1]]
 ! CHECK:  %[[VAL_4:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_4]](%[[VAL_6]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:  %[[VAL_8:.*]] = fir.field_index x
 ! CHECK:  %[[VAL_9:.*]] = fir.insert_value %[[VAL_3]], %[[VAL_7]]
 ! CHECK:  fir.has_value %[[VAL_9]]
 
@@ -106,13 +104,11 @@ end subroutine
 ! CHECK-LABEL:   fir.global internal @_QFtest_savedEx : !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}> {
 ! CHECK:  %[[VAL_0:.*]] = fir.undefined !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
 ! CHECK:  %[[VAL_1:.*]] = fir.zero_bits i32
-! CHECK:  %[[VAL_2:.*]] = fir.field_index i
 ! CHECK:  %[[VAL_3:.*]] = fir.insert_value %[[VAL_0]], %[[VAL_1]]
 ! CHECK:  %[[VAL_4:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_4]](%[[VAL_6]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:  %[[VAL_8:.*]] = fir.field_index x
 ! CHECK:  %[[VAL_9:.*]] = fir.insert_value %[[VAL_3]], %[[VAL_7]]
 ! CHECK:  fir.has_value %[[VAL_9]]
 

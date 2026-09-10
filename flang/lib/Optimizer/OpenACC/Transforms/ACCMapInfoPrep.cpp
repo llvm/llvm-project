@@ -206,14 +206,16 @@ static Value loadRecordTypeSizeFromTypeDesc(
 
   Value typeDescAddr = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(typeDescRecTy), global.getSymbol());
-  Type fieldTy = fir::FieldType::get(builder.getContext());
-  Value field = fir::FieldIndexOp::create(
-      builder, loc, fieldTy, Fortran::semantics::sizeInBytesCompName,
-      typeDescRecTy, ValueRange{});
+  unsigned fieldIndex =
+      typeDescRecTy.getFieldIndex(Fortran::semantics::sizeInBytesCompName);
+  if (fieldIndex >= typeDescRecTy.getNumFields())
+    return {};
+  fir::IntOrValue field = builder.getI32IntegerAttr(fieldIndex);
   Type coorTy = fir::ReferenceType::get(
       typeDescRecTy.getType(Fortran::semantics::sizeInBytesCompName));
   Value addr =
-      fir::CoordinateOp::create(builder, loc, coorTy, typeDescAddr, field);
+      fir::CoordinateOp::create(builder, loc, coorTy, typeDescAddr,
+                                llvm::ArrayRef<fir::IntOrValue>{field});
   return fir::LoadOp::create(builder, loc, addr);
 }
 

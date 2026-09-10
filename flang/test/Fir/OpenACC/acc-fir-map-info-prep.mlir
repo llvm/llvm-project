@@ -30,7 +30,6 @@ func.func @nested_box_member() {
 // CHECK: %[[VAR:.*]] = fir.undefined !fir.ref<!fir.type<_QMtypesTderived{member:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
 // CHECK: fir.type_desc !fir.type<_QMtypesTderived{{.*}}>
 // CHECK: %[[TDESC:.*]] = fir.address_of(@_QMtypesEXdtXderived)
-// CHECK: fir.field_index sizeinbytes
 // CHECK: %[[ADDR:.*]] = fir.coordinate_of %[[TDESC]], sizeinbytes
 // CHECK: %[[SIZE:.*]] = fir.load %[[ADDR]]
 // CHECK: acc.map_info varPtr(%[[VAR]] : !fir.ref<!fir.type<_QMtypesTderived{member:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>)
@@ -62,7 +61,6 @@ func.func @derived_with_box() {
 // CHECK-LABEL: func.func @array_of_derived_with_boxes
 // CHECK: fir.type_desc !fir.type<_QMtypesTdescriptor_pair{{.*}}>
 // CHECK: %[[TDESC:.*]] = fir.address_of(@_QMtypesEXdtXdescriptor_pair)
-// CHECK: fir.field_index sizeinbytes
 // CHECK: %[[ELEMENT_SIZE:.*]] = fir.load
 // CHECK: %[[COUNT:.*]] = arith.constant 6 : i64
 // CHECK: %[[SIZE:.*]] = arith.muli %[[ELEMENT_SIZE]], %[[COUNT]] : i64

@@ -197,6 +197,7 @@ private:
     SmallVector<Value> shapeVec;
     SmallVector<Value> shiftVec;
     SmallVector<Value> sliceVec;
+    SmallVector<bool> sliceIsScalar;
     bool hasProjectedSlice = false;
     // Constant value of the first projected-slice field, if any.
     std::optional<std::int64_t> projectedSliceStart;
@@ -229,17 +230,31 @@ private:
   }
 
   static bool hasProjectedSlice(fir::SliceOp sliceOp) {
-    return sliceOp && !sliceOp.getFields().empty();
+    return sliceOp && !sliceOp.getPath().empty();
   }
 
   // Returns the constant first projected-slice field, if available.
   static std::optional<std::int64_t>
-  getProjectedSliceStartIfConstant(fir::SliceOp sliceOp) {
-    auto fields = sliceOp.getFields();
-    if (fields.empty())
+  getProjectedSliceStartIfConstant(fir::SliceOp sliceOp, mlir::Type baseType) {
+    auto path = sliceOp.getPath();
+    if (path.empty())
       return std::nullopt;
+    fir::SlicePathElement first = path[0];
+    if (auto fieldName = first.dyn_cast<mlir::StringAttr>()) {
+      mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(baseType);
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+        eleTy = seqTy.getEleTy();
+      if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
+        unsigned fieldIndex = recTy.getFieldIndex(fieldName.getValue());
+        if (fieldIndex < recTy.getNumFields())
+          return fieldIndex;
+      }
+      return std::nullopt;
+    }
+    if (auto kind = first.dyn_cast<fir::SliceOperandKindAttr>())
+      return kind.getValue() == fir::SliceOperandKind::Real ? 0 : 1;
     if (std::optional<llvm::APInt> constant =
-            fir::getIntIfConstant(fields.front()))
+            fir::getIntIfConstant(first.dyn_cast<mlir::Value>()))
       return constant->trySExtValue();
     return std::nullopt;
   }
@@ -409,10 +424,10 @@ bool FIRToMemRef::materializeShapeExtents(
 ///   - no shape operand (nullptr)        -> `shapeVec`/`shiftVec` unchanged.
 ///
 /// What the slice operand contributes:
-///   - `fir.slice %lb0, %ub0, %step0, ...` -> appends *all* triple SSA values
+///   - `fir.slice %lb0, %ub0, %step0, ...` -> appends dimension SSA values
 ///                                             to `sliceVec` (per-dim, in
 ///                                             Fortran order).
-///   - projected slice (extra `%fields`)  -> also sets `hasProjectedSlice`
+///   - projected slice                    -> also sets `hasProjectedSlice`
 ///                                             and, when the first field is
 ///                                             a compile-time constant,
 ///                                             `projectedSliceStart`.
@@ -451,10 +466,10 @@ bool FIRToMemRef::materializeShapeExtents(
 ///    positionally distinguishable but not intrinsically labelled.
 ///
 /// 4) Rank-reducing embox slice via scalar subscript
-///    (`fir.slice %c1, %c3, %c1, %c2, %undef, %undef, %c1, %c2, %c1`):
-///    All 9 triple SSAs are appended to `sliceVec`. Callers detect the
-///    scalar-subscript form by testing `isa<fir::UndefOp>` on the ub/step
-///    entries.
+///    (`fir.slice %c1, %c3, %c1, %c2, %c1, %c2, %c1`
+///    `{operand_map = [triplet, index, triplet]}`):
+///    Three entries per dimension are appended to `sliceVec`, and the scalar
+///    interpretation is recorded separately in `sliceIsScalar`.
 template <typename OpTy>
 void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
   if constexpr (std::is_same_v<OpTy, fir::ArrayCoorOp> ||
@@ -478,10 +493,25 @@ void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
     if (auto sliceOp = getSliceOp(op.getSlice())) {
       if (hasProjectedSlice(sliceOp)) {
         info.hasProjectedSlice = true;
-        info.projectedSliceStart = getProjectedSliceStartIfConstant(sliceOp);
+        mlir::Type baseType;
+        if constexpr (std::is_same_v<OpTy, fir::ReboxOp>)
+          baseType = op.getBox().getType();
+        else
+          baseType = op.getMemref().getType();
+        info.projectedSliceStart =
+            getProjectedSliceStartIfConstant(sliceOp, baseType);
       }
-      auto triples = sliceOp.getTriples();
-      info.sliceVec.append(triples.begin(), triples.end());
+      for (const fir::SliceDim &dim : sliceOp.getDims()) {
+        info.sliceIsScalar.push_back(dim.isIndex());
+        if (dim.isTriplet()) {
+          info.sliceVec.append(dim.getOperands().begin(),
+                               dim.getOperands().end());
+        } else {
+          // Keep three entries per dimension for the existing sliceVec index
+          // arithmetic. sliceIsScalar carries the interpretation.
+          info.sliceVec.append(3, dim.getIndex());
+        }
+      }
     }
   }
 }
@@ -617,7 +647,8 @@ static Value castTypeToIndexType(Value originalValue,
 ///
 ///   %parent : !fir.ref<!fir.array<3x2x2xi32>>
 ///   %shape  = fir.shape %c3, %c2, %c2
-///   %eslc   = fir.slice %c1, %c3, %c1,  %c2, %undef, %undef,  %c1, %c2, %c1
+///   %eslc   = fir.slice %c1, %c3, %c1, %c2, %c1, %c2, %c1
+///             {operand_map = [triplet, index, triplet]}
 ///   %box    = fir.embox %parent(%shape) [%eslc]
 ///                                          : !fir.box<!fir.array<3x2xi32>>
 ///   %bshape = fir.shape %c3, %c2                     ; box's rank-2 shape
@@ -645,29 +676,27 @@ void FIRToMemRef::foldSliceLbIntoIndices(SmallVectorImpl<Value> &indices,
   auto sliceOp = getSliceOp(embox.getSlice());
   if (!sliceOp)
     return;
-  auto triples = sliceOp.getTriples();
-  unsigned parentRank = triples.size() / 3;
+  auto dims = sliceOp.getDims();
+  unsigned parentRank = dims.size();
   if (parentRank == 0)
     return;
 
-  auto isUndef = [](Value v) {
-    return v && v.getDefiningOp<fir::UndefOp>() != nullptr;
-  };
   Value cOne = arith::ConstantIndexOp::create(rewriter, loc, 1);
   for (unsigned d = 0; d < parentRank; ++d) {
     unsigned m = parentRank - 1 - d;
     if (m >= indices.size())
       continue;
-    Value lb = castTypeToIndexType(triples[d * 3], rewriter);
+    const fir::SliceDim &dim = dims[d];
+    Value lb = castTypeToIndexType(
+        dim.isIndex() ? dim.getIndex() : dim.getLowerBound(), rewriter);
     Value delta = arith::SubIOp::create(rewriter, loc, lb, cOne);
-    bool isScalar = isUndef(triples[d * 3 + 1]) || isUndef(triples[d * 3 + 2]);
-    if (isScalar) {
+    if (dim.isIndex()) {
       indices[m] = delta;
     } else {
       // Scale the box-relative index by the embox stride before adding the lb
       // offset. For non-unit strides (e.g. a(1:10:2)) omitting this would give
       // the wrong physical element.
-      Value strideVal = castTypeToIndexType(triples[d * 3 + 2], rewriter);
+      Value strideVal = castTypeToIndexType(dim.getStride(), rewriter);
       Value scaled =
           arith::MulIOp::create(rewriter, loc, indices[m], strideVal);
       indices[m] = arith::AddIOp::create(rewriter, loc, scaled, delta);
@@ -784,7 +813,8 @@ static mlir::Value createTypeConversion(PatternRewriter &rewriter,
 ///
 /// Example C -- rank-reducing scalar subscript on the array_coor's slice:
 ///
-///     %slice = fir.slice %c1, %c3, %c1, %k, %undef, %undef  ; dim1 scalar@k
+///     %slice = fir.slice %c1, %c3, %c1, %k
+///              {operand_map = [triplet, index]} ; dim1 scalar@k
 ///     %addr  = fir.array_coor %box(%boxShape) [%slice] %i
 ///          : (!fir.box<...>, !fir.shape<2>, !fir.slice<2>, index)
 ///          -> !fir.ref<i32>
@@ -841,9 +871,7 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
 
   SmallVector<bool> filledPositions(rank, false);
   for (int i = 0; i < rank; ++i) {
-    Value step = isSliced ? sliceStrides[i] : one;
-    Operation *stepOp = step.getDefiningOp();
-    if (stepOp && mlir::isa_and_nonnull<fir::UndefOp>(stepOp)) {
+    if (isSliced && sliceInfo.sliceIsScalar[i]) {
       Value shift = isShifted ? shiftVec[i] : one;
       Value sliceLb = isSliced ? sliceLbs[i] : shift;
       Value offset = arith::SubIOp::create(rewriter, loc, sliceLb, shift);

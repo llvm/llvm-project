@@ -186,7 +186,7 @@ func.func @slice_3d(%arg0: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "a"
 // CHECK:       [[SHAPE:%[0-9]+]] = fir.shape %[[C3]], %[[C3]] : (index, index) -> !fir.shape<2>
 // CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] {uniq_name = "_QFextract_rowEmatrix"} : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<3x3xi32>>
 // CHECK:       %[[UNDEF:.*]] = fir.undefined index
-// CHECK:       %[[SLICE:[0-9]+]] = fir.slice %[[C2]], %[[UNDEF]], %[[UNDEF]], %[[C1]], %[[C3]], %[[C1]] : (index, index, index, index, index, index) -> !fir.slice<2>
+// CHECK:       %[[SLICE:[0-9]+]] = fir.slice %[[C2]], %[[C1]], %[[C3]], %[[C1]] {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index) -> !fir.slice<2>
 // CHECK:       [[EMBOX:%[0-9]+]] = fir.embox [[DECLARE]]([[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<3xi32>>
 // CHECK:       %[[C1_0:.*]] = arith.constant 1 : index
 // CHECK:       [[ADD1:%[0-9]+]] = arith.addi %[[C3]], %[[C1_0]] : index
@@ -212,7 +212,7 @@ func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
   %1 = fir.shape %c3, %c3 : (index, index) -> !fir.shape<2>
   %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFextract_rowEmatrix"} : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<3x3xi32>>
   %5 = fir.undefined index
-  %6 = fir.slice %c2, %5, %5, %c1, %c3, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %6 = fir.slice %c2, %c1, %c3, %c1 {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index) -> !fir.slice<2>
   %7 = fir.embox %2(%1) [%6] : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<3xi32>>
   %c1_0 = arith.constant 1 : index
   %8 = arith.addi %c3, %c1_0 : index
@@ -237,7 +237,7 @@ func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
 // CHECK:       [[SHAPE:%[0-9]+]] = fir.shape %[[C100]], %[[C5]] : (index, index) -> !fir.shape<2>
 // CHECK:       [[DECLARE_TMP:%[0-9]+]] = fir.declare %arg0([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] {uniq_name = "tmp"} : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<100x5xf32>>
 // CHECK:       %[[UNDEF:.*]] = fir.undefined index
-// CHECK:       %[[SLICE:[0-9]+]] = fir.slice %[[C1]], %[[C100]], %[[C11]], %[[C1]], %[[UNDEF]], %[[UNDEF]] : (index, index, index, index, index, index) -> !fir.slice<2>
+// CHECK:       %[[SLICE:[0-9]+]] = fir.slice %[[C1]], %[[C100]], %[[C11]], %[[C1]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index) -> !fir.slice<2>
 // CHECK:       [[EMBOX:%[0-9]+]] = fir.embox [[DECLARE_TMP]]([[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<10xf32>>
 // CHECK:       %[[C1_0:.*]] = arith.constant 1 : index
 // CHECK:       [[ADD1:%[0-9]+]] = arith.addi %[[C10]], %[[C1_0]] : index
@@ -268,7 +268,7 @@ func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name
   %5 = fir.shape %c100, %c5 : (index, index) -> !fir.shape<2>
   %6 = fir.declare %arg0(%5) dummy_scope %0 {uniq_name = "tmp"} : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<100x5xf32>>
   %8 = fir.undefined index
-  %9 = fir.slice %c1, %c100, %c11, %c1, %8, %8 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %9 = fir.slice %c1, %c100, %c11, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index) -> !fir.slice<2>
   %10 = fir.embox %6(%5) [%9] : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<10xf32>>
   %c1_2 = arith.constant 1 : index
   %11 = arith.addi %c10, %c1_2 : index

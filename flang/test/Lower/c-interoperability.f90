@@ -15,10 +15,8 @@
 ! CHECK-LABEL: fir.global @_QMc_interoperability_testEthis_thing : !fir.type<_QMc_interoperability_testTthing_with_pointer{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}> {
 ! CHECK:         %[[VAL_0:.*]] = fir.undefined !fir.type<_QMc_interoperability_testTthing_with_pointer{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
 ! CHECK:         %[[VAL_1:.*]] = fir.undefined !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 0 : i64
 ! CHECK:         %[[VAL_4:.*]] = fir.insert_value %[[VAL_1]], %[[VAL_3]], ["__address", !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>] : (!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>, i64) -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_5:.*]] = fir.field_index cptr, !fir.type<_QMc_interoperability_testTthing_with_pointer{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
 ! CHECK:         %[[VAL_6:.*]] = fir.insert_value %[[VAL_0]], %[[VAL_4]], ["cptr", !fir.type<_QMc_interoperability_testTthing_with_pointer{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>] : (!fir.type<_QMc_interoperability_testTthing_with_pointer{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>) -> !fir.type<_QMc_interoperability_testTthing_with_pointer{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
 ! CHECK:         fir.has_value %[[VAL_6]] : !fir.type<_QMc_interoperability_testTthing_with_pointer{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
 ! CHECK:       }

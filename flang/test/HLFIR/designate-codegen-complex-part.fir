@@ -57,8 +57,7 @@ func.func @test_complete_slice(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
 // CHECK: %[[VAL_7:.*]] = arith.constant 1 : index
 // CHECK: %[[VAL_8:.*]] = arith.constant 0 : index
 // CHECK: %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_3]], %[[VAL_8]] : (!fir.box<!fir.array<?xcomplex<f32>>>, index) -> (index, index, index)
-// CHECK: %[[VAL_10:.*]] = arith.constant 1 : index
-// CHECK: %[[VAL_11:.*]] = fir.slice %[[VAL_7]], %[[VAL_9]]#1, %[[VAL_6]] path %[[VAL_10]] : (index, index, index, index) -> !fir.slice<1>
+// CHECK: %[[VAL_11:.*]] = fir.slice %[[VAL_7]], %[[VAL_9]]#1, %[[VAL_6]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<imaginary>]} : (index, index, index) -> !fir.slice<1>
 // CHECK: %[[VAL_12:.*]] = fir.rebox %[[VAL_3]] [%[[VAL_11]]] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
 
 func.func @test_slice_steps(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
@@ -78,6 +77,5 @@ func.func @test_slice_steps(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
 // CHECK: %[[VAL_4:.*]] = fir.declare %[[VAL_0]] {uniq_name = "a"} : (!fir.box<!fir.array<?xcomplex<f32>>>) -> !fir.box<!fir.array<?xcomplex<f32>>>
 // CHECK: %[[VAL_5:.*]] = fir.rebox %[[VAL_4]] : (!fir.box<!fir.array<?xcomplex<f32>>>) -> !fir.box<!fir.array<?xcomplex<f32>>>
 // CHECK: %[[VAL_6:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-// CHECK: %[[VAL_7:.*]] = arith.constant 0 : index
-// CHECK: %[[VAL_8:.*]] = fir.slice %[[VAL_3]], %[[VAL_2]], %[[VAL_1]] path %[[VAL_7]] : (index, index, index, index) -> !fir.slice<1>
+// CHECK: %[[VAL_8:.*]] = fir.slice %[[VAL_3]], %[[VAL_2]], %[[VAL_1]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<real>]} : (index, index, index) -> !fir.slice<1>
 // CHECK: %[[VAL_9:.*]] = fir.rebox %[[VAL_5]] [%[[VAL_8]]] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.slice<1>) -> !fir.box<!fir.array<3xf32>>

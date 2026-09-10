@@ -24,8 +24,8 @@ func.func @array_coor_box_slice_shape_no_shift(%arg0: !fir.box<!fir.array<?x?xi3
   %c2 = arith.constant 2 : index
   %undef = fir.undefined index
   %rebox = fir.rebox %arg0 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
-  %slice = fir.slice %c1, %c2, %c1, %c2, %undef, %undef :
-      (index, index, index, index, index, index) -> !fir.slice<2>
+  %slice = fir.slice %c1, %c2, %c1, %c2 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} :
+      (index, index, index, index) -> !fir.slice<2>
   %dim0:3 = fir.box_dims %rebox, %c0 : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
   %dim1:3 = fir.box_dims %rebox, %c1 : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
   %shape = fir.shape %dim0#1, %dim1#1 : (index, index) -> !fir.shape<2>
@@ -82,8 +82,8 @@ func.func @array_coor_box_slice_shape_row_loop(%arg0: !fir.box<!fir.array<?x?xi3
   %c2 = arith.constant 2 : index
   %undef = fir.undefined index
   %rebox = fir.rebox %arg0 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
-  %slice = fir.slice %c1, %c2, %c1, %c2, %undef, %undef :
-      (index, index, index, index, index, index) -> !fir.slice<2>
+  %slice = fir.slice %c1, %c2, %c1, %c2 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} :
+      (index, index, index, index) -> !fir.slice<2>
   %c0 = arith.constant 0 : index
   %trip = arith.subi %c2, %c1 : index
   %ub = arith.addi %trip, %c1 : index

@@ -24,8 +24,7 @@ func.func @array_coor_box_value(%29 : !fir.box<!fir.array<2xf64>>,
 func.func @test_array_coor_box_component_slice(%arg0: !fir.box<!fir.array<2x!fir.type<t{i:i32,j:i32}>>>) {
   %c2 = arith.constant 2 : index
   %c1 = arith.constant 1 : index
-  %0 = fir.field_index j, !fir.type<t{i:i32,j:i32}>
-  %1 = fir.slice %c1, %c2, %c1 path %0 : (index, index, index, !fir.field) -> !fir.slice<1>
+  %1 = fir.slice %c1, %c2, %c1 {operand_map = [#fir.slice_operand<triplet>, "j"]} : (index, index, index) -> !fir.slice<1>
   %2 = fir.array_coor %arg0 [%1] %c2 : (!fir.box<!fir.array<2x!fir.type<t{i:i32,j:i32}>>>, !fir.slice<1>, index) -> !fir.ref<i32>
   fir.call @take_int(%2) : (!fir.ref<i32>) -> ()
   return

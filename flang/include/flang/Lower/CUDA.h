@@ -68,7 +68,7 @@ getAllocatorIdxForUnified(const Fortran::semantics::Symbol &sym,
 mlir::Type gatherDeviceComponentCoordinatesAndType(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::semantics::Symbol &sym, fir::RecordType recTy,
-    llvm::SmallVector<mlir::Value> &coordinates);
+    llvm::SmallVector<fir::IntOrValue> &coordinates);
 
 /// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
 /// representation.

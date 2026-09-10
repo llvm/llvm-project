@@ -12,7 +12,6 @@ subroutine test
 end subroutine test
 ! CHECK-LABEL:   fir.global internal @_QQro._QFtestTt1.0 constant : !fir.type<_QFtestTt1{d:!fir.array<1x!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>}> {
 ! CHECK:           %[[VAL_0:.*]] = fir.undefined !fir.type<_QFtestTt1{d:!fir.array<1x!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>}>
-! CHECK:           %[[VAL_1:.*]] = fir.field_index d, !fir.type<_QFtestTt1{d:!fir.array<1x!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>}>
 ! CHECK:           %[[VAL_2:.*]] = fir.undefined !fir.array<1x!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
 ! CHECK:           %[[VAL_3:.*]] = fir.undefined !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : i64
@@ -35,7 +34,6 @@ subroutine test2
 end subroutine test2
 ! CHECK-LABEL:   fir.global internal @_QQro._QFtest2Tt1.1 constant : !fir.type<_QFtest2Tt1{d:!fir.array<1x!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>}> {
 ! CHECK:           %[[VAL_0:.*]] = fir.undefined !fir.type<_QFtest2Tt1{d:!fir.array<1x!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>}>
-! CHECK:           %[[VAL_1:.*]] = fir.field_index d, !fir.type<_QFtest2Tt1{d:!fir.array<1x!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>}>
 ! CHECK:           %[[VAL_2:.*]] = fir.undefined !fir.array<1x!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>
 ! CHECK:           %[[VAL_3:.*]] = fir.undefined !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : i64

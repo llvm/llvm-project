@@ -17,8 +17,9 @@ func.func @rank_reduced_embox_slice(
   %shape = fir.shape %c3, %c2, %c2 : (index, index, index) -> !fir.shape<3>
   // Embox slice: a(:, 2, :) -- range/scalar/range. Collapses parent dim 1
   // (Fortran dim 1) at lb = 2. Result is a rank-2 fir.box.
-  %eslice = fir.slice %c1, %c3, %c1, %c2, %undef, %undef, %c1, %c2, %c1
-      : (index, index, index, index, index, index, index, index, index)
+  %eslice = fir.slice %c1, %c3, %c1, %c2, %c1, %c2, %c1
+      {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]}
+      : (index, index, index, index, index, index, index)
       -> !fir.slice<3>
   %box = fir.embox %arg0(%shape) [%eslice]
       : (!fir.ref<!fir.array<3x2x2xi32>>, !fir.shape<3>, !fir.slice<3>)
@@ -26,8 +27,9 @@ func.func @rank_reduced_embox_slice(
   // Array_coor with its own rank-2 slice on the box + 2 indices.
   %ashape = fir.shape %c3, %c2 : (index, index) -> !fir.shape<2>
   %ai = arith.index_cast %i : index to i64
-  %islice = fir.slice %c1, %c3, %c1, %j, %undef, %undef
-      : (index, index, index, index, index, index) -> !fir.slice<2>
+  %islice = fir.slice %c1, %c3, %c1, %j
+      {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]}
+      : (index, index, index, index) -> !fir.slice<2>
   %addr = fir.array_coor %box(%ashape) [%islice] %ai, %j
       : (!fir.box<!fir.array<3x2xi32>>, !fir.shape<2>, !fir.slice<2>, i64, index)
       -> !fir.ref<i32>
@@ -45,7 +47,7 @@ func.func @rank_reduced_embox_slice(
 
 // Parent (rank-3) fir.shape and rank-reducing fir.slice survive.
 // CHECK:       %[[SHAPE:.+]] = fir.shape %[[C3]], %[[C2]], %[[C2]] : (index, index, index) -> !fir.shape<3>
-// CHECK:       %[[ESLICE:.+]] = fir.slice %[[C1]], %[[C3]], %[[C1]], %[[C2]], %[[UNDEF]], %[[UNDEF]], %[[C1]], %[[C2]], %[[C1]] : ({{.+}}) -> !fir.slice<3>
+// CHECK:       %[[ESLICE:.+]] = fir.slice %[[C1]], %[[C3]], %[[C1]], %[[C2]], %[[C1]], %[[C2]], %[[C1]] {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]} : ({{.+}}) -> !fir.slice<3>
 // CHECK:       fir.embox %[[ARG0]](%[[SHAPE]]) [%[[ESLICE]]] : ({{.+}}) -> !fir.box<!fir.array<3x2xi32>>
 
 // Row-major memref view of the parent (col-major !fir.array<3x2x2>).

@@ -74,14 +74,13 @@ func.func @test_shapeshift_sink(%arg0: !fir.ref<!fir.array<?xf32>>) {
 
 // -----
 
-// Test fir.field_index sinking
+// Test a coordinate with an embedded component name.
 func.func private @use_ref(!fir.ref<f32>) -> ()
 
 func.func @test_fieldindex_sink() {
   %var = fir.alloca !fir.type<_QTmytype{field:f32}>
-  %fieldidx = fir.field_index field, !fir.type<_QTmytype{field:f32}>
   acc.serial {
-    %coor = fir.coordinate_of %var, %fieldidx : (!fir.ref<!fir.type<_QTmytype{field:f32}>>, !fir.field) -> !fir.ref<f32>
+    %coor = fir.coordinate_of %var, field : (!fir.ref<!fir.type<_QTmytype{field:f32}>>) -> !fir.ref<f32>
     fir.call @use_ref(%coor) : (!fir.ref<f32>) -> ()
     acc.yield
   }
@@ -90,8 +89,7 @@ func.func @test_fieldindex_sink() {
 
 // CHECK-LABEL: @test_fieldindex_sink
 // CHECK: acc.serial {
-// CHECK:   %[[FIELD:.*]] = fir.field_index field
-// CHECK:   fir.coordinate_of {{.*}}, %[[FIELD]]
+// CHECK:   fir.coordinate_of {{.*}}, field
 
 // -----
 
@@ -418,17 +416,12 @@ func.func @test_convert_chain_and_direct(%arg0: !fir.boxchar<1>, %arg1: !fir.ref
 
 // -----
 
-// Test fir.undefined sinking into offload region.
-// fir.undefined is used in fir.slice to mark collapsed dimensions.
-// After gpu-kernel-outlining, function arguments lose their defining op,
-// so SliceOp::getOutputRank() can no longer identify collapsed dims.
-// The pass must sink fir.undefined to preserve this information.
+// Test sinking a rank-reducing fir.slice into an offload region.
 
 func.func @test_undef_slice_sink(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
-  %undef = fir.undefined index
-  %slice = fir.slice %c1, %c10, %c1, %c1, %undef, %undef : (index, index, index, index, index, index) -> !fir.slice<2>
+  %slice = fir.slice %c1, %c10, %c1, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index) -> !fir.slice<2>
   acc.serial {
     %rebox = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
     acc.yield
@@ -438,19 +431,17 @@ func.func @test_undef_slice_sink(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 
 // CHECK-LABEL: @test_undef_slice_sink
 // CHECK: acc.serial {
-// CHECK:   %[[UNDEF:.*]] = fir.undefined index
-// CHECK:   %[[SLICE:.*]] = fir.slice {{.*}}, %[[UNDEF]], %[[UNDEF]]
+// CHECK:   %[[SLICE:.*]] = fir.slice {{.*}} {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]}
 // CHECK:   fir.rebox %arg0 [%[[SLICE]]]
 
 // -----
 
-// Test fir.undefined rematerialization (used both inside and outside region).
+// Test rank-reducing fir.slice rematerialization.
 
 func.func @test_undef_slice_rematerialize(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
-  %undef = fir.undefined index
-  %slice = fir.slice %c1, %c10, %c1, %c1, %undef, %undef : (index, index, index, index, index, index) -> !fir.slice<2>
+  %slice = fir.slice %c1, %c10, %c1, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index) -> !fir.slice<2>
   %rebox_outer = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
   acc.serial {
     %rebox_inner = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
@@ -460,12 +451,10 @@ func.func @test_undef_slice_rematerialize(%arg0: !fir.box<!fir.array<?x?xf32>>) 
 }
 
 // CHECK-LABEL: @test_undef_slice_rematerialize
-// CHECK: %[[UNDEF_OUTER:.*]] = fir.undefined index
-// CHECK: %[[SLICE_OUTER:.*]] = fir.slice {{.*}}, %[[UNDEF_OUTER]], %[[UNDEF_OUTER]]
+// CHECK: %[[SLICE_OUTER:.*]] = fir.slice {{.*}} {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]}
 // CHECK: fir.rebox %arg0 [%[[SLICE_OUTER]]]
 // CHECK: acc.serial {
-// CHECK:   %[[UNDEF_INNER:.*]] = fir.undefined index
-// CHECK:   %[[SLICE_INNER:.*]] = fir.slice {{.*}}, %[[UNDEF_INNER]], %[[UNDEF_INNER]]
+// CHECK:   %[[SLICE_INNER:.*]] = fir.slice {{.*}} {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]}
 // CHECK:   fir.rebox %arg0 [%[[SLICE_INNER]]]
 
 // -----

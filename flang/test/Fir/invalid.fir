@@ -97,7 +97,7 @@ func.func @bad_rebox_8(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   %undef = fir.undefined index
-  %0 = fir.slice %c1, %undef, %undef, %c1, %c10, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %0 = fir.slice %c1, %c1, %c10, %c1 {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index) -> !fir.slice<2>
   // expected-error@+1{{result type rank and rank after applying slice operand must match}}
   %1 = fir.rebox %arg0 [%0] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
   return
@@ -602,10 +602,54 @@ func.func @bad_save_result(%buffer : !fir.ref<!fir.array<?xf32>>, %n :index) {
 // -----
 
 func.func @slice_must_be_integral() {
-  %0 = arith.constant 42 : i32
-  %1 = fir.field_index field, !fir.type<t(param:i32){field:i32}> (%0 : i32)
-  // expected-error@+1 {{'fir.slice' op operand #0 must be variadic of any integer, but got '!fir.field'}}
-  %2 = fir.slice %1, %1, %1 : (!fir.field, !fir.field, !fir.field) -> !fir.slice<1>
+  %0 = arith.constant 4.200000e+01 : f32
+  // expected-error@+1 {{'fir.slice' op operand #0 must be variadic of any integer, but got 'f32'}}
+  %1 = fir.slice %0, %0, %0 : (f32, f32, f32) -> !fir.slice<1>
+  return
+}
+
+// -----
+
+func.func @slice_operand_map_entries_must_be_valid() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.slice' op operand map entries must be slice operand kinds or strings}}
+  %0 = fir.slice %c1, %c1, %c1 {operand_map = [0 : i32]} : (index, index, index) -> !fir.slice<1>
+  return
+}
+
+// -----
+
+func.func @slice_operand_map_must_have_a_dimension() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.slice' op operand map has fewer dimensions than the slice type}}
+  %0 = fir.slice %c1, %c1, %c1 {operand_map = []} : (index, index, index) -> !fir.slice<1>
+  return
+}
+
+// -----
+
+func.func @slice_operand_map_must_consume_all_operands() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.slice' op operand map consumes 3 operands, but the operation has 4}}
+  %0 = fir.slice %c1, %c1, %c1, %c1 {operand_map = [#fir.slice_operand<triplet>]} : (index, index, index, index) -> !fir.slice<1>
+  return
+}
+
+// -----
+
+func.func @slice_triplet_must_precede_component_path() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.slice' op triplet cannot appear in a component path}}
+  %0 = fir.slice %c1, %c1, %c1, %c1 {operand_map = [#fir.slice_operand<index>, "field", #fir.slice_operand<triplet>]} : (index, index, index, index) -> !fir.slice<1>
+  return
+}
+
+// -----
+
+func.func @slice_substring_must_be_last() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.slice' op substring must be the final operand map entry}}
+  %0 = fir.slice %c1, %c1, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<substring>, "field"]} : (index, index, index) -> !fir.slice<1>
   return
 }
 
@@ -614,7 +658,7 @@ func.func @slice_must_be_integral() {
 func.func @array_coor_no_slice_substr(%a : !fir.ref<!fir.array<?x?xf32>>) {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
-  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
+  %slice = fir.slice %c1, %c10, %c1, %c1, %c10 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<substring>]} : (index, index, index, index, index) -> !fir.slice<1>
   // expected-error@+1 {{'fir.array_coor' op array_coor cannot take a slice with substring}}
   %p = fir.array_coor %a[%slice] %c1, %c1 : (!fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>, index, index) -> !fir.ref<f32>
   return

@@ -20,18 +20,13 @@
 mlir::Type Fortran::lower::gatherDeviceComponentCoordinatesAndType(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::semantics::Symbol &sym, fir::RecordType recTy,
-    llvm::SmallVector<mlir::Value> &coordinates) {
+    llvm::SmallVector<fir::IntOrValue> &coordinates) {
   unsigned fieldIdx = recTy.getFieldIndex(sym.name().ToString());
   mlir::Type fieldTy;
   if (fieldIdx != std::numeric_limits<unsigned>::max()) {
     // Field found in the base record type.
-    auto fieldName = recTy.getTypeList()[fieldIdx].first;
     fieldTy = recTy.getTypeList()[fieldIdx].second;
-    mlir::Value fieldIndex = fir::FieldIndexOp::create(
-        builder, loc, fir::FieldType::get(fieldTy.getContext()), fieldName,
-        recTy,
-        /*typeParams=*/mlir::ValueRange{});
-    coordinates.push_back(fieldIndex);
+    coordinates.push_back(builder.getI32IntegerAttr(fieldIdx));
   } else {
     // Field not found in base record type, search in potential
     // record type components.
@@ -39,18 +34,10 @@ mlir::Type Fortran::lower::gatherDeviceComponentCoordinatesAndType(
       if (auto childRecTy = mlir::dyn_cast<fir::RecordType>(component.second)) {
         fieldIdx = childRecTy.getFieldIndex(sym.name().ToString());
         if (fieldIdx != std::numeric_limits<unsigned>::max()) {
-          mlir::Value parentFieldIndex = fir::FieldIndexOp::create(
-              builder, loc, fir::FieldType::get(childRecTy.getContext()),
-              component.first, recTy,
-              /*typeParams=*/mlir::ValueRange{});
-          coordinates.push_back(parentFieldIndex);
-          auto fieldName = childRecTy.getTypeList()[fieldIdx].first;
+          coordinates.push_back(
+              builder.getI32IntegerAttr(recTy.getFieldIndex(component.first)));
           fieldTy = childRecTy.getTypeList()[fieldIdx].second;
-          mlir::Value childFieldIndex = fir::FieldIndexOp::create(
-              builder, loc, fir::FieldType::get(fieldTy.getContext()),
-              fieldName, childRecTy,
-              /*typeParams=*/mlir::ValueRange{});
-          coordinates.push_back(childFieldIndex);
+          coordinates.push_back(builder.getI32IntegerAttr(fieldIdx));
           break;
         }
       }

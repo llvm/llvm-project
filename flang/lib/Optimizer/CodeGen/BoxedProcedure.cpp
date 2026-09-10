@@ -517,18 +517,6 @@ private:
                                                   coor.getFieldIndicesAttr());
         opIsValid = false;
       }
-    } else if (auto index = mlir::dyn_cast<FieldIndexOp>(op)) {
-      auto ty{index.getType()};
-      mlir::Type onTy{index.getOnType()};
-      if (typeConverter.needsConversion(ty) ||
-          typeConverter.needsConversion(onTy)) {
-        rewriter.setInsertionPoint(index);
-        auto toTy{typeConverter.convertType(ty)};
-        auto toOnTy{typeConverter.convertType(onTy)};
-        rewriter.replaceOpWithNewOp<FieldIndexOp>(
-            index, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
-        opIsValid = false;
-      }
     } else if (auto index = mlir::dyn_cast<LenParamIndexOp>(op)) {
       auto ty{index.getType()};
       mlir::Type onTy{index.getOnType()};

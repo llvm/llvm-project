@@ -52,9 +52,8 @@ func.func @_QPtest_dt_slice() {
   %c2_i64 = arith.constant 2 : i64
   %0 = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFtest_dt_sliceEv"}
   %1 = fir.alloca !fir.array<20x!fir.type<_QFtest_dt_sliceTt{i:i32,j:i32}>> {bindc_name = "x", uniq_name = "_QFtest_dt_sliceEx"}
-  %2 = fir.field_index i, !fir.type<_QFtest_dt_sliceTt{i:i32,j:i32}>
   %3 = fir.shape %c20 : (index) -> !fir.shape<1>
-  %4 = fir.slice %c1_i64, %c10_i64, %c2_i64 path %2 : (i64, i64, i64, !fir.field) -> !fir.slice<1>
+  %4 = fir.slice %c1_i64, %c10_i64, %c2_i64 {operand_map = [#fir.slice_operand<triplet>, "i"]} : (i64, i64, i64) -> !fir.slice<1>
   %5 = fir.embox %1(%3) [%4] : (!fir.ref<!fir.array<20x!fir.type<_QFtest_dt_sliceTt{i:i32,j:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
   fir.call @_QPtest_dt_callee(%5) : (!fir.box<!fir.array<?xi32>>) -> ()
   return
@@ -71,7 +70,7 @@ func.func @emboxSubstring(%arg0: !fir.ref<!fir.array<2x3x!fir.char<1,4>>>) {
   %c1_i64 = arith.constant 1 : i64
   %c2_i64 = arith.constant 2 : i64
   %0 = fir.shape %c2, %c3 : (index, index) -> !fir.shape<2>
-  %1 = fir.slice %c1, %c2, %c1, %c1, %c3, %c1 substr %c1_i64, %c2_i64 : (index, index, index, index, index, index, i64, i64) -> !fir.slice<2>
+  %1 = fir.slice %c1, %c2, %c1, %c1, %c3, %c1, %c1_i64, %c2_i64 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<triplet>, #fir.slice_operand<substring>]} : (index, index, index, index, index, index, i64, i64) -> !fir.slice<2>
   %2 = fir.embox %arg0(%0) [%1] : (!fir.ref<!fir.array<2x3x!fir.char<1,4>>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   // CHECK: %[[addr:.*]] = getelementptr [3 x [2 x [4 x i8]]], ptr %[[arg0]], i64 0, i64 0, i64 0, i64 1
   // CHECK: insertvalue {[[descriptorType:.*]]} { ptr undef, i64 2, i32 20240719, i8 2, i8 40, i8 0, i8 0

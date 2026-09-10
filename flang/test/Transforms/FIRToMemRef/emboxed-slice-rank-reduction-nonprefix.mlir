@@ -23,16 +23,18 @@ func.func @rank_reduced_nonprefix(
   %undef = fir.undefined index
   %shape = fir.shape %c4, %c3, %c2 : (index, index, index) -> !fir.shape<3>
   // Embox slice: a(:, 2, :) -- collapse parent dim 1 at lb=2.
-  %eslice = fir.slice %c1, %c4, %c1, %c2, %undef, %undef, %c1, %c2, %c1
-      : (index, index, index, index, index, index, index, index, index)
+  %eslice = fir.slice %c1, %c4, %c1, %c2, %c1, %c2, %c1
+      {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<triplet>]}
+      : (index, index, index, index, index, index, index)
       -> !fir.slice<3>
   %box = fir.embox %arg0(%shape) [%eslice]
       : (!fir.ref<!fir.array<4x3x2xi32>>, !fir.shape<3>, !fir.slice<3>)
       -> !fir.box<!fir.array<4x2xi32>>
   %ashape = fir.shape %c4, %c2 : (index, index) -> !fir.shape<2>
   %ai = arith.index_cast %i : index to i64
-  %islice = fir.slice %c1, %c4, %c1, %j, %undef, %undef
-      : (index, index, index, index, index, index) -> !fir.slice<2>
+  %islice = fir.slice %c1, %c4, %c1, %j
+      {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]}
+      : (index, index, index, index) -> !fir.slice<2>
   %addr = fir.array_coor %box(%ashape) [%islice] %ai, %j
       : (!fir.box<!fir.array<4x2xi32>>, !fir.shape<2>, !fir.slice<2>, i64, index)
       -> !fir.ref<i32>

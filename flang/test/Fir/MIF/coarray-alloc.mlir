@@ -149,9 +149,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   mif.alloc_coarray %53 lcobounds %93 ucobounds %94 errmsg %86 {uniq_name = "_QFEc2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
 // CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %95 = fir.absent !fir.box<none>
-  %96 = fir.field_index z, !fir.type<_QFTmy_type{x:i32,y:!fir.box<!fir.heap<!fir.array<?xi32>>>,z:!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>}>
   %97 = fir.coordinate_of %55, z : (!fir.ref<!fir.type<_QFTmy_type{x:i32,y:!fir.box<!fir.heap<!fir.array<?xi32>>>,z:!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>}>>) -> !fir.ref<!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>>
-  %98 = fir.field_index co, !fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>
   %99 = fir.coordinate_of %97, co : (!fir.ref<!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
   %100 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
   fir.store %c1_i64 to %100 : !fir.ref<i64>
@@ -170,9 +168,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   mif.dealloc_coarray %53 stat %106 errmsg %103 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>, !fir.ref<i32>, !fir.box<none>) -> ()
 // CHECK: fir.call @_QMprifPprif_deallocate_coarray({{.*}}) : (!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %107 = fir.absent !fir.box<none>
-  %108 = fir.field_index z, !fir.type<_QFTmy_type{x:i32,y:!fir.box<!fir.heap<!fir.array<?xi32>>>,z:!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>}>
   %109 = fir.coordinate_of %55, z : (!fir.ref<!fir.type<_QFTmy_type{x:i32,y:!fir.box<!fir.heap<!fir.array<?xi32>>>,z:!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>}>>) -> !fir.ref<!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>>
-  %110 = fir.field_index co, !fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>
   %111 = fir.coordinate_of %109, co : (!fir.ref<!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
   %112 = fir.absent !fir.ref<i32>
   mif.dealloc_coarray %111 stat %112 errmsg %107 : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<i32>, !fir.box<none>) -> ()

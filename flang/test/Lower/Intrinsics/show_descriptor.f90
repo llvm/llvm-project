@@ -154,7 +154,6 @@ subroutine test_real
 ! CHECK:           fir.store %[[CONVERT_W]] to %[[ALLOCA_W:.*]] : !fir.ref<!fir.box<none>>
 ! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_W]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 ! CHECK:           %[[SHAPE_4:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[UNDEFINED_0:.*]] = fir.undefined index
 ! CHECK:           %[[SLICE_0:.*]] = fir.slice %[[C1]], %[[C4]], %[[C2]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:           %[[EMBOX_10:.*]] = fir.embox %[[DECLARE_7]](%[[SHAPE_3]]) {{\[}}%[[SLICE_0]]] : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2xf64>>
 ! CHECK:           %[[CONVERT_BOX:.*]] = fir.convert %[[EMBOX_10]] : (!fir.box<!fir.array<2xf64>>) -> !fir.box<none>
@@ -281,9 +280,11 @@ subroutine test_derived_member
   type(t3) :: vt3
 ! CHECK:           %[[VT3:.*]] = fir.alloca !fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
 ! CHECK:           %[[VT3_DECL:.*]] = fir.declare %[[VT3]] {uniq_name = "_QMtest_show_descriptorFtest_derived_memberEvt3"} : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+! CHECK:           %[[A_COORD_INIT:.*]] = fir.coordinate_of %[[VT3_DECL]], a : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           fir.store %{{.*}} to %[[A_COORD_INIT]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   allocate(vt3%a(5))
-! CHECK:           %[[A_FIELD:.*]] = fir.field_index a, !fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
 ! CHECK:           %[[A_COORD:.*]] = fir.coordinate_of %[[VT3_DECL]], a : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[A_ALLOCMEM:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}}
   call show_descriptor(vt3%a)
 ! CHECK:           %[[CONVERT_A:.*]] = fir.convert %[[A_COORD]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           fir.call @_FortranAShowDescriptor(%[[CONVERT_A]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()

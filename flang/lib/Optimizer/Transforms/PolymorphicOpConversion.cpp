@@ -162,22 +162,18 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     // After:
     //   %12 = fir.box_tdesc %11 : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.tdesc<none>
     //   %13 = fir.convert %12 : (!fir.tdesc<none>) -> !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype>>
-    //   %14 = fir.field_index binding, !fir.type<_QM__fortran_type_infoTderivedtype>
-    //   %15 = fir.coordinate_of %13, %14 : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding>>>>>
+    //   %15 = fir.coordinate_of %13, #field_ordinal : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding>>>>>
     //   %bindings = fir.load %15 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding>>>>>
     //   %16 = fir.box_addr %bindings : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding>>>>) -> !fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding>>>
     //   %17 = fir.coordinate_of %16, %c0 : (!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding>>>, index) -> !fir.ref<!fir.type<_QM__fortran_type_infoTbinding>>
-    //   %18 = fir.field_index proc, !fir.type<_QM__fortran_type_infoTbinding>
-    //   %19 = fir.coordinate_of %17, %18 : (!fir.ref<!fir.type<_QM__fortran_type_infoTbinding>>, !fir.field) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>
-    //   %20 = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr>
-    //   %21 = fir.coordinate_of %19, %20 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>, !fir.field) -> !fir.ref<i64>
+    //   %19 = fir.coordinate_of %17, #field_ordinal : (!fir.ref<!fir.type<_QM__fortran_type_infoTbinding>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>
+    //   %21 = fir.coordinate_of %19, #field_ordinal : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>) -> !fir.ref<i64>
     //   %22 = fir.load %21 : !fir.ref<i64>
     //   %23 = fir.convert %22 : (i64) -> (() -> ())
     //   fir.call %23()  : () -> ()
     // clang-format on
 
     // Load the descriptor.
-    mlir::Type fieldTy = fir::FieldType::get(rewriter.getContext());
     mlir::Type tdescType =
         fir::TypeDescType::get(mlir::NoneType::get(rewriter.getContext()));
     mlir::Value boxDesc =
@@ -188,13 +184,18 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     // Load the bindings descriptor.
     auto bindingsCompName = Fortran::semantics::bindingDescCompName;
     fir::RecordType typeDescRecTy = mlir::cast<fir::RecordType>(typeDescTy);
-    mlir::Value field =
-        fir::FieldIndexOp::create(rewriter, loc, fieldTy, bindingsCompName,
-                                  typeDescRecTy, mlir::ValueRange{});
+    auto getFieldIndex = [&](fir::RecordType recordType,
+                             llvm::StringRef fieldName) -> fir::IntOrValue {
+      unsigned fieldIndex = recordType.getFieldIndex(fieldName);
+      assert(fieldIndex < recordType.getNumFields() &&
+             "missing field in runtime record type");
+      return rewriter.getI32IntegerAttr(fieldIndex);
+    };
+    fir::IntOrValue field = getFieldIndex(typeDescRecTy, bindingsCompName);
     mlir::Type coorTy =
         fir::ReferenceType::get(typeDescRecTy.getType(bindingsCompName));
-    mlir::Value bindingBoxAddr =
-        fir::CoordinateOp::create(rewriter, loc, coorTy, boxDesc, field);
+    mlir::Value bindingBoxAddr = fir::CoordinateOp::create(
+        rewriter, loc, coorTy, boxDesc, llvm::ArrayRef<fir::IntOrValue>{field});
     mlir::Value bindingBox = fir::LoadOp::create(rewriter, loc, bindingBoxAddr);
 
     // Load the correct binding.
@@ -210,21 +211,21 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
 
     // Get the function pointer.
     auto procCompName = Fortran::semantics::procCompName;
-    mlir::Value procField = fir::FieldIndexOp::create(
-        rewriter, loc, fieldTy, procCompName, bindingTy, mlir::ValueRange{});
+    fir::IntOrValue procField = getFieldIndex(bindingTy, procCompName);
     fir::RecordType procTy =
         mlir::cast<fir::RecordType>(bindingTy.getType(procCompName));
     mlir::Type procRefTy = fir::ReferenceType::get(procTy);
-    mlir::Value procRef = fir::CoordinateOp::create(rewriter, loc, procRefTy,
-                                                    bindingAddr, procField);
+    mlir::Value procRef =
+        fir::CoordinateOp::create(rewriter, loc, procRefTy, bindingAddr,
+                                  llvm::ArrayRef<fir::IntOrValue>{procField});
 
     auto addressFieldName = Fortran::lower::builtin::cptrFieldName;
-    mlir::Value addressField = fir::FieldIndexOp::create(
-        rewriter, loc, fieldTy, addressFieldName, procTy, mlir::ValueRange{});
+    fir::IntOrValue addressField = getFieldIndex(procTy, addressFieldName);
     mlir::Type addressTy = procTy.getType(addressFieldName);
     mlir::Type addressRefTy = fir::ReferenceType::get(addressTy);
     mlir::Value addressRef = fir::CoordinateOp::create(
-        rewriter, loc, addressRefTy, procRef, addressField);
+        rewriter, loc, addressRefTy, procRef,
+        llvm::ArrayRef<fir::IntOrValue>{addressField});
     mlir::Value address = fir::LoadOp::create(rewriter, loc, addressRef);
 
     // Get the function type.

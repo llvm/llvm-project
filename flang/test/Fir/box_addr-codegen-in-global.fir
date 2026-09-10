@@ -11,8 +11,7 @@ fir.global @x_addr constant : !fir.type<sometype{p:i64}> {
   %0 = fir.undefined !fir.type<sometype{p:i64}>
   %1 = fir.address_of(@_QFEx) : !fir.ref<!fir.array<2x3x5x!fir.type<_QFTt1{c:i32}>>>
   %2 = fir.shape_shift %c1, %c2, %c-3, %c3, %c1, %c5 : (index, index, index, index, index, index) -> !fir.shapeshift<3>
-  %3 = fir.field_index c, !fir.type<_QFTt1{c:i32}>
-  %4 = fir.slice %c1, %c2, %c1, %c-3, %c-1, %c1, %c1, %c5, %c1 path %3 : (index, index, index, index, index, index, index, index, index, !fir.field) -> !fir.slice<3>
+  %4 = fir.slice %c1, %c2, %c1, %c-3, %c-1, %c1, %c1, %c5, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<triplet>, #fir.slice_operand<triplet>, "c"]} : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
   %5 = fir.embox %1(%2) [%4] : (!fir.ref<!fir.array<2x3x5x!fir.type<_QFTt1{c:i32}>>>, !fir.shapeshift<3>, !fir.slice<3>) -> !fir.box<!fir.ref<!fir.array<2x3x5xi32>>>
   %6 = fir.box_addr %5 : (!fir.box<!fir.ref<!fir.array<2x3x5xi32>>>) -> !fir.ref<!fir.array<2x3x5xi32>>
   %7 = fir.convert %6 : (!fir.ref<!fir.array<2x3x5xi32>>) -> i64

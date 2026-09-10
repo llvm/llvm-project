@@ -1363,7 +1363,7 @@ fir::ExtendedValue fir::factory::arraySectionElementToExtendedValue(
     return arrayElementToExtendedValue(builder, loc, array, element);
   auto sliceOp = mlir::dyn_cast_or_null<fir::SliceOp>(slice.getDefiningOp());
   assert(sliceOp && "slice must be a sliceOp");
-  if (sliceOp.getFields().empty())
+  if (sliceOp.getPath().empty())
     return arrayElementToExtendedValue(builder, loc, array, element);
   // For F95, using componentToExtendedValue will work, but when PDTs are
   // lowered. It will be required to go down the slice to propagate the length
@@ -1598,18 +1598,12 @@ mlir::Value fir::factory::computeExtent(fir::FirOpBuilder &builder,
   return computeExtent(builder, loc, lb, ub, zero, one);
 }
 
-static std::pair<mlir::Value, mlir::Type>
-genCPtrOrCFunptrFieldIndex(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Type cptrTy) {
+static std::pair<fir::IntOrValue, mlir::Type>
+genCPtrOrCFunptrFieldIndex(fir::FirOpBuilder &builder, mlir::Type cptrTy) {
   auto recTy = mlir::cast<fir::RecordType>(cptrTy);
   assert(recTy.getTypeList().size() == 1);
-  auto addrFieldName = recTy.getTypeList()[0].first;
   mlir::Type addrFieldTy = recTy.getTypeList()[0].second;
-  auto fieldIndexType = fir::FieldType::get(cptrTy.getContext());
-  mlir::Value addrFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, addrFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  return {addrFieldIndex, addrFieldTy};
+  return {builder.getI32IntegerAttr(0), addrFieldTy};
 }
 
 mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
@@ -1618,16 +1612,17 @@ mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
                                                mlir::Type ty) {
   if (fir::isa_builtin_cdevptr_type(ty)) {
     auto [cptrFieldIndex, cptrFieldTy] =
-        genCPtrOrCFunptrFieldIndex(builder, loc, ty);
+        genCPtrOrCFunptrFieldIndex(builder, ty);
     auto cptrCoord = fir::CoordinateOp::create(
-        builder, loc, builder.getRefType(cptrFieldTy), cPtr, cptrFieldIndex);
+        builder, loc, builder.getRefType(cptrFieldTy), cPtr,
+        llvm::ArrayRef<fir::IntOrValue>{cptrFieldIndex});
     return fir::factory::genCPtrOrCFunptrAddr(builder, loc, cptrCoord,
                                               cptrFieldTy);
   }
-  auto [addrFieldIndex, addrFieldTy] =
-      genCPtrOrCFunptrFieldIndex(builder, loc, ty);
+  auto [addrFieldIndex, addrFieldTy] = genCPtrOrCFunptrFieldIndex(builder, ty);
   return fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(addrFieldTy), cPtr, addrFieldIndex);
+      builder, loc, builder.getRefType(addrFieldTy), cPtr,
+      llvm::ArrayRef<fir::IntOrValue>{addrFieldIndex});
 }
 
 mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
@@ -1637,11 +1632,12 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
   if (fir::isa_builtin_cdevptr_type(cPtrTy)) {
     // Unwrap c_ptr from c_devptr.
     auto [addrFieldIndex, addrFieldTy] =
-        genCPtrOrCFunptrFieldIndex(builder, loc, cPtrTy);
+        genCPtrOrCFunptrFieldIndex(builder, cPtrTy);
     mlir::Value cPtrCoor;
     if (fir::isa_ref_type(cPtr.getType())) {
       cPtrCoor = fir::CoordinateOp::create(
-          builder, loc, builder.getRefType(addrFieldTy), cPtr, addrFieldIndex);
+          builder, loc, builder.getRefType(addrFieldTy), cPtr,
+          llvm::ArrayRef<fir::IntOrValue>{addrFieldIndex});
     } else {
       auto arrayAttr = builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 0)});
@@ -1657,7 +1653,7 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
     return fir::LoadOp::create(builder, loc, cPtrAddr);
   }
   auto [addrFieldIndex, addrFieldTy] =
-      genCPtrOrCFunptrFieldIndex(builder, loc, cPtrTy);
+      genCPtrOrCFunptrFieldIndex(builder, cPtrTy);
   auto arrayAttr =
       builder.getArrayAttr({builder.getIntegerAttr(builder.getIndexType(), 0)});
   return fir::ExtractValueOp::create(builder, loc, addrFieldTy, cPtr,

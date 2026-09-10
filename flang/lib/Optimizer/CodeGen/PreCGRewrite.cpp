@@ -15,8 +15,10 @@
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/Iterators.h"
@@ -55,6 +57,118 @@ static void populateShapeAndShift(llvm::SmallVectorImpl<mlir::Value> &shapeVec,
 static void populateShift(llvm::SmallVectorImpl<mlir::Value> &vec,
                           fir::ShiftOp shift) {
   vec.append(shift.getOrigins().begin(), shift.getOrigins().end());
+}
+
+/// Materialize the component names embedded in a slice as integer field
+/// indices for the lower-level fircg operations.
+static void populateSubcomponent(llvm::SmallVectorImpl<mlir::Value> &result,
+                                 fir::SliceOp slice, mlir::Type baseType,
+                                 mlir::PatternRewriter &rewriter,
+                                 mlir::Location loc) {
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(baseType);
+  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(eleTy))
+    eleTy = seqTy.getEleTy();
+
+  auto path = slice.getPath();
+  for (auto iter = path.begin(), end = path.end(); iter != end;) {
+    if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
+      fir::SlicePathElement element = *iter;
+      ++iter;
+      if (auto fieldName = element.dyn_cast<mlir::StringAttr>()) {
+        unsigned fieldIndex = recTy.getFieldIndex(fieldName.getValue());
+        if (fieldIndex >= recTy.getNumFields())
+          fir::emitFatalError(loc, "invalid component name in fir.slice path");
+        result.push_back(mlir::arith::ConstantOp::create(
+            rewriter, loc, rewriter.getIndexType(),
+            rewriter.getIndexAttr(fieldIndex)));
+        eleTy = recTy.getType(fieldName.getValue());
+        continue;
+      }
+      mlir::Value value = element.dyn_cast<mlir::Value>();
+      std::optional<llvm::APInt> index = fir::getIntIfConstant(value);
+      if (!index)
+        fir::emitFatalError(
+            loc, "record component index in fir.slice must be constant");
+      std::optional<std::int64_t> fieldIndex = index->trySExtValue();
+      if (!fieldIndex || *fieldIndex < 0 ||
+          static_cast<std::uint64_t>(*fieldIndex) >= recTy.getNumFields())
+        fir::emitFatalError(loc, "invalid component index in fir.slice path");
+      result.push_back(value);
+      eleTy = recTy.getType(*fieldIndex);
+      continue;
+    }
+
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy)) {
+      for (unsigned i = 0; i < seqTy.getDimension(); ++i) {
+        if (iter == end)
+          fir::emitFatalError(loc, "missing array index in fir.slice path");
+        fir::SlicePathElement element = *iter;
+        ++iter;
+        auto value = element.dyn_cast<mlir::Value>();
+        if (!value || !fir::isa_integer(value.getType()))
+          fir::emitFatalError(loc, "invalid array index in fir.slice path");
+        result.push_back(value);
+      }
+      eleTy = seqTy.getEleTy();
+      continue;
+    }
+
+    if (auto tupleTy = mlir::dyn_cast<mlir::TupleType>(eleTy)) {
+      fir::SlicePathElement element = *iter;
+      ++iter;
+      auto value = element.dyn_cast<mlir::Value>();
+      std::optional<llvm::APInt> index =
+          value ? fir::getIntIfConstant(value) : std::nullopt;
+      if (!index)
+        fir::emitFatalError(loc, "tuple index in fir.slice must be constant");
+      std::optional<std::int64_t> tupleIndex = index->trySExtValue();
+      if (!tupleIndex || *tupleIndex < 0 ||
+          static_cast<std::uint64_t>(*tupleIndex) >= tupleTy.size())
+        fir::emitFatalError(loc, "invalid tuple index in fir.slice path");
+      result.push_back(value);
+      eleTy = tupleTy.getType(*tupleIndex);
+      continue;
+    }
+
+    if (auto complexTy = mlir::dyn_cast<mlir::ComplexType>(eleTy)) {
+      fir::SlicePathElement element = *iter;
+      ++iter;
+      if (auto kind = element.dyn_cast<fir::SliceOperandKindAttr>()) {
+        int64_t index = kind.getValue() == fir::SliceOperandKind::Real ? 0 : 1;
+        result.push_back(mlir::arith::ConstantOp::create(
+            rewriter, loc, rewriter.getIndexType(),
+            rewriter.getIndexAttr(index)));
+        eleTy = complexTy.getElementType();
+        continue;
+      }
+      auto value = element.dyn_cast<mlir::Value>();
+      if (!value || !fir::isa_integer(value.getType()))
+        fir::emitFatalError(loc, "invalid complex index in fir.slice path");
+      result.push_back(value);
+      eleTy = complexTy.getElementType();
+      continue;
+    }
+
+    fir::emitFatalError(loc, "invalid type in fir.slice component path");
+  }
+}
+
+/// Expand the compact fir.slice dimension encoding into the legacy triplet
+/// encoding expected by fircg operations.
+static void populateSlice(llvm::SmallVectorImpl<mlir::Value> &result,
+                          fir::SliceOp slice, mlir::PatternRewriter &rewriter,
+                          mlir::Location loc) {
+  for (const fir::SliceDim &dim : slice.getDims()) {
+    if (dim.isTriplet()) {
+      result.append(dim.getOperands().begin(), dim.getOperands().end());
+      continue;
+    }
+    result.push_back(dim.getIndex());
+    mlir::Value undef =
+        fir::UndefOp::create(rewriter, loc, rewriter.getIndexType());
+    result.push_back(undef);
+    result.push_back(undef);
+  }
 }
 
 // Helper to emit embox/rebox for OPTIONAL input inside a block
@@ -208,10 +322,9 @@ public:
     if (auto s = embox.getSlice())
       if (auto sliceOp =
               mlir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
-        sliceOpers.assign(sliceOp.getTriples().begin(),
-                          sliceOp.getTriples().end());
-        subcompOpers.assign(sliceOp.getFields().begin(),
-                            sliceOp.getFields().end());
+        populateSlice(sliceOpers, sliceOp, rewriter, loc);
+        populateSubcomponent(subcompOpers, sliceOp, embox.getMemref().getType(),
+                             rewriter, loc);
         substrOpers.assign(sliceOp.getSubstr().begin(),
                            sliceOp.getSubstr().end());
       }
@@ -279,10 +392,9 @@ public:
     if (auto s = rebox.getSlice())
       if (auto sliceOp =
               mlir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
-        sliceOpers.append(sliceOp.getTriples().begin(),
-                          sliceOp.getTriples().end());
-        subcompOpers.append(sliceOp.getFields().begin(),
-                            sliceOp.getFields().end());
+        populateSlice(sliceOpers, sliceOp, rewriter, loc);
+        populateSubcomponent(subcompOpers, sliceOp, rebox.getBox().getType(),
+                             rewriter, loc);
         substrOpers.append(sliceOp.getSubstr().begin(),
                            sliceOp.getSubstr().end());
       }
@@ -336,10 +448,9 @@ public:
     if (auto s = arrCoor.getSlice())
       if (auto sliceOp =
               mlir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
-        sliceOpers.append(sliceOp.getTriples().begin(),
-                          sliceOp.getTriples().end());
-        subcompOpers.append(sliceOp.getFields().begin(),
-                            sliceOp.getFields().end());
+        populateSlice(sliceOpers, sliceOp, rewriter, loc);
+        populateSubcomponent(subcompOpers, sliceOp,
+                             arrCoor.getMemref().getType(), rewriter, loc);
         assert(sliceOp.getSubstr().empty() &&
                "Don't allow substring operations on array_coor. This "
                "restriction may be lifted in the future.");
@@ -445,15 +556,16 @@ static bool isCompileTimeOnly(mlir::Type type) {
 }
 
 /// Return the op \p value is built by, if this pass can rebuild it elsewhere
-/// from its operands. A fir.slice naming components is excluded: its fields
-/// are fir.field values, which are themselves compile-time only and so cannot
-/// be passed along a branch.
+/// from its operands. A fir.slice with a component, substring, or complex-part
+/// path is excluded: that path lives in the operand_map attribute, and incoming
+/// edges are compared only by operand shape, so the attribute cannot be
+/// forwarded independently.
 static mlir::Operation *getRebuildableDefiningOp(mlir::Value value) {
   mlir::Operation *def = value.getDefiningOp();
   if (!def)
     return nullptr;
   if (auto slice = mlir::dyn_cast<fir::SliceOp>(def))
-    return slice.getFields().empty() ? def : nullptr;
+    return slice.getPath().empty() ? def : nullptr;
   if (mlir::isa<fir::ShapeOp, fir::ShapeShiftOp, fir::ShiftOp>(def))
     return def;
   return nullptr;

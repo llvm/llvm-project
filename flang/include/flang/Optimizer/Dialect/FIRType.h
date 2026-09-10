@@ -22,6 +22,7 @@
 namespace fir {
 class FIROpsDialect;
 class KindMapping;
+class SlicePathAdaptor;
 using KindTy = unsigned;
 
 namespace detail {
@@ -455,6 +456,7 @@ bool isCharacterProcedureTuple(mlir::Type type, bool acceptRawFunc = true);
 /// of the resulting component element. `rootTy` should be an aggregate type.
 /// Returns null on error.
 mlir::Type applyPathToType(mlir::Type rootTy, mlir::ValueRange path);
+mlir::Type applyPathToType(mlir::Type rootTy, SlicePathAdaptor path);
 
 /// Does this function type has a result that requires binding the result value
 /// with a storage in a fir.save_result operation in order to use the result?

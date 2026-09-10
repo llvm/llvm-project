@@ -574,15 +574,20 @@ public:
     mlir::Type baseEleTy = hlfir::getFortranElementType(base.getType());
     mlir::Type resultEleTy = hlfir::getFortranElementType(designateResultType);
 
-    mlir::Value fieldIndex;
+    std::optional<fir::IntOrValue> fieldIndex;
+    mlir::StringAttr componentField;
     if (designate.getComponent()) {
       mlir::Type baseRecordType = baseEntity.getFortranElementType();
       if (fir::isRecordWithTypeParameters(baseRecordType))
         TODO(loc, "hlfir.designate with a parameterized derived type base");
-      fieldIndex = fir::FieldIndexOp::create(
-          builder, loc, fir::FieldType::get(builder.getContext()),
-          designate.getComponent().value(), baseRecordType,
-          /*typeParams=*/mlir::ValueRange{});
+      componentField = designate.getComponent().value();
+      auto recordType = mlir::cast<fir::RecordType>(baseRecordType);
+      unsigned componentIndex =
+          recordType.getFieldIndex(designate.getComponent().value());
+      if (componentIndex >= recordType.getNumFields())
+        return rewriter.notifyMatchFailure(
+            designate, "component is not present in the FIR record type");
+      fieldIndex = builder.getI32IntegerAttr(componentIndex);
       if (baseEntity.isScalar()) {
         // Component refs of scalar base right away:
         // - scalar%scalar_component [substring|complex_part] or
@@ -593,8 +598,9 @@ public:
                 designate.getComponent().value());
         mlir::Type coorTy = fir::ReferenceType::get(componentType, isVolatile);
 
-        base =
-            fir::CoordinateOp::create(builder, loc, coorTy, base, fieldIndex);
+        base = fir::CoordinateOp::create(
+            builder, loc, coorTy, base,
+            llvm::ArrayRef<fir::IntOrValue>{*fieldIndex});
         if (mlir::isa<fir::BaseBoxType>(componentType)) {
           auto variableInterface = mlir::cast<fir::FortranVariableOpInterface>(
               designate.getOperation());
@@ -618,7 +624,7 @@ public:
         //       (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>>,
         //        !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>>
         // fir.coordinate_of should probably be a better option, though.
-        (fieldIndex && baseEntity.isArray())) {
+        (fieldIndex.has_value() && baseEntity.isArray())) {
       // Generate embox or rebox for slicing.
       mlir::Type eleTy = fir::unwrapPassByRefType(designateResultType);
       bool isScalarDesignator = !mlir::isa<fir::SequenceType>(eleTy);
@@ -635,14 +641,19 @@ public:
         firBaseTypeParameters.clear();
       }
       llvm::SmallVector<mlir::Value> triples;
-      llvm::SmallVector<mlir::Value> sliceFields;
+      llvm::SmallVector<mlir::Attribute> operandMap;
+      llvm::SmallVector<fir::SlicePathElement> sliceFields;
+      unsigned sliceRank = 0;
       mlir::Type idxTy = builder.getIndexType();
+      auto kindAttr = [&](fir::SliceOperandKind kind) {
+        return fir::SliceOperandKindAttr::get(builder.getContext(), kind);
+      };
       auto subscripts = designate.getIndices();
-      if (fieldIndex && baseEntity.isArray()) {
+      if (fieldIndex.has_value() && baseEntity.isArray()) {
         // array%scalar_comp or array%array_comp(indices)
         // Generate triples for array(:, :, ...).
         triples = genFullSliceTriples(builder, loc, baseEntity);
-        sliceFields.push_back(fieldIndex);
+        sliceFields.push_back(componentField);
         // Add indices in the field path for "array%array_comp(indices)"
         // case. The indices of components provided to the sliceOp must
         // be zero based (fir.slice has no knowledge of the component
@@ -659,16 +670,16 @@ public:
         }
       } else if (!isScalarDesignator) {
         // Otherwise, this is an array section with triplets.
-        auto undef = fir::UndefOp::create(builder, loc, idxTy);
         unsigned i = 0;
         for (auto isTriplet : designate.getIsTriplet()) {
+          ++sliceRank;
           triples.push_back(subscripts[i++]);
           if (isTriplet) {
             triples.push_back(subscripts[i++]);
             triples.push_back(subscripts[i++]);
+            operandMap.push_back(kindAttr(fir::SliceOperandKind::Triplet));
           } else {
-            triples.push_back(undef);
-            triples.push_back(undef);
+            operandMap.push_back(kindAttr(fir::SliceOperandKind::Index));
           }
         }
       }
@@ -686,15 +697,45 @@ public:
       if (designate.getComplexPart()) {
         if (triples.empty())
           triples = genFullSliceTriples(builder, loc, baseEntity);
-        sliceFields.push_back(builder.createIntegerConstant(
-            loc, idxTy, *designate.getComplexPart()));
+        fir::SliceOperandKind kind = *designate.getComplexPart() == 0
+                                         ? fir::SliceOperandKind::Real
+                                         : fir::SliceOperandKind::Imaginary;
+        sliceFields.push_back(
+            fir::SliceOperandKindAttr::get(builder.getContext(), kind));
       }
       mlir::Value slice;
-      if (!triples.empty())
-        slice =
-            fir::SliceOp::create(builder, loc, triples, sliceFields, substring);
-      else
+      if (!triples.empty()) {
+        if (operandMap.empty()) {
+          sliceRank = triples.size() / 3;
+          operandMap.assign(sliceRank,
+                            kindAttr(fir::SliceOperandKind::Triplet));
+        }
+        for (fir::SlicePathElement element : sliceFields) {
+          if (auto component = element.dyn_cast<mlir::StringAttr>())
+            operandMap.push_back(component);
+          else if (auto kind = element.dyn_cast<fir::SliceOperandKindAttr>())
+            operandMap.push_back(kind);
+          else {
+            triples.push_back(element.dyn_cast<mlir::Value>());
+            operandMap.push_back(kindAttr(fir::SliceOperandKind::Index));
+          }
+        }
+        if (!substring.empty()) {
+          triples.append(substring.begin(), substring.end());
+          operandMap.push_back(kindAttr(fir::SliceOperandKind::Substring));
+        }
+        bool allTriplets =
+            sliceFields.empty() && substring.empty() &&
+            llvm::all_of(operandMap, [](mlir::Attribute attr) {
+              return mlir::cast<fir::SliceOperandKindAttr>(attr).getValue() ==
+                     fir::SliceOperandKind::Triplet;
+            });
+        mlir::ArrayAttr map =
+            allTriplets ? mlir::ArrayAttr{} : builder.getArrayAttr(operandMap);
+        slice = fir::SliceOp::create(builder, loc, triples, map, sliceRank);
+      } else {
         assert(sliceFields.empty() && substring.empty());
+      }
 
       // If the designate's result type is not a box, then create
       // a box type to be used for the result of the embox/rebox.
