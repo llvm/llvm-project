@@ -19,10 +19,16 @@ DISubprogram *
 DebugInfoODRUniquer::getODRSubprogramDecl(Metadata *Scope,
                                           StringRef LinkageName, Metadata *Type,
                                           Metadata *TemplateParams) {
-  auto R = FnDecls.find_as(
-      DISubprogramODRKey(Scope, LinkageName, Type, TemplateParams));
+  // Only methods, which have a type scope, are eligable for ODR uniquing.
+  auto *CT = dyn_cast_or_null<DICompositeType>(Scope);
+  if (!CT || !CT->getRawIdentifier())
+    return nullptr;
+
+  auto R =
+      FnDecls.find_as(DISubprogramODRKey(CT->getIdentifier(), LinkageName));
   if (R == FnDecls.end())
     return nullptr;
+
   assert(!(*R)->isDefinition() && "definition unexpectedly ODR-uniqued");
   return *R;
 }

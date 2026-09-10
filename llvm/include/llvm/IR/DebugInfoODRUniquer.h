@@ -22,32 +22,31 @@ class DICompositeType;
 /// Dense set/map find_as key for use alongside DISubprogramODRInfo to
 /// merge function declarations of ODR types.
 struct DISubprogramODRKey {
-  Metadata *Scope;
+  StringRef ScopeIdentifier;
   StringRef LinkageName;
-  // TODO: Can we remove TemplateParams?
-  Metadata *TemplateParams;
 
-  DISubprogramODRKey(Metadata *Scope, StringRef LinkageName, Metadata *Type,
-                     Metadata *TemplateParams)
-      : Scope(Scope), LinkageName(LinkageName), TemplateParams(TemplateParams) {
+  DISubprogramODRKey(StringRef ScopeIdentifier, StringRef LinkageName)
+      : ScopeIdentifier(ScopeIdentifier), LinkageName(LinkageName) {}
+
+  DISubprogramODRKey(const DISubprogram *SP) {
+    auto *CT = dyn_cast_or_null<DICompositeType>(SP->getRawScope());
+    ScopeIdentifier = CT ? CT->getIdentifier() : StringRef();
+    LinkageName = SP->getLinkageName();
   }
-  DISubprogramODRKey(const DISubprogram *SP)
-      : Scope(SP->getRawScope()), LinkageName(SP->getLinkageName()),
-        TemplateParams(SP->getRawTemplateParams()) {}
 
   static bool isEqual(const DISubprogramODRKey &LHS, const DISubprogram *RHS) {
-    if (!LHS.Scope || LHS.LinkageName.empty())
+    if (LHS.LinkageName.empty() || LHS.ScopeIdentifier.empty())
       return false;
-    auto *CT = dyn_cast_or_null<DICompositeType>(LHS.Scope);
+
+    auto *CT = dyn_cast_or_null<DICompositeType>(RHS->getRawScope());
     if (!CT || !CT->getRawIdentifier())
       return false;
 
     if (!RHS->getRawLinkageName())
       return false;
 
-    return LHS.Scope == RHS->getRawScope() &&
-           LHS.LinkageName == RHS->getLinkageName() &&
-           LHS.TemplateParams == RHS->getRawTemplateParams();
+    return LHS.LinkageName == RHS->getLinkageName() &&
+           LHS.ScopeIdentifier == CT->getIdentifier();
   }
 
   static bool isEqual(const DISubprogram *LHS, const DISubprogram *RHS) {
@@ -59,28 +58,16 @@ struct DISubprogramODRKey {
 /// Dense set/map info to merge function declarations of ODR types.
 struct DISubprogramODRInfo {
   static unsigned getHashValue(const DISubprogramODRKey &SP) {
-    // TODO: Evaluate LinkageName hash speed.
-    return hash_combine(SP.Scope, SP.LinkageName, SP.TemplateParams);
+    return hash_combine(SP.ScopeIdentifier, SP.LinkageName);
   }
 
   static bool isEqual(const DISubprogramODRKey &LHS, const DISubprogram *RHS) {
-    if (!LHS.Scope || LHS.LinkageName.empty())
-      return false;
-    auto *CT = dyn_cast_or_null<DICompositeType>(LHS.Scope);
-    if (!CT || !CT->getRawIdentifier())
-      return false;
-
-    if (!RHS->getRawLinkageName())
-      return false;
-
-    return LHS.Scope == RHS->getRawScope() &&
-           LHS.LinkageName == RHS->getLinkageName() &&
-           LHS.TemplateParams == RHS->getRawTemplateParams();
+    return DISubprogramODRKey::isEqual(LHS, RHS);
   }
 
   static bool isEqual(const DISubprogram *LHS, const DISubprogram *RHS) {
     assert(!LHS->isDefinition() && !RHS->isDefinition());
-    return isEqual(DISubprogramODRKey(LHS), RHS);
+    return DISubprogramODRKey::isEqual(DISubprogramODRKey(LHS), RHS);
   }
 };
 
