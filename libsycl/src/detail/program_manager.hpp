@@ -131,7 +131,7 @@ protected:
 
   // Contexts that may hold programs created from the device images above. A
   // context is the sole owner of its programs, and it must destroy them before
-  // the image they were created from is destroyed.
+  // the images they were created from are destroyed.
   //
   // Entries are weak and pruned lazily: a context can be destroyed at any point
   // and ~ContextImpl must not call back into this class, because that would
