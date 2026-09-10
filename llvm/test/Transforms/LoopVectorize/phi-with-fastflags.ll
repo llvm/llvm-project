@@ -7,12 +7,19 @@ define void @f(ptr noalias %p, i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH2:.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select fast i1 [[C]], <4 x float> zeroinitializer, <4 x float> [[WIDE_LOAD]]
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN1:.*]], label %[[LATCH2]]
+; CHECK:       [[THEN1]]:
+; CHECK-NEXT:    br label %[[LATCH2]]
+; CHECK:       [[LATCH2]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[BROADCAST_SPLAT]], %[[THEN1]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select fast <4 x i1> [[TMP2]], <4 x float> zeroinitializer, <4 x float> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024

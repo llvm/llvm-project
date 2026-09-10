@@ -323,8 +323,13 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     Copy->insertBefore(VPBB, InsertPt);
     addRecipeForPart(&R, Copy, Part);
 
-    // Phi operands are updated once all other recipes have been unrolled.
-    if (isa<VPWidenPHIRecipe>(Copy))
+    // Header phis' operands are updated once all other recipes have been
+    // unrolled. Note that interleaving is disabled for outer loop
+    // vectorization, we'd need to perform similar processing for inner loop
+    // header's phis once that is changed.
+    assert(!Plan.isOuterLoop());
+    if (isa<VPWidenPHIRecipe>(Copy) &&
+        R.getParent() == Plan.getVectorLoopRegion()->getEntryBasicBlock())
       continue;
 
     VPValue *Op;

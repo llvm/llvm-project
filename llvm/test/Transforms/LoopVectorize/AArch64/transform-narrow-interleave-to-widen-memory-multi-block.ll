@@ -13,7 +13,7 @@ define void @load_store_interleave_group_block_invar_cond(ptr noalias %data, ptr
 ; VF2IC1:       [[VECTOR_PH]]:
 ; VF2IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC1:       [[VECTOR_BODY]]:
-; VF2IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE3:.*]] ]
+; VF2IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE:.*]] ]
 ; VF2IC1-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP0]]
 ; VF2IC1-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
@@ -22,16 +22,20 @@ define void @load_store_interleave_group_block_invar_cond(ptr noalias %data, ptr
 ; VF2IC1-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC]], <2 x i64> [[STRIDED_VEC1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2IC1-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; VF2IC1-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
-; VF2IC1-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF2IC1-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE]]
 ; VF2IC1:       [[PRED_STORE_IF]]:
+; VF2IC1-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
+; VF2IC1:       [[PRED_STORE_IF1]]:
 ; VF2IC1-NEXT:    store i8 1, ptr [[DST_0]], align 1
-; VF2IC1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF2IC1:       [[PRED_STORE_CONTINUE]]:
-; VF2IC1-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3]]
+; VF2IC1-NEXT:    br label %[[PRED_STORE_CONTINUE1]]
+; VF2IC1:       [[PRED_STORE_CONTINUE1]]:
+; VF2IC1-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
 ; VF2IC1:       [[PRED_STORE_IF2]]:
 ; VF2IC1-NEXT:    store i8 1, ptr [[DST_0]], align 1
 ; VF2IC1-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
 ; VF2IC1:       [[PRED_STORE_CONTINUE3]]:
+; VF2IC1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; VF2IC1:       [[PRED_STORE_CONTINUE]]:
 ; VF2IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[DST_1]], i64 [[INDEX]]
 ; VF2IC1-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP2]], align 1
 ; VF2IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -49,7 +53,7 @@ define void @load_store_interleave_group_block_invar_cond(ptr noalias %data, ptr
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
-; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE11:.*]] ]
+; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE:.*]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 2
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP0]], 1
@@ -67,11 +71,13 @@ define void @load_store_interleave_group_block_invar_cond(ptr noalias %data, ptr
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC3]], <2 x i64> [[STRIDED_VEC4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2IC2-NEXT:    [[INTERLEAVED_VEC5:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; VF2IC2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC5]], ptr [[TMP4]], align 8
-; VF2IC2-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF2IC2-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE]]
 ; VF2IC2:       [[PRED_STORE_IF]]:
+; VF2IC2-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
+; VF2IC2:       [[PRED_STORE_IF1]]:
 ; VF2IC2-NEXT:    store i8 1, ptr [[DST_0]], align 1
-; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF2IC2:       [[PRED_STORE_CONTINUE]]:
+; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE1]]
+; VF2IC2:       [[PRED_STORE_CONTINUE1]]:
 ; VF2IC2-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
 ; VF2IC2:       [[PRED_STORE_IF6]]:
 ; VF2IC2-NEXT:    store i8 1, ptr [[DST_0]], align 1
@@ -82,11 +88,13 @@ define void @load_store_interleave_group_block_invar_cond(ptr noalias %data, ptr
 ; VF2IC2-NEXT:    store i8 1, ptr [[DST_0]], align 1
 ; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
 ; VF2IC2:       [[PRED_STORE_CONTINUE9]]:
-; VF2IC2-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF10:.*]], label %[[PRED_STORE_CONTINUE11]]
+; VF2IC2-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF10:.*]], label %[[PRED_STORE_CONTINUE11:.*]]
 ; VF2IC2:       [[PRED_STORE_IF10]]:
 ; VF2IC2-NEXT:    store i8 1, ptr [[DST_0]], align 1
 ; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE11]]
 ; VF2IC2:       [[PRED_STORE_CONTINUE11]]:
+; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; VF2IC2:       [[PRED_STORE_CONTINUE]]:
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST_1]], i64 [[INDEX]]
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 2
 ; VF2IC2-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP5]], align 1
