@@ -703,6 +703,9 @@ features cannot lower the translation-unit ABI level;
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
   on `if consteval {}`. (#GH220004)
+- Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
+  evaluated to a value not representable by a signed integer, such as an
+  unsigned wrap around. (#GH221418)
 
 ### OpenACC Specific Changes
 
