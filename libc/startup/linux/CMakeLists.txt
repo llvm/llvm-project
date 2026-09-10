@@ -121,6 +121,7 @@ add_object_library(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.tcb
     libc.src.__support.threads.thread
     libc.src.__support.macros.config
     libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.irelative
