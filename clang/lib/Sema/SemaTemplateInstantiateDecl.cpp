@@ -3862,8 +3862,8 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
   }
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
     TemplateArgumentLoc Output;
-    if (!SemaRef.SubstTemplateArgument(D->getDefaultArgument(), TemplateArgs,
-                                       Output))
+    if (!SemaRef.SubstTemplateParameterDefaultArgument(D->getDefaultArgument(),
+                                                       TemplateArgs, Output))
       Inst->setDefaultArgument(SemaRef.getASTContext(), Output);
   }
 
@@ -4026,8 +4026,8 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
     EnterExpressionEvaluationContext ConstantEvaluated(
         SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
     TemplateArgumentLoc Result;
-    if (!SemaRef.SubstTemplateArgument(D->getDefaultArgument(), TemplateArgs,
-                                       Result))
+    if (!SemaRef.SubstTemplateParameterDefaultArgument(D->getDefaultArgument(),
+                                                       TemplateArgs, Result))
       Param->setDefaultArgument(SemaRef.Context, Result);
   }
 

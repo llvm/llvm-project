@@ -1317,6 +1317,9 @@ namespace {
     // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
     bool EvaluateLambdaConstraint = false;
+    // Whether we are substituting into the default argument of a template
+    // parameter whose template parameter list is being instantiated.
+    bool InTemplateParameterDefaultArgument = false;
     // Whether Substitution was Incomplete, that is, we tried to substitute in
     // any user provided template arguments which were null.
     bool IsIncomplete = false;
@@ -1350,6 +1353,10 @@ namespace {
     }
     bool getEvaluateConstraints() {
       return EvaluateConstraints;
+    }
+
+    void setInTemplateParameterDefaultArgument(bool B) {
+      InTemplateParameterDefaultArgument = B;
     }
 
     inline static struct ForParameterMappingSubstitution_t {
@@ -1760,6 +1767,12 @@ namespace {
 
     CXXRecordDecl::LambdaDependencyKind
     ComputeLambdaDependency(LambdaScopeInfo *LSI) {
+      // A lambda in the default argument of a template parameter is dependent
+      // when parsed (it is within a template parameter list) and remains so
+      // while that parameter list is instantiated without being substituted
+      // itself, e.g. for a member template of a class being instantiated.
+      if (InTemplateParameterDefaultArgument)
+        return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       if (auto TypeAlias =
               TemplateInstArgsHelpers::getEnclosingTypeAliasTemplateDecl(
                   getSema());
@@ -4468,6 +4481,16 @@ bool Sema::SubstTemplateArgument(
     TemplateArgumentLoc &Output, SourceLocation Loc,
     const DeclarationName &Entity) {
   TemplateInstantiator Instantiator(*this, TemplateArgs, Loc, Entity);
+  return Instantiator.TransformTemplateArgument(Input, Output);
+}
+
+bool Sema::SubstTemplateParameterDefaultArgument(
+    const TemplateArgumentLoc &Input,
+    const MultiLevelTemplateArgumentList &TemplateArgs,
+    TemplateArgumentLoc &Output) {
+  TemplateInstantiator Instantiator(*this, TemplateArgs, SourceLocation(),
+                                    DeclarationName());
+  Instantiator.setInTemplateParameterDefaultArgument(true);
   return Instantiator.TransformTemplateArgument(Input, Output);
 }
 

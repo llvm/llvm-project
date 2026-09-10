@@ -97,6 +97,58 @@ void foo() {
 }
 
 }
+
+namespace GH176405 {
+template <int> struct bad {
+  template <auto = []<typename... U>(U...) {}()> struct X;
+  static int f() { return 0; }
+};
+int y = bad<0>::f();
+
+template <int N> struct S {
+  template <auto V = []<typename... U>(U...) { return sizeof...(U) + N; }()>
+  struct A { static constexpr auto value = V; };
+  template <auto V = []<typename U>(U u) { return u + N; }(41)>
+  struct B { static constexpr auto value = V; };
+  template <auto V = [](auto... x) { return sizeof...(x) + N; }(1, 2)>
+  struct C { static constexpr auto value = V; };
+  template <typename T, auto V = [] { return sizeof(T) + N; }()>
+  struct D { static constexpr auto value = V; };
+  template <typename T = decltype([]<typename... U>(U...) { return N; }())>
+  struct E { using type = T; };
+  template <auto V = []<typename... U>(U...) { return sizeof...(U) + N; }()>
+  static constexpr auto f() { return V; }
+  template <auto V = []<typename... U>(U...) { return sizeof...(U) + N; }()>
+  static constexpr auto var = V;
+  template <auto V = []<typename... U>(U...) { return sizeof...(U) + N; }()>
+  using alias = A<V>;
+};
+static_assert(S<1>::A<>::value == 1);
+static_assert(S<1>::A<5>::value == 5);
+static_assert(S<1>::B<>::value == 42);
+static_assert(S<1>::C<>::value == 3);
+static_assert(S<1>::D<int>::value == sizeof(int) + 1);
+static_assert(__is_same(S<1>::E<>::type, int));
+static_assert(S<1>::f() == 1);
+static_assert(S<1>::var<> == 1);
+static_assert(S<1>::alias<>::value == 1);
+
+template <int N> struct Outer {
+  template <int M> struct Inner {
+    template <auto V = []<typename... U>(U...) { return N + M; }()>
+    struct X { static constexpr auto value = V; };
+  };
+};
+static_assert(Outer<1>::Inner<2>::X<>::value == 3);
+
+template <int N> constexpr auto g() {
+  auto l = []<typename T = decltype([]<typename V>(V v) { return v; }(N))>() {
+    return T{};
+  };
+  return l();
+}
+static_assert(g<1>() == 0);
+}
 #endif
 
 #if __cplusplus >= 202002L
