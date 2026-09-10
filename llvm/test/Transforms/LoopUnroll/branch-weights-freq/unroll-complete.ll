@@ -740,7 +740,7 @@
 ;     FAST4310-SAME:   !prof !1
 ;     UR4310:        call void @f
 ;     UR4310:        br label %do.end
-;     UNIF4310:      !0 = !{!"branch_weights", i32 406871040, i32 1740612608}
+;     UNIF4310:      !0 = !{!"branch_weights", i32 406872064, i32 1740611584}
 ;     FAST4310:      !0 = !{!"branch_weights", i32 113025456, i32 2034458192}
 ;     FAST4310:      !1 = !{!"branch_weights", i32 1, i32 2}
 ;

@@ -1,8 +1,5 @@
 # Lifetime Safety Analysis
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
@@ -30,11 +27,11 @@ with attributes like [clang::lifetimebound](https://clang.llvm.org/docs/Attribut
 lifetime safety at call sites with higher accuracy. This approach supports
 gradual adoption in existing codebases.
 
-```{note}
+:::{note}
 This analysis is designed for bug finding, not verification. It may miss some
 lifetime issues and can produce false positives. It does not guarantee the
 absence of all lifetime bugs.
-```
+:::
 
 ### Getting Started
 
@@ -128,14 +125,14 @@ details on these attributes, see the Clang attribute reference for
 [gsl::Owner](https://clang.llvm.org/docs/AttributeReference.html#gsl-owner) and
 [gsl::Pointer](https://clang.llvm.org/docs/AttributeReference.html#gsl-pointer).
 
-```{note}
+:::{note}
 Types with mixed ownership semantics (owning some data while holding views to
 other data) or types with multiple view fields with different lifetimes should
 not be annotated. The analysis does not yet support expressing such nuanced
 lifetime relationships.
 Future enhancements, such as named lifetimes, may provide better support for
 these patterns.
-```
+:::
 
 ### LifetimeBound
 
@@ -209,22 +206,6 @@ or visitors that are only used during the call and not stored.
 For more details, see [noescape](https://clang.llvm.org/docs/AttributeReference.html#noescape).
 
 ## Checks Performed
-
-```{raw} html
-<style>
-/* Align text to left and add red/green colors */
-table.colored-code-table td, table.colored-code-table th { text-align: left !important; }
-table.colored-code-table td:first-child, table.colored-code-table th:first-child { background-color: #ffeaea !important; }
-table.colored-code-table td:nth-child(2), table.colored-code-table th:nth-child(2) { background-color: #eafaea !important; }
-table.colored-code-table td .highlight, table.colored-code-table td pre { background-color: transparent !important; border: none !important; }
-
-div.bad-code { background-color: #ffeaea !important; padding: 5px; border-left: 4px solid #ff6b6b; text-align: left !important; }
-div.bad-code .highlight, div.bad-code pre { background-color: transparent !important; border: none !important; }
-
-div.good-code { background-color: #eafaea !important; padding: 5px; border-left: 4px solid #51cf66; text-align: left !important; }
-div.good-code .highlight, div.good-code pre { background-color: transparent !important; border: none !important; }
-</style>
-```
 
 ### Use after scope
 
@@ -384,9 +365,9 @@ as `std::unique_ptr` after operations like `reset`. For example, adding
 elements to `std::vector` may cause reallocation, invalidating all existing
 iterators, pointers and references to its elements.
 
-```{note}
+:::{note}
 Invalidation checking is highly experimental and may produce false positives.
-```
+:::
 
 ````{list-table}
 :widths: 50 50

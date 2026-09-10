@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
@@ -40,6 +41,7 @@ namespace {
 static constexpr llvm::StringRef cudaFortranCtorName{
     "__cudaFortranConstructor"};
 static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
+static constexpr llvm::StringRef cudaCompiledSymbolName{"Mcuda_compiled"};
 
 /// Create an 8-byte pointer global in the __nv_managed_data__ section.
 /// The CUDA runtime populates this pointer with the unified memory address
@@ -63,7 +65,7 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   auto ptrGlobal = fir::GlobalOp::create(
       builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
       /*isTarget=*/false, ptrTy, initAttr,
-      /*linkName=*/builder.createInternalLinkage(), attrs);
+      /*linkage=*/builder.createInternalLinkage(), attrs);
 
   mlir::Region &region = ptrGlobal.getRegion();
   mlir::Block *block = builder.createBlock(&region);
@@ -90,14 +92,24 @@ static bool isDeviceExternReference(fir::GlobalOp hostGlobal,
   return !gpuGlobal.isInitialized();
 }
 
+/// Return true if \p globalOp defines the variable rather than just declaring
+/// it. A variable USEd from another translation unit has no body here; its
+/// device symbol belongs to the defining unit's device module, so registering
+/// the declaration would bind the host address to the wrong module.
+static bool definesGlobal(fir::GlobalOp globalOp) {
+  return globalOp.isInitialized();
+}
+
 /// Return true if \p hostGlobal is a host module-scope global that has been
 /// mirrored in the GPU module as an external (no-body) declaration by the
 /// CUFDeviceGlobal pass under -gpu=mem:unified.
 static bool isCudaUnifiedExternalGlobal(fir::GlobalOp hostGlobal,
                                         mlir::SymbolTable &gpuSymTable) {
+  bool isCompilerGenerated =
+      fir::NameUniquer::isCompilerGenerated(hostGlobal.getSymName());
   if (hostGlobal.getDataAttrAttr())
     return false;
-  if (hostGlobal.getConstant())
+  if (hostGlobal.getConstant() && !isCompilerGenerated)
     return false;
   return isDeviceExternReference(hostGlobal, gpuSymTable);
 }
@@ -214,9 +226,13 @@ static bool hasRegisteredGlobals(mlir::ModuleOp mod,
     }
     if (!gpuSymTable.lookup(globalOp.getSymName()))
       continue;
+    // Non-allocatable managed globals register a companion pointer local to
+    // this translation unit, so they register even when defined elsewhere.
     if (attr.getValue() == cuf::DataAttribute::Managed &&
         !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
       return true;
+    if (!definesGlobal(globalOp))
+      continue;
     switch (attr.getValue()) {
     case cuf::DataAttribute::Device:
     case cuf::DataAttribute::Constant:
@@ -304,6 +320,16 @@ struct CUFAddConstructor
 
     // Create the constructor function that call CUFRegisterAllocator.
     builder.setInsertionPointToEnd(mod.getBody());
+    mlir::LLVM::GlobalOp cudaCompiledGlobal;
+    if (emitCudaCompiled) {
+      // Undefined sentinel: objects compiled as CUDA Fortran reference this
+      // symbol so linking without the CUDA Fortran runtime produces
+      // "undefined reference to `Mcuda_compiled'".
+      cudaCompiledGlobal = mlir::LLVM::GlobalOp::create(
+          builder, loc, mlir::IntegerType::get(ctx, 8), /*isConstant=*/false,
+          mlir::LLVM::Linkage::External, cudaCompiledSymbolName,
+          mlir::Attribute{});
+    }
     auto func = mlir::LLVM::LLVMFuncOp::create(builder, loc,
                                                cudaFortranCtorName, funcTy);
     func.setLinkage(mlir::LLVM::Linkage::Internal);
@@ -364,6 +390,12 @@ struct CUFAddConstructor
           bool isNonAllocManagedGlobal =
               attr.getValue() == cuf::DataAttribute::Managed &&
               !mlir::isa<fir::BaseBoxType>(globalOp.getType());
+
+          // Non-allocatable managed globals register a companion pointer local
+          // to this translation unit, so they register even when defined
+          // elsewhere.
+          if (!definesGlobal(globalOp) && !isNonAllocManagedGlobal)
+            continue;
 
           switch (attr.getValue()) {
           case cuf::DataAttribute::Device:
@@ -445,6 +477,14 @@ struct CUFAddConstructor
           fir::CallOp::create(builder, loc, initFunc, initArgs);
         }
       }
+    }
+    if (emitCudaCompiled) {
+      // Keep the sentinel reference alive: an unused non-volatile load would
+      // be folded away before it reaches the object file.
+      auto addr =
+          mlir::LLVM::AddressOfOp::create(builder, loc, cudaCompiledGlobal);
+      mlir::LLVM::LoadOp::create(builder, loc, mlir::IntegerType::get(ctx, 8),
+                                 addr, /*alignment=*/0, /*isVolatile=*/true);
     }
     mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
 

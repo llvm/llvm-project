@@ -66,7 +66,6 @@ template <class NodeT> class DomTreeNodeBase {
   unsigned Level;
   DomTreeNodeBase *FirstChild = nullptr;
   DomTreeNodeBase *Sibling = nullptr;
-  DomTreeNodeBase **AppendPtr = &FirstChild;
   mutable unsigned DFSNumIn = ~0;
   mutable unsigned DFSNumOut = ~0;
 
@@ -113,30 +112,6 @@ template <class NodeT> class DomTreeNodeBase {
   DomTreeNodeBase *getIDom() const { return IDom; }
   unsigned getLevel() const { return Level; }
 
-  // TODO: make these private once NewGVN doesn't require these anymore.
-  void addChild(DomTreeNodeBase *C) {
-    assert(!C->Sibling && "cannot add child that already has siblings");
-    assert(!*AppendPtr && "sibling of last child must be nullptr");
-    *AppendPtr = C;
-    AppendPtr = &C->Sibling;
-  }
-
-  // TODO: make these private once NewGVN doesn't require these anymore.
-  void removeChild(DomTreeNodeBase *C) {
-    DomTreeNodeBase **It = &FirstChild;
-    while (*It != C) {
-      assert(*It != nullptr && "Not in immediate dominator children list!");
-      It = &(*It)->Sibling;
-    }
-    assert(!*AppendPtr && "sibling of last child must be nullptr");
-    assert(C->Sibling || AppendPtr == &C->Sibling);
-    *It = C->Sibling;
-    if (C->Sibling)
-      C->Sibling = nullptr;
-    else
-      AppendPtr = It;
-  }
-
   bool isLeaf() const { return FirstChild == nullptr; }
 
   bool compare(const DomTreeNodeBase *Other) const {
@@ -177,6 +152,22 @@ template <class NodeT> class DomTreeNodeBase {
   unsigned getDFSNumOut() const { return DFSNumOut; }
 
 private:
+  void addChild(DomTreeNodeBase *C) {
+    assert(!C->Sibling && "cannot add child that already has siblings");
+    C->Sibling = FirstChild;
+    FirstChild = C;
+  }
+
+  void removeChild(DomTreeNodeBase *C) {
+    DomTreeNodeBase **It = &FirstChild;
+    while (*It != C) {
+      assert(*It != nullptr && "Not in immediate dominator children list!");
+      It = &(*It)->Sibling;
+    }
+    *It = C->Sibling;
+    C->Sibling = nullptr;
+  }
+
   // Return true if this node is dominated by other. Use this only if DFS info
   // is valid.
   bool DominatedBy(const DomTreeNodeBase *other) const {
@@ -462,10 +453,8 @@ public:
   bool isReachableFromEntry(const NodeT *A) const {
     assert(!this->isPostDominator() &&
            "This is not implemented for post dominators");
-    return isReachableFromEntry(getNode(A));
+    return getNode(A) != nullptr;
   }
-
-  bool isReachableFromEntry(const DomTreeNodeBase<NodeT> *A) const { return A; }
 
   /// dominates - Returns true iff A dominates B.  Note that this is not a
   /// constant time operation!
@@ -477,11 +466,11 @@ public:
       return true;
 
     // An unreachable node is dominated by anything.
-    if (!isReachableFromEntry(B))
+    if (!B)
       return true;
 
     // And dominates nothing.
-    if (!isReachableFromEntry(A))
+    if (!A)
       return false;
 
     if (B->getIDom() == A) return true;
@@ -864,8 +853,9 @@ public:
 protected:
   inline void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
-  DomTreeNodeBase<NodeT> *createNode(NodeT *BB,
-                                     DomTreeNodeBase<NodeT> *IDom = nullptr) {
+  /// Create a node for \p BB; the caller must link it with addChild.
+  DomTreeNodeBase<NodeT> *createNodeUnlinked(NodeT *BB,
+                                             DomTreeNodeBase<NodeT> *IDom) {
     static_assert(std::is_trivially_destructible_v<DomTreeNodeBase<NodeT>>);
     auto *Node = new (NodeAllocator) DomTreeNodeBase<NodeT>(BB, IDom);
     unsigned Idx = getNodeIndex(BB);
@@ -876,6 +866,12 @@ protected:
       DomTreeNodes.resize(Max);
     }
     DomTreeNodes[Idx] = Node;
+    return Node;
+  }
+
+  DomTreeNodeBase<NodeT> *createNode(NodeT *BB,
+                                     DomTreeNodeBase<NodeT> *IDom = nullptr) {
+    auto *Node = createNodeUnlinked(BB, IDom);
     if (IDom)
       IDom->addChild(Node);
     return Node;
@@ -939,8 +935,7 @@ protected:
   bool dominatedBySlowTreeWalk(const DomTreeNodeBase<NodeT> *A,
                                const DomTreeNodeBase<NodeT> *B) const {
     assert(A != B);
-    assert(isReachableFromEntry(B));
-    assert(isReachableFromEntry(A));
+    assert(A && B);
 
     const unsigned ALevel = A->getLevel();
     const DomTreeNodeBase<NodeT> *IDom;

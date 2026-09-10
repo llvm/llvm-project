@@ -4,10 +4,10 @@
 
 // CHECK-LABEL: func @multi_buffer
 func.func @multi_buffer(%a: memref<1024x1024xf32>) {
-// CHECK-DAG: %[[A:.*]] = memref.alloc() {someAttribute} : memref<5x4x128xf32>
+// CHECK-DAG: %[[A:.*]] = memref.alloc() alignment = 64 {someAttribute} : memref<5x4x128xf32>
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
-  %0 = memref.alloc() {someAttribute} : memref<4x128xf32>
+  %0 = memref.alloc() alignment = 64 {someAttribute} : memref<4x128xf32>
   %c1024 = arith.constant 1024 : index
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index

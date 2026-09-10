@@ -448,9 +448,7 @@ def SIFIVE_X180 : RISCVProcessorModel<"sifive-x180",
                                        FeatureStdExtZicfilp,
                                        FeatureStdExtZvdot4a8i,
                                        FeatureStdExtZvfbfa],
-                                       SiFiveIntelligenceTuneFeatures> {
-  let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
-}
+                                       SiFiveIntelligenceTuneFeatures>;
 
 defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneConditionalCompressedMoveFusion,
@@ -615,7 +613,11 @@ def SIFIVE_P870_D : RISCVProcessorModel<"sifive-p870-d", SiFiveP800Model,
                                         TuneAUIPCADDIFusion,
                                         TuneNoSinkSplatOperands,
                                         TuneVXRMPipelineFlush,
-                                        TunePostRAScheduler]>;
+                                        TunePostRAScheduler]> {
+  let MVendorID = 0x489;
+  let MArchID = 0x8000000000000109;
+  let MImpID = 0x14250606;
+}
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,
@@ -826,7 +828,7 @@ def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                             TuneShiftedZExtWFusion]>;
 
 def XIANGSHAN_KUNMINGHU : RISCVProcessorModel<"xiangshan-kunminghu",
-                                              NoSchedModel,
+                                              XiangShanKunMingHuModel,
                                               !listconcat(RVA23S64Features,
                                               [FeatureStdExtZacas,
                                                FeatureStdExtZbc,
@@ -1013,7 +1015,8 @@ def ANDES_N45 : RISCVProcessorModel<"andes-n45",
                                      FeatureStdExtF,
                                      FeatureStdExtD,
                                      FeatureStdExtC,
-                                     FeatureVendorXAndesPerf],
+                                     FeatureVendorXAndesPerf,
+                                     FeatureUnalignedScalarMem],
                                     Andes45TuneFeatures>;
 
 def ANDES_NX45 : RISCVProcessorModel<"andes-nx45",
@@ -1027,7 +1030,8 @@ def ANDES_NX45 : RISCVProcessorModel<"andes-nx45",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
-                                      FeatureVendorXAndesPerf],
+                                      FeatureVendorXAndesPerf,
+                                      FeatureUnalignedScalarMem],
                                      Andes45TuneFeatures>;
 
 def ANDES_A45 : RISCVProcessorModel<"andes-a45",
@@ -1041,7 +1045,8 @@ def ANDES_A45 : RISCVProcessorModel<"andes-a45",
                                      FeatureStdExtF,
                                      FeatureStdExtD,
                                      FeatureStdExtC,
-                                     FeatureVendorXAndesPerf],
+                                     FeatureVendorXAndesPerf,
+                                     FeatureUnalignedScalarMem],
                                     Andes45TuneFeatures>;
 
 def ANDES_AX45 : RISCVProcessorModel<"andes-ax45",
@@ -1055,7 +1060,8 @@ def ANDES_AX45 : RISCVProcessorModel<"andes-ax45",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
-                                      FeatureVendorXAndesPerf],
+                                      FeatureVendorXAndesPerf,
+                                      FeatureUnalignedScalarMem],
                                      Andes45TuneFeatures>;
 
 def ANDES_AX45MPV : RISCVProcessorModel<"andes-ax45mpv",
@@ -1070,7 +1076,8 @@ def ANDES_AX45MPV : RISCVProcessorModel<"andes-ax45mpv",
                                          FeatureStdExtD,
                                          FeatureStdExtC,
                                          FeatureStdExtV,
-                                         FeatureVendorXAndesPerf],
+                                         FeatureVendorXAndesPerf,
+                                         FeatureUnalignedScalarMem],
                                         Andes45TuneFeatures>;
 
 def ESPERANTO_SOC1 : RISCVProcessorModel<"et-soc1",

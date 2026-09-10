@@ -111,7 +111,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# GNU: GNUStyle::printBBAddrMaps not implemented
+# GNU: GNU output style is not supported for --bb-addr-map
 
 # PRETTY-NO-BAM: warning: --bb-addr-map must be enabled for --pretty-pgo-analysis-map to have an effect
 

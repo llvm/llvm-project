@@ -31,7 +31,7 @@
 // LLVM-LABEL: @test_vfma_f16(
 // CIR-LABEL: @vfma_f16(
 float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -51,7 +51,7 @@ float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 // LLVM-LABEL: @test_vfmaq_f16(
 // CIR-LABEL: @vfmaq_f16(
 float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -116,7 +116,7 @@ float16x8_t test_vfmsq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b,
                                 float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.vector<4 x !cir.f16>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -138,7 +138,7 @@ float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b,
 float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
                                  float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.vector<8 x !cir.f16>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -160,7 +160,7 @@ float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
 float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
                                  float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[LANE]], %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
+// CIR: cir.fma [[LANE]], %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -182,7 +182,7 @@ float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
 float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b,
                                   float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[LANE]], %{{.*}}, %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
+// CIR: cir.fma [[LANE]], %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -245,7 +245,7 @@ float16x8_t test_vfmaq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 // ALL-LABEL: @test_vfmah_lane_f16(
 float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[LANE:%.*]] = extractelement <4 x half> [[C]], i{{32|64}} 3
@@ -257,7 +257,7 @@ float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // ALL-LABEL: @test_vfmah_laneq_f16(
 float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[LANE:%.*]] = extractelement <8 x half> [[C]], i{{32|64}} 7
@@ -275,7 +275,7 @@ float16x4_t test_vfms_lane_f16(float16x4_t a, float16x4_t b,
 // CIR: [[NEG_BYTES:%.*]] = cir.load align(8) [[NEG_PTR]] : !cir.ptr<!cir.vector<8 x !s8i>>, !cir.vector<8 x !s8i>
 // CIR: [[NEG_CAST:%.*]] = cir.cast bitcast [[NEG_BYTES]] : !cir.vector<8 x !s8i> -> !cir.vector<4 x !cir.f16>
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[NEG_CAST]], [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
+// CIR: cir.fma [[NEG_CAST]], [[LANE]], %{{.*}} : !cir.vector<4 x !cir.f16>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -303,7 +303,7 @@ float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b,
 // CIR: [[NEG_BYTES:%.*]] = cir.load align(16) [[NEG_PTR]] : !cir.ptr<!cir.vector<16 x !s8i>>, !cir.vector<16 x !s8i>
 // CIR: [[NEG_CAST:%.*]] = cir.cast bitcast [[NEG_BYTES]] : !cir.vector<16 x !s8i> -> !cir.vector<8 x !cir.f16>
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[NEG_CAST]], [[LANE]], %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
+// CIR: cir.fma [[NEG_CAST]], [[LANE]], %{{.*}} : !cir.vector<8 x !cir.f16>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -331,7 +331,7 @@ float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b,
 // CIR: [[NEG_BYTES:%.*]] = cir.load align(8) [[NEG_PTR]] : !cir.ptr<!cir.vector<8 x !s8i>>, !cir.vector<8 x !s8i>
 // CIR: [[NEG_CAST:%.*]] = cir.cast bitcast [[NEG_BYTES]] : !cir.vector<8 x !s8i> -> !cir.vector<4 x !cir.f16>
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[LANE]], [[NEG_CAST]], %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
+// CIR: cir.fma [[LANE]], [[NEG_CAST]], %{{.*}} : !cir.vector<4 x !cir.f16>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -359,7 +359,7 @@ float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b,
 // CIR: [[NEG_BYTES:%.*]] = cir.load align(16) [[NEG_PTR]] : !cir.ptr<!cir.vector<16 x !s8i>>, !cir.vector<16 x !s8i>
 // CIR: [[NEG_CAST:%.*]] = cir.cast bitcast [[NEG_BYTES]] : !cir.vector<16 x !s8i> -> !cir.vector<8 x !cir.f16>
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[LANE]], [[NEG_CAST]], %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
+// CIR: cir.fma [[LANE]], [[NEG_CAST]], %{{.*}} : !cir.vector<8 x !cir.f16>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -432,7 +432,7 @@ float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CIR: cir.store align(2) [[NEG]], [[NEG_SLOT:%.*]] : !cir.f16, !cir.ptr<!cir.f16>
 // CIR: [[NEG_ARG:%.*]] = cir.load align(2) [[NEG_SLOT]] : !cir.ptr<!cir.f16>, !cir.f16
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[NEG_ARG]], [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.fma [[NEG_ARG]], [[LANE]], %{{.*}} : !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[CONV:%.*]] = fpext half [[B]] to float
@@ -452,7 +452,7 @@ float16_t test_vfmsh_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 // CIR: cir.store align(2) [[NEG]], [[NEG_SLOT:%.*]] : !cir.f16, !cir.ptr<!cir.f16>
 // CIR: [[NEG_ARG:%.*]] = cir.load align(2) [[NEG_SLOT]] : !cir.ptr<!cir.f16>, !cir.f16
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[NEG_ARG]], [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.fma [[NEG_ARG]], [[LANE]], %{{.*}} : !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[CONV:%.*]] = fpext half [[B]] to float

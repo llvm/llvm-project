@@ -8,6 +8,8 @@
 
 #include "MinidumpFileBuilder.h"
 
+#include <cstring>
+
 #include "Plugins/Process/minidump/RegisterContextMinidump_ARM64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 
@@ -968,80 +970,50 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
   const lldb::addr_t addr = range.range.start();
   const lldb::addr_t size = range.range.size();
   Log *log = GetLog(LLDBLog::Object);
-  uint64_t total_bytes_read = 0;
+  void *buf = data_buffer.GetBytes();
+  const lldb::addr_t chunk_size = data_buffer.GetByteSize();
+  // Step over an unreadable page at a time, so we never zero-fill memory that
+  // could be read.
+  const lldb::addr_t page_size = 4096;
+
+  // Write exactly `size` bytes: Memory64List locates each range by the
+  // cumulative DataSize of the ranges before it.
+  bytes_read = 0;
   Status addDataError;
-  Process::ReadMemoryChunkCallback callback =
-      [&](Status &error, lldb::addr_t current_addr, const void *buf,
-          uint64_t bytes_read) -> lldb_private::IterationAction {
-    if (error.Fail() || bytes_read == 0) {
+  while (bytes_read < size) {
+    const lldb::addr_t current_addr = addr + bytes_read;
+    const lldb::addr_t bytes_remaining = size - bytes_read;
+    const lldb::addr_t bytes_to_read = std::min(bytes_remaining, chunk_size);
+    Status error;
+    const lldb::addr_t bytes_read_for_chunk =
+        m_process_sp->ReadMemoryFromInferior(current_addr, buf, bytes_to_read,
+                                             error);
+
+    if (bytes_read_for_chunk > 0) {
+      addDataError = AddData(buf, bytes_read_for_chunk);
+      if (addDataError.Fail())
+        return addDataError;
+      bytes_read += bytes_read_for_chunk;
+    }
+
+    // Unreadable page: zero-fill it and continue past the hole.
+    if (bytes_read_for_chunk < bytes_to_read) {
+      const lldb::addr_t hole = addr + bytes_read;
+      lldb::addr_t fill = ((hole + page_size) & ~(page_size - 1)) - hole;
+      fill = std::min(fill, size - bytes_read);
+      fill = std::min(fill, chunk_size);
       LLDB_LOGF(log,
                 "Failed to read memory region at: 0x%" PRIx64
-                ". Bytes read: 0x%" PRIx64 ", error: %s",
-                current_addr, bytes_read, error.AsCString());
-
-      // If we failed in a memory read, we would normally want to skip
-      // this entire region. If we had already written to the minidump
-      // file, we can't easily rewind that state.
-      //
-      // So if we do encounter an error while reading, we return
-      // immediately, any prior bytes read will still be included but
-      // any bytes partially read before the error are ignored.
-      return lldb_private::IterationAction::Stop;
+                ". Zero-filling 0x%" PRIx64 " bytes, error: %s",
+                hole, fill, error.AsCString());
+      ::memset(buf, 0, fill);
+      addDataError = AddData(buf, fill);
+      if (addDataError.Fail())
+        return addDataError;
+      bytes_read += fill;
     }
+  }
 
-    if (current_addr != addr + total_bytes_read) {
-      LLDB_LOGF(log,
-                "Current addr is at unexpected address, 0x%" PRIx64
-                ", expected at 0x%" PRIx64,
-                current_addr, addr + total_bytes_read);
-
-      // Something went wrong and the address is not where it should be
-      // we'll error out of this Minidump generation.
-      addDataError = Status::FromErrorStringWithFormat(
-          "Unexpected address encounterd when reading memory in chunks "
-          "0x%" PRIx64 " expected 0x%" PRIx64,
-          current_addr, addr + total_bytes_read);
-      return lldb_private::IterationAction::Stop;
-    }
-
-    // Write to the minidump file with the chunk potentially flushing to
-    // disk.
-    // This error will be captured by the outer scope and is considered fatal.
-    // If we get an error writing to disk we can't easily guarauntee that we
-    // won't corrupt the minidump.
-    addDataError = AddData(buf, bytes_read);
-    if (addDataError.Fail())
-      return lldb_private::IterationAction::Stop;
-
-    total_bytes_read += bytes_read;
-    // If we have a partial read, report it, but only if the partial read
-    // didn't finish reading the entire region.
-    if (bytes_read != data_buffer.GetByteSize() && total_bytes_read != size) {
-      LLDB_LOGF(log,
-                "Memory region at: 0x%" PRIx64 " partial read 0x%" PRIx64
-                " bytes out of 0x%" PRIx64 " bytes.",
-                current_addr, bytes_read,
-                data_buffer.GetByteSize() - bytes_read);
-
-      // If we've read some bytes, we stop trying to read more and return
-      // this best effort attempt
-      return lldb_private::IterationAction::Stop;
-    }
-
-    // No problems, keep going!
-    return lldb_private::IterationAction::Continue;
-  };
-
-  // ReadMemoryInChunks returns the number of bytes it read from the inferior,
-  // which can exceed the number we actually appended: when a chunk read fails
-  // the callback stops without writing the bytes it had partially read. Report
-  // the bytes we wrote (total_bytes_read) so the range's DataSize matches the
-  // data in the blob. Otherwise the Memory64List, which locates each range by
-  // the cumulative DataSize of the preceding ranges, desyncs and every later
-  // range reads back corrupted.
-  m_process_sp->ReadMemoryInChunks(addr, data_buffer.GetBytes(),
-                                   data_buffer.GetByteSize(), size, callback);
-  bytes_read = total_bytes_read;
   return addDataError;
 }
 

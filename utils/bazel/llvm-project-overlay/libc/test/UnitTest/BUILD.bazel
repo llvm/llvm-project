@@ -68,6 +68,7 @@ libc_test_library(
         "//libc:__support_macros_properties_types",
         "//libc:__support_stringutil",
         "//libc:__support_uint128",
+        "//libc:__support_wchar_string_converter",
         "//libc:errno",
         "//libc:func_aligned_alloc",
         "//libc:func_free",
@@ -80,6 +81,16 @@ libc_test_library(
     # Force linking in this library's `main()` to surface
     # a duplicate symbol error if a test defines its own main.
     alwayslink = True,
+)
+
+libc_test_library(
+    name = "LibcCTest",
+    srcs = ["LibcCTest.cpp"],
+    hdrs = ["LibcCTest.h"],
+    deps = [
+        ":LibcUnitTest",
+        "//libc:public_headers_deps",
+    ],
 )
 
 libc_test_library(

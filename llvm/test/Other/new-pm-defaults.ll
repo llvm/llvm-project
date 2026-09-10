@@ -157,8 +157,8 @@
 ; CHECK-O23-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O23-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O23-NEXT: Running analysis: ScalarEvolutionAnalysis
-; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O1-NEXT: Running analysis: LoopAnalysis
+; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-O1-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
@@ -229,7 +229,7 @@
 ; CHECK-EP-OPTIMIZER-EARLY: Running pass: NoOpModulePass
 ; CHECK-DEFAULT-NEXT: Running pass: DropUnnecessaryAssumesPass
 ; CHECK-O-NEXT: Running pass: Float2IntPass
-; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
+; CHECK-DEFAULT-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass on f
 ; CHECK-MATRIX-NEXT: Running pass: EarlyCSEPass on f
 ; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass

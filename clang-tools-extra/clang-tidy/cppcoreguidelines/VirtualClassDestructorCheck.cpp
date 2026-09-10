@@ -159,7 +159,7 @@ static FixItHint changePrivateDestructorVisibilityTo(
   else
     EndLocation = Destructor.getEndLoc().getLocWithOffset(1);
 
-  auto OriginalDestructorRange =
+  const auto OriginalDestructorRange =
       CharSourceRange::getCharRange(Destructor.getBeginLoc(), EndLocation);
   return FixItHint::CreateReplacement(OriginalDestructorRange,
                                       DestructorString);

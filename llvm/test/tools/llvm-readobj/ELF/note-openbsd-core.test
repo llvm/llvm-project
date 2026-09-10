@@ -18,6 +18,8 @@ Sections:
         Type: NT_OPENBSD_AUXV
       - Name: OpenBSD
         Type: NT_OPENBSD_WCOOKIE
+      - Name: OpenBSD
+        Type: NT_OPENBSD_PACMASK
       - Name: OpenBSD@31337
         Type: NT_OPENBSD_REGS
       - Name: OpenBSD@31337
@@ -27,11 +29,12 @@ ProgramHeaders:
     FirstSec: .note.foo
     LastSec:  .note.foo
 
-# GNU:      Displaying notes found at file offset 0x00000078 with length 0x00000074:
+# GNU:      Displaying notes found at file offset 0x00000078 with length 0x00000088:
 # GNU-NEXT:   Owner                Data size 	Description
 # GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_PROCINFO (procinfo structure)
 # GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_AUXV (ELF auxiliary vector data)
 # GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_WCOOKIE (window cookie)
+# GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_PACMASK (AArch64 Pointer Authentication Code mask)
 # GNU-NEXT:   OpenBSD@31337        0x00000000	NT_OPENBSD_REGS (regular registers)
 # GNU-NEXT:   OpenBSD@31337        0x00000000	NT_OPENBSD_FPREGS (floating point registers)
 
@@ -39,7 +42,7 @@ ProgramHeaders:
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0x78
-# LLVM-NEXT:     Size: 0x74
+# LLVM-NEXT:     Size: 0x88
 # LLVM-NEXT:     Notes [
 # LLVM-NEXT:        {
 # LLVM-NEXT:            Owner: OpenBSD
@@ -55,6 +58,11 @@ ProgramHeaders:
 # LLVM-NEXT:            Owner: OpenBSD
 # LLVM-NEXT:            Data size: 0x0
 # LLVM-NEXT:            Type: NT_OPENBSD_WCOOKIE (window cookie)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: OpenBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_OPENBSD_PACMASK (AArch64 Pointer Authentication Code mask)
 # LLVM-NEXT:        }
 # LLVM-NEXT:        {
 # LLVM-NEXT:            Owner: OpenBSD@31337

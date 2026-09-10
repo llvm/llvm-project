@@ -22,6 +22,7 @@
 #include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/AnalysisName.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -85,6 +86,13 @@ template <> struct format_provider<clang::ssaf::AnalysisName> {
   static void format(const clang::ssaf::AnalysisName &Val, raw_ostream &OS,
                      StringRef Style) {
     OS << Val;
+  }
+};
+
+template <> struct format_provider<llvm::Triple> {
+  static void format(const llvm::Triple &Val, raw_ostream &OS,
+                     StringRef Style) {
+    OS << llvm::Triple::normalize(Val.str());
   }
 };
 

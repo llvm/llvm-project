@@ -275,6 +275,15 @@ namespace std {
 // [optional.syn]
 #  include <compare>
 
+#  if _LIBCPP_STD_VER >= 26
+// [iterator.range]
+#    include <__iterator/access.h>
+#    include <__iterator/data.h>
+#    include <__iterator/empty.h>
+#    include <__iterator/reverse_access.h>
+#    include <__iterator/size.h>
+#  endif // _LIBCPP_STD_VER >= 26
+
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif

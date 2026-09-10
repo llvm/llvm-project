@@ -43,10 +43,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
           "Number of guarded rotates transformed into funnel shifts");
@@ -1005,12 +1001,10 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
     Res = B.CreateSelect(Cmp, ZeroTableElem, Res);
 
     // The true branch of select handles the cttz(0) case, which is rare.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Res))
-        SelectI->setMetadata(
-            LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-    }
+    if (Instruction *SelectI = dyn_cast<Instruction>(Res))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
@@ -1222,12 +1216,10 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
         B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
 
     // The true branch of select handles the log2(0) case, which is rare.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-        SelectI->setMetadata(
-            LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-    }
+    if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
 
     Result = Select;
   }
@@ -1515,7 +1507,11 @@ struct PartStore {
   StoreInst *Store;
 
   bool isCompatibleWith(const PartStore &Other) const {
-    return PtrBase == Other.PtrBase && Val == Other.Val;
+    // Offset stripping looks through addrspacecasts, so an equal PtrBase does
+    // not imply an equal address space, and thus not an equal PtrOffset width.
+    return PtrBase == Other.PtrBase && Val == Other.Val &&
+           Store->getPointerAddressSpace() ==
+               Other.Store->getPointerAddressSpace();
   }
 
   bool operator<(const PartStore &Other) const {
@@ -2106,9 +2102,8 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   if (!CalledFunc)
     return false;
 
-  LibFunc LF;
-  if (!TLI.getLibFunc(*CalledFunc, LF) ||
-      !isLibFuncEmittable(CI->getModule(), &TLI, LF))
+  LibFunc LF = TLI.getLibFunc(*CalledFunc);
+  if (!isLibFuncEmittable(CI->getModule(), &TLI, LF))
     return false;
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);

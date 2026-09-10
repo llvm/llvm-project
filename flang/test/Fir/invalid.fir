@@ -1,5 +1,10 @@
 // RUN: fir-opt -split-input-file -verify-diagnostics --strict-fir-volatile-verifier %s
 
+// expected-error@+1{{'fir.alloca' op must not be defined at module scope}}
+%0 = fir.alloca i32 {adapt.valuebyref}
+
+// -----
+
 // expected-error@+1{{custom op 'fir.string_lit' must have character type}}
 %0 = fir.string_lit "Hello, World!"(13) : !fir.int<32>
 

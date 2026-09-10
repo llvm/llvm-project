@@ -43,6 +43,7 @@ def Linalg_Dialect : Dialect {
     "tensor::TensorDialect",
   ];
   let useDefaultAttributePrinterParser = 1;
+  let useStrictPropertiesInAssemblyFormat = 1;
   let hasCanonicalizer = 1;
   let hasOperationAttrVerify = 1;
   let hasConstantMaterializer = 1;
@@ -64,27 +65,15 @@ def Linalg_Dialect : Dialect {
 
 // Define the attribute enums matching elementwise op kind (e.g., add).
 def ElementwiseKindAttr : EnumAttr<Linalg_Dialect,
-                                   ElementwiseKind, "elementwise_kind"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+                                   ElementwiseKind, "elementwise_kind">;
 
 // Define the function attribute enums matching the OpDSL functions.
-def UnaryFnAttr : EnumAttr<Linalg_Dialect, UnaryFn, "unary_fn"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-def BinaryFnAttr : EnumAttr<Linalg_Dialect, BinaryFn, "binary_fn"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-def TernaryFnAttr : EnumAttr<Linalg_Dialect, TernaryFn, "ternary_fn"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-def TypeFnAttr : EnumAttr<Linalg_Dialect, TypeFn, "type_fn"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def UnaryFnAttr : EnumAttr<Linalg_Dialect, UnaryFn, "unary_fn">;
+def BinaryFnAttr : EnumAttr<Linalg_Dialect, BinaryFn, "binary_fn">;
+def TernaryFnAttr : EnumAttr<Linalg_Dialect, TernaryFn, "ternary_fn">;
+def TypeFnAttr : EnumAttr<Linalg_Dialect, TypeFn, "type_fn">;
 
-def IteratorTypeEnum : EnumAttr<Linalg_Dialect, IteratorType, "iterator_type"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def IteratorTypeEnum : EnumAttr<Linalg_Dialect, IteratorType, "iterator_type">;
 def IteratorTypeArrayAttr : TypedArrayAttrBase<IteratorTypeEnum,
   "Iterator type should be an enum.">;
 

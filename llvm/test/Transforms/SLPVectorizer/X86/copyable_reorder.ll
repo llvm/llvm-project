@@ -391,12 +391,12 @@ define void @test_sub_zero_copyable_not_swapped(ptr %z) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[GEP_SRC_NEAR0]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP_SRC_FAR1]], align 4
 ; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[GEP_SRC_NEAR1]], align 4
-; CHECK-NEXT:    [[NEG0:%.*]] = sub nsw i32 0, [[V0]]
-; CHECK-NEXT:    [[NEG2:%.*]] = sub nsw i32 0, [[V2]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[NEG0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[V0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[V2]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <2 x i32> zeroinitializer, [[TMP5]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[V1]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[NEG2]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[V3]], i64 3
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[V3]], i64 3
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[GEP_DST0]], align 4
 ; CHECK-NEXT:    ret void
 ;

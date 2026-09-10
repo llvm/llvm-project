@@ -87,7 +87,7 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
 // This uses the proleptic Gregorian calendar: Gregorian leap-year rules are
 // extended to all dates, including those before the calendar's adoption in
 // 1582.
-ErrorOr<int> update_from_seconds(time_t total_seconds, tm *tm) {
+ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm) {
   // Range check for valid time_t values
   constexpr time_t time_min =
       INT_MIN *
@@ -206,7 +206,7 @@ ErrorOr<int> update_from_seconds(time_t total_seconds, tm *tm) {
       static_cast<int>(remaining_seconds % time_constants::SECONDS_PER_MIN);
   tm->tm_isdst = 0; // Daylight saving time flag (not implemented)
 
-  return 0;
+  return {};
 }
 
 } // namespace time_utils

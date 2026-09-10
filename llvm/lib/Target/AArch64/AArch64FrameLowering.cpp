@@ -255,7 +255,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -586,7 +585,7 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   }
 
   // Retain behavior of always omitting the FP for leaf functions when possible.
-  if (MF.getTarget().Options.DisableFramePointerElim(MF))
+  if (MF.disableFramePointerElim())
     return true;
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
@@ -645,7 +644,7 @@ bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
     return true;
 
   // Frontend has requested to preserve the frame pointer.
-  if (TM.Options.FramePointerIsReserved(MF))
+  if (MF.framePointerIsReserved())
     return true;
 
   return false;
@@ -1828,7 +1827,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       case RegPairInfo::PPR:
         break;
       case RegPairInfo::ZPR:
-        if (AFI->getPredicateRegForFillSpill() != 0 &&
+        if (!NeedsWinCFI && AFI->getPredicateRegForFillSpill() != 0 &&
             ((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1)) {
           // Calculate offset of register pair to see if pair instruction can be
           // used.
@@ -2797,6 +2796,94 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   AFI->setSVECalleeSavedStackSize(ZPRCSStackSize, alignTo(PPRCSStackSize, 16));
 }
 
+static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
+                                        const TargetRegisterInfo *RegInfo,
+                                        std::vector<CalleeSavedInfo> &CSI) {
+  // Reorder callee-saved ZPRs to maximize pairing which requires
+  // consecutive even/odd registers at even scaled stack offsets.
+  // Additional requirements are checked when the register pairs are formed.
+  assert(!isTargetWindows(MF) &&
+         "ZPR callee-save reordering not supported on Windows");
+
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (!AFI->getPredicateRegForFillSpill())
+    return;
+
+  SmallVector<CalleeSavedInfo> ZPRSaves;
+  SmallVector<size_t> ZPRPositions;
+
+  for (auto [Index, CS] : llvm::enumerate(CSI)) {
+    if (AArch64::ZPRRegClass.contains(CS.getReg())) {
+      ZPRSaves.push_back(CS);
+      ZPRPositions.push_back(Index);
+    }
+  }
+
+  if (ZPRSaves.size() < 2)
+    return;
+
+  llvm::sort(ZPRSaves, [](const auto &A, const auto &B) {
+    return A.getReg() < B.getReg();
+  });
+
+  SmallVector<std::pair<CalleeSavedInfo, CalleeSavedInfo>> Pairs;
+  SmallVector<CalleeSavedInfo> Singles;
+  for (size_t i = 0; i < ZPRSaves.size();) {
+    if (i + 1 < ZPRSaves.size() &&
+        (ZPRSaves[i].getReg() + 1 == ZPRSaves[i + 1].getReg()) &&
+        (ZPRSaves[i].getReg() - AArch64::Z0) % 2 == 0) {
+      Pairs.emplace_back(ZPRSaves[i], ZPRSaves[i + 1]);
+      i += 2;
+    } else {
+      Singles.push_back(ZPRSaves[i++]);
+    }
+  }
+
+  // If the lowest offset is odd, select one register to spill here
+  // so subsequent pairs begin at an even offset.
+  int ZPRByteOffset = AFI->getZPRCalleeSavedStackSize();
+  if (!AFI->hasSplitSVEObjects())
+    ZPRByteOffset += AFI->getPPRCalleeSavedStackSize();
+
+  const int Scale = RegInfo->getSpillSize(AArch64::ZPRRegClass);
+  const int LowestOffset =
+      (ZPRByteOffset / Scale) - static_cast<int>(ZPRSaves.size());
+
+  // Prefer the highest single otherwise split the highest pair.
+  std::optional<CalleeSavedInfo> AlignmentSingle;
+  if (LowestOffset % 2 != 0) {
+    if (!Singles.empty()) {
+      AlignmentSingle = Singles.pop_back_val();
+    } else {
+      assert(!Pairs.empty() && "Expected a ZPR pair to split");
+      auto [Even, Odd] = Pairs.pop_back_val();
+      AlignmentSingle = Odd;
+      Singles.push_back(Even);
+    }
+  }
+
+  if (Pairs.empty())
+    return;
+
+  // Build ZPRs so reverse spill emission processes the leading single first,
+  // followed by the candidate even/odd pairs and remaining singles.
+  SmallVector<CalleeSavedInfo> ZPRSavesInCSIOrder;
+  llvm::append_range(ZPRSavesInCSIOrder, Singles);
+
+  for (const auto &[Even, Odd] : Pairs) {
+    ZPRSavesInCSIOrder.push_back(Even);
+    ZPRSavesInCSIOrder.push_back(Odd);
+  }
+
+  if (AlignmentSingle)
+    ZPRSavesInCSIOrder.push_back(*AlignmentSingle);
+
+  assert(ZPRSavesInCSIOrder.size() == ZPRPositions.size() &&
+         "Reordering should not change the number of ZPR spills");
+  for (auto [Position, CS] : llvm::zip(ZPRPositions, ZPRSavesInCSIOrder))
+    CSI[Position] = CS;
+}
+
 bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *RegInfo,
     std::vector<CalleeSavedInfo> &CSI) const {
@@ -2818,12 +2905,6 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
 
-  if (IsWindows && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
-    int FrameIdx = MFI.CreateStackObject(8, Align(16), true);
-    AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
-    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
-  }
-
   // Insert VG into the list of CSRs, immediately before LR if saved.
   if (requiresSaveVG(MF)) {
     CalleeSavedInfo VGInfo(AArch64::VG);
@@ -2834,6 +2915,12 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     else
       CSI.push_back(VGInfo);
   }
+
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  if (!IsWindows && enableMultiVectorSpillFill(Subtarget, MF))
+    // The Windows stack layout is not supported by this reordering function
+    // yet.
+    orderZPRCalleeSavesForPairs(MF, RegInfo, CSI);
 
   Register LastReg = 0;
   int HazardSlotIndex = std::numeric_limits<int>::max();
@@ -2861,8 +2948,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     // Grab 8 bytes below FP for the extended asynchronous frame info.
-    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !IsWindows &&
-        Reg == AArch64::FP) {
+    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && Reg == AArch64::FP) {
       FrameIdx = MFI.CreateStackObject(8, Alignment, true);
       AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
       MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);

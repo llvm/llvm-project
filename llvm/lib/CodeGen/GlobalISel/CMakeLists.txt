@@ -44,5 +44,6 @@ add_llvm_component_library(LLVMGlobalISel
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   )

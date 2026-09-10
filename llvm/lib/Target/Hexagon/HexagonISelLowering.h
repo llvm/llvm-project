@@ -78,8 +78,8 @@ public:
   // Should we expand the build vector with shuffles?
   bool shouldExpandBuildVectorWithShuffles(EVT VT,
       unsigned DefinedValues) const override;
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-      unsigned Index) const override;
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
 
   bool isTargetCanonicalConstantNode(SDValue Op) const override;
 
@@ -186,14 +186,16 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override {
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override {
     return Hexagon::R0;
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override {
     return Hexagon::R1;
   }
 
@@ -499,6 +501,14 @@ private:
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpSetoeq(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMinMax(SDValue Op, unsigned PairwiseOpc,
+                                   bool IgnoreNaN, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMin(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMax(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMinimum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMaximum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFMinNum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFMaxNum(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
