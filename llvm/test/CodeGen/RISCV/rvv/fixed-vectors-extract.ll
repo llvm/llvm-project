@@ -1012,10 +1012,9 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ; RV32NOM-LABEL: extractelt_udiv_v4i32:
 ; RV32NOM:       # %bb.0:
-; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32NOM-NEXT:    vsrl.vi v8, v8, 0
 ; RV32NOM-NEXT:    lui a0, 322639
 ; RV32NOM-NEXT:    addi a0, a0, -945
+; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32NOM-NEXT:    vmulhu.vx v8, v8, a0
 ; RV32NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32NOM-NEXT:    vmv.x.s a0, v8
@@ -1035,10 +1034,9 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ;
 ; RV64NOM-LABEL: extractelt_udiv_v4i32:
 ; RV64NOM:       # %bb.0:
-; RV64NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64NOM-NEXT:    vsrl.vi v8, v8, 0
 ; RV64NOM-NEXT:    lui a0, 322639
 ; RV64NOM-NEXT:    addi a0, a0, -945
+; RV64NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64NOM-NEXT:    vmulhu.vx v8, v8, a0
 ; RV64NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64NOM-NEXT:    vmv.x.s a0, v8
