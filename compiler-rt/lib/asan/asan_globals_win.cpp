@@ -20,8 +20,10 @@
 
 namespace __asan {
 
-#  pragma section(".ASAN$GA", read, write)
-#  pragma section(".ASAN$GZ", read, write)
+#  if !defined(__GNUC__) || defined(__clang__)
+#    pragma section(".ASAN$GA", read, write)
+#    pragma section(".ASAN$GZ", read, write)
+#  endif
 extern "C" alignas(sizeof(__asan_global))
     IN_SECTION(".ASAN$GA") __asan_global __asan_globals_start = {};
 extern "C" alignas(sizeof(__asan_global))
@@ -56,8 +58,10 @@ static void unregister_dso_globals() {
 }
 
 // Register globals
-#  pragma section(".CRT$XCU", long, read)
-#  pragma section(".CRT$XTX", long, read)
+#  if !defined(__GNUC__) || defined(__clang__)
+#    pragma section(".CRT$XCU", long, read)
+#    pragma section(".CRT$XTX", long, read)
+#  endif
 extern "C" IN_SECTION(".CRT$XCU") void (*const __asan_dso_reg_hook)() =
     &register_dso_globals;
 extern "C" IN_SECTION(".CRT$XTX") void (*const __asan_dso_unreg_hook)() =
