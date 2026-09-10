@@ -71,8 +71,6 @@ LLVM_ABI bool getDontPlaceZerosInBSS();
 
 LLVM_ABI bool getEnableGuaranteedTailCallOpt();
 
-LLVM_ABI bool getEnableAIXExtendedAltivecABI();
-
 LLVM_ABI bool getDisableTailCalls();
 
 LLVM_ABI bool getStackSymbolOrdering();

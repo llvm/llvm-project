@@ -380,7 +380,6 @@ bool CompilerInstance::setUpTargetMachine() {
   std::optional<llvm::CodeModel::Model> cm = getCodeModel(CGOpts.CodeModel);
 
   llvm::TargetOptions tOpts = llvm::TargetOptions();
-  tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
   tOpts.EnableMachineFunctionSplitter = targetOpts.SplitMachineFunctions;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
   tOpts.MCOptions.DisableIntegratedAS = CGOpts.DisableIntegratedAS;

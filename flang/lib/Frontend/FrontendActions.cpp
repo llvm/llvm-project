@@ -848,7 +848,7 @@ void CodeGenAction::generateLLVMIR() {
     }
   }
 
-  if (triple.isRISCV() && !targetOpts.abi.empty())
+  if (!targetOpts.abi.empty())
     llvmModule->addModuleFlag(
         llvm::Module::Error, "target-abi",
         llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
