@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-- -o - %s | FileCheck %s --check-prefixes=CHECK,SDAG
-; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-- -o - %s | FileCheck %s --check-prefixes=CHECK,GISEL
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-- < %s | FileCheck %s --check-prefixes=CHECK,SDAG
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-- < %s | FileCheck %s --check-prefixes=CHECK,GISEL
 
 ; A subtarget with more than 256 addressable VGPRs encodes a register number's
 ; high bits separately, with S_SET_VGPR_MSB. A whole-dword access folds its
