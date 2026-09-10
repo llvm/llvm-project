@@ -34,6 +34,27 @@
 using namespace clang;
 using namespace ento;
 
+static StringRef getFloatSemanticsName(const llvm::fltSemantics &Sem) {
+  switch (llvm::APFloat::SemanticsToEnum(Sem)) {
+  case llvm::APFloat::S_IEEEhalf:
+    return "IEEEhalf";
+  case llvm::APFloat::S_BFloat:
+    return "BFloat";
+  case llvm::APFloat::S_IEEEsingle:
+    return "IEEEsingle";
+  case llvm::APFloat::S_IEEEdouble:
+    return "IEEEdouble";
+  case llvm::APFloat::S_IEEEquad:
+    return "IEEEquad";
+  case llvm::APFloat::S_PPCDoubleDouble:
+    return "PPCDoubleDouble";
+  case llvm::APFloat::S_x87DoubleExtended:
+    return "x87DoubleExtended";
+  default:
+    return "unknown";
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Symbol iteration within an SVal.
 //===----------------------------------------------------------------------===//
@@ -146,6 +167,26 @@ public:
     if (1 == Value.getBitWidth())
       return Context.BoolTy;
     return Context.getIntTypeForBitwidth(Value.getBitWidth(), Value.isSigned());
+  }
+  QualType VisitConcreteFloat(nonloc::ConcreteFloat CF) {
+    switch (llvm::APFloat::SemanticsToEnum(CF.getValue()->getSemantics())) {
+    case llvm::APFloat::S_IEEEhalf:
+      return Context.Float16Ty;
+    case llvm::APFloat::S_BFloat:
+      return Context.BFloat16Ty;
+    case llvm::APFloat::S_IEEEsingle:
+      return Context.FloatTy;
+    case llvm::APFloat::S_IEEEdouble:
+      return Context.DoubleTy;
+    case llvm::APFloat::S_IEEEquad:
+      return Context.Float128Ty;
+    case llvm::APFloat::S_PPCDoubleDouble:
+      return Context.Ibm128Ty;
+    case llvm::APFloat::S_x87DoubleExtended:
+      return Context.LongDoubleTy;
+    default:
+      return QualType{};
+    }
   }
   QualType VisitLocAsInteger(nonloc::LocAsInteger LI) {
     QualType NestedType = Visit(LI.getLoc());
@@ -312,6 +353,11 @@ void SVal::dumpToStream(raw_ostream &os) const {
 
 void NonLoc::dumpToStream(raw_ostream &os) const {
   switch (getKind()) {
+  case nonloc::ConcreteFloatKind: {
+    const llvm::APFloat &Value = *castAs<nonloc::ConcreteFloat>().getValue();
+    os << Value << ' ' << getFloatSemanticsName(Value.getSemantics());
+    break;
+  }
   case nonloc::ConcreteIntKind: {
     APSIntPtr Value = castAs<nonloc::ConcreteInt>().getValue();
     os << Value << ' ' << (Value->isSigned() ? 'S' : 'U')
