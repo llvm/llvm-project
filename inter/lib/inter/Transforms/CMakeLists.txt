@@ -1,0 +1,42 @@
+add_mlir_library(InterTransforms
+  InterSelect.cpp
+  InterCoalesceTuples.cpp
+  InterReuseBlock2DPayloads.cpp
+  InterImportLLVM.cpp
+  InterDiscoverCacheControls.cpp
+  InterCanonicalizeBlock2DABI.cpp
+  InterPrepareCountedLoops.cpp
+  InterConvertLLVMToXW.cpp
+  InterRefineDistribution.cpp
+  InterNarrowIntegerRanges.cpp
+  InterExpandArithmetic.cpp
+  InterInferMemoryTokens.cpp
+  InterInsertSync.cpp
+  InterPrepareRegAlloc.cpp
+  InterMachineSchedule.cpp
+  InterResourceInfo.cpp
+  MachineScheduler.cpp
+  Xe2ScheduleModel.cpp
+
+  DEPENDS
+  InterPassesIncGen
+
+  LINK_LIBS PUBLIC
+  InterAnalysis
+  InterXW
+  InterXeMachine
+  MLIRAnalysis
+  MLIRArithDialect
+  MLIRLLVMDialect
+  MLIRControlFlowDialect
+  MLIRControlFlowInterfaces
+  MLIRSCFDialect
+  MLIRFuncDialect
+  MLIRDataLayoutInterfaces
+  MLIRDialectUtils
+  MLIRSCFTransforms
+  MLIRTransformUtils
+  MLIRUBDialect
+  MLIRIR
+  MLIRPass
+)
