@@ -42,13 +42,17 @@ Silently ignored. Present for GNU {program}`strings` compatibility.
 :::{option} --bytes=<length>, -n
 Set the minimum number of printable characters required for a sequence to be
 considered a string. The default value is 4.
+
+The option name `--bytes` dates back to when only single-byte characters were
+supported. Despite the name, the option value always specifies the number of
+characters.
 :::
 
 :::{option} --encoding=<encoding>, -e
 Specifies the encoding of the input file. Valid arguments are:
-- s (ASCII characters)
-- S (characters in the system's or user's selected character set)
-- u (UTF-8 characters)
+- `s` (ASCII)
+- `S` (default character set)
+- `utf8` (UTF-8)
 :::
 
 :::{option} --help, -h

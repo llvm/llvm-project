@@ -488,10 +488,17 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
                    convertType(paramVar->getType()), paramLoc, alignment,
                    /*insertIntoFnEntryBlock=*/true);
 
-    declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
+    mlir::ptr::MemorySpaceAttrInterface destAddrSpace =
+        cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                   paramVar->getType().getAddressSpace());
+    Address addr = Address(addrVal, alignment);
+    addr = maybeCastStackAddressSpace(addr, destAddrSpace);
+
+    declare(addr.getPointer(), paramVar, paramVar->getType(), paramLoc,
+            alignment,
             /*isParam=*/true);
 
-    setAddrOfLocalVar(paramVar, Address(addrVal, alignment));
+    setAddrOfLocalVar(paramVar, addr);
 
     bool isPromoted = isa<ParmVarDecl>(paramVar) &&
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
@@ -901,14 +908,13 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // by Sema), but the Itanium ABI doesn't make them optional and Clang may
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
+  Stmt *body = dtor->getBody();
   if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
-    SourceLocation loc =
-        dtor->hasBody() ? dtor->getBody()->getBeginLoc() : dtor->getLocation();
+    SourceLocation loc = body ? body->getBeginLoc() : dtor->getLocation();
     emitTrap(getLoc(loc), true);
     return;
   }
 
-  Stmt *body = dtor->getBody();
   assert(body && !cir::MissingFeatures::incrementProfileCounter());
 
   // The call to operator delete in a deleting destructor happens

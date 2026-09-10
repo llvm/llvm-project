@@ -3064,11 +3064,9 @@ void RISCVTTIImpl::getUnrollingPreferences(
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
-          if (!isLoweredToCall(F))
-            continue;
-        }
-        return;
+        const Function *F = cast<CallBase>(I).getCalledFunction();
+        if (!F || isLoweredToCall(F))
+          return;
       }
 
       SmallVector<const Value *> Operands(I.operand_values());

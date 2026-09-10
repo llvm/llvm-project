@@ -26,7 +26,7 @@ func.func @unpack_elemwise_scalable(%arg0: tensor<4x8x?x?xf32>, %arg1: tensor<?x
   %1 = linalg.unpack %arg0 inner_dims_pos = [0, 1]
       inner_tiles = [%c8_vscale, %c4_vscale] into %0
       : tensor<4x8x?x?xf32> -> tensor<?x?xf32>
-  %2 = linalg.exp ins(%1: tensor<?x?xf32>)
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%1: tensor<?x?xf32>)
                        outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %2 : tensor<?x?xf32>
 }
@@ -36,7 +36,7 @@ module attributes {transform.with_named_sequence} {
   // the inner tiles, asserted via `Multiple`. The outer dims become
   // `ceilDiv(loop tile, inner tile)`.
   transform.named_sequence @aligned(%arg1: !transform.any_op {transform.readonly}) {
-    %exp = transform.structured.match ops{["linalg.exp"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %exp = transform.structured.match ops{["linalg.elementwise"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %mulis = transform.structured.match ops{["arith.muli"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %h8, %h4, %h16 = transform.split_handle %mulis : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     %tiled, %loops:2 = transform.structured.fuse %exp tile_sizes [%h16, %h8] interchange [0, 1]
@@ -60,7 +60,7 @@ module attributes {transform.with_named_sequence} {
   //       ALIGNED:        %[[UNPACK:.*]] = linalg.unpack %[[SRC]]
   //  ALIGNED-SAME:            tensor<?x?x?x?xf32> -> tensor<?x?xf32>
   //   ALIGNED-NOT:         tensor.extract_slice %[[UNPACK]]
-  //       ALIGNED:        linalg.exp ins(%[[UNPACK]]
+  //       ALIGNED:        linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[UNPACK]]
   //       ALIGNED:      scf.yield
   //       ALIGNED:    scf.yield
   //       ALIGNED:    return %[[RES]]
@@ -68,7 +68,7 @@ module attributes {transform.with_named_sequence} {
   // Equal: loop tile sizes (8 * vscale, 4 * vscale) equal the inner tiles,
   // asserted via `Equal`; the fused unpack's outer dims collapse to 1.
   transform.named_sequence @equal(%arg1: !transform.any_op {transform.readonly}) {
-    %exp = transform.structured.match ops{["linalg.exp"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %exp = transform.structured.match ops{["linalg.elementwise"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %mulis = transform.structured.match ops{["arith.muli"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %h8, %h4, %h16 = transform.split_handle %mulis : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     %tiled, %loops:2 = transform.structured.fuse %exp tile_sizes [%h8, %h4] interchange [0, 1]
@@ -87,7 +87,7 @@ module attributes {transform.with_named_sequence} {
   //       EQUAL:        %[[UNPACK:.*]] = linalg.unpack
   //  EQUAL-SAME:            tensor<1x1x?x?xf32> -> tensor<?x?xf32>
   //   EQUAL-NOT:         tensor.extract_slice %[[UNPACK]]
-  //       EQUAL:        linalg.exp ins(%[[UNPACK]]
+  //       EQUAL:        linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[UNPACK]]
   //       EQUAL:      scf.yield
   //       EQUAL:    scf.yield
   //       EQUAL:    return %[[RES]]
@@ -96,7 +96,7 @@ module attributes {transform.with_named_sequence} {
   // tiles and no hint is passed, so the fused unpack over-computes and a trailing
   // extract_slice recovers the needed slice.
   transform.named_sequence @unaligned(%arg1: !transform.any_op {transform.readonly}) {
-    %exp = transform.structured.match ops{["linalg.exp"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %exp = transform.structured.match ops{["linalg.elementwise"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %tiled, %loops:2 = transform.structured.fuse %exp tile_sizes [7, 5] interchange [0, 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
@@ -109,8 +109,8 @@ module attributes {transform.with_named_sequence} {
   //       UNALIGNED:        %[[UNPACK:.*]] = linalg.unpack
   //  UNALIGNED-SAME:            tensor<?x?x?x?xf32> -> tensor<?x?xf32>
   //       UNALIGNED:        %[[EXTRACT:.*]] = tensor.extract_slice %[[UNPACK]]
-  //   UNALIGNED-NOT:        linalg.exp ins(%[[UNPACK]]
-  //       UNALIGNED:        linalg.exp ins(%[[EXTRACT]]
+  //   UNALIGNED-NOT:        linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[UNPACK]]
+  //       UNALIGNED:        linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[EXTRACT]]
   //       UNALIGNED:      scf.yield
   //       UNALIGNED:    scf.yield
   //       UNALIGNED:    return %[[RES]]
@@ -151,7 +151,7 @@ func.func @fuse_unpack_into_containing(
         : tensor<?x?xf32> to tensor<?x?xf32>
     %oslice = tensor.extract_slice %o[%i, %j] [%c8_vscale_step, %c4_vscale_step] [1, 1]
         : tensor<?x?xf32> to tensor<?x?xf32>
-    %0 = linalg.exp ins(%slice : tensor<?x?xf32>) outs(%oslice : tensor<?x?xf32>) -> tensor<?x?xf32>
+    %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%slice : tensor<?x?xf32>) outs(%oslice : tensor<?x?xf32>) -> tensor<?x?xf32>
     scf.forall.in_parallel {
       tensor.parallel_insert_slice %0 into %o[%i, %j] [%c8_vscale_step, %c4_vscale_step] [1, 1]
           : tensor<?x?xf32> into tensor<?x?xf32>
@@ -175,7 +175,7 @@ module attributes {transform.with_named_sequence} {
   //       EQUAL:     %[[UNPACK:.+]] = linalg.unpack
   //  EQUAL-SAME:         : tensor<1x1x?x?xf32> -> tensor<?x?xf32>
   //   EQUAL-NOT:     tensor.extract_slice %[[UNPACK]]
-  //       EQUAL:     linalg.exp ins(%[[UNPACK]]
+  //       EQUAL:     linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[UNPACK]]
 
   // No hint: general (unaligned) tiling with a trailing result slice.
   transform.named_sequence @unaligned(%arg1: !transform.any_op {transform.readonly}) {
@@ -190,8 +190,8 @@ module attributes {transform.with_named_sequence} {
   //     UNALIGNED:     %[[UNPACK:.+]] = linalg.unpack
   // UNALIGNED-SAME:         : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
   //     UNALIGNED:     %[[EXTRACTED:.+]] = tensor.extract_slice %[[UNPACK]]
-  // UNALIGNED-NOT:     linalg.exp ins(%[[UNPACK]]
-  //     UNALIGNED:     linalg.exp ins(%[[EXTRACTED]]
+  // UNALIGNED-NOT:     linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[UNPACK]]
+  //     UNALIGNED:     linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[EXTRACTED]]
 
   // Aligned: the `Multiple` hints assert the containing loop's tile sizes are
   // multiples of the inner tiles. Although the loop tile size and inner tile sizes
@@ -214,7 +214,7 @@ module attributes {transform.with_named_sequence} {
   //       ALIGNED:     %[[UNPACK:.+]] = linalg.unpack
   //  ALIGNED-SAME:         : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
   //   ALIGNED-NOT:     tensor.extract_slice %[[UNPACK]]
-  //       ALIGNED:     linalg.exp ins(%[[UNPACK]]
+  //       ALIGNED:     linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[UNPACK]]
 
   // Dummy entry point so the default RUN line resolves here.
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -324,7 +324,7 @@ func.func @fuse_unpack_through_block_arg(
       shared_outs(%o = %unpack) -> (tensor<?x?xf32>) {
     %slice = tensor.extract_slice %o[%i, %j] [%c8_vscale, %c4_vscale] [1, 1]
         : tensor<?x?xf32> to tensor<?x?xf32>
-    %0 = linalg.exp ins(%slice : tensor<?x?xf32>) outs(%slice : tensor<?x?xf32>) -> tensor<?x?xf32>
+    %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%slice : tensor<?x?xf32>) outs(%slice : tensor<?x?xf32>) -> tensor<?x?xf32>
     scf.forall.in_parallel {
       tensor.parallel_insert_slice %0 into %o[%i, %j] [%c8_vscale, %c4_vscale] [1, 1]
           : tensor<?x?xf32> into tensor<?x?xf32>
@@ -337,7 +337,7 @@ func.func @fuse_unpack_through_block_arg(
 //       CHECK:     %[[UNPACK:.+]] = linalg.unpack
 //  CHECK-SAME:         : tensor<1x1x?x?xf32> -> tensor<?x?xf32>
 //   CHECK-NOT:     tensor.extract_slice %[[UNPACK]]
-//       CHECK:     linalg.exp ins(%[[UNPACK]]
+//       CHECK:     linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[UNPACK]]
 
 module attributes {transform.with_named_sequence} {
   // The `Equal` hints assert the containing loop's tile sizes equal the unpack

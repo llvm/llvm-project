@@ -11,10 +11,7 @@ multiclass Eq<string name, string help> {
 
 def all : FF<"all", "Silently ignored. Present for GNU strings compatibility">;
 defm bytes : Eq<"bytes", "Print sequences of the specified length">;
-defm encoding : Eq<"encoding", [{Select the character encoding of the strings to find:
-s (ASCII characters)
-S (characters in the system's or user's character set)
-u (UTF-8 characters)}]>;
+defm encoding : Eq<"encoding", "Select the character encoding of the strings to find: s (ASCII), S (default), utf8 (UTF-8)">;
 def help : FF<"help", "Display this help">;
 def print_file_name : Flag<["--"], "print-file-name">, HelpText<"Print the name of the file before each string">;
 defm radix : Eq<"radix", "Print the offset within the file with the specified radix: o (octal), d (decimal), x (hexadecimal)">, MetaVarName<"<radix>">;

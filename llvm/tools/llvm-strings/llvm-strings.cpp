@@ -65,7 +65,6 @@ public:
     setDashDashParsing(true);
   }
 };
-} // namespace
 
 static StringRef ToolName;
 
@@ -75,15 +74,21 @@ static cl::list<std::string> InputFileNames(cl::Positional,
 static int MinLength = 4;
 static bool PrintFileName;
 
-enum class encoding { s, S, u };
-static encoding Encoding;
+enum class Encoding { Ascii, Locale, Utf8 };
+static Encoding Encoding;
 
-enum class radix { none, octal, hexadecimal, decimal };
-static radix Radix;
+enum class Radix { None, Octal, Hexadecimal, Decimal };
+static Radix Radix;
+} // namespace
 
 [[noreturn]] static void reportCmdLineError(const Twine &Message) {
   WithColor::error(errs(), ToolName) << Message << "\n";
   exit(1);
+}
+
+[[noreturn]] static void invalidArgValue(Arg *Arg) {
+  reportCmdLineError("'" + StringRef(Arg->getValue()) +
+                     "' is not a valid value for '" + Arg->getSpelling() + "'");
 }
 
 template <typename T>
@@ -96,26 +101,26 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 }
 
 static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
-  std::locale loc("");
-  auto &cvt = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(loc);
-  auto &ctype = std::use_facet<std::ctype<wchar_t>>(loc);
-  std::mbstate_t mbs{};
+  std::locale Loc("");
+  auto &Cvt = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(Loc);
+  auto &Ctype = std::use_facet<std::ctype<wchar_t>>(Loc);
+  std::mbstate_t MBState{};
 
-  auto read = [&cvt, &mbs](const char *&P, const char *E) -> UTF32 {
+  auto Read = [&Cvt, &MBState](const char *&P, const char *E) -> UTF32 {
     UTF32 Ch;
 
     switch (Encoding) {
-    case encoding::s:
+    case Encoding::Ascii:
       Ch = *P++;
       break;
 
-    case encoding::S: {
+    case Encoding::Locale: {
       const char *N;
       wchar_t WCh;
       wchar_t *WNext;
-      [[maybe_unused]] const auto res =
-          cvt.in(mbs, P, E, N, &WCh, &WCh + 1, WNext);
-      assert(res != std::codecvt_base::noconv);
+      [[maybe_unused]] const auto Res =
+          Cvt.in(MBState, P, E, N, &WCh, &WCh + 1, WNext);
+      assert(Res != std::codecvt_base::noconv);
 
       // Only treat a non-null character as a successful conversion, as a null
       // character may be the result of an incomplete multibyte character
@@ -129,13 +134,13 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
         // If there was any error, skip the current byte and reset the state to
         // allow the next byte to start a character.
         Ch = 0;
-        mbs = {};
+        MBState = {};
         ++P;
       }
       break;
     }
 
-    case encoding::u: {
+    case Encoding::Utf8: {
       const UTF8 *UP = reinterpret_cast<const UTF8 *>(P);
       const UTF8 *UE = reinterpret_cast<const UTF8 *>(E);
       UTF32 *Next = &Ch;
@@ -154,21 +159,21 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
     return Ch;
   };
 
-  auto print = [&OS, FileName](unsigned Offset, StringRef L, size_t N) {
+  auto Print = [&OS, FileName](unsigned Offset, StringRef L, size_t N) {
     if (N < static_cast<size_t>(MinLength))
       return;
     if (PrintFileName)
       OS << FileName << ": ";
     switch (Radix) {
-    case radix::none:
+    case Radix::None:
       break;
-    case radix::octal:
+    case Radix::Octal:
       OS << format("%7o ", Offset);
       break;
-    case radix::hexadecimal:
+    case Radix::Hexadecimal:
       OS << format("%7x ", Offset);
       break;
-    case radix::decimal:
+    case Radix::Decimal:
       OS << format("%7u ", Offset);
       break;
     }
@@ -182,20 +187,20 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
   const char *P = Contents.begin(), *E = Contents.end(), *S = nullptr;
   for (P = Contents.begin(), E = Contents.end(); P < E;) {
     const char *N = P;
-    UTF32 Ch = read(N, E);
+    UTF32 Ch = Read(N, E);
 
     const bool Printable =
         Ch == '\t' ||
-        (Encoding == encoding::s   ? Ch <= 0x7f && isPrint(Ch)
-         : Encoding == encoding::S ? ctype.is(std::ctype_base::print, Ch)
-                                   : sys::unicode::isPrintable(Ch));
+        (Encoding == Encoding::Ascii    ? Ch <= 0x7f && isPrint(Ch)
+         : Encoding == Encoding::Locale ? Ctype.is(std::ctype_base::print, Ch)
+                                        : sys::unicode::isPrintable(Ch));
 
     if (Printable) {
       if (S == nullptr)
         S = P;
       ++NumPrintable;
     } else if (S) {
-      print(S - B, StringRef(S, P - S), NumPrintable);
+      Print(S - B, StringRef(S, P - S), NumPrintable);
       S = nullptr;
       NumPrintable = 0;
     }
@@ -203,7 +208,7 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
     P = N;
   }
   if (S)
-    print(S - B, StringRef(S, E - S), NumPrintable);
+    Print(S - B, StringRef(S, E - S), NumPrintable);
 }
 
 int main(int argc, char **argv) {
@@ -230,38 +235,34 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  const auto *EncodingArg = Args.getLastArg(OPT_encoding_EQ);
-
-  Encoding = EncodingArg ? llvm::StringSwitch<encoding>(EncodingArg->getValue())
-                               .Case("s", encoding::s)
-                               .Case("S", encoding::S)
-                               .Case("u", encoding::u)
-                               .Predicate(
-                                   [](StringRef) -> bool {
-                                     reportCmdLineError(
-                                         "--encoding value should be one of: "
-                                         "'s' (ASCII characters), "
-                                         "'S' (characters in the system's or "
-                                         "user's selected character set), "
-                                         "'u' (UTF-8 characters)");
-                                   },
-                                   encoding{})
-                               .DefaultUnreachable()
-                         : encoding::S;
+  Arg *EncodingArg = Args.getLastArg(OPT_encoding_EQ);
+  if (!EncodingArg) {
+    Encoding = Encoding::Locale;
+  } else {
+    auto EncodingVal = llvm::StringSwitch<std::optional<enum Encoding>>(
+                           EncodingArg->getValue())
+                           .Case("s", Encoding::Ascii)
+                           .Case("S", Encoding::Locale)
+                           .Case("utf8", Encoding::Utf8)
+                           .Default(std::nullopt);
+    if (!EncodingVal)
+      invalidArgValue(EncodingArg);
+    Encoding = *EncodingVal;
+  }
   parseIntArg(Args, OPT_bytes_EQ, MinLength);
   PrintFileName = Args.hasArg(OPT_print_file_name);
-  StringRef R = Args.getLastArgValue(OPT_radix_EQ);
-  if (R.empty())
-    Radix = radix::none;
-  else if (R == "o")
-    Radix = radix::octal;
-  else if (R == "d")
-    Radix = radix::decimal;
-  else if (R == "x")
-    Radix = radix::hexadecimal;
-  else
-    reportCmdLineError("--radix value should be one of: '' (no offset), 'o' "
-                       "(octal), 'd' (decimal), 'x' (hexadecimal)");
+  Arg *RadixArg = Args.getLastArg(OPT_radix_EQ);
+  if (!RadixArg) {
+    Radix = Radix::None;
+  } else {
+    Radix = llvm::StringSwitch<enum Radix>(RadixArg->getValue())
+                .Case("o", Radix::Octal)
+                .Case("d", Radix::Decimal)
+                .Case("x", Radix::Hexadecimal)
+                .Default(Radix::None);
+    if (Radix == Radix::None)
+      invalidArgValue(RadixArg);
+  }
 
   if (MinLength == 0) {
     errs() << "invalid minimum string length 0\n";

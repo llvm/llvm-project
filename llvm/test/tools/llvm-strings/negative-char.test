@@ -3,7 +3,7 @@
 ## unless using an encoding where they form valid characters.
 
 # RUN: printf "z\0\200\0\302\241\0a\0" | llvm-strings --encoding=s --bytes 1 - | FileCheck %s
-# RUN: printf "z\0\200\0\302\241\0a\0" | llvm-strings --encoding=u --bytes 1 - | FileCheck %s --check-prefixes=CHECK,CHECK-UTF8
+# RUN: printf "z\0\200\0\302\241\0a\0" | llvm-strings --encoding=utf8 --bytes 1 - | FileCheck %s --check-prefixes=CHECK,CHECK-UTF8
 # CHECK: z{{$}}
 # CHECK-UTF8-NEXT: {{^}}¡{{$}}
 # CHECK-NEXT: {{^}}a

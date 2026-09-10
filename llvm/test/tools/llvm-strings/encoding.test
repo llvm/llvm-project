@@ -1,28 +1,32 @@
 ## Show that llvm-strings uses the specified encoding.
-
 RUN: echo a > %t
 RUN: echo ab >> %t
 RUN: echo abc >> %t
 RUN: echo abcd >> %t
 RUN: echo abcd€ >> %t
 
-# Check that long form options work.
-RUN: llvm-strings --encoding s 2>&1 %t | FileCheck --check-prefixes CHECK,CHECK-ASCII %s
-RUN: llvm-strings --encoding S 2>&1 %t | FileCheck                                    %s
-RUN: llvm-strings --encoding u 2>&1 %t | FileCheck --check-prefixes CHECK,CHECK-UTF8  %s
-RUN: not llvm-strings --encoding x 2>&1 %t | FileCheck --check-prefixes CHECK-ERROR       %s
+## Check that long form options work.
+RUN: llvm-strings --encoding s %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
+RUN: llvm-strings --encoding S %t | FileCheck --check-prefixes CHECK,CHECK-LOCALE --strict-whitespace --match-full-lines %s
+RUN: llvm-strings --encoding utf8 %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
 
-# Check that short form options work.
-RUN: llvm-strings -e s 2>&1 %t | FileCheck --check-prefixes CHECK,CHECK-ASCII %s
-RUN: llvm-strings -e S 2>&1 %t | FileCheck                                    %s
-RUN: llvm-strings -e u 2>&1 %t | FileCheck --check-prefixes CHECK,CHECK-UTF8  %s
+## Check that short form options work.
+RUN: llvm-strings -e s %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e S %t | FileCheck --check-prefixes CHECK,CHECK-LOCALE --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
 
-CHECK: abcd
-CHECK-ASCII-NOT: abcd€
-CHECK-UTF8: abcd€
+## Check that the default output matches that of -e S.
+RUN: llvm-strings -e S %t > %t.1
+RUN: llvm-strings %t > %t.2
+RUN: cmp %t.1 %t.2
 
-# Check that invalid encodings are rejected.
+CHECK:abcd
+CHECK-ASCII-NOT:abcd€
+CHECK-LOCALE:abcd{{.*}}
+CHECK-UTF8:abcd€
+
+## Check that invalid --encoding values are rejected.
 RUN: not llvm-strings --encoding x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
 RUN: not llvm-strings -e x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
 
-CHECK-ERROR: error: --encoding value
+CHECK-ERROR: error: 'x' is not a valid value for '--encoding='

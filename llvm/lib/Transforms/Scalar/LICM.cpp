@@ -169,10 +169,6 @@ cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
              "number of accesses allowed to be present in a loop in order to "
              "enable memory promotion."));
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
-
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
                                       const LoopSafetyInfo *SafetyInfo,
@@ -872,8 +868,7 @@ public:
     HoistTarget->getTerminator()->eraseFromParent();
     // md_prof should also come from the original branch - since the
     // condition was hoisted, the branch probabilities shouldn't change.
-    if (!ProfcheckDisableMetadataFixes)
-      NewBI->copyMetadata(*BI, {LLVMContext::MD_prof});
+    NewBI->copyMetadata(*BI, {LLVMContext::MD_prof});
     // FIXME: Issue #152767: debug info should also be the same as the
     // original branch, **if** the user explicitly indicated that.
     NewBI->setDebugLoc(HoistTarget->getTerminator()->getDebugLoc());
@@ -1427,7 +1422,6 @@ static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
                                       const LoopSafetyInfo *SafetyInfo,
                                       TargetTransformInfo *TTI,
                                       bool &FoldableInLoop, bool LoopNestMode) {
-  const auto &BlockColors = SafetyInfo->getBlockColors();
   bool IsFoldable = isFoldableInLoop(I, CurLoop, TTI);
   for (const User *U : I.users()) {
     const Instruction *UI = cast<Instruction>(U);
@@ -1439,10 +1433,12 @@ static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
 
       // We need to sink a callsite to a unique funclet.  Avoid sinking if the
       // phi use is too muddled.
-      if (isa<CallInst>(I))
+      if (isa<CallInst>(I)) {
+        const auto &BlockColors = SafetyInfo->getBlockColors();
         if (!BlockColors.empty() &&
             BlockColors.find(const_cast<BasicBlock *>(BB))->second.size() != 1)
           return false;
+      }
 
       if (LoopNestMode) {
         while (isa<PHINode>(UI) && UI->hasOneUser() &&
@@ -1678,7 +1674,8 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
   // Iterate over users to be ready for actual sinking. Replace users via
   // unreachable blocks with undef and make all user PHIs trivially replaceable.
   SmallPtrSet<Instruction *, 8> VisitedUsers;
-  for (Value::user_iterator UI = I.user_begin(), UE = I.user_end(); UI != UE;) {
+  for (Instruction::user_iterator UI = I.user_begin(), UE = I.user_end();
+       UI != UE;) {
     auto *User = cast<Instruction>(*UI);
     Use &U = UI.getUse();
     ++UI;
