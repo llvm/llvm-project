@@ -78,6 +78,7 @@ with open(assembly_filepath, "w") as f:
 .text
 .globl _main
 
+.p2align 2
 _main:
   ret
 

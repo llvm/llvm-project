@@ -25,6 +25,7 @@
 
 .text
 .globl _objc_msgSend
+.p2align 2
 _objc_msgSend:
   ret
 

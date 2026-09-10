@@ -45,6 +45,7 @@
 
 .text
 .globl _main
+.p2align 2
 _main:
   bl _hot_a
   bl _hot_b

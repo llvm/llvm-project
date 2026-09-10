@@ -67,6 +67,7 @@
 .globl _main
 .linker_option "-lDeveloperSupport"
 
+.p2align 2
 _main:
   ret
 

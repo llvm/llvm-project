@@ -11,6 +11,7 @@
 .text
 .globl _main
 # CHECK-LABEL: _main:
+.p2align 2
 _main:
 ## The referenced symbol is local
 L1: adrp x0, _local@GOTPAGE
@@ -32,4 +33,5 @@ _local:
 
 #--- dylib.s
 .globl _external
+.p2align 2
 _external:

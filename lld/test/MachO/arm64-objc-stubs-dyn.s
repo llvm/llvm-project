@@ -69,6 +69,7 @@ lselref2:
 .text
 
 .globl _main
+.p2align 2
 _main:
   bl  _objc_msgSend$length
   bl  _objc_msgSend$foo

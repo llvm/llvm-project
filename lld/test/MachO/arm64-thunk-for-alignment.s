@@ -10,14 +10,14 @@
 ## Regression test for PR59259. Previously, we neglected to check section
 ## alignments when deciding when to create thunks.
 
-## If we ignore alignment, the total size of _spacer1 + _spacer2 below is just
-## under the limit at which we attempt to insert thunks between the spacers.
-## However, with alignment accounted for, their total size ends up being
-## 0x8000000, which is just above the max forward branch range, making thunk
-## insertion necessary. Thus, not accounting for alignment led to an error.
+## If we ignore alignment, _bar is 0x7fff3fb bytes after _foo, just within the
+## max forward branch range. However, aligning _spacer2's section adds 0xc05
+## bytes of padding, placing _bar 0x8000000 bytes after _foo. This requires a
+## thunk, and previously not accounting for that alignment led to an error.
 
 #--- foo.s
 
+.p2align 2
 _foo:
   b _bar
 

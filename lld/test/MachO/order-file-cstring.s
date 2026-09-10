@@ -191,6 +191,7 @@ CSTR;0x2032D362
 .text
 .globl _main
 
+.p2align 2
 _main:
   ret
 

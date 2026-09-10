@@ -9,6 +9,7 @@
 # CHECK-DAG: error: {{.*}}:(symbol _main+0x1c): 128-bit LDR/STR to 0x[[#%X,]] (_quad) is not 16-byte aligned
 
 .globl _main
+.p2align 2
 _main:
   adrp x0, _half@PAGE
   ldrh w0, [x0, _half@PAGEOFF]
