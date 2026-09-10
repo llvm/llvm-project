@@ -521,7 +521,12 @@ static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
     FEAT_AGPR_ALLOC,
     FEAT_1536_PHYSICAL_VGPRS,
     FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY,
-    FEAT_1024_ADDRESSABLE_VGPRS};
+    FEAT_1024_ADDRESSABLE_VGPRS,
+    FEAT_LDS_ALLOC_GRANULARITY_256,
+    FEAT_LDS_ALLOC_GRANULARITY_512,
+    FEAT_LDS_ALLOC_GRANULARITY_1024,
+    FEAT_LDS_ALLOC_GRANULARITY_1280,
+    FEAT_LDS_ALLOC_GRANULARITY_2048};
 
 // Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.

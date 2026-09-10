@@ -19,6 +19,10 @@
 // RUN:   | FileCheck %t/bad-stepping.td -DFILE=%t/bad-stepping.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-feature-superset.td 2>&1 \
 // RUN:   | FileCheck %t/generic-feature-superset.td -DFILE=%t/generic-feature-superset.td --implicit-check-not="error:"
+// RUN: llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-lds-granularity-valid.td 2>&1 \
+// RUN:   | FileCheck %t/generic-lds-granularity-valid.td --check-prefix=VALID
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-lds-granularity-invalid.td 2>&1 \
+// RUN:   | FileCheck %t/generic-lds-granularity-invalid.td -DFILE=%t/generic-lds-granularity-invalid.td --implicit-check-not="error:"
 
 // Verify the validation performed by the -gen-amdgpu-target-def backend.
 
@@ -162,6 +166,72 @@ def GFX900 : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]
 // not have 'foo'.
 // CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' exposes feature 'foo' not supported by covered GPU 'gfx900'
 def : ProcessorModel<"gfx9-generic", NoSchedModel, [FeatureFoo]>,
+      AMDGPUGPUInfo<[9, 0, 0]> {
+  let CoveredGPUs = [GFX900];
+}
+
+//--- generic-lds-granularity-valid.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+
+class SubtargetFeatureLDSAllocGranularity<int Granularity> : SubtargetFeature<
+  "granule-"#Granularity, "LDSAllocationGranularity",
+  !cast<string>(Granularity), "Granularity"> {
+  int NumericValue = Granularity;
+}
+def FeatureGranuleSmall : SubtargetFeatureLDSAllocGranularity<256>;
+def FeatureGranuleBig : SubtargetFeatureLDSAllocGranularity<512>;
+
+def AMDGPUFrontendVisibleFeatures {
+  list<SubtargetFeature> Features = [FeatureGranuleSmall, FeatureGranuleBig];
+}
+
+def GFX900 : ProcessorModel<"gfx900", NoSchedModel, [FeatureGranuleSmall]>,
+             AMDGPUGPUInfo<[9, 0, 0]>;
+
+// A generic carries the worst-case numeric field, so it keeps the larger
+// granularity while covering a GPU with a smaller one. That is not an error.
+// VALID: GK_GFX9_GENERIC
+def : ProcessorModel<"gfx9-generic", NoSchedModel, [FeatureGranuleBig]>,
+      AMDGPUGPUInfo<[9, 0, 0]> {
+  let CoveredGPUs = [GFX900];
+}
+
+//--- generic-lds-granularity-invalid.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+
+class SubtargetFeatureLDSAllocGranularity<int Granularity> : SubtargetFeature<
+  "granule-"#Granularity, "LDSAllocationGranularity",
+  !cast<string>(Granularity), "Granularity"> {
+  int NumericValue = Granularity;
+}
+def FeatureGranuleSmall : SubtargetFeatureLDSAllocGranularity<256>;
+def FeatureGranuleBig : SubtargetFeatureLDSAllocGranularity<512>;
+
+def AMDGPUFrontendVisibleFeatures {
+  list<SubtargetFeature> Features = [FeatureGranuleSmall, FeatureGranuleBig];
+}
+
+def GFX900 : ProcessorModel<"gfx900", NoSchedModel, [FeatureGranuleBig]>,
+             AMDGPUGPUInfo<[9, 0, 0]>;
+
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' exposes feature 'granule-256' below the 'LDSAllocationGranularity' of covered GPU 'gfx900'
+def : ProcessorModel<"gfx9-generic", NoSchedModel, [FeatureGranuleSmall]>,
       AMDGPUGPUInfo<[9, 0, 0]> {
   let CoveredGPUs = [GFX900];
 }

@@ -2826,6 +2826,14 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
 
   // A capability feature is queried through the bitset only.
   EXPECT_FALSE(HasFeature("gfx1030", "half-addressable-physical-local-memory"));
+
+  // Numeric hardware properties stay out of the target-feature string. Merging
+  // multiple values there would silently select the largest one.
+  EXPECT_FALSE(HasFeature("gfx600", "lds-alloc-granularity-256"));
+  EXPECT_FALSE(HasFeature("gfx900", "lds-alloc-granularity-512"));
+  EXPECT_FALSE(HasFeature("gfx950", "lds-alloc-granularity-1280"));
+  EXPECT_FALSE(HasFeature("gfx1310", "lds-alloc-granularity-1024"));
+  EXPECT_FALSE(HasFeature("gfx1250", "lds-alloc-granularity-2048"));
 }
 
 TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
@@ -2874,6 +2882,44 @@ TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1200));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX1250));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX1310));
+}
+
+TEST(TargetParserTest, testAMDGPULDSAllocGranularityFeatures) {
+  auto Has = [](AMDGPU::GPUKind AK, AMDGPU::AMDGPUFeature Feature) {
+    return AMDGPU::getFeatureBitset(AK).test(Feature);
+  };
+  auto Count = [&Has](AMDGPU::GPUKind AK) {
+    return Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_256) +
+           Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512) +
+           Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1024) +
+           Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280) +
+           Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_2048);
+  };
+
+  // Exactly one allocation granularity is set per GPU.
+  EXPECT_EQ(Count(AMDGPU::GK_GFX600), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX900), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX950), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX1310), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX1250), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX9_4_GENERIC), 1);
+
+  // The legacy pseudo-targets do not represent hardware.
+  EXPECT_EQ(Count(AMDGPU::GK_GENERIC), 0);
+  EXPECT_EQ(Count(AMDGPU::GK_GENERIC_HSA), 0);
+
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX600, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_256));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX900, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX950, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1310, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1024));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1250, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_2048));
+
+  // A generic target uses the largest allocation granularity of the GPUs it
+  // covers. gfx9-4-generic therefore uses gfx950's 1280-byte granule.
+  EXPECT_TRUE(
+      Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280));
+  EXPECT_FALSE(
+      Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
 }
 
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {

@@ -45,6 +45,23 @@ def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMe
 def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
+class SubtargetFeatureLDSAllocGranularity <int Granularity> : SubtargetFeature <
+  "lds-alloc-granularity-"#Granularity,
+  "LDSAllocationGranularity",
+  !cast<string>(Granularity),
+  "LDS allocation granularity in bytes."
+> {
+  // SubtargetFeature.Value is string-typed; preserve the numeric value for
+  // TableGen backends.
+  int NumericValue = Granularity;
+}
+
+def FeatureLDSAllocGranularity256 : SubtargetFeatureLDSAllocGranularity<256>;
+def FeatureLDSAllocGranularity512 : SubtargetFeatureLDSAllocGranularity<512>;
+def FeatureLDSAllocGranularity1024 : SubtargetFeatureLDSAllocGranularity<1024>;
+def FeatureLDSAllocGranularity1280 : SubtargetFeatureLDSAllocGranularity<1280>;
+def FeatureLDSAllocGranularity2048 : SubtargetFeatureLDSAllocGranularity<2048>;
+
 // Whether each wavefront size mode is available on the hardware,
 // independent of the active mode.
 def FeatureSupportsWave32 : SubtargetFeature<"supports-wave32",

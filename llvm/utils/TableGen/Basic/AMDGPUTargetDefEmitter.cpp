@@ -476,14 +476,44 @@ collectVisibleFeatures(const Record *GPU,
   return Visible;
 }
 
+// Return the LDS allocation granularity in \p GPU's feature closure. Two
+// features setting different granularities is an error: SubtargetFeature
+// silently takes the larger.
+static int64_t getLDSAllocGranularity(const Record *GPU) {
+  SetVector<const Record *> Closure;
+  collectFeatureClosure(GPU, Closure);
+
+  const Record *Found = nullptr;
+  int64_t Value = 256;
+  for (const Record *F : Closure) {
+    if (F->getValueAsString("FieldName") != "LDSAllocationGranularity")
+      continue;
+
+    int64_t V = F->getValueAsInt("NumericValue");
+    if (Found && V != Value) {
+      PrintFatalError(GPU->getLoc(),
+                      "GPU '" + GPU->getValueAsString("Name") +
+                          "' gets conflicting 'LDSAllocationGranularity' "
+                          "values from '" +
+                          Found->getValueAsString("Name") + "' and '" +
+                          F->getValueAsString("Name") + "'");
+    }
+    Found = F;
+    Value = V;
+  }
+  return Value;
+}
+
 // Make sure a "gfxN-generic" processor doesn't expose a frontend-visible
 // feature missing from any covered processor.
 //
+// LDS allocation granularity is an exception to exact matching. A generic
+// target conservatively uses the largest granularity of the GPUs it covers.
+//
 // FIXME: The check should cover all SubtargetFeatures, not just the
 // frontend-visible ones. It is limited to those because a generic legitimately
-// carries some features a covered GPU lacks (bug/hazard workarounds and
-// worst-case-valued features); those cases need to be marked to opt out of the
-// check, plus min-value handling for numeric features.
+// carries some boolean features a covered GPU lacks (bug and hazard
+// workarounds); those cases need to be marked to opt out of the check.
 static void
 validateGenericFeatures(const Record *GPU,
                         const DenseMap<const Record *, unsigned> &FeatureIdx) {
@@ -498,14 +528,29 @@ validateGenericFeatures(const Record *GPU,
     SetVector<const Record *> MemberFeatures =
         collectVisibleFeatures(Member, FeatureIdx);
     for (const Record *F : GenericFeatures) {
-      if (!MemberFeatures.contains(F)) {
+      if (MemberFeatures.contains(F))
+        continue;
+
+      StringRef FieldName = F->getValueAsString("FieldName");
+      if (FieldName == "LDSAllocationGranularity") {
+        int64_t GenericValue = getLDSAllocGranularity(GPU);
+        int64_t MemberValue = getLDSAllocGranularity(Member);
+        if (GenericValue >= MemberValue)
+          continue;
+
         PrintFatalError(GPU->getLoc(),
                         "generic target '" + GPU->getValueAsString("Name") +
                             "' exposes feature '" +
-                            F->getValueAsString("Name") +
-                            "' not supported by covered GPU '" +
+                            F->getValueAsString("Name") + "' below the '" +
+                            FieldName + "' of covered GPU '" +
                             Member->getValueAsString("Name") + "'");
       }
+
+      PrintFatalError(GPU->getLoc(),
+                      "generic target '" + GPU->getValueAsString("Name") +
+                          "' exposes feature '" + F->getValueAsString("Name") +
+                          "' not supported by covered GPU '" +
+                          Member->getValueAsString("Name") + "'");
     }
   }
 }
