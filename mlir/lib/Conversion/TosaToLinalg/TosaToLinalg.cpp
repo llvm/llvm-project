@@ -949,6 +949,15 @@ static Value broadcastDynamicDimension(PatternRewriter &rewriter, Location loc,
   return ifOp.getResult(0);
 }
 
+Value mlir::tosa::broadcastDynamicDimension(PatternRewriter &rewriter,
+                                            Location loc, Value operand,
+                                            int64_t dim,
+                                            OpFoldResult targetSize) {
+  IndexPool indexPool;
+  return ::broadcastDynamicDimension(rewriter, loc, indexPool, operand, dim,
+                                     targetSize, /*masterOperand=*/nullptr);
+}
+
 static Value broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
                                         IndexPool &indexPool, Value operand,
                                         ArrayRef<OpFoldResult> targetShape,
