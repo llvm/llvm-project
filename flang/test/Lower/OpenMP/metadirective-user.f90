@@ -5,6 +5,90 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 %s -o - | FileCheck %s
 
 !===----------------------------------------------------------------------===!
+! Scored implicit NOTHING competes with explicit replacements by score.
+!===----------------------------------------------------------------------===!
+
+! CHECK-LABEL: func.func @_QPtest_implicit_nothing_score(
+! CHECK: fir.if
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.barrier
+! CHECK: return
+subroutine test_implicit_nothing_score(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(user={condition(score(10): flag)}:) &
+  !$omp& when(user={condition(score(5): .true.)}: barrier)
+end subroutine
+
+! Explicit NOTHING with the same score must produce the same selection.
+! CHECK-LABEL: func.func @_QPtest_explicit_nothing_score(
+! CHECK: fir.if
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.barrier
+! CHECK: return
+subroutine test_explicit_nothing_score(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(user={condition(score(10): flag)}: nothing) &
+  !$omp& when(user={condition(score(5): .true.)}: barrier)
+end subroutine
+
+! Equal scores favor the explicit replacement without a runtime branch.
+! CHECK-LABEL: func.func @_QPtest_implicit_nothing_equal_score(
+! CHECK-NOT: fir.if
+! CHECK: omp.barrier
+! CHECK-NEXT: return
+subroutine test_implicit_nothing_equal_score(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(user={condition(score(5): flag)}:) &
+  !$omp& when(user={condition(score(5): .true.)}: barrier)
+end subroutine
+
+! MATCH_ANY still needs a scored runtime candidate when a static trait matches.
+! CHECK-LABEL: func.func @_QPtest_implicit_nothing_match_any_static(
+! CHECK: fir.if
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.barrier
+! CHECK: return
+subroutine test_implicit_nothing_match_any_static(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(llvm), extension(match_any)}, &
+  !$omp& user={condition(score(10): flag)}:) &
+  !$omp& when(user={condition(score(5): .true.)}: barrier)
+end subroutine
+
+! MATCH_ANY can also depend entirely on the runtime condition.
+! CHECK-LABEL: func.func @_QPtest_implicit_nothing_match_any_runtime(
+! CHECK: fir.if
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.barrier
+! CHECK: return
+subroutine test_implicit_nothing_match_any_runtime(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(gnu), extension(match_any)}, &
+  !$omp& user={condition(score(10): flag)}:) &
+  !$omp& when(user={condition(score(5): .true.)}: barrier)
+end subroutine
+
+! MATCH_NONE retains the score but selects NOTHING when the condition is false.
+! CHECK-LABEL: func.func @_QPtest_implicit_nothing_match_none(
+! CHECK: arith.xori
+! CHECK: fir.if
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.barrier
+! CHECK: return
+subroutine test_implicit_nothing_match_none(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(implementation={extension(match_none)}, &
+  !$omp& user={condition(score(10): flag)}:) &
+  !$omp& when(user={condition(score(5): .true.)}: barrier)
+end subroutine
+
+!===----------------------------------------------------------------------===!
 ! Static (constant-folded) user conditions
 !===----------------------------------------------------------------------===!
 
@@ -425,13 +509,14 @@ subroutine test_dynamic_user_match_any_static_score(flag)
 #endif
 end subroutine
 
-! The explicit directive variant wins this tie over the earlier implicit
-! nothing candidate.
-! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_tie_break(
-! CHECK-NOT:     fir.if
-! CHECK:         omp.barrier
+! The vendor-only selector is a strict subset of the implicit NOTHING's
+! selector. Retaining the user condition makes this a runtime choice, not a tie.
+! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_more_specific(
+! CHECK:         fir.if
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:      omp.barrier
 ! CHECK:         return
-subroutine test_dynamic_implicit_nothing_tie_break(flag)
+subroutine test_dynamic_implicit_nothing_more_specific(flag)
   logical, intent(in) :: flag
   !$omp metadirective &
   !$omp & when(implementation={vendor(llvm)}, user={condition(flag)}:) &

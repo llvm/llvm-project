@@ -325,6 +325,7 @@ private:
 
   void BeginPendingLoopDirectiveScope();
   void EndPendingLoopDirectiveScope();
+  void UpdatePendingLoopDirectiveScopeStarts();
 
   // check-omp-variant.cpp
   void CheckPendingLoopDirectivesWithoutLoop(
