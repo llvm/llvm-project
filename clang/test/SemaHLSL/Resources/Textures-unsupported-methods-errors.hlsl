@@ -7,6 +7,10 @@
 // RUN:   -DTEXTURE=Texture1DArray -DCOORD_TYPE=float2 -DGRAD_TYPE=float \
 // RUN:   -DOFFSET_TYPE=int -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DHAS_SAMPLE -DHAS_LOD \
+// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -DOFFSET_TYPE=int3 \
+// RUN:   -DGRAD_TYPE=float3 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DHAS_SAMPLE -DHAS_GATHER -DHAS_LOD \
 // RUN:   -DLOAD_ARG="int4(0, 0, 0, 0)" -DINDEX_ARG="uint3(0, 0, 0)" \
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 -DOFFSET_TYPE=int3 -verify \
@@ -28,17 +32,9 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture2DArray \
 // RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float2 -DOFFSET_TYPE=int2 -verify %s
-
-// RWTexture3D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture3D \
 // RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float3 -DOFFSET_TYPE=int3 -verify %s
-
-// Texture3D
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -DHAS_TEXEL -DHAS_SAMPLE -DHAS_LOD \
-// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -DOFFSET_TYPE=int3 \
-// RUN:   -DGRAD_TYPE=float3 -verify %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

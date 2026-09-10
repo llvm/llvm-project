@@ -1,4 +1,5 @@
 // Texture2D
+// Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
 // RUN:   -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -o - %s \

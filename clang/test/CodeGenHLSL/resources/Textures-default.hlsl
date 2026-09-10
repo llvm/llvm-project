@@ -1,4 +1,5 @@
 // Texture1D
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \
 // RUN:   -finclude-default-header -DTEXTURE=Texture1D -o - %s | FileCheck %s \
@@ -56,6 +57,20 @@
 // RUN:   -DHANDLE_TY='target("spirv.Image", float, 1, 2, 1, 0, 1, 0)' \
 // RUN:   -DSCALAR_HANDLE_TY='target("spirv.Image", float, 1, 2, 1, 0, 1, 0)'
 
+// Texture3D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \
+// RUN:   -finclude-default-header -DTEXTURE=Texture3D -o - %s | FileCheck %s \
+// RUN:   -DTEXTURE=Texture3D --check-prefixes=CHECK,CHECK-TEXEL \
+// RUN:   -DHANDLE_TY='target("dx.Texture", <4 x float>, 0, 0, 0, 4)' \
+// RUN:   -DSCALAR_HANDLE_TY='target("dx.Texture", float, 0, 0, 0, 4)'
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -std=hlsl202x \
+// RUN:   -emit-llvm -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=Texture3D -o - %s | FileCheck %s -DTEXTURE=Texture3D \
+// RUN:   --check-prefixes=CHECK,CHECK-TEXEL \
+// RUN:   -DHANDLE_TY='target("spirv.Image", float, 2, 2, 0, 0, 1, 0)' \
+// RUN:   -DSCALAR_HANDLE_TY='target("spirv.Image", float, 2, 2, 0, 0, 1, 0)'
+
 // TextureCube
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \
@@ -84,13 +99,6 @@
 // RUN:   -DTEXTURE=TextureCubeArray --check-prefixes=CHECK,CHECK-NOTEXEL \
 // RUN:   -DHANDLE_TY='target("spirv.Image", float, 3, 2, 1, 0, 1, 0)' \
 // RUN:   -DSCALAR_HANDLE_TY='target("spirv.Image", float, 3, 2, 1, 0, 1, 0)'
-
-// Texture3D
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \
-// RUN:   -finclude-default-header -DTEXTURE=Texture3D -o - %s \
-// RUN:   | FileCheck %s -DTEXTURE=Texture3D -DDXIL_TY=4 -DRW=0 \
-// RUN:   --check-prefixes=CHECK,CHECK-TEXEL
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

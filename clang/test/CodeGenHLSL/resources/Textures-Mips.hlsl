@@ -1,4 +1,5 @@
 // Texture1D
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
 // RUN:   -DTEXTURE=Texture1D -DCOORD_TYPE=float -DINDEX_TYPE=int -o - %s | \
@@ -91,11 +92,24 @@
 // Texture3D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
-// RUN:   -DTEXTURE=Texture3D -DCOORD_DIM=3 -o - %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,COORD3 -DTEXTURE=Texture3D \
-// RUN:   -DCOORD_DIM=3 -DLOAD_DIM=4 -DDXIL_TY=4 -DDIM=3 \
-// RUN:   -DCOORD_CXX="float vector[3]" -DCOORD_LLVM="<3 x float>" -DINDEX_CXX="int vector[3]" -DINDEX_LLVM="<3 x i32>" -DOFFSET_LLVM="<3 x i32>" -DOFFSET_ZERO=zeroinitializer
+// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -DINDEX_TYPE=int3 -o - %s | \
+// RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,COORD3,VEC-COORD \
+// RUN:   -DTEXTURE=Texture3D -DCOORD_DIM=3 -DLOAD_DIM=4 \
+// RUN:   -DHANDLE_TY='target("dx.Texture", <4 x float>, 0, 0, 0, 4)' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
+// RUN:   -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
+// RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX="int vector[3]" \
+// RUN:   -DOFFSET_LLVM="<3 x i32>" -DOFFSET_ZERO=zeroinitializer
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-pixel -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
+// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -DINDEX_TYPE=int3 -o - %s | \
+// RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,COORD3,VEC-COORD \
+// RUN:   -DTEXTURE=Texture3D -DCOORD_DIM=3 -DLOAD_DIM=4 \
+// RUN:   -DHANDLE_TY='target("spirv.Image", float, 2, 2, 0, 0, 1, 0)' \
+// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
+// RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX="int vector[3]" \
+// RUN:   -DOFFSET_LLVM="<3 x i32>" -DOFFSET_ZERO=zeroinitializer
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

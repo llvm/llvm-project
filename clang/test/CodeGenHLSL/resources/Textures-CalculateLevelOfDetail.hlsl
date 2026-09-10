@@ -1,4 +1,5 @@
 // Texture1D
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float \
 // RUN:   -DTEXTURE=Texture1D %s | llvm-cxxfilt | FileCheck %s \
@@ -50,6 +51,19 @@
 // RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DGRAD_LLVM="<2 x float>" \
 // RUN:   -DGRAD_CXX="float vector[2]"
 
+// Texture3D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
+// RUN:   -DTEXTURE=Texture3D %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   -DTEXTURE=Texture3D --check-prefixes=CHECK,DXIL -DDXIL_TY=4 -DRW=0 \
+// RUN:   -DGRAD_CXX="float vector[3]" -DGRAD_LLVM="<3 x float>"
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
+// RUN:   -DTEXTURE=Texture3D %s | llvm-cxxfilt | FileCheck %s \
+// RUN:   -DTEXTURE=Texture3D --check-prefixes=CHECK,SPIRV -DARRAYED=0 \
+// RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=2 -DGRAD_CXX="float vector[3]" \
+// RUN:   -DGRAD_LLVM="<3 x float>"
+
 // TextureCube
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
@@ -75,24 +89,6 @@
 // RUN:   -DTEXTURE=TextureCubeArray --check-prefixes=CHECK,SPIRV -DARRAYED=1 \
 // RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=3 -DGRAD_LLVM="<3 x float>" \
 // RUN:   -DGRAD_CXX="float vector[3]"
-
-// Texture3D
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
-// RUN:   -DTEXTURE=Texture3D %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=Texture3D --check-prefixes=CHECK,DXIL \
-// RUN:   -DDXIL_TY=4 -DRW=0 -DDIM=3 \
-// RUN:   -DGRAD_CXX="float vector[3]" -DGRAD_LLVM="<3 x float>"
-
-// Texture3D
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
-// RUN:   -DTEXTURE=Texture3D %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=Texture3D --check-prefixes=CHECK,SPIRV \
-// RUN:   -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=2 -DDIM=3 \
-// RUN:   -DGRAD_CXX="float vector[3]" -DGRAD_LLVM="<3 x float>"
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
