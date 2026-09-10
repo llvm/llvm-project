@@ -63,10 +63,12 @@ TEST(LlvmLibcFileModeTest, OnlyOneMainModeAllowed) {
   //  apppend(a) = [read(r), write(w)]
   constexpr TestCase modes_combination[] = {
       // read(r) = [update(+), binary(b)]
+      {.test_description = "read only", .mode = "r", .expects = true},
       {.test_description = "read and update", .mode = "r+", .expects = true},
       {.test_description = "read binary", .mode = "rb", .expects = true},
 
       // write(w) = [update(+), binary(b), exclusive(x)]
+      {.test_description = "write only", .mode = "w", .expects = true},
       {.test_description = "write and update", .mode = "w+", .expects = true},
       {.test_description = "write binary", .mode = "wb", .expects = true},
       {.test_description = "write exclusive", .mode = "wx", .expects = true},
@@ -130,18 +132,98 @@ TEST(LlvmLibcFileModeTest, OnlyOneMainModeAllowed) {
   };
 }
 
-// TEST(LlvmLibcFileModeTest, AllPossibleValidModes) {}
+TEST(LlvmLibcFileModeTest, AllValidModes) {
+  struct TestCase {
+    const char *test_description;
+    const char *mode;
+    bool expects;
+  };
 
-// Test(LlvmLibcFileModeTest, WriteAllowedMode) {}
-//
-// Test(LlvmLibcFileModeTest, FileModeIsReadAllowed) {}
-//
-// Test(LlvmLibcFileModeTest, WriteOnlyAllowed) {}
-//
-// Test(LlvmLibcFileModeTest, ReadOnlyAllowed) {}
-//
-// Test(LlvmLibcFileModeTest, AppendAllowed) {}
-//
-// Test(LlvmLibcFileModeTest, BinaryContentBitIsSet) {}
-//
-// Test(LlvmLibcFileModeTest, ExclusiveCreateBitIsSet) {}
+  constexpr TestCase valid_modes[] = {
+      // Read
+      {.test_description = "read", .mode = "r", .expects = true},
+      {.test_description = "read binary", .mode = "rb", .expects = true},
+      {.test_description = "read update", .mode = "r+", .expects = true},
+      {.test_description = "read update binary",
+       .mode = "r+b",
+       .expects = true},
+      {.test_description = "read binary update",
+       .mode = "rb+",
+       .expects = true},
+
+      // Write
+      {.test_description = "write", .mode = "w", .expects = true},
+      {.test_description = "write binary", .mode = "wb", .expects = true},
+      {.test_description = "write exclusive", .mode = "wx", .expects = true},
+      {.test_description = "write binary exclusive",
+       .mode = "wbx",
+       .expects = true},
+      {.test_description = "write update", .mode = "w+", .expects = true},
+      {.test_description = "write update binary",
+       .mode = "w+b",
+       .expects = true},
+      {.test_description = "write binary update",
+       .mode = "wb+",
+       .expects = true},
+      {.test_description = "write update exclusive",
+       .mode = "w+x",
+       .expects = true},
+      {.test_description = "write update binary exclusive",
+       .mode = "w+bx",
+       .expects = true},
+      {.test_description = "write binary update exclusive",
+       .mode = "wb+x",
+       .expects = true},
+
+      // Append
+      {.test_description = "append", .mode = "a", .expects = true},
+      {.test_description = "append binary", .mode = "ab", .expects = true},
+      {.test_description = "append update", .mode = "a+", .expects = true},
+      {.test_description = "append update binary",
+       .mode = "a+b",
+       .expects = true},
+      {.test_description = "append binary update",
+       .mode = "ab+",
+       .expects = true},
+  };
+
+  for (const TestCase &tc : valid_modes) {
+    const FileMode mode(tc.mode);
+
+    EXPECT_TRUE(mode.is_valid());
+  }
+}
+
+TEST(LlvmLibcFileModeTest, WriteAllowedMode) {
+  const FileMode mode("w+");
+
+  EXPECT_TRUE(mode.is_valid());
+  EXPECT_TRUE(mode.write_allowed());
+}
+
+TEST(LlvmLibcFileModeTest, FileModeIsReadAllowed) {
+  const FileMode mode("r+");
+
+  EXPECT_TRUE(mode.is_valid());
+  EXPECT_TRUE(mode.read_allowed());
+  EXPECT_TRUE(mode.is_update());
+}
+
+TEST(LlvmLibcFileModeTest, FileContentIsBinary) {
+  struct TestCase {
+    const char *mode;
+  };
+
+  constexpr TestCase binary_modes[] = {
+      {.mode = "wb"},
+      {.mode = "rb"},
+      {.mode = "ab"},
+  };
+
+  for (const TestCase &tc : binary_modes) {
+    const FileMode mode(tc.mode);
+
+    EXPECT_TRUE(mode.is_valid());
+    EXPECT_TRUE(mode.is_binary_format());
+  }
+}
