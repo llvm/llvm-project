@@ -509,7 +509,7 @@ void SelectionDAGISel::initializeAnalysisResults(
                           "' analysis required");
   }
 
-  LibcallLowering = &LibcallResult->getLibcallLowering(Subtarget);
+  LibcallLowering = &getLibcallLowering(*LibcallResult, Subtarget);
   CurDAG->init(*MF, *ORE, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
                FnVarLocs);
 

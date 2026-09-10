@@ -8,13 +8,10 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
 #define DEBUG_TYPE "runtime-libcalls-info"
@@ -105,11 +102,18 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   }
 }
 
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M) {
-  // TODO: Consider the remaining module flags.
-  const Triple &TT = M.getTargetTriple();
-  initLibcalls(TT, TT.getDefaultExceptionHandling(), FloatABI::Default,
-               EABI::Default, /*ABIName=*/"", M.getLongDoubleFormat());
+// TODO: Consider the remaining module flags.
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M,
+                                         ExceptionHandling ExceptionModel,
+                                         EABI EABIVersion, StringRef ABIName,
+                                         VectorLibrary VecLib)
+    : RuntimeLibcallsInfo(M.getTargetTriple(), ExceptionModel, M.getFloatABI(),
+                          EABIVersion, ABIName, VecLib) {}
+
+bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
+  // TODO: Drive this from module-level state (e.g. the linked runtime). For now
+  // every named library is reported as available.
+  return true;
 }
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it

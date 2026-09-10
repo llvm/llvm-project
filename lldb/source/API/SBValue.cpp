@@ -313,12 +313,19 @@ bool SBValue::SetValueFromCString(const char *value_str, lldb::SBError &error) {
 bool SBValue::CanSetValue() {
   LLDB_INSTRUMENT_VA(this);
 
+  return CanSet().Success();
+}
+
+lldb::SBError SBValue::CanSet() {
+  LLDB_INSTRUMENT_VA(this);
+
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp)
-    return false;
+    return SBError(Status::FromErrorStringWithFormat(
+        "Could not get value: %s", locker.GetError().AsCString()));
 
-  return value_sp->CanSetValue();
+  return SBError(Status::FromError(value_sp->CanSetValue()));
 }
 
 lldb::SBTypeFormat SBValue::GetTypeFormat() {

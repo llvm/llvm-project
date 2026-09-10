@@ -5,8 +5,8 @@
 // produced by the Fujitsu test.
 
 llvm.func @test_block_structure() {
-  %i1 = llvm.mlir.constant(1 : index) : i1
-  %i64 = llvm.mlir.constant(1 : index) : i64
+  %i1 = llvm.mlir.constant(1 : i1) : i1
+  %i64 = llvm.mlir.constant(1 : i64) : i64
   llvm.br ^bb1(%i64, %i64 : i64, i64)
 
 ^bb1(%20: i64, %21: i64):  // 2 preds: ^bb0, ^bb5

@@ -47,3 +47,11 @@ func.func @test_pad_large_input_rank(%arg0: tensor<13x21x3x1x1x1xf32>) -> tensor
   %1 = tosa.pad %arg0, %padding, %0 : (tensor<13x21x3x1x1x1xf32>, !tosa.shape<12>, tensor<1xf32>) -> tensor<13x21x3x1x1x1xf32>
   return %1 : tensor<13x21x3x1x1x1xf32>
 }
+
+// -----
+
+// CHECK-LABEL: test_cast_input_unsigned_false
+func.func @test_cast_input_unsigned_false(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}

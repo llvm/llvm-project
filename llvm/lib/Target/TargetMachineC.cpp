@@ -24,7 +24,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include <cstring>
 #include <optional>
 
 using namespace llvm;

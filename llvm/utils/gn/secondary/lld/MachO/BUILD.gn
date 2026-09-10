@@ -47,6 +47,7 @@ static_library("MachO") {
     "Relocations.cpp",
     "SectionPriorities.cpp",
     "Sections.cpp",
+    "StripSwiftForceLoad.cpp",
     "SymbolTable.cpp",
     "Symbols.cpp",
     "SyntheticSections.cpp",

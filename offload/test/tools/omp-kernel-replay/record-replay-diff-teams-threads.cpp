@@ -32,6 +32,7 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: intelgpu
+// UNSUPPORTED: nvptx64-nvidia-cuda
 
 // REPLAY-ERROR1: [llvm-omp-kernel-replay] Error: number of threads ({{[0-9]+}}) is out of the allowed limits (min,max: 1,{{[0-9]+}})
 // REPLAY-ERROR2: [llvm-omp-kernel-replay] Error: number of teams (2) is out of the allowed limits (min,max: 1,1)
