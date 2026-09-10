@@ -141,7 +141,6 @@ static cl::opt<unsigned> InjectInvariantConditionHotnesThreshold(
 
 static cl::opt<bool> EstimateProfile("simple-loop-unswitch-estimate-profile",
                                      cl::Hidden, cl::init(true));
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // namespace llvm
 
 AnalysisKey ShouldRunExtraSimpleLoopUnswitch::Key;
@@ -293,8 +292,8 @@ static void buildPartialUnswitchConditionalBranch(
     const CondBrInst &ComputeProfFrom) {
 
   SmallVector<uint32_t> BranchWeights;
-  bool HasBranchWeights = EstimateProfile && !ProfcheckDisableMetadataFixes &&
-                          extractBranchWeights(ComputeProfFrom, BranchWeights);
+  bool HasBranchWeights =
+      EstimateProfile && extractBranchWeights(ComputeProfFrom, BranchWeights);
   // If Direction is true, that means we had a disjunction and that the "true"
   // case exits. The probability of the disjunction of the subset of terms is at
   // most as high as the original one. So, if the probability is higher than the
@@ -380,8 +379,7 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   // The expectation is that ToDuplicate[0] is the condition used by the
   // OriginalBranch, case in which we can clone the profile metadata from there.
   auto *ProfData =
-      !ProfcheckDisableMetadataFixes &&
-              ToDuplicate[0] == skipTrivialSelect(OriginalBranch.getCondition())
+      ToDuplicate[0] == skipTrivialSelect(OriginalBranch.getCondition())
           ? OriginalBranch.getMetadata(LLVMContext::MD_prof)
           : nullptr;
   auto *BR =
@@ -2138,9 +2136,8 @@ static void unswitchNontrivialInvariants(
     else {
       // It is only legal to preserve make.implicit metadata if we are
       // guaranteed no reach implicit null check after following this branch.
-      ICFLoopSafetyInfo SafetyInfo;
-      SafetyInfo.computeLoopSafetyInfo(&L);
-      if (!SafetyInfo.isGuaranteedToExecute(TI, &DT, &L))
+      ICFLoopSafetyInfo SafetyInfo(&L);
+      if (!SafetyInfo.isGuaranteedToExecute(TI, &DT))
         TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
     }
   }
@@ -2581,7 +2578,7 @@ static CondBrInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   // however, that the deopt path is unlikely.
   Instruction *DeoptBlockTerm = SplitBlockAndInsertIfThen(
       GI->getArgOperand(0), GI, true,
-      !ProfcheckDisableMetadataFixes && EstimateProfile
+      EstimateProfile
           ? MDBuilder(GI->getContext()).createUnlikelyBranchWeights()
           : nullptr,
       &DTU, &LI);
@@ -2951,10 +2948,9 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   setExplicitlyUnknownBranchWeightsIfProfiled(*InvariantBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(CheckBlock);
-  Builder.CreateCondBr(
-      TI->getCondition(), TI->getSuccessor(0), TI->getSuccessor(1),
-      !ProfcheckDisableMetadataFixes ? TI->getMetadata(LLVMContext::MD_prof)
-                                     : nullptr);
+  Builder.CreateCondBr(TI->getCondition(), TI->getSuccessor(0),
+                       TI->getSuccessor(1),
+                       TI->getMetadata(LLVMContext::MD_prof));
   TI->eraseFromParent();
 
   // Fixup phis.
@@ -3297,9 +3293,8 @@ static bool shouldInsertFreeze(Loop &L, Instruction &TI, DominatorTree &DT,
   if (!FreezeLoopUnswitchCond)
     return false;
 
-  ICFLoopSafetyInfo SafetyInfo;
-  SafetyInfo.computeLoopSafetyInfo(&L);
-  if (SafetyInfo.isGuaranteedToExecute(TI, &DT, &L))
+  ICFLoopSafetyInfo SafetyInfo(&L);
+  if (SafetyInfo.isGuaranteedToExecute(TI, &DT))
     return false;
 
   Value *Cond;

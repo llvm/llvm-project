@@ -74,16 +74,30 @@ else()
     "add an orc-rt/lib/bedrock/sys/<system>/ directory and compose it above")
 endif()
 
-add_library(orc-rt-bedrock STATIC ${ORC_RT_BEDROCK_SOURCES})
+add_library(orc-rt-bedrock-objects OBJECT ${ORC_RT_BEDROCK_SOURCES})
+
+set_target_properties(orc-rt-bedrock-objects PROPERTIES
+  POSITION_INDEPENDENT_CODE ${ORC_RT_ENABLE_PIC}
+  C_VISIBILITY_PRESET hidden
+  CXX_VISIBILITY_PRESET hidden
+  VISIBILITY_INLINES_HIDDEN ON
+)
+
+target_link_libraries(orc-rt-bedrock-objects PUBLIC orc-rt-headers)
+
+# Apply RTTI and exceptions compile flags
+target_compile_options(orc-rt-bedrock-objects PRIVATE ${ORC_RT_COMPILE_FLAGS})
+
+# The shipped library: Bedrock's objects plus Support's (Support is never
+# shipped on its own).
+add_library(orc-rt-bedrock STATIC)
 
 target_link_libraries(orc-rt-bedrock PUBLIC orc-rt-headers)
 
-# Support is a build-only implementation detail: its objects are absorbed into
-# this archive, and it must not appear in the exported interface.
-target_link_libraries(orc-rt-bedrock PRIVATE $<BUILD_INTERFACE:orc-rt-support>)
+target_link_libraries(orc-rt-bedrock
+  PRIVATE $<BUILD_INTERFACE:orc-rt-bedrock-objects>
+          $<BUILD_INTERFACE:orc-rt-support-objects>)
 
-# Apply RTTI and exceptions compile flags
-target_compile_options(orc-rt-bedrock PRIVATE ${ORC_RT_COMPILE_FLAGS})
 # TODO: Use common runtimes infrastructure for output and install paths
 install(TARGETS orc-rt-bedrock
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -27,7 +27,7 @@ def ApplyGPUToNVVMConversionPatternsOp : Op<Transform_Dialect,
     patterns require an "LLVMTypeConverter".
   }];
   let arguments = (ins DefaultValuedAttr<I16Attr, "1">:$benefit);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "oilist(`benefit` `=` $benefit) attr-dict";
 }
 
 def ApplyGPUWwmaToNVVMConversionPatternsOp : Op<Transform_Dialect,
@@ -245,8 +245,7 @@ def MapNestedForallToThreads :
     $target
     `block_dims` `=` $block_dims
     (`sync_after_distribute` `=` $sync_after_distribute^)?
-    (`warp_size` `=` $warp_size^)?
-    attr-dict
+    (`warp_size` `=` $warp_size^)? attr-dict
     `:` functional-type($target, $result)
   }];
   let extraClassDeclaration = [{
@@ -309,8 +308,7 @@ def MapForallToBlocks :
   let assemblyFormat = [{
     $target
     (`generate_gpu_launch` $generate_gpu_launch^)?
-    (`grid_dims` `=` $grid_dims^)?
-    attr-dict
+    (`grid_dims` `=` $grid_dims^)? attr-dict
     `:` functional-type($target, $result)
   }];
   let hasVerifier = 1;
