@@ -414,6 +414,8 @@ static void NTAPI asan_thread_exit(void *module, DWORD reason, void *reserved) {
 IN_SECTION(".CRT$XLY")
 void(NTAPI* __asan_tls_exit)(void*, unsigned long, void*) = asan_thread_exit;
 
+extern "C" void (*const __asan_dso_reg_hook)();
+
 WIN_FORCE_LINK(__asan_dso_reg_hook)
 
 // }}}
