@@ -805,7 +805,6 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
           SCRef.Diag(VD->getLocation(),
                      diag::note_cuda_managed_var_in_glob_init);
         }
-        Base::VisitDeclRefExpr(DRE);
       }
       void VisitCallExpr(const CallExpr *CE) {
         const FunctionDecl *InitFn = CE->getDirectCallee();
