@@ -1191,7 +1191,7 @@ bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
-  LAI = &LAIs.getInfo(*TheLoop);
+  LAI = &LAIs.getInfo(*TheLoop, false, PSE.getAssumptions());
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
     ORE->emit([&]() {
