@@ -166,11 +166,17 @@ static inline AlignmentSource getFieldAlignmentSource(AlignmentSource Source) {
 class LValueBaseInfo {
   AlignmentSource AlignSource;
 
+  // Whether loads from the base object's storage are invariant.
+  bool IsInvariant : 1;
+
 public:
   explicit LValueBaseInfo(AlignmentSource Source = AlignmentSource::Type)
-    : AlignSource(Source) {}
+      : AlignSource(Source), IsInvariant(false) {}
   AlignmentSource getAlignmentSource() const { return AlignSource; }
   void setAlignmentSource(AlignmentSource Source) { AlignSource = Source; }
+
+  bool isInvariant() const { return IsInvariant; }
+  void setInvariant(bool Value) { IsInvariant = Value; }
 
   void mergeForCast(const LValueBaseInfo &Info) {
     setAlignmentSource(Info.getAlignmentSource());
@@ -357,6 +363,7 @@ public:
 
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
+  void setInvariant(bool Value) { BaseInfo.setInvariant(Value); }
 
   KnownNonNull_t isKnownNonNull() const { return Addr.isKnownNonNull(); }
   LValue setKnownNonNull() {

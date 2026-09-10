@@ -42,7 +42,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2075,22 +2074,6 @@ llvm::Value *CodeGenFunction::emitScalarConstant(
   return Constant.getValue();
 }
 
-static bool isInvariantLoad(CodeGenFunction &CGF, LangAS TypeAS,
-                            llvm::Value *Ptr) {
-  if (TypeAS == LangAS::opencl_constant)
-    return true;
-
-  // CUDA represents constant memory as a declaration attribute, so the
-  // expression type uses the default address space. Recover the storage
-  // address space from the underlying global after the address-space cast.
-  if (!CGF.getLangOpts().CUDAIsDevice)
-    return false;
-  const auto *GV =
-      llvm::dyn_cast<llvm::GlobalValue>(llvm::getUnderlyingObject(Ptr));
-  return GV && GV->getAddressSpace() == CGF.getContext().getTargetAddressSpace(
-                                            LangAS::cuda_constant);
-}
-
 llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                                                SourceLocation Loc) {
   return EmitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
@@ -2265,7 +2248,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
       Addr.withElementType(convertTypeForLoadStore(Ty, Addr.getElementType()));
 
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
-  if (isInvariantLoad(*this, Ty.getAddressSpace(), Addr.getBasePointer()))
+  if (Ty.getAddressSpace() == LangAS::opencl_constant || BaseInfo.isInvariant())
     Load->setMetadata(llvm::LLVMContext::MD_invariant_load,
                       llvm::MDNode::get(Load->getContext(), {}));
   if (isNontemporal) {
@@ -3520,10 +3503,14 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
     return EmitThreadPrivateVarDeclLValue(CGF, VD, T, Addr, RealVarTy,
                                           E->getExprLoc());
   }
-  LValue LV = VD->getType()->isReferenceType() ?
-      CGF.EmitLoadOfReferenceLValue(Addr, VD->getType(),
-                                    AlignmentSource::Decl) :
-      CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
+  const bool IsReference = VD->getType()->isReferenceType();
+  LValue LV = IsReference ? CGF.EmitLoadOfReferenceLValue(Addr, VD->getType(),
+                                                          AlignmentSource::Decl)
+                          : CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
+  // Preserve CUDA constant storage information from the AST declaration.
+  if (!IsReference && CGF.getLangOpts().CUDAIsDevice &&
+      CGF.CGM.GetGlobalVarAddressSpace(VD) == LangAS::cuda_constant)
+    LV.setInvariant(true);
   setObjCGCLValueClass(CGF.getContext(), E, LV);
   return LV;
 }
@@ -5875,7 +5862,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
   QualType FieldType = field->getType();
   const RecordDecl *rec = field->getParent();
   AlignmentSource BaseAlignSource = BaseInfo.getAlignmentSource();
-  LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(BaseAlignSource));
+  // A field inherits invariant storage from its base object.
+  LValueBaseInfo FieldBaseInfo = BaseInfo;
+  FieldBaseInfo.setAlignmentSource(getFieldAlignmentSource(BaseAlignSource));
   TBAAAccessInfo FieldTBAAInfo;
   if (base.getTBAAInfo().isMayAlias() ||
           rec->hasAttr<MayAliasAttr>() || FieldType->isVectorType()) {
@@ -6191,8 +6180,11 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
                  Info.RHS->getBaseInfo().getAlignmentSource());
     TBAAAccessInfo TBAAInfo = CGM.mergeTBAAInfoForConditionalOperator(
         Info.LHS->getTBAAInfo(), Info.RHS->getTBAAInfo());
-    return MakeAddrLValue(result, expr->getType(), LValueBaseInfo(alignSource),
-                          TBAAInfo);
+    LValueBaseInfo BaseInfo(alignSource);
+    // Both possible storage locations must be invariant.
+    BaseInfo.setInvariant(Info.LHS->getBaseInfo().isInvariant() &&
+                          Info.RHS->getBaseInfo().isInvariant());
+    return MakeAddrLValue(result, expr->getType(), BaseInfo, TBAAInfo);
   } else {
     assert((Info.LHS || Info.RHS) &&
            "both operands of glvalue conditional are throw-expressions?");
