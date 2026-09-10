@@ -460,8 +460,8 @@ func.func @fir_complex_add(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // CHECK:         %[[Y0:.*]] = llvm.extractvalue %[[ARG0]][1] : !llvm.struct<(f128, f128)>
 // CHECK:         %[[X1:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.struct<(f128, f128)>
 // CHECK:         %[[Y1:.*]] = llvm.extractvalue %[[ARG1]][1] : !llvm.struct<(f128, f128)>
-// CHECK:         %[[ADD_X0_X1:.*]] = llvm.fadd %[[X0]], %[[X1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[ADD_Y0_Y1:.*]] = llvm.fadd %[[Y0]], %[[Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
+// CHECK:         %[[ADD_X0_X1:.*]] = llvm.fadd %[[X0]], %[[X1]] fastmath<fast> : f128
+// CHECK:         %[[ADD_Y0_Y1:.*]] = llvm.fadd %[[Y0]], %[[Y1]] fastmath<fast> : f128
 // CHECK:         %{{.*}} = llvm.mlir.undef : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[ADD_X0_X1]], %{{.*}}[0] : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[ADD_Y0_Y1]], %{{.*}}[1] : !llvm.struct<(f128, f128)>
@@ -485,8 +485,8 @@ func.func @fir_complex_sub(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // CHECK:         %[[Y0:.*]] = llvm.extractvalue %[[ARG0]][1] : !llvm.struct<(f128, f128)>
 // CHECK:         %[[X1:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.struct<(f128, f128)>
 // CHECK:         %[[Y1:.*]] = llvm.extractvalue %[[ARG1]][1] : !llvm.struct<(f128, f128)>
-// CHECK:         %[[SUB_X0_X1:.*]] = llvm.fsub %[[X0]], %[[X1]] {fastmathFlags = #llvm.fastmath<fast>}  : f128
-// CHECK:         %[[SUB_Y0_Y1:.*]] = llvm.fsub %[[Y0]], %[[Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
+// CHECK:         %[[SUB_X0_X1:.*]] = llvm.fsub %[[X0]], %[[X1]] fastmath<fast> : f128
+// CHECK:         %[[SUB_Y0_Y1:.*]] = llvm.fsub %[[Y0]], %[[Y1]] fastmath<fast> : f128
 // CHECK:         %{{.*}} = llvm.mlir.undef : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[SUB_X0_X1]], %{{.*}}[0] : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[SUB_Y0_Y1]], %{{.*}}[1] : !llvm.struct<(f128, f128)>
@@ -510,12 +510,12 @@ func.func @fir_complex_mul(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // CHECK:         %[[Y0:.*]] = llvm.extractvalue %[[ARG0]][1] : !llvm.struct<(f128, f128)>
 // CHECK:         %[[X1:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.struct<(f128, f128)>
 // CHECK:         %[[Y1:.*]] = llvm.extractvalue %[[ARG1]][1] : !llvm.struct<(f128, f128)>
-// CHECK:         %[[MUL_X0_X1:.*]] = llvm.fmul %[[X0]], %[[X1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[MUL_Y0_X1:.*]] = llvm.fmul %[[Y0]], %[[X1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[MUL_X0_Y1:.*]] = llvm.fmul %[[X0]], %[[Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[ADD:.*]] = llvm.fadd %[[MUL_X0_Y1]], %[[MUL_Y0_X1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[MUL_Y0_Y1:.*]] = llvm.fmul %[[Y0]], %[[Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[SUB:.*]] = llvm.fsub %[[MUL_X0_X1]], %[[MUL_Y0_Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
+// CHECK:         %[[MUL_X0_X1:.*]] = llvm.fmul %[[X0]], %[[X1]] fastmath<fast> : f128
+// CHECK:         %[[MUL_Y0_X1:.*]] = llvm.fmul %[[Y0]], %[[X1]] fastmath<fast> : f128
+// CHECK:         %[[MUL_X0_Y1:.*]] = llvm.fmul %[[X0]], %[[Y1]] fastmath<fast> : f128
+// CHECK:         %[[ADD:.*]] = llvm.fadd %[[MUL_X0_Y1]], %[[MUL_Y0_X1]] fastmath<fast> : f128
+// CHECK:         %[[MUL_Y0_Y1:.*]] = llvm.fmul %[[Y0]], %[[Y1]] fastmath<fast> : f128
+// CHECK:         %[[SUB:.*]] = llvm.fsub %[[MUL_X0_X1]], %[[MUL_Y0_Y1]] fastmath<fast> : f128
 // CHECK:         %{{.*}} = llvm.mlir.undef : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[SUB]], %{{.*}}[0] : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[ADD]], %{{.*}}[1] : !llvm.struct<(f128, f128)>
@@ -539,17 +539,17 @@ func.func @fir_complex_div(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // CHECK:         %[[Y0:.*]] = llvm.extractvalue %[[ARG0]][1] : !llvm.struct<(f128, f128)>
 // CHECK:         %[[X1:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.struct<(f128, f128)>
 // CHECK:         %[[Y1:.*]] = llvm.extractvalue %[[ARG1]][1] : !llvm.struct<(f128, f128)>
-// CHECK:         %[[MUL_X0_X1:.*]] = llvm.fmul %[[X0]], %[[X1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[MUL_X1_X1:.*]] = llvm.fmul %[[X1]], %[[X1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[MUL_Y0_X1:.*]] = llvm.fmul %[[Y0]], %[[X1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[MUL_X0_Y1:.*]] = llvm.fmul %[[X0]], %[[Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[MUL_Y0_Y1:.*]] = llvm.fmul %[[Y0]], %[[Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[MUL_Y1_Y1:.*]] = llvm.fmul %[[Y1]], %[[Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[ADD_X1X1_Y1Y1:.*]] = llvm.fadd %[[MUL_X1_X1]], %[[MUL_Y1_Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[ADD_X0X1_Y0Y1:.*]] = llvm.fadd %[[MUL_X0_X1]], %[[MUL_Y0_Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[SUB_Y0X1_X0Y1:.*]] = llvm.fsub %[[MUL_Y0_X1]], %[[MUL_X0_Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[DIV0:.*]] = llvm.fdiv %[[ADD_X0X1_Y0Y1]], %[[ADD_X1X1_Y1Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
-// CHECK:         %[[DIV1:.*]] = llvm.fdiv %[[SUB_Y0X1_X0Y1]], %[[ADD_X1X1_Y1Y1]] {fastmathFlags = #llvm.fastmath<fast>} : f128
+// CHECK:         %[[MUL_X0_X1:.*]] = llvm.fmul %[[X0]], %[[X1]] fastmath<fast> : f128
+// CHECK:         %[[MUL_X1_X1:.*]] = llvm.fmul %[[X1]], %[[X1]] fastmath<fast> : f128
+// CHECK:         %[[MUL_Y0_X1:.*]] = llvm.fmul %[[Y0]], %[[X1]] fastmath<fast> : f128
+// CHECK:         %[[MUL_X0_Y1:.*]] = llvm.fmul %[[X0]], %[[Y1]] fastmath<fast> : f128
+// CHECK:         %[[MUL_Y0_Y1:.*]] = llvm.fmul %[[Y0]], %[[Y1]] fastmath<fast> : f128
+// CHECK:         %[[MUL_Y1_Y1:.*]] = llvm.fmul %[[Y1]], %[[Y1]] fastmath<fast> : f128
+// CHECK:         %[[ADD_X1X1_Y1Y1:.*]] = llvm.fadd %[[MUL_X1_X1]], %[[MUL_Y1_Y1]] fastmath<fast> : f128
+// CHECK:         %[[ADD_X0X1_Y0Y1:.*]] = llvm.fadd %[[MUL_X0_X1]], %[[MUL_Y0_Y1]] fastmath<fast> : f128
+// CHECK:         %[[SUB_Y0X1_X0Y1:.*]] = llvm.fsub %[[MUL_Y0_X1]], %[[MUL_X0_Y1]] fastmath<fast> : f128
+// CHECK:         %[[DIV0:.*]] = llvm.fdiv %[[ADD_X0X1_Y0Y1]], %[[ADD_X1X1_Y1Y1]] fastmath<fast> : f128
+// CHECK:         %[[DIV1:.*]] = llvm.fdiv %[[SUB_Y0X1_X0Y1]], %[[ADD_X1X1_Y1Y1]] fastmath<fast> : f128
 // CHECK:         %{{.*}} = llvm.mlir.undef : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[DIV0]], %{{.*}}[0] : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[DIV1]], %{{.*}}[1] : !llvm.struct<(f128, f128)>
@@ -609,8 +609,8 @@ func.func @compare_complex_ne(%a : complex<f64>, %b : complex<f64>) -> i1 {
 // CHECK-DAG: [[IA:%.*]] = llvm.extractvalue [[A]][1] : !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[IB:%.*]] = llvm.extractvalue [[B]][1] : !llvm.struct<(f64, f64)>
-// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "une" [[RA]], [[RB]] {fastmathFlags = #llvm.fastmath<fast>} : f64
-// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "une" [[IA]], [[IB]] {fastmathFlags = #llvm.fastmath<fast>} : f64
+// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "une" [[RA]], [[RB]] fastmath<fast> : f64
+// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "une" [[IA]], [[IB]] fastmath<fast> : f64
 // CHECK: [[RES:%.*]] = llvm.or [[RESR]], [[RESI]] : i1
 // CHECK: return [[RES]] : i1
 
@@ -624,7 +624,7 @@ func.func @compare_complex_other(%a : complex<f64>, %b : complex<f64>) -> i1 {
 // CHECK-SAME: [[B:%.*]]: !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[RA:%.*]] = llvm.extractvalue [[A]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0] : !llvm.struct<(f64, f64)>
-// CHECK: [[RESR:%.*]] = llvm.fcmp "ogt" [[RA]], [[RB]] {fastmathFlags = #llvm.fastmath<fast>} : f64
+// CHECK: [[RESR:%.*]] = llvm.fcmp "ogt" [[RA]], [[RB]] fastmath<fast> : f64
 // CHECK: return [[RESR]] : i1
 
 // -----
@@ -1105,7 +1105,7 @@ func.func @alloca_several() -> !fir.ref<i32> {
 }
 
 // CHECK-LABEL: llvm.func @alloca_several() -> !llvm.ptr
-// CHECK: [[N:%.*]] = llvm.mlir.constant(100 : index) : i64
+// CHECK: [[N:%.*]] = llvm.mlir.constant(100 : i64) : i64
 // CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: [[TOTAL:%.*]] = llvm.mul [[ONE]], [[N]] : i64
 // GENERIC: [[A:%.*]] = llvm.alloca [[TOTAL]] x i32
@@ -1206,7 +1206,7 @@ func.func @alloca_multidim_array(%0 : index) -> !fir.ref<!fir.array<8x16x32xf32>
 
 // CHECK-LABEL: llvm.func @alloca_multidim_array
 // CHECK-SAME: ([[OP1:%.*]]: i64) -> !llvm.ptr
-// CHECK: [[OP2:%.*]] = llvm.mlir.constant(24 : index) : i64
+// CHECK: [[OP2:%.*]] = llvm.mlir.constant(24 : i64) : i64
 // CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: [[MUL1:%.*]] = llvm.mul [[OP1]], [[ONE]] : i64
 // CHECK: [[TOTAL:%.*]] = llvm.mul [[MUL1]], [[OP2]] : i64
@@ -1227,7 +1227,7 @@ func.func @alloca_const_interior_array(%0 : index) -> !fir.ref<!fir.array<8x9x?x
 
 // CHECK-LABEL: llvm.func @alloca_const_interior_array
 // CHECK-SAME: ([[OP1:%.*]]: i64) -> !llvm.ptr
-// CHECK: [[OP2:%.*]] = llvm.mlir.constant(64 : index) : i64
+// CHECK: [[OP2:%.*]] = llvm.mlir.constant(64 : i64) : i64
 // CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: [[MUL1:%.*]] = llvm.mul [[OP1]], [[ONE]] : i64
 // CHECK: [[TOTAL:%.*]] = llvm.mul [[MUL1]], [[OP2]] : i64
@@ -1388,7 +1388,7 @@ func.func @dead_shift() {
 
 // CHECK-LABEL: llvm.func @dead_shift
 // CHECK-NOT: fir.shift
-// CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : i[[IDX:[0-9]+]]) : i[[IDX]]
 // CHECK-NEXT: llvm.return
 
 // -----
@@ -1415,7 +1415,7 @@ func.func @dead_shape() {
 
 // CHECK-LABEL: llvm.func @dead_shape
 // CHECK-NOT: fir.shape
-// CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : i[[IDX:[0-9]+]]) : i[[IDX]]
 // CHECK-NEXT: llvm.return
 
 func.func @dead_shapeshift() {
@@ -1426,7 +1426,7 @@ func.func @dead_shapeshift() {
 
 // CHECK-LABEL: llvm.func @dead_shapeshift
 // CHECK-NOT: fir.shape_shift
-// CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : i[[IDX:[0-9]+]]) : i[[IDX]]
 // CHECK-NEXT: llvm.return
 
 func.func @dead_slice() {
@@ -1437,7 +1437,7 @@ func.func @dead_slice() {
 
 // CHECK-LABEL: llvm.func @dead_slice
 // CHECK-NOT: fir.slice
-// CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : i[[IDX:[0-9]+]]) : i[[IDX]]
 // CHECK-NEXT: llvm.return
 
 // -----
@@ -1843,9 +1843,9 @@ func.func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
 // GENERIC:       %[[ALLOCA:.*]] = llvm.alloca %[[ALLOCA_SIZE]] x !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // AMDGPU:        %[[AA:.*]] = llvm.alloca %[[ALLOCA_SIZE]] x !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
 // AMDGPU:        %[[ALLOCA:.*]] = llvm.addrspacecast %[[AA]] : !llvm.ptr<5> to !llvm.ptr
-// CHECK:         %[[C4:.*]] = llvm.mlir.constant(4 : index) : i64
-// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : index) : i64
+// CHECK:         %[[C4:.*]] = llvm.mlir.constant(4 : i64) : i64
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
 // CHECK:         %[[N1_TMP:.*]] = llvm.sub %[[N]], %[[SH1]]  : i64
 // CHECK:         %[[N1:.*]] = llvm.add %[[N1_TMP]], %[[C1]]  : i64
 // CHECK:         %[[N2_TMP:.*]] = llvm.sub %[[N]], %[[SH2]]  : i64
@@ -1934,7 +1934,7 @@ func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // GENERIC:       %[[V:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr
 // AMDGPU:        %[[AB:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr<5>
 // AMDGPU:        %[[V:.*]] = llvm.addrspacecast %[[AB]] : !llvm.ptr<5> to !llvm.ptr
-// CHECK:         %[[C20:.*]] = llvm.mlir.constant(20 : index) : i64
+// CHECK:         %[[C20:.*]] = llvm.mlir.constant(20 : i64) : i64
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C10:.*]] = llvm.mlir.constant(10 : i64) : i64
 // CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
@@ -1986,9 +1986,9 @@ func.func @_QPtest_dt_slice2(%arg0: !fir.ref<!fir.array<2x!fir.type<_QPtest_dt_s
 
 // CHECK-LABEL: llvm.func @_QPtest_dt_slice2(
 // CHECK-SAME:        %[[ARG0:.*]]: !llvm.ptr) {
-// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : index) : i64
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
 // CHECK:         %[[C0_2:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[C0_2]], {{.*}}, 0, %[[C1]], %[[C0]]] : (!llvm.ptr, i64, i64, i64, i64) -> !llvm.ptr, !llvm.array<2 x struct<"_QPtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>>
 // CHECK:         return
@@ -2232,11 +2232,11 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 //GENERIC:  %[[RESULT_BOX_REF:.*]] = llvm.alloca %[[ONE_1]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 //AMDGPU:   %[[AA:.*]] = llvm.alloca %[[ONE_1]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
 //AMDGPU:   %[[RESULT_BOX_REF:.*]] = llvm.addrspacecast %[[AA]] : !llvm.ptr<5> to !llvm.ptr
-//CHECK:    %[[THREE:.*]] = llvm.mlir.constant(3 : index) : i64
-//CHECK:    %[[FOUR:.*]] = llvm.mlir.constant(4 : index) : i64
-//CHECK:    %[[FIVE:.*]] = llvm.mlir.constant(5 : index) : i64
-//CHECK:    %[[SIX:.*]] = llvm.mlir.constant(6 : index) : i64
-//CHECK:    %[[EIGHTY:.*]] = llvm.mlir.constant(80 : index) : i64
+//CHECK:    %[[THREE:.*]] = llvm.mlir.constant(3 : i64) : i64
+//CHECK:    %[[FOUR:.*]] = llvm.mlir.constant(4 : i64) : i64
+//CHECK:    %[[FIVE:.*]] = llvm.mlir.constant(5 : i64) : i64
+//CHECK:    %[[SIX:.*]] = llvm.mlir.constant(6 : i64) : i64
+//CHECK:    %[[EIGHTY:.*]] = llvm.mlir.constant(80 : i64) : i64
 //CHECK:    %[[FLOAT_TYPE:.*]] = llvm.mlir.constant(27 : i32) : i32
 //CHECK:    %[[ELEM_SIZE_I64:.*]] = llvm.mlir.constant(4 : i64) : i64
 //CHECK:    %[[EXTRA_GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 6] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>

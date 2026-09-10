@@ -56,18 +56,19 @@ defm INIT_A#B :
 
 let mayLoad = 1, mayStore = 1 in
 defm COPY_A#B :
-  BULK_I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
+  BULK_I<(outs), (ins i32imm_op:$dst_idx, i32imm_op:$src_idx,
                       rc:$dst, rc:$src, rc:$len),
-         (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
-         [],
-         "memory.copy\t$src_idx, $dst_idx, $dst, $src, $len",
-         "memory.copy\t$src_idx, $dst_idx", 0x0a>;
+         (outs), (ins i32imm_op:$dst_idx, i32imm_op:$src_idx),
+         [(int_wasm_memory_copy (i32 timm:$dst_idx), (i32 timm:$src_idx),
+                                rc:$dst, rc:$src, rc:$len)],
+         "memory.copy\t$dst_idx, $src_idx, $dst, $src, $len",
+         "memory.copy\t$dst_idx, $src_idx", 0x0a>;
 
 let mayStore = 1 in
 defm FILL_A#B :
   BULK_I<(outs), (ins i32imm_op:$idx, rc:$dst, I32:$value, rc:$size),
          (outs), (ins i32imm_op:$idx),
-         [],
+         [(int_wasm_memory_fill (i32 timm:$idx), rc:$dst, I32:$value, rc:$size)],
          "memory.fill\t$idx, $dst, $value, $size",
          "memory.fill\t$idx", 0x0b>;
 }
@@ -82,10 +83,10 @@ defm MEMORY_ : BulkMemoryOps<I64, "64">;
 multiclass BulkMemOps<WebAssemblyRegClass rc, string B> {
 
 let usesCustomInserter = 1, isCodeGenOnly = 1, mayLoad = 1, mayStore = 1 in
-defm CPY_A#B : I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
+defm CPY_A#B : I<(outs), (ins i32imm_op:$dst_idx, i32imm_op:$src_idx,
                               rc:$dst, rc:$src, rc:$len),
-                 (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
-                 [(wasm_memcpy (i32 imm:$src_idx), (i32 imm:$dst_idx),
+                 (outs), (ins i32imm_op:$dst_idx, i32imm_op:$src_idx),
+                 [(wasm_memcpy (i32 imm:$dst_idx), (i32 imm:$src_idx),
                    rc:$dst, rc:$src, rc:$len
                  )],
                  "", "", 0>,

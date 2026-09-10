@@ -45,10 +45,9 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
                        int64_t pos) {
   assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::InsertElementOp::create(rewriter, loc, llvmType, val1, val2,
                                          constant);
   }
@@ -60,10 +59,9 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
                         const LLVMTypeConverter &typeConverter, Location loc,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
   if (rank <= 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::ExtractElementOp::create(rewriter, loc, llvmType, val,
                                           constant);
   }
@@ -347,7 +345,7 @@ public:
     // Replace with the gather intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
         gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
-        adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
+        adaptor.getPassThru(), align);
     return success();
   }
 
@@ -405,8 +403,7 @@ public:
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
-        scatter, adaptor.getValueToStore(), ptrs, adaptor.getMask(),
-        rewriter.getI32IntegerAttr(align));
+        scatter, adaptor.getValueToStore(), ptrs, adaptor.getMask(), align);
     return success();
   }
 

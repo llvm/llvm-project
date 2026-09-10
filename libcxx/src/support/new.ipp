@@ -20,7 +20,7 @@ void __throw_bad_alloc_shim();
 
 #ifndef _LIBCPP_ASSERT_SHIM
 #  error _LIBCPP_ASSERT_SHIM should be defined
-#  define _LIBCPP_ASSERT_SHIM
+#  define _LIBCPP_ASSERT_SHIM // make the file parseable
 #endif
 
 enum class on_failure {

@@ -475,13 +475,9 @@ public:
 
     SymbolTable::setSymbolVisibility(newFuncOp,
                                      SymbolTable::getSymbolVisibility(op));
-    // Copy over all attributes other than the name.
-    for (const auto &namedAttr :
-         op->getDiscardableAttrDictionary().getValue()) {
-      if (namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setDiscardableAttr(namedAttr.getName(),
-                                      namedAttr.getValue());
-    }
+    // Copy over the discardable attributes.
+    for (const auto &namedAttr : op->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     rewriter.inlineRegionBefore(op.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
