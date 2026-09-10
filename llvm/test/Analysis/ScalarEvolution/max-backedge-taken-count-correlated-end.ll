@@ -5,7 +5,7 @@ define void @lt_end_is_start_plus_bounded_n(i8 %nraw, i8 %a) {
 ; CHECK-LABEL: 'lt_end_is_start_plus_bounded_n'
 ; CHECK-NEXT:  Determining loop execution counts for: @lt_end_is_start_plus_bounded_n
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a) umax %a))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 7
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a) umax %a))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -28,7 +28,7 @@ define void @slt_end_is_start_plus_bounded_n(i8 %nraw, i8 %a) {
 ; CHECK-LABEL: 'slt_end_is_start_plus_bounded_n'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_end_is_start_plus_bounded_n
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a)<nsw> smax %a))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 7
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a)<nsw> smax %a))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -51,7 +51,7 @@ define void @lt_end_is_start_plus_bounded_n_stride_3(i8 %nraw, i8 %a) {
 ; CHECK-LABEL: 'lt_end_is_start_plus_bounded_n_stride_3'
 ; CHECK-NEXT:  Determining loop execution counts for: @lt_end_is_start_plus_bounded_n_stride_3
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin ((-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a)<nuw><nsw> umax %a))))<nuw><nsw> + (-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a)<nuw><nsw> umax %a)) /u 3) + (1 umin ((-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a)<nuw><nsw> umax %a))))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 85
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a)<nuw><nsw> umax %a))))<nuw><nsw> + (-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a)<nuw><nsw> umax %a)) /u 3) + (1 umin ((-1 * %a) + (((zext i3 (trunc i8 %nraw to i3) to i8) + %a)<nuw><nsw> umax %a))))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
