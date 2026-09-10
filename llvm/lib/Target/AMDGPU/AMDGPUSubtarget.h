@@ -214,11 +214,6 @@ public:
     return HasFminFmaxLegacy;
   }
 
-  bool hasSALUFMinNumFMaxNumInsts() const {
-    return (hasSALUFloatInsts() && !hasIEEEMinimumMaximumInsts()) ||
-           (hasSALUMinimumMaximumInsts() && hasIEEEMinimumMaximumInsts());
-  }
-
   unsigned getWavefrontSize() const {
     return 1 << WavefrontSizeLog2;
   }

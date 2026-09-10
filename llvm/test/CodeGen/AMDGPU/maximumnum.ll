@@ -1656,17 +1656,13 @@ define half @v_maximumnum_f16_s_s(half inreg %x, half inreg %y) #1 {
 ; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v1, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-TRUE16-LABEL: v_maximumnum_f16_s_s:
-; GFX1170-TRUE16:       ; %bb.0:
-; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_max_num_f16_e64 v0.l, s0, s1
-; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1170-FAKE16-LABEL: v_maximumnum_f16_s_s:
-; GFX1170-FAKE16:       ; %bb.0:
-; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-FAKE16-NEXT:    v_max_num_f16_e64 v0, s0, s1
-; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1170-LABEL: v_maximumnum_f16_s_s:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    s_max_f16 s0, s0, s1
+; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_maximumnum_f16_s_s:
 ; GFX12:       ; %bb.0:
@@ -2170,7 +2166,9 @@ define float @v_maximumnum_f32_s_s(float inreg %x, float inreg %y) #1 {
 ; GFX1170-LABEL: v_maximumnum_f32_s_s:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_max_num_f32_e64 v0, s0, s1
+; GFX1170-NEXT:    s_max_f32 s0, s0, s1
+; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_maximumnum_f32_s_s:
