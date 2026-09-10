@@ -27,46 +27,33 @@ using namespace mlir::x86;
 
 namespace {
 
-static bool isZeroVectorConstant(mlir::Operation *op) {
-  auto constantOp = llvm::dyn_cast<mlir::arith::ConstantOp>(op);
+// Return true if the operation is a constant dense element
+// attribute.
+static bool isZeroVectorConstant(Operation *op) {
+  auto constantOp = llvm::dyn_cast<arith::ConstantOp>(op);
   if (!constantOp)
     return false;
 
-  auto vectorType = llvm::dyn_cast<mlir::VectorType>(constantOp.getType());
+  auto vectorType = llvm::dyn_cast<VectorType>(constantOp.getType());
   if (!vectorType)
     return false;
 
-  auto denseAttr =
-      llvm::dyn_cast<mlir::DenseElementsAttr>(constantOp.getValue());
+  auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(constantOp.getValue());
   if (!denseAttr || !denseAttr.isSplat())
     return false;
 
   mlir::Type elementType = vectorType.getElementType();
 
-  if (llvm::isa<mlir::FloatType>(elementType)) {
+  if (llvm::isa<FloatType>(elementType)) {
     return denseAttr.getSplatValue<llvm::APFloat>().isZero();
   }
 
-  if (llvm::isa<mlir::IntegerType>(elementType)) {
+  if (llvm::isa<IntegerType>(elementType)) {
     return denseAttr.getSplatValue<llvm::APInt>().isZero();
   }
 
   return false;
 }
-
-/*static bool isZeroVectorConstant(mlir::Operation *op) {
-  auto constantOp = llvm::dyn_cast<mlir::arith::ConstantOp>(op);
-  if (!constantOp)
-    return false;
-
-  auto denseAttr =
-      llvm::dyn_cast<mlir::DenseElementsAttr>(constantOp.getValue());
-  if (!denseAttr)
-    return false;
-
-  return denseAttr.isSplat() &&
-         denseAttr.getSplatValue<llvm::APFloat>().isZero();
-}*/
 
 // Recursively follows single-use values through scf.yield operations
 // and returns the first non-yield user result in the contraction chain.
