@@ -20,10 +20,13 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
+class BasicBlock;
 class DataLayout;
+class DominatorTree;
 class FastMathFlags;
 class IRBuilderBase;
 class Instruction;
+class LoopInfo;
 class PHINode;
 class Type;
 class Value;
@@ -81,6 +84,12 @@ Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
                                   RecurKind RdxKind, Value *Vec,
                                   const Value *Root, FastMathFlags FMF,
                                   TargetTransformInfo::TargetCostKind CostKind);
+
+/// Try to get a reduction instruction from phi node \p P in block \p ParentBB,
+/// considering incoming values from \p ParentBB or the containing loop latch.
+/// \returns a candidate reduction value, or nullptr if none.
+Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                               BasicBlock *ParentBB, LoopInfo *LI);
 
 } // namespace llvm::slpvectorizer
 
