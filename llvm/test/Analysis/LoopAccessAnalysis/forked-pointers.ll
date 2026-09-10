@@ -15,24 +15,24 @@ define void @forked_ptrs_simple(ptr nocapture readonly %Base1, ptr nocapture rea
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
+; CHECK-NEXT:          %gep.2 = getelementptr inbounds float, ptr %Base2, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
+; CHECK-NEXT:          %gep.1 = getelementptr inbounds float, ptr %Base1, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
-; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -807,6 +807,11 @@ define dso_local void @forked_ptrs_gather_and_contiguous_forks(ptr nocapture rea
 ; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %arrayidx9 = getelementptr inbounds float, ptr %Base2, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
@@ -814,6 +819,9 @@ define dso_local void @forked_ptrs_gather_and_contiguous_forks(ptr nocapture rea
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
+; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
 ; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -899,15 +907,41 @@ for.body:
 define void @forked_ptrs_two_select(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, ptr nocapture readonly %Base3, ptr %Dest) {
 ; CHECK-LABEL: 'forked_ptrs_two_select'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
+; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.3 = getelementptr inbounds float, ptr %Base3, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
+; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.2 = getelementptr inbounds float, ptr %Base2, i64 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
+; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.1 = getelementptr inbounds float, ptr %Base1, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
-; CHECK-NEXT:      Generated run-time checks are incomplete
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %Base3 High: (400 + %Base3))
+; CHECK-NEXT:            Member: {%Base3,+,4}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
+; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

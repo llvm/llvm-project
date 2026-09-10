@@ -903,19 +903,24 @@ public:
   }
 
   /// Register a load  and whether it is only read from.
-  void addLoad(const MemoryLocation &Loc, Type *AccessTy, bool IsReadOnly) {
+  void addLoad(const MemoryLocation &Loc, Type *AccessTy, bool IsReadOnly,
+               bool NeedsFreeze) {
     Value *Ptr = const_cast<Value *>(Loc.Ptr);
     AST.add(adjustLoc(Loc));
     Accesses[MemAccessInfo(Ptr, false)].insert(AccessTy);
     if (IsReadOnly)
       ReadOnlyPtr.insert(Ptr);
+    if (NeedsFreeze)
+      PtrsNeedingFreeze.insert(Ptr);
   }
 
   /// Register a store.
-  void addStore(const MemoryLocation &Loc, Type *AccessTy) {
+  void addStore(const MemoryLocation &Loc, Type *AccessTy, bool NeedsFreeze) {
     Value *Ptr = const_cast<Value *>(Loc.Ptr);
     AST.add(adjustLoc(Loc));
     Accesses[MemAccessInfo(Ptr, true)].insert(AccessTy);
+    if (NeedsFreeze)
+      PtrsNeedingFreeze.insert(Ptr);
   }
 
   /// Check if we can emit a run-time no-alias check for \p Access.
@@ -1006,6 +1011,10 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Set of pointers reached through a select that may be poison and need to
+  /// be frozen when used in run-time checks.
+  SmallPtrSet<Value *, 4> PtrsNeedingFreeze;
 
   /// Batched alias analysis results.
   BatchAAResults BAA;
@@ -1161,13 +1170,14 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
 }
 
 static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
-                          function_ref<void(Value *)> AddPointer) {
+                          function_ref<void(Value *, bool)> AddPointer) {
   SmallPtrSet<Value *, 8> Visited;
-  SmallVector<Value *> WorkList;
-  WorkList.push_back(StartPtr);
+  // Pointers and whether they were reached through a select.
+  SmallVector<std::pair<Value *, bool>> WorkList;
+  WorkList.emplace_back(StartPtr, false);
 
   while (!WorkList.empty()) {
-    Value *Ptr = WorkList.pop_back_val();
+    auto [Ptr, ViaSelect] = WorkList.pop_back_val();
     if (!Visited.insert(Ptr).second)
       continue;
     auto *PN = dyn_cast<PHINode>(Ptr);
@@ -1176,9 +1186,21 @@ static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
     // value.
     if (PN && InnermostLoop.contains(PN->getParent()) &&
         PN->getParent() != InnermostLoop.getHeader()) {
-      llvm::append_range(WorkList, PN->incoming_values());
-    } else
-      AddPointer(Ptr);
+      for (Value *V : PN->incoming_values())
+        WorkList.emplace_back(V, ViaSelect);
+      continue;
+    }
+    // Likewise, a select between pointers inside the loop is analyzed as
+    // separate accesses through each of its operands.
+    if (auto *SI = dyn_cast<SelectInst>(Ptr);
+        SI && InnermostLoop.contains(SI->getParent())) {
+      WorkList.emplace_back(SI->getTrueValue(), true);
+      WorkList.emplace_back(SI->getFalseValue(), true);
+      continue;
+    }
+    // A select operand is not necessarily dereferenced and may be poison, so
+    // run-time checks using it need to freeze it.
+    AddPointer(Ptr, ViaSelect && !isGuaranteedNotToBeUndefOrPoison(Ptr));
   }
 }
 
@@ -1439,7 +1461,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 
     bool IsWrite = Access.getInt();
     if (!RtCheck.insert(TheLoop, Ptr, PtrExpr, AccessTy, IsWrite, DepId, ASId,
-                        PSE, NeedsFreeze)) {
+                        PSE, NeedsFreeze || PtrsNeedingFreeze.contains(Ptr))) {
       RtCheck.Pointers.truncate(NumPointers);
       return false;
     }
@@ -1932,7 +1954,7 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 
 void MemoryDepChecker::addAccess(StoreInst *SI) {
   visitPointers(SI->getPointerOperand(), *InnermostLoop,
-                [this, SI](Value *Ptr) {
+                [this, SI](Value *Ptr, bool) {
                   Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
                   InstMap.push_back(SI);
                   ++AccessIdx;
@@ -1941,7 +1963,7 @@ void MemoryDepChecker::addAccess(StoreInst *SI) {
 
 void MemoryDepChecker::addAccess(LoadInst *LI) {
   visitPointers(LI->getPointerOperand(), *InnermostLoop,
-                [this, LI](Value *Ptr) {
+                [this, LI](Value *Ptr, bool) {
                   Accesses[MemAccessInfo(Ptr, false)].push_back(AccessIdx);
                   InstMap.push_back(LI);
                   ++AccessIdx;
@@ -2868,9 +2890,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       // Expand forked pointers (i.e., a phi of multiple strided pointers) into
       // all alternatives.
       visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
-                    [&Accesses, AccessTy, Loc](Value *Ptr) {
+                    [&Accesses, AccessTy, Loc](Value *Ptr, bool NeedsFreeze) {
                       MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
-                      Accesses.addStore(NewLoc, AccessTy);
+                      Accesses.addStore(NewLoc, AccessTy, NeedsFreeze);
                     });
     }
   }
@@ -2919,9 +2941,11 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     // Expand forked pointers (i.e., a phi of multiple strided pointers) into
     // all alternatives.
     visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
-                  [&Accesses, AccessTy, Loc, IsReadOnlyPtr](Value *Ptr) {
+                  [&Accesses, AccessTy, Loc, IsReadOnlyPtr](Value *Ptr,
+                                                            bool NeedsFreeze) {
                     MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
-                    Accesses.addLoad(NewLoc, AccessTy, IsReadOnlyPtr);
+                    Accesses.addLoad(NewLoc, AccessTy, IsReadOnlyPtr,
+                                     NeedsFreeze);
                   });
   }
 
