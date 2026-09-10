@@ -28290,14 +28290,53 @@ static SDValue performLegalizedInterleavedStoreCombine(
   return NewStore;
 }
 
+/// Expand a scalable compressing store to a VECTOR_COMPRESS + a masked store.
+static SDValue expandScalableCompressingStore(MaskedStoreSDNode *Store,
+                                              SelectionDAG &DAG) {
+  SDLoc DL(Store);
+  EVT VT = Store->getValue().getValueType();
+  assert(VT.isScalableVector() && Store->isCompressingStore() &&
+         "Expected a scalable compressing store");
+
+  EVT MaskVT = Store->getMask().getValueType();
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+      Store->getMask(), Store->getMask());
+
+  SDValue CompressedValue =
+      DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
+                  Store->getMask(), DAG.getPOISON(VT));
+  SDValue CompressedMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
+
+  return DAG.getMaskedStore(Store->getChain(), DL, CompressedValue,
+                            Store->getBasePtr(), Store->getOffset(),
+                            CompressedMask, Store->getMemoryVT(),
+                            Store->getMemOperand(), Store->getAddressingMode(),
+                            Store->isTruncatingStore(),
+                            /*isCompressing=*/false);
+}
+
 static SDValue performMSTORECombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG,
-                                    const AArch64Subtarget *Subtarget) {
+                                    const AArch64Subtarget *Subtarget,
+                                    const AArch64TargetLowering &TLI) {
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Value = MST->getValue();
   SDValue Mask = MST->getMask();
   SDLoc DL(N);
+
+  EVT VT = MST->getValue().getValueType();
+
+  // If MST is a compressing store and VECTOR_COMPRESS can be lowered for the VT
+  // expand the store early. This allows type promotion to apply to unpacked
+  // SVE float types.
+  if (MST->isCompressingStore() && VT.isScalableVector() &&
+      TLI.isOperationLegalOrCustomOrPromote(ISD::VECTOR_COMPRESS, VT))
+    return expandScalableCompressingStore(MST, DAG);
 
   if (SDValue Res = performInterleavedStoreCombine(N, DCI, DAG))
     return Res;
@@ -31710,7 +31749,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MSTORE:
-    return performMSTORECombine(N, DCI, DAG, Subtarget);
+    return performMSTORECombine(N, DCI, DAG, Subtarget, *this);
   case ISD::MGATHER:
   case ISD::MSCATTER:
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
@@ -34152,25 +34191,7 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
   if (!Store->isCompressingStore())
     return SDValue();
 
-  EVT MaskVT = Store->getMask().getValueType();
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  SDValue CntActive = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
-      Store->getMask(), Store->getMask());
-
-  SDValue CompressedValue =
-      DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
-                  Store->getMask(), DAG.getPOISON(VT));
-  SDValue CompressedMask =
-      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
-
-  return DAG.getMaskedStore(Store->getChain(), DL, CompressedValue,
-                            Store->getBasePtr(), Store->getOffset(),
-                            CompressedMask, Store->getMemoryVT(),
-                            Store->getMemOperand(), Store->getAddressingMode(),
-                            Store->isTruncatingStore(),
-                            /*isCompressing=*/false);
+  return expandScalableCompressingStore(Store, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerFixedLengthVectorMStoreToSVE(
