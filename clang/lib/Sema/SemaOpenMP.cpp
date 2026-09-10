@@ -4320,7 +4320,7 @@ public:
           InheritedDSA = DVar.CKind == OMPC_unknown;
         }
         if (InheritedDSA)
-          VarsWithInheritedDSA[BD ? LookupDecl : VD] = E;
+          VarsWithInheritedDSA[VD] = E;
         if (Stack->getDefaultDSA() == DSA_none)
           return;
       }
@@ -4354,7 +4354,7 @@ public:
                     auto ME = MapExprComponents.rend();
                     return MI != ME && MI->getAssociatedDeclaration() == VD;
                   })) {
-            VarsWithInheritedDSA[BD ? LookupDecl : VD] = E;
+            VarsWithInheritedDSA[VD] = E;
             return;
           }
         }
@@ -4410,23 +4410,6 @@ public:
                     return !StackComponents.empty();
                   return StackComponents.size() == 1;
                 });
-          }
-        }
-        // For BindingDecls, check if the original variable (from the
-        // DecompositionDecl) has been mapped.
-        const auto *BD = dyn_cast<BindingDecl>(VD);
-        if (!AlreadyMapped && BD) {
-          if (const auto *DD =
-                  dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
-            if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
-              AlreadyMapped = Stack->checkMappableExprComponentListsForDecl(
-                  OrigVar, /*CurrentRegionOnly=*/true,
-                  [this](auto StackComponents, auto) {
-                    if (SemaRef.LangOpts.OpenMP >= 50)
-                      return !StackComponents.empty();
-                    return StackComponents.size() == 1;
-                  });
-            }
           }
         }
         if (!AlreadyMapped) {
@@ -20565,30 +20548,20 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     // For BindingDecls, VDPrivate should have the binding's type (not the
     // DecompositionDecl's type), and will be initialized from the binding's
     // field in the original DecompositionDecl.
-    if (IsBindingDecl) {
-      if (PrivateType->isArrayType()) {
-        // For array bindings, don't set any initializer - the array copy
-        // will be handled specially in CodeGen (emitPrivatesInit).
-        // We still need to create VDInitRefExpr for the Inits list.
-        VarDecl *VDInit = buildVarDecl(SemaRef, RefExpr->getExprLoc(), ElemType,
-                                       D->getName());
-        VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, ElemType, ELoc);
-      } else {
-        // For non-array bindings, create a simple copy initialization.
-        VarDecl *VDInit = buildVarDecl(SemaRef, RefExpr->getExprLoc(),
-                                       PrivateType, ".firstprivate.temp");
-        VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, PrivateType,
-                                         RefExpr->getExprLoc());
+    if (IsBindingDecl && !PrivateType->isArrayType()) {
+      // For non-array bindings, create a simple copy initialization.
+      VarDecl *VDInit = buildVarDecl(SemaRef, RefExpr->getExprLoc(),
+                                     PrivateType, ".firstprivate.temp");
+      VDInitRefExpr =
+          buildDeclRefExpr(SemaRef, VDInit, PrivateType, RefExpr->getExprLoc());
 
-        // Initialize VDPrivate from VDInit (which will point to the field).
-        SemaRef.AddInitializerToDecl(
-            VDPrivate, SemaRef.DefaultLvalueConversion(VDInitRefExpr).get(),
-            /*DirectInit=*/false);
-      }
-    }
-    // For arrays generate initializer for single element and replace it by
-    // the original array element in CodeGen.
-    else if (Type->isArrayType()) {
+      // Initialize VDPrivate from VDInit (which will point to the field).
+      SemaRef.AddInitializerToDecl(
+          VDPrivate, SemaRef.DefaultLvalueConversion(VDInitRefExpr).get(),
+          /*DirectInit=*/false);
+    } else if (Type->isArrayType()) {
+      // For arrays generate initializer for single element and replace it by
+      // the original array element in CodeGen.
       VarDecl *VDInit =
           buildVarDecl(SemaRef, RefExpr->getExprLoc(), ElemType, D->getName());
       VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, ElemType, ELoc);
