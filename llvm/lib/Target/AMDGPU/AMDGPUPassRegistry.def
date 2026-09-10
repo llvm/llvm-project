@@ -77,6 +77,7 @@ FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
               AMDGPUUnifyDivergentExitNodesPass())
 FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
 FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
+FUNCTION_PASS("si-sink-async-dma", SISinkAsyncDMAPass(*this))
 FUNCTION_PASS("amdgpu-uniform-intrinsic-combine", AMDGPUUniformIntrinsicCombinePass())
 #undef FUNCTION_PASS
 
@@ -157,7 +158,6 @@ MACHINE_FUNCTION_PASS("si-post-ra-bundler", SIPostRABundlerPass())
 MACHINE_FUNCTION_PASS("si-pre-allocate-wwm-regs", SIPreAllocateWWMRegsPass())
 MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
-MACHINE_FUNCTION_PASS("si-sink-async-dma", SISinkAsyncDMAPass())
 MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 #undef MACHINE_FUNCTION_PASS
 

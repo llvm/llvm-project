@@ -1727,6 +1727,8 @@ bool GCNPassConfig::addPreISel() {
 
   addPass(createAMDGPUAnnotateUniformValuesLegacy());
   addPass(createSIAnnotateControlFlowLegacyPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(&SISinkAsyncDMALegacyID);
   // TODO: Move this right after structurizeCFG to avoid extra divergence
   // analysis. This depends on stopping SIAnnotateControlFlow from making
   // control flow modifications.
@@ -1837,10 +1839,8 @@ void GCNPassConfig::addFastRegAlloc() {
 }
 
 void GCNPassConfig::addPreRegAlloc() {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(&SISinkAsyncDMALegacyID);
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
-  }
   if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
 }
@@ -2492,6 +2492,8 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
   addFunctionPass(AMDGPUAnnotateUniformValuesPass(), PMW);
 
   addFunctionPass(SIAnnotateControlFlowPass(getTM()), PMW);
+  if (TM.getOptLevel() != CodeGenOptLevel::None)
+    addFunctionPass(SISinkAsyncDMAPass(getTM()), PMW);
 
   // TODO: Move this right after structurizeCFG to avoid extra divergence
   // analysis. This depends on stopping SIAnnotateControlFlow from making
@@ -2649,12 +2651,8 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // Still in SSA, which the PHI repair needs, and the last CFG change before
-    // SILowerControlFlow, which runs right after PHI elimination.
-    addMachineFunctionPass(SISinkAsyncDMAPass(), PMW);
+  if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
-  }
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
