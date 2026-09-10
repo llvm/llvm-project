@@ -996,6 +996,22 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (const auto *Pin = dyn_cast<AMDGPUPinVGPRAttr>(TmplAttr)) {
+      EnterExpressionEvaluationContext Unevaluated(
+          *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      ExprResult R = SubstExpr(Pin->getReg(), TemplateArgs);
+      if (!R.isInvalid())
+        AMDGPU().addAMDGPUPinVGPRAttr(New, *Pin, R.get());
+    }
+
+    if (const auto *Pin = dyn_cast<AMDGPUPinAGPRAttr>(TmplAttr)) {
+      EnterExpressionEvaluationContext Unevaluated(
+          *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      ExprResult R = SubstExpr(Pin->getReg(), TemplateArgs);
+      if (!R.isInvalid())
+        AMDGPU().addAMDGPUPinAGPRAttr(New, *Pin, R.get());
+    }
+
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
       instantiateDependentHLSLParamModifierAttr(*this, TemplateArgs, ParamAttr,
                                                 Tmpl, New);
