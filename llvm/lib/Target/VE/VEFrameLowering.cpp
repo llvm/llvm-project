@@ -120,7 +120,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -419,9 +418,8 @@ bool VEFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-         MFI.isFrameAddressTaken();
+  return MF.disableFramePointerElim() || RegInfo->hasStackRealignment(MF) ||
+         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
 }
 
 bool VEFrameLowering::hasBP(const MachineFunction &MF) const {

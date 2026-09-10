@@ -14,6 +14,10 @@
 #define ORC_RT_BEDROCK_SPS_GDBJITREGISTRARSPSCI_H
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
+#include "orc-rt/support/sps/SPSAllocAction.h"
+
+ORC_RT_SPS_ALLOC_ACTION_DECL(orc_rt_ci_aa_sps_GDBJITRegistrar_register)
+ORC_RT_SPS_ALLOC_ACTION_DECL(orc_rt_ci_aa_sps_GDBJITRegistrar_deregister)
 
 namespace orc_rt::sps_ci {
 

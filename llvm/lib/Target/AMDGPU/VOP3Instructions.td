@@ -1982,19 +1982,34 @@ class VOP_Pseudo_Scalar<RegisterClass Dst, RegisterOperand SrcOp,
 
 def VOP_Pseudo_Scalar_F32 : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_f32, f32>;
 def VOP_Pseudo_Scalar_F16 : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_f16, f32, f16>;
+def VOP_Pseudo_Scalar_F16_NoInline : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_NoInline_f16, f32, f16>;
+
+// Define regular and "no inline constant" variant of a F16 pseudo
+// scalar transcendental instruction.
+multiclass VOP3PseudoScalarInst_F16<string opName> {
+  let TRANS = 1, isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
+    let SubtargetPredicate = Predicate<"Subtarget->hasPseudoScalarTrans() && !Subtarget->hasNoF16PseudoScalarTransInlineConstants()"> in {
+      defm NAME : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16>;
+    }
+
+    let SubtargetPredicate = HasNoF16PseudoScalarTransInlineConstants in {
+      defm !strconcat(NAME, "_noinline") : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16_NoInline>;
+    }
+  }
+}
 
 let SubtargetPredicate = HasPseudoScalarTrans, TRANS = 1,
     isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
   defm V_S_EXP_F32  : VOP3PseudoScalarInst<"v_s_exp_f32", VOP_Pseudo_Scalar_F32, AMDGPUexp>;
-  defm V_S_EXP_F16  : VOP3PseudoScalarInst<"v_s_exp_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_EXP_F16  : VOP3PseudoScalarInst_F16<"v_s_exp_f16">;
   defm V_S_LOG_F32  : VOP3PseudoScalarInst<"v_s_log_f32", VOP_Pseudo_Scalar_F32, AMDGPUlog>;
-  defm V_S_LOG_F16  : VOP3PseudoScalarInst<"v_s_log_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_LOG_F16  : VOP3PseudoScalarInst_F16<"v_s_log_f16">;
   defm V_S_RCP_F32  : VOP3PseudoScalarInst<"v_s_rcp_f32", VOP_Pseudo_Scalar_F32, AMDGPUrcp>;
-  defm V_S_RCP_F16  : VOP3PseudoScalarInst<"v_s_rcp_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_RCP_F16  : VOP3PseudoScalarInst_F16<"v_s_rcp_f16">;
   defm V_S_RSQ_F32  : VOP3PseudoScalarInst<"v_s_rsq_f32", VOP_Pseudo_Scalar_F32, AMDGPUrsq>;
-  defm V_S_RSQ_F16  : VOP3PseudoScalarInst<"v_s_rsq_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_RSQ_F16  : VOP3PseudoScalarInst_F16<"v_s_rsq_f16">;
   defm V_S_SQRT_F32 : VOP3PseudoScalarInst<"v_s_sqrt_f32", VOP_Pseudo_Scalar_F32, any_amdgcn_sqrt>;
-  defm V_S_SQRT_F16 : VOP3PseudoScalarInst<"v_s_sqrt_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_SQRT_F16 : VOP3PseudoScalarInst_F16<"v_s_sqrt_f16">;
 }
 
 class PseudoScalarPatF16<SDPatternOperator node, VOP3_Pseudo inst> : GCNPat <
@@ -2139,16 +2154,24 @@ defm V_MINMAX_NUM_F32     : VOP3_Realtriple_with_name_gfx12_gfx13<0x268,0x268, "
 defm V_MAXMIN_NUM_F32     : VOP3_Realtriple_with_name_gfx12_gfx13<0x269, 0x269, "V_MAXMIN_F32", "v_maxmin_num_f32">;
 defm V_MINMAX_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26a, 0x26a, "v_minmax_num_f16", "V_MINMAX_F16", "v_minmax_f16">;
 defm V_MAXMIN_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26b, 0x26b, "v_maxmin_num_f16", "V_MAXMIN_F16", "v_maxmin_f16">;
+
+// Define regular and "no inline constant" variant (for gfx12) of a
+// F16 pseudo-scalar transcendental instruction.
+multiclass VOP3Only_Real_F16_PseudoScalarTrans<bits<10> op> {
+  defm NAME : VOP3_Real_Base<GFX13Gen, op, NAME, 1>;
+  defm !strconcat(NAME, "_noinline") : VOP3_Real_Base<GFX12Gen, op, !strconcat(NAME, "_noinline"), 1>;
+}
+
 defm V_S_EXP_F32          : VOP3Only_Real_Base_gfx12_gfx13<0x280>;
-defm V_S_EXP_F16          : VOP3Only_Real_Base_gfx12_gfx13<0x281>;
+defm V_S_EXP_F16          : VOP3Only_Real_F16_PseudoScalarTrans<0x281>;
 defm V_S_LOG_F32          : VOP3Only_Real_Base_gfx12_gfx13<0x282>;
-defm V_S_LOG_F16          : VOP3Only_Real_Base_gfx12_gfx13<0x283>;
+defm V_S_LOG_F16          : VOP3Only_Real_F16_PseudoScalarTrans<0x283>;
 defm V_S_RCP_F32          : VOP3Only_Real_Base_gfx12_gfx13<0x284>;
-defm V_S_RCP_F16          : VOP3Only_Real_Base_gfx12_gfx13<0x285>;
+defm V_S_RCP_F16          : VOP3Only_Real_F16_PseudoScalarTrans<0x285>;
 defm V_S_RSQ_F32          : VOP3Only_Real_Base_gfx12_gfx13<0x286>;
-defm V_S_RSQ_F16          : VOP3Only_Real_Base_gfx12_gfx13<0x287>;
+defm V_S_RSQ_F16          : VOP3Only_Real_F16_PseudoScalarTrans<0x287>;
 defm V_S_SQRT_F32         : VOP3Only_Real_Base_gfx12_gfx13<0x288>;
-defm V_S_SQRT_F16         : VOP3Only_Real_Base_gfx12_gfx13<0x289>;
+defm V_S_SQRT_F16         : VOP3Only_Real_F16_PseudoScalarTrans<0x289>;
 defm V_MAD_CO_U64_U32     : VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<0x2fe, 0x2f8, "V_MAD_U64_U32", "v_mad_co_u64_u32">;
 defm V_MAD_CO_I64_I32     : VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<0x2ff, 0x2f9, "V_MAD_I64_I32", "v_mad_co_i64_i32">;
 

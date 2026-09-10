@@ -77,6 +77,11 @@ void threads_and_teams() {
         int a_var;
 }
 
+void thread_limit_at_max() {
+    #pragma omp target teams thread_limit(1024)
+    { int a_var; }
+}
+
 #endif
 
 
@@ -85,9 +90,12 @@ void threads_and_teams() {
 // CHECK:      "omp_target_num_teams"="33"
 // CHECK:      "omp_target_num_teams"="44"
 
-// CHECK:      "omp_target_thread_limit"="22"
+// CHECK:      "omp_target_thread_limit"="86"
 
 // CHECK:      "omp_target_thread_limit"="11"
 
 // CHECK:      "omp_target_num_teams"="33"
 // CHECK-SAME: "omp_target_thread_limit"="22"
+
+// Every target this test runs on allows 1024, whatever its warp size is.
+// CHECK:      "omp_target_thread_limit"="1024"
