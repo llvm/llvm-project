@@ -21,6 +21,7 @@ using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
 using LIBC_NAMESPACE::ErrorOr;
 using LIBC_NAMESPACE::File;
 using LIBC_NAMESPACE::FileIOResult;
+using LIBC_NAMESPACE::FileMode;
 
 class StringFile : public File {
   static constexpr size_t SIZE = 512;
@@ -41,13 +42,12 @@ class StringFile : public File {
 
 public:
   explicit StringFile(char *buffer, size_t buflen, int bufmode, bool owned,
-                      ModeFlags modeflags)
+                      FileMode mode)
       : LIBC_NAMESPACE::File(&str_write, &str_read, &str_seek, &str_close,
                              reinterpret_cast<uint8_t *>(buffer), buflen,
-                             bufmode, owned, modeflags),
+                             bufmode, owned, mode),
         pos(0), eof_marker(0), write_append(false) {
-    if (modeflags &
-        static_cast<ModeFlags>(LIBC_NAMESPACE::File::OpenMode::APPEND))
+    if (mode.is_append())
       write_append = true;
   }
 
@@ -109,10 +109,10 @@ ErrorOr<off_t> StringFile::str_seek(LIBC_NAMESPACE::File *f, off_t offset,
 StringFile *new_string_file(char *buffer, size_t buflen, int bufmode,
                             bool owned, const char *mode) {
   LIBC_NAMESPACE::AllocChecker ac;
+  const FileMode file_mode(mode);
   // We will just assume the allocation succeeds. We cannot test anything
   // otherwise.
-  return new (ac) StringFile(buffer, buflen, bufmode, owned,
-                             LIBC_NAMESPACE::File::mode_flags(mode));
+  return new (ac) StringFile(buffer, buflen, bufmode, owned, file_mode);
 }
 
 TEST(LlvmLibcFileTest, WriteOnly) {
