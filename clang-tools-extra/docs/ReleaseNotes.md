@@ -252,6 +252,11 @@ infrastructure are described first, followed by tool-specific sections.
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
 
+- Improved {doc}`readability-redundant-control-flow
+  <clang-tidy/checks/readability/redundant-control-flow>` check by fixing
+  false positive when continuing a labeled outer loop from the end of an
+  inner loop.
+
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
 
