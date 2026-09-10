@@ -110,7 +110,7 @@ void test_rcu() {
     int read_count = 0;
     while (!token.stop_requested()) {
       dom.lock();
-      auto obj = global_obj_rcu.load(std::memory_order_relaxed);
+      auto obj = global_obj_rcu.load();
       obj->doWork();
       dom.unlock();
       ++read_count;
@@ -122,7 +122,7 @@ void test_rcu() {
     int write_count = 0;
     while (!token.stop_requested()) {
       auto newObj = new MyObject(destruction_count);
-      auto oldObj = global_obj_rcu.exchange(newObj, std::memory_order_relaxed);
+      auto oldObj = global_obj_rcu.exchange(newObj);
       oldObj->retire();
       ++write_count;
       std::this_thread::sleep_for(std::chrono::microseconds(100));
