@@ -12194,9 +12194,14 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     // `CSET <Wd>, <cond>` is an alias of `CSINC <Wd>, WZR, WZR, invert(<cond>)`
     auto m_CSET = m_Node(AArch64ISD::CSINC, m_Zero(), m_Zero(),
                          m_ConstInt(InverseCC), m_Value(Flags));
+    // `CSEL <Wd>, 0, 1, <cond>` computes the same value as that CSINC; it is
+    // how the success flag of a cmpxchg comes out of custom lowering.
+    auto m_CSEL = m_Node(AArch64ISD::CSEL, m_Zero(), m_One(),
+                         m_ConstInt(InverseCC), m_Value(Flags));
+    auto m_CSETorCSEL = m_AnyOf(m_CSET, m_CSEL);
     // Note: We look through `& 1` as the result of CSET is known to be 0 or 1.
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) && isNullConstant(RHS) &&
-        sd_match(LHS, m_AnyOf(m_CSET, m_And(m_CSET, m_One())))) {
+        sd_match(LHS, m_AnyOf(m_CSETorCSEL, m_And(m_CSETorCSEL, m_One())))) {
       AArch64CC::CondCode BranchCC = AArch64CC::CondCode(InverseCC);
       if (CC == ISD::SETNE)
         BranchCC = AArch64CC::getInvertedCondCode(BranchCC);
