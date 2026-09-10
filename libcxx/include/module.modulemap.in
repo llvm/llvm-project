@@ -1782,11 +1782,6 @@ module std {
   module new {
     header "new"
     module align_val_t          { header "__new/align_val_t.h" }
-    module allocate {
-      header "__new/allocate.h"
-      export std.utility.element_count // used as part of the API
-      export * // TODO: Workaround for https://llvm.org/PR120108
-    }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
     module global_new_delete    {
