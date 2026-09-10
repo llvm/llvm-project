@@ -9706,9 +9706,8 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL,
 ///                 LOAD
 ///
 /// *ExtractVectorElement
-using SDByteProvider = ByteProvider<SDValue>;
 
-static std::optional<SDByteProvider>
+static std::optional<ByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       std::optional<uint64_t> VectorIndex,
                       unsigned StartingIndex = 0,
@@ -9759,7 +9758,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     // provide, then do not provide anything. Otherwise, subtract the index by
     // the amount we shifted by.
     return Index < ByteShift
-               ? SDByteProvider::getConstantZero()
+               ? ByteProvider::getConstantZero()
                : calculateByteProvider(Op->getOperand(0), Index - ByteShift,
                                        Depth + 1, VectorIndex, Index, ByteMask);
   }
@@ -9782,7 +9781,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
         MaskOp->getAPIntValue().extractBitsAsZExtValue(8, Index * 8);
 
     if (MaskByte == 0x00)
-      return SDByteProvider::getConstantZero();
+      return ByteProvider::getConstantZero();
 
     auto Result = Recurse(Op->getOperand(0), Index);
     if (!Result)
@@ -9841,12 +9840,12 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     // question
     if (Index >= NarrowByteWidth)
       return L->getExtensionType() == ISD::ZEXTLOAD
-                 ? std::optional<SDByteProvider>(
-                       SDByteProvider::getConstantZero())
+                 ? std::optional<ByteProvider>(
+                       ByteProvider::getConstantZero())
                  : std::nullopt;
 
     unsigned BPVectorIndex = VectorIndex.value_or(0U);
-    return SDByteProvider::getSrc(Op, Index, BPVectorIndex);
+    return ByteProvider::getSrc(Op, Index, BPVectorIndex);
   }
   }
 
@@ -10152,7 +10151,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   unsigned ByteWidth = VT.getSizeInBits() / 8;
 
   bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
-  auto MemoryByteOffset = [&](SDByteProvider P) {
+  auto MemoryByteOffset = [&](ByteProvider P) {
     assert(P.hasSrc() && "Must be a memory byte provider");
     auto *Load = cast<LoadSDNode>(*P.Src);
 
@@ -10169,7 +10168,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   SDValue Chain;
 
   SmallPtrSet<LoadSDNode *, 8> Loads;
-  std::optional<SDByteProvider> FirstByteProvider;
+  std::optional<ByteProvider> FirstByteProvider;
   int64_t FirstOffset = INT64_MAX;
 
   // Check if all the bytes of the OR we are looking at are loaded from the same

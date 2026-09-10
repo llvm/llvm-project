@@ -15101,9 +15101,10 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
 // ultimately provides. \p SrcIndex is the byte of the src that maps to this
 // dest of the or byte. \p Depth tracks how many recursive iterations we have
 // performed.
-static const std::optional<ByteProvider<SDValue>>
-calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
-                 unsigned Depth = 0) {
+static const std::optional<ByteProvider> calculateSrcByte(const SDValue Op,
+                                                          uint64_t DestByte,
+                                                          uint64_t SrcIndex = 0,
+                                                          unsigned Depth = 0) {
   // We may need to recursively traverse a series of SRLs
   if (Depth >= 6)
     return std::nullopt;
@@ -15112,7 +15113,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
     return std::nullopt;
 
   if (Op.getValueType().isVector())
-    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
+    return ByteProvider::getSrc(Op, DestByte, SrcIndex);
 
   switch (Op->getOpcode()) {
   case ISD::TRUNCATE: {
@@ -15158,7 +15159,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   }
 
   default: {
-    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
+    return ByteProvider::getSrc(Op, DestByte, SrcIndex);
   }
   }
   llvm_unreachable("fully handled switch");
@@ -15170,7 +15171,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 // the byte position of the Op that corresponds with the originally requested
 // byte of the Or \p Depth tracks how many recursive iterations we have
 // performed. \p StartingIndex is the originally requested byte of the Or
-static const std::optional<ByteProvider<SDValue>>
+static const std::optional<ByteProvider>
 calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
                       unsigned StartingIndex = 0) {
   // Finding Src tree of RHS of or typically requires at least 1 additional
@@ -15212,7 +15213,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       // is not well formatted
       if (IndexMask & BitMask)
         return std::nullopt;
-      return ByteProvider<SDValue>::getConstantZero();
+      return ByteProvider::getConstantZero();
     }
 
     return calculateSrcByte(Op->getOperand(0), StartingIndex, Index);
@@ -15270,7 +15271,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     // SRA's out-of-range bytes are sign bits, not constant zero.
     if (Op.getOpcode() == ISD::SRA)
       return std::nullopt;
-    return ByteProvider<SDValue>::getConstantZero();
+    return ByteProvider::getConstantZero();
   }
 
   case ISD::SHL: {
@@ -15290,7 +15291,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     // the index we are trying to provide, then it provides 0s. If not,
     // then this bytes are not definitively 0s, and the corresponding byte
     // of interest is Index - ByteShift of the src
-    return Index < ByteShift ? ByteProvider<SDValue>::getConstantZero()
+    return Index < ByteShift ? ByteProvider::getConstantZero()
                              : Recurse(Op.getOperand(0), Index - ByteShift);
   }
   case ISD::ANY_EXTEND:
@@ -15341,8 +15342,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     // question
     if (Index >= NarrowByteWidth) {
       return L->getExtensionType() == ISD::ZEXTLOAD
-                 ? std::optional<ByteProvider<SDValue>>(
-                       ByteProvider<SDValue>::getConstantZero())
+                 ? std::optional<ByteProvider>(ByteProvider::getConstantZero())
                  : std::nullopt;
     }
 
@@ -15385,8 +15385,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     auto NextIndex = IdxMask > 0x03 ? IdxMask % 4 : IdxMask;
 
     return IdxMask != 0x0c ? calculateSrcByte(NextOp, StartingIndex, NextIndex)
-                           : ByteProvider<SDValue>(
-                                 ByteProvider<SDValue>::getConstantZero());
+                           : ByteProvider::getConstantZero();
   }
 
   default: {
@@ -15531,13 +15530,13 @@ static SDValue getDWordFromOffset(SelectionDAG &DAG, SDLoc SL, SDValue Src,
 static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   [[maybe_unused]] EVT VT = N->getValueType(0);
-  SmallVector<ByteProvider<SDValue>, 8> PermNodes;
+  SmallVector<ByteProvider, 8> PermNodes;
 
   // VT is known to be MVT::i32, so we need to provide 4 bytes.
   assert(VT == MVT::i32);
   for (int i = 0; i < 4; i++) {
     // Find the ByteProvider that provides the ith byte of the result of OR
-    std::optional<ByteProvider<SDValue>> P =
+    std::optional<ByteProvider> P =
         calculateByteProvider(SDValue(N, 0), i, 0, /*StartingIndex = */ i);
     // TODO support constantZero
     if (!P || P->isConstantZero())
@@ -15905,13 +15904,13 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
   // possible we're missing out on some combine opportunities, but we'd need to
   // weigh the cost of extracting the byte from the upper dwords.
 
-  std::optional<ByteProvider<SDValue>> BP0 =
+  std::optional<ByteProvider> BP0 =
       calculateByteProvider(SDValue(N, 0), 0, 0, 0);
   if (!BP0 || BP0->SrcOffset >= 4 || !BP0->Src)
     return SDValue();
   SDValue V0 = *BP0->Src;
 
-  std::optional<ByteProvider<SDValue>> BP1 =
+  std::optional<ByteProvider> BP1 =
       calculateByteProvider(SDValue(N, 0), 1, 0, 1);
   if (!BP1 || BP1->SrcOffset >= 4 || !BP1->Src)
     return SDValue();
@@ -17454,8 +17453,7 @@ SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
 
 // Collect the ultimate src of each of the mul node's operands, and confirm
 // each operand is 8 bytes.
-static std::optional<ByteProvider<SDValue>>
-handleMulOperand(const SDValue &MulOperand) {
+static std::optional<ByteProvider> handleMulOperand(const SDValue &MulOperand) {
   auto Byte0 = calculateByteProvider(MulOperand, 0, 0);
   if (!Byte0 || Byte0->isConstantZero()) {
     return std::nullopt;
@@ -17487,8 +17485,7 @@ struct DotSrc {
   int64_t DWordOffset;
 };
 
-static void placeSources(ByteProvider<SDValue> &Src0,
-                         ByteProvider<SDValue> &Src1,
+static void placeSources(ByteProvider &Src0, ByteProvider &Src1,
                          SmallVectorImpl<DotSrc> &Src0s,
                          SmallVectorImpl<DotSrc> &Src1s, int Step) {
 
@@ -17503,7 +17500,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
   }
 
   for (int BPI = 0; BPI < 2; BPI++) {
-    std::pair<ByteProvider<SDValue>, ByteProvider<SDValue>> BPP = {Src0, Src1};
+    std::pair<ByteProvider, ByteProvider> BPP = {Src0, Src1};
     if (BPI == 1) {
       BPP = {Src1, Src0};
     }
@@ -17647,9 +17644,9 @@ static bool isMul(const SDValue Op) {
 }
 
 static std::optional<bool>
-checkDot4MulSignedness(const SDValue &N, ByteProvider<SDValue> &Src0,
-                       ByteProvider<SDValue> &Src1, const SDValue &S0Op,
-                       const SDValue &S1Op, const SelectionDAG &DAG) {
+checkDot4MulSignedness(const SDValue &N, ByteProvider &Src0, ByteProvider &Src1,
+                       const SDValue &S0Op, const SDValue &S1Op,
+                       const SelectionDAG &DAG) {
   // If we both ops are i8s (pre legalize-dag), then the signedness semantics
   // of the dot4 is irrelevant.
   if (S0Op.getValueSizeInBits() == 8 && S1Op.getValueSizeInBits() == 8)

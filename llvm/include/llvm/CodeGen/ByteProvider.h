@@ -15,11 +15,9 @@
 #ifndef LLVM_CODEGEN_BYTEPROVIDER_H
 #define LLVM_CODEGEN_BYTEPROVIDER_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/Support/DataTypes.h"
 #include <optional>
-#include <type_traits>
 
 namespace llvm {
 
@@ -28,41 +26,29 @@ namespace llvm {
 /// some other productive instruction (e.g. arithmetic instructions).
 /// Bit manipulation instructions like shifts are not ByteProviders, rather
 /// are used to extract Bytes.
-template <typename ISelOp> class ByteProvider {
+class ByteProvider {
 private:
-  ByteProvider(std::optional<ISelOp> Src, int64_t DestOffset, int64_t SrcOffset)
+  ByteProvider(std::optional<SDValue> Src, int64_t DestOffset,
+               int64_t SrcOffset)
       : Src(Src), DestOffset(DestOffset), SrcOffset(SrcOffset) {}
-
-  // TODO -- use constraint in c++20
-  // Does this type correspond with an operation in selection DAG
-  // Only allow classes with member function getOpcode
-  template <typename U>
-  using check_has_getOpcode =
-      decltype(std::declval<std::remove_pointer_t<U> &>().getOpcode());
-
-  template <typename U>
-  static constexpr bool has_getOpcode =
-      is_detected<check_has_getOpcode, U>::value;
 
 public:
   // For constant zero providers Src is set to nullopt. For actual providers
   // Src represents the node which originally produced the relevant bits.
-  std::optional<ISelOp> Src = std::nullopt;
+  std::optional<SDValue> Src = std::nullopt;
   // DestOffset and SrcOffset are producer defined, see DAGCombiner.cpp.
   int64_t DestOffset = 0;
   int64_t SrcOffset = 0;
 
   ByteProvider() = default;
 
-  static ByteProvider getSrc(std::optional<ISelOp> Val, int64_t ByteOffset,
+  static ByteProvider getSrc(std::optional<SDValue> Val, int64_t ByteOffset,
                              int64_t VectorOffset) {
-    static_assert(has_getOpcode<ISelOp>,
-                  "ByteProviders must contain an operation in selection DAG.");
     return ByteProvider(Val, ByteOffset, VectorOffset);
   }
 
   static ByteProvider getConstantZero() {
-    return ByteProvider<ISelOp>(std::nullopt, 0, 0);
+    return ByteProvider(std::nullopt, 0, 0);
   }
   bool isConstantZero() const { return !Src; }
 
@@ -77,17 +63,17 @@ public:
 };
 
 using SDByteProviderRecurseFn =
-    function_ref<std::optional<ByteProvider<SDValue>>(SDValue, unsigned)>;
+    function_ref<std::optional<ByteProvider>(SDValue, unsigned)>;
 
 /// Visits both operands even once one answers, because \p Recurse may have
 /// side effects (DAGCombiner accumulates an and mask there).
-inline std::optional<ByteProvider<SDValue>>
+inline std::optional<ByteProvider>
 calculateByteProviderForOr(SDValue Op, unsigned Index,
                            SDByteProviderRecurseFn Recurse) {
-  std::optional<ByteProvider<SDValue>> LHS = Recurse(Op.getOperand(0), Index);
+  std::optional<ByteProvider> LHS = Recurse(Op.getOperand(0), Index);
   if (!LHS)
     return std::nullopt;
-  std::optional<ByteProvider<SDValue>> RHS = Recurse(Op.getOperand(1), Index);
+  std::optional<ByteProvider> RHS = Recurse(Op.getOperand(1), Index);
   if (!RHS)
     return std::nullopt;
 
@@ -102,7 +88,7 @@ calculateByteProviderForOr(SDValue Op, unsigned Index,
 
 /// \p NarrowBitWidth is a parameter because it is not always the operand
 /// width, for instance sign_extend_inreg takes it from the VTSDNode.
-inline std::optional<ByteProvider<SDValue>>
+inline std::optional<ByteProvider>
 calculateByteProviderForExtend(SDValue Op, unsigned Index,
                                unsigned NarrowBitWidth, bool ZeroFills,
                                SDByteProviderRecurseFn Recurse) {
@@ -112,7 +98,7 @@ calculateByteProviderForExtend(SDValue Op, unsigned Index,
   if (Index >= NarrowBitWidth / 8) {
     if (!ZeroFills)
       return std::nullopt;
-    return ByteProvider<SDValue>::getConstantZero();
+    return ByteProvider::getConstantZero();
   }
   return Recurse(Op.getOperand(0), Index);
 }
