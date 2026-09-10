@@ -60,6 +60,36 @@ func.func @existing_attach_point() {
   return
 }
 
+// A loaded descriptor of an entity that is neither POINTER nor ALLOCATABLE is
+// not named: the specification leaves such a descriptor unmanaged on the
+// device, so it does not describe the mapped object there. The entry is a plain
+// object map, sized from its type.
+// CHECK-LABEL: func.func @loaded_unmanaged_descriptor
+// CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.array<100xf32>>>
+// CHECK: %[[DATA:.*]] = fir.box_addr %[[BOX]]
+// CHECK: %[[SIZE:.*]] = arith.constant 400 : i64
+// CHECK: acc.map_info varPtr(%[[DATA]] : !fir.ref<!fir.array<100xf32>>)
+// CHECK-NOT: varPtrPtr
+// CHECK-NOT: desc(
+// CHECK-SAME: size(%[[SIZE]] : i64)
+// CHECK-SAME: elementSize(4)
+// CHECK-SAME: descKind(none)
+// CHECK-SAME: mapFlags(to)
+// IDEMP-LABEL: func.func @loaded_unmanaged_descriptor
+// IDEMP-COUNT-1: acc.map_info
+// IDEMP-NOT: acc.copyin
+func.func @loaded_unmanaged_descriptor() {
+  %slot = fir.undefined !fir.ref<!fir.box<!fir.array<100xf32>>>
+  %box = fir.load %slot : !fir.ref<!fir.box<!fir.array<100xf32>>>
+  %data = fir.box_addr %box : (!fir.box<!fir.array<100xf32>>) -> !fir.ref<!fir.array<100xf32>>
+  %copy = acc.copyin varPtr(%data : !fir.ref<!fir.array<100xf32>>)
+      dataClause(acc_copyin) name("v") -> !fir.ref<!fir.array<100xf32>>
+  acc.data dataOperands(%copy : !fir.ref<!fir.array<100xf32>>) {
+    acc.terminator
+  }
+  return
+}
+
 // Mapping descriptor storage itself has no second indirection operand. The
 // descriptor is recovered from var and supplies both CFI and ptr_and_obj facts.
 // CHECK-LABEL: func.func @descriptor_storage
