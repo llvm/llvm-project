@@ -1145,6 +1145,10 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   %45 = call float @llvm.vp.reduce.fmax.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.reduce.fmin"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
   %46 = call float @llvm.vp.reduce.fmin.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
+  ; CHECK: "llvm.intr.vp.reduce.fmaximum"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  %fmaximum = call float @llvm.vp.reduce.fmaximum.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
+  ; CHECK: "llvm.intr.vp.reduce.fminimum"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  %fminimum = call float @llvm.vp.reduce.fminimum.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
   ; CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : vector<8xi1>, vector<8xi32>
   %47 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %11, <8 x i32> %0, <8 x i32> %1, i32 %12)
   ; CHECK: "llvm.intr.vp.merge"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi1>, vector<8xi32>, vector<8xi32>, i32) -> vector<8xi32>
@@ -1969,6 +1973,8 @@ declare i32 @llvm.vp.reduce.umin.v8i32(i32, <8 x i32>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fadd.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmul.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmax.v8f32(float, <8 x float>, <8 x i1>, i32)
+declare float @llvm.vp.reduce.fmaximum.v8f32(float, <8 x float>, <8 x i1>, i32)
+declare float @llvm.vp.reduce.fminimum.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmin.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.select.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32)
 declare <8 x i32> @llvm.vp.merge.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32)
