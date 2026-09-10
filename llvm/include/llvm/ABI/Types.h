@@ -262,6 +262,7 @@ public:
   VectorKind getVectorKind() const { return VecKind; }
 
   bool isScalable() const { return NumElements.isScalable(); }
+  bool isFixedLength() const { return !NumElements.isScalable(); }
 
   bool isSVEData() const { return VecKind == VectorKind::SVEData; }
   bool isSVEPredicate() const { return VecKind == VectorKind::SVEPredicate; }
@@ -286,16 +287,9 @@ private:
   const VectorType *Vec;
   unsigned NumVectors;
 
-  static TypeSize computeSizeInBits(const VectorType *Vec,
-                                    unsigned NumVectors) {
-    TypeSize VecSize = Vec->getSizeInBits();
-    return TypeSize(VecSize.getKnownMinValue() * NumVectors,
-                    VecSize.isScalable());
-  }
-
 public:
   TupleType(const VectorType *Vec, unsigned NumVectors)
-      : Type(TypeKind::Tuple, computeSizeInBits(Vec, NumVectors),
+      : Type(TypeKind::Tuple, (Vec->getSizeInBits() * NumVectors),
              Vec->getAlignment()),
         Vec(Vec), NumVectors(NumVectors) {}
 

@@ -136,7 +136,7 @@ TEST_F(ABITypesTest, GenericVector) {
 
   EXPECT_EQ(V4I32->getVectorKind(), VectorKind::Generic);
   EXPECT_FALSE(V4I32->isSVEType());
-  EXPECT_FALSE(V4I32->isScalable());
+  EXPECT_TRUE(V4I32->isFixedLength());
   EXPECT_FALSE(V4I32->isTuple());
   EXPECT_EQ(V4I32->getSizeInBits(), TypeSize::getFixed(128));
 }

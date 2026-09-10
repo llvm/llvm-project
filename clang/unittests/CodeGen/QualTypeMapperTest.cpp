@@ -262,7 +262,7 @@ TEST_F(QualTypeMapperSVETest, FixedLengthSVEVectors) {
   EXPECT_EQ(FixedInt32->getSizeInBits(), llvm::TypeSize::getFixed(256));
 
   // Clang derives the element count of a fixed-length predicate by dividing
-  // the vector length in bits by the square of the char width, so a 256-bit
+  // the vector length in bytes by the the char bit width, so a 256-bit
   // vector length gives 4 unsigned char (i8) elements. That is still tagged
   // SVEPredicate, unlike sizeless svbool_t, which uses i1 elements.
   const llvm::abi::VectorType *FixedBool =
