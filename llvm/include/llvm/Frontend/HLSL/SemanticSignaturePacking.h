@@ -25,8 +25,7 @@ static constexpr unsigned MaxSignatureRows = 32;
 static constexpr unsigned MaxSignatureCols = 4;
 
 /// Denotes the element that could not be packed and why.
-class LLVM_ABI SignaturePackingError
-    : public ErrorInfo<SignaturePackingError> {
+class LLVM_ABI SignaturePackingError : public ErrorInfo<SignaturePackingError> {
 public:
   enum ErrorKind {
     SignatureOverflow,
