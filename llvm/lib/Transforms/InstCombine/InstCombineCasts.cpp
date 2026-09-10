@@ -270,9 +270,17 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
     // Don't do this if it would create a PHI node with an illegal type from a
     // legal type.
     if (!Src->getType()->isIntegerTy() || !CI.getType()->isIntegerTy() ||
-        shouldChangeType(CI.getSrcTy(), CI.getType()))
-      if (Instruction *NV = foldOpIntoPhi(CI, PN))
+        shouldChangeType(CI.getSrcTy(), CI.getType())) {
+      bool AllConst =
+          !PN->hasOneUse() && all_of(PN->blocks(), [&](BasicBlock *InBB) {
+            Value *V = simplifyCastInst(
+                CI.getOpcode(), PN->getIncomingValueForBlock(InBB),
+                CI.getType(), SQ.getWithInstruction(InBB->getTerminator()));
+            return V && isa<Constant>(V);
+          });
+      if (Instruction *NV = foldOpIntoPhi(CI, PN, AllConst))
         return NV;
+    }
   }
 
   // Canonicalize a unary shuffle after the cast if neither operation changes

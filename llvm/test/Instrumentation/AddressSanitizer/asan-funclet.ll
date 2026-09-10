@@ -23,7 +23,7 @@ declare i32 @dummyPersonality(...)
 
 define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr @__CxxFrameHandler3 {
 ; CHECK-INLINE-LABEL: define void @FuncletPersonality(
-; CHECK-INLINE-SAME: ptr [[PTRPARAM:%.*]]) #[[ATTR2:[0-9]+]] personality ptr @__CxxFrameHandler3 {
+; CHECK-INLINE-SAME: ptr [[PTRPARAM:%.*]]) #[[ATTR3:[0-9]+]] personality ptr @__CxxFrameHandler3 {
 ; CHECK-INLINE-NEXT:  entry:
 ; CHECK-INLINE-NEXT:    [[TMP0:%.*]] = alloca i64, align 32
 ; CHECK-INLINE-NEXT:    store i64 0, ptr [[TMP0]], align 8
@@ -146,13 +146,12 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    br i1 [[TMP84]], label [[TMP85:%.*]], label [[TMP90:%.*]], !prof [[PROF1]]
 ; CHECK-INLINE:       79:
 ; CHECK-INLINE-NEXT:    [[TMP86:%.*]] = and i64 [[TMP77]], 7
-; CHECK-INLINE-NEXT:    [[TMP87:%.*]] = trunc i64 [[TMP86]] to i8
-; CHECK-INLINE-NEXT:    [[TMP88:%.*]] = icmp sge i8 [[TMP87]], [[TMP83]]
+; CHECK-INLINE-NEXT:    [[TMP88:%.*]] = icmp sge i8 0, [[TMP83]]
 ; CHECK-INLINE-NEXT:    br i1 [[TMP88]], label [[TMP89:%.*]], label [[TMP90]]
-; CHECK-INLINE:       83:
+; CHECK-INLINE:       82:
 ; CHECK-INLINE-NEXT:    call void @__asan_report_store1(i64 [[TMP77]]) #[[ATTR7]]
 ; CHECK-INLINE-NEXT:    unreachable
-; CHECK-INLINE:       84:
+; CHECK-INLINE:       83:
 ; CHECK-INLINE-NEXT:    store volatile i8 0, ptr [[TMP79]], align 1
 ; CHECK-INLINE-NEXT:    invoke void @MayThrowFunc()
 ; CHECK-INLINE-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[EHCLEANUP:%.*]]
@@ -164,15 +163,15 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    store i64 1172321806, ptr [[TMP23]], align 8
 ; CHECK-INLINE-NEXT:    [[TMP93:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-INLINE-NEXT:    br i1 [[TMP93]], label [[TMP94:%.*]], label [[TMP95:%.*]]
-; CHECK-INLINE:       88:
+; CHECK-INLINE:       87:
 ; CHECK-INLINE-NEXT:    call void @__asan_stack_free_8(i64 [[TMP7]], i64 8544)
 ; CHECK-INLINE-NEXT:    br label [[TMP97:%.*]]
-; CHECK-INLINE:       89:
+; CHECK-INLINE:       88:
 ; CHECK-INLINE-NEXT:    call void @__asan_set_shadow_00(i64 [[TMP29]], i64 4)
 ; CHECK-INLINE-NEXT:    [[TMP96:%.*]] = add i64 [[TMP29]], 1028
 ; CHECK-INLINE-NEXT:    call void @__asan_set_shadow_00(i64 [[TMP96]], i64 40)
 ; CHECK-INLINE-NEXT:    br label [[TMP97]]
-; CHECK-INLINE:       91:
+; CHECK-INLINE:       90:
 ; CHECK-INLINE-NEXT:    ret void
 ; CHECK-INLINE:       ehcleanup:
 ; CHECK-INLINE-NEXT:    [[TMP98:%.*]] = cleanuppad within none []
@@ -183,15 +182,14 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    [[TMP102:%.*]] = load i8, ptr [[TMP101]], align 1
 ; CHECK-INLINE-NEXT:    [[TMP103:%.*]] = icmp ne i8 [[TMP102]], 0
 ; CHECK-INLINE-NEXT:    br i1 [[TMP103]], label [[TMP104:%.*]], label [[TMP109:%.*]], !prof [[PROF1]]
-; CHECK-INLINE:       98:
+; CHECK-INLINE:       97:
 ; CHECK-INLINE-NEXT:    [[TMP105:%.*]] = and i64 [[TMP54]], 7
-; CHECK-INLINE-NEXT:    [[TMP106:%.*]] = trunc i64 [[TMP105]] to i8
-; CHECK-INLINE-NEXT:    [[TMP107:%.*]] = icmp sge i8 [[TMP106]], [[TMP102]]
+; CHECK-INLINE-NEXT:    [[TMP107:%.*]] = icmp sge i8 0, [[TMP102]]
 ; CHECK-INLINE-NEXT:    br i1 [[TMP107]], label [[TMP108:%.*]], label [[TMP109]]
-; CHECK-INLINE:       102:
+; CHECK-INLINE:       100:
 ; CHECK-INLINE-NEXT:    call void @__asan_report_store1(i64 [[TMP54]]) #[[ATTR7]] [ "funclet"(token [[TMP98]]) ]
 ; CHECK-INLINE-NEXT:    unreachable
-; CHECK-INLINE:       103:
+; CHECK-INLINE:       101:
 ; CHECK-INLINE-NEXT:    store volatile i8 0, ptr [[TMP56]], align 1
 ; CHECK-INLINE-NEXT:    call void @__asan_poison_stack_memory(i64 [[TMP54]], i64 4) [ "funclet"(token [[TMP98]]) ]
 ; CHECK-INLINE-NEXT:    call void @DeInit(ptr [[TMP14]]) [ "funclet"(token [[TMP98]]) ]
@@ -214,27 +212,27 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    [[TMP120:%.*]] = load i8, ptr [[TMP119]], align 1
 ; CHECK-INLINE-NEXT:    [[TMP121:%.*]] = icmp ne i8 [[TMP120]], 0
 ; CHECK-INLINE-NEXT:    br i1 [[TMP121]], label [[TMP122:%.*]], label [[TMP127:%.*]], !prof [[PROF1]]
-; CHECK-INLINE:       118:
+; CHECK-INLINE:       116:
 ; CHECK-INLINE-NEXT:    [[TMP123:%.*]] = and i64 [[TMP116]], 7
 ; CHECK-INLINE-NEXT:    [[TMP124:%.*]] = trunc i64 [[TMP123]] to i8
 ; CHECK-INLINE-NEXT:    [[TMP125:%.*]] = icmp sge i8 [[TMP124]], [[TMP120]]
 ; CHECK-INLINE-NEXT:    br i1 [[TMP125]], label [[TMP126:%.*]], label [[TMP127]]
-; CHECK-INLINE:       122:
+; CHECK-INLINE:       120:
 ; CHECK-INLINE-NEXT:    call void @__asan_report_store_n(i64 [[TMP116]], i64 8) #[[ATTR7]] [ "funclet"(token [[TMP98]]) ]
 ; CHECK-INLINE-NEXT:    unreachable
-; CHECK-INLINE:       123:
+; CHECK-INLINE:       121:
 ; CHECK-INLINE-NEXT:    [[TMP128:%.*]] = lshr i64 [[TMP114]], 3
 ; CHECK-INLINE-NEXT:    [[TMP129:%.*]] = add i64 [[TMP128]], [[TMP1]]
 ; CHECK-INLINE-NEXT:    [[TMP130:%.*]] = inttoptr i64 [[TMP129]] to ptr
 ; CHECK-INLINE-NEXT:    [[TMP131:%.*]] = load i8, ptr [[TMP130]], align 1
 ; CHECK-INLINE-NEXT:    [[TMP132:%.*]] = icmp ne i8 [[TMP131]], 0
 ; CHECK-INLINE-NEXT:    br i1 [[TMP132]], label [[TMP133:%.*]], label [[EHEXIT:%.*]], !prof [[PROF1]]
-; CHECK-INLINE:       129:
+; CHECK-INLINE:       127:
 ; CHECK-INLINE-NEXT:    [[TMP134:%.*]] = and i64 [[TMP114]], 7
 ; CHECK-INLINE-NEXT:    [[TMP135:%.*]] = trunc i64 [[TMP134]] to i8
 ; CHECK-INLINE-NEXT:    [[TMP136:%.*]] = icmp sge i8 [[TMP135]], [[TMP131]]
 ; CHECK-INLINE-NEXT:    br i1 [[TMP136]], label [[TMP137:%.*]], label [[EHEXIT]]
-; CHECK-INLINE:       133:
+; CHECK-INLINE:       131:
 ; CHECK-INLINE-NEXT:    call void @__asan_report_store_n(i64 [[TMP114]], i64 8) #[[ATTR7]] [ "funclet"(token [[TMP98]]) ]
 ; CHECK-INLINE-NEXT:    unreachable
 ; CHECK-INLINE:       ehexit:
@@ -247,19 +245,19 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    store i64 1172321806, ptr [[TMP23]], align 8
 ; CHECK-INLINE-NEXT:    [[TMP142:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-INLINE-NEXT:    br i1 [[TMP142]], label [[TMP143:%.*]], label [[TMP144:%.*]]
-; CHECK-INLINE:       139:
+; CHECK-INLINE:       137:
 ; CHECK-INLINE-NEXT:    call void @__asan_stack_free_8(i64 [[TMP7]], i64 8544) [ "funclet"(token [[TMP98]]) ]
 ; CHECK-INLINE-NEXT:    br label [[TMP146:%.*]]
-; CHECK-INLINE:       140:
+; CHECK-INLINE:       138:
 ; CHECK-INLINE-NEXT:    call void @__asan_set_shadow_00(i64 [[TMP29]], i64 4) [ "funclet"(token [[TMP98]]) ]
 ; CHECK-INLINE-NEXT:    [[TMP145:%.*]] = add i64 [[TMP29]], 1028
 ; CHECK-INLINE-NEXT:    call void @__asan_set_shadow_00(i64 [[TMP145]], i64 40) [ "funclet"(token [[TMP98]]) ]
 ; CHECK-INLINE-NEXT:    br label [[TMP146]]
-; CHECK-INLINE:       142:
+; CHECK-INLINE:       140:
 ; CHECK-INLINE-NEXT:    cleanupret from [[TMP98]] unwind to caller
 ;
 ; CHECK-OUTLINE-LABEL: define void @FuncletPersonality(
-; CHECK-OUTLINE-SAME: ptr [[PTRPARAM:%.*]]) #[[ATTR2:[0-9]+]] personality ptr @__CxxFrameHandler3 {
+; CHECK-OUTLINE-SAME: ptr [[PTRPARAM:%.*]]) #[[ATTR3:[0-9]+]] personality ptr @__CxxFrameHandler3 {
 ; CHECK-OUTLINE-NEXT:  entry:
 ; CHECK-OUTLINE-NEXT:    [[TMP0:%.*]] = alloca i64, align 32
 ; CHECK-OUTLINE-NEXT:    store i64 0, ptr [[TMP0]], align 8
@@ -483,7 +481,7 @@ nopredecessor:
 ; Non-Windows personality, ensure no funclet gets attached to asan runtime call.
 define void @OtherPersonality(ptr %ptrParam) sanitize_address personality ptr @dummyPersonality {
 ; CHECK-LABEL: define void @OtherPersonality(
-; CHECK-SAME: ptr [[PTRPARAM:%.*]]) #[[ATTR2:[0-9]+]] personality ptr @dummyPersonality {
+; CHECK-SAME: ptr [[PTRPARAM:%.*]]) #[[ATTR3:[0-9]+]] personality ptr @dummyPersonality {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
 ; CHECK-NEXT:    [[ASAN_LOCAL_STACK_BASE:%.*]] = alloca i64, align 8
