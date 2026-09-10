@@ -659,10 +659,10 @@ define half @test_si_si_i16_mul_fail_overflow(i16 noundef %x_in, i16 noundef %y_
 
 define half @test_si_si_i16_mul_C_fail_overflow(i16 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i16_mul_C_fail_overflow(
-; CHECK-NEXT:    [[X:%.*]] = or i16 [[X_IN:%.*]], -129
+; CHECK-NEXT:    [[X1:%.*]] = shl i16 [[X_IN:%.*]], 7
+; CHECK-NEXT:    [[X:%.*]] = or i16 [[X1]], -16512
 ; CHECK-NEXT:    [[XF:%.*]] = sitofp i16 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 1.280000e+02
-; CHECK-NEXT:    ret half [[R]]
+; CHECK-NEXT:    ret half [[XF]]
 ;
   %x = or i16 %x_in, -129
   %xf = sitofp i16 %x to half
