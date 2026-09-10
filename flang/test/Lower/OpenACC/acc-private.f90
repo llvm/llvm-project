@@ -436,6 +436,7 @@ program acc_private
 
 ! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@firstprivatization_ref_100xf32) name("b") -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.parallel {{.*}} firstprivate(%[[FP_B]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
 ! CHECK: acc.yield
 
   !$acc parallel loop firstprivate(b(51:100))
@@ -450,6 +451,8 @@ program acc_private
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) recipe(@firstprivatization_section_lb50.ub99_ref_100xf32) name("b(51:100)") -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.parallel {{.*}} firstprivate(%[[FP_B]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop
 
 end program
 
@@ -563,6 +566,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_firstprivate_assumed_shape
 ! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?xi32>>) recipe(@firstprivatization_box_Uxi32) name("a") -> !fir.box<!fir.array<?xi32>>
 ! CHECK: acc.parallel {{.*}}firstprivate(%[[FIRSTPRIVATE_A]] : !fir.box<!fir.array<?xi32>>) {
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop
 
 subroutine acc_firstprivate_assumed_shape_with_section(a, n)
   integer :: a(:), i, n
@@ -576,6 +581,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_firstprivate_assumed_shape_with_section
 ! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?xi32>>) bounds(%{{.*}}) recipe(@firstprivatization_section_lb4.ub9_box_Uxi32) name("a(5:10)") -> !fir.box<!fir.array<?xi32>>
 ! CHECK: acc.parallel {{.*}}firstprivate(%[[FIRSTPRIVATE_A]] : !fir.box<!fir.array<?xi32>>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop
 
 subroutine acc_firstprivate_dynamic_extent(a, n)
   integer :: n, i
@@ -590,6 +597,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_firstprivate_dynamic_extent
 ! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?x?x2xi32>>) recipe(@firstprivatization_box_UxUx2xi32) name("a") -> !fir.box<!fir.array<?x?x2xi32>>
 ! CHECK: acc.parallel {{.*}}firstprivate(%[[FIRSTPRIVATE_A]] : !fir.box<!fir.array<?x?x2xi32>>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop
 
 module acc_declare_equivalent
   integer, parameter :: n = 10

@@ -620,3 +620,22 @@ end subroutine
 ! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
 ! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
 ! CHECK: acc.loop combined(serial)
+
+! serial loop is not combined parallel, even with independent.
+subroutine acc_serial_loop_firstprivate_independent
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc serial loop independent firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_independent
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop combined(serial)
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
