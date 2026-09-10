@@ -273,7 +273,7 @@ public:
       }
 
       // Process only VALUs and SALUs
-      bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/false);
+      bool IsVALU = SIInstrInfo::isComputeVALU(*MI);
       bool IsSALU = SIInstrInfo::isSALU(*MI);
       if (!IsVALU && !IsSALU)
         continue;
@@ -510,7 +510,7 @@ public:
         if (MI.isMetaInstruction())
           continue;
 
-        const bool IsVALU = SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false);
+        const bool IsVALU = SIInstrInfo::isComputeVALU(MI);
         const bool IsSALU = SIInstrInfo::isSALU(MI);
         if (!IsVALU && !IsSALU)
           continue;
