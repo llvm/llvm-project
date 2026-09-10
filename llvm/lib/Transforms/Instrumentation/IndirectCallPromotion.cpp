@@ -871,12 +871,41 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
   return true;
 }
 
+// Returns true if the call already dispatches over a statically known set of
+// targets, that is, its callee operand is a phi node whose incoming values are
+// all functions.
+//
+// A switch that selects a handler out of a table of functions and calls it
+// reaches indirect call promotion in this shape, before SimplifyCFG folds the
+// phi into a lookup table. Guarding one of the targets there buys no
+// devirtualization that the compiler could not do on its own, and it costs the
+// lookup table: the guard is threaded back into the switch, the phi's incoming
+// edges no longer share a destination, and every case ends up materializing a
+// function address of its own. A threaded interpreter, which is one such
+// switch per handler, then carries a copy of the whole dispatch table in every
+// handler.
+static bool hasKnownTargetSet(const CallBase &CB) {
+  const auto *Phi = dyn_cast<PHINode>(CB.getCalledOperand());
+  if (!Phi)
+    return false;
+
+  return all_of(Phi->incoming_values(), [](const Value *V) {
+    return isa<Function>(V->stripPointerCasts());
+  });
+}
+
 // Traverse all the indirect-call callsite and get the value profile
 // annotation to perform indirect-call promotion.
 bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
   bool Changed = false;
   ICallPromotionAnalysis ICallAnalysis;
   for (auto *CB : findIndirectCalls(F)) {
+    if (hasKnownTargetSet(*CB)) {
+      LLVM_DEBUG(dbgs() << "Don't promote a call over a known set of targets: "
+                        << *CB << "\n");
+      continue;
+    }
+
     uint32_t NumCandidates;
     uint64_t TotalCount;
     auto ICallProfDataRef = ICallAnalysis.getPromotionCandidatesForInstruction(
