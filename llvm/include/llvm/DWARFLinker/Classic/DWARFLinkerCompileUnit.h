@@ -131,13 +131,7 @@ public:
 
   unsigned getUniqueID() const { return ID; }
 
-  void createOutputDIE() {
-    NewUnit.emplace(OrigUnit.getUnitDIE().getTag());
-
-    // Propogate the section offset so that DIEntry can compute
-    // correct absolute offsets for DW_FORM_ref_addr references
-    NewUnit->setDebugSectionOffset(StartOffset);
-  }
+  void createOutputDIE() { NewUnit.emplace(OrigUnit.getUnitDIE().getTag()); }
 
   DIE *getOutputUnitDIE() const {
     if (NewUnit)
@@ -295,8 +289,8 @@ private:
   std::optional<BasicDIEUnit> NewUnit;
   MCSymbol *LabelBegin = nullptr;
 
-  uint64_t StartOffset;
-  uint64_t NextUnitOffset;
+  uint64_t StartOffset = 0;
+  uint64_t NextUnitOffset = 0;
 
   std::optional<uint64_t> LowPc;
   uint64_t HighPc = 0;
