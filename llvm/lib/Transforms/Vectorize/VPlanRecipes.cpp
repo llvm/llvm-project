@@ -3624,11 +3624,14 @@ VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {},
-                        ExpressionType == ExpressionTypes::TailFoldedInLoopOp
-                            ? ExpressionRecipes.back()->getScalarType()
-                            : cast<VPReductionRecipe>(ExpressionRecipes.back())
-                                  ->getChainOp()
-                                  ->getScalarType()),
+                        [&]() {
+                          if (ExpressionType == ExpressionTypes::FoldedOp)
+                            return ExpressionRecipes.back()->getScalarType();
+                          return cast<VPReductionRecipe>(
+                                     ExpressionRecipes.back())
+                              ->getChainOp()
+                              ->getScalarType();
+                        }()),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -3701,10 +3704,10 @@ SmallVector<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
 
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
-  // Handle expression recipe without in-loop reduction.
-  if (ExpressionType == ExpressionTypes::TailFoldedInLoopOp) {
+  // The last recipes in the chain will be optimized away, so igonre the cost.
+  if (ExpressionType == ExpressionTypes::FoldedOp) {
     InstructionCost Cost = 0;
-    for (auto *R : ExpressionRecipes)
+    for (auto *R : drop_end(ExpressionRecipes))
       Cost += R->cost(VF, Ctx);
     return Cost;
   }
@@ -3780,8 +3783,8 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
             Instruction::ZExt,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
   }
-  case ExpressionTypes::TailFoldedInLoopOp:
-    llvm_unreachable("TailFoldedInLoopOp should be handled early");
+  default:
+    llvm_unreachable("Unsupported VPExpressionRecipe::ExpressionTypes enum");
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
@@ -3812,8 +3815,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "EXPRESSION ";
   printAsOperand(O, SlotTracker);
   O << " = ";
-  // Handle the tail-folded in-loop operation
-  if (ExpressionType == ExpressionTypes::TailFoldedInLoopOp) {
+  if (ExpressionType == ExpressionTypes::FoldedOp) {
     VPSingleDefRecipe *InLoopOp = ExpressionRecipes[0];
     unsigned NumInLoopOps = InLoopOp->getNumOperands();
     O << "vp.merge ";
@@ -3821,11 +3823,10 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     O << ", ";
     auto PrintInLoopOperands = [&]() {
       O << "(";
-      for (unsigned Idx = 0; Idx != NumInLoopOps; ++Idx) {
-        if (Idx != 0)
-          O << ", ";
-        getOperand(Idx)->printAsOperand(O, SlotTracker);
-      }
+      interleaveComma(make_range(op_begin(), op_begin() + NumInLoopOps), O,
+                      [&O, &SlotTracker](VPValue *Op) {
+                        Op->printAsOperand(O, SlotTracker);
+                      });
       O << ")";
     };
 
@@ -3837,13 +3838,13 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       O << Instruction::getOpcodeName(Widen->getOpcode());
       Widen->printFlags(O);
       PrintInLoopOperands();
-    } else {
-      llvm_unreachable("Unsupported in-loop recipe for tail-folded expression");
     }
     O << ", ";
-    getOperand(NumInLoopOps + 1)->printAsOperand(O, SlotTracker);
-    O << ", ";
-    getOperand(NumInLoopOps + 2)->printAsOperand(O, SlotTracker);
+    interleaveComma(make_range(op_begin() + NumInLoopOps + 1,
+                               op_begin() + NumInLoopOps + 3),
+                    O, [&O, &SlotTracker](VPValue *Op) {
+                      Op->printAsOperand(O, SlotTracker);
+                    });
 
     return;
   }

@@ -3583,9 +3583,10 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// extended vector operands, negating the multiplication, performing a
     /// reduction.add on the result, and adding the scalar result to a chain.
     ExtNegatedMulAccReduction,
-    /// Represent an inloop operations with tail-floded select for the outer
-    /// loop reduction.
-    TailFoldedInLoopOp,
+    /// Represent a chain of recipes that the last recipe will be optimized
+    /// away.
+    /// For example A(B(C(...))), LV won't calculate the cost for recipe A.
+    FoldedOp,
   };
 
   /// Type of the expression.
@@ -3644,8 +3645,7 @@ public:
       assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
   }
   VPExpressionRecipe(VPSingleDefRecipe *InLoopOp, VPSingleDefRecipe *VPMerge)
-      : VPExpressionRecipe(ExpressionTypes::TailFoldedInLoopOp,
-                           {InLoopOp, VPMerge}) {}
+      : VPExpressionRecipe(ExpressionTypes::FoldedOp, {InLoopOp, VPMerge}) {}
 
   ~VPExpressionRecipe() override {
     SmallPtrSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;

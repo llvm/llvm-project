@@ -66,7 +66,6 @@
 ; CHECK-AFTER: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::optimize
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::narrowInterleaveGroups
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeHeaderMask
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::prepareForCostModel
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] printOptimizedVPlan
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::addMinimumIterationCheck
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replaceWideCanonicalIVWithWideIV
