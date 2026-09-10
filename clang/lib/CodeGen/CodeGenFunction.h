@@ -303,7 +303,7 @@ public:
   VarBypassDetector Bypasses;
 
   // Addresses of bypassed variables, for re-emitting their
-  // trivial-auto-var-init at a bypassing jump (C++ scope-reentry).
+  // trivial-auto-var-init at a jump that re-enters their scope.
   llvm::SmallDenseMap<const VarDecl *, Address, 4> BypassedVarInits;
 
   // Forward gotos that may bypass a not-yet-emitted declaration;
@@ -1121,10 +1121,6 @@ public:
     SourceRange Range;
     SmallVector<const LabelDecl *, 4> Labels;
     LexicalScope *ParentScope;
-    // Block through which this scope is entered, used to place
-    // trivial-auto-var-init for bypassed variables in C. There can only be one
-    // EntryBlock for a variable.
-    llvm::BasicBlock *EntryBlock = nullptr;
 
     LexicalScope(const LexicalScope &) = delete;
     void operator=(const LexicalScope &) = delete;
@@ -1137,9 +1133,6 @@ public:
       assert(PerformCleanup && "adding label to dead scope?");
       Labels.push_back(label);
     }
-
-    /// The block through which this scope is entered, or null.
-    llvm::BasicBlock *getEntryBlock() const { return EntryBlock; }
 
     /// Exit this cleanup scope, emitting any accumulated
     /// cleanups.
@@ -3577,9 +3570,8 @@ public:
                               QualType::DestructionKind dtorKind);
 
   /// Re-emit trivial-auto-var-init stores for variables bypassed by the jump
-  /// Source (C++ only). No-op in C, where bypassed variables are initialized
-  /// once in the entry block, and in any function with a computed goto, where
-  /// jump sources are unknown and a single function-scope init is used instead.
+  /// Source. No-op in a function containing a computed goto, where jump sources
+  /// are unknown and a single function-scope init is used instead.
   void emitBypassedVarInitsForSource(const Stmt *Source);
 
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
