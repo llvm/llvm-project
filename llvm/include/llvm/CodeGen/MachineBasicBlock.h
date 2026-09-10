@@ -46,7 +46,6 @@ class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class LiveIntervals;
-class LiveVariables;
 class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
@@ -1003,12 +1002,11 @@ public:
   /// Split the critical edge from this block to the given successor block, and
   /// return the newly created block, or null if splitting is not possible.
   ///
-  /// This function updates LiveVariables, MachineDominatorTree, and
+  /// This function updates LiveIntervals, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
   struct SplitCriticalEdgeAnalyses {
     LiveIntervals *LIS;
     SlotIndexes *SI;
-    LiveVariables *LV;
     MachineLoopInfo *MLI;
   };
 
