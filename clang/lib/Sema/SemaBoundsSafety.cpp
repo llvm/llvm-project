@@ -26,6 +26,34 @@ static CountAttributedType::BoundsAttrKind getCountAttrKind(bool CountInBytes,
                 : CountAttributedType::CountedBy;
 }
 
+BoundsAttributedType::BoundsAttrKind
+Sema::getBoundsAttrKind(const BoundsAttrFlags &Flags) {
+  // `ended_by` (Flags.IsEndedBy) has no home on this base; the field exists for
+  // struct parity with the downstream API but is never set here.
+  return getCountAttrKind(Flags.CountInBytes, Flags.OrNull);
+}
+
+Sema::BoundsAttrFlags Sema::getBoundsAttrFlags(AttributeCommonInfo::Kind K) {
+  BoundsAttrFlags Flags;
+  switch (K) {
+  case ParsedAttr::AT_SizedBy:
+    Flags.CountInBytes = true;
+    break;
+  case ParsedAttr::AT_SizedByOrNull:
+    Flags.CountInBytes = true;
+    Flags.OrNull = true;
+    break;
+  case ParsedAttr::AT_CountedBy:
+    break;
+  case ParsedAttr::AT_CountedByOrNull:
+    Flags.OrNull = true;
+    break;
+  default:
+    llvm_unreachable("unexpected bounds attribute kind");
+  }
+  return Flags;
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
   // An unnamed struct is treated as anonymous struct at this point.
@@ -48,6 +76,90 @@ enum class CountedByInvalidPointeeTypeKind {
   FLEXIBLE_ARRAY_MEMBER,
   VALID,
 };
+
+bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                       SourceRange AttrRange,
+                                       BoundsAttrFlags &Flags,
+                                       StringRef AttrSpelling, bool AllowRedecl,
+                                       Expr *AttrArg) {
+  // The downstream leaf runs a `hasBoundsSafetyAttributes()`-gated
+  // `checkBoundsAttrTypeConflictsAndMisc` preamble and an `ended_by` early
+  // path; both depend on machinery (`DynamicRangePointerType`,
+  // `ValueTerminatedType`, the `err_bounds_safety_*` diagnostics) that does not
+  // exist here, so they are the omitted bounds-safety arms. The rest matches.
+  BoundsAttributedType::BoundsAttrKind Kind = getBoundsAttrKind(Flags);
+
+  // counted_by/sized_by: must be pointer or array.
+  if (!Ty->isPointerType() && !Ty->isArrayType()) {
+    Diag(AttrLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << 0;
+    return false;
+  }
+
+  // Arrays with sized_by or _or_null variants are not allowed under the
+  // non -fbounds-safety path; emit the "did you mean to use 'counted_by'" hint.
+  if (!getLangOpts().hasBoundsSafetyAttributes() && Ty->isArrayType() &&
+      (Flags.CountInBytes || Flags.OrNull)) {
+    Diag(AttrLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << /*suggest counted_by*/ 1;
+    return false;
+  }
+
+  // Pointee/element type validation.
+  QualType PointeeTy;
+  int SelectPtrOrArr;
+  if (Ty->isPointerType()) {
+    PointeeTy = Ty->getPointeeType();
+    SelectPtrOrArr = 0;
+  } else {
+    const ArrayType *AT = getASTContext().getAsArrayType(Ty);
+    PointeeTy = AT->getElementType();
+    SelectPtrOrArr = 1;
+  }
+
+  auto InvalidTypeKind = CountedByInvalidPointeeTypeKind::VALID;
+  bool ShouldWarn = false;
+  if (!Flags.CountInBytes && PointeeTy->isAlwaysIncompleteType()) {
+    // Exception: void has an implicit size of 1 byte for pointer arithmetic
+    // (following GNU convention). Therefore, counted_by on void* is allowed
+    // and behaves equivalently to sized_by (treating the count as bytes).
+    if (PointeeTy->isVoidType() && !getLangOpts().hasBoundsSafetyAttributes()) {
+      // Emit a warning that this is a GNU extension.
+      Diag(AttrLoc, diag::ext_gnu_counted_by_void_ptr) << Kind;
+      Diag(AttrLoc, diag::note_gnu_counted_by_void_ptr_use_sized_by) << Kind;
+      Flags.CountInBytes = true;
+      return true;
+    }
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+  } else if (PointeeTy->isSizelessType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
+  } else if (PointeeTy->isFunctionType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
+  } else if (!Flags.CountInBytes &&
+             PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
+    if (Ty->isArrayType() && !getLangOpts().BoundsSafety) {
+      // This is a workaround for the Linux kernel that has already adopted
+      // `counted_by` on a FAM where the pointee is a struct with a FAM. This
+      // should be an error because computing the bounds of the array cannot
+      // be done correctly without manually traversing every struct object in
+      // the array at runtime. To allow the code to be built this error is
+      // downgraded to a warning.
+      ShouldWarn = true;
+    }
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
+  }
+
+  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
+    unsigned DiagID = ShouldWarn
+                          ? diag::warn_counted_by_attr_elt_type_unknown_size
+                          : diag::err_counted_by_attr_pointee_unknown_size;
+    Diag(AttrLoc, DiagID) << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
+                          << (ShouldWarn ? 1 : 0) << Kind << AttrRange;
+    return false;
+  }
+
+  return true;
+}
 
 bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                      bool OrNull) {
