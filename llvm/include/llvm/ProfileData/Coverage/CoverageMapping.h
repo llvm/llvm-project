@@ -113,6 +113,15 @@ struct Counter {
   static const unsigned EncodingTagMask = 0x3;
   static const unsigned EncodingCounterTagAndExpansionRegionTagBits =
       EncodingTagBits + 1;
+  // Bit 2 is used to mark ExpansionRegion (both ExpansionRegion and
+  // MacroExpansionRegion). Bit 3 is used to distinguish MacroExpansionRegion
+  // from ExpansionRegion (Version8+). ExpandedFileID starts at bit 4 for both
+  // types.
+  static const unsigned EncodingExpansionRegionBit = 1 << EncodingTagBits;
+  static const unsigned EncodingMacroExpansionRegionBit =
+      1 << EncodingCounterTagAndExpansionRegionTagBits;
+  static const unsigned EncodingTagBitsMacroExpansion =
+      EncodingCounterTagAndExpansionRegionTagBits + 1;
 
 private:
   CounterKind Kind = Zero;
@@ -257,7 +266,13 @@ struct CounterMappingRegion {
     MCDCDecisionRegion,
 
     /// A Branch Region can be extended to include IDs to facilitate MC/DC.
-    MCDCBranchRegion
+    MCDCBranchRegion,
+
+    /// A MacroExpansionRegion is like an ExpansionRegion but specifically
+    /// represents a macro expansion (as opposed to an #include).
+    /// Added in Version8 to distinguish macro expansions from includes.
+    /// Must be at the end to preserve binary compatibility with old files.
+    MacroExpansionRegion
   };
 
   /// Primary Counter that is also used for Branch Regions (TrueCount).
@@ -286,6 +301,12 @@ struct CounterMappingRegion {
   bool isBranch() const {
     return (Kind == BranchRegion || Kind == MCDCBranchRegion);
   }
+
+  bool isExpansion() const {
+    return Kind == ExpansionRegion || Kind == MacroExpansionRegion;
+  }
+
+  bool isMacroExpansion() const { return Kind == MacroExpansionRegion; }
 
   CounterMappingRegion(Counter Count, unsigned FileID, unsigned ExpandedFileID,
                        unsigned LineStart, unsigned ColumnStart,
@@ -321,10 +342,11 @@ struct CounterMappingRegion {
 
   static CounterMappingRegion
   makeExpansion(unsigned FileID, unsigned ExpandedFileID, unsigned LineStart,
-                unsigned ColumnStart, unsigned LineEnd, unsigned ColumnEnd) {
-    return CounterMappingRegion(Counter(), FileID, ExpandedFileID, LineStart,
-                                ColumnStart, LineEnd, ColumnEnd,
-                                ExpansionRegion);
+                unsigned ColumnStart, unsigned LineEnd, unsigned ColumnEnd,
+                bool IsMacro = false) {
+    return CounterMappingRegion(
+        Counter(), FileID, ExpandedFileID, LineStart, ColumnStart, LineEnd,
+        ColumnEnd, IsMacro ? MacroExpansionRegion : ExpansionRegion);
   }
 
   static CounterMappingRegion
@@ -1484,7 +1506,10 @@ enum CovMapVersion {
   Version6 = 5,
   // Branch regions extended and Decision Regions added for MC/DC.
   Version7 = 6,
-  // The current version is Version7.
+  // MacroExpansionRegion kind added to distinguish macro expansions
+  // from #include expansions.
+  Version8 = 7,
+  // The current version is Version8.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
 

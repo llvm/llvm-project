@@ -1,0 +1,38 @@
+// Test that --ignore-branch-in-macro distinguishes macros from #include
+//
+// The test binary contains:
+// - 1 macro call (CLAMP) producing 2 branches
+// - 1 #include (header_func) producing 2 branches
+// - 1 source-level if producing 2 branches
+// - Total: 8 branches without filter, 4 branches with filter
+//
+// This verifies that macro branches are filtered while #include branches
+// are preserved.
+
+// Test: Verify branch count changes from 8 to 4
+// RUN: llvm-profdata merge %S/Inputs/macro-vs-include.proftext -o %t.profdata
+// RUN: llvm-cov report %S/Inputs/macro-vs-include.o -instr-profile %t.profdata --show-branch-summary -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=WITHOUT-FILTER
+// WITHOUT-FILTER: Branches
+// WITHOUT-FILTER: 8
+
+// RUN: llvm-cov report %S/Inputs/macro-vs-include.o -instr-profile %t.profdata --show-branch-summary --ignore-branch-in-macro -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=WITH-FILTER
+// WITH-FILTER: Branches
+// WITH-FILTER: 4
+
+// Test: Verify LCOV export preserves #include branches but filters macro branches
+// RUN: llvm-cov export --format=lcov %S/Inputs/macro-vs-include.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=LCOV-WITHOUT
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+
+// RUN: llvm-cov export --format=lcov --ignore-branch-in-macro %S/Inputs/macro-vs-include.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=LCOV-WITH
+// LCOV-WITH: BRDA:
+// LCOV-WITH: BRDA:
+// LCOV-WITH: BRDA:
+// LCOV-WITH: BRDA:
+// LCOV-WITH-NOT: BRDA:
