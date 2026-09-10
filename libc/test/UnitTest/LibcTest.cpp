@@ -314,11 +314,27 @@ bool test_str_eq(const char *LHS, const char *RHS, const char *LHSStr,
                    RHSStr, Loc);
 }
 
+bool test_str_eq(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::EQ,
+                   LHS ? cpp::wstring_view(LHS) : cpp::wstring_view(),
+                   RHS ? cpp::wstring_view(RHS) : cpp::wstring_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
 bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc) {
   return test_impl(internal::current_context, TestCond::NE,
                    LHS ? cpp::string_view(LHS) : cpp::string_view(),
                    RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
+bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::NE,
+                   LHS ? cpp::wstring_view(LHS) : cpp::wstring_view(),
+                   RHS ? cpp::wstring_view(RHS) : cpp::wstring_view(), LHSStr,
                    RHSStr, Loc);
 }
 
