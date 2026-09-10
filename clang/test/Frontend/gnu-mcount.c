@@ -8,6 +8,8 @@
 // RUN: %clang -Xclang -disable-llvm-passes -target armv7-unknown-linux-musleabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI
 // RUN: %clang -Xclang -disable-llvm-passes -target armv7-unknown-linux-gnueabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-MEABI-GNU
 // RUN: %clang -Xclang -disable-llvm-passes -target armv7-unknown-linux-gnueabi -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-MEABI-GNU
+// An explicit -meabi=5 overrides the gnueabi environment default and selects the plain mcount name.
+// RUN: %clang -Xclang -disable-llvm-passes -target armv7-unknown-linux-gnueabi -meabi 5 -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI
 // RUN: %clang -Xclang -disable-llvm-passes --target=aarch64-unknown-linux -pg -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,UNDER
 // RUN: %clang -Xclang -disable-llvm-passes -target armv7-unknown-linux-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-MEABI-GNU
 // RUN: %clang -Xclang -disable-llvm-passes -target armv7-unknown-linux-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-MEABI-GNU
