@@ -1055,15 +1055,16 @@ define void @bounded_mul_huge_scale_as1(ptr addrspace(1) %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep = getelementptr inbounds i8, ptr addrspace(1) %a, i128 %off:
-; CHECK-NEXT:        ((36893488147419103232 * (zext i2 {0,+,1}<%loop> to i128))<nuw><nsw> + %a)<nuw>
-; CHECK-NEXT:        --> {%a,+,36893488147419103232}<nw><%loop>
+; CHECK-NEXT:        ((147573952589676412928 * (zext i2 {0,+,1}<%loop> to i128))<nuw><nsw> + %a)<nuw>
+; CHECK-NEXT:        --> {%a,+,147573952589676412928}<nw><%loop>
 ;
 entry:
   br label %loop
 loop:
   %iv = phi i128 [ 0, %entry ], [ %iv.next, %loop ]
   %idx = urem i128 %iv, 4
-  %off = mul i128 %idx, 36893488147419103232
+  ; Huge enough for the stride in elements (not bytes!) to be out of i64 range:
+  %off = mul i128 %idx, u0x80000000000000000
   %gep = getelementptr inbounds i8, ptr addrspace(1) %a, i128 %off
   %ld = load i64, ptr addrspace(1) %gep, align 8
   %add = add i64 %ld, 1
