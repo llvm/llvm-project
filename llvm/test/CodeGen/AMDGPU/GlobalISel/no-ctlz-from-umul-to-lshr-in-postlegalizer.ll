@@ -11,7 +11,6 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    s_mov_b32 s8, 16
 ; CHECK-NEXT:    s_mov_b32 s11, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s11
-; CHECK-NEXT:    v_cvt_f32_ubyte0_e64 v2, v2
 ; CHECK-NEXT:    v_rcp_iflag_f32_e64 v2, v2
 ; CHECK-NEXT:    s_mov_b32 s5, 0x4f7ffffe
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
@@ -25,7 +24,6 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    s_mov_b32 s6, 2
 ; CHECK-NEXT:    s_add_i32 s4, s4, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s11
-; CHECK-NEXT:    v_cvt_f32_ubyte0_e64 v2, v2
 ; CHECK-NEXT:    v_rcp_iflag_f32_e64 v2, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mul_f32_e64 v2, v2, v3
@@ -36,7 +34,6 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    s_mul_hi_u32 s7, s7, s8
 ; CHECK-NEXT:    s_add_i32 s9, s7, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s11
-; CHECK-NEXT:    v_cvt_f32_ubyte0_e64 v2, v2
 ; CHECK-NEXT:    v_rcp_iflag_f32_e64 v2, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mul_f32_e64 v2, v2, v3
@@ -47,7 +44,6 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    s_mul_hi_u32 s7, s7, s8
 ; CHECK-NEXT:    s_add_i32 s7, s7, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s11
-; CHECK-NEXT:    v_cvt_f32_ubyte0_e64 v2, v2
 ; CHECK-NEXT:    v_rcp_iflag_f32_e64 v2, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mul_f32_e64 v2, v2, v3

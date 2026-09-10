@@ -397,6 +397,57 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
   return RValue::get(result);
 }
 
+mlir::Value CIRGenFunction::emitAtomicCmpXchg(const CallExpr *e,
+                                              bool returnBool,
+                                              cir::MemOrder successOrder,
+                                              cir::MemOrder failureOrder,
+                                              cir::SyncScopeKind scope) {
+  Address destAddr = checkAtomicAlignment(*this, e);
+  CIRGenBuilderTy &builder = getBuilder();
+  mlir::Value destValue = destAddr.emitRawPointer();
+  mlir::Value expected = emitScalarExpr(e->getArg(1));
+  mlir::Value desired = emitScalarExpr(e->getArg(2));
+
+  auto cmpxchg = cir::AtomicCmpXchgOp::create(
+      builder, getLoc(e->getSourceRange()), destValue, expected, desired,
+      successOrder, failureOrder, scope,
+      /*alignment=*/nullptr, /*weak=*/false, /*is_volatile=*/false);
+
+  if (returnBool)
+    return cmpxchg.getSuccess();
+  return cmpxchg.getOld();
+}
+
+/// Emit a `cir.atomic.xchg` for __sync_swap_N and __sync_lock_test_and_set_N.
+static RValue emitAtomicXchg(CIRGenFunction &cgf, const CallExpr *e,
+                             cir::MemOrder ordering) {
+  Address destAddr = checkAtomicAlignment(cgf, e);
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value destValue = destAddr.emitRawPointer();
+  mlir::Value val = cgf.emitScalarExpr(e->getArg(1));
+
+  auto xchg = cir::AtomicXchgOp::create(
+      builder, cgf.getLoc(e->getSourceRange()), destValue, val, ordering,
+      cir::SyncScopeKind::System, /*is_volatile=*/false);
+  return RValue::get(xchg.getResult());
+}
+
+/// Emit a release store of 0 for __sync_lock_release_N.
+static void emitAtomicLockRelease(CIRGenFunction &cgf, const CallExpr *e) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  Address destAddr = checkAtomicAlignment(cgf, e);
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  mlir::Type elemTy = destAddr.getElementType();
+  mlir::Value zero = builder.getConstant(loc, builder.getZeroInitAttr(elemTy));
+  auto orderAttr =
+      cir::MemOrderAttr::get(&cgf.getMLIRContext(), cir::MemOrder::Release);
+  auto scopeAttr = cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(),
+                                               cir::SyncScopeKind::System);
+  builder.createStore(loc, zero, destAddr, /*isVolatile=*/false,
+                      /*isNontemporal=*/false,
+                      /*align=*/mlir::IntegerAttr{}, scopeAttr, orderAttr);
+}
+
 static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
                               cir::SyncScopeKind syncScope) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
@@ -584,11 +635,11 @@ static RValue errorBuiltinNYI(CIRGenFunction &cgf, const CallExpr *e,
   if (cgf.getContext().BuiltinInfo.isLibFunction(builtinID)) {
     cgf.cgm.errorNYI(
         e->getSourceRange(),
-        std::string("unimplemented X86 library function builtin call: ") +
+        std::string("unimplemented library function builtin call: ") +
             cgf.getContext().BuiltinInfo.getName(builtinID));
   } else {
     cgf.cgm.errorNYI(e->getSourceRange(),
-                     std::string("unimplemented X86 builtin call: ") +
+                     std::string("unimplemented builtin call: ") +
                          cgf.getContext().BuiltinInfo.getName(builtinID));
   }
 
@@ -1123,6 +1174,27 @@ static mlir::Type correctIntegerSignedness(mlir::Type iitType, QualType astType,
     return cir::IntType::get(context, intTy.getWidth(), /*isSigned=*/false);
 
   return iitType;
+}
+
+/// Helper function to correct the return type for intrinsic calls. This is
+/// needed because the AST FunctionDecl may have a different return type than
+/// the intrinsic's IIT descriptor. For example, builtins may need their
+/// signedness corrected, or a builtin may return a bool while the intrinsic
+/// returns an i1.
+static mlir::Type correctReturnType(mlir::Type iitType,
+                                    const FunctionDecl *funcDecl,
+                                    mlir::MLIRContext *context) {
+  if (!funcDecl)
+    return iitType;
+  QualType astType = funcDecl->getReturnType();
+
+  // Relabel the return type to cir.bool if the builtin returns a bool and
+  // the intrinsic returns an i1.
+  auto intTy = mlir::dyn_cast<cir::IntType>(iitType);
+  if (intTy && intTy.getWidth() == 1 && astType->isBooleanType())
+    return cir::BoolType::get(context);
+
+  return correctIntegerSignedness(iitType, astType, context);
 }
 
 static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
@@ -1662,20 +1734,20 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_coro_end:
     return RValue::get(emitCoroEndBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_promise:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
-    return getUndefRValue(e->getType());
-  case Builtin::BI__builtin_coro_resume:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_resume NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroPromiseBuiltinCall(e).getResult());
+  case Builtin::BI__builtin_coro_resume: {
+    emitCoroResumeBuiltinCall(e);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_coro_noop:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
     return getUndefRValue(e->getType());
-  case Builtin::BI__builtin_coro_destroy:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_destroy NYI");
-    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_destroy: {
+    emitCoroDestroyBuiltinCall(e);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_coro_done:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_done NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroDoneBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_suspend:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
     return getUndefRValue(e->getType());
@@ -2355,7 +2427,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_test_and_set:
   case Builtin::BI__sync_lock_release:
   case Builtin::BI__sync_swap:
-    return errorBuiltinNYI(*this, e, builtinID);
+    llvm_unreachable("Shouldn't make it through sema");
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
   case Builtin::BI__sync_fetch_and_add_4:
@@ -2443,26 +2515,32 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_val_compare_and_swap_2:
   case Builtin::BI__sync_val_compare_and_swap_4:
   case Builtin::BI__sync_val_compare_and_swap_8:
-  case Builtin::BI__sync_val_compare_and_swap_16:
+    return RValue::get(emitAtomicCmpXchg(e, /*returnBool=*/false));
   case Builtin::BI__sync_bool_compare_and_swap_1:
   case Builtin::BI__sync_bool_compare_and_swap_2:
   case Builtin::BI__sync_bool_compare_and_swap_4:
   case Builtin::BI__sync_bool_compare_and_swap_8:
-  case Builtin::BI__sync_bool_compare_and_swap_16:
+    return RValue::get(emitAtomicCmpXchg(e, /*returnBool=*/true));
   case Builtin::BI__sync_swap_1:
   case Builtin::BI__sync_swap_2:
   case Builtin::BI__sync_swap_4:
   case Builtin::BI__sync_swap_8:
-  case Builtin::BI__sync_swap_16:
+    return emitAtomicXchg(*this, e, cir::MemOrder::SequentiallyConsistent);
   case Builtin::BI__sync_lock_test_and_set_1:
   case Builtin::BI__sync_lock_test_and_set_2:
   case Builtin::BI__sync_lock_test_and_set_4:
   case Builtin::BI__sync_lock_test_and_set_8:
-  case Builtin::BI__sync_lock_test_and_set_16:
+    return emitAtomicXchg(*this, e, cir::MemOrder::SequentiallyConsistent);
   case Builtin::BI__sync_lock_release_1:
   case Builtin::BI__sync_lock_release_2:
   case Builtin::BI__sync_lock_release_4:
   case Builtin::BI__sync_lock_release_8:
+    emitAtomicLockRelease(*this, e);
+    return RValue::get(nullptr);
+  case Builtin::BI__sync_val_compare_and_swap_16:
+  case Builtin::BI__sync_bool_compare_and_swap_16:
+  case Builtin::BI__sync_swap_16:
+  case Builtin::BI__sync_lock_test_and_set_16:
   case Builtin::BI__sync_lock_release_16:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__sync_synchronize: {
@@ -2995,14 +3073,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       args.push_back(argValue);
     }
 
-    // Correct return type signedness based on AST return type before creating
-    // the call, avoiding unnecessary casts in the IR.
-    mlir::Type correctedReturnType = intrinsicType.getReturnType();
-    if (fd) {
-      correctedReturnType =
-          correctIntegerSignedness(intrinsicType.getReturnType(),
-                                   fd->getReturnType(), &getMLIRContext());
-    }
+    // Correct the builtin type based on the AST function declaration's return
+    // type, if available.
+    mlir::Type correctedReturnType =
+        correctReturnType(intrinsicType.getReturnType(), fd, &getMLIRContext());
 
     cir::LLVMIntrinsicCallOp intrinsicCall = cir::LLVMIntrinsicCallOp::create(
         builder, getLoc(e->getExprLoc()), builder.getStringAttr(name),

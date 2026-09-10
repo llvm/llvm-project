@@ -130,7 +130,7 @@ Register llvm::constrainOperandRegClass(
     // register types (E.g., AMDGPU's VGPR and AGPR). The regbank ambiguity
     // resolved by targets during regbankselect should not be overridden.
     if (const auto *SubRC = TRI.getCommonSubClass(
-            OpRC, TRI.getConstrainedRegClassForOperand(RegMO, MRI)))
+            OpRC, TRI.getConstrainedRegClassForReg(Reg, MRI)))
       OpRC = SubRC;
 
     OpRC = TRI.getAllocatableClass(OpRC);
@@ -1160,8 +1160,8 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
       int GCDMinElts = std::gcd(OrigTy.getElementCount().getKnownMinValue(),
                                 TargetTy.getElementCount().getKnownMinValue());
       // Prefer the original element type.
-      ElementCount Mul = OrigTy.getElementCount().multiplyCoefficientBy(
-          TargetTy.getElementCount().getKnownMinValue());
+      ElementCount Mul = OrigTy.getElementCount() *
+                         TargetTy.getElementCount().getKnownMinValue();
       return LLT::vector(Mul.divideCoefficientBy(GCDMinElts),
                          OrigTy.getElementType());
     }

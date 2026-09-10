@@ -38,9 +38,8 @@ LIBC_INLINE ErrorOr<char *> asctime(const tm *timeptr, char *buffer,
       timeptr->tm_mon > (time_constants::MONTHS_PER_YEAR - 1))
     return cpp::unexpected(EINVAL);
 
-  printf_core::DropOverflowBuffer wb(buffer,
-                                     buffer_length > 0 ? buffer_length - 1 : 0);
-  printf_core::Writer writer(wb);
+  printf_core::Writer writer = printf_core::make_drop_overflow_writer(
+      buffer, (buffer_length > 0 ? buffer_length - 1 : 0));
 
   auto res = strftime_core::strftime_main(&writer, "%a %b %e %T %Y\n", timeptr);
   if (!res.has_value())
