@@ -157,6 +157,24 @@
 # RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=in.rel-gc.o out.rel-gc /dev/null
 # RUN: llvm-readelf -Ssg in.rel-gc.o | FileCheck --check-prefix=IN %s
 
+## Check link with environment variable LLD_REPRODUCE set.
+# RUN: env LLD_REPRODUCE=repro.tar ld.lld -e main -o out.repro main.o foo.o shared.so
+# RUN: tar tf repro.tar | FileCheck --check-prefix=REPRO %s
+# RUN: tar xOf repro.tar repro/response.txt | FileCheck --check-prefix=RSP %s
+
+# REPRO:      repro/response.txt
+# REPRO-NEXT: repro/version.txt
+# REPRO-NEXT: repro/{{.*}}/main.o
+# REPRO-NEXT: repro/{{.*}}/foo.o
+# REPRO-NEXT: repro/{{.*}}/shared.so
+
+# RSP:      --chroot .
+# RSP-NEXT: --entry main
+# RSP-NEXT: -o out.repro
+# RSP-NEXT: {{.*}}/main.o
+# RSP-NEXT: {{.*}}/foo.o
+# RSP-NEXT: {{.*}}/shared.so
+
 #--- main.s
 ## Optimized version of "main"
 
