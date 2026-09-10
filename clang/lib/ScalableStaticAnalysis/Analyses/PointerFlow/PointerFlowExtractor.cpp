@@ -119,7 +119,7 @@ llvm::Error PointerFlowEdgeBuilder::handleRHSAndAddEdges(
 
     for (DeclPointerLevel &DPL : Copy)
       DPL.PointerLevel += ArrayElementIndirectLevel;
-    return addEdges(Copy, translateDeclPointerLevel(RHS, Ctx, Extractor));
+    return addEdges(Copy, translateDeclPointerLevel(RHS, Ctx));
   }
 
   llvm::Error Err = llvm::Error::success();
@@ -134,7 +134,7 @@ llvm::Error PointerFlowEdgeBuilder::handleRHSAndAddEdges(
 
 llvm::Error PointerFlowEdgeBuilder::operator()(const Expr *LHS,
                                                const Expr *RHS) {
-  auto LVec = translateDeclPointerLevel(LHS, Ctx, Extractor);
+  auto LVec = translateDeclPointerLevel(LHS, Ctx);
   if (!LVec)
     return LVec.takeError();
   return handleRHSAndAddEdges(*LVec, RHS);
