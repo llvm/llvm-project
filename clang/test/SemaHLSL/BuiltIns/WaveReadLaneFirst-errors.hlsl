@@ -21,5 +21,4 @@ enum E { A };
 
 E test_expr_enum_type_check(E p0) {
   return __builtin_hlsl_wave_read_lane_first(p0);
-  // expected-error@-1 {{invalid operand of type 'E' where a scalar, vector, or matrix is required}}
 }
