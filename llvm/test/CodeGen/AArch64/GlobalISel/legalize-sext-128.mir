@@ -13,11 +13,11 @@ name:            foo
 body:             |
   bb.1 (%ir-block.1):
     liveins: $x0
-    %namedVReg4352:_(s64) = COPY $x0
-    %namedVReg1356:_(s128) = G_CONSTANT i128 0
-    %namedVReg1355:_(s128) = G_SEXT %namedVReg4352(s64)
-    %namedVReg1354:_(s1) = G_ICMP intpred(sle), %namedVReg1355(s128), %namedVReg1356
-    %namedVReg1353:_(s32) = G_SEXT %namedVReg1354(s1)
-    $w0 = COPY %namedVReg1353(s32)
+    %namedVReg4352:_(i64) = COPY $x0
+    %namedVReg1356:_(i128) = G_CONSTANT i128 0
+    %namedVReg1355:_(i128) = G_SEXT %namedVReg4352(i64)
+    %namedVReg1354:_(i1) = G_ICMP intpred(sle), %namedVReg1355(i128), %namedVReg1356
+    %namedVReg1353:_(i32) = G_SEXT %namedVReg1354(i1)
+    $w0 = COPY %namedVReg1353(i32)
     RET_ReallyLR implicit $w0
 ...

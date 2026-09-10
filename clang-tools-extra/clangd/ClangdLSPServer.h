@@ -243,7 +243,7 @@ private:
   /// Used to indicate the ClangdLSPServer is being destroyed.
   std::atomic<bool> IsBeingDestroyed = {false};
 
-  // FIXME: The caching is a temporary solution to get corresponding clangd 
+  // FIXME: The caching is a temporary solution to get corresponding clangd
   // diagnostic from a LSP diagnostic.
   // Ideally, ClangdServer can generate an identifier for each diagnostic,
   // emit them via the LSP's data field (which was newly added in LSP 3.16).

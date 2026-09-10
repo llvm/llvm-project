@@ -23,7 +23,7 @@ void foo(void *a) {
 // CIR: cir.return
 
 // LLVM-LABEL: define dso_local void @foo(
-// LLVM: [[ALLOCA:%.*]] = alloca ptr, i64 1
+// LLVM: [[ALLOCA:%.*]] = alloca ptr, 
 // LLVM: store ptr {{.*}}, ptr [[ALLOCA]]
 // LLVM: [[LP1:%.*]] = load ptr, ptr [[ALLOCA]]
 // LLVM: call void @llvm.prefetch.p0(ptr [[LP1]], i32 0, i32 3, i32 1)

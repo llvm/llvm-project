@@ -40,13 +40,13 @@ define void @scalarize_irregular_types(ptr noalias %p1, ptr noalias %p2) {
 ; ALL-MEMOP-WIDEN-NEXT:    vector.body:
 ; ALL-MEMOP-WIDEN-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep1> = getelementptr ir<%p1>, ir<%iv>
-; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep1>, ir<1>
+; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep1>, ir<1>
 ; ALL-MEMOP-WIDEN-NEXT:      WIDEN ir<%load1> = load vp<[[VP4]]>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep2> = getelementptr ir<%p2>, ir<%iv>
 ; ALL-MEMOP-WIDEN-NEXT:      REPLICATE ir<%load2> = load ir<%gep2>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT-SCALAR ir<%load2.zext> = zext ir<%load2> to i64
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%add> = add ir<%load1>, ir<%load2.zext>
-; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep1>, ir<1>
+; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%gep1>, ir<1>
 ; ALL-MEMOP-WIDEN-NEXT:      WIDEN store vp<[[VP5]]>, ir<%add>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<100>
@@ -104,7 +104,7 @@ define void @irregular_gather(ptr noalias %p, ptr noalias %idx, ptr noalias %out
 ; ALL-MEMOP-WIDEN-NEXT:    vector.body:
 ; ALL-MEMOP-WIDEN-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
-; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%gep.idx>, ir<1>
+; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.idx>, ir<1>
 ; ALL-MEMOP-WIDEN-NEXT:      WIDEN ir<%offset> = load vp<[[VP4]]>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep.p> = getelementptr inbounds ir<%p>, ir<%offset>
 ; ALL-MEMOP-WIDEN-NEXT:      REPLICATE ir<%v> = load ir<%gep.p>

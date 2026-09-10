@@ -49,7 +49,7 @@
 0xc2,0x01,0x98,0xc0,0x09,0x00,0x00,0x00
 # GFX9: s_atc_probe 7, s[4:5], s9               ; encoding: [0xc2,0x01,0x98,0xc0,0x09,0x00,0x00,0x00]
 
-# The SGRP variants can alternatively be encoded with imm=0, soffset_en=1
+# The SGPR variants can alternatively be encoded with imm=0, soffset_en=1
 # and the offset register encoded in the soffset field with the offset
 # field being disregarded.
 0xc2,0x41,0x98,0xc0,0x2e,0x00,0x00,0x12
@@ -70,13 +70,13 @@
 0x41,0x01,0x08,0xc2,0x65,0x00,0x00,0x00
 # GFX9: s_atomic_add s5, s[2:3], s101           ; encoding: [0x41,0x01,0x08,0xc2,0x65,0x00,0x00,0x00]
 
-# The SGRP variants can alternatively be encoded with imm=0, soffset_en=1
+# The SGPR variants can alternatively be encoded with imm=0, soffset_en=1
 # and the offset register encoded in the soffset field with the offset
 # field being disregarded.
 0x41,0x41,0x08,0xc2,0x2e,0x00,0x00,0xca
 # GFX9: s_atomic_add s5, s[2:3], s101           ; encoding: [0x41,0x41,0x08,0xc2,0x00,0x00,0x00,0xca]
 
-# The SGRP variants can alternatively be encoded with imm=0, soffset_en=1
+# The SGPR variants can alternatively be encoded with imm=0, soffset_en=1
 # and the offset register encoded in the soffset field with the offset
 # field being disregarded.
 0x41,0x41,0x09,0xc2,0x2e,0x00,0x00,0xca
@@ -292,7 +292,7 @@
 0x32,0x00,0xa0,0xc0,0x00,0x00,0x00,0x00
 # GFX9: s_dcache_discard s[100:101], s0         ; encoding: [0x32,0x00,0xa0,0xc0,0x00,0x00,0x00,0x00]
 
-# The SGRP variants can alternatively be encoded with imm=0, soffset_en=1
+# The SGPR variants can alternatively be encoded with imm=0, soffset_en=1
 # and the offset register encoded in the soffset field with the offset
 # field being disregarded.
 0x32,0x40,0xa0,0xc0,0x25,0x00,0x00,0x80

@@ -1747,6 +1747,17 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
       is->trim();
 }
 
+// Sections that finalizeAddressDependentContent may add to.
+static bool mayGrowLate(Ctx &ctx, SyntheticSection *sec) {
+  if (sec != ctx.in.relaDyn.get())
+    return false;
+  // Relocations may move here from .relr.auth.dyn.
+  if (ctx.in.relrAuthDyn && ctx.in.relrAuthDyn->isNeeded())
+    return true;
+  // PPC64PILongBranchThunk adds a relative relocation for its .branch_lt entry.
+  return ctx.in.ppc64LongBranchTarget && ctx.arg.picThunk;
+}
+
 // In order to allow users to manipulate linker-synthesized sections,
 // we had to add synthetic sections to the input section list early,
 // even before we make decisions whether they are needed. This allows
@@ -1758,7 +1769,8 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 //
 // To deal with the above problem, this function is called after
 // scanRelocations is called to remove synthetic sections that turn
-// out to be empty.
+// out to be empty. It runs before finalizeAddressDependentContent, which may
+// add to a section mayGrowLate reports.
 static void removeUnusedSyntheticSections(Ctx &ctx) {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. Reverse iterate to find the first synthetic section
@@ -1773,17 +1785,13 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
   auto end =
       std::remove_if(start, ctx.inputSections.end(), [&](InputSectionBase *s) {
         auto *sec = cast<SyntheticSection>(s);
-        if (sec->getParent() && sec->isNeeded())
-          return false;
-        // .relr.auth.dyn relocations may be moved to .rela.dyn in
-        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
-        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
-        // we would fail to remove it here.
-        if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs &&
-            sec == ctx.in.relaDyn.get() && ctx.in.relrAuthDyn &&
-            ctx.in.relrAuthDyn->isNeeded())
+        if ((sec->getParent() && sec->isNeeded()) || mayGrowLate(ctx, sec))
           return false;
         unused.insert(sec);
+        // LinkerScript::discard clears the parent. Losing later additions to
+        // such a section is intended.
+        if (sec->getParent())
+          ctx.removedSyntheticSections.push_back(sec);
         return true;
       });
   ctx.inputSections.erase(end, ctx.inputSections.end());
@@ -2116,6 +2124,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   //    sometimes using forward symbol declarations. We want to set the correct
   //    values. They also might change after adding the thunks.
   finalizeAddressDependentContent();
+
+  // A section dropped as unneeded must have stayed unneeded.
+  assert(llvm::none_of(ctx.removedSyntheticSections,
+                       [](SyntheticSection *sec) { return sec->isNeeded(); }));
 
   // All information needed for OutputSection part of Map file is available.
   if (errCount(ctx))

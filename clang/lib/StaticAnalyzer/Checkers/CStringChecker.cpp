@@ -86,17 +86,13 @@ class CStringChecker
   mutable StringRef CurrentFunctionDescription;
 
 public:
-  // FIXME: The bug types emitted by this checker family have confused garbage
-  // in their Description and Category fields (e.g. `categories::UnixAPI` is
-  // passed as the description in several cases and `uninitialized` is mistyped
-  // as `unitialized`). This should be cleaned up.
-  CheckerFrontendWithBugType NullArg{categories::UnixAPI};
+  CheckerFrontendWithBugType NullArg{"Null pointer argument"};
   CheckerFrontendWithBugType OutOfBounds{"Out-of-bound array access"};
-  CheckerFrontendWithBugType BufferOverlap{categories::UnixAPI,
+  CheckerFrontendWithBugType BufferOverlap{"Overlapping buffers",
                                            "Improper arguments"};
-  CheckerFrontendWithBugType NotNullTerm{categories::UnixAPI};
+  CheckerFrontendWithBugType NotNullTerm{"Not null-terminated string"};
   CheckerFrontendWithBugType UninitializedRead{
-      "Accessing unitialized/garbage values"};
+      "Accessing uninitialized/garbage values"};
 
   StringRef getDebugTag() const override { return "MallocChecker"; }
 
@@ -1074,6 +1070,11 @@ CStringChecker::getStringRefAtRegion(const MemRegion *R) {
   }
   const StringLiteral *Lit = getStringLiteralFromRegion(Base);
   if (!Lit)
+    return std::nullopt;
+  // getBytes() exposes the literal's raw storage, which for wide literals holds
+  // the code units in host byte order (see StringLiteral::getCodeUnit()).
+  // Only narrow literals can be interpreted as a target byte string.
+  if (Lit->getCharByteWidth() != 1)
     return std::nullopt;
   StringRef S = Lit->getBytes();
   if (Offset > S.size())

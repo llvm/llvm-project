@@ -33,6 +33,10 @@ template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
 
 namespace sandboxir {
 
+class InstrMaps;
+
+using BundleTy = SmallVector<Value *, 4>;
+
 class VecUtils {
 public:
   /// \Returns the number of elements in \p Ty. That is the number of lanes if a
@@ -197,6 +201,20 @@ public:
     return LastI;
   }
 
+  /// \Returns the BB iterator after the lowest instruction in \p Vals
+  /// (skipping instructions not in \p BB), or the top of BB if no
+  /// instruction found in \p Vals.
+  static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
+                                                        BasicBlock *BB) {
+    auto *BotI = getLastPHIOrSelf(getLowest(Vals, BB));
+    if (BotI == nullptr)
+      // We are using BB->begin() (or after PHIs) as the fallback insert point.
+      return BB->empty()
+                 ? BB->begin()
+                 : std::next(getLastPHIOrSelf(&*BB->begin())->getIterator());
+    return std::next(BotI->getIterator());
+  }
+
   /// If all values in \p Bndl are of the same scalar type then return it,
   /// otherwise return nullptr.
   static Type *tryGetCommonScalarType(ArrayRef<Value *> Bndl) {
@@ -224,6 +242,14 @@ public:
   }
   /// \Returns the first integer power of 2 that is <= Num.
   LLVM_ABI static unsigned getFloorPowerOf2(unsigned Num);
+
+  /// For each user of lane 0 in \p Bndl, try to form a bundle of matching
+  /// users for all lanes. Returns all complete user bundles found.
+  /// \p Claimed contains instructions that have already been claimed by a
+  /// bundle.
+  LLVM_ABI static SmallVector<BundleTy>
+  getNextUserBundles(ArrayRef<Value *> Bndl, const InstrMaps &IMaps,
+                     SmallPtrSet<Instruction *, 4> &Claimed);
 
   /// Helper struct for `matchPack()`. Describes the instructions and operands
   /// of a pack pattern.
@@ -375,6 +401,38 @@ public:
     bool operator!=(const LaneValueEnumerator &Other) const {
       return !(*this == Other);
     }
+  };
+
+  /// Utility class to collect and erase dead instructions.
+  class DeadInstructionMorgue {
+  public:
+    DeadInstructionMorgue() = default;
+    DeadInstructionMorgue(const DeadInstructionMorgue &) = delete;
+
+    /// Record instructions in \p Bndl that may be dead after vectorization.
+    /// For load/store bundles, also record non-first-lane pointer operands;
+    /// the first lane's pointer is skipped because the vector load/store
+    /// reuses it. Erased later by \c tryEraseDeadInstrs().
+    void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
+
+    /// Erase candidates recorded by \c collectPotentiallyDeadInstrs() that
+    /// now have no uses, then clear the candidate set.
+    void tryEraseDeadInstrs();
+
+#ifndef NDEBUG
+    void print(raw_ostream &OS) const {
+      OS << "DeadInstrCandidates:\n";
+      for (auto *I : DeadInstrCandidates)
+        OS << *I << '\n';
+    }
+    LLVM_DUMP_METHOD void debug() const {
+      print(dbgs());
+      dbgs() << '\n';
+    }
+#endif /* NDEBUG */
+
+  private:
+    DenseSet<Instruction *> DeadInstrCandidates;
   };
 
   /// Helper for creating LaneValueEnumerator ranges. Can be used in for loops

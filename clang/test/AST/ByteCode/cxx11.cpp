@@ -501,3 +501,11 @@ namespace SubPtr {
                                                      // both-note {{subtracted pointers are not elements of the same array}}
   constexpr auto diff8 = &a[1][2].n - (&a[1][2].n + 1);
 }
+
+namespace ConstexprForRangeVar {
+  void f() {
+    int arr[] = {1, 2, 3};
+    for (constexpr int a : arr) {} // both-error {{constexpr variable 'a' must be initialized by a constant expression}} \
+                                   // both-note-re {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+}

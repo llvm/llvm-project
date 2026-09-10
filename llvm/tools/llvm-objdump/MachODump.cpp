@@ -9294,6 +9294,19 @@ static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
   }
 }
 
+static void PrintTargetTripleCommand(MachO::target_triple_command tt,
+                                     const char *Ptr) {
+  PrintLoadCommand(tt.cmd, tt.cmdsize,
+                   tt.cmdsize >= sizeof(struct MachO::target_triple_command),
+                   /*LabelWidth=*/8);
+  if (tt.triple < tt.cmdsize) {
+    const char *P = Ptr + tt.triple;
+    outs() << "  triple " << P << " (offset " << tt.triple << ")\n";
+  } else {
+    outs() << "  triple ?(bad offset " << tt.triple << ")\n";
+  }
+}
+
 static void PrintSourceVersionCommand(MachO::source_version_command sd) {
   PrintLoadCommand(sd.cmd, sd.cmdsize,
                    sd.cmdsize == sizeof(struct MachO::source_version_command),
@@ -10193,6 +10206,10 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
       MachO::build_version_command Bv =
           Obj->getBuildVersionLoadCommand(Command);
       PrintBuildVersionLoadCommand(Obj, Bv, verbose);
+    } else if (Command.C.cmd == MachO::LC_TARGET_TRIPLE) {
+      MachO::target_triple_command Tt =
+          Obj->getTargetTripleLoadCommand(Command);
+      PrintTargetTripleCommand(Tt, Command.Ptr);
     } else if (Command.C.cmd == MachO::LC_SOURCE_VERSION) {
       MachO::source_version_command Sd = Obj->getSourceVersionCommand(Command);
       PrintSourceVersionCommand(Sd);

@@ -3,53 +3,15 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=CHECK,X64
 
 define void @knownbits_zext_in_reg(ptr) nounwind {
-; X86-LABEL: knownbits_zext_in_reg:
-; X86:       # %bb.0: # %BB
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl (%eax), %ecx
-; X86-NEXT:    imull $101, %ecx, %eax
-; X86-NEXT:    shrl $14, %eax
-; X86-NEXT:    imull $177, %ecx, %edx
-; X86-NEXT:    shrl $14, %edx
-; X86-NEXT:    movzbl %al, %ecx
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    .p2align 4
-; X86-NEXT:  .LBB0_1: # %CF
-; X86-NEXT:    # =>This Loop Header: Depth=1
-; X86-NEXT:    # Child Loop BB0_2 Depth 2
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    divb %dl
-; X86-NEXT:    .p2align 4
-; X86-NEXT:  .LBB0_2: # %CF237
-; X86-NEXT:    # Parent Loop BB0_1 Depth=1
-; X86-NEXT:    # => This Inner Loop Header: Depth=2
-; X86-NEXT:    testb %bl, %bl
-; X86-NEXT:    jne .LBB0_2
-; X86-NEXT:    jmp .LBB0_1
-;
-; X64-LABEL: knownbits_zext_in_reg:
-; X64:       # %bb.0: # %BB
-; X64-NEXT:    movzbl (%rdi), %eax
-; X64-NEXT:    imull $101, %eax, %ecx
-; X64-NEXT:    shrl $14, %ecx
-; X64-NEXT:    imull $177, %eax, %edx
-; X64-NEXT:    shrl $14, %edx
-; X64-NEXT:    movzbl %cl, %ecx
-; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    .p2align 4
-; X64-NEXT:  .LBB0_1: # %CF
-; X64-NEXT:    # =>This Loop Header: Depth=1
-; X64-NEXT:    # Child Loop BB0_2 Depth 2
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    divb %dl
-; X64-NEXT:    .p2align 4
-; X64-NEXT:  .LBB0_2: # %CF237
-; X64-NEXT:    # Parent Loop BB0_1 Depth=1
-; X64-NEXT:    # => This Inner Loop Header: Depth=2
-; X64-NEXT:    testb %sil, %sil
-; X64-NEXT:    jne .LBB0_2
-; X64-NEXT:    jmp .LBB0_1
+; CHECK-LABEL: knownbits_zext_in_reg:
+; CHECK:       # %bb.0: # %BB
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB0_1: # %CF237
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:    jmp .LBB0_1
 BB:
   %L5 = load i8, ptr %0
   %Sl9 = select i1 true, i8 %L5, i8 undef

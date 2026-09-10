@@ -21,6 +21,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 
+#include <cstddef>
+#include <functional>
+#include <optional>
+#include <string>
+
 using AccDirectiveSet = Fortran::common::EnumSet<llvm::acc::Directive,
     llvm::acc::Directive_enumSize>;
 
@@ -112,6 +117,8 @@ private:
   std::optional<std::int64_t> getGangDimensionSize(
       DirectiveContext &dirContext);
   void CheckNotInSameOrSubLevelLoopConstruct();
+  void CheckLoopLevelClauseValue(llvm::StringRef clauseName);
+  void CheckLoopLevelClauseKernelsConflicts();
   void CheckRoutineCallInLoop(const Symbol &);
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);

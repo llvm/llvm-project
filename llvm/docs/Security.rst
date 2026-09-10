@@ -37,11 +37,11 @@ username for an individual isn't available, the brackets will be empty.
 
 * Abhay Kanhere (Apple) [@AbhayKanhere]
 * Ahmed Bougacha (Apple) [@ahmedbougacha]
-* Andras Gemes (HighTec EDV Systeme) [@gemesa]
 * Artur Pilipenko (Azul Systems Inc) []
 * Boovaragavan Dasarathan (Nvidia) [@mrragava]
 * Dimitry Andric (individual; FreeBSD) [@DimitryAndric]
 * Ed Maste (individual; FreeBSD) [@emaste]
+* Gabor Spaits (HighTec EDV Systeme) [@spaits]
 * George Burgess IV (Google) [@gburgessiv]
 * Kristof Beyls (ARM) [@kbeyls]
 * Mario Cupelli (HighTec EDV Systeme) [@mariocup]

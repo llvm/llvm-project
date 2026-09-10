@@ -93,6 +93,9 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
     InterfaceMethod<[{
         This method is called to compare types along control-flow edges. By
         default, the types are checked as equal.
+
+        Note: Operations that do not support a certain type for successor
+        operands at all should return "false" if `lhs` / `rhs` is that type.
       }],
       "bool", "areTypesCompatible",
       (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],

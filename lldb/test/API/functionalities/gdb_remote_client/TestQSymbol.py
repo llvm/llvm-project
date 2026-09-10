@@ -74,10 +74,8 @@ class TestQSymbol(GDBRemoteTestBase):
             [
                 ("main", 0x1000),
                 ("local_address", 0x1004),
-                # FIXME: Should return a value.
-                ("global_value", None),
-                # FIXME: Should return a value.
-                ("local_value", None),
+                ("global_value", 0x1234),
+                ("local_value", 0xABCD),
                 ("not_a_symbol", None),
             ]
         )

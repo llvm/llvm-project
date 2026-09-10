@@ -167,8 +167,6 @@ void HexagonLiveVariables::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved("packets");
   MachineFunctionPass::getAnalysisUsage(AU);
 }

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i386-pc-win32 %s -fsyntax-only -verify -fms-extensions -Wno-microsoft -std=c++11
 // RUN: %clang_cc1 %s -fsyntax-only -verify -fms-extensions -Wno-microsoft \
 // RUN:    -std=c++11 -aux-triple x86_64-pc-win32 -fcuda-is-device -xhip \
-// RUN:    -triple amdgcn-amd-amdhsa -target-cpu gfx1200
+// RUN:    -triple amdgpu12.00-amd-amdhsa
 // RUN: %clang_cc1 %s -fsyntax-only -verify -fms-extensions -Wno-microsoft \
 // RUN:    -std=c++11 -aux-triple x86_64-pc-win32 -fcuda-is-device -xhip \
 // RUN:    -triple spirv64-amd-amdhsa

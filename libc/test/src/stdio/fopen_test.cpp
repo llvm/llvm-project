@@ -22,8 +22,7 @@ TEST(LlvmLibcFOpenTest, PrintToFile) {
 
   static constexpr char STRING[] = "A simple string written to a file\n";
   {
-    FILE *file =
-        LIBC_NAMESPACE::fopen(APPEND_LIBC_TEST("testdata/test.txt"), "w");
+    FILE *file = LIBC_NAMESPACE::fopen("testdata/test.txt", "w");
     ASSERT_FALSE(file == nullptr);
     scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
 
@@ -32,8 +31,7 @@ TEST(LlvmLibcFOpenTest, PrintToFile) {
   }
 
   {
-    FILE *file =
-        LIBC_NAMESPACE::fopen(APPEND_LIBC_TEST("testdata/test.txt"), "r");
+    FILE *file = LIBC_NAMESPACE::fopen("testdata/test.txt", "r");
     ASSERT_FALSE(file == nullptr);
     scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
 

@@ -23,11 +23,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Low-level helpers to call the aligned allocation and deallocation functions
 // on the target platform. This is used to implement libc++'s own memory
 // allocation routines -- if you need to allocate memory inside the library,
-// chances are that you want to use `__libcpp_allocate` instead.
+// chances are that you want to use `allocator::allocate` instead.
 //
 // Returns the allocated memory, or `nullptr` on failure.
 inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
-#  if defined(_LIBCPP_MSVCRT_LIKE)
+#  ifdef _WIN32
   return ::_aligned_malloc(__size, __alignment);
 
 // Android only provides aligned_alloc when targeting API 28 or higher.
@@ -51,7 +51,7 @@ inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignmen
 }
 
 inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
-#  if defined(_LIBCPP_MSVCRT_LIKE)
+#  ifdef _WIN32
   ::_aligned_free(__ptr);
 #  else
   ::free(__ptr);

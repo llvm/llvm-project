@@ -4,16 +4,16 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h      \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -o - \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -O1 -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=DEFAULT,CORRECT-DIV-SQRT %s
 
 // Check that we end up with fast math flags set on intrinsic calls
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -menable-no-infs \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -O1 -menable-no-infs \
 // RUN:   -menable-no-nans -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefix=FINITEONLY %s
 
@@ -21,8 +21,8 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -O1 \
 // RUN:   -fno-hip-fp32-correctly-rounded-divide-sqrt -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=DEFAULT,NO-CORRECT-DIV-SQRT %s
 
@@ -164,7 +164,7 @@ namespace user_namespace {
 //
 // NO-CORRECT-DIV-SQRT-LABEL: @test_sqrt_f32(
 // NO-CORRECT-DIV-SQRT-NEXT:  entry:
-// NO-CORRECT-DIV-SQRT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META8:![0-9]+]]
+// NO-CORRECT-DIV-SQRT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META7:![0-9]+]]
 // NO-CORRECT-DIV-SQRT-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_sqrt_f32(float x) {
