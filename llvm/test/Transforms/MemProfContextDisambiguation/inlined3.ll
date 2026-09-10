@@ -59,17 +59,17 @@
 ; REMARKS: created clone _Z1Ab.memprof.1
 ; REMARKS: created clone _Z2XZv.memprof.1
 ; REMARKS: created clone _Z1Mv.memprof.1
-;; Make sure the inlined context in _Z3XZNv, which partially overlaps
-;; trimmed cold context, and also partially overlaps completely
-;; unrelated contexts, correctly calls a cloned version of Z1Ab,
-;; which will call the cold annotated allocation.
-; REMARKS: call in clone _Z3XZNv assigned to call function clone _Z1Ab.memprof.1
 ; REMARKS: call in clone main assigned to call function clone _Z1Mv.memprof.1
 ; REMARKS: call in clone _Z1Mv.memprof.1 assigned to call function clone _Z2XZv.memprof.1
 ; REMARKS: call in clone _Z2XZv.memprof.1 assigned to call function clone _Z1Ab
 ; REMARKS: call in clone main assigned to call function clone _Z1Mv
 ; REMARKS: call in clone _Z1Mv assigned to call function clone _Z2XZv
 ; REMARKS: call in clone _Z2XZv assigned to call function clone _Z1Ab.memprof.1
+;; Make sure the inlined context in _Z3XZNv, which partially overlaps
+;; trimmed cold context, and also partially overlaps completely
+;; unrelated contexts, correctly calls a cloned version of Z1Ab,
+;; which will call the cold annotated allocation.
+; REMARKS: call in clone _Z3XZNv assigned to call function clone _Z1Ab.memprof.1
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Yv assigned to call function clone _Z1Ab
 ; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute notcold

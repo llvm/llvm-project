@@ -233,6 +233,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   else
     BSWAPActions.maxScalar(0, sXLen).lower();
 
+  getActionDefinitionsBuilder(G_CLMUL)
+      .legalFor(ST.hasStdExtZbkc(), {sXLen})
+      .unsupported();
+
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
   auto &CountZerosPoisonActions =
       getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
@@ -637,6 +641,19 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
       .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
       .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
+      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .libcallFor({{s32, s32},
+                   {s64, s32},
+                   {s32, s64},
+                   {s64, s64},
+                   {s32, s128},
+                   {s64, s128}});
+
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
+      .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
+      .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
+      .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
+      .minScalar(0, sXLen)
       .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
       .libcallFor({{s32, s32},
                    {s64, s32},

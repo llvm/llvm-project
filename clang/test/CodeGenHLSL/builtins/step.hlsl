@@ -67,3 +67,12 @@ float4 test_step_float4(float4 p0, float4 p1)
 {
     return step(p0, p1);
 }
+
+// CHECK-LABEL: test_step_float5
+// CHECK: [[CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <5 x float> %p1, %p0
+// CHECK-NEXT: [[SELECT:%.*]] = select reassoc nnan ninf nsz arcp afn <5 x i1> [[CMP]], <5 x float> zeroinitializer, <5 x float> splat (float 1.000000e+00)
+// CHECK-NEXT: ret <5 x float> [[SELECT]]
+vector<float, 5> test_step_float5(vector<float, 5> p0,
+                                  vector<float, 5> p1) {
+    return step(p0, p1);
+}
