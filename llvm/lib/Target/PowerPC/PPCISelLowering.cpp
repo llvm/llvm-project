@@ -1407,6 +1407,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   if (Subtarget.pairedVectorMemops()) {
     addRegisterClass(MVT::v256i1, &PPC::VSRpRCRegClass);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v256i1, Custom);
     setOperationAction(ISD::LOAD, MVT::v256i1, Custom);
     setOperationAction(ISD::STORE, MVT::v256i1, Custom);
   }
@@ -9648,6 +9649,34 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   SDLoc dl(Op);
   BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(Op.getNode());
   assert(BVN && "Expected a BuildVectorSDNode in LowerBUILD_VECTOR");
+
+  if (Op.getValueType() == MVT::v256i1) {
+    // v256i1 represents a pair of VSX registers. Pack the bits into legal
+    // vector elements, since generic stack expansion cannot store i1 elements.
+    SmallVector<SDValue, 8> Words;
+    for (unsigned I = 0; I != 256; I += 32) {
+      SDValue Word = DAG.getConstant(0, dl, MVT::i32);
+      for (unsigned J = 0; J != 32; ++J) {
+        SDValue Bit = Op.getOperand(I + J);
+        if (Bit.isUndef())
+          continue;
+        Bit = DAG.getZExtOrTrunc(Bit, dl, MVT::i32);
+        Bit = DAG.getZeroExtendInReg(Bit, dl, MVT::i1);
+        unsigned Shift = Subtarget.isLittleEndian() ? J : 31 - J;
+        Bit = DAG.getNode(ISD::SHL, dl, MVT::i32, Bit,
+                          DAG.getShiftAmountConstant(Shift, MVT::i32, dl));
+        Word = DAG.getNode(ISD::OR, dl, MVT::i32, Word, Bit);
+      }
+      Words.push_back(Word);
+    }
+    SDValue Lo = DAG.getBuildVector(MVT::v4i32, dl,
+                                    {Words[0], Words[1], Words[2], Words[3]});
+    SDValue Hi = DAG.getBuildVector(MVT::v4i32, dl,
+                                    {Words[4], Words[5], Words[6], Words[7]});
+    if (!Subtarget.isLittleEndian())
+      std::swap(Lo, Hi);
+    return DAG.getNode(PPCISD::PAIR_BUILD, dl, MVT::v256i1, Hi, Lo);
+  }
 
   if (Subtarget.hasP10Vector()) {
     APInt BitMask(32, 0);
