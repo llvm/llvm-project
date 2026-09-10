@@ -310,7 +310,7 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::ConstantInt">
-    <DisplayString>i{Val.BitWidth} {Val.U.VAL}</DisplayString>
+    <DisplayString>i{Val.BitWidth} {Val}</DisplayString>
   </Type>
 
   <Type Name="llvm::IntegerType">
