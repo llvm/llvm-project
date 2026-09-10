@@ -13548,10 +13548,8 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
         "unsupported access of VGPR 'as memory' address space (13); only "
         "dword-aligned whole-dword loads and stores are implemented",
         DL.getDebugLoc()));
-    if (isa<StoreSDNode>(MemOp))
-      return MemOp->getChain();
-    return DAG.getMergeValues(
-        {DAG.getPOISON(Op.getValueType()), MemOp->getChain()}, DL);
+    SmallVector<EVT, 2> ResultTypes(Op->values());
+    return DAG.getErrorMergeValues(ResultTypes, MemOp->getChain(), DL);
   };
 
   if (BitWidth < 32)
