@@ -1532,7 +1532,8 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   return false;
 }
 
-Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
+Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList,
+                                      bool CC1MainIsReusable) {
   llvm::PrettyStackTraceString CrashInfo("Compilation construction");
 
   // FIXME: Handle environment options which affect driver behavior, somewhere
@@ -1865,7 +1866,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   // The compilation takes ownership of Args.
   Compilation *C = new Compilation(*this, TC, UArgs.release(), TranslatedArgs,
-                                   ContainsError);
+                                   ContainsError, CC1MainIsReusable);
 
   if (!HandleImmediateArgs(*C))
     return C;
@@ -4697,9 +4698,10 @@ void Driver::BuildJobs(Compilation &C) const {
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
 
-  // If we have more than one job, then disable integrated-cc1 for now. Do this
-  // also when we need to report process execution statistics.
-  if (C.getJobs().size() > 1 || CCPrintProcessStats)
+  // Unless the callback explicitly supports repeated invocation, use a
+  // separate process when there is more than one job. Process execution
+  // statistics always require a separate process.
+  if ((C.getJobs().size() > 1 && !C.isCC1MainReusable()) || CCPrintProcessStats)
     for (auto &J : C.getJobs())
       J.InProcess = false;
 
