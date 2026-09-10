@@ -2366,12 +2366,11 @@ static bool canWriteAGPR(const MachineInstr *MI, Register Reg,
          nullptr;
 }
 
-static bool useAcceptsAGPR(const MachineOperand *Use,
-                           const TargetRegisterClass *RegAGPRClass,
-                           const SIInstrInfo *TII, const SIRegisterInfo *SRI) {
-  const MachineInstr *UseMI = Use->getParent();
-  return UseMI->getRegClassConstraintEffect(Use->getOperandNo(), RegAGPRClass,
-                                            TII, SRI) != nullptr;
+static bool userAcceptsAGPR(const MachineInstr *UserMI, Register Reg,
+                            const TargetRegisterClass *RegAGPRClass,
+                            const SIInstrInfo *TII, const SIRegisterInfo *SRI) {
+  return UserMI->getRegClassConstraintEffectForVReg(Reg, RegAGPRClass, TII,
+                                                    SRI) != nullptr;
 }
 
 bool RewriteMFMAFormStage::isRecolorSafe(
@@ -2399,7 +2398,7 @@ bool RewriteMFMAFormStage::isRecolorSafe(
                                        RewriteCandsSet)) {
         continue;
       }
-      if (!useAcceptsAGPR(UseMO, RegAGPRClass, TII, SRI))
+      if (!userAcceptsAGPR(UseMO->getParent(), Reg, RegAGPRClass, TII, SRI))
         return false;
     }
   }
@@ -2838,7 +2837,8 @@ bool RewriteMFMAFormStage::rewrite(
       bool CanReadAGPR =
           TII->isMAI(*UserMI)
               ? RewriteCandsSet.contains(UserMI)
-              : DstRecolorSafe && useAcceptsAGPR(RUOp, DstAGPRClass, TII, SRI);
+              : DstRecolorSafe &&
+                    userAcceptsAGPR(UserMI, DstReg, DstAGPRClass, TII, SRI);
       if (!CanReadAGPR &&
           find(DstReachingUseCopies, RUOp) == DstReachingUseCopies.end())
         DstReachingUseCopies.push_back(RUOp);
