@@ -90,3 +90,8 @@ for var in ("ORC_RT_LOG", "ORC_RT_LOG_OUTPUT"):
 if platform.system() == "Darwin":
     config.substitutions.append(("%macos-product-version", platform.mac_ver()[0]))
 config.substitutions.append(("%target_triple", config.target_triple))
+
+# The architecture the runtime was built for, so tests can check the triple it
+# reports against an independent source.
+config.substitutions.append(
+    ("%target-arch", config.target_triple.split("-")[0]))
