@@ -461,6 +461,8 @@ static VPWideningInfo getWideningInfo(const VPRecipeBase &R) {
   case VPRecipeBase::VPBranchOnMaskSC:
     return VPWideningInfo::SingleScalar;
   case VPRecipeBase::VPScalarIVStepsSC:
+    // FIXME: ScalarIVSteps only generates per all VF lanes if
+    // ScalarIVSteps::doesGeneratePerAllLanes.
     return VPWideningInfo::GenPerAllLanes;
   case VPRecipeBase::VPWidenCastSC:
   case VPRecipeBase::VPWidenGEPSC:
