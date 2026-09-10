@@ -548,6 +548,23 @@ bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV) {
   return true;
 }
 
+const GlobalValue *llvm::getDescribableGlobalAddress(const Constant *C,
+                                                     int64_t &Offset,
+                                                     const DataLayout &DL) {
+  if (!C->getType()->isPointerTy())
+    return nullptr;
+
+  // Non-inbounds offsets are stripped as well, which is the default. The
+  // inbounds flag constrains what the program may do with the pointer, not
+  // what its value is, and describing an address needs only the value.
+  const auto *GV =
+      dyn_cast<GlobalValue>(GetPointerBaseWithConstantOffset(C, Offset, DL));
+  if (!GV || !canDescribeGlobalAddressInDebugInfo(GV))
+    return nullptr;
+
+  return GV;
+}
+
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with
 /// a return and there's nothing that needs to be scheduled

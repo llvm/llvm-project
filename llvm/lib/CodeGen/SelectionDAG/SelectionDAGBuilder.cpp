@@ -1641,7 +1641,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
 
   SmallVector<SDDbgOperand> LocationOps;
   SmallVector<SDNode *> Dependencies;
-  for (const Value *V : Values) {
+  for (const auto &[OpIdx, V] : enumerate(Values)) {
     // Constant value.
     if (isa<ConstantInt>(V) || isa<ConstantFP>(V) || isa<UndefValue>(V) ||
         isa<ConstantPointerNull>(V)) {
@@ -1656,12 +1656,23 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
         continue;
       }
 
-    // The address of a global is a link-time constant.
-    if (const auto *GV = dyn_cast<GlobalValue>(V))
-      if (canDescribeGlobalAddressInDebugInfo(GV)) {
+    // The address of a global is a link-time constant, and so is a constant
+    // displacement from one. The displacement rides along in the expression
+    // rather than in the operand, so that it survives into a DBG_INSTR_REF.
+    if (const auto *C = dyn_cast<Constant>(V)) {
+      int64_t Offset = 0;
+      if (const GlobalValue *GV =
+              getDescribableGlobalAddress(C, Offset, DAG.getDataLayout())) {
+        if (Offset) {
+          SmallVector<uint64_t, 3> Ops;
+          DIExpression::appendOffset(Ops, Offset);
+          Expr = DIExpression::appendOpsToArg(Expr, Ops, OpIdx,
+                                              /*StackValue=*/false);
+        }
         LocationOps.emplace_back(SDDbgOperand::fromGlobalAddr(GV));
         continue;
       }
+    }
 
     // If the Value is a frame index, we can create a FrameIndex debug value
     // without relying on the DAG at all.

@@ -110,6 +110,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   }();
 
   bool IsIndirect = true;
+  int64_t GlobalOffset = 0;
   if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
@@ -121,10 +122,17 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addFPImm(CFP);
   } else if (isa<ConstantPointerNull>(NumericConstant)) {
     MIB.addImm(0);
-  } else if (auto *GV = dyn_cast<GlobalValue>(NumericConstant);
-             GV && canDescribeGlobalAddressInDebugInfo(GV)) {
-    // The address of a global is a direct link-time constant.
+  } else if (const GlobalValue *GV = getDescribableGlobalAddress(
+                 NumericConstant, GlobalOffset, getMF().getDataLayout())) {
+    // The address of a global is a direct link-time constant. A displacement
+    // from it rides along in the expression rather than in the operand.
     MIB.addGlobalAddress(GV);
+    if (GlobalOffset) {
+      SmallVector<uint64_t, 3> Ops;
+      DIExpression::appendOffset(Ops, GlobalOffset);
+      Expr = DIExpression::appendOpsToArg(cast<DIExpression>(Expr), Ops, 0,
+                                          /*StackValue=*/false);
+    }
     IsIndirect = false;
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.

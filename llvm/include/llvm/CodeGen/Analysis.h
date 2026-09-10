@@ -20,6 +20,8 @@
 
 namespace llvm {
 template <typename T> class SmallVectorImpl;
+class Constant;
+class DataLayout;
 class GlobalValue;
 class LLT;
 class MachineBasicBlock;
@@ -121,6 +123,15 @@ LLVM_ABI ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
 /// described for the whole of its scope rather than only from wherever the
 /// address happens to be materialized.
 LLVM_ABI bool canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV);
+
+/// If \p C is the address of a global, possibly displaced by a constant,
+/// return that global and set \p Offset to the displacement in bytes. Returns
+/// nullptr if \p C is not such an address, or if the global's address cannot
+/// be described per canDescribeGlobalAddressInDebugInfo(); \p Offset is then
+/// meaningless.
+LLVM_ABI const GlobalValue *getDescribableGlobalAddress(const Constant *C,
+                                                        int64_t &Offset,
+                                                        const DataLayout &DL);
 
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with

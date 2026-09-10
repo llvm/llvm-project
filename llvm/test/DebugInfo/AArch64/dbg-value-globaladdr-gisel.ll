@@ -61,6 +61,23 @@ entry:
   ret void, !dbg !17
 }
 
+;; A constant displacement from the global rides along in the expression, the
+;; same way the SelectionDAG path spells it in
+;; DebugInfo/X86/globaladdr-offset.ll.
+; MIR-LABEL: name: globaladdr_offset
+; MIR: DBG_VALUE @g, $noreg, ![[#]], !DIExpression(DW_OP_plus_uconst, 8)
+;
+; DWARF-LABEL: DW_AT_name ("globaladdr_offset")
+; DWARF: DW_TAG_variable
+; DWARF-NEXT: DW_AT_location (DW_OP_addrx 0x1, DW_OP_plus_uconst 0x8, DW_OP_stack_value)
+; DWARF-NEXT: DW_AT_name ("w")
+define void @globaladdr_offset() !dbg !20 {
+entry:
+    #dbg_value(ptr getelementptr (i8, ptr @g, i64 8), !21, !DIExpression(), !22)
+  tail call void @sink(ptr null), !dbg !22
+  ret void, !dbg !22
+}
+
 declare void @sink(ptr)
 declare ptr @alloc()
 
@@ -87,3 +104,7 @@ declare ptr @alloc()
 !17 = !DILocation(line: 11, column: 1, scope: !19)
 !18 = distinct !DILexicalBlock(scope: !12, file: !3, line: 6, column: 1)
 !19 = distinct !DILexicalBlock(scope: !15, file: !3, line: 11, column: 1)
+!20 = distinct !DISubprogram(name: "globaladdr_offset", scope: !3, file: !3, line: 14, type: !4, scopeLine: 14, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+!21 = !DILocalVariable(name: "w", scope: !23, file: !3, line: 15, type: !7)
+!22 = !DILocation(line: 15, column: 1, scope: !23)
+!23 = distinct !DILexicalBlock(scope: !20, file: !3, line: 15, column: 1)
