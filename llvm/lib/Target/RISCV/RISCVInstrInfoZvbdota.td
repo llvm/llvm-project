@@ -14,6 +14,14 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// Operand definitions
+//===----------------------------------------------------------------------===//
+
+// The ci operand is written as a multiple of 8 in the assembly syntax, but the
+// encoded field only holds the value divided by 8.
+def uimm6_lsb000 : RISCVUImmLsbZeroOp<6, 3>;
+
+//===----------------------------------------------------------------------===//
 // Instruction class definitions
 //===----------------------------------------------------------------------===//
 
@@ -22,11 +30,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     VS1VS2Constraint = Vrgather, Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb" in
 class ZvbdotaVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVV<funct6, opv, (outs VR:$vd_wb),
-               (ins VR:$vd, VRM8:$vs2, VR:$vs1, uimm3:$ci, VMaskOp:$vm),
+               (ins VR:$vd, VRM8:$vs2, VR:$vs1, uimm6_lsb000:$ci, VMaskOp:$vm),
                opcodestr, "$vd, $vs2, $vs1, $ci$vm"> {
-  bits<3> ci;
+  bits<6> ci;
   let Inst{24-23} = vs2{4-3};
-  let Inst{22-20} = ci;
+  let Inst{22-20} = ci{5-3};
   let Inst{6-0} = OPC_OP_VE.Value;
 }
 

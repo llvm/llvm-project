@@ -23,6 +23,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -40,18 +41,35 @@ using namespace llvm;
 void llvm::verifyAMDGPUModuleFlag(VerifierSupport &VS, const MDString *ID,
                                   Module::ModFlagBehavior MFB,
                                   const MDNode *Op) {
-  if (ID->getString() != "amdgpu.buffer.oob.mode" &&
-      ID->getString() != "amdgpu.tbuffer.oob.mode")
+  StringRef FlagName = ID->getString();
+  if (!FlagName.consume_front("amdgpu."))
     return;
 
-  Check(MFB == Module::Max,
-        "'" + ID->getString() + "' module flag must use 'max' merge behaviour");
-  ConstantInt *Value =
-      mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
-  Check(Value, "'" + ID->getString() +
-                   "' module flag must have a constant integer value");
-  Check(Value->getZExtValue() <= 2,
-        "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+  if (FlagName == "buffer.oob.mode" || FlagName == "tbuffer.oob.mode") {
+    Check(MFB == Module::Max,
+          "'" + ID->getString() +
+              "' module flag must use 'max' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    Check(Value->getZExtValue() <= 2,
+          "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+    return;
+  }
+
+  if (FlagName == "xnack" || FlagName == "sramecc") {
+    Check(MFB == Module::Error,
+          "'" + ID->getString() +
+              "' module flag must use 'error' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    Check(Value->getZExtValue() <= 1,
+          "'" + ID->getString() + "' module flag must be 0 or 1");
+    return;
+  }
 }
 
 // Verify that when a function has !reqd_work_group_size metadata, it also has
@@ -117,13 +135,35 @@ void llvm::verifyAMDGPUFunctionMetadata(VerifierSupport &VS,
   verifyAMDGPUReqdWorkGroupSize(VS, F);
 }
 
+void llvm::verifyAMDGPUGlobalVariable(VerifierSupport &VS,
+                                      const GlobalVariable &GV) {
+  // This is not required for other targets so we only check for AMDGPU.
+  if (!VS.TT.isAMDGPU())
+    return;
+
+  // The VGPR address space is a view of one wave's own vector registers, which
+  // exist only while that wave runs. A global variable needs storage that
+  // outlives any particular wave, so there is nothing here for it to name.
+  if (GV.getAddressSpace() == AMDGPUAS::VGPR)
+    VS.CheckFailed("global variable on amdgpu must not be in addrspace(13)",
+                   &GV);
+}
+
 void llvm::verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI) {
   // This is not required for other targets so we only check for AMDGPU.
   if (!VS.TT.isAMDGPU())
     return;
 
-  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    VS.CheckFailed("alloca on amdgpu must be in addrspace(5)", &AI);
+  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS &&
+      AI.getAddressSpace() != AMDGPUAS::VGPR)
+    VS.CheckFailed("alloca on amdgpu must be in addrspace(5) or addrspace(13)",
+                   &AI);
+
+  // Only static allocas can live in VGPRs; a dynamically sized one has no
+  // register-file representation. (Other address spaces are already rejected
+  // above, so this only adds the more specific diagnostic for addrspace(13).)
+  if (!AI.isStaticAlloca() && AI.getAddressSpace() == AMDGPUAS::VGPR)
+    VS.CheckFailed("dynamic alloca on amdgpu must be in addrspace(5)", &AI);
 }
 
 bool llvm::isAMDGPUCallBrIntrinsic(Intrinsic::ID ID) {
@@ -144,9 +184,13 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     if (auto *CBI = dyn_cast<CallBrInst>(&Call)) {
       Check(CBI->getNumIndirectDests() == 1,
             "callbr amdgcn_kill only supports one indirect dest");
-      bool Unreachable = isa<UnreachableInst>(CBI->getIndirectDest(0)->begin());
-      CallInst *CI = dyn_cast<CallInst>(CBI->getIndirectDest(0)->begin());
-      Check(Unreachable ||
+      // We assume that amdgcn_unreachable is only introduced by
+      // AMDGPUUnifyDivergentExitNodes, which replaces the block's original
+      // unreachable terminator by a call to amdgcn_unreachable + a return.
+      const Instruction *Term = CBI->getIndirectDest(0)->getTerminator();
+      const CallInst *CI =
+          Term ? dyn_cast_if_present<CallInst>(Term->getPrevNode()) : nullptr;
+      Check(isa_and_nonnull<UnreachableInst>(Term) ||
                 (CI && CI->getIntrinsicID() == Intrinsic::amdgcn_unreachable),
             "callbr amdgcn_kill indirect dest needs to be unreachable");
     }

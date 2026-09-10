@@ -8,10 +8,8 @@ add_entrypoint_object(
     libc.hdr.types.struct_timespec
     libc.hdr.types.struct_timeval
     libc.hdr.fcntl_macros
-    libc.src.__support.OSUtil.osutil
     libc.src.__support.OSUtil.linux.syscall_wrappers.utimensat
     libc.include.sys_stat
-    libc.include.sys_syscall
     libc.include.fcntl
     libc.src.__support.libc_errno
 )
@@ -26,7 +24,7 @@ add_entrypoint_object(
     libc.hdr.types.struct_itimerval
     libc.src.__support.OSUtil.linux.syscall_wrappers.setitimer
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.common 
+    libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.errno.errno
 )
@@ -41,7 +39,21 @@ add_entrypoint_object(
     libc.hdr.types.struct_itimerval
     libc.src.__support.OSUtil.linux.syscall_wrappers.getitimer
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.common 
+    libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  gettimeofday
+  SRCS
+    gettimeofday.cpp
+  HDRS
+    ../gettimeofday.h
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.suseconds_t
+    libc.src.__support.time.clock_gettime
+    libc.src.__support.time.units
     libc.src.errno.errno
 )

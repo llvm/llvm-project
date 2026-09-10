@@ -563,6 +563,12 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
   return AreSameDerivedType(x, y, true, true, false, inProgress);
 }
 
+bool AreSameDerivedTypeIgnoringLengthParameters(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, false, true, false, inProgress);
+}
+
 bool AreSameDerivedTypeIgnoringSequence(
     const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
   SetOfDerivedTypePairs inProgress;

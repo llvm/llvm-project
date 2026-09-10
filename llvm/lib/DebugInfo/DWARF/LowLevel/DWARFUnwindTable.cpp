@@ -257,6 +257,17 @@ llvm::dwarf::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       break;
     }
 
+    case dwarf::DW_CFA_AARCH64_set_ra_state: {
+      constexpr uint32_t AArch64DWARFPAuthRaState = 34;
+      llvm::Expected<uint64_t> State = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!State)
+        return State.takeError();
+      Row.getRegisterLocations().setRegisterLocation(
+          AArch64DWARFPAuthRaState,
+          UnwindLocation::createIsConstant((int64_t)*State));
+      break;
+    }
+
     case dwarf::DW_CFA_undefined: {
       llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
       if (!RegNum)

@@ -75,6 +75,19 @@ int baz() { return y + x; }
 // LTO: nvlink{{.*}} -arch sm_52 -o a.out [[CUBIN]].cubin {{.*}}-u-{{.*}}.cubin {{.*}}-y-{{.*}}.cubin
 
 //
+// Check that '-Xptxas' is forwarded to 'ptxas' and not to 'nvlink'.
+//
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a \
+// RUN:   -Xptxas -maxrregcount=32 -arch sm_52 -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=PTXAS-ARGS
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a \
+// RUN:   -Xptxas=-maxrregcount=32 -arch sm_52 -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=PTXAS-ARGS
+// PTXAS-ARGS: ptxas{{.*}} -arch sm_52 -maxrregcount=32 -o [[CUBIN:.+]].cubin
+// PTXAS-ARGS: nvlink{{.*}} -arch sm_52 -o a.out
+// PTXAS-ARGS-NOT: -maxrregcount=32
+
+//
 // Check that we don't forward some arguments.
 //
 // RUN: clang-nvlink-wrapper --dry-run %t.o %t-u.o %t-y.a \

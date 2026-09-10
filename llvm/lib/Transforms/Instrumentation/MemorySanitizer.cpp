@@ -2609,6 +2609,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void visitPtrToAddrInst(PtrToAddrInst &I) {
+    IRBuilder<> IRB(&I);
+    setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
+                                    "_msprop_ptrtoaddr"));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void visitIntToPtrInst(IntToPtrInst &I) {
     IRBuilder<> IRB(&I);
     setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
@@ -2651,7 +2658,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S0 = getShadow(&I, 0);
 
     /// For scalars:
-    /// Since they are converting from floating-point to integer, the output is
+    /// Since they are converting from floating-point to integer, or between
+    /// different width floating-point values, the output is:
     /// - fully uninitialized if *any* bit of the input is uninitialized
     /// - fully ininitialized if all bits of the input are ininitialized
     /// We apply the same principle on a per-field basis for vectors.
@@ -2673,8 +2681,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitUIToFPInst(CastInst &I) {
     handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
   }
-  void visitFPExtInst(CastInst &I) { handleShadowOr(I); }
-  void visitFPTruncInst(CastInst &I) { handleShadowOr(I); }
+
+  void visitFPExtInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitFPTruncInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
 
   /// Generic handler to compute shadow for bitwise AND.
   ///
@@ -5082,6 +5095,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  void handleModfOrSincos(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *ArgShadow = getShadow(&I, 0);
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 1);
+    setShadow(&I, Shadow);
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   Value *extractLowerShadow(IRBuilder<> &IRB, Value *V) {
     assert(isa<FixedVectorType>(V->getType()));
     assert(cast<FixedVectorType>(V->getType())->getNumElements() > 0);
@@ -5288,6 +5311,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *Shadow = IRB.CreateSelect(Mask, DataShadow, WriteThruShadow);
     setShadow(&I, Shadow);
+
+    setOriginForNaryOp(I);
+  }
+
+  // AVX512 Floating-Point Classification
+  //
+  // e.g.,
+  // - < 8 x i1> @llvm.x86.avx512.fpclass.pd.512
+  //                 (<8 x double> %input, i32 %classifiers)
+  // - <16 x i1> @llvm.x86.avx512.fpclass.ps.512
+  //                 (<16 x float> %input, i32 %classifiers)
+  void handleAVX512FPClass(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 2);
+
+    Value *Input = I.getOperand(0);
+    assert(isFixedFPVector(Input));
+    [[maybe_unused]] FixedVectorType *InputType = cast<FixedVectorType>(Input->getType());
+
+    Value *Classifiers = I.getOperand(1);
+    assert(isa<ConstantInt>(Classifiers));
+    // No shadow check needed for constants
+
+    assert(isFixedIntVectorTy(I.getType()));
+    FixedVectorType *OutputType = cast<FixedVectorType>(I.getType());
+    assert(OutputType->getScalarSizeInBits() == 1);
+
+    assert(OutputType->getNumElements() == InputType->getNumElements());
+
+    Value *OutputShadow;
+    if (cast<ConstantInt>(Classifiers)->isZero())
+      // Each bit specifies whether a particular classifier is enabled.
+      // If Classifiers == 0, the output is trivially known to be zero, thus
+      // the output is fully initialized.
+      OutputShadow = getCleanShadow(OutputType);
+    else
+      // Approximate each bit of the output shadow based on whether the
+      // corresponding input element is fully initialized. It is only
+      // approximate because some classifications do not rely on all bits of
+      // the input element.
+      OutputShadow = IRB.CreateICmpNE(getShadow(Input), getCleanShadow(Input));
+
+    setShadow(&I, OutputShadow);
 
     setOriginForNaryOp(I);
   }
@@ -5821,6 +5888,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::umul_with_overflow:
     case Intrinsic::smul_with_overflow:
       handleArithmeticWithOverflow(I);
+      break;
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi:
+      handleModfOrSincos(I);
       break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
@@ -6889,6 +6961,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // e.g.,
+    // <16 x float> @llvm.x86.avx512.mask.compress
+    //                  (<16 x float> %data, <16 x float> %passthru,
+    //                   <16 x i1> %mask)
+    // <16 x i32>   @llvm.x86.avx512.mask.compress
+    //                  (<16 x i32> %data, <16 x i32> %passthru,
+    //                   <16 x i1> %mask)
+    case Intrinsic::x86_avx512_mask_compress:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1,
+                                        /*forceIntegerIntrinsic=*/true);
+      break;
+
     // AVX512/AVX10 Reciprocal
     //   <16 x float> @llvm.x86.avx512.rsqrt14.ps.512
     //                    (<16 x float>, <16 x float>, i16)
@@ -7124,6 +7209,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       visitGenericScalarHalfwordInst(I);
       break;
     }
+
+    // AVX512 Floating-Point Classification
+    // - <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
+    // - <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float>, i32)
+    case Intrinsic::x86_avx512_fpclass_pd_512:
+    case Intrinsic::x86_avx512_fpclass_ps_512:
+      handleAVX512FPClass(I);
+      break;
 
     // AVX Galois Field New Instructions
     case Intrinsic::x86_vgf2p8affineqb_128:
@@ -7468,8 +7561,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         visitInstruction(CB);
       return;
     }
-    LibFunc LF;
-    if (TLI->getLibFunc(CB, LF)) {
+    LibFunc LF = TLI->getLibFunc(CB);
+    if (LF != NotLibFunc) {
       // libatomic.a functions need to have special handling because there isn't
       // a good way to intercept them or compile the library with
       // instrumentation.
@@ -7534,7 +7627,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       unsigned Size = 0;
       const DataLayout &DL = F.getDataLayout();
 
-      bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
+      bool ByVal = CB.isByValArgument(i);
       bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef);
       bool EagerCheck = MayCheckCall && !ByVal && NoUndef;
 
@@ -8222,7 +8315,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
 
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         // ByVal arguments always go to the overflow area.
         // Fixed arguments passed through the overflow area will be stepped
@@ -8651,7 +8744,7 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
     const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
@@ -8781,7 +8874,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
@@ -9027,7 +9120,7 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       // SystemZABIInfo does not produce ByVal parameters.
-      assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
+      assert(!CB.isByValArgument(ArgNo));
       Type *T = A->getType();
       ArgKind AK = classifyArgument(T);
       if (AK == ArgKind::Indirect) {
@@ -9244,7 +9337,7 @@ struct VarArgI386Helper : public VarArgHelperBase {
     unsigned VAArgOffset = 0;
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);

@@ -43,21 +43,22 @@ void test() {
   ::delete[] a;
 }
 
+// The shared __empty_global_delete fallback is emitted with a trapping body
+// (kept alive via llvm.used) even though both wrappers have real forwarding
+// bodies here.
+// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK-NEXT: call void @llvm.trap()
+
 // The scalar deleting destructor's global path calls __global_delete.
 // CHECK: call void @"?__global_delete@@YAXPEAX_K@Z"(
-
-// It forwards to the scalar ??3@ (::operator delete).
-// CHECK: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
-// CHECK-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr %0, i64 %1)
 
 // The vector deleting destructor's global array path calls __global_array_delete.
 // CHECK: call void @"?__global_array_delete@@YAXPEAX_K@Z"(
 
-// It forwards to the array ??_V@ (::operator delete[]).
+// The forwarding bodies are emitted at end-of-module. Each wrapper forwards to
+// its OWN global operator delete: __global_delete to the scalar ??3@,
+// __global_array_delete to the array ??_V@.
+// CHECK: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr %0, i64 %1)
 // CHECK: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
-
-// Both wrappers share a single __empty_global_delete fallback, wired via
-// /ALTERNATENAME.
-// CHECK-DAG: !{!"/alternatename:?__global_delete@@YAXPEAX_K@Z=?__empty_global_delete@@YAXPEAX_K@Z"}
-// CHECK-DAG: !{!"/alternatename:?__global_array_delete@@YAXPEAX_K@Z=?__empty_global_delete@@YAXPEAX_K@Z"}

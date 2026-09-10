@@ -204,11 +204,11 @@ FunctionCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
-  return (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName());
+  return getCalleeAttr();
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(getCalleeAttrName(), cast<SymbolRefAttr>(callee));
+  setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {

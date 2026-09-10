@@ -11,8 +11,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -28,7 +26,6 @@ MATCHER_P(line, N, "") { return arg->Line == (unsigned)N; }
 TEST(RecordedIncludesTest, Match) {
   // We're using synthetic data, but need a FileManager to obtain FileEntry*s.
   // Ensure it doesn't do any actual IO.
-  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager FM(FileSystemOptions{});
   FileEntryRef A = FM.getVirtualFileRef("/path/a", /*Size=*/0, time_t{});
   FileEntryRef B = FM.getVirtualFileRef("/path/b", /*Size=*/0, time_t{});
@@ -48,7 +45,6 @@ TEST(RecordedIncludesTest, Match) {
 }
 
 TEST(RecordedIncludesTest, MatchVerbatim) {
-  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager FM(FileSystemOptions{});
   Includes Inc;
 
@@ -79,8 +75,6 @@ TEST(RecordedIncludesTest, MatchVerbatim) {
 }
 
 TEST(RecordedIncludesTest, MatchVerbatimMixedAbsoluteRelative) {
-  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  FS->setCurrentWorkingDirectory("/working");
   FileManager FM(FileSystemOptions{});
   Includes Inc;
 

@@ -33,8 +33,7 @@ namespace {
 // Determine if a promotion alias should be created for a symbol name.
 static bool allowPromotionAlias(const std::string &Name) {
   // Promotion aliases are used only in inline assembly. It's safe to
-  // simply skip unusual names. Subset of MCAsmInfo::isAcceptableChar()
-  // and MCAsmInfoXCOFF::isAcceptableChar().
+  // simply skip unusual names. Subset of MCAsmInfo::isAcceptableChar().
   for (const char &C : Name) {
     if (isAlnum(C) || C == '_' || C == '.')
       continue;
@@ -207,17 +206,16 @@ void simplifyExternals(Module &M) {
         F.getName().starts_with("llvm."))
       continue;
 
-    Function *NewF =
-        Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
-                         F.getAddressSpace(), "", &M);
+    Function *NewF = Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
+                                      F.getAddressSpace(), "", &M);
     NewF->copyAttributesFrom(&F);
     // Only copy function attribtues.
     NewF->setAttributes(AttributeList::get(M.getContext(),
                                            AttributeList::FunctionIndex,
                                            F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
-    NewF->setMetadata(LLVMContext::MD_unique_id,
-                      F.getMetadata(LLVMContext::MD_unique_id));
+    NewF->setMetadata(LLVMContext::MD_guid,
+                      F.getMetadata(LLVMContext::MD_guid));
     F.replaceAllUsesWith(NewF);
     F.eraseFromParent();
   }

@@ -92,7 +92,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
   MemberCallInfo CallInfo = commonEmitCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
-      Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
+      Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize,
+      getCurrentFunctionDecl());
   return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke,
                   CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation());
@@ -494,7 +495,8 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
   return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
-                                                      /*PrefixSize=*/0),
+                                                      /*PrefixSize=*/0,
+                                                      getCurrentFunctionDecl()),
                   Callee, ReturnValue, Args, CallOrInvoke, E == MustTailCall,
                   E->getExprLoc());
 }
@@ -1101,7 +1103,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
     ArrayRef<const Expr *> InitExprs =
         ILE ? ILE->inits() : CPLIE->getInitExprs();
-    InitListElements = InitExprs.size();
+    InitListElements =
+        ILE ? ILE->getNumInitsWithEmbedExpanded() : InitExprs.size();
 
     // If this is a multi-dimensional array new, we will initialize multiple
     // elements with each init list element.
@@ -1136,6 +1139,14 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
     CharUnits StartAlign = CurPtr.getAlignment();
     unsigned i = 0;
+    auto AdvanceToNextElement = [&]() {
+      CurPtr = Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
+                                                 CurPtr.emitRawPointer(*this),
+                                                 Builder.getSize(1),
+                                                 "array.exp.next"),
+                       CurPtr.getElementType(),
+                       StartAlign.alignmentAtOffset((++i) * ElementSize));
+    };
     for (const Expr *IE : InitExprs) {
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
@@ -1143,17 +1154,32 @@ void CodeGenFunction::EmitNewArrayInitializer(
       if (EndOfInit.isValid()) {
         Builder.CreateStore(CurPtr.emitRawPointer(*this), EndOfInit);
       }
+      // A multi-element EmbedExpr initializes several array elements at once.
+      // A single-element embed can be wrapped in a conversion to a non-scalar
+      // element type (e.g. _Complex) and is emitted like any other
+      // initializer.
+      const auto *EmbedS = dyn_cast<EmbedExpr>(IE->IgnoreParenImpCasts());
+      if (EmbedS && EmbedS->getDataElementCount() > 1) {
+        const StringLiteral *SL = EmbedS->getDataStringLiteral();
+        llvm::Type *DataTy = ConvertType(EmbedS->getType());
+        for (unsigned I = EmbedS->getStartingElementPos(),
+                      End = I + EmbedS->getDataElementCount();
+             I != End; ++I) {
+          llvm::Value *Val = EmitScalarConversion(
+              llvm::ConstantInt::get(DataTy, SL->getCodeUnit(I)),
+              EmbedS->getType(), ElementType, EmbedS->getLocation());
+          EmitStoreOfScalar(Val, MakeAddrLValue(CurPtr, ElementType),
+                            /*isInit=*/true);
+          AdvanceToNextElement();
+        }
+        continue;
+      }
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two
       // initialization loops.
       StoreAnyExprIntoOneUnit(*this, IE, IE->getType(), CurPtr,
                               AggValueSlot::DoesNotOverlap);
-      CurPtr = Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
-                                                 CurPtr.emitRawPointer(*this),
-                                                 Builder.getSize(1),
-                                                 "array.exp.next"),
-                       CurPtr.getElementType(),
-                       StartAlign.alignmentAtOffset((++i) * ElementSize));
+      AdvanceToNextElement();
     }
 
     // The remaining elements are filled with the array filler expression.
@@ -1354,9 +1380,10 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   llvm::Constant *CalleePtr =
       CalleeOverride ? CalleeOverride : CGF.CGM.GetAddrOfFunction(CalleeDecl);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
-  RValue RV = CGF.EmitCall(CGF.CGM.getTypes().arrangeFreeFunctionCall(
-                               Args, CalleeType, /*ChainCall=*/false),
-                           Callee, ReturnValueSlot(), Args, &CallOrInvoke);
+  RValue RV = CGF.EmitCall(
+      CGF.CGM.getTypes().arrangeFreeFunctionCall(
+          Args, CalleeType, /*ChainCall=*/false, CGF.getCurrentFunctionDecl()),
+      Callee, ReturnValueSlot(), Args, &CallOrInvoke);
 
   /// C++1y [expr.new]p10:
   ///   [In a new-expression,] an implementation is allowed to omit a call
@@ -1588,7 +1615,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
           cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
               ->getZExtSize();
     } else if (ILE || CPLIE) {
-      minElements = ILE ? ILE->getNumInits() : CPLIE->getInitExprs().size();
+      minElements = ILE ? ILE->getNumInitsWithEmbedExpanded()
+                        : CPLIE->getInitExprs().size();
     }
   }
 
@@ -2108,8 +2136,20 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   //     operator delete are both irrelevant to the trigger.
   if (E->isGlobalDelete() && CGM.getTarget().getCXXABI().isMicrosoft()) {
     const CXXRecordDecl *RD = E->getDestroyedType()->getAsCXXRecordDecl();
-    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor())
+    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       CGM.noteDirectGlobalDelete();
+      // Ensure a __global_delete wrapper (and thus a strong forwarding body)
+      // is emitted in THIS TU for the resolved global ::operator delete, even
+      // when no vector deleting destructor here references it. Without this, a
+      // TU that only does ::delete (with the deleting destructor defined in
+      // another TU) would emit no forwarder, leaving the wrapper bound to the
+      // trapping empty fallback and crashing at runtime.
+      const FunctionDecl *OD = E->getOperatorDelete();
+      assert(!isa<CXXMethodDecl>(OD) &&
+             "global ::delete should resolve to a namespace-scope "
+             "operator delete");
+      CGM.getOrCreateMSVCGlobalDeleteWrapper(OD);
+    }
   }
 
   // Null check the pointer.

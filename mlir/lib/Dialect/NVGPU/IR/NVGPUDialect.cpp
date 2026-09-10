@@ -184,7 +184,8 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
     numElementA = 1;
     numElementB = 1;
   } else if (aType.isF32() || aType.isBF16() || aType.isF16() ||
-             aType.isInteger(8) || aType.isInteger(4)) {
+             aType.isInteger(8) || aType.isInteger(4) || aType.isF8E4M3FN() ||
+             aType.isF8E5M2()) {
     // 8-by-8-128b fundamental tensor core tile size
     int operandBitwidth = aType.getIntOrFloatBitWidth();
     shapeK = 128 / operandBitwidth; // 128b wide shapeK
@@ -193,8 +194,8 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
     numElementB = 32 / operandBitwidth; // 32b wide operand B
   } else {
     return op->emitError()
-           << "expected input data type (i4,i8,f16,bf16,tf32,f64) "
-              "supported by "
+           << "expected input data type (i4,i8,f16,bf16,tf32,f64,"
+              "f8E4M3FN,f8E5M2) supported by "
            << op->getName();
   }
 
@@ -271,7 +272,7 @@ LogicalResult MmaSyncOp::verify() {
 
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
-                         getOperation()->hasAttr(getTf32EnabledAttrName()));
+                         getTf32Enabled().value_or(false));
 }
 
 //===----------------------------------------------------------------------===//
@@ -295,8 +296,7 @@ LogicalResult MmaSparseSyncOp::verify() {
 
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
-                         getOperation()->hasAttr(getTf32EnabledAttrName()),
-                         true);
+                         getTf32Enabled().value_or(false), true);
 }
 
 //===----------------------------------------------------------------------===//

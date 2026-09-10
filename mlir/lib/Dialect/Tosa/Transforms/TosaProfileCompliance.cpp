@@ -462,34 +462,10 @@ TosaProfileCompliance::getOperatorMatchedEntries(Operation *op) {
 
 template <typename T>
 LogicalResult TosaProfileCompliance::checkProfileOrExtension(
-    Operation *op, const tosa::TargetEnv &targetEnv,
-    const SmallVector<ArrayRef<T>> &specRequiredModeSet) {
-
-  // None of profile requirement is set in the specification.
-  if (specRequiredModeSet.size() == 0)
-    return success();
-
+    Operation *op, const tosa::TargetEnv &targetEnv) {
   const auto maybeOpEntries = getOperatorMatchedEntries<T>(op);
-  if (failed(maybeOpEntries)) {
-    // Operators such as control-flow and shape ops do not have an operand type
-    // restriction. When the profile compliance information of operation is not
-    // found, confirm if the target have enabled the profile required from the
-    // specification.
-    int modeCount = 0;
-    for (const auto &cands : specRequiredModeSet) {
-      if (targetEnv.allowsAnyOf(cands))
-        return success();
-      modeCount += cands.size();
-    }
-
-    op->emitOpError() << "illegal: requires"
-                      << (modeCount > 1 ? " any of " : " ") << "["
-                      << llvm::join(stringifyProfile<T>(specRequiredModeSet),
-                                    ", ")
-                      << "] but not enabled in target\n";
-
-    return failure();
-  }
+  if (failed(maybeOpEntries))
+    return success();
 
   const auto opEntries = maybeOpEntries.value();
   if (opEntries.size() == 0) {
@@ -510,22 +486,18 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   const TosaSpecificationVersion targetVersion{targetEnv.getSpecVersion()};
   const auto isVersionCompatible =
       [&targetVersion](const OpComplianceInfo<T> &info) -> bool {
+    // Assume compatible if there are no versioned type constraints
+    if (info.operandTypeInfoSet.empty())
+      return true;
     const TosaSpecificationVersion complianceVersion{
         info.operandTypeInfoSet.front().second};
     return targetVersion.isBackwardsCompatibleWith(complianceVersion);
   };
 
   for (const auto &info : opEntries) {
-    // Ensure the profile compliance is compatible with the profile knowledge of
-    // the op definition.
-    assert(llvm::all_of(info.mode,
-                        [&specRequiredModeSet](const T &mode) {
-                          return llvm::is_contained(specRequiredModeSet.front(),
-                                                    mode);
-                        }) &&
-           "the profile/extension requirement of the operator should be "
-           "included in the profile compliance information");
-
+    // Type constraints exist, check if they are compatible with the current
+    // target definition, including: profile, extension and specification
+    // version
     if (isModeAllowed(info) && isVersionCompatible(info))
       return success();
   }
@@ -566,21 +538,13 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
 LogicalResult
 TosaProfileCompliance::checkProfile(Operation *op,
                                     const tosa::TargetEnv &targetEnv) {
-  if (auto interface = dyn_cast<tosa::QueryProfileInterface>(op))
-    return checkProfileOrExtension<Profile>(op, targetEnv,
-                                            interface.getProfiles());
-
-  return success();
+  return checkProfileOrExtension<Profile>(op, targetEnv);
 }
 
 LogicalResult
 TosaProfileCompliance::checkExtension(Operation *op,
                                       const tosa::TargetEnv &targetEnv) {
-  if (auto interface = dyn_cast<tosa::QueryExtensionInterface>(op))
-    return checkProfileOrExtension<Extension>(op, targetEnv,
-                                              interface.getExtensions());
-
-  return success();
+  return checkProfileOrExtension<Extension>(op, targetEnv);
 }
 
 LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
@@ -653,13 +617,26 @@ SmallVector<OpComplianceInfo<T>> TosaProfileCompliance::findMatchedEntries(
   assert(compInfo.size() != 0 &&
          "profile-based compliance information is empty");
 
-  // Populate the type of profile/extension relevant operands.
+  // If there are no type constraints for the given operation, return the
+  // matched entries directly so required profile/extension information can
+  // be checked
+  SmallVector<OpComplianceInfo<T>> matchedInfos;
+  if (llvm::all_of(compInfo, [&matchedInfos](const OpComplianceInfo<T> &info) {
+        if (info.operandTypeInfoSet.empty()) {
+          matchedInfos.push_back(info);
+          return true;
+        }
+        return false;
+      }))
+    return matchedInfos;
+
+  // Get the type information of the operator we're trying to match
   ProfileInfoDepot depot(op);
   SmallVector<TypeInfo> present = depot.getInfo();
   if (present.size() == 0)
     return {};
 
-  SmallVector<OpComplianceInfo<T>> matchedInfos;
+  // Compare 'present' against known type signatures in the compliance metadata
   for (size_t i = 0; i < compInfo.size(); i++) {
     SmallVector<VersionedTypeInfo> sets = compInfo[i].operandTypeInfoSet;
     for (const auto &set : sets) {

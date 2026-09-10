@@ -7,10 +7,10 @@
 // RUN:   -fexceptions -fcxx-exceptions -ferror-limit 100
 
 // RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown \
-// RUN:   -verify=host -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc \
+// RUN:   -verify=host -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc \
 // RUN:   %s -o %t-ppc-host-amd.bc -fexceptions -fcxx-exceptions
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgcn-amd-amdhsa \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s \
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgpu-amd-amdhsa \
+// RUN:   -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s \
 // RUN:   -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-amd.bc -o - \
 // RUN:   -fexceptions -fcxx-exceptions -ferror-limit 100
 

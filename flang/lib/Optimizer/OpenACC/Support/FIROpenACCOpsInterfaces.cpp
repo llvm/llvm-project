@@ -121,6 +121,11 @@ bool GlobalVariableModel::isConstant(mlir::Operation *op) const {
   return globalOp.getConstant().has_value();
 }
 
+bool GlobalVariableModel::hasInitializer(mlir::Operation *op) const {
+  auto globalOp = mlir::cast<fir::GlobalOp>(op);
+  return globalOp.getInitVal().has_value() || globalOp.hasInitializationBody();
+}
+
 mlir::Region *GlobalVariableModel::getInitRegion(mlir::Operation *op) const {
   auto globalOp = mlir::cast<fir::GlobalOp>(op);
   return globalOp.hasInitializationBody() ? &globalOp.getRegion() : nullptr;
@@ -130,6 +135,11 @@ bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
   if (auto dataAttr = cuf::getDataAttr(op))
     return cuf::isDeviceDataAttribute(dataAttr.getValue());
   return false;
+}
+
+bool GlobalVariableModel::isCompilerGenerated(mlir::Operation *op) const {
+  auto globalOp = mlir::cast<fir::GlobalOp>(op);
+  return fir::NameUniquer::isCompilerGenerated(globalOp.getSymName());
 }
 
 bool OutlineRematerializationModel<
@@ -236,6 +246,15 @@ void IndirectGlobalAccessModel<fir::EmboxOp>::getReferencedSymbols(
   auto emboxOp = mlir::cast<fir::EmboxOp>(op);
   collectReferencedSymbolsForType(emboxOp.getMemref().getType(), op, symbols,
                                   symbolTable);
+}
+
+template <>
+void IndirectGlobalAccessModel<fir::CreateBoxOp>::getReferencedSymbols(
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::SymbolTable *symbolTable) const {
+  auto createBoxOp = mlir::cast<fir::CreateBoxOp>(op);
+  collectReferencedSymbolsForType(createBoxOp.getMemref().getType(), op,
+                                  symbols, symbolTable);
 }
 
 template <>

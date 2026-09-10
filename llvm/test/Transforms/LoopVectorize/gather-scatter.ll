@@ -52,10 +52,10 @@ define void @gather_i32(ptr noalias %src, ptr noalias %offsets.addr, ptr noalias
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP11:%.*]] = load float, ptr [[TMP7]], align 4
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP8]], align 4
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[TMP9]], i32 0
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP10]], i32 1
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP11]], i32 2
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[TMP12]], i32 3
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[TMP9]], i64 0
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP10]], i64 1
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP11]], i64 2
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[TMP12]], i64 3
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[INDEX]]
 ; GATHER-SCATTER-DISABLED-NEXT:    store <4 x float> [[TMP16]], ptr [[TMP17]], align 4
 ; GATHER-SCATTER-DISABLED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

@@ -275,9 +275,9 @@ int mainVC(int argc, int *argv) {
 // OMP60-NEXT: int h[20];
 // OMP60-NEXT: int j;
 // OMP60-NEXT: #pragma omp parallel shared(global) default(firstprivate:aggregate)
-// OMP60-NEXT: bar(h[1]) , h[1] = global;
+// OMP60-NEXT: bar(h[1]), h[1] = global;
 // OMP60-NEXT: #pragma omp parallel private(global2) default(private:scalar)
-// OMP60-NEXT: bar(global2) , j = global2;
+// OMP60-NEXT: bar(global2), j = global2;
 
 enum Enum { };
 

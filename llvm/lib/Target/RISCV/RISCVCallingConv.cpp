@@ -14,7 +14,6 @@
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
@@ -203,6 +202,13 @@ ArrayRef<MCPhysReg> RISCV::getArgFPRs(const RISCVSubtarget &STI) {
     return ArrayRef(ArgFPR64s);
 
   return ArrayRef(ArgFPR32s);
+}
+
+ArrayRef<MCPhysReg> RISCV::getArgVRs(const RISCVSubtarget &STI) {
+  if (STI.hasVInstructions())
+    return ArrayRef(ArgVRs);
+
+  return {};
 }
 
 static ArrayRef<MCPhysReg> getArgGPR16s(const RISCVABI::ABI ABI) {

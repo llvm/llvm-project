@@ -28,19 +28,19 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<4 x s16>) from %ir.a_ptr)
-    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[COPY1]](p0) :: (load (<4 x s16>) from %ir.b_ptr)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<4 x s16>) = G_ADD [[LOAD]], [[LOAD1]]
-    ; CHECK-NEXT: $d0 = COPY [[ADD]](<4 x s16>)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<4 x i16>) = G_LOAD [[COPY]](p0) :: (load (<4 x i16>) from %ir.a_ptr)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(<4 x i16>) = G_LOAD [[COPY1]](p0) :: (load (<4 x i16>) from %ir.b_ptr)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<4 x i16>) = G_ADD [[LOAD]], [[LOAD1]]
+    ; CHECK-NEXT: $d0 = COPY [[ADD]](<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(<3 x s16>) = G_LOAD %0(p0) :: (load (<3 x s16>) from %ir.a_ptr, align 8, !range !0)
-    %3:_(<3 x s16>) = G_LOAD %1(p0) :: (load (<3 x s16>) from %ir.b_ptr, align 8, !range !2)
-    %4:_(<3 x s16>) = G_ADD %2, %3
-    %5:_(s16), %6:_(s16), %7:_(s16) = G_UNMERGE_VALUES %4(<3 x s16>)
-    %8:_(s16) = G_IMPLICIT_DEF
-    %9:_(<4 x s16>) = G_BUILD_VECTOR %5(s16), %6(s16), %7(s16), %8(s16)
-    $d0 = COPY %9(<4 x s16>)
+    %2:_(<3 x i16>) = G_LOAD %0(p0) :: (load (<3 x i16>) from %ir.a_ptr, align 8, !range !0)
+    %3:_(<3 x i16>) = G_LOAD %1(p0) :: (load (<3 x i16>) from %ir.b_ptr, align 8, !range !2)
+    %4:_(<3 x i16>) = G_ADD %2, %3
+    %5:_(i16), %6:_(i16), %7:_(i16) = G_UNMERGE_VALUES %4(<3 x i16>)
+    %8:_(i16) = G_IMPLICIT_DEF
+    %9:_(<4 x i16>) = G_BUILD_VECTOR %5(i16), %6(i16), %7(i16), %8(i16)
+    $d0 = COPY %9(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...

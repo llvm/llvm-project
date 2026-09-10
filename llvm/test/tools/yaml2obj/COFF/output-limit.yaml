@@ -1,0 +1,22 @@
+## Check the default COFF output limit and --max-size.
+## 0x9FFFC4 = 0xA00000 (10 MB) - COFF::Header16Size - COFF::SectionSize.
+# RUN: yaml2obj %s -DSIZE=0x9FFFC4 -o /dev/null
+# RUN: not yaml2obj %s -DSIZE=0xA00001 -o /dev/null 2>&1 | FileCheck %s
+# RUN: yaml2obj %s -DSIZE=0xA00001 --max-size=0 -o /dev/null
+# RUN: not yaml2obj %s -DSIZE=0xA00001 --max-size=0x100 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s
+
+# CHECK: error: the desired output size is greater than permitted. Use the --max-size option to change the limit
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    StructuredData:
+      - LoadConfig:
+          Size: [[SIZE]]
+symbols: []
+...

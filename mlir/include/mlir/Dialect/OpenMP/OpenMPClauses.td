@@ -113,7 +113,9 @@ class OpenMP_AllocateClauseSkip<
                     extraClassDeclaration> {
   let arguments = (ins
     Variadic<AnyType>:$allocate_vars,
-    Variadic<AnyType>:$allocator_vars
+    Variadic<AnyType>:$allocator_vars,
+    OptionalAttr<DenseI64ArrayAttr>:$allocate_alignments,
+    OptionalAttr<DenseI64ArrayAttr>:$allocate_private_indices
   );
 
   let extraClassDeclaration = [{
@@ -125,12 +127,18 @@ class OpenMP_AllocateClauseSkip<
     `allocate` `(`
       custom<AllocateAndAllocator>($allocate_vars, type($allocate_vars),
                                    $allocator_vars, type($allocator_vars)) `)`
+      (`allocate_alignments` `(` $allocate_alignments^ `)`)?
+      (`allocate_private_indices` `(` $allocate_private_indices^ `)`)?
   }];
 
   let description = [{
-    The `allocator_vars` and `allocate_vars` parameters are a variadic list of
-    values that specify the memory allocator to be used to obtain storage for
-    private values.
+    The `allocate_vars` and `allocator_vars` parameters are parallel lists that
+    pair each allocated private value with the allocator used to obtain its
+    storage. When present, `allocate_alignments` has one entry per allocate
+    variable; zero means omitted alignment, and nonzero entries must be powers
+    of two.
+    `allocate_private_indices` maps each allocate variable to the corresponding
+    position in the operation's private variables.
   }];
 }
 
@@ -266,14 +274,15 @@ class OpenMP_CriticalNameClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    Symbol
+    SymbolName, SymbolVisibility, Symbol
   ];
 
   let arguments = (ins
-    SymbolNameAttr:$sym_name
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
-  let reqAssemblyFormat = "$sym_name";
+  let reqAssemblyFormat = "($sym_visibility^)? $sym_name";
 
   let description = [{
     The `sym_name` can be used in `omp.critical` constructs in the dialect.
@@ -387,9 +396,10 @@ class OpenMP_DoacrossClauseSkip<
   );
 
   let reqAssemblyFormat = [{
-    ( `depend_type` `` $doacross_depend_type^ )?
+    ( `depend_type` `(` enum($doacross_depend_type)^ `)` )?
     ( `depend_vec` `(` $doacross_depend_vars^ `:` type($doacross_depend_vars)
                    `)` )?
+    ( `num_loops` `(` $doacross_num_loops^ `)` )?
   }];
 
   let description = [{
@@ -575,12 +585,11 @@ class OpenMP_HeapAllocClauseSkip<
     Variadic<IntLikeType>:$shape
   );
 
-  // The custom parser doesn't parse `uniq_name` and `bindc_name`. This is
-  // handled by the attr-dict, which must be present in the operation's
-  // `assemblyFormat`.
   let reqAssemblyFormat = [{
     custom<HeapAllocClause>($in_type, $typeparams, type($typeparams), $shape,
                             type($shape))
+    ( `uniq_name` `(` $uniq_name^ `)` )?
+    ( `bindc_name` `(` $bindc_name^ `)` )?
   }];
 
   let extraClassDeclaration = [{
@@ -822,6 +831,7 @@ class OpenMP_LinearClauseSkip<
       custom<LinearClause>($linear_vars, type($linear_vars),
                            $linear_step_vars, type($linear_step_vars),
                            $linear_modifiers) `)`
+      ( `linear_var_types` `(` $linear_var_types^ `)` )?
   }];
 
   let description = [{
@@ -1705,6 +1715,33 @@ class OpenMP_ThreadLimitClauseSkip<
 }
 
 def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V6.0: [14.8] `threadset` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_ThreadsetClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    OptionalAttr<ThreadsetPolicyAttr>:$threadset
+  );
+
+  let optAssemblyFormat = [{
+    `threadset` `(` custom<ClauseAttr>($threadset) `)`
+  }];
+
+  let description = [{
+    The `threadset` clause specifies the set of threads that may execute the
+    generated task. When the policy is `omp_pool`, the task is eligible to be
+    executed by a free-agent thread. When the policy is `omp_team`, the task
+    may only be executed by a thread in the current team.
+  }];
+}
+
+def OpenMP_ThreadsetClause : OpenMP_ThreadsetClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [9.1.1] `sizes` clause

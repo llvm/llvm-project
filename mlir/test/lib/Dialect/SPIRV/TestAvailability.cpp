@@ -168,7 +168,7 @@ struct ConvertToGroupNonUniformBallot : RewritePattern {
                                 PatternRewriter &rewriter) const override {
     Value predicate = op->getOperand(0);
     rewriter.replaceOpWithNewOp<spirv::GroupNonUniformBallotOp>(
-        op, op->getResult(0).getType(), spirv::Scope::Workgroup, predicate);
+        op, op->getResult(0).getType(), spirv::Scope::Subgroup, predicate);
     return success();
   }
 };
@@ -208,8 +208,9 @@ struct ConvertToIntegerDotProd : RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<SPIRVOp>(op, op->getResultTypes(),
-                                         op->getOperands(), op->getAttrs());
+    rewriter.replaceOpWithNewOp<SPIRVOp>(
+        op, op->getResultTypes(), op->getOperands(),
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };

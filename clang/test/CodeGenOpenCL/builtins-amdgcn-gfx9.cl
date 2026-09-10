@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu9.00-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu10.10-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 typedef unsigned int uint;

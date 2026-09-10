@@ -381,7 +381,7 @@ func.func @mismatched_types() {
 // -----
 
 // expected-error @+1 {{'memref.global' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-memref.global "private" @gv : memref<4xf32> = dense<1.0> { alignment = 63 }
+memref.global "private" @gv : memref<4xf32> = dense<1.0> alignment = 63
 
 // -----
 
@@ -996,7 +996,7 @@ func.func @test_store_zero_results2(%x: i32, %p: memref<i32>) {
 func.func @invalid_load_alignment(%memref: memref<4xi32>) {
   %c0 = arith.constant 0 : index
   // expected-error @below {{'memref.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %val = memref.load %memref[%c0] { alignment = -1 } : memref<4xi32>
+  %val = memref.load %memref[%c0] alignment(-1) : memref<4xi32>
   return
 }
 
@@ -1005,7 +1005,7 @@ func.func @invalid_load_alignment(%memref: memref<4xi32>) {
 func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: i32) {
   %c0 = arith.constant 0 : index
   // expected-error @below {{'memref.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  memref.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>
+  memref.store %val, %memref[%c0] alignment(3) : memref<4xi32>
   return
 }
 
@@ -1013,7 +1013,7 @@ func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: i32) {
 
 func.func @invalid_alloc_alignment() {
   // expected-error @below {{'memref.alloc' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %0 = memref.alloc() {alignment = 3} : memref<4xf32>
+  %0 = memref.alloc() alignment = 3 : memref<4xf32>
   return
 }
 
@@ -1021,7 +1021,7 @@ func.func @invalid_alloc_alignment() {
 
 func.func @invalid_realloc_alignment(%src: memref<4xf32>) {
   // expected-error @below {{'memref.realloc' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %0 = memref.realloc %src {alignment = 7} : memref<4xf32> to memref<8xf32>
+  %0 = memref.realloc %src alignment = 7 : memref<4xf32> to memref<8xf32>
   return
 }
 

@@ -35,7 +35,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/ExpressionTraits.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
@@ -43,7 +43,6 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -160,6 +159,8 @@ namespace {
     }
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
+
+    void VisitBinComma(BinaryOperator *Node);
 
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
@@ -778,8 +779,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
@@ -966,9 +968,16 @@ void StmtPrinter::VisitOMPScanDirective(OMPScanDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
-void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
+void StmtPrinter::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *Node) {
   Indent() << "#pragma omp ordered";
-  PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());
+  PrintOMPExecutableDirective(Node, true);
+}
+
+void StmtPrinter::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *Node) {
+  Indent() << "#pragma omp ordered";
+  PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPAtomicDirective(OMPAtomicDirective *Node) {
@@ -1017,16 +1026,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
@@ -1367,7 +1378,8 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
   bool CleanUglifiedParameter = Policy.CleanUglifiedParameters &&
                                 isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD);
 
-  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter) {
+  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter &&
+      !VD->isTemplateParameter()) {
     VD->printQualifiedName(OS, Policy);
   } else {
     Node->getQualifier().print(OS, Policy);
@@ -1882,6 +1894,24 @@ void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
 }
 
 void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
+  if (QualType T = Node->getType(); Policy.PrettyEnums && T->isEnumeralType()) {
+    // special case enums to avoid producing cast expressions when naming
+    // an enumerator would suffice
+
+    const auto *IL = dyn_cast<IntegerLiteral>(Node->getSubExpr());
+    const auto *ED = T->getAsEnumDecl();
+    if (IL && ED) {
+      llvm::APInt Val = IL->getValue();
+      const auto ECD =
+          llvm::find_if(ED->enumerators(), [&](const EnumConstantDecl *ECD) {
+            return llvm::APInt::isSameValue(ECD->getInitVal(), Val);
+          });
+      if (ECD != ED->enumerator_end()) {
+        ECD->printQualifiedName(OS, Policy);
+        return;
+      }
+    }
+  }
   OS << '(';
   Node->getTypeAsWritten().print(OS, Policy);
   OS << ')';
@@ -1898,6 +1928,12 @@ void StmtPrinter::VisitCompoundLiteralExpr(CompoundLiteralExpr *Node) {
 void StmtPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
   // No need to print anything, simply forward to the subexpression.
   PrintExpr(Node->getSubExpr());
+}
+
+void StmtPrinter::VisitBinComma(BinaryOperator *Node) {
+  PrintExpr(Node->getLHS());
+  OS << BinaryOperator::getOpcodeStr(Node->getOpcode()) << " ";
+  PrintExpr(Node->getRHS());
 }
 
 void StmtPrinter::VisitBinaryOperator(BinaryOperator *Node) {
@@ -2639,6 +2675,12 @@ void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
   assert(false && "not implemented yet");
 }
 
+void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {
+  Node->getTemplateName().print(OS, Policy, TemplateName::Qualified::None);
+  printTemplateArgumentList(OS, Node->template_arguments(), Policy,
+                            Node->getParameter()->getTemplateParameters());
+}
+
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(
                                          CXXDependentScopeMemberExpr *Node) {
   if (!Node->isImplicitAccess()) {
@@ -2755,7 +2797,7 @@ void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   OS << E->getFoundDecl()->getName();
   printTemplateArgumentList(OS, E->getTemplateArgsAsWritten()->arguments(),
                             Policy,
-                            E->getNamedConcept()->getTemplateParameters());
+                            E->getConceptDecl()->getTemplateParameters());
 }
 
 void StmtPrinter::VisitRequiresExpr(RequiresExpr *E) {

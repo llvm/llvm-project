@@ -73,10 +73,18 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "isConstant", (ins), [{
         return false;
       }]>,
+    InterfaceMethod<"Check if the global variable has an initializer", "bool",
+      "hasInitializer", (ins), [{
+        return false;
+      }]>,
     InterfaceMethod<"Get the initialization region (returns nullptr if none)",
       "::mlir::Region*", "getInitRegion", (ins)>,
     InterfaceMethod<"Check if the global variable is device data",
       "bool", "isDeviceData", (ins), [{
+        return false;
+      }]>,
+    InterfaceMethod<"Check if the global variable is compiler generated", "bool",
+      "isCompilerGenerated", (ins), [{
         return false;
       }]>,
   ];

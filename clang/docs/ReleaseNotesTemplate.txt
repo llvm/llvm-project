@@ -2,6 +2,7 @@
 myst:
   enable_extensions:
     - attrs_block
+    - colon_fence
     - substitution
 ---
 
@@ -18,14 +19,14 @@ myst:
 
 Written by the [LLVM Team](https://llvm.org/)
 
-````{only} PreRelease
+::::{only} PreRelease
 
-```{warning}
+:::{warning}
 These are in-progress notes for the upcoming Clang {{env.config.version}} release.
 Release notes for previous releases can be found on
 [the Releases Page](https://llvm.org/releases/).
-```
-````
+:::
+::::
 
 ## Introduction
 

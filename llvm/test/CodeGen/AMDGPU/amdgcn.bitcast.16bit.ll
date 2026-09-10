@@ -716,17 +716,20 @@ define i16 @bitcast_bf16_to_i16(bfloat %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-TRUE16-NEXT:    v_cmpx_ne_u32_e32 0, v1
 ; GFX11-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
-; GFX11-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB6_4
-; GFX11-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
+; GFX11-TRUE16-NEXT:    s_branch .LBB6_3
+; GFX11-TRUE16-NEXT:  .LBB6_2: ; %Flow
+; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB6_4
+; GFX11-TRUE16-NEXT:  .LBB6_3: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, 0x40c00000, v0
@@ -736,10 +739,10 @@ define i16 @bitcast_bf16_to_i16(bfloat %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v1, v1, v0, 0x7fff
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11-TRUE16-NEXT:  .LBB6_4: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: bitcast_bf16_to_i16:
@@ -1234,17 +1237,20 @@ define half @bitcast_bf16_to_f16(bfloat %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX11-TRUE16-NEXT:    v_cmpx_ne_u32_e32 0, v1
 ; GFX11-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
-; GFX11-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB10_4
-; GFX11-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
+; GFX11-TRUE16-NEXT:    s_branch .LBB10_3
+; GFX11-TRUE16-NEXT:  .LBB10_2: ; %Flow
+; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB10_4
+; GFX11-TRUE16-NEXT:  .LBB10_3: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, 0x40c00000, v0
@@ -1254,10 +1260,10 @@ define half @bitcast_bf16_to_f16(bfloat %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v1, v1, v0, 0x7fff
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11-TRUE16-NEXT:  .LBB10_4: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: bitcast_bf16_to_f16:

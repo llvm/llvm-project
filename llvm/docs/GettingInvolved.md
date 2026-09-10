@@ -2,9 +2,6 @@
 
 LLVM welcomes contributions of all kinds. To get started, please review the following topics:
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -260,6 +257,10 @@ what to add to your calendar invite.
      - Every week on Thursday
      -
      - [Meeting notes](https://github.com/llvm/wg-hlsl/tree/main/meetings)
+   * - BOLT
+     - Monthly, 2nd Wednesday of the month at 11:00am PT
+     - [gcal](https://calendar.google.com/calendar/u/0/event?eid=ZjIzMGRsOTFpdWZ0MWkxYjB0M2QzamxtcmRfMjAyNjA5MDlUMTgwMDAwWiBjYWxlbmRhckBsbHZtLm9yZw)
+     - [Meeting notes/agenda](https://docs.google.com/document/d/17Ivx8tyvUkRT3h78RJSQdDabAtBvpbtGQI-atdPmXE8/edit?usp=sharing)
 ```
 
 For event owners, our Discord bot also supports sending automated announcements
@@ -362,11 +363,6 @@ The {doc}`CodeOfConduct` applies to all office hours.
     - SYCL compiler, offload tools, OpenCL and SPIR-V, how to contribute.
     - Monthly, 2nd Monday of the month at 9:30am PT, for 30 minutes.
     - [GoogleMeet](https://meet.google.com/pdz-xhns-uus)
-    - English, Russian
-  * - Maksim Panchenko
-    - BOLT internals, IR, new passes, proposals, etc.
-    - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
-    - [Zoom](https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09)
     - English, Russian
   * - Quentin Colombet (he/him)
     - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
@@ -521,7 +517,6 @@ can be better.
 :hidden:
 
 Proposals/GitHubMove
-BugpointRedesign
 Proposals/TestSuite
 Proposals/VariableNames
 Proposals/VectorPredication
@@ -530,10 +525,6 @@ Proposals/VectorPredication
 * {doc}`Proposals/GitHubMove`
 
   Proposal to move from SVN/Git to GitHub.
-
-* {doc}`BugpointRedesign`
-
-  Design doc for a redesign of the Bugpoint tool.
 
 * {doc}`Proposals/TestSuite`
 

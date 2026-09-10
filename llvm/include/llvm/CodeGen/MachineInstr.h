@@ -128,7 +128,9 @@ public:
     SameSign = 1 << 21,      // Both operands have the same sign.
     InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
-    LRSplit = 1 << 23        // Instruction for live range split.
+    LRSplit = 1 << 23,       // Instruction for live range split.
+    NonNull = 1 << 24        // Address space cast source is not the null
+                             // value of the source address space.
   };
 
 private:
@@ -1368,6 +1370,7 @@ public:
   }
 
   // True if the instruction represents a position in the function.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
   bool isPosition() const { return isLabel() || isCFIInstruction(); }
 
   bool isNonListDebugValue() const {

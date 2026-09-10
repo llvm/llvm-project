@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgpu9.06 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ANY %s
 ; RUN: llc -mtriple=amdgpu9.08 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ANY %s
 ; RUN: llc -mtriple=amdgpu12.50 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ANY %s
+; RUN: llc -mtriple=amdgpu12.51 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ANY %s
+; RUN: llc -mtriple=amdgpu12.5 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ANY %s
 
 ; REQUIRES: asserts
 

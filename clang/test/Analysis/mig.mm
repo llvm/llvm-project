@@ -166,7 +166,7 @@ void test_block() {
       ^MIG_SERVER_ROUTINE (mach_port_name_t port,
                            vm_address_t address, vm_size_t size) {
         vm_deallocate(port, address, size); // expected-note{{Value passed through parameter 'address' is deallocated}}
-        return KERN_ERROR; // expected-warning{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
+        return KERN_ERROR; // expected-warning{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
                            // expected-note@-1{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
       };
 }

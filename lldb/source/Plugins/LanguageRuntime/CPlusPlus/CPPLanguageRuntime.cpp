@@ -13,9 +13,11 @@
 
 #include "CPPLanguageRuntime.h"
 #include "CommandObjectCPlusPlus.h"
+#include "ItaniumABIRuntime.h"
 #include "VerboseTrapFrameRecognizer.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Variable.h"
@@ -32,6 +34,7 @@
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
@@ -110,7 +113,7 @@ public:
 };
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
-    : LanguageRuntime(process), m_itanium_runtime(process) {
+    : LanguageRuntime(process) {
   if (process) {
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
@@ -120,6 +123,8 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
 
     RegisterVerboseTrapFrameRecognizer(*process);
   }
+
+  m_abi_runtimes.emplace_back(new ItaniumABIRuntime(process));
 }
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
@@ -243,42 +248,47 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     return optional_info;
 
   uint32_t address_size = process->GetAddressByteSize();
-  Status status;
 
   // First item pointed to by __f_ should be the pointer to the vtable for
   // a __base object.
-  lldb::addr_t vtable_address =
-      process->ReadPointerFromMemory(member_f_pointer_value, status);
+  llvm::Expected<lldb::addr_t> vtable_address_or_err =
+      process->ReadPointerFromMemory(member_f_pointer_value);
+  if (!vtable_address_or_err) {
+    llvm::consumeError(vtable_address_or_err.takeError());
+    return optional_info;
+  }
+  lldb::addr_t vtable_address = *vtable_address_or_err;
 
   ABISP abi_sp = process->GetABI();
   if (abi_sp)
     vtable_address = abi_sp->FixCodeAddress(vtable_address);
 
-  if (status.Fail())
+  llvm::Expected<lldb::addr_t> vtable_address_first_entry_or_err =
+      process->ReadPointerFromMemory(vtable_address + address_size);
+  if (!vtable_address_first_entry_or_err) {
+    llvm::consumeError(vtable_address_first_entry_or_err.takeError());
     return optional_info;
-
-  lldb::addr_t vtable_address_first_entry =
-      process->ReadPointerFromMemory(vtable_address + address_size, status);
+  }
+  lldb::addr_t vtable_address_first_entry = *vtable_address_first_entry_or_err;
 
   if (abi_sp)
     vtable_address_first_entry =
         abi_sp->FixCodeAddress(vtable_address_first_entry);
 
-  if (status.Fail())
-    return optional_info;
-
   lldb::addr_t address_after_vtable = member_f_pointer_value + address_size;
   // As commented above we may not have a function pointer but if we do we will
   // need it.
-  lldb::addr_t possible_function_address =
-      process->ReadPointerFromMemory(address_after_vtable, status);
+  llvm::Expected<lldb::addr_t> possible_function_address_or_err =
+      process->ReadPointerFromMemory(address_after_vtable);
+  if (!possible_function_address_or_err) {
+    llvm::consumeError(possible_function_address_or_err.takeError());
+    return optional_info;
+  }
+  lldb::addr_t possible_function_address = *possible_function_address_or_err;
 
   if (abi_sp)
     possible_function_address =
         abi_sp->FixCodeAddress(possible_function_address);
-
-  if (status.Fail())
-    return optional_info;
 
   Target &target = process->GetTarget();
 
@@ -470,6 +480,23 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   StackFrameSP frame = thread.GetStackFrameAtIndex(0);
 
   if (frame) {
+    Address func_start_address =
+        sc.function ? sc.function->GetAddress() : symbol->GetAddress();
+    lldb::addr_t func_start =
+        func_start_address.GetLoadAddress(target_sp.get());
+
+    if (func_start == LLDB_INVALID_ADDRESS)
+      return ret_plan_sp;
+
+    // Advance past the prologue if we stopped there.
+    uint32_t prologue_size = sc.function ? sc.function->GetPrologueByteSize()
+                                         : symbol->GetPrologueByteSize();
+    if (curr_pc < func_start + prologue_size) {
+      func_start_address.Slide(prologue_size);
+      return std::make_shared<ThreadPlanRunToAddress>(
+          thread, func_start_address, stop_others);
+    }
+
     ValueObjectSP value_sp = frame->FindVariable(g_this);
 
     CPPLanguageRuntime::LibCppStdFunctionCallableInfo callable_info =
@@ -487,7 +514,7 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
       // We create a ThreadPlan to keep stepping through using the address range
       // of the current function.
       ret_plan_sp = std::make_shared<ThreadPlanStepInRange>(
-          thread, range_of_curr_func, sc, nullptr, eOnlyThisThread,
+          thread, range_of_curr_func, sc, std::string(), eOnlyThisThread,
           eLazyBoolYes, eLazyBoolYes);
       return ret_plan_sp;
     }
@@ -524,8 +551,15 @@ bool CPPLanguageRuntime::GetDynamicTypeAndAddress(
   if (!CouldHaveDynamicValue(in_value))
     return false;
 
-  return m_itanium_runtime.GetDynamicTypeAndAddress(
-      in_value, use_dynamic, class_type_or_name, dynamic_address, value_type);
+  llvm::Expected<VTableInfoEntry> entry =
+      GetVTableInfoEntry(in_value, /*check_type=*/false);
+  if (!entry) {
+    llvm::consumeError(entry.takeError());
+    return false;
+  }
+
+  return entry->runtime->GetDynamicTypeAndAddress(
+      in_value, use_dynamic, entry->info, class_type_or_name, dynamic_address);
 }
 
 TypeAndOrName
@@ -588,7 +622,11 @@ void CPPLanguageRuntime::Terminate() {
 
 llvm::Expected<LanguageRuntime::VTableInfo>
 CPPLanguageRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
-  return m_itanium_runtime.GetVTableInfo(in_value, check_type);
+  llvm::Expected<VTableInfoEntry> entry =
+      GetVTableInfoEntry(in_value, check_type);
+  if (!entry)
+    return entry.takeError();
+  return entry->info;
 }
 
 BreakpointResolverSP
@@ -602,8 +640,9 @@ CPPLanguageRuntime::CreateExceptionResolver(const BreakpointSP &bkpt,
                                             bool catch_bp, bool throw_bp,
                                             bool for_expressions) {
   std::vector<const char *> exception_names;
-  m_itanium_runtime.AppendExceptionBreakpointFunctions(
-      exception_names, catch_bp, throw_bp, for_expressions);
+  for (const auto &runtime : m_abi_runtimes)
+    runtime->AppendExceptionBreakpointFunctions(exception_names, catch_bp,
+                                                throw_bp, for_expressions);
 
   BreakpointResolverSP resolver_sp(new BreakpointResolverName(
       bkpt, exception_names.data(), exception_names.size(),
@@ -616,8 +655,9 @@ lldb::SearchFilterSP CPPLanguageRuntime::CreateExceptionSearchFilter() {
   Target &target = m_process->GetTarget();
 
   FileSpecList filter_modules;
-  m_itanium_runtime.AppendExceptionBreakpointFilterModules(filter_modules,
-                                                           target);
+  for (const auto &runtime : m_abi_runtimes)
+    runtime->AppendExceptionBreakpointFilterModules(filter_modules, target);
+
   return target.GetSearchFilterForModuleList(&filter_modules);
 }
 
@@ -684,5 +724,121 @@ bool CPPLanguageRuntime::ExceptionBreakpointsExplainStop(
 
 lldb::ValueObjectSP
 CPPLanguageRuntime::GetExceptionObjectForThread(lldb::ThreadSP thread_sp) {
-  return m_itanium_runtime.GetExceptionObjectForThread(std::move(thread_sp));
+  for (const auto &runtime : m_abi_runtimes) {
+    ValueObjectSP valobj = runtime->GetExceptionObjectForThread(thread_sp);
+    if (valobj)
+      return valobj;
+  }
+  return {};
+}
+
+static llvm::Error TypeHasVTable(CompilerType type) {
+  // Check to make sure the class has a vtable.
+  CompilerType original_type = type;
+  if (type.IsPointerOrReferenceType()) {
+    CompilerType pointee_type = type.GetPointeeType();
+    if (pointee_type)
+      type = pointee_type;
+  }
+
+  // Make sure this is a class or a struct first by checking the type class
+  // bitfield that gets returned.
+  if ((type.GetTypeClass() & (eTypeClassStruct | eTypeClassClass)) == 0) {
+    return llvm::createStringError(
+        std::errc::invalid_argument,
+        "type \"%s\" is not a class or struct or a pointer to one",
+        original_type.GetTypeName().AsCString("<invalid>"));
+  }
+
+  // Check if the type has virtual functions by asking it if it is polymorphic.
+  if (!type.IsPolymorphicClass()) {
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "type \"%s\" doesn't have a vtable",
+                                   type.GetTypeName().AsCString("<invalid>"));
+  }
+  return llvm::Error::success();
+}
+
+// This function can accept both pointers or references to classes as well as
+// instances of classes. If you are using this function during dynamic type
+// detection, only valid ValueObjects that return true to
+// CouldHaveDynamicValue(...) should call this function and \a check_type
+// should be set to false. This function is also used by ValueObjectVTable
+// and is can pass in instances of classes which is not suitable for dynamic
+// type detection, these cases should pass true for \a check_type.
+llvm::Expected<CPPLanguageRuntime::VTableInfoEntry>
+CPPLanguageRuntime::GetVTableInfoEntry(ValueObject &in_value, bool check_type) {
+
+  CompilerType type = in_value.GetCompilerType();
+  if (check_type) {
+    if (llvm::Error err = TypeHasVTable(type))
+      return std::move(err);
+  }
+  ExecutionContext exe_ctx(in_value.GetExecutionContextRef());
+  Process *process = exe_ctx.GetProcessPtr();
+  if (process == nullptr)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "invalid process");
+
+  auto [original_ptr, address_type] =
+      type.IsPointerOrReferenceType()
+          ? in_value.GetPointerValue()
+          : in_value.GetAddressOf(/*scalar_is_load_address=*/true);
+  if (original_ptr == LLDB_INVALID_ADDRESS || address_type != eAddressTypeLoad)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "failed to get the address of the value");
+
+  llvm::Expected<lldb::addr_t> vtable_load_addr_or_err =
+      process->ReadPointerFromMemory(original_ptr);
+  if (!vtable_load_addr_or_err)
+    return vtable_load_addr_or_err.takeError();
+  lldb::addr_t vtable_load_addr = *vtable_load_addr_or_err;
+
+  // The vtable load address can have authentication bits with
+  // AArch64 targets on Darwin.
+  vtable_load_addr = process->FixDataAddress(vtable_load_addr);
+
+  // Find the symbol that contains the "vtable_load_addr" address
+  Address vtable_addr;
+  if (!process->GetTarget().ResolveLoadAddress(vtable_load_addr, vtable_addr))
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "failed to resolve vtable pointer 0x%" PRIx64
+                                   "to a section",
+                                   vtable_load_addr);
+
+  // Check our cache first to see if we already have this info
+  {
+    std::lock_guard<std::mutex> locker(m_vtable_mutex);
+    auto pos = m_vtable_info_map.find(vtable_addr);
+    if (pos != m_vtable_info_map.end())
+      return pos->second;
+  }
+
+  Symbol *symbol = vtable_addr.CalculateSymbolContextSymbol();
+  if (symbol == nullptr)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "no symbol found for 0x%" PRIx64,
+                                   vtable_load_addr);
+
+  Mangled &mangled = symbol->GetMangled();
+  Log *log = GetLog(LLDBLog::Object);
+  for (const auto &runtime : m_abi_runtimes) {
+    if (runtime->IsVTableSymbol(symbol->GetMangled())) {
+      LLDB_LOG(log, "{0:x16} ({1}): symbol='{2}' matches {3}", original_ptr,
+               in_value.GetTypeName(), mangled.GetDemangledName(),
+               runtime->GetName());
+
+      VTableInfoEntry entry{
+          /*info=*/VTableInfo{vtable_addr, symbol},
+          /*runtime=*/runtime.get(),
+      };
+      std::lock_guard<std::mutex> locker(m_vtable_mutex);
+      m_vtable_info_map[vtable_addr] = entry;
+      return entry;
+    }
+  }
+  return llvm::createStringError(std::errc::invalid_argument,
+                                 "symbol found that contains 0x%" PRIx64
+                                 " is not a vtable symbol",
+                                 vtable_load_addr);
 }

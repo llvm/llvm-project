@@ -13,7 +13,7 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
-#include "inv_trigf_utils.h"
+#include "atan_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
@@ -26,7 +26,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE float16 atan2f16(float16 y, float16 x) {
-  using namespace inv_trigf_utils_internal;
+  using namespace atan_internal;
   using FPBits = fputil::FPBits<float16>;
 
   constexpr double IS_NEG[2] = {1.0, -1.0};
@@ -84,7 +84,7 @@ LIBC_INLINE float16 atan2f16(float16 y, float16 x) {
   //   atan(n/d) = atan(idx/16) + q_d * Q(q_d)
   // where Q(q_d) approximates
   //   [atan(idx/16 + q_d) - atan(idx/16)] / q_d
-  // via atan_eval(q_d, idx) from inv_trigf_utils.
+  // via atan_eval(q_d, idx) from atan_utils.
   double n = static_cast<double>(FPBits(min_abs).get_val());
   double d = static_cast<double>(FPBits(max_abs).get_val());
   double q_d = n / d;

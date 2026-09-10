@@ -15,10 +15,10 @@ define void  @vector_broadcast() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = shufflevector <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = shufflevector <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = shufflevector <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %8 = shufflevector <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %9 = shufflevector <vscale x 8 x i1> undef, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %10 = shufflevector <vscale x 4 x i1> undef, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %11 = shufflevector <vscale x 2 x i1> undef, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %8 = shufflevector <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %9 = shufflevector <vscale x 8 x i1> undef, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %10 = shufflevector <vscale x 4 x i1> undef, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %11 = shufflevector <vscale x 2 x i1> undef, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_broadcast'

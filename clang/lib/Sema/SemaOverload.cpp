@@ -12,6 +12,7 @@
 
 #include "CheckExprLifetime.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -366,9 +367,12 @@ static const Expr *IgnoreNarrowingConversion(ASTContext &Ctx,
 ///        type of the expression prior to the narrowing conversion.
 /// \param IgnoreFloatToIntegralConversion If true type-narrowing conversions
 ///        from floating point types to integral types should be ignored.
+/// \param AllowRelaxedEval If true constant expression evaluation is relaxed
+///        to conform MSVC compiler behavior.
 NarrowingKind StandardConversionSequence::getNarrowingKind(
     ASTContext &Ctx, const Expr *Converted, APValue &ConstantValue,
-    QualType &ConstantType, bool IgnoreFloatToIntegralConversion) const {
+    QualType &ConstantType, bool IgnoreFloatToIntegralConversion,
+    bool AllowRelaxedEval) const {
   assert((Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23) &&
          "narrowing check outside C++");
 
@@ -457,7 +461,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       Expr::EvalResult R;
       if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
           ((Ctx.getLangOpts().CPlusPlus &&
-            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)))) {
+            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue,
+                                             AllowRelaxedEval)))) {
         // Constant!
         if (Ctx.getLangOpts().C23)
           ConstantValue = R.Val;
@@ -547,7 +552,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       return NK_Dependent_Narrowing;
 
     std::optional<llvm::APSInt> OptInitializerValue =
-        Initializer->getIntegerConstantExpr(Ctx);
+        Initializer->getIntegerConstantExpr(Ctx, AllowRelaxedEval);
     if (!OptInitializerValue) {
       // If the bit-field width was dependent, it might end up being small
       // enough to fit in the target type (unless the target type is unsigned
@@ -1523,7 +1528,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     if (!UseMemberUsingDeclRules && (OldMethod->getRefQualifier() == RQ_None ||
                                      NewMethod->getRefQualifier() == RQ_None)) {
       SemaRef.Diag(NewMethod->getLocation(), diag::err_ref_qualifier_overload)
-          << NewMethod->getRefQualifier() << OldMethod->getRefQualifier();
+          << OldMethod->getRefQualifier() << NewMethod->getRefQualifier();
       SemaRef.Diag(OldMethod->getLocation(), diag::note_previous_declaration);
       return true;
     }
@@ -6491,7 +6496,8 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
                                                    NamedDecl *Dest,
                                                    APValue &PreNarrowingValue) {
   [[maybe_unused]] bool isCCEAllowedPreCXX11 =
-      (CCE == CCEKind::TempArgStrict || CCE == CCEKind::ExplicitBool);
+      (CCE == CCEKind::TempArgStrict || CCE == CCEKind::ExplicitBool ||
+       CCE == CCEKind::PackIndex);
   assert((S.getLangOpts().CPlusPlus11 || isCCEAllowedPreCXX11) &&
          "converted constant expression outside C++11 or TTP matching");
 
@@ -6597,11 +6603,14 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   if (Result.isInvalid())
     return Result;
 
+  bool AllowRelaxedEval = S.getASTContext().getLangOpts().MSVCCompat;
+
   // Check for a narrowing implicit conversion.
   bool ReturnPreNarrowingValue = false;
   QualType PreNarrowingType;
-  switch (SCS->getNarrowingKind(S.Context, Result.get(), PreNarrowingValue,
-                                PreNarrowingType)) {
+  switch (SCS->getNarrowingKind(
+      S.Context, Result.get(), PreNarrowingValue, PreNarrowingType,
+      /*IgnoreFloatToIntegralConversion*/ false, AllowRelaxedEval)) {
   case NK_Variable_Narrowing:
     // Implicit conversion to a narrower type, and the value is not a constant
     // expression. We'll diagnose this in a moment.
@@ -6706,8 +6715,10 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   ExprResult Result = E;
   // Check the expression is a constant expression.
   SmallVector<PartialDiagnosticAt, 8> Notes;
+  SmallVector<PartialDiagnosticAt> MSWarning;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
+  Eval.ExtendedDiag = &MSWarning;
 
   assert(CCE != CCEKind::TempArgStrict && "unnexpected CCE Kind");
 
@@ -6726,8 +6737,12 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
     Result = ExprError();
   } else {
     Value = Eval.Val;
-
-    if (Notes.empty()) {
+    // For -fms-compatibility mode we relax some requirements
+    // for constant folding in non-SFINAE contexts
+    bool CantFold = isSFINAEContext() && !MSWarning.empty();
+    if (Notes.empty() && !CantFold) {
+      for (auto &Info : MSWarning)
+        Diag(Info.first, Info.second);
       // It's a constant expression.
       Expr *E = Result.get();
       if (const auto *CE = dyn_cast<ConstantExpr>(E)) {
@@ -7388,7 +7403,16 @@ void Sema::AddOverloadCandidate(
         Function->isFromGlobalModule() &&
         (IsImplicitlyInstantiated || Function->isInlined());
 
-    if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF) {
+    // Don't exclude internal-linkage entities from the current TU's global
+    // module fragment.
+    const Module *CurrentModule = getCurrentModule();
+    const bool IsCurrentUnitGMFDecl =
+        Function->isFromGlobalModule() && CurrentModule &&
+        Function->getOwningModule()->getTopLevelModule() ==
+            CurrentModule->getTopLevelModule();
+
+    if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF &&
+        !IsCurrentUnitGMFDecl) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;
@@ -12397,8 +12421,9 @@ static TemplateDecl *getDescribedTemplate(Decl *Templated) {
 /// Diagnose a failed template-argument deduction.
 static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  DeductionFailureInfo &DeductionFailure,
-                                 unsigned NumArgs,
-                                 bool TakingCandidateAddress) {
+                                 unsigned NumArgs, bool TakingCandidateAddress,
+                                 TemplateSpecCandidateSetKind CandidateSetKind =
+                                     TemplateSpecCandidateSetKind::Normal) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
   NamedDecl *ParamD;
   (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
@@ -12645,7 +12670,10 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           //    name for types, not decls.
           // Ideally, this should folded into the diagnostic printer.
           S.Diag(Templated->getLocation(),
-                 diag::note_ovl_candidate_non_deduced_mismatch_qualified)
+                 CandidateSetKind ==
+                         TemplateSpecCandidateSetKind::FriendTemplate
+                     ? diag::note_friend_template_non_deduced_mismatch_qualified
+                     : diag::note_ovl_candidate_non_deduced_mismatch_qualified)
               << FirstTN.getAsTemplateDecl() << SecondTN.getAsTemplateDecl();
           return;
         }
@@ -12661,7 +12689,9 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // diagnostic that mentions 'auto' and lambda in addition to
     // (or instead of?) the canonical template type parameters.
     S.Diag(Templated->getLocation(),
-           diag::note_ovl_candidate_non_deduced_mismatch)
+           CandidateSetKind == TemplateSpecCandidateSetKind::FriendTemplate
+               ? diag::note_friend_template_non_deduced_mismatch
+               : diag::note_ovl_candidate_non_deduced_mismatch)
         << FirstTA << SecondTA;
     return;
   }
@@ -13612,10 +13642,12 @@ struct CompareTemplateSpecCandidatesForDisplay {
 /// Diagnose a template argument deduction failure.
 /// We are treating these failures as overload failures due to bad
 /// deductions.
-void TemplateSpecCandidate::NoteDeductionFailure(Sema &S,
-                                                 bool ForTakingAddress) {
+void TemplateSpecCandidate::NoteDeductionFailure(
+    Sema &S, bool ForTakingAddress,
+    TemplateSpecCandidateSetKind CandidateSetKind) {
   DiagnoseBadDeduction(S, FoundDecl, Specialization, // pattern
-                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress);
+                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress,
+                       CandidateSetKind);
 }
 
 void TemplateSpecCandidateSet::destroyCandidates() {
@@ -13667,7 +13699,7 @@ void TemplateSpecCandidateSet::NoteCandidates(Sema &S, SourceLocation Loc) {
 
     assert(Cand->Specialization &&
            "Non-matching built-in candidates are not added to Cands.");
-    Cand->NoteDeductionFailure(S, ForTakingAddress);
+    Cand->NoteDeductionFailure(S, ForTakingAddress, CandidateSetKind);
   }
 
   if (I != E)
@@ -14580,13 +14612,14 @@ static bool canBeDeclaredInNamespace(const DeclarationName &Name) {
 
 /// Attempt to recover from an ill-formed use of a non-dependent name in a
 /// template, where the non-dependent name was declared after the template
-/// was defined. This is common in code written for a compilers which do not
+/// was defined. This is common in code written for compilers which do not
 /// correctly implement two-stage name lookup.
 ///
 /// Returns true if a viable candidate was found and a diagnostic was issued.
 static bool DiagnoseTwoPhaseLookup(
     Sema &SemaRef, SourceLocation FnLoc, const CXXScopeSpec &SS,
     LookupResult &R, OverloadCandidateSet::CandidateSetKind CSK,
+    const OverloadCandidateSet &ResolvedCandidates,
     TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
     CXXRecordDecl **FoundInClass = nullptr) {
   if (!SemaRef.inTemplateInstantiation() || !SS.isEmpty())
@@ -14602,6 +14635,14 @@ static bool DiagnoseTwoPhaseLookup(
       R.suppressDiagnostics();
 
       OverloadCandidateSet Candidates(FnLoc, CSK);
+      // We have performed a BestViableFunction over these candidates, so
+      // exclude them.
+      for (auto &Cand : ResolvedCandidates) {
+        if (Cand.Function)
+          Candidates.exclude(Cand.Function);
+        else if (Cand.IsSurrogate)
+          Candidates.exclude(Cand.Surrogate);
+      }
       SemaRef.AddOverloadedCallCandidates(R, ExplicitTemplateArgs, Args,
                                           Candidates);
 
@@ -14692,16 +14733,16 @@ static bool DiagnoseTwoPhaseLookup(
 /// was defined.
 ///
 /// Returns true if a viable candidate was found and a diagnostic was issued.
-static bool
-DiagnoseTwoPhaseOperatorLookup(Sema &SemaRef, OverloadedOperatorKind Op,
-                               SourceLocation OpLoc,
-                               ArrayRef<Expr *> Args) {
+static bool DiagnoseTwoPhaseOperatorLookup(
+    Sema &SemaRef, OverloadedOperatorKind Op, SourceLocation OpLoc,
+    ArrayRef<Expr *> Args, const OverloadCandidateSet &ResolvedCandidateSet) {
   DeclarationName OpName =
-    SemaRef.Context.DeclarationNames.getCXXOperatorName(Op);
+      SemaRef.Context.DeclarationNames.getCXXOperatorName(Op);
   LookupResult R(SemaRef, OpName, OpLoc, Sema::LookupOperatorName);
-  return DiagnoseTwoPhaseLookup(SemaRef, OpLoc, CXXScopeSpec(), R,
-                                OverloadCandidateSet::CSK_Operator,
-                                /*ExplicitTemplateArgs=*/nullptr, Args);
+  return DiagnoseTwoPhaseLookup(
+      SemaRef, OpLoc, CXXScopeSpec(), R, OverloadCandidateSet::CSK_Operator,
+      ResolvedCandidateSet,
+      /*ExplicitTemplateArgs=*/nullptr, Args, /*FoundInClass=*/nullptr);
 }
 
 namespace {
@@ -14728,11 +14769,10 @@ public:
 ///    expected to diagnose as appropriate.
 static ExprResult
 BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
-                      UnresolvedLookupExpr *ULE,
-                      SourceLocation LParenLoc,
-                      MutableArrayRef<Expr *> Args,
-                      SourceLocation RParenLoc,
-                      bool EmptyLookup, bool AllowTypoCorrection) {
+                      UnresolvedLookupExpr *ULE, SourceLocation LParenLoc,
+                      MutableArrayRef<Expr *> Args, SourceLocation RParenLoc,
+                      const OverloadCandidateSet &ResolvedCandidateSet,
+                      bool AllowTypoCorrection) {
   // Do not try to recover if it is already building a recovery call.
   // This stops infinite loops for template instantiations like
   //
@@ -14756,11 +14796,11 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   LookupResult R(SemaRef, ULE->getName(), ULE->getNameLoc(),
                  Sema::LookupOrdinaryName);
   CXXRecordDecl *FoundInClass = nullptr;
-  if (DiagnoseTwoPhaseLookup(SemaRef, Fn->getExprLoc(), SS, R,
-                             OverloadCandidateSet::CSK_Normal,
-                             ExplicitTemplateArgs, Args, &FoundInClass)) {
+  if (DiagnoseTwoPhaseLookup(
+          SemaRef, Fn->getExprLoc(), SS, R, OverloadCandidateSet::CSK_Normal,
+          ResolvedCandidateSet, ExplicitTemplateArgs, Args, &FoundInClass)) {
     // OK, diagnosed a two-phase lookup issue.
-  } else if (EmptyLookup) {
+  } else if (ResolvedCandidateSet.empty()) {
     // Try to recover from an empty lookup with typo correction.
     R.clear();
     NoTypoCorrectionCCC NoTypoValidator{};
@@ -14973,10 +15013,9 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
 
     // Try to recover by looking for viable functions which the user might
     // have meant to call.
-    ExprResult Recovery = BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc,
-                                                Args, RParenLoc,
-                                                CandidateSet->empty(),
-                                                AllowTypoCorrection);
+    ExprResult Recovery =
+        BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc, Args, RParenLoc,
+                              *CandidateSet, AllowTypoCorrection);
     if (Recovery.isInvalid() || Recovery.isUsable())
       return Recovery;
 
@@ -15221,6 +15260,24 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
   return CheckForImmediateInvocation(CE, CE->getDirectCallee());
 }
 
+void Sema::LookupOverloadedUnaryOp(OverloadCandidateSet &CandidateSet,
+                                   OverloadedOperatorKind Op,
+                                   const UnresolvedSetImpl &Fns,
+                                   ArrayRef<Expr *> Args, bool PerformADL) {
+  assert(Op != OO_None && "Invalid opcode for overloaded unary operator");
+
+  SourceLocation OpLoc = CandidateSet.getLocation();
+  DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
+
+  AddNonMemberOperatorCandidates(Fns, Args, CandidateSet);
+  AddMemberOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+  if (PerformADL)
+    AddArgumentDependentLookupCandidates(OpName, OpLoc, Args,
+                                         /*ExplicitTemplateArgs*/ nullptr,
+                                         CandidateSet);
+  AddBuiltinOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+}
+
 ExprResult
 Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
                               const UnresolvedSetImpl &Fns,
@@ -15274,22 +15331,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
 
   // Build an empty overload set.
   OverloadCandidateSet CandidateSet(OpLoc, OverloadCandidateSet::CSK_Operator);
-
-  // Add the candidates from the given function set.
-  AddNonMemberOperatorCandidates(Fns, ArgsArray, CandidateSet);
-
-  // Add operator candidates that are member functions.
-  AddMemberOperatorCandidates(Op, OpLoc, ArgsArray, CandidateSet);
-
-  // Add candidates from ADL.
-  if (PerformADL) {
-    AddArgumentDependentLookupCandidates(OpName, OpLoc, ArgsArray,
-                                         /*ExplicitTemplateArgs*/nullptr,
-                                         CandidateSet);
-  }
-
-  // Add builtin operator candidates.
-  AddBuiltinOperatorCandidates(Op, OpLoc, ArgsArray, CandidateSet);
+  LookupOverloadedUnaryOp(CandidateSet, Op, Fns, ArgsArray, PerformADL);
 
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
 
@@ -15375,7 +15417,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     // This is an erroneous use of an operator which can be overloaded by
     // a non-member function. Check for non-member operators which were
     // defined too late to be candidates.
-    if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, ArgsArray))
+    if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, ArgsArray,
+                                       CandidateSet))
       // FIXME: Recover by calling the found function.
       return ExprError();
 
@@ -15897,7 +15940,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // This is an erroneous use of an operator which can be overloaded by
         // a non-member function. Check for non-member operators which were
         // defined too late to be candidates.
-        if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, Args))
+        if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, Args,
+                                           CandidateSet))
           // FIXME: Recover by calling the found function.
           return ExprError();
 
@@ -15926,7 +15970,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
     case OR_Deleted: {
       if (isImplicitlyDeleted(Best->Function)) {
         FunctionDecl *DeletedFD = Best->Function;
-        DefaultedFunctionKind DFK = getDefaultedFunctionKind(DeletedFD);
+        FunctionDecl::DefaultedFunctionKind DFK =
+            DeletedFD->getDefaultedFunctionKind();
         if (DFK.isSpecialMember()) {
           Diag(OpLoc, diag::err_ovl_deleted_special_oper)
               << Args[0]->getType() << DFK.asSpecialMember();

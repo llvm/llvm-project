@@ -2,11 +2,11 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck --check-prefix=VARIANT0 %s
 ; RUN: llc -mtriple=amdgpu6.00 -mattr=+auto-waitcnt-before-barrier < %s | FileCheck --check-prefix=VARIANT1 %s
 ; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck --check-prefix=VARIANT2 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.00 < %s | FileCheck --check-prefix=VARIANT2-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck --check-prefix=VARIANT2-GISEL %s
 ; RUN: llc -mtriple=amdgpu9.00 -mattr=+auto-waitcnt-before-barrier < %s | FileCheck --check-prefix=VARIANT3 %s
 ; RUN: llc -mtriple=amdgpu12.00 < %s | FileCheck --check-prefix=VARIANT4 %s
 ; RUN: llc -mtriple=amdgpu12.00 -mattr=+auto-waitcnt-before-barrier < %s | FileCheck --check-prefix=VARIANT5 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00 < %s | FileCheck --check-prefix=VARIANT6 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 < %s | FileCheck --check-prefix=VARIANT6 %s
 
 define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT0-LABEL: test_barrier:

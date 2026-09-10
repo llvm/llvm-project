@@ -147,7 +147,7 @@ static Error processFileList() {
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/false,
-                                   /*RequiresNullTerminator=*/false);
+                                   /*RequiresNullTerminator=*/true);
   if (std::error_code EC = FileOrErr.getError())
     return createFileError(FileName, errorCodeToError(EC));
   const MemoryBuffer &Ref = *FileOrErr.get();

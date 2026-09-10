@@ -330,6 +330,10 @@ static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
     return NVVM::MMATypes::f64;
   if (elType.isF32())
     return NVVM::MMATypes::tf32;
+  if (elType.isF8E4M3FN())
+    return NVVM::MMATypes::e4m3;
+  if (elType.isF8E5M2())
+    return NVVM::MMATypes::e5m2;
   return failure();
 }
 
@@ -349,7 +353,7 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     std::array<int64_t, 3> gemmShape = op.getMmaShapeAsArray();
 
     // Tensor Cores (mma.sync) on F32 works only with TensorFloat32 (TF32).
-    bool tf32Enabled = op->hasAttr(op.getTf32EnabledAttrName());
+    bool tf32Enabled = op.getTf32Enabled().value_or(false);
     if (aType.getElementType().isF32() && !tf32Enabled)
       return failure();
 
@@ -562,6 +566,7 @@ static FailureOr<LLVM::InlineAsmOp> emitMmaSparseSyncOpAsm(
                                    /*has_side_effects=*/true,
                                    /*is_align_stack=*/false,
                                    LLVM::TailCallKind::None,
+                                   /*convergent=*/false,
                                    /*asm_dialect=*/asmDialectAttr,
                                    /*operand_attrs=*/ArrayAttr());
 }
@@ -595,7 +600,7 @@ struct NVGPUMmaSparseSyncLowering
           "could not infer the PTX type for the accumulator/result");
 
     // Same as `mma.sync`, F32 works only with TensorFloat32 (TF32).
-    bool tf32Enabled = op->hasAttr(op.getTf32EnabledAttrName());
+    bool tf32Enabled = op.getTf32Enabled().value_or(false);
     if (aType.getElementType().isF32() && !tf32Enabled)
       return failure();
 
@@ -842,7 +847,7 @@ struct NVGPUMBarrierInitLowering
     Value barrier = getMbarrierPtr(b, mbarrierType, adaptor.getBarriers(),
                                    adaptor.getMbarId(), rewriter);
     Value count = truncToI32(b, adaptor.getCount());
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count, 0,
                                                       adaptor.getPredicate());
     return success();
   }
@@ -1090,7 +1095,7 @@ struct NVGPUGenerateWarpgroupDescriptorLowering
 
 static Value makeI64Const(ImplicitLocOpBuilder &b, int32_t index) {
   return LLVM::ConstantOp::create(b, b.getIntegerType(64),
-                                  b.getI32IntegerAttr(index));
+                                  b.getI64IntegerAttr(index));
 }
 
 /// Returns a Value that holds data type enum that is expected by CUDA driver.

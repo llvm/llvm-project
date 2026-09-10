@@ -1,0 +1,298 @@
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/foo.o.yaml -o %t/foo.o
+
+## The debug map links the same two-CU object eight times, so the parallel
+## linker processes many compile units that share the same nested types and
+## cross-CU references concurrently. -oso-prepend-path resolves the relative
+## object filename against the temporary directory.
+
+## Link the same input several times with multiple threads and require the
+## output to be byte-identical every run. The parallel linker computes DIE
+## placement (artificial type unit vs plain DWARF) concurrently across compile
+## units. The input (from odr-nested-types1) has a nested type demoted to plain
+## DWARF while its root stays in the type table, with cross-CU references to it.
+## That placement must not depend on thread interleaving.
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/link.map -f -o %t/1.out --num-threads 4
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/link.map -f -o %t/2.out --num-threads 4
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/link.map -f -o %t/3.out --num-threads 4
+# RUN: diff %t/1.out %t/2.out
+# RUN: diff %t/1.out %t/3.out
+
+#--- link.map
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10100, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10200, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10300, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10400, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10500, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10600, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10700, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10800, size: 0x10 }
+...
+
+#--- foo.o.yaml
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      2
+  sizeofcmds: 376
+  flags:      0x00002000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  ''
+    vmaddr:   0x00
+    vmsize:   0x300
+    fileoff:  0x300
+    filesize: 0x300
+    maxprot:  7
+    initprot: 7
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x000000000000000F
+        size:      0x76
+        offset:    0x00000380
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x000000000000100
+        size:      0xa7
+        offset:    0x000003f6
+        align:     0
+        reloff:    0x00000600
+        nreloc:    1
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        relocations:
+          - address:         0x0
+            symbolnum:       1
+            pcrel:           true
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0x700
+    nsyms:           2
+    stroff:          0x720
+    strsize:         10
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '__Z3foov'
+    - ''
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+        - AbbrCode: 2
+          Values:
+            - CStr: s1
+        - AbbrCode: 2
+          Values:
+            - CStr: s2
+        - AbbrCode: 4
+          Values:
+            - CStr: m
+            - Value:  0x0000002c
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 7
+        - AbbrCode: 3
+          Values:
+            - CStr: s3
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+        - AbbrCode: 6
+          Values:
+            - Value:  0x0000001e
+        - AbbrCode: 6
+          Values:
+            - Value:  0x00000022
+        - AbbrCode: 8
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x00000036
+        - AbbrCode: 8
+          Values:
+            - CStr: var2
+            - Value:  0x00000000
+            - Value:  0x0000003b
+        - AbbrCode: 0
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU2
+        - AbbrCode: 2
+          Values:
+            - CStr: s1
+        - AbbrCode: 3
+          Values:
+            - CStr: s2
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+        - AbbrCode: 5
+          Values:
+            - Value:  0x0000007b
+        - AbbrCode: 6
+          Values:
+            - CStr: var3
+            - Value:  0x00000000
+            - Value:  0x00000085
+        - AbbrCode: 6
+          Values:
+            - CStr: var4
+            - Value:  0x00000000
+            - Value:  0x00000085
+        - AbbrCode: 0
+...

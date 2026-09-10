@@ -23,7 +23,7 @@ define <2 x half> @foo() {
 ; CHECK-NEXT:    cvt.u8.u16 %e2m1x2_in, %rs1;
 ; CHECK-NEXT:    cvt.rn.f16x2.e2m1x2 %r1, %e2m1x2_in;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %ld = load i8, ptr addrspace(1) @test0, align 1
     %in = zext nneg i8 %ld to i16

@@ -507,6 +507,19 @@ def getSubstitutions(sourcepath):
     ]
 
 
+def split_run_line(run_line):
+    """Split a FileCheck RUN line into its tool, FileCheck, and pre-processing commands."""
+    if "%if" in run_line:
+        match = re.search(r"%{\s*(.*?)\s*%}", run_line)
+        if match:
+            run_line = match.group(1)
+
+    commands = [cmd.strip() for cmd in run_line.split("|")]
+    assert len(commands) >= 2
+    preprocess_cmd = " | ".join(commands[:-2]) or None
+    return commands[-2], commands[-1], preprocess_cmd
+
+
 def applySubstitutions(s, substitutions):
     for a, b in substitutions:
         s = s.replace(a, b)
@@ -1190,6 +1203,8 @@ class NamelessValue:
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
         var = var.replace("%", "")
+        if var.startswith("."):
+            var = var.replace(".", "dot", 1)
         if self.replace_number_with_counter:
             assert var
             replacement = self.variable_mapping.get(var, None)
@@ -1913,8 +1928,6 @@ def generalize_check_lines(
 
     if ginfo.is_ir():
         for i, line in enumerate(lines):
-            # An IR variable named '%.' matches the FileCheck regex string.
-            line = line.replace("%.", "%dot")
             for regex in _global_hex_value_regex:
                 if re.match("^@" + regex + " = ", line):
                     line = re.sub(

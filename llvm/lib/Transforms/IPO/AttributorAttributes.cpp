@@ -214,16 +214,16 @@ ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
 } // namespace llvm
 
 static bool mayBeInCycle(const CycleInfo *CI, const Instruction *I,
-                         bool HeaderOnly, Cycle **CPtr = nullptr) {
+                         bool HeaderOnly, CycleRef *CPtr = nullptr) {
   if (!CI)
     return true;
   auto *BB = I->getParent();
-  auto *C = CI->getCycle(BB);
+  CycleRef C = CI->getCycle(BB);
   if (!C)
     return false;
   if (CPtr)
     *CPtr = C;
-  return !HeaderOnly || BB == C->getHeader();
+  return !HeaderOnly || BB == CI->getHeader(C);
 }
 
 /// Checks if a type could have padding bytes.
@@ -761,15 +761,6 @@ template <> struct DenseMapInfo<AA::RangeTy> {
   static bool isEqual(const AA::RangeTy &A, const AA::RangeTy B) {
     return A == B;
   }
-};
-
-/// Helper for AA::PointerInfo::Access DenseMap/Set usage ignoring everythign
-/// but the instruction
-struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
-  using Base = DenseMapInfo<Instruction *>;
-  using Access = AAPointerInfo::Access;
-  static unsigned getHashValue(const Access &A);
-  static bool isEqual(const Access &LHS, const Access &RHS);
 };
 
 } // namespace llvm
@@ -9256,19 +9247,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     return true;
   }
 
-  /// See AAValueConstantRange::getKnownConstantRange(..).
-  ConstantRange
-  getKnownConstantRange(Attributor &A,
-                        const Instruction *CtxI = nullptr) const override {
-    if (!isValidCtxInstructionForOutsideAnalysis(A, CtxI,
-                                                 /* AllowAACtxI */ false))
-      return getKnown();
-
-    ConstantRange LVIR = getConstantRangeFromLVI(A, CtxI);
-    ConstantRange SCEVR = getConstantRangeFromSCEV(A, CtxI);
-    return getKnown().intersectWith(SCEVR).intersectWith(LVIR);
-  }
-
   /// See AAValueConstantRange::getAssumedConstantRange(..).
   ConstantRange
   getAssumedConstantRange(Attributor &A,
@@ -11421,7 +11399,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
           A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(
               *PHI.getFunction());
 
-      Cycle *C = nullptr;
+      CycleRef C;
       bool CyclePHI = mayBeInCycle(CI, &PHI, /* HeaderOnly */ true, &C);
       for (unsigned u = 0, e = PHI.getNumIncomingValues(); u < e; u++) {
         BasicBlock *IncomingBB = PHI.getIncomingBlock(u);
@@ -11437,7 +11415,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         // If the incoming value is not the PHI but an instruction in the same
         // cycle we might have multiple versions of it flying around.
         if (CyclePHI && isa<Instruction>(V) &&
-            (!C || C->contains(cast<Instruction>(V)->getParent())))
+            (!C || CI->contains(C, cast<Instruction>(V)->getParent())))
           return false;
 
         Worklist.push_back({{*V, IncomingBB->getTerminator()}, II.S});
@@ -12517,10 +12495,16 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       return ChangeStatus::UNCHANGED;
 
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    // The callees this is compared against below are functions, which live in
+    // the program address space. Normalize to that rather than to zero: they
+    // are only the same address space on a target that leaves it at the
+    // default.
+    unsigned ProgramAS = CB->getDataLayout().getProgramAddressSpace();
     Value *FP = CB->getCalledOperand();
-    if (FP->getType()->getPointerAddressSpace())
-      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getContext(), 0),
-                                 FP->getName() + ".as0", CB->getIterator());
+    if (FP->getType()->getPointerAddressSpace() != ProgramAS)
+      FP = new AddrSpaceCastInst(
+          FP, PointerType::get(FP->getContext(), ProgramAS),
+          FP->getName() + ".as" + Twine(ProgramAS), CB->getIterator());
 
     bool CBIsVoid = CB->getType()->isVoidTy();
     BasicBlock::iterator IP = CB->getIterator();

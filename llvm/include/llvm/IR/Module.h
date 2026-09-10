@@ -29,6 +29,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -270,10 +271,14 @@ public:
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues() {
+  /// Returns true if any function's conversion modified the module.
+  bool convertFromNewDbgValues() {
+    bool Modified = false;
     for (auto &F : *this) {
-      F.convertFromNewDbgValues();
+      if (F.convertFromNewDbgValues())
+        Modified = true;
     }
+    return Modified;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -603,12 +608,20 @@ public:
   /// the module-level flags named metadata if it doesn't already exist.
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint64_t Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
+  inline void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, int Val) {
+    addModuleFlag(Behavior, Key, static_cast<uint32_t>(Val));
+  }
   void addModuleFlag(MDNode *Node);
   /// Like addModuleFlag but replaces the old module flag if it already exists.
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint64_t Val);
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
+  inline void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, int Val) {
+    setModuleFlag(Behavior, Key, static_cast<uint32_t>(Val));
+  }
 
   /// @}
   /// @name Materialization
@@ -657,7 +670,7 @@ public:
     if (It == ValueToGUIDMap.end())
       return std::nullopt;
 
-    return It->getSecond();
+    return It->second;
   }
 
   void insertGUID(const Value *V, GlobalValue::GUID GUID) {
@@ -672,10 +685,15 @@ public:
   }
 
 private:
+  /// Do not transfer GUID of a value to the value it is being RAUWed with.
+  struct GUIDMapConfig : ValueMapConfig<const Value *> {
+    enum { FollowRAUW = false };
+  };
+
   /// A mapping directly from Value to GUID. Populated from bitcode
   /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
   /// don't load metadata.
-  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
+  ValueMap<const Value *, GlobalValue::GUID, GUIDMapConfig> ValueToGUIDMap;
 
   /// @}
   /// @name Direct access to the globals list, functions list, and symbol table
@@ -979,6 +997,11 @@ public:
              bool ShouldPreserveUseListOrder = false,
              bool IsForDebug = false) const;
 
+  /// Renumber the IDs stored in metadata nodes into canonical assembly order.
+  /// This mutates the IDs and should only be used immediately before final
+  /// assembly output.
+  void renumberMetadataForAssembly();
+
   /// Dump the module to stderr (for debugging).
   void dump() const;
 
@@ -1039,6 +1062,27 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+  /// @}
+
+  /// @}
+  /// @name Utility functions for querying the long double format
+  /// @{
+
+  /// Returns the long double format from the "long-double-type" module flag,
+  /// or the triple default when the flag is absent.
+  LongDoubleFormat getLongDoubleFormat() const;
+
+  /// Set the long double format.
+  void setLongDoubleFormat(LongDoubleFormat Format);
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying the floating-point ABI
+  /// @{
+
+  /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
+  /// the ABI implied by the target triple when the flag is absent.
+  FloatABI::ABIType getFloatABI() const;
   /// @}
 
   /// @}

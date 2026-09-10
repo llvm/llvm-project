@@ -21,6 +21,10 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
 
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
+
 #include <cstdio>
 #include <variant>
 
@@ -840,22 +844,116 @@ def main(f):
     return ArgInfo(count, varargs)
 )";
 
-Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
-  ArgInfo result = {};
-  if (!IsValid())
-    return nullDeref();
-
+// inspect.signature() is deeply recursive and expensive in C-stack terms;
+// reentrant scripted callbacks dispatched through GetArgInfo() can turn
+// that into a fatal stack overflow instead of a catchable Python
+// RecursionError. GetArgInfo() never calls this itself; callers fall back
+// to it explicitly when they need to handle callables its cheaper,
+// attribute-only approach can't (e.g. builtins).
+Expected<PythonCallable::ArgInfo>
+PythonCallable::GetArgInfoFromInspectSignature(const PythonCallable &callable) {
+  PythonCallable::ArgInfo result = {};
   // no need to synchronize access to this global, we already have the GIL
   static PythonScript get_arg_info(get_arg_info_script);
-  Expected<PythonObject> pyarginfo = get_arg_info(*this);
+  Expected<PythonObject> pyarginfo = get_arg_info(callable);
   if (!pyarginfo)
     return pyarginfo.takeError();
   long long count =
       cantFail(As<long long>(pyarginfo.get().GetAttribute("count")));
   bool has_varargs =
       cantFail(As<bool>(pyarginfo.get().GetAttribute("has_varargs")));
-  result.max_positional_args = has_varargs ? ArgInfo::UNBOUNDED : count;
+  result.max_positional_args =
+      has_varargs ? PythonCallable::ArgInfo::UNBOUNDED : count;
+  return result;
+}
 
+// GetArgInfo()'s branches, top to bottom (`func` is what each branch ends up
+// introspecting; the final step is always func.__code__.co_argcount/co_flags):
+//
+//   callable
+//   |-- has __self__          -> func = __func__           (bound method;
+//   |                             fails for slot wrappers, e.g. (1).__add__)
+//   |-- has __code__ already  -> func = callable            (plain function)
+//   `-- neither
+//       |-- is a class
+//       |   |-- __init__ has __code__ -> func = __init__
+//       |   `-- else: check __new__ too (object.__init__ is lenient about
+//       |       extra args once __new__ is overridden)
+//       |       |-- __new__ has __code__ -> func = __new__
+//       |       `-- else                  -> ArgInfo{0} (object's defaults)
+//       `-- is an instance
+//           `-- func = __call__ (unwrap __func__ if bound)
+//               `-- no __code__ -> error (e.g. a builtin)
+Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
+  if (!IsValid())
+    return nullDeref();
+
+  PythonObject func = *this;
+  bool implicit_first_arg = false;
+  if (HasAttribute("__self__")) {
+    implicit_first_arg = true;
+    Expected<PythonObject> func_or_err = GetAttribute("__func__");
+    if (!func_or_err)
+      return func_or_err.takeError();
+    func = *func_or_err;
+  } else if (!HasAttribute("__code__")) {
+    implicit_first_arg = true;
+    if (PyType_Check(m_py_obj)) {
+      Expected<PythonObject> init_or_err = GetAttribute("__init__");
+      if (!init_or_err)
+        return init_or_err.takeError();
+      func = *init_or_err;
+      if (!func.HasAttribute("__code__")) {
+        // __init__ is still object.__init__. A class may customize
+        // __new__ instead and leave __init__ untouched, which makes
+        // object.__init__ lenient about extra arguments -- so check
+        // __new__ too before concluding there are none.
+        Expected<PythonObject> new_or_err = GetAttribute("__new__");
+        if (!new_or_err)
+          return new_or_err.takeError();
+        func = *new_or_err;
+        if (!func.HasAttribute("__code__"))
+          return ArgInfo{0};
+      }
+    } else {
+      Expected<PythonObject> call_or_err = GetAttribute("__call__");
+      if (!call_or_err)
+        return call_or_err.takeError();
+      func = *call_or_err;
+      if (func.HasAttribute("__self__")) {
+        Expected<PythonObject> inner_or_err = func.GetAttribute("__func__");
+        if (!inner_or_err)
+          return inner_or_err.takeError();
+        func = *inner_or_err;
+      }
+      if (!func.HasAttribute("__code__"))
+        return llvm::createStringError("__call__ has no __code__");
+    }
+  }
+
+  Expected<PythonObject> code_or_err = func.GetAttribute("__code__");
+  if (!code_or_err)
+    return code_or_err.takeError();
+  PythonObject code = *code_or_err;
+
+  Expected<long long> argcount =
+      As<long long>(code.GetAttribute("co_argcount"));
+  if (!argcount)
+    return argcount.takeError();
+  Expected<long long> flags = As<long long>(code.GetAttribute("co_flags"));
+  if (!flags)
+    return flags.takeError();
+
+  ArgInfo result = {};
+  // Mirrors CPython's CO_VARARGS from <code.h>, which isn't reliably
+  // visible across the Python versions/platforms this file builds against.
+  constexpr long long kCoFlagVarArgs = 0x04;
+  if (*flags & kCoFlagVarArgs) {
+    result.max_positional_args = ArgInfo::UNBOUNDED;
+  } else {
+    long long count = *argcount - (implicit_first_arg ? 1 : 0);
+    result.max_positional_args = count > 0 ? static_cast<unsigned>(count) : 0;
+  }
   return result;
 }
 
@@ -905,6 +1003,63 @@ bool PythonFile::Check(PyObject *py_obj) {
   }
   return !!r;
 }
+
+#if defined(_WIN32) && !defined(_DLL)
+// When LLVM is built with a different CRT allocator, it's built against the
+// static C runtime. The official Python builds link to the dynamic C runtime.
+// Since the file descriptors are managed per CRT instance, liblldb and Python
+// have different fd mappings. This translates between the two using the msvcrt
+// module.
+int PythonFile::TranslateFdToPython(int our_fd) {
+  intptr_t handle = _get_osfhandle(our_fd);
+  if (handle == 0 || (HANDLE)handle == INVALID_HANDLE_VALUE)
+    return -1;
+
+  PyObject *msvcrt = PyImport_ImportModule("msvcrt");
+  if (!msvcrt)
+    return -1;
+  PyObject *open_osf = PyObject_GetAttrString(msvcrt, "open_osfhandle");
+  Py_XDECREF(msvcrt);
+  if (!open_osf)
+    return -1;
+  PyObject *fd_obj =
+      PyObject_CallFunction(open_osf, "Li", (long long)handle, 0);
+  Py_XDECREF(open_osf);
+  if (!fd_obj)
+    return -1;
+  if (!PyLong_Check(fd_obj)) {
+    Py_XDECREF(fd_obj);
+    return -1;
+  }
+  long theirs = PyLong_AsLong(fd_obj);
+  Py_XDECREF(fd_obj);
+  return (int)theirs;
+}
+
+int PythonFile::TranslateFdFromPython(int their_fd) {
+  PyObject *msvcrt = PyImport_ImportModule("msvcrt");
+  if (!msvcrt)
+    return -1;
+  PyObject *get_handle = PyObject_GetAttrString(msvcrt, "get_osfhandle");
+  Py_XDECREF(msvcrt);
+  if (!get_handle)
+    return -1;
+  PyObject *handle_obj = PyObject_CallFunction(get_handle, "i", their_fd);
+  Py_XDECREF(get_handle);
+  if (!handle_obj)
+    return -1;
+  if (!PyLong_Check(handle_obj)) {
+    Py_XDECREF(handle_obj);
+    return -1;
+  }
+  size_t handle = PyLong_AsSize_t(handle_obj);
+  Py_XDECREF(handle_obj);
+  return _open_osfhandle((intptr_t)handle, 0);
+}
+#else
+int PythonFile::TranslateFdToPython(int our_fd) { return our_fd; }
+int PythonFile::TranslateFdFromPython(int their_fd) { return their_fd; }
+#endif
 
 const char *PythonException::toCString() const {
   if (!m_repr_bytes)
@@ -965,10 +1120,7 @@ bool PythonException::Matches(PyObject *exc) const {
 const char read_exception_script[] = R"(
 import sys
 from traceback import print_exception
-if sys.version_info.major < 3:
-  from StringIO import StringIO
-else:
-  from io import StringIO
+from io import StringIO
 def main(exc_type, exc_value, tb):
   f = StringIO()
   print_exception(exc_type, exc_value, tb, file=f)
@@ -1274,6 +1426,12 @@ llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
     PyErr_Clear();
     return ConvertToFileForcingUseOfScriptingIOMethods(borrowed);
   }
+  fd = TranslateFdFromPython(fd);
+  if (fd < 0) {
+    PyErr_Clear();
+    return llvm::createStringError("failed to translate Python fd to our fd");
+  }
+
   auto options = GetOptionsForPyObject(*this);
   if (!options)
     return options.takeError();
@@ -1318,6 +1476,12 @@ PythonFile::ConvertToFileForcingUseOfScriptingIOMethods(bool borrowed) {
   if (fd < 0) {
     PyErr_Clear();
     fd = File::kInvalidDescriptor;
+  } else {
+    fd = TranslateFdFromPython(fd);
+    if (fd < 0) {
+      PyErr_Clear();
+      return llvm::createStringError("failed to translate Python fd to our fd");
+    }
   }
 
   auto io_module = PythonModule::Import("io");
@@ -1383,8 +1547,8 @@ Expected<PythonFile> PythonFile::FromFile(File &file, const char *mode) {
   }
 
   PyObject *file_obj;
-  file_obj = PyFile_FromFd(file.GetDescriptor(), nullptr, mode, -1, nullptr,
-                           "ignore", nullptr, /*closefd=*/0);
+  file_obj = PyFile_FromFd(TranslateFdToPython(file.GetDescriptor()), nullptr,
+                           mode, -1, nullptr, "ignore", nullptr, /*closefd=*/0);
 
   if (!file_obj)
     return exception();

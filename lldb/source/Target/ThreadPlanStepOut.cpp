@@ -29,7 +29,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-uint32_t ThreadPlanStepOut::s_default_flag_values = 0;
+uint32_t ThreadPlanStepOut::s_default_flag_values =
+    ThreadPlanShouldStopHere::eStepPastLine0;
 
 /// Computes the target frame this plan should step out to.
 static StackFrameSP
@@ -235,14 +236,14 @@ ThreadPlanStepOut::~ThreadPlanStepOut() {
 void ThreadPlanStepOut::GetDescription(Stream *s,
                                        lldb::DescriptionLevel level) {
   if (level == lldb::eDescriptionLevelBrief)
-    s->Printf("step out");
+    s->PutCString("step out");
   else {
     if (m_step_out_to_inline_plan_sp)
-      s->Printf("Stepping out to inlined frame so we can walk through it.");
+      s->PutCString("Stepping out to inlined frame so we can walk through it.");
     else if (m_step_through_inline_plan_sp)
-      s->Printf("Stepping out by stepping through inlined function.");
+      s->PutCString("Stepping out by stepping through inlined function.");
     else {
-      s->Printf("Stepping out from ");
+      s->PutCString("Stepping out from ");
       Address tmp_address;
       if (tmp_address.SetLoadAddress(m_step_from_insn, &GetTarget())) {
         tmp_address.Dump(s, &m_process, Address::DumpStyleResolvedDescription,
@@ -255,7 +256,7 @@ void ThreadPlanStepOut::GetDescription(Stream *s,
       // be multiple copies of the
       // same function on the stack.
 
-      s->Printf(" returning to frame at ");
+      s->PutCString(" returning to frame at ");
       if (tmp_address.SetLoadAddress(m_return_addr, &GetTarget())) {
         tmp_address.Dump(s, &m_process, Address::DumpStyleResolvedDescription,
                          Address::DumpStyleLoadAddress);
@@ -271,9 +272,9 @@ void ThreadPlanStepOut::GetDescription(Stream *s,
   if (m_stepped_past_frames.empty())
     return;
 
-  s->Printf("\n");
+  s->PutCString("\n");
   for (StackFrameSP frame_sp : m_stepped_past_frames) {
-    s->Printf("Stepped out past: ");
+    s->PutCString("Stepped out past: ");
     frame_sp->DumpUsingSettingsFormat(s);
   }
 }

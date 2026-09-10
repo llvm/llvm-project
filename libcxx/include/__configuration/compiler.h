@@ -41,8 +41,8 @@
 #      warning "Libc++ only supports AppleClang 26.4 and later"
 #    endif
 #  elif defined(_LIBCPP_GCC_VER)
-#    if _LIBCPP_GCC_VER < 1500
-#      warning "Libc++ only supports GCC 15 and later"
+#    if _LIBCPP_GCC_VER < 1600
+#      warning "Libc++ only supports GCC 16 and later"
 #    endif
 #  endif
 
@@ -69,6 +69,12 @@
 
 #  if !defined(_LIBCPP_COMPILER_CLANG_BASED) && __cplusplus < 201103L
 #    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
+#  endif
+
+#  ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+#    define _LIBCPP_DEFAULT_NEW_ALIGNMENT __STDCPP_DEFAULT_NEW_ALIGNMENT__
+#  else
+#    define _LIBCPP_DEFAULT_NEW_ALIGNMENT __BIGGEST_ALIGNMENT__
 #  endif
 
 #endif

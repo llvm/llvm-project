@@ -192,9 +192,9 @@ public:
            (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
-  /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
-  /// of instruction rematerialization or sinking.
-  virtual bool isIgnorableUse(const MachineOperand &MO) const {
+  /// Given operand \p OpIdx of \p MI is a PhysReg use, return if it can be
+  /// ignored for the purpose of instruction rematerialization or sinking.
+  virtual bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
     return false;
   }
 
@@ -741,6 +741,19 @@ public:
                              SmallVectorImpl<MachineOperand> &Cond,
                              bool AllowModify = false) const {
     return true;
+  }
+
+  bool analyzeBranch(const MachineBasicBlock &MBB,
+                     const MachineBasicBlock *&TBB,
+                     const MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond) const {
+    MachineBasicBlock *TempTBB = nullptr, *TempFBB = nullptr;
+    bool NotUnderstandable = analyzeBranch(const_cast<MachineBasicBlock &>(MBB),
+                                           TempTBB, TempFBB, Cond,
+                                           /*AllowModify=*/false);
+    TBB = TempTBB;
+    FBB = TempFBB;
+    return NotUnderstandable;
   }
 
   /// Represents a predicate at the MachineFunction level.  The control flow a
@@ -1916,7 +1929,8 @@ public:
                                    SDNode *Node) const;
 
   /// Return the default expected latency for a def based on its opcode.
-  unsigned defaultDefLatency(const MCSchedModel &SchedModel,
+  unsigned defaultDefLatency(const TargetSubtargetInfo &STI,
+                             const MCSchedModel &SchedModel,
                              const MachineInstr &DefMI) const;
 
   /// Return true if this opcode has high latency to its result.
@@ -2256,8 +2270,9 @@ public:
   ///
   /// If an entire block is mappable, then its range is [MBB.begin(), MBB.end())
   ///
-  /// All instructions not present in an outlinable range are considered
-  /// illegal.
+  /// All non-debug instructions not present in an outlinable range are
+  /// considered illegal. Debug instructions are ignored wherever they appear,
+  /// so each gap between ranges must contain a non-debug instruction.
   virtual SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const {

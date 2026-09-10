@@ -43,9 +43,10 @@ def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
 
 def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
   let parameters =
-      (ins OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
-          OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause,
-          OptionalParameter<"BoolAttr">:$automap);
+      (ins OptionalEnumAttrParameter<DeclareTargetDeviceTypeAttr>:$device_type,
+          OptionalEnumAttrParameter<DeclareTargetCaptureClauseAttr>:$capture_clause,
+          DefaultValuedParameter<"bool", "false">:$automap,
+          DefaultValuedParameter<"bool", "false">:$implicit);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -80,6 +81,16 @@ def TaskDependArrayAttr
 }
 
 //===----------------------------------------------------------------------===//
+// InteropTypeArrayAttr
+//===----------------------------------------------------------------------===//
+
+def InteropTypeArrayAttr
+    : TypedArrayAttrBase<InteropTypeAttr,
+                         InteropTypeAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
 // VersionAttr
 //===----------------------------------------------------------------------===//
 
@@ -87,6 +98,17 @@ def VersionAttr : OpenMP_Attr<"Version", "version"> {
   let parameters = (ins
     "uint32_t":$version
   );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// IntegerWrapAroundAttr
+//===----------------------------------------------------------------------===//
+
+def IntegerWrapAroundAttr
+    : OpenMP_Attr<"IntegerWrapAround", "integer_wrap_around"> {
+  let parameters = (ins "bool":$integer_wrap_around);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }

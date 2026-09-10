@@ -4,7 +4,7 @@
 ;       checks are looking for the absence of specific metadata, which
 ;       cannot be expressed reliably by the generated checks.
 
-; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck %s -check-prefix=ISA
+; RUN: llc < %s | FileCheck %s -check-prefix=ISA
 ; RUN: opt --amdgpu-annotate-uniform -S %s |  FileCheck %s -check-prefix=UNIFORM
 ; RUN: opt --amdgpu-annotate-uniform --si-annotate-control-flow -S %s |  FileCheck %s -check-prefix=CONTROLFLOW
 
@@ -13,7 +13,7 @@
 ; not. This test ensures that the divergence of the branch is tested,
 ; not its condition, so that branch is correctly emitted as divergent.
 
-target triple = "amdgcn-mesa-mesa3d"
+target triple = "amdgpu9.00-mesa-mesa3d"
 
 define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA-LABEL: main:

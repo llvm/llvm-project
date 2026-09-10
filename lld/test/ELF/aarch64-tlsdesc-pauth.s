@@ -92,10 +92,10 @@ local2:
 ///                                                            ^^
 ///                                                            0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
 
-//--- err1.s
-// RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err1.s -o err1.o
-// RUN: not ld.lld -shared err1.o 2>&1 | FileCheck --check-prefix=ERR1 --implicit-check-not=error: %s
-// ERR1: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+//--- err.s
+// RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err.s -o err.o
+// RUN: not ld.lld -shared err.o 2>&1 | FileCheck --check-prefix=ERR --implicit-check-not=error: %s
+// ERR: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
         .text
         adrp    x0, :tlsdesc_auth:a
         ldr     x16, [x0, :tlsdesc_auth_lo12:a]
@@ -105,30 +105,5 @@ local2:
         adrp    x0, :tlsdesc:a
         ldr     x1, [x0, :tlsdesc_lo12:a]
         add     x0, x0, :tlsdesc_lo12:a
-        blr     x1
-
-//--- err2.s
-// RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err2.s -o err2.o
-// RUN: not ld.lld -shared err2.o 2>&1 | FileCheck --check-prefix=ERR2 --implicit-check-not=error: %s
-// ERR2: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
-        .text
-        adrp    x0, :tlsdesc:a
-        ldr     x1, [x0, :tlsdesc_lo12:a]
-        add     x0, x0, :tlsdesc_lo12:a
-        blr     x1
-
-        adrp    x0, :tlsdesc_auth:a
-        ldr     x16, [x0, :tlsdesc_auth_lo12:a]
-        add     x0, x0, :tlsdesc_auth_lo12:a
-        blraa   x16, x0
-
-//--- err3.s
-// RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err3.s -o err3.o
-// RUN: not ld.lld -shared err3.o 2>&1 | FileCheck --check-prefix=ERR3 --implicit-check-not=error: %s
-// ERR3: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
-        .text
-        adrp    x0, :tlsdesc_auth:a
-        ldr     x16, [x0, :tlsdesc_auth_lo12:a]
-        add     x0, x0, :tlsdesc_auth_lo12:a
         .tlsdesccall a
-        blraa   x16, x0
+        blr     x1

@@ -230,6 +230,14 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableCUDAInit("fcuda-init",
+                                          llvm::cl::desc("enable CUDA Init"),
+                                          llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    warnOnAllExtensions("pedantic", llvm::cl::desc("warn on all extensions"),
+                        llvm::cl::init(false));
+
 static llvm::cl::opt<bool>
     enableDoConcurrentOffload("fdoconcurrent-offload",
                               llvm::cl::desc("enable do concurrent offload"),
@@ -273,6 +281,12 @@ static llvm::cl::opt<bool>
                   llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
                                  "the LHS of the intrinsic assignment"),
                   llvm::cl::init(true));
+
+static llvm::cl::opt<bool> fpSumReassociation(
+    "ffp-sum-reassociation",
+    llvm::cl::desc("Enable Fortran-standard compliant reassociation within "
+                   "individual REAL and COMPLEX sum expressions"),
+    llvm::cl::init(true));
 
 static llvm::cl::opt<bool> stackRepackArrays(
     "fstack-repack-arrays",
@@ -368,6 +382,7 @@ static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
 
   fir::OpenMPFIRPassPipelineOpts opts;
+  opts.isSimdOnly = false;
   opts.isTargetDevice = enableOpenMPDevice;
   opts.doConcurrentMappingKind =
       llvm::StringSwitch<DoConcurrentMappingKind>(
@@ -409,7 +424,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   }
 
   // parse the input Fortran
-  parsing.Parse(llvm::outs());
+  parsing.Parse(llvm::outs(), semanticsContext.langOptions());
   if (!parsing.consumedWholeFile()) {
     parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
@@ -498,6 +513,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
+  loweringOptions.setSplitSumExpressionTree(fpSumReassociation);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);
   loweringOptions.setRepackArraysWhole(repackArraysWhole);
@@ -532,10 +548,13 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
         setOpenMPTargetDebug, setOpenMPTeamSubscription,
         setOpenMPThreadSubscription, setOpenMPNoThreadState,
         setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
-        enableOpenMPForceUSM, setOpenMPVersion, "", targetTriples, setNoGPULib);
+        enableOpenMPForceUSM, setOpenMPVersion, /*hostIRFile=*/"",
+        targetTriples, setNoGPULib);
     mlir::omp::setOffloadModuleInterfaceAttributes(mlirModule,
                                                    offloadModuleOpts);
     mlir::omp::setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
+    if (!integerWrapAround)
+      mlir::omp::setOpenMPIntegerWrapAround(mlirModule, false);
   }
   burnside.lower(parseTree, semanticsContext);
   std::error_code ec;
@@ -684,6 +703,13 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+  if (enableCUDAInit) {
+    options.features.Enable(Fortran::common::LanguageFeature::CUDAInit);
+  }
+  if (warnOnAllExtensions) {
+    options.features.WarnOnAllNonstandard();
+    options.features.WarnOnAllUsage();
   }
 
   if (enableDoConcurrentOffload) {

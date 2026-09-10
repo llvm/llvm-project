@@ -206,6 +206,11 @@ public:
   // graph has been built.
   void computeSuperRegs(CodeGenRegBank &);
 
+  // Diagnose an explicit SubRegIndex whose declared size makes a sub-register
+  // extend past the register that contains it (an oversized lane mask that
+  // silently corrupts sub-register liveness and spilling). See the definition.
+  void checkSubRegIndexSizes(CodeGenRegBank &) const;
+
   const SubRegMap &getSubRegs() const {
     assert(SubRegsComplete && "Must precompute sub-registers");
     return SubRegs;
@@ -446,6 +451,15 @@ public:
                              CodeGenRegisterClass *SubRC) {
     SubClassWithSubReg[SubIdx] = SubRC;
   }
+
+  /// Checks if there are any super-register classes for this SubIdx of this
+  /// class.
+  bool hasAnySuperRegClasses(const CodeGenSubRegIndex *SubIdx) const;
+
+  /// Checks if there is a super-register class for this SubIdx of this
+  /// class containing RC register class.
+  bool hasSuperRegClass(const CodeGenSubRegIndex *SubIdx,
+                        const CodeGenRegisterClass *RC) const;
 
   // getSuperRegClasses - Returns a bit vector of all register classes
   // containing only SubIdx super-registers of this class.

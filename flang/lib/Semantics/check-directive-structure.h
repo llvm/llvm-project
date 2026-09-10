@@ -12,22 +12,26 @@
 #ifndef FORTRAN_SEMANTICS_CHECK_DIRECTIVE_STRUCTURE_H_
 #define FORTRAN_SEMANTICS_CHECK_DIRECTIVE_STRUCTURE_H_
 
-#include "flang/Common/enum-set.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/iterator_range.h"
 
+#include <functional>
 #include <set>
 #include <unordered_map>
 
 namespace Fortran::semantics {
 
-template <typename C, std::size_t ClauseEnumSize> struct DirectiveClauses {
-  const common::EnumSet<C, ClauseEnumSize> allowed;
-  const common::EnumSet<C, ClauseEnumSize> allowedOnce;
-  const common::EnumSet<C, ClauseEnumSize> allowedExclusive;
-  const common::EnumSet<C, ClauseEnumSize> requiredOneOf;
+template <typename ClauseSetTy> struct DirectiveClauses {
+  const ClauseSetTy allowed;
+  const ClauseSetTy allowedOnce;
+  const ClauseSetTy allowedExclusive;
+  const ClauseSetTy requiredOneOf;
 };
+
+template <typename ClauseTy, typename ClauseSetTy>
+void IterateOverMembers(
+    const ClauseSetTy &set, std::function<void(ClauseTy)> func);
 
 // Generic branching checker for invalid branching out of OpenMP/OpenACC
 // directive.
@@ -204,11 +208,11 @@ private:
 // typename D is the directive enumeration.
 // typename C is the clause enumeration.
 // typename PC is the parser class defined in parse-tree.h for the clauses.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+template <typename D, typename C, typename PC, typename ClauseSetTy>
 class DirectiveStructureChecker : public virtual BaseChecker {
 protected:
   DirectiveStructureChecker(SemanticsContext &context,
-      const std::unordered_map<D, DirectiveClauses<C, ClauseEnumSize>>
+      const std::unordered_map<D, DirectiveClauses<ClauseSetTy>>
           &directiveClausesMap)
       : context_{context}, directiveClausesMap_(directiveClausesMap) {}
   virtual ~DirectiveStructureChecker() {}
@@ -221,10 +225,10 @@ protected:
     parser::CharBlock directiveSource{nullptr};
     parser::CharBlock clauseSource{nullptr};
     D directive;
-    common::EnumSet<C, ClauseEnumSize> allowedClauses{};
-    common::EnumSet<C, ClauseEnumSize> allowedOnceClauses{};
-    common::EnumSet<C, ClauseEnumSize> allowedExclusiveClauses{};
-    common::EnumSet<C, ClauseEnumSize> requiredClauses{};
+    ClauseSetTy allowedClauses{};
+    ClauseSetTy allowedOnceClauses{};
+    ClauseSetTy allowedExclusiveClauses{};
+    ClauseSetTy requiredClauses{};
 
     const PC *clause{nullptr};
     ClauseMapTy clauseInfo;
@@ -265,21 +269,19 @@ protected:
 
   void SetContextDirectiveEnum(D dir) { GetContext().directive = dir; }
 
-  void SetContextAllowed(const common::EnumSet<C, ClauseEnumSize> &allowed) {
+  void SetContextAllowed(const ClauseSetTy &allowed) {
     GetContext().allowedClauses = allowed;
   }
 
-  void SetContextAllowedOnce(
-      const common::EnumSet<C, ClauseEnumSize> &allowedOnce) {
+  void SetContextAllowedOnce(const ClauseSetTy &allowedOnce) {
     GetContext().allowedOnceClauses = allowedOnce;
   }
 
-  void SetContextAllowedExclusive(
-      const common::EnumSet<C, ClauseEnumSize> &allowedExclusive) {
+  void SetContextAllowedExclusive(const ClauseSetTy &allowedExclusive) {
     GetContext().allowedExclusiveClauses = allowedExclusive;
   }
 
-  void SetContextRequired(const common::EnumSet<C, ClauseEnumSize> &required) {
+  void SetContextRequired(const ClauseSetTy &required) {
     GetContext().requiredClauses = required;
   }
 
@@ -378,7 +380,7 @@ protected:
       const parser::CharBlock &directiveSource);
 
   // Check that only clauses in set are after the specific clauses.
-  void CheckOnlyAllowedAfter(C clause, common::EnumSet<C, ClauseEnumSize> set);
+  void CheckOnlyAllowedAfter(C clause, ClauseSetTy set);
 
   void CheckRequireAtLeastOneOf(bool warnInsteadOfError = false);
 
@@ -390,13 +392,11 @@ protected:
   // separator clause appears.
   void CheckAllowedOncePerGroup(C clause, C separator);
 
-  void CheckMutuallyExclusivePerGroup(
-      C clause, C separator, common::EnumSet<C, ClauseEnumSize> set);
+  void CheckMutuallyExclusivePerGroup(C clause, C separator, ClauseSetTy set);
 
   void CheckAtLeastOneClause();
 
-  void CheckNotAllowedIfClause(
-      C clause, common::EnumSet<C, ClauseEnumSize> set);
+  void CheckNotAllowedIfClause(C clause, ClauseSetTy set);
 
   std::string ContextDirectiveAsFortran();
 
@@ -416,10 +416,9 @@ protected:
 
   SemanticsContext &context_;
   std::vector<DirectiveContext> dirContext_; // used as a stack
-  std::unordered_map<D, DirectiveClauses<C, ClauseEnumSize>>
-      directiveClausesMap_;
+  std::unordered_map<D, DirectiveClauses<ClauseSetTy>> directiveClausesMap_;
 
-  std::string ClauseSetToString(const common::EnumSet<C, ClauseEnumSize> set);
+  std::string ClauseSetToString(const ClauseSetTy &set);
 };
 
 // Collect all labels defined in a block.
@@ -434,8 +433,8 @@ struct LabelCollector {
   }
 };
 
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckNoBranching(
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+void DirectiveStructureChecker<D, C, PC, ClauseSetTy>::CheckNoBranching(
     const parser::Block &block, D directive,
     const parser::CharBlock &directiveSource) {
   LabelCollector labelCollector;
@@ -449,9 +448,9 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckNoBranching(
 
 // Check that only clauses included in the given set are present after the given
 // clause.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckOnlyAllowedAfter(
-    C clause, common::EnumSet<C, ClauseEnumSize> set) {
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+void DirectiveStructureChecker<D, C, PC, ClauseSetTy>::CheckOnlyAllowedAfter(
+    C clause, ClauseSetTy set) {
   bool enforceCheck = false;
   for (auto cl : GetContext().actualClauses) {
     if (cl == clause) {
@@ -470,9 +469,8 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckOnlyAllowedAfter(
 }
 
 // Check that at least one clause is attached to the directive.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::CheckAtLeastOneClause() {
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+void DirectiveStructureChecker<D, C, PC, ClauseSetTy>::CheckAtLeastOneClause() {
   if (GetContext().actualClauses.empty()) {
     context_.Say(GetContext().directiveSource,
         "At least one clause is required on the %s directive"_err_en_US,
@@ -480,24 +478,24 @@ void DirectiveStructureChecker<D, C, PC,
   }
 }
 
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-std::string
-DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::ClauseSetToString(
-    const common::EnumSet<C, ClauseEnumSize> set) {
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+std::string DirectiveStructureChecker<D, C, PC, ClauseSetTy>::ClauseSetToString(
+    const ClauseSetTy &set) {
   std::string list;
-  set.IterateOverMembers([&](C o) {
+  std::function<void(C)> visitor{[&](C o) {
     if (!list.empty())
       list.append(", ");
     list.append(parser::ToUpperCaseLetters(getClauseName(o).str()));
-  });
+  }};
+  IterateOverMembers(set, visitor);
   return list;
 }
 
 // Check that at least one clause in the required set is present on the
 // directive.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::CheckRequireAtLeastOneOf(bool warnInsteadOfError) {
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+void DirectiveStructureChecker<D, C, PC, ClauseSetTy>::CheckRequireAtLeastOneOf(
+    bool warnInsteadOfError) {
   if (GetContext().requiredClauses.empty()) {
     return;
   }
@@ -521,16 +519,16 @@ void DirectiveStructureChecker<D, C, PC,
   }
 }
 
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-std::string DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::ContextDirectiveAsFortran() {
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+std::string
+DirectiveStructureChecker<D, C, PC, ClauseSetTy>::ContextDirectiveAsFortran() {
   return parser::ToUpperCaseLetters(
       getDirectiveName(GetContext().directive).str());
 }
 
 // Check that clauses present on the directive are allowed clauses.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-bool DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckAllowed(
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+bool DirectiveStructureChecker<D, C, PC, ClauseSetTy>::CheckAllowed(
     C clause, bool warnInsteadOfError) {
   if (!GetContext().allowedClauses.test(clause) &&
       !GetContext().allowedOnceClauses.test(clause) &&
@@ -561,11 +559,12 @@ bool DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckAllowed(
   }
   if (GetContext().allowedExclusiveClauses.test(clause)) {
     std::vector<C> others;
-    GetContext().allowedExclusiveClauses.IterateOverMembers([&](C o) {
+    std::function<void(C)> visitor{[&](C o) {
       if (FindClause(o)) {
         others.emplace_back(o);
       }
-    });
+    }};
+    IterateOverMembers(GetContext().allowedExclusiveClauses, visitor);
     for (const auto &e : others) {
       context_.Say(GetContext().clauseSource,
           "%s and %s clauses are mutually exclusive and may not appear on the "
@@ -586,10 +585,9 @@ bool DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckAllowed(
 
 // Enforce restriction where clauses in the given set are not allowed if the
 // given clause appears.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::CheckNotAllowedIfClause(C clause,
-    common::EnumSet<C, ClauseEnumSize> set) {
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+void DirectiveStructureChecker<D, C, PC, ClauseSetTy>::CheckNotAllowedIfClause(
+    C clause, ClauseSetTy set) {
   if (!llvm::is_contained(GetContext().actualClauses, clause)) {
     return; // Clause is not present
   }
@@ -605,9 +603,9 @@ void DirectiveStructureChecker<D, C, PC,
   }
 }
 
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::CheckAllowedOncePerGroup(C clause, C separator) {
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+void DirectiveStructureChecker<D, C, PC, ClauseSetTy>::CheckAllowedOncePerGroup(
+    C clause, C separator) {
   bool clauseIsPresent = false;
   for (auto cl : GetContext().actualClauses) {
     if (cl == clause) {
@@ -626,10 +624,10 @@ void DirectiveStructureChecker<D, C, PC,
   }
 }
 
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+template <typename D, typename C, typename PC, typename ClauseSetTy>
 void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::CheckMutuallyExclusivePerGroup(C clause, C separator,
-    common::EnumSet<C, ClauseEnumSize> set) {
+    ClauseSetTy>::CheckMutuallyExclusivePerGroup(C clause, C separator,
+    ClauseSetTy set) {
 
   // Checking of there is any offending clauses before the first separator.
   for (auto cl : GetContext().actualClauses) {
@@ -658,9 +656,9 @@ void DirectiveStructureChecker<D, C, PC,
 }
 
 // Check the value of the clause is a constant positive integer.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+template <typename D, typename C, typename PC, typename ClauseSetTy>
 void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::RequiresConstantPositiveParameter(const C &clause,
+    ClauseSetTy>::RequiresConstantPositiveParameter(const C &clause,
     const parser::ScalarIntConstantExpr &i) {
   if (const auto v{GetIntValue(i)}) {
     if (*v <= 0) {
@@ -673,17 +671,17 @@ void DirectiveStructureChecker<D, C, PC,
 }
 
 // Check the value of the clause is a constant positive parameter.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+template <typename D, typename C, typename PC, typename ClauseSetTy>
 void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::OptionalConstantPositiveParameter(const C &clause,
+    ClauseSetTy>::OptionalConstantPositiveParameter(const C &clause,
     const std::optional<parser::ScalarIntConstantExpr> &o) {
   if (o != std::nullopt) {
     RequiresConstantPositiveParameter(clause, o.value());
   }
 }
 
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::SayNotMatching(
+template <typename D, typename C, typename PC, typename ClauseSetTy>
+void DirectiveStructureChecker<D, C, PC, ClauseSetTy>::SayNotMatching(
     const parser::CharBlock &beginSource, const parser::CharBlock &endSource) {
   context_
       .Say(endSource, "Unmatched %s directive"_err_en_US,
@@ -692,9 +690,9 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::SayNotMatching(
 }
 
 // Check the value of the clause is a positive parameter.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+template <typename D, typename C, typename PC, typename ClauseSetTy>
 void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::RequiresPositiveParameter(const C &clause,
+    ClauseSetTy>::RequiresPositiveParameter(const C &clause,
     const parser::ScalarIntExpr &i, llvm::StringRef paramName, bool allowZero) {
   if (const auto v{GetIntValue(i)}) {
     if (*v < (allowZero ? 0 : 1)) {
