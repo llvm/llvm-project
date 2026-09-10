@@ -17,6 +17,8 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -35,6 +37,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -494,6 +497,71 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
   return Changed;
 }
 
+namespace {
+
+/// Iterator that lazily chains main SCCs with orphan SCCs.
+class AllSCCIterator {
+  CallGraph &CG;
+  scc_iterator<CallGraph *> CGSCCs;
+  Module::iterator OrphanScanPos;
+  std::optional<scc_iterator<CallGraphNode *>> OrphanSCCs;
+  SmallPtrSet<CallGraphNode *, 16> VisitedOrphans;
+
+  bool isUnvisited(CallGraphNode *N) const {
+    return !VisitedOrphans.contains(N) &&
+           !CGSCCs.getUnvisitedNodes(ArrayRef(N)).empty();
+  }
+
+  void findNextOrphanSCC() {
+    while (OrphanScanPos != CG.getModule().end()) {
+      Function &F = *OrphanScanPos++;
+      if (F.isDeclaration())
+        continue;
+      CallGraphNode *Node = CG[&F];
+      if (!isUnvisited(Node))
+        continue;
+      OrphanSCCs.emplace(scc_begin(Node));
+      return;
+    }
+    OrphanSCCs.reset();
+  }
+
+public:
+  AllSCCIterator(CallGraph &CG)
+      : CG(CG), CGSCCs(scc_begin(&CG)), OrphanScanPos(CG.getModule().begin()) {}
+
+  bool isAtEnd() const {
+    if (!CGSCCs.isAtEnd())
+      return false;
+    return !OrphanSCCs || OrphanSCCs->isAtEnd();
+  }
+
+  const std::vector<CallGraphNode *> &operator*() const {
+    if (!CGSCCs.isAtEnd())
+      return *CGSCCs;
+    return **OrphanSCCs;
+  }
+
+  AllSCCIterator &operator++() {
+    if (!CGSCCs.isAtEnd()) {
+      ++CGSCCs;
+      if (CGSCCs.isAtEnd())
+        findNextOrphanSCC();
+    } else {
+      for (CallGraphNode *N : **OrphanSCCs)
+        VisitedOrphans.insert(N);
+      ++(*OrphanSCCs);
+      if (OrphanSCCs->isAtEnd())
+        findNextOrphanSCC();
+    }
+    return *this;
+  }
+
+  scc_iterator<CallGraph *> &getCGSCCIterator() { return CGSCCs; }
+};
+
+} // anonymous namespace
+
 /// Execute all of the passes scheduled for execution.  Keep track of
 /// whether any of the passes modifies the module, and if so, return true.
 bool CGPassManager::runOnModule(Module &M) {
@@ -501,28 +569,32 @@ bool CGPassManager::runOnModule(Module &M) {
   bool Changed = doInitialization(CG);
 
   // Walk the callgraph in bottom-up SCC order.
-  scc_iterator<CallGraph*> CGI = scc_begin(&CG);
+  AllSCCIterator SCCI(CG);
+  CallGraphSCC CurSCC(CG, &SCCI.getCGSCCIterator());
 
-  CallGraphSCC CurSCC(CG, &CGI);
-  while (!CGI.isAtEnd()) {
+  // At the top level, we run all the passes in this pass manager on the
+  // functions in this SCC.  However, we support iterative compilation in the
+  // case where a function pass devirtualizes a call to a function.  For
+  // example, it is very common for a function pass (often GVN or instcombine)
+  // to eliminate the addressing that feeds into a call.  With that improved
+  // information, we would like the call to be an inline candidate, infer
+  // mod-ref information etc.
+  //
+  // we walk the callgraph with a custom iterator that first retruns all
+  // non-orphaned nodes and later finds the orphaned nodes and returns those. We
+  // do this because If those orphaned nodes do not get a function generated for
+  // them, we get a miscompilation and a crash later on.
+  //
+  // Because of this, we allow iteration up to a specified iteration count.
+  // This only happens in the case of a devirtualized call, so we only burn
+  // compile time in the case that we're making progress.  We also have a hard
+  // iteration count limit in case there is crazy code.
+  while (!SCCI.isAtEnd()) {
     // Copy the current SCC and increment past it so that the pass can hack
     // on the SCC if it wants to without invalidating our iterator.
-    const std::vector<CallGraphNode *> &NodeVec = *CGI;
+    const std::vector<CallGraphNode *> &NodeVec = *SCCI;
     CurSCC.initialize(NodeVec);
-    ++CGI;
-
-    // At the top level, we run all the passes in this pass manager on the
-    // functions in this SCC.  However, we support iterative compilation in the
-    // case where a function pass devirtualizes a call to a function.  For
-    // example, it is very common for a function pass (often GVN or instcombine)
-    // to eliminate the addressing that feeds into a call.  With that improved
-    // information, we would like the call to be an inline candidate, infer
-    // mod-ref information etc.
-    //
-    // Because of this, we allow iteration up to a specified iteration count.
-    // This only happens in the case of a devirtualized call, so we only burn
-    // compile time in the case that we're making progress.  We also have a hard
-    // iteration count limit in case there is crazy code.
+    ++SCCI;
     unsigned Iteration = 0;
     bool DevirtualizedCall = false;
     do {
@@ -540,6 +612,7 @@ bool CGPassManager::runOnModule(Module &M) {
 
     MaxSCCIterations.updateMax(Iteration);
   }
+
   Changed |= doFinalization(CG);
   return Changed;
 }
