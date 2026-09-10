@@ -638,6 +638,7 @@ done:
 ; OPT-GFX9: load i8, ptr addrspace(1) %sunkaddr
 
 ; GCN-LABEL: {{^}}test_sink_global_small_min_scratch_global_offset:
+; GFX9: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GFX9: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
 ; GFX9: global_load_sbyte v{{[0-9]+}}, [[ZERO]], s{{\[[0-9]+:[0-9]+\]}} offset:-4096{{$}}
 define amdgpu_kernel void @test_sink_global_small_min_scratch_global_offset(ptr addrspace(1) %out, ptr addrspace(1) %in) {

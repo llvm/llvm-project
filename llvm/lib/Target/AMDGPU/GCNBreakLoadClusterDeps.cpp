@@ -497,7 +497,7 @@ bool GCNBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
   OccupancyBudget = ST->getMaxNumVGPRs(
       ST->getOccupancyWithNumVGPRs(
-          TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
+          TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass, false),
           DynamicBlockSize),
       DynamicBlockSize);
   // The occupancy-derived budget above can exceed the function's own VGPR
