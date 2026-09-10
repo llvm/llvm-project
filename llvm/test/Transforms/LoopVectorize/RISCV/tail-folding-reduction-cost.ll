@@ -16,7 +16,7 @@ define i64 @add(ptr %a, i64 %n, i64 %start) {
 ; CHECK:  Cost of 0 for VF vscale x 8: WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP2]]>, vp<[[VP9]]>
 ; CHECK:  Cost of 8 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp.merge ir<true>, add (ir<%zext>, ir<%rdx>), ir<%rdx>, vp<%evl>
 ; CHECK:  Cost of 0 for VF vscale x 16: WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP2]]>, vp<[[VP9]]>
-; CHECK:  Cost of 32 for VF vscale x 16: EXPRESSION vp<[[VP9]]> = vp.merge ir<true>, add (ir<%zext>, ir<%rdx>), ir<%rdx>, vp<%evl>
+; CHECK:  Cost of 16 for VF vscale x 16: EXPRESSION vp<[[VP9]]> = vp.merge ir<true>, add (ir<%zext>, ir<%rdx>), ir<%rdx>, vp<%evl>
 ;
 entry:
   br label %loop
