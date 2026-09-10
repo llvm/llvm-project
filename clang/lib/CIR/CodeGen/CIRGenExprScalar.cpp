@@ -681,8 +681,8 @@ public:
         return isPre ? emitIncOrDec(e, oldVal) : oldVal;
       }
 
-    // Special case for atomic increment/decrement on floats.
-    // Bail out non-power-of-2-sized floating point types (e.g., x86_fp80).
+      // Special case for atomic increment/decrement on floats.
+      // Bail out non-power-of-2-sized floating point types (e.g., x86_fp80).
       if (valType->isFloatingType()) {
         CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
         mlir::Type fpTy = cgf.convertType(valType);
