@@ -827,7 +827,12 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   UsedRegs.addLiveOuts(MBB);
   auto InstUpToI = MBB.end();
   while (InstUpToI != MI) {
-    UsedRegs.stepBackward(*--InstUpToI);
+    // The pre-decrement is on purpose here.
+    // We want to have the liveness right before MI.
+    --InstUpToI;
+    if (InstUpToI->isDebugInstr())
+      continue;
+    UsedRegs.stepBackward(*InstUpToI);
   }
 
   if (SrcReg == M68k::CCR) {
