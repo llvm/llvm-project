@@ -4683,12 +4683,8 @@ struct AAIsDeadFunction : public AAIsDead {
     for (const Instruction &I : BB)
       if (const auto *CB = dyn_cast<CallBase>(&I))
         if (auto *F = dyn_cast_if_present<Function>(CB->getCalledOperand()))
-          if (F->hasLocalLinkage()) {
-            LLVM_DEBUG(dbgs() << "[AAIsDead] Seeding live internal callee "
-                              << F->getName() << " from "
-                              << BB.getParent()->getName() << "\n");
+          if (F->hasLocalLinkage())
             A.markLiveInternalFunction(*F);
-          }
     return true;
   }
 
