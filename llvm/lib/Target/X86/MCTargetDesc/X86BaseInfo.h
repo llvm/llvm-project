@@ -1165,6 +1165,34 @@ inline int getMemoryOperandIdx(const MCInstrDesc &Desc) {
   return MemRefIdx + getOperandBias(Desc);
 }
 
+/// Return true if displacement \p Value fits one byte: a plain disp8, or a
+/// compressed disp8*N for a CDisp8-capable EVEX form (per \p TSFlags). On
+/// success, if \p ImmOffset is non-null it receives the offset to add to
+/// \p Value to leave just the encoded byte (see emitImmediate).
+inline bool isDispOrCDisp8(uint64_t TSFlags, int64_t Value,
+                           int *ImmOffset = nullptr) {
+  bool HasEVEX = (TSFlags & X86II::EncodingMask) == X86II::EVEX;
+
+  unsigned CD8_Scale =
+      (TSFlags & X86II::CD8_Scale_Mask) >> X86II::CD8_Scale_Shift;
+  CD8_Scale = CD8_Scale ? 1U << (CD8_Scale - 1) : 0U;
+  if (!HasEVEX || !CD8_Scale)
+    return isInt<8>(Value);
+
+  assert(isPowerOf2_32(CD8_Scale) && "Unexpected CD8 scale!");
+  if (Value & (CD8_Scale - 1)) // Unaligned offset
+    return false;
+
+  int64_t CDisp8 = Value / static_cast<int64_t>(CD8_Scale);
+  if (!isInt<8>(CDisp8))
+    return false;
+
+  // ImmOffset will be added to Value in emitImmediate leaving just CDisp8.
+  if (ImmOffset)
+    *ImmOffset = CDisp8 - Value;
+  return true;
+}
+
 /// \returns true if the register is a XMM.
 inline bool isXMMReg(MCRegister Reg) {
   static_assert(X86::XMM15 - X86::XMM0 == 15,
