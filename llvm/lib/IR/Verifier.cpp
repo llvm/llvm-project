@@ -3936,7 +3936,8 @@ void Verifier::visitPHINode(PHINode &PN) {
         "PHI nodes not grouped at top of basic block!", &PN, PN.getParent());
 
   // Check that a PHI doesn't yield a Token.
-  Check(!PN.getType()->isTokenLikeTy(), "PHI nodes cannot have token type!");
+  Check(!PHINode::isInvalidType(PN.getType()),
+        "PHI nodes cannot have token type!");
 
   // Check that all of the values of the PHI node have the same type as the
   // result.
