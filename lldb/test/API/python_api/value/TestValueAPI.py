@@ -273,6 +273,22 @@ class ValueAPITestCase(TestBase):
         a_null_int_ptr = frame0.FindVariable("a_null_int_ptr")
         self.assertEqual(a_null_int_ptr.GetValue(), "0x0")
 
+        a_val: lldb.SBValue = frame0.FindVariable("a_val")
+        self.assertTrue(a_val)
+        self.assertEqual(a_val.value, "10")
+        self.assertEqual(a_val.GetValue(), "10")
+
+        a_val.SetFormat(lldb.eFormatBoolean)
+        self.assertEqual(a_val.format, lldb.eFormatBoolean)
+        self.assertEqual(a_val.GetFormat(), lldb.eFormatBoolean)
+        self.assertEqual(a_val.value.lower(), "true")
+
+        # Verify the setter.
+        a_val.format = lldb.eFormatHex
+        self.assertEqual(a_val.format, lldb.eFormatHex)
+        self.assertEqual(a_val.GetFormat(), lldb.eFormatHex)
+        self.assertEqual(a_val.value.lower(), "0xa")
+
         # Check that dereferencing a null pointer produces reasonable results
         # (does not crash).
         self.assertEqual(

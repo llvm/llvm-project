@@ -238,7 +238,7 @@ void FooAnalysis::visitOperation(Operation *op) {
   result |= state->set(*prevState);
 
   // Modify the state with the attribute, if specified.
-  if (auto attr = op->getAttrOfType<IntegerAttr>(kFooAttrName)) {
+  if (auto attr = op->getDiscardableAttrOfType<IntegerAttr>(kFooAttrName)) {
     uint64_t value = attr.getType().isUnsignedInteger()
                          ? attr.getUInt()
                          : static_cast<uint64_t>(attr.getInt());
@@ -301,7 +301,7 @@ void BarAnalysis::visitOperation(Operation *op) {
       getOrCreateFor<BarState>(point, getProgramPointBefore(op));
   result |= state->join(*prevState);
 
-  if (op->hasAttr(kTagAttrName)) {
+  if (op->hasDiscardableAttr(kTagAttrName)) {
     const FooState *fooState = getOrCreateFor<FooState>(point, point);
     if (fooState->isUninitialized())
       return;
@@ -321,7 +321,7 @@ void TestFooAnalysisPass::runOnOperation() {
   os << "function: @" << func.getSymName() << "\n";
 
   func.walk([&](Operation *op) {
-    auto tag = op->getAttrOfType<StringAttr>(kTagAttrName);
+    auto tag = op->getDiscardableAttrOfType<StringAttr>(kTagAttrName);
     if (!tag)
       return;
     const FooState *state =
@@ -344,7 +344,7 @@ void TestStagedAnalysesPass::runOnOperation() {
     return signalPassFailure();
 
   func.walk([&](Operation *op) {
-    if (!op->hasAttr(kTagAttrName))
+    if (!op->hasDiscardableAttr(kTagAttrName))
       return;
 
     ProgramPoint *point = solver.getProgramPointAfter(op);
@@ -353,9 +353,10 @@ void TestStagedAnalysesPass::runOnOperation() {
     assert(fooState && !fooState->isUninitialized());
     assert(barState && !barState->isUninitialized());
 
-    op->setAttr(kFooStateAttrName,
-                builder.getI64IntegerAttr(fooState->getValue()));
-    op->setAttr(kBarStateAttrName, builder.getBoolAttr(barState->getValue()));
+    op->setDiscardableAttr(kFooStateAttrName,
+                           builder.getI64IntegerAttr(fooState->getValue()));
+    op->setDiscardableAttr(kBarStateAttrName,
+                           builder.getBoolAttr(barState->getValue()));
   });
 }
 

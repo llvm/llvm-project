@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @skipIf(macos_version=["<", "15.0"])
     @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):

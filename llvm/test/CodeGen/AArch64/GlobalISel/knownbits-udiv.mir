@@ -6,9 +6,9 @@ name: Cst
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst
-  ; CHECK-NEXT: %0:_ KnownBits:01100100 SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %2:_ KnownBits:00011001 SignBits:3
+  ; CHECK-NEXT: %0:_ KnownBits:01100100 SignBits:1 IsKnownNeverZero:1
+  ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:00011001 SignBits:3 IsKnownNeverZero:1
     %0:_(i8) = G_CONSTANT i8 100
     %1:_(i8) = G_CONSTANT i8 4
     %2:_(i8) = G_UDIV %0, %1
@@ -18,11 +18,11 @@ name: PartialKnown
 body: |
   bb.0:
   ; CHECK-LABEL: name: @PartialKnown
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00001111 SignBits:4
-  ; CHECK-NEXT: %2:_ KnownBits:0000???? SignBits:4
-  ; CHECK-NEXT: %3:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %4:_ KnownBits:000000?? SignBits:6
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00001111 SignBits:4 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:0000???? SignBits:4 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %4:_ KnownBits:000000?? SignBits:6 IsKnownNeverZero:0
     %0:_(i8) = G_IMPLICIT_DEF
     %1:_(i8) = G_CONSTANT i8 15
     %2:_(i8) = G_AND %0, %1
@@ -34,9 +34,9 @@ name: Exact
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Exact
-  ; CHECK-NEXT: %0:_ KnownBits:00001100 SignBits:4
-  ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %2:_ KnownBits:00000011 SignBits:6
+  ; CHECK-NEXT: %0:_ KnownBits:00001100 SignBits:4 IsKnownNeverZero:1
+  ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
     %0:_(i8) = G_CONSTANT i8 12
     %1:_(i8) = G_CONSTANT i8 4
     %2:_(i8) = exact G_UDIV %0, %1
@@ -46,9 +46,9 @@ name: Unknown
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Unknown
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
     %0:_(i8) = COPY $b0
     %1:_(i8) = COPY $b1
     %2:_(i8) = G_UDIV %0, %1
@@ -58,11 +58,11 @@ name: EvenDivisor
 body: |
   bb.0:
   ; CHECK-LABEL: name: @EvenDivisor
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %2:_ KnownBits:11111110 SignBits:7
-  ; CHECK-NEXT: %3:_ KnownBits:???????0 SignBits:1
-  ; CHECK-NEXT: %4:_ KnownBits:0??????? SignBits:1
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:11111110 SignBits:7 IsKnownNeverZero:1
+  ; CHECK-NEXT: %3:_ KnownBits:???????0 SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:0??????? SignBits:1 IsKnownNeverZero:0
     %0:_(i8) = COPY $b0
     %1:_(i8) = COPY $b1
     %2:_(i8) = G_CONSTANT i8 -2
@@ -74,15 +74,15 @@ name: RangeKnownOnes
 body: |
   bb.0:
   ; CHECK-LABEL: name: @RangeKnownOnes
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %2:_ KnownBits:11000000 SignBits:2
-  ; CHECK-NEXT: %3:_ KnownBits:11?????? SignBits:2
-  ; CHECK-NEXT: %4:_ KnownBits:00000001 SignBits:7
-  ; CHECK-NEXT: %5:_ KnownBits:0000000? SignBits:7
-  ; CHECK-NEXT: %6:_ KnownBits:00000010 SignBits:6
-  ; CHECK-NEXT: %7:_ KnownBits:0000001? SignBits:6
-  ; CHECK-NEXT: %8:_ KnownBits:01?????? SignBits:1
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:11000000 SignBits:2 IsKnownNeverZero:1
+  ; CHECK-NEXT: %3:_ KnownBits:11?????? SignBits:2 IsKnownNeverZero:1
+  ; CHECK-NEXT: %4:_ KnownBits:00000001 SignBits:7 IsKnownNeverZero:1
+  ; CHECK-NEXT: %5:_ KnownBits:0000000? SignBits:7 IsKnownNeverZero:0
+  ; CHECK-NEXT: %6:_ KnownBits:00000010 SignBits:6 IsKnownNeverZero:1
+  ; CHECK-NEXT: %7:_ KnownBits:0000001? SignBits:6 IsKnownNeverZero:1
+  ; CHECK-NEXT: %8:_ KnownBits:01?????? SignBits:1 IsKnownNeverZero:1
     %0:_(i8) = COPY $b0
     %1:_(i8) = COPY $b1
     %2:_(i8) = G_CONSTANT i8 -64

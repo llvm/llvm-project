@@ -871,8 +871,10 @@ Status NativeProcessFreeBSD::Attach() {
   return Status();
 }
 
-Status NativeProcessFreeBSD::ReadMemory(lldb::addr_t addr, void *buf,
-                                        size_t size, size_t &bytes_read) {
+Status NativeProcessFreeBSD::ReadMemory(const ProcessAddress &process_addr,
+                                        void *buf, size_t size,
+                                        size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   unsigned char *dst = static_cast<unsigned char *>(buf);
   struct ptrace_io_desc io;
 
@@ -898,8 +900,8 @@ Status NativeProcessFreeBSD::ReadMemory(lldb::addr_t addr, void *buf,
   return Status();
 }
 
-Status NativeProcessFreeBSD::WriteMemory(lldb::addr_t addr, const void *buf,
-                                         size_t size, size_t &bytes_written) {
+Status NativeProcessFreeBSD::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                           size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   Status error;
   struct ptrace_io_desc io;

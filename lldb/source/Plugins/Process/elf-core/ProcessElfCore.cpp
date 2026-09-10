@@ -524,8 +524,9 @@ Status ProcessElfCore::DoDestroy() { return Status(); }
 bool ProcessElfCore::IsAlive() { return true; }
 
 // Process Memory
-size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                  Status &error) {
+size_t ProcessElfCore::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                                  size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   if (lldb::ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
@@ -562,8 +563,9 @@ Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
   return Status();
 }
 
-size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                    Status &error) {
+size_t ProcessElfCore::DoReadMemory(const ProcessAddress &process_addr,
+                                    void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
   if (core_objfile == nullptr)

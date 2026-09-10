@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
@@ -117,7 +118,7 @@ TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
       {"__builtin_HEXAGON_A2_tfr", "hexagon", hexagon_A2_tfr},
       {"__builtin_lasx_xbz_w", "loongarch", loongarch_lasx_xbz_w},
       {"__builtin_mips_bitrev", "mips", mips_bitrev},
-      {"__nvvm_add_rn_d", "nvvm", nvvm_add_rn_d},
+      {"__nvvm_mul_rn_d", "nvvm", nvvm_mul_rn_d},
       {"__builtin_altivec_dss", "ppc", ppc_altivec_dss},
       {"__builtin_riscv_sha512sum1r", "riscv", riscv_sha512sum1r},
       {"__builtin_tend", "s390", s390_tend},
@@ -186,8 +187,30 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
   }
 }
 
+TEST(IntrinsicAttributes,
+     SPIRVResourceImplicitDerivativeIntrinsicsAreConvergent) {
+  using namespace Intrinsic;
+  LLVMContext Context;
+  static constexpr ID ConvergentResourceIntrinsics[] = {
+      spv_resource_sample,        spv_resource_sample_clamp,
+      spv_resource_samplebias,    spv_resource_samplebias_clamp,
+      spv_resource_calculate_lod, spv_resource_calculate_lod_unclamped,
+  };
+  for (ID IntrID : ConvergentResourceIntrinsics) {
+    AttributeSet AS = getFnAttributes(Context, IntrID);
+    EXPECT_TRUE(AS.hasAttribute(Attribute::Convergent))
+        << "Intrinsic " << getName(IntrID) << " should be convergent";
+  }
+
+  AttributeSet SampleGradAttrs =
+      getFnAttributes(Context, spv_resource_samplegrad);
+  EXPECT_FALSE(SampleGradAttrs.hasAttribute(Attribute::Convergent))
+      << "Intrinsic " << getName(spv_resource_samplegrad)
+      << " should not be convergent";
+}
+
 // Check that getFnAttributes for intrinsics that do not have any function
-// attributes correcty returns an empty set.
+// attributes correctly returns an empty set.
 TEST(IntrinsicAttributes, TestGetFnAttributesBug) {
   using namespace Intrinsic;
   LLVMContext Context;
