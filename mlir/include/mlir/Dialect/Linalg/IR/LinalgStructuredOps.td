@@ -610,11 +610,21 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
       }]>,
 
      OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$outputs,
-          "ElementwiseKindAttr":$kind,
-          "ArrayAttr":$indexingMaps,
+          "ElementwiseKind":$kind,
+          CArg<"ArrayAttr", "{}">:$indexingMaps,
           CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        $_state.addAttribute("kind", kind);
+        assert((unsigned)kind <= getMaxEnumValForElementwiseKind() &&
+               "expected a valid elementwise kind attribute");
+        ElementwiseKindAttr kindAttr = ElementwiseKindAttr::get($_builder.getContext(), kind);
+        $_state.addAttribute("kind", kindAttr);
+        if (!indexingMaps) {
+          auto affineMaps = ElementwiseOp::getDefaultIndexingMaps(
+                            inputs.size() + outputs.size(),
+                            llvm::cast<ShapedType>(outputs[0].getType()).getRank(),
+                            $_builder.getContext());
+          indexingMaps = $_builder.getAffineMapArrayAttr(affineMaps);
+        }
         $_state.addAttribute("indexing_maps", indexingMaps);
         buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
                           attributes, ElementwiseOp::getRegionBuilder());

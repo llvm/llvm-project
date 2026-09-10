@@ -44,8 +44,6 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
-using VectorParts = SmallVector<Value *, 2>;
-
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
@@ -948,7 +946,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // The recipe may have multiple operands to be reduced together.
     unsigned NumOperandsToReduce = getNumOperands();
-    VectorParts RdxParts(NumOperandsToReduce);
+    SmallVector<Value *, 2> RdxParts(NumOperandsToReduce);
     for (unsigned Part = 0; Part < NumOperandsToReduce; ++Part)
       RdxParts[Part] = State.get(getOperand(Part), IsInLoop);
 
@@ -3144,11 +3142,6 @@ InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
   if (!BaseIVTy->isIntegerTy())
     return 0;
 
-  // TODO: Add support for predicated regions. Requires scaling the cost by the
-  // probability of entering the block.
-  if (getRegion() && getRegion()->isReplicator())
-    return 0;
-
   // If only the first lane is used, then there won't be any code that remains
   // in the loop for the first unrolled part.
   if (vputils::onlyFirstLaneUsed(this))
@@ -3178,8 +3171,15 @@ InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
   //  %gep2 = getelementptr i8, ptr %base_gep, i32 1
   // Therefore, in reality the cost is somewhere betwen 1*AddCost and
   // (NumLanes - 1) * AddCost. For now, assume the cost of a single add.
-  return Ctx.TTI.getArithmeticInstrCost(Instruction::Add, BaseIVTy,
-                                        Ctx.CostKind);
+  //
+  // If the steps are generated inside a replicate region, scale by execution
+  // probability.
+  InstructionCost Cost =
+      Ctx.TTI.getArithmeticInstrCost(Instruction::Add, BaseIVTy, Ctx.CostKind);
+  const VPRegionBlock *Region = getRegion();
+  if (Region && Region->isReplicator())
+    Cost /= Ctx.getReplicateRegionCostDivisor(Region);
+  return Cost;
 }
 
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
