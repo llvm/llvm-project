@@ -1307,7 +1307,7 @@ public:
     // function during ThinLTO import. This will create a linkage name like
     // "_Zfoo.llvm.xxxx.cleanup". Remove the ".llvm." suffix after stripping all
     // the coroutine suffixes to avoid pseudo probe mismatch.
-    const SmallVector<StringRef, 3> CoroSuffixes{".cleanup", ".destroy",
+    const SmallVector<StringRef, 4> CoroSuffixes{".cleanup", ".destroy",
                                                  ".resume", LLVMSuffix};
     return getCanonicalFnName(FnName, CoroSuffixes, Attr);
   }
