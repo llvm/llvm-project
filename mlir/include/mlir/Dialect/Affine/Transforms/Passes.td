@@ -183,6 +183,26 @@ def AffineLoopInvariantCodeMotion
   let constructor = "mlir::affine::createAffineLoopInvariantCodeMotionPass()";
 }
 
+def AffineLoopCarriedComputationReuse
+    : Pass<"affine-loop-carried-computation-reuse", "func::FuncOp"> {
+  let summary = "Reuse one-iteration translated computations across affine "
+                "loop iterations";
+  let description = [{
+    This pass finds two side-effect-free computation DAGs consumed in the same
+    affine loop iteration when their affine loads differ by exactly one loop
+    step. It computes the earlier DAG once before the loop, carries its result
+    through an iter_arg, and yields the later DAG for the next iteration.
+
+    The pass preserves operation structure and does not reassociate
+    floating-point operations. It does not match a pair of raw loads or
+    algebraically rewrite reductions. One candidate is materialized per loop,
+    preferring a whole computation over a translated subexpression, to bound
+    the amount of new loop-carried state.
+  }];
+  let constructor = "mlir::affine::createAffineLoopCarriedComputationReusePass()";
+  let dependentDialects = ["arith::ArithDialect"];
+}
+
 def AffineLoopTiling : Pass<"affine-loop-tile", "func::FuncOp"> {
   let summary = "Tile affine loop nests";
   let constructor = "mlir::affine::createLoopTilingPass()";
