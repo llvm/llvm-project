@@ -4221,16 +4221,28 @@ bool AMDGPUDAGToDAGISel::SelectSWMMACIndex32(SDValue In, SDValue &Src,
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {
+  unsigned Mods = SISrcMods::NONE;
   Src = In;
-  // FIXME: Handle op_sel
-  SrcMods = CurDAG->getTargetConstant(0, SDLoc(In), MVT::i32);
+  if (!Subtarget->useRealTrue16Insts() && In.getValueSizeInBits() == 16 &&
+      isExtractHiElt(Src, Src))
+    Mods |= SISrcMods::OP_SEL_0;
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSelMods(SDValue In, SDValue &Src,
                                              SDValue &SrcMods) const {
-  // FIXME: Handle op_sel
-  return SelectVOP3Mods(In, Src, SrcMods);
+  unsigned Mods;
+  if (!SelectVOP3ModsImpl(In, Src, Mods, /*IsCanonicalizing=*/true,
+                          /*AllowAbs=*/true))
+    return false;
+
+  if (!Subtarget->useRealTrue16Insts() && In.getValueSizeInBits() == 16 &&
+      isExtractHiElt(Src, Src))
+    Mods |= SISrcMods::OP_SEL_0;
+
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
 }
 
 // Match lowered fpext from bf16 to f32. This is a bit operation extending

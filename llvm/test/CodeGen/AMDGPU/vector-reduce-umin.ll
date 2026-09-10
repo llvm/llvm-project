@@ -1284,8 +1284,7 @@ define i16 @test_vector_reduce_umin_v2i16(<2 x i16> %v) {
 ; GFX10-SDAG-LABEL: test_vector_reduce_umin_v2i16:
 ; GFX10-SDAG:       ; %bb.0: ; %entry
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v1
+; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: test_vector_reduce_umin_v2i16:
@@ -1400,8 +1399,7 @@ define i16 @test_vector_reduce_umin_v3i16(<3 x i16> %v) {
 ; GFX9-GISEL-LABEL: test_vector_reduce_umin_v3i16:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX9-GISEL-NEXT:    v_min3_u16 v0, v0, v2, v1
+; GFX9-GISEL-NEXT:    v_min3_u16 v0, v0, v0, v1 op_sel:[0,1,0,0]
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_umin_v3i16:
@@ -1409,15 +1407,13 @@ define i16 @test_vector_reduce_umin_v3i16(<3 x i16> %v) {
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_perm_b32 v1, -1, v1, 0x5040100
 ; GFX10-SDAG-NEXT:    v_pk_min_u16 v0, v0, v1
-; GFX10-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v1
+; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: test_vector_reduce_umin_v3i16:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-GISEL-NEXT:    v_min3_u16 v0, v0, v2, v1
+; GFX10-GISEL-NEXT:    v_min3_u16 v0, v0, v0, v1 op_sel:[0,1,0,0]
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_umin_v3i16:
@@ -1445,9 +1441,7 @@ define i16 @test_vector_reduce_umin_v3i16(<3 x i16> %v) {
 ; GFX11-GISEL-LABEL: test_vector_reduce_umin_v3i16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_min3_u16 v0, v0, v2, v1
+; GFX11-GISEL-NEXT:    v_min3_u16 v0, v0, v0, v1 op_sel:[0,1,0,0]
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_umin_v3i16:
@@ -1487,9 +1481,7 @@ define i16 @test_vector_reduce_umin_v3i16(<3 x i16> %v) {
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_min3_u16 v0, v0, v2, v1
+; GFX12-GISEL-NEXT:    v_min3_u16 v0, v0, v0, v1 op_sel:[0,1,0,0]
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call i16 @llvm.vector.reduce.umin.v3i16(<3 x i16> %v)
@@ -1560,8 +1552,7 @@ define i16 @test_vector_reduce_umin_v4i16(<4 x i16> %v) {
 ; GFX10-SDAG:       ; %bb.0: ; %entry
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_pk_min_u16 v0, v0, v1
-; GFX10-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v1
+; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: test_vector_reduce_umin_v4i16:
@@ -1736,8 +1727,7 @@ define i16 @test_vector_reduce_umin_v8i16(<8 x i16> %v) {
 ; GFX10-SDAG-NEXT:    v_pk_min_u16 v1, v1, v3
 ; GFX10-SDAG-NEXT:    v_pk_min_u16 v0, v0, v2
 ; GFX10-SDAG-NEXT:    v_pk_min_u16 v0, v0, v1
-; GFX10-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v1
+; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: test_vector_reduce_umin_v8i16:
@@ -1987,8 +1977,7 @@ define i16 @test_vector_reduce_umin_v16i16(<16 x i16> %v) {
 ; GFX10-SDAG-NEXT:    v_pk_min_u16 v1, v1, v3
 ; GFX10-SDAG-NEXT:    v_pk_min_u16 v0, v0, v2
 ; GFX10-SDAG-NEXT:    v_pk_min_u16 v0, v0, v1
-; GFX10-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v1
+; GFX10-SDAG-NEXT:    v_min_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: test_vector_reduce_umin_v16i16:
