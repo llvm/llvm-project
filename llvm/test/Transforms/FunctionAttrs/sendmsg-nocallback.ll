@@ -5,13 +5,13 @@
 ; Make sure norecurse is inferred on the calling functions
 
 define internal void @sendmsg_is_norecurse() {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define internal void @sendmsg_is_norecurse(
 ; FNATTRS-SAME: ) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @llvm.amdgcn.s.sendmsg(i32 1, i32 0)
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn
 ; ATTRIBUTOR-LABEL: define internal void @sendmsg_is_norecurse(
 ; ATTRIBUTOR-SAME: ) #[[ATTR0:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    call void @llvm.amdgcn.s.sendmsg(i32 1, i32 0) #[[ATTR4:[0-9]+]]
@@ -22,30 +22,24 @@ define internal void @sendmsg_is_norecurse() {
 }
 
 define internal void @sendmsghalt_is_norecurse() {
-; FNATTRS: Function Attrs: nofree norecurse nounwind
-; FNATTRS-LABEL: define internal void @sendmsghalt_is_norecurse(
-; FNATTRS-SAME: ) #[[ATTR1:[0-9]+]] {
-; FNATTRS-NEXT:    call void @llvm.amdgcn.s.sendmsghalt(i32 1, i32 0)
-; FNATTRS-NEXT:    ret void
-;
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind
-; ATTRIBUTOR-LABEL: define internal void @sendmsghalt_is_norecurse(
-; ATTRIBUTOR-SAME: ) #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @llvm.amdgcn.s.sendmsghalt(i32 1, i32 0) #[[ATTR5:[0-9]+]]
-; ATTRIBUTOR-NEXT:    ret void
+; COMMON: Function Attrs: norecurse nounwind
+; COMMON-LABEL: define internal void @sendmsghalt_is_norecurse(
+; COMMON-SAME: ) #[[ATTR1:[0-9]+]] {
+; COMMON-NEXT:    call void @llvm.amdgcn.s.sendmsghalt(i32 1, i32 0)
+; COMMON-NEXT:    ret void
 ;
   call void @llvm.amdgcn.s.sendmsghalt(i32 1, i32 0)
   ret void
 }
 
 define internal i32 @sendmsg_rtn_is_norecurse() {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define internal i32 @sendmsg_rtn_is_norecurse(
 ; FNATTRS-SAME: ) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 1)
 ; FNATTRS-NEXT:    ret i32 [[RES]]
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn
 ; ATTRIBUTOR-LABEL: define internal i32 @sendmsg_rtn_is_norecurse(
 ; ATTRIBUTOR-SAME: ) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 1) #[[ATTR4]]
@@ -56,7 +50,7 @@ define internal i32 @sendmsg_rtn_is_norecurse() {
 }
 
 define void @user() {
-; FNATTRS: Function Attrs: nofree norecurse nounwind
+; FNATTRS: Function Attrs: norecurse nounwind
 ; FNATTRS-LABEL: define void @user(
 ; FNATTRS-SAME: ) #[[ATTR1]] {
 ; FNATTRS-NEXT:    call void @sendmsg_is_norecurse()
@@ -64,12 +58,12 @@ define void @user() {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = call i32 @sendmsg_rtn_is_norecurse()
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind
+; ATTRIBUTOR: Function Attrs: norecurse nounwind
 ; ATTRIBUTOR-LABEL: define void @user(
 ; ATTRIBUTOR-SAME: ) #[[ATTR1]] {
-; ATTRIBUTOR-NEXT:    call void @sendmsg_is_norecurse() #[[ATTR6:[0-9]+]]
-; ATTRIBUTOR-NEXT:    call void @sendmsghalt_is_norecurse() #[[ATTR7:[0-9]+]]
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call i32 @sendmsg_rtn_is_norecurse() #[[ATTR7]]
+; ATTRIBUTOR-NEXT:    call void @sendmsg_is_norecurse() #[[ATTR5:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @sendmsghalt_is_norecurse() #[[ATTR6:[0-9]+]]
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call i32 @sendmsg_rtn_is_norecurse() #[[ATTR6]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @sendmsg_is_norecurse()
@@ -78,19 +72,16 @@ define void @user() {
   ret void
 }
 ;.
-; FNATTRS: attributes #[[ATTR0]] = { mustprogress nofree norecurse nounwind willreturn }
-; FNATTRS: attributes #[[ATTR1]] = { nofree norecurse nounwind }
-; FNATTRS: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn }
-; FNATTRS: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind }
+; FNATTRS: attributes #[[ATTR0]] = { mustprogress norecurse nounwind willreturn }
+; FNATTRS: attributes #[[ATTR1]] = { norecurse nounwind }
+; FNATTRS: attributes #[[ATTR2:[0-9]+]] = { nocallback nounwind willreturn }
+; FNATTRS: attributes #[[ATTR3:[0-9]+]] = { nocallback nounwind }
 ;.
-; ATTRIBUTOR: attributes #[[ATTR0]] = { mustprogress nofree norecurse nounwind willreturn }
-; ATTRIBUTOR: attributes #[[ATTR1]] = { nofree norecurse nounwind }
-; ATTRIBUTOR: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn }
-; ATTRIBUTOR: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind }
-; ATTRIBUTOR: attributes #[[ATTR4]] = { nofree willreturn }
-; ATTRIBUTOR: attributes #[[ATTR5]] = { nofree }
-; ATTRIBUTOR: attributes #[[ATTR6]] = { nofree nounwind willreturn }
-; ATTRIBUTOR: attributes #[[ATTR7]] = { nofree nounwind }
+; ATTRIBUTOR: attributes #[[ATTR0]] = { mustprogress norecurse nounwind willreturn }
+; ATTRIBUTOR: attributes #[[ATTR1]] = { norecurse nounwind }
+; ATTRIBUTOR: attributes #[[ATTR2:[0-9]+]] = { nocallback nounwind willreturn }
+; ATTRIBUTOR: attributes #[[ATTR3:[0-9]+]] = { nocallback nounwind }
+; ATTRIBUTOR: attributes #[[ATTR4]] = { willreturn }
+; ATTRIBUTOR: attributes #[[ATTR5]] = { nounwind willreturn }
+; ATTRIBUTOR: attributes #[[ATTR6]] = { nounwind }
 ;.
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; COMMON: {{.*}}

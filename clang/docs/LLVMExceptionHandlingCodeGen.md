@@ -1,5 +1,8 @@
 # LLVM IR Generation for EH and Cleanups
 
+```{contents}
+:local: true
+```
 
 ## Overview
 

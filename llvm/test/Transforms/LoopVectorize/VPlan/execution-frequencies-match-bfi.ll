@@ -223,15 +223,14 @@ exit:
 }
 
 define void @second_branch_without_weights(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
-; %merge's branch has no weights, so BranchProbabilityInfo estimates them.
-; %if.then.2's frequency is composed through that estimated edge, so it is
-; marked estimated too.
+; %merge's branch has no weights, so everything it reaches is unknown and stays
+; unannotated. %merge itself is still known, as both of its incoming edges are.
 ;
 ;   %loop      1000/1000 =   1
 ;   %if.then.1  250/1000 = 1/4
 ;   %merge     1000/1000 =   1
-;   %if.then.2  625/1000 = 5/8       (estimated)
-;   %latch     1000/1000 =   1
+;   %if.then.2               unknown
+;   %latch                   unknown
 ;
 ; BFI-LABEL: block-frequency-info: second_branch_without_weights
 ; BFI-NEXT:   - entry: float = 1.0,
@@ -253,7 +252,7 @@ define void @second_branch_without_weights(ptr noalias %a, ptr noalias %b, ptr n
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then.2:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, ir<%c.0> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, ir<%c.0>{{$}}
 ; VPLAN-NEXT:    Successor(s): latch
 ;
 entry:

@@ -230,12 +230,12 @@ public:
     const_reference back() const;
 
     void push_back(const value_type& x);
-    template <class... Args> reference emplace_back(Args&&... args);  // C++11; returns void/reference until/since C++17
+    template <class... Args> reference emplace_back(Args&&... args);  // C++14; reference in C++17
     template<container-compatible-range<T> R>
       constexpr void append_range(R&& rg); // C++23
     void pop_back();
 
-    template <class... Args> iterator emplace(const_iterator position, Args&&... args);  // C++11
+    template <class... Args> iterator emplace(const_iterator position, Args&&... args);  // C++14
     iterator insert(const_iterator position, const value_type& x);
     iterator insert(const_iterator position, size_type n, const value_type& x);
     template <class InputIterator>

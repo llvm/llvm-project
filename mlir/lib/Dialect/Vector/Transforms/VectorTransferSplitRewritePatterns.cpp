@@ -518,8 +518,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   auto inBoundsAttr = b.getBoolArrayAttr(bools);
   if (options.vectorTransferSplit == VectorTransferSplit::ForceInBounds) {
     b.modifyOpInPlace(xferOp, [&]() {
-      xferOp->setInherentAttr(b.getStringAttr(xferOp.getInBoundsAttrName()),
-                              inBoundsAttr);
+      xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);
     });
     return success();
   }
@@ -592,8 +591,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
       xferReadOp.setOperand(i, fullPartialIfOp.getResult(i));
 
     b.modifyOpInPlace(xferOp, [&]() {
-      xferOp->setInherentAttr(b.getStringAttr(xferOp.getInBoundsAttrName()),
-                              inBoundsAttr);
+      xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);
     });
 
     return success();
@@ -612,7 +610,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   mapping.map(xferWriteOp.getBase(), memrefAndIndices.front());
   mapping.map(xferWriteOp.getIndices(), memrefAndIndices.drop_front());
   auto *clone = b.clone(*xferWriteOp, mapping);
-  clone->setInherentAttr(xferWriteOp.getInBoundsAttrName(), inBoundsAttr);
+  clone->setAttr(xferWriteOp.getInBoundsAttrName(), inBoundsAttr);
 
   // Create a potential copy from the allocated buffer to the final output in
   // the slow path case.

@@ -69,21 +69,18 @@ constexpr auto obsoleteExecutionPartConstruct{recovery(ignoredStatementPrefix >>
 TYPE_PARSER(!consumedAllInput >>
     recovery(
         CONTEXT_PARSER("execution part construct"_en_US,
-            first(
-                withMessage("expected an executable statement"_err_en_US,
-                    first(
-                        construct<ExecutionPartConstruct>(executableConstruct),
-                        construct<ExecutionPartConstruct>(
-                            statement(indirect(formatStmt))),
-                        construct<ExecutionPartConstruct>(
-                            statement(indirect(entryStmt))),
-                        construct<ExecutionPartConstruct>(
-                            statement(indirect(dataStmt))),
-                        extension<LanguageFeature::ExecutionPartNamelist>(
-                            "nonstandard usage: NAMELIST in execution part"_port_en_US,
-                            construct<ExecutionPartConstruct>(
-                                statement(indirect(Parser<NamelistStmt>{})))),
-                        obsoleteExecutionPartConstruct)),
+            first(construct<ExecutionPartConstruct>(executableConstruct),
+                construct<ExecutionPartConstruct>(
+                    statement(indirect(formatStmt))),
+                construct<ExecutionPartConstruct>(
+                    statement(indirect(entryStmt))),
+                construct<ExecutionPartConstruct>(
+                    statement(indirect(dataStmt))),
+                extension<LanguageFeature::ExecutionPartNamelist>(
+                    "nonstandard usage: NAMELIST in execution part"_port_en_US,
+                    construct<ExecutionPartConstruct>(
+                        statement(indirect(Parser<NamelistStmt>{})))),
+                obsoleteExecutionPartConstruct,
                 lookAhead(declarationConstruct) >> SkipTo<'\n'>{} >>
                     fail<ExecutionPartConstruct>(
                         "misplaced declaration in the execution part"_err_en_US))),

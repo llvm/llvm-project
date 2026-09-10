@@ -1,5 +1,8 @@
 # OverflowBehaviorTypes
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

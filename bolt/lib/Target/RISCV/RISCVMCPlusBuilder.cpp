@@ -28,14 +28,6 @@ using namespace bolt;
 
 namespace {
 
-bool isValidCallJALR(const MCInst &Inst) {
-  if (Inst.getOpcode() != RISCV::JALR || MCPlus::getNumPrimeOperands(Inst) != 3)
-    return false;
-
-  return Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg() &&
-         Inst.getOperand(2).isImm();
-}
-
 class RISCVMCPlusBuilder : public MCPlusBuilder {
   bool isRV64() const { return STI->hasFeature(RISCV::Feature64Bit); }
   unsigned regSize() const { return isRV64() ? 8 : 4; }
@@ -47,28 +39,6 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 
 public:
   using MCPlusBuilder::MCPlusBuilder;
-
-  MCPhysReg getFlagsReg() const override { return RISCV::NoRegister; }
-
-  bool isCleanReg(const MCInst &Inst) const override {
-    switch (Inst.getOpcode()) {
-    case RISCV::ADDI:
-      return Inst.getOperand(1).isReg() &&
-             Inst.getOperand(1).getReg() == RISCV::X0 &&
-             Inst.getOperand(2).isImm() && Inst.getOperand(2).getImm() == 0;
-    case RISCV::C_LI:
-      return Inst.getOperand(1).isImm() && Inst.getOperand(1).getImm() == 0;
-    default:
-      return false;
-    }
-  }
-
-  BitVector getRegsUsedAsParams() const override {
-    BitVector Regs(RegInfo->getNumRegs(), false);
-    for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X17; ++Reg)
-      Regs |= getAliases(Reg);
-    return Regs;
-  }
 
   std::unique_ptr<MCSymbolizer>
   createTargetSymbolizer(BinaryFunction &Function,
@@ -101,33 +71,6 @@ public:
     Regs |= getAliases(RISCV::X25);
     Regs |= getAliases(RISCV::X26);
     Regs |= getAliases(RISCV::X27);
-  }
-
-  void getDefaultLiveOut(BitVector &Regs) const override {
-    // The RISC-V psABI uses a0 (x10) and a1 (x11) to return integer and pointer
-    // values.
-    Regs |= getAliases(RISCV::X10);
-    Regs |= getAliases(RISCV::X11);
-  }
-
-  void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const override {
-    for (MCPhysReg Reg = RISCV::X1; Reg <= RISCV::X31; ++Reg) {
-      if (IncludeAlias)
-        Regs |= getAliases(Reg);
-      else
-        Regs.set(Reg);
-    }
-  }
-
-  void removeNonScavengeableRegs(BitVector &Regs) const override {
-    BitVector ExclusionMask(RegInfo->getNumRegs(), false);
-    ExclusionMask |= getAliases(RISCV::X1); // return address
-    ExclusionMask |= getAliases(RISCV::X2); // stack pointer
-    ExclusionMask |= getAliases(RISCV::X3); // global pointer
-    ExclusionMask |= getAliases(RISCV::X4); // thread pointer
-    ExclusionMask |= getAliases(RISCV::X8); // frame pointer
-    ExclusionMask.flip();
-    Regs &= ExclusionMask;
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
@@ -621,9 +564,7 @@ public:
   }
 
   bool isCallAuipc(const MCInst &Inst) const {
-    if (Inst.getOpcode() != RISCV::AUIPC ||
-        MCPlus::getNumPrimeOperands(Inst) != 2 || !Inst.getOperand(0).isReg() ||
-        Inst.getOperand(0).getReg() == RISCV::X0)
+    if (Inst.getOpcode() != RISCV::AUIPC)
       return false;
 
     const auto &ImmOp = Inst.getOperand(1);
@@ -644,9 +585,10 @@ public:
   }
 
   bool isRISCVCall(const MCInst &First, const MCInst &Second) const override {
-    if (!isCallAuipc(First) || !isValidCallJALR(Second))
+    if (!isCallAuipc(First))
       return false;
 
+    assert(Second.getOpcode() == RISCV::JALR);
     return true;
   }
 

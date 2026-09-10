@@ -9088,7 +9088,12 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     // freeze(icmp a, const)) -> icmp (freeze a), const
     // This helps generate efficient conditional jumps.
-    CmpInst *CmpI = dyn_cast<CmpInst>(FI->getOperand(0));
+    Instruction *CmpI = nullptr;
+    if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0)))
+      CmpI = II;
+    else if (FCmpInst *F = dyn_cast<FCmpInst>(FI->getOperand(0)))
+      CmpI = F->getFastMathFlags().none() ? F : nullptr;
+
     if (CmpI && CmpI->hasOneUse()) {
       auto Op0 = CmpI->getOperand(0), Op1 = CmpI->getOperand(1);
       bool Const0 = isa<ConstantInt>(Op0) || isa<ConstantFP>(Op0) ||
@@ -9100,7 +9105,6 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
           auto *F = new FreezeInst(Const0 ? Op1 : Op0, "", CmpI->getIterator());
           F->takeName(FI);
           CmpI->setOperand(Const0 ? 1 : 0, F);
-          CmpI->dropPoisonGeneratingFlags();
         }
         replaceAllUsesWith(FI, CmpI, FreshBBs, IsHugeFunc);
         FI->eraseFromParent();

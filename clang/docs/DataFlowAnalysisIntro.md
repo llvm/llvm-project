@@ -82,10 +82,7 @@ inclusion relation as ordering and set union as a join.
 Lattices are often represented visually as Hasse diagrams. Here is a Hasse
 diagram for our lattice that tracks subsets of integers:
 
-:::{figure} DataFlowAnalysisIntroImages/IntegerSetsInfiniteLattice.svg
-:class: light-background
-:alt: Hasse diagram for a lattice of integer sets
-:::
+![Hasse diagram for a lattice of integer sets](DataFlowAnalysisIntroImages/IntegerSetsInfiniteLattice.svg)
 
 Computing the join in the lattice corresponds to finding the lowest common
 ancestor (LCA) between two nodes in its Hasse diagram. There is a vast amount of
@@ -179,10 +176,7 @@ lattice that we can use in practice to track possible values of integer
 variables. This lattice represents sets of integers with 1, 2, or 3 elements, as
 well as top and bottom. Here is a Hasse diagram for it:
 
-:::{figure} DataFlowAnalysisIntroImages/IntegerSetsFiniteLattice.svg
-:class: light-background
-:alt: Hasse diagram for a lattice of integer sets
-:::
+![Hasse diagram for a lattice of integer sets](DataFlowAnalysisIntroImages/IntegerSetsFiniteLattice.svg)
 
 ### Formalization
 
@@ -210,10 +204,7 @@ As humans, we understand the control flow from the program text. We used our
 understanding of control flow to find program points where two flows join.
 Formally, control flow is represented by a CFG (control flow graph):
 
-:::{figure} DataFlowAnalysisIntroImages/CFGExample.svg
-:class: light-background
-:alt: CFG for the code above
-:::
+![CFG for the code above](DataFlowAnalysisIntroImages/CFGExample.svg)
 
 We can compute sets of possible values by propagating them through the CFG of
 the function:
@@ -286,10 +277,7 @@ conclusion is called a postcondition.
 
 In terms of the CFG, we join the information from all predecessor basic blocks.
 
-:::{figure} DataFlowAnalysisIntroImages/CFGJoinRule.svg
-:class: light-background
-:alt: Modeling the effects of a CFG basic block
-:::
+![Modeling the effects of a CFG basic block](DataFlowAnalysisIntroImages/CFGJoinRule.svg)
 
 Putting it all together, to model the effects of a basic block we compute:
 
@@ -527,10 +515,7 @@ between normal states is determined by reversed inclusion relation on the set of
 overwritten parameter's member fields (lattice's `⩽` is `⊇` on the set of
 overwritten fields).
 
-:::{figure} DataFlowAnalysisIntroImages/OutputParameterIdentificationLattice.svg
-:class: light-background
-:alt: Lattice for data flow analysis that identifies output parameters
-:::
+![Lattice for data flow analysis that identifies output parameters](DataFlowAnalysisIntroImages/OutputParameterIdentificationLattice.svg)
 
 To determine whether a statement reads or writes a field we can implement
 symbolic evaluation of `DeclRefExpr`s, `LValueToRValue` casts, pointer
@@ -651,10 +636,7 @@ For this purpose we can use lattice in a form of a mapping from variable
 declarations to initialization states; each initialization state is represented
 by the following lattice:
 
-:::{figure} DataFlowAnalysisIntroImages/DefinitiveInitializationLattice.svg
-:class: light-background
-:alt: Lattice for definitive initialization analysis
-:::
+![Lattice for definitive initialization analysis](DataFlowAnalysisIntroImages/DefinitiveInitializationLattice.svg)
 
 A lattice element could also capture the source locations of the branches that
 lead us to the corresponding program point. Diagnostics would use this
@@ -700,10 +682,7 @@ void UniqueOwnership1() {
 This problem can be solved with a lattice in form of map from value declarations
 to pointer states:
 
-:::{figure} DataFlowAnalysisIntroImages/UniquePtrLattice.svg
-:class: light-background
-:alt: Lattice that identifies candidates for unique_ptr refactoring
-:::
+![Lattice that identifies candidates for unique_ptr refactoring](DataFlowAnalysisIntroImages/UniquePtrLattice.svg)
 
 We can perform the refactoring if at the exit of a function `pi` is
 `Compatible`.

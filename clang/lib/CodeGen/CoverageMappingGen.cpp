@@ -618,9 +618,9 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
       : CoverageMappingBuilder(CVM, SM, LangOpts) {}
 
   void VisitDecl(const Decl *D) {
-    Stmt *Body = D->getBody();
-    if (!Body)
+    if (!D->hasBody())
       return;
+    auto Body = D->getBody();
     SourceLocation Start = getStart(Body);
     SourceLocation End = getEnd(Body);
     if (!SM.isWrittenInSameFile(Start, End)) {

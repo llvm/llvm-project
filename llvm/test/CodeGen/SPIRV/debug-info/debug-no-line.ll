@@ -25,13 +25,10 @@
 ; CHECK-NEXT: [[B:%[0-9]+]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF]] [[FN]]
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V3]] [[V3]] [[V10]] [[V11]]
 ; CHECK-NEXT: [[T0:%[0-9]+]] = OpIAdd [[I32]] [[A]] [[B]]
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugNoScope
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugNoLine
 ; CHECK-NEXT: [[T1:%[0-9]+]] = OpIMul [[I32]] [[T0]] [[A]]
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V5]] [[V5]] [[V3]] [[V4]]
 ; CHECK-NEXT: OpReturnValue [[T1]]
 ; CHECK-NEXT: OpFunctionEnd

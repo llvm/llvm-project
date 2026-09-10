@@ -64,6 +64,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mergeicmps"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 namespace {
 
 // A BCE atom "Binary Compare Expression Atom" represents an integer load
@@ -622,6 +625,8 @@ private:
 static std::optional<SmallVector<uint32_t, 2>>
 computeMergedBranchWeights(ArrayRef<BCECmpBlock> Comparisons) {
   assert(!Comparisons.empty());
+  if (ProfcheckDisableMetadataFixes)
+    return std::nullopt;
   if (Comparisons.size() == 1) {
     SmallVector<uint32_t, 2> Weights;
     if (!extractBranchWeights(*Comparisons[0].BB->getTerminator(), Weights))

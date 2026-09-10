@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_serial(int cond) {
   // CHECK: cir.func{{.*}} @acc_serial(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{

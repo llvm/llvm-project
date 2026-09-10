@@ -37,9 +37,7 @@ set(llvm_cmake_builddir "${llvm_cmake_builddir}/cmake/llvm")
 
 # Generate the 'MLIRTarget.cmake' file.
 get_property(MLIR_EXPORTS GLOBAL PROPERTY MLIR_EXPORTS)
-if(NOT "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
-  export(TARGETS ${MLIR_EXPORTS} FILE ${mlir_cmake_builddir}/MLIRTargets.cmake)
-endif()
+export(TARGETS ${MLIR_EXPORTS} FILE ${mlir_cmake_builddir}/MLIRTargets.cmake)
 
 # Declare all the variables required by the 'MLIRConfig.cmake.in' template.
 get_property(MLIR_ALL_LIBS GLOBAL PROPERTY MLIR_ALL_LIBS)
@@ -135,8 +133,7 @@ set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
 set(MLIR_CONFIG_INCLUDE_DIRS)
 
-if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND
-    NOT "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   # Not TOOLCHAIN ONLY, so install the MLIR parts as well
   # Include the cmake files so other tools can use mlir-tblgen, etc.
   install_distribution_exports(MLIR)

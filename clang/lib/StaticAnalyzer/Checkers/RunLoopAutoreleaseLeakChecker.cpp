@@ -82,8 +82,9 @@ static void emitDiagnostics(BoundNodes &Match,
                             BugReporter &BR,
                             AnalysisManager &AM,
                             const RunLoopAutoreleaseLeakChecker *Checker) {
+
+  assert(D->hasBody());
   const Stmt *DeclBody = D->getBody();
-  assert(DeclBody);
 
   AnalysisDeclContext *ADC = AM.getAnalysisDeclContext(D);
 

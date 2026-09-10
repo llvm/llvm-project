@@ -10,6 +10,7 @@ add_mlir_dialect_library(
   MemorySpaceInterfaces.cpp
 
   DEPENDS
+  MLIRPtrOpsEnumsGen
   MLIRPtrMemorySpaceInterfacesIncGen
   LINK_LIBS
   PUBLIC

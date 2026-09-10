@@ -21,9 +21,7 @@ class TestDAP_exception_cpp(DAPTestCaseBase):
         process_event = session.launch(LaunchArgs(program=program))
 
         stopped_event = session.verify_stopped_on_exception(
-            expected_description="signal SIGABRT",
-            expected_text=r"^SIGABRT$",
-            after=process_event,
+            expected_description="signal SIGABRT", after=process_event
         )
 
         thread_id = self.expect_not_none(stopped_event.body.threadId)
@@ -52,9 +50,7 @@ class TestDAP_exception_cpp(DAPTestCaseBase):
 
             session.set_exception_breakpoints(filters=cpp_filters)
 
-        stop_event = session.verify_stopped_on_exception(
-            after=ctx.process_event, expected_text=r"^C\+\+ Throw$"
-        )
+        stop_event = session.verify_stopped_on_exception(after=ctx.process_event)
         thread_ctx = session.thread_context_from(stop_event)
 
         def verify_stack_trace_contains(function: str, line: int):

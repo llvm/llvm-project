@@ -7,7 +7,7 @@ add_mlir_library(MLIRDialectUtils
 
   DEPENDS
   MLIRDialectUtilsIncGen
-  MLIRArithOpsIncGen
+  MLIRArithDialect
 
   LINK_LIBS PUBLIC
   MLIRIR

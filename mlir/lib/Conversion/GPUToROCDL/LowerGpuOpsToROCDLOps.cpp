@@ -683,8 +683,7 @@ struct GPUInitializeNamedBarrierOpLowering final
 
     auto targetTy = LLVM::LLVMTargetExtType::get(
         rewriter.getContext(), "amdgcn.named.barrier", {}, {0});
-    auto ptrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), ROCDL::ROCDLDialect::kBarrierAddressSpace);
+    auto ptrTy = LLVM::LLVMPointerType::get(rewriter.getContext(), 3);
 
     // Build the global detached so SymbolTable::insert can both place it and
     // rename it as needed without creating a transient name conflict in IR.
@@ -692,8 +691,7 @@ struct GPUInitializeNamedBarrierOpLowering final
     auto globalOp = LLVM::GlobalOp::create(
         detachedBuilder, loc, targetTy, /*isConstant=*/false,
         LLVM::Linkage::Internal, "__named_barrier", /*value=*/Attribute(),
-        /*alignment=*/0,
-        /*addrSpace=*/ROCDL::ROCDLDialect::kBarrierAddressSpace);
+        /*alignment=*/0, /*addrSpace=*/3);
     // Initialize with poison.
     {
       Region &region = globalOp.getInitializerRegion();

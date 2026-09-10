@@ -26,7 +26,6 @@
 ; CHECK-NEXT: OpFunctionParameter
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF_LEAF]] [[LEAF]]
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF_LEAF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpReturnValue
 ; CHECK-NEXT: OpFunctionEnd
@@ -40,13 +39,10 @@
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF_WITH]] [[WITH]]
 ; CHECK-NEXT: OpStore
 ; CHECK-NEXT: OpStore
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF_WITH]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpFunctionCall
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugNoScope
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugNoLine
 ; CHECK-NEXT: OpIAdd
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF_WITH]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpReturnValue
 ; CHECK-NEXT: OpFunctionEnd
@@ -56,7 +52,6 @@
 ; CHECK-NEXT: OpFunctionParameter
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF_CALLER]] [[CALLER]]
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF_CALLER]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpFunctionCall
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
@@ -69,7 +64,6 @@
 ; CHECK: [[ORCH]] = OpFunction %{{.*}} ; -- Begin function orchestrator
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF_ORCH]] [[ORCH]]
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF_ORCH]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpFunctionCall
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine

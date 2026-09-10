@@ -79,10 +79,8 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
                                               Operation *op,
                                               ArrayRef<Value> operands,
                                               ArrayRef<Type> resultTypes) {
-  OperationState state(loc, op->getName(), operands, resultTypes,
-                       op->getDiscardableAttrDictionary().getValue());
-  state.propertiesAttr = op->getPropertiesAsAttribute();
-  return builder.create(state);
+  return builder.create(loc, op->getName().getIdentifier(), operands,
+                        resultTypes, op->getAttrs());
 }
 
 /// Return the target shape for unrolling for the given `op`. Return

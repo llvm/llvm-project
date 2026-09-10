@@ -1,5 +1,8 @@
 # C++ Safe Buffers
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

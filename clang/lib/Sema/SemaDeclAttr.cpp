@@ -2101,9 +2101,9 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 // ExprWithCleanups). We could expand this to perform control-flow analysis for
 // more complex patterns.
 static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
-  const Stmt *Body = FD->getBody();
-  if (!Body)
+  if (!FD->hasBody())
     return false;
+  const Stmt *Body = FD->getBody();
   const Stmt *OnlyStmt = nullptr;
 
   if (const auto *Compound = dyn_cast<CompoundStmt>(Body)) {

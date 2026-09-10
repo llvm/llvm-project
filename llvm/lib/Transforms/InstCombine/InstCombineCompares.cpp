@@ -42,6 +42,10 @@ using namespace PatternMatch;
 // How many times is a select replaced by one of its operands?
 STATISTIC(NumSel, "Number of select opts");
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 /// Compute Result = In1+In2, returning true if the result overflowed for this
 /// type.
 static bool addWithOverflow(APInt &Result, const APInt &In1, const APInt &In2,
@@ -4544,7 +4548,8 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
       Op1 = Builder.CreateICmp(Pred, SI->getOperand(1), RHS, I.getName());
     if (!Op2)
       Op2 = Builder.CreateICmp(Pred, SI->getOperand(2), RHS, I.getName());
-    return SelectInst::Create(SI->getOperand(0), Op1, Op2, "", nullptr, SI);
+    return SelectInst::Create(SI->getOperand(0), Op1, Op2, "", nullptr,
+                              ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
 
   return nullptr;
@@ -5307,18 +5312,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return NewICmp;
 
   const CmpInst::Predicate Pred = I.getPredicate();
-
-  // (X urem Y) == X --> X u< Y
-  // (X urem Y) != X --> X u>= Y
-  Value *Dividend, *Divisor;
-  if (I.isEquality() &&
-      match(&I, m_c_ICmp(m_URem(m_Value(Dividend), m_Value(Divisor)),
-                         m_Deferred(Dividend)))) {
-    CmpInst::Predicate NewPred =
-        Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
-    return new ICmpInst(NewPred, Dividend, Divisor);
-  }
-
   Value *X;
 
   // Convert add-with-unsigned-overflow comparisons into a 'not' with compare.
@@ -6122,7 +6115,8 @@ struct OffsetResult {
     case OffsetKind::Value:
       return V0;
     case OffsetKind::Select:
-      return Builder.CreateSelect(V0, V1, V2, "", MDFrom);
+      return Builder.CreateSelect(
+          V0, V1, V2, "", ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
     }
     llvm_unreachable("Unknown OffsetKind enum");
   }
@@ -8125,16 +8119,16 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       // Check whether comparison of TrueValues can be simplified
       if (Value *Res = simplifyICmpInst(Pred, A, C, SQ)) {
         Value *NewICMP = Builder.CreateICmp(Pred, B, D);
-        return SelectInst::Create(Cond, Res, NewICMP, /*NameStr=*/"",
-                                  /*InsertBefore=*/nullptr,
-                                  cast<Instruction>(Op0));
+        return SelectInst::Create(
+            Cond, Res, NewICMP, /*NameStr=*/"", /*InsertBefore=*/nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Op0));
       }
       // Check whether comparison of FalseValues can be simplified
       if (Value *Res = simplifyICmpInst(Pred, B, D, SQ)) {
         Value *NewICMP = Builder.CreateICmp(Pred, A, C);
-        return SelectInst::Create(Cond, NewICMP, Res, /*NameStr=*/"",
-                                  /*InsertBefore=*/nullptr,
-                                  cast<Instruction>(Op0));
+        return SelectInst::Create(
+            Cond, NewICMP, Res, /*NameStr=*/"", /*InsertBefore=*/nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Op0));
       }
     }
   }

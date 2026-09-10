@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_host_data(int cond, int var1, int var2, int *arr) {
   // CHECK: cir.func{{.*}} @acc_host_data(%[[ARG_COND:.*]]: !s32i {{.*}}, %[[ARG_V1:.*]]: !s32i {{.*}}, %[[ARG_V2:.*]]: !s32i {{.*}}, %[[ARG_ARR:.*]]: !cir.ptr<!s32i> {{.*}}) {{.*}}{

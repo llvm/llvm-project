@@ -1,5 +1,8 @@
 # Warning suppression mappings
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

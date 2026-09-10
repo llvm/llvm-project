@@ -1,9 +1,9 @@
 // Two-step host-BC ->  device pipeline that mirrors the offloading driver.
 //
 // Step 1: Host compilation to bitcode (provides offload entry info to device pass).
-// RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fopenmp-targets=amdgpu-amd-amdhsa \
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa \
 // RUN:   -fclangir -emit-llvm-bc %s -o %t-cir-host.bc
-// RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fopenmp-targets=amdgpu-amd-amdhsa \
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa \
 // RUN:   -emit-llvm-bc %s -o %t-ogcg-host.bc
 //
 // Step 2: Device compilation using host BC.

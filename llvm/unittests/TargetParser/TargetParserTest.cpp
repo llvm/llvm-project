@@ -2748,9 +2748,6 @@ TEST(TargetParserTest, testAMDGPUparseArchR600) {
     EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;
     EXPECT_EQ(AMDGPU::getArchNameR600(G.Kind), G.Name) << G.Name;
     EXPECT_EQ(AMDGPU::getArchAttrR600(G.Kind), G.Features) << G.Name;
-    EXPECT_EQ(AMDGPU::getFeatureBitsetR600(G.Kind).test(AMDGPU::R600_FEAT_FMAF),
-              G.Features == AMDGPU::R600_FEATURE_FMA)
-        << G.Name;
   }
 
   // Aliases resolve to the canonical GPUKind but are not returned by

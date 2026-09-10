@@ -1,5 +1,8 @@
 # Debugging C++ Coroutines
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

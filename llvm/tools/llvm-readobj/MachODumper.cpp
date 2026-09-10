@@ -491,8 +491,6 @@ void MachODumper::printFileHeaders(const MachHeader &Header) {
   default:
     W.printHex("CpuSubType", subtype);
   }
-  W.printHex("CpuCapabilities",
-             (Header.cpusubtype & MachO::CPU_SUBTYPE_MASK) >> 24);
   W.printEnum("FileType", Header.filetype, EnumStrings(MachOHeaderFileTypes));
   W.printNumber("NumOfLoadCommands", Header.ncmds);
   W.printNumber("SizeOfLoadCommands", Header.sizeofcmds);

@@ -1,5 +1,8 @@
 # Structure Protection
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

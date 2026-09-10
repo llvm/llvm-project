@@ -185,14 +185,6 @@ lldb::LanguageType SBCompileUnit::GetLanguage() {
   return lldb::eLanguageTypeUnknown;
 }
 
-bool SBCompileUnit::GetIsOptimized() {
-  LLDB_INSTRUMENT_VA(this);
-
-  if (m_opaque_ptr)
-    return m_opaque_ptr->GetIsOptimized();
-  return false;
-}
-
 bool SBCompileUnit::IsValid() const {
   LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
@@ -201,14 +193,6 @@ SBCompileUnit::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_ptr != nullptr;
-}
-
-uint32_t SBCompileUnit::GetIDInModule() const {
-  LLDB_INSTRUMENT_VA(this);
-
-  if (m_opaque_ptr)
-    return m_opaque_ptr->GetIndex();
-  return LLDB_INVALID_INDEX32;
 }
 
 bool SBCompileUnit::operator==(const SBCompileUnit &rhs) const {

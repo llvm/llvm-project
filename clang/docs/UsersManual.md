@@ -1,5 +1,8 @@
 # Clang Compiler User's Manual
 
+```{contents}
+:local:
+```
 
 ## Introduction
 
@@ -275,7 +278,7 @@ specific parts of the diagnostic, e.g.,
 
 ::::{raw} html
 <pre>
-  <b>test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</b>
+  <b><span style="color:black">test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</span></b>
   #endif bad
          <span style="color:green">^</span>
          <span style="color:green">//</span>

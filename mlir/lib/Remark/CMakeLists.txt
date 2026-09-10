@@ -1,5 +1,4 @@
 add_mlir_library(MLIRRemarkStreamer
-  LLVMRemarkImport.cpp
   RemarkStreamer.cpp
 
   ADDITIONAL_HEADER_DIRS

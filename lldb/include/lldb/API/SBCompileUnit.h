@@ -68,15 +68,6 @@ public:
 
   lldb::LanguageType GetLanguage();
 
-  /// Returns true if this compile unit was compiled with optimization, false if
-  /// unoptimized or unknown.
-  bool GetIsOptimized();
-
-  /// Return an ID that identifies this compile unit within its module, or
-  /// LLDB_INVALID_INDEX32 if invalid. SBModule::GetCompileUnitAtIndex maps it
-  /// back to this compile unit. The ID is not unique across modules.
-  uint32_t GetIDInModule() const;
-
   bool operator==(const lldb::SBCompileUnit &rhs) const;
 
   bool operator!=(const lldb::SBCompileUnit &rhs) const;

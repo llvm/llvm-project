@@ -162,40 +162,4 @@ loop:                                             ; preds = %loop, %entry
   br label %loop
 }
 
-declare i32 @get_step()
-
-define i1 @test_loop_variant_step_with_condition() {
-; CHECK-LABEL: @test_loop_variant_step_with_condition(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[STEP:%.*]] = call i32 @get_step()
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[STEP]], -1
-; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LATCH]]
-; CHECK:       latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], [[STEP]]
-; CHECK-NEXT:    br label [[LOOP]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i32 [[IV]], -1
-; CHECK-NEXT:    ret i1 [[RESULT]]
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
-  %step = call i32 @get_step()
-  %iv.next = add nsw i32 %iv, %step
-  %c = icmp sge i32 %step, 0
-  br i1 %c, label %exit, label %latch
-
-latch:
-  br label %loop
-
-exit:
-  %result = icmp sge i32 %iv, 0
-  ret i1 %result
-}
-
 declare void @use(i64)

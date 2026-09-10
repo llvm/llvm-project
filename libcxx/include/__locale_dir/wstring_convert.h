@@ -50,11 +50,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI wstring_convert() : wstring_convert(new _Codecvt) {}
   _LIBCPP_HIDE_FROM_ABI explicit wstring_convert(_Codecvt* __pcvt);
 #    else
-  _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt = new _Codecvt);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXPLICIT_SINCE_CXX14 wstring_convert(_Codecvt* __pcvt = new _Codecvt);
 #    endif
 
   _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt, state_type __state);
-  explicit _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
 #    ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wstring_convert(wstring_convert&& __wc);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 void acc_data(int parmVar, int *ptrParmVar) {
   // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}, %[[PTRARG:.*]]: !cir.ptr<!s32i>{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init : !cir.ptr<!s32i>

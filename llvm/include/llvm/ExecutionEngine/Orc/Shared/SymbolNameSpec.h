@@ -38,7 +38,8 @@ enum class SymbolNameKind {
 /// previously took an already-mangled StringRef.
 class SymbolNameSpec {
 public:
-  constexpr SymbolNameSpec(StringRef Name, SymbolNameKind Kind)
+  constexpr SymbolNameSpec(StringRef Name,
+                           SymbolNameKind Kind = SymbolNameKind::Verbatim)
       : Name(Name), Kind(Kind) {}
 
   static constexpr SymbolNameSpec verbatim(StringRef Name) {

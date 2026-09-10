@@ -41,7 +41,7 @@ using namespace mlir::scf;
 // Name of internal attribute to mark visited operations during conversion.
 //
 // NOTE: The conversion originally used the following legality criteria:
-//   `!parallelOp->hasDiscardableAttr(gpu::getMappingAttrName())`
+//   `!parallelOp->hasAttr(gpu::getMappingAttrName())`
 // But the provided pattern might reject some cases based on more detailed
 // analysis of the `mapping` attribute.
 // To avoid dialect conversion failure due to non-converted illegal operation
@@ -408,8 +408,8 @@ static LogicalResult processParallelLoop(
     DenseMap<gpu::Processor, Value> &bounds, PatternRewriter &rewriter) {
   // TODO: Verify that this is a valid GPU mapping.
   // processor ids: 0-2 block [x/y/z], 3-5 -> thread [x/y/z], 6-> sequential
-  ArrayAttr mapping = parallelOp->getDiscardableAttrOfType<ArrayAttr>(
-      gpu::getMappingAttrName());
+  ArrayAttr mapping =
+      parallelOp->getAttrOfType<ArrayAttr>(gpu::getMappingAttrName());
 
   // TODO: Support multiple reductions.
   if (!mapping || parallelOp.getNumResults() > 1)
@@ -562,11 +562,11 @@ static LogicalResult processParallelLoop(
 
   // Propagate custom user defined optional attributes, that can be used at
   // later stage, such as extension data for GPU kernel dispatch
-  for (const auto &namedAttr :
-       parallelOp->getDiscardableAttrDictionary().getValue()) {
-    if (namedAttr.getName() == gpu::getMappingAttrName())
+  for (const auto &namedAttr : parallelOp->getAttrs()) {
+    if (namedAttr.getName() == gpu::getMappingAttrName() ||
+        namedAttr.getName() == ParallelOp::getOperandSegmentSizeAttr())
       continue;
-    launchOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
+    launchOp->setAttr(namedAttr.getName(), namedAttr.getValue());
   }
 
   Block *body = parallelOp.getBody();
@@ -614,7 +614,7 @@ LogicalResult
 ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                                              PatternRewriter &rewriter) const {
   // Mark the operation as visited for recursive legality check.
-  parallelOp->setDiscardableAttr(kVisitedAttrName, rewriter.getUnitAttr());
+  parallelOp->setAttr(kVisitedAttrName, rewriter.getUnitAttr());
 
   // We can only transform starting at the outer-most loop. Launches inside of
   // parallel loops are not supported.
@@ -774,13 +774,13 @@ void mlir::populateParallelLoopToGPUPatterns(RewritePatternSet &patterns) {
 void mlir::configureParallelLoopToGPULegality(ConversionTarget &target) {
   target.addLegalDialect<memref::MemRefDialect>();
   target.addDynamicallyLegalOp<scf::ParallelOp>([](scf::ParallelOp parallelOp) {
-    return !parallelOp->hasDiscardableAttr(gpu::getMappingAttrName()) ||
-           parallelOp->hasDiscardableAttr(kVisitedAttrName);
+    return !parallelOp->hasAttr(gpu::getMappingAttrName()) ||
+           parallelOp->hasAttr(kVisitedAttrName);
   });
 }
 
 void mlir::finalizeParallelLoopToGPUConversion(Operation *op) {
   op->walk([](scf::ParallelOp parallelOp) {
-    parallelOp->removeDiscardableAttr(kVisitedAttrName);
+    parallelOp->removeAttr(kVisitedAttrName);
   });
 }

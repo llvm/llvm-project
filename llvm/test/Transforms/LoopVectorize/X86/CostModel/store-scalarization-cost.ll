@@ -50,12 +50,12 @@ define void @varying_pred_store_kept_in_replicate_region(ptr noalias %dst, ptr n
 ; CHECK:  Cost of 3.5 for VF 2: profitable to scalarize %mul = mul i32 %l, %b
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%mul> = mul ir<%l>, ir<%b>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%mul>, ir<%gep.dst>
-; CHECK:  Cost for VF 2: 10 (Estimated cost per lane: 5)
+; CHECK:  Cost for VF 2: 9.5 (Estimated cost per lane: 4.5)
 ; CHECK:  Cost of 2 for VF 4: profitable to scalarize store i32 %mul, ptr %gep.dst, align 8
 ; CHECK:  Cost of 8.5 for VF 4: profitable to scalarize %mul = mul i32 %l, %b
 ; CHECK:  Cost of 0 for VF 4: REPLICATE ir<%mul> = mul ir<%l>, ir<%b>
 ; CHECK:  Cost of 0 for VF 4: REPLICATE store ir<%mul>, ir<%gep.dst>
-; CHECK:  Cost for VF 4: 16 (Estimated cost per lane: 4)
+; CHECK:  Cost for VF 4: 15.5 (Estimated cost per lane: 3.75)
 ; CHECK:  LV: Selecting VF: 4.
 ;
 entry:

@@ -988,21 +988,21 @@ def formatOutput(title, data, limit=None):
         msg = ""
     ndashes = 30
     # fmt: off
-    parts = [f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"]
+    out = f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
     curr_color = None
     for line in data.splitlines():
         if curr_color:
-            parts.append("\33[0m")
-        parts.append("# | ")
+            out += "\33[0m"
+        out += "# | "
         if curr_color:
-            parts.append(curr_color)
-        parts.append(line + "\n")
+            out += curr_color
+        out += line + "\n"
         curr_color = findColor(line, curr_color)
     if curr_color:
-        parts.append("\33[0m")  # prevent unterminated formatting from leaking
-    parts.append(f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n")
+        out += "\33[0m"  # prevent unterminated formatting from leaking
+    out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
     # fmt: on
-    return "".join(parts)
+    return out
 
 
 # Always either returns the tuple (out, err, exitCode, timeoutInfo) or raises a

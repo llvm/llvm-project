@@ -383,12 +383,12 @@ func.func @normalized_forall_elide_terminator() -> () {
   %num_threads = arith.constant 100 : index
 
   //      CHECK:    scf.forall
-  // CHECK-NEXT:  } {mapping = [#gpu.thread<x>], test.marker}
+  // CHECK-NEXT:  } {mapping = [#gpu.thread<x>]}
   // CHECK-NEXT:  return
   scf.forall (%thread_idx) in (%num_threads) {
     scf.forall.in_parallel {
     }
-  } {mapping = [#gpu.thread<x>], test.marker}
+  } {mapping = [#gpu.thread<x>]}
   return
 
 }

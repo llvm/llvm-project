@@ -4755,28 +4755,6 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
-  case Intrinsic::nvvm_mbarrier_init: {
-    Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = MVT::i64;
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.flags = MachineMemOperand::MOStore;
-    Info.align = Align(8);
-    Infos.push_back(Info);
-    return;
-  }
-
-  case Intrinsic::nvvm_mbarrier_check_layout: {
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::i64;
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.flags = MachineMemOperand::MOLoad;
-    Info.align = Align(8);
-    Infos.push_back(Info);
-    return;
-  }
-
   case Intrinsic::nvvm_tensormap_replace_global_address:
   case Intrinsic::nvvm_tensormap_replace_global_stride: {
     Info.opc = ISD::INTRINSIC_VOID;

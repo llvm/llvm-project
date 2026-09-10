@@ -3967,7 +3967,7 @@ public:
   std::vector<PFPField> findPFPFields(QualType Ty) const;
 
   bool hasPFPFields(QualType Ty) const;
-  static bool isPFPField(const FieldDecl *Field);
+  bool isPFPField(const FieldDecl *Field) const;
 
   /// Returns whether this record's PFP fields (if any) are trivially
   /// copyable (i.e. may be memcpy'd). This may also return true if the

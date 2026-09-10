@@ -1,5 +1,8 @@
 # ShadowCallStack
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

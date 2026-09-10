@@ -12,15 +12,14 @@ add_libc_test(
 )
 
 add_libc_test(
-  getaddrinfo_test
+  netdb_test
   SUITE
     libc-netdb-tests
   SRCS
-    getaddrinfo_test.cpp
+    netdb_test.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.netdb_macros
-    libc.hdr.sys_socket_macros
     libc.hdr.types.struct_addrinfo
     libc.src.errno.errno
     libc.src.netdb.freeaddrinfo

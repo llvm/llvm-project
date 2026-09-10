@@ -1,5 +1,8 @@
 # FAQ and How to Deal with Common False Positives
 
+```{contents}
+:local: true
+```
 
 ## Custom Assertions
 

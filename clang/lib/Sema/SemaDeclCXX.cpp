@@ -8203,8 +8203,6 @@ protected:
       //   Unnamed bit-fields are not members ...
       if (Field->isUnnamedBitField())
         continue;
-      if (Field->isInvalidDecl())
-        continue;
       // Recursively expand anonymous structs.
       if (Field->isAnonymousStructOrUnion()) {
         if (visitSubobjects(Results, Field->getType()->getAsCXXRecordDecl(),
@@ -9418,8 +9416,8 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
 
   // The common case is that we just defined the comparison function. In that
   // case, just look at whether the body can throw.
-  if (Stmt *FunctionBody = FD->getBody()) {
-    ExceptSpec.CalledStmt(FunctionBody);
+  if (FD->hasBody()) {
+    ExceptSpec.CalledStmt(FD->getBody());
   } else {
     // Otherwise, build a body so we can check it. This should ideally only
     // happen when we're not actually marking the function referenced. (This is

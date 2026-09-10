@@ -41,7 +41,6 @@ FileHeader:
 # MACHO32-NEXT:  Magic: Magic (0xFEEDFACE)
 # MACHO32-NEXT:  CpuType: [[CPUTYPE]]
 # MACHO32-NEXT:  CpuSubType: [[SUBTYPE]]
-# MACHO32-NEXT:  CpuCapabilities: 0x0
 # MACHO32-NEXT:  FileType: Relocatable (0x1)
 # MACHO32-NEXT:  NumOfLoadCommands: 0
 # MACHO32-NEXT:  SizeOfLoadCommands: 0
@@ -89,7 +88,6 @@ FileHeader:
 # MACHO64-NEXT:  Magic: Magic64 (0xFEEDFACF)
 # MACHO64-NEXT:  CpuType: [[CPUTYPE]]
 # MACHO64-NEXT:  CpuSubType: [[SUBTYPE]]
-# MACHO64-NEXT:  CpuCapabilities: 0x0
 # MACHO64-NEXT:  FileType: Relocatable (0x1)
 # MACHO64-NEXT:  NumOfLoadCommands: 0
 # MACHO64-NEXT:  SizeOfLoadCommands: 0

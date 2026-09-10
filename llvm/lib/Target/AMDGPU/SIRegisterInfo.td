@@ -597,7 +597,7 @@ class RegisterTypes<list<ValueType> reg_types> {
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
 def Reg32DataTypes: RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16]>;
-def Reg32PtrTypes: RegisterTypes<[p2, p3, p5, p6, p15]>;
+def Reg32PtrTypes: RegisterTypes<[p2, p3, p5, p6]>;
 def Reg32Types : RegisterTypes<!listconcat(Reg32DataTypes.types, Reg32PtrTypes.types)>;
 def Reg64DataTypes: RegisterTypes<[i64, f64, v2i32, v2f32, v4i16, v4f16, v4bf16]>;
 def Reg64PtrTypes: RegisterTypes<[p0, p1, p4]>;
@@ -1421,7 +1421,6 @@ class SrcRegOrImm9_t16<string operandType, RegisterClass regClass = VS_16>
 def SSrc_b16  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT16">;
 def SSrc_bf16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_BF16">;
 def SSrc_f16  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP16">;
-def SSrc_NoInline_f16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_NOINLINE_FP16">;
 def SSrc_b32  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT32">;
 def SSrc_f32  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP32">;
 def SSrc_b64  : SrcRegOrImm9 <SReg_64_Encodable, "OPERAND_REG_IMM_INT64">;

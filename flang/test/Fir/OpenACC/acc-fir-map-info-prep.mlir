@@ -56,36 +56,6 @@ func.func @derived_with_box() {
   return
 }
 
-// An array of derived types whose layout is only available from its type
-// descriptor uses the padded element size times the static element count.
-//
-// CHECK-LABEL: func.func @array_of_derived_with_boxes
-// CHECK: fir.type_desc !fir.type<_QMtypesTdescriptor_pair{{.*}}>
-// CHECK: %[[TDESC:.*]] = fir.address_of(@_QMtypesEXdtXdescriptor_pair)
-// CHECK: fir.field_index sizeinbytes
-// CHECK: %[[ELEMENT_SIZE:.*]] = fir.load
-// CHECK: %[[COUNT:.*]] = arith.constant 6 : i64
-// CHECK: %[[SIZE:.*]] = arith.muli %[[ELEMENT_SIZE]], %[[COUNT]] : i64
-// CHECK: acc.map_info
-// CHECK-SAME: size(%[[SIZE]] : i64)
-// CHECK-SAME: mapFlags(to)
-
-fir.global linkonce_odr @_QMtypesEXdtXdescriptor_pair constant target : !fir.type<_QM__fortran_type_infoTderivedtype{sizeinbytes:i64}> {
-  %0 = fir.undefined !fir.type<_QM__fortran_type_infoTderivedtype{sizeinbytes:i64}>
-  fir.has_value %0 : !fir.type<_QM__fortran_type_infoTderivedtype{sizeinbytes:i64}>
-}
-
-func.func @array_of_derived_with_boxes() {
-  %array = fir.undefined !fir.ref<!fir.array<6x!fir.type<_QMtypesTdescriptor_pair{p:!fir.box<!fir.ptr<!fir.array<?xf64>>>,x:!fir.box<!fir.ptr<!fir.array<?x?xf64>>>}>>>
-  %copy = acc.copyin varPtr(%array : !fir.ref<!fir.array<6x!fir.type<_QMtypesTdescriptor_pair{p:!fir.box<!fir.ptr<!fir.array<?xf64>>>,x:!fir.box<!fir.ptr<!fir.array<?x?xf64>>>}>>>)
-      dataClause(acc_copyin) name("array")
-      -> !fir.ref<!fir.array<6x!fir.type<_QMtypesTdescriptor_pair{p:!fir.box<!fir.ptr<!fir.array<?xf64>>>,x:!fir.box<!fir.ptr<!fir.array<?x?xf64>>>}>>>
-  acc.data dataOperands(%copy : !fir.ref<!fir.array<6x!fir.type<_QMtypesTdescriptor_pair{p:!fir.box<!fir.ptr<!fir.array<?xf64>>>,x:!fir.box<!fir.ptr<!fir.array<?x?xf64>>>}>>>) {
-    acc.terminator
-  }
-  return
-}
-
 // firstprivate_map is a live-in (not on dataOperands) but still gets map_info.
 // A partial array section keeps the full-array byte size on map_info; bounds
 // carry the section.

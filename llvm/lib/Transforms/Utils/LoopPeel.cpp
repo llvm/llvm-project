@@ -90,6 +90,7 @@ static cl::opt<bool> EnablePeelingForIV(
 
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // namespace llvm
 
 // Check whether we are capable of peeling this loop.
@@ -1230,7 +1231,8 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       auto *BI = B.CreateCondBr(Cond, NewPreHeader, InsertTop);
       SmallVector<uint32_t> Weights;
       auto *OrigLatchBr = Latch->getTerminator();
-      auto HasBranchWeights = extractBranchWeights(*OrigLatchBr, Weights);
+      auto HasBranchWeights = !ProfcheckDisableMetadataFixes &&
+                              extractBranchWeights(*OrigLatchBr, Weights);
       if (HasBranchWeights) {
         // The probability that the new guard skips the loop to execute just one
         // iteration is the original loop's probability of exiting at the latch

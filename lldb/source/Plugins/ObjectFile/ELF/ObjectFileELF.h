@@ -182,7 +182,7 @@ private:
   typedef std::vector<elf::ELFProgramHeader> ProgramHeaderColl;
 
   struct ELFSectionHeaderInfo : public elf::ELFSectionHeader {
-    std::string section_name;
+    lldb_private::ConstString section_name;
   };
 
   typedef std::vector<ELFSectionHeaderInfo> SectionHeaderColl;
@@ -354,7 +354,7 @@ private:
   /// index of the corresponding section or zero if no section with the given
   /// name can be found (note that section indices are always 1 based, and so
   /// section index 0 is never valid).
-  lldb::user_id_t GetSectionIndexByName(llvm::StringRef name);
+  lldb::user_id_t GetSectionIndexByName(const char *name);
 
   /// Returns the section header with the given id or NULL.
   const ELFSectionHeaderInfo *GetSectionHeaderByIndex(lldb::user_id_t id);

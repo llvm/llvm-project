@@ -1362,10 +1362,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
       Ins2Idx = LIS->InsertMachineInstrInMaps(*InsMI2);
     SlotIndex NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
     SlotIndex ExtIdx = LIS->InsertMachineInstrInMaps(*ExtMI);
-
-    // Drop the dead EFLAGS def MI had; the replacement does not define EFLAGS.
-    LIS->removePhysRegDefAt(X86::EFLAGS, NewIdx.getRegSlot());
-
     LIS->getInterval(InRegLEA);
     LIS->getInterval(OutRegLEA);
     if (InRegLEA2)
@@ -2046,11 +2042,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   MBB.insert(MI.getIterator(), NewMI); // Insert the new inst
 
   if (LIS) {
-    // The replacement does not define EFLAGS; drop the dead EFLAGS def MI had.
-    SlotIndex Idx = LIS->getInstructionIndex(MI);
     LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
-
-    LIS->removePhysRegDefAt(X86::EFLAGS, Idx.getRegSlot());
     if (SrcReg)
       LIS->getInterval(SrcReg);
     if (SrcReg2)

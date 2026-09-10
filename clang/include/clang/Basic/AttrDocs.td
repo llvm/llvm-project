@@ -32,6 +32,9 @@ def GlobalDocumentation {
 
 # Attributes in Clang
 
+```{contents}
+:local: true
+```
 
 ```{program} clang
 ```

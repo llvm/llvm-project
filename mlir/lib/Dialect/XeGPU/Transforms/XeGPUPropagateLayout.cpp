@@ -207,17 +207,12 @@ private:
   xegpu::LayoutKind layoutKind;
   unsigned indexBitWidth;
 
-  // The op this analysis runs on; program order is numbered within this scope
-  // only (not the enclosing module, which may be mutated concurrently by the
-  // parallel pass manager running this pass on sibling gpu.modules).
-  Operation *scopeRoot = nullptr;
-
   // Program-order index of every op, built lazily on first use via a pre-order
-  // walk of `scopeRoot` (matching printed-IR order). Used to tell which
-  // consumer of a value is nearer to its producer.
+  // walk of the top-level module/function (matching printed-IR order). Used to
+  // tell which consumer of a value is nearer to its producer.
   DenseMap<Operation *, int64_t> programOrder;
   // Returns the program-order index of `op`, populating `programOrder` from
-  // `scopeRoot` on first call.
+  // `op`'s top-level ancestor on first call.
   int64_t getProgramOrder(Operation *op);
 
   int64_t currentProgramOrder = std::numeric_limits<int64_t>::max();
@@ -328,11 +323,9 @@ public:
 
   LayoutInfoPropagation(DataFlowSolver &solver,
                         SymbolTableCollection &symbolTable,
-                        xegpu::LayoutKind layoutKind, unsigned indexBitWidth,
-                        Operation *scopeRoot)
+                        xegpu::LayoutKind layoutKind, unsigned indexBitWidth)
       : SparseBackwardDataFlowAnalysis(solver, symbolTable),
-        layoutKind(layoutKind), indexBitWidth(indexBitWidth),
-        scopeRoot(scopeRoot) {}
+        layoutKind(layoutKind), indexBitWidth(indexBitWidth) {}
   using SparseBackwardDataFlowAnalysis::SparseBackwardDataFlowAnalysis;
 
   LogicalResult
@@ -362,14 +355,15 @@ int64_t LayoutInfoPropagation::getProgramOrder(Operation *op) {
   auto it = programOrder.find(op);
   if (it != programOrder.end())
     return it->second;
-  // First time we number the tree: number every op under the analysis scope in
-  // pre-order (i.e. printed-IR order). Nested ops (e.g. inside an scf.for body)
-  // get an index between their parent and the parent's next sibling, so a use
-  // inside a loop is "nearer" than a use after it. Numbering is confined to
-  // `scopeRoot` (the op this pass runs on) rather than the enclosing module,
-  // which may be mutated concurrently by the parallel pass manager.
+  // First time we see this op's tree: number every op under its top-level
+  // ancestor in pre-order (i.e. printed-IR order). Nested ops (e.g. inside an
+  // scf.for body) get an index between their parent and the parent's next
+  // sibling, so a use inside a loop is "nearer" than a use after it.
+  Operation *root = op;
+  while (root->getParentOp())
+    root = root->getParentOp();
   int64_t counter = 0;
-  scopeRoot->walk<WalkOrder::PreOrder>(
+  root->walk<WalkOrder::PreOrder>(
       [&](Operation *o) { programOrder[o] = counter++; });
   return programOrder.lookup(op);
 }
@@ -1460,7 +1454,7 @@ public:
     SymbolTableCollection symbolTable;
     loadBaselineAnalyses(solver);
     analysis = solver.load<LayoutInfoPropagation>(symbolTable, layoutKind,
-                                                  indexBitWidth, op);
+                                                  indexBitWidth);
     (void)solver.initializeAndRun(op);
   }
 

@@ -285,45 +285,79 @@ std::optional<ParseResult> mlir::LLVM::parseOpBundles(
 // Printing, parsing, folding and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
-template <typename PredicateAttr, typename Predicate>
-static ParseResult parseCmpPredicateImpl(
-    OpAsmParser &parser, PredicateAttr &predicate,
-    function_ref<std::optional<Predicate>(StringRef)> symbolize) {
-  std::string spelling;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseString(&spelling))
+void ICmpOp::print(OpAsmPrinter &p) {
+  p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)
+    << ", " << getOperand(1);
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(), {"predicate"});
+  p << " : " << getLhs().getType();
+}
+
+void FCmpOp::print(OpAsmPrinter &p) {
+  p << " \"" << stringifyFCmpPredicate(getPredicate()) << "\" " << getOperand(0)
+    << ", " << getOperand(1);
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
+                          {"predicate"});
+  p << " : " << getLhs().getType();
+}
+
+// <operation> ::= `llvm.icmp` string-literal ssa-use `,` ssa-use
+//                 attribute-dict? `:` type
+// <operation> ::= `llvm.fcmp` string-literal ssa-use `,` ssa-use
+//                 attribute-dict? `:` type
+template <typename CmpPredicateType>
+static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
+  StringAttr predicateAttr;
+  OpAsmParser::UnresolvedOperand lhs, rhs;
+  Type type;
+  SMLoc predicateLoc, trailingTypeLoc;
+  if (parser.getCurrentLocation(&predicateLoc) ||
+      parser.parseAttribute(predicateAttr, "predicate", result.attributes) ||
+      parser.parseOperand(lhs) || parser.parseComma() ||
+      parser.parseOperand(rhs) ||
+      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
+      parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type) ||
+      parser.resolveOperand(lhs, type, result.operands) ||
+      parser.resolveOperand(rhs, type, result.operands))
     return failure();
-  std::optional<Predicate> value = symbolize(spelling);
-  if (!value)
-    return parser.emitError(loc)
-           << "'" << spelling
-           << "' is an incorrect value of the 'predicate' attribute";
-  predicate = PredicateAttr::get(parser.getContext(), *value);
+
+  // Replace the string attribute `predicate` with an integer attribute.
+  int64_t predicateValue = 0;
+  if (std::is_same<CmpPredicateType, ICmpPredicate>()) {
+    std::optional<ICmpPredicate> predicate =
+        symbolizeICmpPredicate(predicateAttr.getValue());
+    if (!predicate)
+      return parser.emitError(predicateLoc)
+             << "'" << predicateAttr.getValue()
+             << "' is an incorrect value of the 'predicate' attribute";
+    predicateValue = static_cast<int64_t>(*predicate);
+  } else {
+    std::optional<FCmpPredicate> predicate =
+        symbolizeFCmpPredicate(predicateAttr.getValue());
+    if (!predicate)
+      return parser.emitError(predicateLoc)
+             << "'" << predicateAttr.getValue()
+             << "' is an incorrect value of the 'predicate' attribute";
+    predicateValue = static_cast<int64_t>(*predicate);
+  }
+
+  result.attributes.set("predicate",
+                        parser.getBuilder().getI64IntegerAttr(predicateValue));
+
+  // The result type is either i1 or a vector type <? x i1> if the inputs are
+  // vectors.
+  if (!isCompatibleType(type))
+    return parser.emitError(trailingTypeLoc,
+                            "expected LLVM dialect-compatible type");
+  result.addTypes(getI1SameShape(type));
   return success();
 }
 
-ParseResult mlir::LLVM::parseCmpPredicate(OpAsmParser &parser,
-                                          ICmpPredicateAttr &predicate) {
-  return parseCmpPredicateImpl<ICmpPredicateAttr, ICmpPredicate>(
-      parser, predicate,
-      [](StringRef spelling) { return symbolizeICmpPredicate(spelling); });
+ParseResult ICmpOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseCmpOp<ICmpPredicate>(parser, result);
 }
 
-ParseResult mlir::LLVM::parseCmpPredicate(OpAsmParser &parser,
-                                          FCmpPredicateAttr &predicate) {
-  return parseCmpPredicateImpl<FCmpPredicateAttr, FCmpPredicate>(
-      parser, predicate,
-      [](StringRef spelling) { return symbolizeFCmpPredicate(spelling); });
-}
-
-void mlir::LLVM::printCmpPredicate(OpAsmPrinter &printer, Operation *,
-                                   ICmpPredicateAttr predicate) {
-  printer << '"' << stringifyICmpPredicate(predicate.getValue()) << '"';
-}
-
-void mlir::LLVM::printCmpPredicate(OpAsmPrinter &printer, Operation *,
-                                   FCmpPredicateAttr predicate) {
-  printer << '"' << stringifyFCmpPredicate(predicate.getValue()) << '"';
+ParseResult FCmpOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseCmpOp<FCmpPredicate>(parser, result);
 }
 
 /// Returns a scalar or vector boolean attribute of the given type.
@@ -4702,7 +4736,6 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
       name == LLVMDialect::getNestAttrName() ||
       name == LLVMDialect::getNoCaptureAttrName() ||
       name == LLVMDialect::getNoFreeAttrName() ||
-      name == LLVMDialect::getNoFreeObjAttrName() ||
       name == LLVMDialect::getNonNullAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();

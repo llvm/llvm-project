@@ -1,5 +1,8 @@
 # SYCL Compiler and Runtime architecture design
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

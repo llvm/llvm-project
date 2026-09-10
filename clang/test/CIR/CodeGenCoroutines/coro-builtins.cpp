@@ -44,17 +44,14 @@ void f(int n) {
   // LLVM: %[[MEM:.*]] = call noundef ptr @_Z7myAllocx(i64 noundef %[[SIZE]])
   // LLVM: %[[FRAME:.*]] = call ptr @llvm.coro.begin(token %[[COROID]], ptr %[[MEM]])
 
-  __builtin_coro_resume(__builtin_coro_frame());
-  // CIR: cir.coro.intrinsic.resume(%[[FRAME]]) : (!cir.ptr<!void>)
-  // LLVM-NEXT: call void @llvm.coro.resume(ptr %[[FRAME]])
+  // TODO(CIR):
+  //__builtin_coro_resume(__builtin_coro_frame());
 
-  __builtin_coro_destroy(__builtin_coro_frame());
-  // CIR: cir.coro.intrinsic.destroy(%[[FRAME]]) : (!cir.ptr<!void>)
-  // LLVM-NEXT: call void @llvm.coro.destroy(ptr %[[FRAME]])
+  // TODO(CIR):
+  //__builtin_coro_destroy(__builtin_coro_frame());
 
-  __builtin_coro_done(__builtin_coro_frame());
-  // CIR: cir.coro.intrinsic.done(%[[FRAME]]) : (!cir.ptr<!void>) -> !cir.bool
-  // LLVM-NEXT: call i1 @llvm.coro.done(ptr %[[FRAME]])
+  // TODO(CIR):
+  //__builtin_coro_done(__builtin_coro_frame());
 
   __builtin_coro_promise(__builtin_coro_frame(), 48, 0);
   // CIR: %[[ALIGN:.*]] = cir.const #cir.int<48> : !s32i

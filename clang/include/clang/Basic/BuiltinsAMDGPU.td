@@ -1239,16 +1239,16 @@ def __builtin_amdgcn_wmma_f16_16x16x32_f16 : AMDGPUBuiltin<"_ExtVector<8, _Float
   let Documentation = [DocWMMA_half_16x16x32_GFX1250];
   let ArgNames = ["a_neg", "a", "b_neg", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_f32_32x16x128_f4 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<16, int>, _ExtVector<8, int>, _Constant short, _ExtVector<16, float>)", [Const], "wmma-f4-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f32_32x16x128_f4 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<16, int>, _ExtVector<8, int>, _Constant short, _ExtVector<16, float>)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_f4_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c"];
 }
-def __builtin_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<16, int>, _ExtVector<8, int>, _Constant short, _ExtVector<16, float>, _Constant int, _Constant int, int, _Constant int, _Constant int, int, _Constant bool, _Constant bool)", [Const], "wmma-f4-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<16, int>, _ExtVector<8, int>, _Constant short, _ExtVector<16, float>, _Constant int, _Constant int, int, _Constant int, _Constant int, int, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_scale_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_scale", "matrix_a_scale_fmt", "matrix_a_scale_exp", "matrix_b_scale", "matrix_b_scale_fmt", "matrix_b_scale_exp", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<16, int>, _ExtVector<8, int>, _Constant short, _ExtVector<16, float>, _Constant int, _Constant int, long int, _Constant int, _Constant int, long int, _Constant bool, _Constant bool)", [Const], "wmma-f4-insts,wavefrontsize32"> {
-  let Documentation = [DocWMMA_scale16_f4_GFX1250];
+def __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<16, int>, _ExtVector<8, int>, _Constant short, _ExtVector<16, float>, _Constant int, _Constant int, long int, _Constant int, _Constant int, long int, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
+  let Documentation = [DocWMMA_scale16_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_scale", "matrix_a_scale_fmt", "matrix_a_scale_exp", "matrix_b_scale", "matrix_b_scale_fmt", "matrix_b_scale_exp", "matrix_a_reuse", "matrix_b_reuse"];
 }
 def __builtin_amdgcn_swmmac_f32_16x16x64_bf16 : AMDGPUBuiltin<"_ExtVector<8, float>(_Constant bool, _ExtVector<16, __bf16>, _Constant bool, _ExtVector<32, __bf16>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "swmmac-gfx1250-insts,wavefrontsize32">;

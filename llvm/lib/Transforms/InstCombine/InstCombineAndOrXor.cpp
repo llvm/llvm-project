@@ -723,56 +723,52 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
 /// Example: (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
 /// If \p Inverted is true then the check is for the inverted range, e.g.
 /// (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
-Value *InstCombinerImpl::simplifyRangeCheck(CmpPredicate PredL, Value *LHS0,
-                                            Value *LHS1, CmpPredicate PredR,
-                                            Value *RHS0, Value *RHS1,
-                                            Instruction *CxtI, bool Inverted) {
+Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                            bool Inverted) {
   // Check the lower range comparison, e.g. x >= 0
   // InstCombine already ensured that if there is a constant it's on the RHS.
-  ConstantInt *RangeStart = dyn_cast<ConstantInt>(LHS1);
+  ConstantInt *RangeStart = dyn_cast<ConstantInt>(Cmp0->getOperand(1));
   if (!RangeStart)
     return nullptr;
 
-  if (Inverted) {
-    PredL = CmpPredicate::getInverse(PredL);
-    PredR = CmpPredicate::getInverse(PredR);
-  }
+  ICmpInst::Predicate Pred0 = (Inverted ? Cmp0->getInversePredicate() :
+                               Cmp0->getPredicate());
 
   // Accept x > -1 or x >= 0 (after potentially inverting the predicate).
-  if (!((PredL == ICmpInst::ICMP_SGT && RangeStart->isMinusOne()) ||
-        (PredL == ICmpInst::ICMP_SGE && RangeStart->isZero())))
+  if (!((Pred0 == ICmpInst::ICMP_SGT && RangeStart->isMinusOne()) ||
+        (Pred0 == ICmpInst::ICMP_SGE && RangeStart->isZero())))
     return nullptr;
 
-  Value *Input = LHS0;
+  ICmpInst::Predicate Pred1 = (Inverted ? Cmp1->getInversePredicate() :
+                               Cmp1->getPredicate());
+
+  Value *Input = Cmp0->getOperand(0);
+  Value *Cmp1Op0 = Cmp1->getOperand(0);
+  Value *Cmp1Op1 = Cmp1->getOperand(1);
   Value *RangeEnd;
-  if (match(RHS0, m_SExtOrSelf(m_Specific(Input)))) {
+  if (match(Cmp1Op0, m_SExtOrSelf(m_Specific(Input)))) {
     // For the upper range compare we have: icmp x, n
-    Input = RHS0;
-    RangeEnd = RHS1;
-  } else if (match(RHS1, m_SExtOrSelf(m_Specific(Input)))) {
+    Input = Cmp1Op0;
+    RangeEnd = Cmp1Op1;
+  } else if (match(Cmp1Op1, m_SExtOrSelf(m_Specific(Input)))) {
     // For the upper range compare we have: icmp n, x
-    Input = RHS1;
-    RangeEnd = RHS0;
-    PredR = CmpPredicate::getSwapped(PredR);
+    Input = Cmp1Op1;
+    RangeEnd = Cmp1Op0;
+    Pred1 = ICmpInst::getSwappedPredicate(Pred1);
   } else {
     return nullptr;
   }
 
   // Check the upper range comparison, e.g. x < n
   ICmpInst::Predicate NewPred;
-  switch (PredR) {
-  case ICmpInst::ICMP_SLT:
-    NewPred = ICmpInst::ICMP_ULT;
-    break;
-  case ICmpInst::ICMP_SLE:
-    NewPred = ICmpInst::ICMP_ULE;
-    break;
-  default:
-    return nullptr;
+  switch (Pred1) {
+    case ICmpInst::ICMP_SLT: NewPred = ICmpInst::ICMP_ULT; break;
+    case ICmpInst::ICMP_SLE: NewPred = ICmpInst::ICMP_ULE; break;
+    default: return nullptr;
   }
 
   // This simplification is only valid if the upper range is not negative.
-  KnownBits Known = computeKnownBits(RangeEnd, CxtI);
+  KnownBits Known = computeKnownBits(RangeEnd, Cmp1);
   if (!Known.isNonNegative())
     return nullptr;
 
@@ -786,26 +782,21 @@ Value *InstCombinerImpl::simplifyRangeCheck(CmpPredicate PredL, Value *LHS0,
 //      -> (icmp eq (and X, Pow2OrZero), X)
 // (and (icmp ne X, 0), (icmp ne X, Pow2OrZero))
 //      -> (icmp ne (and X, Pow2OrZero), X)
-static Value *foldAndOrOfICmpsWithPow2AndWithZero(
-    InstCombiner::BuilderTy &Builder, CmpPredicate PredL, Value *LHS0,
-    Value *LHS1, bool LHSOneUse, CmpPredicate PredR, Value *RHS0, Value *RHS1,
-    bool RHSOneUse, bool IsAnd, const SimplifyQuery &Q) {
-  CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
+static Value *
+foldAndOrOfICmpsWithPow2AndWithZero(InstCombiner::BuilderTy &Builder,
+                                    ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
+                                    const SimplifyQuery &Q) {
+  CmpPredicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
   // Make sure we have right compares for our op.
-  if (PredL != Pred || PredR != Pred)
+  if (LHS->getPredicate() != Pred || RHS->getPredicate() != Pred)
     return nullptr;
 
   // Make it so we can match LHS against the (icmp eq/ne X, 0) just for
   // simplicity.
-  if (match(RHS1, m_Zero())) {
-    std::swap(PredL, PredR);
-    std::swap(LHS0, RHS0);
-    std::swap(LHS1, RHS1);
-  }
+  if (match(RHS->getOperand(1), m_Zero()))
+    std::swap(LHS, RHS);
 
-  if (RHS1 == LHS0)
-    std::swap(RHS0, RHS1);
-
+  Value *Pow2, *Op;
   // Match the desired pattern:
   // LHS: (icmp eq/ne X, 0)
   // RHS: (icmp eq/ne X, Pow2OrZero)
@@ -815,12 +806,14 @@ static Value *foldAndOrOfICmpsWithPow2AndWithZero(
   // be one-use. We don't create additional instructions if only one
   // of them is one-use. So cases where one is one-use and the other
   // is two-use might be profitable.
-  if (!LHSOneUse || !RHSOneUse || !match(LHS1, m_Zero()) || RHS0 != LHS0 ||
-      match(RHS1, m_One()) || !isKnownToBeAPowerOfTwo(RHS1, /*OrZero=*/true, Q))
+  if (!match(LHS, m_OneUse(m_ICmp(Pred, m_Value(Op), m_Zero()))) ||
+      !match(RHS, m_OneUse(m_c_ICmp(Pred, m_Specific(Op), m_Value(Pow2)))) ||
+      match(Pow2, m_One()) ||
+      !isKnownToBeAPowerOfTwo(Pow2, Q.DL, /*OrZero=*/true, Q.AC, Q.CxtI, Q.DT))
     return nullptr;
 
-  Value *And = Builder.CreateAnd(LHS0, RHS1);
-  return Builder.CreateICmp(Pred, And, LHS0);
+  Value *And = Builder.CreateAnd(Op, Pow2);
+  return Builder.CreateICmp(Pred, And, Op);
 }
 
 /// General pattern:
@@ -853,21 +846,19 @@ static Value *foldAndOrOfICmpsWithPow2AndWithZero(
 /// masked bits are zero.
 /// So this should be transformed to:
 ///   %r = icmp ult i32 %arg, 128
-static Value *foldSignedTruncationCheck(CmpPredicate PredL, Value *LHS0,
-                                        Value *LHS1, CmpPredicate PredR,
-                                        Value *RHS0, Value *RHS1,
+static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
                                         Instruction &CxtI,
                                         InstCombiner::BuilderTy &Builder) {
   assert(CxtI.getOpcode() == Instruction::And);
 
   // Match  icmp ult (add %arg, C01), C1   (C1 == C01 << 1; powers of two)
-  auto tryToMatchSignedTruncationCheck = [](CmpPredicate Pred, Value *LHS,
-                                            Value *RHS, Value *&X,
+  auto tryToMatchSignedTruncationCheck = [](ICmpInst *ICmp, Value *&X,
                                             APInt &SignBitMask) -> bool {
     const APInt *I01, *I1; // powers of two; I1 == I01 << 1
-    if (Pred != ICmpInst::ICMP_ULT ||
-        !match(LHS, m_Add(m_Value(X), m_Power2(I01))) ||
-        !match(RHS, m_Power2(I1)) || I1->ule(*I01) || I01->shl(1) != *I1)
+    if (!(match(ICmp, m_SpecificICmp(ICmpInst::ICMP_ULT,
+                                     m_Add(m_Value(X), m_Power2(I01)),
+                                     m_Power2(I1))) &&
+          I1->ugt(*I01) && I01->shl(1) == *I1))
       return false;
     // Which bit is the new sign bit as per the 'signed truncation' pattern?
     SignBitMask = *I01;
@@ -878,24 +869,25 @@ static Value *foldSignedTruncationCheck(CmpPredicate PredL, Value *LHS0,
   // We need to match this first, else we will mismatch commutative cases.
   Value *X1;
   APInt HighestBit;
-  if (tryToMatchSignedTruncationCheck(PredR, RHS0, RHS1, X1, HighestBit)) {
-    std::swap(PredL, PredR);
-    std::swap(LHS0, RHS0);
-    std::swap(LHS1, RHS1);
-  } else if (!tryToMatchSignedTruncationCheck(PredL, LHS0, LHS1, X1,
-                                              HighestBit))
+  ICmpInst *OtherICmp;
+  if (tryToMatchSignedTruncationCheck(ICmp1, X1, HighestBit))
+    OtherICmp = ICmp0;
+  else if (tryToMatchSignedTruncationCheck(ICmp0, X1, HighestBit))
+    OtherICmp = ICmp1;
+  else
     return nullptr;
 
   assert(HighestBit.isPowerOf2() && "expected to be power of two (non-zero)");
 
   // Try to match/decompose into:  icmp eq (X & Mask), 0
-  auto tryToDecompose = [](CmpPredicate Pred, Value *LHS, Value *RHS, Value *&X,
+  auto tryToDecompose = [](ICmpInst *ICmp, Value *&X,
                            APInt &UnsetBitsMask) -> bool {
+    CmpPredicate Pred = ICmp->getPredicate();
     // Can it be decomposed into  icmp eq (X & Mask), 0  ?
-    auto Res = llvm::decomposeBitTestICmp(LHS, RHS, Pred,
-                                          /*LookThroughTrunc=*/false,
-                                          /*AllowNonZeroC=*/false,
-                                          /*DecomposeAnd=*/true);
+    auto Res = llvm::decomposeBitTestICmp(
+        ICmp->getOperand(0), ICmp->getOperand(1), Pred,
+        /*LookThroughTrunc=*/false, /*AllowNonZeroC=*/false,
+        /*DecomposeAnd=*/true);
     if (Res && Res->Pred == ICmpInst::ICMP_EQ) {
       X = Res->X;
       UnsetBitsMask = Res->Mask;
@@ -908,7 +900,7 @@ static Value *foldSignedTruncationCheck(CmpPredicate PredL, Value *LHS0,
   // And the other icmp needs to be decomposable into a bit test.
   Value *X0;
   APInt UnsetBitsMask;
-  if (!tryToDecompose(PredR, RHS0, RHS1, X0, UnsetBitsMask))
+  if (!tryToDecompose(OtherICmp, X0, UnsetBitsMask))
     return nullptr;
 
   assert(!UnsetBitsMask.isZero() && "empty mask makes no sense.");
@@ -950,24 +942,23 @@ static Value *foldSignedTruncationCheck(CmpPredicate PredL, Value *LHS0,
 /// fold (icmp ne ctpop(X) 1) & (icmp ne X 0) into (icmp ugt ctpop(X) 1).
 /// Also used for logical and/or, must be poison safe if range attributes are
 /// dropped.
-static Value *foldIsPowerOf2OrZero(CmpPredicate PredL, Value *LHS0, Value *LHS1,
-                                   CmpPredicate PredR, Value *RHS0, Value *RHS1,
-                                   bool IsAnd, InstCombiner::BuilderTy &Builder,
+static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
+                                   InstCombiner::BuilderTy &Builder,
                                    InstCombinerImpl &IC) {
-
+  CmpPredicate Pred0, Pred1;
   Value *X;
-  if (!match(LHS0, m_Ctpop(m_Value(X))) || !match(LHS1, m_SpecificInt(1)) ||
-      RHS0 != X || !match(RHS1, m_ZeroInt()))
+  if (!match(Cmp0, m_ICmp(Pred0, m_Ctpop(m_Value(X)), m_SpecificInt(1))) ||
+      !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())))
     return nullptr;
 
-  auto *CtPop = cast<Instruction>(LHS0);
-  if (IsAnd && PredL == ICmpInst::ICMP_NE && PredR == ICmpInst::ICMP_NE) {
+  auto *CtPop = cast<Instruction>(Cmp0->getOperand(0));
+  if (IsAnd && Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_NE) {
     // Drop range attributes and re-infer them in the next iteration.
     CtPop->dropPoisonGeneratingAnnotations();
     IC.addToWorklist(CtPop);
     return Builder.CreateICmpUGT(CtPop, ConstantInt::get(CtPop->getType(), 1));
   }
-  if (!IsAnd && PredL == ICmpInst::ICMP_EQ && PredR == ICmpInst::ICMP_EQ) {
+  if (!IsAnd && Pred0 == ICmpInst::ICMP_EQ && Pred1 == ICmpInst::ICMP_EQ) {
     // Drop range attributes and re-infer them in the next iteration.
     CtPop->dropPoisonGeneratingAnnotations();
     IC.addToWorklist(CtPop);
@@ -980,32 +971,33 @@ static Value *foldIsPowerOf2OrZero(CmpPredicate PredL, Value *LHS0, Value *LHS1,
 /// Reduce a pair of compares that check if a value has exactly 1 bit set.
 /// Also used for logical and/or, must be poison safe if range attributes are
 /// dropped.
-static Value *foldIsPowerOf2(CmpPredicate PredL, Value *LHS0, Value *LHS1,
-                             CmpPredicate PredR, Value *RHS0, Value *RHS1,
-                             bool JoinedByAnd, InstCombiner::BuilderTy &Builder,
+static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
+                             InstCombiner::BuilderTy &Builder,
                              InstCombinerImpl &IC) {
   // Handle 'and' / 'or' commutation: make the equality check the first operand.
-  if (PredR == (JoinedByAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ)) {
-    std::swap(PredL, PredR);
-    std::swap(LHS0, RHS0);
-    std::swap(LHS1, RHS1);
-  }
+  if (JoinedByAnd && Cmp1->getPredicate() == ICmpInst::ICMP_NE)
+    std::swap(Cmp0, Cmp1);
+  else if (!JoinedByAnd && Cmp1->getPredicate() == ICmpInst::ICMP_EQ)
+    std::swap(Cmp0, Cmp1);
 
   // (X != 0) && (ctpop(X) u< 2) --> ctpop(X) == 1
-  if (JoinedByAnd && PredL == ICmpInst::ICMP_NE && match(LHS1, m_ZeroInt()) &&
-      PredR == ICmpInst::ICMP_ULT && match(RHS0, m_Ctpop(m_Specific(LHS0))) &&
-      match(RHS1, m_SpecificInt(2))) {
-    auto *CtPop = cast<Instruction>(RHS0);
+  Value *X;
+  if (JoinedByAnd &&
+      match(Cmp0, m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(X), m_ZeroInt())) &&
+      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_ULT, m_Ctpop(m_Specific(X)),
+                                 m_SpecificInt(2)))) {
+    auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
     // Drop range attributes and re-infer them in the next iteration.
     CtPop->dropPoisonGeneratingAnnotations();
     IC.addToWorklist(CtPop);
     return Builder.CreateICmpEQ(CtPop, ConstantInt::get(CtPop->getType(), 1));
   }
   // (X == 0) || (ctpop(X) u> 1) --> ctpop(X) != 1
-  if (!JoinedByAnd && PredL == ICmpInst::ICMP_EQ && match(LHS1, m_ZeroInt()) &&
-      PredR == ICmpInst::ICMP_UGT && match(RHS0, m_Ctpop(m_Specific(LHS0))) &&
-      match(RHS1, m_SpecificInt(1))) {
-    auto *CtPop = cast<Instruction>(RHS0);
+  if (!JoinedByAnd &&
+      match(Cmp0, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(X), m_ZeroInt())) &&
+      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_UGT, m_Ctpop(m_Specific(X)),
+                                 m_SpecificInt(1)))) {
+    auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
     // Drop range attributes and re-infer them in the next iteration.
     CtPop->dropPoisonGeneratingAnnotations();
     IC.addToWorklist(CtPop);
@@ -1085,7 +1077,7 @@ static Value *foldNegativePower2AndShiftedMask(
 /// 2, an earlier optimization converts the expression into (icmp X s> -1).
 /// Parameter P supports masking using undef/poison in either scalar or vector
 /// values.
-static Value *foldPowerOf2AndShiftedMask(Value *Cmp0, Value *Cmp1,
+static Value *foldPowerOf2AndShiftedMask(ICmpInst *Cmp0, ICmpInst *Cmp1,
                                          bool JoinedByAnd,
                                          InstCombiner::BuilderTy &Builder) {
   if (!JoinedByAnd)
@@ -1117,45 +1109,41 @@ static Value *foldPowerOf2AndShiftedMask(Value *Cmp0, Value *Cmp1,
 
 /// Commuted variants are assumed to be handled by calling this function again
 /// with the parameters swapped.
-static Value *foldUnsignedUnderflowCheck(CmpPredicate PredL, Value *LHS0,
-                                         Value *LHS1, bool LHSOneUse,
-                                         CmpPredicate PredR, Value *RHS0,
-                                         Value *RHS1, bool RHSOneUse,
-                                         bool IsAnd, const SimplifyQuery &Q,
+static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
+                                         ICmpInst *UnsignedICmp, bool IsAnd,
+                                         const SimplifyQuery &Q,
                                          InstCombiner::BuilderTy &Builder) {
-  if (!match(LHS1, m_Zero()) || !ICmpInst::isEquality(PredL))
+  Value *ZeroCmpOp;
+  CmpPredicate EqPred;
+  if (!match(ZeroICmp, m_ICmp(EqPred, m_Value(ZeroCmpOp), m_Zero())) ||
+      !ICmpInst::isEquality(EqPred))
     return nullptr;
+
+  CmpPredicate UnsignedPred;
 
   Value *A, *B;
-  if (RHS0 == LHS0)
-    A = RHS1;
-  else if (RHS1 == LHS0) {
-    A = RHS0;
-    PredR = CmpPredicate::getSwapped(PredR);
-  } else
-    return nullptr;
+  if (match(UnsignedICmp,
+            m_c_ICmp(UnsignedPred, m_Specific(ZeroCmpOp), m_Value(A))) &&
+      match(ZeroCmpOp, m_c_Add(m_Specific(A), m_Value(B))) &&
+      (ZeroICmp->hasOneUse() || UnsignedICmp->hasOneUse())) {
+    auto GetKnownNonZeroAndOther = [&](Value *&NonZero, Value *&Other) {
+      if (!isKnownNonZero(NonZero, Q))
+        std::swap(NonZero, Other);
+      return isKnownNonZero(NonZero, Q);
+    };
 
-  if (!match(LHS0, m_c_Add(m_Specific(A), m_Value(B))) ||
-      !(LHSOneUse || RHSOneUse))
-    return nullptr;
-
-  auto GetKnownNonZeroAndOther = [&](Value *&NonZero, Value *&Other) {
-    if (!isKnownNonZero(NonZero, Q))
-      std::swap(NonZero, Other);
-    return isKnownNonZero(NonZero, Q);
-  };
-
-  // Given  ZeroCmpOp = (A + B)
-  //   ZeroCmpOp <  A && ZeroCmpOp != 0  -->  (0-X) <  Y  iff
-  //   ZeroCmpOp >= A || ZeroCmpOp == 0  -->  (0-X) >= Y  iff
-  //     with X being the value (A/B) that is known to be non-zero,
-  //     and Y being remaining value.
-  if (PredR == ICmpInst::ICMP_ULT && PredL == ICmpInst::ICMP_NE && IsAnd &&
-      GetKnownNonZeroAndOther(B, A))
-    return Builder.CreateICmpULT(Builder.CreateNeg(B), A);
-  if (PredR == ICmpInst::ICMP_UGE && PredL == ICmpInst::ICMP_EQ && !IsAnd &&
-      GetKnownNonZeroAndOther(B, A))
-    return Builder.CreateICmpUGE(Builder.CreateNeg(B), A);
+    // Given  ZeroCmpOp = (A + B)
+    //   ZeroCmpOp <  A && ZeroCmpOp != 0  -->  (0-X) <  Y  iff
+    //   ZeroCmpOp >= A || ZeroCmpOp == 0  -->  (0-X) >= Y  iff
+    //     with X being the value (A/B) that is known to be non-zero,
+    //     and Y being remaining value.
+    if (UnsignedPred == ICmpInst::ICMP_ULT && EqPred == ICmpInst::ICMP_NE &&
+        IsAnd && GetKnownNonZeroAndOther(B, A))
+      return Builder.CreateICmpULT(Builder.CreateNeg(B), A);
+    if (UnsignedPred == ICmpInst::ICMP_UGE && EqPred == ICmpInst::ICMP_EQ &&
+        !IsAnd && GetKnownNonZeroAndOther(B, A))
+      return Builder.CreateICmpUGE(Builder.CreateNeg(B), A);
+  }
 
   return nullptr;
 }
@@ -1284,32 +1272,29 @@ Value *InstCombinerImpl::foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd) {
 /// Reduce logic-of-compares with equality to a constant by substituting a
 /// common operand with the constant. Callers are expected to call this with
 /// Cmp0/Cmp1 switched to handle logic op commutativity.
-static Value *
-foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
-                            Value *LHS, CmpPredicate PredR, Value *RHS0,
-                            Value *RHS1, bool RHSOneUse, bool IsAnd,
-                            bool IsLogical, InstCombiner::BuilderTy &Builder,
-                            const SimplifyQuery &Q, Instruction &I) {
+static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                          bool IsAnd, bool IsLogical,
+                                          InstCombiner::BuilderTy &Builder,
+                                          const SimplifyQuery &Q,
+                                          Instruction &I) {
   // Match an equality compare with a non-poison constant as Cmp0.
   // Also, give up if the compare can be constant-folded to avoid looping.
-  if (!isa<Constant>(LHS1) || !isGuaranteedNotToBeUndefOrPoison(LHS1) ||
-      isa<Constant>(LHS0))
+  CmpPredicate Pred0;
+  Value *X;
+  Constant *C;
+  if (!match(Cmp0, m_ICmp(Pred0, m_Value(X), m_Constant(C))) ||
+      !isGuaranteedNotToBeUndefOrPoison(C) || isa<Constant>(X))
     return nullptr;
-  if ((IsAnd && PredL != ICmpInst::ICMP_EQ) ||
-      (!IsAnd && PredL != ICmpInst::ICMP_NE))
+  if ((IsAnd && Pred0 != ICmpInst::ICMP_EQ) ||
+      (!IsAnd && Pred0 != ICmpInst::ICMP_NE))
     return nullptr;
 
   // The other compare must include a common operand (X). Canonicalize the
   // common operand as operand 1 (Pred1 is swapped if the common operand was
   // operand 0).
   Value *Y;
-
-  if (LHS0 == RHS0) {
-    Y = RHS1;
-    PredR = CmpPredicate::getSwapped(PredR);
-  } else if (LHS0 == RHS1)
-    Y = RHS0;
-  else
+  CmpPredicate Pred1;
+  if (!match(Cmp1, m_c_ICmp(Pred1, m_Value(Y), m_Specific(X))))
     return nullptr;
 
   // Replace variable with constant value equivalence to remove a variable use:
@@ -1317,20 +1302,21 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
   // (X != C) || (Y Pred1 X) --> (X != C) || (Y Pred1 C)
   // Can think of the 'or' substitution with the 'and' bool equivalent:
   // A || B --> A || (!A && B)
-  Value *SubstituteCmp = simplifyICmpInst(PredR, Y, LHS1, Q);
+  Value *SubstituteCmp = simplifyICmpInst(Pred1, Y, C, Q);
   if (!SubstituteCmp) {
     // If we need to create a new instruction, require that the old compare can
     // be removed.
-    if (!RHSOneUse)
+    if (!Cmp1->hasOneUse())
       return nullptr;
-    SubstituteCmp = Builder.CreateICmp(PredR, Y, LHS1);
+    SubstituteCmp = Builder.CreateICmp(Pred1, Y, C);
   }
   if (IsLogical) {
-    Instruction *MDFrom = isa<SelectInst>(I) ? &I : nullptr;
-    return IsAnd ? Builder.CreateLogicalAnd(LHS, SubstituteCmp, "", MDFrom)
-                 : Builder.CreateLogicalOr(LHS, SubstituteCmp, "", MDFrom);
+    Instruction *MDFrom =
+        ProfcheckDisableMetadataFixes && isa<SelectInst>(I) ? nullptr : &I;
+    return IsAnd ? Builder.CreateLogicalAnd(Cmp0, SubstituteCmp, "", MDFrom)
+                 : Builder.CreateLogicalOr(Cmp0, SubstituteCmp, "", MDFrom);
   }
-  return Builder.CreateBinOp(IsAnd ? Instruction::And : Instruction::Or, LHS,
+  return Builder.CreateBinOp(IsAnd ? Instruction::And : Instruction::Or, Cmp0,
                              SubstituteCmp);
 }
 
@@ -1338,17 +1324,17 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
 /// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
 /// into a single comparison using range-based reasoning.
 /// NOTE: This is also used for logical and/or, must be poison-safe!
-Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(
-    CmpPredicate PredL, Value *LHS0, Value *LHS1, bool LHSOneUse,
-    CmpPredicate PredR, Value *RHS0, Value *RHS1, bool RHSOneUse, bool IsAnd) {
+Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
+                                                     ICmpInst *ICmp2,
+                                                     bool IsAnd) {
   // Return (V, CR) for a range check idiom V in CR.
   auto MatchExactRangeCheck =
-      [](CmpPredicate Pred, Value *LHS,
-         Value *RHS) -> std::optional<std::pair<Value *, ConstantRange>> {
+      [](ICmpInst *ICmp) -> std::optional<std::pair<Value *, ConstantRange>> {
     const APInt *C;
-    if (!match(RHS, m_APInt(C)))
+    if (!match(ICmp->getOperand(1), m_APInt(C)))
       return std::nullopt;
-
+    Value *LHS = ICmp->getOperand(0);
+    CmpPredicate Pred = ICmp->getPredicate();
     Value *X;
     // Match (x & NegPow2) ==/!= C
     const APInt *Mask;
@@ -1369,11 +1355,11 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(
     return std::make_pair(LHS, CR);
   };
 
-  auto RC1 = MatchExactRangeCheck(PredL, LHS0, LHS1);
+  auto RC1 = MatchExactRangeCheck(ICmp1);
   if (!RC1)
     return nullptr;
 
-  auto RC2 = MatchExactRangeCheck(PredR, RHS0, RHS1);
+  auto RC2 = MatchExactRangeCheck(ICmp2);
   if (!RC2)
     return nullptr;
 
@@ -1392,7 +1378,8 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(
   Value *NewV = V1;
   std::optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
   if (!CR) {
-    if (!LHSOneUse || !RHSOneUse || CR1.isWrappedSet() || CR2.isWrappedSet())
+    if (!(ICmp1->hasOneUse() && ICmp2->hasOneUse()) || CR1.isWrappedSet() ||
+        CR2.isWrappedSet())
       return nullptr;
 
     // Check whether we have equal-size ranges that only differ by one bit.
@@ -2457,7 +2444,8 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
   else if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false))
     Folded = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
                           : Builder.CreateBinOp(Opcode, X, Res);
-  if (SelectInst *SI = dyn_cast_or_null<SelectInst>(Folded); SI != nullptr)
+  if (SelectInst *SI = dyn_cast_or_null<SelectInst>(Folded);
+      SI != nullptr && !ProfcheckDisableMetadataFixes)
     // If the bop I was originally a lop, we could recover branch weight
     // information using that lop's weights. However, InstCombine usually
     // replaces the lop with a bop by the time we get here, deleting the branch
@@ -3400,20 +3388,23 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B, Value *C,
 
 // (icmp eq X, C) | (icmp ult Other, (X - C)) -> (icmp ule Other, (X - (C + 1)))
 // (icmp ne X, C) & (icmp uge Other, (X - C)) -> (icmp ugt Other, (X - (C + 1)))
-static Value *foldAndOrOfICmpEqConstantAndICmp(CmpPredicate PredL, Value *LHS0,
-                                               Value *LHS1, bool LHSOneUse,
-                                               CmpPredicate PredR, Value *RHS0,
-                                               Value *RHS1, bool RHSOneUse,
+static Value *foldAndOrOfICmpEqConstantAndICmp(ICmpInst *LHS, ICmpInst *RHS,
                                                bool IsAnd, bool IsLogical,
                                                IRBuilderBase &Builder) {
-  if (IsAnd) {
-    PredL = CmpPredicate::getInverse(PredL);
-    PredR = CmpPredicate::getInverse(PredR);
-  }
+  Value *LHS0 = LHS->getOperand(0);
+  Value *RHS0 = RHS->getOperand(0);
+  Value *RHS1 = RHS->getOperand(1);
+
+  ICmpInst::Predicate LPred =
+      IsAnd ? LHS->getInversePredicate() : LHS->getPredicate();
+  ICmpInst::Predicate RPred =
+      IsAnd ? RHS->getInversePredicate() : RHS->getPredicate();
 
   const APInt *CInt;
-  if (PredL != ICmpInst::ICMP_EQ || !match(LHS1, m_APIntAllowPoison(CInt)) ||
-      !LHS0->getType()->isIntOrIntVectorTy() || !(LHSOneUse || RHSOneUse))
+  if (LPred != ICmpInst::ICMP_EQ ||
+      !match(LHS->getOperand(1), m_APIntAllowPoison(CInt)) ||
+      !LHS0->getType()->isIntOrIntVectorTy() ||
+      !(LHS->hasOneUse() || RHS->hasOneUse()))
     return nullptr;
 
   auto MatchRHSOp = [LHS0, CInt](const Value *RHSOp) {
@@ -3423,9 +3414,9 @@ static Value *foldAndOrOfICmpEqConstantAndICmp(CmpPredicate PredL, Value *LHS0,
   };
 
   Value *Other;
-  if (PredR == ICmpInst::ICMP_ULT && MatchRHSOp(RHS1))
+  if (RPred == ICmpInst::ICMP_ULT && MatchRHSOp(RHS1))
     Other = RHS0;
-  else if (PredR == ICmpInst::ICMP_UGT && MatchRHSOp(RHS0))
+  else if (RPred == ICmpInst::ICMP_UGT && MatchRHSOp(RHS0))
     Other = RHS1;
   else
     return nullptr;
@@ -3442,19 +3433,14 @@ static Value *foldAndOrOfICmpEqConstantAndICmp(CmpPredicate PredL, Value *LHS0,
 /// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
 /// If IsLogical is true, then the and/or is in select form and the transform
 /// must be poison-safe.
-Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
+Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                           Instruction &I, bool IsAnd,
                                           bool IsLogical) {
-  CmpPredicate PredL, PredR;
-  Value *LHS0, *LHS1, *RHS0, *RHS1;
-  if (!match(LHS, m_ICmp(PredL, m_Value(LHS0), m_Value(LHS1))) ||
-      !match(RHS, m_ICmp(PredR, m_Value(RHS0), m_Value(RHS1))))
-    return nullptr;
-
-  bool LHSOneUse = LHS->hasOneUse();
-  bool RHSOneUse = RHS->hasOneUse();
-
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
+
+  ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
+  Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
+  Value *LHS1 = LHS->getOperand(1), *RHS1 = RHS->getOperand(1);
 
   const APInt *LHSC = nullptr, *RHSC = nullptr;
   match(LHS1, m_APInt(LHSC));
@@ -3470,45 +3456,38 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     if (LHS0 == RHS0 && LHS1 == RHS1) {
       unsigned Code = IsAnd ? getICmpCode(PredL) & getICmpCode(PredR)
                             : getICmpCode(PredL) | getICmpCode(PredR);
-      bool IsSigned = ICmpInst::isSigned(PredL) || ICmpInst::isSigned(PredR);
+      bool IsSigned = LHS->isSigned() || RHS->isSigned();
       return getNewICmpValue(Code, IsSigned, LHS0, LHS1, Builder);
     }
   }
 
-  if (Value *V = foldAndOrOfICmpEqConstantAndICmp(PredL, LHS0, LHS1, LHSOneUse,
-                                                  PredR, RHS0, RHS1, RHSOneUse,
-                                                  IsAnd, IsLogical, Builder))
+  if (Value *V =
+          foldAndOrOfICmpEqConstantAndICmp(LHS, RHS, IsAnd, IsLogical, Builder))
     return V;
   // We can treat logical like bitwise here, because both operands are used on
   // the LHS, and as such poison from both will propagate.
-  if (Value *V = foldAndOrOfICmpEqConstantAndICmp(
-          PredR, RHS0, RHS1, RHSOneUse, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
-          /*IsLogical*/ false, Builder))
+  if (Value *V = foldAndOrOfICmpEqConstantAndICmp(RHS, LHS, IsAnd,
+                                                  /*IsLogical*/ false, Builder))
     return V;
 
-  if (Value *V = foldAndOrOfICmpsWithConstEq(PredL, LHS0, LHS1, LHS, PredR,
-                                             RHS0, RHS1, RHSOneUse, IsAnd,
-                                             IsLogical, Builder, Q, I))
+  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, IsLogical,
+                                             Builder, Q, I))
     return V;
   // We can convert this case to bitwise and, because both operands are used
   // on the LHS, and as such poison from both will propagate.
   if (Value *V = foldAndOrOfICmpsWithConstEq(
-          PredR, RHS0, RHS1, RHS, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
-          /*IsLogical=*/false, Builder, Q, I)) {
+          RHS, LHS, IsAnd, /*IsLogical=*/false, Builder, Q, I)) {
     // If RHS is still used, we should drop samesign flag.
-    if (IsLogical && PredR.hasSameSign() && !RHS->use_empty()) {
-      auto *CmpR = cast<ICmpInst>(RHS);
-      CmpR->setSameSign(false);
-      addToWorklist(CmpR);
+    if (IsLogical && RHS->hasSameSign() && !RHS->use_empty()) {
+      RHS->setSameSign(false);
+      addToWorklist(RHS);
     }
     return V;
   }
 
-  if (Value *V = foldIsPowerOf2OrZero(PredL, LHS0, LHS1, PredR, RHS0, RHS1,
-                                      IsAnd, Builder, *this))
+  if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder, *this))
     return V;
-  if (Value *V = foldIsPowerOf2OrZero(PredR, RHS0, RHS1, PredL, LHS0, LHS1,
-                                      IsAnd, Builder, *this))
+  if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder, *this))
     return V;
 
   // TODO: One of these directions is fine with logical and/or, the other could
@@ -3516,25 +3495,21 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   if (!IsLogical) {
     // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
     // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(PredL, LHS0, LHS1, PredR, RHS0, RHS1, &I,
-                                      /*Inverted=*/!IsAnd))
+    if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/!IsAnd))
       return V;
 
     // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
     // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(PredR, RHS0, RHS1, PredL, LHS0, LHS1, &I,
-                                      /*Inverted=*/!IsAnd))
+    if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd))
       return V;
   }
 
   // TODO: Add conjugated or fold, check whether it is safe for logical and/or.
   if (IsAnd && !IsLogical)
-    if (Value *V = foldSignedTruncationCheck(PredL, LHS0, LHS1, PredR, RHS0,
-                                             RHS1, I, Builder))
+    if (Value *V = foldSignedTruncationCheck(LHS, RHS, I, Builder))
       return V;
 
-  if (Value *V = foldIsPowerOf2(PredL, LHS0, LHS1, PredR, RHS0, RHS1, IsAnd,
-                                Builder, *this))
+  if (Value *V = foldIsPowerOf2(LHS, RHS, IsAnd, Builder, *this))
     return V;
 
   if (Value *V = foldPowerOf2AndShiftedMask(LHS, RHS, IsAnd, Builder))
@@ -3542,13 +3517,9 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
 
   // TODO: Verify whether this is safe for logical and/or.
   if (!IsLogical) {
-    if (Value *X = foldUnsignedUnderflowCheck(PredL, LHS0, LHS1, LHSOneUse,
-                                              PredR, RHS0, RHS1, RHSOneUse,
-                                              IsAnd, Q, Builder))
+    if (Value *X = foldUnsignedUnderflowCheck(LHS, RHS, IsAnd, Q, Builder))
       return X;
-    if (Value *X = foldUnsignedUnderflowCheck(PredR, RHS0, RHS1, RHSOneUse,
-                                              PredL, LHS0, LHS1, LHSOneUse,
-                                              IsAnd, Q, Builder))
+    if (Value *X = foldUnsignedUnderflowCheck(RHS, LHS, IsAnd, Q, Builder))
       return X;
   }
 
@@ -3556,8 +3527,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
   // TODO: Remove this and below when foldLogOpOfMaskedICmps can handle undefs.
   if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
-      PredL.dropSameSign() == PredR.dropSameSign() &&
-      match(LHS1, m_ZeroInt()) && match(RHS1, m_ZeroInt()) &&
+      PredL == PredR && match(LHS1, m_ZeroInt()) && match(RHS1, m_ZeroInt()) &&
       LHS0->getType() == RHS0->getType() &&
       (!IsLogical || isGuaranteedNotToBePoison(RHS0))) {
     Value *NewOr = Builder.CreateOr(LHS0, RHS0);
@@ -3568,8 +3538,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   // (icmp ne A, -1) | (icmp ne B, -1) --> (icmp ne (A&B), -1)
   // (icmp eq A, -1) & (icmp eq B, -1) --> (icmp eq (A&B), -1)
   if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
-      PredL.dropSameSign() == PredR.dropSameSign() &&
-      match(LHS1, m_AllOnes()) && match(RHS1, m_AllOnes()) &&
+      PredL == PredR && match(LHS1, m_AllOnes()) && match(RHS1, m_AllOnes()) &&
       LHS0->getType() == RHS0->getType() &&
       (!IsLogical || isGuaranteedNotToBePoison(RHS0))) {
     Value *NewAnd = Builder.CreateAnd(LHS0, RHS0);
@@ -3578,9 +3547,8 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   }
 
   if (!IsLogical)
-    if (Value *V = foldAndOrOfICmpsWithPow2AndWithZero(
-            Builder, PredL, LHS0, LHS1, LHSOneUse, PredR, RHS0, RHS1, RHSOneUse,
-            IsAnd, Q))
+    if (Value *V =
+            foldAndOrOfICmpsWithPow2AndWithZero(Builder, LHS, RHS, IsAnd, Q))
       return V;
 
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
@@ -3592,7 +3560,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   // where CMAX is the all ones value for the truncated type,
   // iff the lower bits of C2 and CA are zero.
   if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
-      PredL.dropSameSign() == PredR.dropSameSign() && LHSOneUse && RHSOneUse) {
+      PredL == PredR && LHS->hasOneUse() && RHS->hasOneUse()) {
     Value *V;
     const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
 
@@ -3660,10 +3628,10 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   // (X & ExpMask) == 0 || (X & ExpMask) == ExpMask -> !isnormal(X)
   Value *X;
   const APInt *MaskC;
-  if (LHS0 == RHS0 && PredL.dropSameSign() == PredR.dropSameSign() &&
+  if (LHS0 == RHS0 && PredL == PredR &&
       PredL == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
       !I.getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
-      LHSOneUse && RHSOneUse &&
+      LHS->hasOneUse() && RHS->hasOneUse() &&
       match(LHS0, m_And(m_ElementWiseBitCast(m_Value(X)), m_APInt(MaskC))) &&
       X->getType()->getScalarType()->isIEEELikeFPTy() &&
       APFloat(X->getType()->getScalarType()->getFltSemantics(), *MaskC)
@@ -3673,8 +3641,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     return Builder.createIsFPClass(X, IsAnd ? FPClassTest::fcNormal
                                             : ~FPClassTest::fcNormal);
 
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHS1, LHSOneUse, PredR, RHS0,
-                                     RHS1, RHSOneUse, IsAnd);
+  return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }
 
 /// If IsLogical is true, then the and/or is in select form and the transform
@@ -3692,8 +3659,10 @@ Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
                                         SQ.getWithInstruction(&I)))
     return V;
 
-  if (Value *Res = foldAndOrOfICmps(LHS, RHS, I, IsAnd, IsLogical))
-    return Res;
+  if (auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
+    if (auto *RHSCmp = dyn_cast<ICmpInst>(RHS))
+      if (Value *Res = foldAndOrOfICmps(LHSCmp, RHSCmp, I, IsAnd, IsLogical))
+        return Res;
 
   if (auto *LHSCmp = dyn_cast<FCmpInst>(LHS))
     if (auto *RHSCmp = dyn_cast<FCmpInst>(RHS))
@@ -5149,7 +5118,8 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
     NewLogicOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
   } else {
     NewLogicOp =
-        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not", &I);
+        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not",
+                                ProfcheckDisableMetadataFixes ? nullptr : &I);
     if (SelectInst *SI = dyn_cast<SelectInst>(NewLogicOp))
       SI->swapProfMetadata();
   }
@@ -5230,8 +5200,9 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   }
   if (match(NotOp, m_OneUse(m_LogicalAnd(m_Not(m_Value(X)), m_Value(Y))))) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
-    SelectInst *SI = SelectInst::Create(X, ConstantInt::getTrue(Ty), NotY, "",
-                                        nullptr, cast<Instruction>(NotOp));
+    SelectInst *SI = SelectInst::Create(
+        X, ConstantInt::getTrue(Ty), NotY, "", nullptr,
+        ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(NotOp));
     SI->swapProfMetadata();
     return SI;
   }
@@ -5244,8 +5215,9 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   }
   if (match(NotOp, m_OneUse(m_LogicalOr(m_Not(m_Value(X)), m_Value(Y))))) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
-    SelectInst *SI = SelectInst::Create(X, NotY, ConstantInt::getFalse(Ty), "",
-                                        nullptr, cast<Instruction>(NotOp));
+    SelectInst *SI = SelectInst::Create(
+        X, NotY, ConstantInt::getFalse(Ty), "", nullptr,
+        ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(NotOp));
     SI->swapProfMetadata();
     return SI;
   }
@@ -5727,7 +5699,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       if (NeedFreeze)
         A = Builder.CreateFreeze(A);
       Value *NotB = Builder.CreateNot(B);
-      return MDFrom == nullptr
+      return MDFrom == nullptr || ProfcheckDisableMetadataFixes
                  ? createSelectInstWithUnknownProfile(A, NotB, C)
                  : SelectInst::Create(A, NotB, C, "", nullptr, MDFrom);
     }

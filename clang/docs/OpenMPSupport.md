@@ -15,6 +15,9 @@
 ```{role} good
 ```
 
+```{contents}
+:local:
+```
 
 # OpenMP Support
 

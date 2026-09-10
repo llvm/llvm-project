@@ -9,7 +9,6 @@ add_mlir_dialect_library(MLIRSCFDialect
 
   DEPENDS
   MLIRSCFOpsIncGen
-  MLIRDeviceMappingInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

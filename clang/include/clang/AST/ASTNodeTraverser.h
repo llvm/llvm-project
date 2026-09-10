@@ -806,8 +806,8 @@ public:
       for (const ParmVarDecl *Parameter : D->parameters())
         Visit(Parameter);
 
-    if (Stmt *Body = D->getBody())
-      Visit(Body);
+    if (D->hasBody())
+      Visit(D->getBody());
   }
 
   void VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {

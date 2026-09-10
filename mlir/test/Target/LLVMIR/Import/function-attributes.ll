@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s --verify-diagnostics | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file %s --verify-diagnostics | FileCheck %s
 
 ; CHECK: llvm.func internal @func_internal
 define internal void @func_internal() {
@@ -58,7 +58,6 @@ attributes #0 = { readnone }
 ; CHECK-SAME:  !llvm.ptr {llvm.dead_on_return = 8 : i64}
 ; CHECK-SAME:  f32 {llvm.nofpclass = 519 : i64}
 ; CHECK-SAME:  i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>}
-; CHECK-SAME:  !llvm.ptr {llvm.nofreeobj}
 define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
     ptr byref(i64) %arg1,
@@ -81,8 +80,7 @@ define ptr @func_arg_attrs(
     ptr dead_on_unwind %arg20,
     ptr dead_on_return(8) %arg21,
     float nofpclass(nan inf) %arg22,
-    i64 range(i64 0, 4097) %arg23,
-    ptr nofreeobj %arg24) {
+    i64 range(i64 0, 4097) %arg23) {
   ret ptr %arg17
 }
 
@@ -108,12 +106,6 @@ declare ptr @allocator(i64 allocalign, ptr allocptr)
 ; CHECK-LABEL: @func_res_attr_noalias
 ; CHECK-SAME:  !llvm.ptr {llvm.noalias}
 declare noalias ptr @func_res_attr_noalias()
-
-; // -----
-
-; CHECK-LABEL: @func_res_attr_nofreeobj
-; CHECK-SAME:  !llvm.ptr {llvm.nofreeobj}
-declare nofreeobj ptr @func_res_attr_nofreeobj()
 
 ; // -----
 

@@ -815,6 +815,9 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
   // loop tree. Then we can optionally compute global RegPressure.
   for (MachineFunction::iterator MBB = MF->begin(), MBBEnd = MF->end();
        MBB != MBBEnd; ++MBB) {
+
+    Scheduler.startBlock(&*MBB);
+
 #ifndef NDEBUG
     if (SchedOnlyFunc.getNumOccurrences() && SchedOnlyFunc != MF->getName())
       continue;
@@ -822,8 +825,6 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         && (int)SchedOnlyBlock != MBB->getNumber())
       continue;
 #endif
-
-    Scheduler.startBlock(&*MBB);
 
     // Break the block into scheduling regions [I, RegionEnd). RegionEnd
     // points to the scheduling boundary at the bottom of the region. The DAG

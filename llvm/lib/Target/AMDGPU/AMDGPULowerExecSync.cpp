@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Lower global variables with target extension type "amdgpu.named.barrier"
+// Lower LDS global variables with target extension type "amdgpu.named.barrier"
 // that require specialized address assignment. It assigns a unique
-// barrier identifier to each named-barrier variable and encodes
+// barrier identifier to each named-barrier LDS variable and encodes
 // this identifier within the !absolute_symbol metadata of that global.
+// This encoding ensures that subsequent LDS lowering passes can process these
+// barriers correctly without conflicts.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,14 +33,10 @@ using namespace AMDGPU;
 
 namespace {
 
-static bool isNamedBarrierToLower(const GlobalVariable &GV) {
-  return isNamedBarrier(GV) && !GV.isAbsoluteSymbolRef();
-}
-
 // Write the specified address into metadata where it can be retrieved by
 // the assembler. Format is a half open range, [Address Address+1)
-static void recordAbsoluteAddress(Module *M, GlobalVariable *GV,
-                                  uint32_t Address) {
+static void recordLDSAbsoluteAddress(Module *M, GlobalVariable *GV,
+                                     uint32_t Address) {
   LLVMContext &Ctx = M->getContext();
   auto *IntTy = M->getDataLayout().getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
   auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address));
@@ -135,12 +133,14 @@ static bool lowerExecSyncGlobalVariables(Module &M, GVUsesInfoTy &GVUsesInfo) {
       LLVM_DEBUG(GV->printAsOperand(dbgs(), false);
                  dbgs() << " was assigned barrier id: " << BarID
                         << " id-count: " << BarCnt << "\n");
-      Offset = BarID;
+      // 4 bits for alignment, 5 bits for the barrier num,
+      // 3 bits for the barrier scope
+      Offset = 0x802000u | BarrierScope << 9 | BarID << 4;
     } else {
       llvm_unreachable("Unhandled special variable type.");
     }
 
-    recordAbsoluteAddress(&M, GV, Offset);
+    recordLDSAbsoluteAddress(&M, GV, Offset);
   }
 
   // Also erase those special LDS variables from indirect_access.
@@ -210,16 +210,15 @@ static bool runLowerExecSyncGlobals(Module &M) {
   CallGraph CG = CallGraph(M);
   bool Changed = false;
   Changed |=
-      eliminateGVConstantExprUsesFromAllInstructions(M, isNamedBarrierToLower);
+      eliminateGVConstantExprUsesFromAllInstructions(M, isLDSVariableToLower);
 
   // For each kernel, what variables does it access directly or through
   // callees
-  GVUsesInfoTy BarrierUsesInfo =
-      getTransitiveUsesOfGV(CG, M, isNamedBarrierToLower);
+  GVUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDSForLowering(CG, M);
 
-  if (hasBarrierToLower(BarrierUsesInfo)) {
+  if (hasBarrierToLower(LDSUsesInfo)) {
     // Special LDS variables need special address assignment
-    Changed |= lowerExecSyncGlobalVariables(M, BarrierUsesInfo);
+    Changed |= lowerExecSyncGlobalVariables(M, LDSUsesInfo);
   }
 
   return Changed;

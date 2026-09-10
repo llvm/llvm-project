@@ -272,15 +272,13 @@ The most important command line options are:
 `-malloc_limit_mb`
 : If non-zero, the fuzzer will exit if the target tries to allocate this
   number of Mb with one malloc call.
-  If zero (default) the same limit as rss_limit_mb is applied.
+  If zero (default) same limit as rss_limit_mb is applied.
 
 `-timeout_exitcode`
-: Exit code (default 70) used if libFuzzer reports a timeout.
+: Exit code (default 77) used if libFuzzer reports a timeout.
 
 `-error_exitcode`
-: Exit code (default 77) used if libFuzzer itself (not a sanitizer) reports a
-  bug (leak, crash, etc). Out-of-memory uses a fixed exit code of 71 that is
-  not configurable.
+: Exit code (default 77) used if libFuzzer itself (not a sanitizer) reports a bug (leak, OOM, etc).
 
 `-max_total_time`
 : If positive, indicates the maximum total time in seconds to run the fuzzer.
@@ -704,11 +702,9 @@ is expensive.
 By default (`-detect_leaks=1`) libFuzzer will count the number of
 `malloc` and `free` calls when executing every mutation.
 If the numbers don't match (which by itself doesn't mean there is a leak)
-libFuzzer will re-execute the input to verify the mismatch and then invoke
-the more expensive [LeakSanitizer]
+libFuzzer will invoke the more expensive [LeakSanitizer]
 pass and if the actual leak is found, it will be reported with the reproducer
-and the process will exit. The verification re-executions are not fuzzing
-runs and do not count towards `-runs`.
+and the process will exit.
 
 If your target has massive leaks and the leak detection is disabled
 you will eventually run out of RAM (see the `-rss_limit_mb` flag).

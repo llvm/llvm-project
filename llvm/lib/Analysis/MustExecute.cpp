@@ -28,17 +28,12 @@ using namespace llvm;
 
 const DenseMap<BasicBlock *, ColorVector> &
 LoopSafetyInfo::getBlockColors() const {
-  computeBlockColors();
-  return *BlockColors;
+  return BlockColors;
 }
 
 void LoopSafetyInfo::copyColors(BasicBlock *New, BasicBlock *Old) {
-  // Nothing to update if colors have not been computed yet.
-  if (!BlockColors)
-    return;
-
-  ColorVector &ColorsForNewBlock = (*BlockColors)[New];
-  ColorVector &ColorsForOldBlock = (*BlockColors)[Old];
+  ColorVector &ColorsForNewBlock = BlockColors[New];
+  ColorVector &ColorsForOldBlock = BlockColors[Old];
   ColorsForNewBlock = ColorsForOldBlock;
 }
 
@@ -67,6 +62,8 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo() {
     if (MayThrow)
       break;
   }
+
+  computeBlockColors();
 }
 
 bool ICFLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
@@ -88,6 +85,7 @@ void ICFLoopSafetyInfo::computeLoopSafetyInfo() {
       MayThrow = true;
       break;
     }
+  computeBlockColors();
 }
 
 void ICFLoopSafetyInfo::insertInstructionTo(const Instruction *Inst,
@@ -101,11 +99,7 @@ void ICFLoopSafetyInfo::removeInstruction(const Instruction *Inst) {
   MW.removeInstruction(Inst);
 }
 
-void LoopSafetyInfo::computeBlockColors() const {
-  if (BlockColors)
-    return;
-  BlockColors.emplace();
-
+void LoopSafetyInfo::computeBlockColors() {
   // Compute funclet colors if we might sink/hoist in a function with a funclet
   // personality routine.
   Function *Fn = CurLoop->getHeader()->getParent();

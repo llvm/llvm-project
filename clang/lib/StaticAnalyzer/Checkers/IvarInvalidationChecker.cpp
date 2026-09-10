@@ -421,7 +421,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
     // Get the corresponding method in the @implementation.
     const ObjCMethodDecl *D = ImplD->getMethod(InterfD->getSelector(),
                                                InterfD->isInstanceMethod());
-    if (Stmt *Body; D && (Body = D->getBody())) {
+    if (D && D->hasBody()) {
       AtImplementationContainsAtLeastOnePartialInvalidationMethod = true;
 
       bool CalledAnotherInvalidationMethod = false;
@@ -431,7 +431,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
                     PropSetterToIvarMap,
                     PropGetterToIvarMap,
                     PropertyToIvarMap,
-                    BR.getContext()).VisitStmt(Body);
+                    BR.getContext()).VisitStmt(D->getBody());
       // If another invalidation method was called, trust that full invalidation
       // has occurred.
       if (CalledAnotherInvalidationMethod)
@@ -470,7 +470,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
     // Get the corresponding method in the @implementation.
     const ObjCMethodDecl *D = ImplD->getMethod(InterfD->getSelector(),
                                                InterfD->isInstanceMethod());
-    if (Stmt *Body; D && (Body = D->getBody())) {
+    if (D && D->hasBody()) {
       AtImplementationContainsAtLeastOneInvalidationMethod = true;
 
       // Get a copy of ivars needing invalidation.
@@ -482,7 +482,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
                     PropSetterToIvarMap,
                     PropGetterToIvarMap,
                     PropertyToIvarMap,
-                    BR.getContext()).VisitStmt(Body);
+                    BR.getContext()).VisitStmt(D->getBody());
       // If another invalidation method was called, trust that full invalidation
       // has occurred.
       if (CalledAnotherInvalidationMethod)

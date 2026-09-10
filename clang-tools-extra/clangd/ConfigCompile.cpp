@@ -624,11 +624,6 @@ struct FragmentCompiler {
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Diagnostics.ClangTidy.FastCheckFilter = *Val;
         });
-    if (F.ExperimentalCustomChecks)
-      Out.Apply.push_back(
-          [Enabled = **F.ExperimentalCustomChecks](const Params &, Config &C) {
-            C.Diagnostics.ClangTidy.ExperimentalCustomChecks = Enabled;
-          });
   }
 
   void compile(Fragment::DiagnosticsBlock::IncludesBlock &&F) {

@@ -72,9 +72,8 @@ exit:
 }
 
 ; Without profile data the cost model is still self-contained: the recorded
-; reciprocal comes from branch weights estimated by BranchProbabilityInfo. For
-; this comparison against zero that heuristic favors the predicate at 5/8
-; (round(1/0.625) = 2), so cost 10 / 2 -> 5.
+; reciprocal comes from block frequency info, which defaults to an even 50/50
+; split for the unprofiled predicate (reciprocal 2), so cost 10 / 2 -> 5.
 define void @predicated_udiv_no_profile(ptr %a, i32 %n) {
 ; CHECK-LABEL: 'predicated_udiv_no_profile'
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP6:%[0-9]+]]>
@@ -114,12 +113,12 @@ define void @merged_regions_use_conservative_probability(ptr noalias %a, ptr noa
 ; CHECK-LABEL: 'merged_regions_use_conservative_probability'
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP7:%[0-9]+]]>
 ; CHECK:  Cost of 3000000 for VF 2: REPLICATE store vp<[[VP6:%[0-9]+]]>, ir<%gep>.1
-; CHECK:  Cost of 2.5 for VF 2: REPLICATE ir<%d2> = sdiv ir<%val>, ir<%y>
+; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%d2> = sdiv ir<%val>, ir<%y>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP7]]>
 ; CHECK:  Cost of 3000000 for VF 2: REPLICATE store ir<%d2>, ir<%gep.b>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP7]]>
 ; CHECK:  Cost of 3000000 for VF 2: REPLICATE store vp<[[VP6]]>, ir<%gep>.1
-; CHECK:  Cost of 2.5 for VF 2: REPLICATE ir<%d2> = sdiv ir<%val>, ir<%y>
+; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%d2> = sdiv ir<%val>, ir<%y>
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP7]]>
 ; CHECK:  Cost of 3000000 for VF 2: REPLICATE store ir<%d2>, ir<%gep.b>
 ;

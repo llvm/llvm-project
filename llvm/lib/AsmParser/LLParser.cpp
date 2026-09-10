@@ -4916,7 +4916,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         }
       }
 
-      if (!Indices.empty() && !Ty->isSized())
+      SmallPtrSet<Type*, 4> Visited;
+      if (!Indices.empty() && !Ty->isSized(&Visited))
         return error(ID.Loc, "base element of getelementptr must be sized");
 
       if (!ConstantExpr::isSupportedGetElementPtr(Ty))
@@ -9055,7 +9056,8 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
   if (Size && !Size->getType()->isIntegerTy())
     return error(SizeLoc, "element count must have integer type");
 
-  if (!Alignment && !Ty->isSized())
+  SmallPtrSet<Type *, 4> Visited;
+  if (!Alignment && !Ty->isSized(&Visited))
     return error(TyLoc, "Cannot allocate unsized type");
   if (!Alignment)
     Alignment = M->getDataLayout().getPrefTypeAlign(Ty);
@@ -9124,7 +9126,8 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc,
                  "atomic elementwise load cannot be sequentially consistent");
 
-  if (!Alignment && !Ty->isSized())
+  SmallPtrSet<Type *, 4> Visited;
+  if (!Alignment && !Ty->isSized(&Visited))
     return error(ExplicitTypeLoc, "loading unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Ty);
@@ -9194,7 +9197,8 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc,
                  "atomic elementwise store cannot be sequentially consistent");
 
-  if (!Alignment && !Val->getType()->isSized())
+  SmallPtrSet<Type *, 4> Visited;
+  if (!Alignment && !Val->getType()->isSized(&Visited))
     return error(Loc, "storing unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Val->getType());
@@ -9481,7 +9485,8 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
     Indices.push_back(Val);
   }
 
-  if (!Indices.empty() && !Ty->isSized())
+  SmallPtrSet<Type*, 4> Visited;
+  if (!Indices.empty() && !Ty->isSized(&Visited))
     return error(Loc, "base element of getelementptr must be sized");
 
   auto *STy = dyn_cast<StructType>(Ty);

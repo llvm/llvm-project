@@ -103,7 +103,7 @@ public:
   bool legalizeFEXPF64(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
-  bool legalizeFPow(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
 
@@ -264,10 +264,6 @@ public:
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
-
-private:
-  Register getBaseSegmentAperture(unsigned AS, MachineRegisterInfo &MRI,
-                                  MachineIRBuilder &B) const;
 };
 } // End llvm namespace.
 #endif

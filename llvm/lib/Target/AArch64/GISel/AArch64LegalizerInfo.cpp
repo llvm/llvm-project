@@ -341,8 +341,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{i32, i32}, {i64, i32}})
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(0)
-      .lower();
+      .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR})
       .customFor({{i32, i32}, {i32, i64}, {i64, i64}})

@@ -605,8 +605,7 @@ def CUFDeviceGlobal :
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
-    "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect",
-    "mlir::LLVM::LLVMDialect"
+    "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
   ];
   let options = [
     Option<"allocatorRegistrationFunction",
@@ -621,11 +620,7 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "time and HMM/ATS handles migration.">,
     Option<"priority", "priority", "int32_t", /*default=*/"0",
            "Priority for the CUDA Fortran global constructor in "
-           "llvm.mlir.global_ctors.">,
-    Option<"emitCudaCompiled", "emit-cuda-compiled", "bool",
-           /*default=*/"false",
-           "Declare an undefined cuda_compiled symbol so linking without the "
-           "CUDA Fortran runtime fails with a clear diagnostic.">
+           "llvm.mlir.global_ctors.">
   ];
 }
 

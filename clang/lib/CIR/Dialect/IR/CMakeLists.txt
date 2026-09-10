@@ -20,6 +20,6 @@ add_clang_library(MLIRCIR
   MLIRDataLayoutInterfaces
   MLIRFuncDialect
   MLIRLoopLikeInterface
-  MLIRPtrMemorySpaceInterfaces
+  MLIRCIRInterfaces
   clangAST
   )

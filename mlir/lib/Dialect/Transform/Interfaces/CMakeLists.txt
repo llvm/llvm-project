@@ -5,8 +5,6 @@ add_mlir_library(MLIRTransformDialectInterfaces
   DEPENDS
   MLIRMatchInterfacesIncGen
   MLIRTransformInterfacesIncGen
-  MLIRTransformDialectTypeInterfacesIncGen
-  MLIRTransformDialectAttrInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
@@ -16,3 +14,4 @@ add_mlir_library(MLIRTransformDialectInterfaces
   MLIRTransforms
   MLIRTransformDialectUtils
 )
+

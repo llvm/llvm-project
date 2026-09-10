@@ -2549,7 +2549,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Value *LBVal, Value *UBVal, Value *StepVal, bool Untied, Value *IfCond,
     Value *GrainSize, bool NoGroup, int Sched, Value *Final, bool Mergeable,
     Value *Priority, uint64_t NumOfCollapseLoops, TaskDupCallbackTy DupCB,
-    Value *TaskContextStructPtrVal, bool FreeAgent) {
+    Value *TaskContextStructPtrVal) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2629,8 +2629,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
                        TaskloopAllocaBB, CLI, TaskDupFn, ToBeDeleted, IfCond,
                        GrainSize, NoGroup, Sched, FakeLB, FakeUB, FakeStep,
                        FakeSharedsTy, Final, Mergeable, Priority,
-                       NumOfCollapseLoops,
-                       FreeAgent](Function &OutlinedFn) mutable {
+                       NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -2672,8 +2671,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // Task is not mergeable if (Flags & 4) == 0.
     // Task is priority if (Flags & 32) == 32.
     // Task is not priority if (Flags & 32) == 0.
-    // Task is free-agent eligible if (Flags & 128) == 128.
-    // Task is not free-agent eligible if (Flags & 128) == 0.
     Value *Flags = Builder.getInt32(Untied ? 0 : 1);
     if (Final)
       Flags = Builder.CreateOr(Builder.getInt32(2), Flags);
@@ -2681,8 +2678,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
       Flags = Builder.CreateOr(Builder.getInt32(4), Flags);
     if (Priority)
       Flags = Builder.CreateOr(Builder.getInt32(32), Flags);
-    if (FreeAgent)
-      Flags = Builder.CreateOr(Builder.getInt32(128), Flags);
 
     Value *TaskSize = Builder.getInt64(
         divideCeil(M.getDataLayout().getTypeSizeInBits(Task), 8));
@@ -2902,7 +2897,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
     bool Tied, Value *Final, Value *IfCondition,
     const DependenciesInfo &Dependencies, const AffinityData &Affinities,
-    bool Mergeable, Value *EventHandle, Value *Priority, bool FreeAgent) {
+    bool Mergeable, Value *EventHandle, Value *Priority) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2950,7 +2945,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI->PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                       Affinities, Mergeable, Priority, EventHandle, FreeAgent,
+                       Affinities, Mergeable, Priority, EventHandle,
                        TaskAllocaBB,
                        ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
@@ -2983,8 +2978,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     // Task is not detachable iff (Flags & 64) == 0.
     // Task is priority iff (Flags & 32) == 32.
     // Task is not priority iff (Flags & 32) == 0.
-    // Task is free-agent eligible iff (Flags & 128) == 128.
-    // Task is not free-agent eligible iff (Flags & 128) == 0.
     // TODO: Handle the other flags.
     Value *Flags = Builder.getInt32(Tied);
     auto *ConstIfCondition = dyn_cast_or_null<ConstantInt>(IfCondition);
@@ -3001,8 +2994,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Flags = Builder.CreateOr(Builder.getInt32(64), Flags);
     if (Priority)
       Flags = Builder.CreateOr(Builder.getInt32(32), Flags);
-    if (FreeAgent)
-      Flags = Builder.CreateOr(Builder.getInt32(128), Flags);
 
     // Argument - `sizeof_kmp_task_t` (TaskSize)
     // Tasksize refers to the size in bytes of kmp_task_t data structure
@@ -8595,14 +8586,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
       MaxThreadsVal = Attrs.MinThreads.front();
     }
   }
-
-  // Generic mode runs the main thread on a warp of its own, past thread_limit.
-  // Reserve the widest warp any target has.
-  if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
-      hasGridValue(T))
-    MaxThreadsVal = int32_t(
-        std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
-                          int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
 
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),

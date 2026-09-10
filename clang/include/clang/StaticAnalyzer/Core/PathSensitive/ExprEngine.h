@@ -510,10 +510,9 @@ public:
   void VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
                      ExplodedNodeSet &Dst);
 
-  /// VisitCastExpr - Transfer function logic for all casts (implicit and
-  /// explicit).
-  void VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
-                     ExplodedNodeSet &Dst);
+  /// VisitCast - Transfer function logic for all casts (implicit and explicit).
+  void VisitCast(const CastExpr *CastE, const Expr *Ex, ExplodedNode *Pred,
+                 ExplodedNodeSet &Dst);
 
   /// VisitCompoundLiteralExpr - Transfer function logic for compound literals.
   void VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
@@ -547,6 +546,10 @@ public:
   void VisitAtomicExpr(const AtomicExpr *E, ExplodedNode *Pred,
                        ExplodedNodeSet &Dst);
 
+  /// Transfer function logic for ObjCAtSynchronizedStmts.
+  void VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
+                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
+
   /// Transfer function logic for computing the lvalue of an Objective-C ivar.
   void VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *DR, ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
@@ -579,19 +582,9 @@ public:
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
-  void VisitStmtExpr(const StmtExpr *SE, ExplodedNode *Pred,
-                     ExplodedNodeSet &Dst);
-
   /// VisitUnaryOperator - Transfer function logic for unary operators.
   void VisitUnaryOperator(const UnaryOperator* B, ExplodedNode *Pred,
                           ExplodedNodeSet &Dst);
-
-  void VisitPseudoObjectExpr(const PseudoObjectExpr *PE, ExplodedNode *Pred,
-                             ExplodedNodeSet &Dst);
-
-  void VisitObjCIndirectCopyRestoreExpr(const ObjCIndirectCopyRestoreExpr *OIE,
-                                        ExplodedNode *Pred,
-                                        ExplodedNodeSet &Dst);
 
   /// Handle ++ and -- (both pre- and post-increment).
   void VisitIncrementDecrementOperator(const UnaryOperator* U,
@@ -599,13 +592,11 @@ public:
                                        ExplodedNodeSet &Dst);
 
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
-                                 ExplodedNode *Pred, ExplodedNodeSet &Dst);
+                                 ExplodedNodeSet &PreVisit,
+                                 ExplodedNodeSet &Dst);
 
   void VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
-
-  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
-                                 ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   void VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
                         ExplodedNodeSet & Dst);
@@ -632,8 +623,9 @@ public:
                           ExplodedNodeSet &Dst);
 
   /// Create a C++ temporary object for an rvalue.
-  void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE,
-                                     ExplodedNode *Pred, ExplodedNodeSet &Dst);
+  void CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
+                                ExplodedNode *Pred,
+                                ExplodedNodeSet &Dst);
 
   void ConstructInitList(const Expr *Source, ArrayRef<Expr *> Args,
                          bool IsTransparent, ExplodedNode *Pred,
@@ -649,10 +641,10 @@ public:
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
   getEagerlyAssumeBifurcationTags();
 
-  void handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
-                           const StackFrame *SF, QualType T, QualType ExTy,
-                           const CastExpr *CastE, ExplodedNodeSet &Dst,
-                           ExplodedNode *Pred);
+  ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
+                                      const StackFrame *SF, QualType T,
+                                      QualType ExTy, const CastExpr *CastE,
+                                      ExplodedNodeSet &Dst, ExplodedNode *Pred);
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
