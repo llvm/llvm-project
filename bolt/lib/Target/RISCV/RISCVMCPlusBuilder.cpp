@@ -735,11 +735,11 @@ public:
   }
 
   void createNoop(MCInst &Inst) const override {
-    Inst.setOpcode(RISCV::ADDI);
     Inst.clear();
-    Inst.addOperand(MCOperand::createReg(RISCV::X0));
-    Inst.addOperand(MCOperand::createReg(RISCV::X0));
-    Inst.addOperand(MCOperand::createImm(0));
+    Inst = MCInstBuilder(RISCV::ADDI)
+               .addReg(RISCV::X0)
+               .addReg(RISCV::X0)
+               .addImm(0);
   }
 
   void createShortJmp(InstructionListType &Seq, const MCSymbol *Target,

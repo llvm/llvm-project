@@ -1,183 +1,212 @@
-## Check that rewriting an AUIPC/JALR call pair preserves an input offset used
-## as a DWARF lexical-scope boundary. The first call grows from eight to twelve
-## bytes. The parent scope ends at the AUIPC of the second call, while its child
-## ends at the intervening compressed NOP. Losing the AUIPC offset maps the
-## parent's high_pc inside the preceding rewritten call and makes the child
-## extend beyond its parent. Also check that the replacement NOP retains the
-## source line associated with the original AUIPC.
+## A shrinking call changes the offsets of later scope boundaries within the
+## same basic block. Both the AUIPC and JALR of a rewritten pair must map to the
+## surviving call. Otherwise the low_pc of the first parent follows its child's
+## low_pc, and the high_pc of the second child exceeds its parent's high_pc.
+## Check exact endpoints too: verification alone misses misplaced boundaries
+## when replacement NOPs are retained or the first call does not shrink.
 
 # REQUIRES: system-linux
 
-# RUN: llvm-mc -triple riscv64 -mattr=+c -filetype obj -o %t.o %s
+# RUN: llvm-mc -triple riscv64 -dwarf-version=4 -filetype=obj %s -o %t.o
 # RUN: ld.lld --no-relax --emit-relocs --section-start=.text=0x10000 \
-# RUN:   --section-start=.callee=0x400000 -e foo -o %t %t.o
-# RUN: llvm-bolt --update-debug-sections --skip-funcs=callee -o %t.bolt %t
+# RUN:   --section-start=.far=0x400000 -e foo %t.o -o %t
+# RUN: llvm-dwarfdump --verify %t
+# RUN: llvm-bolt %t --update-debug-sections --skip-funcs=far_callee -o %t.bolt
 # RUN: llvm-dwarfdump --verify %t.bolt
 # RUN: llvm-objdump -d --no-show-raw-insn %t.bolt > %t.out
 # RUN: llvm-dwarfdump --debug-info --debug-line %t.bolt >> %t.out
-# RUN: FileCheck %s < %t.out
+# RUN: FileCheck %s --check-prefixes=CHECK,SHORT < %t.out
+
+## BAT reverse lookups use the last entry at a shared output address. Keep the
+## original JALR mapping after the AUIPC alias so branch profiles are unchanged.
+# RUN: llvm-bolt %t --update-debug-sections --skip-funcs=far_callee \
+# RUN:   --enable-bat -o %t.bat
+# RUN: llvm-bat-dump %t.bat --dump-all | FileCheck %s --check-prefix=BAT
+
+# BAT: BB mappings:
+# BAT-NEXT: 0x0 -> 0x0 hash:
+# BAT-NEXT: 0x4 -> 0x8 (branch)
+# BAT-NEXT: 0x4 -> 0xc (branch)
+# BAT-NEXT: 0xc -> 0x10 (branch)
+# BAT-NEXT: 0x10 -> 0x14 (branch)
+# BAT-NEXT: 0x10 -> 0x18 (branch)
+# BAT-NEXT: 0x18 -> 0x1c (branch)
+# BAT-NEXT: NumBlocks: 1
+
+# RUN: llvm-bolt %t --update-debug-sections --skip-funcs=far_callee \
+# RUN:   --keep-nops -o %t.keep
+# RUN: llvm-dwarfdump --verify %t.keep
+# RUN: llvm-objdump -d --no-show-raw-insn %t.keep > %t.keep.out
+# RUN: llvm-dwarfdump --debug-info --debug-line %t.keep >> %t.keep.out
+# RUN: FileCheck %s --check-prefixes=CHECK,SHORT,KEEP < %t.keep.out
+
+# RUN: llvm-mc -triple riscv64 -dwarf-version=4 -filetype=obj \
+# RUN:   --defsym FIRST_FAR=1 %s -o %t.far.o
+# RUN: ld.lld --no-relax --emit-relocs --section-start=.text=0x10000 \
+# RUN:   --section-start=.far=0x400000 -e foo %t.far.o -o %t.far
+# RUN: llvm-bolt %t.far --update-debug-sections --skip-funcs=far_callee \
+# RUN:   -o %t.far.bolt
+# RUN: llvm-dwarfdump --verify %t.far.bolt
+# RUN: llvm-objdump -d --no-show-raw-insn %t.far.bolt > %t.far.out
+# RUN: llvm-dwarfdump --debug-info --debug-line %t.far.bolt >> %t.far.out
+# RUN: FileCheck %s --check-prefixes=CHECK,LONG < %t.far.out
+
+## An internal call makes BOLT preserve NOPs for this function even without
+## --keep-nops. The AUIPC must not acquire two different output mappings.
+# RUN: llvm-mc -triple riscv64 -dwarf-version=4 -filetype=obj \
+# RUN:   --defsym INTERNAL=1 %s -o %t.internal.o
+# RUN: ld.lld --no-relax --emit-relocs --section-start=.text=0x10000 \
+# RUN:   --section-start=.far=0x400000 -e foo %t.internal.o -o %t.internal
+# RUN: llvm-bolt %t.internal --update-debug-sections --skip-funcs=far_callee \
+# RUN:   -o %t.internal.bolt
+# RUN: llvm-dwarfdump --verify %t.internal.bolt
+# RUN: llvm-objdump -d --no-show-raw-insn %t.internal.bolt > %t.internal.out
+# RUN: llvm-dwarfdump --debug-info --debug-line %t.internal.bolt >> %t.internal.out
+# RUN: FileCheck %s --check-prefixes=CHECK,SHORT,KEEP,INTERNAL < %t.internal.out
 
 # CHECK-LABEL: <foo>:
-# CHECK:      nop
-# CHECK-NEXT: auipc
+# INTERNAL-NEXT: jal
+# KEEP-NEXT: nop
+# SHORT-NEXT: [[FIRST:[0-9a-f]+]]:{{.*}}jal {{.*}} <near_callee>
+# LONG-NEXT: [[FIRST:[0-9a-f]+]]:{{.*}}auipc
+# LONG-NEXT: jalr
+# KEEP-NEXT: nop
+# CHECK-NOT: nop
+# CHECK: [[BEGIN:[0-9a-f]+]]:{{.*}}auipc
 # CHECK-NEXT: jalr
-# CHECK-NEXT: nop
-# CHECK-NEXT: [[PARENT_END:[0-9a-f]+]]:{{.*}}nop
-# CHECK-NEXT: auipc
+# CHECK-NEXT: [[END:[0-9a-f]+]]:{{.*}}addi
+# KEEP-NEXT: nop
+# CHECK-NEXT: [[BOUNDARY:[0-9a-f]+]]:{{.*}}auipc
 # CHECK-NEXT: jalr
-# CHECK:      DW_TAG_lexical_block
-# CHECK:      DW_AT_low_pc
-# CHECK-NEXT: DW_AT_high_pc {{.*}}0x{{0*}}[[PARENT_END]])
-# CHECK:      0x{{0*}}[[PARENT_END]] 30
+# CHECK-NEXT: ret
+# CHECK: DW_AT_name ("parent_high")
+# CHECK-NEXT: DW_AT_low_pc
+# CHECK-NEXT: DW_AT_high_pc (0x{{0*}}[[BOUNDARY]])
+# CHECK: DW_AT_name ("child_high")
+# CHECK-NEXT: DW_AT_low_pc
+# CHECK-NEXT: DW_AT_high_pc (0x{{0*}}[[BOUNDARY]])
+# CHECK: DW_AT_name ("parent_low")
+# CHECK-NEXT: DW_AT_low_pc (0x{{0*}}[[BEGIN]])
+# CHECK-NEXT: DW_AT_high_pc (0x{{0*}}[[END]])
+# CHECK: DW_AT_name ("child_low")
+# CHECK-NEXT: DW_AT_low_pc (0x{{0*}}[[BEGIN]])
+# CHECK-NEXT: DW_AT_high_pc (0x{{0*}}[[END]])
+# CHECK: 0x{{0*}}[[FIRST]] 10
+# CHECK: 0x{{0*}}[[BEGIN]] 21
+# CHECK: 0x{{0*}}[[END]] 30
+# CHECK: 0x{{0*}}[[BOUNDARY]] 41
 
         .text
         .option norvc
         .option norelax
-        .globl  foo
-        .p2align 2
-        .type   foo,@function
+        .file 1 "dwarf-scope-call-pair.s"
+        .globl foo
+        .type foo,@function
 foo:
-.Lfoo_begin:
-        call    callee
-        .option rvc
-.Lchild_end:
-        c.nop
-        .option norvc
+        .ifdef INTERNAL
+        jal ra, .Lfirst_call
+        .endif
+.Lfirst_call:
+        .loc 1 10
+        .ifdef FIRST_FAR
+        call far_callee
+        .else
+        call near_callee
+        .endif
+.Lparent_begin:
+        .loc 1 20
+        .reloc ., R_RISCV_CALL_PLT, far_callee
+        auipc ra, 0
+.Lchild_begin:
+        .loc 1 21
+        jalr ra
 .Lparent_end:
-        call    callee
-.Lret:
+        .loc 1 30
+        addi a0, a0, 1
+.Lboundary_auipc:
+        .loc 1 40
+        .reloc ., R_RISCV_CALL_PLT, far_callee
+        auipc ra, 0
+.Lboundary_jalr:
+        .loc 1 41
+        jalr ra
+        .loc 1 50
         ret
 .Lfoo_end:
-        .size   foo, .-foo
+        .size foo, .-foo
 
-        .globl  callee
-        .section .callee,"ax",@progbits
-        .p2align 2
-        .type   callee,@function
-callee:
+        .globl near_callee
+        .type near_callee,@function
+near_callee:
         ret
-.Lcallee_end:
-        .size   callee, .-callee
+        .size near_callee, .-near_callee
+
+        .section .far,"ax",@progbits
+        .globl far_callee
+        .type far_callee,@function
+far_callee:
+        ret
+        .size far_callee, .-far_callee
 
         .section .debug_abbrev,"",@progbits
-        .byte   1                       # Abbrev code
-        .byte   17                      # DW_TAG_compile_unit
-        .byte   1                       # DW_CHILDREN_yes
-        .byte   37                      # DW_AT_producer
-        .byte   8                       # DW_FORM_string
-        .byte   17                      # DW_AT_low_pc
-        .byte   1                       # DW_FORM_addr
-        .byte   18                      # DW_AT_high_pc
-        .byte   6                       # DW_FORM_data4
-        .byte   3                       # DW_AT_name
-        .byte   8                       # DW_FORM_string
-        .byte   16                      # DW_AT_stmt_list
-        .byte   23                      # DW_FORM_sec_offset
-        .byte   0
-        .byte   0
-        .byte   2                       # Abbrev code
-        .byte   46                      # DW_TAG_subprogram
-        .byte   1                       # DW_CHILDREN_yes
-        .byte   3                       # DW_AT_name
-        .byte   8                       # DW_FORM_string
-        .byte   17                      # DW_AT_low_pc
-        .byte   1                       # DW_FORM_addr
-        .byte   18                      # DW_AT_high_pc
-        .byte   6                       # DW_FORM_data4
-        .byte   0
-        .byte   0
-        .byte   3                       # Abbrev code
-        .byte   11                      # DW_TAG_lexical_block
-        .byte   1                       # DW_CHILDREN_yes
-        .byte   17                      # DW_AT_low_pc
-        .byte   1                       # DW_FORM_addr
-        .byte   18                      # DW_AT_high_pc
-        .byte   6                       # DW_FORM_data4
-        .byte   0
-        .byte   0
-        .byte   4                       # Abbrev code
-        .byte   11                      # DW_TAG_lexical_block
-        .byte   0                       # DW_CHILDREN_no
-        .byte   17                      # DW_AT_low_pc
-        .byte   1                       # DW_FORM_addr
-        .byte   18                      # DW_AT_high_pc
-        .byte   6                       # DW_FORM_data4
-        .byte   0
-        .byte   0
-        .byte   0
+        .byte 1, 0x11, 1
+        .byte 0x03, 0x08
+        .byte 0x11, 0x01
+        .byte 0x12, 0x06
+        .byte 0x10, 0x17
+        .byte 0, 0
+
+        .byte 2, 0x2e, 1
+        .byte 0x03, 0x08
+        .byte 0x11, 0x01
+        .byte 0x12, 0x06
+        .byte 0, 0
+
+        .byte 3, 0x0b, 1
+        .byte 0x03, 0x08
+        .byte 0x11, 0x01
+        .byte 0x12, 0x06
+        .byte 0, 0
+
+        .byte 4, 0x0b, 0
+        .byte 0x03, 0x08
+        .byte 0x11, 0x01
+        .byte 0x12, 0x06
+        .byte 0, 0
+        .byte 0
 
         .section .debug_info,"",@progbits
-.Lcu_begin:
-        .long   .Lcu_end-.Lcu_version
+        .long .Lcu_end-.Lcu_version
 .Lcu_version:
-        .short  4                       # DWARF version
-        .long   .debug_abbrev
-        .byte   8                       # Address size
-        .byte   1                       # DW_TAG_compile_unit
-        .asciz  "test producer"
-        .quad   .Lfoo_begin
-        .long   .Lfoo_end-.Lfoo_begin
-        .asciz  "dwarf-scope-call-pair.s"
-        .long   .Lline_table_start      # DW_AT_stmt_list
-        .byte   2                       # DW_TAG_subprogram
-        .asciz  "foo"
-        .quad   .Lfoo_begin
-        .long   .Lfoo_end-.Lfoo_begin
-        .byte   3                       # Parent lexical block
-        .quad   .Lfoo_begin
-        .long   .Lparent_end-.Lfoo_begin
-        .byte   4                       # Child lexical block
-        .quad   .Lfoo_begin
-        .long   .Lchild_end-.Lfoo_begin
-        .byte   0                       # End parent children
-        .byte   0                       # End subprogram children
-        .byte   0                       # End CU children
+        .short 4
+        .long .debug_abbrev
+        .byte 8
+        .byte 1
+        .asciz "dwarf-scope-call-pair.s"
+        .quad foo
+        .long .Lfoo_end-foo
+        .long 0
+        .byte 2
+        .asciz "foo"
+        .quad foo
+        .long .Lfoo_end-foo
+        .byte 3
+        .asciz "parent_high"
+        .quad foo
+        .long .Lboundary_jalr-foo
+        .byte 3
+        .asciz "child_high"
+        .quad foo
+        .long .Lboundary_auipc-foo
+        .byte 3
+        .asciz "parent_low"
+        .quad .Lparent_begin
+        .long .Lparent_end-.Lparent_begin
+        .byte 4
+        .asciz "child_low"
+        .quad .Lchild_begin
+        .long .Lparent_end-.Lchild_begin
+        .byte 0, 0, 0, 0, 0
 .Lcu_end:
 
-        .section .debug_line,"",@progbits
-.Lline_table_start:
-        .long   .Lline_table_end-.Lline_version
-.Lline_version:
-        .short  4                       # DWARF version
-        .long   .Lline_prologue_end-.Lline_prologue_start
-.Lline_prologue_start:
-        .byte   1                       # Minimum instruction length
-        .byte   1                       # Maximum operations per instruction
-        .byte   1                       # Default is_stmt
-        .byte   -5                      # Line base
-        .byte   14                      # Line range
-        .byte   13                      # Opcode base
-        .byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1
-        .byte   0                       # Include directory terminator
-        .asciz  "dwarf-scope-call-pair.s"
-        .uleb128 0                      # Directory index
-        .uleb128 0                      # Modification time
-        .uleb128 0                      # File size
-        .byte   0                       # File table terminator
-.Lline_prologue_end:
-        .byte   0, 9, 2                 # DW_LNE_set_address
-        .quad   .Lfoo_begin
-        .byte   3                       # DW_LNS_advance_line
-        .sleb128 9                      # Line 10
-        .byte   1                       # DW_LNS_copy
-        .byte   2                       # DW_LNS_advance_pc
-        .uleb128 .Lchild_end-.Lfoo_begin
-        .byte   3                       # DW_LNS_advance_line
-        .sleb128 10                     # Line 20
-        .byte   1                       # DW_LNS_copy
-        .byte   2                       # DW_LNS_advance_pc
-        .uleb128 .Lparent_end-.Lchild_end
-        .byte   3                       # DW_LNS_advance_line
-        .sleb128 10                     # Line 30
-        .byte   1                       # DW_LNS_copy
-        .byte   2                       # DW_LNS_advance_pc
-        .uleb128 .Lret-.Lparent_end
-        .byte   3                       # DW_LNS_advance_line
-        .sleb128 10                     # Line 40
-        .byte   1                       # DW_LNS_copy
-        .byte   2                       # DW_LNS_advance_pc
-        .uleb128 .Lfoo_end-.Lret
-        .byte   0, 1, 1                 # DW_LNE_end_sequence
-.Lline_table_end:
-
-        .section ".note.GNU-stack","",@progbits
+        .section .note.GNU-stack,"",@progbits
