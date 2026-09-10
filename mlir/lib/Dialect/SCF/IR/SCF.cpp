@@ -169,7 +169,7 @@ void ExecuteRegionOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"no_inline"});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult ExecuteRegionOp::verify() {
@@ -531,8 +531,7 @@ void ForOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/!getInitArgs().empty());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/getUnsignedCmpAttrName().strref());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -637,7 +636,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   scf::ForOp newLoop = scf::ForOp::create(
       rewriter, getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
       [](OpBuilder &, Location, Value, ValueRange) {}, getUnsignedCmp());
-  newLoop->setAttrs(getPrunedAttributeList(getOperation(), {}));
+  newLoop->setDiscardableAttrs(getOperation()->getDiscardableAttrDictionary());
 
   // Generate the new yield values and append them to the scf.yield operation.
   auto yieldOp = cast<scf::YieldOp>(getBody()->getTerminator());
@@ -910,7 +909,8 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
       rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
       forOp.getStep(), newIterOperands, /*bodyBuilder=*/nullptr,
       forOp.getUnsignedCmp());
-  newForOp->setAttrs(forOp->getAttrs());
+  newForOp->setDiscardableAttrs(
+      forOp->getDiscardableAttrDictionary().getValue());
   Block &newBlock = newForOp.getRegion().front();
   SmallVector<Value, 4> newBlockTransferArgs(newBlock.getArguments().begin(),
                                              newBlock.getArguments().end());
@@ -1140,10 +1140,11 @@ void ForallOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/getNumResults() > 0);
-  p.printOptionalAttrDict(op->getAttrs(), {getOperandSegmentSizesAttrName(),
-                                           getStaticLowerBoundAttrName(),
-                                           getStaticUpperBoundAttrName(),
-                                           getStaticStepAttrName()});
+  SmallVector<NamedAttribute> attrs(op->getDiscardableAttrs());
+  if (ArrayAttr mapping = getMappingAttr())
+    attrs.emplace_back(getMappingAttrName(), mapping);
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
 }
 
 ParseResult ForallOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1456,12 +1457,13 @@ public:
       op.getDynamicStepMutable().assign(dynamicStep);
       op.setStaticStep(staticStep);
 
-      op->setAttr(ForallOp::getOperandSegmentSizeAttr(),
-                  rewriter.getDenseI32ArrayAttr(
-                      {static_cast<int32_t>(dynamicLowerBound.size()),
-                       static_cast<int32_t>(dynamicUpperBound.size()),
-                       static_cast<int32_t>(dynamicStep.size()),
-                       static_cast<int32_t>(op.getNumResults())}));
+      op->setInherentAttr(
+          rewriter.getStringAttr(ForallOp::getOperandSegmentSizeAttr()),
+          rewriter.getDenseI32ArrayAttr(
+              {static_cast<int32_t>(dynamicLowerBound.size()),
+               static_cast<int32_t>(dynamicUpperBound.size()),
+               static_cast<int32_t>(dynamicStep.size()),
+               static_cast<int32_t>(op.getNumResults())}));
     });
     return success();
   }
@@ -1665,20 +1667,8 @@ struct ForallOpSingleOrZeroIterationDimsFolder
                              newMixedUpperBounds, newMixedSteps,
                              op.getOutputs(), std::nullopt, nullptr);
     newOp.getBodyRegion().getBlocks().clear();
-    // The new loop needs to keep all attributes from the old one, except for
-    // "operandSegmentSizes" and static loop bound attributes which capture
-    // the outdated information of the old iteration domain.
-    SmallVector<StringAttr> elidedAttrs{newOp.getOperandSegmentSizesAttrName(),
-                                        newOp.getStaticLowerBoundAttrName(),
-                                        newOp.getStaticUpperBoundAttrName(),
-                                        newOp.getStaticStepAttrName()};
-    for (const auto &namedAttr : op->getAttrs()) {
-      if (llvm::is_contained(elidedAttrs, namedAttr.getName()))
-        continue;
-      rewriter.modifyOpInPlace(newOp, [&]() {
-        newOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-      });
-    }
+    newOp.setMappingAttr(op.getMappingAttr());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),
                                newOp.getRegion().begin(), mapping);
     rewriter.replaceOp(op, newOp.getResults());
@@ -1876,7 +1866,8 @@ void InParallelOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
-  p.printOptionalAttrDict(getOperation()->getAttrs());
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 }
 
 ParseResult InParallelOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -2105,7 +2096,7 @@ void IfOp::print(OpAsmPrinter &p) {
                   /*printBlockTerminators=*/printBlockTerminators);
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 void IfOp::getSuccessorRegions(RegionBranchPoint point,
@@ -2951,9 +2942,7 @@ void ParallelOp::print(OpAsmPrinter &p) {
   p.printOptionalArrowTypeList(getResultTypes());
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
@@ -3372,7 +3361,8 @@ void scf::WhileOp::print(OpAsmPrinter &p) {
   p.printRegion(getBefore(), /*printEntryBlockArgs=*/false);
   p << " do ";
   p.printRegion(getAfter());
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue());
 }
 
 /// Verifies that two ranges of types match, i.e. have the same number of

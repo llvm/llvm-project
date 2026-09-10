@@ -80,14 +80,14 @@ func.func @multiple_outputs_fusion_yield_all(%lhs0: tensor<32x32xf32>,
     linalg.yield %4, %5: f32, f32
   } -> (tensor<32x32xf32>, tensor<32x32xf32>)
 
-  %out3 = linalg.add ins(%out0, %rhs1: tensor<32x32xf32>, tensor<32x32xf32>) outs(%init2: tensor<32x32xf32>) -> tensor<32x32xf32>
+  %out3 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%out0, %rhs1: tensor<32x32xf32>, tensor<32x32xf32>) outs(%init2: tensor<32x32xf32>) -> tensor<32x32xf32>
 
   return %out0, %out1, %out3 : tensor<32x32xf32>, tensor<32x32xf32>, tensor<32x32xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
-    %add = transform.structured.match ops{["linalg.add"]} in %arg0
+    %add = transform.structured.match ops{["linalg.elementwise"]} in %arg0
       : (!transform.any_op) -> !transform.any_op
     %a, %b = transform.test.fuse_and_yield %add [16]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
@@ -112,7 +112,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:         outs(%[[INIT0_TILE]], %[[INIT1_TILE]] :
 //  CHECK-DAG:     %[[RHS1_TILE:.+]] = tensor.extract_slice %[[RHS1]][%[[IV]], 0]
 //  CHECK-DAG:     %[[INIT2_TILE:.+]] = tensor.extract_slice %[[ITERARG0]][%[[IV]], 0]
-//      CHECK:     %[[ADD_TILE:.+]] = linalg.add
+//      CHECK:     %[[ADD_TILE:.+]] = linalg.elementwise
 // CHECK-SAME:         ins(%[[GENERIC_TILE]]#0, %[[RHS1_TILE]] :
 // CHECK-SAME:         outs(%[[INIT2_TILE]] :
 //      CHECK:     %[[INSERT0:.+]] = tensor.insert_slice %[[ADD_TILE]] into %[[ITERARG0]][%[[IV]], 0]

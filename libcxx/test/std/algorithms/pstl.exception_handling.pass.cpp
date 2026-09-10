@@ -306,6 +306,14 @@ int main(int, char**) {
         assert_non_throwing([=, &policy] {
           (void)std::min_element(policy, std::move(first1), std::move(last1), compare);
         });
+
+        // minmax_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::minmax_element(policy, std::move(first1), std::move(last1)); });
+
+        // minmax_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::minmax_element(policy, std::move(first1), std::move(last1), compare);
+        });
       }
 
       {

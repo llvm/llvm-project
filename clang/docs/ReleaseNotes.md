@@ -261,14 +261,6 @@ features cannot lower the translation-unit ABI level;
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
-- `-funique-internal-linkage-names` now gives internal global variables a
-  unique `.__uniq.<module-hash>` suffix, as it already does for functions. This
-  helps profiling tools distinguish static variables with the same name in
-  different source files. LLVM can demangle these suffixes for both functions
-  and data symbols. GNU libiberty can demangle suffixed function symbols, but
-  leaves suffixed data symbols unchanged. The option remains opt-in, and
-  variables with explicit assembly labels keep their original names.
-
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -490,6 +482,9 @@ features cannot lower the translation-unit ABI level;
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
 
+- Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
+  (#GH181730)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -517,6 +512,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
+- Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -528,6 +524,10 @@ features cannot lower the translation-unit ABI level;
   format warnings to errors. (#GH211943)
 - Fixed a wrong code generation in `__builtin_clear_padding` wherein the
   wrong bits of the `_BitInt` type were cleared in big-endian mode.
+- Fixed an assertion failure when `__builtin_vectorelements` is applied to a
+  reference to a vector type; `vec_step` (in C++ for OpenCL) and
+  `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
+  types that their evaluation silently mishandled. (#GH216997)
 
 #### Bug Fixes to Attribute Support
 
@@ -698,6 +698,9 @@ features cannot lower the translation-unit ABI level;
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
   on `if consteval {}`. (#GH220004)
+- Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
+  evaluated to a value not representable by a signed integer, such as an
+  unsigned wrap around. (#GH221418)
 
 ### OpenACC Specific Changes
 
