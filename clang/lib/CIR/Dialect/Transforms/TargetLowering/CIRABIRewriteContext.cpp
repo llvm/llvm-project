@@ -1022,7 +1022,6 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   for (mlir::NamedAttribute attr : call->getAttrs())
     if (!newCall->hasAttr(attr.getName()))
       newCall->setAttr(attr.getName(), attr.getValue());
-  // res_attrs arrived in the copy above, from the call that had a result.
   newCall->removeAttr("res_attrs");
 
   // Shape the per-argument attrs exactly as the non-sret path does
@@ -1226,13 +1225,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     }
   }
 
-  // Whatever emptied the result list, an sret pointer taking the value or an
-  // Ignore return dropping it, res_attrs no longer describes anything.  Keyed
-  // on the result count rather than the kind so a future kind that voids the
-  // return cannot slip past.
-  bool returnDropped =
-      !oldResultTypes.empty() && mlir::isa<cir::VoidType>(newRetTy);
-  if (returnDropped) {
+  if (mlir::isa<cir::VoidType>(newRetTy)) {
     funcOp->removeAttr("res_attrs");
   } else if (fc.returnInfo.kind == ArgKind::Extend) {
     // Layer llvm.signext / llvm.zeroext onto an Extend return.
@@ -1434,8 +1427,6 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("res_attrs");
     newCall->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
   } else if (hasResult && mlir::isa<cir::VoidType>(callRetTy)) {
-    // The copy above brought res_attrs over from a call that had a result,
-    // and this one no longer does.
     newCall->removeAttr("res_attrs");
   }
 
