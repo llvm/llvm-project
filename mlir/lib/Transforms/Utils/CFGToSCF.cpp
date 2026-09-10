@@ -421,15 +421,35 @@ public:
   /// Transforms `returnLikeOp` to a branch to the only block in the
   /// region with an instance of `returnLikeOp`s kind.
   void combineExit(Operation *returnLikeOp,
-                   function_ref<Value(unsigned)> getSwitchValue) {
-    auto [iter, inserted] = returnLikeToCombinedExit.try_emplace(returnLikeOp);
-    if (!inserted && iter->first == returnLikeOp)
+                   function_ref<Value(unsigned)> getSwitchValue,
+                   function_ref<Value(Type)> getUndefValue) {
+    auto existing = returnLikeToCombinedExit.find(returnLikeOp);
+    if (existing != returnLikeToCombinedExit.end() &&
+        existing->first == returnLikeOp)
       return;
+
+    // If `returnLikeOp` is an unreachable terminator and an exit block of
+    // another return-like operation already exists, it is turned into a branch
+    // to that exit block with undefined operands instead of getting an exit
+    // block of its own.
+    if (interface.isUnreachableTerminator(returnLikeOp) &&
+        !orderedExitBlocks.empty()) {
+      Block *exitBlock = orderedExitBlocks.front();
+      auto builder = OpBuilder::atBlockTerminator(returnLikeOp->getBlock());
+      interface.createSingleDestinationBranch(
+          returnLikeOp->getLoc(), builder, getSwitchValue(0), exitBlock,
+          llvm::map_to_vector(exitBlock->getArgumentTypes(), getUndefValue));
+      returnLikeOp->erase();
+      return;
+    }
+
+    auto [iter, inserted] = returnLikeToCombinedExit.try_emplace(returnLikeOp);
 
     Block *exitBlock = iter->second;
     if (inserted) {
       exitBlock = new Block;
       iter->second = exitBlock;
+      orderedExitBlocks.push_back(exitBlock);
       topLevelRegion.push_back(exitBlock);
       exitBlock->addArguments(
           returnLikeOp->getOperandTypes(),
@@ -457,6 +477,8 @@ private:
   /// as equivalent. First occurrence seen is kept in the map.
   llvm::SmallDenseMap<Operation *, Block *, 4, ReturnLikeOpEquivalence>
       returnLikeToCombinedExit;
+  /// All exit blocks in the order they were created.
+  SmallVector<Block *, 4> orderedExitBlocks;
   Region &topLevelRegion;
   CFGToSCFInterface &interface;
 };
@@ -623,7 +645,7 @@ static FailureOr<StructuredLoopProperties> createSingleExitingLatch(
         return failure();
       // Transform the just created transform operation in the case that an
       // occurrence of it existed in input IR.
-      exitCombiner.combineExit(*terminator, getSwitchValue);
+      exitCombiner.combineExit(*terminator, getSwitchValue, getUndefValue);
     }
   }
 
@@ -1218,13 +1240,25 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
 /// operation, it creates a single-entry and single-exit region.
 static ReturnLikeExitCombiner createSingleExitBlocksForReturnLike(
     Region &region, function_ref<Value(unsigned)> getSwitchValue,
-    CFGToSCFInterface &interface) {
+    function_ref<Value(Type)> getUndefValue, CFGToSCFInterface &interface) {
   ReturnLikeExitCombiner exitCombiner(region, interface);
 
+  // Combine the exits of all non-unreachable return-like operations first so
+  // that unreachable terminators can be merged into their exit blocks,
+  // regardless of the order in which they appear in the region.
   for (Block &block : region.getBlocks()) {
-    if (block.getNumSuccessors() != 0)
+    if (block.getNumSuccessors() != 0 ||
+        interface.isUnreachableTerminator(block.getTerminator()))
       continue;
-    exitCombiner.combineExit(block.getTerminator(), getSwitchValue);
+    exitCombiner.combineExit(block.getTerminator(), getSwitchValue,
+                             getUndefValue);
+  }
+  for (Block &block : region.getBlocks()) {
+    if (block.getNumSuccessors() != 0 ||
+        !interface.isUnreachableTerminator(block.getTerminator()))
+      continue;
+    exitCombiner.combineExit(block.getTerminator(), getSwitchValue,
+                             getUndefValue);
   }
 
   return exitCombiner;
@@ -1339,8 +1373,8 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
     return switchValueCache[value];
   };
 
-  ReturnLikeExitCombiner exitCombiner =
-      createSingleExitBlocksForReturnLike(region, getSwitchValue, interface);
+  ReturnLikeExitCombiner exitCombiner = createSingleExitBlocksForReturnLike(
+      region, getSwitchValue, getUndefValue, interface);
 
   // Invalidate any dominance tree on the region as the exit combiner has
   // added new blocks and edges.
