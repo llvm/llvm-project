@@ -151,7 +151,7 @@ TEST(LlvmLibcFileModeTest, AllValidModes) {
        .mode = "rb+",
        .expects = true},
 
-      // Write
+      // Write combinations
       {.test_description = "write", .mode = "w", .expects = true},
       {.test_description = "write binary", .mode = "wb", .expects = true},
       {.test_description = "write exclusive", .mode = "wx", .expects = true},
@@ -175,7 +175,7 @@ TEST(LlvmLibcFileModeTest, AllValidModes) {
        .mode = "wb+x",
        .expects = true},
 
-      // Append
+      // Append combinations
       {.test_description = "append", .mode = "a", .expects = true},
       {.test_description = "append binary", .mode = "ab", .expects = true},
       {.test_description = "append update", .mode = "a+", .expects = true},
