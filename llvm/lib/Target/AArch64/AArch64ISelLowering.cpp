@@ -20369,7 +20369,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return Subtarget->hasFPARMv8();
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasBF16();
+    return VT.isScalableVector() &&
+           (Subtarget->hasBF16() || Subtarget->hasSVEB16B16());
   default:
     break;
   }

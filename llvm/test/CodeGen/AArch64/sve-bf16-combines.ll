@@ -34,8 +34,8 @@ define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 ;
 ; SVE-B16B16_NONSTREAMING-LABEL: fmla_nxv8bf16:
 ; SVE-B16B16_NONSTREAMING:       // %bb.0:
-; SVE-B16B16_NONSTREAMING-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16_NONSTREAMING-NEXT:    bfadd z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16_NONSTREAMING-NEXT:    ret
 ;
 ; BF16_STREAMING-LABEL: fmla_nxv8bf16:
@@ -83,8 +83,7 @@ define <vscale x 4 x bfloat> @fmla_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale 
 ; SVE-B16B16_NONSTREAMING-LABEL: fmla_nxv4bf16:
 ; SVE-B16B16_NONSTREAMING:       // %bb.0:
 ; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
-; SVE-B16B16_NONSTREAMING-NEXT:    bfmul z1.h, p0/m, z1.h, z2.h
-; SVE-B16B16_NONSTREAMING-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16_NONSTREAMING-NEXT:    ret
 ;
 ; BF16_STREAMING-LABEL: fmla_nxv4bf16:
@@ -125,8 +124,7 @@ define <vscale x 2 x bfloat> @fmla_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale 
 ; SVE-B16B16_NONSTREAMING-LABEL: fmla_nxv2bf16:
 ; SVE-B16B16_NONSTREAMING:       // %bb.0:
 ; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.d
-; SVE-B16B16_NONSTREAMING-NEXT:    bfmul z1.h, p0/m, z1.h, z2.h
-; SVE-B16B16_NONSTREAMING-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16_NONSTREAMING-NEXT:    ret
 ;
 ; BF16_STREAMING-LABEL: fmla_nxv2bf16:
@@ -177,8 +175,8 @@ define <vscale x 8 x bfloat> @fmls_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 ;
 ; SVE-B16B16_NONSTREAMING-LABEL: fmls_nxv8bf16:
 ; SVE-B16B16_NONSTREAMING:       // %bb.0:
-; SVE-B16B16_NONSTREAMING-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16_NONSTREAMING-NEXT:    bfsub z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16_NONSTREAMING-NEXT:    ret
 ;
 ; BF16_STREAMING-LABEL: fmls_nxv8bf16:
@@ -229,8 +227,7 @@ define <vscale x 4 x bfloat> @fmls_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale 
 ; SVE-B16B16_NONSTREAMING-LABEL: fmls_nxv4bf16:
 ; SVE-B16B16_NONSTREAMING:       // %bb.0:
 ; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
-; SVE-B16B16_NONSTREAMING-NEXT:    bfmul z1.h, p0/m, z1.h, z2.h
-; SVE-B16B16_NONSTREAMING-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16_NONSTREAMING-NEXT:    ret
 ;
 ; BF16_STREAMING-LABEL: fmls_nxv4bf16:
@@ -273,8 +270,7 @@ define <vscale x 2 x bfloat> @fmls_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale 
 ; SVE-B16B16_NONSTREAMING-LABEL: fmls_nxv2bf16:
 ; SVE-B16B16_NONSTREAMING:       // %bb.0:
 ; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.d
-; SVE-B16B16_NONSTREAMING-NEXT:    bfmul z1.h, p0/m, z1.h, z2.h
-; SVE-B16B16_NONSTREAMING-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16_NONSTREAMING-NEXT:    ret
 ;
 ; BF16_STREAMING-LABEL: fmls_nxv2bf16:
