@@ -78,6 +78,52 @@ body:             |
     $k1 = VPMOVB2MZ256kr $ymm0
     $ymm1 = VMOVDQU8Z256rrk $ymm1, $k1, $ymm2
 
+    ; CHECK: $xmm1 = VBLENDVPSrrr $xmm2, $xmm3, $xmm0
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $xmm1 = VPBLENDMDZ128rrk $k1, $xmm2, $xmm3
+
+    ; CHECK: $ymm1 = VBLENDVPSYrrr $ymm2, $ymm3, $ymm0
+    $k1 = VPMOVD2MZ256kr $ymm0
+    $ymm1 = VPBLENDMDZ256rrk $k1, $ymm2, $ymm3
+
+    ; CHECK: $xmm1 = VBLENDVPDrrr $xmm2, $xmm3, $xmm0
+    $k1 = VPMOVQ2MZ128kr $xmm0
+    $xmm1 = VPBLENDMQZ128rrk $k1, $xmm2, $xmm3
+
+    ; CHECK: $ymm1 = VBLENDVPDYrrr $ymm2, $ymm3, $ymm0
+    $k1 = VPMOVQ2MZ256kr $ymm0
+    $ymm1 = VPBLENDMQZ256rrk $k1, $ymm2, $ymm3
+
+    ; CHECK: $xmm4 = VBLENDVPSrrr $xmm5, $xmm6, $xmm7
+    $k1 = VPMOVD2MZ128kr $xmm7
+    $xmm4 = VBLENDMPSZ128rrk $k1, $xmm5, $xmm6
+
+    ; CHECK: $ymm4 = VBLENDVPSYrrr $ymm5, $ymm6, $ymm7
+    $k1 = VPMOVD2MZ256kr $ymm7
+    $ymm4 = VBLENDMPSZ256rrk $k1, $ymm5, $ymm6
+
+    ; CHECK: $xmm8 = VBLENDVPDrrr $xmm9, $xmm10, $xmm11
+    $k1 = VPMOVQ2MZ128kr $xmm11
+    $xmm8 = VBLENDMPDZ128rrk $k1, $xmm9, $xmm10
+
+    ; CHECK: $ymm8 = VBLENDVPDYrrr $ymm9, $ymm10, $ymm11
+    $k1 = VPMOVQ2MZ256kr $ymm11
+    $ymm8 = VBLENDMPDZ256rrk $k1, $ymm9, $ymm10
+
+    RET64
+...
+
+---
+name:            masked_blend_mask_has_multiple_uses
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: masked_blend_mask_has_multiple_uses
+    ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
+    ; CHECK: $xmm1 = VPBLENDMDZ128rrk $k1, $xmm2, $xmm3
+    ; CHECK: $xmm4 = VPBLENDMDZ128rrk $k1, $xmm5, $xmm6
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $xmm1 = VPBLENDMDZ128rrk $k1, $xmm2, $xmm3
+    $xmm4 = VPBLENDMDZ128rrk $k1, $xmm5, $xmm6
     RET64
 ...
 
@@ -136,5 +182,20 @@ body:             |
     ; CHECK-NOT: VBLENDVPSrrr
     $k1 = VPMOVD2MZ128kr $xmm0
     $xmm16 = VMOVAPSZ128rrk $xmm16, $k1, $xmm2
+    RET64
+...
+
+---
+name:            blendv_incompatible_mask_width
+body:             |
+  bb.0:
+    ; A dword mask extracted from XMM cannot directly become the vector mask
+    ; for a 256-bit qword VBLENDVPD.
+    ; CHECK-LABEL: name: blendv_incompatible_mask_width
+    ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
+    ; CHECK: $ymm1 = VPBLENDMQZ256rrk $k1, $ymm2, $ymm3
+    ; CHECK-NOT: VBLENDVPDYrrr
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $ymm1 = VPBLENDMQZ256rrk $k1, $ymm2, $ymm3
     RET64
 ...

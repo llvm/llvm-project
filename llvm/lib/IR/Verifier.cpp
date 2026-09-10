@@ -712,6 +712,10 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 }
 
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
+  // Target-specific global variable checks. Done first because this function
+  // returns early for a global without an initializer.
+  verifyAMDGPUGlobalVariable(*this, GV);
+
   Type *GVType = GV.getValueType();
 
   if (MaybeAlign A = GV.getAlign()) {
@@ -2292,8 +2296,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     }
     if (Attrs.hasAttribute(Attribute::ByVal)) {
       Type *ByValTy = Attrs.getByValType();
-      SmallPtrSet<Type *, 4> Visited;
-      Check(ByValTy->isSized(&Visited),
+      Check(ByValTy->isSized(),
             "Attribute 'byval' does not support unsized types!", V);
       // Check if it is or contains a target extension type that disallows being
       // used on the stack.
@@ -2303,24 +2306,21 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
             "huge 'byval' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByRef)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getByRefType()->isSized(&Visited),
+      Check(Attrs.getByRefType()->isSized(),
             "Attribute 'byref' does not support unsized types!", V);
       Check(DL.getTypeAllocSize(Attrs.getByRefType()).getKnownMinValue() <
                 (1ULL << 32),
             "huge 'byref' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::InAlloca)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getInAllocaType()->isSized(&Visited),
+      Check(Attrs.getInAllocaType()->isSized(),
             "Attribute 'inalloca' does not support unsized types!", V);
       Check(DL.getTypeAllocSize(Attrs.getInAllocaType()).getKnownMinValue() <
                 (1ULL << 32),
             "huge 'inalloca' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::Preallocated)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getPreallocatedType()->isSized(&Visited),
+      Check(Attrs.getPreallocatedType()->isSized(),
             "Attribute 'preallocated' does not support unsized types!", V);
       Check(
           DL.getTypeAllocSize(Attrs.getPreallocatedType()).getKnownMinValue() <
@@ -4833,8 +4833,7 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
           "Non-logical alloca disallowed for this module.");
 
   Type *Ty = AI.getAllocatedType();
-  SmallPtrSet<Type*, 4> Visited;
-  Check(Ty->isSized(&Visited), "Cannot allocate unsized type", &AI);
+  Check(Ty->isSized(), "Cannot allocate unsized type", &AI);
   // Check if it's a target extension type that disallows being used on the
   // stack.
   Check(!Ty->containsNonLocalTargetExtType(),

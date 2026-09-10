@@ -410,6 +410,9 @@ public:
                                           ArrayRef<Instruction *> Instrs) {
     return Sched.getBndlSchedState(Instrs);
   }
+  static const ReadyListContainer &getReadyList(const Scheduler &Sched) {
+    return Sched.ReadyList;
+  }
 };
 
 } // namespace llvm::sandboxir

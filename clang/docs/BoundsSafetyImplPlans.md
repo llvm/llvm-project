@@ -1,8 +1,5 @@
 # Implementation plans for `-fbounds-safety`
 
-```{contents}
-:local: true
-```
 
 (bounds-safety-current-upstream-status)=
 ## Current status of `-fbounds-safety` support in upstream Clang
