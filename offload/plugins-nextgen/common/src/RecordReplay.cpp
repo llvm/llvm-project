@@ -279,7 +279,7 @@ Error NativeRecordReplayTy::recordDescImpl(
 
   // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
-  uint32_t MaxThreads = Kernel.getMaxThreads();
+  uint32_t MaxThreads = LaunchArgs.KernelEnvironment.MaxNumThreads;
   json::Array JsonThreadsLimits;
   JsonThreadsLimits.push_back(1);
   JsonThreadsLimits.push_back(MaxThreads);
