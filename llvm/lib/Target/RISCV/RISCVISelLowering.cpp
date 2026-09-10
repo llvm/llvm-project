@@ -8304,11 +8304,8 @@ SDValue RISCVTargetLowering::lowerConcatVectorsOfVectorInterleave(
   // of the said VECTOR_INTERLEAVE op.
   DAG.ReplaceAllUsesWith(OpSrcNode, Interleaved.getNode());
 
-  // Technically this CONCAT_VECTORS node has been modified after
-  // the RAUW call above, so we have to bail out with the node itself
-  // rather than empty SDValue.
   if (Interleaved->getOpcode() != ISD::MERGE_VALUES)
-    return Op;
+    return SDValue();
 
   SDNode *ExtractSrcNode = nullptr;
   EVT OperandEVT = Op.getOperand(0).getValueType();
@@ -8320,7 +8317,7 @@ SDValue RISCVTargetLowering::lowerConcatVectorsOfVectorInterleave(
     if (!sd_match(OpVal,
                   m_ExtractSubvector(m_Value(ExtractSrc), m_ConstInt(Idx))) ||
         Idx % OperandMinEC != 0)
-      return Op;
+      return SDValue();
 
     // Check if index matches. Note that it's unlikely lowerVECTOR_INTERLEAVE
     // would generate an extract_subvector sequence with unexpected indices but
@@ -8328,7 +8325,7 @@ SDValue RISCVTargetLowering::lowerConcatVectorsOfVectorInterleave(
     if (Idx / OperandMinEC != ExpectedIdx ||
         // The source node of different parts does not match.
         (ExtractSrcNode && ExtractSrc.getNode() != ExtractSrcNode))
-      return Op;
+      return SDValue();
 
     if (!ExtractSrcNode)
       ExtractSrcNode = ExtractSrc.getNode();
@@ -8337,7 +8334,7 @@ SDValue RISCVTargetLowering::lowerConcatVectorsOfVectorInterleave(
   assert(ExtractSrcNode);
   SDValue ExtractSrc(ExtractSrcNode, 0);
   if (ExtractSrc.getValueType() != Op.getValueType())
-    return Op;
+    return SDValue();
 
   return ExtractSrc;
 }
