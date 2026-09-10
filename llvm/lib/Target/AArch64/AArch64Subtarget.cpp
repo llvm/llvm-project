@@ -120,7 +120,6 @@ AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
 
   ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
   initializeProperties(HasMinSize);
-
   return *this;
 }
 
@@ -205,7 +204,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
     VScaleForTuning = 4;
-    MinFDivForCombining = 2;
     break;
   case MONAKA:
     VScaleForTuning = 2;
