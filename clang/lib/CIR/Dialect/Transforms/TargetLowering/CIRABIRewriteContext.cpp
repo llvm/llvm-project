@@ -14,7 +14,9 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/STLExtras.h"
 #include <algorithm>
+#include <utility>
 
 using namespace cir;
 using namespace mlir;
@@ -454,26 +456,18 @@ static cir::LoadOp getWholeRecordLoad(mlir::Value recordVal) {
 
 /// Whether a non-byval indirect argument may name \p addr, given the callee is
 /// told the argument is \p minAlign aligned.  A slot allocated here qualifies,
-/// reached through storage-preserving casts, and so does a non-byval indirect
-/// parameter of the enclosing function, matched by exact value.  Which arm
-/// answers depends on whether the driver reached this call before the
-/// definition enclosing it.  For CIRGen output they agree, since the spill
-/// slot states the alignment the classification does.
+/// reached through storage-preserving casts, and so does the enclosing
+/// function's own non-byval parameter: its slot stands until
+/// finalizeParameterSlots, and states the alignment the parameter promises
+/// rather than the one CIRGen chose for a local copy.
 ///
-/// Both must already state that alignment: a slot's own alignment can be
-/// raised in principle, but one standing in for a parameter is replaced by the
-/// incoming pointer later, which would discard the raise and leave the callee
-/// over-promised.
-static bool forwardableNonByvalStorage(
-    mlir::Value addr, uint64_t minAlign,
-    const llvm::DenseMap<mlir::BlockArgument, uint64_t> &nonByvalParams) {
-  if (cir::AllocaOp slot = cir::getUnderlyingAlloca(addr))
-    return slot.getAlignment() >= minAlign;
-  auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(addr);
-  if (!blockArg || !blockArg.getOwner()->isEntryBlock())
-    return false;
-  auto param = nonByvalParams.find(blockArg);
-  return param != nonByvalParams.end() && param->second >= minAlign;
+/// The slot must already state that alignment.  Raising it here would not
+/// survive one that stands in for a parameter, since finalizeParameterSlots
+/// replaces it with the incoming pointer, which would discard the raise and
+/// leave the callee over-promised.
+static bool forwardableNonByvalStorage(mlir::Value addr, uint64_t minAlign) {
+  cir::AllocaOp slot = cir::getUnderlyingAlloca(addr);
+  return slot && slot.getAlignment() >= minAlign;
 }
 
 /// Decompose a struct value into one scalar call argument per field of \p
@@ -525,13 +519,31 @@ static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
       load->erase();
 }
 
+/// The store that spills non-byval indirect parameter \p blockArg, and the
+/// slot it spills into.  CIRGen spills every by-value parameter into a local
+/// alloca with a single store before any other use, and this pass runs on that
+/// CIRGen output before any alloca-promoting or splitting pass, so the block
+/// argument has exactly that one use.  Both results are null when DCE already
+/// removed a dead spill.
+static std::pair<cir::StoreOp, cir::AllocaOp>
+findParamSpill(mlir::BlockArgument blockArg) {
+  if (blockArg.use_empty())
+    return {};
+  assert(blockArg.hasOneUse() &&
+         "non-byval arg must have exactly one use (the CIRGen param spill)");
+  auto store = cast<cir::StoreOp>(*blockArg.user_begin());
+  assert(store.getValue() == blockArg &&
+         "non-byval arg's use must be the value operand of its store");
+  return {store, cast<cir::AllocaOp>(store.getAddr().getDefiningOp())};
+}
+
 /// For each Direct arg with a coerced type, change the block argument's type
 /// to the coerced type and insert a coercion at function entry that maps it
 /// back to the original type for body uses.  For each Indirect byval arg,
 /// change the block argument's type to a pointer and insert a load at entry
 /// so the body sees a local copy of the original value type.  For each
-/// Indirect non-byval arg, change the block argument to a pointer and
-/// rewire the CIRGen param-slot alloca to that pointer (no entry load /
+/// Indirect non-byval arg, change the block argument to a pointer and queue
+/// the CIRGen param-slot alloca to be replaced by it (no entry load /
 /// byte-copy) so the body operates on the caller's storage in place.  For each
 /// Expand arg, replace the single struct block argument with N scalar block
 /// arguments (one per field) and store each field directly into the parameter's
@@ -545,7 +557,8 @@ static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
 void insertArgCoercion(
     mlir::FunctionOpInterface funcOp, const FunctionClassification &fc,
     mlir::OpBuilder &builder, const mlir::DataLayout &dl, bool hasSRetArg,
-    llvm::DenseMap<mlir::BlockArgument, uint64_t> &nonByvalParams) {
+    SmallVectorImpl<std::pair<cir::AllocaOp, mlir::BlockArgument>>
+        &pendingParamSlots) {
   mlir::Region &body = funcOp->getRegion(0);
   if (body.empty())
     return;
@@ -719,28 +732,12 @@ void insertArgCoercion(
       auto ptrTy = cir::PointerType::get(blockArg.getType());
 
       if (!ac.byVal) {
-        // Without byval: CIRGen spills every by-value parameter into a local
-        // alloca with a single store before any other use, and this pass runs
-        // on that CIRGen output before any alloca-promoting or splitting pass,
-        // so the block argument still has exactly that one use here.
-        // Rewire the alloca to the incoming pointer and drop the store so the
-        // body operates on the caller's storage in place.  A byte-copy would be
-        // wrong for non-trivially-copyable aggregates (e.g. libstdc++ SSO
-        // std::string, where it would leave `_M_p` aliasing the source's
-        // `_M_local_buf`).  DCE may have removed a dead spill; tolerate that by
-        // only retyping the block argument.
-        cir::StoreOp paramStore;
-        cir::AllocaOp destAlloca;
-        if (!blockArg.use_empty()) {
-          assert(blockArg.hasOneUse() &&
-                 "non-byval arg must have exactly one use (the CIRGen param "
-                 "spill)");
-          paramStore = cast<cir::StoreOp>(*blockArg.user_begin());
-          assert(paramStore.getValue() == blockArg &&
-                 "non-byval arg's use must be the value operand of its store");
-          destAlloca =
-              cast<cir::AllocaOp>(paramStore.getAddr().getDefiningOp());
-        }
+        // Without byval, drop the spill store and let the slot's uses read the
+        // incoming pointer, so the body operates on the caller's storage in
+        // place.  A byte-copy would be wrong for non-trivially-copyable
+        // aggregates (e.g. libstdc++ SSO std::string, where it would leave
+        // `_M_p` aliasing the source's `_M_local_buf`).
+        auto [paramStore, destAlloca] = findParamSpill(blockArg);
 
         if (paramStore)
           paramStore->erase();
@@ -748,12 +745,14 @@ void insertArgCoercion(
         // Update the block argument to point to its original type.
         blockArg.setType(ptrTy);
 
-        nonByvalParams[blockArg] = ac.indirectAlign.value();
-
-        if (destAlloca) {
-          destAlloca.getResult().replaceAllUsesWith(blockArg);
-          destAlloca->erase();
-        }
+        // Pointing the slot's uses at the incoming pointer waits until every
+        // call site has been rewritten.  A call that hands this parameter
+        // straight on recognises it by the slot its operand was loaded from,
+        // and collapsing the slot here would leave that call reading a block
+        // argument with no defining operation to inspect.  A dead spill DCE
+        // already removed leaves nothing to collapse.
+        if (destAlloca)
+          pendingParamSlots.emplace_back(destAlloca, blockArg);
       } else {
         // byval: load the incoming pointer so the body sees a T value (and
         // any CIRGen param-slot store becomes a local copy of that value).
@@ -1020,6 +1019,37 @@ void rewriteIndirectReturnCall(cir::CallOp call,
 
 } // namespace
 
+void CIRABIRewriteContext::normalizeParameterSlotAlignments(
+    cir::FuncOp funcOp, const FunctionClassification &fc) {
+  if (!funcOp.isDefinition())
+    return;
+  mlir::Region &body = funcOp->getRegion(0);
+  if (body.empty())
+    return;
+  mlir::Block &entry = body.front();
+
+  // No signature has been rewritten yet, so no sret pointer has been prepended
+  // and no Expand argument has been split into its fields.  Every
+  // classification therefore still maps to the entry block argument at its own
+  // index.
+  for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
+    if (ac.kind != ArgKind::Indirect || ac.byVal)
+      continue;
+    assert(idx < entry.getNumArguments() &&
+           "classification count must not exceed entry block arguments");
+    if (cir::AllocaOp slot = findParamSpill(entry.getArgument(idx)).second)
+      slot.setAlignment(ac.indirectAlign.value());
+  }
+}
+
+void CIRABIRewriteContext::finalizeParameterSlots() {
+  for (auto [slot, incoming] : pendingParamSlots) {
+    slot.getResult().replaceAllUsesWith(incoming);
+    slot->erase();
+  }
+  pendingParamSlots.clear();
+}
+
 mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     mlir::FunctionOpInterface funcOpInterface, const FunctionClassification &fc,
     mlir::OpBuilder &builder) {
@@ -1086,7 +1116,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       // in-body cir.call operands) through the recovered value.  Done before
       // the Ignore-drop below so the entry block argument indices used here
       // still refer to the original positions.
-      insertArgCoercion(funcOp, fc, builder, dl, hasSRet, nonByvalParams);
+      insertArgCoercion(funcOp, fc, builder, dl, hasSRet, pendingParamSlots);
 
       // Direct return with coerced type: insert a coercion at every
       // cir.return so the returned value matches the (coerced) return
@@ -1300,8 +1330,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
         if (!srcLoad ||
             srcLoad.getAddr().getType() !=
                 cir::PointerType::get(arg.getType()) ||
-            !forwardableNonByvalStorage(
-                srcLoad.getAddr(), ac.indirectAlign.value(), nonByvalParams))
+            !forwardableNonByvalStorage(srcLoad.getAddr(),
+                                        ac.indirectAlign.value()))
           return call->emitOpError()
                  << "non-byval indirect argument that does not name the "
                     "caller's storage is not yet implemented in "

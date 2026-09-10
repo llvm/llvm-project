@@ -335,6 +335,49 @@ module attributes {
 !s64i = !cir.int<s, 64>
 !rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
 
+#non_byval_arg_align8 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#non_byval_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The same rejection with the callee declared first, so the call is reached
+  // before the caller's own definition is rewritten.  The slot's own alignment
+  // would satisfy the callee here, and only the parameter's promise rules the
+  // forward out.
+  cir.func private @takes_big_non_byval16(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg_align16 }
+
+  cir.func @callee_first_non_byval_param_underaligned(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg_align8 } {
+    %spill = cir.alloca "arg0" align(16) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %paramload = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval16(%paramload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval16(%paramload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
 #non_byval_arg = {
   return = { kind = "direct" },
   args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
