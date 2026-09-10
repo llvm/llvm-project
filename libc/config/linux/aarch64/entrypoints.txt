@@ -219,6 +219,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.memalignment
+    libc.src.stdlib.mkdtemp
     libc.src.stdlib.mkstemp
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
@@ -344,10 +345,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
     libc.src.sys.stat.fstat
+    libc.src.sys.stat.futimens
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
 
     # sys/statfs.h entrypoints
@@ -462,6 +465,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.write
 
     # wchar.h entrypoints
+    libc.src.wchar.wcscasecmp
+    libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
 
@@ -1237,6 +1242,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fgets
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
+    libc.src.stdio.fmemopen
     libc.src.stdio.fopen
     libc.src.stdio.freopen
     libc.src.stdio.fopencookie
@@ -1404,6 +1410,10 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
+
+      # glob.h entrypoints
+      libc.src.glob.glob
+      libc.src.glob.globfree
 
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
