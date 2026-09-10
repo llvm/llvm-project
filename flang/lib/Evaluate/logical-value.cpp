@@ -12,7 +12,7 @@ namespace Fortran::evaluate::value {
 
 void LogicalValue::print(llvm::raw_ostream &os) const {
   if (!IsCanonical()) {
-    // PAPAYA: This was modified from formatting.cpp where kind 8 is hardcoded
+    // This was modified from formatting.cpp where kind 8 is hardcoded
     os << "transfer(";
     word().print(os);
     os << ",.false._" << kind() << ')';

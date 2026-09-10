@@ -56,7 +56,7 @@ RealValue RealValue::Infinity(int kind, bool negative) {
   return FromImpl(RealValueImpl::Infinity(kind, negative));
 }
 
-bool RealValue::IsMonostate() const { return impl().IsMonostate(); }
+bool RealValue::IsNull() const { return impl().IsNull(); }
 
 int RealValue::kind() const { return impl().kind(); }
 

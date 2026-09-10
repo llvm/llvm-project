@@ -8,6 +8,14 @@
 // RUN:   -DDXIL_TY=2 -DRW=0 -DDIM=2 -DOFFSET_CONST="<i32 1, i32 2>"
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DOFFSET_ARG="int3(1, 2, 3)" -DHAS_OFFSET -DTEXTURE=Texture3D \
+// RUN:   -DCOORD_TYPE=float3 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture3D -DCOORD_DIM=3 \
+// RUN:   --check-prefixes=CHECK,DXIL,DXIL-TEXEL,CHECK-OFFSET,DXIL-OFFSET \
+// RUN:   -DDXIL_TY=4 -DRW=0 -DDIM=3 -DOFFSET_CONST="<i32 1, i32 2, i32 3>"
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
@@ -27,6 +35,15 @@
 // RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-TEXEL,CHECK-OFFSET,SPIRV-OFFSET \
 // RUN:   -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DDIM=2 \
 // RUN:   -DOFFSET_CONST="<i32 1, i32 2>"
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DOFFSET_ARG="int3(1, 2, 3)" -DHAS_OFFSET -DTEXTURE=Texture3D \
+// RUN:   -DCOORD_TYPE=float3 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture3D -DCOORD_DIM=3 \
+// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-TEXEL,CHECK-OFFSET,SPIRV-OFFSET \
+// RUN:   -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=2 -DDIM=3 \
+// RUN:   -DOFFSET_CONST="<i32 1, i32 2, i32 3>"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \

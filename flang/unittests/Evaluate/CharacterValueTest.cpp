@@ -75,16 +75,16 @@ static void PutChar(int kind, void *dst, char32_t c) {
 // Construction, assignment and kind inquiries
 //===----------------------------------------------------------------------===//
 
-TEST(CharacterValue, Monostate) {
+TEST(CharacterValue, nullstate) {
   CharacterValue v;
-  EXPECT_TRUE(v.IsMonostate());
+  EXPECT_TRUE(v.IsNull());
 
-  // Monostate behaves like an empty string
+  // nullstate behaves like an empty string
   EXPECT_TRUE(v.empty());
   EXPECT_EQ(0u, v.size());
   EXPECT_EQ(0u, v.length());
 
-  // A monostate is converted to an empty string of any representation
+  // A null state is converted to an empty string of any representation
   EXPECT_CHARS_EQ("", v);
   EXPECT_EQ(llvm::StringRef{}, *v.AsStringRef());
   EXPECT_EQ(std::string{}, *v.AsStdString());
@@ -101,7 +101,7 @@ TYPED_TEST(CharacterValueTypedKind, ConstructFromStdBasicString) {
   CharT buffer[] = {'a', 'b', 'c', '\0'};
   CharacterValue v{kind, StringT{buffer}};
 
-  EXPECT_FALSE(v.IsMonostate());
+  EXPECT_FALSE(v.IsNull());
   EXPECT_EQ(StringT{buffer}, v.AsBasicString<CharT>());
 }
 
@@ -109,29 +109,29 @@ TEST_P(CharacterValueKind, Zero) {
   const int kind{GetParam()};
   CharacterValue zero{CharacterValue::Zero(kind)};
   CharacterValue empty{kind, ""};
-  CharacterValue monostate;
+  CharacterValue nullstate;
 
-  EXPECT_FALSE(zero.IsMonostate());
+  EXPECT_FALSE(zero.IsNull());
   EXPECT_EQ(kind, zero.kind());
   EXPECT_TRUE(zero.empty());
   EXPECT_EQ(0u, zero.bytesStored());
   EXPECT_CHARS_EQ("", zero);
   EXPECT_EQ(empty, zero);
-  EXPECT_EQ(monostate, empty);
+  EXPECT_EQ(nullstate, empty);
 }
 
 TEST_P(CharacterValueKind, FillConstructor) {
   const int kind{GetParam()};
 
   CharacterValue v(kind, 3, U'x');
-  EXPECT_FALSE(v.IsMonostate());
+  EXPECT_FALSE(v.IsNull());
   EXPECT_EQ(kind, v.kind());
   EXPECT_EQ(3u, v.size());
   EXPECT_CHARS_EQ("xxx", v);
 
   // A zero-length fill is still kind-typed
   CharacterValue none(kind, 0, U'x');
-  EXPECT_FALSE(none.IsMonostate());
+  EXPECT_FALSE(none.IsNull());
   EXPECT_TRUE(none.empty());
   EXPECT_EQ(kind, none.kind());
 }
@@ -254,7 +254,7 @@ TEST_P(CharacterValueKind, ToAscii) {
   EXPECT_TRUE(nonascii.ToAscii(kind).empty());
   EXPECT_EQ(kind, nonascii.ToAscii(kind).kind());
 
-  // Converting a monostate yields an empty string of the target kind.
+  // Converting a null state yields an empty string of the target kind.
   CharacterValue empty{CharacterValue{}.ToAscii(kind)};
   EXPECT_EQ(kind, empty.kind());
   EXPECT_TRUE(empty.empty());
@@ -284,11 +284,11 @@ TEST_P(CharacterValueKind, Compare) {
   // ... whereas any other trailing character does.
   EXPECT_EQ(Ordering::Less, ab.Compare(abc));
 
-  // A monostate compares as an empty string of the other operand's kind.
-  CharacterValue monostate;
-  EXPECT_EQ(Ordering::Equal, monostate.Compare(empty));
-  EXPECT_EQ(Ordering::Less, monostate.Compare(abc));
-  EXPECT_EQ(Ordering::Greater, abc.Compare(monostate));
+  // A null state compares as an empty string of the other operand's kind.
+  CharacterValue nullstate;
+  EXPECT_EQ(Ordering::Equal, nullstate.Compare(empty));
+  EXPECT_EQ(Ordering::Less, nullstate.Compare(abc));
+  EXPECT_EQ(Ordering::Greater, abc.Compare(nullstate));
 }
 
 TEST_P(CharacterValueKind, RelationalOperators) {
@@ -314,11 +314,11 @@ TEST_P(CharacterValueKind, RelationalOperators) {
   EXPECT_TRUE(ab != ab_);
   EXPECT_TRUE(ab < ab_);
 
-  // A monostate is an empty string here too.
-  CharacterValue monostate;
+  // A null state is an empty string here too.
+  CharacterValue nullstate;
   CharacterValue empty{kind, ""};
-  EXPECT_TRUE(monostate == empty);
-  EXPECT_TRUE(monostate < abc);
+  EXPECT_TRUE(nullstate == empty);
+  EXPECT_TRUE(nullstate < abc);
 }
 
 //===----------------------------------------------------------------------===//
@@ -333,7 +333,7 @@ TEST_P(CharacterValueKind, AssignFill) {
   EXPECT_EQ(kind, v.kind());
   EXPECT_CHARS_EQ("zz", v);
 
-  // assign() also fixes the kind of a monostate, and can change the kind.
+  // assign() also fixes the kind of a null state, and can change the kind.
   CharacterValue fresh;
   fresh.assign(kind, 1, 'q');
   EXPECT_EQ(kind, fresh.kind());
@@ -480,7 +480,7 @@ TEST_P(CharacterValueKind, Find) {
   CharacterValue empty{kind, ""};
   CharacterValue xyz{kind, "xyz"};
   CharacterValue a{kind, "a"};
-  CharacterValue monostate;
+  CharacterValue nullstate;
 
   EXPECT_EQ(1u, abcabc.find(bc));
   EXPECT_EQ(0u, abcabc.find(abc));
@@ -488,13 +488,13 @@ TEST_P(CharacterValueKind, Find) {
 
   // Find empty string at begnning
   EXPECT_EQ(0u, abcabc.find(empty));
-  EXPECT_EQ(0u, abcabc.find(monostate));
+  EXPECT_EQ(0u, abcabc.find(nullstate));
   EXPECT_EQ(0u, empty.find(empty));
-  EXPECT_EQ(0u, monostate.find(empty));
-  EXPECT_EQ(0u, monostate.find(monostate));
+  EXPECT_EQ(0u, nullstate.find(empty));
+  EXPECT_EQ(0u, nullstate.find(nullstate));
 
   // Nothing is ever found in a value of unknown kind
-  EXPECT_EQ(CharacterValue::npos, monostate.find(a));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find(a));
 }
 
 TEST_P(CharacterValueKind, RFind) {
@@ -563,13 +563,13 @@ TEST_P(CharacterValueKind, FindFirstNotOfSet) {
   CharacterValue xyz{kind, "xyz"};
   CharacterValue a{kind, "a"};
   CharacterValue empty{kind, ""};
-  CharacterValue monostate;
+  CharacterValue nullstate;
 
   EXPECT_EQ(4u, v.find_first_not_of(ab));
   EXPECT_EQ(0u, v.find_first_not_of(xyz));
   EXPECT_EQ(CharacterValue::npos, v.find_first_not_of(abc));
   EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(a));
-  EXPECT_EQ(CharacterValue::npos, monostate.find_first_not_of(a));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_first_not_of(a));
 }
 
 TEST_P(CharacterValueKind, FindLastNotOfSet) {
@@ -580,13 +580,13 @@ TEST_P(CharacterValueKind, FindLastNotOfSet) {
   CharacterValue xyz{kind, "xyz"};
   CharacterValue a{kind, "a"};
   CharacterValue empty{kind, ""};
-  CharacterValue monostate;
+  CharacterValue nullstate;
 
   EXPECT_EQ(1u, v.find_last_not_of(bc));
   EXPECT_EQ(4u, v.find_last_not_of(xyz));
   EXPECT_EQ(CharacterValue::npos, v.find_last_not_of(abc));
   EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(a));
-  EXPECT_EQ(CharacterValue::npos, monostate.find_last_not_of(a));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_last_not_of(a));
 }
 
 //===----------------------------------------------------------------------===//

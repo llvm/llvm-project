@@ -92,7 +92,7 @@ void *CharacterValueImpl::charData() {
       [](auto &s) -> void * {
         using StringT = std::decay_t<decltype(s)>;
         if constexpr (is_monostate<StringT>) {
-          // No data available in monostate
+          // No data available in the null state
           return nullptr;
         } else {
           return static_cast<void *>(s.data());
@@ -106,7 +106,7 @@ const void *CharacterValueImpl::charData() const {
       [](const auto &s) -> const void * {
         using StringT = std::decay_t<decltype(s)>;
         if constexpr (is_monostate<StringT>) {
-          // No data available in monostate
+          // No data available in the null state
           return nullptr;
         } else {
           return static_cast<const void *>(s.data());
@@ -121,7 +121,7 @@ Ordering CharacterValueImpl::Compare(const CharacterValueImpl &y) const {
         using XS = std::decay_t<decltype(xs)>;
         using YS = std::decay_t<decltype(ys)>;
 
-        // monostate represents an empty string of any type; here it is
+        // The null state represents an empty string of any type; here it is
         // polymorhpic to what it is compared to
         if constexpr (std::is_same_v<XS, YS>) {
           return Fortran::evaluate::Compare(xs, ys);
@@ -142,7 +142,7 @@ bool CharacterValueImpl::operator<(const CharacterValueImpl &y) const {
         using XS = std::decay_t<decltype(xs)>;
         using YS = std::decay_t<decltype(ys)>;
 
-        // monostate represents an empty string of any type; here it is
+        // The null state represents an empty string of any type; here it is
         // polymorphic to what it is compared to
         if constexpr (std::is_same_v<XS, YS>) {
           return xs < ys;
@@ -163,7 +163,7 @@ bool CharacterValueImpl::operator==(const CharacterValueImpl &y) const {
         using XS = std::decay_t<decltype(xs)>;
         using YS = std::decay_t<decltype(ys)>;
 
-        // monostate represents an empty string of any type; here it is
+        // The null state represents an empty string of any type; here it is
         // polymorhpic to what it is compared to
         if constexpr (std::is_same_v<XS, YS>) {
           return xs == ys;
@@ -261,7 +261,7 @@ CharacterValueImpl CharacterValueImpl::substr(
 }
 
 std::optional<llvm::StringRef> CharacterValueImpl::AsStringRef() const {
-  if (IsMonostate()) {
+  if (IsNull()) {
     return llvm::StringRef{};
   }
   if (const auto *s{std::get_if<std::string>(&storage_)}) {
@@ -272,7 +272,7 @@ std::optional<llvm::StringRef> CharacterValueImpl::AsStringRef() const {
 
 /// Return the string as std::string if kind==1, or nullopt otherwise.
 std::optional<std::string> CharacterValueImpl::AsStdString() const {
-  if (IsMonostate()) {
+  if (IsNull()) {
     return std::string{};
   }
 
@@ -284,7 +284,7 @@ std::optional<std::string> CharacterValueImpl::AsStdString() const {
 }
 
 std::optional<std::u16string> CharacterValueImpl::AsU16String() const {
-  if (IsMonostate()) {
+  if (IsNull()) {
     return std::u16string{};
   }
 
@@ -296,7 +296,7 @@ std::optional<std::u16string> CharacterValueImpl::AsU16String() const {
 }
 
 std::optional<std::u32string> CharacterValueImpl::AsU32String() const {
-  if (IsMonostate()) {
+  if (IsNull()) {
     return std::u32string{};
   }
 
@@ -327,7 +327,7 @@ std::string CharacterValueImpl::ToStdString() const {
 }
 
 CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
-  if (IsMonostate()) {
+  if (IsNull()) {
     return Zero(kind);
   }
 

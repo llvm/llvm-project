@@ -88,7 +88,7 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool IsMonostate() const { return storage_.index() == 0; }
+  bool IsNull() const { return storage_.index() == 0; }
   int kind() const;
 
   int bits() const;
@@ -206,7 +206,7 @@ public:
   // operands of equal width.  A monostate operand is treated as a zero of
   // that width.
   template <typename T> static T Coerce(const IntegerValueImpl &y) {
-    if (y.IsMonostate()) {
+    if (y.IsNull()) {
       return T{};
     }
     return y.withWord([](const auto &yv) -> T {
@@ -221,7 +221,7 @@ public:
 
   // Same as Coerce, but zero-extending rather than sign-extending.
   template <typename T> static T CoerceUnsigned(const IntegerValueImpl &y) {
-    if (y.IsMonostate()) {
+    if (y.IsNull()) {
       return T{};
     }
     return y.withWord([](const auto &yv) -> T {

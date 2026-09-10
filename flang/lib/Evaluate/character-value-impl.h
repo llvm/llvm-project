@@ -86,7 +86,7 @@ public:
 
   std::string ToStdString() const;
 
-  bool IsMonostate() const { return storage_.index() == 0; }
+  bool IsNull() const { return storage_.index() == 0; }
   int kind() const {
     return withCharProto([](auto ct) { return sizeof(ct); });
   }
@@ -222,7 +222,7 @@ public:
     case 4:
       return f(char32_t{});
     default:
-      DIE("unsupported character kind/monostate");
+      DIE("unsupported character kind/null state");
     }
   }
 

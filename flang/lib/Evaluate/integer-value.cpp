@@ -42,7 +42,7 @@ IntegerValue IntegerValue::Zero(int kind) {
   return FromImpl(IntegerValueImpl::Zero(kind));
 }
 
-bool IntegerValue::IsMonostate() const { return impl().IsMonostate(); }
+bool IntegerValue::IsNull() const { return impl().IsNull(); }
 
 int IntegerValue::kind() const { return impl().kind(); }
 

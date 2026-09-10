@@ -71,9 +71,9 @@ static constexpr int KindPos(int kind) {
 // Construction and kind inquiries
 //===----------------------------------------------------------------------===//
 
-TEST(ComplexValue, DefaultConstructionIsMonostate) {
+TEST(ComplexValue, DefaultConstructionIsNull) {
   ComplexValue z;
-  EXPECT_TRUE(z.IsMonostate());
+  EXPECT_TRUE(z.IsNull());
   EXPECT_TRUE(z.IsZero());
   EXPECT_FALSE(z.IsInfinite());
   EXPECT_FALSE(z.IsNotANumber());
@@ -83,7 +83,7 @@ TEST(ComplexValue, DefaultConstructionIsMonostate) {
 TEST_P(ComplexValueKind, ConstructFromParts) {
   const int kind{GetParam()};
   ComplexValue z{Real(kind, 1), Real(kind, 2)};
-  EXPECT_FALSE(z.IsMonostate());
+  EXPECT_FALSE(z.IsNull());
   EXPECT_EQ(kind, z.kind());
   EXPECT_TRUE(z.REAL() == Real(kind, 1));
   EXPECT_TRUE(z.AIMAG() == Real(kind, 2));
@@ -133,7 +133,7 @@ TEST(ComplexValue, KindCheckingConstructors) {
 TEST_P(ComplexValueKind, Zero) {
   const int kind{GetParam()};
   ComplexValue zero{ComplexValue::Zero(kind)};
-  EXPECT_FALSE(zero.IsMonostate());
+  EXPECT_FALSE(zero.IsNull());
   EXPECT_EQ(kind, zero.kind());
   EXPECT_TRUE(zero.IsZero());
   EXPECT_FALSE(zero.REAL().IsNegative());

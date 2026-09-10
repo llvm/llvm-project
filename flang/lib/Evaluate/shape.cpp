@@ -18,6 +18,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/Support/MathExtras.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
@@ -466,7 +467,15 @@ static MaybeExtentExpr GetNonNegativeExtent(
     if (*uval < *lval) {
       return MakeExtentExpr(0);
     } else {
-      return MakeExtentExpr(*uval - *lval + 1);
+      // The extent of an oversized dimension, e.g. integer(1)::a(0:huge(0_8)),
+      // does not fit and wraps around; storage sequences that are too large
+      // are diagnosed later, where the original bounds distinguish a wrapped
+      // extent from an empty one.  Compute the same two's complement result
+      // here without signed integer overflow.
+      ConstantSubscript extent;
+      (void)llvm::SubOverflow(*uval, *lval, extent);
+      (void)llvm::AddOverflow(extent, ConstantSubscript{1}, extent);
+      return ExtentExpr{extent};
     }
   } else if (lbound && ubound && lbound->Rank() == 0 && ubound->Rank() == 0 &&
       (!invariantOnly ||

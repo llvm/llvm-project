@@ -77,7 +77,7 @@ public:
   }
 
   /// Creates an integer with value 0 of a given kind. This is different from
-  /// the default-ctor which creates a "monostate" that represents 0 of unknown
+  /// the default-ctor which creates a null state that represents 0 of unknown
   /// kind.
   static IntegerValue Zero(int kind);
 
@@ -89,7 +89,7 @@ public:
 
   /// Whether this object represents a default-initialized value (zero) of
   /// not-yet-known kind.
-  bool IsMonostate() const;
+  bool IsNull() const;
 
   /// The kind of the value currently stored.
   int kind() const;

@@ -74,7 +74,7 @@ void CharacterValue::print(llvm::raw_ostream &os) const { impl().print(os); }
 LLVM_DUMP_METHOD void CharacterValue::dump() const { impl().dump(); }
 #endif
 
-bool CharacterValue::IsMonostate() const { return impl().IsMonostate(); }
+bool CharacterValue::IsNull() const { return impl().IsNull(); }
 
 bool CharacterValue::empty() const { return impl().empty(); }
 

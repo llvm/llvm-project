@@ -77,7 +77,7 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool IsMonostate() const { return storage_.index() == 0; }
+  bool IsNull() const { return storage_.index() == 0; }
   int kind() const;
 
   int bits() const;
@@ -199,7 +199,7 @@ public:
 
   template <typename V> static std::decay_t<V> AsWord(const RealValueImpl &y) {
     using R = std::decay_t<V>;
-    if (y.IsMonostate()) {
+    if (y.IsNull()) {
       return R{};
     }
 

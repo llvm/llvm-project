@@ -1,18 +1,36 @@
 ! RUN: split-file %s %t
-! RUN: %flang_fc1 -fsyntax-only -module-dir %t %t/m.f90
-! RUN: %flang_fc1 -fsyntax-only -Werror -module-dir %t %t/use.f90
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/a.f90
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/b.f90
+! RUN: %flang_fc1 -fsyntax-only -pedantic -J%t %t/c.f90 2>&1 | FileCheck --allow-empty %s
 
-! Ensure that canonical representations of infinities and NaNs in module files
-! can be read without emitting folding exception warnings.
+! Compiling a submodule of a submodule ("b") must not
+! resurface "b"'s own missing-MODULE-prefix portability warning when "b" is
+! re-read from its .smod file as a dependency of "c".
 
-!--- m.f90
-module m
-  real(4), parameter :: positive_infinity = z'7f800000'
-  real(4), parameter :: negative_infinity = z'ff800000'
-  real(4), parameter :: quiet_nan = z'7fc00000'
+!--- a.f90
+module modfile86a
+  interface
+    module subroutine inside_one()
+    end subroutine
+  end interface
 end module
 
-!--- use.f90
-program test
-  use m
-end program
+!--- b.f90
+submodule (modfile86a) modfile86b
+  interface
+    module subroutine inside_two()
+    end subroutine
+  end interface
+contains
+  subroutine inside_one()
+  end subroutine
+end submodule
+
+!--- c.f90
+submodule (modfile86a:modfile86b) modfile86c
+contains
+  module subroutine inside_two()
+  end subroutine
+end submodule
+
+!CHECK-NOT: portability

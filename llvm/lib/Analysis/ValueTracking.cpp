@@ -1819,8 +1819,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::PHI: {
     const PHINode *P = cast<PHINode>(I);
     BinaryOperator *BO = nullptr;
-    Value *R = nullptr, *L = nullptr;
-    if (matchSimpleRecurrence(P, BO, R, L)) {
+    Value *Start = nullptr, *Step = nullptr;
+    KnownBits &KnownStart = Known2;
+    if (matchSimpleRecurrence(P, BO, Start, Step)) {
       // Handle the case of a simple two-predecessor recurrence PHI.
       // There's a lot more that could theoretically be done here, but
       // this is sufficient to catch some interesting cases.
@@ -1853,23 +1854,23 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // add sufficient tests to cover.
         SimplifyQuery RecQ = Q.getWithoutCondContext();
         RecQ.CxtI = P;
-        computeKnownBits(R, DemandedElts, Known2, RecQ, Depth + 1);
+        computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
         switch (Opcode) {
         case Instruction::Shl:
           // A shl recurrence will only increase the tailing zeros
-          Known.Zero.setLowBits(Known2.countMinTrailingZeros());
+          Known.Zero.setLowBits(KnownStart.countMinTrailingZeros());
           break;
         case Instruction::LShr:
         case Instruction::UDiv:
         case Instruction::URem:
           // lshr, udiv, and urem recurrences will preserve the leading zeros of
           // the start value.
-          Known.Zero.setHighBits(Known2.countMinLeadingZeros());
+          Known.Zero.setHighBits(KnownStart.countMinLeadingZeros());
           break;
         case Instruction::AShr:
           // An ashr recurrence will extend the initial sign bit
-          Known.Zero.setHighBits(Known2.countMinLeadingZeros());
-          Known.One.setHighBits(Known2.countMinLeadingOnes());
+          Known.Zero.setHighBits(KnownStart.countMinLeadingZeros());
+          Known.One.setHighBits(KnownStart.countMinLeadingOnes());
           break;
         }
         break;
@@ -1889,22 +1890,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // D69571).
         SimplifyQuery RecQ = Q.getWithoutCondContext();
 
-        unsigned OpNum = P->getOperand(0) == R ? 0 : 1;
-        Instruction *RInst = P->getIncomingBlock(OpNum)->getTerminator();
-        Instruction *LInst = P->getIncomingBlock(1 - OpNum)->getTerminator();
+        unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
+        Instruction *StartTerm = P->getIncomingBlock(OpNum)->getTerminator();
+        Instruction *LatchTerm =
+            P->getIncomingBlock(1 - OpNum)->getTerminator();
 
-        // Ok, we have a PHI of the form L op= R. Check for low
+        // Ok, we have a recurrence of the form {Start,op,Step}. Check for low
         // zero bits.
-        RecQ.CxtI = RInst;
-        computeKnownBits(R, DemandedElts, Known2, RecQ, Depth + 1);
+        RecQ.CxtI = StartTerm;
+        computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
 
-        // We need to take the minimum number of known bits
-        KnownBits Known3(BitWidth);
-        RecQ.CxtI = LInst;
-        computeKnownBits(L, DemandedElts, Known3, RecQ, Depth + 1);
+        // We need to take the minimum number of known bits.
+        // The step may be loop-variant, so make sure we don't make use of
+        // any conditions that only hold on the last iteration.
+        KnownBits KnownStep(BitWidth);
+        RecQ.CxtI = LatchTerm;
+        computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
 
-        Known.Zero.setLowBits(std::min(Known2.countMinTrailingZeros(),
-                                       Known3.countMinTrailingZeros()));
+        Known.Zero.setLowBits(std::min(KnownStart.countMinTrailingZeros(),
+                                       KnownStep.countMinTrailingZeros()));
 
         auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(BO);
         if (!OverflowOp || !Q.IIQ.hasNoSignedWrap(OverflowOp))
@@ -1921,9 +1925,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // (add non-negative, non-negative) --> non-negative
         // (add negative, negative) --> negative
         case Instruction::Add: {
-          if (Known2.isNonNegative() && Known3.isNonNegative())
+          if (KnownStart.isNonNegative() && KnownStep.isNonNegative())
             Known.makeNonNegative();
-          else if (Known2.isNegative() && Known3.isNegative())
+          else if (KnownStart.isNegative() && KnownStep.isNegative())
             Known.makeNegative();
           break;
         }
@@ -1933,16 +1937,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
         case Instruction::Sub: {
           if (BO->getOperand(0) != I)
             break;
-          if (Known2.isNonNegative() && Known3.isNegative())
+          if (KnownStart.isNonNegative() && KnownStep.isNegative())
             Known.makeNonNegative();
-          else if (Known2.isNegative() && Known3.isNonNegative())
+          else if (KnownStart.isNegative() && KnownStep.isNonNegative())
             Known.makeNegative();
           break;
         }
 
         // (mul nsw non-negative, non-negative) --> non-negative
         case Instruction::Mul:
-          if (Known2.isNonNegative() && Known3.isNonNegative())
+          if (KnownStart.isNonNegative() && KnownStep.isNonNegative())
             Known.makeNonNegative();
           break;
 
