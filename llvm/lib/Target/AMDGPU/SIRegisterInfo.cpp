@@ -3421,21 +3421,13 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                     MI->getOpcode() == AMDGPU::S_MOV_B32;
 
       int64_t Offset = FrameInfo.getObjectOffset(Index);
-      int64_t ScaledOffset = -Offset * ST.getWavefrontSize();
 
       // Scaling FrameReg in place is the last resort when there is nothing to
       // scavenge. It has to be undone after MI, which is only possible while MI
-      // does not use FrameReg for anything besides the frame index, and while
-      // the offset can be folded back in wave space. A second frame index on MI
-      // would be lowered while FrameReg is still scaled, so keep away from it.
-      bool HasOneFrameIndex =
-          llvm::count_if(MI->operands(), [](const MachineOperand &MO) {
-            return MO.isFI();
-          }) == 1;
-      bool CanUseFrameRegAsScratch =
-          IsSALU && !LiveSCC && FrameReg && HasOneFrameIndex &&
-          !MI->readsRegister(FrameReg, this) &&
-          !MI->modifiesRegister(FrameReg, this) && isInt<32>(ScaledOffset);
+      // does not use FrameReg for anything besides the frame index.
+      bool CanUseFrameRegAsScratch = IsSALU && !LiveSCC && FrameReg &&
+                                     !MI->readsRegister(FrameReg, this) &&
+                                     !MI->modifiesRegister(FrameReg, this);
 
       bool RestoreFrameReg = false;
       Register ResultReg;
@@ -3444,13 +3436,15 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       } else {
         ResultReg = RS->scavengeRegisterBackwards(*RC, MI, false, 0,
                                                   /*AllowSpill=*/false);
-        if (!ResultReg && CanUseFrameRegAsScratch) {
-          // Spilling an SGPR here instead would flip EXEC with S_NOT, and that
-          // clobbers the SCC MI may be defining for a later use.
-          ResultReg = FrameReg;
-          RestoreFrameReg = true;
-        } else if (!ResultReg) {
-          ResultReg = RS->scavengeRegisterBackwards(*RC, MI, false, 0);
+        if (!ResultReg) {
+          if (CanUseFrameRegAsScratch) {
+            // Spilling an SGPR here instead would flip EXEC with S_NOT, and
+            // that clobbers the SCC MI may be defining for a later use.
+            ResultReg = FrameReg;
+            RestoreFrameReg = true;
+          } else {
+            ResultReg = RS->scavengeRegisterBackwards(*RC, MI, false, 0);
+          }
         }
       }
 
@@ -3648,6 +3642,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             .addReg(FrameReg)
             .addImm(ST.getWavefrontSize());
 
+        int64_t ScaledOffset = -Offset * ST.getWavefrontSize();
         bool SCCLiveAfterMI = MI->definesRegister(AMDGPU::SCC, this) &&
                               !MI->registerDefIsDead(AMDGPU::SCC, this);
         if (Offset && !SCCLiveAfterMI) {
