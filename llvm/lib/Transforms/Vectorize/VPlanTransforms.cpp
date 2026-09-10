@@ -1154,21 +1154,18 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
 static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
   DenseMap<const SCEV *, VPValue *> SCEV2VPV;
 
-  for (VPRecipeBase &R :
-       make_early_inc_range(*Plan.getEntry()->getEntryBasicBlock())) {
-    auto *ExpR = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpR)
-      continue;
-
-    const auto &[V, Inserted] = SCEV2VPV.try_emplace(ExpR->getSCEV(), ExpR);
+  for (VPExpandSCEVRecipe &ExpR :
+       make_early_inc_range(vputils::recipesOnly<VPExpandSCEVRecipe>(
+           *Plan.getEntry()->getEntryBasicBlock()))) {
+    const auto &[V, Inserted] = SCEV2VPV.try_emplace(ExpR.getSCEV(), &ExpR);
     if (Inserted)
       continue;
 
-    ExpR->replaceAllUsesWith(V->second);
-    if (ExpR == Plan.getTripCount())
+    ExpR.replaceAllUsesWith(V->second);
+    if (&ExpR == Plan.getTripCount())
       Plan.resetTripCount(V->second);
 
-    ExpR->eraseFromParent();
+    ExpR.eraseFromParent();
   }
 }
 
@@ -1897,39 +1894,36 @@ static void removeCommonBlendMask(VPBlendRecipe *Blend) {
 static void simplifyBlends(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *Blend = dyn_cast<VPBlendRecipe>(&R);
-      if (!Blend)
-        continue;
-
-      removeCommonBlendMask(Blend);
+    for (VPBlendRecipe &Blend :
+         make_early_inc_range(vputils::recipesOnly<VPBlendRecipe>(*VPBB))) {
+      removeCommonBlendMask(&Blend);
 
       // Try to remove redundant blend recipes.
       SmallPtrSet<VPValue *, 4> UniqueValues;
-      if (Blend->isNormalized() || !match(Blend->getMask(0), m_False()))
-        UniqueValues.insert(Blend->getIncomingValue(0));
-      for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-        if (!match(Blend->getMask(I), m_False()))
-          UniqueValues.insert(Blend->getIncomingValue(I));
+      if (Blend.isNormalized() || !match(Blend.getMask(0), m_False()))
+        UniqueValues.insert(Blend.getIncomingValue(0));
+      for (unsigned I = 1; I != Blend.getNumIncomingValues(); ++I)
+        if (!match(Blend.getMask(I), m_False()))
+          UniqueValues.insert(Blend.getIncomingValue(I));
 
       if (UniqueValues.size() == 1) {
-        Blend->replaceAllUsesWith(*UniqueValues.begin());
-        Blend->eraseFromParent();
+        Blend.replaceAllUsesWith(*UniqueValues.begin());
+        Blend.eraseFromParent();
         continue;
       }
 
-      if (Blend->isNormalized())
+      if (Blend.isNormalized())
         continue;
 
       // Normalize the blend so its first incoming value is used as the initial
       // value with the others blended into it.
 
       unsigned StartIndex = 0;
-      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+      for (unsigned I = 0; I != Blend.getNumIncomingValues(); ++I) {
         // If a value's mask is used only by the blend then is can be deadcoded.
         // TODO: Find the most expensive mask that can be deadcoded, or a mask
         // that's used by multiple blends where it can be removed from them all.
-        VPValue *Mask = Blend->getMask(I);
+        VPValue *Mask = Blend.getMask(I);
         if (Mask->hasOneUse() && !match(Mask, m_False())) {
           StartIndex = I;
           break;
@@ -1937,23 +1931,23 @@ static void simplifyBlends(VPlan &Plan) {
       }
 
       SmallVector<VPValue *, 4> OperandsWithMask;
-      OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
+      OperandsWithMask.push_back(Blend.getIncomingValue(StartIndex));
 
-      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+      for (unsigned I = 0; I != Blend.getNumIncomingValues(); ++I) {
         if (I == StartIndex)
           continue;
-        OperandsWithMask.push_back(Blend->getIncomingValue(I));
-        OperandsWithMask.push_back(Blend->getMask(I));
+        OperandsWithMask.push_back(Blend.getIncomingValue(I));
+        OperandsWithMask.push_back(Blend.getMask(I));
       }
 
       auto *NewBlend =
-          new VPBlendRecipe(cast_or_null<PHINode>(Blend->getUnderlyingValue()),
-                            OperandsWithMask, *Blend, Blend->getDebugLoc());
-      NewBlend->insertBefore(&R);
+          new VPBlendRecipe(cast_or_null<PHINode>(Blend.getUnderlyingValue()),
+                            OperandsWithMask, Blend, Blend.getDebugLoc());
+      NewBlend->insertBefore(&Blend);
 
-      VPValue *DeadMask = Blend->getMask(StartIndex);
-      Blend->replaceAllUsesWith(NewBlend);
-      Blend->eraseFromParent();
+      VPValue *DeadMask = Blend.getMask(StartIndex);
+      Blend.replaceAllUsesWith(NewBlend);
+      Blend.eraseFromParent();
       vputils::recursivelyDeleteDeadRecipes(DeadMask);
 
       /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
@@ -2204,17 +2198,14 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 }
 
 void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
-  for (VPRecipeBase &R :
-       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!PhiR)
-      continue;
-    RecurKind RK = PhiR->getRecurrenceKind();
+  for (VPReductionPHIRecipe &PhiR : vputils::recipesOnly<VPReductionPHIRecipe>(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
+    RecurKind RK = PhiR.getRecurrenceKind();
     if (RK != RecurKind::Add && RK != RecurKind::Mul && RK != RecurKind::Sub &&
         RK != RecurKind::AddChainWithSubs)
       continue;
 
-    for (VPUser *U : vputils::collectUsersRecursively(PhiR))
+    for (VPUser *U : vputils::collectUsersRecursively(&PhiR))
       if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(U)) {
         RecWithFlags->dropPoisonGeneratingFlags();
       }
@@ -2761,17 +2752,15 @@ void VPlanTransforms::replaceSymbolicStrides(
     RewriteMap[StrideV] = StrideExpr;
   }
 
-  for (VPRecipeBase &R : *Plan.getEntry()) {
-    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpSCEV)
-      continue;
-    const SCEV *ScevExpr = ExpSCEV->getSCEV();
+  for (VPExpandSCEVRecipe &ExpSCEV :
+       vputils::recipesOnly<VPExpandSCEVRecipe>(*Plan.getEntry())) {
+    const SCEV *ScevExpr = ExpSCEV.getSCEV();
     auto *NewSCEV =
         SCEVParameterRewriter::rewrite(ScevExpr, *PSE.getSE(), RewriteMap);
     if (NewSCEV != ScevExpr) {
       VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
-      ExpSCEV->replaceAllUsesWith(NewExp);
-      if (Plan.getTripCount() == ExpSCEV)
+      ExpSCEV.replaceAllUsesWith(NewExp);
+      if (Plan.getTripCount() == &ExpSCEV)
         Plan.resetTripCount(NewExp);
     }
   }
@@ -5325,18 +5314,15 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       ChainsByPhi;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   SmallVector<VPReductionPHIRecipe *, 4> UnorderedReductions;
-  for (VPRecipeBase &R : HeaderVPBB->phis()) {
-    auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!RedPhiR)
-      continue;
-
-    if (auto Chains = getScaledReductions(RedPhiR))
-      ChainsByPhi.try_emplace(RedPhiR, std::move(*Chains));
+  for (VPReductionPHIRecipe &RedPhiR :
+       vputils::recipesOnly<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
+    if (auto Chains = getScaledReductions(&RedPhiR))
+      ChainsByPhi.try_emplace(&RedPhiR, std::move(*Chains));
     else if (UsePartialReductionsByDefault &&
-             (RedPhiR->getRecurrenceKind() == RecurKind::Add ||
-              (RedPhiR->getRecurrenceKind() == RecurKind::FAdd &&
-               !RedPhiR->isOrdered() && !RedPhiR->isInLoop())))
-      UnorderedReductions.push_back(RedPhiR);
+             (RedPhiR.getRecurrenceKind() == RecurKind::Add ||
+              (RedPhiR.getRecurrenceKind() == RecurKind::FAdd &&
+               !RedPhiR.isOrdered() && !RedPhiR.isInLoop())))
+      UnorderedReductions.push_back(&RedPhiR);
   }
 
   // For general unordered reductions which aren't part of a candidate chain for
@@ -5497,12 +5483,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (VPI && VPI->getUnderlyingValue() &&
+    for (VPInstruction &VPI : vputils::recipesOnly<VPInstruction>(*VPBB)) {
+      if (VPI.getUnderlyingValue() &&
           is_contained({Instruction::Load, Instruction::Store},
-                       VPI->getOpcode()))
-        MemOps.push_back(VPI);
+                       VPI.getOpcode()))
+        MemOps.push_back(&VPI);
     }
   }
 
@@ -5675,40 +5660,37 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
-    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI)
-        continue;
-
-      auto *I = cast_or_null<Instruction>(VPI->getUnderlyingValue());
+    for (VPInstruction &VPI : make_early_inc_range(
+             vputils::recipesOnly<VPInstruction>(reverse(*VPBB)))) {
+      auto *I = cast_or_null<Instruction>(VPI.getUnderlyingValue());
       // Wouldn't be able to create a `VPReplicateRecipe` anyway.
       if (!I)
         continue;
 
       // If executing other lanes produces side-effects we can't avoid them.
-      if (VPI->mayHaveSideEffects())
+      if (VPI.mayHaveSideEffects())
         continue;
 
       // We want to drop the mask operand, verify we can safely do that.
-      if (VPI->isMasked() && !VPI->isSafeToSpeculativelyExecute())
+      if (VPI.isMasked() && !VPI.isSafeToSpeculativelyExecute())
         continue;
 
       // Avoid rewriting IV increment as that interferes with
       // `removeRedundantCanonicalIVs`.
-      if (VPI->getOpcode() == Instruction::Add &&
-          any_of(VPI->operands(), IsaPred<VPWidenIntOrFpInductionRecipe>))
+      if (VPI.getOpcode() == Instruction::Add &&
+          any_of(VPI.operands(), IsaPred<VPWidenIntOrFpInductionRecipe>))
         continue;
 
       // Other lanes are needed - can't drop them.
-      if (!vputils::onlyFirstLaneUsed(VPI))
+      if (!vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
       auto *Recipe = VPBuilder::createSingleScalarOp(
-          VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr, *VPI,
-          *VPI, VPI->getDebugLoc(), I);
-      Recipe->insertBefore(VPI);
-      VPI->replaceAllUsesWith(Recipe);
-      VPI->eraseFromParent();
+          VPI.getOpcode(), VPI.operandsWithoutMask(), /*Mask=*/nullptr, VPI,
+          VPI, VPI.getDebugLoc(), I);
+      Recipe->insertBefore(&VPI);
+      VPI.replaceAllUsesWith(Recipe);
+      VPI.eraseFromParent();
     }
   }
 }
@@ -5828,21 +5810,20 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                                 VPCostContext &CostCtx) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI || !VPI->getUnderlyingValue() ||
-          VPI->getOpcode() != Instruction::Call)
+    for (VPInstruction &VPI :
+         make_early_inc_range(vputils::recipesOnly<VPInstruction>(*VPBB))) {
+      if (!VPI.getUnderlyingValue() || VPI.getOpcode() != Instruction::Call)
         continue;
 
-      auto *CI = cast<CallInst>(VPI->getUnderlyingInstr());
-      SmallVector<VPValue *, 4> Ops(VPI->op_begin(),
-                                    VPI->op_begin() + CI->arg_size());
+      auto *CI = cast<CallInst>(VPI.getUnderlyingInstr());
+      SmallVector<VPValue *, 4> Ops(VPI.op_begin(),
+                                    VPI.op_begin() + CI->arg_size());
 
       CallWideningDecision Decision =
-          decideCallWidening(*VPI, Ops, Range.Start, CostCtx);
+          decideCallWidening(VPI, Ops, Range.Start, CostCtx);
       LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
-            return Decision == decideCallWidening(*VPI, Ops, VF, CostCtx);
+            return Decision == decideCallWidening(VPI, Ops, VF, CostCtx);
           },
           Range);
 
@@ -5850,31 +5831,31 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       switch (Decision.Kind) {
       case CallWideningDecision::KindTy::Intrinsic: {
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
-        Type *ResultTy = VPI->getScalarType();
-        Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI,
-                                                 *VPI, VPI->getDebugLoc());
+        Type *ResultTy = VPI.getScalarType();
+        Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, VPI,
+                                                 VPI, VPI.getDebugLoc());
         break;
       }
       case CallWideningDecision::KindTy::VectorVariant: {
         // Masked variants take the mask as a trailing parameter, so they have
         // one more parameter than the original call's arguments.
         if (Decision.Variant->arg_size() > Ops.size()) {
-          VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
+          VPValue *Mask = VPI.isMasked() ? VPI.getMask() : Plan.getTrue();
           Ops.push_back(Mask);
         }
-        Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
-        Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, *VPI,
-                                            *VPI, VPI->getDebugLoc());
+        Ops.push_back(VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1));
+        Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, VPI, VPI,
+                                            VPI.getDebugLoc());
         break;
       }
       case CallWideningDecision::KindTy::Scalarize:
-        Replacement = RecipeBuilder.handleReplication(VPI, Range);
+        Replacement = RecipeBuilder.handleReplication(&VPI, Range);
         break;
       }
 
-      Replacement->insertBefore(VPI);
-      VPI->replaceAllUsesWith(Replacement);
-      VPI->eraseFromParent();
+      Replacement->insertBefore(&VPI);
+      VPI.replaceAllUsesWith(Replacement);
+      VPI.eraseFromParent();
     }
   }
 }
