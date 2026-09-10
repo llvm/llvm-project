@@ -258,8 +258,8 @@ protected:
   /// instruction.
   template <typename T, typename ShuffleBuilderTy, typename... Args>
   static T createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
-                         ShuffleBuilderTy &Builder, Type *ScalarTy, bool ReVec,
-                         Args... Arguments) {
+                         ShuffleBuilderTy &Builder, Type *ScalarTy,
+                         [[maybe_unused]] bool ReVec, Args... Arguments) {
     assert(V1 && "Expected at least one vector value.");
     unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     SmallVector<int> NewMask(Mask);
