@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CrossTU/CrossTUDiagnostic.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -35,11 +36,40 @@ using namespace clang::tooling;
 static cl::OptionCategory
     ClangExtDefMapGenCategory("clang-extdef-mapping options");
 
+class ExtDefNameMap {
+  llvm::StringMap<std::string> Index;
+  llvm::StringSet<> WeakNames;
+
+public:
+  bool addName(const std::string &USR, bool IsWeak,
+               const std::string &FileName) {
+    bool NameExists = Index.contains(USR);
+    if (IsWeak) {
+      if (!NameExists) {
+        Index[USR] = FileName;
+        WeakNames.insert(USR);
+      }
+    } else {
+      bool ExistingIsWeak = WeakNames.erase(USR);
+      if (NameExists && !ExistingIsWeak)
+        return false;
+      Index[USR] = FileName;
+    }
+    return true;
+  }
+
+  const std::string &lookupName(const std::string &USR) const {
+    return Index.at(USR);
+  }
+
+  void printIndex() const { llvm::outs() << createCrossTUIndexString(Index); }
+};
+
 class MapExtDefNamesConsumer : public ASTConsumer {
 public:
-  MapExtDefNamesConsumer(ASTContext &Context,
+  MapExtDefNamesConsumer(ExtDefNameMap &NMap, ASTContext &Context,
                          StringRef astFilePath = StringRef())
-      : Ctx(Context), SM(Context.getSourceManager()) {
+      : Ctx(Context), SM(Context.getSourceManager()), NameMap(NMap) {
     CurrentFileName = astFilePath.str();
   }
 
@@ -47,21 +77,15 @@ public:
     handleDecl(Context.getTranslationUnitDecl());
   }
 
-  static void printIndex() { llvm::outs() << createCrossTUIndexString(Index); }
-
 private:
   void handleDecl(const Decl *D);
   void addIfInMain(const DeclaratorDecl *DD, SourceLocation defStart);
 
   ASTContext &Ctx;
   SourceManager &SM;
-  static llvm::StringMap<std::string> Index;
-  static llvm::StringSet<> WeakNames;
   std::string CurrentFileName;
+  ExtDefNameMap &NameMap;
 };
-
-llvm::StringMap<std::string> MapExtDefNamesConsumer::Index;
-llvm::StringSet<> MapExtDefNamesConsumer::WeakNames;
 
 void MapExtDefNamesConsumer::handleDecl(const Decl *D) {
   if (!D)
@@ -102,14 +126,11 @@ void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
   case Linkage::VisibleNone:
   case Linkage::UniqueExternal:
     if (SM.isInMainFile(defStart)) {
-      if (!DD->hasAttr<WeakAttr>()) {
-        Index[*LookupName] = CurrentFileName;
-        WeakNames.erase(*LookupName);
-      } else {
-        if (!Index.contains(*LookupName)) {
-          Index[*LookupName] = CurrentFileName;
-          WeakNames.insert(*LookupName);
-        }
+      if (!NameMap.addName(*LookupName, DD->hasAttr<WeakAttr>(),
+                           CurrentFileName)) {
+        Ctx.getDiagnostics().Report(DD->getLocation(),
+                                    diag::warn_multiple_def_index)
+            << NameMap.lookupName(*LookupName);
       }
     }
     break;
@@ -121,11 +142,29 @@ void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
 }
 
 class MapExtDefNamesAction : public ASTFrontendAction {
+public:
+  MapExtDefNamesAction(ExtDefNameMap &NMap) : NameMap(NMap) {}
+
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) override {
-    return std::make_unique<MapExtDefNamesConsumer>(CI.getASTContext());
+    return std::make_unique<MapExtDefNamesConsumer>(NameMap,
+                                                    CI.getASTContext());
   }
+
+private:
+  ExtDefNameMap &NameMap;
+};
+
+class MapExtDefNamesActionFactory : public FrontendActionFactory {
+public:
+  MapExtDefNamesActionFactory(ExtDefNameMap &NMap) : NameMap(NMap) {}
+  std::unique_ptr<FrontendAction> create() override {
+    return std::make_unique<MapExtDefNamesAction>(NameMap);
+  };
+
+private:
+  ExtDefNameMap &NameMap;
 };
 
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
@@ -155,7 +194,7 @@ GetDiagnosticsEngine(DiagnosticOptions &DiagOpts) {
 
 static CompilerInstance *CI = nullptr;
 
-static bool HandleAST(StringRef AstPath) {
+static bool HandleAST(ExtDefNameMap &NMap, StringRef AstPath) {
 
   if (!CI)
     CI = new CompilerInstance();
@@ -177,7 +216,7 @@ static bool HandleAST(StringRef AstPath) {
   FM.makeAbsolutePath(AbsPath);
 
   MapExtDefNamesConsumer Consumer =
-      MapExtDefNamesConsumer(Unit->getASTContext(), AbsPath);
+      MapExtDefNamesConsumer(NMap, Unit->getASTContext(), AbsPath);
   Consumer.HandleTranslationUnit(Unit->getASTContext());
 
   return true;
@@ -185,6 +224,7 @@ static bool HandleAST(StringRef AstPath) {
 
 static int HandleFiles(ArrayRef<std::string> SourceFiles,
                        CompilationDatabase &compilations) {
+  ExtDefNameMap NameMap;
   std::vector<std::string> SourcesToBeParsed;
 
   // Loop over all input files, if they are pre-compiled AST
@@ -192,7 +232,7 @@ static int HandleFiles(ArrayRef<std::string> SourceFiles,
   // on a list for ClangTool to handle.
   for (StringRef Src : SourceFiles) {
     if (Src.ends_with(".ast")) {
-      if (!HandleAST(Src)) {
+      if (!HandleAST(NameMap, Src)) {
         return 1;
       }
     } else {
@@ -200,13 +240,11 @@ static int HandleFiles(ArrayRef<std::string> SourceFiles,
     }
   }
 
-  int Ret = 0;
-  if (!SourcesToBeParsed.empty()) {
-    ClangTool Tool(compilations, SourcesToBeParsed);
-    Ret = Tool.run(newFrontendActionFactory<MapExtDefNamesAction>().get());
-  }
+  MapExtDefNamesActionFactory Factory(NameMap);
+  ClangTool Tool(compilations, SourcesToBeParsed);
+  int Ret = Tool.run(&Factory);
 
-  MapExtDefNamesConsumer::printIndex();
+  NameMap.printIndex();
 
   return Ret;
 }
