@@ -75,6 +75,14 @@ enum {
 #include "CorePropertiesEnum.inc"
 };
 
+#define LLDB_PROPERTIES_modulelist_experimental
+#include "CoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_modulelist_experimental
+#include "CorePropertiesEnum.inc"
+};
+
 } // namespace
 
 ModuleListProperties::ModuleListProperties() {
@@ -82,6 +90,16 @@ ModuleListProperties::ModuleListProperties() {
   m_collection_sp->Initialize(g_modulelist_properties_def);
   m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
                                            [this] { UpdateSymlinkMappings(); });
+
+  m_experimental_properties_sp = std::make_shared<OptionValueProperties>(
+      Properties::GetExperimentalSettingsName());
+  m_experimental_properties_sp->Initialize(
+      g_modulelist_experimental_properties_def);
+  m_collection_sp->AppendProperty(
+      Properties::GetExperimentalSettingsName(),
+      "Experimental settings - setting these won't produce "
+      "errors if the setting is not present.",
+      true, m_experimental_properties_sp);
 
   llvm::SmallString<128> path;
   if (llvm::sys::path::cache_directory(path)) {
@@ -99,6 +117,17 @@ bool ModuleListProperties::GetEnableExternalLookup() const {
 
 bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
   return SetPropertyAtIndex(ePropertyEnableExternalLookup, new_value);
+}
+
+bool ModuleListProperties::GetEnableTypeSystemClike() const {
+  const uint32_t idx = ePropertyEnableTypeSystemClike;
+  return m_experimental_properties_sp->GetPropertyAtIndexAs<bool>(idx).value_or(
+      g_modulelist_experimental_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetEnableTypeSystemClike(bool new_value) {
+  return m_experimental_properties_sp->SetPropertyAtIndex(
+      ePropertyEnableTypeSystemClike, new_value);
 }
 
 SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
