@@ -49,6 +49,7 @@ struct GPUInfo {
 struct R600Info {
   StringTable::Offset Name;
   R600FeatureKind ArchFeatures;
+  R600FeatureBitset Features;
 };
 
 #define GET_AMDGPU_NAME_TABLE
@@ -62,6 +63,7 @@ struct R600Info {
 #define GET_R600_NAME_TABLE
 #define GET_R600_GPU_TABLE
 #define GET_R600_GPU_ALIAS_TABLE
+#define GET_R600_FEATURE_NAME_TABLE
 #include "llvm/TargetParser/R600TargetParserDef.inc"
 
 // The string tables holding GPU-name-derived strings as offsets. R600 and
@@ -328,6 +330,12 @@ R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
 const AMDGPUFeatureBitset &AMDGPU::getFeatureBitset(GPUKind AK) {
   static constexpr AMDGPUFeatureBitset Empty{};
   const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->Features : Empty;
+}
+
+const R600FeatureBitset &AMDGPU::getFeatureBitsetR600(GPUKind AK) {
+  static constexpr R600FeatureBitset Empty{};
+  const R600Info *Info = getR600Info(AK);
   return Info ? Info->Features : Empty;
 }
 
