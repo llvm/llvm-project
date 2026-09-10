@@ -630,10 +630,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
       .widenScalarToNextPow2(0)
       .minScalar(0, s32)
+      // The magnitude of a half is at most 65504, so with Zfh use fcvt.w[u].h
+      // and extend the i32 result. Without Zfh, use the libcalls.
+      .libcallFor(!ST.hasStdExtZfh(), {{s64, s16}})
+      .narrowScalarFor({{s64, s16}}, changeTo(0, s32))
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
-      // The fcvt.l[u].h conversions are RV64-only, so RV32 falls back to the
-      // half-variant conversion libcalls.
-      .libcallFor({{s64, s16}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
 
