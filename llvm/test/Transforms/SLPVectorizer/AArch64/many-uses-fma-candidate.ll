@@ -14,7 +14,7 @@ define double @test(ptr %0, ptr %1) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul reassoc nsz <4 x double> [[TMP4]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP10:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul double [[TMP5]], 2.000000e+00
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul reassoc nsz double [[TMP5]], 2.000000e+00
 ; CHECK-NEXT:    [[OP_RDX5:%.*]] = fadd reassoc nsz double [[TMP11]], [[TMP8]]
 ; CHECK-NEXT:    [[OP_RDX6:%.*]] = fadd reassoc nsz double [[OP_RDX5]], [[TMP6]]
 ; CHECK-NEXT:    [[OP_RDX7:%.*]] = fadd reassoc nsz double [[OP_RDX6]], [[TMP7]]

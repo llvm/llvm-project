@@ -14,6 +14,7 @@
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
+#include "llvm/Support/InitLLVM.h"
 
 using namespace mlir;
 
@@ -37,6 +38,7 @@ static void registerTestTranslations() {
 }
 
 int main(int argc, char **argv) {
+  llvm::InitLLVM y(argc, argv);
   registerAllTranslations();
   registerTestTranslations();
   return failed(mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));
