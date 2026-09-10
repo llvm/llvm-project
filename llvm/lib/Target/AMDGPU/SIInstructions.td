@@ -1192,6 +1192,8 @@ def V_LOAD_IDX_BITS : VPseudoInstSI<(outs VGPR_32:$data),
   let mayLoad = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
+  // See the whole-dword pseudos above: the inserter supplies the M0 operand.
+  let usesCustomInserter = 1;
 }
 
 // Used for byte or short stores.
@@ -1204,6 +1206,8 @@ def V_STORE_IDX_BITS : VPseudoInstSI<(outs),
   let mayStore = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
+  // See the whole-dword pseudos above: the inserter supplies the M0 operand.
+  let usesCustomInserter = 1;
 }
 
 // Select the REG_LOAD_BITS/REG_STORE_BITS target nodes into the sub-dword
