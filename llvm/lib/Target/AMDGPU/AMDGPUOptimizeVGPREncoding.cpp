@@ -1,4 +1,4 @@
-//===-- AMDGPUOptimizeVGPREncoding.cpp --------------------------*- C++- *-===//
+//===-- AMDGPUOptimizeVGPREncoding.cpp --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 /// occur.
 ///
 /// In the future, the intent is for this pass to also try to minimize VGPR bank
-/// conflicts on subtarget where it is relevant.
+/// conflicts on subtargets where it is relevant.
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,8 +30,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -75,10 +77,10 @@ struct ModeInstr {
   /// of a previous/next instruction.
   static constexpr unsigned NoIdx = ~0U;
 
-  /// For each operand type, virtual of physical VGPR operand used by the
+  /// For each operand type, virtual or physical VGPR operand used by the
   /// instruction. A null register indicates the instruction has no VGPR operand
   /// of that type. For VOPD instructions, this holds VGPRs for the first of the
-  /// two instruction which define a VGPR of each operand type.
+  /// two instructions which define a VGPR of each operand type.
   std::array<Register, NumOprdTypes> Oprds;
   /// For each operand type, indices of previous/next neighbor instructions with
   /// defined operands in the instruction list this instruction is a part of.
@@ -178,8 +180,8 @@ private:
 /// currently in the corresponding MSB group. Two registers (virtual or
 /// physical) are initially considered neighbors when they are used as operands
 /// of the same type in two neighboring instructions (c.f. \ref ModeInstr). A
-/// register's neighborhood---and thefore its score---changes throughout the
-/// pass's lifetime to reflect the simulataed placement of MODE-setting
+/// register's neighborhood---and therefore its score---changes throughout the
+/// pass's lifetime to reflect the simulated placement of MODE-setting
 /// instructions.
 ///
 /// An optimizable register is said to be "pinned" when the MSB group of its
@@ -190,9 +192,9 @@ class OptReg {
 public:
   using WeightedNeighbors = SmallDenseMap<OptReg *, unsigned, 4>;
 
-  /// Abstract coordinates for an occurence of this register.
+  /// Abstract coordinates for an occurrence of this register.
   struct Coordinates {
-    /// This index of the MBB.
+    /// The index of the MBB.
     unsigned MBBIndex;
     /// The index of the MODE-using instruction.
     unsigned InstrIdx;
@@ -205,18 +207,18 @@ public:
   /// created/destroyed through class methods.
   OptReg(Register VirtReg, const VirtRegMap &VRM);
 
-  /// Returns the total number of occurences of pinned neighbor registers in \p
+  /// Returns the total number of occurrences of pinned neighbor registers in \p
   /// Group.
   unsigned getGroupPinnedScore(MSBGroup Group) const {
     return PinnedScore[Group];
   }
 
-  /// Returns the total number of occurences of neighbor registers in \p Group.
+  /// Returns the total number of occurrences of neighbor registers in \p Group.
   unsigned getGroupScore(MSBGroup Group) const {
     return PinnedScore[Group] + Score[Group];
   }
 
-  /// Returns the total number of occurences of neighbor registers in this
+  /// Returns the total number of occurrences of neighbor registers in this
   /// register's current MSB group.
   unsigned getCurrentGroupScore() const { return getGroupScore(MSB); }
 
@@ -229,8 +231,8 @@ public:
   const WeightedNeighbors &getNeighbors() const { return Neighbors; }
 
   /// Returns the list of coordinates corresponding to this register's
-  /// occurences.
-  ArrayRef<Coordinates> getOccurences() const { return Occurences; }
+  /// occurrences.
+  ArrayRef<Coordinates> getOccurrences() const { return Occurrences; }
 
   /// Returns the underlying virtual register.
   Register getVirt() const { return VirtReg; }
@@ -245,23 +247,23 @@ public:
   /// Returns whether the register is pinned.
   bool isPinned() const { return IsPinned; }
 
-  // addOccurence and record* methods used by OptimizableRegs to initialize the
-  // occurences and neighborhood of all optimizable registers at the beginning.
+  // addOccurrence and record* methods used by OptimizableRegs to initialize the
+  // occurrences and neighborhood of all optimizable registers at the beginning.
 
-  /// Adds an occurence of this register in operand type \p Oprd of instruction
+  /// Adds an occurrence of this register in operand type \p Oprd of instruction
   /// \p InstrIdx of MBB \p MBBIdx.
-  void addOccurence(unsigned MBBIndex, unsigned InstrIdx, OprdType Oprd) {
-    Occurences.push_back({MBBIndex, InstrIdx, Oprd});
+  void addOccurrence(unsigned MBBIndex, unsigned InstrIdx, OprdType Oprd) {
+    Occurrences.push_back({MBBIndex, InstrIdx, Oprd});
   }
 
-  /// Records an occurence of \p NeighborReg as a neighbor.
-  void recordNeighborOccurence(OptReg &NeighborReg);
+  /// Records an occurrence of \p NeighborReg as a neighbor.
+  void recordNeighborOccurrence(OptReg &NeighborReg);
 
-  /// Records an occurence of physical register \p PhysReg as a neighbor.
-  void recordPhysNeighborOccurence(Register PhysReg, const VirtRegMap &VRM);
+  /// Records an occurrence of physical register \p PhysReg as a neighbor.
+  void recordPhysNeighborOccurrence(Register PhysReg, const VirtRegMap &VRM);
 
-  /// Records an occurence of this register at a block boundary. This adds a
-  /// "pinned occurence" of the default MSB group in which all MBBs start and
+  /// Records an occurrence of this register at a block boundary. This adds a
+  /// "pinned occurrence" of the default MSB group in which all MBBs start and
   /// end.
   void recordBlockBoundaryPin() { ++PinnedScore[DefaultGroup]; }
 
@@ -270,25 +272,25 @@ public:
   // simulates placement of MODE-setting instructions. remove* methods mirror
   // record* methods 1-to-1.
 
-  /// Pins this register's to the MSB group of its currently assigned physical
+  /// Pins this register to the MSB group of its currently assigned physical
   /// register.
   void pinMSBGroup();
 
-  /// Removes an occurence of \p NeighborReg as a neighbor.
-  void removeNeighborOccurence(OptReg &NeighborReg);
+  /// Removes an occurrence of \p NeighborReg as a neighbor.
+  void removeNeighborOccurrence(OptReg &NeighborReg);
 
-  /// Removes an occurence of physical register \p PhysReg as a neighbor.
-  void removePhysNeighborOccurence(Register PhysReg, const VirtRegMap &VRM);
+  /// Removes an occurrence of physical register \p PhysReg as a neighbor.
+  void removePhysNeighborOccurrence(Register PhysReg, const VirtRegMap &VRM);
 
-  /// Removes an occurence of this register at a block boundary. This removes a
-  /// "pinned occurence" of the default MSB group in which all MBBs start and
+  /// Removes an occurrence of this register at a block boundary. This removes a
+  /// "pinned occurrence" of the default MSB group in which all MBBs start and
   /// end.
   void removeBlockBoundaryPin() {
     assert(PinnedScore[DefaultGroup] > 0 && "underflow");
     --PinnedScore[DefaultGroup];
   }
 
-  /// Notifies the optimizable register that its assigned physcial register has
+  /// Notifies the optimizable register that its assigned physical register has
   /// changed and that its new assignment belongs to MSB group \p NewGroup. It
   /// is illegal to change the MSB group of a pinned register.
   void notifyPhysAssignmentChanged(MSBGroup NewGroup);
@@ -300,21 +302,21 @@ public:
 private:
   /// The virtual register.
   Register VirtReg;
-  /// MSB group of the virtual register's current physcial register assignment.
+  /// MSB group of the virtual register's current physical register assignment.
   MSBGroup MSB;
-  /// Per-MSB group score, counting the number of occurences of neighbor
-  /// registers in each group, separated between occurences of unpinned
+  /// Per-MSB group score, counting the number of occurrences of neighbor
+  /// registers in each group, separated between occurrences of unpinned
   /// optimizable registers from the others (physical registers, pinned
   /// optimizable registers, and block boundaries). Reflects the register's
   /// current neighborhood.
   std::array<unsigned, NumMSBGroups> Score, PinnedScore;
   /// Maps neighboring optimizable registers to the number of times they occur
-  /// in the neighborhood of one of this register's occurences. Neighbors can be
-  /// added or removed at will after construction, impacting the score.
+  /// in the neighborhood of one of this register's occurrences. Neighbors can
+  /// be added or removed at will after construction, impacting the score.
   WeightedNeighbors Neighbors;
-  /// Occurences of this register in the function under consideration.
-  /// Occurences can be added after construction but cannot be removed.
-  SmallVector<Coordinates> Occurences;
+  /// Occurrences of this register in the function under consideration.
+  /// Occurrences can be added after construction but cannot be removed.
+  SmallVector<Coordinates> Occurrences;
   /// Whether the register is pinned to \ref MSB.
   bool IsPinned = false;
 };
@@ -370,22 +372,22 @@ private:
   SmallVector<unsigned, 0> VirtRegToStorageIdx;
 };
 
-/// Simulates placement of MODE-setting instructions as unoptimizable MSB groups
+/// Simulates placement of MODE-setting instructions as unoptimizable MSB group
 /// conflicts are detected, driving optimization forward by progressively
 /// pruning register neighborhoods and pinning optimizable registers once they
 /// reach an "ideal" MSB group.
 ///
 /// The detection and resolution of unoptimizable MSB group conflicts is this
 /// class's main purpose. An optimizable register with non-null score
-/// contributions from pinned neighbors in more that one MSB group will
-/// necessarily require MODE-setting instructions around its occurences that
+/// contributions from pinned neighbors in more than one MSB group will
+/// necessarily require MODE-setting instructions around its occurrences that
 /// neighbor pinned registers in all but one of those MSB groups. This is a
 /// conflict in the sense that we would need the register to be in multiple MSB
 /// groups at the same time to not need MODE-setting instructions. It is
 /// unoptimizable by the pass because pinned neighbors are not allowed to change
 /// MSB group, so no amount of register re-assignment can resolve it. The
 /// objective is to detect those situations early so that no effort is made
-/// attempting to optimize MSB conflits at code locations where we are
+/// attempting to optimize MSB conflicts at code locations where we are
 /// guaranteed to be unable to solve them. The class resolves such conflicts by
 /// simulating the placement of MODE-setting instructions around problematic
 /// registers, effectively "breaking" their relationships with some pinned
@@ -399,9 +401,9 @@ private:
 /// registers reach an "ideal" MSB group that they can be pinned to.
 ///
 /// FIXME: The current approach to determine where we place MODE-setting
-/// instructions to resolve conflicts is correct however when there are multiple
-/// possible locations to choose from it does not attempt to analyze the
-/// expected benefit of each. Picking the best location in such cases should
+/// instructions to resolve conflicts is correct, however when there are
+/// multiple possible locations to choose from it does not attempt to analyze
+/// the expected benefit of each. Picking the best location in such cases should
 /// improve overall pass performance.
 class ModeSetOptimizer {
 public:
@@ -446,8 +448,8 @@ private:
   ArrayRef<MBBModeUsage> ModeUsage;
   const VirtRegMap &VRM;
 
-  /// Resolve conflicts for \p Reg, if any, and returns whether the register had
-  /// conflicts.
+  /// Resolves conflicts for \p Reg, if any, and returns whether the register
+  /// had conflicts.
   bool resolveConflictingPins(OptReg &Reg);
 
   /// Returns whether we consider that \p Reg should be pinned. Registers whose
@@ -455,7 +457,7 @@ private:
   /// group are in the perfect MSB group and should never change group again.
   bool shouldBePinned(const OptReg &Reg) const;
 
-  /// Pins \p Reg if it is eligible according to \ref shouldbePinned. Returns
+  /// Pins \p Reg if it is eligible according to \ref shouldBePinned. Returns
   /// whether the register was newly pinned.
   bool pinIfEligible(OptReg &Reg);
 
@@ -633,7 +635,7 @@ private:
   /// parent. Returns true if it moved at all.
   bool siftUp(unsigned HeapIdx);
 
-  /// Sifts the element at \p HeapIdx towards the leaves while it is outranged
+  /// Sifts the element at \p HeapIdx towards the leaves while it is outranked
   /// by its children.
   bool siftDown(unsigned HeapIdx);
 };
@@ -667,7 +669,7 @@ class AMDGPUOptimizeVGPREncoding {
 public:
   AMDGPUOptimizeVGPREncoding(VirtRegMap &VRM, LiveIntervals &LIS,
                              LiveRegMatrix &LRM)
-      : VRM(VRM), LIS(LIS), LRM(LRM){};
+      : VRM(VRM), LIS(LIS), LRM(LRM) {}
 
   bool run(MachineFunction &MF);
 
@@ -875,7 +877,7 @@ void OptReg::pinMSBGroup() {
   }
 }
 
-void OptReg::recordNeighborOccurence(OptReg &NeighborReg) {
+void OptReg::recordNeighborOccurrence(OptReg &NeighborReg) {
   assert(&NeighborReg != this && "cannot be neighbor with itself");
   ++Neighbors.insert({&NeighborReg, 0}).first->getSecond();
   if (NeighborReg.isPinned())
@@ -884,7 +886,7 @@ void OptReg::recordNeighborOccurence(OptReg &NeighborReg) {
     ++Score[NeighborReg.MSB];
 }
 
-void OptReg::removeNeighborOccurence(OptReg &NeighborReg) {
+void OptReg::removeNeighborOccurrence(OptReg &NeighborReg) {
   // Update neighbors.
   auto Neighbor = Neighbors.find(&NeighborReg);
   assert(Neighbor != Neighbors.end() && "neighbor must exist");
@@ -901,14 +903,14 @@ void OptReg::removeNeighborOccurence(OptReg &NeighborReg) {
   }
 }
 
-void OptReg::recordPhysNeighborOccurence(Register PhysReg,
-                                         const VirtRegMap &VRM) {
+void OptReg::recordPhysNeighborOccurrence(Register PhysReg,
+                                          const VirtRegMap &VRM) {
   assert(PhysReg.isPhysical() && "must be physical register");
   ++PinnedScore[getVGPRGroup(PhysReg, VRM)];
 }
 
-void OptReg::removePhysNeighborOccurence(Register PhysReg,
-                                         const VirtRegMap &VRM) {
+void OptReg::removePhysNeighborOccurrence(Register PhysReg,
+                                          const VirtRegMap &VRM) {
   assert(PhysReg.isPhysical() && "must be physical register");
   MSBGroup PhysGroup = getVGPRGroup(PhysReg, VRM);
   assert(PinnedScore[PhysGroup] > 0 && "underflow");
@@ -947,8 +949,8 @@ OptimizableRegs::OptimizableRegs(const BitVector &OptVirtRegs,
       Reg.pinMSBGroup();
   }
 
-  // Idnetify the neighborhood and occurences of each register. This initializes
-  // the score of all optimizable registers.
+  // Identify the neighborhood and occurrences of each register. This
+  // initializes the score of all optimizable registers.
   for (const auto &[MBBIdx, BlockUsage] : enumerate(ModeUsage)) {
     ArrayRef<ModeInstr> Instructions = BlockUsage.getInstructions();
     if (Instructions.empty())
@@ -965,7 +967,7 @@ OptimizableRegs::OptimizableRegs(const BitVector &OptVirtRegs,
         OptReg *CurrentOptReg = (*this)[Reg];
         if (CurrentOptReg) {
           assert(Reg.isVirtual() && "only virtregs are optimizable");
-          CurrentOptReg->addOccurence(MBBIdx, InstrIdx, Oprd);
+          CurrentOptReg->addOccurrence(MBBIdx, InstrIdx, Oprd);
 
           if (!PreviousOptReg) {
             unsigned PrevIdx = CurrentInstr.Prev[Oprd];
@@ -976,19 +978,19 @@ OptimizableRegs::OptimizableRegs(const BitVector &OptVirtRegs,
               // the first register.
               CurrentOptReg->recordBlockBoundaryPin();
             } else {
-              // The register immediately preceeding this was a physical one.
+              // The register immediately preceding this was a physical one.
               Register PhysReg = Instructions[PrevIdx].Oprds[Oprd];
-              CurrentOptReg->recordPhysNeighborOccurence(PhysReg, VRM);
+              CurrentOptReg->recordPhysNeighborOccurrence(PhysReg, VRM);
             }
           } else if (CurrentOptReg != PreviousOptReg) {
             // The two virtual registers are neighbors.
-            CurrentOptReg->recordNeighborOccurence(*PreviousOptReg);
-            PreviousOptReg->recordNeighborOccurence(*CurrentOptReg);
+            CurrentOptReg->recordNeighborOccurrence(*PreviousOptReg);
+            PreviousOptReg->recordNeighborOccurrence(*CurrentOptReg);
           }
         } else if (PreviousOptReg) {
           // We have a virtual register followed by a physical one on the same
           // operand stream. We just need to update the former's pin score.
-          PreviousOptReg->recordPhysNeighborOccurence(Reg, VRM);
+          PreviousOptReg->recordPhysNeighborOccurrence(Reg, VRM);
           PreviousOptReg = nullptr;
         }
 
@@ -1043,7 +1045,7 @@ MSBGroup ModeSetOptimizer::selectPreferredMSBGroup(const OptReg &Reg) const {
     if (PinnedScore < MaxPinnedScore)
       continue;
 
-    // Ammong MSB groups with the same number of pinned neighbors, favor the one
+    // Among MSB groups with the same number of pinned neighbors, favor the one
     // with highest number of unpinned neighbors.
     unsigned TotalScore = Reg.getGroupScore(Group);
     if (PinnedScore == MaxPinnedScore && MaxTotalScore > TotalScore)
@@ -1112,21 +1114,21 @@ void ModeSetOptimizer::breakNeighborRelationship(unsigned MBBIdx,
   if (AfterReg == BeforeReg)
     return;
 
-  // Notify registers that one occurence of their neighborhood relationship is
+  // Notify registers that one occurrence of their neighborhood relationship is
   // broken. Optimizable registers which have their score affected by the
   // break may become pinnable.
-  OptReg *AferOptReg = OptRegs[AfterReg];
+  OptReg *AfterOptReg = OptRegs[AfterReg];
   OptReg *BeforeOptReg = OptRegs[BeforeReg];
-  if (AferOptReg && BeforeOptReg) {
-    AferOptReg->removeNeighborOccurence(*BeforeOptReg);
-    BeforeOptReg->removeNeighborOccurence(*AferOptReg);
+  if (AfterOptReg && BeforeOptReg) {
+    AfterOptReg->removeNeighborOccurrence(*BeforeOptReg);
+    BeforeOptReg->removeNeighborOccurrence(*AfterOptReg);
     CheckShouldBePinned.set(AfterReg.virtRegIndex());
     CheckShouldBePinned.set(BeforeReg.virtRegIndex());
-  } else if (AferOptReg) {
-    AferOptReg->removePhysNeighborOccurence(BeforeReg, VRM);
+  } else if (AfterOptReg) {
+    AfterOptReg->removePhysNeighborOccurrence(BeforeReg, VRM);
     CheckShouldBePinned.set(AfterReg.virtRegIndex());
   } else if (BeforeOptReg) {
-    BeforeOptReg->removePhysNeighborOccurence(AfterReg, VRM);
+    BeforeOptReg->removePhysNeighborOccurrence(AfterReg, VRM);
     CheckShouldBePinned.set(BeforeReg.virtRegIndex());
   }
 }
@@ -1148,7 +1150,7 @@ bool ModeSetOptimizer::resolveConflictingPins(OptReg &Reg) {
   // group is not the preferred one.
   if (PreferredGroup != DefaultGroup &&
       Reg.getGroupPinnedScore(DefaultGroup) > 0) {
-    for (const auto &[MBBIdx, InstrIdx, Oprd] : Reg.getOccurences()) {
+    for (const auto &[MBBIdx, InstrIdx, Oprd] : Reg.getOccurrences()) {
       const MBBModeUsage &MBB = ModeUsage[MBBIdx];
       if (InstrIdx == MBB.getFirstOprd(Oprd) &&
           !hasModeSetBefore(MBBIdx, InstrIdx)) {
@@ -1167,25 +1169,25 @@ bool ModeSetOptimizer::resolveConflictingPins(OptReg &Reg) {
     }
   }
 
-  // Conflicts with occurences of pinned neighbors in the non-preferred MSB
+  // Conflicts with occurrences of pinned neighbors in the non-preferred MSB
   // group need to be resolved. Iterate over a copy of the list of neighbors
   // because they will be modified as we simulate placement of MODE-setting
   // instructions.
   OptReg::WeightedNeighbors Neighbors(Reg.getNeighbors());
   for (const auto &[NeighborReg, _] : Neighbors) {
-    // Early exit when we know we are not gonna find conflicting occurences.
+    // Early exit when we know we are not going to find conflicting occurrences.
     if (!NeighborReg->isPinned() || NeighborReg->getMSB() == PreferredGroup ||
         Reg.getGroupPinnedScore(NeighborReg->getMSB()) == 0)
       continue;
 
-    // Look through occurences for conflicts.
-    for (const auto &[MBBIdx, InstrIdx, Oprd] : NeighborReg->getOccurences()) {
+    // Look through occurrences for conflicts.
+    for (const auto &[MBBIdx, InstrIdx, Oprd] : NeighborReg->getOccurrences()) {
       const MBBModeUsage &MBB = ModeUsage[MBBIdx];
       ArrayRef<ModeInstr> Instructions = MBB.getInstructions();
 
-      // Look at the operand immediately before this neighbor occurence. If it
+      // Look at the operand immediately before this neighbor occurrence. If it
       // matches the register for which we are currently resolving conflicts,
-      // then it is one of the neighborhood relationship to break.
+      // then it is one of the neighborhood relationships to break.
       unsigned PrevIdx = MBB.getLastInstrBefore(InstrIdx, Oprd);
       if (PrevIdx != ModeInstr::NoIdx &&
           Instructions[PrevIdx].Oprds[Oprd] == Reg.getVirt() &&
@@ -1198,9 +1200,9 @@ bool ModeSetOptimizer::resolveConflictingPins(OptReg &Reg) {
         placeJustBefore(MBBIdx, InstrIdx);
       }
 
-      // Look at the operand immediately after this neighbor occurence. If it
+      // Look at the operand immediately after this neighbor occurrence. If it
       // matches the register for which we are currently resolving conflicts,
-      // then it is one of the neighborhood relationship to break.
+      // then it is one of the neighborhood relationships to break.
       unsigned NextIdx = MBB.getFirstInstrAfter(InstrIdx, Oprd);
       if (NextIdx != ModeInstr::NoIdx &&
           Instructions[NextIdx].Oprds[Oprd] == Reg.getVirt() &&
@@ -1332,7 +1334,7 @@ void OptRegCandidate::update() {
   // per-group score, at the extreme registers whose neighborhood is entirely
   // assigned to a single MSB group. On the contrary, registers whose
   // neighborhood is roughly evenly split between all MSB groups are not that
-  // profitable to re-assign; even if a MSB group with higher score than the
+  // profitable to re-assign, even if an MSB group with a higher score than the
   // current one the register is in exists.
   Benefit = CurrentScore;
   unsigned MaxGroupScore = CurrentScore;
@@ -1365,7 +1367,7 @@ void OptRegCandidate::update() {
     return;
 
   // We want to favor registers which would benefit from being re-assigned to
-  // the single MSB group in which they haved pinned neighbors (if there is
+  // the single MSB group in which they have pinned neighbors (if there is
   // one), as this is likely to resolve conflicts in the future without having
   // to place MODE-setting instructions.
   if (PinGroups.none()) {
@@ -1539,9 +1541,9 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
     // Constructs a max-heap with all remaining unpinned registers that are
     // candidates for re-assignment.
     //
-    /// FIXME: There is no need to re-construct the heap every time, we can just
-    /// let pin registers fall to the bottom of it since they have no target MSB
-    /// group by construction.
+    // FIXME: There is no need to re-construct the heap every time, we can just
+    // let pinned registers fall to the bottom of it since they have no target
+    // MSB group by construction.
     MaxHeap AllCandidates(OptRegs);
     LLVM_DEBUG(dbgs() << AllCandidates.print(VRM, LIS));
 
@@ -1554,7 +1556,7 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
     BitVector ScoreChanged(OptRegs.getNumVirtRegs());
 
     // Only accepting profitable candidates guarantees forward progress
-    // because re-assigning to target groups increase the combined score, which
+    // because re-assigning to target groups increases the combined score, which
     // is upper-bounded by the number of neighboring relationships between all
     // registers (itself only decreasing after initialization).
     while (OptRegCandidate *Candidate = AllCandidates.getMostProfitable()) {
@@ -1790,6 +1792,8 @@ public:
     AU.addPreserved<VirtRegMapWrapperLegacy>();
     AU.addPreserved<LiveRegMatrixWrapperLegacy>();
     AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
+    AU.addPreserved<LiveStacksWrapperLegacy>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -1831,5 +1835,13 @@ AMDGPUOptimizeVGPREncodingPass::run(MachineFunction &MF,
   if (!AMDGPUOptimizeVGPREncoding(VRM, LIS, LRM).run(MF))
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<LiveDebugVariablesAnalysis>();
+  PA.preserve<LiveStacksAnalysis>();
+  PA.preserve<VirtRegMapAnalysis>();
+  PA.preserve<LiveRegMatrixAnalysis>();
+  return PA;
 }
