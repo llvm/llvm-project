@@ -16,14 +16,14 @@ define double @test() {
 ; CHECK-NEXT:    store double [[TMP7]], ptr null, align 16
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul double [[TMP3]], 0.000000e+00
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul double [[TMP2]], 0.000000e+00
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul double [[TMP3]], 0.000000e+00
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul double [[TMP2]], 0.000000e+00
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul double [[TMP1]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd double [[TMP12]], [[TMP11]]
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul double [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul double [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP16:%.*]] = fadd double [[TMP14]], [[TMP13]]
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul double [[TMP0]], 0.000000e+00
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd double [[TMP17]], [[TMP16]]
-; CHECK-NEXT:    ret double [[TMP15]]
+; CHECK-NEXT:    ret double [[TMP16]]
 ;
 entry:
   %0 = fmul double 0.000000e+00, 0.000000e+00

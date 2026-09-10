@@ -1298,10 +1298,10 @@ define <4 x float> @add_v4f32_0123(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @add_v4f32_u123(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @add_v4f32_u123(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 poison, i32 2, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 poison, i32 3, i32 4, i32 7>
-; CHECK-NEXT:    [[RESULT1:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <4 x float> [[RESULT1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 poison, i32 2, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 poison, i32 3, i32 4, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP4]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1
@@ -1325,10 +1325,10 @@ define <4 x float> @add_v4f32_u123(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @add_v4f32_0u23(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @add_v4f32_0u23(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 0, i32 poison, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 1, i32 poison, i32 4, i32 7>
-; CHECK-NEXT:    [[RESULT1:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <4 x float> [[RESULT1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 0, i32 poison, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 1, i32 poison, i32 4, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP4]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1
@@ -1975,9 +1975,9 @@ define <8 x float> @add_v8f32_uuuu4uu7(<8 x float> %a, <8 x float> %b) {
 
 define <8 x float> @add_v8f32_76u43210(<8 x float> %a, <8 x float> %b) {
 ; SSE2-LABEL: @add_v8f32_76u43210(
-; SSE2-NEXT:    [[A4:%.*]] = extractelement <8 x float> [[A:%.*]], i64 4
-; SSE2-NEXT:    [[A5:%.*]] = extractelement <8 x float> [[A]], i64 5
-; SSE2-NEXT:    [[B01:%.*]] = fadd float [[A4]], [[A5]]
+; SSE2-NEXT:    [[B0:%.*]] = extractelement <8 x float> [[A:%.*]], i64 4
+; SSE2-NEXT:    [[B1:%.*]] = extractelement <8 x float> [[A]], i64 5
+; SSE2-NEXT:    [[B01:%.*]] = fadd float [[B0]], [[B1]]
 ; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 8, i32 10>
 ; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <4 x i32> <i32 1, i32 3, i32 9, i32 11>
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
@@ -2552,8 +2552,8 @@ define <2 x double> @add_v2f64_01(<2 x double> %a, <2 x double> %b) {
 define <2 x double> @add_v2f64_u1(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @add_v2f64_u1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd <2 x double> [[TMP1]], [[B]]
-; CHECK-NEXT:    ret <2 x double> [[RESULT]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = fadd <2 x double> [[TMP1]], [[B]]
+; CHECK-NEXT:    ret <2 x double> [[RESULT1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1
@@ -2569,9 +2569,9 @@ define <2 x double> @add_v2f64_u1(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @add_v2f64_0u(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @add_v2f64_0u(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd <2 x double> [[A]], [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[RESULT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <2 x double> [[TMP1:%.*]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[RESULT1:%.*]] = fadd <2 x double> [[TMP1]], [[RESULT]]
+; CHECK-NEXT:    ret <2 x double> [[RESULT1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1
