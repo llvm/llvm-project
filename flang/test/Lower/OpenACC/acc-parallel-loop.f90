@@ -771,6 +771,42 @@ end subroutine
 ! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
 ! CHECK: acc.loop
 
+! Scalars used without an explicit firstprivate are implicitly firstprivate
+! on the compute construct later. Do not emit a loop firstprivate here.
+subroutine acc_parallel_loop_no_explicit_firstprivate
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_no_explicit_firstprivate
+! CHECK: acc.parallel combined(loop) {
+! CHECK-NOT: acc.firstprivate
+! CHECK: acc.loop combined(parallel)
+
+! copyin is explicit but not firstprivate, so the loop still gets no copy.
+subroutine acc_parallel_loop_copyin_scalar
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop copyin(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_copyin_scalar
+! CHECK: acc.copyin {{.*}} name("v")
+! CHECK: acc.parallel combined(loop) {{.*}}dataOperands
+! CHECK-NOT: acc.firstprivate
+! CHECK: acc.loop combined(parallel)
+
 ! Explicit independent is the same as the parallel loop default.
 subroutine acc_parallel_loop_firstprivate_independent
   integer :: i, n, v
