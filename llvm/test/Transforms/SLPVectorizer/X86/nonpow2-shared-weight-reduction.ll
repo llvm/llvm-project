@@ -11,7 +11,7 @@
 ; Once the load is priced correctly the tree cost goes negative and the width-3
 ; form is kept (vpmovzxbd + vpbroadcastd + vpmulld + vpaddd).
 
-define void @ship3(ptr noundef readonly %weights, ptr noundef readonly %src, i64 noundef %bpp, ptr noundef writeonly %dst, i32 noundef %n) {
+define void @ship3(ptr %weights, ptr %src, i64 %bpp, ptr %dst, i32 %n) {
 ; NPOT-LABEL: @ship3(
 ; NPOT-NEXT:    [[N_EXT:%.*]] = sext i32 [[N:%.*]] to i64
 ; NPOT-NEXT:    [[POS:%.*]] = icmp sgt i32 [[N]], 0
