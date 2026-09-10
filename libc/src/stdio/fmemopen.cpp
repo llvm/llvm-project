@@ -92,8 +92,8 @@ class MemoryFile : public File {
 
     // The bounds fit in off_t since no object is larger than PTRDIFF_MAX, so
     // comparing in off_t needs no negation of offset or narrowing to size_t.
-    off_t min_offset = -static_cast<off_t>(base);
-    off_t max_offset = static_cast<off_t>(mf->capacity - base);
+    const off_t min_offset = -static_cast<off_t>(base);
+    const off_t max_offset = static_cast<off_t>(mf->capacity - base);
     if (offset < min_offset || offset > max_offset)
       return Error(EINVAL);
     size_t next = base + static_cast<size_t>(offset);
