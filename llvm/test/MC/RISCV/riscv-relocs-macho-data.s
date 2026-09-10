@@ -5,7 +5,7 @@
 ; Data section relocations
         .data
 ; CHECK:  0000 2a000000 0c000000 00000000 04000000  *...............
-; CHECK-NEXT:  0010 00000000 02000000                    ........
+; CHECK-NEXT:  0010 00000000 02000000 b80b0000                  ........
 
 ; Plain integer, no relocation needed.
         .global _a
@@ -66,10 +66,24 @@ _sub_add:
 ; CHECK-NEXT:                   00000014:  RISCV_RELOC_UNSIGNED _ref
 ; CHECK-NEXT:       16: 0000            <unknown>
 .word _ref - _elsewhere + 2
+; Same as before, but with a offset that requires more than 12 bits.
+        .global _sub_add_big_offset
+_sub_add_big_offset:
+; CHECK-LABEL: 00000018 <_sub_add_big_offset>:
+; CHECK-NEXT:       18: 0bb8            <unknown>
+; CHECK-NEXT:                   00000018:  RISCV_RELOC_ADDEND       0xbb8
+; CHECK-NEXT:                   00000018:  RISCV_RELOC_SUBTRACTOR       _elsewhere
+; CHECK-NEXT:                   00000018:  RISCV_RELOC_UNSIGNED _ref
+; CHECK-NEXT:       1a: 0000            <unknown>
+.word _ref - _elsewhere + 3000
+
 ; CHECK-NOT: {{.}}
 
-; OTOOL-LABEL: Relocation information (__DATA,__data) 6 entries
+; OTOOL-LABEL: Relocation information (__DATA,__data) 9 entries
 ; OTOOL-NEXT:  address  pcrel length extern type    scattered symbolnum/value
+; OTOOL-NEXT:  00000018 False long   False  8       False     addend = 0x000bb8
+; OTOOL-NEXT:  00000018 False long   True   1       False     _elsewhere
+; OTOOL-NEXT:  00000018 False long   True   0       False     _ref
 ; OTOOL-NEXT:  00000014 False long   True   1       False     _elsewhere
 ; OTOOL-NEXT:  00000014 False long   True   0       False     _ref
 ; OTOOL-NEXT:  00000010 False long   True   1       False     _elsewhere
