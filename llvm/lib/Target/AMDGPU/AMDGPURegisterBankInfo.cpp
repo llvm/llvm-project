@@ -4498,7 +4498,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case AMDGPU::G_AMDGPU_REG_LOAD:
   case AMDGPU::G_AMDGPU_REG_STORE: {
-    // data/result is a VGPR value; the dword index is uniform (SGPR).
     OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
     break;
