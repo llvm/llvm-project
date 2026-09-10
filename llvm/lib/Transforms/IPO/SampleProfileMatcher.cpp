@@ -472,8 +472,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
     return;
   // For probe-based profiles, run matching only when profile checksum is
   // mismatched.
-  bool ChecksumMismatch = FunctionSamples::ProfileIsProbeBased &&
-                          !ProbeManager->profileIsValid(F, *FSForMatching);
+  bool ChecksumMismatch = checksumMismatch(F, *FSForMatching);
   bool RunCFGMatching =
       !FunctionSamples::ProfileIsProbeBased || ChecksumMismatch;
   bool RunCGMatching = SalvageUnusedProfile;
@@ -677,6 +676,17 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
       if (GlobalValue::isAvailableExternallyLinkage(I.first->getLinkage()))
         continue;
       NumCallGraphRecoveredProfiledFunc++;
+    }
+    // Collect recovered samples from CFG match. Recovered samples might be
+    // mis-counted if function name is matches but CFG checksum mismatched.
+    for (const auto &F : M) {
+      if (GlobalValue::isAvailableExternallyLinkage(F.getLinkage()))
+        continue;
+      const auto *FS = Reader.getSamplesFor(F);
+      if (FS && checksumMismatch(F, *FS)) {
+        NumCallGraphRecoveredProfiledFunc++;
+        CallGraphRecoveredProfiles.insert(FS->getFunction());
+      }
     }
   }
 
