@@ -866,6 +866,23 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertEqual(variables.GetSize(), 1)
         self.assertEqual(variables.GetValueAtIndex(0).name, "_handler_one")
 
+        # A variable reports the value type the frame classified it as, not the
+        # one its underlying value has. `_handler_one` is built from an
+        # expression, so these differ.
+        self.assertEqual(
+            variables.GetValueAtIndex(0).GetValueType(),
+            lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag,
+        )
+        # Classifying a variable must not cost its value or its type.
+        self.assertEqual(variables.GetValueAtIndex(0).GetValueAsUnsigned(), 1)
+        self.assertEqual(variables.GetValueAtIndex(0).GetTypeName(), "uint32_t")
+        # Reaching the same value by name has to agree with the enumeration.
+        self.assertEqual(
+            frame0.FindVariable("_handler_one").GetValueType(),
+            lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag,
+        )
+        self.assertEqual(frame0.FindVariable("_handler_one").GetValueAsUnsigned(), 1)
+
         # Check the `frame variable` command(s) handle synthetic variables the
         # way we expect by printing them.
         self.expect("frame var", substrs=["variable_in_main", "_handler_one"])

@@ -52,6 +52,18 @@ public:
 
   virtual lldb::ValueObjectListSP GetVariables() { return nullptr; }
 
+  /// Report which kind of variable \a ValueObject is presented as, for
+  /// instance \a eValueTypeVariableLocal to have it listed among the frame's
+  /// locals.
+  ///
+  /// Include \a eValueTypeSyntheticFlag for a ValueObject the ScriptedFrame
+  /// built itself. That flag is what exempts a variable from the scope rules a
+  /// declared variable is subject to, so a value with no storage behind it will
+  /// be filtered out of an in-scope-only listing without it. Leave it off to
+  /// present a variable that really does exist in the frame.
+  ///
+  /// Returning std::nullopt keeps the kind the value already reports, with the
+  /// synthetic flag added.
   virtual std::optional<lldb::ValueType>
   GetValueTypeForVariable(lldb::ValueObjectSP value) {
     return std::nullopt;
