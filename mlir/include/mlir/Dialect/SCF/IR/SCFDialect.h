@@ -1,4 +1,4 @@
-//===- SCF.cpp - C Interface for SCF dialect ------------------------------===//
+//===- SCFDialect.h - SCF dialect declaration ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/Dialect/SCF.h"
-#include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/SCF/IR/SCFDialect.h"
+#ifndef MLIR_DIALECT_SCF_IR_SCFDIALECT_H
+#define MLIR_DIALECT_SCF_IR_SCFDIALECT_H
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(SCF, scf, mlir::scf::SCFDialect)
+#include "mlir/IR/Dialect.h"
+
+#include "mlir/Dialect/SCF/IR/SCFOpsDialect.h.inc"
+
+#endif // MLIR_DIALECT_SCF_IR_SCFDIALECT_H
