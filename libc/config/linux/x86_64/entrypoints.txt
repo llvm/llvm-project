@@ -303,6 +303,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/file.h entrypoints
+    libc.src.sys.file.flock
+
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
