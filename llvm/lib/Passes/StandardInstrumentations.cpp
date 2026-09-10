@@ -44,6 +44,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO/PGOFlowVerify.h"
 #include <utility>
 #include <vector>
 
@@ -2487,6 +2488,8 @@ StandardInstrumentations::StandardInstrumentations(
       Verify(DebugLogging), DroppedStatsIR(DroppedVarStats),
       VerifyEach(VerifyEach) {}
 
+StandardInstrumentations::~StandardInstrumentations() = default;
+
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
 
@@ -2554,6 +2557,10 @@ void StandardInstrumentations::registerCallbacks(
   OptPassGate.registerCallbacks(PIC);
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
+  if (PGOFlowVerifier::isHookEnabled()) {
+    PGOFlowVerification = std::make_unique<PGOFlowVerifier>();
+    PGOFlowVerification->registerCallbacks(PIC);
+  }
   if (VerifyEach)
     Verify.registerCallbacks(PIC, MAM);
   PrintChangedDiff.registerCallbacks(PIC);

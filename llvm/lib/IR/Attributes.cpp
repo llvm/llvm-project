@@ -810,7 +810,8 @@ enum AttributeProperty {
   IntersectAnd = (1 << 3),
   IntersectMin = (2 << 3),
   IntersectCustom = (3 << 3),
-  IntersectPropertyMask = (3 << 3),
+  IntersectOr = (4 << 3),
+  IntersectPropertyMask = (7 << 3),
 };
 
 #define GET_ATTR_PROP_TABLE
@@ -844,7 +845,8 @@ static bool hasIntersectProperty(Attribute::AttrKind Kind,
   assert((Prop == AttributeProperty::IntersectPreserve ||
           Prop == AttributeProperty::IntersectAnd ||
           Prop == AttributeProperty::IntersectMin ||
-          Prop == AttributeProperty::IntersectCustom) &&
+          Prop == AttributeProperty::IntersectCustom ||
+          Prop == AttributeProperty::IntersectOr) &&
          "Unknown intersect property");
   return (getAttributeProperties(Kind) &
           AttributeProperty::IntersectPropertyMask) == Prop;
@@ -858,6 +860,9 @@ bool Attribute::intersectWithAnd(AttrKind Kind) {
 }
 bool Attribute::intersectWithMin(AttrKind Kind) {
   return hasIntersectProperty(Kind, AttributeProperty::IntersectMin);
+}
+bool Attribute::intersectWithOr(AttrKind Kind) {
+  return hasIntersectProperty(Kind, AttributeProperty::IntersectOr);
 }
 bool Attribute::intersectWithCustom(AttrKind Kind) {
   return hasIntersectProperty(Kind, AttributeProperty::IntersectCustom);
@@ -1091,8 +1096,12 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
 
     Attribute::AttrKind Kind = Attr0.getKindAsEnum();
     // If we don't have both attributes, then fail if the attribute is
-    // must-preserve or drop it otherwise.
+    // must-preserve, keep it if it is sticky-OR, or drop it otherwise.
     if (!Attr1.isValid()) {
+      if (Attribute::intersectWithOr(Kind)) {
+        Intersected.addAttribute(Kind);
+        continue;
+      }
       if (Attribute::intersectMustPreserve(Kind))
         return std::nullopt;
       continue;
@@ -1118,6 +1127,15 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
       Intersected.addRawIntAttr(Kind, NewVal);
       continue;
     }
+
+    // Attribute we can intersect with "or": keep if either side has it.
+    if (Attribute::intersectWithOr(Kind)) {
+      assert(Attribute::isEnumAttrKind(Kind) &&
+             "Invalid attr type of intersectOr");
+      Intersected.addAttribute(Kind);
+      continue;
+    }
+
     // Attribute we can intersect but need a custom rule for.
     if (Attribute::intersectWithCustom(Kind)) {
       switch (Kind) {

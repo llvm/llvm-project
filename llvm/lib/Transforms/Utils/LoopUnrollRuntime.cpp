@@ -28,7 +28,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
@@ -179,14 +178,13 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   SplitBlockPredecessors(OriginalLoopLatchExit, Preds, ".unr-lcssa", DT, LI,
                          nullptr, PreserveLCSSA);
   // Add the branch to the exit block (around the unrolled loop)
-  MDNode *BranchWeights = nullptr;
-  if (hasBranchWeightMD(*Latch->getTerminator())) {
-    // Assume loop is nearly always entered.
-    MDBuilder MDB(B.getContext());
-    BranchWeights = MDB.createBranchWeights(UnrolledLoopHeaderWeights);
-  }
-  B.CreateCondBr(BrLoopExit, OriginalLoopLatchExit, NewPreHeader,
-                 BranchWeights);
+  CondBrInst *UnrolledLoopGuard =
+      B.CreateCondBr(BrLoopExit, OriginalLoopLatchExit, NewPreHeader);
+  Instruction *OriginalLatch = Latch->getTerminator();
+  if (hasBranchWeightMD(*OriginalLatch) ||
+      hasExplicitlyUnknownBranchWeights(*OriginalLatch))
+    setBranchWeightsForNewCFG(*UnrolledLoopGuard, UnrolledLoopHeaderWeights,
+                              *OriginalLatch, DEBUG_TYPE);
   InsertPt->eraseFromParent();
   if (DT) {
     auto *NewDom = DT->findNearestCommonDominator(OriginalLoopLatchExit,
@@ -368,19 +366,19 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI, nullptr,
                          PreserveLCSSA);
   // Add the branch to the exit block (around the epilog loop)
-  MDNode *BranchWeights = nullptr;
-  if (OriginalLoopProb.isUnknown() &&
-      hasBranchWeightMD(*Latch->getTerminator())) {
-    // Assume equal distribution in interval [0, Count).
-    MDBuilder MDB(B.getContext());
-    BranchWeights = MDB.createBranchWeights(1, Count - 1);
-  }
   CondBrInst *RemainderLoopGuard =
-      B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit, BranchWeights);
+      B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit);
+  Instruction *OriginalLatch = Latch->getTerminator();
+  if (OriginalLoopProb.isUnknown() &&
+      (hasBranchWeightMD(*OriginalLatch) ||
+       hasExplicitlyUnknownBranchWeights(*OriginalLatch)))
+    // Assume equal distribution in interval [0, Count).
+    setBranchWeightsForNewCFG(*RemainderLoopGuard, {1, Count - 1},
+                              *OriginalLatch, DEBUG_TYPE);
   if (!OriginalLoopProb.isUnknown()) {
-    setBranchProbability(RemainderLoopGuard,
-                         probOfNextInRemainder(OriginalLoopProb, Count - 1),
-                         /*ForFirstTarget=*/true);
+    setBranchProbabilityForNewCFG(
+        RemainderLoopGuard, probOfNextInRemainder(OriginalLoopProb, Count - 1),
+        /*ForFirstTarget=*/true, OriginalLatch, DEBUG_TYPE);
   }
   InsertPt->eraseFromParent();
   if (DT) {
@@ -463,9 +461,11 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
       Value *IdxNext =
           Builder.CreateAdd(NewIdx, One, NewIdx->getName() + ".next");
       Value *IdxCmp = Builder.CreateICmpNE(IdxNext, NewIter, NewIdx->getName() + ".cmp");
-      MDNode *BranchWeights = nullptr;
+      SmallVector<uint32_t, 2> RemainderWeights;
+      Instruction *OriginalLatch = Latch->getTerminator();
       if ((OriginalLoopProb.isUnknown() || !UseEpilogRemainder) &&
-          hasBranchWeightMD(*LatchBR)) {
+          (hasBranchWeightMD(*OriginalLatch) ||
+           hasExplicitlyUnknownBranchWeights(*OriginalLatch))) {
         uint32_t ExitWeight;
         uint32_t BackEdgeWeight;
         if (Count >= 3) {
@@ -480,11 +480,13 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
           ExitWeight = 1;
           BackEdgeWeight = 0;
         }
-        MDBuilder MDB(Builder.getContext());
-        BranchWeights = MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
+        RemainderWeights = {BackEdgeWeight, ExitWeight};
       }
       CondBrInst *RemainderLoopLatch =
-          Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot, BranchWeights);
+          Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot);
+      if (!RemainderWeights.empty())
+        setBranchWeightsForNewCFG(*RemainderLoopLatch, RemainderWeights,
+                                  *OriginalLatch, DEBUG_TYPE);
       if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
         // Compute the total frequency of the original loop body from the
         // remainder iterations.  Once we've reached them, the first of them
@@ -501,7 +503,9 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
         // Sum(i=0..inf)(Prob^i) = 1/(1-Prob) = FreqRemIters.
         BranchProbability Prob =
             BranchProbability::getBranchProbability(1 - 1 / FreqRemIters);
-        setBranchProbability(RemainderLoopLatch, Prob, /*ForFirstTarget=*/true);
+        setBranchProbabilityForNewCFG(RemainderLoopLatch, Prob,
+                                      /*ForFirstTarget=*/true,
+                                      Latch->getTerminator(), DEBUG_TYPE);
       }
       NewIdx->addIncoming(Zero, InsertTop);
       NewIdx->addIncoming(IdxNext, NewBB);
@@ -894,23 +898,23 @@ bool llvm::UnrollRuntimeLoopRemainder(
       UseEpilogRemainder ? EpilogPreHeader : PrologPreHeader;
   BasicBlock *UnrollingLoop = UseEpilogRemainder ? NewPreHeader : PrologExit;
   // Branch to either remainder (extra iterations) loop or unrolling loop.
-  MDNode *BranchWeights = nullptr;
-  if ((OriginalLoopProb.isUnknown() || !UseEpilogRemainder) &&
-      hasBranchWeightMD(*Latch->getTerminator())) {
-    // Assume loop is nearly always entered.
-    MDBuilder MDB(B.getContext());
-    BranchWeights = MDB.createBranchWeights(EpilogHeaderWeights);
-  }
+  Instruction *OriginalLatch = Latch->getTerminator();
   CondBrInst *UnrollingLoopGuard =
-      B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop, BranchWeights);
+      B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop);
+  if ((OriginalLoopProb.isUnknown() || !UseEpilogRemainder) &&
+      (hasBranchWeightMD(*OriginalLatch) ||
+       hasExplicitlyUnknownBranchWeights(*OriginalLatch)))
+    setBranchWeightsForNewCFG(*UnrollingLoopGuard, EpilogHeaderWeights,
+                              *OriginalLatch, DEBUG_TYPE);
   if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
     // The original loop's first iteration always happens.  Compute the
     // probability of the original loop executing Count-1 iterations after that
     // to complete the first iteration of the unrolled loop.
     BranchProbability ProbOne = OriginalLoopProb;
     BranchProbability ProbRest = ProbOne.pow(Count - 1);
-    setBranchProbability(UnrollingLoopGuard, ProbRest,
-                         /*ForFirstTarget=*/false);
+    setBranchProbabilityForNewCFG(UnrollingLoopGuard, ProbRest,
+                                  /*ForFirstTarget=*/false,
+                                  Latch->getTerminator(), DEBUG_TYPE);
   }
   PreHeaderBR->eraseFromParent();
   if (DT) {

@@ -160,6 +160,7 @@ public:
   LLVM_ABI static bool intersectMustPreserve(AttrKind Kind);
   LLVM_ABI static bool intersectWithAnd(AttrKind Kind);
   LLVM_ABI static bool intersectWithMin(AttrKind Kind);
+  LLVM_ABI static bool intersectWithOr(AttrKind Kind);
   LLVM_ABI static bool intersectWithCustom(AttrKind Kind);
 
 private:

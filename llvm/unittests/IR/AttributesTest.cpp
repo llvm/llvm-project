@@ -495,6 +495,7 @@ TEST(Attributes, SetIntersect) {
     bool CanDrop = Attribute::intersectWithAnd(Kind) ||
                    Attribute::intersectWithMin(Kind) ||
                    Attribute::intersectWithCustom(Kind);
+    bool StickyOr = Attribute::intersectWithOr(Kind);
 
     AB0.addAttribute(Attr0);
     AB1.addAttribute(Attr1);
@@ -505,9 +506,13 @@ TEST(Attributes, SetIntersect) {
 
     AS0 = AttributeSet::get(C0, AB0);
     Res = AS0.intersectWith(C0, AS1);
-    ASSERT_EQ(Res.has_value(), CanDrop);
+    ASSERT_EQ(Res.has_value(), CanDrop || StickyOr);
     if (CanDrop)
       ASSERT_FALSE(Res->hasAttributes());
+    else if (StickyOr) {
+      ASSERT_TRUE(Res->hasAttributes());
+      ASSERT_TRUE(Res->hasAttribute(Kind));
+    }
 
     AS1 = AttributeSet::get(C1, AB0);
     Res = AS0.intersectWith(C0, AS1);
@@ -516,7 +521,7 @@ TEST(Attributes, SetIntersect) {
 
     AS1 = AttributeSet::get(C1, AB1);
     Res = AS0.intersectWith(C0, AS1);
-    if (!CanDrop) {
+    if (!CanDrop && !StickyOr) {
       ASSERT_FALSE(Res.has_value());
       continue;
     }
@@ -530,6 +535,10 @@ TEST(Attributes, SetIntersect) {
       ASSERT_TRUE(Res->hasAttributes());
       ASSERT_TRUE(Res->hasAttribute(Kind));
       ASSERT_FALSE(Res->hasAttribute(Other));
+    } else if (Attribute::intersectWithOr(Kind)) {
+      ASSERT_TRUE(Res.has_value());
+      ASSERT_TRUE(Res->hasAttributes());
+      ASSERT_TRUE(Res->hasAttribute(Kind));
     } else if (Attribute::intersectWithMin(Kind)) {
       ASSERT_TRUE(Res.has_value());
       ASSERT_TRUE(Res->hasAttributes());

@@ -119,8 +119,13 @@ int FunctionComparator::cmpMem(StringRef L, StringRef R) const {
   return std::clamp(L.compare(R), -1, 1);
 }
 
-int FunctionComparator::cmpAttrs(const AttributeList L,
-                                 const AttributeList R) const {
+int FunctionComparator::cmpAttrs(const AttributeList LIn,
+                                 const AttributeList RIn) const {
+  LLVMContext &Ctx = FnL->getContext();
+  // approxprofile is a sticky taint, not part of functional equivalence.
+  AttributeList L = LIn.removeFnAttribute(Ctx, Attribute::ApproxProfile);
+  AttributeList R = RIn.removeFnAttribute(Ctx, Attribute::ApproxProfile);
+
   if (int Res = cmpNumbers(L.getNumAttrSets(), R.getNumAttrSets()))
     return Res;
 

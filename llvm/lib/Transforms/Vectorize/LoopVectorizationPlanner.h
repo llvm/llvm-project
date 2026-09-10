@@ -1024,15 +1024,17 @@ public:
   /// Update loop metadata and profile info for both the scalar remainder loop
   /// and \p VectorLoop, if it exists. Keeps all loop hints from the original
   /// loop on the vector loop and replaces vectorizer-specific metadata. The
-  /// loop ID of the original loop \p OrigLoopID must be passed, together with
-  /// the average trip count and invocation weight of the original loop (\p
-  /// OrigAverageTripCount and \p OrigLoopInvocationWeight respectively). They
-  /// cannot be retrieved after the plan has been executed, as the original loop
-  /// may have been removed. \p UnrollVectorizedLoop indicates whether the
-  /// target wants the vector loop left eligible for runtime unrolling.
+  /// loop ID and latch profile of the original loop (\p OrigLoopID and
+  /// \p OrigLoopLatchProfile) must be passed, together with its average trip
+  /// count and invocation weight (\p OrigAverageTripCount and
+  /// \p OrigLoopInvocationWeight respectively). They cannot be retrieved after
+  /// the plan has been executed, as the original loop may have been removed.
+  /// \p UnrollVectorizedLoop indicates whether the target wants the vector loop
+  /// left eligible for runtime unrolling.
   void updateLoopMetadataAndProfileInfo(
       Loop *VectorLoop, VPBasicBlock *HeaderVPBB, const VPlan &Plan,
       bool VectorizingEpilogue, MDNode *OrigLoopID,
+      const MDNode *OrigLoopLatchProfile,
       std::optional<unsigned> OrigAverageTripCount,
       unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
       bool DisableRuntimeUnroll, bool UnrollVectorizedLoop);

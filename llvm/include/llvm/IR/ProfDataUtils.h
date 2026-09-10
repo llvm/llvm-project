@@ -24,6 +24,9 @@
 #include <type_traits>
 
 namespace llvm {
+class Function;
+class Instruction;
+class MDNode;
 struct MDProfLabels {
   LLVM_ABI static const char *BranchWeights;
   LLVM_ABI static const char *ValueProfile;
@@ -145,6 +148,13 @@ LLVM_ABI bool extractProfTotalWeight(const MDNode *ProfileData,
 LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
                                      uint64_t &TotalWeights);
 
+/// Mark that profile counts attached to \p F are approximate, not absolute.
+/// The attribute is function-wide and sticky (once set, it remains on \p F).
+LLVM_ABI void markApproximateProfileCounts(Function &F);
+
+/// Return true when \p F carries the approxprofile function attribute.
+LLVM_ABI bool hasApproximateProfileCounts(const Function &F);
+
 /// Create a new `branch_weights` metadata node and add or overwrite
 /// a `prof` metadata reference to instruction `I`.
 /// \param I the Instruction to set branch weights on.
@@ -156,8 +166,8 @@ LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
 /// Push the weights right to fit in uint32_t.
 LLVM_ABI SmallVector<uint32_t> fitWeights(ArrayRef<uint64_t> Weights);
 
-/// Variant of `setBranchWeights` where the `Weights` will be fit first to
-/// uint32_t by shifting right.
+/// Like \c setBranchWeights after fitting to uint32_t. A shift of non-expect
+/// weights marks the function \c approxprofile.
 LLVM_ABI void setFittedBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
                                      bool IsExpected,
                                      bool ElideAllZero = false);
@@ -222,7 +232,8 @@ LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F,
 LLVM_ABI bool isExplicitlyUnknownProfileMetadata(const MDNode &MD);
 LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
 
-/// Scaling the profile data attached to 'I' using the ratio of S/T.
+/// Scale the profile data attached to \p I by S/T. Counts that do not fit
+/// in uint32_t are saturated and mark the function \c approxprofile.
 LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
 
 // Helper to apply a metadata setting function to an Instruction* if profiling

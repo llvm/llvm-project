@@ -79,6 +79,9 @@ Makes programs 10x faster by doing Special New Thing.
   freeing the underlying object (as opposed to only frees through that specific
   pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
   semantics.
+* Added the `approxprofile` function attribute to mark profile counts whose
+  absolute magnitudes are no longer trustworthy (ratios may still be). It is
+  sticky: intersection and inlining keep it if either side has it.
 * The following VP intrinsics have been removed:
   * `llvm.vp.select.*`
   * `llvm.vp.add.*`

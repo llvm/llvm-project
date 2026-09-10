@@ -832,6 +832,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_FLATTEN;
   case Attribute::Hot:
     return bitc::ATTR_KIND_HOT;
+  case Attribute::ApproxProfile:
+    return bitc::ATTR_KIND_APPROXPROFILE;
   case Attribute::ElementType:
     return bitc::ATTR_KIND_ELEMENTTYPE;
   case Attribute::HybridPatchable:

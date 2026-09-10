@@ -32,8 +32,10 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
@@ -967,7 +969,8 @@ llvm::getLoopEstimatedTripCount(Loop *L,
 
 bool llvm::setLoopEstimatedTripCount(
     Loop *L, unsigned EstimatedTripCount,
-    std::optional<unsigned> EstimatedloopInvocationWeight) {
+    std::optional<unsigned> EstimatedloopInvocationWeight,
+    std::optional<const MDNode *> ProfileOrigin) {
   // If EstimatedLoopInvocationWeight, we do not support this loop if
   // getExpectedExitLoopLatchBranch returns nullptr.
   //
@@ -1003,9 +1006,12 @@ bool llvm::setLoopEstimatedTripCount(
   if (LatchBranch->getSuccessor(0) != L->getHeader())
     std::swap(BackedgeTakenWeight, LatchExitWeight);
 
-  // Set/Update profile metadata.
-  setBranchWeights(*LatchBranch, {BackedgeTakenWeight, LatchExitWeight},
-                   /*IsExpected=*/false);
+  // Keep origin from the original latch when L is newly created.
+  const MDNode *OriginMD = ProfileOrigin
+                               ? *ProfileOrigin
+                               : LatchBranch->getMetadata(LLVMContext::MD_prof);
+  setBranchWeightsPreservingOrigin(
+      *LatchBranch, {BackedgeTakenWeight, LatchExitWeight}, OriginMD);
 
   return true;
 }
@@ -1074,14 +1080,78 @@ BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
   return BranchProbability(Numerator, Total);
 }
 
+static bool isCountTypeBranchWeights(const MDNode *MD) {
+  return isBranchWeightMD(MD) && !hasBranchWeightOrigin(MD);
+}
+
+static void markApproxIfCountTypeOrigin(Instruction &I,
+                                        const MDNode *OriginMD) {
+  if (!isCountTypeBranchWeights(OriginMD))
+    return;
+  if (Function *F = I.getFunction())
+    markApproximateProfileCounts(*F);
+}
+
+void llvm::setBranchWeightsPreservingOrigin(Instruction &B,
+                                            ArrayRef<uint32_t> Weights,
+                                            const Instruction &Source) {
+  setBranchWeightsPreservingOrigin(B, Weights,
+                                   Source.getMetadata(LLVMContext::MD_prof));
+}
+
+void llvm::setBranchWeightsPreservingOrigin(Instruction &B,
+                                            ArrayRef<uint32_t> Weights,
+                                            const MDNode *SourceMD) {
+  if (SourceMD && isExplicitlyUnknownProfileMetadata(*SourceMD)) {
+    B.setMetadata(LLVMContext::MD_prof, const_cast<MDNode *>(SourceMD));
+    return;
+  }
+
+  setBranchWeights(B, Weights, hasBranchWeightOrigin(SourceMD));
+}
+
 void llvm::setBranchProbability(CondBrInst *B, BranchProbability P,
-                                bool ForFirstTarget) {
+                                bool ForFirstTarget,
+                                const Instruction *Origin) {
   BranchProbability Prob0 = P;
   BranchProbability Prob1 = P.getCompl();
   if (!ForFirstTarget)
     std::swap(Prob0, Prob1);
-  setBranchWeights(*B, {Prob0.getNumerator(), Prob1.getNumerator()},
-                   /*IsExpected=*/false);
+
+  const Instruction &Src = Origin ? *Origin : *B;
+  const MDNode *OriginMD = Src.getMetadata(LLVMContext::MD_prof);
+  setBranchWeightsPreservingOrigin(
+      *B, {Prob0.getNumerator(), Prob1.getNumerator()}, OriginMD);
+  markApproxIfCountTypeOrigin(*B, OriginMD);
+}
+
+void llvm::setBranchWeightsForNewCFG(Instruction &B, ArrayRef<uint32_t> Weights,
+                                     const Instruction &Source,
+                                     StringRef PassName) {
+  setBranchWeightsForNewCFG(B, Weights,
+                            Source.getMetadata(LLVMContext::MD_prof), PassName);
+}
+
+void llvm::setBranchWeightsForNewCFG(Instruction &B, ArrayRef<uint32_t> Weights,
+                                     const MDNode *SourceMD,
+                                     StringRef PassName) {
+  if (SourceMD && hasBranchWeightOrigin(SourceMD)) {
+    setExplicitlyUnknownBranchWeights(B, PassName);
+    return;
+  }
+  setBranchWeightsPreservingOrigin(B, Weights, SourceMD);
+  markApproxIfCountTypeOrigin(B, SourceMD);
+}
+
+void llvm::setBranchProbabilityForNewCFG(CondBrInst *B, BranchProbability P,
+                                         bool ForFirstTarget,
+                                         const Instruction *Origin,
+                                         StringRef PassName) {
+  if (Origin && hasBranchWeightOrigin(*Origin)) {
+    setExplicitlyUnknownBranchWeights(*B, PassName);
+    return;
+  }
+  setBranchProbability(B, P, ForFirstTarget, Origin);
 }
 
 bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,

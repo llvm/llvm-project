@@ -607,6 +607,11 @@ define nofreeobj ptr @nofreeobj(ptr nofreeobj %p) {
   ret ptr %p
 }
 
+; CHECK: define void @f_approxprofile() [[APPROXPROFILE:#[0-9]+]]
+define void @f_approxprofile() approxprofile {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }
@@ -671,4 +676,5 @@ define nofreeobj ptr @nofreeobj(ptr nofreeobj %p) {
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
 ; CHECK: attributes [[NOIPA]] = { noipa }
+; CHECK: attributes [[APPROXPROFILE]] = { approxprofile }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

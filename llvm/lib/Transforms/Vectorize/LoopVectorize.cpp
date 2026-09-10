@@ -5843,6 +5843,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Retrieve loop information before executing the plan, which may remove the
   // original loop, if it becomes unreachable.
   MDNode *LID = OrigLoop->getLoopID();
+  BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
+  const MDNode *OrigLoopLatchProfile =
+      OrigLatch ? OrigLatch->getTerminator()->getMetadata(LLVMContext::MD_prof)
+                : nullptr;
   unsigned OrigLoopInvocationWeight = 0;
   std::optional<unsigned> OrigAverageTripCount =
       getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
@@ -5862,7 +5866,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                  : nullptr,
       HeaderVPBB, BestVPlan,
       EpilogueVecKind == EpilogueVectorizationKind::Epilogue, LID,
-      OrigAverageTripCount, OrigLoopInvocationWeight,
+      OrigLoopLatchProfile, OrigAverageTripCount, OrigLoopInvocationWeight,
       estimateElementCount(BestVF * BestUF, Config.getVScaleForTuning()),
       DisableRuntimeUnroll, UnrollVectorizedLoop);
 

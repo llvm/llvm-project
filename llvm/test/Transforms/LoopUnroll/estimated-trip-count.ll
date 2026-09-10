@@ -17,7 +17,7 @@ define void @zero_estimated_trip_count(ptr %p, i64 %n) !prof !0 {
 ; CHECK:  [[EXIT]]:
 ;
 ; FORCED-LABEL: define void @zero_estimated_trip_count(
-; FORCED-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0:![0-9]+]] {
+; FORCED-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF0:![0-9]+]] {
 ; FORCED:  [[ENTRY:.*:]]
 ; FORCED:    br i1 [[TMP1:%.*]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]], !prof [[PROF1:![0-9]+]]
 ; FORCED:  [[ENTRY_NEW]]:
@@ -54,7 +54,7 @@ exit:
 ; Same loop but with a high estimated trip count, which is runtime unrolled.
 define void @high_estimated_trip_count(ptr %p, i64 %n) !prof !0 {
 ; CHECK-LABEL: define void @high_estimated_trip_count(
-; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF0]] {
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:    br i1 [[TMP1:%.*]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]], !prof [[PROF4:![0-9]+]]
 ; CHECK:  [[ENTRY_NEW]]:
@@ -72,7 +72,7 @@ define void @high_estimated_trip_count(ptr %p, i64 %n) !prof !0 {
 ; CHECK:  [[EXIT]]:
 ;
 ; FORCED-LABEL: define void @high_estimated_trip_count(
-; FORCED-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; FORCED-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] !prof [[PROF0]] {
 ; FORCED:  [[ENTRY:.*:]]
 ; FORCED:    br i1 [[TMP1:%.*]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]], !prof [[PROF1]]
 ; FORCED:  [[ENTRY_NEW]]:
@@ -110,7 +110,7 @@ exit:
 ; exit the loop.
 define void @high_estimated_trip_count_low_branch_weights(ptr %p, i64 %n) !prof !0 {
 ; CHECK-LABEL: define void @high_estimated_trip_count_low_branch_weights(
-; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] !prof [[PROF0]] {
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:    br i1 [[TMP1:%.*]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]], !prof [[PROF12:![0-9]+]]
 ; CHECK:  [[ENTRY_NEW]]:
@@ -128,7 +128,7 @@ define void @high_estimated_trip_count_low_branch_weights(ptr %p, i64 %n) !prof 
 ; CHECK:  [[EXIT]]:
 ;
 ; FORCED-LABEL: define void @high_estimated_trip_count_low_branch_weights(
-; FORCED-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; FORCED-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] !prof [[PROF0]] {
 ; FORCED:  [[ENTRY:.*:]]
 ; FORCED:    br i1 [[TMP1:%.*]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]], !prof [[PROF12:![0-9]+]]
 ; FORCED:  [[ENTRY_NEW]]:
@@ -170,6 +170,7 @@ exit:
 !5 = !{!"llvm.loop.estimated_trip_count", i32 1024}
 !6 = !{!"branch_weights", i32 1023, i32 1}
 ;.
+; CHECK: attributes #[[ATTR0]] = { approxprofile }
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1023}
 ; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
@@ -187,6 +188,7 @@ exit:
 ; CHECK: [[PROF14]] = !{!"branch_weights", i32 2097152, i32 2145386496}
 ; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META3]], [[META11]]}
 ;.
+; FORCED: attributes #[[ATTR0]] = { approxprofile }
 ; FORCED: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; FORCED: [[PROF1]] = !{!"branch_weights", i32 6285314, i32 2141198334}
 ; FORCED: [[PROF2]] = !{!"branch_weights", i32 8376328, i32 2139107320}

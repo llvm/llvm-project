@@ -90,6 +90,7 @@ loop.exit:
 !0 = !{!"branch_weights", i32 100, i32 200, i32 20, i32 10}
 
 ;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { approxprofile }
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 100, i32 200, i32 20, i32 10}
 ; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"llvm.loop.peeled.count", i32 2}

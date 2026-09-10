@@ -42,6 +42,11 @@ def IntersectAnd : AttrProperty;
 /// Only valid for Int attrs.
 def IntersectMin : AttrProperty;
 
+/// When intersecting take the OR of the two attrs.
+/// Keep the attribute if either side has it.
+/// Only valid for Enum attrs.
+def IntersectOr : AttrProperty;
+
 /// When intersecting rely on some specially defined code.
 def IntersectCustom : AttrProperty;
 
@@ -120,6 +125,10 @@ def Convergent : EnumAttr<"convergent", IntersectPreserve, [FnAttr]>;
 
 /// Marks function as being in a hot path and frequently called.
 def Hot: EnumAttr<"hot", IntersectAnd, [FnAttr]>;
+
+/// Profile counts are approximate (ratios preserved, not absolute magnitudes).
+/// Sticky taint: intersection and inlining keep it if either side has it.
+def ApproxProfile : EnumAttr<"approxprofile", IntersectOr, [FnAttr]>;
 
 /// Pointer is known to be dereferenceable.
 def Dereferenceable : IntAttr<"dereferenceable", IntersectMin, [ParamAttr, RetAttr]>;
@@ -492,6 +501,7 @@ def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;
 def : MergeRule<"setOR<ProfileSampleAccurateAttr>">;
 def : MergeRule<"setOR<SpeculativeLoadHardeningAttr>">;
+def : MergeRule<"setOR<ApproxProfileAttr>">;
 def : MergeRule<"adjustCallerSSPLevel">;
 def : MergeRule<"adjustCallerStackProbes">;
 def : MergeRule<"adjustCallerStackProbeSize">;

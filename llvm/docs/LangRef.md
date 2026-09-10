@@ -2492,6 +2492,13 @@ define void @f() "no-sse" { ... }
     attribute does not restrict inlining, so instrumented instructions could end
     up in this function.
 
+`approxprofile`
+:   Profile counts on this function are approximate. Ratios between counts may
+    still be meaningful, but absolute magnitudes are not. The attribute is
+    function-wide. Attribute intersection keeps it if either side has it.
+    Inlining ORs it onto the caller. MergeFunctions ignores it for
+    equivalence and ORs it onto the survivor. It is not immutable in IR.
+
 `noredzone`
 :   This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.

@@ -119,6 +119,7 @@ void Attributes::emitAttributeProperties(raw_ostream &OS) {
                              "ConstantRangeAttr", "ConstantRangeListAttr"}) {
     bool AllowIntersectAnd = KindName == "EnumAttr";
     bool AllowIntersectMin = KindName == "IntAttr";
+    bool AllowIntersectOr = KindName == "EnumAttr";
     for (auto *A : Records.getAllDerivedDefinitions(KindName)) {
       OS << "0";
       for (const Init *P : *A->getValueAsListInit("Properties")) {
@@ -128,6 +129,9 @@ void Attributes::emitAttributeProperties(raw_ostream &OS) {
         if (!AllowIntersectMin &&
             cast<DefInit>(P)->getDef()->getName() == "IntersectMin")
           PrintFatalError("'IntersectMin' only compatible with 'IntAttr'");
+        if (!AllowIntersectOr &&
+            cast<DefInit>(P)->getDef()->getName() == "IntersectOr")
+          PrintFatalError("'IntersectOr' only compatible with 'EnumAttr'");
 
         OS << " | AttributeProperty::" << cast<DefInit>(P)->getDef()->getName();
       }

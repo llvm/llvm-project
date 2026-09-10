@@ -951,6 +951,11 @@ static bool isODR(const Function *F) {
   return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
 }
 
+static void propagateApproximateProfile(Function *F, bool GWasApprox) {
+  if (GWasApprox || hasApproximateProfileCounts(*F))
+    markApproximateProfileCounts(*F);
+}
+
 static uint64_t getBlockCountForMerging(const BlockFrequencyInfo &BFI,
                                         const BasicBlock *BB) {
   if (auto Count = BFI.getBlockProfileCount(BB, /*AllowSynthetic=*/true))
@@ -1120,7 +1125,7 @@ void MergeFunctions::mergeInstrAnnotations(Function *Dst, Function *Src) {
 
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
-
+  const bool GWasApprox = hasApproximateProfileCounts(*G);
   std::optional<uint64_t> FEntryCount = F->getEntryCount();
 
   // Create a new thunk that both F and G can call, if F cannot call G directly.
@@ -1177,6 +1182,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     else
       F->setAlignment(std::nullopt);
     F->setLinkage(GlobalValue::PrivateLinkage);
+    propagateApproximateProfile(F, GWasApprox);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
   } else {
@@ -1206,13 +1212,16 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
       mergeInstrAnnotations(F, G);
       mergeEntryCountsAndImportsInto(*F, *G);
+      propagateApproximateProfile(F, GWasApprox);
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
     }
 
-    if (writeThunkOrAliasIfNeeded(F, G, /*MergeAnnotations=*/true))
+    if (writeThunkOrAliasIfNeeded(F, G, /*MergeAnnotations=*/true)) {
+      propagateApproximateProfile(F, GWasApprox);
       ++NumFunctionsMerged;
+    }
   }
 }
 
