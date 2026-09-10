@@ -235,3 +235,30 @@ body:             |
     %2:sreg_32 = S_PACK_LL_B32_B16 1, %1:sreg_32, implicit-def dead $scc
 ...
 
+---
+name:            copy_sreg32_vgpr32_usedby_valu16_lo16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: copy_sreg32_vgpr32_usedby_valu16_lo16
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY [[DEF]]
+    ; GCN-NEXT: [[V_TRUNC_F16_t16_e64_:%[0-9]+]]:vgpr_16 = V_TRUNC_F16_t16_e64 0, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:vgpr_32 = COPY %0:sreg_32
+    %2:vgpr_16 = V_TRUNC_F16_t16_e64 0, %1.lo16:vgpr_32, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+# expect to reject
+---
+name:            copy_sreg32_vgpr32_usedby_valu16_hi16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: copy_sreg32_vgpr32_usedby_valu16_hi16
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
+    ; GCN-NEXT: [[V_TRUNC_F16_t16_e64_:%[0-9]+]]:vgpr_16 = V_TRUNC_F16_t16_e64 0, [[COPY]].hi16, 0, 0, 0, implicit $mode, implicit $exec
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:vgpr_32 = COPY %0:sreg_32
+    %2:vgpr_16 = V_TRUNC_F16_t16_e64 0, %1.hi16:vgpr_32, 0, 0, 0, implicit $mode, implicit $exec
+...
+
