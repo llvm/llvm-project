@@ -480,8 +480,8 @@ class ReductionNeutralSIntMin {};
 class ReductionNeutralUIntMin {};
 class ReductionNeutralSIntMax {};
 class ReductionNeutralUIntMax {};
-class ReductionNeutralFPMin {};
-class ReductionNeutralFPMax {};
+class ReductionNeutralFPQNaN {};
+class ReductionNeutralFPNegQNaN {};
 class ReductionNeutralFPNegInf {};
 class ReductionNeutralFPPosInf {};
 class ReductionNeutralFPLowestFinite {};
@@ -561,8 +561,8 @@ static Value createReductionNeutralValue(ReductionNeutralUIntMax neutral,
                                             llvmType.getIntOrFloatBitWidth())));
 }
 
-/// Create the reduction neutral fp minimum value.
-static Value createReductionNeutralValue(ReductionNeutralFPMin neutral,
+/// Create the reduction neutral quiet NaN value.
+static Value createReductionNeutralValue(ReductionNeutralFPQNaN neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
   auto floatType = cast<FloatType>(llvmType);
@@ -573,8 +573,8 @@ static Value createReductionNeutralValue(ReductionNeutralFPMin neutral,
                                            /*Negative=*/false)));
 }
 
-/// Create the reduction neutral fp maximum value.
-static Value createReductionNeutralValue(ReductionNeutralFPMax neutral,
+/// Create the reduction neutral negative quiet NaN value.
+static Value createReductionNeutralValue(ReductionNeutralFPNegQNaN neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
   auto floatType = cast<FloatType>(llvmType);
@@ -1033,13 +1033,14 @@ public:
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MINNUMF:
-      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMinOp,
-                                                      ReductionNeutralFPMax>(
-          rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+      result =
+          lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMinOp,
+                                                 ReductionNeutralFPNegQNaN>(
+              rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MAXNUMF:
       result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMaxOp,
-                                                      ReductionNeutralFPMin>(
+                                                      ReductionNeutralFPQNaN>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case CombiningKind::MAXIMUMF:
