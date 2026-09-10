@@ -460,7 +460,7 @@ public:
       return rewriter.notifyMatchFailure(uiBinOp,
                                          "converting result type failed");
     if (!isa<IntegerType, emitc::SizeTType>(newRetTy)) {
-      return rewriter.notifyMatchFailure(uiBinOp, "expected integer type");
+      return rewriter.notifyMatchFailure(uiBinOp, "unsupported result type");
     }
     Type unsignedType =
         adaptIntegralTypeSignedness(newRetTy, /*needsUnsigned=*/true);
