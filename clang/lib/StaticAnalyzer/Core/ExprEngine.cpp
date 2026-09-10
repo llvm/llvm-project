@@ -1404,7 +1404,7 @@ void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction Cleanup,
   const StackFrame *SF = Pred->getStackFrame();
 
   // The implicit f(&var) call is not written in the source; anchor it at the
-  // function name in the cleanup attribute.
+  // location of the `cleanup` attribute.
   static SimpleProgramPointTag PT("ExprEngine",
                                   "Prepare for cleanup function call");
   PreImplicitCall PP(FD, VD->getAttr<CleanupAttr>()->getLoc(), SF,
@@ -1422,7 +1422,6 @@ void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction Cleanup,
                                 Call->getSourceRange().getBegin(),
                                 "Error evaluating cleanup function");
 
-  ExplodedNodeSet Dst;
   ExplodedNodeSet DstPreCall;
   getCheckerManager().runCheckersForPreCall(DstPreCall, Pred, *Call, *this);
 
@@ -1430,6 +1429,7 @@ void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction Cleanup,
   for (ExplodedNode *N : DstPreCall)
     defaultEvalCall(DstInvalidated, N, *Call);
 
+  ExplodedNodeSet Dst;
   getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated, *Call, *this);
 
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);

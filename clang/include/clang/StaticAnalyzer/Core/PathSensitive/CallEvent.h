@@ -1250,7 +1250,9 @@ public:
 ///
 /// The call has no syntactic representation: like \c CXXDestructorCall it is
 /// Decl-origin, and its single argument, the address of the annotated
-/// variable, is not written in the source.
+/// variable, is not written in the source. The inherited \c getResultType()
+/// reports `void`: the return value of a cleanup function (if any) is always
+/// ignored.
 class CleanupFunctionCall : public AnyFunctionCall {
   friend class CallEventManager;
 
@@ -1280,7 +1282,10 @@ public:
   unsigned getNumArgs() const override { return 1; }
 
   // The implicit `&var` argument has no expression in the source.
-  const Expr *getArgExpr(unsigned Index) const override { return nullptr; }
+  const Expr *getArgExpr(unsigned Index) const override {
+    assert(Index == 0);
+    return nullptr;
+  }
 
   SVal getArgSVal(unsigned Index) const override {
     assert(Index == 0);

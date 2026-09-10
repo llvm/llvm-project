@@ -562,7 +562,9 @@ static PathDiagnosticLocation getLocationForCaller(const StackFrame *SF,
   case CFGElement::CleanupFunction: {
     const CFGCleanupFunction &Cleanup = Source.castAs<CFGCleanupFunction>();
     // The implicit call is not written in the source; anchor it at the
-    // function name in the cleanup attribute.
+    // location of the `cleanup` attribute. (CleanupAttr::getLoc() returns
+    // the location of the `cleanup` keyword, not of the cleanup function
+    // name, which may sit on a different line.)
     const CleanupAttr *A = Cleanup.getVarDecl()->getAttr<CleanupAttr>();
     return PathDiagnosticLocation(A->getLoc(), SM);
   }
