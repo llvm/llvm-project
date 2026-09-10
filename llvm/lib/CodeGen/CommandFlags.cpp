@@ -70,7 +70,6 @@ CGOPT(std::string, MCPU)
 CGOPT(std::string, MTune)
 CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
-CGOPT(ThreadModel, ThreadModel)
 CGOPT_EXP(CodeModel::Model, CodeModel)
 CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
@@ -156,15 +155,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(Reloc::ROPI_RWPI, "ropi-rwpi",
                      "Combination of ropi and rwpi")));
   CGBINDOPT(RelocModel);
-
-  static cl::opt<ThreadModel> ThreadModel(
-      "thread-model", cl::desc("Choose threading model"),
-      cl::init(llvm::ThreadModel::POSIX),
-      cl::values(
-          clEnumValN(llvm::ThreadModel::POSIX, "posix", "POSIX thread model"),
-          clEnumValN(llvm::ThreadModel::Single, "single",
-                     "Single thread model")));
-  CGBINDOPT(ThreadModel);
 
   static cl::opt<CodeModel::Model> CodeModel(
       "code-model", cl::desc("Choose code model"),
@@ -590,7 +580,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
-  Options.ThreadModel = getThreadModel();
   Options.EABIVersion = getEABIVersion();
   Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();

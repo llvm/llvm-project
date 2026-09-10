@@ -205,8 +205,6 @@ public:
 
   virtual unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
 
-  virtual bool isSingleThreaded() const { return false; }
-
   virtual std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const {
     return std::make_pair(nullptr, -1);
