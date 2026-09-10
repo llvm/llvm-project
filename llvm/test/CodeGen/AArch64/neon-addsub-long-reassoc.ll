@@ -57,8 +57,9 @@ define <8 x i16> @sub_add_u(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
   ret <8 x i16> %r
 }
 
-define <4 x i32> @sub_sub_u_s(<4 x i32> %x, <4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: sub_sub_u_s:
+; (a - X) - b  ->  USUBL(a, b) - X
+define <4 x i32> @sub_sub_u_i32(<4 x i32> %x, <4 x i16> %a, <4 x i16> %b) {
+; CHECK-LABEL: sub_sub_u_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usubl v1.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
@@ -70,8 +71,9 @@ define <4 x i32> @sub_sub_u_s(<4 x i32> %x, <4 x i16> %a, <4 x i16> %b) {
   ret <4 x i32> %r
 }
 
-define <2 x i64> @sub_sub_s_d(<2 x i64> %x, <2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: sub_sub_s_d:
+; (a - X) - b  ->  SSUBL(a, b) - X
+define <2 x i64> @sub_sub_s_i64(<2 x i64> %x, <2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: sub_sub_s_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssubl v1.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    sub v0.2d, v1.2d, v0.2d

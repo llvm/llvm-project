@@ -23575,26 +23575,27 @@ static SDValue reassociateAddSubLong(SDNode *N, SelectionDAG &DAG) {
     auto MatchA = m_Value(A, ExtOp), MatchB = m_Value(B, ExtOp);
     auto MatchX = m_Value(X, m_Unless(ExtOp));
 
-    auto TryReassociate = [&](unsigned Opc, SDValue L, SDValue R) {
+    auto TryReassociate = [&](unsigned Opc0, SDValue L, SDValue R,
+                              unsigned Opc1, SDValue X) {
       // Long instructions read operands from lower/upper halves.
       if (isEssentiallyExtractHighSubvector(L.getOperand(0)) !=
           isEssentiallyExtractHighSubvector(R.getOperand(0)))
         return SDValue();
       SDLoc DL(N);
-      return DAG.getNode(ISD::SUB, DL, VT, DAG.getNode(Opc, DL, VT, L, R), X);
+      return DAG.getNode(Opc1, DL, VT, DAG.getNode(Opc0, DL, VT, L, R), X);
     };
 
     // (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
     if (sd_match(N, m_Add(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
-      return TryReassociate(ISD::ADD, A, B);
+      return TryReassociate(ISD::ADD, A, B, ISD::SUB, X);
 
     // (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
     if (sd_match(N, m_Sub(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
-      return TryReassociate(ISD::SUB, A, B);
+      return TryReassociate(ISD::SUB, A, B, ISD::SUB, X);
 
     // ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
     if (sd_match(N, m_Sub(MatchB, m_OneUse(m_Add(MatchX, MatchA)))))
-      return TryReassociate(ISD::SUB, B, A);
+      return TryReassociate(ISD::SUB, B, A, ISD::SUB, X);
   }
 
   return SDValue();
