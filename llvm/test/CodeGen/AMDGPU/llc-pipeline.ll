@@ -49,11 +49,13 @@
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Expand Atomic instructions
+; GCN-O0-NEXT:      Dominator Tree Construction
+; GCN-O0-NEXT:      Natural Loop Information
+; GCN-O0-NEXT:      AMDGPU VGPR Allocate
 ; GCN-O0-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O0-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
-; GCN-O0-NEXT:      Dominator Tree Construction
 ; GCN-O0-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O0-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O0-NEXT:      FunctionPass Manager
@@ -116,6 +118,7 @@
 ; GCN-O0-NEXT:        AMDGPU Lower Idx Ops
 ; GCN-O0-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O0-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O0-NEXT:        AMDGPU Def/use private object VGPRs
 ; GCN-O0-NEXT:        Two-Address instruction pass
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        Slot index numbering
@@ -367,6 +370,7 @@
 ; GCN-O1-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O1-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O1-NEXT:        AMDGPU Def/use private object VGPRs
 ; GCN-O1-NEXT:        Two-Address instruction pass
 ; GCN-O1-NEXT:        Slot index numbering
 ; GCN-O1-NEXT:        Live Interval Analysis
@@ -696,6 +700,7 @@
 ; GCN-O1-OPTS-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O1-OPTS-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-OPTS-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O1-OPTS-NEXT:        AMDGPU Def/use private object VGPRs
 ; GCN-O1-OPTS-NEXT:        Two-Address instruction pass
 ; GCN-O1-OPTS-NEXT:        Slot index numbering
 ; GCN-O1-OPTS-NEXT:        Live Interval Analysis
@@ -1030,6 +1035,7 @@
 ; GCN-O2-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O2-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O2-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O2-NEXT:        AMDGPU Def/use private object VGPRs
 ; GCN-O2-NEXT:        Two-Address instruction pass
 ; GCN-O2-NEXT:        Slot index numbering
 ; GCN-O2-NEXT:        Live Interval Analysis
@@ -1380,6 +1386,7 @@
 ; GCN-O3-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O3-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O3-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O3-NEXT:        AMDGPU Def/use private object VGPRs
 ; GCN-O3-NEXT:        Two-Address instruction pass
 ; GCN-O3-NEXT:        Slot index numbering
 ; GCN-O3-NEXT:        Live Interval Analysis

@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -142,6 +143,9 @@ private:
   bool IsAMDGCN = false;
   bool IsAMDHSA = false;
 
+  /// Next free byte offset in the VGPR ("as memory") address space.
+  unsigned AllocVGPROffset = 0;
+
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
@@ -167,6 +171,8 @@ private:
   void
   finishDeferredAllocaToLDSPromotion(SetVector<IntrinsicInst *> &DeferredIntrs);
 
+  void allocateVgprs(AllocaAnalysis &AA);
+
   void scoreAlloca(AllocaAnalysis &AA) const;
 
   void setFunctionLimits(const Function &F);
@@ -179,7 +185,11 @@ public:
     IsAMDHSA = TT.getOS() == Triple::AMDHSA;
   }
 
-  bool run(Function &F, bool PromoteToLDS);
+  /// IsLatePass is true if invoked as a codegen pass and false if invoked from
+  /// the optimization pipeline ("amdgpu-promote-alloca-to-vector" pass). NoOpt
+  /// indicates to perform only the codegen work that is strictly required for
+  /// functionality, which is allocating objects in the VGPR address space.
+  bool run(Function &F, bool IsLatePass, bool NoOpt = false);
 };
 
 // FIXME: This can create globals so should be a module pass.
@@ -187,7 +197,8 @@ class AMDGPUPromoteAlloca : public FunctionPass {
 public:
   static char ID;
 
-  AMDGPUPromoteAlloca() : FunctionPass(ID) {}
+  explicit AMDGPUPromoteAlloca(CodeGenOptLevel OptLevel)
+      : FunctionPass(ID), NoOpt(OptLevel == CodeGenOptLevel::None) {}
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
@@ -196,17 +207,22 @@ public:
       return AMDGPUPromoteAllocaImpl(
                  TPC->getTM<TargetMachine>(), *F.getParent(),
                  getAnalysis<LoopInfoWrapperPass>().getLoopInfo())
-          .run(F, /*PromoteToLDS*/ true);
+          .run(F, /*IsLatePass=*/true, NoOpt);
     return false;
   }
 
-  StringRef getPassName() const override { return "AMDGPU Promote Alloca"; }
+  StringRef getPassName() const override {
+    return NoOpt ? "AMDGPU VGPR Allocate" : "AMDGPU Promote Alloca";
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<LoopInfoWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
+
+private:
+  bool NoOpt;
 };
 
 static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
@@ -246,7 +262,7 @@ PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*PromoteToLDS=*/true);
+                     .run(F, /*IsLatePass=*/true);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -259,7 +275,7 @@ PreservedAnalyses
 AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*PromoteToLDS=*/false);
+                     .run(F, /*IsLatePass=*/false);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -268,8 +284,21 @@ AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
-FunctionPass *llvm::createAMDGPUPromoteAlloca() {
-  return new AMDGPUPromoteAlloca();
+FunctionPass *llvm::createAMDGPUPromoteAlloca(CodeGenOptLevel OptLevel) {
+  return new AMDGPUPromoteAlloca(OptLevel);
+}
+
+PreservedAnalyses AMDGPUVGPRAllocatePass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
+                     .run(F, /*IsLatePass=*/true, /*NoOpt=*/true);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
@@ -362,9 +391,15 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
     VGPRBudgetRatio = PromoteAllocaToVectorVGPRRatio;
 }
 
-bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
-  if (DisablePromoteAllocaToLDS && DisablePromoteAllocaToVector)
+bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
+  assert((!NoOpt || IsLatePass) && "NoOpt only makes sense for the late pass");
+
+  // Without optimizations only the allocation below is done, so the promotion
+  // options do not get a say.
+  if (!NoOpt && DisablePromoteAllocaToLDS && DisablePromoteAllocaToVector)
     return false;
+
+  const bool PromoteToLDS = IsLatePass && !NoOpt;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
   MaxVGPRs = IsAMDGCN ? getMaxVGPRs(CurrentLocalMemUsage, TM, F) : 128;
@@ -386,6 +421,21 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       LLVM_DEBUG(dbgs() << "Analyzing: " << *AI << '\n');
 
       AllocaAnalysis AA{AI};
+
+      // An alloca that is already in the VGPR ("as memory") address space is
+      // not promoted, only given a place in that address space, which only the
+      // codegen pass does. It happens whether or not optimizations are enabled,
+      // since the address space cannot be used without it.
+      if (AI->getAddressSpace() == AMDGPUAS::VGPR) {
+        if (IsLatePass)
+          Allocas.push_back(std::move(AA));
+        continue;
+      }
+
+      // Everything below this point is an optimization.
+      if (NoOpt)
+        continue;
+
       if (collectAllocaUses(AA)) {
         analyzePromoteToVector(AA);
         if (PromoteToLDS)
@@ -398,8 +448,15 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
     }
   }
 
-  stable_sort(Allocas,
-              [](const auto &A, const auto &B) { return A.Score > B.Score; });
+  stable_sort(Allocas, [](const auto &A, const auto &B) {
+    // Prioritize allocas that are already in the VGPR address space, since
+    // their allocation must not fail.
+    bool AIsVGPR = A.Alloca->getAddressSpace() == AMDGPUAS::VGPR;
+    bool BIsVGPR = B.Alloca->getAddressSpace() == AMDGPUAS::VGPR;
+    if (AIsVGPR != BIsVGPR)
+      return AIsVGPR;
+    return A.Score > B.Score;
+  });
 
   // clang-format off
   LLVM_DEBUG(
@@ -412,6 +469,17 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   bool Changed = false;
   SetVector<IntrinsicInst *> DeferredIntrs;
   for (AllocaAnalysis &AA : Allocas) {
+    if (AA.Alloca->getAddressSpace() == AMDGPUAS::VGPR) {
+      allocateVgprs(AA);
+      std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(DL);
+      assert(Size); // Expected to succeed on non-array alloca.
+      const unsigned AllocaCost = Size->getFixedValue() * 8;
+      // These registers are no longer available for vectorization.
+      VectorizationBudget -= std::min(VectorizationBudget, AllocaCost);
+      Changed = true;
+      continue;
+    }
+
     if (AA.Vector.Ty) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(DL);
       assert(Size); // Expected to succeed on non-array alloca.
@@ -444,6 +512,103 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   // would need to be updated to remove successfully promoted allocas.
 
   return Changed;
+}
+
+// Give an alloca in the VGPR ("as memory") address space a place in that
+// address space, recorded on it as !amdgpu.allocated.vgprs, and lifetime
+// markers the backend understands. AMDGPUPrivateObjectVGPRs turns the two into
+// defs and uses of the physical registers the object occupies, which is what
+// keeps register allocation off them while it is live.
+void AMDGPUPromoteAllocaImpl::allocateVgprs(AllocaAnalysis &AA) {
+  LLVMContext &Ctx = Mod.getContext();
+  const unsigned AllocaSize =
+      DL.getTypeAllocSize(AA.Alloca->getAllocatedType()).getFixedValue();
+
+  // The generic lifetime intrinsics do not survive into the backend, so use
+  // the address-space specific ones instead. An object with no lifetime start
+  // is live from its definition.
+  //
+  // A marker that is already the address-space specific one counts as a start:
+  // this runs over IR it has converted before, since an object written in the
+  // address space to begin with reaches the backend that way, as does one an
+  // earlier run promoted. Adding a second start would move the start of the
+  // live range back to the alloca and keep the object live from there.
+  bool HaveLifetimeStart = false;
+  for (Use &U : AA.Alloca->uses()) {
+    auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+    if (!II)
+      continue;
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
+      II->setCalledFunction(Intrinsic::getOrInsertDeclaration(
+          &Mod, Intrinsic::amdgcn_vgpr_lifetime_start, AA.Alloca->getType()));
+      HaveLifetimeStart = true;
+      break;
+    case Intrinsic::lifetime_end:
+      II->setCalledFunction(Intrinsic::getOrInsertDeclaration(
+          &Mod, Intrinsic::amdgcn_vgpr_lifetime_end, AA.Alloca->getType()));
+      break;
+    case Intrinsic::amdgcn_vgpr_lifetime_start:
+      HaveLifetimeStart = true;
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (!HaveLifetimeStart) {
+    Instruction *IP = AA.Alloca->getNextNode();
+    while (isa<AllocaInst>(IP))
+      IP = IP->getNextNode();
+    IRBuilder<> B(IP);
+    B.SetCurrentDebugLocation(AA.Alloca->getDebugLoc());
+    B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_vgpr_lifetime_start,
+                      AA.Alloca);
+  }
+
+  // Allocating twice would place a second object on top of this one, so an
+  // object that already has its place keeps it, and the next one is allocated
+  // after it. The markers above are still rewritten, since IR that carries the
+  // metadata need not carry them.
+  unsigned Address = AllocVGPROffset;
+  if (MDNode *MD = AA.Alloca->getMetadata("amdgpu.allocated.vgprs")) {
+    Address = cast<AMDGPU::AllocatedVGPRsMetadata>(MD)->getAddress();
+    AllocVGPROffset =
+        std::max(AllocVGPROffset, Address + alignTo(AllocaSize, 4));
+  } else {
+    // Find space for the alloca. Objects are packed in order at dword
+    // granularity, since a register cannot be shared between two of them.
+    Type *I32 = Type::getInt32Ty(Ctx);
+    AA.Alloca->setMetadata(
+        "amdgpu.allocated.vgprs",
+        MDNode::get(
+            Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32, Address)),
+                  ConstantAsMetadata::get(ConstantInt::get(I32, AllocaSize))}));
+    AllocVGPROffset += alignTo(AllocaSize, 4);
+  }
+
+  // The object occupies whole registers named by its address, and nothing may
+  // move or spill it, so it has to fit in the registers this function is
+  // entitled to. That budget is what promotion elsewhere in this pass already
+  // uses, and for a non-entry function it is the 32 registers the ABI preserves
+  // unless the function is known to be inlined.
+  //
+  // Diagnose the overflow here rather than leaving it to register allocation,
+  // which reports "ran out of registers" from a pass with no idea what an
+  // object in this address space is - and only once the object is large enough
+  // to starve everything else, so an object that merely overruns the budget
+  // goes through silently.
+  const unsigned FirstReg = Address / 4;
+  const unsigned LastReg = (Address + alignTo(AllocaSize, 4)) / 4 - 1;
+  if (LastReg >= MaxVGPRs) {
+    const Function &F = *AA.Alloca->getFunction();
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F,
+        Twine("object in the VGPR 'as memory' address space (13) at v[") +
+            Twine(FirstReg) + ":" + Twine(LastReg) + "] does not fit in the " +
+            Twine(MaxVGPRs) + " registers available to this function",
+        AA.Alloca->getDebugLoc()));
+  }
 }
 
 // Checks if the instruction I is a memset user of the alloca AI that we can

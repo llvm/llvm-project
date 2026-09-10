@@ -4378,4 +4378,13 @@ def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
 /// incoming block.
 def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
     [IntrNoMem]>;
+
+/// Backend-only intrinsics analogous to llvm.lifetime.{start,end} for marking
+/// the lifetimes of allocas in the VGPR address space.
+def int_amdgcn_vgpr_lifetime_start :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                          [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+def int_amdgcn_vgpr_lifetime_end :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                          [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 }
