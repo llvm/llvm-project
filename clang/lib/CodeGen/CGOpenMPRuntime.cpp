@@ -1139,8 +1139,7 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
     // For non-trivial types with user initializers wrapped in StmtExpr,
     // manually emit each statement to ensure constructor targets the right
     // address.
-    if (!IsCombiner && Ty.isDestructedType() != QualType::DK_none &&
-        isa<StmtExpr>(CombinerInitializer)) {
+    if (!IsCombiner && isa<StmtExpr>(CombinerInitializer)) {
       const auto *SE = cast<StmtExpr>(CombinerInitializer);
       const CompoundStmt *CS = SE->getSubStmt();
       AggValueSlot Slot = AggValueSlot::forAddr(
