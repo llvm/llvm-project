@@ -475,7 +475,7 @@ static MaybeExtentExpr GetNonNegativeExtent(
       ConstantSubscript extent;
       (void)llvm::SubOverflow(*uval, *lval, extent);
       (void)llvm::AddOverflow(extent, ConstantSubscript{1}, extent);
-      return ExtentExpr{extent};
+      return MakeExtentExpr(extent);
     }
   } else if (lbound && ubound && lbound->Rank() == 0 && ubound->Rank() == 0 &&
       (!invariantOnly ||

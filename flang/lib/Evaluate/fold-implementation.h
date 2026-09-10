@@ -1880,7 +1880,7 @@ common::IfNoLvalue<std::optional<TO>, FROM> ConvertString(
   const int fromKind{s.kind()};
   if (std::is_same_v<TO, FROM> && toKind == fromKind) {
     return std::make_optional<TO>(std::move(s));
-  } else if (auto result{s.ToAscii(toKind)}; !result.IsMonostate()) {
+  } else if (auto result{s.ToAscii(toKind)}; !result.IsNull()) {
     return result;
   } else {
     return std::nullopt;
