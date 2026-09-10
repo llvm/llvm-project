@@ -28,10 +28,10 @@ class _LIBCPP_EXPORTED_FROM_ABI random_device {
 #  ifdef _LIBCPP_USING_DEV_RANDOM
   int __f_;
 #  elif !defined(_LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT)
-  // Apple platforms used to use the `_LIBCPP_USING_DEV_RANDOM` code path, and now
-  // use `arc4random()` as of this comment. In order to avoid breaking the ABI, we
-  // retain the same layout as before.
-#    if defined(__APPLE__)
+  // Apple platforms and GNU/Linux used to use the `_LIBCPP_USING_DEV_RANDOM`
+  // code path, and now use `arc4random` or `getentropy`. In order to avoid
+  // breaking the ABI, we retain the same layout as before.
+#    if defined(__APPLE__) || defined(__GLIBC__)
   [[__maybe_unused__]] int __padding_; // padding to fake the `__f_` field above
 #    endif
 

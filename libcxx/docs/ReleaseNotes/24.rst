@@ -67,6 +67,10 @@ Deprecations and Removals
 Potentially breaking changes
 ----------------------------
 
+- On Linux, ``std::random_device`` now uses ``arc4random`` when libc++ is built against glibc 2.36+, and ``getentropy``
+  when built against glibc 2.25 through 2.35, instead of reading from ``/dev/urandom``. Behavior with older glibc versions
+  and other C libraries on Linux remain unchanged.
+
 - In LLVM 23, libc++ dropped a lot of transitive includes in all language modes. This improves compile time significantly,
   but causes programs which rely on these includes to not compile anymore. The ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23``
   macro that was provided in LLVM 23 to ease the transition has been removed in this release.
