@@ -856,6 +856,8 @@ void Function::copyAttributesFrom(const Function *Src) {
     setPrefixData(Src->getPrefixData());
   if (Src->hasPrologueData())
     setPrologueData(Src->getPrologueData());
+  if (auto CM = Src->getCodeModel())
+    setCodeModel(*CM);
 }
 
 MemoryEffects Function::getMemoryEffects() const {
@@ -1232,4 +1234,13 @@ bool llvm::CallingConv::supportsNonVoidReturnType(CallingConv::ID CC) {
   }
 
   llvm_unreachable("covered callingconv switch");
+}
+
+void Function::setCodeModel(CodeModel::Model CM) {
+  unsigned CodeModelData = static_cast<unsigned>(CM) + 1;
+  unsigned OldData = getGlobalValueSubClassData();
+  unsigned NewData = (OldData & ~(CodeModelMask << CodeModelShift)) |
+                     (CodeModelData << CodeModelShift);
+  setGlobalValueSubClassData(NewData);
+  assert(getCodeModel() == CM && "Code model representation error!");
 }

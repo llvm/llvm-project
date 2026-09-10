@@ -4512,6 +4512,13 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
     Func->setPreferredAlignment(PrefAlignment);
   }
 
+  if (Record.size() > 20 && Record[20]) {
+    if (auto CM = getDecodedCodeModel(Record[20]))
+      Func->setCodeModel(*CM);
+    else
+      return error("Invalid function code model");
+  }
+
   ValueList.push_back(Func, getVirtualTypeID(Func->getType(), FTyID));
 
   if (OperandInfo.PersonalityFn || OperandInfo.Prefix || OperandInfo.Prologue)
