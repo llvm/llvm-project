@@ -91,9 +91,9 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                            SmallVectorImpl<int> &ReuseShuffleIndices,
                            FixedVectorType *&StoreVecTy);
 
-/// Clusters \p VL pointers by underlying object and sorts each cluster by
-/// offset, producing \p SortedIndices when the accesses are consecutive.
-/// \p MaxDepth is the recursion limit for getUnderlyingObject.
+/// Clusters \p VL pointers by (basic block, underlying object) pair and sorts
+/// each cluster by offset. Returns false and leaves \p SortedIndices empty if
+/// the accesses are not worth reordering.
 bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
                             Type *ElemTy, const DataLayout &DL,
                             ScalarEvolution &SE, unsigned MaxDepth,
