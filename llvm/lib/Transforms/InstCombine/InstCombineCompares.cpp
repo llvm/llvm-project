@@ -5333,6 +5333,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       if (P == ICmpInst::ICMP_SGE)
         return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
     }
+    
   // (X urem Y) == X --> X u< Y
   // (X urem Y) != X --> X u>= Y
   Value *Dividend, *Divisor;
