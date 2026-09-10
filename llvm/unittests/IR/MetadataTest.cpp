@@ -282,15 +282,11 @@ TEST_F(MDNodeTest, Print) {
   std::string Expected;
   {
     raw_string_ostream OS(Expected);
-    OS << "<" << (void *)N << "> = !{";
+    OS << "!3 = !{";
     C->printAsOperand(OS);
     OS << ", ";
     S->printAsOperand(OS);
-    OS << ", null";
-    MDNode *Nodes[] = {N0, N1, N2};
-    for (auto *Node : Nodes)
-      OS << ", <" << (void *)Node << ">";
-    OS << "}";
+    OS << ", null, !0, !1, !2}";
   }
 
   std::string Actual;
@@ -319,9 +315,9 @@ TEST_F(MDNodeTest, PrintTemporary) {
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("named");
   NMD->addOperand(N);
 
-  EXPECT_PRINTER_EQ("!0 = !{!1}", N->print(OS, &M));
-  EXPECT_PRINTER_EQ("!1 = <temporary!> !{!2}", Temp->print(OS, &M));
-  EXPECT_PRINTER_EQ("!2 = !{}", Arg->print(OS, &M));
+  EXPECT_PRINTER_EQ("!2 = !{!1}", N->print(OS, &M));
+  EXPECT_PRINTER_EQ("!1 = <temporary!> !{!0}", Temp->print(OS, &M));
+  EXPECT_PRINTER_EQ("!0 = !{}", Arg->print(OS, &M));
 
   // Cleanup.
   Temp->replaceAllUsesWith(Arg);
@@ -343,11 +339,11 @@ TEST_F(MDNodeTest, PrintFromModule) {
   std::string Expected;
   {
     raw_string_ostream OS(Expected);
-    OS << "!0 = !{";
+    OS << "!3 = !{";
     C->printAsOperand(OS);
     OS << ", ";
     S->printAsOperand(OS);
-    OS << ", null, !1, !2, !3}";
+    OS << ", null, !0, !1, !2}";
   }
 
   EXPECT_PRINTER_EQ(Expected, N->print(OS, &M));
