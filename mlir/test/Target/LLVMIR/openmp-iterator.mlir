@@ -1,6 +1,7 @@
 // RUN: split-file %s %t
 // RUN: mlir-translate --mlir-to-llvmir %t/host.mlir | FileCheck %s --check-prefix=CHECK
 // RUN: mlir-translate --mlir-to-llvmir %t/target.mlir | FileCheck %s --check-prefix=TARGET
+// RUN: mlir-translate --mlir-to-llvmir %t/mapper.mlir | FileCheck %s --check-prefix=MAPPER
 
 //--- host.mlir
 
@@ -513,3 +514,64 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // TARGET: call void @.omp_target_task_proxy_func
 // TARGET: call void @__kmpc_omp_task_complete_if0
 // TARGET: tail call void @free(ptr %[[DEP_ARR]])
+
+//--- mapper.mlir
+
+// --------------------------------------------------------------------
+// Map clause with iterator modifier inside a declare_mapper body
+// --------------------------------------------------------------------
+
+// The mapper's own `iterator(i = 0:10)` (11 total trips) is emitted as a
+// dynamic segment: each iteration pushes one component via
+// __tgt_push_mapper_component from inside a generated loop nested in the
+// mapper function's usual per-array-element loop, rather than being added
+// to the static offload arrays.
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  omp.declare_mapper @mapper_with_iterator : !llvm.struct<"mapper_type", (i32)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c10 = llvm.mlir.constant(10 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+      omp.yield(%m : !llvm.ptr)
+    } -> !omp.iterated<!llvm.ptr>
+    omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  llvm.func @target_data_mapper_iterator(%addr : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) name("") -> !llvm.ptr
+    omp.target_data map_entries(%map : !llvm.ptr) {}
+    llvm.return
+  }
+}
+
+// MAPPER-LABEL: define void @target_data_mapper_iterator
+// MAPPER: call void @__tgt_target_data_begin_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %{{.*}}, ptr %{{.*}}, ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr %.offload_mappers)
+// MAPPER: call void @__tgt_target_data_end_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %{{.*}}, ptr %{{.*}}, ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr %.offload_mappers)
+
+// MAPPER-LABEL: define internal void @.omp_mapper.mapper_with_iterator
+// MAPPER-SAME: (ptr noundef %[[HANDLE:.*]], ptr noundef %{{.*}}, ptr noundef %{{.*}}, i64 noundef %{{.*}}, i64 noundef %{{.*}}, ptr noundef %{{.*}})
+//
+// Per-array-element loop wraps the dynamically-sized mapper iterator loop
+// (trip count = 11, from the mapper's `iterator(i = 0:10)`).
+// MAPPER: omp.arraymap.body:
+// MAPPER: call i64 @__tgt_mapper_num_components(ptr %[[HANDLE]])
+// MAPPER: br label %omp_mapper.iterator.preheader
+//
+// MAPPER: omp_mapper.iterator.header:
+// MAPPER: %[[IV:.*]] = phi i64 [ 0, %omp_mapper.iterator.preheader ], [ %[[NEXT:.*]], %omp_mapper.iterator.inc ]
+// MAPPER: omp_mapper.iterator.cond:
+// MAPPER: %[[CMP:.*]] = icmp ult i64 %[[IV]], 11
+// MAPPER: br i1 %[[CMP]], label %omp_mapper.iterator.body, label %omp_mapper.iterator.exit
+//
+// Body: push one component per iteration via __tgt_push_mapper_component,
+// using the current array element as both base and begin address, and the
+// mapper's own var_ptr type size (4 bytes for the i32 field) as the size.
+// MAPPER: omp_mapper.iterator.body:
+// MAPPER: call void @__tgt_push_mapper_component(ptr %[[HANDLE]], ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 4, i64 %{{.*}}, ptr null)
+// MAPPER: br label %omp_mapper.iterator.inc
+//
+// MAPPER: omp_mapper.iterator.inc:
+// MAPPER: %[[NEXT]] = add nuw i64 %[[IV]], 1
+// MAPPER: br label %omp_mapper.iterator.header
