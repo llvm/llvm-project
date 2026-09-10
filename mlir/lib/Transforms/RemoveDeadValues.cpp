@@ -46,6 +46,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -844,4 +845,14 @@ void RemoveDeadValues::runOnOperation() {
     module->emitError("greedy pattern rewrite failed to converge");
     signalPassFailure();
   }
+
+  // Canonicalizing a region branch op (e.g. dropping a now-unused result and
+  // the corresponding terminator operand) erases operands in place without
+  // revisiting the defining ops of the values that were erased. This can
+  // strand now-dead values that this pass itself introduced, such as the
+  // `ub.poison` ops created above to replace operands forwarded only to dead
+  // successor inputs. Sweep those away here.
+  IRRewriter rewriter(context);
+  for (Region &region : module->getRegions())
+    eliminateTriviallyDeadOps(rewriter, region);
 }
