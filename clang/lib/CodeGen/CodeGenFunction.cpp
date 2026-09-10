@@ -36,6 +36,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
@@ -2884,121 +2885,18 @@ void CGBuilderInserter::InsertHelper(
 // called function.
 void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
                                           const FunctionDecl *TargetDecl) {
-  // SemaChecking cannot handle below x86 builtins because they have different
-  // parameter ranges with different TargetAttribute of caller.
-  if (CGM.getContext().getTargetInfo().getTriple().isX86()) {
-    unsigned BuiltinID = TargetDecl->getBuiltinID();
-    if (BuiltinID == X86::BI__builtin_ia32_cmpps ||
-        BuiltinID == X86::BI__builtin_ia32_cmpss ||
-        BuiltinID == X86::BI__builtin_ia32_cmppd ||
-        BuiltinID == X86::BI__builtin_ia32_cmpsd) {
-      const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
-      llvm::StringMap<bool> TargetFetureMap;
-      CGM.getContext().getFunctionFeatureMap(TargetFetureMap, FD);
-      llvm::APSInt Result =
-          *(E->getArg(2)->getIntegerConstantExpr(CGM.getContext()));
-      if (Result.getSExtValue() > 7 && !TargetFetureMap.lookup("avx"))
-        CGM.getDiags().Report(E->getBeginLoc(), diag::err_builtin_needs_feature)
-            << TargetDecl->getDeclName() << "avx";
-    }
-  }
-  return checkTargetFeatures(E->getBeginLoc(), TargetDecl);
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  CodeGenUtils::checkTargetFeatures(CGM.getContext(), CGM.getDiags(),
+                                    getLangOpts(), E, FD, TargetDecl);
 }
 
 // Emits an error if we don't have a valid set of target features for the
 // called function.
 void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
                                           const FunctionDecl *TargetDecl) {
-  // Early exit if this is an indirect call.
-  if (!TargetDecl)
-    return;
-
-  // Get the current enclosing function if it exists. If it doesn't
-  // we can't check the target features anyhow.
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
-  if (!FD)
-    return;
-
-  bool IsAlwaysInline = TargetDecl->hasAttr<AlwaysInlineAttr>();
-  bool IsFlatten = FD && FD->hasAttr<FlattenAttr>();
-
-  // Grab the required features for the call. For a builtin this is listed in
-  // the td file with the default cpu, for an always_inline function this is any
-  // listed cpu and any listed features.
-  unsigned BuiltinID = TargetDecl->getBuiltinID();
-  std::string MissingFeature;
-  llvm::StringMap<bool> CallerFeatureMap;
-  CGM.getContext().getFunctionFeatureMap(CallerFeatureMap, FD);
-  // When compiling in HipStdPar mode we have to be conservative in rejecting
-  // target specific features in the FE, and defer the possible error to the
-  // AcceleratorCodeSelection pass, wherein iff an unsupported target builtin is
-  // referenced by an accelerator executable function, we emit an error.
-  bool IsHipStdPar = getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice;
-  if (BuiltinID) {
-    StringRef FeatureList(CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
-    if (!Builtin::evaluateRequiredTargetFeatures(
-        FeatureList, CallerFeatureMap) && !IsHipStdPar) {
-      CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)
-          << TargetDecl->getDeclName()
-          << FeatureList;
-    }
-  } else if (!TargetDecl->isMultiVersion() &&
-             TargetDecl->hasAttr<TargetAttr>()) {
-    // Get the required features for the callee.
-
-    const TargetAttr *TD = TargetDecl->getAttr<TargetAttr>();
-    ParsedTargetAttr ParsedAttr =
-        CGM.getContext().filterFunctionTargetAttrs(TD);
-
-    SmallVector<StringRef, 1> ReqFeatures;
-    llvm::StringMap<bool> CalleeFeatureMap;
-    CGM.getContext().getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
-
-    for (const auto &F : ParsedAttr.Features) {
-      if (F[0] == '+' && CalleeFeatureMap.lookup(F.substr(1)))
-        ReqFeatures.push_back(StringRef(F).substr(1));
-    }
-
-    for (const auto &F : CalleeFeatureMap) {
-      // Only positive features are "required".
-      if (F.getValue())
-        ReqFeatures.push_back(F.getKey());
-    }
-    if (!llvm::all_of(ReqFeatures,
-                      [&](StringRef Feature) {
-                        if (!CallerFeatureMap.lookup(Feature)) {
-                          MissingFeature = Feature.str();
-                          return false;
-                        }
-                        return true;
-                      }) &&
-        !IsHipStdPar) {
-      if (IsAlwaysInline)
-        CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
-            << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
-      else if (IsFlatten)
-        CGM.getDiags().Report(Loc, diag::err_flatten_function_needs_feature)
-            << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
-    }
-
-  } else if (!FD->isMultiVersion() && FD->hasAttr<TargetAttr>()) {
-    llvm::StringMap<bool> CalleeFeatureMap;
-    CGM.getContext().getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
-
-    for (const auto &F : CalleeFeatureMap) {
-      if (F.getValue() &&
-          (!CallerFeatureMap.lookup(F.getKey()) ||
-           !CallerFeatureMap.find(F.getKey())->getValue()) &&
-          !IsHipStdPar) {
-        if (IsAlwaysInline)
-          CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
-              << FD->getDeclName() << TargetDecl->getDeclName() << F.getKey();
-        else if (IsFlatten)
-          CGM.getDiags().Report(Loc, diag::err_flatten_function_needs_feature)
-              << FD->getDeclName() << TargetDecl->getDeclName() << F.getKey();
-      }
-    }
-  }
+  CodeGenUtils::checkTargetFeatures(CGM.getContext(), CGM.getDiags(),
+                                    getLangOpts(), Loc, FD, TargetDecl);
 }
 
 void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
