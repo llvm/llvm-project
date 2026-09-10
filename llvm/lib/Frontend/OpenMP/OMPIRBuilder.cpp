@@ -5553,8 +5553,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
       Type *IntPtrTy = Builder.getInt32Ty();
       Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
       Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
-      Value *Buff = Builder.CreateMalloc(IntPtrTy, ScanVarsType[i], Allocsize,
-                                         AllocSpan, nullptr, "arr");
+      Value *Buff =
+          Builder.CreateMalloc(IntPtrTy, Allocsize, AllocSpan, nullptr, "arr");
       Builder.CreateStore(Buff, (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]]);
     }
     return Error::success();
