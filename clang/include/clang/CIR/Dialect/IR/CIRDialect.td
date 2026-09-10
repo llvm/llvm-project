@@ -25,11 +25,10 @@ def CIR_Dialect : Dialect {
   let cppNamespace = "::cir";
 
   let useDefaultAttributePrinterParser = 1;
+
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
-
-  let hasOperationAttrVerify = 1;
 
   // Enable constant materialization for the CIR dialect. This generates a
   // declaration for the cir::CIRDialect::materializeConstant function. This

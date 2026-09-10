@@ -172,15 +172,6 @@ static LogicalResult verifyOpenCLVersionAttr(Operation *op,
   return success();
 }
 
-LogicalResult cir::CIRDialect::verifyOperationAttribute(Operation *op,
-                                                        NamedAttribute attr) {
-  StringRef attrName = attr.getName().getValue();
-  if (!isOpenCLVersionAttrName(attrName))
-    return success();
-
-  return verifyOpenCLVersionAttr(op, attr);
-}
-
 LogicalResult cir::CIRDialect::verifyRegionArgAttribute(
     Operation *op, unsigned /*regionIndex*/, unsigned /*argIndex*/,
     NamedAttribute attr) {
@@ -260,7 +251,11 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
 LogicalResult
 cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                           mlir::NamedAttribute attr) {
-  if (attr.getName() == getOffloadContainerAttrName()) {
+  llvm::StringRef attrName = attr.getName().getValue();
+  if (isOpenCLVersionAttrName(attrName))
+    return verifyOpenCLVersionAttr(op, attr);
+
+  if (attrName == getOffloadContainerAttrName()) {
     if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
       return op->emitOpError() << "expects '" << getOffloadContainerAttrName()
                                << "' to be a unit attribute";
@@ -270,8 +265,7 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
   // The container verifier owns the structural contract between a container
   // and the modules it holds. All this can add is that the kind attribute
   // never lands on something that is not a module.
-  if (attr.getName() == getOffloadKindAttrName() &&
-      !mlir::isa<mlir::ModuleOp>(op))
+  if (attrName == getOffloadKindAttrName() && !mlir::isa<mlir::ModuleOp>(op))
     return op->emitOpError() << "expects '" << getOffloadKindAttrName()
                              << "' attribute to be attached to '"
                              << mlir::ModuleOp::getOperationName() << "'";
