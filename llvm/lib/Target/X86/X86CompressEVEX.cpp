@@ -137,7 +137,7 @@ static bool hasShorterEVEXViaCDisp8(const MachineInstr &MI) {
     return false;
 
   int64_t Val = Disp.getImm();
-  return X86II::isDispOrCDisp8(MI.getDesc().TSFlags, Val) && !isInt<8>(Val);
+  return !isInt<8>(Val) && X86II::isDispOrCDisp8(MI.getDesc().TSFlags, Val);
 }
 
 // Do any custom cleanup needed to finalize the conversion.
