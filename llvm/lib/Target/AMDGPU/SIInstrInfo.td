@@ -59,8 +59,7 @@ def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.G
 // modifier behavior with dx10_enable.
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
 
-// VGPR address space (13) load/store with a dword index operand. The index is
-// the byte offset into the wave's view of its vector registers, divided by 4.
+// VGPR address space (13) load/store indexed by (byte offset >> 2).
 def SDTRegIdxLoad : SDTypeProfile<1, 1,
     [SDTCisVT<1, i32>]>; // dword_index
 def SDTRegIdxStore : SDTypeProfile<0, 2,
