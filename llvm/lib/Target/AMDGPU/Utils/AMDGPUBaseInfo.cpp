@@ -3661,17 +3661,17 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
+  if (ST.getFeatureBits().test(FeatureLDSAllocGranularity256))
     return 64;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
+  if (ST.getFeatureBits().test(FeatureLDSAllocGranularity512))
     return 128;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+  if (ST.getFeatureBits().test(FeatureLDSAllocGranularity1024))
     return 256;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
+  if (ST.getFeatureBits().test(FeatureLDSAllocGranularity1280))
     return 320;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+  if (ST.getFeatureBits().test(FeatureLDSAllocGranularity2048))
     return 512;
-  return 64; // In sync with getAddressableLocalMemorySize
+  return 64;
 }
 
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
