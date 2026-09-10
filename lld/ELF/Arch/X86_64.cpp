@@ -364,9 +364,10 @@ void X86_64::relaxCFIJumpTables() const {
       // because the last entry controls which output section the jump table is
       // placed into, which affects move eligibility for other sections.
       //
-      // We assume the compiler will try to put the jump table into a hot section
-      // (e.g. .text.hot). Moving the jump table before its last entry places
-      // the entire table into that entry's output section (last->getParent()).
+      // We assume the compiler will try to put the jump table into a hot
+      // section (e.g. .text.hot). Moving the jump table before its last entry
+      // places the entire table into that entry's output section
+      // (last->getParent()).
       // - If the last entry shares the jump table's original output section
       //   (sec->getParent()), moving it keeps the table in that same section,
       //   which is acceptable.

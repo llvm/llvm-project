@@ -494,7 +494,6 @@ struct OpaquePointer {
   bool isUnknownSizeArray() const;
   bool isRoot() const;
 };
-struct OpaqueTag {};
 
 enum class Storage { Int, Block, Fn, Typeid, String, Opaque };
 
@@ -570,18 +569,33 @@ public:
 
   /// Equality operators are just for tests.
   bool operator==(const Pointer &P) const {
-    if (P.StorageKind != StorageKind)
+    if (StorageKind != P.StorageKind)
       return false;
-    if (isIntegralPointer())
+
+    switch (StorageKind) {
+    case Storage::Int:
       return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty &&
              P.Offset == Offset;
-
-    if (isFunctionPointer())
+    case Storage::Block:
+      return P.view() == view();
+    case Storage::Fn:
       return P.Fn.Func == Fn.Func && P.Offset == Offset;
-    if (isStringPointer())
+    case Storage::Typeid:
+      llvm_unreachable("typeid in operator==?");
+    case Storage::String:
       return Str.Base == P.Str.Base && Offset == P.Offset;
-
-    return P.view() == view();
+    case Storage::Opaque:
+      if (!(P.Opaque.Base == Opaque.Base &&
+            P.Opaque.PathLength == Opaque.PathLength))
+        return false;
+      if (P.Offset != Offset)
+        return false;
+      if (Opaque.PathLength == 0)
+        return true;
+      return std::memcmp(P.Opaque.Path, Opaque.Path,
+                         sizeof(PointerPathEntry) * Opaque.PathLength) == 0;
+    }
+    llvm_unreachable("Unhandled storage kind");
   }
 
   bool operator!=(const Pointer &P) const { return !(P == *this); }
@@ -922,6 +936,9 @@ public:
 
       return Fn.Func->getDecl()->isWeak();
     }
+
+    if (isOpaquePointer())
+      return Opaque.Base->isWeak();
     if (!isBlockPointer())
       return false;
 
@@ -940,6 +957,8 @@ public:
 
   /// Checks if the pointer points to a dummy value.
   bool isDummy() const {
+    if (isOpaquePointer())
+      return true;
     if (!isBlockPointer())
       return false;
     return view().isDummy();
@@ -951,6 +970,8 @@ public:
       return true;
     if (isStringPointer())
       return true;
+    if (!isBlockPointer())
+      return false;
     return view().isConst();
   }
   bool isConstInMutable() const {
