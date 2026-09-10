@@ -11,6 +11,8 @@
 // XFAIL: target={{.+}}-apple-{{.+}} && using-built-library-before-llvm-14
 
 // UNSUPPORTED: no-random-device
+// ADDITIONAL_COMPILE_FLAGS(libcpp-using-arc4-random): -DTEST_USING_ARC4_RANDOM
+// ADDITIONAL_COMPILE_FLAGS(libcpp-using-dev-random): -DTEST_USING_DEV_RANDOM
 
 // <random>
 
@@ -62,13 +64,13 @@ int main(int, char**) {
   }
   // Check the validity of various tokens
   {
-#if defined(_LIBCPP_USING_ARC4_RANDOM)
+#if defined(TEST_USING_ARC4_RANDOM)
     check_random_device_valid("/dev/urandom");
     check_random_device_valid("/dev/random");
     check_random_device_valid("/dev/null");
     check_random_device_valid("/dev/nonexistent");
     check_random_device_valid("wrong file");
-#elif defined(_LIBCPP_USING_DEV_RANDOM)
+#elif defined(TEST_USING_DEV_RANDOM)
     check_random_device_valid("/dev/urandom");
     check_random_device_valid("/dev/random");
     check_random_device_valid("/dev/null");
