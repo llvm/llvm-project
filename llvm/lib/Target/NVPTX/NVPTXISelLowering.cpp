@@ -1603,10 +1603,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // start of the function in the AsmPrinter.
   SDValue Proto = GetI32(0);
   if (IsIndirectCall) {
-    MCSymbol *ProtoSymbol =
-        DAG.getMachineFunction()
-            .getInfo<NVPTXMachineFunctionInfo>()
-            ->addCallPrototype(UniqueCallSite, CB, DAG.getMachineFunction());
+    auto *ProtoSymbol = DAG.getMachineFunction()
+                            .getInfo<NVPTXMachineFunctionInfo>()
+                            ->addCallPrototype(CB, DAG.getMachineFunction());
     Proto = DAG.getMCSymbol(ProtoSymbol, MVT::i32);
   }
 

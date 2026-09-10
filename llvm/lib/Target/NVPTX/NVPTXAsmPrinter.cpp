@@ -945,8 +945,7 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   OutStreamer->emitRawText(O.str());
 
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
-  for (const auto &Entry : MFI->getCallPrototypes()) {
-    const auto &[CB, Symbol] = Entry.second;
+  for (const auto &[CB, Symbol] : MFI->getCallPrototypes()) {
     emitCallPrototype(*CB, Symbol);
   }
 
