@@ -134,6 +134,7 @@ private:
                                                Value *OtherOp);
   Instruction *canonicalizeNegFPConstants(Instruction *I);
   void BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT);
+  void convertShiftsUsedByMulsToMuls(Function &F);
 };
 
 } // end namespace llvm
