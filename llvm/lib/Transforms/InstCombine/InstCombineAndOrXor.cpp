@@ -4326,21 +4326,21 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       const APInt *ShiftAmt;
       if (match(A, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
           match(B, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
-          ShiftAmt->ult(A->getType()->getIntegerBitWidth()) &&
+          ShiftAmt->ult(A->getType()->getScalarSizeInBits()) &&
           !C1->intersects(APInt::getHighBitsSet(
-              A->getType()->getIntegerBitWidth(), ShiftAmt->getZExtValue()))) {
+              A->getType()->getScalarSizeInBits(), ShiftAmt->getZExtValue()))) {
         return BinaryOperator::CreateAnd(
-            A, ConstantInt::get(I.getType(), *C0 | *C1));
+            A, ConstantInt::getIntegerValue(I.getType(), *C0 | *C1));
       }
       // A = lshr (trunc X), S
       // B = trunc (lshr X, S)
       if (match(B, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
           match(A, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
-          ShiftAmt->ult(A->getType()->getIntegerBitWidth()) &&
+          ShiftAmt->ult(A->getType()->getScalarSizeInBits()) &&
           !C0->intersects(APInt::getHighBitsSet(
-              A->getType()->getIntegerBitWidth(), ShiftAmt->getZExtValue()))) {
+              A->getType()->getScalarSizeInBits(), ShiftAmt->getZExtValue()))) {
         return BinaryOperator::CreateAnd(
-            B, ConstantInt::get(I.getType(), *C0 | *C1));
+            B, ConstantInt::getIntegerValue(I.getType(), *C0 | *C1));
       }
     }
 
