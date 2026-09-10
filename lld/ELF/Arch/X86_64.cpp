@@ -355,6 +355,17 @@ void X86_64::relaxCFIJumpTables() const {
       // Figure out the movable section for the last entry. We do this first
       // because the last entry controls which output section the jump table is
       // placed into, which affects move eligibility for other sections.
+      //
+      // We assume the compiler will try to put the jump table into a hot section
+      // (e.g. .text.hot). Moving the jump table before its last entry places
+      // the entire table into that entry's output section (last->getParent()).
+      // - If the last entry shares the jump table's original output section
+      //   (sec->getParent()), moving it keeps the table in that same section,
+      //   which is acceptable.
+      // - If the last entry is in a different output section, avoid moving
+      //   the table if any other entry targets the jump table's original
+      //   output section (e.g. avoiding dragging a table containing hot entries
+      //   into a different section like .text.unlikely).
       auto *lastSec = [&]() -> InputSection * {
         // If the jump table section is more aligned than the entry size, skip
         // this because there's no guarantee that we'll be able to emit a
@@ -369,7 +380,19 @@ void X86_64::relaxCFIJumpTables() const {
         if (rels.size() >= 2 &&
             rels[rels.size() - 2].offset >= sec->size - sec->entsize)
           return nullptr;
-        return getMovableSection(rels.back());
+        InputSection *last = getMovableSection(rels.back());
+        if (!last)
+          return nullptr;
+
+        if (sec->getParent() != last->getParent()) {
+          for (Relocation &r : rels.drop_back()) {
+            InputSection *target = getMovableSection(r);
+            if (target && target->getParent() == sec->getParent())
+              return nullptr;
+          }
+        }
+
+        return last;
       }();
       OutputSection *targetOutputSec;
       if (lastSec) {

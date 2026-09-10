@@ -198,6 +198,7 @@ jmp f21.cfi
 f21.cfi:
 ret $21
 
+
 # CHECK:      <f1>:
 # CHECK-NEXT: <f1.cfi>:
 # CHECK-NEXT:   retq   $0x1
@@ -281,6 +282,98 @@ f15.cfi:
 f16.cfi:
 ret $16
 .zero 16
+
+## Test interaction between CFI jump table relaxation and section placement.
+
+## Case 1: Jump table is in .sec_a and has entries in both .sec_a and .sec_b.
+## The last entry is in .sec_b, but because an entry targets .sec_a, the jump
+## table must not be moved into .sec_b.
+.section .sec_a,"ax",@llvm_cfi_jump_table,8,unique,1
+f22:
+jmp f22.cfi
+.balign 8, 0xcc
+f23:
+jmp f23.cfi
+.balign 8, 0xcc
+
+.section .sec_a,"ax",@progbits,unique,2
+f22.cfi:
+ret $22
+.zero 16
+
+.section .sec_b,"ax",@progbits,unique,3
+f23.cfi:
+ret $23
+
+## Case 2: Jump table is in .sec_a, and its last entry is in .sec_a.
+## Moving the jump table before the last entry keeps it in .sec_a, which
+## is acceptable even if an earlier entry is in .sec_b.
+.section .sec_a,"ax",@llvm_cfi_jump_table,8,unique,4
+f24:
+jmp f24.cfi
+.balign 8, 0xcc
+f25:
+jmp f25.cfi
+.balign 8, 0xcc
+
+.section .sec_b,"ax",@progbits,unique,5
+f24.cfi:
+ret $24
+.zero 16
+
+.section .sec_a,"ax",@progbits,unique,6
+f25.cfi:
+ret $25
+
+## Case 3: Jump table is in .sec_a, but ALL of its targets are in .sec_b.
+## Since no entries target .sec_a, the jump table can be moved before the
+## last entry into .sec_b.
+.section .sec_a,"ax",@llvm_cfi_jump_table,8,unique,7
+f26:
+jmp f26.cfi
+.balign 8, 0xcc
+f27:
+jmp f27.cfi
+.balign 8, 0xcc
+
+.section .sec_b,"ax",@progbits,unique,8
+f26.cfi:
+ret $26
+.zero 16
+
+.section .sec_b,"ax",@progbits,unique,9
+f27.cfi:
+ret $27
+
+# CHECK: Disassembly of section .sec_a:
+
+## Case 1: jt stays in .sec_a and both entries remain jumps.
+# CHECK:      <f22>:
+# CHECK-NEXT:   jmp {{.*}} <f22.cfi>
+# CHECK:      <f23>:
+# CHECK-NEXT:   jmp {{.*}} <f23.cfi>
+# CHECK:      <f22.cfi>:
+# CHECK-NEXT:   retq $0x16
+
+## Case 2: jt stays in .sec_a, f24 remains a jump, and f25 is relaxed.
+# CHECK:      <f24>:
+# CHECK-NEXT:   jmp {{.*}} <f24.cfi>
+# CHECK:      <f25>:
+# CHECK-NEXT: <f25.cfi>:
+# CHECK-NEXT:   retq $0x19
+# O0:         <f25>:
+# O0-NEXT:      jmp {{.*}} <f25.cfi>
+
+# CHECK: Disassembly of section .sec_b:
+
+## Case 3: jt is moved into .sec_b, f26 remains a jump, and f27 is relaxed.
+# CHECK:      <f26>:
+# CHECK-NEXT:   jmp {{.*}} <f26.cfi>
+# CHECK:      <f27>:
+# CHECK-NEXT: <f27.cfi>:
+# CHECK-NEXT:   retq $0x1b
+# O0:         <f27>:
+# O0-NEXT:      jmp {{.*}} <f27.cfi>
 
 # CHECK:      <.iplt>:
 # CHECK-NEXT:   [[IPLT]]:
