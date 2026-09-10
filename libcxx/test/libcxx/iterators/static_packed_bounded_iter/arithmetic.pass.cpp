@@ -31,74 +31,74 @@ constexpr bool tests() {
   Foo array[]       = {40, 41, 42, 43, 44};
   Foo* b            = array + 0;
   Foo* e            = array + 5;
-  using BoundedIter = std::__static_packed_bounded_iterator<Iter, decltype(array), std::size(array)>;
+  using BoundedIter = std::__static_packed_bounded_iterator<Iter, std::size(array)>;
   // ++it
   {
-    BoundedIter iter    = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 0);
+    BoundedIter iter    = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 0);
     BoundedIter& result = ++iter;
     assert(&result == &iter);
     assert(*iter == 41);
   }
   // it++
   {
-    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 0);
+    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 0);
     BoundedIter result = iter++;
     assert(*result == 40);
     assert(*iter == 41);
   }
   // --it
   {
-    BoundedIter iter    = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 3);
+    BoundedIter iter    = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 3);
     BoundedIter& result = --iter;
     assert(&result == &iter);
     assert(*iter == 42);
   }
   // it--
   {
-    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 3);
+    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 3);
     BoundedIter result = iter--;
     assert(*result == 43);
     assert(*iter == 42);
   }
   // it += n
   {
-    BoundedIter iter    = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 0);
+    BoundedIter iter    = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 0);
     BoundedIter& result = (iter += 3);
     assert(&result == &iter);
     assert(*iter == 43);
   }
   // it + n
   {
-    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 0);
+    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 0);
     BoundedIter result = iter + 3;
     assert(*iter == 40);
     assert(*result == 43);
   }
   // n + it
   {
-    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 0);
+    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 0);
     BoundedIter result = 3 + iter;
     assert(*iter == 40);
     assert(*result == 43);
   }
   // it -= n
   {
-    BoundedIter iter    = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 3);
+    BoundedIter iter    = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 3);
     BoundedIter& result = (iter -= 3);
     assert(&result == &iter);
     assert(*iter == 40);
   }
   // it - n
   {
-    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 3);
+    BoundedIter iter   = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 3);
     BoundedIter result = iter - 3;
     assert(*iter == 43);
     assert(*result == 40);
   }
   // it - it
   {
-    BoundedIter iter1     = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 0);
-    BoundedIter iter2     = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(e), 0);
+    BoundedIter iter1     = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 0);
+    BoundedIter iter2     = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(e), 0);
     std::ptrdiff_t result = iter2 - iter1;
     assert(result == 5);
   }
