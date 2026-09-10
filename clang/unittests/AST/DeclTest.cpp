@@ -37,6 +37,30 @@ using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
 
+TEST(Decl, LookupAfterNamespaceRedeclaration) {
+  auto AST = tooling::buildASTFromCode("");
+  ASSERT_TRUE(AST);
+  ASTContext &Ctx = AST->getASTContext();
+  auto *TU = Ctx.getTranslationUnitDecl();
+  auto *First = NamespaceDecl::Create(Ctx, TU, false, {}, {},
+                                      &Ctx.Idents.get("N"), nullptr, false);
+  auto *Second = NamespaceDecl::Create(Ctx, TU, false, {}, {},
+                                       &Ctx.Idents.get("N"), nullptr, false);
+  auto *A = VarDecl::Create(Ctx, First, {}, {}, &Ctx.Idents.get("a"), Ctx.IntTy,
+                            nullptr, SC_None);
+  auto *B = VarDecl::Create(Ctx, Second, {}, {}, &Ctx.Idents.get("b"),
+                            Ctx.IntTy, nullptr, SC_None);
+  First->addDecl(A);
+  Second->addDecl(B);
+  ASSERT_TRUE(Second->lookup(B->getDeclName()).isSingleResult());
+
+  // A map created before relinking must not bypass the new primary context.
+  Second->setPreviousDecl(First);
+  auto Result = Second->lookup(A->getDeclName());
+  ASSERT_TRUE(Result.isSingleResult());
+  EXPECT_EQ(A, Result.front());
+}
+
 TEST(Decl, CleansUpAPValues) {
   MatchFinder Finder;
   std::unique_ptr<FrontendActionFactory> Factory(
