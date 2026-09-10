@@ -7,8 +7,7 @@ define i1 @reduce_and_trunc_v8i8(<8 x i8> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v8, v8, 0
-; CHECK-NEXT:    vmnot.m v8, v8
+; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -21,8 +20,7 @@ define i1 @reduce_and_icmp_slt_v8i8(<8 x i8> %v) {
 ; CHECK-LABEL: reduce_and_icmp_slt_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmsle.vi v8, v8, 4
-; CHECK-NEXT:    vmnot.m v8, v8
+; CHECK-NEXT:    vmsgt.vi v8, v8, 4
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -36,8 +34,7 @@ define <8 x i1> @not_trunc_v8i8(<8 x i8> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v8, v8, 0
-; CHECK-NEXT:    vmnot.m v0, v8
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %t = trunc <8 x i8> %v to <8 x i1>
   %n = xor <8 x i1> %t, splat (i1 true)
@@ -74,9 +71,7 @@ define <8 x i1> @not_vp_reverse_v8i1(<8 x i1> %v, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v9, v10, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v11, 0, v0.t
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v0, v8
+; CHECK-NEXT:    vmseq.vi v0, v11, 0, v0.t
 ; CHECK-NEXT:    ret
   %r = call <8 x i1> @llvm.experimental.vp.reverse.v8i1(<8 x i1> %v, <8 x i1> %m, i32 %evl)
   %n = xor <8 x i1> %r, splat (i1 true)
