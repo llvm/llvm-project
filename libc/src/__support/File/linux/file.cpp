@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "file.h"
-
+#include "file_flags.h"
 #include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
 #include "hdr/stdio_macros.h"
 #include "hdr/sys_stat_macros.h" // For S_IS*, S_IF*, and S_IR* flags.
@@ -82,18 +82,18 @@ static int map_c_mode_flags_to_linux_open_flags(const FileMode &file_mode) {
   // handle access patterns i.e whether the file should be in
   // only read, write modes or both.
   if (file_mode.is_update())
-    open_flags = read_and_write();
+    open_flags = LinuxFileFlags::READ_AND_WRITE;
   else if (file_mode.is_append() || file_mode.is_write())
-    open_flags = write_only();
+    open_flags = LinuxFileFlags::WRITE_ONLY;
   else
-    open_flags = read_only();
+    open_flags = LinuxFileFlags::READ_ONLY;
 
   // handle the behaviour of the file when accessed i.e should the file
   // be appended to or truncate when created.
   if (file_mode.is_append())
-    open_flags |= create_and_append();
+    open_flags |= LinuxFileFlags::CREATE_AND_APPEND;
   else if (file_mode.is_write())
-    open_flags |= create_or_truncate();
+    open_flags |= LinuxFileFlags::CREATE_OR_TRUNCATE;
 
   return open_flags;
 }
