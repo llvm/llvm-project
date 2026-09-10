@@ -8945,6 +8945,157 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
   return false;
 }
 
+// Performs very basic loop strength reduction to vector values with a known
+// evolution from one iteration to the next that are used as the value operand
+// for a store.
+// TODO: Support more cases, such as the address instead of value operand for
+//       strided memory operations.
+// TODO: Add a little example to help explain.
+static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
+  // We're only interested in header phis in innermost loops.
+  // We want a loop with an identifiable preheader and single latch.
+  Loop *L = LI->getLoopFor(Phi->getParent());
+  if (!L || !L->isInnermost())
+    return false;
+
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *PreHeader = L->getLoopPreheader();
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!PreHeader || !Latch || Phi->getParent() != Header)
+    return false;
+
+  // Check the progression of the phi.
+  Value *Start = Phi->getIncomingValueForBlock(PreHeader);
+  Value *Step = Phi->getIncomingValueForBlock(Latch);
+
+  // TODO: Handle offsets from stepvector.
+  if (!match(Start, m_Intrinsic<Intrinsic::stepvector>()))
+    return false;
+
+  Value *LoopStride = nullptr;
+  if (!match(Step, m_c_Add(m_Specific(Phi), m_Value(LoopStride))))
+    return false;
+
+  unsigned AddCount = 0;
+  Value *ShiftedVScale = LoopStride;
+  // We're looking for updates by a multiple of the number of elements in
+  // the vector.
+  // TODO: Check that the shift amount correctly corresponds to the VF.
+  // TODO: Do better with depth restrictions instead of hardcoding.
+  // TODO: Support cases where the total stride is created directly by a
+  //       shifted vscale where we have interleaving.
+  if (match(LoopStride, m_c_Add(m_Value(LoopStride),
+                                m_Value(ShiftedVScale, m_Splat(m_Value()))))) {
+    for (int I = 0; I < 4; ++I) {
+      AddCount++;
+      LLVM_DEBUG(dbgs() << "\t " << *LoopStride << "\n");
+      if (!match(LoopStride,
+                 m_c_Add(m_Value(LoopStride), m_Specific(ShiftedVScale))))
+        break;
+    }
+  }
+
+  const APInt *ShiftAmt = nullptr;
+  if (!match(LoopStride, m_Splat(m_Shl(m_VScale(), m_APInt(ShiftAmt)))) ||
+      LoopStride != ShiftedVScale)
+    return false;
+
+  // Record users of interest.
+  struct OffsetGEP {
+    GetElementPtrInst *GEP;
+    Value *Offset;
+  };
+  SmallVector<OffsetGEP, 4> Candidates;
+  Value *CommonBase = nullptr;
+  unsigned CommonSize = 0;
+  DataLayout DL = Phi->getFunction()->getDataLayout();
+  for (User *U : Phi->users()) {
+    Instruction *I = cast<Instruction>(U);
+    // Skip over the step, handled above.
+    if (Step == I)
+      continue;
+
+    // If we have an offset from the Phi values, record that and then look
+    // for a GEP.
+    Value *Offset = nullptr;
+    if (match(I, m_OneUse(m_c_Add(m_Specific(Phi), m_Value(Offset)))))
+      I = cast<Instruction>(I->getSingleUndroppableUse()->getUser());
+
+    // We're only interested in single index GEPs used only as the value
+    // operand in a store for now.
+    auto *GEP = dyn_cast<GetElementPtrInst>(I);
+    if (!GEP || GEP->getNumOperands() != 2)
+      return false;
+
+    Use *GEPUse = GEP->getSingleUndroppableUse();
+    if (!GEPUse || !isa<StoreInst>(GEPUse->getUser()) ||
+        GEPUse->getOperandNo() != 0)
+      return false;
+
+    // Reject anything with a loop-varying base or if we have different bases
+    // for different GEPs.
+    // TODO: Support multiple bases.
+    Value *Base = I->getOperand(0);
+    if (!L->isLoopInvariant(Base) || (CommonBase && CommonBase != Base))
+      return false;
+
+    CommonBase = Base;
+
+    // Check that the indexed size is also the same.
+    unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
+    if (!Size || (CommonSize && CommonSize != Size))
+      return false;
+
+    CommonSize = Size;
+    Candidates.push_back({GEP, Offset});
+  }
+
+  // Multiply the start by the size of the struct, and add the base pointer.
+  IRBuilder<> PHBuilder(PreHeader->getTerminator());
+  VectorType *VTy = cast<VectorType>(Start->getType());
+  Type *ITy = VTy->getElementType();
+  Value *StructSize = ConstantInt::get(ITy, APInt(64, CommonSize));
+  StructSize = PHBuilder.CreateVectorSplat(VTy->getElementCount(), StructSize);
+  Value *NewStart = PHBuilder.CreateMul(Start, StructSize);
+  CommonBase = PHBuilder.CreatePtrToInt(CommonBase, ITy);
+  CommonBase = PHBuilder.CreateVectorSplat(VTy->getElementCount(), CommonBase);
+  NewStart = PHBuilder.CreateAdd(NewStart, CommonBase);
+
+  // Create a new step based on the total size of all struct addresses per
+  // iteration.
+  Value *StructStride = ConstantInt::get(ITy, ShiftAmt->getZExtValue());
+  StructStride = PHBuilder.CreateMul(StructStride, PHBuilder.CreateVScale(ITy));
+  Value *TotalStride =
+      PHBuilder.CreateMul(StructStride, ConstantInt::get(ITy, AddCount + 1));
+  StructStride =
+      PHBuilder.CreateVectorSplat(VTy->getElementCount(), StructStride);
+  TotalStride =
+      PHBuilder.CreateVectorSplat(VTy->getElementCount(), TotalStride);
+
+  IRBuilder<> LBuilder(cast<Instruction>(Step));
+  Value *NewStep = LBuilder.CreateAdd(Phi, TotalStride);
+
+  // Update the phi to the new start and step.
+  Phi->setIncomingValueForBlock(PreHeader, NewStart);
+  Phi->setIncomingValueForBlock(Latch, NewStep);
+
+  // Replace the GEPs with casted adds to remove the multiplies from the loop.
+  // TODO: An alternative would be to order by offset, and just add from the
+  // previous term in the loop. Requires fewer registers, but does increase the
+  // critical path for each operation.
+  for (auto [GEP, Offset] : Candidates) {
+    Value *NewBase = Phi;
+    LBuilder.SetInsertPoint(GEP);
+    if (Offset) {
+      Offset = PHBuilder.CreateMul(Offset, StructStride);
+      NewBase = LBuilder.CreateAdd(NewBase, Offset);
+    }
+    GEP->replaceAllUsesWith(LBuilder.CreateIntToPtr(NewBase, GEP->getType()));
+  }
+
+  return true;
+}
+
 bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   bool AnyChange = false;
   AnyChange = fixupDbgVariableRecordsOnInst(*I);
@@ -8966,6 +9117,10 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       ++NumPHIsElim;
       return true;
     }
+    // Look for simple GEPs on scalable vectors used as data which may
+    // introduce unnecessary multiplies in the loop.
+    if (P->getType()->isScalableTy())
+      AnyChange |= strengthReduceVectorPhiUsers(P, LI);
     return AnyChange;
   }
 
