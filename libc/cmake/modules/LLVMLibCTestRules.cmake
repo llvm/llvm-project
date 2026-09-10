@@ -824,6 +824,47 @@ function(add_libc_hermetic test_name)
     list(APPEND fq_deps_list libc.src.time.clock)
   endif()
 
+  if(LIBC_ENABLE_COVERAGE)
+    list(APPEND fq_deps_list
+      libc.src.stdio.fclose
+      libc.src.stdio.fdopen
+      libc.src.stdio.feof
+      libc.src.stdio.fflush
+      libc.src.stdio.fileno
+      libc.src.stdio.fopen
+      libc.src.stdio.fprintf
+      libc.src.stdio.fread
+      libc.src.stdio.fseek
+      libc.src.stdio.ftell
+      libc.src.stdio.fwrite
+      libc.src.stdio.snprintf
+      libc.src.stdio.stderr
+      libc.src.stdio.vfprintf
+      libc.src.stdio.vsnprintf
+      libc.src.fcntl.fcntl
+      libc.src.fcntl.open
+      libc.src.stdlib.getenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.strtol
+      libc.src.string.strchr
+      libc.src.string.strcmp
+      libc.src.string.strdup
+      libc.src.string.strerror
+      libc.src.string.strlen
+      libc.src.string.strncpy
+      libc.src.string.strrchr
+      libc.src.sys.mman.madvise
+      libc.src.sys.mman.mmap
+      libc.src.sys.mman.munmap
+      libc.src.sys.prctl.prctl
+      libc.src.sys.stat.mkdir
+      libc.src.sys.utsname.uname
+      libc.src.unistd.ftruncate
+      libc.src.unistd.getpagesize
+      libc.src.unistd.getpid
+    )
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
@@ -936,7 +977,6 @@ function(add_libc_hermetic test_name)
   if(LIBC_ENABLE_COVERAGE)
     set(coverage_link_libs
       "${LIBC_CLANG_PROFILE_LIB}"
-      libc
       libc.test.UnitTest.CoverageTestUtils
     )
   endif()
@@ -950,11 +990,7 @@ function(add_libc_hermetic test_name)
       ${coverage_link_libs}
       ${compiler_runtime}
   )
-  set(coverage_deps "")
-  if(LIBC_ENABLE_COVERAGE)
-    set(coverage_deps libc)
-  endif()
-  add_dependencies(${fq_build_target_name} ${fq_deps_list} ${coverage_deps})
+  add_dependencies(${fq_build_target_name} ${fq_deps_list})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if(LIBC_TEST_CMD)

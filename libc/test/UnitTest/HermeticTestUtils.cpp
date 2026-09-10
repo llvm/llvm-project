@@ -1,28 +1,15 @@
-//===----------------------------------------------------------------------===//
+//===-- Implementation of libc death test executors -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// Hermetic test runtime utilities, allocator stubs, and compiler runtime
-/// hooks.
-///
-//===----------------------------------------------------------------------===//
 
-#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
-
-#if defined(LIBC_TARGET_OS_IS_LINUX)
-#include "src/__support/OSUtil/linux/syscall.h"
-#include <sys/syscall.h>
-#endif
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
     !defined(LIBC_TARGET_OS_IS_BAREMETAL)
@@ -64,32 +51,27 @@ extern "C" {
 // entrypoint to the internal implementation of the function used for testing.
 // This is done manually as not all targets support aliases.
 
-[[gnu::weak]] int bcmp(const void *lhs, const void *rhs, size_t count) {
+int bcmp(const void *lhs, const void *rhs, size_t count) {
   return LIBC_NAMESPACE::bcmp(lhs, rhs, count);
 }
-[[gnu::weak]] void bzero(void *ptr, size_t count) {
-  LIBC_NAMESPACE::bzero(ptr, count);
-}
-[[gnu::weak]] int memcmp(const void *lhs, const void *rhs, size_t count) {
+void bzero(void *ptr, size_t count) { LIBC_NAMESPACE::bzero(ptr, count); }
+int memcmp(const void *lhs, const void *rhs, size_t count) {
   return LIBC_NAMESPACE::memcmp(lhs, rhs, count);
 }
-[[gnu::weak]] void *memcpy(void *__restrict dst, const void *__restrict src,
-                           size_t count) {
+void *memcpy(void *__restrict dst, const void *__restrict src, size_t count) {
   return LIBC_NAMESPACE::memcpy(dst, src, count);
 }
-[[gnu::weak]] void *memmove(void *dst, const void *src, size_t count) {
+void *memmove(void *dst, const void *src, size_t count) {
   return LIBC_NAMESPACE::memmove(dst, src, count);
 }
-[[gnu::weak]] void *memset(void *ptr, int value, size_t count) {
+void *memset(void *ptr, int value, size_t count) {
   return LIBC_NAMESPACE::memset(ptr, value, count);
 }
 
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
-[[gnu::weak]] int atexit(void (*func)(void)) {
-  return LIBC_NAMESPACE::atexit(func);
-}
+int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
-[[gnu::weak]] void *aligned_alloc(size_t align, size_t s) {
+void *aligned_alloc(size_t align, size_t s) {
   if (align & (align - 1)) // Must be power of 2
     return nullptr;
   uintptr_t ptr_val = reinterpret_cast<uintptr_t>(ptr);
@@ -100,42 +82,11 @@ extern "C" {
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
 
-[[gnu::weak]] void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
+void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
 
-/// Allocates zero-initialized memory for hermetic test execution.
-/// Satisfies runtime memory dependencies referenced by libclang_rt.profile.a.
-///
-/// \param num Number of elements.
-/// \param size Size of each element in bytes.
-/// \return Pointer to zero-initialized allocated memory, or nullptr on failure.
-[[gnu::weak]] void *calloc(size_t num, size_t size) {
-  if (num == 0 || size == 0)
-    return nullptr;
-  size_t total;
-  if (__builtin_mul_overflow(num, size, &total)) {
-    libc_errno = ENOMEM;
-    return nullptr;
-  }
-  void *mem = malloc(total);
-  if (mem == nullptr) {
-    libc_errno = ENOMEM;
-    return nullptr;
-  }
-  LIBC_NAMESPACE::memset(mem, 0, total);
-  return mem;
-}
+void free(void *) {}
 
-[[gnu::weak]] void free(void *) {}
-
-#if defined(__linux__)
-/// Bridges compiler-rt profiling errno accesses to LLVM-libc thread-local
-/// errno.
-extern "C" [[gnu::const]] int *__errno_location() noexcept {
-  return LIBC_NAMESPACE::__llvm_libc_errno();
-}
-#endif
-
-[[gnu::weak]] void *realloc(void *mem, size_t s) {
+void *realloc(void *mem, size_t s) {
   if (mem == nullptr)
     return malloc(s);
   uint8_t *newmem = reinterpret_cast<uint8_t *>(malloc(s));
@@ -150,27 +101,6 @@ extern "C" [[gnu::const]] int *__errno_location() noexcept {
     newmem[i] = oldmem[i];
   return newmem;
 }
-
-void *calloc(size_t num, size_t size) {
-  size_t total;
-  if (__builtin_mul_overflow(num, size, &total))
-    return nullptr;
-  void *mem = malloc(total);
-  if (mem != nullptr)
-    LIBC_NAMESPACE::memset(mem, 0, total);
-  return mem;
-}
-
-int *__llvm_libc_errno() noexcept;
-int *__errno_location() { return __llvm_libc_errno(); }
-
-#if defined(LIBC_TARGET_OS_IS_LINUX)
-__attribute__((constructor)) static void __clean_hermetic_environment() {
-  for (int fd = 3; fd < 256; ++fd)
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
-  *__llvm_libc_errno() = 0;
-}
-#endif
 
 // The unit test framework uses pure virtual functions. Since hermetic tests
 // cannot depend C++ runtime libraries, implement dummy functions to support
