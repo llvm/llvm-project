@@ -75,3 +75,55 @@ define { <2 x half>, <2 x i16> } @uitofp_trunc_and_mask_multiuse_trunc(<2 x i32>
   %ret1 = insertvalue { <2 x half>, <2 x i16> } %ret0, <2 x i16> %trunc, 1
   ret { <2 x half>, <2 x i16> } %ret1
 }
+
+define float @uitofp_trunc_and_mask_legal_narrow_scalar(i64 %x) {
+; CHECK-LABEL: @uitofp_trunc_and_mask_legal_narrow_scalar(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[TRUNC]], 255
+; CHECK-NEXT:    [[RESULT:%.*]] = uitofp nneg i32 [[MASKED]] to float
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %trunc = trunc i64 %x to i32
+  %masked = and i32 %trunc, 255
+  %result = uitofp nneg i32 %masked to float
+  ret float %result
+}
+
+define <2 x float> @uitofp_trunc_and_mask_legal_narrow_vector(<2 x i64> %x) {
+; CHECK-LABEL: @uitofp_trunc_and_mask_legal_narrow_vector(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i32> [[TRUNC]], splat (i32 255)
+; CHECK-NEXT:    [[RESULT:%.*]] = uitofp nneg <2 x i32> [[MASKED]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[RESULT]]
+;
+  %trunc = trunc <2 x i64> %x to <2 x i32>
+  %masked = and <2 x i32> %trunc, splat (i32 255)
+  %result = uitofp nneg <2 x i32> %masked to <2 x float>
+  ret <2 x float> %result
+}
+
+define double @uitofp_trunc_and_mask_illegal_wide_scalar(i128 %x) {
+; CHECK-LABEL: @uitofp_trunc_and_mask_illegal_wide_scalar(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i128 [[X:%.*]] to i64
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[TRUNC]], 255
+; CHECK-NEXT:    [[RESULT:%.*]] = uitofp nneg i64 [[MASKED]] to double
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %trunc = trunc i128 %x to i64
+  %masked = and i64 %trunc, 255
+  %result = uitofp nneg i64 %masked to double
+  ret double %result
+}
+
+define <2 x double> @uitofp_trunc_and_mask_illegal_wide_vector(<2 x i128> %x) {
+; CHECK-LABEL: @uitofp_trunc_and_mask_illegal_wide_vector(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i128> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i64> [[TRUNC]], splat (i64 255)
+; CHECK-NEXT:    [[RESULT:%.*]] = uitofp nneg <2 x i64> [[MASKED]] to <2 x double>
+; CHECK-NEXT:    ret <2 x double> [[RESULT]]
+;
+  %trunc = trunc <2 x i128> %x to <2 x i64>
+  %masked = and <2 x i64> %trunc, splat (i64 255)
+  %result = uitofp nneg <2 x i64> %masked to <2 x double>
+  ret <2 x double> %result
+}
