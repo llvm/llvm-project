@@ -9,6 +9,7 @@
 #include "src/stdio/stderr.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/File/file_mode.h"
 
 #ifdef LIBC_FULL_BUILD
 
@@ -19,8 +20,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 constexpr size_t STDERR_BUFFER_SIZE = 0;
+constexpr FileMode append_mode("a");
 static LinuxFile StdErr(2, nullptr, STDERR_BUFFER_SIZE, _IONBF, false,
-                        File::ModeFlags(File::OpenMode::APPEND));
+                        append_mode);
 
 LLVM_LIBC_VARIABLE(FILE *, stderr) = reinterpret_cast<FILE *>(&StdErr);
 

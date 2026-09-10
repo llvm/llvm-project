@@ -9,6 +9,7 @@
 #include "src/stdio/stdout.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/File/file_mode.h"
 
 #ifdef LIBC_FULL_BUILD
 
@@ -20,8 +21,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 constexpr size_t STDOUT_BUFFER_SIZE = 1024;
 uint8_t stdout_buffer[STDOUT_BUFFER_SIZE];
+constexpr FileMode append_mode("a");
 static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, _IOLBF, false,
-                        File::ModeFlags(File::OpenMode::APPEND));
+                        append_mode);
 
 LLVM_LIBC_VARIABLE(FILE *, stdout) = reinterpret_cast<FILE *>(&StdOut);
 
