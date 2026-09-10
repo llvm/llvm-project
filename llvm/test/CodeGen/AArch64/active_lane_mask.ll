@@ -159,8 +159,8 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i8(i8 %index, i8 %TC) {
 ; CHECK-NEXT:    and w11, w1, #0xff
 ; CHECK-NEXT:    cmp w8, #255
 ; CHECK-NEXT:    csel w8, w8, w10, lo
-; CHECK-NEXT:    whilelo p0.b, w9, w11
 ; CHECK-NEXT:    whilelo p1.b, w8, w11
+; CHECK-NEXT:    whilelo p0.b, w9, w11
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i8(i8 %index, i8 %TC)
   ret <vscale x 32 x i1> %active.lane.mask

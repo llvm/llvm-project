@@ -118,65 +118,65 @@ define i256 @ctlz_i256(i256 %a) nounwind {
 ;
 ; NEON-LABEL: ctlz_i256:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    clz x8, x2
-; NEON-NEXT:    clz x9, x3
+; NEON-NEXT:    clz x9, x2
+; NEON-NEXT:    clz x11, x0
+; NEON-NEXT:    clz x8, x3
+; NEON-NEXT:    clz x10, x1
+; NEON-NEXT:    add x9, x9, #64
+; NEON-NEXT:    add x11, x11, #64
 ; NEON-NEXT:    cmp x3, #0
-; NEON-NEXT:    add x8, x8, #64
-; NEON-NEXT:    clz x10, x0
-; NEON-NEXT:    orr x11, x2, x3
-; NEON-NEXT:    csel x8, x9, x8, ne
-; NEON-NEXT:    clz x9, x1
-; NEON-NEXT:    add x10, x10, #64
+; NEON-NEXT:    csel x8, x8, x9, ne
 ; NEON-NEXT:    cmp x1, #0
-; NEON-NEXT:    mov x1, xzr
-; NEON-NEXT:    mov x2, xzr
-; NEON-NEXT:    csel x9, x9, x10, ne
-; NEON-NEXT:    cmp x11, #0
-; NEON-NEXT:    mov x3, xzr
+; NEON-NEXT:    csel x9, x10, x11, ne
+; NEON-NEXT:    orr x10, x2, x3
 ; NEON-NEXT:    add x9, x9, #128
+; NEON-NEXT:    cmp x10, #0
+; NEON-NEXT:    mov x1, xzr
 ; NEON-NEXT:    csel x0, x8, x9, ne
+; NEON-NEXT:    mov x2, xzr
+; NEON-NEXT:    mov x3, xzr
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: ctlz_i256:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    clz x8, x2
-; SVE-NEXT:    clz x9, x3
+; SVE-NEXT:    clz x9, x2
+; SVE-NEXT:    clz x11, x0
+; SVE-NEXT:    clz x8, x3
+; SVE-NEXT:    clz x10, x1
+; SVE-NEXT:    add x9, x9, #64
+; SVE-NEXT:    add x11, x11, #64
 ; SVE-NEXT:    cmp x3, #0
-; SVE-NEXT:    add x8, x8, #64
-; SVE-NEXT:    clz x10, x0
-; SVE-NEXT:    orr x11, x2, x3
-; SVE-NEXT:    csel x8, x9, x8, ne
-; SVE-NEXT:    clz x9, x1
-; SVE-NEXT:    add x10, x10, #64
+; SVE-NEXT:    csel x8, x8, x9, ne
 ; SVE-NEXT:    cmp x1, #0
-; SVE-NEXT:    mov x1, xzr
-; SVE-NEXT:    mov x2, xzr
-; SVE-NEXT:    csel x9, x9, x10, ne
-; SVE-NEXT:    cmp x11, #0
-; SVE-NEXT:    mov x3, xzr
+; SVE-NEXT:    csel x9, x10, x11, ne
+; SVE-NEXT:    orr x10, x2, x3
 ; SVE-NEXT:    add x9, x9, #128
+; SVE-NEXT:    cmp x10, #0
+; SVE-NEXT:    mov x1, xzr
 ; SVE-NEXT:    csel x0, x8, x9, ne
+; SVE-NEXT:    mov x2, xzr
+; SVE-NEXT:    mov x3, xzr
 ; SVE-NEXT:    ret
 ;
 ; CSSC-LABEL: ctlz_i256:
 ; CSSC:       // %bb.0:
-; CSSC-NEXT:    clz x8, x2
-; CSSC-NEXT:    clz x9, x3
+; CSSC-NEXT:    clz x9, x2
+; CSSC-NEXT:    clz x11, x0
+; CSSC-NEXT:    clz x8, x3
+; CSSC-NEXT:    clz x10, x1
+; CSSC-NEXT:    add x9, x9, #64
+; CSSC-NEXT:    add x11, x11, #64
 ; CSSC-NEXT:    cmp x3, #0
-; CSSC-NEXT:    add x8, x8, #64
-; CSSC-NEXT:    clz x10, x0
-; CSSC-NEXT:    orr x11, x2, x3
-; CSSC-NEXT:    csel x8, x9, x8, ne
-; CSSC-NEXT:    clz x9, x1
-; CSSC-NEXT:    add x10, x10, #64
+; CSSC-NEXT:    csel x8, x8, x9, ne
 ; CSSC-NEXT:    cmp x1, #0
-; CSSC-NEXT:    mov x1, xzr
-; CSSC-NEXT:    mov x2, xzr
-; CSSC-NEXT:    csel x9, x9, x10, ne
-; CSSC-NEXT:    cmp x11, #0
-; CSSC-NEXT:    mov x3, xzr
+; CSSC-NEXT:    csel x9, x10, x11, ne
+; CSSC-NEXT:    orr x10, x2, x3
 ; CSSC-NEXT:    add x9, x9, #128
+; CSSC-NEXT:    cmp x10, #0
+; CSSC-NEXT:    mov x1, xzr
 ; CSSC-NEXT:    csel x0, x8, x9, ne
+; CSSC-NEXT:    mov x2, xzr
+; CSSC-NEXT:    mov x3, xzr
 ; CSSC-NEXT:    ret
   %r = call i256 @llvm.ctlz.i256(i256 %a, i1 false)
   ret i256 %r
@@ -188,73 +188,73 @@ define i256 @cttz_i256(i256 %a) nounwind {
 ;
 ; NEON-LABEL: cttz_i256:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    rbit x8, x1
-; NEON-NEXT:    rbit x9, x0
-; NEON-NEXT:    rbit x10, x3
-; NEON-NEXT:    cmp x0, #0
-; NEON-NEXT:    rbit x11, x2
+; NEON-NEXT:    rbit x9, x1
+; NEON-NEXT:    rbit x11, x3
+; NEON-NEXT:    rbit x8, x0
+; NEON-NEXT:    rbit x10, x2
 ; NEON-NEXT:    mov x3, xzr
-; NEON-NEXT:    clz x8, x8
 ; NEON-NEXT:    clz x9, x9
-; NEON-NEXT:    add x8, x8, #64
-; NEON-NEXT:    csel x8, x9, x8, ne
-; NEON-NEXT:    clz x9, x10
-; NEON-NEXT:    clz x10, x11
+; NEON-NEXT:    clz x11, x11
+; NEON-NEXT:    clz x8, x8
+; NEON-NEXT:    clz x10, x10
 ; NEON-NEXT:    add x9, x9, #64
+; NEON-NEXT:    add x11, x11, #64
+; NEON-NEXT:    cmp x0, #0
+; NEON-NEXT:    csel x8, x8, x9, ne
 ; NEON-NEXT:    cmp x2, #0
-; NEON-NEXT:    orr x11, x0, x1
-; NEON-NEXT:    csel x9, x10, x9, ne
-; NEON-NEXT:    cmp x11, #0
-; NEON-NEXT:    mov x1, xzr
+; NEON-NEXT:    csel x9, x10, x11, ne
+; NEON-NEXT:    orr x10, x0, x1
 ; NEON-NEXT:    add x9, x9, #128
-; NEON-NEXT:    mov x2, xzr
+; NEON-NEXT:    cmp x10, #0
+; NEON-NEXT:    mov x1, xzr
 ; NEON-NEXT:    csel x0, x8, x9, ne
+; NEON-NEXT:    mov x2, xzr
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: cttz_i256:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rbit x8, x1
-; SVE-NEXT:    rbit x9, x0
-; SVE-NEXT:    rbit x10, x3
-; SVE-NEXT:    cmp x0, #0
-; SVE-NEXT:    rbit x11, x2
+; SVE-NEXT:    rbit x9, x1
+; SVE-NEXT:    rbit x11, x3
+; SVE-NEXT:    rbit x8, x0
+; SVE-NEXT:    rbit x10, x2
 ; SVE-NEXT:    mov x3, xzr
-; SVE-NEXT:    clz x8, x8
 ; SVE-NEXT:    clz x9, x9
-; SVE-NEXT:    add x8, x8, #64
-; SVE-NEXT:    csel x8, x9, x8, ne
-; SVE-NEXT:    clz x9, x10
-; SVE-NEXT:    clz x10, x11
+; SVE-NEXT:    clz x11, x11
+; SVE-NEXT:    clz x8, x8
+; SVE-NEXT:    clz x10, x10
 ; SVE-NEXT:    add x9, x9, #64
+; SVE-NEXT:    add x11, x11, #64
+; SVE-NEXT:    cmp x0, #0
+; SVE-NEXT:    csel x8, x8, x9, ne
 ; SVE-NEXT:    cmp x2, #0
-; SVE-NEXT:    orr x11, x0, x1
-; SVE-NEXT:    csel x9, x10, x9, ne
-; SVE-NEXT:    cmp x11, #0
-; SVE-NEXT:    mov x1, xzr
+; SVE-NEXT:    csel x9, x10, x11, ne
+; SVE-NEXT:    orr x10, x0, x1
 ; SVE-NEXT:    add x9, x9, #128
-; SVE-NEXT:    mov x2, xzr
+; SVE-NEXT:    cmp x10, #0
+; SVE-NEXT:    mov x1, xzr
 ; SVE-NEXT:    csel x0, x8, x9, ne
+; SVE-NEXT:    mov x2, xzr
 ; SVE-NEXT:    ret
 ;
 ; CSSC-LABEL: cttz_i256:
 ; CSSC:       // %bb.0:
 ; CSSC-NEXT:    ctz x8, x1
+; CSSC-NEXT:    ctz x11, x3
 ; CSSC-NEXT:    ctz x9, x0
-; CSSC-NEXT:    cmp x0, #0
+; CSSC-NEXT:    ctz x10, x2
 ; CSSC-NEXT:    add x8, x8, #64
-; CSSC-NEXT:    ctz x10, x3
-; CSSC-NEXT:    orr x11, x0, x1
+; CSSC-NEXT:    add x11, x11, #64
+; CSSC-NEXT:    cmp x0, #0
 ; CSSC-NEXT:    csel x8, x9, x8, ne
-; CSSC-NEXT:    ctz x9, x2
-; CSSC-NEXT:    add x10, x10, #64
-; CSSC-NEXT:    cmp x2, #0
-; CSSC-NEXT:    mov x1, xzr
-; CSSC-NEXT:    mov x2, xzr
-; CSSC-NEXT:    csel x9, x9, x10, ne
-; CSSC-NEXT:    cmp x11, #0
 ; CSSC-NEXT:    mov x3, xzr
+; CSSC-NEXT:    cmp x2, #0
+; CSSC-NEXT:    csel x9, x10, x11, ne
+; CSSC-NEXT:    orr x10, x0, x1
 ; CSSC-NEXT:    add x9, x9, #128
+; CSSC-NEXT:    cmp x10, #0
+; CSSC-NEXT:    mov x1, xzr
 ; CSSC-NEXT:    csel x0, x8, x9, ne
+; CSSC-NEXT:    mov x2, xzr
 ; CSSC-NEXT:    ret
   %r = call i256 @llvm.cttz.i256(i256 %a, i1 false)
   ret i256 %r

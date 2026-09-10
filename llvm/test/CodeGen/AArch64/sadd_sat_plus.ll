@@ -75,11 +75,11 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; CHECK-GI-NEXT:    mul w8, w1, w2
 ; CHECK-GI-NEXT:    sxth w8, w8
 ; CHECK-GI-NEXT:    add w8, w8, w0, sxth
-; CHECK-GI-NEXT:    sxth w9, w8
-; CHECK-GI-NEXT:    sbfx w10, w8, #15, #1
-; CHECK-GI-NEXT:    sub w10, w10, #8, lsl #12 // =32768
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    csel w0, w10, w8, ne
+; CHECK-GI-NEXT:    sbfx w9, w8, #15, #1
+; CHECK-GI-NEXT:    sxth w10, w8
+; CHECK-GI-NEXT:    sub w9, w9, #8, lsl #12 // =32768
+; CHECK-GI-NEXT:    cmp w8, w10
+; CHECK-GI-NEXT:    csel w0, w9, w8, ne
 ; CHECK-GI-NEXT:    ret
   %a = mul i16 %y, %z
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %a)
@@ -105,11 +105,11 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; CHECK-GI-NEXT:    mul w8, w1, w2
 ; CHECK-GI-NEXT:    sxtb w8, w8
 ; CHECK-GI-NEXT:    add w8, w8, w0, sxtb
-; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    sbfx w10, w8, #7, #1
-; CHECK-GI-NEXT:    sub w10, w10, #128
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    csel w0, w10, w8, ne
+; CHECK-GI-NEXT:    sbfx w9, w8, #7, #1
+; CHECK-GI-NEXT:    sxtb w10, w8
+; CHECK-GI-NEXT:    sub w9, w9, #128
+; CHECK-GI-NEXT:    cmp w8, w10
+; CHECK-GI-NEXT:    csel w0, w9, w8, ne
 ; CHECK-GI-NEXT:    ret
   %a = mul i8 %y, %z
   %tmp = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %a)
@@ -139,8 +139,8 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; CHECK-GI-NEXT:    add w8, w9, w8
 ; CHECK-GI-NEXT:    sbfx w9, w8, #0, #4
 ; CHECK-GI-NEXT:    asr w10, w9, #3
-; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    add w10, w10, #8
+; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    csel w0, w10, w8, ne
 ; CHECK-GI-NEXT:    ret
   %a = mul i4 %y, %z

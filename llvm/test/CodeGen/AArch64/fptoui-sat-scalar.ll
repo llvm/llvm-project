@@ -41,10 +41,10 @@ define i1 @test_unsigned_i1_f32(float %f) nounwind {
 define i8 @test_unsigned_i8_f32(float %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i8_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu w9, s0
-; CHECK-NEXT:    mov w8, #255 // =0xff
-; CHECK-NEXT:    cmp w9, #255
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    fcvtzu w8, s0
+; CHECK-NEXT:    mov w9, #255 // =0xff
+; CHECK-NEXT:    cmp w8, #255
+; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret
     %x = call i8 @llvm.fptoui.sat.i8.f32(float %f)
     ret i8 %x
@@ -235,10 +235,10 @@ define i1 @test_unsigned_i1_f64(double %f) nounwind {
 define i8 @test_unsigned_i8_f64(double %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i8_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu w9, d0
-; CHECK-NEXT:    mov w8, #255 // =0xff
-; CHECK-NEXT:    cmp w9, #255
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    fcvtzu w8, d0
+; CHECK-NEXT:    mov w9, #255 // =0xff
+; CHECK-NEXT:    cmp w8, #255
+; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret
     %x = call i8 @llvm.fptoui.sat.i8.f64(double %f)
     ret i8 %x
@@ -447,35 +447,35 @@ define i8 @test_unsigned_i8_f16(half %f) nounwind {
 ; CHECK-SD-CVT-LABEL: test_unsigned_i8_f16:
 ; CHECK-SD-CVT:       // %bb.0:
 ; CHECK-SD-CVT-NEXT:    fcvt s0, h0
-; CHECK-SD-CVT-NEXT:    mov w8, #255 // =0xff
-; CHECK-SD-CVT-NEXT:    fcvtzu w9, s0
-; CHECK-SD-CVT-NEXT:    cmp w9, #255
-; CHECK-SD-CVT-NEXT:    csel w0, w9, w8, lo
+; CHECK-SD-CVT-NEXT:    mov w9, #255 // =0xff
+; CHECK-SD-CVT-NEXT:    fcvtzu w8, s0
+; CHECK-SD-CVT-NEXT:    cmp w8, #255
+; CHECK-SD-CVT-NEXT:    csel w0, w8, w9, lo
 ; CHECK-SD-CVT-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: test_unsigned_i8_f16:
 ; CHECK-SD-FP16:       // %bb.0:
-; CHECK-SD-FP16-NEXT:    fcvtzu w9, h0
-; CHECK-SD-FP16-NEXT:    mov w8, #255 // =0xff
-; CHECK-SD-FP16-NEXT:    cmp w9, #255
-; CHECK-SD-FP16-NEXT:    csel w0, w9, w8, lo
+; CHECK-SD-FP16-NEXT:    fcvtzu w8, h0
+; CHECK-SD-FP16-NEXT:    mov w9, #255 // =0xff
+; CHECK-SD-FP16-NEXT:    cmp w8, #255
+; CHECK-SD-FP16-NEXT:    csel w0, w8, w9, lo
 ; CHECK-SD-FP16-NEXT:    ret
 ;
 ; CHECK-GI-CVT-LABEL: test_unsigned_i8_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov w8, #255 // =0xff
-; CHECK-GI-CVT-NEXT:    fcvtzu w9, s0
-; CHECK-GI-CVT-NEXT:    cmp w9, #255
-; CHECK-GI-CVT-NEXT:    csel w0, w9, w8, lo
+; CHECK-GI-CVT-NEXT:    mov w9, #255 // =0xff
+; CHECK-GI-CVT-NEXT:    fcvtzu w8, s0
+; CHECK-GI-CVT-NEXT:    cmp w8, #255
+; CHECK-GI-CVT-NEXT:    csel w0, w8, w9, lo
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_unsigned_i8_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzu w9, h0
-; CHECK-GI-FP16-NEXT:    mov w8, #255 // =0xff
-; CHECK-GI-FP16-NEXT:    cmp w9, #255
-; CHECK-GI-FP16-NEXT:    csel w0, w9, w8, lo
+; CHECK-GI-FP16-NEXT:    fcvtzu w8, h0
+; CHECK-GI-FP16-NEXT:    mov w9, #255 // =0xff
+; CHECK-GI-FP16-NEXT:    cmp w8, #255
+; CHECK-GI-FP16-NEXT:    csel w0, w8, w9, lo
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i8 @llvm.fptoui.sat.i8.f16(half %f)
     ret i8 %x
@@ -772,8 +772,8 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI30_1
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    cmp w19, #0
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
 ; CHECK-SD-NEXT:    csel w19, wzr, w0, mi
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
 ; CHECK-SD-NEXT:    bl __gttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    csinv w0, w19, wzr, le

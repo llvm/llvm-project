@@ -6,11 +6,11 @@ define zeroext i16 @overflow_add(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w9, w1, w0
 ; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    mov w10, #2 // =0x2
 ; CHECK-NEXT:    orr w9, w9, #0x1
 ; CHECK-NEXT:    and w9, w9, #0xffff
 ; CHECK-NEXT:    cmp w9, #1024
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    csel w0, w10, w8, hi
 ; CHECK-NEXT:    ret
   %add = add i16 %b, %a
   %or = or i16 %add, 1
@@ -24,11 +24,11 @@ define zeroext i16 @overflow_sub(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w9, w0, w1
 ; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    mov w10, #2 // =0x2
 ; CHECK-NEXT:    orr w9, w9, #0x1
 ; CHECK-NEXT:    and w9, w9, #0xffff
 ; CHECK-NEXT:    cmp w9, #1024
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    csel w0, w10, w8, hi
 ; CHECK-NEXT:    ret
   %add = sub i16 %a, %b
   %or = or i16 %add, 1
@@ -42,11 +42,11 @@ define zeroext i16 @overflow_mul(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul w9, w1, w0
 ; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    mov w10, #2 // =0x2
 ; CHECK-NEXT:    orr w9, w9, #0x1
 ; CHECK-NEXT:    and w9, w9, #0xffff
 ; CHECK-NEXT:    cmp w9, #1024
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    csel w0, w10, w8, hi
 ; CHECK-NEXT:    ret
   %add = mul i16 %b, %a
   %or = or i16 %add, 1
@@ -60,11 +60,11 @@ define zeroext i16 @overflow_shl(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl w9, w0, w1
 ; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    mov w10, #2 // =0x2
 ; CHECK-NEXT:    orr w9, w9, #0x1
 ; CHECK-NEXT:    and w9, w9, #0xffff
 ; CHECK-NEXT:    cmp w9, #1024
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    csel w0, w10, w8, hi
 ; CHECK-NEXT:    ret
   %add = shl i16 %a, %b
   %or = or i16 %add, 1
@@ -77,10 +77,10 @@ define i32 @overflow_add_no_consts(i8 zeroext %a, i8 zeroext %b, i8 zeroext %lim
 ; CHECK-LABEL: overflow_add_no_consts:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w1, w0
-; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    mov w10, #8 // =0x8
 ; CHECK-NEXT:    cmp w2, w8, uxtb
-; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    csel w0, w10, w9, lo
 ; CHECK-NEXT:    ret
   %add = add i8 %b, %a
   %cmp = icmp ugt i8 %add, %limit
@@ -93,10 +93,10 @@ define i32 @overflow_add_const_limit(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w9, w1, w0
 ; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    mov w10, #8 // =0x8
 ; CHECK-NEXT:    and w9, w9, #0xff
 ; CHECK-NEXT:    cmp w9, #128
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    csel w0, w10, w8, hi
 ; CHECK-NEXT:    ret
   %add = add i8 %b, %a
   %cmp = icmp ugt i8 %add, -128
@@ -122,8 +122,8 @@ define i32 @unsafe_add_underflow(i8 zeroext %a) {
 ; CHECK-LABEL: unsafe_add_underflow:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i8 %a, 1
@@ -135,8 +135,8 @@ define i32 @safe_add_underflow(i8 zeroext %a) {
 ; CHECK-LABEL: safe_add_underflow:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i8 %a, 0
@@ -147,11 +147,11 @@ define i32 @safe_add_underflow(i8 zeroext %a) {
 define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: safe_add_underflow_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w9, w0, #2
 ; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    sub w9, w0, #2
+; CHECK-NEXT:    mov w10, #8 // =0x8
 ; CHECK-NEXT:    cmp w9, #251
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    csel w0, w10, w8, lo
 ; CHECK-NEXT:    ret
   %add = add i8 %a, -2
   %cmp = icmp ult i8 %add, -5
@@ -193,8 +193,8 @@ define i32 @safe_sub_underflow(i8 zeroext %a) {
 ; CHECK-LABEL: safe_sub_underflow:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #8 // =0x8
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %cmp.not = icmp eq i8 %a, 0
@@ -205,11 +205,11 @@ define i32 @safe_sub_underflow(i8 zeroext %a) {
 define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: safe_sub_underflow_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w9, w0, #4
 ; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    sub w9, w0, #4
+; CHECK-NEXT:    mov w10, #8 // =0x8
 ; CHECK-NEXT:    cmp w9, #250
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    csel w0, w10, w8, hi
 ; CHECK-NEXT:    ret
   %sub = add i8 %a, -4
   %cmp = icmp ugt i8 %sub, -6
@@ -283,10 +283,10 @@ define i8 @convert_add_order(i8 zeroext %arg) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    sub w10, w9, #40
 ; CHECK-NEXT:    cmp w10, #20
+; CHECK-NEXT:    mov w10, #255 // =0xff
 ; CHECK-NEXT:    cinc w8, w8, hs
 ; CHECK-NEXT:    cmp w9, #50
-; CHECK-NEXT:    mov w9, #255 // =0xff
-; CHECK-NEXT:    csel w8, w8, w9, lo
+; CHECK-NEXT:    csel w8, w8, w10, lo
 ; CHECK-NEXT:    and w0, w8, w0
 ; CHECK-NEXT:    ret
   %shl = or i8 %arg, 1

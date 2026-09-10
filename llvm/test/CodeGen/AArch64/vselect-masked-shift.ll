@@ -175,12 +175,12 @@ define <1 x i128> @neg_masked_shl_v1i128(<1 x i128> %x, <1 x i128> %amt) {
 ; CHECK-NEXT:    lsr x9, x0, #1
 ; CHECK-NEXT:    lsl x11, x1, x2
 ; CHECK-NEXT:    eor x10, x8, #0x3f
-; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    lsr x9, x9, x10
 ; CHECK-NEXT:    lsl x10, x0, x2
 ; CHECK-NEXT:    orr x9, x11, x9
-; CHECK-NEXT:    csel x0, x10, xzr, lo
+; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    csel x1, x9, xzr, lo
+; CHECK-NEXT:    csel x0, x10, xzr, lo
 ; CHECK-NEXT:    ret
 entry:
   %m = and <1 x i128> %amt, splat (i128 63)

@@ -20,10 +20,10 @@ entry:
 define i32 @test2(i8 %a) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    ubfx w9, w0, #3, #5
-; CHECK-NEXT:    cmp w8, #47
-; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    ubfx w8, w0, #3, #5
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    cmp w9, #47
+; CHECK-NEXT:    csel w0, w8, w9, hi
 ; CHECK-NEXT:    ret
 entry:
   %conv = zext i8 %a to i32

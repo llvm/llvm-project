@@ -226,10 +226,10 @@ define <vscale x 32 x i1> @mask_exclude_active_nxv32(<vscale x 32 x i1> %mask.in
 ; CHECK-NEXT:    ptrue p2.b
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mov x9, x8
-; CHECK-NEXT:    brkb p0.b, p2/z, p0.b
 ; CHECK-NEXT:    brkb p1.b, p2/z, p1.b
-; CHECK-NEXT:    cntp x10, p0, p0.b
+; CHECK-NEXT:    brkb p0.b, p2/z, p0.b
 ; CHECK-NEXT:    incp x9, p1.b
+; CHECK-NEXT:    cntp x10, p0, p0.b
 ; CHECK-NEXT:    cmp x10, x8
 ; CHECK-NEXT:    csel x9, x10, x9, ne
 ; CHECK-NEXT:    whilelo p0.b, xzr, x9
@@ -244,15 +244,15 @@ define <32 x i1> @mask_exclude_active_v32(<32 x i1> %mask.in) {
 ; CHECK-LABEL: mask_exclude_active_v32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w9, [sp, #64]
-; CHECK-NEXT:    fmov s0, w0
 ; CHECK-NEXT:    ldr w10, [sp, #72]
+; CHECK-NEXT:    fmov s0, w0
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    mov w11, #16 // =0x10
 ; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    ldr w9, [sp, #80]
 ; CHECK-NEXT:    mov v0.b[1], w1
 ; CHECK-NEXT:    mov v1.b[1], w10
-; CHECK-NEXT:    ldr w10, [sp, #128]
+; CHECK-NEXT:    ldr w10, [sp]
 ; CHECK-NEXT:    mov v0.b[2], w2
 ; CHECK-NEXT:    mov v1.b[2], w9
 ; CHECK-NEXT:    ldr w9, [sp, #88]
@@ -270,48 +270,48 @@ define <32 x i1> @mask_exclude_active_v32(<32 x i1> %mask.in) {
 ; CHECK-NEXT:    ldr w9, [sp, #120]
 ; CHECK-NEXT:    mov v0.b[7], w7
 ; CHECK-NEXT:    mov v1.b[7], w9
-; CHECK-NEXT:    ldr w9, [sp]
-; CHECK-NEXT:    mov v0.b[8], w9
-; CHECK-NEXT:    ldr w9, [sp, #8]
-; CHECK-NEXT:    mov v1.b[8], w10
-; CHECK-NEXT:    ldr w10, [sp, #136]
-; CHECK-NEXT:    mov v0.b[9], w9
-; CHECK-NEXT:    ldr w9, [sp, #16]
-; CHECK-NEXT:    mov v1.b[9], w10
-; CHECK-NEXT:    ldr w10, [sp, #144]
-; CHECK-NEXT:    mov v0.b[10], w9
-; CHECK-NEXT:    ldr w9, [sp, #24]
-; CHECK-NEXT:    mov v1.b[10], w10
-; CHECK-NEXT:    ldr w10, [sp, #152]
-; CHECK-NEXT:    mov v0.b[11], w9
-; CHECK-NEXT:    ldr w9, [sp, #32]
-; CHECK-NEXT:    mov v1.b[11], w10
-; CHECK-NEXT:    ldr w10, [sp, #160]
-; CHECK-NEXT:    mov v0.b[12], w9
-; CHECK-NEXT:    ldr w9, [sp, #40]
-; CHECK-NEXT:    mov v1.b[12], w10
-; CHECK-NEXT:    ldr w10, [sp, #168]
-; CHECK-NEXT:    mov v0.b[13], w9
-; CHECK-NEXT:    ldr w9, [sp, #48]
-; CHECK-NEXT:    mov v1.b[13], w10
-; CHECK-NEXT:    ldr w10, [sp, #176]
-; CHECK-NEXT:    mov v0.b[14], w9
-; CHECK-NEXT:    ldr w9, [sp, #56]
-; CHECK-NEXT:    mov v1.b[14], w10
-; CHECK-NEXT:    ldr w10, [sp, #184]
-; CHECK-NEXT:    mov v0.b[15], w9
-; CHECK-NEXT:    mov v1.b[15], w10
+; CHECK-NEXT:    ldr w9, [sp, #128]
+; CHECK-NEXT:    mov v0.b[8], w10
+; CHECK-NEXT:    ldr w10, [sp, #8]
+; CHECK-NEXT:    mov v1.b[8], w9
+; CHECK-NEXT:    ldr w9, [sp, #136]
+; CHECK-NEXT:    mov v0.b[9], w10
+; CHECK-NEXT:    ldr w10, [sp, #16]
+; CHECK-NEXT:    mov v1.b[9], w9
+; CHECK-NEXT:    ldr w9, [sp, #144]
+; CHECK-NEXT:    mov v0.b[10], w10
+; CHECK-NEXT:    ldr w10, [sp, #24]
+; CHECK-NEXT:    mov v1.b[10], w9
+; CHECK-NEXT:    ldr w9, [sp, #152]
+; CHECK-NEXT:    mov v0.b[11], w10
+; CHECK-NEXT:    ldr w10, [sp, #32]
+; CHECK-NEXT:    mov v1.b[11], w9
+; CHECK-NEXT:    ldr w9, [sp, #160]
+; CHECK-NEXT:    mov v0.b[12], w10
+; CHECK-NEXT:    ldr w10, [sp, #40]
+; CHECK-NEXT:    mov v1.b[12], w9
+; CHECK-NEXT:    ldr w9, [sp, #168]
+; CHECK-NEXT:    mov v0.b[13], w10
+; CHECK-NEXT:    ldr w10, [sp, #48]
+; CHECK-NEXT:    mov v1.b[13], w9
+; CHECK-NEXT:    ldr w9, [sp, #176]
+; CHECK-NEXT:    mov v0.b[14], w10
+; CHECK-NEXT:    ldr w10, [sp, #56]
+; CHECK-NEXT:    mov v1.b[14], w9
+; CHECK-NEXT:    ldr w9, [sp, #184]
+; CHECK-NEXT:    mov v0.b[15], w10
+; CHECK-NEXT:    mov v1.b[15], w9
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #7
-; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    cmpne p2.b, p0/z, z1.b, #0
-; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    cmpne p2.b, p0/z, z0.b, #0
+; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, #0
 ; CHECK-NEXT:    brkb p2.b, p0/z, p2.b
-; CHECK-NEXT:    cntp x9, p1, p1.b
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
 ; CHECK-NEXT:    cntp x10, p2, p2.b
-; CHECK-NEXT:    cmp x9, #16
-; CHECK-NEXT:    add x10, x10, #16
-; CHECK-NEXT:    csel x9, x9, x10, ne
+; CHECK-NEXT:    cntp x9, p1, p1.b
+; CHECK-NEXT:    add x9, x9, #16
+; CHECK-NEXT:    cmp x10, #16
+; CHECK-NEXT:    csel x9, x10, x9, ne
 ; CHECK-NEXT:    whilelo p0.b, x11, x9
 ; CHECK-NEXT:    whilelo p1.b, xzr, x9
 ; CHECK-NEXT:    adrp x9, .LCPI17_0

@@ -96,10 +96,10 @@ define i64 @split_extract_8i64_idx(<vscale x 8 x i64> %a, i32 %idx) {
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ldr x0, [x9, x8, lsl #3]
 ; CHECK-NEXT:    addvl sp, sp, #4
@@ -165,10 +165,10 @@ define i32 @split_extract_16i32(<vscale x 16 x i32> %a) {
 ; CHECK-NEXT:    movk w9, #1, lsl #16
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ldr w0, [x9, x8, lsl #2]
 ; CHECK-NEXT:    addvl sp, sp, #4

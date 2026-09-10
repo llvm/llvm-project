@@ -95,10 +95,10 @@ entry:
 define float @test_unsigned_min_max(float %x) {
 ; CHECK-LABEL: test_unsigned_min_max:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu w9, s0
-; CHECK-NEXT:    mov w8, #512 // =0x200
-; CHECK-NEXT:    cmp w9, #512
-; CHECK-NEXT:    csel w8, w9, w8, hi
+; CHECK-NEXT:    fcvtzu w8, s0
+; CHECK-NEXT:    mov w9, #512 // =0x200
+; CHECK-NEXT:    cmp w8, #512
+; CHECK-NEXT:    csel w8, w8, w9, hi
 ; CHECK-NEXT:    mov w9, #1023 // =0x3ff
 ; CHECK-NEXT:    cmp w8, #1023
 ; CHECK-NEXT:    csel w8, w8, w9, lo
@@ -136,11 +136,11 @@ define float @test_inexact_16777217(float %x) {
 ; CHECK-LABEL: test_inexact_16777217:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    mov w10, #1 // =0x1
 ; CHECK-NEXT:    mov w9, #16777216 // =0x1000000
+; CHECK-NEXT:    movk w10, #256, lsl #16
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    movk w9, #256, lsl #16
-; CHECK-NEXT:    csel w8, w8, w9, le
+; CHECK-NEXT:    csel w8, w8, w10, le
 ; CHECK-NEXT:    scvtf s0, w8
 ; CHECK-NEXT:    ret
 entry:

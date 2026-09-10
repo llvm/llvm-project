@@ -16,7 +16,7 @@ declare void @declaration()
 
 ; The baseline is unchanged after functions with custom attributes.
 ; CHECK-NOT: Enabled features
-; CHECK: remark: <unknown>:0:0: Enabled features for @baseline: [[BASELINE:enable-select-opt,ete,fixed-load-latency-4,fp-armv8,fuse-adrp-add,fuse-aes,neon,trbe,use-postra-scheduler]]{{$}}
+; CHECK: remark: <unknown>:0:0: Enabled features for @baseline: [[BASELINE:enable-select-opt,ete,fixed-load-latency-4,fp-armv8,fuse-adrp-add,fuse-aes,fuse-csel,neon,trbe,use-postra-scheduler]]{{$}}
 ; CHECK-NEXT: remark: <unknown>:0:0: Enabled features for @enabled: {{([^,]+,)*}}fp-armv8,fullfp16,{{([^,]+,)*}}sve,sve2{{(,.*)?$}}
 ; CHECK-NEXT: remark: <unknown>:0:0: Enabled features for @disabled:
 ; CHECK-NOT: {{(^|[ ,])(sve|sve2)(,|$)}}

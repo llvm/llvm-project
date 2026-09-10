@@ -9,8 +9,8 @@
 define i8 @unsigned_sat_constant_i8_using_min(i8 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i8_using_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w0, #0xff
 ; CHECK-NEXT:    mov w8, #-43 // =0xffffffd5
+; CHECK-NEXT:    and w9, w0, #0xff
 ; CHECK-NEXT:    cmp w9, #213
 ; CHECK-NEXT:    csel w8, w0, w8, lo
 ; CHECK-NEXT:    add w0, w8, #42

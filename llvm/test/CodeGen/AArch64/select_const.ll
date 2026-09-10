@@ -284,8 +284,8 @@ define i32 @select_C1_C2_zeroext(i1 zeroext %cond) {
 ; CHECK-SD-LABEL: select_C1_C2_zeroext:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #42 // =0x2a
-; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    mov w9, #421 // =0x1a5
+; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    csel w0, w9, w8, ne
 ; CHECK-SD-NEXT:    ret
 ;

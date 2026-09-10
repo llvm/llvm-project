@@ -112,12 +112,12 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mul w8, w1, w2
 ; CHECK-GI-NEXT:    and w9, w0, #0xf
-; CHECK-GI-NEXT:    mov w10, #15 // =0xf
 ; CHECK-GI-NEXT:    and w8, w8, #0xf
 ; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    and w9, w8, #0xf
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    csel w0, w10, w8, ne
+; CHECK-GI-NEXT:    mov w9, #15 // =0xf
+; CHECK-GI-NEXT:    and w10, w8, #0xf
+; CHECK-GI-NEXT:    cmp w8, w10
+; CHECK-GI-NEXT:    csel w0, w9, w8, ne
 ; CHECK-GI-NEXT:    ret
   %a = mul i4 %y, %z
   %tmp = call i4 @llvm.uadd.sat.i4(i4 %x, i4 %a)

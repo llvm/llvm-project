@@ -62,11 +62,11 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: func8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    and w9, w0, #0xff
-; CHECK-SD-NEXT:    mov w8, #255 // =0xff
-; CHECK-SD-NEXT:    add w9, w9, w1, uxtb
-; CHECK-SD-NEXT:    cmp w9, #255
-; CHECK-SD-NEXT:    csel w0, w9, w8, lo
+; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    mov w9, #255 // =0xff
+; CHECK-SD-NEXT:    add w8, w8, w1, uxtb
+; CHECK-SD-NEXT:    cmp w8, #255
+; CHECK-SD-NEXT:    csel w0, w8, w9, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: func8:
