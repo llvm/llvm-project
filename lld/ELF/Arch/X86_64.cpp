@@ -13,9 +13,17 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "TargetImpl.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
+
+#define DEBUG_TYPE "lld"
+
+STATISTIC(NumCfiJumpTablesInlined,
+          "Number of CFI jump table functions inlined");
+STATISTIC(NumCfiJumpTablesAdjustedLast,
+          "Number of CFI jump table last entries adjusted");
 
 using namespace llvm;
 using namespace llvm::object;
@@ -457,6 +465,7 @@ void X86_64::relaxCFIJumpTables() const {
               target && target->size != 0 && target->size <= sec->entsize &&
               target->addralign <= sec->entsize &&
               target->getParent() == targetOutputSec) {
+            ++NumCfiJumpTablesInlined;
             // Okay, we found a small enough section. Move it into the jump
             // table. First add a slice for the unmodified jump table entries
             // before this one. This slice may be of zero size if two
@@ -482,6 +491,7 @@ void X86_64::relaxCFIJumpTables() const {
       // function's body acts as the last jump table entry), otherwise leave the
       // jump table where it is and keep the last entry.
       if (lastSec) {
+        ++NumCfiJumpTablesAdjustedLast;
         addSectionSlice(begin, cur, rbegin, rcur);
         replacements.push_back(lastSec);
         sectionReplacements[sec] = {};
