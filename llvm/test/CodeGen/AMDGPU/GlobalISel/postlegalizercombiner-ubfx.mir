@@ -15,9 +15,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C]](s32), [[C1]]
     ; GCN-NEXT: $vgpr0 = COPY [[UBFX]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 8
@@ -41,9 +41,9 @@ body: |
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s64) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s64) = G_UBFX [[COPY]], [[C]](s32), [[C1]]
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[UBFX]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 8
@@ -119,9 +119,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C]](s32), [[C1]]
     ; GCN-NEXT: $vgpr0 = COPY [[UBFX]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 7936 ; 31 << 8
@@ -145,9 +145,9 @@ body: |
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s64) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s64) = G_UBFX [[COPY]], [[C]](s32), [[C1]]
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[UBFX]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 261888 ; 1023 << 8
