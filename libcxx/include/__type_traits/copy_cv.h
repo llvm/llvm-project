@@ -19,32 +19,36 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Let COPYCV(FROM, TO) be an alias for type TO with the addition of FROM's
 // top-level cv-qualifiers.
-template <class _From>
-struct __copy_cv {
+template <bool, bool>
+struct __copy_cv_impl;
+
+template <>
+struct __copy_cv_impl<false, false> {
   template <class _To>
   using __apply _LIBCPP_NODEBUG = _To;
 };
 
-template <class _From>
-struct __copy_cv<const _From> {
+template <>
+struct __copy_cv_impl<true, false> {
   template <class _To>
   using __apply _LIBCPP_NODEBUG = const _To;
 };
 
-template <class _From>
-struct __copy_cv<volatile _From> {
+template <>
+struct __copy_cv_impl<false, true> {
   template <class _To>
   using __apply _LIBCPP_NODEBUG = volatile _To;
 };
 
-template <class _From>
-struct __copy_cv<const volatile _From> {
+template <>
+struct __copy_cv_impl<true, true> {
   template <class _To>
   using __apply _LIBCPP_NODEBUG = const volatile _To;
 };
 
 template <class _From, class _To>
-using __copy_cv_t _LIBCPP_NODEBUG = typename __copy_cv<_From>::template __apply<_To>;
+using __copy_cv_t _LIBCPP_NODEBUG =
+    typename __copy_cv_impl<__is_const(_From), __is_volatile(_From)>::template __apply<_To>;
 
 _LIBCPP_END_NAMESPACE_STD
 
