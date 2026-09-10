@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
   const int N = num_blocks * block_size;
   int *data = (int *)malloc(N * sizeof(int));
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,1,1] blocks and [64,1,1]
   // CHECK-SAME: threads in BARE mode
 

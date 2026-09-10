@@ -39,11 +39,50 @@
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 using DeviceInfo = llvm::omp::target::plugin::DeviceInfo;
 using InfoTreeNode = llvm::omp::target::plugin::InfoTreeNode;
-using KernelLaunchInfoTy = llvm::omp::target::plugin::KernelLaunchInfoTy;
 
 // Forward declarations.
 struct __tgt_bin_desc;
 struct __tgt_target_table;
+
+/// Kernel launch-geometry properties.
+struct KernelLaunchInfoTy {
+  uint32_t MaxNumThreads = 0;
+  uint32_t PreferredNumThreads = 0;
+  uint32_t ReductionDataSize = 0;
+  llvm::omp::OMPTgtExecModeFlags Mode = llvm::omp::OMP_TGT_EXEC_MODE_BARE;
+
+  bool isBareMode() const { return Mode == llvm::omp::OMP_TGT_EXEC_MODE_BARE; }
+  bool isGenericMode() const {
+    return Mode == llvm::omp::OMP_TGT_EXEC_MODE_GENERIC;
+  }
+  bool isGenericSPMDMode() const {
+    return Mode == llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+  }
+  bool isSPMDMode() const { return Mode == llvm::omp::OMP_TGT_EXEC_MODE_SPMD; }
+  bool isNoLoopMode() const {
+    return Mode == llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  }
+
+  static const char *getExecutionModeName(llvm::omp::OMPTgtExecModeFlags Mode) {
+    switch (Mode) {
+    case llvm::omp::OMP_TGT_EXEC_MODE_BARE:
+      return "BARE";
+    case llvm::omp::OMP_TGT_EXEC_MODE_SPMD:
+      return "SPMD";
+    case llvm::omp::OMP_TGT_EXEC_MODE_GENERIC:
+      return "Generic";
+    case llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD:
+      return "Generic-SPMD";
+    case llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
+      return "SPMD-No-Loop";
+    }
+    return "Unknown";
+  }
+
+  const char *getExecutionModeName() const {
+    return getExecutionModeName(Mode);
+  }
+};
 
 struct DeviceTy {
   int32_t DeviceID;
