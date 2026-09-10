@@ -487,9 +487,13 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     // only merges declarations directly referring to the tag, not typedefs.
     //
     // Check whether the current declaration should be grouped with a previous
-    // non-free-standing tag declaration.
+    // non-free-standing tag declaration. A decomposition declaration is always
+    // a declaration of its own -- it can never be one declarator among several
+    // -- but its deduced type can be the tag type owned by the preceding
+    // declaration, so exclude it explicitly.
     QualType CurDeclType = getDeclType(*D);
-    if (!Decls.empty() && !CurDeclType.isNull()) {
+    if (!Decls.empty() && !CurDeclType.isNull() &&
+        !isa<DecompositionDecl>(*D)) {
       QualType BaseType = GetBaseType(CurDeclType);
       if (const auto *TT = dyn_cast_or_null<TagType>(BaseType);
           TT && TT->isTagOwned()) {

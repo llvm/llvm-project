@@ -87,3 +87,21 @@ void local() {
   auto [x [[maybe_unused]], y] = get();
 }
 } // namespace Attributes
+
+namespace OwnedTag {
+// At declaration-context scope the printer groups a tag declaration with the
+// declarators that follow it, so an owned tag type keeps `struct Owned { ... }
+// obj;` on one line. A decomposition declaration is a declaration of its own
+// and must never be pulled into that group, even though its deduced type is
+// precisely the tag type owned by `obj`'s declaration.
+// CHECK-LABEL: struct Owned {
+// CHECK: } obj;
+// CHECK-NEXT: auto [ox, oy] = obj;
+struct Owned { int a, b; } obj;
+auto [ox, oy] = obj;
+
+// A second declarator of an owned tag type still merges.
+// CHECK-NEXT: struct Merged {
+// CHECK: } m1, m2;
+struct Merged { int v; } m1, m2;
+} // namespace OwnedTag
