@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include <algorithm>
 
 using namespace cir;
@@ -219,14 +220,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       // which constrains the pointer operand, not the pointee's contents.
       //
       // llvm.byval(T) records the pre-rewrite arg type because the opaque
-      // LLVM pointer cannot carry it.  llvm.nofreeobj holds because a
-      // parameter has automatic storage duration.
-      //
-      // Two of classic's attributes are missing.  llvm.noalias needs
-      // -fpass-by-value-is-noalias, which CIR does not plumb through.
-      // llvm.dead_on_return needs the destructor's triviality, which
-      // cir.record_layout carries as has_trivial_dtor and nothing here reads
-      // yet.
+      // LLVM pointer cannot carry it.  llvm.nofreeobj says the object cannot
+      // be freed while the callee runs, which holds because the caller owns it
+      // across the call.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       mlir::NamedAttrList attrs(existing);
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
@@ -234,9 +230,16 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                 builder.getUnitAttr());
       if (ac.byVal) {
+        // Classic adds llvm.noalias under -fpass-by-value-is-noalias, which
+        // CIR does not plumb through.
+        assert(!cir::MissingFeatures::noaliasOnByvalAttr());
         attrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
                   mlir::TypeAttr::get(pointeeTy));
       } else {
+        // Classic adds llvm.dead_on_return when the object's lifetime ends in
+        // the callee, which needs the destructor's triviality from
+        // cir.record_layout's has_trivial_dtor.
+        assert(!cir::MissingFeatures::deadOnReturnAttr());
         attrs.set(mlir::LLVM::LLVMDialect::getNoFreeObjAttrName(),
                   builder.getUnitAttr());
         attrs.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
