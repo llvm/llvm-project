@@ -31,3 +31,33 @@ end subroutine
 ! ZERO:        %[[L:.*]]:2 = hlfir.declare {{.*}}_QFtest_logical4_kmEl
 ! ZERO:        %[[Z:.*]] = fir.zero_bits !fir.logical<4>
 ! ZERO:        fir.store %[[Z]] to %[[L]]#0 : !fir.ref<!fir.logical<4>>
+
+! Record with a CHARACTER(kind=1,len=4) component under a1:24.
+! --kind-mapping=a1:24 maps CHARACTER(1) code units to i24 (3-byte store, 4-byte
+! stride on most targets).  getTypeSizeAndAlignment for !fir.char<1,4> must
+! use the allocation stride (4 bytes) rather than the store size (3 bytes).
+! The record byte loop must therefore run 4 * 4 = 16 iterations (bound 15).
+! Previously, using the store size gave 4 * 3 = 12 iterations, leaving the
+! 4th byte of each code unit's allocation uninitialised.
+!
+! RUN: bbc -emit-hlfir --kind-mapping=a1:24 -finit-local=0xAA %s -o - | \
+! RUN:     FileCheck --check-prefix=RECHEX %s
+! RUN: bbc -emit-hlfir --kind-mapping=a1:24 -finit-local=zero %s -o - | \
+! RUN:     FileCheck --check-prefix=RECZERO %s
+
+subroutine test_record_char4(res)
+  type :: t
+    character(kind=1, len=4) :: c
+  end type
+  type(t) :: x
+  integer :: res
+  res = ichar(x%c(4:4))
+end subroutine
+
+! RECHEX-LABEL:  func.func @_QPtest_record_char4(
+! RECHEX:  %[[C15:.*]] = arith.constant 15 : index
+! RECHEX:  fir.do_loop %{{.*}} = %{{.*}} to %[[C15]] step %{{.*}}
+
+! RECZERO-LABEL: func.func @_QPtest_record_char4(
+! RECZERO:  %[[C15:.*]] = arith.constant 15 : index
+! RECZERO:  fir.do_loop %{{.*}} = %{{.*}} to %[[C15]] step %{{.*}}

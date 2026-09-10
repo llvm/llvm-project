@@ -1440,13 +1440,15 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   // width matches the actual allocation size.
   // The caller stores it via a bitcasted address to preserve the bit pattern
   // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
-  // Sub-byte, non-byte-multiple, and padded LOGICAL mappings are not supported:
+  // Sub-byte and non-byte-multiple LOGICAL mappings are not supported here:
   //   - sub-byte (e.g. l4:1): APInt::getSplat requires destination width >= 8.
   //   - non-byte-multiple (e.g. l4:12): makeIntCst(12) builds an i12 splat of
   //     0xAA -> 0xAAA, which occupies bytes AA 0A rather than AA AA -- the
   //     high nibble of the second byte is not filled by the byte pattern.
-  //   - padded (e.g. l4:24): allocSize (4) > storeSize (3) leaves the trailing
-  //     allocation byte uninitialized.
+  // Padded mappings (e.g. l4:24, where allocSize=4 > storeSize=3) are
+  // intercepted upfront in genInitLocalStore via emitByteLoop before this
+  // function is called; the allocSize > storeSize branch below is a defensive
+  // guard in case this function is ever called directly for such a type.
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
     unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
     const mlir::DataLayout &dl = builder.getDataLayout();
@@ -1539,6 +1541,27 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     if (allocSize > storeSize) {
       emitByteLoop(builder, loc, addr, allocSize, mode, hexByte);
       return;
+    }
+  }
+
+  // LOGICAL(k): when the allocation size exceeds the store size (e.g.
+  // --kind-mapping=l4:24 maps LOGICAL(4) to i24 with 3-byte store size but
+  // 4-byte allocation size on most targets), use the allocation-derived byte
+  // loop to cover the tail padding byte.  This guard fires before
+  // genByteSplatInit is called, so both zero and hex modes use the byte loop
+  // and the padded case never reaches the TODO in genByteSplatInit.
+  if (auto logTy = mlir::dyn_cast<fir::LogicalType>(ty)) {
+    unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
+    if (bits % 8 == 0 && bits >= 8) {
+      const mlir::DataLayout &logDL = builder.getDataLayout();
+      mlir::Type intTy = builder.getIntegerType(bits);
+      uint64_t logStoreSize = logDL.getTypeSize(intTy);
+      uint64_t logAllocSize =
+          llvm::alignTo(logStoreSize, logDL.getTypeABIAlignment(intTy));
+      if (logAllocSize > logStoreSize) {
+        emitByteLoop(builder, loc, addr, logAllocSize, mode, hexByte);
+        return;
+      }
     }
   }
 
@@ -1692,13 +1715,12 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::Value lenIdx = builder.createConvert(loc, idxTy, rtLen);
       mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
       mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      // This stride computation applies to all modes (zero and hex), not just
-      // hex.  Unlike the fixed-length path -- where zero mode emits a single
-      // fir.zero_bits over the whole !fir.char<k,n> object -- the runtime-
-      // length path always strides by kindBytes regardless of mode, so the
-      // correct stride is required in both cases.  Gating on hex would
-      // reintroduce a half-storage fill under a non-byte-multiple mapping
-      // (e.g. a1:12) in zero mode.
+      // This stride computation applies to all modes (zero and hex).  Both
+      // the fixed-length and runtime-length paths always stride by kindBytes
+      // regardless of mode: fixed-length uses emitByteLoop directly, and
+      // runtime-length loops here.  The correct stride is required in both
+      // cases; gating on hex would reintroduce a half-storage fill under a
+      // non-byte-multiple mapping (e.g. a1:12) in zero mode.
       //
       // Use the DataLayout allocation stride rather than charBits / 8.
       // charBits / 8 is the semantic byte width; LLVM pads iN types to their
