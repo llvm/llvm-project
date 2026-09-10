@@ -2089,7 +2089,21 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
   return success();
 }
 
+/// Verify that none of the reassociation groups is empty.
+template <typename TensorReshapeOp>
+static LogicalResult verifyReassociationIndicesNotEmpty(TensorReshapeOp op) {
+  if (llvm::any_of(
+          op.getReassociationIndices(),
+          [](const ReassociationIndices &group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
+  return success();
+}
+
 LogicalResult ExpandShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   RankedTensorType srcType = getSrc().getType();
   RankedTensorType resultType = getResult().getType();
 
@@ -2125,10 +2139,9 @@ LogicalResult ExpandShapeOp::verify() {
 
 LogicalResult CollapseShapeOp::verify() {
   CollapseShapeOp op = *this;
-  if (llvm::any_of(op.getReassociationIndices(),
-                   [](ReassociationIndices group) { return group.empty(); })) {
-    return op.emitOpError("reassociation indices must not be empty");
-  }
+  if (failed(verifyReassociationIndicesNotEmpty(op)))
+    return failure();
+
   RankedTensorType srcType = op.getSrc().getType();
   RankedTensorType resultType = op.getResult().getType();
 
