@@ -70,6 +70,42 @@ private:
   /// Flushed whenever a diagnostic pragma changes severities.
   llvm::DenseMap<const void *, Policy> PolicyCache[4];
 
+  /// Warning-analysis gates evaluated at a function's declaration location.
+  /// These determine which analyses can emit diagnostics, allowing disabled
+  /// analyses and their CFG setup to be skipped.
+  struct FunctionPolicy {
+    bool enableLifetimeSafetyAnalysis;
+    bool enableUninitializedAnalysis;
+    bool enableFallthroughFull;
+    bool enableFallthroughPerFunction;
+    bool enableInfiniteRecursion;
+    bool enableThrowInNoexcept;
+    bool enableLogicalErrors;
+  };
+
+  /// Classifies locations by expansion site and system-macro origin, which
+  /// affect diagnostic suppression independently of the diagnostic state.
+  enum FunctionPolicyCacheKind {
+    /// User expansion site, not a system macro.
+    UserCode,
+    /// System macro expanded in user code.
+    SystemMacroInUserCode,
+    /// System-header expansion site, not a system macro.
+    SystemHeader,
+    /// System macro expanded in a system header.
+    SystemMacroInSystemHeader,
+    NumFunctionPolicyCaches
+  };
+
+  /// One diagnostic-state-to-policy map per FunctionPolicyCacheKind. Keeping
+  /// the four location classes separate preserves system-header and
+  /// system-macro suppression even when they share a diagnostic state.
+  /// Flushed whenever a diagnostic pragma changes severities.
+  llvm::DenseMap<const void *, FunctionPolicy>
+      FunctionPolicyCaches[NumFunctionPolicyCaches];
+
+  FunctionPolicy getFunctionPolicy(const Decl *D);
+
   /// \name Statistics
   /// @{
 
