@@ -2379,7 +2379,7 @@ bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
-        Subtarget->hasGloballyAddressableScratch()) {
+        Subtarget->hasGloballyAddressableScratchSupport()) {
       // Flat -> private requires subtracting src_flat_scratch_base_lo.
       return false;
     }
@@ -9354,7 +9354,7 @@ SDValue SITargetLowering::getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
     const unsigned ApertureRegNo =
         IsLDS ? AMDGPU::SRC_SHARED_BASE : AMDGPU::SRC_PRIVATE_BASE;
     assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
-            !Subtarget->hasGloballyAddressableScratch()) &&
+            !Subtarget->hasGloballyAddressableScratchSupport()) &&
            "Cannot use src_private_base with globally addressable scratch!");
     // Note: this feature (register) is broken. When used as a 32-bit operand,
     // it returns a wrong value (all zeroes?). The real value is in the upper 32
@@ -9444,7 +9444,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
-          Subtarget->hasGloballyAddressableScratch()) {
+          Subtarget->hasGloballyAddressableScratchSupport()) {
         // flat -> private with globally addressable scratch: subtract
         // src_flat_scratch_base_lo.
         SDValue FlatScratchBaseLo(
@@ -9473,7 +9473,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::BARRIER) {
       SDValue CvtPtr;
       if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
-          Subtarget->hasGloballyAddressableScratch()) {
+          Subtarget->hasGloballyAddressableScratchSupport()) {
         // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
         // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr
         SDValue AllOnes = DAG.getSignedTargetConstant(-1, SL, MVT::i32);
@@ -11534,7 +11534,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                       ? AMDGPUAS::LOCAL_ADDRESS
                       : AMDGPUAS::PRIVATE_ADDRESS;
     if (AS == AMDGPUAS::PRIVATE_ADDRESS &&
-        Subtarget->hasGloballyAddressableScratch()) {
+        Subtarget->hasGloballyAddressableScratchSupport()) {
       SDValue FlatScratchBaseHi(
           DAG.getMachineNode(
               AMDGPU::S_MOV_B32, DL, MVT::i32,
@@ -20788,8 +20788,8 @@ static bool flatInstrMayAccessPrivate(const Instruction *I) {
 
 static TargetLowering::AtomicExpansionKind
 getPrivateAtomicExpansionKind(const GCNSubtarget &STI) {
-  // For GAS, lower to flat atomic.
-  return STI.hasGloballyAddressableScratch()
+  // If GAS is enabled, scratch atomics need to be expanded to FLAT.
+  return STI.isGloballyAddressableScratchEnabled()
              ? TargetLowering::AtomicExpansionKind::CustomExpand
              : TargetLowering::AtomicExpansionKind::NotAtomic;
 }
