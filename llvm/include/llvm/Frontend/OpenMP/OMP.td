@@ -498,7 +498,7 @@ def OMPC_Reduction : Clause<[Spelling<"reduction">]> {
   let clangClass = "OMPReductionClause";
   let flangClass = "OmpReductionClause";
 }
-def OMPD_ReductionKind : Clause<[Spelling<"reduction_kind">]> {
+def OMPC_ReductionKind : Clause<[Spelling<"reduction_kind">]> {
 }
 def OMPC_Relaxed : Clause<[Spelling<"relaxed">]> {
   let clangClass = "OMPRelaxedClause";
@@ -559,7 +559,7 @@ def OMPC_Shared : Clause<[Spelling<"shared">]> {
   let clangClass = "OMPSharedClause";
   let flangClass = "OmpObjectList";
 }
-def OMPD_Shift : Clause<[Spelling<"shift">]> {
+def OMPC_Shift : Clause<[Spelling<"shift">]> {
 }
 def OMPC_Simd : Clause<[Spelling<"simd">]> {
   let clangClass = "OMPSIMDClause";
