@@ -195,32 +195,23 @@ int main() {
                       [&]() { return TAMalloc(d, ctx, usm::alloc::host); }});
 
   // Testing invalid arguments for alignment
-  if (d.has(aspect::usm_device_allocations))
-    assert(aligned_alloc_device(3, 1024, q) == nullptr);
-  if (d.has(aspect::usm_host_allocations))
-    assert(aligned_alloc_host(3, 1024, q) == nullptr);
-  if (d.has(aspect::usm_shared_allocations))
-    assert(aligned_alloc_shared(3, 1024, q) == nullptr);
+  assert(aligned_alloc_device(3, 1024, q) == nullptr);
+  assert(aligned_alloc_host(3, 1024, q) == nullptr);
+  assert(aligned_alloc_shared(3, 1024, q) == nullptr);
 
   // A requested alignment of 0 means "no specific alignment" and must
   // succeed, routing through the plain (non-aligned) allocation path.
-  if (d.has(aspect::usm_device_allocations)) {
-    void *Ptr = aligned_alloc_device(0, 1024, q);
-    assert(Ptr != nullptr);
-    free(Ptr, q);
-  }
+  void *ZeroAlignPtr = aligned_alloc_device(0, 1024, q);
+  assert(ZeroAlignPtr != nullptr);
+  free(ZeroAlignPtr, q);
 
-  if (d.has(aspect::usm_host_allocations)) {
-    void *Ptr = aligned_alloc_host(0, 1024, q);
-    assert(Ptr != nullptr);
-    free(Ptr, q);
-  }
+  ZeroAlignPtr = aligned_alloc_host(0, 1024, q);
+  assert(ZeroAlignPtr != nullptr);
+  free(ZeroAlignPtr, q);
 
-  if (d.has(aspect::usm_shared_allocations)) {
-    void *Ptr = aligned_alloc_shared(0, 1024, q);
-    assert(Ptr != nullptr);
-    free(Ptr, q);
-  }
+  ZeroAlignPtr = aligned_alloc_shared(0, 1024, q);
+  assert(ZeroAlignPtr != nullptr);
+  free(ZeroAlignPtr, q);
 
   return 0;
 }
