@@ -53,16 +53,12 @@ public:
   }
 
   MCSymbol *addCallPrototype(const CallBase *CB, MachineFunction &MF) {
-    MCSymbol *Symbol =
-        MF.getContext().createTempSymbol("prototype_",
-                                         /*AlwaysAddSuffix=*/true);
+    MCSymbol *Symbol = MF.getContext().createTempSymbol("prototype_");
     CallPrototypes.push_back({CB, Symbol});
     return Symbol;
   }
 
-  const std::vector<CallProtoTy> &getCallPrototypes() const {
-    return CallPrototypes;
-  }
+  ArrayRef<CallProtoTy> getCallPrototypes() const { return CallPrototypes; }
 };
 }
 

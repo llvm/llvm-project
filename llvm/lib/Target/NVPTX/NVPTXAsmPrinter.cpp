@@ -945,9 +945,8 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   OutStreamer->emitRawText(O.str());
 
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
-  for (const auto &[CB, Symbol] : MFI->getCallPrototypes()) {
+  for (const auto &[CB, Symbol] : MFI->getCallPrototypes())
     emitCallPrototype(*CB, Symbol);
-  }
 
   if (const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo())
     for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables()))
@@ -1254,7 +1253,7 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   // Ensure globals are in the symbol table before ISel so any temp symbols are
   // guaranteed not to collide with user symbols
   for (const GlobalValue &GV : M.global_values())
-    TM.getSymbol(&GV);
+    getSymbol(&GV);
 
   return Result;
 }
