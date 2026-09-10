@@ -8339,9 +8339,9 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
   return *newFn;
 }
 
-static llvm::Value *
-getFallbackKernelLaunchIdent(llvm::IRBuilderBase &builder,
-                             llvm::OpenMPIRBuilder &ompBuilder, Operation *op) {
+static llvm::Value *getSourceLocIdentFromOp(llvm::IRBuilderBase &builder,
+                                            llvm::OpenMPIRBuilder &ompBuilder,
+                                            Operation *op) {
   auto fileLoc = op->getLoc()->findInstanceOf<FileLineColLoc>();
   if (!fileLoc)
     return nullptr;
@@ -8579,12 +8579,11 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocInsertPoints(builder, moduleTranslation, &deallocBlocks);
 
-  // Without -g there is no debug location to carry the data region's source
-  // position to the runtime.
+  // Pass the region's source location to the runtime, taken from the op's own
+  // location; only offloading entries emit the mapper calls that consume it.
   llvm::Value *srcLocOverride =
-      (isOffloadEntry && !ompLoc.DL)
-          ? getFallbackKernelLaunchIdent(builder, *ompBuilder, op)
-          : nullptr;
+      isOffloadEntry ? getSourceLocIdentFromOp(builder, *ompBuilder, op)
+                     : nullptr;
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
     if (isa<omp::TargetDataOp>(op))
@@ -9760,14 +9759,12 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::omp::OMPDynGroupprivateFallbackType fallbackType =
       getDynGroupprivateFallbackType(targetOp.getDynGroupprivateFallbackAttr());
 
-  // Without -g there is no debug location to carry the target region's source
-  // position to the runtime. Build a kernel-launch identifier from the op's own
-  // MLIR location so the runtime can still report file/line without -g. Only on
-  // the host offload path that actually emits the kernel launch, to avoid
-  // creating an unused identifier on the device.
+  // Pass the target region's source location to the runtime, taken from the
+  // op's own location. Restricted to the host offload path that actually emits
+  // the kernel launch, to avoid creating an unused identifier on the device.
   llvm::Value *rtLocOverride =
-      (!isTargetDevice && isOffloadEntry && !ompLoc.DL)
-          ? getFallbackKernelLaunchIdent(builder, *ompBuilder, targetOp)
+      (!isTargetDevice && isOffloadEntry)
+          ? getSourceLocIdentFromOp(builder, *ompBuilder, targetOp)
           : nullptr;
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
