@@ -108,11 +108,11 @@ static cl::opt<uint32_t> FusionPeelMaxCount(
     cl::desc("Max number of iterations to be peeled from a loop, such that "
              "fusion can take place"));
 
-static cl::opt<bool> EnableLoopFusionCostModel(
+static cl::opt<bool> EnableFusionCostModel(
     "loop-fusion-cost-model", cl::Hidden, cl::init(false),
     cl::desc("Enable the loop fusion profitability model"));
 
-static cl::opt<unsigned> LoopFusionMaxCodeSize(
+static cl::opt<unsigned> FusionMaxCodeSize(
     "loop-fusion-max-code-size", cl::Hidden, cl::init(300),
     cl::desc("Maximum estimated combined cost of fused loop bodies "
              "(0 disables the limit)"));
@@ -721,7 +721,7 @@ private:
   bool isBeneficialFusion(const FusionCandidate &FC0,
                           const FusionCandidate &FC1,
                           FusionProfitabilityInfo &Info) const {
-    if (!EnableLoopFusionCostModel)
+    if (!EnableFusionCostModel)
       return true;
 
     std::optional<unsigned> Size0 = estimateLoopCodeSize(FC0);
@@ -734,10 +734,10 @@ private:
     Info.CombinedCost = *Size0 + *Size1;
     LLVM_DEBUG(dbgs() << "\tEstimated combined loop-body cost: "
                       << *Info.CombinedCost << " (maximum: "
-                      << LoopFusionMaxCodeSize << ")\n");
+                      << FusionMaxCodeSize << ")\n");
 
-    if (LoopFusionMaxCodeSize &&
-        *Info.CombinedCost > LoopFusionMaxCodeSize) {
+    if (FusionMaxCodeSize &&
+        *Info.CombinedCost > FusionMaxCodeSize) {
       Info.Result = FusionProfitabilityResult::TooLarge;
       return false;
     }
@@ -1822,7 +1822,7 @@ private:
              << ": estimated combined loop-body cost "
              << NV("CombinedCost", *Info.CombinedCost)
              << " exceeds the configured maximum "
-             << NV("MaximumCost", unsigned(LoopFusionMaxCodeSize)));
+             << NV("MaximumCost", unsigned(FusionMaxCodeSize)));
   }
 
   /// Fuse two guarded fusion candidates, creating a new fused loop.
