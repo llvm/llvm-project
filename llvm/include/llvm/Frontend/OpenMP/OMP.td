@@ -664,7 +664,7 @@ def OMP_Allocate : Directive<[Spelling<"allocate">]> {
     VersionedClause<OMPC_Align, 51>,
     VersionedClause<OMPC_Allocator>,
   ];
-  let association = AS_None;
+  let association = AS_Explicit;
   let category = CA_Declarative;
   let pureSince = 50;
 }
@@ -864,7 +864,7 @@ def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
     VersionedClause<OMPC_DeviceType, 50>,
     VersionedClause<OMPC_Indirect, 51>,
   ];
-  let association = AS_None;
+  let association = AS_Explicit;
   let category = CA_Declarative;
   let pureSince = 45;
 }
@@ -1007,7 +1007,7 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_DeviceType>,
   ];
-  let association = AS_None;
+  let association = AS_Explicit;
   let category = CA_Declarative;
   let languages = [L_C, L_Fortran];
   let pureSince = 50;
@@ -1448,7 +1448,7 @@ def OMP_Teams : Directive<[Spelling<"teams">]> {
 }
 def OMP_ThreadPrivate : Directive<[Spelling<"threadprivate">]> {
   let pureSince = 50;
-  let association = AS_None;
+  let association = AS_Explicit;
   let category = CA_Declarative;
 }
 def OMP_Tile : Directive<[Spelling<"tile">]> {
