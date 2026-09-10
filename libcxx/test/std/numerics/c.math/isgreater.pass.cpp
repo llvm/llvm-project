@@ -32,7 +32,8 @@ struct TestFloat {
     assert(!std::isgreater(lim::quiet_NaN(), T(0)));
     assert(!std::isgreater(T(0), lim::quiet_NaN()));
     assert(!std::isgreater(lim::quiet_NaN(), lim::quiet_NaN()));
-    assert(!std::isgreater(lim::signaling_NaN(), T(0)));
+    // Note: signaling NaN is intentionally not tested. Passing a signaling NaN to these macros may
+    // raise the "invalid" floating-point exception, which is not allowed during constant evaluation.
   }
 };
 
