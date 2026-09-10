@@ -2847,6 +2847,14 @@ inline bool Decl::isTemplateParameter() const {
          getKind() == TemplateTemplateParm;
 }
 
+inline ASTContext &Decl::getASTContext() const {
+  const DeclContext *DC = getDeclContext();
+  // The translation unit has no parent context and owns the AST context.
+  if (!DC)
+    DC = castToDeclContext(this);
+  return DC->getParentASTContext();
+}
+
 // Specialization selected when ToTy is not a known subclass of DeclContext.
 template <class ToTy,
           bool IsKnownSubtype = ::std::is_base_of<DeclContext, ToTy>::value>
