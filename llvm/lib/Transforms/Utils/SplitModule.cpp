@@ -36,7 +36,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/Utils/SplitModuleCommon.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <iterator>
@@ -126,8 +126,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
     if (GV.isDeclaration())
       return;
 
-    if (!GV.hasName())
-      GV.setName("__llvmsplit_unnamed");
+    nameUnnamedGlobalValue(GV);
 
     // Comdat groups must not be partitioned. For comdat groups that contain
     // locals, record all their members here so we can keep them together.

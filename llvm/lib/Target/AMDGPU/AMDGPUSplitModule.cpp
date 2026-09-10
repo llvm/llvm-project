@@ -56,7 +56,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/Utils/SplitModuleCommon.h"
 #include <cassert>
 #include <cmath>
 #include <utility>
