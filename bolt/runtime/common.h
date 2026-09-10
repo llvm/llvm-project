@@ -292,19 +292,22 @@ static bool scanUInt32(const char *&Buf, const char *End, uint32_t &Ret) {
 // process. Any failure in runtime should not terminate the host process with
 // __exit(1), which would turn a profiling-tool defect into a foreground app
 // crash. Instead, __bolt_instr_data_dump() installs a setjmp() recovery point
-// and any failed assert() or reportError() will record the failure and then
-// longjmp() back reporting failure to the caller.
+// and a failed assert() or reportError() on the dumping thread will record
+// the failure and then longjmp() back reporting failure to the caller.
 alignas(16) void *__bolt_instr_longjmp_buf[16];
-bool __bolt_instr_recovery_active = false;
+
+// Thread that installed the recovery point above, or 0 when there is none.
+uint64_t __bolt_instr_recovery_tid = 0;
+
 bool __bolt_instr_dump_failed = false;
 
 void boltHandleFatalAndRecover() {
   __atomic_store_n(&__bolt_instr_dump_failed, true, __ATOMIC_RELAXED);
-  if (__bolt_instr_recovery_active) {
-    __bolt_instr_recovery_active = false;
+  if (__atomic_load_n(&__bolt_instr_recovery_tid, __ATOMIC_RELAXED) ==
+      __gettid()) {
+    __atomic_store_n(&__bolt_instr_recovery_tid, 0, __ATOMIC_RELAXED);
     __bolt_longjmp(__bolt_instr_longjmp_buf, 1);
   }
-  __exit(1);
 }
 #endif // defined(ANDROID_AARCH64)
 
