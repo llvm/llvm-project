@@ -56,6 +56,9 @@ public:
 
   /// Invokes another tool registered with the same host session.
   LLVM_ABI ErrorOr<int> callTool(ArrayRef<const char *> Args) const;
+
+  /// Returns true when this invocation is owned by a tool session.
+  bool hasSession() const { return Session != nullptr; }
 };
 
 /// Owns LLVM process initialization and an in-process tool registry.

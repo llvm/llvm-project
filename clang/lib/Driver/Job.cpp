@@ -13,6 +13,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -387,6 +388,12 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
                                    ErrMsg, ExecutionFailed, &ProcStat);
 }
 
+void Command::enableFree() {
+  llvm::erase_if(Arguments, [](const char *Arg) {
+    return StringRef(Arg) == "-disable-free";
+  });
+}
+
 CC1Command::CC1Command(const Action &Source, const Tool &Creator,
                        ResponseFileSupport ResponseSupport,
                        const char *Executable,
@@ -396,6 +403,7 @@ CC1Command::CC1Command(const Action &Source, const Tool &Creator,
     : Command(Source, Creator, ResponseSupport, Executable, Arguments, Inputs,
               Outputs, PrependArg) {
   InProcess = true;
+  SupportsDisableFree = true;
 }
 
 void CC1Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,

@@ -177,6 +177,9 @@ public:
   /// Whether the command will be executed in this process or not.
   bool InProcess = false;
 
+  /// Whether this command accepts -disable-free.
+  bool SupportsDisableFree = false;
+
   Command(const Action &Source, const Tool &Creator,
           ResponseFileSupport ResponseSupport, const char *Executable,
           const llvm::opt::ArgStringList &Arguments, ArrayRef<InputInfo> Inputs,
@@ -237,6 +240,9 @@ public:
   }
 
   void replaceExecutable(const char *Exe) { Executable = Exe; }
+
+  /// Ensure that this command frees memory before returning to its caller.
+  void enableFree();
 
   const char *getExecutable() const { return Executable; }
 

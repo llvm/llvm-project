@@ -25,6 +25,7 @@ int linkerMain(int Argc, char **Argv, const ToolContext &Context) {
   ++LinkerCalls;
   EXPECT_EQ(Argc, 3);
   EXPECT_STREQ(Argv[0], "wasm-ld");
+  EXPECT_TRUE(Context.hasSession());
   EXPECT_TRUE(Context.getCallableTool("clang"));
   return 0;
 }
@@ -50,6 +51,11 @@ int clangWrapperMain(int Argc, char **Argv, const ToolContext &Context) {
 int resetOptionsMain(int, char **, const ToolContext &) {
   cl::ResetAllOptionOccurrences();
   return 0;
+}
+
+TEST(LLVMToolSessionTest, DistinguishesStandaloneContext) {
+  ToolContext Context("clang", nullptr, false);
+  EXPECT_FALSE(Context.hasSession());
 }
 
 TEST(LLVMToolSessionTest, SupportsSequentialNestedToolCalls) {
