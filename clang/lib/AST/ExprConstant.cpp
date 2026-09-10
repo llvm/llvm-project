@@ -6630,6 +6630,12 @@ static bool
 checkNonVirtualMemberCallThisPointer(EvalInfo &Info, const Expr *E,
                                      const LValue &This,
                                      const CXXMethodDecl *NamedMember) {
+  ConstructionPhase Phase =
+      Info.isEvaluatingCtorDtor(This.getLValueBase(), This.Designator.Entries);
+  if (Phase == ConstructionPhase::Bases) {
+    Info.FFDiag(E);
+    return false;
+  }
   return checkDynamicType(
       Info, E, This,
       isa<CXXDestructorDecl>(NamedMember) ? AK_Destroy : AK_MemberCall, false);
