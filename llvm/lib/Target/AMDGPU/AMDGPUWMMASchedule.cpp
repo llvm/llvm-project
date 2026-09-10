@@ -147,7 +147,8 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
          "For each ds_load, find which WMMAs consume it (MinPos = earliest,\n"
          "MaxPos = latest). Update the data edge latency of the earliest\n"
          "consumer to be the real LDS load latency, so the scheduler keeps\n"
-         "the load issued far enough ahead of the WMMAs that need it.\n");
+         "the load issued far enough ahead of the WMMAs that need it. Also\n"
+         "calculate the latest cycle at which the load can be issued.\n");
   for (LoadInfo &LI : Loads) {
     SmallVector<SUnit *, 8> Consumers; // WMMA consumers (program order)
     for (const SDep &D : LI.SU->Succs) {
@@ -175,6 +176,8 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
         P.setLatency(LoadLatency);
     EarliestConsumer->setDepthDirty();
     LI.SU->setHeightDirty();
+    LI.LatestCycle = static_cast<long>(LI.MinPos) * (*WmmaLatency) -
+                     static_cast<long>(LoadLatency);
     LLVM_DEBUG({
       dbgs() << "[2] ds_load SU" << LI.SU->NodeNum << ": MinPos=" << LI.MinPos
              << " MaxPos=" << LI.MaxPos << "; consumers W[" << LI.MinPos << ".."
@@ -183,8 +186,15 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
         dbgs() << (I ? ", " : "") << "SU" << Consumers[I]->NodeNum;
       dbgs() << "); set latency " << LoadLatency << " on edge -> W["
              << LI.MinPos << "]\n";
+      dbgs() << "[lat] ds_load SU" << LI.SU->NodeNum
+             << ": LatestCycle=" << LI.LatestCycle << " (W[" << LI.MinPos
+             << "]*" << *WmmaLatency << " - " << LoadLatency << ")\n";
     });
   }
+
+  // Loads without a MinPos have no WMMA consumer in this scheduling region.
+  llvm::erase_if(Loads,
+                 [](const LoadInfo &LI) { return LI.MinPos == UINT_MAX; });
 
   // Order the Loads
   llvm::stable_sort(Loads, [](const LoadInfo &A, const LoadInfo &B) {
@@ -201,8 +211,6 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
          "memory bound).\n");
   SUnit *Prev = nullptr;
   for (LoadInfo &LI : Loads) {
-    if (LI.MinPos == UINT_MAX)
-      continue;
     if (Prev) {
       const unsigned Spacing = static_cast<unsigned>(
           std::ceil(SM->computeReciprocalThroughput(Prev->getInstr())));
@@ -216,34 +224,17 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     Prev = LI.SU;
   }
 
-  // Determing each load's as late as possible cycle - this means the
-  // latest cycle that still meets the load latency, then pushed earlier
-  // if the ds_load -> ds_load edges requires spacing (ds_loads cannot be
-  // too close to each other or it could overwhelm the LDS bus and lead to
-  // the program being memory bound).
+  // Push each load's latest cycle earlier if the ds_load -> ds_load edges
+  // require spacing (ds_loads cannot be too close to each other or they could
+  // overwhelm the LDS bus and make the program memory bound).
   LLVM_DEBUG(
       dbgs()
-      << "\n--- [lat]/[space] as late as possible cycle --------------\n"
-         "[lat]: latest cycle each load could issue and still feed its\n"
-         "earliest consumer in time (MinPos*wmmalat - loadlat).\n"
+      << "\n--- [space] as late as possible cycle --------------------\n"
          "[space]: loop through the ordered loads from last to first and\n"
          "pull any that are too close to the next one earlier in order to\n"
          "honor the ds_load -> ds_load spacing.\n");
-  for (LoadInfo &LI : Loads)
-    if (LI.MinPos != UINT_MAX) {
-      const long LoadLatency =
-          static_cast<long>(SM->computeInstrLatency(LI.SU->getInstr()));
-      LI.LatestCycle =
-          static_cast<long>(LI.MinPos) * (*WmmaLatency) - LoadLatency;
-      LLVM_DEBUG(dbgs() << "[lat] ds_load SU" << LI.SU->NodeNum
-                        << ": LatestCycle=" << LI.LatestCycle << " (W["
-                        << LI.MinPos << "]*" << *WmmaLatency << " - "
-                        << LoadLatency << ")\n");
-    }
   long PrevLatest = LONG_MAX;
   for (LoadInfo &LI : llvm::reverse(Loads)) {
-    if (LI.MinPos == UINT_MAX)
-      continue;
     const long Spacing = static_cast<long>(
         std::ceil(SM->computeReciprocalThroughput(LI.SU->getInstr())));
     long Spaced = PrevLatest - Spacing;
@@ -270,8 +261,6 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
          "as late as possible schedule above.\n");
   MapVector<Register, FragInfo> Frags;
   for (LoadInfo &LI : Loads) {
-    if (LI.MinPos == UINT_MAX)
-      continue;
     Register R = LI.SU->getInstr()->getOperand(0).getReg();
     FragInfo &F = Frags[R];
     if (F.Subloads.empty() && R.isVirtual())
