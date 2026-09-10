@@ -3,10 +3,15 @@
 main:
   .cfi_startproc
   cmpq $0x3, %rdi
-  jae .L4
+  jae .Ltmp
   cmpq $0x1, %rdi
   jne .L4
   movslq .Ljt_pic+8(%rip), %rax
+  lea .Ljt_pic(%rip), %rdx
+  add %rdx, %rax
+  jmpq *%rax
+.Ltmp:
+  movslq .Ljt_pic(%rip), %rax
   lea .Ljt_pic(%rip), %rdx
   add %rdx, %rax
   jmpq *%rax
