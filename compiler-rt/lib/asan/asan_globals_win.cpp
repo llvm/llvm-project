@@ -14,6 +14,10 @@
 #if SANITIZER_WINDOWS
 #  include "sanitizer_common/sanitizer_win_defs.h"
 
+#  if defined(__GNUC__) && !defined(__clang__)
+#    include <intrin.h>
+#  endif
+
 namespace __asan {
 
 #  pragma section(".ASAN$GA", read, write)
