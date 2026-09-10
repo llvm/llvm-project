@@ -103,9 +103,13 @@ public:
     return BlockRef();
   }
 
+  /// Whether `block` is too small to hold a free list node. insert() and
+  /// remove() ignore such blocks, so they are owned by no store.
   LIBC_INLINE static bool too_small(BlockRef block) {
     return block.outer_size() < MIN_OUTER_SIZE;
   }
+
+  LIBC_INLINE bool empty() const { return free_sizes.empty(); }
 
 private:
   LIBC_INLINE constexpr TLSFFreeStoreImpl(cpp::bool_constant<true>) : trie() {}

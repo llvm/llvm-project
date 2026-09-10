@@ -456,10 +456,10 @@ TEST(LlvmLibcFreeListHeap, CoalescesAcrossUntrackedPadding) {
         continue;
       tested = true;
 
-      // Quarantine X, rotate (a failing request still rotates), then
-      // quarantine A in the other store.
+      // Quarantine X, rotate (a request for more than is free fails, but
+      // the stores rotate first), then quarantine A in the other store.
       allocator.free(x);
-      ASSERT_EQ(allocator.allocate(N), static_cast<void *>(nullptr));
+      ASSERT_EQ(allocator.allocate(N - 64), static_cast<void *>(nullptr));
       allocator.free(a);
 
       // Carve B out of X, leaving one MIN_ALIGN unit of untracked padding.
@@ -481,5 +481,26 @@ TEST(LlvmLibcFreeListHeap, CoalescesAcrossUntrackedPadding) {
       allocator.integrity_check();
     }
     EXPECT_TRUE(tested);
+  }
+}
+
+// A request larger than the whole heap can never be served, so it must fail
+// without ending the quarantine period.
+TEST(LlvmLibcFreeListHeap, OversizedRequestDoesNotRotate) {
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1) {
+    byte buf[2048] = {byte(0)};
+    FreeListHeap allocator(buf);
+
+    void *ptr1 = allocator.allocate(64);
+    ASSERT_NE(ptr1, static_cast<void *>(nullptr));
+    allocator.free(ptr1);
+
+    ASSERT_EQ(allocator.allocate(allocator.region().size() + 1),
+              static_cast<void *>(nullptr));
+
+    // The freed block is still quarantined, so it cannot be handed back out.
+    void *ptr2 = allocator.allocate(64);
+    ASSERT_NE(ptr2, static_cast<void *>(nullptr));
+    EXPECT_NE(ptr1, ptr2);
   }
 }
