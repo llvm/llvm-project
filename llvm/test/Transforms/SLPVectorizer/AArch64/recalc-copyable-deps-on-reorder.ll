@@ -34,12 +34,12 @@ define void @test(ptr %0, ptr %1, double %2, ptr %3) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = fmul <2 x double> [[TMP27]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = fadd <2 x double> [[TMP30]], zeroinitializer
 ; CHECK-NEXT:    br label %[[DOTPREHEADER511]]
-; CHECK:       [[_PREHEADER511:.*:]]
+; CHECK:       [[DOTPREHEADER511]]:
 ; CHECK-NEXT:    [[TMP32:%.*]] = phi <2 x double> [ [[TMP14]], %[[VECTOR_PH]] ], [ zeroinitializer, [[TMP4:%.*]] ]
 ; CHECK-NEXT:    [[TMP33:%.*]] = phi <2 x double> [ [[TMP49]], %[[VECTOR_PH]] ], [ zeroinitializer, [[TMP4]] ]
 ; CHECK-NEXT:    [[TMP34:%.*]] = phi <2 x double> [ [[TMP31]], %[[VECTOR_PH]] ], [ zeroinitializer, [[TMP4]] ]
 ; CHECK-NEXT:    [[TMP35:%.*]] = phi <2 x double> [ [[TMP25]], %[[VECTOR_PH]] ], [ zeroinitializer, [[TMP4]] ]
-; CHECK-NEXT:    br i1 true, label %[[BB31:.*]], [[DOTPREHEADER498:label %.*]]
+; CHECK-NEXT:    br i1 true, label %[[BB31:.*]], label %[[DOTPREHEADER498:.*]]
 ; CHECK:       [[BB31]]:
 ; CHECK-NEXT:    [[TMP37:%.*]] = fmul <2 x double> [[TMP33]], zeroinitializer
 ; CHECK-NEXT:    [[TMP38:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
@@ -70,8 +70,8 @@ define void @test(ptr %0, ptr %1, double %2, ptr %3) {
 ; CHECK-NEXT:    [[TMP63:%.*]] = shufflevector <2 x double> <double poison, double 0.000000e+00>, <2 x double> [[TMP53]], <2 x i32> <i32 3, i32 1>
 ; CHECK-NEXT:    [[TMP64:%.*]] = fadd <2 x double> [[TMP62]], [[TMP63]]
 ; CHECK-NEXT:    [[TMP65:%.*]] = fadd <2 x double> [[TMP64]], <double 0.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    br [[DOTPREHEADER498]]
-; CHECK:       [[_PREHEADER498:.*:]]
+; CHECK-NEXT:    br label %[[DOTPREHEADER498]]
+; CHECK:       [[DOTPREHEADER498]]:
 ; CHECK-NEXT:    [[DOTSROA_18924_0:%.*]] = phi double [ [[TMP48]], %[[BB31]] ], [ 0.000000e+00, %[[DOTPREHEADER511]] ]
 ; CHECK-NEXT:    [[TMP66:%.*]] = phi <2 x double> [ [[TMP47]], %[[BB31]] ], [ zeroinitializer, %[[DOTPREHEADER511]] ]
 ; CHECK-NEXT:    [[TMP67:%.*]] = phi <2 x double> [ [[TMP65]], %[[BB31]] ], [ zeroinitializer, %[[DOTPREHEADER511]] ]

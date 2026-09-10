@@ -26,13 +26,13 @@ define void @test(i1 %tobool.not, <8 x double> %p.0) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ [[TMP1]], [[WHILE_BODY_AB_CRIT_EDGE]] ], [ [[TMP3]], [[R]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x double> [ zeroinitializer, [[WHILE_BODY_AB_CRIT_EDGE]] ], [ [[TMP5]], [[R]] ]
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <8 x double> zeroinitializer, double [[O_0]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
-; CHECK-NEXT:    [[ADD_I110:%.*]] = fadd double [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
+; CHECK-NEXT:    [[ADD_I110:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[ADD1_I111:%.*]] = fadd double [[TMP10]], [[ADD_I110]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[ADD1_I112:%.*]] = fadd double [[TMP12]], [[ADD1_I111]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
-; CHECK-NEXT:    [[ADD2_I112:%.*]] = fadd double [[TMP11]], [[ADD1_I111]]
+; CHECK-NEXT:    [[ADD2_I112:%.*]] = fadd double [[TMP11]], [[ADD1_I112]]
 ; CHECK-NEXT:    [[ADD3_I113:%.*]] = fadd double [[VECEXT65_PRE_PHI]], [[ADD2_I112]]
 ; CHECK-NEXT:    [[ADD4_I114:%.*]] = fadd double [[VECEXT65_PRE_PHI]], [[ADD3_I113]]
 ; CHECK-NEXT:    br label [[T]]
