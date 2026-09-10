@@ -148,63 +148,57 @@ Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd, const Twine &Comment) {
   return Error::success();
 }
 
+Error CodeViewRecordIO::mapWriteInt128(const APSInt &Value,
+                                       const Twine &Comment) {
+  if (isStreaming()) {
+    emitComment(Comment);
+    Streamer->emitAPSIntValue(Value, 16);
+    incrStreamedLen(16);
+    return Error::success();
+  }
+
+  return Writer->writeInt128(Value);
+}
+
 Error CodeViewRecordIO::mapEncodedInteger(int64_t &Value,
                                           const Twine &Comment) {
-  if (isStreaming()) {
-    if (Value >= 0)
-      emitEncodedUnsignedInteger(static_cast<uint64_t>(Value), Comment);
-    else
-      emitEncodedSignedInteger(Value, Comment);
-  } else if (isWriting()) {
-    if (Value >= 0) {
-      if (auto EC = writeEncodedUnsignedInteger(static_cast<uint64_t>(Value)))
-        return EC;
-    } else {
-      if (auto EC = writeEncodedSignedInteger(Value))
-        return EC;
-    }
-  } else {
+  if (isReading()) {
     APSInt N;
     if (auto EC = consume(*Reader, N))
       return EC;
     Value = N.getExtValue();
+    return Error::success();
   }
 
-  return Error::success();
+  if (Value >= 0)
+    return mapWriteEncodedUnsignedInteger(APSInt(APInt(Value, 64), true),
+                                          Comment);
+
+  return mapWriteEncodedSignedInteger(APSInt(APInt(64, Value, true), false),
+                                      Comment);
 }
 
 Error CodeViewRecordIO::mapEncodedInteger(uint64_t &Value,
                                           const Twine &Comment) {
-  if (isStreaming())
-    emitEncodedUnsignedInteger(Value, Comment);
-  else if (isWriting()) {
-    if (auto EC = writeEncodedUnsignedInteger(Value))
-      return EC;
-  } else {
+  if (isReading()) {
     APSInt N;
     if (auto EC = consume(*Reader, N))
       return EC;
     Value = N.getZExtValue();
+    return Error::success();
   }
-  return Error::success();
+  return mapWriteEncodedUnsignedInteger(APSInt(APInt(64, Value), true),
+                                        Comment);
 }
 
 Error CodeViewRecordIO::mapEncodedInteger(APSInt &Value, const Twine &Comment) {
-  if (isStreaming()) {
-    // FIXME: We also need to handle big values here, but it's
-    //        not clear how we can excercise this code path yet.
-    if (Value.isSigned())
-      emitEncodedSignedInteger(Value.getSExtValue(), Comment);
-    else
-      emitEncodedUnsignedInteger(Value.getZExtValue(), Comment);
-  } else if (isWriting()) {
-    if (Value.isSigned())
-      return writeEncodedSignedInteger(
-          Value.isSingleWord() ? Value.getSExtValue() : INT64_MIN);
-    return writeEncodedUnsignedInteger(Value.getLimitedValue());
-  } else
+  if (isReading())
     return consume(*Reader, Value);
-  return Error::success();
+
+  if (Value.isUnsigned())
+    return mapWriteEncodedUnsignedInteger(Value, Comment);
+
+  return mapWriteEncodedSignedInteger(Value, Comment);
 }
 
 Error CodeViewRecordIO::mapStringZ(StringRef &Value, const Twine &Comment) {
@@ -278,116 +272,77 @@ Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value,
   return Error::success();
 }
 
-void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value,
-                                                const Twine &Comment) {
-  // FIXME: There are no test cases covering this function.
-  // This may be because we always consider enumerators to be unsigned.
-  // See FIXME at CodeViewDebug.cpp : CodeViewDebug::lowerTypeEnum.
-  if (Value < LF_NUMERIC && Value >= 0) {
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 2);
-    incrStreamedLen(2);
-  } else if (Value >= std::numeric_limits<int8_t>::min() &&
-             Value <= std::numeric_limits<int8_t>::max()) {
-    Streamer->emitIntValue(LF_CHAR, 2);
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 1);
-    incrStreamedLen(3);
-  } else if (Value >= std::numeric_limits<int16_t>::min() &&
-             Value <= std::numeric_limits<int16_t>::max()) {
-    Streamer->emitIntValue(LF_SHORT, 2);
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 2);
-    incrStreamedLen(4);
-  } else if (Value >= std::numeric_limits<int32_t>::min() &&
-             Value <= std::numeric_limits<int32_t>::max()) {
-    Streamer->emitIntValue(LF_LONG, 2);
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 4);
-    incrStreamedLen(6);
-  } else {
-    Streamer->emitIntValue(LF_QUADWORD, 2);
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 8);
-    incrStreamedLen(10);
+Error CodeViewRecordIO::mapWriteEncodedSignedInteger(const APSInt &APValue,
+                                                     const Twine &Comment) {
+  assert(APValue.isSigned());
+
+  if (LLVM_UNLIKELY(!APValue.isSingleWord())) {
+    // All values >64 bit are encoded as 128 bit integers (possibly truncated).
+    if (Error Err = mapWriteInteger<uint16_t>(LF_OCTWORD))
+      return Err;
+    return mapWriteInt128(APValue, Comment);
   }
+
+  int64_t Value = APValue.getSExtValue();
+
+  if (Value < LF_NUMERIC && Value >= 0)
+    return mapWriteInteger(static_cast<uint16_t>(Value), Comment);
+
+  if (Value >= std::numeric_limits<int8_t>::min() &&
+      Value <= std::numeric_limits<int8_t>::max()) {
+    if (Error Err = mapWriteInteger<uint16_t>(LF_CHAR))
+      return Err;
+    return mapWriteInteger(static_cast<int8_t>(Value), Comment);
+  }
+
+  if (Value >= std::numeric_limits<int16_t>::min() &&
+      Value <= std::numeric_limits<int16_t>::max()) {
+    if (Error Err = mapWriteInteger<uint16_t>(LF_SHORT))
+      return Err;
+    return mapWriteInteger(static_cast<int16_t>(Value), Comment);
+  }
+
+  if (Value >= std::numeric_limits<int32_t>::min() &&
+      Value <= std::numeric_limits<int32_t>::max()) {
+    if (Error Err = mapWriteInteger<uint16_t>(LF_LONG))
+      return Err;
+    return mapWriteInteger(static_cast<int32_t>(Value), Comment);
+  }
+
+  if (Error Err = mapWriteInteger<uint16_t>(LF_QUADWORD))
+    return Err;
+  return mapWriteInteger(Value, Comment);
 }
 
-void CodeViewRecordIO::emitEncodedUnsignedInteger(const uint64_t &Value,
-                                                  const Twine &Comment) {
-  if (Value < LF_NUMERIC) {
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 2);
-    incrStreamedLen(2);
-  } else if (Value <= std::numeric_limits<uint16_t>::max()) {
-    Streamer->emitIntValue(LF_USHORT, 2);
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 2);
-    incrStreamedLen(4);
-  } else if (Value <= std::numeric_limits<uint32_t>::max()) {
-    Streamer->emitIntValue(LF_ULONG, 2);
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 4);
-    incrStreamedLen(6);
-  } else {
-    Streamer->emitIntValue(LF_UQUADWORD, 2);
-    emitComment(Comment);
-    Streamer->emitIntValue(Value, 8);
-    incrStreamedLen(10);
-  }
-}
+Error CodeViewRecordIO::mapWriteEncodedUnsignedInteger(const APSInt &APValue,
+                                                       const Twine &Comment) {
+  assert(APValue.isUnsigned());
 
-Error CodeViewRecordIO::writeEncodedSignedInteger(const int64_t &Value) {
-  if (Value < LF_NUMERIC && Value >= 0) {
-    if (auto EC = Writer->writeInteger<int16_t>(Value))
-      return EC;
-  } else if (Value >= std::numeric_limits<int8_t>::min() &&
-             Value <= std::numeric_limits<int8_t>::max()) {
-    if (auto EC = Writer->writeInteger<uint16_t>(LF_CHAR))
-      return EC;
-    if (auto EC = Writer->writeInteger<int8_t>(Value))
-      return EC;
-  } else if (Value >= std::numeric_limits<int16_t>::min() &&
-             Value <= std::numeric_limits<int16_t>::max()) {
-    if (auto EC = Writer->writeInteger<uint16_t>(LF_SHORT))
-      return EC;
-    if (auto EC = Writer->writeInteger<int16_t>(Value))
-      return EC;
-  } else if (Value >= std::numeric_limits<int32_t>::min() &&
-             Value <= std::numeric_limits<int32_t>::max()) {
-    if (auto EC = Writer->writeInteger<uint16_t>(LF_LONG))
-      return EC;
-    if (auto EC = Writer->writeInteger<int32_t>(Value))
-      return EC;
-  } else {
-    if (auto EC = Writer->writeInteger<uint16_t>(LF_QUADWORD))
-      return EC;
-    if (auto EC = Writer->writeInteger(Value))
-      return EC;
-  }
-  return Error::success();
-}
-
-Error CodeViewRecordIO::writeEncodedUnsignedInteger(const uint64_t &Value) {
-  if (Value < LF_NUMERIC) {
-    if (auto EC = Writer->writeInteger<uint16_t>(Value))
-      return EC;
-  } else if (Value <= std::numeric_limits<uint16_t>::max()) {
-    if (auto EC = Writer->writeInteger<uint16_t>(LF_USHORT))
-      return EC;
-    if (auto EC = Writer->writeInteger<uint16_t>(Value))
-      return EC;
-  } else if (Value <= std::numeric_limits<uint32_t>::max()) {
-    if (auto EC = Writer->writeInteger<uint16_t>(LF_ULONG))
-      return EC;
-    if (auto EC = Writer->writeInteger<uint32_t>(Value))
-      return EC;
-  } else {
-    if (auto EC = Writer->writeInteger<uint16_t>(LF_UQUADWORD))
-      return EC;
-    if (auto EC = Writer->writeInteger(Value))
-      return EC;
+  if (LLVM_UNLIKELY(!APValue.isSingleWord())) {
+    // All values >64 bit are encoded as 128 bit integers (possibly truncated).
+    if (Error Err = mapWriteInteger<uint16_t>(LF_UOCTWORD))
+      return Err;
+    return mapWriteInt128(APValue, Comment);
   }
 
-  return Error::success();
+  uint64_t Value = APValue.getZExtValue();
+
+  if (Value < LF_NUMERIC)
+    return mapWriteInteger(static_cast<uint16_t>(Value), Comment);
+
+  if (Value <= std::numeric_limits<uint16_t>::max()) {
+    if (Error Err = mapWriteInteger<uint16_t>(LF_USHORT))
+      return Err;
+    return mapWriteInteger(static_cast<uint16_t>(Value), Comment);
+  }
+
+  if (Value <= std::numeric_limits<uint32_t>::max()) {
+    if (Error Err = mapWriteInteger<uint16_t>(LF_ULONG))
+      return Err;
+    return mapWriteInteger(static_cast<uint32_t>(Value), Comment);
+  }
+
+  if (Error Err = mapWriteInteger<uint16_t>(LF_UQUADWORD))
+    return Err;
+  return mapWriteInteger(Value, Comment);
 }

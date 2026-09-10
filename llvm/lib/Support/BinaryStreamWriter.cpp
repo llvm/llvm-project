@@ -32,6 +32,21 @@ Error BinaryStreamWriter::writeBytes(ArrayRef<uint8_t> Buffer) {
   return Error::success();
 }
 
+Error BinaryStreamWriter::writeInt128(const APSInt &Value) {
+  bool SameEndianess = Stream.getEndian() == endianness::native;
+  // Avoid copying the value if it is in the expected shape.
+  if (Value.getBitWidth() == 128 && SameEndianess)
+    return writeBytes(
+        {reinterpret_cast<const uint8_t *>(Value.getRawData()), 16});
+
+  APInt Trunc = Value.extOrTrunc(128);
+  if (!SameEndianess)
+    Trunc = Trunc.byteSwap();
+
+  return writeBytes(
+      {reinterpret_cast<const uint8_t *>(Trunc.getRawData()), 16});
+}
+
 Error BinaryStreamWriter::writeULEB128(uint64_t Value) {
   uint8_t EncodedBytes[10] = {0};
   unsigned Size = encodeULEB128(Value, &EncodedBytes[0]);
