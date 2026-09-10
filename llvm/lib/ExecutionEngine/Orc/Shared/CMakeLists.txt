@@ -1,3 +1,10 @@
+if("${CMAKE_SYSTEM_NAME}" MATCHES "QNX")
+  # On QNX the socket APIs (shutdown, used by FDSimpleRemoteEPCTransport in
+  # SimpleRemoteEPCUtils.cpp) live in libsocket rather than libc. On SunOS and
+  # Haiku the equivalent library is already pulled in transitively via Support.
+  set(ORC_SHARED_EXTRA_LIBS socket)
+endif()
+
 add_llvm_component_library(LLVMOrcShared
   AllocationActions.cpp
   MachOObjectFormat.cpp
@@ -15,6 +22,7 @@ add_llvm_component_library(LLVMOrcShared
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
+  ${ORC_SHARED_EXTRA_LIBS}
 
   LINK_COMPONENTS
   Support
