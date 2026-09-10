@@ -9141,21 +9141,6 @@ static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
                      [&] { Cache.CheapOpcodes.insert(Key); });
 }
 
-/// Find the innermost loop starting from \p L, for which at least a single
-/// value in \p VL is not invariant.
-static const Loop *findInnermostNonInvariantLoop(const Loop *L,
-                                                 ArrayRef<Value *> VL) {
-  assert(L && "Expected valid loop");
-  auto IsLoopInvariant = [&](const Loop *L, ArrayRef<Value *> VL) {
-    return all_of(VL, [&](Value *V) {
-      return isa<Constant>(V) || !isa<Instruction>(V) || L->isLoopInvariant(V);
-    });
-  };
-  while (L && IsLoopInvariant(L, VL))
-    L = L->getParentLoop();
-  return L;
-}
-
 /// Get the loop nest for the given loop.
 ArrayRef<const Loop *> BoUpSLP::getLoopNest(const Loop *L) {
   assert(L && "Expected valid loop");
@@ -15392,24 +15377,6 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   return TTI::CastContextHint::None;
 }
 
-/// Get the assumed loop trip count for the loop \p L.
-static unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE) {
-  if (LoopAwareTripCount == 0)
-    return 1;
-  unsigned Scale = SE.getSmallConstantTripCount(L);
-  if (Scale == 0)
-    Scale = getLoopEstimatedTripCount(const_cast<Loop *>(L)).value_or(0);
-  if (Scale != 0) {
-    // Multiple exiting blocks - choose the minimum between trip count (scale)
-    // and LoopAwareTripCount, since the multiple exit loops can be terminated
-    // early.
-    if (!L->getExitingBlock())
-      return std::min<unsigned>(LoopAwareTripCount, Scale);
-    return Scale;
-  }
-  return LoopAwareTripCount;
-}
-
 uint64_t BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
                                            Instruction *U) {
   BasicBlock *Parent = nullptr;
@@ -15495,7 +15462,8 @@ uint64_t BoUpSLP::getLoopNestScale(const Loop *L) {
   // Use SaturatingMultiply to clamp at uint64_t max on deep/large nests
   // rather than wrapping around.
   for (const Loop *Cur : reverse(Chain)) {
-    uint64_t TC = std::max<uint64_t>(1, getLoopTripCount(Cur, *SE));
+    uint64_t TC =
+        std::max<uint64_t>(1, getLoopTripCount(Cur, *SE, LoopAwareTripCount));
     Scale = SaturatingMultiply(Scale, TC);
     LoopNestScaleCache.try_emplace(Cur, std::max<uint64_t>(1, Scale));
   }
