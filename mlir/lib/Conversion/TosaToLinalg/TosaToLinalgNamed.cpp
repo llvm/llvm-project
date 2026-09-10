@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
@@ -677,6 +678,175 @@ public:
   }
 };
 
+// Broadcast the batch dimension of B from one to the batch dimension of A.
+// linalg.broadcast adds dimensions rather than expanding dimensions of size
+// one, so first rank-reduce B from 1xWxC to WxC.
+static Value broadcastMatMulTRhs(PatternRewriter &rewriter, Location loc,
+                                 Value a, Value b) {
+  auto bType = cast<RankedTensorType>(b.getType());
+  auto rankReducedBType =
+      RankedTensorType::get(bType.getShape().drop_front(),
+                            bType.getElementType(), bType.getEncoding());
+
+  SmallVector<OpFoldResult> offsets(3, rewriter.getIndexAttr(0));
+  SmallVector<OpFoldResult> sizes = {rewriter.getIndexAttr(1),
+                                     tensor::getMixedSize(rewriter, loc, b, 1),
+                                     tensor::getMixedSize(rewriter, loc, b, 2)};
+  SmallVector<OpFoldResult> strides(3, rewriter.getIndexAttr(1));
+  Value rankReducedB = tensor::ExtractSliceOp::create(
+      rewriter, loc, rankReducedBType, b, offsets, sizes, strides);
+
+  SmallVector<OpFoldResult> broadcastShape = {
+      tensor::getMixedSize(rewriter, loc, a, 0),
+      tensor::getMixedSize(rewriter, loc, b, 1),
+      tensor::getMixedSize(rewriter, loc, b, 2)};
+  Value broadcastInit =
+      tensor::EmptyOp::create(rewriter, loc, broadcastShape,
+                              bType.getElementType(), bType.getEncoding());
+  return linalg::BroadcastOp::create(rewriter, loc, rankReducedB, broadcastInit,
+                                     ArrayRef<int64_t>{0})
+      .getResult()
+      .front();
+}
+
+// Materialize MATMUL_T's optional B batch broadcast. When the B batch is
+// dynamic, select the broadcasted value at runtime if its size is one.
+static Value normalizeMatMulTRhsBatch(PatternRewriter &rewriter, Location loc,
+                                      Value a, Value b) {
+  auto aType = cast<RankedTensorType>(a.getType());
+  auto bType = cast<RankedTensorType>(b.getType());
+  const int64_t aBatch = aType.getDimSize(0);
+  const int64_t bBatch = bType.getDimSize(0);
+
+  if (bBatch == 1 && aBatch != 1)
+    return broadcastMatMulTRhs(rewriter, loc, a, b);
+
+  if (ShapedType::isStatic(bBatch) || aBatch == 1)
+    return b;
+
+  Value bBatchSize = tensor::DimOp::create(rewriter, loc, b, 0);
+  Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  Value requiresBroadcast = arith::CmpIOp::create(
+      rewriter, loc, arith::CmpIPredicate::eq, bBatchSize, one);
+
+  auto thenBuilder = [&](OpBuilder &builder, Location nestedLoc) {
+    Value broadcastedB = broadcastMatMulTRhs(rewriter, nestedLoc, a, b);
+    Value castB =
+        builder.createOrFold<tensor::CastOp>(nestedLoc, bType, broadcastedB);
+    scf::YieldOp::create(builder, nestedLoc, castB);
+  };
+  auto elseBuilder = [&](OpBuilder &builder, Location nestedLoc) {
+    scf::YieldOp::create(builder, nestedLoc, b);
+  };
+  return scf::IfOp::create(rewriter, loc, requiresBroadcast, thenBuilder,
+                           elseBuilder)
+      .getResult(0);
+}
+
+class MatMulTConverter : public OpConversionPattern<tosa::MatMulTOp> {
+public:
+  using OpConversionPattern<tosa::MatMulTOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::MatMulTOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    auto aType = dyn_cast<RankedTensorType>(adaptor.getA().getType());
+    auto bType = dyn_cast<RankedTensorType>(adaptor.getB().getType());
+    auto outputType = dyn_cast<RankedTensorType>(op.getType());
+    if (!aType || !bType || !outputType)
+      return rewriter.notifyMatchFailure(op, "only supports ranked tensors");
+
+    FailureOr<int64_t> maybeAZp = op.getAZeroPoint();
+    FailureOr<int64_t> maybeBZp = op.getBZeroPoint();
+    if (failed(maybeAZp))
+      return rewriter.notifyMatchFailure(
+          op, "input a zero point cannot be statically determined");
+    if (failed(maybeBZp))
+      return rewriter.notifyMatchFailure(
+          op, "input b zero point cannot be statically determined");
+
+    const int64_t aZpVal = *maybeAZp;
+    const int64_t bZpVal = *maybeBZp;
+    if (op.verifyAZeroPoint(aZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input a zero point must be zero for non-int8 integer types");
+    if (op.verifyBZeroPoint(bZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input b zero point must be zero for non-int8 integer types");
+
+    Value b =
+        normalizeMatMulTRhsBatch(rewriter, loc, adaptor.getA(), adaptor.getB());
+
+    SmallVector<Value> dynamicDims(3);
+    if (outputType.isDynamicDim(0))
+      dynamicDims[0] = tensor::DimOp::create(rewriter, loc, adaptor.getA(), 0);
+    if (outputType.isDynamicDim(1))
+      dynamicDims[1] = tensor::DimOp::create(rewriter, loc, adaptor.getA(), 1);
+    if (outputType.isDynamicDim(2))
+      dynamicDims[2] = tensor::DimOp::create(rewriter, loc, adaptor.getB(), 1);
+
+    Value zero = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getZeroAttr(outputType.getElementType()));
+    Value emptyTensor = tensor::EmptyOp::create(
+        rewriter, loc, outputType.getShape(), outputType.getElementType(),
+        condenseValues(dynamicDims));
+    Value zeroTensor = linalg::FillOp::create(rewriter, loc, ValueRange{zero},
+                                              ValueRange{emptyTensor})
+                           .result();
+
+    Type outputElementType = outputType.getElementType();
+    if (!isa<IntegerType>(outputElementType)) {
+      rewriter.replaceOpWithNewOp<linalg::BatchMatmulTransposeBOp>(
+          op, TypeRange{outputType}, ValueRange{adaptor.getA(), b},
+          ValueRange{zeroTensor});
+      return success();
+    }
+
+    AffineExpr batch, height, width, channels;
+    bindDims(rewriter.getContext(), batch, height, width, channels);
+    SmallVector<AffineMap> indexingMaps = {
+        AffineMap::get(4, 0, {batch, height, channels}, rewriter.getContext()),
+        AffineMap::get(4, 0, {batch, width, channels}, rewriter.getContext()),
+        AffineMap::get(4, 0, {batch, height, width}, rewriter.getContext())};
+    SmallVector<utils::IteratorType> iteratorTypes = {
+        utils::IteratorType::parallel, utils::IteratorType::parallel,
+        utils::IteratorType::parallel, utils::IteratorType::reduction};
+
+    auto generic = linalg::GenericOp::create(
+        rewriter, loc, outputType, ValueRange{adaptor.getA(), b}, zeroTensor,
+        indexingMaps, iteratorTypes,
+        [=](OpBuilder &builder, Location nestedLoc, ValueRange args) {
+          auto extendToOutputType = [&](Value value) {
+            if (value.getType() == outputElementType)
+              return value;
+            return arith::ExtSIOp::create(builder, nestedLoc, outputElementType,
+                                          value)
+                .getResult();
+          };
+
+          Value aValue = extendToOutputType(args[0]);
+          Value bValue = extendToOutputType(args[1]);
+          Value aZp = arith::ConstantOp::create(
+              builder, nestedLoc,
+              builder.getIntegerAttr(outputElementType, aZpVal));
+          Value bZp = arith::ConstantOp::create(
+              builder, nestedLoc,
+              builder.getIntegerAttr(outputElementType, bZpVal));
+          Value adjustedA =
+              arith::SubIOp::create(builder, nestedLoc, aValue, aZp);
+          Value adjustedB =
+              arith::SubIOp::create(builder, nestedLoc, bValue, bZp);
+          Value product =
+              arith::MulIOp::create(builder, nestedLoc, adjustedA, adjustedB);
+          Value sum =
+              arith::AddIOp::create(builder, nestedLoc, args[2], product);
+          linalg::YieldOp::create(builder, nestedLoc, sum);
+        });
+    rewriter.replaceOp(op, generic.getResult(0));
+    return success();
+  }
+};
+
 class MaxPool2dConverter : public OpConversionPattern<tosa::MaxPool2dOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -1132,6 +1302,7 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       ConvConverter<tosa::Conv3DOp, linalg::Conv3DNdhwcDhwcfOp, linalg::Conv3DNdhwcDhwcfQOp>,
       DepthwiseConvConverter,
       MatMulConverter,
+      MatMulTConverter,
       AvgPool2dConverter,
       TransposeConverter
   >(patterns->getContext());
