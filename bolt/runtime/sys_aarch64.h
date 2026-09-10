@@ -391,6 +391,50 @@ int __prctl(int option, unsigned long arg2, unsigned long arg3,
   return ret;
 }
 
+#if defined(__ANDROID__)
+// Clang does not support __builtin_setjmp/__builtin_longjmp for the aarch64
+// Android target, and this freestanding runtime cannot use libc <setjmp.h>.
+//
+// Minimal AAPCS64 setjmp/longjmp: save callee-saved x19-x28, fp(x29), lr(x30),
+// and sp. Built with -mgeneral-regs-only, so there are no callee-saved FP/SIMD
+// (d8-d15) to save. Buffer (8-byte slots): [0..9]=x19..x28, [10]=fp, [11]=lr,
+// [12]=sp - long jump buffer must hold at least 13 doublewords.
+__attribute__((naked, returns_twice)) int __bolt_setjmp(void ** /*buf in x0*/) {
+  // clang-format off
+  __asm__ __volatile__(
+      "stp x19, x20, [x0, #0]\n"
+      "stp x21, x22, [x0, #16]\n"
+      "stp x23, x24, [x0, #32]\n"
+      "stp x25, x26, [x0, #48]\n"
+      "stp x27, x28, [x0, #64]\n"
+      "stp x29, x30, [x0, #80]\n"
+      "mov x2, sp\n"
+      "str x2, [x0, #96]\n"
+      "mov x0, #0\n" // direct call returns 0
+      "ret\n" :::);
+  // clang-format on
+}
+
+__attribute__((naked, noreturn)) void __bolt_longjmp(void ** /*buf in x0*/,
+                                                     int /*val in x1*/) {
+  // clang-format off
+  __asm__ __volatile__(
+      "ldp x19, x20, [x0, #0]\n"
+      "ldp x21, x22, [x0, #16]\n"
+      "ldp x23, x24, [x0, #32]\n"
+      "ldp x25, x26, [x0, #48]\n"
+      "ldp x27, x28, [x0, #64]\n"
+      "ldp x29, x30, [x0, #80]\n"
+      "ldr x2, [x0, #96]\n"
+      "mov sp, x2\n"
+      "cmp w1, #0\n"
+      "csinc w0, w1, wzr, ne\n" // setjmp returns (val ? val : 1)
+      "ret\n"                   // ret -> saved lr == setjmp's caller
+      :::);
+  // clang-format on
+}
+#endif // defined(__ANDROID__)
+
 } // anonymous namespace
 
 #endif
