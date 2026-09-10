@@ -70,6 +70,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Diagnostics
 
+- Query-based custom clang-tidy checks can now be enabled with the
+  `Diagnostics.ClangTidy.ExperimentalCustomChecks` clangd configuration option.
+  Custom checks are subject to `FastCheckFilter`, and therefore require
+  `FastCheckFilter: Loose` or `None` to run.
+
 #### Semantic Highlighting
 
 #### Compile flags
