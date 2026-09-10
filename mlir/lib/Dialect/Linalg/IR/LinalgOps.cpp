@@ -5139,7 +5139,8 @@ ElementwiseOp::getDefaultIndexingMaps(unsigned numMaps, unsigned numDims,
 }
 
 ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Expect e.g. `<add>` (also accepts the full `#linalg.elementwise_kind<add>`).
+  // Expect e.g. `<add>` (also accepts the full
+  // `#linalg.elementwise_kind<add>`).
   ElementwiseKindAttr kindAttr;
   mlir::linalg::ElementwiseKind elemwiseKindVal;
   if (parser.parseCustomAttributeWithFallback(kindAttr))
