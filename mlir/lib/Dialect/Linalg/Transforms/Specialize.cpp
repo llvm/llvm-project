@@ -155,14 +155,14 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
       std::swap(inputs[0], inputs[1]);
 
     LinalgOp newOp;
-    if (!emitCategoryOp) {
-      using NamedOpTy = decltype(namedOp);
+    using NamedOpTy = decltype(namedOp);
+    // A null named op means the op only has a category form; emit
+    // `linalg.elementwise` regardless of the requested output form.
+    if (!emitCategoryOp && !std::is_null_pointer_v<NamedOpTy>) {
       if constexpr (!std::is_null_pointer_v<NamedOpTy>)
         newOp = NamedOpTy::create(rewriter, genericOp.getLoc(), inputs,
                                   genericOp.getDpsInits(),
                                   ArrayRef<NamedAttribute>{});
-      else
-        llvm_unreachable("Missing named op type");
     } else {
       SmallVector<AffineMap> indexingMaps = genericOp.getIndexingMapsArray();
       // Swap indexing maps, too.
@@ -269,31 +269,29 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
   bool allBool = llvm::all_of(op->getOperands(),
                               [](Value v) { return v.getType().isInteger(1); });
 
-  if (isa<arith::AddIOp, arith::AddFOp, complex::AddOp>(op) ||
+  if (isa<arith::AddFOp, arith::AddIOp, complex::AddOp>(op) ||
       (allBool && isa<arith::OrIOp>(op)))
-    return replaceOp(AddOp{}, ElementwiseKind::add);
+    return replaceOp(nullptr, ElementwiseKind::add);
   if (isa<arith::SubIOp, arith::SubFOp, complex::SubOp>(op))
-    return replaceOp(SubOp{}, ElementwiseKind::sub);
+    return replaceOp(nullptr, ElementwiseKind::sub);
   if (isa<arith::MulIOp, arith::MulFOp, complex::MulOp>(op) ||
       (allBool && isa<arith::AndIOp>(op)))
-    return replaceOp(MulOp{}, ElementwiseKind::mul);
+    return replaceOp(nullptr, ElementwiseKind::mul);
   if (isa<arith::DivSIOp, arith::DivFOp, complex::DivOp>(op))
-    return replaceOp(DivOp{}, ElementwiseKind::div);
+    return replaceOp(nullptr, ElementwiseKind::div);
   if (isa<arith::DivUIOp>(op))
-    return replaceOp(DivUnsignedOp{}, ElementwiseKind::div_unsigned);
+    return replaceOp(nullptr, ElementwiseKind::div_unsigned);
   if (isa<arith::MaxSIOp, arith::MaximumFOp>(op))
-    return replaceOp(MaxOp{}, ElementwiseKind::max_signed);
+    return replaceOp(nullptr, ElementwiseKind::max_signed);
   if (isa<arith::MinSIOp, arith::MinimumFOp>(op))
-    return replaceOp(MinOp{}, ElementwiseKind::min_signed);
-  if (emitCategoryOp) {
-    // No named ops for unsigned maximum/minimum.
-    if (isa<arith::MaxUIOp>(op))
-      return replaceOp(nullptr, ElementwiseKind::max_unsigned);
-    if (isa<arith::MinUIOp>(op))
-      return replaceOp(nullptr, ElementwiseKind::min_unsigned);
-  }
+    return replaceOp(nullptr, ElementwiseKind::min_signed);
   if (isa<math::PowFOp>(op))
-    return replaceOp(PowFOp{}, ElementwiseKind::powf);
+    return replaceOp(nullptr, ElementwiseKind::powf);
+  // No named ops for unsigned maximum/minimum.
+  if (isa<arith::MaxUIOp>(op))
+    return replaceOp(nullptr, ElementwiseKind::max_unsigned);
+  if (isa<arith::MinUIOp>(op))
+    return replaceOp(nullptr, ElementwiseKind::min_unsigned);
 
   return rewriter.notifyMatchFailure(
       genericOp,

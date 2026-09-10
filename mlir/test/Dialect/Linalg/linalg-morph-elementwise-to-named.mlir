@@ -35,26 +35,25 @@ func.func @binary_ops_int(%A: tensor<?x?xi32>, %B: tensor<?x?xi32>,
 // CHECK-LABEL: binary_ops_int
 // CHECK-SAME: %[[A:.+]]: tensor<?x?xi32>, %[[B:.+]]: tensor<?x?xi32>,
 // CHECK-SAME: %[[OUT:.+]]: tensor<?x?xi32>)
-// CHECK-NOT: linalg.elementwise
-// CHECK: %[[ADD:.+]] = linalg.add
+// CHECK: %[[ADD:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xi32>, tensor<?x?xi32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi32>) -> tensor<?x?xi32>
-// CHECK: %[[SUB:.+]] = linalg.sub
+// CHECK: %[[SUB:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sub>
 // CHECK-SAME: ins(%[[ADD]], %[[B]] : tensor<?x?xi32>, tensor<?x?xi32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi32>) -> tensor<?x?xi32>
-// CHECK: %[[MUL:.+]] = linalg.mul
+// CHECK: %[[MUL:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
 // CHECK-SAME: ins(%[[SUB]], %[[B]] : tensor<?x?xi32>, tensor<?x?xi32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi32>) -> tensor<?x?xi32>
-// CHECK: %[[DIV:.+]] = linalg.div
+// CHECK: %[[DIV:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<div>
 // CHECK-SAME: ins(%[[MUL]], %[[B]] : tensor<?x?xi32>, tensor<?x?xi32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi32>) -> tensor<?x?xi32>
-// CHECK: %[[DIVU:.+]] = linalg.div_unsigned
+// CHECK: %[[DIVU:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<div_unsigned>
 // CHECK-SAME: ins(%[[DIV]], %[[B]] : tensor<?x?xi32>, tensor<?x?xi32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi32>) -> tensor<?x?xi32>
-// CHECK: %[[MAX:.+]] = linalg.max
+// CHECK: %[[MAX:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
 // CHECK-SAME: ins(%[[DIVU]], %[[B]] : tensor<?x?xi32>, tensor<?x?xi32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi32>) -> tensor<?x?xi32>
-// CHECK: linalg.min
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
 // CHECK-SAME: ins(%[[MAX]], %[[B]] : tensor<?x?xi32>, tensor<?x?xi32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi32>) -> tensor<?x?xi32>
 
@@ -89,26 +88,25 @@ func.func @binary_ops_float(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK-LABEL: binary_ops_float
 // CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>,
 // CHECK-SAME: %[[OUT:.+]]: tensor<?x?xf32>)
-// CHECK-NOT: linalg.elementwise
-// CHECK: %[[ADD:.+]] = linalg.add
+// CHECK: %[[ADD:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK: %[[SUB:.+]] = linalg.sub
+// CHECK: %[[SUB:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sub>
 // CHECK-SAME: ins(%[[ADD]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK: %[[MUL:.+]] = linalg.mul
+// CHECK: %[[MUL:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
 // CHECK-SAME: ins(%[[SUB]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK: %[[DIV:.+]] = linalg.div
+// CHECK: %[[DIV:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<div>
 // CHECK-SAME: ins(%[[MUL]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK: %[[MAX:.+]] = linalg.max
+// CHECK: %[[MAX:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
 // CHECK-SAME: ins(%[[DIV]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK: %[[MIN:.+]] = linalg.min
+// CHECK: %[[MIN:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
 // CHECK-SAME: ins(%[[MAX]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK: linalg.powf
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<powf>
 // CHECK-SAME: ins(%[[MIN]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 

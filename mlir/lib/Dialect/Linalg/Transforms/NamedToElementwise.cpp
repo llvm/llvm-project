@@ -29,12 +29,6 @@ namespace {
 ElementwiseKind getKind(Operation *op) {
   return llvm::TypeSwitch<Operation *, ElementwiseKind>(op)
       .Case([](SelectOp) { return ElementwiseKind::select; })
-      .Case([](AddOp) { return ElementwiseKind::add; })
-      .Case([](SubOp) { return ElementwiseKind::sub; })
-      .Case([](MulOp) { return ElementwiseKind::mul; })
-      .Case([](DivOp) { return ElementwiseKind::div; })
-      .Case([](DivUnsignedOp) { return ElementwiseKind::div_unsigned; })
-      .Case([](PowFOp) { return ElementwiseKind::powf; })
       .DefaultUnreachable("unhandled case in named to elementwise");
 }
 
@@ -60,10 +54,4 @@ struct NamedToElementwisePattern : public OpRewritePattern<NamedOpTy> {
 void mlir::linalg::populateLinalgNamedToElementwisePatterns(
     RewritePatternSet &patterns) {
   patterns.add<NamedToElementwisePattern<SelectOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<AddOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<SubOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<MulOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<DivOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<DivUnsignedOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<PowFOp>>(patterns.getContext());
 }
