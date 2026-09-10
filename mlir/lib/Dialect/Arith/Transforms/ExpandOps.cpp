@@ -542,7 +542,8 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     if (!isa<Float4E2M1FNType>(resultETy))
       return rewriter.notifyMatchFailure(op, "not a trunc of F4E2M1FN");
     if (!isa<Float32Type>(operandETy))
-      operand = arith::ExtFOp::create(b, f32Ty, operand);
+      operand =
+          arith::ExtFOp::create(b, f32Ty, operand, arith::FastMathFlagsAttr{});
 
     Value c0x1 = createConst(loc, i4Ty, 1, rewriter);
     Value c0x3 = createConst(loc, i4Ty, 3, rewriter);
