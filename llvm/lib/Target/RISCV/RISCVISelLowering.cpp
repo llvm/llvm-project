@@ -18568,7 +18568,7 @@ static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
 
     SDLoc DL(N);
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
-                       DAG.getTargetConstant(AccId, DL, MVT::i32),
+                       DAG.getTargetConstant(AccId, DL, Subtarget.getXLenVT()),
                        N->getOperand(1 - I), Mul.getOperand(1),
                        Mul.getOperand(2));
   }
