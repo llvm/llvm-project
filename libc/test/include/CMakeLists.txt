@@ -11,6 +11,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  linux_sys_sem_macros_test
+  SUITE
+    libc-include-tests
+  SRCS
+    linux_sys_sem_macros_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.sys_sem_macros
+)
+
+add_libc_test(
   assert_test
   SUITE
     libc-include-tests
