@@ -842,6 +842,14 @@
 // X86_64H:#define __x86_64h 1
 // X86_64H:#define __x86_64h__ 1
 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64apx-none-none < /dev/null | FileCheck -match-full-lines -check-prefix X86_64APX %s
+//
+// X86_64APX:#define __x86_64 1
+// X86_64APX:#define __x86_64__ 1
+// X86_64APX:#define __x86_64apx__ 1
+// X86_64APX-NOT:#define __x86_64h 1
+// X86_64APX-NOT:#define __x86_64h__ 1
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 -check-prefix X32-CXX %s
 //

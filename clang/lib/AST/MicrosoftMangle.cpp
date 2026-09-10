@@ -604,9 +604,14 @@ void MicrosoftCXXNameMangler::mangle(GlobalDecl GD, StringRef Prefix) {
   // <mangled-name> ::= ? <name> <type-encoding>
   Out << Prefix;
   mangleName(GD);
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     mangleFunctionEncoding(GD, Context.shouldMangleDeclName(FD));
-  else if (const VarDecl *VD = dyn_cast<VarDecl>(D))
+    // __wincall symbols get a @win suffix so the linker can catch calling
+    // convention mismatches, like the @N parameter-size suffix does for
+    // stdcall on i386.
+    if (FD->getType()->castAs<FunctionType>()->getCallConv() == CC_WinCall)
+      Out << "@win";
+  } else if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     mangleVariableEncoding(VD);
   else if (isa<MSGuidDecl>(D))
     // MSVC appears to mangle GUIDs as if they were variables of type
@@ -3347,6 +3352,8 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
   //                      ::= H # __export __stdcall
   //                      ::= I # __fastcall
   //                      ::= J # __export __fastcall
+  //                      ::= K # __wincall
+  //                      ::= L # __export __wincall
   //                      ::= Q # __vectorcall
   //                      ::= S # __attribute__((__swiftcall__)) // Clang-only
   //                      ::= W # __attribute__((__swiftasynccall__))
@@ -3361,6 +3368,11 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
   // that keyword. (It didn't actually export them, it just made them so
   // that they could be in a DLL and somebody from another module could call
   // them.)
+  //
+  // __wincall is mangled as if it were __cdecl ('A') here; the distinct
+  // "@win" suffix is appended to the whole mangled name in
+  // MicrosoftCXXNameMangler::mangle so the linker can catch calling
+  // convention mismatches.
 
   switch (CC) {
     default:
@@ -3368,6 +3380,7 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
     case CC_Win64:
     case CC_X86_64SysV:
     case CC_C:
+    case CC_WinCall:
       Out << 'A';
       return;
     case CC_X86Pascal:

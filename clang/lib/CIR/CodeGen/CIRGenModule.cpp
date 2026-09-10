@@ -3234,7 +3234,11 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
-  func.setCallingConv(callingConv);
+  // Set the calling convention on the function if it's not the default C
+  // calling convention. Target-specific CodeGen is needed to set it correctly
+  // (e.g., AMDGPU kernel functions should be marked with AMDGPUKernel).
+  if (callingConv != cir::CallingConv::C)
+    func.setCallingConv(callingConv);
 }
 
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
@@ -3284,6 +3288,18 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   if (!CodeGenUtils::hasUnwindExceptions(langOpts))
     f->setAttr(cir::CIRDialect::getNoThrowAttrName(),
                mlir::UnitAttr::get(&getMLIRContext()));
+
+  // Set calling convention for function definitions.
+  // WinCall is the default for x86_64apx Windows targets or when the wincall
+  // attribute is present. The calling convention is stored on the function
+  // type.
+  if (decl) {
+    clang::CallingConv cc =
+        decl->getType()->castAs<clang::FunctionType>()->getCallConv();
+    if (cc == clang::CallingConv::CC_WinCall) {
+      f.setCallingConv(cir::CallingConv::X86WinCall);
+    }
+  }
 
   std::optional<cir::InlineKind> existingInlineKind = f.getInlineKind();
   bool isNoInline =

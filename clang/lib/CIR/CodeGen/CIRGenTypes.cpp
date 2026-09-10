@@ -767,6 +767,8 @@ CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
     return cir::CallingConv::C;
   case CC_DeviceKernel:
     return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
+  case CC_WinCall:
+    return cir::CallingConv::X86WinCall;
   default:
     // TODO(cir): Support the remaining target-specific calling conventions.
     return cir::CallingConv::C;
