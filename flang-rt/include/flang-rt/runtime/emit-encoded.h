@@ -97,11 +97,18 @@ RT_API_ATTRS bool EmitRepeated(CONTEXT &to, char ch, std::size_t n) {
   ConnectionState &connection{to.GetConnectionState()};
   if (connection.internalIoCharKind <= 1 &&
       connection.access != Access::Stream) {
-    // faster path, no encoding needed
-    while (n-- > 0) {
-      if (!to.Emit(&ch, 1)) {
+    // Faster path, no encoding needed: emit the run in bulk
+    char buffer[64];
+    std::size_t chunk{n < sizeof buffer ? n : sizeof buffer};
+    for (std::size_t j{0}; j < chunk; ++j) {
+      buffer[j] = ch;
+    }
+    while (n > 0) {
+      std::size_t bytes{n < chunk ? n : chunk};
+      if (!to.Emit(buffer, bytes)) {
         return false;
       }
+      n -= bytes;
     }
   } else {
     while (n-- > 0) {
