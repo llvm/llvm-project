@@ -107,11 +107,10 @@ LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,
   if (attr.getName() == xnackAttrName.getName() ||
       attr.getName() == srameccAttrName.getName()) {
     if (!LLVM::satisfiesLLVMModule(op))
-      return op->emitError() << "'" << attr.getName().getValue()
-                             << "' is only supported on modules";
-    if (!isa<BoolAttr>(attr.getValue()))
       return op->emitError()
-             << "'" << attr.getName().getValue() << "' must be a boolean";
+             << attr.getName() << " is only supported on modules";
+    if (!isa<BoolAttr>(attr.getValue()))
+      return op->emitError() << attr.getName() << " must be a boolean";
   }
   return success();
 }
