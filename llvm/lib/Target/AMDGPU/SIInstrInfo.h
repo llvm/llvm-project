@@ -527,11 +527,12 @@ public:
   /// to include LDSDMA instructions in this query. By setting \p AllowLDSDMA to
   /// false, this will return false for LDSDMA instructions.
   /// This will be removed once call sites are migrated to the new API.
-  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
-    if (!AllowLDSDMA && isLDSDMA(Opcode))
-      return false;
+  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
+    return AllowLDSDMA ? isVALU(MI) : isComputeVALU(MI);
+  }
 
-    return SIInstrFlags::isVALU(get(Opcode));
+  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
+    return AllowLDSDMA ? isVALU(Opcode) : isComputeVALU(Opcode);
   }
 
   static bool isImage(const MachineInstr &MI) {
