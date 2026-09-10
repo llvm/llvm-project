@@ -1180,11 +1180,11 @@ TEST(WalkAST, ObjCForwardProtocolDecl) {
            {"-x", "objective-c"});
 }
 
-TEST(WalkAST, ObjCIvarRefExprExplicit) {
+TEST(WalkAST, ObjCIvarRefExprDereferenced) {
   testWalk(R"objc(
-    @interface MyClass {
+    @interface $implicit^MyClass {
       @public
-      int $explicit^foo;
+      int foo;
     }
     @end
   )objc",
@@ -1196,10 +1196,89 @@ TEST(WalkAST, ObjCIvarRefExprExplicit) {
            {"-x", "objective-c"});
 }
 
-TEST(WalkAST, ObjCIvarRefExprFree) {
+TEST(WalkAST, ObjCIvarRefExpr) {
   testWalk(R"objc(
-    @interface MyClass {
-      int $explicit^foo;
+    @interface $implicit^MyClass {
+      int foo;
+    }
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)test {
+      int x = ^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCIvarRefExprClassExtension) {
+  testWalk(R"objc(
+    @interface MyClass
+    @end
+    @interface $implicit^MyClass () {
+      int foo;
+    }
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)test {
+      int x = ^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+  TEST(WalkAST, ObjCIvarRefInheritedExprDereferenced) {
+  testWalk(R"objc(
+    @interface ParentClass {
+      @public
+      int foo;
+    }
+    @end
+    @interface $implicit^MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj->^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCIvarRefInheritedExpr) {
+  testWalk(R"objc(
+    @interface ParentClass {
+      @public
+      int foo;
+    }
+    @end
+    @interface $implicit^MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)test {
+      int x = ^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCIvarRefExprInheritedClassExtension) {
+  testWalk(R"objc(
+    @interface ParentClass
+    @end
+    @interface MyClass : ParentClass
+    @end
+    @interface $implicit^ParentClass () {
+      @public
+      int foo;
     }
     @end
   )objc",
