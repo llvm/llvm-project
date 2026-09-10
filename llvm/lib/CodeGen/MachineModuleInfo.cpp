@@ -11,7 +11,9 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -192,10 +194,13 @@ static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
   uint64_t LocCookie = 0;
   if (LocInfo) {
     unsigned ErrorLine = SMD.getLineNo() - 1;
-    if (ErrorLine >= LocInfo->getNumOperands())
+    unsigned NumRawLocs = LocInfo->getNumOperands();
+    if (InlineAsm::getSourceLocMetadata(LocInfo))
+      --NumRawLocs;
+    if (ErrorLine >= NumRawLocs)
       ErrorLine = 0;
 
-    if (LocInfo->getNumOperands() != 0)
+    if (NumRawLocs != 0)
       if (const ConstantInt *CI =
               mdconst::dyn_extract<ConstantInt>(LocInfo->getOperand(ErrorLine)))
         LocCookie = CI->getZExtValue();
