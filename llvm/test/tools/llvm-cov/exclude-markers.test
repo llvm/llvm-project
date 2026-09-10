@@ -1,0 +1,222 @@
+// Tests for --exclude-line-regex and --exclude-region-start/stop-regex.
+//
+// Test inputs were generated with:
+//   clang++ -fprofile-instr-generate -fcoverage-mapping \
+//       -mllvm -enable-name-compression=false -c -o report.o report.cpp
+//   llvm-cov convert-for-testing report.o -o report.covmapping
+//   clang++ -fprofile-instr-generate -fcoverage-mapping \
+//       -mllvm -enable-name-compression=false -o report report.cpp
+//   LLVM_PROFILE_FILE=report.profraw ./report
+//   llvm-profdata merge --sparse report.profraw -o report.profdata
+//
+// -mllvm -enable-name-compression=false ensures the profraw and covmapping
+// files do not use zlib, so they are portable to builds without zlib support.
+
+// ===== LCOV_EXCL_LINE (per-line exclusion) =====
+
+// Baseline: disable all exclusion markers, verify original totals.
+// RUN: llvm-cov report %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   --exclude-line-regex="" --exclude-region-start-regex="" \
+// RUN:   --exclude-region-stop-regex="" --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=BASELINE %s
+
+// Original: 13 lines total, 3 missed, 76.92% covered.
+// BASELINE: TOTAL
+// BASELINE-SAME: 13
+// BASELINE-SAME: 3
+// BASELINE-SAME: 76.92%
+
+// With default LCOV_EXCL_LINE markers: func() lines excluded (2 lines removed).
+// RUN: llvm-cov report %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=EXCL %s
+
+// 13 - 2 excluded = 11 lines, 1 missed, 90.91%.
+// EXCL: TOTAL
+// EXCL-SAME: 11
+// EXCL-SAME: 1
+// EXCL-SAME: 90.91%
+
+// Custom regex that doesn't match: no exclusion.
+// RUN: llvm-cov report %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   --exclude-line-regex="MY_CUSTOM_EXCL" \
+// RUN:   --exclude-region-start-regex="" --exclude-region-stop-regex="" \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=CUSTOM_NOMATCH %s
+
+// CUSTOM_NOMATCH: TOTAL
+// CUSTOM_NOMATCH-SAME: 13
+// CUSTOM_NOMATCH-SAME: 3
+// CUSTOM_NOMATCH-SAME: 76.92%
+
+// Custom regex that matches the markers:
+// RUN: llvm-cov report %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   --exclude-line-regex="LCOV_EXCL" \
+// RUN:   --exclude-region-start-regex="" --exclude-region-stop-regex="" \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=CUSTOM_MATCH %s
+
+// CUSTOM_MATCH: TOTAL
+// CUSTOM_MATCH-SAME: 11
+// CUSTOM_MATCH-SAME: 1
+// CUSTOM_MATCH-SAME: 90.91%
+
+// JSON export with exclusion:
+// RUN: llvm-cov export --summary-only \
+// RUN:   %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   2>&1 | FileCheck -check-prefix=JSON %s
+
+// JSON: "lines":{"count":11,"covered":10,"percent":90
+
+// ===== LCOV_EXCL_START / LCOV_EXCL_STOP (region exclusion) =====
+
+// Region exclusion with defaults:
+// RUN: llvm-cov report %S/Inputs/exclude-markers-region/report-region.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers-region/report-region.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers-region \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=REGION %s
+
+// func() is inside EXCL_START/STOP region (2 mapped lines excluded).
+// 13 - 2 = 11 lines, 1 missed, 90.91%.
+// REGION: TOTAL
+// REGION-SAME: 11
+// REGION-SAME: 1
+// REGION-SAME: 90.91%
+
+// Region exclusion with explicit custom regex (same patterns):
+// RUN: llvm-cov report %S/Inputs/exclude-markers-region/report-region.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers-region/report-region.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers-region \
+// RUN:   --exclude-line-regex="" \
+// RUN:   --exclude-region-start-regex="LCOV_EXCL_START" \
+// RUN:   --exclude-region-stop-regex="LCOV_EXCL_STOP" \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=REGION_CUSTOM %s
+
+// REGION_CUSTOM: TOTAL
+// REGION_CUSTOM-SAME: 11
+// REGION_CUSTOM-SAME: 1
+// REGION_CUSTOM-SAME: 90.91%
+
+// Disabling all exclusion leaves totals unchanged:
+// RUN: llvm-cov report %S/Inputs/exclude-markers-region/report-region.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers-region/report-region.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers-region \
+// RUN:   --exclude-line-regex="" --exclude-region-start-regex="" \
+// RUN:   --exclude-region-stop-regex="" \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=REGION_DISABLED %s
+
+// REGION_DISABLED: TOTAL
+// REGION_DISABLED-SAME: 13
+// REGION_DISABLED-SAME: 3
+// REGION_DISABLED-SAME: 76.92%
+
+// ===== Overriding default markers with custom regex =====
+
+// Custom per-line marker "MY_SKIP" (default LCOV_EXCL_LINE won't match):
+// RUN: llvm-cov report %S/Inputs/exclude-markers-custom/report-custom.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers-custom/report-custom.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers-custom \
+// RUN:   --exclude-line-regex="MY_SKIP" \
+// RUN:   --exclude-region-start-regex="" --exclude-region-stop-regex="" \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=OVERRIDE_LINE %s
+
+// OVERRIDE_LINE: TOTAL
+// OVERRIDE_LINE-SAME: 11
+// OVERRIDE_LINE-SAME: 1
+// OVERRIDE_LINE-SAME: 90.91%
+
+// Default markers don't match "MY_SKIP":
+// RUN: llvm-cov report %S/Inputs/exclude-markers-custom/report-custom.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers-custom/report-custom.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers-custom \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=OVERRIDE_LINE_DEFAULT %s
+
+// OVERRIDE_LINE_DEFAULT: TOTAL
+// OVERRIDE_LINE_DEFAULT-SAME: 13
+// OVERRIDE_LINE_DEFAULT-SAME: 3
+// OVERRIDE_LINE_DEFAULT-SAME: 76.92%
+
+// Custom region markers "BEGIN_NO_COV" / "END_NO_COV":
+// RUN: llvm-cov report %S/Inputs/exclude-markers-custom-region/report-custom-region.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers-custom-region/report-custom-region.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers-custom-region \
+// RUN:   --exclude-line-regex="" \
+// RUN:   --exclude-region-start-regex="BEGIN_NO_COV" \
+// RUN:   --exclude-region-stop-regex="END_NO_COV" \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=OVERRIDE_REGION %s
+
+// OVERRIDE_REGION: TOTAL
+// OVERRIDE_REGION-SAME: 11
+// OVERRIDE_REGION-SAME: 1
+// OVERRIDE_REGION-SAME: 90.91%
+
+// Default region markers don't match "BEGIN_NO_COV" / "END_NO_COV":
+// RUN: llvm-cov report %S/Inputs/exclude-markers-custom-region/report-custom-region.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers-custom-region/report-custom-region.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers-custom-region \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=OVERRIDE_REGION_DEFAULT %s
+
+// OVERRIDE_REGION_DEFAULT: TOTAL
+// OVERRIDE_REGION_DEFAULT-SAME: 13
+// OVERRIDE_REGION_DEFAULT-SAME: 3
+// OVERRIDE_REGION_DEFAULT-SAME: 76.92%
+
+// ===== "show" command with exclusions disabled =====
+// Exercises the scanForExclusionMarkers early-return path when both regexes
+// are empty (show always loads source files regardless of exclusion settings).
+// RUN: llvm-cov show %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   --exclude-line-regex="" --exclude-region-start-regex="" \
+// RUN:   --exclude-region-stop-regex="" \
+// RUN:   2>&1 | FileCheck -check-prefix=SHOW_DISABLED %s
+
+// Source is displayed normally; LCOV_EXCL_LINE markers have no effect.
+// SHOW_DISABLED: func()
+// SHOW_DISABLED: LCOV_EXCL_LINE
+
+// ===== Invalid regex error handling =====
+
+// Invalid --exclude-line-regex:
+// RUN: not llvm-cov report %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   --exclude-line-regex="[unclosed" \
+// RUN:   2>&1 | FileCheck -check-prefix=BAD_LINE_RE %s
+
+// BAD_LINE_RE: error: invalid --exclude-line-regex:
+
+// Invalid --exclude-region-start-regex:
+// RUN: not llvm-cov report %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   --exclude-region-start-regex="(unmatched" \
+// RUN:   2>&1 | FileCheck -check-prefix=BAD_START_RE %s
+
+// BAD_START_RE: error: invalid --exclude-region-start-regex:
+
+// Invalid --exclude-region-stop-regex:
+// RUN: not llvm-cov report %S/Inputs/exclude-markers/report.covmapping \
+// RUN:   -instr-profile %S/Inputs/exclude-markers/report.profdata \
+// RUN:   -path-equivalence=/tmp/exclude-markers-source,%S/Inputs/exclude-markers \
+// RUN:   --exclude-region-stop-regex="*invalid" \
+// RUN:   2>&1 | FileCheck -check-prefix=BAD_STOP_RE %s
+
+// BAD_STOP_RE: error: invalid --exclude-region-stop-regex:
