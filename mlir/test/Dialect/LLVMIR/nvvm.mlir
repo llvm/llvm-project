@@ -452,46 +452,6 @@ llvm.func private @mbarrier_init_shared(%barrier: !llvm.ptr<3>) {
 }
 
 
-// The `layout` attribute and the optional `predicate` operand are independent,
-// so all four combinations must round-trip.
-llvm.func private @mbarrier_init_layout_predicate(%barrier: !llvm.ptr<3>,
-                                                  %count: i32, %pred: i1) {
-  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} : !llvm.ptr<3>, i32
-  nvvm.mbarrier.init %barrier, %count : !llvm.ptr<3>, i32
-  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} layout = 1 : !llvm.ptr<3>, i32
-  nvvm.mbarrier.init %barrier, %count layout = 1 : !llvm.ptr<3>, i32
-  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}}, predicate = %{{.*}} : !llvm.ptr<3>, i32, i1
-  nvvm.mbarrier.init %barrier, %count, predicate = %pred : !llvm.ptr<3>, i32, i1
-  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} layout = 1, predicate = %{{.*}} : !llvm.ptr<3>, i32, i1
-  nvvm.mbarrier.init %barrier, %count layout = 1, predicate = %pred : !llvm.ptr<3>, i32, i1
-  llvm.return
-}
-
-
-llvm.func private @mbarrier_check_layout_generic(%barrier: !llvm.ptr) {
-  // CHECK:   nvvm.mbarrier.check_layout %{{.*}} layout = 1 : !llvm.ptr -> i1
-  %0 = nvvm.mbarrier.check_layout %barrier layout = 1 : !llvm.ptr -> i1
-  llvm.return
-}
-
-
-llvm.func private @mbarrier_check_layout_shared(%barrier: !llvm.ptr<3>) {
-  // CHECK:   nvvm.mbarrier.check_layout %{{.*}} layout = 1 : !llvm.ptr<3> -> i1
-  %0 = nvvm.mbarrier.check_layout %barrier layout = 1 : !llvm.ptr<3> -> i1
-  llvm.return
-}
-
-
-// `layout` defaults to 0, so it is elided when absent and when written out.
-llvm.func private @mbarrier_check_layout_default(%barrier: !llvm.ptr<3>) {
-  // CHECK:   nvvm.mbarrier.check_layout %{{.*}} : !llvm.ptr<3> -> i1
-  %0 = nvvm.mbarrier.check_layout %barrier : !llvm.ptr<3> -> i1
-  // CHECK:   nvvm.mbarrier.check_layout %{{.*}} : !llvm.ptr<3> -> i1
-  %1 = nvvm.mbarrier.check_layout %barrier layout = 0 : !llvm.ptr<3> -> i1
-  llvm.return
-}
-
-
 llvm.func private @mbarrier_inval_generic(%barrier: !llvm.ptr) {
   // CHECK:   nvvm.mbarrier.inval %{{.*}} : !llvm.ptr
   nvvm.mbarrier.inval %barrier : !llvm.ptr

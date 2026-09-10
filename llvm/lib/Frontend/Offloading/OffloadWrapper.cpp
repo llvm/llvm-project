@@ -132,6 +132,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
   LLVMContext &C = M.getContext();
   auto [EntriesB, EntriesE] = EntryArray;
 
+  auto *Zero = ConstantInt::get(getSizeTTy(M), 0u);
+
   // Create initializer for the images array.
   SmallVector<Constant *, 4u> ImagesInits;
   ImagesInits.reserve(Bufs.size());
@@ -168,8 +170,13 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
 
     auto *Begin = ConstantInt::get(getSizeTTy(M), BeginOffset);
     auto *Size = ConstantInt::get(getSizeTTy(M), EndOffset);
-    auto *ImageB = ConstantExpr::getPtrAdd(Image, Begin);
-    auto *ImageE = ConstantExpr::getPtrAdd(Image, Size);
+    Constant *ZeroBegin[] = {Zero, Begin};
+    Constant *ZeroSize[] = {Zero, Size};
+
+    auto *ImageB =
+        ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroBegin);
+    auto *ImageE =
+        ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroSize);
 
     ImagesInits.push_back(ConstantStruct::get(getDeviceImageTy(M), ImageB,
                                               ImageE, EntriesB, EntriesE));
@@ -644,8 +651,11 @@ public:
                                           : ".llvm.offloading");
 
     IntegerType *Int64Ty = Type::getInt64Ty(C);
+    Constant *Zero = ConstantInt::get(Int64Ty, 0);
     Constant *Size = ConstantInt::get(Int64Ty, Buffer.size());
-    return {BinaryGV, Size};
+    Constant *Start = ConstantExpr::getGetElementPtr(
+        BinaryGV->getValueType(), BinaryGV, ArrayRef<Constant *>{Zero, Zero});
+    return {Start, Size};
   }
 
   Function *createRegisterFatbinFunction(Constant *Start, Constant *Size) {

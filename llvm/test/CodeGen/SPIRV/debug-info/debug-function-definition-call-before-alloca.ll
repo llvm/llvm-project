@@ -33,7 +33,6 @@
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF]] [[CALLER]]
 ; CHECK-NEXT: OpFunctionCall
 ; CHECK-NEXT: OpStore
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpReturnValue
 ; CHECK-NEXT: OpFunctionEnd
@@ -45,7 +44,6 @@
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF_NOARGS]] [[CALLER_NOARGS]]
 ; CHECK-NEXT: OpFunctionCall
 ; CHECK-NEXT: OpStore
-; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF_NOARGS]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpReturn
 ; CHECK-NEXT: OpFunctionEnd

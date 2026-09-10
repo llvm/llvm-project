@@ -1,5 +1,8 @@
 # Frequently Asked Questions (FAQ)
 
+```{contents}
+:local: true
+```
 
 ## Driver
 

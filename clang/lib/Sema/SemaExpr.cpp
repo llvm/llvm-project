@@ -4742,17 +4742,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprType->isDependentType())
     return false;
 
-  // These builtins evaluate with the operand type as written; a reference is
-  // not looked through.
-  if (ExprKind == UETT_VectorElements)
-    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
-                                               ExprRange);
-  if (ExprKind == UETT_VecStep)
-    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
-  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
-    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
-                                                    ExprRange);
-
   // C++ [expr.sizeof]p2:
   //     When applied to a reference or a reference type, the result
   //     is the size of the referenced type.
@@ -4774,6 +4763,17 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
       DiagCompat(OpLoc, diag_compat::alignof_incomplete_array);
     ExprType = Context.getBaseElementType(ExprType);
   }
+
+  if (ExprKind == UETT_VecStep)
+    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
+
+  if (ExprKind == UETT_VectorElements)
+    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
+                                               ExprRange);
+
+  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
+    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
+                                                    ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
@@ -11931,35 +11931,6 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
       if (!checkArithmeticBinOpPointerOperands(*this, Loc,
                                                LHS.get(), RHS.get()))
         return QualType();
-
-      // For pointer subtraction, if the address spaces differ but overlap,
-      // convert both pointers to the composite (superset) address space.
-      // This is needed because address spaces may use different
-      // representations, such as a private offset vs a flat address.
-      LangAS LAddrSpace = lpointee.getAddressSpace();
-      LangAS RAddrSpace = rpointee.getAddressSpace();
-      if (LAddrSpace != RAddrSpace) {
-        Qualifiers LQual = lpointee.getQualifiers();
-        Qualifiers RQual = rpointee.getQualifiers();
-        LangAS ResultAddrSpace = LQual.isAddressSpaceSupersetOf(RQual, Context)
-                                     ? LAddrSpace
-                                     : RAddrSpace;
-
-        if (LAddrSpace != ResultAddrSpace) {
-          QualType NewPteTy = Context.getAddrSpaceQualType(
-              lpointee.getUnqualifiedType(), ResultAddrSpace);
-          QualType NewPtrTy = Context.getPointerType(NewPteTy);
-          LHS =
-              ImpCastExprToType(LHS.get(), NewPtrTy, CK_AddressSpaceConversion);
-        }
-        if (RAddrSpace != ResultAddrSpace) {
-          QualType NewPteTy = Context.getAddrSpaceQualType(
-              rpointee.getUnqualifiedType(), ResultAddrSpace);
-          QualType NewPtrTy = Context.getPointerType(NewPteTy);
-          RHS =
-              ImpCastExprToType(RHS.get(), NewPtrTy, CK_AddressSpaceConversion);
-        }
-      }
 
       bool LHSIsNullPtr = LHS.get()->IgnoreParenCasts()->isNullPointerConstant(
           Context, Expr::NPC_ValueDependentIsNotNull);

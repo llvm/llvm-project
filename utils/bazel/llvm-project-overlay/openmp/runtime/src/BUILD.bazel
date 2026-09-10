@@ -228,7 +228,6 @@ cc_library(
     name = "omp_headers",
     hdrs = [
         "kmp.h",
-        "kmp_adt.h",
         "kmp_affinity.h",
         "kmp_atomic.h",
         "kmp_barrier.h",
@@ -257,7 +256,6 @@ cc_library(
         "kmp_stats_timing.h",
         "kmp_str.h",
         "kmp_taskdeps.h",
-        "kmp_traits.h",
         "kmp_utils.h",
         "kmp_version.h",
         "kmp_wait_release.h",
@@ -303,7 +301,6 @@ cc_library(
 cc_library(
     name = "omp",
     srcs = [
-        "kmp_adt.cpp",
         "kmp_affinity.cpp",
         "kmp_alloc.cpp",
         "kmp_atomic.cpp",
@@ -330,7 +327,6 @@ cc_library(
         "kmp_taskdeps.cpp",
         "kmp_tasking.cpp",
         "kmp_threadprivate.cpp",
-        "kmp_traits.cpp",
         "kmp_utility.cpp",
         "kmp_version.cpp",
         "kmp_wait_release.cpp",

@@ -39,8 +39,6 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMTypesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
-  MLIRLLVMConversionsIncGen
-  MLIRLLVMIntrinsicConversionsIncGen
 
   LINK_COMPONENTS
   BinaryFormat
@@ -130,6 +128,7 @@ add_mlir_dialect_library(MLIRVCIXDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
   DEPENDS
+  MLIRGPUCompilationAttrInterfacesIncGen
   MLIRVCIXOpsIncGen
   MLIRVCIXConversionsIncGen
   intrinsics_gen

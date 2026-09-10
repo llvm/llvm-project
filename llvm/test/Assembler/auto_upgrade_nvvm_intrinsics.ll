@@ -776,15 +776,3 @@ define void @nvvm_add(float %a, double %b, half %c, <2 x half> %d) {
   %r10 = call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d)
   ret void
 }
-
-declare void @llvm.nvvm.mbarrier.init(ptr, i32)
-declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3), i32)
-
-; CHECK-LABEL: @nvvm_mbarrier_init_default_layout
-define void @nvvm_mbarrier_init_default_layout(ptr %gen, ptr addrspace(3) %shared, i32 %count) {
-; CHECK: call void @llvm.nvvm.mbarrier.init.p0(ptr %gen, i32 %count, /* layout=v0 */ i32 0)
-; CHECK: call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %shared, i32 %count, /* layout=v0 */ i32 0)
-  call void @llvm.nvvm.mbarrier.init(ptr %gen, i32 %count)
-  call void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %shared, i32 %count)
-  ret void
-}

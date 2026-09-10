@@ -128,7 +128,7 @@ public:
                                 /*bodyBuilder=*/nullptr, op.getUnsignedCmp());
 
     // Reserve whatever attributes in the original op.
-    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
+    newOp->setAttrs(op->getAttrs());
 
     // We do not need the empty block created by rewriter.
     rewriter.eraseBlock(newOp.getBody(0));
@@ -155,7 +155,7 @@ public:
     IfOp newOp =
         IfOp::create(rewriter, op.getLoc(), dstTypes,
                      llvm::getSingleElement(adaptor.getCondition()), true);
-    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
+    newOp->setAttrs(op->getAttrs());
 
     // We do not need the empty blocks created by rewriter.
     rewriter.eraseBlock(newOp.elseBlock());

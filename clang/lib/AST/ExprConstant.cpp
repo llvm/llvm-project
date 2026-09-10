@@ -4773,11 +4773,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       } else if (Info.getLangOpts().C23 && ConstexprVar) {
         Info.FFDiag(E);
         return CompleteObject();
-      } else if (VD->isCXXForRangeImplicitVar()) {
-        if (!IsAccess)
-          return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
-        Info.FFDiag(E, diag::note_constexpr_ltor_for_range_var) << VD;
-        return CompleteObject();
       } else if (BaseType->isIntegralOrEnumerationType()) {
         if (!IsConstant) {
           if (!IsAccess)

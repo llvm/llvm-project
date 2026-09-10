@@ -1,5 +1,8 @@
 # HLSL Support
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

@@ -195,44 +195,7 @@ static Value loadRecordTypeSizeFromTypeDesc(
   return fir::LoadOp::create(builder, loc, addr);
 }
 
-/// Materialize the storage size of \p type. FIR's layout utility handles the
-/// recursively statically-sized case. Recurse through a sequence when its
-/// element instead needs a runtime size, and obtain that leaf size from a
-/// derived type's type descriptor.
-static Value materializeTypeSizeBytes(acc::OpenACCSupport &support,
-                                      ModuleOp module, Location loc, Type type,
-                                      Operation *entryOp,
-                                      std::optional<SymbolTable> &symbolTable,
-                                      OpBuilder &builder) {
-  type = fir::unwrapRefType(type);
-  if (std::optional<int64_t> staticSize =
-          computeTypeSizeBytes(support, module, type))
-    return arith::ConstantIntOp::create(builder, loc, builder.getI64Type(),
-                                        *staticSize);
-
-  if (auto sequenceType = dyn_cast<fir::SequenceType>(type)) {
-    if (sequenceType.hasUnknownShape() || sequenceType.hasDynamicExtents())
-      return {};
-    Value elementSize =
-        materializeTypeSizeBytes(support, module, loc, sequenceType.getEleTy(),
-                                 entryOp, symbolTable, builder);
-    if (!elementSize)
-      return {};
-    int64_t elementCount = sequenceType.getConstantArraySize();
-    if (elementCount == 1)
-      return elementSize;
-    Value count = arith::ConstantIntOp::create(
-        builder, loc, elementSize.getType(), elementCount);
-    return arith::MulIOp::create(builder, loc, elementSize, count);
-  }
-
-  if (auto recordType = dyn_cast<fir::RecordType>(type))
-    return loadRecordTypeSizeFromTypeDesc(loc, recordType, entryOp, symbolTable,
-                                          builder);
-  return {};
-}
-
-static Value materializeMapSize(acc::OpenACCSupport &support, ModuleOp module,
+static Value materializeMapSize(acc::OpenACCSupport &support,
                                 Operation *entryOp, Value var, Type varType,
                                 acc::DataDescKind descKind, ValueRange bounds,
                                 acc::MapFlags mapFlags,
@@ -256,10 +219,14 @@ static Value materializeMapSize(acc::OpenACCSupport &support, ModuleOp module,
 
   // Derived types with descriptor fields often have no compile-time layout
   // size; load the type descriptor's size-in-bytes field instead.
-  if (staticSize < 0)
-    if (Value dynamicSize = materializeTypeSizeBytes(
-            support, module, loc, varType, entryOp, symbolTable, builder))
-      return dynamicSize;
+  if (staticSize < 0) {
+    if (auto recordType =
+            dyn_cast<fir::RecordType>(fir::unwrapRefType(varType))) {
+      if (Value dynamicSize = loadRecordTypeSizeFromTypeDesc(
+              loc, recordType, entryOp, symbolTable, builder))
+        return dynamicSize;
+    }
+  }
 
   // An implicit present of an object whose size is not recoverable is only an
   // address lookup. Size 0 matches the present-table entry whatever its
@@ -331,11 +298,29 @@ static Value materializePrivateStorageSize(
     staticTy = fir::SequenceType::get(staticExtents, elementType);
   }
 
-  Value size = materializeTypeSizeBytes(support, module, loc, staticTy,
-                                        privatizeOp.getOperation(), symbolTable,
-                                        builder);
-  if (!size)
+  Value size;
+  if (std::optional<int64_t> staticBytes =
+          computeTypeSizeBytes(support, module, staticTy)) {
+    size = arith::ConstantIntOp::create(builder, loc, builder.getI64Type(),
+                                        *staticBytes);
+  } else if (auto recordType = dyn_cast<fir::RecordType>(elementType)) {
+    // A derived type whose layout is not computable here carries its padded
+    // size in the Fortran type descriptor.
+    size = loadRecordTypeSizeFromTypeDesc(
+        loc, recordType, privatizeOp.getOperation(), symbolTable, builder);
+    if (!size)
+      return {};
+    int64_t staticExtent = 1;
+    for (int64_t extent : staticExtents)
+      staticExtent *= extent;
+    if (staticExtent != 1) {
+      Value extentVal = arith::ConstantIntOp::create(
+          builder, loc, size.getType(), staticExtent);
+      size = arith::MulIOp::create(builder, loc, size, extentVal);
+    }
+  } else {
     return {};
+  }
 
   for (Value dynamicSize : dynamicSizes) {
     Value extentVal =
@@ -433,9 +418,8 @@ buildMapInfo(acc::OpenACCSupport &support, ModuleOp module, Operation *entryOp,
     acc::populateSourceExtents(bounds, seqTy.getShape(), builder);
 
   Location loc = entryOp->getLoc();
-  Value size =
-      materializeMapSize(support, module, entryOp, var, varType, descKind,
-                         bounds, mapFlags, symbolTable, builder);
+  Value size = materializeMapSize(support, entryOp, var, varType, descKind,
+                                  bounds, mapFlags, symbolTable, builder);
 
   return acc::MapInfoOp::create(builder, loc, entryOp->getResult(0).getType(),
                                 var, varType, mapFlags, attachPoint, desc,

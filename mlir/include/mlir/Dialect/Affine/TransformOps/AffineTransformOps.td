@@ -122,7 +122,8 @@ def SuperVectorizeOp
   let assemblyFormat = [{
       $target $vector_sizes
           (`fastest_varying_pattern` `=` $fastest_varying_pattern^)? 
-          (`vectorize_reductions` `=` $vectorize_reductions^)? attr-dict `:` type($target)
+          (`vectorize_reductions` `=` $vectorize_reductions^)? 
+          attr-dict `:` type($target)
   }];
   let hasVerifier = 1;
 }

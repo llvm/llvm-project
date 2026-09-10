@@ -6,6 +6,9 @@
 ControlFlowIntegrityDesign
 ```
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

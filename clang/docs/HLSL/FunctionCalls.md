@@ -1,5 +1,8 @@
 # HLSL Function Calls
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

@@ -28,6 +28,7 @@ add_mlir_library(MLIRTransforms
 
   DEPENDS
   MLIRTransformsPassIncGen
+  MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRAnalysis

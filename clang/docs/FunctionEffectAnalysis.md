@@ -1,5 +1,9 @@
 # Function Effect Analysis
 
+```{contents}
+:depth: 3
+:local:
+```
 
 ## Introduction
 

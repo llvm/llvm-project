@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefixes=CIR
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR
-// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -Wno-unused-value -std=c++11 -fclangir -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=LLVM
-// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -Wno-unused-value -std=c++11 -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=LLVM
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -Wno-unused-value -std=c++11 -fclangir -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=LLVM
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -Wno-unused-value -std=c++11 -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=LLVM
 namespace std {
 struct type_info;
 }

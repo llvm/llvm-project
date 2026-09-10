@@ -4,116 +4,8 @@
 ; The compared value 4 has no explicit case, and the remapped value 6 maps to
 ; a real (non-default) case, so switching on %x needs a new explicit case for
 ; 4 pointing to bb2.
-define void @test_remap_add_case(i8 %x) !prof !0 {
+define void @test_remap_add_case(i8 %x) {
 ; CHECK-LABEL: define void @test_remap_add_case(
-; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0:![0-9]+]] {
-; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
-; CHECK-NEXT:      i8 4, label %[[BB2]]
-; CHECK-NEXT:    ], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    call void @func1()
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @func2()
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @func3()
-; CHECK-NEXT:    unreachable
-;
-  %cmp = icmp eq i8 %x, 4
-  %key = select i1 %cmp, i8 6, i8 %x, !prof !1
-  switch i8 %key, label %bb1 [
-  i8 6, label %bb2
-  i8 10, label %bb3
-  ], !prof !2
-
-bb1:
-  call void @func1()
-  unreachable
-bb2:
-  call void @func2()
-  unreachable
-bb3:
-  call void @func3()
-  unreachable
-}
-
-define void @test_remap_profile_undeflow(i8 %x) !prof !0 {
-; CHECK-LABEL: define void @test_remap_profile_undeflow(
-; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
-; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
-; CHECK-NEXT:      i8 4, label %[[BB2]]
-; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    call void @func1()
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @func2()
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @func3()
-; CHECK-NEXT:    unreachable
-;
-  %cmp = icmp eq i8 %x, 4
-  %key = select i1 %cmp, i8 6, i8 %x, !prof !1
-  switch i8 %key, label %bb1 [
-  i8 6, label %bb2
-  i8 10, label %bb3
-  ], !prof !5
-
-bb1:
-  call void @func1()
-  unreachable
-bb2:
-  call void @func2()
-  unreachable
-bb3:
-  call void @func3()
-  unreachable
-}
-
-define void @test_remap_only_switch_profile(i8 %x) !prof !0 {
-; CHECK-LABEL: define void @test_remap_only_switch_profile(
-; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
-; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
-; CHECK-NEXT:      i8 4, label %[[BB2]]
-; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    call void @func1()
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @func2()
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @func3()
-; CHECK-NEXT:    unreachable
-;
-  %cmp = icmp eq i8 %x, 4
-  %key = select i1 %cmp, i8 6, i8 %x
-  switch i8 %key, label %bb1 [
-  i8 6, label %bb2
-  i8 10, label %bb3
-  ], !prof !2
-
-bb1:
-  call void @func1()
-  unreachable
-bb2:
-  call void @func2()
-  unreachable
-bb3:
-  call void @func3()
-  unreachable
-}
-
-define void @test_remap_only_switch_profile_unprofiled_function(i8 %x) {
-; CHECK-LABEL: define void @test_remap_only_switch_profile_unprofiled_function(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
 ; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
@@ -135,7 +27,7 @@ define void @test_remap_only_switch_profile_unprofiled_function(i8 %x) {
   switch i8 %key, label %bb1 [
   i8 6, label %bb2
   i8 10, label %bb3
-  ], !prof !2
+  ]
 
 bb1:
   call void @func1()
@@ -155,14 +47,14 @@ bb3:
 ; body are removed in the same run: this pass edits the CFG through a
 ; DomTreeUpdater, so a follow-up SimplifyCFG iteration cleans it up
 ; immediately instead of needing a separate pass.
-define void @test_remap_retarget_case(i8 %x) !prof !0 {
+define void @test_remap_retarget_case(i8 %x) {
 ; CHECK-LABEL: define void @test_remap_retarget_case(
-; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
+; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
 ; CHECK-NEXT:      i8 4, label %[[BB2:.*]]
 ; CHECK-NEXT:      i8 6, label %[[BB2]]
 ; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
-; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    ]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -174,12 +66,12 @@ define void @test_remap_retarget_case(i8 %x) !prof !0 {
 ; CHECK-NEXT:    unreachable
 ;
   %cmp = icmp eq i8 %x, 4
-  %key = select i1 %cmp, i8 6, i8 %x, !prof !1
+  %key = select i1 %cmp, i8 6, i8 %x
   switch i8 %key, label %bb1 [
   i8 4, label %bb4
   i8 6, label %bb2
   i8 10, label %bb3
-  ], !prof !3
+  ]
 
 bb1:
   call void @func1()
@@ -198,14 +90,14 @@ bb4:
 ; Same remap expressed with icmp ne / select(cond, %x, 6). The remapped value 6
 ; maps to a real (non-default) case, so switching on %x needs a new explicit
 ; case for 4 pointing to bb2, same as test_remap_add_case but via the NE arm.
-define void @test_remap_ne_add_case(i8 %x) !prof !0 {
+define void @test_remap_ne_add_case(i8 %x) {
 ; CHECK-LABEL: define void @test_remap_ne_add_case(
-; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
+; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
 ; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
 ; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
 ; CHECK-NEXT:      i8 4, label %[[BB2]]
-; CHECK-NEXT:    ], !prof [[PROF1]]
+; CHECK-NEXT:    ]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -217,11 +109,11 @@ define void @test_remap_ne_add_case(i8 %x) !prof !0 {
 ; CHECK-NEXT:    unreachable
 ;
   %cmp = icmp ne i8 %x, 4
-  %key = select i1 %cmp, i8 %x, i8 6, !prof !4
+  %key = select i1 %cmp, i8 %x, i8 6
   switch i8 %key, label %bb1 [
   i8 6, label %bb2
   i8 10, label %bb3
-  ], !prof !2
+  ]
 
 bb1:
   call void @func1()
@@ -331,13 +223,13 @@ bb4:
 ; K (the remapped-to value) has no explicit case of its own, so it already
 ; dispatches to the default destination - same as the (also absent) compared
 ; value C would. %x can be switched on directly with no case-list change.
-define void @test_remap_k_default_add(i8 %x) !prof !0 {
+define void @test_remap_k_default_add(i8 %x) {
 ; CHECK-LABEL: define void @test_remap_k_default_add(
-; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
+; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    switch i8 [[X]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i8 1, label %[[BB1:.*]]
 ; CHECK-NEXT:      i8 2, label %[[BB2:.*]]
-; CHECK-NEXT:    ], !prof [[PROF5:![0-9]+]]
+; CHECK-NEXT:    ]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -349,11 +241,11 @@ define void @test_remap_k_default_add(i8 %x) !prof !0 {
 ; CHECK-NEXT:    unreachable
 ;
   %cmp = icmp eq i8 %x, 4
-  %key = select i1 %cmp, i8 6, i8 %x, !prof !1
+  %key = select i1 %cmp, i8 6, i8 %x
   switch i8 %key, label %default [
   i8 1, label %bb1
   i8 2, label %bb2
-  ], !prof !2
+  ]
 
 bb1:
   call void @func1()
@@ -399,6 +291,45 @@ bb1:
   call void @func1()
   unreachable
 default:
+  call void @func3()
+  unreachable
+}
+
+; The fold changes the case list (a case may be added, or retargeted to a
+; different successor), so any existing branch-weight metadata would
+; mislabel the new layout - it must be dropped rather than kept stale.
+define void @test_remap_drops_branch_weights(i8 %x) {
+; CHECK-LABEL: define void @test_remap_drops_branch_weights(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
+; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
+; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
+; CHECK-NEXT:      i8 4, label %[[BB2]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cmp = icmp eq i8 %x, 4
+  %key = select i1 %cmp, i8 6, i8 %x
+  switch i8 %key, label %bb1 [
+  i8 6, label %bb2
+  i8 10, label %bb3
+  ], !prof !0
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
   call void @func3()
   unreachable
 }
@@ -533,17 +464,4 @@ declare void @func3()
 declare void @func4()
 declare void @use(i32)
 
-!0 = !{!"function_entry_count", i32 10}
-!1 = !{!"branch_weights", i32 2, i32 3}
-!2 = !{!"branch_weights", i32 5, i32 11, i32 7}
-!3 = !{!"branch_weights", i32 5, i32 0, i32 11, i32 7}
-!4 = !{!"branch_weights", i32 3, i32 2}
-!5 = !{!"branch_weights", i32 5, i32 7, i32 11}
-;.
-; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 25, i32 9, i32 35, i32 46}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 25, i32 0, i32 55, i32 46}
-; CHECK: [[PROF3]] = !{!"unknown", !"simplifycfg"}
-; CHECK: [[PROF4]] = !{!"branch_weights", i32 25, i32 46, i32 9, i32 35}
-; CHECK: [[PROF5]] = !{!"branch_weights", i32 5, i32 11, i32 7}
-;.
+!0 = !{!"branch_weights", i32 1, i32 2, i32 3}

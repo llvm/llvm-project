@@ -15,7 +15,6 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgRelayoutOpsIncGen
   MLIRShardingInterfaceIncGen
-  MLIRRelayoutOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect

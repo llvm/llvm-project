@@ -58,6 +58,12 @@
 #  define _LIBCPP_HAS_CHAR8_T 1
 #endif
 
+#if _LIBCPP_STD_VER <= 11
+#  define _LIBCPP_EXPLICIT_SINCE_CXX14
+#else
+#  define _LIBCPP_EXPLICIT_SINCE_CXX14 explicit
+#endif
+
 #if _LIBCPP_STD_VER >= 14
 #  define _LIBCPP_CONSTEXPR_SINCE_CXX14 constexpr
 #else

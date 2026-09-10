@@ -81,7 +81,8 @@ def SetAnchorLayoutOp : Op<Transform_Dialect, "xegpu.set_anchor_layout", [
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
     (`order` `=` $order^)?
-    (`slice_dims` `=` $slice_dims^)? attr-dict `:` qualified(type(operands))
+    (`slice_dims` `=` $slice_dims^)?
+    attr-dict `:` qualified(type(operands))
   }];
 
   let extraClassDeclaration = [{
@@ -127,7 +128,8 @@ def SetGPULaunchThreadsOp
 
   let assemblyFormat = [{
     $target
-    `threads` `=` custom<DynamicIndexList>($threads, $static_threads) attr-dict `:` qualified(type(operands))
+    `threads` `=` custom<DynamicIndexList>($threads, $static_threads)
+    attr-dict `:` qualified(type(operands))
   }];
 
   let extraClassDeclaration = [{
@@ -165,7 +167,8 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
 
   let assemblyFormat = [{
     $target
-    `nb_prefetch` `=` ($dynamic_nb_prefetch^):($static_nb_prefetch)? attr-dict `:` functional-type(operands, results)
+    `nb_prefetch` `=` ($dynamic_nb_prefetch^):($static_nb_prefetch)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
@@ -238,7 +241,8 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
     `target_sg_layout` `=` custom<DynamicIndexList>($target_sg_layout, $static_target_sg_layout)
     `target_sg_data` `=` custom<DynamicIndexList>($target_sg_data, $static_target_sg_data)
     (`target_inst_data` `=` custom<DynamicIndexList>($target_inst_data, $static_target_inst_data)^)?
-    (`target_order` `=` $target_order^)? attr-dict `:` functional-type(operands, results)
+    (`target_order` `=` $target_order^)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{

@@ -979,12 +979,8 @@ void ContractionOp::print(OpAsmPrinter &p) {
   auto attrNames = getTraitAttrNames();
   llvm::StringSet<> traitAttrsSet;
   traitAttrsSet.insert_range(attrNames);
-  NamedAttrList allAttrs(getOperation()->getRawDictionaryAttrs());
-  getOperation()->getName().walkInherentAttrs(
-      getOperation(),
-      [&](StringRef name, Attribute &attr) { allAttrs.append(name, attr); });
   SmallVector<NamedAttribute, 8> attrs;
-  for (auto attr : allAttrs) {
+  for (auto attr : (*this)->getAttrs()) {
     if (attr.getName() == getIteratorTypesAttrName()) {
       auto iteratorTypes =
           llvm::cast<ArrayAttr>(attr.getValue())
@@ -1014,7 +1010,7 @@ void ContractionOp::print(OpAsmPrinter &p) {
   p << " " << dictAttr << " " << getLhs() << ", ";
   p << getRhs() << ", " << getAcc();
 
-  p.printOptionalAttrDict(allAttrs.getAttrs(), attrNames);
+  p.printOptionalAttrDict((*this)->getAttrs(), attrNames);
   p << " : " << getLhs().getType() << ", " << getRhs().getType() << " into "
     << getResultType();
 }
@@ -4362,10 +4358,7 @@ void OuterProductOp::print(OpAsmPrinter &p) {
   p << " " << getLhs() << ", " << getRhs();
   if (getAcc()) {
     p << ", " << getAcc();
-    SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
-    attrs.emplace_back(getKindAttrName(), getKindAttr());
-    llvm::sort(attrs);
-    p.printOptionalAttrDict(attrs);
+    p.printOptionalAttrDict((*this)->getAttrs());
   }
   p << " : " << getLhs().getType() << ", " << getRhs().getType();
 }
@@ -5138,7 +5131,7 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
                  VectorType vectorType, VectorType maskType,
                  VectorType inferredMaskType, AffineMap permutationMap,
                  ArrayAttr inBounds) {
-  if (op->hasDiscardableAttr("masked")) {
+  if (op->hasAttr("masked")) {
     return op->emitOpError("masked attribute has been removed. "
                            "Use in_bounds instead.");
   }
@@ -5214,15 +5207,14 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
 }
 
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
-  SmallVector<NamedAttribute> attrs(op->getDiscardableAttrs());
+  SmallVector<StringRef, 3> elidedAttrs;
+  elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
+  if (op.getPermutationMap().isMinorIdentity())
+    elidedAttrs.push_back(op.getPermutationMapAttrName());
   // Elide in_bounds attribute if all dims are out-of-bounds.
-  if (llvm::any_of(op.getInBoundsValues(), [](bool b) { return b; }))
-    attrs.emplace_back(op.getInBoundsAttrName(), op.getInBounds());
-  if (!op.getPermutationMap().isMinorIdentity())
-    attrs.emplace_back(op.getPermutationMapAttrName(),
-                       AffineMapAttr::get(op.getPermutationMap()));
-  llvm::sort(attrs);
-  p.printOptionalAttrDict(attrs);
+  if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
+    elidedAttrs.push_back(op.getInBoundsAttrName());
+  p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
 void TransferReadOp::print(OpAsmPrinter &p) {
@@ -8056,8 +8048,7 @@ void mlir::vector::MaskOp::print(OpAsmPrinter &p) {
     p.printCustomOrGenericOp(&singleBlock->front());
   p << " }";
 
-  p.printOptionalAttrDict(
-      getOperation()->getDiscardableAttrDictionary().getValue());
+  p.printOptionalAttrDict(getOperation()->getAttrs());
 
   p << " : " << getMask().getType();
   if (getNumResults() > 0)

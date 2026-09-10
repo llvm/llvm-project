@@ -26,7 +26,8 @@ namespace llvm {
 /// memory locations.
 namespace AMDGPUAS {
 enum : unsigned {
-  MAX_AMDGPU_ADDRESS = 15,
+  // The maximum value for flat, generic, local, private, constant and region.
+  MAX_AMDGPU_ADDRESS = 9,
 
   FLAT_ADDRESS = 0,   ///< Address space for flat memory.
   GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
@@ -50,14 +51,9 @@ enum : unsigned {
 
   RESERVED_ADDRESS_SPACE_11 = 11, ///< Reserved for downstream use.
 
-  VGPR = 13, ///< Address space for VGPRs. The 32-bit address is a byte offset
-             ///< into the wave's view of its vector registers. Note this shares
-             ///< its numeric value with CONSTANT_BUFFER_5, which is only used
-             ///< by the (graphics) R600 path.
+  RESERVED_ADDRESS_SPACE_13 = 13, ///< Reserved for downstream use.
 
   RESERVED_ADDRESS_SPACE_14 = 14, ///< Reserved for downstream use.
-
-  BARRIER = 15, ///< Address space for modeling barrier IDs as addresses.
 
   RESERVED_ADDRESS_SPACE_16 = 16, ///< Reserved for downstream use.
 
@@ -197,7 +193,6 @@ constexpr int64_t getNullPointerValue(unsigned AS) {
   case PRIVATE_ADDRESS:
   case LOCAL_ADDRESS:
   case REGION_ADDRESS:
-  case VGPR:
     return -1;
   default:
     return 0;

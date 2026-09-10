@@ -11,8 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/OpImplementation.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
 

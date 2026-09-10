@@ -1752,8 +1752,9 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         const ELFSectionHeaderInfo &sheader = *I;
         const uint64_t section_size =
             sheader.sh_type == SHT_NOBITS ? 0 : sheader.sh_size;
-        llvm::StringRef name(shstr_data.PeekCStr(I->sh_name));
-        I->section_name = name.str();
+        ConstString name(shstr_data.PeekCStr(I->sh_name));
+
+        I->section_name = name;
 
         if (arch_spec.IsMIPS()) {
           uint32_t arch_flags = arch_spec.GetFlags();
@@ -1911,11 +1912,11 @@ ObjectFileELF::GetSectionHeaderByIndex(lldb::user_id_t id) {
   return nullptr;
 }
 
-lldb::user_id_t ObjectFileELF::GetSectionIndexByName(llvm::StringRef name) {
-  if (name.empty() || !ParseSectionHeaders())
+lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
+  if (!name || !name[0] || !ParseSectionHeaders())
     return 0;
   for (size_t i = 1; i < m_section_headers.size(); ++i)
-    if (m_section_headers[i].section_name == name)
+    if (m_section_headers[i].section_name == ConstString(name))
       return i;
   return 0;
 }
@@ -1959,7 +1960,7 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   case SHT_DYNAMIC:
     return eSectionTypeELFDynamicLinkInfo;
   }
-  return GetSectionTypeFromName(H.section_name);
+  return GetSectionTypeFromName(H.section_name.GetStringRef());
 }
 
 static Permissions GetPermissions(const ELFSectionHeader &H) {
@@ -2165,7 +2166,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
        I != m_section_headers.end(); ++I) {
     const ELFSectionHeaderInfo &header = *I;
 
-    const std::string &name = I->section_name;
+    ConstString &name = I->section_name;
     const uint64_t file_size =
         header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
 
@@ -2185,8 +2186,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         this,            // ObjectFile to which this section belongs and should
                          // read section data from.
         SectionIndex(I), // Section ID.
-        ConstString(name),            // Section name.
-        sect_type,                    // Section type.
+        name,            // Section name.
+        sect_type,       // Section type.
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
@@ -3412,7 +3413,7 @@ void ObjectFileELF::RelocateSection(lldb_private::Section *section)
   for (SectionHeaderCollIter I = m_section_headers.begin();
        I != m_section_headers.end(); ++I) {
     if (I->sh_type == SHT_RELA || I->sh_type == SHT_REL) {
-      llvm::StringRef hay_name(I->section_name);
+      llvm::StringRef hay_name = I->section_name.GetStringRef();
       if (hay_name.empty())
         continue;
       if (needle == hay_name || needlea == hay_name) {
@@ -3759,8 +3760,8 @@ void ObjectFileELF::DumpELFSectionHeaders(Stream *s) {
        I != m_section_headers.end(); ++I, ++idx) {
     s->Printf("[%2u] ", idx);
     ObjectFileELF::DumpELFSectionHeader(s, *I);
-    const std::string &section_name = I->section_name;
-    if (!section_name.empty())
+    const char *section_name = I->section_name.AsCString("");
+    if (section_name)
       *s << ' ' << section_name << "\n";
   }
 }

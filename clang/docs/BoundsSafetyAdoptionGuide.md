@@ -1,5 +1,8 @@
 # Adoption Guide for `-fbounds-safety`
 
+```{contents}
+:local: true
+```
 
 ## Where to get `-fbounds-safety`
 

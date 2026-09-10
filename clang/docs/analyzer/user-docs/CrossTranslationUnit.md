@@ -4,6 +4,9 @@ Normally, static analysis works in the boundary of one translation unit (TU).
 However, with additional steps and configuration we can enable the analysis to inline the definition of a function from
 another TU.
 
+```{contents}
+:local: true
+```
 
 ## Overview
 

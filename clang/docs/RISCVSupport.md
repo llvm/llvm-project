@@ -1,5 +1,8 @@
 # RISC-V Support
 
+```{contents}
+:local: true
+```
 
 ## Intrinsic Detection Macros
 

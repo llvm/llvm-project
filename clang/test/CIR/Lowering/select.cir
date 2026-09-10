@@ -1,6 +1,5 @@
 // RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o - %s | FileCheck -check-prefix=LLVM %s
 // RUN: cir-translate -target aarch64 -cir-to-llvmir --disable-cc-lowering -o - %s | FileCheck -check-prefix=LLVM %s
-// REQUIRES: target={{x86_64-linux}}
 
 !s32i = !cir.int<s, 32>
 

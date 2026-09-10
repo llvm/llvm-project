@@ -12,8 +12,8 @@
 
 // wstring_convert<Codecvt, Elem, Wide_alloc, Byte_alloc>
 
-// explicit wstring_convert(const byte_string& byte_err,
-//                          const wide_string& wide_err = wide_string());
+// wstring_convert(const byte_string& byte_err,
+//                 const wide_string& wide_err = wide_string());
 
 // XFAIL: no-wide-characters
 
@@ -28,9 +28,10 @@ int main(int, char**)
 {
     typedef std::codecvt_utf8<wchar_t> Codecvt;
     typedef std::wstring_convert<Codecvt> Myconv;
+#if TEST_STD_VER > 11
     static_assert(!std::is_convertible<std::string, Myconv>::value, "");
-    static_assert(std::is_constructible<Myconv, std::string>::value, "");
-
+    static_assert( std::is_constructible<Myconv, std::string>::value, "");
+#endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         Myconv myconv;

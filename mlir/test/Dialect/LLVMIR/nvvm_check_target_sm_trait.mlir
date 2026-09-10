@@ -158,22 +158,3 @@ gpu.module @check_invalid_SM_arch_or_family [#nvvm.target<chip = "sm_100">] {
   // expected-error @below {{is not supported on sm_100}}
   test.nvvm_requires_sm_90a_or_sm_100f
 }
-
-// -----
-
-gpu.module @check_valid_SM_mbarrier_check_layout [#nvvm.target<chip = "sm_90">] {
-  llvm.func @mbarrier_check_layout(%barrier: !llvm.ptr<3>) {
-    %0 = nvvm.mbarrier.check_layout %barrier layout = 1 : !llvm.ptr<3> -> i1
-    llvm.return
-  }
-}
-
-// -----
-
-gpu.module @check_invalid_SM_mbarrier_check_layout [#nvvm.target<chip = "sm_80">] {
-  llvm.func @mbarrier_check_layout(%barrier: !llvm.ptr<3>) {
-    // expected-error @below {{is not supported on sm_80}}
-    %0 = nvvm.mbarrier.check_layout %barrier layout = 1 : !llvm.ptr<3> -> i1
-    llvm.return
-  }
-}

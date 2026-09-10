@@ -1,5 +1,8 @@
 # SafeStack
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

@@ -6,7 +6,6 @@ add_mlir_dialect_library(MLIRArmNeonDialect
 
   DEPENDS
   MLIRArmNeonIncGen
-  MLIRArmNeonConversionsIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

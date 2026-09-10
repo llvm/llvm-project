@@ -287,34 +287,14 @@ void LoopInvariantCodeMotion::runOnOperation() {
 
   LDBG() << "Enter [HL]FIR LoopInvariantCodeMotion()";
 
-  // Build a recursive-effects cache scoped to this pass run and link it to
-  // a fir::AliasAnalysis that will live inside the mlir::AliasAnalysis
-  // aggregator. Every query against that AliasAnalysis (direct, or via the
-  // aggregator) now routes recursive-effect ops through the cache. The
-  // cache's destructor nulls the back-pointer on the registered
-  // AliasAnalysis when LICM exits, so the aggregator never dereferences a
-  // dead cache.
-  //
-  // LICM only hoists pure-read ops out of loops; writes are never moved,
-  // ops are never erased, and SSA values are not RAUW'd. That matches the
-  // cache's safety invariant for the whole pass run on this function.
-  fir::AliasAnalysisRecursiveEffectsCache cachedAA;
   auto &aliasAnalysis = getAnalysis<AliasAnalysis>();
-  // Two independent, complementary caches are enabled for this pass:
-  //
-  //   * the recursive-effects cache (`cachedAA`), which memoizes per-operation
-  //     read/write summaries so mod-ref queries do not re-walk the regions of
-  //     ops with HasRecursiveMemoryEffects, and
-  //   * getSource() memoization, which memoizes source classification keyed on
-  //     (value, flags).
-  //
-  // Both are frozen-snapshot caches with no automatic invalidation, and both
-  // are sound here for the same reason: LICM only hoists pure-read ops, never
-  // moves writes, erases ops, or RAUWs values, so neither the effects of an
-  // operation nor the source of a value changes across the hoists. They live
-  // no longer than this analysis instance, which the pass manager drops when
-  // the analysis is invalidated after the pass.
-  fir::AliasAnalysis firAliasAnalysis{cachedAA};
+  // Enable getSource() memoization on the FIR AliasAnalysis for the duration
+  // of this pass. This is a frozen-snapshot cache with no automatic
+  // invalidation, but it is sound here because LICM only moves operations, so
+  // getSource()'s inputs are unchanged across the hoists. The cache lives no
+  // longer than this analysis instance, which the pass manager drops when the
+  // analysis is invalidated after the pass.
+  fir::AliasAnalysis firAliasAnalysis;
   firAliasAnalysis.enableSourceCache();
   aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
 

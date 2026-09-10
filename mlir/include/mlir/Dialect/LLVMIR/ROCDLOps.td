@@ -405,17 +405,16 @@ def ROCDL_WaveBarrierOp : ROCDL_ConcreteNonMemIntrOp<"wave.barrier", [], 0> {
 
 def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
-def ROCDLBarrier : LLVM_PointerInAddressSpace<15>;
 
 def ROCDL_BarrierInitOp : ROCDL_IntrOp<"s.barrier.init", [], [], [], 0, 0, 0, 0, [1], ["memberCnt"]>,
-  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr, I32Attr:$memberCnt)> {
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$memberCnt)> {
   let description = [{
     Available on gfx1250+.
 
     Example:
     ```mlir
     // Initialize a named barrier with member count.
-    rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<15>
+    rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<3>
     ```
   }];
   let results = (outs);
@@ -438,7 +437,7 @@ def ROCDL_BarrierSignalOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal", [], 0
 }
 
 def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 0, 0, 0, 0, [1], ["memberCnt"]>,
-  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr, I32Attr:$memberCnt)> {
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$memberCnt)> {
   let description = [{
     Available on gfx1250+.
 
@@ -447,7 +446,7 @@ def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 
     Example:
     ```mlir
     // Signal a named barrier with variable ID.
-    rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<15>
+    rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<3>
     ```
   }];
   let results = (outs);
@@ -455,14 +454,14 @@ def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 
 }
 
 def ROCDL_BarrierJoinOp : ROCDL_IntrOp<"s.barrier.join", [], [], [], 0>,
-  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr)> {
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
   let description = [{
     Available on gfx1250+.
 
     Example:
     ```mlir
     // Join a named barrier.
-    rocdl.s.barrier.join %ptr : !llvm.ptr<15>
+    rocdl.s.barrier.join %ptr : !llvm.ptr<3>
     ```
   }];
   let results = (outs);
@@ -530,14 +529,14 @@ def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", 
 }
 
 def ROCDL_GetNamedBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.named.barrier.state", [], 1, [], []>,
-  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr)> {
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
   let description = [{
     Available on gfx1250+.
 
     Example:
     ```mlir
     // Query named barrier state by pointer.
-    %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<15> -> i32
+    %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<3> -> i32
     ```
   }];
   let results = (outs I32:$res);
@@ -545,7 +544,7 @@ def ROCDL_GetNamedBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.named.barri
 }
 
 def ROCDL_WakeupBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.wakeup.barrier", [], 0, [], []>,
-  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr)> {
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
   let description = [{
     Wakes up waves associated with a given named barrier. Note, This op does not release waves waiting
     at the barrier. It just signal other waves in the same work-group waiting on the indicated named barrier
@@ -555,7 +554,7 @@ def ROCDL_WakeupBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.wakeup.barrier", [], 0
     Example:
     ```mlir
     // Wake up waves waiting on a named barrier.
-    rocdl.s.wakeup.barrier %ptr : !llvm.ptr<15>
+    rocdl.s.wakeup.barrier %ptr : !llvm.ptr<3>
     ```
   }];
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";

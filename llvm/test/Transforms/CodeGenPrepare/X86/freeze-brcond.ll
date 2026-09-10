@@ -96,8 +96,8 @@ define i1 @fcmp(float %a) {
 
 define i1 @fcmp_nan(float %a) {
 ; CHECK-LABEL: @fcmp_nan(
-; CHECK-NEXT:    [[FR1:%.*]] = freeze float [[A:%.*]]
-; CHECK-NEXT:    [[FR:%.*]] = fcmp oeq float [[FR1]], 0.000000e+00
+; CHECK-NEXT:    [[C:%.*]] = fcmp nnan oeq float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[FR:%.*]] = freeze i1 [[C]]
 ; CHECK-NEXT:    ret i1 [[FR]]
 ;
   %c = fcmp nnan oeq float %a, 0.0
@@ -317,17 +317,6 @@ UNREACHABLE:
   br i1 %fr, label %UNREACHABLE, label %EXIT
 EXIT:
   ret void
-}
-
-define i1 @freeze_samesign(i32 %x) {
-; CHECK-LABEL: @freeze_samesign(
-; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[FR]], 42
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %cmp = icmp samesign ult i32 %x, 42
-  %fr = freeze i1 %cmp
-  ret i1 %fr
 }
 
 declare void @g1()

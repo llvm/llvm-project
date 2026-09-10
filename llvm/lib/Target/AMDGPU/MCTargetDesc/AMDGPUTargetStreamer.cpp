@@ -568,7 +568,8 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   case AMDGPU::AMDHSA_COV4:
   case AMDGPU::AMDHSA_COV5:
     if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK)) {
-      bool XnackOn = getTargetID()->isXnackOnOrAny();
+      bool XnackOn = getTargetID()->isXnackOnOrAny() ||
+                     STI.hasFeature(AMDGPU::FeatureXNACK);
       OS << "\t\t.amdhsa_reserve_xnack_mask " << XnackOn << '\n';
     }
     break;

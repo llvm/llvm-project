@@ -15,6 +15,9 @@
 ```{role} good
 ```
 
+```{contents}
+:local:
+```
 
 # HIP Support
 

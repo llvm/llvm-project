@@ -91,6 +91,8 @@ static cl::opt<bool> SpecializeLiteralConstant(
         "Enable specialization of functions that take a literal constant as an "
         "argument"));
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 } // end namespace llvm
 
 bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB,
@@ -791,7 +793,7 @@ bool FunctionSpecializer::run() {
       auto &BFI = GetBFI(*Call->getFunction());
       std::optional<uint64_t> Count =
           BFI.getBlockProfileCount(Call->getParent());
-      if (Count) {
+      if (Count && !ProfcheckDisableMetadataFixes) {
         std::optional<uint64_t> MaybeCloneCount = Clone->getEntryCount();
         if (MaybeCloneCount) {
           uint64_t CallCount = *Count + *MaybeCloneCount;
@@ -1071,7 +1073,7 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   // clone must.
   Clone->setLinkage(GlobalValue::InternalLinkage);
 
-  if (F->getEntryCount())
+  if (F->getEntryCount() && !ProfcheckDisableMetadataFixes)
     Clone->setEntryCount(0);
 
   // Initialize the lattice state of the arguments of the function clone,

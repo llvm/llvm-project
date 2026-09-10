@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -67,22 +66,23 @@ struct LinearizeConstantLike final
         typeConverter.convertType<VectorType>(op->getResult(0).getType());
     assert(resType && "expected 1-D vector type");
 
-    Attribute value;
-    if (!matchPattern(op, m_Constant(&value)))
-      return rewriter.notifyMatchFailure(loc,
-                                         "could not fold constant-like op");
+    StringAttr attrName = rewriter.getStringAttr("value");
+    Attribute value = op->getAttr(attrName);
+    if (!value)
+      return rewriter.notifyMatchFailure(loc, "no 'value' attr");
 
     FailureOr<Attribute> newValue =
         linearizeConstAttr(loc, rewriter, resType, value);
     if (failed(newValue))
       return failure();
 
-    Operation *newOp = op->getDialect()->materializeConstant(
-        rewriter, *newValue, resType, loc);
-    if (!newOp)
-      return rewriter.notifyMatchFailure(
-          loc, "could not materialize linearized constant");
-    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+    FailureOr<Operation *> convertResult =
+        convertOpResultTypes(op, /*operands=*/{}, typeConverter, rewriter);
+    if (failed(convertResult))
+      return failure();
+
+    Operation *newOp = *convertResult;
+    newOp->setAttr(attrName, *newValue);
     rewriter.replaceOp(op, newOp);
     return success();
   }

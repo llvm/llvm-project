@@ -47,9 +47,7 @@ static std::pair<bool, bool> runImpl(MachineFunction &MF) {
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
 
-  // GlobalISel finalizes lowering in InstructionSelect.
-  if (!MF.getProperties().hasSelected())
-    TLI->finalizeLowering(MF);
+  TLI->finalizeLowering(MF);
 
   // Iterate through each instruction in the function, looking for pseudos.
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {

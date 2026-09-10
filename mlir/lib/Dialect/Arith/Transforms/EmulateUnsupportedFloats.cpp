@@ -68,11 +68,9 @@ LogicalResult EmulateFloatPattern::matchAndRewrite(
     // If you're seeing it, there's a bug.
     return op->emitOpError("type conversion failed in float emulation");
   }
-  OperationState state(loc, op->getName(), operands, resultTypes,
-                       op->getDiscardableAttrDictionary().getValue(),
-                       op->getSuccessors());
-  state.propertiesAttr = op->getPropertiesAsAttribute();
-  Operation *expandedOp = rewriter.create(state);
+  Operation *expandedOp =
+      rewriter.create(loc, op->getName().getIdentifier(), operands, resultTypes,
+                      op->getAttrs(), op->getSuccessors(), /*regions=*/{});
   SmallVector<Value> newResults(expandedOp->getResults());
   for (auto [res, oldType, newType] : llvm::zip_equal(
            MutableArrayRef{newResults}, op->getResultTypes(), resultTypes)) {

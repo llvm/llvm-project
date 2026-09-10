@@ -218,6 +218,22 @@ public:
   // modified
   //
 
+  /// Removes all edges from this CallGraphNode to any functions it
+  /// calls.
+  void removeAllCalledFunctions() {
+    while (!CalledFunctions.empty()) {
+      CalledFunctions.back().second->DropRef();
+      CalledFunctions.pop_back();
+    }
+  }
+
+  /// Moves all the callee information from N to this node.
+  void stealCalledFunctionsFrom(CallGraphNode *N) {
+    assert(CalledFunctions.empty() &&
+           "Cannot steal callsite information if I already have some");
+    std::swap(CalledFunctions, N->CalledFunctions);
+  }
+
   /// Adds a function to the list of functions called by this one.
   void addCalledFunction(CallBase *Call, CallGraphNode *M) {
     CalledFunctions.emplace_back(Call ? std::optional<WeakTrackingVH>(Call)

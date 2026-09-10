@@ -54,11 +54,8 @@
 ; R600-NEXT: .long 0
 @nullptr12 = global ptr addrspace(12) addrspacecast (ptr null to ptr addrspace(12))
 
-; Address space 13 is the VGPR address space, whose null pointer is -1 like the
-; other address spaces where zero is a valid address. R600 reaches the same
-; value through the shared numbering, where 13 is CONSTANT_BUFFER_5.
 ; CHECK-LABEL: nullptr13:
-; CHECK-NEXT: .long -1
+; R600-NEXT: .long 0
 @nullptr13 = global ptr addrspace(13) addrspacecast (ptr null to ptr addrspace(13))
 
 ; CHECK-LABEL: nullptr14:

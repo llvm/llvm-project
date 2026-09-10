@@ -34,7 +34,7 @@ def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
       DefaultValuedAttr<BoolAttr, "false">:$reassociate_fp_reductions,
       DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices,
       DefaultValuedAttr<BoolAttr, "false">:$use_vector_alignment);
-  let assemblyFormat = "oilist(`reassociate_fp_reductions` `=` $reassociate_fp_reductions | `force_32bit_vector_indices` `=` $force_32bit_vector_indices | `use_vector_alignment` `=` $use_vector_alignment) attr-dict";
+  let assemblyFormat = "attr-dict";
 }
 
 
@@ -419,7 +419,8 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
     oilist (
       `lowering_strategy` `=` $lowering_strategy
       | `avx2_lowering_strategy` `=` $avx2_lowering_strategy
-    ) attr-dict
+    )
+    attr-dict
   }];
 }
 
@@ -507,7 +508,8 @@ def ApplyTransferToScfPatternsOp : Op<Transform_Dialect,
     oilist (
         `max_transfer_rank` `=` $max_transfer_rank
       | `full_unroll` `=` $full_unroll
-    ) attr-dict
+    )
+    attr-dict
   }];
 }
 

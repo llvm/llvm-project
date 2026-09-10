@@ -606,10 +606,7 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
       return std::nullopt;
     VNums[N]++;
   }
-  unsigned VNumToSink =
-      llvm::max_element(VNums, [](const auto &L, const auto &R) {
-        return L.second < R.second;
-      })->first;
+  unsigned VNumToSink = llvm::max_element(VNums, llvm::less_second())->first;
 
   if (VNums[VNumToSink] == 1)
     // Can't sink anything!

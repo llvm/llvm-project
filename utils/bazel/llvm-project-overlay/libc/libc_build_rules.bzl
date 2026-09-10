@@ -18,40 +18,7 @@ def libc_common_copts():
         "-I" + libc_include_path,
         "-I" + paths.join(libc_include_path, "include"),
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
-    ] + select({
-        Label(":full_build"): [
-            "-DLIBC_FULL_BUILD",
-            "-ffreestanding",
-            "-fno-asynchronous-unwind-tables",
-            "-fno-exceptions",
-            "-fno-rtti",
-            "-fno-unwind-tables",
-            "-nostdinc++",
-            "-nostdlib",
-            "-nostdlib++",
-            # This is a clang-only option. To support gcc, we should use
-            # -nostdinc and pass in compiler builtin headers separately.
-            "-nostdlibinc",
-        ],
-        "//conditions:default": [],
-    })
-
-def libc_common_deps():
-    return select({
-        Label(":full_build"): [
-            # This is too broad. Really, we should have every public header
-            # accessible as a distinct cc_library target. However, the glob
-            # here is convenient for keeping Bazel rules in sync with CMake.
-            Label(":public_headers"),
-            Label(":public_headers_deps"),
-        ],
-        "//conditions:default": [],
-    }) + select({
-        Label(":full_build_linux"): [
-            "@linux_uapi//:linux_uapi_headers",
-        ],
-        "//conditions:default": [],
-    })
+    ]
 
 def libc_release_copts():
     copts = [
@@ -75,12 +42,11 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-def _libc_library(name, deps = [], **kwargs):
+def _libc_library(name, **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
-      deps: cc_library deps.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
@@ -91,7 +57,6 @@ def _libc_library(name, deps = [], **kwargs):
         name = name,
         copts = libc_common_copts(),
         local_defines = LIBC_CONFIGURE_OPTIONS,
-        deps = deps + libc_common_deps(),
         linkstatic = 1,
         **kwargs
     )
@@ -242,7 +207,7 @@ def libc_release_library(
         local_defines = weak_attributes + LIBC_CONFIGURE_OPTIONS,
         deps = [
             ":" + name + "_textual_hdr_library",
-        ] + libc_common_deps(),
+        ],
         **kwargs
     )
 
@@ -276,7 +241,7 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         # We put _hdr_deps in srcs, as they are not a part of this cc_library
         # interface, but instead are used to implement shared headers.
         srcs = [":" + name + "_hdr_deps"],
-        deps = [":" + name + "_textual_hdr_library"] + libc_common_deps(),
+        deps = [":" + name + "_textual_hdr_library"],
         # copts don't really matter, since it's a header-only library, but we
         # need proper -I flags for header validation, which are specified in
         # libc_common_copts().

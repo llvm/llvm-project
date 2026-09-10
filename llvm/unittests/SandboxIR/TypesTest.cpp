@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -171,7 +172,8 @@ define void @foo(i32 %v0) {
   // Check isAggregateType().
   EXPECT_FALSE(Int32Ty->isAggregateType());
   // Check isSized().
-  EXPECT_TRUE(Int32Ty->isSized());
+  SmallPtrSet<sandboxir::Type *, 1> Visited;
+  EXPECT_TRUE(Int32Ty->isSized(&Visited));
   // Check getPrimitiveSizeInBits().
   EXPECT_EQ(VecTy32x2->getPrimitiveSizeInBits(), 32u * 2);
   // Check getScalarSizeInBits().

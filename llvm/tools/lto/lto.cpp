@@ -752,14 +752,3 @@ extern const char *const *lto_runtime_lib_symbols_list(size_t *size) {
   *size = RuntimeLibcallSymbols.size();
   return RuntimeLibcallSymbols.data();
 }
-
-extern const char *const *
-lto_runtime_lib_symbols_list_for_triple(const char *TS, size_t *size) {
-  static StringMap<SmallVector<const char *>> RTLibcallSymMap;
-  Triple TT(TS);
-  auto [It, Inserted] = RTLibcallSymMap.try_emplace(TT.normalize());
-  if (Inserted)
-    It->second = lto::LTO::getRuntimeLibcallSymbols(TT);
-  *size = It->second.size();
-  return It->second.data();
-}

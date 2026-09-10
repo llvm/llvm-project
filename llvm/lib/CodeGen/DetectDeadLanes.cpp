@@ -27,7 +27,6 @@
 
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
@@ -498,31 +497,30 @@ DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
   // Mark operands as dead/unused.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      for (MachineOperand &MO : mi_bundle_ops(MI)) {
+      for (MachineOperand &MO : MI.operands()) {
         if (!MO.isReg())
           continue;
         Register Reg = MO.getReg();
         if (!Reg.isVirtual())
           continue;
-        const MachineInstr &OpMI = *MO.getParent();
         unsigned RegIdx = Reg.virtRegIndex();
         const DeadLaneDetector::VRegInfo &RegInfo = DLD.getVRegInfo(RegIdx);
         if (MO.isDef() && !MO.isDead() && RegInfo.UsedLanes.none()) {
           LLVM_DEBUG(dbgs()
-                     << "Marking operand '" << MO << "' as dead in " << OpMI);
+                     << "Marking operand '" << MO << "' as dead in " << MI);
           MO.setIsDead();
           Changed = true;
         }
         if (MO.readsReg()) {
           bool CrossCopy = false;
           if (isUndefRegAtInput(MO, RegInfo)) {
-            LLVM_DEBUG(dbgs() << "Marking operand '" << MO << "' as undef in "
-                              << OpMI);
+            LLVM_DEBUG(dbgs()
+                       << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();
             Changed = true;
-          } else if (isUndefInput(DLD, OpMI, MO, &CrossCopy)) {
-            LLVM_DEBUG(dbgs() << "Marking operand '" << MO << "' as undef in "
-                              << OpMI);
+          } else if (isUndefInput(DLD, MI, MO, &CrossCopy)) {
+            LLVM_DEBUG(dbgs()
+                       << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();
             Changed = true;
             if (CrossCopy)

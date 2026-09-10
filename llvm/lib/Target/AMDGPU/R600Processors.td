@@ -169,8 +169,3 @@ def : R600ProcessorModel<"cayman", R600_VLIW4_Itin,
 def : R600ProcessorModel<"turks", R600_VLIW5_Itin,
   [FeatureNorthernIslands, FeatureVertexCache, FeatureCFALUBug]
 >;
-
-// The subset of R600 SubtargetFeatures exposed outside of the backend.
-def R600FrontendVisibleFeatures {
-  list<SubtargetFeature> Features = [FeatureFMA];
-}

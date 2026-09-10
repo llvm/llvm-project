@@ -1,6 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
-# RUN:   -debug-only=machine-scheduler -run-pass=machine-scheduler 2>&1 \
+# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
 # RUN:   -mattr=+fusion-shift-bit-extract | FileCheck %s
 
 # Test shift-bit-extract fusion: SLLI + SRLI/SRAI

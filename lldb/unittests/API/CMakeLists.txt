@@ -10,7 +10,6 @@ add_lldb_unittest(APITests
 
   LINK_LIBS
     liblldb
-    LLVMTestingSupport
     lldbSBUtilityHelpers
   )
 

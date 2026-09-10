@@ -129,14 +129,14 @@ exit:
 
 ; Same for live-out token-like target extension types, which cannot be used in
 ; phi nodes either.
-define void @token_like_live_out(i32 %n, i1 %cond) {
+define void @token_like_live_out(i32 %n, i1 %cond, ptr %p) {
 ; CHECK-LABEL: define void @token_like_live_out(
-; CHECK-SAME: i32 [[N:%.*]], i1 [[COND:%.*]]) {
+; CHECK-SAME: i32 [[N:%.*]], i1 [[COND:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    [[TOKEN:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") poison)
+; CHECK-NEXT:    [[HANDLE:%.*]] = load target("dx.RawBuffer", i32, 1, 0), ptr [[P]], align 8
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LEFT:.*]], label %[[RIGHT:.*]]
 ; CHECK:       [[LEFT]]:
 ; CHECK-NEXT:    call void @a()
@@ -149,7 +149,7 @@ define void @token_like_live_out(i32 %n, i1 %cond) {
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") [[TOKEN]])
+; CHECK-NEXT:    store target("dx.RawBuffer", i32, 1, 0) [[HANDLE]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -157,7 +157,7 @@ entry:
 
 loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
-  %token = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") poison)
+  %handle = load target("dx.RawBuffer", i32, 1, 0), ptr %p
   br i1 %cond, label %left, label %right
 
 left:
@@ -174,6 +174,6 @@ latch:
   br i1 %exit.cond, label %loop, label %exit
 
 exit:
-  %use = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") %token)
+  store target("dx.RawBuffer", i32, 1, 0) %handle, ptr %p
   ret void
 }

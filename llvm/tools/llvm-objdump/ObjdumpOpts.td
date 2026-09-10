@@ -72,13 +72,12 @@ def traceback_table : Flag<["--"], "traceback-table">,
            "This option is for XCOFF files only">;
 
 def disassemble_symbols_EQ : Joined<["--"], "disassemble-symbols=">,
-  HelpText<"Comma-separated list of symbols to disassemble. "
+  HelpText<"List of symbols to disassemble. "
            "Accept demangled names when --demangle is "
            "specified, otherwise accept mangled names">;
 
 def disassemble_EQ : Joined<["--"], "disassemble=">,
-  HelpText<"Disassemble a single symbol. "
-           "May be specified multiple times. "
+  HelpText<"Specify a symbol name to diasassemble. "
            "Accept demangled names when --demangle is "
            "specified, otherwise accept mangled names">;
 

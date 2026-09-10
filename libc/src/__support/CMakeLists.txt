@@ -493,7 +493,6 @@ add_subdirectory(net)
 add_subdirectory(threads)
 
 add_subdirectory(File)
-add_subdirectory(pwd)
 
 add_subdirectory(printf_core)
 

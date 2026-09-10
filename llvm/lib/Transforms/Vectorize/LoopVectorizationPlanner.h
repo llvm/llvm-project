@@ -36,7 +36,6 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
-class BranchProbabilityInfo;
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
@@ -221,8 +220,8 @@ public:
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, {}, DL, Name, ResultTy));
+    return tryInsertInstruction(new VPInstructionWithType(
+        Opcode, Operands, ResultTy, Flags, {}, DL, Name));
   }
 
   VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
@@ -419,19 +418,20 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
-  VPInstruction *createScalarLoad(Type *ResultTy, VPValue *Addr, DebugLoc DL,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstruction(Instruction::Load, Addr, {},
-                                                  Metadata, DL, "", ResultTy));
+  VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
+                                          DebugLoc DL,
+                                          const VPIRMetadata &Metadata = {}) {
+    return tryInsertInstruction(new VPInstructionWithType(
+        Instruction::Load, Addr, ResultTy, {}, Metadata, DL));
   }
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
                                   std::optional<VPIRFlags> Flags = std::nullopt,
                                   const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstruction(
-        Opcode, Op, Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)),
-        Metadata, DL, "", ResultTy));
+    return tryInsertInstruction(new VPInstructionWithType(
+        Opcode, Op, ResultTy,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)), Metadata, DL));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
@@ -442,8 +442,8 @@ public:
     VPlan &Plan = getPlan();
     SmallVector<VPValue *, 2> Ops(Operands);
     Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
-    return tryInsertInstruction(new VPInstruction(VPInstruction::Intrinsic, Ops,
-                                                  {}, {}, DL, "", ResultTy));
+    return tryInsertInstruction(new VPInstructionWithType(
+        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
   }
 
   /// Create a scalar llvm.vscale call.
@@ -495,10 +495,8 @@ public:
                                                  DebugLoc DL, Instruction *UV) {
     if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
-      auto *VPI = new VPInstruction(Opcode, Operands, Flags, Metadata, DL,
-                                    UV->getName(), UV->getType());
-      VPI->setUnderlyingValue(UV);
-      return VPI;
+      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
+                                       Metadata, DL, UV->getName(), UV);
     }
     return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
                                  Flags, Metadata, DL);
@@ -893,9 +891,6 @@ class LoopVectorizationPlanner {
 
   OptimizationRemarkEmitter *ORE;
 
-  /// Lazily fetch BranchProbabilityInfo, independent of BlockFrequencyInfo.
-  std::function<const BranchProbabilityInfo &()> GetBPI;
-
   SmallVector<VPlanPtr, 4> VPlans;
 
   /// Profitable vector factors.
@@ -926,8 +921,7 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       std::unique_ptr<LoopVectorizationCostModel> CM,
       VFSelectionContext &Config, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
-      std::function<const BranchProbabilityInfo &()> GetBPI);
+      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE);
 
   ~LoopVectorizationPlanner();
 

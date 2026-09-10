@@ -258,15 +258,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   }
   case Instruction::And: {
     Constant *ShAmt;
-    // sub(0,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),0)
-    // Only applies when this is a true negation (LHS is zero).  For the
-    // general sub(y,and(lshr(x,C),1)) case the rewrite replaces one 2-insn
-    // sequence with another without reducing instruction count, and the
-    // resulting shl/ashr form prevents later target-specific combines (e.g.
-    // on PowerPC the original lshr+and maps to a single rldicl, while the
-    // shl+ashr form requires sldi+sradi).
-    if (IsTrulyNegation &&
-        match(I, m_And(m_OneUse(m_TruncOrSelf(
+    // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
+    if (match(I, m_And(m_OneUse(m_TruncOrSelf(
                            m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
                        m_One()))) {
       unsigned BW = X->getType()->getScalarSizeInBits();
