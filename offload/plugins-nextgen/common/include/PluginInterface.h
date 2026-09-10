@@ -168,9 +168,9 @@ struct AsyncInfoWrapperTy {
 
   /// Register \p Ptr as an associated allocation that is freed after
   /// finalization.
-  void freeAllocationAfterSynchronization(void *Ptr) {
+  void freeAllocationAfterSynchronization(void *Ptr, TargetAllocTy Kind) {
     std::lock_guard<std::mutex> AllocationGuard(AsyncInfoPtr->Mutex);
-    AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
+    AsyncInfoPtr->AssociatedAllocations.push_back({Ptr, Kind});
   }
 
 private:
@@ -456,11 +456,12 @@ struct KernelLaunchArgsTy {
   uint32_t UserThreadLimit[3] = {0, 0, 0};
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t StrictBlocksAndThreads
-        : 1; // The user-requested number of blocks and threads are strict.
+    uint64_t StrictBlocks : 1; // The user-requested number of blocks is strict.
+    uint64_t StrictThreads
+        : 1; // The user-requested number of threads is strict.
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
     uint64_t Unused : 60;
-  } Flags = {0, 0, 0, 0};
+  } Flags = {0, 0, 0, 0, 0};
   /// Set by the caller when replaying a previously recorded kernel launch, so
   /// the plugin can report the outcome back; null for a normal launch.
   KernelReplayOutcomeTy *ReplayOutcome = nullptr;
@@ -600,6 +601,7 @@ private:
   uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
                                  uint32_t UserNumBlocks, uint64_t LoopTripCount,
                                  uint32_t &EffectiveNumThreads,
+                                 bool IsNumThreadsStrict,
                                  bool IsNumThreadsFromUser) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
@@ -959,6 +961,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
+  virtual uint32_t getDriverId() const { return 0; }
+
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
 
@@ -981,11 +985,14 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error deinit(GenericPluginTy &Plugin);
   virtual Error deinitImpl() = 0;
 
-  /// Load the binary image into the device and return the target table.
+  /// Load the binary image into the device and return the target table. When
+  /// \p Context is null the plugin's driver-scoped default context is used.
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
-                                       StringRef TgtImage);
+                                       StringRef TgtImage,
+                                       PluginContextTy *Context);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy *Context) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);
@@ -1295,7 +1302,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
-    return nullptr;
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
   }
 
   virtual Error releaseInterop(omp_interop_val_t *Interop) {
@@ -1405,8 +1413,12 @@ private:
   /// only necessary for unhosted targets like the GPU.
   virtual bool shouldSetupRPCServer() const { return false; }
 
-  /// Pointer to the memory manager or nullptr if not available.
+  /// Pointer to the device memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
+  /// Memory managers for the host and shared allocation kinds or nullptr if not
+  /// available.
+  MemoryManagerTy *HostMemoryManager;
+  MemoryManagerTy *SharedMemoryManager;
 
   /// Per device setting of MemoryManager's Threshold
   virtual size_t getMemoryManagerSizeThreshold() { return 0; }
@@ -1442,6 +1454,20 @@ private:
 
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
+
+  /// Return the memory manager for the given allocation kind.
+  MemoryManagerTy *getMemoryManagerFor(TargetAllocTy Kind) {
+    switch (Kind) {
+    case TARGET_ALLOC_DEFAULT:
+    case TARGET_ALLOC_DEVICE:
+      return MemoryManager;
+    case TARGET_ALLOC_HOST:
+      return HostMemoryManager;
+    case TARGET_ALLOC_SHARED:
+      return SharedMemoryManager;
+    }
+    return nullptr;
+  }
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation

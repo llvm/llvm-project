@@ -16,7 +16,11 @@
 // SHADOWING: warning: system1/stdio.h included!
 
 /// Check that the diagnostic is only performed once in MSVC compatibility mode.
-// RUN: %clang_cc1 -fms-compatibility -Wshadow-header -Eonly %t/t.c 2>&1 | FileCheck %s --check-prefix=SHADOWING-MS
+/// The file found in the includer's directory is the one that ends up being
+/// used, so the candidates found in the search paths must not be reported.
+// RUN: %clang_cc1 -fms-compatibility -Wshadow-header -Eonly %t/t.c \
+// RUN: -I %t/ms_include1 -I %t/ms_include2 2>&1 | FileCheck %s \
+// RUN: --check-prefix=SHADOWING-MS --implicit-check-not="multiple candidates"
 
 // SHADOWING-MS: {{.*}} warning: multiple candidates for header 't3.h' found; directory '{{.*}}foo' chosen, ignoring others including '{{.*}}' [-Wshadow-header]
 // SHADOWING-MS-NOT: {{.*}} warning: multiple candidates for header 't3.h' found; directory '{{.*}}' chosen, ignoring others including '{{.*}}foo' [-Wshadow-header]
@@ -55,3 +59,9 @@
 
 //--- t3.h
 #warning Found t3.h.
+
+//--- ms_include1/t3.h
+#warning Found ms_include1/t3.h.
+
+//--- ms_include2/t3.h
+#warning Found ms_include2/t3.h.

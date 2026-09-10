@@ -31,7 +31,7 @@ end program
 ! CHECK-DAG: [[M3:![0-9]+]] = !DIModule(scope: !{{.*}}, name: "m3"
 ! CHECK-DAG: [[A3:![0-9]+]] = distinct !DIGlobalVariable(name: "a3"
 ! CHECK-DAG: [[B3:![0-9]+]] = distinct !DIGlobalVariable(name: "b3"
-! CHECK-DAG: [[SP:![0-9]+]] = distinct !DISubprogram(name: "TEST_ORDER"{{.*}}retainedNodes: [[NODES:![0-9]+]]
+! CHECK-DAG: [[SP:![0-9]+]] = distinct !DISubprogram(name: "test_order"{{.*}}retainedNodes: [[NODES:![0-9]+]]
 
 ! CHECK: [[NODES]] = !{[[E1:![0-9]+]], [[E2:![0-9]+]], [[E3:![0-9]+]], [[E4:![0-9]+]], [[E5:![0-9]+]]}
 ! CHECK-NEXT: [[E1]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[SP]], entity: [[A1]],

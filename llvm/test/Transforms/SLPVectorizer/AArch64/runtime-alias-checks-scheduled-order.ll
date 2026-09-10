@@ -17,7 +17,7 @@ define fastcc void @versioned_block_preserves_scheduled_order(ptr %LARc, ptr %LA
 ; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[LARC2]], [[TMP1]]
 ; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
-; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[ENTRY_RTVEC]]:
 ; CHECK-NEXT:    [[INCDEC_PTR92:%.*]] = getelementptr i8, ptr [[LARPP]], i64 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[LARC]], align 2
@@ -104,7 +104,7 @@ define void @versioned_block_check_reuses_no_body_scalars(ptr %arg, ptr nofree r
 ; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[ARG21]], [[TMP1]]
 ; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
-; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0]]
 ; CHECK:       [[ENTRY_RTVEC]]:
 ; CHECK-NEXT:    [[GEP4_1:%.*]] = getelementptr i8, ptr [[ARG]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> poison, ptr [[ARG]], i64 0
@@ -316,3 +316,6 @@ declare i16 @llvm.sadd.sat.i16(i16, i16) #0
 attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 
 uselistorder ptr @llvm.sadd.sat.i16, { 2, 1, 0 }
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.

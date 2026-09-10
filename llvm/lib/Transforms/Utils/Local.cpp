@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -407,18 +406,6 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
   return wouldInstructionBeTriviallyDead(I, TLI);
 }
 
-bool llvm::wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI) {
-  // Instructions that are "markers" and have implied meaning on code around
-  // them (without explicit uses), are not dead on unused paths.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::stacksave ||
-        II->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-        II->isLifetimeStartOrEnd())
-      return false;
-  return wouldInstructionBeTriviallyDead(I, TLI);
-}
-
 bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
                                            const TargetLibraryInfo *TLI) {
   if (I->isTerminator())
@@ -609,21 +596,13 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
   }
 }
 
-bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
-  SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(I, DPUsers);
-  for (auto *DVR : DPUsers)
-    DVR->setKillLocation();
-  return !DPUsers.empty();
-}
-
 /// areAllUsesEqual - Check whether the uses of a value are all the same.
 /// This is similar to Instruction::hasOneUse() except this will also return
 /// true when there are no uses or multiple uses that all refer to the same
 /// value.
 static bool areAllUsesEqual(Instruction *I) {
-  Value::user_iterator UI = I->user_begin();
-  Value::user_iterator UE = I->user_end();
+  Instruction::user_iterator UI = I->user_begin();
+  Instruction::user_iterator UE = I->user_end();
   if (UI == UE)
     return true;
 
@@ -1680,6 +1659,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   auto *DIExpr = DVR->getExpression();
   Value *DV = SI->getValueOperand();
 
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
+
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
   // If the alloca describes the variable itself, i.e. the expression in the
@@ -2606,7 +2588,6 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
                                        II->getCalledOperand(), Args, OpBundles);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
-  NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
 
   // If the invoke had profile metadata, try converting them for CallInst.
@@ -2871,7 +2852,7 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
         }
         if (DTU) {
           std::vector<DominatorTree::UpdateType> Updates;
-          for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+          for (const auto &I : NumPerSuccessorCases)
             if (I.second == 0)
               Updates.push_back({DominatorTree::Delete, BB, I.first});
           DTU->applyUpdates(Updates);
@@ -3352,12 +3333,7 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
   // Lib calls can be materialized by some passes, and won't be
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
-  LibFunc LF;
-  if (TLI.getLibFunc(*Call, LF)) {
-    return TLI.has(LF);
-  }
-
-  return false;
+  return TLI.has(TLI.getLibFunc(*Call));
 }
 
 void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
@@ -3916,9 +3892,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
     CallInst *CI, const TargetLibraryInfo *TLI) {
   Function *F = CI->getCalledFunction();
-  LibFunc Func;
   if (F && !F->hasLocalLinkage() && F->hasName() &&
-      TLI->getLibFunc(F->getName(), Func) && TLI->hasOptimizedCodeGen(Func) &&
+      TLI->hasOptimizedCodeGen(TLI->getLibFunc(F->getName())) &&
       !F->doesNotAccessMemory())
     CI->addFnAttr(Attribute::NoBuiltin);
 }

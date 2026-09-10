@@ -66,6 +66,13 @@ unsigned ContiguousBlobAccumulator::writeSLEB128(int64_t Val) {
 
 void ContiguousBlobAccumulator::updateDataAt(uint64_t Pos, const void *Data,
                                              size_t Size) {
-  assert(Pos >= InitialOffset && Pos + Size <= getOffset());
+  uint64_t CurrentOffset = getOffset();
+  bool IsValidRange = Pos >= InitialOffset && Pos <= CurrentOffset &&
+                      Size <= CurrentOffset - Pos;
+  if (!IsValidRange) {
+    assert(ReachedLimitErr &&
+           "update range is invalid without reaching the output size limit");
+    return;
+  }
   memcpy(&Buf[Pos - InitialOffset], Data, Size);
 }

@@ -815,9 +815,6 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
   // loop tree. Then we can optionally compute global RegPressure.
   for (MachineFunction::iterator MBB = MF->begin(), MBBEnd = MF->end();
        MBB != MBBEnd; ++MBB) {
-
-    Scheduler.startBlock(&*MBB);
-
 #ifndef NDEBUG
     if (SchedOnlyFunc.getNumOccurrences() && SchedOnlyFunc != MF->getName())
       continue;
@@ -825,6 +822,8 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         && (int)SchedOnlyBlock != MBB->getNumber())
       continue;
 #endif
+
+    Scheduler.startBlock(&*MBB);
 
     // Break the block into scheduling regions [I, RegionEnd). RegionEnd
     // points to the scheduling boundary at the bottom of the region. The DAG
@@ -1899,11 +1898,10 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
+        RegOpers.detectDeadDefs(*MI, *LIS, MRI);
       }
 
       TopRPTracker.advance(RegOpers);
@@ -1934,11 +1932,10 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
+        RegOpers.detectDeadDefs(*MI, *LIS, MRI);
       }
 
       if (BotRPTracker.getPos() != CurrentBottom)

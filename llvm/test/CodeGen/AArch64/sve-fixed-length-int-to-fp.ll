@@ -835,7 +835,6 @@ define void @ucvtf_v32i64_v32f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x double> @ucvtf_v1i64_v1f64(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v1i64_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ucvtf d0, d0
 ; CHECK-NEXT:    ret
   %res = uitofp <1 x i64> %op1 to <1 x double>
@@ -1768,7 +1767,6 @@ define void @scvtf_v32i64_v32f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x double> @scvtf_v1i64_v1f64(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v1i64_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    ret
   %res = sitofp <1 x i64> %op1 to <1 x double>
