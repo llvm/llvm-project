@@ -2957,6 +2957,54 @@ such as kernels and boot loaders, that performs pointer arithmetic over
 externally defined memory layouts rather than ordinary C or C++ objects.
 :::
 
+:::{option} -ftrivial-auto-var-init=[uninitialized, zero, pattern]
+
+Initialize automatic variables that would otherwise be left uninitialized.
+`zero` stores zeroes and `pattern` stores a repeated, target-specific byte
+pattern chosen to be likely to fault or to look obviously wrong if it is ever
+used as a pointer or a length. The default, `uninitialized`, disables the
+feature.
+
+This is a hardening measure, not a correctness feature: reading an
+uninitialized variable remains undefined behavior, and the flag only bounds the
+damage by making the value deterministic. Use `-Wuninitialized`, or a tool like
+{doc}`MemorySanitizer`, to find such reads in the first place.
+
+Individual variables can opt out with `__attribute__((uninitialized))`, and
+whole functions with `__attribute__((no_trivial_auto_var_init))`.
+`-ftrivial-auto-var-init-max-size=` skips variables above a given size, and
+`-ftrivial-auto-var-init-stop-after=` stops after a given number of variables;
+both exist to bound code size while triaging.
+
+The initialization is normally emitted where the variable is declared. A `goto`
+or a `switch` can jump over a declaration, in which case that point is never
+reached:
+
+```c
+switch (c) {
+  int x;         // jumped over by every case label
+case 1:
+  use(&x);       // x would be uninitialized without special handling
+}
+```
+
+Clang emits the initialization at each jump that bypasses the declaration,
+since such a jump re-enters the variable's scope. A variable bypassed inside a
+loop is therefore re-initialized on every iteration, and a jump whose source and
+destination are both inside the variable's scope does not re-initialize it,
+because that jump never ends the variable's lifetime.
+
+In a function containing a computed `goto` (`goto *ptr`), the jumps that bypass
+a given declaration cannot be identified, so every variable in the function is
+instead initialized once, in the function's entry block.
+
+Note that in C this deliberately does not implement C 6.2.4p6, under which an
+object's lifetime begins at entry into the block containing its declaration
+rather than at the declaration itself. Modelling that would mean initializing
+at block entry, which is more expensive and no more useful for the jumps this
+feature exists to guard against. Clang applies the C++ rule in both languages.
+:::
+
 (strict_aliasing)=
 (strict-aliasing)=
 

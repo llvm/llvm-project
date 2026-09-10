@@ -273,19 +273,11 @@ features cannot lower the translation-unit ABI level;
   leaves suffixed data symbols unchanged. The option remains opt-in, and
   variables with explicit assembly labels keep their original names.
 
-- `-ftrivial-auto-var-init=zero` and `-ftrivial-auto-var-init=pattern` now
-  initialize variables whose declaration is bypassed by a `goto` or `switch`,
-  which were previously left uninitialized. A bypassing jump re-enters the
-  variable's scope, so the variable is reinitialized at the jump. In a function
-  containing a computed `goto` the jumps that bypass a declaration cannot be
-  identified, so such variables are instead initialized once, in the function's
-  entry block.
-
-  Note that in C this deliberately does not follow C 6.2.4p6, under which an
-  object's lifetime begins at entry into the block it is declared in rather than
-  at its declaration. Modelling that would mean initializing at block entry,
-  which is both more expensive and, for the jumps this feature exists to
-  protect, no more useful. Clang uses the C++ rule in both languages.
+- `-ftrivial-auto-var-init=` now initializes variables whose declaration is
+  bypassed by a `goto` or `switch`, which were previously left uninitialized.
+  The initialization is emitted at each bypassing jump. See the
+  `-ftrivial-auto-var-init=` entry in the User's Manual for the details,
+  including where C deliberately departs from C 6.2.4p6.
 
 ### Removed Compiler Flags
 
