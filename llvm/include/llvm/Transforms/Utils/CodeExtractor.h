@@ -261,15 +261,14 @@ public:
   void excludeArgFromAggregate(Value *Arg);
 
 protected:
-  /// Allocate an intermediate variable at the specified point. \p DL is a debug
-  /// location for anything an override emits that needs one.
+  /// Allocate an intermediate variable at the specified point.
   virtual Instruction *allocateVar(IRBuilder<>::InsertPoint AllocaIP,
                                    DebugLoc DL, Type *VarType,
                                    const Twine &Name = Twine(""),
                                    AddrSpaceCastInst **CastedAlloc = nullptr);
 
   /// Deallocate a previously-allocated intermediate variable at the specified
-  /// point. \p DL is as for allocateVar().
+  /// point.
   virtual Instruction *deallocateVar(IRBuilder<>::InsertPoint DeallocIP,
                                      DebugLoc DL, Value *Var, Type *VarType);
 

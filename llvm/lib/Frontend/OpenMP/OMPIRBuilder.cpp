@@ -2182,8 +2182,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
         for (BasicBlock *DeallocBlock : OuterDeallocBlocks) {
           assert(DeallocBlock->getParent() ==
                      OuterAllocIP.getBlock()->getParent() &&
-                 "Dealloc block is not in the function holding the allocation, "
-                 "so its debug location cannot be reused there");
+                 "Dealloc block must be in the allocation's function to reuse "
+                 "its debug location");
           createOMPFreeShared(
               {InsertPointTy(DeallocBlock, DeallocBlock->getFirstInsertionPt()),
                Builder.getCurrentDebugLocation()},
