@@ -1398,7 +1398,7 @@ void LoopVersioningPass::runOnOperation() {
     auto [rank, typeSize] =
         getRankAndElementSize(kindMap, *dl, arg, /*isArgument=*/true);
     if (rank != 0 && typeSize != 0)
-      argsOfInterest.push_back({arg, typeSize, rank, {}});
+      argsOfInterest.push_back({arg, typeSize, rank, {}, {}});
   }
 
   if (argsOfInterest.empty()) {
