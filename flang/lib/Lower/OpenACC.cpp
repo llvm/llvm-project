@@ -1722,6 +1722,31 @@ loopWillBeIndependent(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+// Attach an implicit firstprivate on this combined loop in addition to the
+// compute clause (firstprivate is not a loop clause in the spec) when:
+//  1. Combined `parallel loop` — the region is that one loop. Not `serial
+//     loop` (seq by default), `kernels loop`, or a standalone `acc loop`.
+//  2. Independent (the `parallel loop` default). Not `seq`/`auto`, which
+//     must keep a carried firstprivate.
+//  3. Scalar. Nested loops reuse this copy via remap; they get no clause.
+static bool shouldAttachFirstprivateOnCombinedLoop(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::AccClauseList &accClauseList,
+    std::optional<mlir::acc::CombinedConstructsType> combinedConstructs,
+    const Fortran::parser::AccObject &accObject) {
+  if (!combinedConstructs ||
+      *combinedConstructs != mlir::acc::CombinedConstructsType::ParallelLoop)
+    return false;
+  if (!loopWillBeIndependent(converter, accClauseList,
+                             llvm::acc::ACCD_parallel_loop))
+    return false;
+  mlir::Value var =
+      converter.getSymbolAddress(getSymbolFromAccObject(accObject));
+  return var &&
+         mlir::acc::bitEnumContainsAny(mlir::acc::getTypeCategory(var),
+                                       mlir::acc::VariableTypeCategory::scalar);
+}
+
 // Helper to visit Bounds of DO LOOP nest.
 //
 // When `markInnerCollapsed` is true (the default), inner DOs that are absorbed
@@ -2209,6 +2234,7 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
                const Fortran::parser::DoConstruct &outerDoConstruct,
                Fortran::lower::pft::Evaluation &eval,
                llvm::SmallVector<mlir::Value> &privateOperands,
+               llvm::SmallVector<mlir::Value> &firstprivateOperands,
                AccDataMap &dataMap,
                llvm::SmallVector<mlir::Value> &gangOperands,
                llvm::SmallVector<mlir::Value> &workerNumOperands,
@@ -2227,7 +2253,6 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<bool> inclusiveBounds;
   llvm::SmallVector<mlir::Location> locs;
   llvm::SmallVector<mlir::Value> lowerbounds, upperbounds, steps;
-  llvm::SmallVector<mlir::Value> firstprivateOperands;
   llvm::SmallVector<
       std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
       localSymPairs;
@@ -2369,8 +2394,8 @@ static mlir::acc::LoopOp createLoopOp(
         std::nullopt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   llvm::SmallVector<mlir::Value> tileOperands, privateOperands,
-      reductionOperands, cacheOperands, vectorOperands, workerNumOperands,
-      gangOperands;
+      firstprivateOperands, reductionOperands, cacheOperands, vectorOperands,
+      workerNumOperands, gangOperands;
   llvm::SmallVector<int32_t> tileOperandsSegments, gangOperandsSegments;
   llvm::SmallVector<int64_t> collapseValues;
 
@@ -2499,6 +2524,24 @@ static mlir::acc::LoopOp createLoopOp(
           /*structured=*/true, /*implicit=*/false,
           /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
           /*setDeclareAttr=*/false, &dataMap);
+    } else if (const auto *firstprivateClause =
+                   std::get_if<Fortran::parser::AccClause::Firstprivate>(
+                       &clause.u)) {
+      // Duplicate scalar firstprivate onto this combined independent loop.
+      // The compute construct already has the user-facing firstprivate (host
+      // seed). After that remap, getSymbolAddress is the compute copy, so the
+      // loop clause's varPtr chains from it. implicit=true: firstprivate is
+      // not a loop clause in the spec.
+      genDataOperandOperations<mlir::acc::FirstprivateOp>(
+          firstprivateClause->v, converter, semanticsContext, stmtCtx,
+          firstprivateOperands, mlir::acc::DataClause::acc_firstprivate,
+          /*structured=*/true, /*implicit=*/true,
+          /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
+          /*setDeclareAttr=*/false, &dataMap,
+          /*filter=*/[&](const Fortran::parser::AccObject &obj) {
+            return shouldAttachFirstprivateOnCombinedLoop(
+                converter, accClauseList, combinedConstructs, obj);
+          });
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
@@ -2572,9 +2615,10 @@ static mlir::acc::LoopOp createLoopOp(
 
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
-      eval, privateOperands, dataMap, gangOperands, workerNumOperands,
-      vectorOperands, tileOperands, cacheOperands, reductionOperands, retTy,
-      yieldValue, loopsToProcess, /*hasDirective=*/true);
+      eval, privateOperands, firstprivateOperands, dataMap, gangOperands,
+      workerNumOperands, vectorOperands, tileOperands, cacheOperands,
+      reductionOperands, retTy, yieldValue, loopsToProcess,
+      /*hasDirective=*/true);
 
   if (!gangDeviceTypes.empty())
     loopOp.setGangAttr(builder.getArrayAttr(gangDeviceTypes));
@@ -5555,9 +5599,9 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
 
   // Prepare empty operand vectors since there are no associated `acc loop`
   // clauses with the Fortran do loops being handled here.
-  llvm::SmallVector<mlir::Value> privateOperands, gangOperands,
-      workerNumOperands, vectorOperands, tileOperands, cacheOperands,
-      reductionOperands;
+  llvm::SmallVector<mlir::Value> privateOperands, firstprivateOperands,
+      gangOperands, workerNumOperands, vectorOperands, tileOperands,
+      cacheOperands, reductionOperands;
   llvm::SmallVector<mlir::Type> retTy;
   AccDataMap dataMap;
   mlir::Value yieldValue;
@@ -5568,9 +5612,9 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   Fortran::lower::StatementContext stmtCtx;
   auto loopOp = buildACCLoopOp(
       converter, converter.getCurrentLocation(), semanticsContext, stmtCtx,
-      doConstruct, eval, privateOperands, dataMap, gangOperands,
-      workerNumOperands, vectorOperands, tileOperands, cacheOperands,
-      reductionOperands, retTy, yieldValue, loopsToProcess,
+      doConstruct, eval, privateOperands, firstprivateOperands, dataMap,
+      gangOperands, workerNumOperands, vectorOperands, tileOperands,
+      cacheOperands, reductionOperands, retTy, yieldValue, loopsToProcess,
       /*hasDirective=*/false);
 
   // Normal do loops which are not annotated with `acc loop` should be

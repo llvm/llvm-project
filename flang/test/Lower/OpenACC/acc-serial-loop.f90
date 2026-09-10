@@ -601,3 +601,22 @@ subroutine acc_serial_loop
 ! CHECK:      acc.copyout accPtr(%[[COPYINREDI]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_reduction) implicit(true) name("reduction_i")
 
 end subroutine acc_serial_loop
+
+! serial loop defaults to seq, so scalar firstprivate stays on the compute
+! construct only.
+subroutine acc_serial_loop_firstprivate_scalar
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc serial loop firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_scalar
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop combined(serial)
