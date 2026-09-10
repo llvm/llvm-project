@@ -30,6 +30,11 @@ struct VPCostContext;
 void collectEphemeralRecipesForVPlan(VPlan &Plan,
                                      DenseSet<VPRecipeBase *> &EphRecipes);
 
+/// Returns true if the memory accesses in outer loop plain \p Plan can be
+/// vectorized.
+bool proveOuterLoopMemorySafety(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                AAResults &AA, const Loop *OuterLoop);
+
 /// A struct that represents some properties of the register usage
 /// of a loop.
 struct VPRegisterUsage {

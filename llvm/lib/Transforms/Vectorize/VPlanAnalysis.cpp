@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanAnalysis.h"
+#include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 using namespace llvm;
@@ -335,4 +338,82 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
   }
 
   return RUs;
+}
+
+//===----------------------------------------------------------------------===//
+// Outer-loop memory safety analysis.
+//===----------------------------------------------------------------------===//
+
+/// Returns the live-in IR value \p Ptr is based on, looking through GEPs, or
+/// nullptr if there is none.
+static const Value *getBaseObject(VPValue *Ptr) {
+  while (auto *VPI = dyn_cast<VPInstruction>(Ptr)) {
+    if (VPI->getOpcode() != Instruction::GetElementPtr)
+      break;
+    Ptr = VPI->getOperand(0);
+  }
+  auto *IRV = dyn_cast<VPIRValue>(Ptr);
+  return IRV ? IRV->getValue() : nullptr;
+}
+
+/// Returns true if \p ObjA and \p ObjB are known and \p AA proves they don't
+/// alias.
+static bool provablyDistinctObjects(AAResults &AA, const Value *ObjA,
+                                    const Value *ObjB) {
+  return ObjA && ObjB && AA.isNoAlias(ObjA, ObjB);
+}
+
+/// Returns true if a store of \p StoredTy to \p Addr writes different locations
+/// on each iteration of \p OuterLoop.
+static bool writesDisjointLocationsPerIteration(VPValue *Addr, Type *StoredTy,
+                                                const DataLayout &DL,
+                                                PredicatedScalarEvolution &PSE,
+                                                const Loop *OuterLoop) {
+  if (!vputils::getGEPFlagsForPtr(Addr).isInBounds())
+    return false;
+
+  if (hasIrregularType(StoredTy, DL))
+    return false;
+
+  // Stride != 0 ensures no write-after-write.
+  std::optional<int64_t> Stride =
+      vputils::getConstantStride(Addr, StoredTy, PSE, OuterLoop);
+  return Stride && *Stride != 0;
+}
+
+bool llvm::proveOuterLoopMemorySafety(VPlan &Plan,
+                                      PredicatedScalarEvolution &PSE,
+                                      AAResults &AA, const Loop *OuterLoop) {
+  SmallVector<const Value *> LoadObjects;
+  SmallVector<const Value *> StoreObjects;
+  VPBasicBlock *Header = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
+  for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(Header)) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (!R.mayReadOrWriteMemory())
+        continue;
+      VPValue *Addr, *StoredVal;
+      if (match(&R, m_VPInstruction<Instruction::Load>(m_VPValue(Addr)))) {
+        LoadObjects.push_back(getBaseObject(Addr));
+        continue;
+      }
+      // Bail out on any other memory accesses or write-after-write conflict in
+      // the other loop.
+      if (!match(&R, m_VPInstruction<Instruction::Store>(m_VPValue(StoredVal),
+                                                         m_VPValue(Addr))) ||
+          !writesDisjointLocationsPerIteration(Addr, StoredVal->getScalarType(),
+                                               Plan.getDataLayout(), PSE,
+                                               OuterLoop))
+        return false;
+      StoreObjects.push_back(getBaseObject(Addr));
+    }
+  }
+
+  // Stores must access objects not accessed by any other load or store in the
+  // nest.
+  for (auto [I, StoreObj] : enumerate(StoreObjects))
+    for (const Value *Obj : concat<const Value *const>(
+             ArrayRef(StoreObjects).drop_front(I + 1), LoadObjects))
+      if (!provablyDistinctObjects(AA, StoreObj, Obj))
+        return false;
+  return true;
 }
