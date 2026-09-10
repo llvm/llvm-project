@@ -120,6 +120,9 @@ public:
   bool doFinalization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  /// Create AMDGPU-specific DwarfDebug handler.
+  DwarfDebug *createDwarfDebug() override;
+
   /// Wrapper for MCInstLowering.lowerOperand() for the tblgen'erated
   /// pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
