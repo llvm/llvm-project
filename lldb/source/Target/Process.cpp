@@ -133,6 +133,21 @@ static constexpr OptionEnumValueElement g_follow_fork_mode_values[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_fork_debug_mode_values[] = {
+    {
+        eForkDebugDetach,
+        "detach",
+        "Detach the process that follow-fork-mode does not continue "
+        "tracing.",
+    },
+    {
+        eForkDebugCreateTarget,
+        "create-target",
+        "Create a new target for the process that follow-fork-mode does "
+        "not continue tracing, instead of detaching it.",
+    },
+};
+
 static constexpr unsigned g_string_read_width = 256;
 
 #define LLDB_PROPERTIES_process
@@ -412,6 +427,13 @@ FollowForkMode ProcessProperties::GetFollowForkMode() const {
   const uint32_t idx = ePropertyFollowForkMode;
   return GetPropertyAtIndexAs<FollowForkMode>(
       idx, static_cast<FollowForkMode>(
+               g_process_properties[idx].default_uint_value));
+}
+
+ForkDebugMode ProcessProperties::GetForkDebugMode() const {
+  const uint32_t idx = ePropertyForkDebugMode;
+  return GetPropertyAtIndexAs<ForkDebugMode>(
+      idx, static_cast<ForkDebugMode>(
                g_process_properties[idx].default_uint_value));
 }
 
