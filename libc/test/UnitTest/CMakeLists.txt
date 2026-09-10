@@ -174,21 +174,6 @@ add_unittest_framework_library(
     libc.src.__support.libc_errno
 )
 
-add_unittest_framework_library(
-  CoverageTestUtils
-  SRCS
-    CoverageTestUtils.cpp
-  DEPENDS
-    libc.hdr.fcntl_macros
-    libc.hdr.stdint_proxy
-    libc.hdr.types.FILE
-    libc.hdr.types.mode_t
-    libc.hdr.types.off_t
-    libc.hdr.types.pid_t
-    libc.hdr.types.struct_utsname
-    libc.src.__support.libc_errno
-)
-
 add_header_library(
   string_utils
   HDRS

@@ -825,7 +825,7 @@ function(add_libc_hermetic test_name)
   endif()
 
   if(LIBC_ENABLE_COVERAGE)
-    list(APPEND fq_deps_list
+     set(coverage_deps
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
       libc.src.stdio.feof
@@ -859,10 +859,12 @@ function(add_libc_hermetic test_name)
       libc.src.sys.prctl.prctl
       libc.src.sys.stat.mkdir
       libc.src.sys.utsname.uname
+      libc.src.unistd.fork
       libc.src.unistd.ftruncate
       libc.src.unistd.getpagesize
       libc.src.unistd.getpid
     )
+    list(APPEND fq_deps_list ${coverage_deps})
   endif()
 
   list(REMOVE_DUPLICATES fq_deps_list)
@@ -880,6 +882,18 @@ function(add_libc_hermetic test_name)
     return()
   endif()
   list(REMOVE_DUPLICATES link_object_files)
+
+  if(LIBC_ENABLE_COVERAGE)
+    foreach(cov_dep IN LISTS coverage_deps)
+      get_target_property(is_alias ${cov_dep} "IS_ALIAS")
+      if(is_alias)
+        get_target_property(real_target ${cov_dep} "DEPS")
+      else()
+        set(real_target ${cov_dep})
+      endif()
+      string(REPLACE "${real_target}.__internal__" "${real_target}" link_object_files "${link_object_files}")
+    endforeach()
+  endif()
 
   # Make a library of all deps
   add_library(
@@ -977,7 +991,7 @@ function(add_libc_hermetic test_name)
   if(LIBC_ENABLE_COVERAGE)
     set(coverage_link_libs
       "${LIBC_CLANG_PROFILE_LIB}"
-      libc.test.UnitTest.CoverageTestUtils
+       ${fq_target_name}.__libc__
     )
   endif()
 
