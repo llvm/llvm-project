@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -1563,6 +1564,34 @@ DebugLoc getDebugLocFromPHI(PHINode &PN) {
   if (DebugLoc DL = PN.getDebugLoc())
     return DL;
   return DebugLoc::getUnknown();
+}
+
+std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
+  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
+    return cast<FixedVectorType>(IE->getType())->getNumElements();
+
+  unsigned AggregateSize = 1;
+  auto *IV = cast<InsertValueInst>(InsertInst);
+  Type *CurrentType = IV->getType();
+  do {
+    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      for (auto *Elt : ST->elements())
+        if (Elt != ST->getElementType(0)) // check homogeneity
+          return std::nullopt;
+      AggregateSize *= ST->getNumElements();
+      CurrentType = ST->getElementType(0);
+    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      AggregateSize *= AT->getNumElements();
+      CurrentType = AT->getElementType();
+    } else if (auto *VT = dyn_cast<FixedVectorType>(CurrentType)) {
+      AggregateSize *= VT->getNumElements();
+      return AggregateSize;
+    } else if (CurrentType->isSingleValueType()) {
+      return AggregateSize;
+    } else {
+      return std::nullopt;
+    }
+  } while (true);
 }
 
 } // namespace llvm::slpvectorizer
