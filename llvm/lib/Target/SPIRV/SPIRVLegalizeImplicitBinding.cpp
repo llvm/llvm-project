@@ -101,7 +101,7 @@ void SPIRVLegalizeImplicitBindingImpl::collectBindingInfo(Module &M) {
     }
   };
 
-  for (Function &F : M.functions()) {
+  for (Function &F : M) {
     if (!F.isDeclaration())
       continue;
 
@@ -144,6 +144,9 @@ static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
                                          uint32_t DescSet, uint32_t Binding,
                                          Value *IndexOp, Value *RangeOp,
                                          Value *Name) {
+  assert(CI->getIntrinsicID() ==
+             Intrinsic::spv_resource_handlefromimplicitbinding &&
+         "unexpected implicit binding intrinsic");
   IRBuilder<> Builder(CI);
   Value *DescSetOp = Builder.getInt32(DescSet);
   Value *BindingOp = Builder.getInt32(Binding);
@@ -159,17 +162,16 @@ static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
 // Replace the implicit counter binding call with a new call using explicit
 // binding.
 static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
-                                                Value *MainHandle,
                                                 uint32_t DescSet,
                                                 uint32_t Binding) {
-
   assert(CI->getIntrinsicID() ==
              Intrinsic::spv_resource_counterhandlefromimplicitbinding &&
          "unexpected implicit binding intrinsic");
   IRBuilder<> Builder(CI);
   Value *DescSetOp = Builder.getInt32(DescSet);
   Value *BindingOp = Builder.getInt32(Binding);
-  Type *OverloadTys[] = {CI->getType(), CI->getArgOperand(0)->getType()};
+  Value *MainHandle = CI->getArgOperand(0);
+  Type *OverloadTys[] = {CI->getType(), MainHandle->getType()};
   Function *NewFunc = Intrinsic::getOrInsertDeclaration(
       &M, Intrinsic::spv_resource_counterhandlefrombinding, OverloadTys);
   CallInst *NewCI =
@@ -204,11 +206,11 @@ bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
     }
   }
 
+  if (IBCalls.empty())
+    return false;
+
   // Sort the collected calls by their order ID.
-  llvm::sort(IBCalls, [](const std::pair<uint32_t, CallInst *> &A,
-                         const std::pair<uint32_t, CallInst *> &B) {
-    return A.first < B.first;
-  });
+  llvm::sort(IBCalls, llvm::less_first());
 
   // Assign bindings based on the order ID. Same order ID gets the same binding.
   // Also make sure that calls with the same order ID have the same descriptor
@@ -235,8 +237,7 @@ bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
                                    CI->getArgOperand(2), CI->getArgOperand(3),
                                    CI->getArgOperand(4));
     else
-      replaceWithCounterHandleFromBinding(M, CI, CI->getArgOperand(0), DescSet,
-                                          Binding);
+      replaceWithCounterHandleFromBinding(M, CI, DescSet, Binding);
     Changed = true;
 
     LastOrderId = OrderId;
