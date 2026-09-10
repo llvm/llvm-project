@@ -861,6 +861,26 @@ TEST(CompletionTest, Kinds) {
       Contains(AllOf(named("Red"), kind(CompletionItemKind::EnumMember))));
 }
 
+TEST(CompletionTest, ModulesKeywords) {
+  // Bare 'module' and 'import' keywords are offered alongside the snippet
+  // forms ('module;', 'module name;', 'import name;').
+  Annotations ModuleTest("mod^");
+  auto TU = TestTU::withCode(ModuleTest.code());
+  TU.ExtraArgs = {"-std=c++20"};
+  auto Results = completions(TU, ModuleTest.point());
+  EXPECT_THAT(Results.Completions,
+              AllOf(has("module", CompletionItemKind::Keyword),
+                    has("module", CompletionItemKind::Snippet)));
+
+  Annotations ImportTest("imp^");
+  TU = TestTU::withCode(ImportTest.code());
+  TU.ExtraArgs = {"-std=c++20"};
+  Results = completions(TU, ImportTest.point());
+  EXPECT_THAT(Results.Completions,
+              AllOf(has("import", CompletionItemKind::Keyword),
+                    has("import", CompletionItemKind::Snippet)));
+}
+
 TEST(CompletionTest, NoDuplicates) {
   auto Results = completions(
       R"cpp(
