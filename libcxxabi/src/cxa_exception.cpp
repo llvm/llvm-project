@@ -200,7 +200,7 @@ void *__cxa_allocate_exception(size_t thrown_size) throw() {
 
 
 //  Free a __cxa_exception object allocated with __cxa_allocate_exception.
-__attribute__((noinline));
+__attribute__((noinline))
 void __cxa_free_exception(void *thrown_object) throw() {
     // Compute the size of the padding before the header.
     size_t header_offset = get_cxa_exception_offset();
