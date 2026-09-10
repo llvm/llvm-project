@@ -4193,6 +4193,21 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
     return ExprError();
 
+  // check if the builtin has CustomTypeChecking or not, if it dose we get the
+  // already parsed type string of the builtin and compare that with the
+  // caller's passed args and give error for too much args
+  if (Context.BuiltinInfo.hasCustomTypechecking(BuiltinID)) {
+    ASTContext::GetBuiltinTypeError Error;
+    QualType BuiltinFTy = Context.GetBuiltinType(BuiltinID, Error);
+    if (!BuiltinFTy.isNull() && !Error) {
+      if (const FunctionProtoType *FPT =
+              dyn_cast<FunctionProtoType>(BuiltinFTy.getTypePtr()))
+        if (!FPT->isVariadic() &&
+            checkArgCountAtMost(TheCall, FPT->getNumParams()))
+          return ExprError();
+    }
+  }
+
   // Since the target specific builtins for each arch overlap, only check those
   // of the arch we are compiling for.
   if (Context.BuiltinInfo.isTSBuiltin(BuiltinID)) {
