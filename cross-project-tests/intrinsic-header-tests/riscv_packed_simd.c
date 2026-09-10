@@ -2343,6 +2343,45 @@ uint32x2_t test_pwsubu_u32x2(uint16x2_t rs1, uint16x2_t rs2) {
   return __riscv_pwsubu_u32x2(rs1, rs2);
 }
 
+// CHECK-LABEL: test_pwadda_i16x4:
+// RV32:        pwadda.b
+// RV64:        zip8p
+// RV64:        psext.h.b
+// RV64:        padd.h
+// RV64:        psrai.h
+// RV64:        padd.h
+int16x4_t test_pwadda_i16x4(int16x4_t rd, int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_pwadda_i16x4(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwadda_i32x2:
+// RV32:        pwadda.h
+// RV64:        zip16p
+// RV64:        pli.h
+// RV64:        pm2adda.h
+int32x2_t test_pwadda_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pwadda_i32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwaddau_u16x4:
+// RV32:        pwaddau.b
+// RV64:        pwcvtu.wb
+// RV64:        padd.h
+// RV64:        pwcvtu.wb
+// RV64:        padd.h
+uint16x4_t test_pwaddau_u16x4(uint16x4_t rd, uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pwaddau_u16x4(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwaddau_u32x2:
+// RV32:        pwaddau.h
+// RV64:        zip16p
+// RV64:        pli.h
+// RV64:        pm2addau.h
+uint32x2_t test_pwaddau_u32x2(uint32x2_t rd, uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pwaddau_u32x2(rd, rs1, rs2);
+}
+
 // CHECK-LABEL: test_pwcvth_i16x4:
 // RV32:        pwcvth.b
 // RV64:        pwcvth.wb
