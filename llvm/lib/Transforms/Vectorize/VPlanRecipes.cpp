@@ -3139,7 +3139,7 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     // If the step is 1.0, the multiply is an exact identity and gets folded
     // away, independent of fast-math flags.
     const ConstantFP *StepC = getConstantFP(getStepValue());
-    bool NeedsMul = !StepC || !StepC->isExactlyValue(1.0);
+    bool NeedsMul = !StepC || !StepC->isOne();
 
     // "fadd -0.0, X" folds to X unconditionally, but "fadd 0.0, X" only folds
     // to X without nsz if X can be proven to never be -0.0, which we cannot, as
