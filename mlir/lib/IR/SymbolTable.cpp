@@ -295,7 +295,7 @@ StringAttr SymbolTable::getSymbolName(Operation *symbol) {
 /// Sets the name of the given symbol operation.
 void SymbolTable::setSymbolName(Operation *symbol, StringAttr name) {
   auto symbolOp = cast<SymbolOpInterface>(symbol);
-  symbolOp.setName(name);
+  symbolOp.setSymbolName(name);
 }
 
 /// Returns the visibility of the given symbol operation.

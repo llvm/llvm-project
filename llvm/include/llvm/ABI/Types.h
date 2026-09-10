@@ -237,14 +237,15 @@ struct FieldInfo {
   uint64_t BitFieldWidth;
   bool IsBitField;
   bool IsUnnamedBitfield;
-  bool IsVirtualBase;
+  bool HasNoUniqueAddress;
 
   FieldInfo(const Type *FieldType, uint64_t OffsetInBits = 0,
             bool IsBitField = false, uint64_t BitFieldWidth = 0,
-            bool IsUnnamedBitField = false, bool IsVirtualBase = false)
+            bool IsUnnamedBitField = false, bool HasNoUniqueAddress = false)
       : FieldType(FieldType), OffsetInBits(OffsetInBits),
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
-        IsUnnamedBitfield(IsUnnamedBitField), IsVirtualBase(IsVirtualBase) {}
+        IsUnnamedBitfield(IsUnnamedBitField),
+        HasNoUniqueAddress(HasNoUniqueAddress) {}
 
   LLVM_ABI bool isEmpty() const;
 };
@@ -305,16 +306,7 @@ public:
     return static_cast<unsigned>(Flags & RecordFlags::IsTransparent) != 0;
   }
   ArrayRef<FieldInfo> getFields() const { return Fields; }
-
-  /// Returns the direct base classes, both virtual and non-virtual, mirroring
-  /// clang::CXXRecordDecl::bases(). A virtual base is marked with
-  /// FieldInfo::IsVirtualBase, and its offset is only meaningful when this
-  /// record is the most-derived object.
   ArrayRef<FieldInfo> getBaseClasses() const { return BaseClasses; }
-
-  /// Returns the virtual base classes, both direct and indirect, mirroring
-  /// clang::CXXRecordDecl::vbases(). Direct virtual bases therefore appear
-  /// both here and in getBaseClasses().
   ArrayRef<FieldInfo> getVirtualBaseClasses() const {
     return VirtualBaseClasses;
   }
@@ -419,10 +411,9 @@ public:
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
 
     for (size_t I = 0, E = Fields.size(); I != E; ++I) {
-      const FieldInfo &Field = Fields[I];
-      new (&FieldArray[I])
-          FieldInfo(Field.FieldType, 0, Field.IsBitField, Field.BitFieldWidth,
-                    Field.IsUnnamedBitfield);
+      FieldInfo Field = Fields[I];
+      Field.OffsetInBits = 0;
+      new (&FieldArray[I]) FieldInfo(Field);
     }
 
     ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());

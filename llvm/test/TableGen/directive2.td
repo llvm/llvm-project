@@ -40,6 +40,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
   let isDefault = 1;
   let association = AS_Block;
   let category = CA_Declarative;
+  let pureSince = 0x00DEEA;
 }
 
 // CHECK:       #ifndef LLVM_Tdl_INC
@@ -157,8 +158,10 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr unsigned getDirectivePureSince(Directive Dir) {
 // CHECK-NEXT:    switch (Dir) {
+// CHECK-NEXT:    case TDLD_dira:
+// CHECK-NEXT:      return unsigned(57066);
 // CHECK-NEXT:    default:
-// CHECK-NEXT:      return unsigned(0x7FFFFFFF);
+// CHECK-NEXT:      return unsigned(2147483647);
 // CHECK-NEXT:    } // switch (Dir)
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
