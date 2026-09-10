@@ -19,19 +19,11 @@ define void @test0() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    tbz w19, #0, .LBB0_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    tbz w19, #0, .LBB0_6
-; CHECK-NEXT:  // %bb.5:
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:  .LBB0_6:
-; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    tbz w19, #0, .LBB0_8
-; CHECK-NEXT:  // %bb.7:
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:  .LBB0_8:
 ; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
