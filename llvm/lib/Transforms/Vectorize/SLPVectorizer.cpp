@@ -14451,7 +14451,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       return TTI::TCC_Free;
     auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
     InstructionCost GatherCost = 0;
-    SmallVector<Value *> Gathers(VL);
     if (!Root && isSplat(VL)) {
       // Found the broadcasting of the single scalar, calculate the cost as
       // the broadcast.
@@ -14486,11 +14485,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                          /*Index=*/0, /*SubTp=*/nullptr,
                                          /*Args=*/*It);
     }
-    return GatherCost +
-           (all_of(Gathers, IsaPred<UndefValue>)
-                ? TTI::TCC_Free
-                : R.getGatherCost(Gathers, !Root && VL.equals(Gathers),
-                                  ScalarTy));
+    return GatherCost + (all_of(VL, IsaPred<UndefValue>)
+                             ? TTI::TCC_Free
+                             : R.getGatherCost(VL, !Root, ScalarTy));
   };
 
   /// Compute the cost of creating a vector containing the extracted values from
