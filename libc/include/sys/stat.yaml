@@ -63,6 +63,10 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: struct stat *__restrict
+  - name: umask
+    return_type: mode_t
+    arguments:
+      - type: mode_t
   - name: utimensat
     return_type: int
     arguments:

@@ -386,6 +386,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
 
     # sys/statfs.h entrypoints
