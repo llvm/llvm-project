@@ -1397,6 +1397,16 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static APValue::LValueBase getLValueBase(const Pointer &Ptr) {
+  if (Ptr.isBlockPointer()) {
+    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
+      return VD;
+  }
+  if (const auto *E = Ptr.getRootExpr())
+    return E;
+  return APValue::LValueBase();
+}
+
 /// __builtin_assume_aligned(Ptr, Alignment[, ExtraOffset])
 static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
                                            const InterpFrame *Frame,
@@ -1421,11 +1431,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
 
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer()) {
-    CharUnits BaseAlignment;
-    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
-      BaseAlignment = ASTCtx.getDeclAlign(VD);
-    else if (const auto *E = Ptr.getRootExpr())
-      BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
+    CharUnits BaseAlignment = getBaseAlignment(ASTCtx, getLValueBase(Ptr));
 
     if (BaseAlignment < Align) {
       S.CCEDiag(Call->getArg(0),
@@ -2103,6 +2109,81 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 /// sizeof(T) == 1.
 static bool isOneByteCharacterType(QualType T) {
   return T->isCharType() || T->isChar8Type();
+}
+
+static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const CallExpr *Call, bool IsBigEndian,
+                                  bool IsAligned) {
+  Pointer Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Read;
+    return false;
+  }
+
+  if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
+    return false;
+
+  if (IsAligned) {
+    CharUnits RequiredAlign =
+        S.getASTContext().getTypeAlignInChars(Call->getType());
+    CharUnits BaseAlignment =
+        getBaseAlignment(S.getASTContext(), getLValueBase(Ptr));
+    CharUnits PtrOffset = Ptr.toAPValue(S.getASTContext()).getLValueOffset();
+    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(PtrOffset);
+    if (PtrAlign < RequiredAlign) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_load8_unaligned)
+          << S.getASTContext().BuiltinInfo.getQuotedName(
+                 Call->getBuiltinCallee())
+          << RequiredAlign.getQuantity() << PtrAlign.getQuantity();
+      return false;
+    }
+  }
+
+  // A string pointer has no Descriptor; treat it as an array of its
+  // character type.
+  bool IsArray = Ptr.isStringPointer() || Ptr.getFieldDesc()->isArray();
+  QualType ElemTy = getElemType(Ptr);
+
+  if (IsArray)
+    Ptr = Ptr.expand();
+
+  uint64_t BaseIdx = Ptr.getIndex();
+  uint64_t ArraySize = Ptr.getNumElems();
+  uint64_t RemainingElems = ArraySize - BaseIdx;
+
+  unsigned ByteWidth = S.getASTContext().getTypeSize(Call->getType()) / 8;
+  if (ByteWidth > RemainingElems) {
+    uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, uint64_t(ByteWidth - 1));
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+        << LastIndex << /*array*/ !IsArray << ArraySize;
+    return false;
+  }
+
+  PrimType ElemT = *S.getContext().classify(ElemTy);
+  unsigned BitWidth = ByteWidth * 8;
+  APInt Result = APInt::getZero(BitWidth);
+
+  // C2y §7.18.21: result = sum(b_index * 2^(8*index)) for index in [0, N/8)
+  // where b_index = ptr[index] (LE) or ptr[N/8 - index - 1] (BE).
+  for (unsigned I = 0; I != ByteWidth; ++I) {
+    size_t SrcIdx = IsBigEndian ? (ByteWidth - I - 1) : I;
+    // When Ptr is not an array, the RemainingElems check above already
+    // guarantees ByteWidth == 1, so this loop runs once and BytePtr == Ptr.
+    Pointer BytePtr = IsArray ? Ptr.atIndex(BaseIdx + SrcIdx) : Ptr;
+    if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
+      return false;
+    uint64_t B;
+    INT_TYPE_SWITCH_NO_BOOL(
+        ElemT, { B = static_cast<uint64_t>(BytePtr.load<T>().toUnsigned()); });
+    Result |= APInt(BitWidth, B) << (8 * I);
+  }
+
+  bool IsSigned = Call->getType()->isSignedIntegerType();
+  pushInteger(S, APSInt(Result, !IsSigned), Call->getType());
+  return true;
 }
 
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
@@ -5124,6 +5205,50 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_memreverse8u32:
   case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
+
+  case Builtin::BIstdc_load8_leu8:
+  case Builtin::BIstdc_load8_leu16:
+  case Builtin::BIstdc_load8_leu32:
+  case Builtin::BIstdc_load8_leu64:
+  case Builtin::BIstdc_load8_les8:
+  case Builtin::BIstdc_load8_les16:
+  case Builtin::BIstdc_load8_les32:
+  case Builtin::BIstdc_load8_les64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/false,
+                                 /*IsAligned=*/false);
+
+  case Builtin::BIstdc_load8_aligned_leu8:
+  case Builtin::BIstdc_load8_aligned_leu16:
+  case Builtin::BIstdc_load8_aligned_leu32:
+  case Builtin::BIstdc_load8_aligned_leu64:
+  case Builtin::BIstdc_load8_aligned_les8:
+  case Builtin::BIstdc_load8_aligned_les16:
+  case Builtin::BIstdc_load8_aligned_les32:
+  case Builtin::BIstdc_load8_aligned_les64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/false,
+                                 /*IsAligned=*/true);
+
+  case Builtin::BIstdc_load8_beu8:
+  case Builtin::BIstdc_load8_beu16:
+  case Builtin::BIstdc_load8_beu32:
+  case Builtin::BIstdc_load8_beu64:
+  case Builtin::BIstdc_load8_bes8:
+  case Builtin::BIstdc_load8_bes16:
+  case Builtin::BIstdc_load8_bes32:
+  case Builtin::BIstdc_load8_bes64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
+                                 /*IsAligned=*/false);
+
+  case Builtin::BIstdc_load8_aligned_beu8:
+  case Builtin::BIstdc_load8_aligned_beu16:
+  case Builtin::BIstdc_load8_aligned_beu32:
+  case Builtin::BIstdc_load8_aligned_beu64:
+  case Builtin::BIstdc_load8_aligned_bes8:
+  case Builtin::BIstdc_load8_aligned_bes16:
+  case Builtin::BIstdc_load8_aligned_bes32:
+  case Builtin::BIstdc_load8_aligned_bes64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
+                                 /*IsAligned=*/true);
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
