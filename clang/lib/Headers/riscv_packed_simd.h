@@ -318,9 +318,8 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
       __attribute__((__enable_if__(                                            \
           __idx <= (max_idx),                                                  \
           "index must be a constant integer from 0 to " #max_idx))) {          \
-    ty __r = __v;                                                              \
-    __r[__idx] = __e;                                                          \
-    return __r;                                                                \
+    __v[__idx] = __e;                                                          \
+    return __v;                                                                \
   }
 
 // clang-format off: macro call sites have no trailing semicolons, which
