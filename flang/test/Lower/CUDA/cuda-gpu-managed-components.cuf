@@ -1,0 +1,98 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s
+
+! Under -gpu=managed, ALLOCATABLE and POINTER components of derived types are
+! implicitly attributed as managed, exactly as allocatables and pointers
+! declared in an ordinary scope are (see cuda-gpu-managed.cuf).
+
+module mod_derived
+  type :: t
+     real, allocatable :: alc(:)
+     real, pointer :: ptr(:) => null()
+     real :: fixed(4)
+  end type t
+  type :: outer
+     type(t) :: inner
+  end type outer
+  type(t) :: mod_obj
+end module
+
+! -----------------------------------------------------------------------------
+! Test 1: ALLOCATABLE component of a local derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_local()
+  use mod_derived
+  type(t) :: obj
+  allocate(obj%alc(100))
+  deallocate(obj%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_local()
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate
+! CHECK: cuf.deallocate
+
+! -----------------------------------------------------------------------------
+! Test 2: POINTER component of a local derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_pointer()
+  use mod_derived
+  type(t) :: obj
+  allocate(obj%ptr(100))
+  deallocate(obj%ptr)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_pointer()
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate
+! CHECK: cuf.deallocate
+
+! -----------------------------------------------------------------------------
+! Test 3: ALLOCATABLE component of a module-scope derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_module()
+  use mod_derived
+  allocate(mod_obj%alc(100))
+  deallocate(mod_obj%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_module()
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate
+! CHECK: cuf.deallocate
+
+! -----------------------------------------------------------------------------
+! Test 4: ALLOCATABLE component reached through a nested derived type
+! -----------------------------------------------------------------------------
+subroutine test_component_nested()
+  use mod_derived
+  type(outer) :: o
+  allocate(o%inner%alc(100))
+  deallocate(o%inner%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_nested()
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate
+! CHECK: cuf.deallocate
+
+! -----------------------------------------------------------------------------
+! Test 5: an explicitly attributed component keeps its own allocator; the
+! implicit attribution must not override it.
+! -----------------------------------------------------------------------------
+module mod_explicit
+  type :: td
+     real, allocatable, device :: dev(:)
+  end type td
+end module
+
+subroutine test_component_explicit_device()
+  use mod_explicit
+  type(td) :: obj
+  allocate(obj%dev(100))
+  deallocate(obj%dev)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_explicit_device()
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate
+! CHECK: cuf.deallocate
