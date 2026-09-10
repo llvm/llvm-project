@@ -22,5 +22,4 @@ TEST_F(LlvmLibcGettimeofdayTest, SmokeTest) {
   timeval tv;
   int ret = LIBC_NAMESPACE::gettimeofday(&tv, nullptr);
   ASSERT_EQ(ret, 0);
-  ASSERT_ERRNO_SUCCESS();
 }

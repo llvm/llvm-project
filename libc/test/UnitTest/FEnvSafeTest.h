@@ -22,10 +22,8 @@ namespace testing {
 // asserts that each test does not leave the FPU state represented by `fenv_t`
 // (aka `FPState`) perturbed from its initial state.
 class FEnvSafeTest : public ErrnoCheckingTest {
-public:
-  void TearDown() override;
-
 protected:
+  void OnTearDown() override;
   // This is an RAII type where `PreserveFEnv preserve{this};` will sample the
   // `fenv_t` state and restore it when `preserve` goes out of scope.
   class PreserveFEnv {

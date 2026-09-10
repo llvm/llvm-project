@@ -13,8 +13,6 @@
 using LlvmLibcSchedYieldTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcSchedYieldTest, SmokeTest) {
-  // sched_yield() always succeeds, just do a basic test that errno/ret are
-  // properly 0.
+  // sched_yield() always succeeds, just do a basic test that ret is properly 0.
   ASSERT_EQ(LIBC_NAMESPACE::sched_yield(), 0);
-  ASSERT_ERRNO_SUCCESS();
 }
