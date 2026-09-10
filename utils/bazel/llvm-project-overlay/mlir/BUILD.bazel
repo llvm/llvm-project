@@ -5512,6 +5512,23 @@ gentbl_cc_library(
     deps = [":LLVMOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "LLVMAllOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/LLVMAllOps.h.inc": [
+            "-gen-op-decls",
+            "-op-shard-count=8",
+        ],
+        "include/mlir/Dialect/LLVMIR/LLVMAllOps.cpp.inc": [
+            "-gen-op-defs",
+            "-op-shard-count=8",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/LLVMAllOps.td",
+    deps = [":LLVMOpsTdFiles"],
+)
+
 cc_library(
     name = "LLVMDialect",
     srcs = glob(
