@@ -156,23 +156,16 @@ public:
     if (invoke_callback) {
       rcu_singly_list_view ready_callbacks;
       ready_callbacks.splice_back(retired_queue_stage2_);
-
-      // Invoke the ready callbacks outside of the grace period mutex
-      lk.unlock();
       ready_callbacks.for_each([](auto* node) { node->__callback_(); });
-      lk.lock();
     }
 
     std::atomic_signal_fence(memory_order_seq_cst);
     update_phase_and_wait();
 
-    lk.unlock();
 
     if (invoke_callback) {
       rcu_singly_list_view ready_callbacks;
       ready_callbacks.splice_back(retired_queue_stage2_);
-
-      // Invoke the ready callbacks outside of the grace period mutex
       ready_callbacks.for_each([](auto* node) { node->__callback_(); });
     }
     std::atomic_thread_fence(memory_order_seq_cst);
