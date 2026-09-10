@@ -16,15 +16,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUIGroupLP.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-
-#include <type_traits>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -2593,8 +2589,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI, /*AllowLDSDMA=*/true) && !TII->isMFMAorWMMA(MI) &&
-           !TII->isTRANS(MI) && !TII->isLDSDMA(MI)) {
+           TII->isVALU(MI, /*AllowLDSDMA=*/false) && !TII->isMFMAorWMMA(MI) &&
+           !TII->isTRANS(MI)) {
     // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
     // For our purposes, these shall not be classified as VALU as this results
     // in unexpected behavior.
@@ -2614,11 +2610,11 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() && TII->isVMEM(MI))
+           MI.mayLoad() && TII->isVMEM(MI) && !TII->isLDSDMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() && TII->isVMEM(MI))
+           MI.mayStore() && TII->isVMEM(MI) && !TII->isLDSDMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&

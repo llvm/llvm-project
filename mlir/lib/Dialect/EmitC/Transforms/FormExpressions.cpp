@@ -50,9 +50,5 @@ struct FormExpressionsPass
     if (failed(applyPatternsGreedily(rootOp, std::move(patterns))))
       return signalPassFailure();
   }
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<emitc::EmitCDialect>();
-  }
 };
 } // namespace

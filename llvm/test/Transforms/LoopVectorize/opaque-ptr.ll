@@ -6,8 +6,8 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoaddr ptr [[P1_END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[P1_START:%.*]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP8]], [[P1_END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP14]], -4
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP8]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -22,8 +22,7 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP8]], -4
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP15]], [[P1_END1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP9]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP9]], -4
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P1_END]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[P2_START:%.*]], i64 [[TMP12]]
@@ -32,7 +31,7 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[P1_END]], i64 [[TMP13]]
@@ -95,8 +94,8 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoaddr ptr [[P1_END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[P1_START:%.*]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP4]], [[P1_END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP10]], -4
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP4]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -104,8 +103,7 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP4]], -4
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP11]], [[P1_END1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP5]], -4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P1_END]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[P2_START:%.*]], i64 [[TMP8]]
@@ -114,7 +112,7 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[P1_END]], i64 [[TMP9]]
@@ -177,14 +175,14 @@ define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[START2]], [[END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP9]], -8
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[START2]], -8
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP9]], [[END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[END]], i64 [[TMP4]]

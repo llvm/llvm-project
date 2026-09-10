@@ -18,6 +18,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_search = [](auto first1, auto last1, auto first2, auto last2) {
@@ -32,7 +33,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto search) {
       benchmark::RegisterBenchmark(
           name,
-          [search](auto& st) {
+          [search](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -68,7 +69,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto search) {
       benchmark::RegisterBenchmark(
           name,
-          [search](auto& st) {
+          [search](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -114,7 +115,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto search) {
       benchmark::RegisterBenchmark(
           name,
-          [search](auto& st) {
+          [search](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -148,7 +149,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto search) {
       benchmark::RegisterBenchmark(
           name,
-          [search](auto& st) {
+          [search](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

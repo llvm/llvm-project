@@ -17,8 +17,12 @@
 
 #include "../types.h"
 
-static_assert(!std::is_constructible_v<std::ranges::iterator_t<std::ranges::iota_view<int>>, int>);
+using IntIter = std::ranges::iterator_t<std::ranges::iota_view<int>>;
 
-using Iter = std::ranges::iterator_t<std::ranges::iota_view<SomeInt>>;
-static_assert(!std::is_constructible_v<Iter, SomeInt>);
-static_assert(!std::is_convertible_v<SomeInt, Iter>);
+static_assert(!std::is_constructible_v<IntIter, int>);
+static_assert(!std::is_convertible_v<int, IntIter>);
+
+using SomeIntIter = std::ranges::iterator_t<std::ranges::iota_view<SomeInt>>;
+
+static_assert(!std::is_constructible_v<SomeIntIter, SomeInt>);
+static_assert(!std::is_convertible_v<SomeInt, SomeIntIter>);

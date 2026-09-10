@@ -1,10 +1,7 @@
 ; RUN: llc -mtriple=amdgpu8.02-amd-unknown < %s | FileCheck --check-prefix=OSABI-UNK %s
-; RUN: llc -mtriple=amdgpu8.02-amd-unknown < %s | FileCheck --check-prefix=OSABI-UNK %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-unknown -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-UNK-ELF %s
-; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa < %s| FileCheck --check-prefix=OSABI-HSA %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa < %s | FileCheck --check-prefix=OSABI-HSA %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-HSA-ELF %s
-; RUN: llc -mtriple=amdgpu8.02-amd-amdpal < %s | FileCheck --check-prefix=OSABI-PAL %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdpal < %s | FileCheck --check-prefix=OSABI-PAL %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdpal -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-PAL-ELF %s
 ; RUN: llc -mtriple=r600 < %s | FileCheck --check-prefix=R600 %s

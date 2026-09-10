@@ -16,9 +16,11 @@
 #include "../types.h"
 
 struct Iter : ForwardIterBase<Iter> {
-  int i            = 0;
+  int i = 0;
+
   constexpr Iter() = default;
   constexpr Iter(int ii) : i(ii) {}
+
   constexpr int operator*() const { return i; }
   constexpr Iter& operator++() {
     ++i;

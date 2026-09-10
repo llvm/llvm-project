@@ -272,7 +272,7 @@ BringInRemoteFile(Platform *platform,
 lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr,
-    Process *process) {
+    Target &target) {
 
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log,
@@ -289,8 +289,8 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
   Status err;
 
   if (CheckLocalSharedCache()) {
-    err = GetModuleFromSharedCaches(module_spec, process, module_sp,
-                                    old_modules, did_create_ptr);
+    err = GetModuleFromSharedCaches(module_spec, target, module_sp, old_modules,
+                                    did_create_ptr);
     if (module_sp)
       return err;
   }

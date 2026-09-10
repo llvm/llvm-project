@@ -37,8 +37,7 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -47,7 +46,7 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], -1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[COND]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sub nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, ptr [[TMP10]], align 8, !alias.scope [[META0:![0-9]+]]
@@ -59,7 +58,7 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]], <vscale x 4 x double> poison), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <vscale x 4 x double> [[REVERSE3]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> [[TMP14]], ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]]), !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -100,5 +99,5 @@ attributes #0 = {"target-cpu"="generic" "target-features"="+neon,+sve"}
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
+!4 = !{!"llvm.loop.vectorize.enable"}

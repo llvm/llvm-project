@@ -286,7 +286,7 @@ public:
                                      Decl *Previous, Decl *Canon);
   static void attachPreviousDeclImpl(ASTReader &Reader, ...);
   static void attachPreviousDecl(ASTReader &Reader, Decl *D, Decl *Previous,
-                                 Decl *PreviousNonLocal, Decl *Canon);
+                                 Decl *Canon);
 
   static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
                                                     Decl *Previous);
@@ -983,19 +983,19 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       // The template that contains the specializations set. It's not safe to
       // use getCanonicalDecl on Template since it may still be initializing.
       auto *CanonTemplate = readDeclAs<FunctionTemplateDecl>();
-      // Get the InsertPos by FindNodeOrInsertPos() instead of calling
-      // InsertNode(FTInfo) directly to avoid the getASTContext() call in
+      // Get the insert token by lookup() instead of calling insert(FTInfo)
+      // directly to avoid the getASTContext() call in
       // FunctionTemplateSpecializationInfo's Profile().
       // We avoid getASTContext because a decl in the parent hierarchy may
       // be initializing.
       llvm::FoldingSetNodeID ID;
       FunctionTemplateSpecializationInfo::Profile(ID, TemplArgs, C);
-      void *InsertPos = nullptr;
+      llvm::FoldingSetInsertToken InsertToken;
       FunctionTemplateDecl::Common *CommonPtr = CanonTemplate->getCommonPtr();
       FunctionTemplateSpecializationInfo *ExistingInfo =
-          CommonPtr->Specializations.FindNodeOrInsertPos(ID, InsertPos);
-      if (InsertPos)
-        CommonPtr->Specializations.InsertNode(FTInfo, InsertPos);
+          CommonPtr->Specializations.lookup(ID, InsertToken);
+      if (InsertToken)
+        CommonPtr->Specializations.insert(FTInfo, InsertToken);
       else {
         Existing = ExistingInfo->getFunction();
       }
@@ -1573,7 +1573,7 @@ void ASTDeclReader::VisitMSGuidDecl(MSGuidDecl *D) {
     C = Record.readInt();
 
   // Add this GUID to the AST context's lookup structure, and merge if needed.
-  if (MSGuidDecl *Existing = Reader.getContext().MSGuidDecls.GetOrInsertNode(D))
+  if (MSGuidDecl *Existing = Reader.getContext().MSGuidDecls.getOrInsert(D))
     Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
 }
 
@@ -1584,7 +1584,7 @@ void ASTDeclReader::VisitUnnamedGlobalConstantDecl(
 
   // Add this to the AST context's lookup structure, and merge if needed.
   if (UnnamedGlobalConstantDecl *Existing =
-          Reader.getContext().UnnamedGlobalConstantDecls.GetOrInsertNode(D))
+          Reader.getContext().UnnamedGlobalConstantDecls.getOrInsert(D))
     Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
 }
 
@@ -1595,7 +1595,7 @@ void ASTDeclReader::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {
   // Add this template parameter object to the AST context's lookup structure,
   // and merge if needed.
   if (TemplateParamObjectDecl *Existing =
-          Reader.getContext().TemplateParamObjectDecls.GetOrInsertNode(D))
+          Reader.getContext().TemplateParamObjectDecls.getOrInsert(D))
     Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
 }
 
@@ -2103,7 +2103,27 @@ void ASTDeclMerger::MergeDefinitionData(
       PFDI->second == ASTReader::PendingFakeDefinitionKind::Fake) {
     // We faked up this definition data because we found a class for which we'd
     // not yet loaded the definition. Replace it with the real thing now.
-    assert(!DD.IsLambda && !MergeDD.IsLambda && "faked up lambda definition?");
+    assert(!DD.IsLambda && "faked up lambda definition?");
+
+    // This is possible for some special loading ordering. See
+    // clang/test/Modules/pr217858.cppm for an example.
+    //
+    // LambdaDefinitionData is larger than DefinitionData, so it cannot replace
+    // the fake DefinitionData object in place.
+    if (MergeDD.IsLambda) {
+      auto *Def = DD.Definition;
+      MergeDD.Definition = Def;
+      // Unlike an instantiated class definition,
+      // whose update-record reader removes the fake entry after loading its
+      // lexical declarations, a lambda's definition is part of its declaration
+      // record and is fully loaded here.
+      Reader.PendingFakeDefinitionData.erase(PFDI);
+      for (auto *R = Reader.getMostRecentExistingDecl(Def); R;
+           R = R->getPreviousDecl())
+        cast<CXXRecordDecl>(R)->DefinitionData = &MergeDD;
+      return;
+    }
+
     PFDI->second = ASTReader::PendingFakeDefinitionKind::FakeLoaded;
 
     // Don't change which declaration is the definition; that is required
@@ -2408,26 +2428,37 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
     D->Friend = readDeclAs<NamedDecl>();
   else
     D->Friend = readTypeSourceInfo();
-  for (unsigned i = 0; i != D->NumTPLists; ++i)
-    D->getTrailingObjects()[i] = Record.readTemplateParameterList();
   D->NextFriend = readDeclID().getRawValue();
-  D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
   D->EllipsisLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
-  unsigned NumParams = Record.readInt();
-  D->NumParams = NumParams;
-  D->Params = new (Reader.getContext()) TemplateParameterList *[NumParams];
-  for (unsigned i = 0; i != NumParams; ++i)
-    D->Params[i] = Record.readTemplateParameterList();
-  if (Record.readInt()) // HasFriendDecl
-    D->Friend = readDeclAs<NamedDecl>();
-  else
+  for (unsigned I = 0; I != D->NumTPLists; ++I)
+    D->getTrailingObjects()[I] = Record.readTemplateParameterList();
+  auto Kind = static_cast<FriendTemplateDeclKind>(Record.readInt());
+  switch (Kind) {
+  case FTDK_Type:
     D->Friend = readTypeSourceInfo();
+    break;
+  case FTDK_Decl:
+    D->Friend = readDeclAs<NamedDecl>();
+    break;
+  case FTDK_Template:
+    D->Template = Record.readTemplateName();
+    assert(D->Template.getAsTemplateDecl() &&
+           "friend template name must resolve to a template declaration");
+    D->Friend = D->Template.getAsTemplateDecl();
+    break;
+  case FTDK_Dependent:
+    D->Friend = readTypeSourceInfo();
+    D->Template = Record.readTemplateName();
+    break;
+  }
+  D->NextFriend = readDeclID().getRawValue();
   D->FriendLoc = readSourceLocation();
+  D->EllipsisLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitTemplateDecl(TemplateDecl *D) {
@@ -2567,11 +2598,12 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
       // Set this as, or find, the canonical declaration for this specialization
       ClassTemplateSpecializationDecl *CanonSpec;
       if (auto *Partial = dyn_cast<ClassTemplatePartialSpecializationDecl>(D)) {
-        CanonSpec = CanonPattern->getCommonPtr()->PartialSpecializations
-            .GetOrInsertNode(Partial);
+        CanonSpec =
+            CanonPattern->getCommonPtr()->PartialSpecializations.getOrInsert(
+                Partial);
       } else {
         CanonSpec =
-            CanonPattern->getCommonPtr()->Specializations.GetOrInsertNode(D);
+            CanonPattern->getCommonPtr()->Specializations.getOrInsert(D);
       }
       // If there was already a canonical specialization, merge into it.
       if (CanonSpec != D) {
@@ -2682,11 +2714,12 @@ RedeclarableResult ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
     if (D->isCanonicalDecl()) { // It's kept in the folding set.
       VarTemplateSpecializationDecl *CanonSpec;
       if (auto *Partial = dyn_cast<VarTemplatePartialSpecializationDecl>(D)) {
-        CanonSpec = CanonPattern->getCommonPtr()
-                        ->PartialSpecializations.GetOrInsertNode(Partial);
+        CanonSpec =
+            CanonPattern->getCommonPtr()->PartialSpecializations.getOrInsert(
+                Partial);
       } else {
         CanonSpec =
-            CanonPattern->getCommonPtr()->Specializations.GetOrInsertNode(D);
+            CanonPattern->getCommonPtr()->Specializations.getOrInsert(D);
       }
       // If we already have a matching specialization, merge it.
       if (CanonSpec != D)
@@ -2959,10 +2992,10 @@ void ASTDeclMerger::mergeLambda(CXXRecordDecl *D, RedeclarableResult &Redecl,
 
   // Look up this lambda to see if we've seen it before. If so, merge with the
   // one we already loaded.
-  NamedDecl *&Slot = Reader.LambdaDeclarationsForMerging[{
-      Context.getCanonicalDecl(), IndexInContext}];
-  if (Slot)
-    mergeRedeclarable(D, cast<TagDecl>(Slot), Redecl);
+  auto *&Slot = Reader.getContext().getLambdaDeclarationSlotForMerging(
+      &Context, IndexInContext);
+  if (TagDecl *PrevDecl = Slot)
+    mergeRedeclarable(D, PrevDecl, Redecl);
   else
     Slot = D;
 }
@@ -3667,6 +3700,28 @@ Decl *ASTReader::getMostRecentExistingDecl(Decl *D) {
   return ASTDeclReader::getMostRecentDecl(D->getCanonicalDecl());
 }
 
+namespace {
+void mergeInheritableAttributes(ASTReader &Reader, Decl *D, Decl *Previous) {
+  InheritableAttr *NewAttr = nullptr;
+  ASTContext &Context = Reader.getContext();
+  const auto *IA = Previous->getAttr<MSInheritanceAttr>();
+
+  if (IA && !D->hasAttr<MSInheritanceAttr>()) {
+    NewAttr = cast<InheritableAttr>(IA->clone(Context));
+    NewAttr->setInherited(true);
+    D->addAttr(NewAttr);
+  }
+
+  if (!D->hasAttr<AvailabilityAttr>()) {
+    for (const auto *AA : Previous->specific_attrs<AvailabilityAttr>()) {
+      NewAttr = AA->clone(Context);
+      NewAttr->setInherited(true);
+      D->addAttr(NewAttr);
+    }
+  }
+}
+} // namespace
+
 template<typename DeclT>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<DeclT> *D,
@@ -3878,8 +3933,7 @@ void ASTDeclReader::checkMultipleDefinitionInNamedModules(ASTReader &Reader,
 }
 
 void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
-                                       Decl *Previous, Decl *PreviousNonLocal,
-                                       Decl *Canon) {
+                                       Decl *Previous, Decl *Canon) {
   assert(D && Previous);
 
   switch (D->getKind()) {
@@ -3908,12 +3962,11 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
     inheritDefaultTemplateArguments(Reader.getContext(),
                                     cast<TemplateDecl>(Previous), TD);
 
-  if (PreviousNonLocal) {
-    if (Sema *S = Reader.getSema()) {
-      if (auto *ND = dyn_cast<NamedDecl>(D))
-        S->mergeDeclAttributes(ND, PreviousNonLocal);
-    }
-  }
+  // If any of the declaration in the chain contains an Inheritable attribute,
+  // it needs to be added to all the declarations in the redeclarable chain.
+  // FIXME: Only the logic of merging MSInheritableAttr is present, it should
+  // be extended for all inheritable attributes.
+  mergeInheritableAttributes(Reader, D, Previous);
 }
 
 template<typename DeclT>
@@ -4084,10 +4137,11 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     D = AccessSpecDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FRIEND:
-    D = FriendDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = FriendDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FRIEND_TEMPLATE:
-    D = FriendTemplateDecl::CreateDeserialized(Context, ID);
+    D = FriendTemplateDecl::CreateDeserialized(Context, ID,
+                                               /*NumTPLists=*/Record.readInt());
     break;
   case DECL_CLASS_TEMPLATE:
     D = ClassTemplateDecl::CreateDeserialized(Context, ID);
@@ -4562,19 +4616,21 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
 }
 
 void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
-  // Attach FirstLocal to the end of the decl chain.
   Decl *CanonDecl = FirstLocal->getCanonicalDecl();
-  Decl *NonLocalMostRecent = nullptr;
+
+  Decl *MostRecent = ASTDeclReader::getMostRecentDecl(CanonDecl);
+  if (!MostRecent)
+    MostRecent = CanonDecl;
   if (FirstLocal != CanonDecl) {
-    Decl *PrevMostRecent = ASTDeclReader::getMostRecentDecl(CanonDecl);
-    NonLocalMostRecent = PrevMostRecent ? PrevMostRecent : CanonDecl;
-    ASTDeclReader::attachPreviousDecl(*this, FirstLocal, NonLocalMostRecent,
-                                      NonLocalMostRecent, CanonDecl);
-    ASTDeclReader::attachLatestDecl(CanonDecl, FirstLocal);
+    // Attach FirstLocal to the end of the decl chain.
+    ASTDeclReader::attachPreviousDecl(*this, FirstLocal, MostRecent, CanonDecl);
+    MostRecent = FirstLocal;
   }
 
-  if (!LocalOffset)
+  if (!LocalOffset) {
+    ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
     return;
+  }
 
   // Load the list of other redeclarations from this module file.
   ModuleFile *M = getOwningModuleFile(FirstLocal);
@@ -4604,15 +4660,13 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
 
   // FIXME: We have several different dispatches on decl kind here; maybe
   // we should instead generate one loop per kind and dispatch up-front?
-  Decl *MostRecent = FirstLocal;
   for (unsigned I = 0, N = Record.size(); I != N; ++I) {
     unsigned Idx = N - I - 1;
     auto *D = ReadDecl(*M, Record, Idx);
-    ASTDeclReader::attachPreviousDecl(*this, D, MostRecent, NonLocalMostRecent,
-                                      CanonDecl);
+    ASTDeclReader::attachPreviousDecl(*this, D, MostRecent, CanonDecl);
     MostRecent = D;
-    ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
   }
+  ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
 }
 
 namespace {

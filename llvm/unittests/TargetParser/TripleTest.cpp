@@ -1770,13 +1770,13 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
       Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
-  // ... except on Windows, Darwin, and Android, which use IEEE double.
+  // ... except on Windows and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
   EXPECT_EQ(
-      LongDoubleFormat::IEEEdouble,
+      LongDoubleFormat::IEEEquad,
       Triple("aarch64-unknown-linux-android").getDefaultLongDoubleFormat());
 
   // ARM/Thumb use IEEE double.
@@ -3280,6 +3280,30 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
 }
 
+TEST(TripleTest, SupportsDebugEntryValues) {
+  EXPECT_TRUE(Triple("i686-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("x86_64-apple-macosx").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("arm64-apple-macosx").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("arm64e-apple-ios").supportsDebugEntryValues());
+  EXPECT_TRUE(
+      Triple("armv7-unknown-linux-gnueabihf").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("armeb-unknown-linux-gnueabi").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mipsel-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips64-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips64el-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("riscv32-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("riscv64-unknown-linux-gnu").supportsDebugEntryValues());
+
+  EXPECT_FALSE(Triple("arm64_32-apple-watchos").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("thumbv7-apple-ios").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip1").supportsDebugEntryValues());
+  EXPECT_FALSE(
+      Triple("powerpc64le-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("s390x-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("").supportsDebugEntryValues());
+}
+
 TEST(TripleTest, DefaultExceptionHandling) {
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("i686-unknown-linux-gnu").getDefaultExceptionHandling());
@@ -3860,6 +3884,13 @@ TEST(TripleTest, isCompatibleWith) {
 
       {"amdgpu12.5-amd-amdhsa", "amdgpu12.50-amd-amdhsa", true},
       {"amdgpu12.5-amd-amdhsa", "amdgpu12.51-amd-amdhsa", true},
+
+      // amdgpu12.50s is its own major subarch: compatible only with itself.
+      {"amdgpu12.50s-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", true},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.50-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.51-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
 
       {"amdgpu13-amd-amdhsa", "amdgpu13.10-amd-amdhsa", true},
 

@@ -34,17 +34,15 @@ OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
   DominatorTree DT;
   DT.recalculate(*const_cast<Function *>(F));
 
-  // Generate LoopInfo from it.
+  // Generate CycleInfo.
   CycleInfo CI;
   CI.compute(*const_cast<Function *>(F));
-  LoopInfo LI;
-  LI.analyze(DT);
 
   // Then compute BranchProbabilityInfo.
   BranchProbabilityInfo BPI(*F, CI, nullptr, &DT, nullptr);
 
   // Finally compute BFI.
-  OwnedBFI = std::make_unique<BlockFrequencyInfo>(*F, BPI, LI);
+  OwnedBFI = std::make_unique<BlockFrequencyInfo>(*F, BPI, CI);
   BFI = OwnedBFI.get();
 }
 

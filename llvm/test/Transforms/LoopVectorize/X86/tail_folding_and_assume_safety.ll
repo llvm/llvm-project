@@ -143,12 +143,12 @@ for.inc:
 attributes #0 = { "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 
 !6 = distinct !{!6, !7}
-!7 = !{!"llvm.loop.vectorize.enable", i1 true}
+!7 = !{!"llvm.loop.vectorize.enable"}
 
 !8 = distinct !{!8, !9}
-!9 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!9 = !{!"llvm.loop.vectorize.predicate.enable"}
 
 !10 = distinct !{}
 !11 = distinct !{!11, !12, !13}
 !12 = !{!"llvm.loop.parallel_accesses", !10}
-!13 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!13 = !{!"llvm.loop.vectorize.predicate.enable"}

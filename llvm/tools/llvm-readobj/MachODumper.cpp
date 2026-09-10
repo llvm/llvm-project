@@ -491,6 +491,8 @@ void MachODumper::printFileHeaders(const MachHeader &Header) {
   default:
     W.printHex("CpuSubType", subtype);
   }
+  W.printHex("CpuCapabilities",
+             (Header.cpusubtype & MachO::CPU_SUBTYPE_MASK) >> 24);
   W.printEnum("FileType", Header.filetype, EnumStrings(MachOHeaderFileTypes));
   W.printNumber("NumOfLoadCommands", Header.ncmds);
   W.printNumber("SizeOfLoadCommands", Header.sizeofcmds);
@@ -824,7 +826,6 @@ void MachODumper::printNeededLibraries() {
 
   for (const auto &Command : Obj->load_commands()) {
     if (Command.C.cmd == MachO::LC_LOAD_DYLIB ||
-        Command.C.cmd == MachO::LC_ID_DYLIB ||
         Command.C.cmd == MachO::LC_LOAD_WEAK_DYLIB ||
         Command.C.cmd == MachO::LC_REEXPORT_DYLIB ||
         Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB ||
