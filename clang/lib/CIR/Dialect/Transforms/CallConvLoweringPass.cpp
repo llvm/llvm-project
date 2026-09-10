@@ -249,7 +249,8 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
           auto bfTy = dyn_cast<cir::BitFieldType>(m);
           if (!bfTy)
             return false;
-          std::optional<uint64_t> extentBits = bfTy.getDeclaredExtentInBits(dl);
+          std::optional<uint64_t> extentBits =
+              bfTy.getSoleDeclaredExtentInBits(dl);
           return extentBits && *extentBits >= recordBits;
         };
         if (!llvm::any_of(members, spansRecord))

@@ -1487,7 +1487,7 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
   return 1;
 }
 
-std::optional<uint64_t> BitFieldType::getDeclaredExtentInBits(
+std::optional<uint64_t> BitFieldType::getSoleDeclaredExtentInBits(
     const mlir::DataLayout &dataLayout) const {
   if (getFields().size() != 1)
     return std::nullopt;

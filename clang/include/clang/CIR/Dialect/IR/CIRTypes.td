@@ -739,7 +739,7 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
     /// can exceed the storage type's size.  Returns nullopt when the unit
     /// holds more than one bit-field.
     std::optional<uint64_t>
-    getDeclaredExtentInBits(const mlir::DataLayout &dataLayout) const;
+    getSoleDeclaredExtentInBits(const mlir::DataLayout &dataLayout) const;
   }];
 
   let genVerifyDecl = 1;
