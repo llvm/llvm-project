@@ -3740,28 +3740,28 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
   return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
-unsigned getLdsGranularityEncodingDw(const MCSubtargetInfo &ST) {
+unsigned getLdsGranularityEncoding(const MCSubtargetInfo &ST) {
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
-    return 64;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
-    return 128;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
     return 256;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
-    return 320;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 512;
-  return 64; // In sync with getAddressableLocalMemorySize
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 1024;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
+    return 1280;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+    return 2048;
+  return 256; // In sync with getAddressableLocalMemorySize
 }
 
 /// Returns the actual LDS allocation block size in dwords. This can
 /// be different from the value expected in the kernel metadata.
-unsigned getLdsGranularityAllocDw(const MCSubtargetInfo &ST) {
-  if (hasGFX10_3Insts(ST) &&
+unsigned getLdsGranularityAlloc(const MCSubtargetInfo &ST) {
+  if (ST.hasFeature(AMDGPU::FeatureGFX10_3Insts) &&
       ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
-    return 256;
+    return 1024;
 
-  return getLdsGranularityEncodingDw(ST);
+  return getLdsGranularityEncoding(ST);
 }
 
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {

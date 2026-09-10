@@ -1808,12 +1808,12 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 /// \returns lds block size in terms of dwords. \p
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
 /// must be defined in terms of bytes.
-unsigned getLdsGranularityEncodingDw(const MCSubtargetInfo &ST);
+unsigned getLdsGranularityEncoding(const MCSubtargetInfo &ST);
 
 /// \returns LDS allocation granularity in dwords.
 /// This is the block size at which hardware allocates LDS to workgroups,
 /// used for occupancy calculations.
-unsigned getLdsGranularityAllocDw(const MCSubtargetInfo &ST);
+unsigned getLdsGranularityAlloc(const MCSubtargetInfo &ST);
 
 class ClusterDimsAttr {
 public:
