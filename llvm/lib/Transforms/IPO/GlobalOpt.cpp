@@ -660,11 +660,16 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
 
   auto *FirstNewGV = NewGlobals.begin()->second;
 
-  // For COFF, the comdat must contain a member which has the same name as the
-  // group. We rename the first new global to match.
+  // For COFF, the comdat must contain a member which has the
+  // same name as the group.
   if (auto *C = FirstNewGV->getComdat()) {
-    auto ComdatName = C->getName();
-    FirstNewGV->setName(ComdatName);
+    auto *DummyGV = new GlobalVariable(
+        *FirstNewGV->getParent(), Type::getInt1Ty(FirstNewGV->getContext()),
+        false, FirstNewGV->getLinkage(),
+        ConstantInt::getFalse(FirstNewGV->getContext()), C->getName(),
+        FirstNewGV, FirstNewGV->getThreadLocalMode(),
+        FirstNewGV->getAddressSpace());
+    DummyGV->setComdat(C);
   }
 
   return FirstNewGV;
@@ -1533,6 +1538,17 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       // Delete any stores we can find to the global.  We may not be able to
       // make it completely dead though.
       Changed = CleanupConstantGlobalUsers(GV, DL);
+    }
+
+    // For COFF, the Comdat leader must be preserved.
+    if (auto *C = GV->getComdat()) {
+      auto IsComdatLeaderWithUses =
+          C->getName() == GV->getName() && C->getUsers().size() > 1;
+      if (IsComdatLeaderWithUses) {
+        LLVM_DEBUG(dbgs() << "GLOBAL IS COMDAT LEADER WITH USES: " << *GV
+                          << "\n");
+        return Changed;
+      }
     }
 
     // If the global is dead now, delete it.
