@@ -422,9 +422,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
+    libc.src.math.totalorderf128
     libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
+    libc.src.math.totalordermagf128
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
@@ -613,8 +615,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.scalbnf128
     libc.src.math.setpayloadf128
     libc.src.math.setpayloadsigf128
-    libc.src.math.totalorderf128
-    libc.src.math.totalordermagf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
   )
