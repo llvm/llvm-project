@@ -1,15 +1,18 @@
 add_flang_library(FIRTestOpenACCInterfaces
   TestOpenACCInterfaces.cpp
+  TestOpenACCSupport.cpp
 
   DEPENDS
   HLFIRDialect
   FIRDialect
+  FIROpenACCAnalysis
   FIROpenACCSupport
   FIRSupport
 
   LINK_LIBS
   HLFIRDialect
   FIRDialect
+  FIROpenACCAnalysis
   FIROpenACCSupport
   FIRSupport
 
