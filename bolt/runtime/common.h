@@ -284,6 +284,68 @@ static bool scanUInt32(const char *&Buf, const char *End, uint32_t &Ret) {
   return false;
 }
 
+struct ProcMapsEntry {
+  uint64_t Start{0};
+  uint64_t End{0};
+};
+
+static bool isHexDigit(char C) {
+  return ('0' <= C && C <= '9') || ('a' <= C && C <= 'f') ||
+         ('A' <= C && C <= 'F');
+}
+
+static const char *parseHex(const char *Buf, const char *End, uint64_t &Value) {
+  const char *Start = Buf;
+  Value = 0;
+  while (Buf < End && isHexDigit(*Buf)) {
+    Value <<= 4;
+    Value += *Buf <= '9' ? *Buf - '0' : (*Buf | 32) - 'a' + 10;
+    ++Buf;
+  }
+  return Buf == Start ? nullptr : Buf;
+}
+
+static const char *skipToken(const char *Buf, const char *End) {
+  while (Buf < End && *Buf != ' ')
+    ++Buf;
+  while (Buf < End && *Buf == ' ')
+    ++Buf;
+  return Buf;
+}
+
+static const char *findLineEnd(const char *Buf, const char *End) {
+  while (Buf < End && *Buf != '\n')
+    ++Buf;
+  return Buf;
+}
+
+static const char *skipLine(const char *Buf, const char *End) {
+  Buf = findLineEnd(Buf, End);
+  if (Buf < End)
+    ++Buf;
+  return Buf;
+}
+
+static bool parseProcMapsLine(const char *Line, const char *LineEnd,
+                              ProcMapsEntry &Entry) {
+  const char *Buf = parseHex(Line, LineEnd, Entry.Start);
+  if (!Buf || Buf == LineEnd || *Buf++ != '-')
+    return false;
+  Buf = parseHex(Buf, LineEnd, Entry.End);
+  if (!Buf || Entry.Start >= Entry.End)
+    return false;
+
+  Buf = skipToken(Buf, LineEnd);
+  if (LineEnd - Buf < 4 || Buf[0] != 'r' || Buf[1] != '-' || Buf[2] != 'x' ||
+      Buf[3] != 'p')
+    return false;
+
+  Buf = skipToken(Buf, LineEnd); // offset
+  Buf = skipToken(Buf, LineEnd); // device
+  Buf = skipToken(Buf, LineEnd); // inode
+  return Buf < LineEnd && *Buf != '0';
+}
+
 void reportError(const char *Msg, uint64_t Size) {
 #if !defined(__ANDROID__)
   __write(2, Msg, Size);
