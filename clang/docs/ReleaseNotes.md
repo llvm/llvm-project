@@ -232,7 +232,7 @@ features cannot lower the translation-unit ABI level;
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
-- Added support for the `__builtin_strlcat` builtin.
+- Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
 ### New Compiler Flags
 
@@ -271,8 +271,8 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
-- `-Wfortify-source` now diagnoses when `strlcat` or `__builtin_strlcat` is called with a size
-  argument larger than the destination buffer.
+- `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
+  `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
