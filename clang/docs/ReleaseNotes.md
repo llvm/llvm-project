@@ -485,6 +485,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
   (#GH181730)
 
+- `-Wdelete-abstract-non-virtual-dtor` and `-Wdelete-non-abstract-non-virtual-dtor`
+  no longer warn when the selected deallocation function is a destroying
+  `operator delete`, since such a delete expression never invokes the
+  destructor. (#GH65524)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
