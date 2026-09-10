@@ -31,7 +31,6 @@
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 #define DEBUG_TYPE "amdgpu-wmma-sched"
@@ -233,15 +232,15 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     if (LI.MinPos != UINT_MAX) {
       const long LoadLatency =
           static_cast<long>(SM->computeInstrLatency(LI.SU->getInstr()));
-      LI.LatestCycle = (long)LI.MinPos * (*WmmaLatency) - LoadLatency;
+      LI.LatestCycle =
+          static_cast<long>(LI.MinPos) * (*WmmaLatency) - LoadLatency;
       LLVM_DEBUG(dbgs() << "[lat] ds_load SU" << LI.SU->NodeNum
                         << ": LatestCycle=" << LI.LatestCycle << " (W["
                         << LI.MinPos << "]*" << *WmmaLatency << " - "
                         << LoadLatency << ")\n");
     }
   long PrevLatest = LONG_MAX;
-  for (int I = (int)Loads.size() - 1; I >= 0; --I) {
-    LoadInfo &LI = Loads[I];
+  for (LoadInfo &LI : llvm::reverse(Loads)) {
     if (LI.MinPos == UINT_MAX)
       continue;
     const long Spacing = static_cast<long>(
@@ -283,10 +282,9 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   }
 
   std::vector<unsigned> Hist(Wmmas.size(), 0);
-  for (auto &KV : Frags) {
-    FragInfo &F = KV.second;
-    long Pos = F.LatestCycle / (long)(*WmmaLatency);
-    unsigned StartPos = Pos < 0 ? 0 : (unsigned)Pos;
+  for (auto &[_, F] : Frags) {
+    long Pos = F.LatestCycle / static_cast<long>(*WmmaLatency);
+    unsigned StartPos = Pos < 0 ? 0 : static_cast<unsigned>(Pos);
     for (unsigned P = StartPos; P <= F.MaxPos && P < Wmmas.size(); ++P)
       Hist[P] += F.VGPRs;
     LLVM_DEBUG({
@@ -298,9 +296,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     });
   }
 
-  unsigned Budget = 0;
-  for (unsigned P = 0; P < Wmmas.size(); ++P)
-    Budget = std::max(Budget, Hist[P]);
+  unsigned Budget = *llvm::max_element(Hist);
 
   LLVM_DEBUG({
     dbgs() << "\n--- [5] histogram BEFORE debunch (sets the budget) -------\n"
@@ -328,14 +324,13 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
          "any earlier. 'unconstrained' = it already fits at W[0], so no edge\n"
          "is needed; the histogram is updated cumulatively so later\n"
          "fragments only use the slack that's left over.\n");
-  for (auto &KV : Frags) {
-    FragInfo &F = KV.second;
-    long Pos = F.LatestCycle / (long)(*WmmaLatency);
-    unsigned LateStartPos = Pos < 0 ? 0 : (unsigned)Pos;
+  for (auto &[_, F] : Frags) {
+    long Pos = F.LatestCycle / static_cast<long>(*WmmaLatency);
+    unsigned LateStartPos = Pos < 0 ? 0 : static_cast<unsigned>(Pos);
     unsigned Earliest = LateStartPos;
-    for (int P = (int)LateStartPos - 1; P >= 0; --P) {
-      if (Hist[(unsigned)P] + F.VGPRs <= Budget)
-        Earliest = (unsigned)P;
+    for (int P = static_cast<int>(LateStartPos) - 1; P >= 0; --P) {
+      if (Hist[static_cast<unsigned>(P)] + F.VGPRs <= Budget)
+        Earliest = static_cast<unsigned>(P);
       else
         break;
     }
@@ -359,9 +354,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   }
 
   LLVM_DEBUG({
-    unsigned Peak = 0;
-    for (unsigned P = 0; P < Wmmas.size(); ++P)
-      Peak = std::max(Peak, Hist[P]);
+    unsigned Peak = *llvm::max_element(Hist);
     dbgs() << "\n--- [6] histogram AFTER debunch -------------------------\n"
               "Same usage after the debunch edges. Loads now sit as\n"
               "early as the budget allows; the peak should still be within\n"
