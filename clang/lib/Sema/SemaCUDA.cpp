@@ -806,17 +806,30 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
                      diag::note_cuda_managed_var_in_glob_init);
         }
       }
+
       void VisitCallExpr(const CallExpr *CE) {
         const FunctionDecl *InitFn = CE->getDirectCallee();
         if (InitFn)
           CheckForWrongSidedCall(InitFn);
         Base::VisitCallExpr(CE);
       }
+
       void VisitCXXConstructExpr(const CXXConstructExpr *CE) {
-        const FunctionDecl *InitFn = CE->getConstructor();
-        if (InitFn)
-          CheckForWrongSidedCall(InitFn);
+        const CXXConstructorDecl *Ctor = CE->getConstructor();
+        if (Ctor) {
+          CheckForWrongSidedCall(Ctor);
+          for (auto *I : Ctor->inits())
+            Visit(I->getInit());
+        }
         Base::VisitCXXConstructExpr(CE);
+      }
+
+      void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
+        Visit(E->getExpr());
+      }
+
+      void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
+        Visit(E->getExpr());
       }
     };
     GlobVarInitChecker Checker(*this, VD);

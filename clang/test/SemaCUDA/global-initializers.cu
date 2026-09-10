@@ -73,7 +73,7 @@ const __device__ double CAY = ca.cpow(2.0, 2);
 
 namespace ns1 {
   // host-note@+3 {{'value_func' declared here}}
-  // expected-note@+2 5{{'value_func' declared here}}
+  // expected-note@+2 7{{'value_func' declared here}}
   // expected-note@+1 {{candidate function not viable: call to __device__ function from __host__ function}}
 __device__ constexpr inline int value_func() {
   return 32;
@@ -112,4 +112,18 @@ namespace ns2 {
   // host-error@-1 {{reference to __device__ function 'value_func' in __host__ function}}
   // device-error@-2 {{reference to __device__ function 'value_func' in global initializer}}
   }
+
+  struct DefInit {
+    unsigned a = 1 + value_func();
+  };
+  DefInit testDefInit;
+  // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+
+  struct DefArg {
+    int data;
+    DefArg(int a = 1 + value_func()) : data(a) {}
+  };
+  DefArg testDefArg;
+  // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+
 }
