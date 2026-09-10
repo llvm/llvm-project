@@ -908,7 +908,6 @@ function(add_libc_hermetic test_name)
     if(LIBC_ENABLE_COVERAGE)
       list(APPEND link_options
         -noprofilelib
-        -Wl,--allow-multiple-definition
         -u__llvm_profile_runtime
       )
     endif()
@@ -926,7 +925,6 @@ function(add_libc_hermetic test_name)
     if(LIBC_ENABLE_COVERAGE)
       list(APPEND link_options
         -noprofilelib
-        -Wl,--allow-multiple-definition
         -u__llvm_profile_runtime
       )
     endif()
@@ -939,6 +937,7 @@ function(add_libc_hermetic test_name)
     set(coverage_link_libs
       "${LIBC_CLANG_PROFILE_LIB}"
       libc
+      libc.test.UnitTest.CoverageTestUtils
     )
   endif()
 
@@ -950,7 +949,6 @@ function(add_libc_hermetic test_name)
       ${fq_target_name}.__libc__
       ${coverage_link_libs}
       ${compiler_runtime}
-      ${coverage_deps}
   )
   set(coverage_deps "")
   if(LIBC_ENABLE_COVERAGE)
@@ -1010,44 +1008,6 @@ function(add_libc_hermetic test_name)
       PROPERTIES
         SYMBOLIC "TRUE"
     )
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${HERMETIC_TEST_DEPENDS})
-  # Enable source-based code coverage using Clang's continuous profiling mode.
-  option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
-  if(LIBC_ENABLE_COVERAGE)
-    list(APPEND fq_deps_list
-      libc.startup.${LIBC_TARGET_OS}.crt1
-      libc.test.UnitTest.ErrnoSetterMatcher
-      libc.test.UnitTest.LibcTest
-      libc.test.UnitTest.HermeticTestUtils
-    )
-  else()
-    list(APPEND fq_deps_list
-      # Hermetic tests use the platform's startup object. So, their deps also
-      # have to be collected.
-      libc.startup.${LIBC_TARGET_OS}.crt1
-      # We always add the memory functions objects. This is because the
-      # compiler's codegen can emit calls to the C memory functions.
-      libc.src.__support.StringUtil.error_to_string
-      libc.src.string.memcmp
-      libc.src.string.memcpy
-      libc.src.string.memmove
-      libc.src.string.memset
-      libc.src.strings.bcmp
-      libc.src.strings.bzero
-      libc.test.UnitTest.ErrnoSetterMatcher
-      libc.test.UnitTest.LibcTest
-      libc.test.UnitTest.HermeticTestUtils
-    )
-  endif()
-
-  if(HERMETIC_TEST_C_TEST)
-    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
-  endif()
-
-  if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
-    list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
   endif()
 
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})

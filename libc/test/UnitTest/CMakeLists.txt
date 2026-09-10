@@ -174,6 +174,15 @@ add_unittest_framework_library(
     libc.src.__support.libc_errno
 )
 
+add_unittest_framework_library(
+  CoverageTestUtils
+  SRCS
+    CoverageTestUtils.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.libc_errno
+)
+
 add_header_library(
   string_utils
   HDRS
