@@ -29,6 +29,7 @@
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUNextUseAnalysis.h"
+#include "AMDGPUOptimizeVGPREncoding.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPUPrepareAGPRAlloc.h"
@@ -602,6 +603,11 @@ static cl::opt<bool>
                        cl::desc("Enable loop data prefetch on AMDGPU"),
                        cl::Hidden, cl::init(false));
 
+static cl::opt<bool>
+    EnableVGPREncodingOpt("amdgpu-enable-vgpr-encoding-optimization", cl::Hidden,
+                          cl::init(false),
+                          cl::desc("Enable VGPR encoding optimization pass"));
+
 static cl::opt<std::string>
     AMDGPUSchedStrategy("amdgpu-sched-strategy",
                         cl::desc("Select custom AMDGPU scheduling strategy."),
@@ -707,6 +713,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
+  initializeAMDGPUOptimizeVGPREncodingLegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
   initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
   initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(*PR);
@@ -2010,6 +2017,9 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
 
+  if (EnableVGPREncodingOpt)
+    addPass(&SIAMDGPUOptimizeVGPREncodingLegacyID);
+
   addPreRewrite();
   addPass(&VirtRegRewriterID);
 
@@ -2745,6 +2755,9 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
   else
     addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+
+  if (EnableVGPREncodingOpt)
+    addMachineFunctionPass(AMDGPUOptimizeVGPREncodingPass(), PMW);
 
   addPreRewrite(PMW);
   addMachineFunctionPass(VirtRegRewriterPass(true), PMW);
