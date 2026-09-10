@@ -14981,8 +14981,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       InVectors.pop_back();
     TTI::VectorInstrContext Ctx =
         P2.isNull() ? Ctx1 : TTI::combineVectorInstrContexts(Ctx1, Ctx2);
-    return ExtraCost + BaseShuffleAnalysis::createShuffle<InstructionCost>(
-                           V1, V2, CommonMask, Builder, ScalarTy, SLPReVec, VL, Ctx);
+    return ExtraCost +
+           BaseShuffleAnalysis::createShuffle<InstructionCost>(
+               V1, V2, CommonMask, Builder, ScalarTy, SLPReVec, VL, Ctx);
   }
 
 public:
