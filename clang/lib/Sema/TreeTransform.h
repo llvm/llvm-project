@@ -9469,10 +9469,12 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
     return StmtError();
 
   // Before c++23, ForRangeLifetimeExtendTemps should be empty.
-  assert(getSema().getLangOpts().CPlusPlus23 ||
-         getSema().ExprEvalContexts.back().ForRangeLifetimeExtendTemps.empty());
+  auto *Rare = getSema().ExprEvalContexts.back().getRareData();
+  assert(getSema().getLangOpts().CPlusPlus23 || !Rare ||
+         Rare->ForRangeLifetimeExtendTemps.empty());
   auto ForRangeLifetimeExtendTemps =
-      getSema().ExprEvalContexts.back().ForRangeLifetimeExtendTemps;
+      Rare ? Rare->ForRangeLifetimeExtendTemps
+           : SmallVector<MaterializeTemporaryExpr *, 8>();
 
   StmtResult Begin = getDerived().TransformStmt(S->getBeginStmt());
   if (Begin.isInvalid())
@@ -9611,8 +9613,8 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
     ExpansionInitializer =
         SemaRef.MaybeCreateExprWithCleanups(ExpansionInitializer);
 
-    LifetimeExtendTemps =
-        SemaRef.currentEvaluationContext().ForRangeLifetimeExtendTemps;
+    if (auto *Rare = SemaRef.currentEvaluationContext().getRareData())
+      LifetimeExtendTemps = Rare->ForRangeLifetimeExtendTemps;
   }
 
   CXXExpansionStmtPattern *NewPattern = nullptr;
@@ -9718,8 +9720,10 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtInstantiation(
     if (S->shouldApplyLifetimeExtensionToPreamble()) {
       auto *VD =
           cast<VarDecl>(cast<DeclStmt>(PreambleStmts.front())->getSingleDecl());
+      auto *Rare = SemaRef.currentEvaluationContext().getRareData();
       SemaRef.ApplyForRangeOrExpansionStatementLifetimeExtension(
-          VD, SemaRef.currentEvaluationContext().ForRangeLifetimeExtendTemps);
+          VD, Rare ? ArrayRef(Rare->ForRangeLifetimeExtendTemps)
+                   : ArrayRef<MaterializeTemporaryExpr *>());
     }
   }
 

@@ -5382,7 +5382,8 @@ void Sema::CheckAddressOfNoDeref(const Expr *E) {
   while ((Member = dyn_cast<MemberExpr>(StrippedExpr)) && !Member->isArrow())
     StrippedExpr = Member->getBase()->IgnoreParenImpCasts();
 
-  LastRecord.PossibleDerefs.erase(StrippedExpr);
+  if (auto *Rare = LastRecord.getRareData())
+    Rare->PossibleDerefs.erase(StrippedExpr);
 }
 
 void Sema::CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E) {
@@ -5397,7 +5398,7 @@ void Sema::CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E) {
     return;
 
   if (ResultTy->hasAttr(attr::NoDeref)) {
-    LastRecord.PossibleDerefs.insert(E);
+    LastRecord.getOrCreateRareData().PossibleDerefs.insert(E);
     return;
   }
 
@@ -5416,7 +5417,7 @@ void Sema::CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E) {
 
   if (const auto *Ptr = dyn_cast<PointerType>(Base->getType())) {
     if (Ptr->getPointeeType()->hasAttr(attr::NoDeref))
-      LastRecord.PossibleDerefs.insert(E);
+      LastRecord.getOrCreateRareData().PossibleDerefs.insert(E);
   }
 }
 
@@ -6799,7 +6800,8 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     // an invalid immediate call.
     if (auto *DRE = dyn_cast<DeclRefExpr>(Fn->IgnoreParens());
         DRE && Call.get()->isValueDependent()) {
-      currentEvaluationContext().ReferenceToConsteval.erase(DRE);
+      if (auto *Rare = currentEvaluationContext().getRareData())
+        Rare->ReferenceToConsteval.erase(DRE);
     }
   }
   return Call;
@@ -14730,7 +14732,9 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
       //   A simple-assignment whose left operand is of a volatile-qualified
       //   type is deprecated unless the assignment is either a discarded-value
       //   expression or an unevaluated operand
-      ExprEvalContexts.back().VolatileAssignmentLHSs.push_back(LHSExpr);
+      ExprEvalContexts.back()
+          .getOrCreateRareData()
+          .VolatileAssignmentLHSs.push_back(LHSExpr);
     }
   }
 
@@ -16584,7 +16588,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   if (Opc == UO_Deref && UO->getType()->hasAttr(attr::NoDeref) &&
       !isa<ArrayType>(UO->getType().getDesugaredType(Context)) &&
       !isUnevaluatedContext())
-    ExprEvalContexts.back().PossibleDerefs.insert(UO);
+    ExprEvalContexts.back().getOrCreateRareData().PossibleDerefs.insert(UO);
 
   // Convert the result back to a half vector.
   if (ConvertHalfVec)
@@ -18322,29 +18326,35 @@ void
 Sema::PushExpressionEvaluationContext(
     ExpressionEvaluationContext NewContext, Decl *LambdaContextDecl,
     ExpressionEvaluationContextRecord::ExpressionKind ExprContext) {
+  const auto &Prev = currentEvaluationContext();
+  bool InDiscardedStatement = Prev.isDiscardedStatementContext();
+  bool InImmediateFunctionContext =
+      Prev.isImmediateFunctionContext() || Prev.isConstantEvaluated();
+  bool InImmediateEscalatingFunctionContext =
+      Prev.InImmediateEscalatingFunctionContext;
+
   ExprEvalContexts.emplace_back(NewContext, ExprCleanupObjects.size(), Cleanup,
                                 LambdaContextDecl, ExprContext);
+  auto &Current = currentEvaluationContext();
 
   // Discarded statements and immediate contexts nested in other
   // discarded statements or immediate context are themselves
   // a discarded statement or an immediate context, respectively.
-  ExprEvalContexts.back().InDiscardedStatement =
-      parentEvaluationContext().isDiscardedStatementContext();
+  Current.InDiscardedStatement = InDiscardedStatement;
 
   // C++23 [expr.const]/p15
   // An expression or conversion is in an immediate function context if [...]
   // it is a subexpression of a manifestly constant-evaluated expression or
   // conversion.
-  const auto &Prev = parentEvaluationContext();
-  ExprEvalContexts.back().InImmediateFunctionContext =
-      Prev.isImmediateFunctionContext() || Prev.isConstantEvaluated();
+  Current.InImmediateFunctionContext = InImmediateFunctionContext;
 
-  ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
-      Prev.InImmediateEscalatingFunctionContext;
+  Current.InImmediateEscalatingFunctionContext =
+      InImmediateEscalatingFunctionContext;
 
   Cleanup.reset();
   if (!MaybeODRUseExprs.empty())
-    std::swap(MaybeODRUseExprs, ExprEvalContexts.back().SavedMaybeODRUseExprs);
+    std::swap(MaybeODRUseExprs,
+              Current.getOrCreateRareData().SavedMaybeODRUseExprs);
 }
 
 void
@@ -18434,7 +18444,10 @@ const DeclRefExpr *CheckPossibleDeref(Sema &S, const Expr *PossibleDeref) {
 } // namespace
 
 void Sema::WarnOnPendingNoDerefs(ExpressionEvaluationContextRecord &Rec) {
-  for (const Expr *E : Rec.PossibleDerefs) {
+  auto *Rare = Rec.getRareData();
+  if (!Rare)
+    return;
+  for (const Expr *E : Rare->PossibleDerefs) {
     const DeclRefExpr *DeclRef = CheckPossibleDeref(*this, E);
     if (DeclRef) {
       const ValueDecl *Decl = DeclRef->getDecl();
@@ -18446,7 +18459,7 @@ void Sema::WarnOnPendingNoDerefs(ExpressionEvaluationContextRecord &Rec) {
           << E->getSourceRange();
     }
   }
-  Rec.PossibleDerefs.clear();
+  Rare->PossibleDerefs.clear();
 }
 
 void Sema::CheckUnusedVolatileAssignment(Expr *E) {
@@ -18458,8 +18471,8 @@ void Sema::CheckUnusedVolatileAssignment(Expr *E) {
   // drives a deprecation warning so doesn't affect conformance.
   if (auto *BO = dyn_cast<BinaryOperator>(E->IgnoreParenImpCasts())) {
     if (BO->getOpcode() == BO_Assign) {
-      auto &LHSs = ExprEvalContexts.back().VolatileAssignmentLHSs;
-      llvm::erase(LHSs, BO->getLHS());
+      if (auto *Rare = ExprEvalContexts.back().getRareData())
+        llvm::erase(Rare->VolatileAssignmentLHSs, BO->getLHS());
     }
   }
 }
@@ -18499,7 +18512,8 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   if (auto *Call = dyn_cast<CallExpr>(E.get()->IgnoreImplicit()))
     if (auto *DeclRef =
             dyn_cast<DeclRefExpr>(Call->getCallee()->IgnoreImplicit()))
-      ExprEvalContexts.back().ReferenceToConsteval.erase(DeclRef);
+      if (auto *Rare = ExprEvalContexts.back().getRareData())
+        Rare->ReferenceToConsteval.erase(DeclRef);
 
   // C++23 [expr.const]/p16
   // An expression or conversion is immediate-escalating if it is not initially
@@ -18555,7 +18569,9 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   /// Value-dependent constant expressions should not be immediately
   /// evaluated until they are instantiated.
   if (!Res->isValueDependent())
-    ExprEvalContexts.back().ImmediateInvocationCandidates.emplace_back(Res, 0);
+    ExprEvalContexts.back()
+        .getOrCreateRareData()
+        .ImmediateInvocationCandidates.emplace_back(Res, 0);
   return Res;
 }
 
@@ -18691,8 +18707,8 @@ static void RemoveNestedImmediateInvocation(
       return Res;
     }
     bool AllowSkippingFirstCXXConstructExpr = true;
-  } Transformer(SemaRef, Rec.ReferenceToConsteval,
-                Rec.ImmediateInvocationCandidates, It);
+  } Transformer(SemaRef, Rec.getRareData()->ReferenceToConsteval,
+                Rec.getRareData()->ImmediateInvocationCandidates, It);
 
   /// CXXConstructExpr with a single argument are getting skipped by
   /// TreeTransform in some situtation because they could be implicit. This
@@ -18716,8 +18732,10 @@ static void RemoveNestedImmediateInvocation(
 static void
 HandleImmediateInvocations(Sema &SemaRef,
                            Sema::ExpressionEvaluationContextRecord &Rec) {
-  if ((Rec.ImmediateInvocationCandidates.size() == 0 &&
-       Rec.ReferenceToConsteval.size() == 0) ||
+  auto *Rare = Rec.getRareData();
+  if (!Rare ||
+      (Rare->ImmediateInvocationCandidates.empty() &&
+       Rare->ReferenceToConsteval.empty()) ||
       Rec.isImmediateFunctionContext() || SemaRef.RebuildingImmediateInvocation)
     return;
 
@@ -18745,7 +18763,7 @@ HandleImmediateInvocations(Sema &SemaRef,
   /// ImmediateInvocationCandidates in order to avoid duplicate diagnostics.
   /// Otherwise we only need to remove ReferenceToConsteval in the immediate
   /// invocation.
-  if (Rec.ImmediateInvocationCandidates.size() > 1 ||
+  if (Rare->ImmediateInvocationCandidates.size() > 1 ||
       !SemaRef.FailedImmediateInvocations.empty()) {
 
     /// Prevent sema calls during the tree transform from adding pointers that
@@ -18756,12 +18774,12 @@ HandleImmediateInvocations(Sema &SemaRef,
     /// Prevent diagnostic during tree transfrom as they are duplicates
     Sema::TentativeAnalysisScope DisableDiag(SemaRef);
 
-    for (auto It = Rec.ImmediateInvocationCandidates.rbegin();
-         It != Rec.ImmediateInvocationCandidates.rend(); It++)
+    for (auto It = Rare->ImmediateInvocationCandidates.rbegin();
+         It != Rare->ImmediateInvocationCandidates.rend(); It++)
       if (!It->getInt())
         RemoveNestedImmediateInvocation(SemaRef, Rec, It);
-  } else if (Rec.ImmediateInvocationCandidates.size() == 1 &&
-             Rec.ReferenceToConsteval.size()) {
+  } else if (Rare->ImmediateInvocationCandidates.size() == 1 &&
+             !Rare->ReferenceToConsteval.empty()) {
     struct SimpleRemove : DynamicRecursiveASTVisitor {
       llvm::SmallPtrSetImpl<DeclRefExpr *> &DRSet;
       SimpleRemove(llvm::SmallPtrSetImpl<DeclRefExpr *> &S) : DRSet(S) {}
@@ -18769,14 +18787,14 @@ HandleImmediateInvocations(Sema &SemaRef,
         DRSet.erase(E);
         return DRSet.size();
       }
-    } Visitor(Rec.ReferenceToConsteval);
+    } Visitor(Rare->ReferenceToConsteval);
     Visitor.TraverseStmt(
-        Rec.ImmediateInvocationCandidates.front().getPointer()->getSubExpr());
+        Rare->ImmediateInvocationCandidates.front().getPointer()->getSubExpr());
   }
-  for (auto CE : Rec.ImmediateInvocationCandidates)
+  for (auto CE : Rare->ImmediateInvocationCandidates)
     if (!CE.getInt())
       EvaluateAndDiagnoseImmediateInvocation(SemaRef, CE);
-  for (auto *DR : Rec.ReferenceToConsteval) {
+  for (auto *DR : Rare->ReferenceToConsteval) {
     // If the expression is immediate escalating, it is not an error;
     // The outer context itself becomes immediate and further errors,
     // if any, will be handled by DiagnoseImmediateEscalatingReason.
@@ -18825,7 +18843,23 @@ HandleImmediateInvocations(Sema &SemaRef,
 
 void Sema::PopExpressionEvaluationContext() {
   ExpressionEvaluationContextRecord& Rec = ExprEvalContexts.back();
-  if (!Rec.Lambdas.empty()) {
+  auto *Rare = Rec.getRareData();
+  if (!Rare) {
+    if (Rec.isUnevaluated() || Rec.isConstantEvaluated()) {
+      ExprCleanupObjects.erase(ExprCleanupObjects.begin() +
+                                   Rec.NumCleanupObjects,
+                               ExprCleanupObjects.end());
+      Cleanup = Rec.ParentCleanup;
+      CleanupVarDeclMarking();
+      MaybeODRUseExprs.clear();
+    } else {
+      Cleanup.mergeFrom(Rec.ParentCleanup);
+    }
+    ExprEvalContexts.pop_back();
+    return;
+  }
+
+  if (!Rare->Lambdas.empty()) {
     using ExpressionKind = ExpressionEvaluationContextRecord::ExpressionKind;
     if (!getLangOpts().CPlusPlus20 &&
         (Rec.ExprContext == ExpressionKind::EK_TemplateArgument ||
@@ -18850,7 +18884,7 @@ void Sema::PopExpressionEvaluationContext() {
       } else
         llvm_unreachable("Couldn't infer lambda error message.");
 
-      for (const auto *L : Rec.Lambdas)
+      for (const auto *L : Rare->Lambdas)
         Diag(L->getBeginLoc(), D);
     }
   }
@@ -18859,9 +18893,10 @@ void Sema::PopExpressionEvaluationContext() {
   // exit if the previous also is a lifetime extending context.
   if (getLangOpts().CPlusPlus23 && Rec.InLifetimeExtendingContext &&
       parentEvaluationContext().InLifetimeExtendingContext &&
-      !Rec.ForRangeLifetimeExtendTemps.empty()) {
-    parentEvaluationContext().ForRangeLifetimeExtendTemps.append(
-        Rec.ForRangeLifetimeExtendTemps);
+      !Rare->ForRangeLifetimeExtendTemps.empty()) {
+    parentEvaluationContext()
+        .getOrCreateRareData()
+        .ForRangeLifetimeExtendTemps.append(Rare->ForRangeLifetimeExtendTemps);
   }
 
   WarnOnPendingNoDerefs(Rec);
@@ -18870,7 +18905,7 @@ void Sema::PopExpressionEvaluationContext() {
   // Warn on any volatile-qualified simple-assignments that are not discarded-
   // value expressions nor unevaluated operands (those cases get removed from
   // this list by CheckUnusedVolatileAssignment).
-  for (auto *BO : Rec.VolatileAssignmentLHSs)
+  for (auto *BO : Rare->VolatileAssignmentLHSs)
     Diag(BO->getBeginLoc(), diag::warn_deprecated_simple_assign_volatile)
         << BO->getType();
 
@@ -18883,11 +18918,12 @@ void Sema::PopExpressionEvaluationContext() {
                              ExprCleanupObjects.end());
     Cleanup = Rec.ParentCleanup;
     CleanupVarDeclMarking();
-    std::swap(MaybeODRUseExprs, Rec.SavedMaybeODRUseExprs);
-  // Otherwise, merge the contexts together.
+    if (!MaybeODRUseExprs.empty() || !Rare->SavedMaybeODRUseExprs.empty())
+      std::swap(MaybeODRUseExprs, Rare->SavedMaybeODRUseExprs);
+    // Otherwise, merge the contexts together.
   } else {
     Cleanup.mergeFrom(Rec.ParentCleanup);
-    MaybeODRUseExprs.insert_range(Rec.SavedMaybeODRUseExprs);
+    MaybeODRUseExprs.insert_range(Rare->SavedMaybeODRUseExprs);
   }
 
   DiagnoseMisalignedMembers();
@@ -21057,7 +21093,8 @@ void Sema::MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base) {
         !isCheckingDefaultArgumentOrInitializer() &&
         FD->isImmediateFunction() && !RebuildingImmediateInvocation &&
         !FD->isDependentContext())
-      ExprEvalContexts.back().ReferenceToConsteval.insert(E);
+      ExprEvalContexts.back().getOrCreateRareData().ReferenceToConsteval.insert(
+          E);
   }
   MarkExprReferenced(*this, E->getLocation(), E->getDecl(), E, OdrUse,
                      RefsMinusAssignments);
@@ -21307,7 +21344,9 @@ bool Sema::CheckCallReturnType(QualType ReturnType, SourceLocation Loc,
   // type or construct temporaries until we know whether this is the last call.
   if (ExprEvalContexts.back().ExprContext ==
       ExpressionEvaluationContextRecord::EK_Decltype) {
-    ExprEvalContexts.back().DelayedDecltypeCalls.push_back(CE);
+    ExprEvalContexts.back()
+        .getOrCreateRareData()
+        .DelayedDecltypeCalls.push_back(CE);
     return false;
   }
 

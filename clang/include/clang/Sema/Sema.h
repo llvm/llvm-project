@@ -6809,12 +6809,6 @@ public:
     /// this expression evaluation context.
     unsigned NumCleanupObjects;
 
-    MaybeODRUseExprSet SavedMaybeODRUseExprs;
-
-    /// The lambdas that are present within this context, if it
-    /// is indeed an unevaluated context.
-    SmallVector<LambdaExpr *, 2> Lambdas;
-
     /// The declaration that provides context for lambda expressions
     /// and block literals if the normal declaration context does not
     /// suffice, e.g., in a default function argument.
@@ -6825,38 +6819,60 @@ public:
     /// diagnostic to reference the declaration as a whole.
     VarDecl *DeclForInitializer = nullptr;
 
-    /// If we are processing a decltype type, a set of call expressions
-    /// for which we have deferred checking the completeness of the return type.
-    SmallVector<CallExpr *, 8> DelayedDecltypeCalls;
+    /// Collections used by uncommon evaluation-context features. Keeping them
+    /// out of line avoids constructing empty containers for ordinary contexts.
+    struct RareData {
+      MaybeODRUseExprSet SavedMaybeODRUseExprs;
 
-    /// If we are processing a decltype type, a set of temporary binding
-    /// expressions for which we have deferred checking the destructor.
-    SmallVector<CXXBindTemporaryExpr *, 8> DelayedDecltypeBinds;
+      /// The lambdas that are present within an unevaluated context.
+      SmallVector<LambdaExpr *, 2> Lambdas;
 
-    llvm::SmallPtrSet<const Expr *, 8> PossibleDerefs;
+      /// If we are processing a decltype type, call expressions for which we
+      /// have deferred checking the completeness of the return type.
+      SmallVector<CallExpr *, 8> DelayedDecltypeCalls;
 
-    /// Expressions appearing as the LHS of a volatile assignment in this
-    /// context. We produce a warning for these when popping the context if
-    /// they are not discarded-value expressions nor unevaluated operands.
-    SmallVector<Expr *, 2> VolatileAssignmentLHSs;
+      /// If we are processing a decltype type, temporary binding expressions
+      /// for which we have deferred checking the destructor.
+      SmallVector<CXXBindTemporaryExpr *, 8> DelayedDecltypeBinds;
 
-    /// Set of candidates for starting an immediate invocation.
-    llvm::SmallVector<ImmediateInvocationCandidate, 4>
-        ImmediateInvocationCandidates;
+      llvm::SmallPtrSet<const Expr *, 8> PossibleDerefs;
 
-    /// Set of DeclRefExprs referencing a consteval function when used in a
-    /// context not already known to be immediately invoked.
-    llvm::SmallPtrSet<DeclRefExpr *, 4> ReferenceToConsteval;
+      /// Expressions appearing as the LHS of a volatile assignment in this
+      /// context. We warn when popping the context unless they are discarded-
+      /// value expressions or unevaluated operands.
+      SmallVector<Expr *, 2> VolatileAssignmentLHSs;
 
-    /// P2718R0 - Lifetime extension in range-based for loops.
-    /// MaterializeTemporaryExprs in for-range-init expressions which need to
-    /// extend lifetime. Add MaterializeTemporaryExpr* if the value of
-    /// InLifetimeExtendingContext is true.
-    SmallVector<MaterializeTemporaryExpr *, 8> ForRangeLifetimeExtendTemps;
+      /// Set of candidates for starting an immediate invocation.
+      llvm::SmallVector<ImmediateInvocationCandidate, 4>
+          ImmediateInvocationCandidates;
 
-    /// Small set of gathered accesses to potentially misaligned members
-    /// due to the packed attribute.
-    SmallVector<MisalignedMember, 4> MisalignedMembers;
+      /// DeclRefExprs referencing a consteval function in a context not already
+      /// known to be immediately invoked.
+      llvm::SmallPtrSet<DeclRefExpr *, 4> ReferenceToConsteval;
+
+      /// P2718R0 - Lifetime extension in range-based for loops.
+      /// Materialized temporaries in for-range-init expressions whose lifetime
+      /// needs extending. Collected when InLifetimeExtendingContext is true.
+      SmallVector<MaterializeTemporaryExpr *, 8> ForRangeLifetimeExtendTemps;
+
+      /// Gathered accesses to potentially misaligned members due to the packed
+      /// attribute.
+      SmallVector<MisalignedMember, 4> MisalignedMembers;
+    };
+
+    /// Null means that every rare-data collection is empty.
+    std::unique_ptr<RareData> Rare;
+
+    /// Obtain storage for adding rare state, allocating it on first use.
+    RareData &getOrCreateRareData() {
+      if (!Rare)
+        Rare = std::make_unique<RareData>();
+      return *Rare;
+    }
+
+    /// Inspect rare state without allocating storage for an empty context.
+    RareData *getRareData() { return Rare.get(); }
+    const RareData *getRareData() const { return Rare.get(); }
 
     /// \brief Describes whether we are in an expression constext which we have
     /// to handle differently.

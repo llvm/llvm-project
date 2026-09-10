@@ -1793,7 +1793,7 @@ void Sema::CheckMemberAccessOfNoDeref(const MemberExpr *E) {
     if (const auto *Ptr = dyn_cast<PointerType>(
             E->getBase()->getType().getDesugaredType(Context))) {
       if (Ptr->getPointeeType()->hasAttr(attr::NoDeref))
-        ExprEvalContexts.back().PossibleDerefs.insert(E);
+        ExprEvalContexts.back().getOrCreateRareData().PossibleDerefs.insert(E);
     }
   }
 }

@@ -16950,12 +16950,16 @@ void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
 
 void Sema::AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
                                          CharUnits Alignment) {
-  currentEvaluationContext().MisalignedMembers.emplace_back(E, RD, MD,
-                                                            Alignment);
+  currentEvaluationContext()
+      .getOrCreateRareData()
+      .MisalignedMembers.emplace_back(E, RD, MD, Alignment);
 }
 
 void Sema::DiagnoseMisalignedMembers() {
-  for (MisalignedMember &m : currentEvaluationContext().MisalignedMembers) {
+  auto *Rare = currentEvaluationContext().getRareData();
+  if (!Rare)
+    return;
+  for (MisalignedMember &m : Rare->MisalignedMembers) {
     const NamedDecl *ND = m.RD;
     if (ND->getName().empty()) {
       if (const TypedefNameDecl *TD = m.RD->getTypedefNameForAnonDecl())
@@ -16964,7 +16968,7 @@ void Sema::DiagnoseMisalignedMembers() {
     Diag(m.E->getBeginLoc(), diag::warn_taking_address_of_packed_member)
         << m.MD << ND << m.E->getSourceRange();
   }
-  currentEvaluationContext().MisalignedMembers.clear();
+  Rare->MisalignedMembers.clear();
 }
 
 void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
@@ -16975,8 +16979,10 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
       cast<UnaryOperator>(E)->getOpcode() == UO_AddrOf) {
     auto *Op = cast<UnaryOperator>(E)->getSubExpr()->IgnoreParens();
     if (isa<MemberExpr>(Op)) {
-      auto &MisalignedMembersForExpr =
-          currentEvaluationContext().MisalignedMembers;
+      auto *Rare = currentEvaluationContext().getRareData();
+      if (!Rare)
+        return;
+      auto &MisalignedMembersForExpr = Rare->MisalignedMembers;
       auto *MA = llvm::find(MisalignedMembersForExpr, MisalignedMember(Op));
       if (MA != MisalignedMembersForExpr.end() &&
           (T->isDependentType() || T->isIntegerType() ||
