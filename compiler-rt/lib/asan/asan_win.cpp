@@ -384,7 +384,9 @@ bool HandleDlopenInit() {
 // beginning of C++ initialization. We set our priority to XCAB to run
 // immediately after the CRT runs. This way, our exception filter is called
 // first and we can delegate to their filter if appropriate.
-#pragma section(".CRT$XCAB", long, read)
+#    if !defined(__GNUC__) || defined(__clang__)
+#      pragma section(".CRT$XCAB", long, read)
+#    endif
 IN_SECTION(".CRT$XCAB") int (*__intercept_seh)() = __asan_set_seh_filter;
 
 // Piggyback on the TLS initialization callback directory to initialize asan as
@@ -396,7 +398,9 @@ static void NTAPI asan_thread_init(void *module, DWORD reason, void *reserved) {
     __asan_init();
 }
 
-#pragma section(".CRT$XLAB", long, read)
+#    if !defined(__GNUC__) || defined(__clang__)
+#      pragma section(".CRT$XLAB", long, read)
+#    endif
 IN_SECTION(".CRT$XLAB")
 void(NTAPI* __asan_tls_init)(void*, unsigned long, void*) = asan_thread_init;
 #  endif
@@ -410,7 +414,9 @@ static void NTAPI asan_thread_exit(void *module, DWORD reason, void *reserved) {
   }
 }
 
-#pragma section(".CRT$XLY", long, read)
+#  if !defined(__GNUC__) || defined(__clang__)
+#    pragma section(".CRT$XLY", long, read)
+#  endif
 IN_SECTION(".CRT$XLY")
 void(NTAPI* __asan_tls_exit)(void*, unsigned long, void*) = asan_thread_exit;
 
