@@ -12673,10 +12673,13 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
     // Find any virtual functions that this function overrides.
     if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(NewFD)) {
-      if (!Method->isFunctionTemplateSpecialization() &&
+      CXXRecordDecl *Parent = Method->getParent();
+      if (!isa<CXXConstructorDecl>(Method) && Parent->getNumBases() != 0 &&
+          Parent->isPolymorphic() &&
+          !Method->isFunctionTemplateSpecialization() &&
           !Method->getDescribedFunctionTemplate() &&
           Method->isCanonicalDecl()) {
-        AddOverriddenMethods(Method->getParent(), Method);
+        AddOverriddenMethods(Parent, Method);
       }
       if (Method->isVirtual() && NewFD->getTrailingRequiresClause())
         // C++2a [class.virtual]p6
