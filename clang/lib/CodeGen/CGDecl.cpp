@@ -1645,18 +1645,18 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     }
 
     // A variable whose declaration is bypassed by a goto or switch is not
-    // initialized by EmitAutoVarInit (that runs at the declaration). Emit the
-    // trivial-auto-var-init separately, following each language's lifetime
-    // rules.
+    // initialized by EmitAutoVarInit, which runs at the declaration. Emit the
+    // trivial-auto-var-init separately.
     if (Bypasses.IsBypassed(&D) && !emission.IsEscapingByRef &&
         !Ty->isVariablyModifiedType() &&
         getAutoVarInitKind(Ty, D) !=
             LangOptions::TrivialAutoVarInitKind::Uninitialized) {
-      if (getLangOpts().CPlusPlus && !Bypasses.isAlwaysBypassed()) {
-        // C++ [basic.stc.auto]: the lifetime restarts on each scope re-entry,
-        // so reinitialize at every bypassing jump. Switch cases and backward
-        // gotos are emitted at the jump source (after this alloca); forward
-        // gotos already emitted are patchd before their branch.
+      if (!Bypasses.isAlwaysBypassed()) {
+        // The variable's lifetime restarts on each re-entry into its scope, so
+        // reinitialize at every bypassing jump. Switch cases and backward gotos
+        // are emitted at the jump source, which comes after this alloca;
+        // forward gotos have already been emitted, so patch their init in
+        // before the branch.
         BypassedVarInits.insert({&D, address});
         for (const BypassingForwardGoto &FG : BypassingForwardGotos) {
           const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Goto);
@@ -1668,16 +1668,11 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
             }
         }
       } else {
-        // C (C6.2.4p6) and computed gotos: the lifetime begins at entry into
-        // the enclosing block, so initialize at that block's entry once for a
-        // function-scoped variable and every iteration for a loop-scoped one.
-        llvm::BasicBlock *Entry =
-            CurLexicalScope ? CurLexicalScope->getEntryBlock() : nullptr;
+        // A computed goto can jump anywhere, so we can't identify the jumps
+        // that bypass this declaration. Fall back to initializing once, in the
+        // function's entry block.
         llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
-        if (Entry && Entry->getTerminator())
-          Builder.SetInsertPoint(Entry->getTerminator());
-        else
-          Builder.SetInsertPoint(getPostAllocaInsertPoint());
+        Builder.SetInsertPoint(getPostAllocaInsertPoint());
         emitZeroOrPatternForAutoVarInit(Ty, D, address);
       }
     }
@@ -1892,7 +1887,7 @@ CodeGenFunction::getAutoVarInitKind(QualType type, const VarDecl &D) {
 }
 
 void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
-  // C++ scope-reentry reinit is only sound when jump sources are known. With a
+  // Scope-reentry reinit is only sound when jump sources are known. With a
   // computed goto we can't tell whether a jump leaves a variable's scope, so
   // EmitAutoVarAlloca falls back to a single function-scope init and we must
   // not reinitialize here -- doing so could clobber a still-live variable.
@@ -1903,10 +1898,8 @@ void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
     return;
   for (const VarDecl *VD : *Vars) {
     auto It = BypassedVarInits.find(VD);
-    if (It != BypassedVarInits.end()) {
-      QualType Ty = VD->getType().getNonReferenceType();
-      emitZeroOrPatternForAutoVarInit(Ty, *VD, It->second);
-    }
+    if (It != BypassedVarInits.end())
+      emitZeroOrPatternForAutoVarInit(VD->getType(), *VD, It->second);
   }
 }
 
