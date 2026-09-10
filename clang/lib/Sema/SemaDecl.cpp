@@ -4984,6 +4984,9 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   if (Old->getMostRecentDecl()->isUsed(false))
     New->setIsUsed();
 
+  // Linking this declaration to a previous one may change its linkage.
+  New->invalidateCachedLinkage();
+
   // Keep a chain of previous declarations.
   New->setPreviousDecl(Old);
   if (NewTemplate)
