@@ -334,30 +334,18 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_fract:
   case AMDGPU::BI__builtin_amdgcn_fractf:
-  case AMDGPU::BI__builtin_amdgcn_fracth: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_fracth:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.fract").getValue();
   case AMDGPU::BI__builtin_amdgcn_lerp: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_ubfe: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
-  case AMDGPU::BI__builtin_amdgcn_sbfe: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_ubfe:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.ubfe").getValue();
+  case AMDGPU::BI__builtin_amdgcn_sbfe:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.sbfe").getValue();
   case AMDGPU::BI__builtin_amdgcn_ballot_w32:
   case AMDGPU::BI__builtin_amdgcn_ballot_w64:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ballot",
