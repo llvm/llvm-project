@@ -343,8 +343,13 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
            << PtrArg->getType() << 0 << PtrArg->getSourceRange();
   TheCall->setArg(0, PtrArg);
 
-  QualType PtrQT =
-      Context.getCanonicalType(PtrTy->getPointeeType()).getUnqualifiedType();
+  QualType PtrQT = Context.getCanonicalType(PtrTy->getPointeeType());
+  if (PtrQT.isConstQualified())
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_op_needs_non_const_pointer)
+           << PtrQT << PtrArg->getSourceRange();
+
+  PtrQT = PtrQT.getUnqualifiedType();
   if (!PtrQT->isIntegralType(Context) && !PtrQT->isFloatingType() &&
       !PtrQT->isMFloat8Type())
     return Diag(TheCall->getBeginLoc(),
@@ -354,11 +359,6 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   if (PtrQT->isBitIntType())
     return Diag(TheCall->getBeginLoc(),
                 diag::err_atomic_builtin_bit_int_prohibit)
-           << PtrQT << PtrArg->getSourceRange();
-
-  if (Context.getCanonicalType(PtrTy->getPointeeType()).isConstQualified())
-    return Diag(TheCall->getBeginLoc(),
-                diag::err_atomic_op_needs_non_const_pointer)
            << PtrQT << PtrArg->getSourceRange();
 
   unsigned TySize = Context.getTypeSize(PtrQT);
@@ -383,7 +383,7 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   // Arg 2 is the memory order, which must be relaxed, release or seq_cst
   auto MemOrdArg =
       SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2)).get();
-  if (!MemOrdArg->isTypeDependent() && !MemOrdArg->isValueDependent()) {
+  if (!MemOrdArg->isValueDependent()) {
     std::optional<llvm::APSInt> MemOrdAP =
         MemOrdArg->getIntegerConstantExpr(Context);
     if (!MemOrdAP)
@@ -410,7 +410,7 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   // are valid.
   auto HintArg =
       SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(3)).get();
-  if (!HintArg->isTypeDependent() && !HintArg->isValueDependent()) {
+  if (!HintArg->isValueDependent()) {
     std::optional<llvm::APSInt> HintAP =
         HintArg->getIntegerConstantExpr(Context);
     if (!HintAP) {
