@@ -712,6 +712,10 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 }
 
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
+  // Target-specific global variable checks. Done first because this function
+  // returns early for a global without an initializer.
+  verifyAMDGPUGlobalVariable(*this, GV);
+
   Type *GVType = GV.getValueType();
 
   if (MaybeAlign A = GV.getAlign()) {
@@ -2078,13 +2082,15 @@ Verifier::visitModuleFlag(const MDNode *Op,
           "module flag identifiers must be unique (or of 'require' type)", ID);
   }
 
-  if (ID->getString() == "wchar_size") {
+  StringRef Name = ID->getString();
+  if (Name == "wchar_size") {
     ConstantInt *Value
       = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Check(Value, "wchar_size metadata requires constant integer argument");
+    return;
   }
 
-  if (ID->getString() == "long-double-type") {
+  if (Name == "long-double-type") {
     Check(MFB == Module::Error,
           "long-double-type module flag must use 'error' merge behavior", Op);
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
@@ -2092,9 +2098,10 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(parseLongDoubleFormat(Value->getString()).has_value(),
             "invalid long-double-type metadata value", Op);
+    return;
   }
 
-  if (ID->getString() == "float-abi") {
+  if (Name == "float-abi") {
     Check(MFB == Module::Error,
           "float-abi module flag must use 'error' merge behavior", Op);
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
@@ -2102,32 +2109,37 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(FloatABI::parseABIType(Value->getString()).has_value(),
             "invalid float-abi metadata value", Op);
+    return;
   }
 
-  if (ID->getString() == "target-abi") {
+  if (Name == "target-abi") {
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
     Check(Value && !Value->getString().empty(),
           "target-abi metadata requires a non-empty string argument", Op);
+    return;
   }
 
-  if (ID->getString() == "Linker Options") {
+  if (Name == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
     // have been created by a client directly.
     Check(M.getNamedMetadata("llvm.linker.options"),
           "'Linker Options' named metadata no longer supported");
+    return;
   }
 
-  if (ID->getString() == "SemanticInterposition") {
+  if (Name == "SemanticInterposition") {
     ConstantInt *Value =
         mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Check(Value,
           "SemanticInterposition metadata requires constant integer argument");
+    return;
   }
 
-  if (ID->getString() == "CG Profile") {
+  if (Name == "CG Profile") {
     for (const MDOperand &MDO : cast<MDNode>(Op->getOperand(2))->operands())
       visitModuleFlagCGProfileEntry(MDO);
+    return;
   }
 
   // Target-specific module flag checks.
@@ -2284,8 +2296,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     }
     if (Attrs.hasAttribute(Attribute::ByVal)) {
       Type *ByValTy = Attrs.getByValType();
-      SmallPtrSet<Type *, 4> Visited;
-      Check(ByValTy->isSized(&Visited),
+      Check(ByValTy->isSized(),
             "Attribute 'byval' does not support unsized types!", V);
       // Check if it is or contains a target extension type that disallows being
       // used on the stack.
@@ -2295,24 +2306,21 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
             "huge 'byval' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByRef)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getByRefType()->isSized(&Visited),
+      Check(Attrs.getByRefType()->isSized(),
             "Attribute 'byref' does not support unsized types!", V);
       Check(DL.getTypeAllocSize(Attrs.getByRefType()).getKnownMinValue() <
                 (1ULL << 32),
             "huge 'byref' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::InAlloca)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getInAllocaType()->isSized(&Visited),
+      Check(Attrs.getInAllocaType()->isSized(),
             "Attribute 'inalloca' does not support unsized types!", V);
       Check(DL.getTypeAllocSize(Attrs.getInAllocaType()).getKnownMinValue() <
                 (1ULL << 32),
             "huge 'inalloca' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::Preallocated)) {
-      SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getPreallocatedType()->isSized(&Visited),
+      Check(Attrs.getPreallocatedType()->isSized(),
             "Attribute 'preallocated' does not support unsized types!", V);
       Check(
           DL.getTypeAllocSize(Attrs.getPreallocatedType()).getKnownMinValue() <
@@ -4825,8 +4833,7 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
           "Non-logical alloca disallowed for this module.");
 
   Type *Ty = AI.getAllocatedType();
-  SmallPtrSet<Type*, 4> Visited;
-  Check(Ty->isSized(&Visited), "Cannot allocate unsized type", &AI);
+  Check(Ty->isSized(), "Cannot allocate unsized type", &AI);
   // Check if it's a target extension type that disallows being used on the
   // stack.
   Check(!Ty->containsNonLocalTargetExtType(),
