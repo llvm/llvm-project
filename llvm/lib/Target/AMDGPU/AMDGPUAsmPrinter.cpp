@@ -17,6 +17,7 @@
 
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPU.h"
+#include "AMDGPUDwarfDebug.h"
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPUMCResourceInfo.h"
 #include "AMDGPUResourceUsageAnalysis.h"
@@ -129,6 +130,11 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
   return "AMDGPU Assembly Printer";
+}
+
+/// Create AMDGPU-specific DwarfDebug handler.
+DwarfDebug *AMDGPUAsmPrinter::createDwarfDebug() {
+  return new AMDGPUDwarfDebug(this);
 }
 
 const MCSubtargetInfo *AMDGPUAsmPrinter::getGlobalSTI() const {
