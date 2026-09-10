@@ -2538,6 +2538,13 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /// Supply the parsed argument of a late-parsed bounds attribute to the type
+  /// built for it by ActOnLateParsedTypeAttr, and run the checks that need the
+  /// owning declaration. \p FD is the field the type belongs to. Returns false
+  /// if the attribute was rejected.
+  bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
+                                       FieldDecl *FD, Expr *Arg);
+
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
   ///
