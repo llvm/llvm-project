@@ -5,17 +5,8 @@
 include "APIDefs.td"
 
 // CHECK: #include <type_traits>
-// CHECK: #ifdef OFFLOAD_PRINT_USE_STD_OSTREAM
-// CHECK-NEXT: #include <ostream>
-// CHECK-NEXT: namespace offload::detail {
-// CHECK-NEXT: using print_ostream = std::ostream;
-// CHECK-NEXT: }
-// CHECK-NEXT: #else
-// CHECK-NEXT: #include <llvm/Support/raw_ostream.h>
-// CHECK-NEXT: namespace offload::detail {
-// CHECK-NEXT: using print_ostream = llvm::raw_ostream;
-// CHECK-NEXT: }
-// CHECK-NEXT: #endif
+// CHECK-NOT: #include <ostream>
+// CHECK-NOT: #include <llvm/Support/raw_ostream.h>
 
 def my_enum_t : Enum {
   let desc = "An example enum";

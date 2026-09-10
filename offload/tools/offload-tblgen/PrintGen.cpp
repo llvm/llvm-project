@@ -198,19 +198,6 @@ void EmitOffloadPrintHeader(const RecordKeeper &Records, raw_ostream &OS) {
 #include <OffloadAPI.h>
 #include <type_traits>
 
-#ifdef OFFLOAD_PRINT_USE_STD_OSTREAM
-#include <ostream>
-namespace offload::detail {
-using print_ostream = std::ostream;
-}
-#else
-#include <llvm/Support/raw_ostream.h>
-namespace offload::detail {
-using print_ostream = llvm::raw_ostream;
-}
-#endif
-
-
 template <typename T> inline ol_result_t printPtr(offload::detail::print_ostream &os, const T *ptr);
 template <typename T> inline void printTagged(offload::detail::print_ostream &os, const void *ptr, T value, size_t size);
 )""";

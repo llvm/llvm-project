@@ -63,5 +63,13 @@ if(MSVC)
     OPTIONAL)
 endif()
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadAPI.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload COMPONENT offload)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadPrint.hpp DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload COMPONENT offload)
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadAPI.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/OffloadPrintRaw.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/OffloadPrintStd.hpp
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload
+  COMPONENT offload)
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/API/detail/OffloadPrintGeneric.inc
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload/detail
+  COMPONENT offload)
