@@ -297,6 +297,8 @@ public:
   friend class PoisonSEHIdentifiersRAIIObject;
   friend class ParenBraceBracketBalancer;
   friend class BalancedDelimiterTracker;
+  friend struct LateParsedAttribute;
+  friend struct LateParsedTypeAttribute;
 
   Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
   ~Parser() override;
@@ -2251,6 +2253,8 @@ private:
       ParsedAttributes Attrs(AttrFactory);
       ParseGNUAttributes(Attrs, LateAttrs, &D);
       D.takeAttributesAppending(Attrs);
+      if (LateAttrs)
+        Parser::TakeTypeAttrsAppendingFrom(D.getLateAttributes(), *LateAttrs);
     }
   }
 
@@ -8175,6 +8179,13 @@ private:
   static BoundsAttributedType **
   GetLateParsedTypeAttrCallback(LateParsedAttribute *LA, ParsedAttr::Kind &Kind,
                                 SourceLocation &Loc);
+
+  /// The late-parsed type attributes of the record currently being parsed, so a
+  /// nested anonymous record can hand its unresolved attributes to the
+  /// enclosing record whose scope makes their arguments visible. Null outside a
+  /// record body.
+  SmallVectorImpl<LateParsedTypeAttribute *> *CurRecordLateParsedTypeAttrs =
+      nullptr;
 
   /// We've parsed something that could plausibly be intended to be a template
   /// name (\p LHS) followed by a '<' token, and the following code can't
