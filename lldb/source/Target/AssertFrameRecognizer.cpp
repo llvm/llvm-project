@@ -100,7 +100,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
   if (!location.symbols_are_regex) {
     target.GetFrameRecognizerManager().AddRecognizer(
         std::make_shared<AssertFrameRecognizer>(),
-        ConstString(location.module_spec.GetFilename()), location.symbols,
+        location.module_spec.GetFilename().str(), location.symbols,
         Mangled::ePreferDemangled,
         /*first_instruction_only*/ false);
     return;

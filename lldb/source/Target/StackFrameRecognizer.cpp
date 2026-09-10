@@ -111,13 +111,13 @@ void StackFrameRecognizerManager::BumpGeneration() {
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
-    StackFrameRecognizerSP recognizer, ConstString module,
-    llvm::ArrayRef<ConstString> symbols,
-    Mangled::NamePreference symbol_mangling, bool first_instruction_only) {
+    StackFrameRecognizerSP recognizer, std::string module,
+    std::vector<ConstString> symbols, Mangled::NamePreference symbol_mangling,
+    bool first_instruction_only) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
-                            module, RegularExpressionSP(), symbols,
-                            RegularExpressionSP(), symbol_mangling,
-                            first_instruction_only, true});
+                            std::move(module), RegularExpressionSP(),
+                            std::move(symbols), RegularExpressionSP(),
+                            symbol_mangling, first_instruction_only, true});
   BumpGeneration();
 }
 
@@ -126,7 +126,7 @@ void StackFrameRecognizerManager::AddRecognizer(
     RegularExpressionSP symbol, Mangled::NamePreference symbol_mangling,
     bool first_instruction_only) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, true,
-                            ConstString(), module, std::vector<ConstString>(),
+                            std::string(), module, std::vector<ConstString>(),
                             symbol, symbol_mangling, first_instruction_only,
                             true});
   BumpGeneration();
@@ -151,8 +151,7 @@ void StackFrameRecognizerManager::ForEach(
                entry.symbol_mangling, true);
     } else {
       callback(entry.recognizer_id, entry.enabled, entry.recognizer->GetName(),
-               entry.module.GetCString(), entry.symbols, entry.symbol_mangling,
-               false);
+               entry.module, entry.symbols, entry.symbol_mangling, false);
     }
   }
 }
@@ -216,9 +215,8 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
     if (!entry.enabled)
       continue;
 
-    if (entry.module)
-      if (entry.module != module_name)
-        continue;
+    if (!entry.module.empty() && entry.module != module_name)
+      continue;
 
     if (entry.module_regexp)
       if (!entry.module_regexp->Execute(module_name))
