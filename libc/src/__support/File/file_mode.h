@@ -1,15 +1,22 @@
-//===--- A platform independent File mode class -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// file_mode.h
+/// This file contains the implementation of FileMode class. This is the class
+/// that handles everything related to a file's mode.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_MODE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_MODE_H
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/File/file.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
