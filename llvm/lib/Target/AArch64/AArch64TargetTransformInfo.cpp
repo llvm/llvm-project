@@ -1154,23 +1154,30 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::experimental_vector_match: {
-    auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
-    EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    unsigned SearchSize = NeedleTy->getNumElements();
-    auto IsSupportedTypeAndSearchSize = [&]() {
-      if (SearchVT == MVT::nxv8i16 || SearchVT == MVT::v8i16)
-        return SearchSize == 8;
-
-      if (SearchVT == MVT::nxv16i8 || SearchVT == MVT::v16i8 ||
-          SearchVT == MVT::v8i8)
-        return SearchSize == 8 || SearchSize == 16;
-
-      return false;
-    };
-
-    if (!ST->hasSVE2() || !ST->isSVEAvailable() ||
-        !IsSupportedTypeAndSearchSize())
+    if (!ST->hasSVE2() || !ST->isSVEAvailable())
       break;
+
+    auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+
+    // We expand vector.matches with <= 2 elements to a chain of compares.
+    unsigned SearchSize = NeedleTy->getNumElements();
+    if (SearchSize <= 2)
+      break;
+
+    auto [LegalParts, SearchVT] = getTypeLegalizationCost(ICA.getArgTypes()[0]);
+    if (!is_contained(
+            {MVT::nxv8i16, MVT::nxv16i8, MVT::v8i16, MVT::v16i8, MVT::v8i8},
+            SearchVT.SimpleTy))
+      break;
+
+    unsigned ElementSizeInBits = SearchVT.getScalarSizeInBits();
+
+    // Number of needle elements we can compare per `match` instruction.
+    unsigned NeedleEltsPerMatch = AArch64::SVEBitsPerBlock / ElementSizeInBits;
+
+    // How many `match` instructions we need to match `SearchSize` elements.
+    unsigned MatchesRequiredForNeedle =
+        llvm::divideCeil(SearchSize, NeedleEltsPerMatch);
 
     // Base cost for MATCH instructions. At least on the Neoverse V2 and
     // Neoverse V3, these are cheap operations with the same latency as a
@@ -1180,7 +1187,8 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     InstructionCost Cost = 4;
     if (isa<FixedVectorType>(RetTy))
       Cost += 10;
-    return Cost;
+
+    return Cost * LegalParts * MatchesRequiredForNeedle;
   }
   case Intrinsic::cttz: {
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
@@ -3899,6 +3907,18 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
+  // From a vector to a scalarized vector will be an series of extract-element
+  // and extends.
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      DstTy.getScalarSizeInBits() > 64 && SrcTy.getScalarSizeInBits() <= 64 &&
+      DstTy.isFixedLengthVector()) {
+    InstructionCost LaneCost = getVectorInstrCost(
+        Instruction::ExtractElement, Src, CostKind, -1, nullptr, nullptr);
+    InstructionCost ExtCost = getCastInstrCost(
+        Opcode, Dst->getScalarType(), Src->getScalarType(), CCH, CostKind);
+    return DstTy.getVectorNumElements() * (LaneCost + ExtCost);
+  }
+
   if (!SrcTy.isSimple() || !DstTy.isSimple())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
@@ -5738,12 +5758,16 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   if (VecTy->isScalableTy() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
-  // Scalable VFs will emit vector.[de]interleave intrinsics, and currently we
-  // only have lowering for power-of-2 factors.
-  // TODO: Add lowering for vector.[de]interleave3 intrinsics and support in
-  // InterleavedAccessPass for ld3/st3
-  if (VecTy->isScalableTy() && !isPowerOf2_32(Factor))
-    return InstructionCost::getInvalid();
+  // Scalable VFs emit vector.[de]interleave intrinsics, for which the target
+  // supports factors up to the maximum supported interleave factor.
+  if (VecTy->isScalableTy()) {
+    if (Factor > TLI->getMaxSupportedInterleaveFactor())
+      return InstructionCost::getInvalid();
+
+    if (Factor == 3 &&
+        DL.getTypeSizeInBits(VecTy).getKnownMinValue() != (3 * 128))
+      return InstructionCost::getInvalid();
+  }
 
   // Vectorization for masked interleaved accesses is only enabled for scalable
   // VF.
@@ -6685,8 +6709,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Invalid;
 
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
-       Opcode != Instruction::FAdd && Opcode != Instruction::FSub) ||
-      OpAExtend == TTI::PR_None)
+       Opcode != Instruction::FAdd && Opcode != Instruction::FSub))
     return Invalid;
 
   // Floating-point partial reductions are invalid if `reassoc` and `contract`
@@ -6709,6 +6732,21 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (BinOp && ((*BinOp != Instruction::Mul && *BinOp != Instruction::FMul) ||
                 InputTypeA != InputTypeB))
     return Invalid;
+
+  // We only support the following element sizes.
+  if (!is_contained({8u, 16u, 32u, 64u}, AccumType->getScalarSizeInBits()))
+    return Invalid;
+
+  // If none of the operands are extended and there's no extra BinOp, just
+  // cost this as the equivalent arithmetic instruction.
+  // TODO: Depending on VF and element type, we may be able to improve on this.
+  if (!OpAExtend) {
+    assert(!OpBExtend && "Extended second operand without extended first.");
+    assert(InputTypeA == AccumType && "Type mismatch with no extensions.");
+
+    VectorType *VTy = VectorType::get(AccumType, VF);
+    return getArithmeticInstrCost(Opcode, VTy, CostKind);
+  }
 
   bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
   // USDot is natively supported with +i8mm. With plain +dotprod, SUMLA is
@@ -7218,7 +7256,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 static bool containsDecreasingPointers(Loop *TheLoop,
                                        PredicatedScalarEvolution *PSE,
                                        const DominatorTree &DT) {
-  const auto &Strides = DenseMap<Value *, const SCEV *>();
+  const auto &Strides = SymbolicStrideMap();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
     // consecutive and decreasing.

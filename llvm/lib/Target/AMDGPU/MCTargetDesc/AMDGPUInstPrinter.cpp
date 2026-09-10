@@ -387,6 +387,18 @@ static MCRegister getRegFromMIA(MCRegister Reg, unsigned OpNo,
   return Reg;
 }
 
+void AMDGPUInstPrinter::printRsrcReg(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
+  bool IsIndexReg = AMDGPU::isRsrcIndexReg(Reg, MRI);
+  if (IsIndexReg)
+    O << "rsrcidx(";
+  printRegOperand(Reg, MI->getOpcode(), OpNo, O, MRI);
+  if (IsIndexReg)
+    O << ')';
+}
+
 void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 #if !defined(NDEBUG)
@@ -882,6 +894,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
       printImmediateF16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:

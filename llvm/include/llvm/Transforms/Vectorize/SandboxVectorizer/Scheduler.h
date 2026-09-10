@@ -277,6 +277,22 @@ public:
     return Where == Other.Where;
   }
 #ifndef NDEBUG
+  /// Returns true if the scheduling point is after \p I in program order.
+  bool comesBefore(Instruction &I) const {
+    if (BasicBlock *BB = atEndOrNull()) {
+      // All instructions are before BB end.
+      assert(BB == I.getParent() && "We don't support crossing BBs!");
+      return false;
+    }
+    if (BasicBlock *BB = atBeforeBeginOrNull()) {
+      // Before begin is always before any instruction.
+      assert(BB == I.getParent() && "We don't support crossing BBs!");
+      return true;
+    }
+    Instruction *SchedPointI = atInstrOrNull();
+    assert(SchedPointI != nullptr && "Should have been already handled!");
+    return SchedPointI->comesBefore(&I);
+  }
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif
@@ -298,7 +314,7 @@ class Scheduler {
   /// top-most/bottom-most instruction scheduled. It may get updated after every
   /// trySchedule() attempt, regardless of whether scheduling succeeded or not.
   /// It is nullopt if we have not scheduled before.
-  std::optional<SchedulingPoint> ScheduleTopItOpt;
+  std::optional<SchedulingPoint> ScheduleFrontierOpt;
   // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
   /// The BB that we are currently scheduling.
@@ -340,8 +356,12 @@ class Scheduler {
   Scheduler(const Scheduler &) = delete;
   Scheduler &operator=(const Scheduler &) = delete;
 
-private:
   SchedDirection Dir = SchedDirection::BottomUp;
+#ifndef NDEBUG
+  /// Asserts that \p Instrs are above the scheduling frontier if scheduling
+  /// bottom-up or below it if scheduling top-down.
+  void assertSameDirection(ArrayRef<Instruction *> Instrs) const;
+#endif
 
 public:
   Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)
@@ -367,10 +387,10 @@ public:
     // TODO: clear view once it lands.
     DAG.clear();
     ReadyList.clear();
-    ScheduleTopItOpt = std::nullopt;
+    ScheduleFrontierOpt = std::nullopt;
     ScheduledBB = nullptr;
     assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
-           !ScheduleTopItOpt && ScheduledBB == nullptr &&
+           !ScheduleFrontierOpt && ScheduledBB == nullptr &&
            "Expected empty state!");
   }
 
@@ -389,6 +409,9 @@ public:
   static BndlSchedState getBndlSchedState(const Scheduler &Sched,
                                           ArrayRef<Instruction *> Instrs) {
     return Sched.getBndlSchedState(Instrs);
+  }
+  static const ReadyListContainer &getReadyList(const Scheduler &Sched) {
+    return Sched.ReadyList;
   }
 };
 

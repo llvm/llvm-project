@@ -319,6 +319,35 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fabsf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fabsf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fabsbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fabsbf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsbf16
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fabsl_test
   NEED_MPFR
   SUITE
@@ -436,6 +465,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  truncbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    truncbf16_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   ceil_test
   NEED_MPFR
   SUITE
@@ -508,6 +553,22 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.ceilf16
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  ceilbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ceilbf16_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -588,6 +649,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  floorbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    floorbf16_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   round_test
   NEED_MPFR
   SUITE
@@ -644,6 +721,22 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.roundf16
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundbf16_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -719,6 +812,22 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.roundevenf16
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundevenbf16_test.cpp
+  HDRS
+    RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1479,6 +1588,35 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  frexpf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    frexpf16_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf16
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_fp_unittest(
+  frexpbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    frexpbf16_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpbf16
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   frexpl_test
   NEED_MPFR
   SUITE
@@ -1937,7 +2075,41 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquof
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  remquof16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    remquof16_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquof16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  remquobf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    remquobf16_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquobf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1952,6 +2124,7 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquo
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1967,6 +2140,7 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquol
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )
@@ -3748,7 +3922,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.bfloat16
 )
 
-add_subdirectory(generic)
 add_subdirectory(smoke)
 
 if(NOT LLVM_LIBC_FULL_BUILD)

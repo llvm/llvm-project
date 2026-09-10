@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -99,6 +100,11 @@ std::optional<llvm::TypeSize> OpenACCMappableModel<Ty>::getSizeInBytes(
   // If the type enclosed is a mappable type, then have it provide the size.
   if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
     return mappableTy.getSizeInBytes(var, accBounds, dataLayout);
+
+  // Procedure pointers map as a single address-sized slot.
+  if (mlir::isa<mlir::FunctionType>(eleTy))
+    return llvm::TypeSize::getFixed(dataLayout.getTypeSize(
+        mlir::LLVM::LLVMPointerType::get(type.getContext())));
 
   // Dynamic extents or unknown ranks generally do not have compile-time
   // computable dimensions.
@@ -543,7 +549,19 @@ OpenACCMappableModel<fir::PointerType>::getTypeCategory(mlir::Type type,
 template <typename Ty>
 mlir::acc::VariableInfoAttr OpenACCMappableModel<Ty>::genPrivateVariableInfo(
     mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const {
-  hlfir::Entity entity{var};
+  // A variable may already be captured by a data clause operation, for
+  // instance when privatization is applied to the result of an earlier
+  // clause. The Fortran properties belong to the variable that operation was
+  // created from, so walk back to it.
+  mlir::Value hostVar = var;
+  while (mlir::Operation *definingOp = hostVar.getDefiningOp()) {
+    mlir::Value clauseVar = mlir::acc::getVar(definingOp);
+    if (!clauseVar)
+      break;
+    hostVar = clauseVar;
+  }
+
+  hlfir::Entity entity{hostVar};
   return fir::OpenACCFortranVariableInfoAttr::get(var.getContext(),
                                                   entity.mayBeOptional());
 }

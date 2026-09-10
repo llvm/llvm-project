@@ -35,6 +35,17 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
         return op.getFastmathFlagsAttr();
       }]
       >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the FastmathFlagsAttr attribute for the operation",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setFastmathAttr",
+      /*args=*/        (ins "::mlir::LLVM::FastmathFlagsAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setFastmathFlagsAttr(attr);
+      }]
+      >,
     StaticInterfaceMethod<
       /*desc=*/        [{Returns the name of the FastmathFlagsAttr attribute
                          for the operation}],

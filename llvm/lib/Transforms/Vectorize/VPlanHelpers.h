@@ -356,12 +356,17 @@ struct VPCostContext {
   /// transform replaced the original recipe.
   void invalidateWideningDecision(Instruction *I, ElementCount VF);
 
-  /// \returns how much the cost of a predicated block should be divided by.
-  /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
-  uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
+  /// \returns how much the cost of the block predicated by replicate region
+  /// \p Region should be divided by.
+  uint64_t getReplicateRegionCostDivisor(const VPRegionBlock *Region) const;
 
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;
+
+  /// Returns true if the vector loop body of \p Plan is known to execute at
+  /// most once at \p VF, i.e. its trip count is a constant not greater than
+  /// \p VF. Currently ignores UF.
+  static bool executesAtMostOnce(const VPlan &Plan, ElementCount VF);
 
   /// Forwards to LoopVectorizationCostModel::isMaskRequired.
   bool isMaskRequired(Instruction *I) const;

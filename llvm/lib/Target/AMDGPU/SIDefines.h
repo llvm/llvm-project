@@ -436,6 +436,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_FP64,
   OPERAND_REG_IMM_BF16,
   OPERAND_REG_IMM_FP16,
+  OPERAND_REG_IMM_NOINLINE_FP16,
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2FP16_SPLAT,
@@ -1363,11 +1364,20 @@ enum Type {
   NAMED_BARRIER_LAST = 16,
 };
 
-enum {
-  BARRIER_SCOPE_WORKGROUP = 0,
-};
-
 } // namespace Barrier
+
+namespace SyntheticAperture {
+/// Synthetic aperture numbers. This is OR'd with the high
+/// bits of the LDS aperture pointer.
+///
+/// NOTE: This is also documented in AMDGPUUsage.
+enum SyntheticAperture {
+  None = 0x00000000,
+
+  BARRIER = 0x00000001,
+};
+} // namespace SyntheticAperture
+
 } // namespace AMDGPU
 
 // clang-format off

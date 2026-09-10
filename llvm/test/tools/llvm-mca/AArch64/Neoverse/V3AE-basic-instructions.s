@@ -560,7 +560,7 @@
 # CHECK-NEXT:  1      2     0.50                        fabs	d2, d3
 # CHECK-NEXT:  1      2     0.50                        fneg	d4, d5
 # CHECK-NEXT:  1      6     1.00                        fsqrt	h13, h24
-# CHECK-NEXT:  1      13    8.00                        fsqrt	d6, d7
+# CHECK-NEXT:  1      13    1.00                        fsqrt	d6, d7
 # CHECK-NEXT:  1      3     0.50                        fcvt	s8, d9
 # CHECK-NEXT:  1      3     0.50                        fcvt	h10, d11
 # CHECK-NEXT:  1      3     1.00                        frintn	d12, d13
@@ -588,7 +588,7 @@
 # CHECK-NEXT:  1      3     0.50                        fnmul	h3, h15, h7
 # CHECK-NEXT:  1      3     0.50                        fnmul	s22, s23, s2
 # CHECK-NEXT:  1      3     0.50                        fmul	d20, d19, d17
-# CHECK-NEXT:  1      13    8.00                        fdiv	d1, d2, d3
+# CHECK-NEXT:  1      13    1.00                        fdiv	d1, d2, d3
 # CHECK-NEXT:  1      2     0.50                        fadd	d4, d5, d6
 # CHECK-NEXT:  1      2     0.50                        fsub	d7, d8, d9
 # CHECK-NEXT:  1      2     0.50                        fmax	d10, d11, d12
@@ -1278,7 +1278,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT: 8.67   8.67   8.67   34.00  34.00  40.75  40.75  40.75  40.75  99.33  99.33  170.33 290.63 163.63 79.96  79.96  79.96  79.96  79.96  79.96  71.00  219.50 96.50
+# CHECK-NEXT: 8.67   8.67   8.67   34.00  34.00  40.75  40.75  40.75  40.75  99.33  99.33  170.33 290.63 163.63 79.96  79.96  79.96  79.96  79.96  79.96  71.00  219.50 82.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
@@ -1832,7 +1832,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fabs	d2, d3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	d4, d5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fsqrt	h13, h24
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     8.00   fsqrt	d6, d7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fsqrt	d6, d7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvt	s8, d9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvt	h10, d11
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintn	d12, d13
@@ -1860,7 +1860,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmul	h3, h15, h7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmul	s22, s23, s2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmul	d20, d19, d17
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     8.00   fdiv	d1, d2, d3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fdiv	d1, d2, d3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fadd	d4, d5, d6
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fsub	d7, d8, d9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmax	d10, d11, d12
