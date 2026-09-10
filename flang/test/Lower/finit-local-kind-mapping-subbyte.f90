@@ -1,7 +1,8 @@
 ! Tests that -finit-local= handles all CHARACTER kind-mapping widths correctly
 ! using the code unit's allocation stride (alignTo(ceil(charBits/8), ABI)),
-! and that LOGICAL sub-byte and non-byte-multiple mappings emit a controlled
-! diagnostic.
+! that LOGICAL sub-byte and non-byte-multiple mappings emit a controlled
+! diagnostic, and that padded LOGICAL mappings (allocSize > storeSize) use a
+! byte-fill loop in both hex and zero modes.
 !
 ! LOGICAL sub-byte: --kind-mapping=l4:1 maps LOGICAL(4) to 1 bit.
 ! APInt::getSplat(1, APInt(8, 0xAA)) asserts because the destination width is
@@ -44,13 +45,16 @@ subroutine test_logical4_nonbyte(res)
 end subroutine
 
 ! LOGICAL padded mapping: --kind-mapping=l4:24 maps LOGICAL(4) to 24 bits.
-! An i24 has a 4-byte allocation size (storeSize=3, allocSize=4). A 3-byte store
-! would leave the 4th byte unwritten. The guard catches this and emits a TODO.
+! An i24 has a 4-byte allocation size (storeSize=3, allocSize=4).  genInitLocalStore
+! now intercepts this upfront and emits a byte-fill loop over all 4 bytes, so
+! neither hex nor zero mode stores only 3 bytes any more.
 !
-! RUN: %not_todo_cmd bbc -emit-hlfir --kind-mapping=l4:24 -finit-local=0xAA %s -o - 2>&1 | \
+! RUN: bbc -emit-hlfir --kind-mapping=l4:24 -finit-local=0xAA %s -o - 2>&1 | \
 ! RUN:     FileCheck --check-prefix=LOG-PAD %s
 
-! LOG-PAD: not yet implemented: -finit-local= with a sub-byte, non-byte-multiple, or padded LOGICAL kind mapping
+! LOG-PAD-LABEL: func.func @_QPtest_logical4_padded(
+! LOG-PAD: %[[C3:.*]] = arith.constant 3 : index
+! LOG-PAD: fir.do_loop %{{.*}} = %{{.*}} to %[[C3]] step %{{.*}}
 
 subroutine test_logical4_padded(res)
   logical(kind=4) :: l
@@ -90,3 +94,16 @@ end subroutine
 ! CHAR-24BIT-NOT: not yet implemented
 ! CHAR-24BIT: %[[C7:.*]] = arith.constant 7 : index
 ! CHAR-24BIT: fir.do_loop %{{.*}} = %{{.*}} to %[[C7]] step %{{.*}}
+
+! LOGICAL padded mapping + zero mode: --kind-mapping=l4:24 maps LOGICAL(4) to
+! 24 bits (3-byte store) inside a 4-byte allocation.  Zero mode previously
+! emitted a single 3-byte fir.zero_bits store, leaving the tail byte
+! uninitialized.  It must now use a byte-fill loop over the full 4-byte
+! allocation, the same as hex mode.
+!
+! RUN: bbc -emit-hlfir --kind-mapping=l4:24 -finit-local=zero %s -o - 2>&1 | \
+! RUN:     FileCheck --check-prefix=LOG-PAD-ZERO %s
+
+! LOG-PAD-ZERO-LABEL: func.func @_QPtest_logical4_padded(
+! LOG-PAD-ZERO: %[[C3:.*]] = arith.constant 3 : index
+! LOG-PAD-ZERO: fir.do_loop %{{.*}} = %{{.*}} to %[[C3]] step %{{.*}}

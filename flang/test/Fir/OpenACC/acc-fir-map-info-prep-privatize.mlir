@@ -51,15 +51,17 @@ func.func @private_without_par_dims() {
 
 // -----
 
-// A record element uses the padded stride: real(8) + real(4) has a size of 12
-// and an alignment of 8, so consecutive elements are 16 bytes apart.
+// A record element's allocation size includes tail padding: real(8) + real(4)
+// has a store size of 12 but an allocation size of 16 (padded to the record's
+// 8-byte alignment), so elementSize reports 16.  The total array size
+// (8 * 16 = 128) matches the arith.constant below.
 
 // CHECK-LABEL: func.func @private_static_record
 // CHECK: %[[PRIV:.*]] = acc.privatize
 // CHECK: %[[SIZE:.*]] = arith.constant 128 : i64
 // CHECK: acc.map_info varPtr(%[[PRIV]]
 // CHECK-SAME: size(%[[SIZE]] : i64)
-// CHECK-SAME: elementSize(12)
+// CHECK-SAME: elementSize(16)
 // CHECK-SAME: mapFlags(private)
 func.func @private_static_record() {
   %priv = acc.privatize par_dims(#acc<par_dims[]>)
