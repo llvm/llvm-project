@@ -45,9 +45,8 @@ static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
 
   const TargetOptions &Options = TM.Options;
-  CodeGenPasses.add(
-      new RuntimeLibraryInfoWrapper(Options.ExceptionModel, Options.EABIVersion,
-                                    Options.MCOptions.ABIName, Options.VecLib));
+  CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
+      Options.ExceptionModel, Options.MCOptions.ABIName, Options.VecLib));
 
   if (TM.addPassesToEmitFile(CodeGenPasses, OS, DwoOS ? &DwoOS->os() : nullptr,
                              CGFT, DisableVerify))

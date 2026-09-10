@@ -499,7 +499,7 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
   emitLibFuncSuffix(OS, Name);
   OS << "(const llvm::Triple &TT, "
         "ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, "
-        "EABI EABIVersion, StringRef ABIName, "
+        "StringRef ABIName, "
         "LongDoubleFormat LongDoubleFormat) {\n";
 
   // Per-variant expansion. Unconditional impls are tracked separately for
@@ -630,7 +630,7 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallsInfoMemberDecls(
     OS << "void setAvailableLibFuncs_";
     emitLibFuncSuffix(OS, Name);
     OS << "(const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
-          "FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, "
+          "FloatABI::ABIType FloatABI, StringRef ABIName, "
           "LongDoubleFormat LongDoubleFormat);\n";
   }
 }
@@ -646,7 +646,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
-        "FloatABI::ABIType FloatABI, EABI EABIVersion, "
+        "FloatABI::ABIType FloatABI, "
         "StringRef ABIName, LongDoubleFormat LongDoubleFormat) {\n";
 
   for (const Record *R : AllLibs) {
@@ -773,7 +773,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       OS << indent(4) << "if (isLibraryAvailable(\"" << LibName << "\"))\n"
          << indent(6) << "setAvailableLibFuncs_";
       emitLibFuncSuffix(OS, LibName);
-      OS << "(TT, ExceptionModel, FloatABI, EABIVersion, ABIName, "
+      OS << "(TT, ExceptionModel, FloatABI, ABIName, "
             "LongDoubleFormat);\n";
     }
     if (!DispatchLibs.empty())

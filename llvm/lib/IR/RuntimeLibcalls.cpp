@@ -29,7 +29,7 @@ using namespace RTLIB;
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
                                          ExceptionHandling ExceptionModel,
                                          FloatABI::ABIType FloatABI,
-                                         EABI EABIVersion, StringRef ABIName,
+                                         StringRef ABIName,
                                          VectorLibrary VecLib) {
   // FIXME: The ExceptionModel parameter is to handle the field in
   // TargetOptions. This interface fails to distinguish the forced disable
@@ -38,7 +38,7 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   if (ExceptionModel == ExceptionHandling::None)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
-  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName,
+  initLibcalls(TT, ExceptionModel, FloatABI, ABIName,
                TT.getDefaultLongDoubleFormat());
 
   // TODO: Tablegen should generate these sets
@@ -105,10 +105,10 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
 // TODO: Consider the remaining module flags.
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M,
                                          ExceptionHandling ExceptionModel,
-                                         EABI EABIVersion, StringRef ABIName,
+                                         StringRef ABIName,
                                          VectorLibrary VecLib)
     : RuntimeLibcallsInfo(M.getTargetTriple(), ExceptionModel, M.getFloatABI(),
-                          EABIVersion, ABIName, VecLib) {}
+                          ABIName, VecLib) {}
 
 bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
   // TODO: Drive this from module-level state (e.g. the linked runtime). For now
@@ -121,10 +121,10 @@ bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
-                                       EABI EABIVersion, StringRef ABIName,
+                                       StringRef ABIName,
                                        LongDoubleFormat LongDoubleFormat) {
-  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
-                              ABIName, LongDoubleFormat);
+  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, ABIName,
+                              LongDoubleFormat);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE

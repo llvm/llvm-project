@@ -848,8 +848,7 @@ optMain(int argc, char **argv,
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
   Passes.add(new RuntimeLibraryInfoWrapper(
-      Options->ExceptionModel, Options->EABIVersion, Options->MCOptions.ABIName,
-      Options->VecLib));
+      Options->ExceptionModel, Options->MCOptions.ABIName, Options->VecLib));
 
   // Add internal analysis passes from the target machine.
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()
@@ -927,11 +926,10 @@ optMain(int argc, char **argv,
       BOS = std::make_unique<raw_svector_ostream>(Buffer);
       OS = BOS.get();
     }
-    if (OutputAssembly) {
+    if (OutputAssembly)
       Passes.add(createPrintModulePass(
-          *OS, "", /*ShouldPreserveAssemblyUseListOrder=*/false,
-          /*ShouldRenumberMetadata=*/true));
-    } else
+          *OS, "", /* ShouldPreserveAssemblyUseListOrder */ false));
+    else
       Passes.add(createBitcodeWriterPass(
           *OS, /* ShouldPreserveBitcodeUseListOrder */ true));
   }

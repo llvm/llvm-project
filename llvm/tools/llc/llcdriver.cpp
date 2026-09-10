@@ -760,9 +760,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
-  PM.add(new RuntimeLibraryInfoWrapper(
-      Target->Options.ExceptionModel, Target->Options.EABIVersion,
-      Options.MCOptions.ABIName, Target->Options.VecLib));
+  PM.add(new RuntimeLibraryInfoWrapper(Target->Options.ExceptionModel,
+                                       Options.MCOptions.ABIName,
+                                       Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

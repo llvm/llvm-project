@@ -204,11 +204,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   if (Triple.getOS() == llvm::Triple::Linux)
     this->MCountName = "\01_mcount";
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
-    this->MCountName =
-        (Opts.EABIVersion == llvm::EABI::GNU ||
-         (Opts.EABIVersion == llvm::EABI::Default && Triple.isGNUEnvironment()))
-            ? "\01_mcount"
-            : "mcount";
+    this->MCountName = Triple.isGNUEnvironment() ? "\01_mcount" : "mcount";
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }

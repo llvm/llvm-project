@@ -313,9 +313,9 @@ bool CodeGenAction::beginSourceFileAction() {
   bool isOpenMPEnabled =
       ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP);
+  bool isOpenMPSimd = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   fir::OpenMPFIRPassPipelineOpts opts;
-  opts.isSimdOnly = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
@@ -343,7 +343,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // WARNING: This pipeline must be run immediately after the lowering to
   // ensure that the FIR is correct with respect to OpenMP operations/
   // attributes.
-  if (isOpenMPEnabled || opts.isSimdOnly)
+  if (isOpenMPEnabled || isOpenMPSimd)
     fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -1029,7 +1029,6 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
         targetMachine->Options.ExceptionModel,
-        targetMachine->Options.EABIVersion,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });
@@ -1080,9 +1079,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
       }
     } else if (action == BackendActionTy::Backend_EmitLL) {
-      mpm.addPass(llvm::PrintModulePass(
-          os, /*Banner=*/"", /*ShouldPreserveUseListOrder=*/false, emitSummary,
-          /*ShouldRenumberMetadata=*/true));
+      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
+                                        /*ShouldPreserveUseListOrder=*/false,
+                                        emitSummary));
     }
   }
 

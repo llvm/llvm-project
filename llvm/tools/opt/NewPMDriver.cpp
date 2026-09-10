@@ -452,7 +452,7 @@ bool llvm::runPassPipeline(
 
     MAM.registerPass([&] {
       const TargetOptions &Options = TM->Options;
-      return RuntimeLibraryAnalysis(Options.ExceptionModel, Options.EABIVersion,
+      return RuntimeLibraryAnalysis(Options.ExceptionModel,
                                     Options.MCOptions.ABIName, Options.VecLib);
     });
   }
@@ -558,8 +558,7 @@ bool llvm::runPassPipeline(
       MPM.addPass(AssignGUIDPass());
     }
     MPM.addPass(PrintModulePass(
-        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex,
-        /*ShouldRenumberMetadata=*/true));
+        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex));
     break;
   case OK_OutputBitcode:
     if (EmitSummaryIndex) {
