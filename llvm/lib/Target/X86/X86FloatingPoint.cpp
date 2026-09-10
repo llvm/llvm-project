@@ -1751,15 +1751,13 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
                       << NumSTPopped << ", and defines " << NumSTDefs
                       << " regs.\n");
 
-#ifndef NDEBUG
     // If any input operand uses constraint "f", all output register
     // constraints must be early-clobber defs.
-    for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I)
-      if (FRegIdx.count(I)) {
-        assert((1 << getFPReg(MI.getOperand(I)) & STDefs) == 0 &&
-               "Operands with constraint \"f\" cannot overlap with defs");
-      }
-#endif
+    assert(llvm::none_of(FRegIdx,
+                         [&](unsigned I) {
+                           return STDefs & (1u << getFPReg(MI.getOperand(I)));
+                         }) &&
+           "Operands with constraint \"f\" cannot overlap with defs");
 
     // Do not include registers that are implicitly popped by defs/clobbers.
     FPKills &= ~(STDefs | STClobbers);
