@@ -1567,7 +1567,9 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   one such matching entity, the program is ill-formed. Otherwise,
   //   if no matching entity is found, the block scope entity receives
   //   external linkage.
-  if (D->getDeclContext()->isFunctionOrMethod())
+  if (D->getDeclContext()
+          ->getEnclosingNonExpansionStatementContext()
+          ->isFunctionOrMethod())
     return getLVForLocalDecl(D, computation);
 
   // C++ [basic.link]p6:
@@ -4642,6 +4644,7 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
 
+  case Builtin::BI__builtin_strlcat:
   case Builtin::BIstrlcat:
   case Builtin::BI__builtin___strlcat_chk:
     return Builtin::BIstrlcat;
@@ -4721,6 +4724,8 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbzero;
       if (FnInfo->isStr("bcopy"))
         return Builtin::BIbcopy;
+      if (FnInfo->isStr("strlcat"))
+        return Builtin::BIstrlcat;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;

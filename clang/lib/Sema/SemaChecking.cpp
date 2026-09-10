@@ -1450,7 +1450,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIstrncpy:
   case Builtin::BI__builtin_strncpy:
   case Builtin::BIstpncpy:
-  case Builtin::BI__builtin_stpncpy: {
+  case Builtin::BI__builtin_stpncpy:
+  case Builtin::BIstrlcat:
+  case Builtin::BI__builtin_strlcat: {
     // Whether these functions overflow depends on the runtime strlen of the
     // string, not just the buffer size, so emitting the "always overflow"
     // diagnostic isn't quite right. We should still diagnose passing a buffer
@@ -3015,8 +3017,9 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
     if (MPT->isMemberDataPointer())
       return BinOp;
 
+    // Give the synthesized expression a valid source range for diagnostics.
     auto *MemCall = new (S.Context)
-        ParenExpr(SourceLocation(), SourceLocation(), BinOp.get());
+        ParenExpr(TheCall->getBeginLoc(), TheCall->getRParenLoc(), BinOp.get());
 
     return S.ActOnCallExpr(S.getCurScope(), MemCall, TheCall->getBeginLoc(),
                            Args.drop_front(2), TheCall->getRParenLoc());
@@ -6181,8 +6184,7 @@ static bool checkVAStartIsInVariadicFunction(Sema &S, Expr *Fn,
   // and get its parameter list.
   bool IsVariadic = false;
   ArrayRef<ParmVarDecl *> Params;
-  DeclContext *Caller =
-      S.CurContext->getEnclosingNonExpansionStatementContext();
+  DeclContext *Caller = S.CurContext;
   if (auto *Block = dyn_cast<BlockDecl>(Caller)) {
     IsVariadic = Block->isVariadic();
     Params = Block->parameters();
@@ -7837,7 +7839,7 @@ static bool CheckMissingFormatAttribute(
   if (S->getDiagnostics().isIgnored(diag::warn_missing_format_attribute, Loc))
     return false;
 
-  DeclContext *DC = S->CurContext->getEnclosingNonExpansionStatementContext();
+  DeclContext *DC = S->CurContext;
   if (!isa<ObjCMethodDecl>(DC) && !isa<FunctionDecl>(DC) && !isa<BlockDecl>(DC))
     return false;
   Decl *Caller = cast<Decl>(DC)->getCanonicalDecl();
@@ -13266,7 +13268,8 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
 }
 
 // Helper function to filter out cases for constant width constant conversion.
-// Don't warn on char array initialization or for non-decimal values.
+// Don't warn on unsigned char array initialization or for non-decimal
+// values.
 static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
                                           SourceLocation CC) {
   // If initializing from a constant, and the constant starts with '0',
@@ -13279,9 +13282,9 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
       return false;
   }
 
-  // If the CC location points to a '{', and the type is char, then assume
-  // assume it is an array initialization.
-  if (CC.isValid() && T->isCharType()) {
+  // If the CC location points to a '{' and the type is an unsigned char
+  // type, assume it is an array initialization.
+  if (T->isCharType() && !T->isSignedIntegerType() && CC.isValid()) {
     const char FirstContextCharacter =
         S.getSourceManager().getCharacterData(CC)[0];
     if (FirstContextCharacter == '{')
@@ -13585,6 +13588,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (TargetBT && TargetBT->isSveVLSBuiltinType())
     Target = TargetBT->getSveEltType(Context).getTypePtr();
+
+  // Nothing to diagnose if stripping the wrappers left identical element types
+  // (e.g. a scalar splatted to a vector of its own type).
+  if (Source == Target)
+    return;
 
   // If the source is floating point...
   if (SourceBT && SourceBT->isFloatingPoint()) {

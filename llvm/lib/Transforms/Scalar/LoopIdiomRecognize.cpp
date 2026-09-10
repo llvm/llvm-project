@@ -186,8 +186,6 @@ static cl::opt<CRCStrategyKind> CRCStrategy(
                clEnumValN(CRCStrategyKind::Clmul, "clmul",
                           "Use carry-less multiplication when possible")));
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // namespace llvm
 
 namespace {
@@ -403,8 +401,7 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
 
   // The following transforms hoist stores/memsets into the loop pre-header.
   // Give up if the loop has instructions that may throw.
-  SimpleLoopSafetyInfo SafetyInfo;
-  SafetyInfo.computeLoopSafetyInfo(CurLoop);
+  SimpleLoopSafetyInfo SafetyInfo(CurLoop);
   if (SafetyInfo.anyBlockMayThrow())
     return false;
 
@@ -3501,7 +3498,6 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
                                        CurLoop->getName() + ".ivcheck");
   SmallVector<uint32_t> BranchWeights;
   const bool HasBranchWeights =
-      !ProfcheckDisableMetadataFixes &&
       extractBranchWeights(*LoopHeaderBB->getTerminator(), BranchWeights);
 
   auto *BI = Builder.CreateCondBr(IVCheck, SuccessorBB, LoopHeaderBB);
@@ -3849,7 +3845,6 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   Builder.SetInsertPoint(LoopHeaderBB->getTerminator());
   SmallVector<uint32_t> BranchWeights;
   const bool HasBranchWeights =
-      !ProfcheckDisableMetadataFixes &&
       extractBranchWeights(*LoopHeaderBB->getTerminator(), BranchWeights);
 
   auto *BI = Builder.CreateCondBr(CIVCheck, SuccessorBB, LoopHeaderBB);

@@ -4064,12 +4064,12 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     QualType Ty;
 
     // 'z/uz' literals are a C++23 feature.
-    if (Literal.isSizeT)
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus
-                                  ? getLangOpts().CPlusPlus23
-                                        ? diag::warn_cxx20_compat_size_t_suffix
-                                        : diag::ext_cxx23_size_t_suffix
-                                  : diag::err_cxx23_size_t_suffix);
+    if (Literal.isSizeT) {
+      if (getLangOpts().CPlusPlus)
+        DiagCompat(Tok.getLocation(), diag_compat::size_t_suffix);
+      else
+        Diag(Tok.getLocation(), diag::err_cxx23_size_t_suffix);
+    }
 
     // 'wb/uwb' literals are a C23 feature. We support _BitInt as a type in C++,
     // but we do not currently support the suffix in C++ mode because it's not
@@ -4742,6 +4742,17 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprType->isDependentType())
     return false;
 
+  // These builtins evaluate with the operand type as written; a reference is
+  // not looked through.
+  if (ExprKind == UETT_VectorElements)
+    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
+                                               ExprRange);
+  if (ExprKind == UETT_VecStep)
+    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
+  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
+    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
+                                                    ExprRange);
+
   // C++ [expr.sizeof]p2:
   //     When applied to a reference or a reference type, the result
   //     is the size of the referenced type.
@@ -4763,17 +4774,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
       DiagCompat(OpLoc, diag_compat::alignof_incomplete_array);
     ExprType = Context.getBaseElementType(ExprType);
   }
-
-  if (ExprKind == UETT_VecStep)
-    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
-
-  if (ExprKind == UETT_VectorElements)
-    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
-                                               ExprRange);
-
-  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
-    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
-                                                    ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
@@ -11931,6 +11931,35 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
       if (!checkArithmeticBinOpPointerOperands(*this, Loc,
                                                LHS.get(), RHS.get()))
         return QualType();
+
+      // For pointer subtraction, if the address spaces differ but overlap,
+      // convert both pointers to the composite (superset) address space.
+      // This is needed because address spaces may use different
+      // representations, such as a private offset vs a flat address.
+      LangAS LAddrSpace = lpointee.getAddressSpace();
+      LangAS RAddrSpace = rpointee.getAddressSpace();
+      if (LAddrSpace != RAddrSpace) {
+        Qualifiers LQual = lpointee.getQualifiers();
+        Qualifiers RQual = rpointee.getQualifiers();
+        LangAS ResultAddrSpace = LQual.isAddressSpaceSupersetOf(RQual, Context)
+                                     ? LAddrSpace
+                                     : RAddrSpace;
+
+        if (LAddrSpace != ResultAddrSpace) {
+          QualType NewPteTy = Context.getAddrSpaceQualType(
+              lpointee.getUnqualifiedType(), ResultAddrSpace);
+          QualType NewPtrTy = Context.getPointerType(NewPteTy);
+          LHS =
+              ImpCastExprToType(LHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+        }
+        if (RAddrSpace != ResultAddrSpace) {
+          QualType NewPteTy = Context.getAddrSpaceQualType(
+              rpointee.getUnqualifiedType(), ResultAddrSpace);
+          QualType NewPtrTy = Context.getPointerType(NewPteTy);
+          RHS =
+              ImpCastExprToType(RHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+        }
+      }
 
       bool LHSIsNullPtr = LHS.get()->IgnoreParenCasts()->isNullPointerConstant(
           Context, Expr::NPC_ValueDependentIsNotNull);
@@ -19408,8 +19437,7 @@ void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
 static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
                                                         SourceLocation loc,
                                                         ValueDecl *var) {
-  DeclContext *VarDC =
-      var->getDeclContext()->getEnclosingNonExpansionStatementContext();
+  DeclContext *VarDC = var->getDeclContext();
 
   //  If the parameter still belongs to the translation unit, then
   //  we're actually just using one parameter in the declaration of
@@ -19571,10 +19599,7 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
         diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
       return false;
     } else if (Diagnose && S.getLangOpts().CPlusPlus) {
-      S.Diag(Loc, S.LangOpts.CPlusPlus20
-                      ? diag::warn_cxx17_compat_capture_binding
-                      : diag::ext_capture_binding)
-          << Var;
+      S.DiagCompat(Loc, diag_compat::capture_binding) << Var;
       S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
     }
   }

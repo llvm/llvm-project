@@ -2549,7 +2549,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Value *LBVal, Value *UBVal, Value *StepVal, bool Untied, Value *IfCond,
     Value *GrainSize, bool NoGroup, int Sched, Value *Final, bool Mergeable,
     Value *Priority, uint64_t NumOfCollapseLoops, TaskDupCallbackTy DupCB,
-    Value *TaskContextStructPtrVal) {
+    Value *TaskContextStructPtrVal, bool FreeAgent) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2629,7 +2629,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
                        TaskloopAllocaBB, CLI, TaskDupFn, ToBeDeleted, IfCond,
                        GrainSize, NoGroup, Sched, FakeLB, FakeUB, FakeStep,
                        FakeSharedsTy, Final, Mergeable, Priority,
-                       NumOfCollapseLoops](Function &OutlinedFn) mutable {
+                       NumOfCollapseLoops,
+                       FreeAgent](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -2671,6 +2672,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // Task is not mergeable if (Flags & 4) == 0.
     // Task is priority if (Flags & 32) == 32.
     // Task is not priority if (Flags & 32) == 0.
+    // Task is free-agent eligible if (Flags & 128) == 128.
+    // Task is not free-agent eligible if (Flags & 128) == 0.
     Value *Flags = Builder.getInt32(Untied ? 0 : 1);
     if (Final)
       Flags = Builder.CreateOr(Builder.getInt32(2), Flags);
@@ -2678,6 +2681,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
       Flags = Builder.CreateOr(Builder.getInt32(4), Flags);
     if (Priority)
       Flags = Builder.CreateOr(Builder.getInt32(32), Flags);
+    if (FreeAgent)
+      Flags = Builder.CreateOr(Builder.getInt32(128), Flags);
 
     Value *TaskSize = Builder.getInt64(
         divideCeil(M.getDataLayout().getTypeSizeInBits(Task), 8));
@@ -2897,7 +2902,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
     bool Tied, Value *Final, Value *IfCondition,
     const DependenciesInfo &Dependencies, const AffinityData &Affinities,
-    bool Mergeable, Value *EventHandle, Value *Priority) {
+    bool Mergeable, Value *EventHandle, Value *Priority, bool FreeAgent) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2945,7 +2950,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI->PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                       Affinities, Mergeable, Priority, EventHandle,
+                       Affinities, Mergeable, Priority, EventHandle, FreeAgent,
                        TaskAllocaBB,
                        ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
@@ -2978,6 +2983,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     // Task is not detachable iff (Flags & 64) == 0.
     // Task is priority iff (Flags & 32) == 32.
     // Task is not priority iff (Flags & 32) == 0.
+    // Task is free-agent eligible iff (Flags & 128) == 128.
+    // Task is not free-agent eligible iff (Flags & 128) == 0.
     // TODO: Handle the other flags.
     Value *Flags = Builder.getInt32(Tied);
     auto *ConstIfCondition = dyn_cast_or_null<ConstantInt>(IfCondition);
@@ -2994,6 +3001,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Flags = Builder.CreateOr(Builder.getInt32(64), Flags);
     if (Priority)
       Flags = Builder.CreateOr(Builder.getInt32(32), Flags);
+    if (FreeAgent)
+      Flags = Builder.CreateOr(Builder.getInt32(128), Flags);
 
     // Argument - `sizeof_kmp_task_t` (TaskSize)
     // Tasksize refers to the size in bytes of kmp_task_t data structure
@@ -5268,6 +5277,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
   Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
+  // Emitting the alloca moved the insertion point into the alloca block and
+  // can clear the debug loc. Restore back to Loc.DL.
+  Builder.SetCurrentDebugLocation(Loc.DL);
 
   for (auto En : enumerate(ReductionInfos)) {
     unsigned Index = En.index();
@@ -8584,6 +8596,14 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
     }
   }
 
+  // Generic mode runs the main thread on a warp of its own, past thread_limit.
+  // Reserve the widest warp any target has.
+  if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
+      hasGridValue(T))
+    MaxThreadsVal = int32_t(
+        std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
+                          int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
+
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
                                MaxThreadsVal);
@@ -9226,7 +9246,8 @@ static Expected<Function *> createOutlinedFunction(
     const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
     StringRef FuncName, SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
-    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB,
+    DebugLoc OutlinedFnLoc) {
   SmallVector<Type *> ParameterTypes;
   if (OMPBuilder.Config.isTargetDevice()) {
     // All parameters to target devices are passed as pointers
@@ -9273,8 +9294,11 @@ static Expected<Function *> createOutlinedFunction(
   // Save insert point.
   IRBuilder<>::InsertPointGuard IPG(Builder);
   // We will generate the entries in the outlined function but the debug
-  // location may still be pointing to the parent function. Reset it now.
-  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+  // location is still pointing to the parent function, which is the wrong
+  // scope. OutlinedFnLoc, when the caller provides one, is the same source
+  // position scoped to the subprogram that will be attached to the outlined
+  // function, so it is what everything emitted below needs.
+  Builder.SetCurrentDebugLocation(OutlinedFnLoc);
 
   // Generate the region into the function.
   BasicBlock *EntryBB = BasicBlock::Create(Builder.getContext(), "entry", Func);
@@ -9302,6 +9326,14 @@ static Expected<Function *> createOutlinedFunction(
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.SetInsertPoint(ExitBB);
+  // The body callback builds the body with its own IRBuilder and cannot reach
+  // this one directly. But a body holding another OpenMP construct, a nested
+  // parallel say, calls OpenMPIRBuilder::createParallel, and that can leave
+  // this Builder pointing at the wrong debug location, or at none at all. The
+  // epilogue below belongs to the target construct rather than to whatever the
+  // body emitted last, so re-establish the location the prologue was emitted
+  // with.
+  Builder.SetCurrentDebugLocation(OutlinedFnLoc);
 
   // Insert target deinit call in the device compilation pass.
   if (OMPBuilder.Config.isTargetDevice())
@@ -9603,13 +9635,14 @@ static Error emitTargetOutlinedFunction(
     Function *&OutlinedFn, Constant *&OutlinedFnID,
     SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
-    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB,
+    DebugLoc OutlinedFnLoc) {
 
   OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
       [&](StringRef EntryFnName) {
         return createOutlinedFunction(OMPBuilder, Builder, DefaultAttrs,
                                       EntryFnName, Inputs, CBFunc,
-                                      ArgAccessorFuncCB);
+                                      ArgAccessorFuncCB, OutlinedFnLoc);
       };
 
   return OMPBuilder.emitTargetRegionFunction(
@@ -10232,7 +10265,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
     CustomMapperCallbackTy CustomMapperCB, const DependenciesInfo &Dependencies,
     bool HasNowait, Value *DynCGroupMem,
-    OMPDynGroupprivateFallbackType DynCGroupMemFallback) {
+    OMPDynGroupprivateFallbackType DynCGroupMemFallback,
+    DebugLoc OutlinedFnLoc) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -10246,7 +10280,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
   // and ArgAccessorFuncCB
   if (Error Err = emitTargetOutlinedFunction(
           *this, Builder, IsOffloadEntry, EntryInfo, DefaultAttrs, OutlinedFn,
-          OutlinedFnID, Inputs, CBFunc, ArgAccessorFuncCB))
+          OutlinedFnID, Inputs, CBFunc, ArgAccessorFuncCB, OutlinedFnLoc))
     return Err;
 
   // If we are not on the target device, then we need to generate code
