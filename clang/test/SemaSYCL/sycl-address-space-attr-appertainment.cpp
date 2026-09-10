@@ -52,26 +52,26 @@ struct global_members {
 // expected-error@+1{{function type may not be qualified with an address space}}
 fn_t [[clang::sycl_global]] *global_fp1;
 
-// expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_global]]' address space attribute}}
 void (* [[clang::sycl_global]] global_fp2)();
 
-// expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_global]]' address space attribute}}
 int [[clang::sycl_global]] global_object;
 
-// expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_global]]' address space attribute}}
 int * [[clang::sycl_global]] global_pointer_object;
 
-// expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_global]]' address space attribute}}
 int [[clang::sycl_global]] global_array[4];
 
 using global_int = int [[clang::sycl_global]];
-// expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_global]]' address space attribute}}
 global_int global_object_via_typedef;
 
 void global_storage_durations() {
-  // expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_global]]' address space attribute}}
   int [[clang::sycl_global]] automatic_object;
-  // expected-error@+1{{'[[clang::sycl_global]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_global]]' address space attribute}}
   static int [[clang::sycl_global]] static_object;
 }
 
@@ -128,26 +128,26 @@ struct local_members {
 // expected-error@+1{{function type may not be qualified with an address space}}
 fn_t [[clang::sycl_local]] *local_fp1;
 
-// expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_local]]' address space attribute}}
 void (* [[clang::sycl_local]] local_fp2)();
 
-// expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_local]]' address space attribute}}
 int [[clang::sycl_local]] local_object;
 
-// expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_local]]' address space attribute}}
 int * [[clang::sycl_local]] local_pointer_object;
 
-// expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_local]]' address space attribute}}
 int [[clang::sycl_local]] local_array[4];
 
 using local_int = int [[clang::sycl_local]];
-// expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_local]]' address space attribute}}
 local_int local_object_via_typedef;
 
 void local_storage_durations() {
-  // expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_local]]' address space attribute}}
   int [[clang::sycl_local]] automatic_object;
-  // expected-error@+1{{'[[clang::sycl_local]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_local]]' address space attribute}}
   static int [[clang::sycl_local]] static_object;
 }
 
@@ -204,26 +204,26 @@ struct private_members {
 // expected-error@+1{{function type may not be qualified with an address space}}
 fn_t [[clang::sycl_private]] *private_fp1;
 
-// expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_private]]' address space attribute}}
 void (* [[clang::sycl_private]] private_fp2)();
 
-// expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_private]]' address space attribute}}
 int [[clang::sycl_private]] private_object;
 
-// expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_private]]' address space attribute}}
 int * [[clang::sycl_private]] private_pointer_object;
 
-// expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_private]]' address space attribute}}
 int [[clang::sycl_private]] private_array[4];
 
 using private_int = int [[clang::sycl_private]];
-// expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_private]]' address space attribute}}
 private_int private_object_via_typedef;
 
 void private_storage_durations() {
-  // expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_private]]' address space attribute}}
   int [[clang::sycl_private]] automatic_object;
-  // expected-error@+1{{'[[clang::sycl_private]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_private]]' address space attribute}}
   static int [[clang::sycl_private]] static_object;
 }
 
@@ -280,26 +280,26 @@ struct generic_members {
 // expected-error@+1{{function type may not be qualified with an address space}}
 fn_t [[clang::sycl_generic]] *generic_fp1;
 
-// expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_generic]]' address space attribute}}
 void (* [[clang::sycl_generic]] generic_fp2)();
 
-// expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_generic]]' address space attribute}}
 int [[clang::sycl_generic]] generic_object;
 
-// expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_generic]]' address space attribute}}
 int * [[clang::sycl_generic]] generic_pointer_object;
 
-// expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_generic]]' address space attribute}}
 int [[clang::sycl_generic]] generic_array[4];
 
 using generic_int = int [[clang::sycl_generic]];
-// expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_generic]]' address space attribute}}
 generic_int generic_object_via_typedef;
 
 void generic_storage_durations() {
-  // expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_generic]]' address space attribute}}
   int [[clang::sycl_generic]] automatic_object;
-  // expected-error@+1{{'[[clang::sycl_generic]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_generic]]' address space attribute}}
   static int [[clang::sycl_generic]] static_object;
 }
 
@@ -356,26 +356,26 @@ struct constant_members {
 // expected-error@+1{{function type may not be qualified with an address space}}
 fn_t [[clang::sycl_constant]] *constant_fp1;
 
-// expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_constant]]' address space attribute}}
 void (* [[clang::sycl_constant]] constant_fp2)();
 
-// expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_constant]]' address space attribute}}
 int [[clang::sycl_constant]] constant_object;
 
-// expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_constant]]' address space attribute}}
 int * [[clang::sycl_constant]] constant_pointer_object;
 
-// expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_constant]]' address space attribute}}
 int [[clang::sycl_constant]] constant_array[4];
 
 using constant_int = int [[clang::sycl_constant]];
-// expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+// expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_constant]]' address space attribute}}
 constant_int constant_object_via_typedef;
 
 void constant_storage_durations() {
-  // expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_constant]]' address space attribute}}
   int [[clang::sycl_constant]] automatic_object;
-  // expected-error@+1{{'[[clang::sycl_constant]]' attribute may only be applied to the object type of an object pointer or object reference type}}
+  // expected-error@+1{{the top-level type of a variable declaration cannot be qualified with the '[[clang::sycl_constant]]' address space attribute}}
   static int [[clang::sycl_constant]] static_object;
 }
 
