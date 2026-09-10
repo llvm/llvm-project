@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class InitializerListTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def do_test(self):
@@ -51,4 +52,9 @@ class InitializerListTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     def test_libstdcpp(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstd(self):
+        self.build()
         self.do_test()
