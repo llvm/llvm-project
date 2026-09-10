@@ -179,15 +179,15 @@
 // RUN:   | FileCheck -check-prefix=CUDA_MODE %s
 // RUN:   %clang -### -nogpulib -nogpuinc -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target -march=gfx906 %s -fno-openmp-cuda-mode -fopenmp-cuda-mode 2>&1 \
 // RUN:   | FileCheck -check-prefix=CUDA_MODE %s
-// CUDA_MODE: "-cc1"{{.*}}"-triple" "{{nvptx64-nvidia-cuda|amdgcn-amd-amdhsa}}"
+// CUDA_MODE: "-cc1"{{.*}}"-triple" "{{nvptx64-nvidia-cuda|amdgpu9.06-amd-amdhsa}}"
 // CUDA_MODE-SAME: "-fopenmp-cuda-mode"
 // RUN:   %clang -### -nogpulib -nogpuinc -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 %s -fno-openmp-cuda-mode 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO_CUDA_MODE %s
 // RUN:   %clang -### -nogpulib -nogpuinc -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 %s -fopenmp-cuda-mode -fno-openmp-cuda-mode 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO_CUDA_MODE %s
-// RUN:   %clang -### -nogpulib -nogpuinc -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target -march=gfx906 %s -fno-openmp-cuda-mode 2>&1 \
+// RUN:   %clang -### -nogpulib -nogpuinc -fopenmp=libomp -fopenmp-targets=amdgpu9-amd-amdhsa -Xopenmp-target -march=gfx906 %s -fno-openmp-cuda-mode 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO_CUDA_MODE %s
-// RUN:   %clang -### -nogpulib -nogpuinc -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target -march=gfx906 %s -fopenmp-cuda-mode -fno-openmp-cuda-mode 2>&1 \
+// RUN:   %clang -### -nogpulib -nogpuinc -fopenmp=libomp -fopenmp-targets=amdgpu9-amd-amdhsa -Xopenmp-target -march=gfx906 %s -fopenmp-cuda-mode -fno-openmp-cuda-mode 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO_CUDA_MODE %s
 // NO_CUDA_MODE-NOT: "-{{fno-|f}}openmp-cuda-mode"
 
@@ -277,7 +277,7 @@
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-NVIDIA-AMDGPU
 
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_BC:.+]]"
-// CHECK-NVIDIA-AMDGPU: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[AMD_BC:.+]]"
+// CHECK-NVIDIA-AMDGPU: "amdgpu9.08-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[AMD_BC:.+]]"
 // CHECK-NVIDIA-AMDGPU: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[NVIDIA_PTX:.+]]"
 // CHECK-NVIDIA-AMDGPU: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[NVIDIA_PTX]]"], output: "[[NVIDIA_CUBIN:.+]]"
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[AMD_BC]]", "[[NVIDIA_CUBIN]]"], output: "[[BINARY:.*]]"
@@ -391,11 +391,11 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     --offload-arch=gfx906 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=THINLTO-GFX906 %s
-// THINLTO-GFX906: --device-compiler=amdgcn-amd-amdhsa=-flto=thin
-// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-force-import-all
-// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-avail-extern-to-local
-// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3
-// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols
+// THINLTO-GFX906: --device-compiler=amdgpu-amd-amdhsa=-flto=thin
+// THINLTO-GFX906-SAME: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-force-import-all
+// THINLTO-GFX906-SAME: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-avail-extern-to-local
+// THINLTO-GFX906-SAME: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3
+// THINLTO-GFX906-SAME: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols
 //
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     --offload-arch=sm_52 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
@@ -420,14 +420,30 @@
 // RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=PROFILE %s
 //
-// PROFILE: clang-linker-wrapper{{.*}}--device-compiler=amdgcn-amd-amdhsa=-fprofile-generate
-// 
+// Check with new triple named directory structure
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_amdgpu_triples \
+// RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=PROFILE %s
+//
+// PROFILE: clang-linker-wrapper{{.*}}--device-compiler=amdgpu-amd-amdhsa=-fprofile-generate
+//
+// Check with subarch directory name is respected when the toolchain triple is forced.
+// TODO: This does not work with just --offload-arch
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_amdgpu_subarch_triples \
+// RUN:     -fopenmp-targets=amdgpu10.30-amd-amdhsa-llvm -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=PROFILE-SUBARCH %s
+//
+// PROFILE-SUBARCH: clang-linker-wrapper{{.*}}--device-compiler=amdgpu10.30-amd-amdhsa-llvm=-fprofile-generate
+
+
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NO-PROFILE %s
 //
-// NO-PROFILE-NOT: --device-compiler=amdgcn-amd-amdhsa=-fprofile-generate
+// NO-PROFILE-NOT: --device-compiler=amd{{.*}}-amd-amdhsa=-fprofile-generate
 
 //
 // Check that `-fsanitize=` flags are forwarded to link in the runtime
@@ -439,8 +455,8 @@
 // RUN:     -fsanitize-minimal-runtime -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=UBSAN %s
 //
-// UBSAN: clang-linker-wrapper{{.*}}--device-compiler=amdgcn-amd-amdhsa=-fsanitize=undefined
-// UBSAN-SAME: --device-compiler=amdgcn-amd-amdhsa=-fsanitize-minimal-runtime
+// UBSAN: clang-linker-wrapper{{.*}}--device-compiler=amdgpu-amd-amdhsa=-fsanitize=undefined
+// UBSAN-SAME: --device-compiler=amdgpu-amd-amdhsa=-fsanitize-minimal-runtime
 //
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -448,7 +464,7 @@
 // RUN:     -fsanitize-minimal-runtime -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NO-UBSAN %s
 //
-// NO-UBSAN-NOT: --device-compiler=amdgcn-amd-amdhsa=-fsanitize=undefined
+// NO-UBSAN-NOT: --device-compiler=amdgpu{{.*}}-amd-amdhsa=-fsanitize=undefined
 
 // Check that --cuda-path and --rocm-path are forwarded unconditionally
 //

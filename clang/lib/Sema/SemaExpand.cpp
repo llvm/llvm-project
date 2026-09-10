@@ -573,6 +573,8 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
     NonSFINAEContext _(*this);
     InstantiatingTemplate Inst(*this, Body->getBeginLoc(), Expansion, Arg,
                                Body->getSourceRange());
+    if (Inst.isInvalid())
+      return StmtError();
 
     StmtResult Instantiation = SubstStmt(CombinedBody, MTArgList);
     if (Instantiation.isInvalid())

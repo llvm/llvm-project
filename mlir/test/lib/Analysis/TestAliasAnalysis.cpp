@@ -21,14 +21,15 @@ using namespace mlir;
 
 /// Print a value that is used as an operand of an alias query.
 static void printAliasOperand(Operation *op) {
-  llvm::errs() << op->getAttrOfType<StringAttr>("test.ptr").getValue();
+  llvm::errs()
+      << op->getDiscardableAttrOfType<StringAttr>("test.ptr").getValue();
 }
 static void printAliasOperand(Value value) {
   if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     Region *region = arg.getParentRegion();
     unsigned parentBlockNumber = arg.getOwner()->computeBlockNumber();
     llvm::errs() << region->getParentOp()
-                        ->getAttrOfType<StringAttr>("test.ptr")
+                        ->getDiscardableAttrOfType<StringAttr>("test.ptr")
                         .getValue()
                  << ".region" << region->getRegionNumber();
     if (parentBlockNumber != 0)

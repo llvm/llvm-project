@@ -811,6 +811,66 @@ define void @store_abs_i32(ptr %p, ptr %r) nounwind {
   ret void
 }
 
+; llvm.abs(..., i1 true) is ISD::ABS_MIN_POISON; PABS is still valid.
+define void @store_abs_i32_int_min_poison(ptr %p, ptr %r) nounwind {
+; SSE2-LABEL: store_abs_i32_int_min_poison:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movl (%rdi), %eax
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    negl %ecx
+; SSE2-NEXT:    cmovsl %eax, %ecx
+; SSE2-NEXT:    movl %ecx, (%rsi)
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: store_abs_i32_int_min_poison:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    pabsd %xmm0, %xmm0
+; SSE41-NEXT:    movd %xmm0, (%rsi)
+; SSE41-NEXT:    retq
+;
+; X86-SSE41-LABEL: store_abs_i32_int_min_poison:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    pabsd %xmm0, %xmm0
+; X86-SSE41-NEXT:    movd %xmm0, (%eax)
+; X86-SSE41-NEXT:    retl
+;
+; AVX-LABEL: store_abs_i32_int_min_poison:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vpabsd %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, (%rsi)
+; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: store_abs_i32_int_min_poison:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512F-NEXT:    vpabsd %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: store_abs_i32_int_min_poison:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512VL-NEXT:    vpabsd %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: store_abs_i32_int_min_poison:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512FP16-NEXT:    vpabsd %xmm0, %xmm0
+; AVX512FP16-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512FP16-NEXT:    retq
+  %x = load i32, ptr %p, align 4
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  store i32 %a, ptr %r, align 4
+  ret void
+}
+
 ; Negative: register operand / GPR result should stay on neg+cmov.
 define i32 @abs_gpr(i32 %x) nounwind {
 ; SSE2-LABEL: abs_gpr:
@@ -1256,6 +1316,81 @@ define void @store_abs_i64(ptr %p, ptr %r) nounwind {
 ; AVX512FP16-NEXT:    retq
   %x = load i64, ptr %p, align 8
   %a = call i64 @llvm.abs.i64(i64 %x, i1 false)
+  store i64 %a, ptr %r, align 8
+  ret void
+}
+
+; llvm.abs(..., i1 true) is ISD::ABS_MIN_POISON; PABS is still valid.
+define void @store_abs_i64_int_min_poison(ptr %p, ptr %r) nounwind {
+; SSE2-LABEL: store_abs_i64_int_min_poison:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq (%rdi), %rax
+; SSE2-NEXT:    movq %rax, %rcx
+; SSE2-NEXT:    negq %rcx
+; SSE2-NEXT:    cmovsq %rax, %rcx
+; SSE2-NEXT:    movq %rcx, (%rsi)
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: store_abs_i64_int_min_poison:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq (%rdi), %rax
+; SSE41-NEXT:    movq %rax, %rcx
+; SSE41-NEXT:    negq %rcx
+; SSE41-NEXT:    cmovsq %rax, %rcx
+; SSE41-NEXT:    movq %rcx, (%rsi)
+; SSE41-NEXT:    retq
+;
+; X86-SSE41-LABEL: store_abs_i64_int_min_poison:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    pushl %esi
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE41-NEXT:    movl 4(%ecx), %edx
+; X86-SSE41-NEXT:    movl %edx, %esi
+; X86-SSE41-NEXT:    sarl $31, %esi
+; X86-SSE41-NEXT:    xorl %esi, %edx
+; X86-SSE41-NEXT:    movl (%ecx), %ecx
+; X86-SSE41-NEXT:    xorl %esi, %ecx
+; X86-SSE41-NEXT:    subl %esi, %ecx
+; X86-SSE41-NEXT:    sbbl %esi, %edx
+; X86-SSE41-NEXT:    movl %ecx, (%eax)
+; X86-SSE41-NEXT:    movl %edx, 4(%eax)
+; X86-SSE41-NEXT:    popl %esi
+; X86-SSE41-NEXT:    retl
+;
+; AVX-LABEL: store_abs_i64_int_min_poison:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq (%rdi), %rax
+; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    negq %rcx
+; AVX-NEXT:    cmovsq %rax, %rcx
+; AVX-NEXT:    movq %rcx, (%rsi)
+; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: store_abs_i64_int_min_poison:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vpabsq %zmm0, %zmm0
+; AVX512F-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: store_abs_i64_int_min_poison:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512VL-NEXT:    vpabsq %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: store_abs_i64_int_min_poison:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512FP16-NEXT:    vpabsq %zmm0, %zmm0
+; AVX512FP16-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512FP16-NEXT:    vzeroupper
+; AVX512FP16-NEXT:    retq
+  %x = load i64, ptr %p, align 8
+  %a = call i64 @llvm.abs.i64(i64 %x, i1 true)
   store i64 %a, ptr %r, align 8
   ret void
 }
@@ -1720,6 +1855,76 @@ define void @store_abs_i16(ptr %p, ptr %r) nounwind {
 ; AVX512FP16-NEXT:    retq
   %x = load i16, ptr %p, align 2
   %a = call i16 @llvm.abs.i16(i16 %x, i1 false)
+  store i16 %a, ptr %r, align 2
+  ret void
+}
+
+; llvm.abs(..., i1 true) is ISD::ABS_MIN_POISON; PABS is still valid.
+define void @store_abs_i16_int_min_poison(ptr %p, ptr %r) nounwind {
+; SSE2-LABEL: store_abs_i16_int_min_poison:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    negw %cx
+; SSE2-NEXT:    cmovsw %ax, %cx
+; SSE2-NEXT:    movw %cx, (%rsi)
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: store_abs_i16_int_min_poison:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movzwl (%rdi), %eax
+; SSE41-NEXT:    movl %eax, %ecx
+; SSE41-NEXT:    negw %cx
+; SSE41-NEXT:    cmovsw %ax, %cx
+; SSE41-NEXT:    movw %cx, (%rsi)
+; SSE41-NEXT:    retq
+;
+; X86-SSE41-LABEL: store_abs_i16_int_min_poison:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE41-NEXT:    movzwl (%ecx), %ecx
+; X86-SSE41-NEXT:    movl %ecx, %edx
+; X86-SSE41-NEXT:    negw %dx
+; X86-SSE41-NEXT:    cmovsw %cx, %dx
+; X86-SSE41-NEXT:    movw %dx, (%eax)
+; X86-SSE41-NEXT:    retl
+;
+; AVX-LABEL: store_abs_i16_int_min_poison:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    negw %cx
+; AVX-NEXT:    cmovsw %ax, %cx
+; AVX-NEXT:    movw %cx, (%rsi)
+; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: store_abs_i16_int_min_poison:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movzwl (%rdi), %eax
+; AVX512F-NEXT:    movl %eax, %ecx
+; AVX512F-NEXT:    negw %cx
+; AVX512F-NEXT:    cmovsw %ax, %cx
+; AVX512F-NEXT:    movw %cx, (%rsi)
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: store_abs_i16_int_min_poison:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    movzwl (%rdi), %eax
+; AVX512VL-NEXT:    movl %eax, %ecx
+; AVX512VL-NEXT:    negw %cx
+; AVX512VL-NEXT:    cmovsw %ax, %cx
+; AVX512VL-NEXT:    movw %cx, (%rsi)
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: store_abs_i16_int_min_poison:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vmovw (%rdi), %xmm0
+; AVX512FP16-NEXT:    vpabsw %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpextrw $0, %xmm0, (%rsi)
+; AVX512FP16-NEXT:    retq
+  %x = load i16, ptr %p, align 2
+  %a = call i16 @llvm.abs.i16(i16 %x, i1 true)
   store i16 %a, ptr %r, align 2
   ret void
 }

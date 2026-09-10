@@ -34,14 +34,14 @@ struct AllocTensorOpInterface
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    assert(opOperand.getOperandNumber() == op->getNumOperands() - 1 &&
+    assert(&opOperand == &cast<AllocTensorOp>(op).getCopyMutable()[0] &&
            "expected copy operand");
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    assert(opOperand.getOperandNumber() == op->getNumOperands() - 1 &&
+    assert(&opOperand == &cast<AllocTensorOp>(op).getCopyMutable()[0] &&
            "expected copy operand");
     return false;
   }

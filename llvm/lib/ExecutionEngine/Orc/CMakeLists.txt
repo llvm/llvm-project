@@ -43,10 +43,11 @@ add_llvm_component_library(LLVMOrcJIT
   LinkGraphLayer.cpp
   LinkGraphLinkingLayer.cpp
   LoadLinkableFile.cpp
-  LookupAndRecordAddrs.cpp
+  LookupAndApply.cpp
   LLJIT.cpp
   MachO.cpp
   MachOPlatform.cpp
+  Mangler.cpp
   MapperJITLinkMemoryManager.cpp
   MemoryMapper.cpp
   ELFNixPlatform.cpp
@@ -58,6 +59,7 @@ add_llvm_component_library(LLVMOrcJIT
   RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
+  SimpleMemoryMapSPS.cpp
   SimpleRemoteEPC.cpp
   SimpleRemoteMemoryMapper.cpp
   Speculation.cpp

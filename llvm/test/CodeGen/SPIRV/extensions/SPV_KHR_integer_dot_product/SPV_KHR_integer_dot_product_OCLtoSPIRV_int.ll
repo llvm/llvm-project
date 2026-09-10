@@ -2,6 +2,9 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.6-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_integer_dot_product %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_integer_dot_product %s -o - -filetype=obj | spirv-val %}
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+
+; CHECK-ERROR: LLVM ERROR: {{.*}}: the builtin requires the following SPIR-V extension: SPV_KHR_integer_dot_product
 
 ; CHECK: Capability DotProduct
 ; CHECK: Capability DotProductInput4x8BitPacked

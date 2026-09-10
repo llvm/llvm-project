@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -29,6 +30,7 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -760,9 +762,12 @@ struct RankReducedExtractSliceOp
     SmallVector<OpFoldResult> offsets = sliceOp.getMixedOffsets();
     SmallVector<OpFoldResult> strides = sliceOp.getMixedStrides();
     SmallVector<OpFoldResult> sizes = sliceOp.getMixedSizes();
-    auto rankReducedType = cast<RankedTensorType>(
-        tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
-            reassociation->size(), sliceOp.getSourceType(), sizes));
+    SmallVector<int64_t> staticSizes;
+    std::tie(staticSizes, std::ignore) = decomposeMixedValues(sizes);
+    llvm::SmallBitVector droppedDims = getPositionsOfShapeOne(
+        sizes.size() - reassociation->size(), staticSizes);
+    RankedTensorType rankReducedType =
+        tensor::inferSliceType(sliceOp.getSourceType(), sizes, droppedDims);
 
     Location loc = sliceOp.getLoc();
     Value newSlice = tensor::ExtractSliceOp::create(
@@ -983,14 +988,28 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
     SmallVector<Type, 1> collapsedResultTy;
     if (isa<RankedTensorType>(collapsedInit.getType()))
       collapsedResultTy.push_back(collapsedInit.getType());
-    auto collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
-                                      ValueRange{collapsedLhs, collapsedRhs},
-                                      ValueRange{collapsedInit});
-    for (auto attr : contractionOp->getAttrs()) {
+    ToOpTy collapsedOp;
+    if constexpr (std::is_same_v<FromOpTy, BatchMatmulOp> &&
+                  std::is_same_v<ToOpTy, MatmulOp>) {
+      if (TypeFnAttr castAttr = contractionOp.getCastAttr()) {
+        collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                     ValueRange{collapsedLhs, collapsedRhs},
+                                     ValueRange{collapsedInit}, castAttr);
+      } else {
+        collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                     ValueRange{collapsedLhs, collapsedRhs},
+                                     ValueRange{collapsedInit});
+      }
+    } else {
+      collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                   ValueRange{collapsedLhs, collapsedRhs},
+                                   ValueRange{collapsedInit});
+    }
+    for (auto attr : contractionOp->getDiscardableAttrDictionary()) {
       if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName ||
           attr.getName() == "indexing_maps")
         continue;
-      collapsedOp->setAttr(attr.getName(), attr.getValue());
+      collapsedOp->setDiscardableAttr(attr.getName(), attr.getValue());
     }
 
     auto results = contractionOp.getResults();

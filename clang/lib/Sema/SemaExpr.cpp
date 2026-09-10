@@ -65,6 +65,7 @@
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -2122,8 +2123,7 @@ static Decl *getPredefinedExprDecl(Sema &S, DeclContext *DC) {
   auto tryAdjustLambdaContext = [&S, &LSI](DeclContext *&DC) {
     if (isLambdaCallOperator(DC)) {
       auto E = S.FunctionScopes.rend();
-      while (LSI != E && isa<CapturingScopeInfo>(*LSI) &&
-             !isa<LambdaScopeInfo>(*LSI))
+      while (LSI != E && !isa<LambdaScopeInfo>(*LSI))
         ++LSI;
       assert(LSI != E && "Should be in a lambda scope info");
       if (dyn_cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
@@ -2864,6 +2864,12 @@ ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   DeclarationName Name = NameInfo.getName();
   IdentifierInfo *II = Name.getAsIdentifierInfo();
   SourceLocation NameLoc = NameInfo.getLoc();
+
+  if (Id.getKind() == UnqualifiedIdKind::IK_TemplateId &&
+      Id.TemplateId->Template)
+    if (TemplateName TN = Id.TemplateId->Template.get();
+        TN.getAsPackIndexingTemplate())
+      return CheckVarOrConceptTemplateTemplateId(NameInfo, TN, TemplateArgs);
 
   if (II && II->isEditorPlaceholder()) {
     // FIXME: When typed placeholders are supported we can create a typed
@@ -4058,12 +4064,12 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     QualType Ty;
 
     // 'z/uz' literals are a C++23 feature.
-    if (Literal.isSizeT)
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus
-                                  ? getLangOpts().CPlusPlus23
-                                        ? diag::warn_cxx20_compat_size_t_suffix
-                                        : diag::ext_cxx23_size_t_suffix
-                                  : diag::err_cxx23_size_t_suffix);
+    if (Literal.isSizeT) {
+      if (getLangOpts().CPlusPlus)
+        DiagCompat(Tok.getLocation(), diag_compat::size_t_suffix);
+      else
+        Diag(Tok.getLocation(), diag::err_cxx23_size_t_suffix);
+    }
 
     // 'wb/uwb' literals are a C23 feature. We support _BitInt as a type in C++,
     // but we do not currently support the suffix in C++ mode because it's not
@@ -4092,7 +4098,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           !Context.getTargetInfo().hasInt128Type())
         PP.Diag(Tok.getLocation(), diag::err_integer_literal_too_large)
             << Literal.isUnsigned;
-      BitsNeeded = Literal.MicrosoftInteger;
+      BitsNeeded = std::max<unsigned>(BitsNeeded, Literal.MicrosoftInteger);
     }
 
     llvm::APInt ResultVal(BitsNeeded, 0);
@@ -4134,6 +4140,9 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           Ty = Context.getIntTypeForBitwidth(Width,
                                              /*Signed=*/!Literal.isUnsigned);
         }
+        // To maintain consistency with MSVC, we chose to truncate directly
+        // without issuing any warnings.
+        ResultVal = ResultVal.zextOrTrunc(Width);
       }
 
       // Bit-precise integer literals are automagically-sized based on the
@@ -4733,6 +4742,17 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprType->isDependentType())
     return false;
 
+  // These builtins evaluate with the operand type as written; a reference is
+  // not looked through.
+  if (ExprKind == UETT_VectorElements)
+    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
+                                               ExprRange);
+  if (ExprKind == UETT_VecStep)
+    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
+  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
+    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
+                                                    ExprRange);
+
   // C++ [expr.sizeof]p2:
   //     When applied to a reference or a reference type, the result
   //     is the size of the referenced type.
@@ -4754,17 +4774,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
       DiagCompat(OpLoc, diag_compat::alignof_incomplete_array);
     ExprType = Context.getBaseElementType(ExprType);
   }
-
-  if (ExprKind == UETT_VecStep)
-    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
-
-  if (ExprKind == UETT_VectorElements)
-    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
-                                               ExprRange);
-
-  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
-    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
-                                                    ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
@@ -11782,6 +11791,26 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
   return PExp->getType();
 }
 
+/// Determine whether the size of \p T is provably zero: some array dimension
+/// is provably zero or the base element type has zero size. A variable
+/// dimension that does not fold to an integer constant is assumed nonzero.
+static bool isProvablyZeroSize(const ASTContext &Ctx, QualType T) {
+  while (const ArrayType *AT = Ctx.getAsArrayType(T)) {
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+      if (CAT->isZeroSize())
+        return true;
+    } else if (const auto *VAT = dyn_cast<VariableArrayType>(AT)) {
+      if (const Expr *Bound = VAT->getSizeExpr())
+        if (std::optional<llvm::APSInt> Size =
+                Bound->getIntegerConstantExpr(Ctx))
+          if (*Size == 0)
+            return true;
+    }
+    T = AT->getElementType();
+  }
+  return !T->isIncompleteType() && Ctx.getTypeSizeInChars(T).isZero();
+}
+
 // C99 6.5.6
 QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation Loc,
@@ -11903,6 +11932,35 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                                LHS.get(), RHS.get()))
         return QualType();
 
+      // For pointer subtraction, if the address spaces differ but overlap,
+      // convert both pointers to the composite (superset) address space.
+      // This is needed because address spaces may use different
+      // representations, such as a private offset vs a flat address.
+      LangAS LAddrSpace = lpointee.getAddressSpace();
+      LangAS RAddrSpace = rpointee.getAddressSpace();
+      if (LAddrSpace != RAddrSpace) {
+        Qualifiers LQual = lpointee.getQualifiers();
+        Qualifiers RQual = rpointee.getQualifiers();
+        LangAS ResultAddrSpace = LQual.isAddressSpaceSupersetOf(RQual, Context)
+                                     ? LAddrSpace
+                                     : RAddrSpace;
+
+        if (LAddrSpace != ResultAddrSpace) {
+          QualType NewPteTy = Context.getAddrSpaceQualType(
+              lpointee.getUnqualifiedType(), ResultAddrSpace);
+          QualType NewPtrTy = Context.getPointerType(NewPteTy);
+          LHS =
+              ImpCastExprToType(LHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+        }
+        if (RAddrSpace != ResultAddrSpace) {
+          QualType NewPteTy = Context.getAddrSpaceQualType(
+              rpointee.getUnqualifiedType(), ResultAddrSpace);
+          QualType NewPtrTy = Context.getPointerType(NewPteTy);
+          RHS =
+              ImpCastExprToType(RHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+        }
+      }
+
       bool LHSIsNullPtr = LHS.get()->IgnoreParenCasts()->isNullPointerConstant(
           Context, Expr::NPC_ValueDependentIsNotNull);
       bool RHSIsNullPtr = RHS.get()->IgnoreParenCasts()->isNullPointerConstant(
@@ -11916,15 +11974,13 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
       // The pointee type may have zero size.  As an extension, a structure or
       // union may have zero size or an array may have zero length.  In this
-      // case subtraction does not make sense.
-      if (!rpointee->isVoidType() && !rpointee->isFunctionType()) {
-        CharUnits ElementSize = Context.getTypeSizeInChars(rpointee);
-        if (ElementSize.isZero()) {
-          Diag(Loc,diag::warn_sub_ptr_zero_size_types)
-            << rpointee.getUnqualifiedType()
-            << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
-        }
-      }
+      // case subtraction does not make sense.  For a variably modified type,
+      // warn only when the size is provably zero.
+      if (!rpointee->isVoidType() && !rpointee->isFunctionType() &&
+          isProvablyZeroSize(Context, rpointee))
+        Diag(Loc, diag::warn_sub_ptr_zero_size_types)
+            << rpointee.getUnqualifiedType() << LHS.get()->getSourceRange()
+            << RHS.get()->getSourceRange();
 
       if (CompLHSTy) *CompLHSTy = LHS.get()->getType();
       return Context.getPointerDiffType();
@@ -12963,6 +13019,10 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     CheckPtrComparisonWithNullChar(RHS, LHS);
   }
 
+  if (getLangOpts().HLSL && (LHS.get()->getType()->isConstantMatrixType() ||
+                             RHS.get()->getType()->isConstantMatrixType()))
+    return CheckMatrixCompareOperands(LHS, RHS, Loc, Opc);
+
   // Handle vector comparisons separately.
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
@@ -13536,6 +13596,35 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
 
   // Return a signed type for the vector.
   return GetSignedVectorType(vType);
+}
+
+QualType Sema::CheckMatrixCompareOperands(ExprResult &LHS, ExprResult &RHS,
+                                          SourceLocation Loc,
+                                          BinaryOperatorKind Opc) {
+  assert(getLangOpts().HLSL && "matrix comparisons are only supported in HLSL");
+  assert(Opc != BO_Cmp && "three-way comparisons are not supported in HLSL");
+
+  QualType MatrixTy =
+      CheckMatrixElementwiseOperands(LHS, RHS, Loc, /*IsCompAssign=*/false);
+  if (MatrixTy.isNull())
+    return QualType();
+
+  if (!LHS.get()->getType()->isMatrixType()) {
+    LHS = prepareMatrixSplat(MatrixTy, LHS.get());
+    if (LHS.isInvalid())
+      return QualType();
+    LHS = ImpCastExprToType(LHS.get(), MatrixTy, CK_HLSLAggregateSplatCast);
+  }
+  if (!RHS.get()->getType()->isMatrixType()) {
+    RHS = prepareMatrixSplat(MatrixTy, RHS.get());
+    if (RHS.isInvalid())
+      return QualType();
+    RHS = ImpCastExprToType(RHS.get(), MatrixTy, CK_HLSLAggregateSplatCast);
+  }
+
+  const auto *MT = MatrixTy->castAs<ConstantMatrixType>();
+  return Context.getConstantMatrixType(Context.BoolTy, MT->getNumRows(),
+                                       MT->getNumColumns());
 }
 
 QualType Sema::CheckSizelessVectorCompareOperands(ExprResult &LHS,
@@ -19510,10 +19599,7 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
         diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
       return false;
     } else if (Diagnose && S.getLangOpts().CPlusPlus) {
-      S.Diag(Loc, S.LangOpts.CPlusPlus20
-                      ? diag::warn_cxx17_compat_capture_binding
-                      : diag::ext_capture_binding)
-          << Var;
+      S.DiagCompat(Loc, diag_compat::capture_binding) << Var;
       S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
     }
   }

@@ -7,6 +7,14 @@
 // RUN:   | FileCheck %t/alias-shadows-processor.td -DFILE=%t/alias-shadows-processor.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/bad-isa-version.td 2>&1 \
 // RUN:   | FileCheck %t/bad-isa-version.td -DFILE=%t/bad-isa-version.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/oversized-major.td 2>&1 \
+// RUN:   | FileCheck %t/oversized-major.td -DFILE=%t/oversized-major.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/oversized-minor.td 2>&1 \
+// RUN:   | FileCheck %t/oversized-minor.td -DFILE=%t/oversized-minor.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/oversized-stepping.td 2>&1 \
+// RUN:   | FileCheck %t/oversized-stepping.td -DFILE=%t/oversized-stepping.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/negative-component.td 2>&1 \
+// RUN:   | FileCheck %t/negative-component.td -DFILE=%t/negative-component.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/bad-stepping.td 2>&1 \
 // RUN:   | FileCheck %t/bad-stepping.td -DFILE=%t/bad-stepping.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-feature-superset.td 2>&1 \
@@ -77,6 +85,64 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 // CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' must have a 3-element [major, minor, stepping] IsaVersion
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0]>;
 
+//--- oversized-major.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+// A major that does not fit in the uint8_t table field is rejected rather than
+// silently truncated.
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' IsaVersion components must each fit in a byte
+def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[256, 0, 0]>;
+
+//--- oversized-minor.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+// A minor that does not fit in the uint8_t table field is likewise rejected.
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' IsaVersion components must each fit in a byte
+def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 256, 0]>;
+
+//--- oversized-stepping.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+// A stepping that does not fit in the uint8_t table field is likewise rejected.
+// The byte check fires before the single-hex-digit check.
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' IsaVersion components must each fit in a byte
+def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 256]>;
+
+//--- negative-component.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+// A negative component is likewise rejected (it does not fit an unsigned byte).
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' IsaVersion components must each fit in a byte
+def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, -1]>;
+
 //--- bad-stepping.td
 include "llvm/Target/Target.td"
 def MyTarget : Target;
@@ -87,8 +153,8 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
 }
-// The stepping must fit in a single hex digit so it can be spelled in the
-// triple subarch name (e.g. "amdgpu9.0c").
+// The stepping is spelled as one hex digit in the device/subarch names, so it
+// must fit in a nibble even though the table field is a full byte.
 // CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' stepping must be a single hex digit
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 16]>;
 

@@ -497,8 +497,7 @@ define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 1, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 1
