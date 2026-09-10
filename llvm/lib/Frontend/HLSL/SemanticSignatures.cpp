@@ -87,7 +87,7 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
   }
   case dxbc::PSV::SemanticKind::ViewID: {
     static constexpr IOType InOrPatchConstant =
-        static_cast<IOType>(IOType::In | IOType::PatchConstantOrPrimitive);
+        IOType::In | IOType::PatchConstantOrPrimitive;
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
         {Triple::Hull, InOrPatchConstant, SemanticInterpretation::NotAllocated},
