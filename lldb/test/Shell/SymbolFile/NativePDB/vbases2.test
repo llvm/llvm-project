@@ -1,0 +1,16 @@
+REQUIRES: target-windows, lld
+RUN: %build --compiler=clang-cl --output=%t.exe %S/Inputs/VBases2.cpp
+RUN: %lldb -b -s %S/Inputs/VBases2.script -- %t.exe | FileCheck %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=0 %lldb -b -s %S/Inputs/VBases2.script -- %t.exe | FileCheck %s
+
+CHECK: {
+CHECK:   A = (a = '\x01')
+CHECK:   B = (b = 2)
+CHECK:   c = 3
+CHECK: }
+
+CHECK: {
+CHECK:   A = (a = '\x01')
+CHECK:   B = (b = 2)
+CHECK:   c = 3
+CHECK: }

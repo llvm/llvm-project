@@ -88,6 +88,10 @@ static cl::opt<bool> MinExistingHotColdNewHint(
     cl::desc("Take the minimum of compiler hint and existing hint when "
              "optimizing existing hot/cold operator new library calls"));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 namespace {
 
 // Specialized parser to ensure the hint is an 8 bit value (we can't specify
@@ -1070,7 +1074,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
       });
       return B.CreateSelect(SI->getCondition(),
                             ConstantInt::get(CI->getType(), LenTrue - 1),
-                            ConstantInt::get(CI->getType(), LenFalse - 1));
+                            ConstantInt::get(CI->getType(), LenFalse - 1), "",
+                            ProfcheckDisableMetadataFixes ? nullptr : SI);
     }
   }
 

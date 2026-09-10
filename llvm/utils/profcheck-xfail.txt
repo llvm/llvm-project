@@ -80,8 +80,6 @@ Transforms/InstCombine/strlen-1.ll
 Transforms/InstCombine/strrchr-3.ll
 Transforms/InstCombine/truncating-saturate.ll
 Transforms/InstCombine/unordered-fcmp-select.ll
-Transforms/InstCombine/wcslen-1.ll
-Transforms/InstCombine/wcslen-3.ll
 Transforms/InstCombine/xor-and-or.ll
 Transforms/InstCombine/zext-bool-add-sub.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll

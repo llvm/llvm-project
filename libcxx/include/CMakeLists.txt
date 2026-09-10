@@ -651,7 +651,6 @@ set(files
   __mutex/tag_types.h
   __mutex/unique_lock.h
   __new/align_val_t.h
-  __new/allocate.h
   __new/destroying_delete_t.h
   __new/exceptions.h
   __new/global_new_delete.h
@@ -703,6 +702,7 @@ set(files
   __pstl/cpu_algos/is_heap_until.h
   __pstl/cpu_algos/merge.h
   __pstl/cpu_algos/min_element.h
+  __pstl/cpu_algos/minmax_element.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
   __pstl/cpu_algos/search.h
