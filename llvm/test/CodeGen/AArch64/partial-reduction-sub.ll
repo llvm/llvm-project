@@ -288,6 +288,72 @@ define <vscale x 4 x i32> @negative_test_no_sub_dot_inst(<vscale x 4 x i32> %acc
   ret <vscale x 4 x i32> %res
 }
 
+; Mixed-sign (usdot) sub-reductions have no subtracting form either, so the
+; accumulator is negated around the dot product.
+define <vscale x 4 x i32> @usdot_sub_i8_i32(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #1 {
+; CHECK-LABEL: usdot_sub_i8_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    usdot z0.s, z2.b, z1.b
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    ret
+  %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %b.zext = zext <vscale x 16 x i8> %b to <vscale x 16 x i32>
+  %mul = mul <vscale x 16 x i32> %a.sext, %b.zext
+  %mul.neg = sub <vscale x 16 x i32> zeroinitializer, %mul
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mul.neg)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @sudot_sub_i8_i32(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #1 {
+; CHECK-LABEL: sudot_sub_i8_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    usdot z0.s, z1.b, z2.b
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    ret
+  %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %b.sext = sext <vscale x 16 x i8> %b to <vscale x 16 x i32>
+  %mul = mul <vscale x 16 x i32> %a.zext, %b.sext
+  %mul.neg = sub <vscale x 16 x i32> zeroinitializer, %mul
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mul.neg)
+  ret <vscale x 4 x i32> %res
+}
+
+define <4 x i32> @neon_usdot_sub_i8_i32(<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b) #2 {
+; CHECK-LABEL: neon_usdot_sub_i8_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg v0.4s, v0.4s
+; CHECK-NEXT:    usdot v0.4s, v2.16b, v1.16b
+; CHECK-NEXT:    neg v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %a.sext = sext <16 x i8> %a to <16 x i32>
+  %b.zext = zext <16 x i8> %b to <16 x i32>
+  %mul = mul <16 x i32> %a.sext, %b.zext
+  %mul.neg = sub <16 x i32> zeroinitializer, %mul
+  %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <16 x i32> %mul.neg)
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @neon_usdot_sub_i8_i32_no_i8mm(<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b) #3 {
+; CHECK-LABEL: neon_usdot_sub_i8_i32_no_i8mm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v3.16b, #128
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    neg v0.4s, v0.4s
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    udot v4.4s, v3.16b, v2.16b
+; CHECK-NEXT:    udot v0.4s, v1.16b, v2.16b
+; CHECK-NEXT:    sub v0.4s, v4.4s, v0.4s
+; CHECK-NEXT:    ret
+  %a.sext = sext <16 x i8> %a to <16 x i32>
+  %b.zext = zext <16 x i8> %b to <16 x i32>
+  %mul = mul <16 x i32> %a.sext, %b.zext
+  %mul.neg = sub <16 x i32> zeroinitializer, %mul
+  %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <16 x i32> %mul.neg)
+  ret <4 x i32> %res
+}
+
 ; Make sure wider types are supported when vscale_range supports it
 define void @wide_fixed_umlslbt_i8_i16(ptr %acc.ptr, ptr %a.ptr, ptr %b.ptr, ptr %dest.ptr) #0 vscale_range(2,0) {
 ; CHECK-LABEL: wide_fixed_umlslbt_i8_i16:
@@ -314,3 +380,6 @@ define void @wide_fixed_umlslbt_i8_i16(ptr %acc.ptr, ptr %a.ptr, ptr %b.ptr, ptr
 }
 
 attributes #0 = { "target-features"="+sve2" }
+attributes #1 = { "target-features"="+sve2,+i8mm" }
+attributes #2 = { "target-features"="+dotprod,+i8mm" }
+attributes #3 = { "target-features"="+dotprod" }
