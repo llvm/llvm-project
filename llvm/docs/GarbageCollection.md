@@ -222,7 +222,7 @@ work is focused on `gc.statepoint`.
 {doc}`This page <Statepoints>` contains detailed documentation for
 `gc.statepoint`.
 
-#### Using `llvm.gcwrite`
+#### Using `llvm.gcroot`
 
 ```llvm
   void @llvm.gcroot(i8** %ptrloc, i8* %metadata)
