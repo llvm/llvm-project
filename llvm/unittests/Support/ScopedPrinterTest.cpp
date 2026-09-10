@@ -1174,6 +1174,38 @@ TEST_F(ScopedPrinterTest, PrintObject) {
   verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
+TEST_F(ScopedPrinterTest, PrintJSONObject) {
+  auto PrintFunc = [](ScopedPrinter &W) {
+    W.printObject("Object",
+                  json::Value(json::Object(
+                      {{"Key", "Value"}, {"Key2", json::Array{1, 1, 2, 3}}})));
+  };
+
+  const char *ExpectedOut = R"(Object: {
+  "Key": "Value",
+  "Key2": [
+    1,
+    1,
+    2,
+    3
+  ]
+}
+)";
+
+  const char *JSONExpectedOut = R"({
+  "Object": {
+    "Key": "Value",
+    "Key2": [
+      1,
+      1,
+      2,
+      3
+    ]
+  }
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
+}
+
 TEST_F(ScopedPrinterTest, StartLine) {
   auto PrintFunc = [](ScopedPrinter &W) {
     W.startLine() << "|";
