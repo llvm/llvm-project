@@ -959,7 +959,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
         continue;
 
       FilteredSizes.push_back(Sizes[MemoryPtrIndex]);
-      FilteredPtrs.push_back(reinterpret_cast<CUdeviceptr>(Mems[MemoryPtrIndex]));
+      FilteredPtrs.push_back(
+          reinterpret_cast<CUdeviceptr>(Mems[MemoryPtrIndex]));
     }
 
     if (FilteredPtrs.size() == 0)
@@ -978,8 +979,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
       size_t LocIdxs = 0;
       CUresult Res = cuMemPrefetchBatchAsync(
-          FilteredPtrs.data(), FilteredSizes.data(),
-          FilteredPtrs.size(), &Loc, &LocIdxs, 1, 0, Stream);
+          FilteredPtrs.data(), FilteredSizes.data(), FilteredPtrs.size(), &Loc,
+          &LocIdxs, 1, 0, Stream);
       if (auto Err = Plugin::check(Res, "error in cuMemPrefetchBatchAsync: %s"))
         return Err;
 
