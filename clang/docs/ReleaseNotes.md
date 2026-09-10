@@ -490,6 +490,9 @@ features cannot lower the translation-unit ABI level;
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
 
+- Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
+  (#GH181730)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -703,6 +706,9 @@ features cannot lower the translation-unit ABI level;
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
   on `if consteval {}`. (#GH220004)
+- Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
+  evaluated to a value not representable by a signed integer, such as an
+  unsigned wrap around. (#GH221418)
 
 ### OpenACC Specific Changes
 
