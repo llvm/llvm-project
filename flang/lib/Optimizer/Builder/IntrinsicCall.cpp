@@ -6915,6 +6915,26 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
   return subResult;
 }
 
+/// A zero divisor makes the inlined integer remainder undefined. Guard it
+/// with a test that reports the same fatal error as the runtime IntMod.
+/// A divisor known to be nonzero needs no test.
+static void genIntegerZeroDivisorCheck(fir::FirOpBuilder &builder,
+                                       mlir::Location loc, mlir::Value p,
+                                       bool isModulo) {
+  if (std::optional<llvm::APInt> constantP = fir::getIntIfConstant(p))
+    if (!constantP->isZero())
+      return;
+  mlir::Value zero = builder.createIntegerConstant(loc, p.getType(), 0);
+  mlir::Value isZero = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::eq, p, zero);
+  builder.genIfThen(loc, isZero)
+      .genThen([&]() {
+        fir::runtime::genReportFatalUserError(
+            builder, loc, isModulo ? "MODULO with P==0" : "MOD with P==0");
+      })
+      .end();
+}
+
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   auto mod = builder.getModule();
@@ -6930,8 +6950,10 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
     return builder.createUnsigned<mlir::arith::RemUIOp>(loc, signlessType,
                                                         args[0], args[1]);
   }
-  if (mlir::isa<mlir::IntegerType>(resultType))
+  if (mlir::isa<mlir::IntegerType>(resultType)) {
+    genIntegerZeroDivisorCheck(builder, loc, args[1], /*isModulo=*/false);
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
+  }
 
   if (resultType.isFloat() && useFastRealMod) {
     // Treat MOD as an approximate function and code-gen inline code
@@ -6948,8 +6970,6 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
 // MODULO
 mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
-  // TODO: we'd better generate a runtime call here, when runtime error
-  // checking is needed (to detect 0 divisor) or when precise math is requested.
   assert(args.size() == 2);
   // No floored modulo op in LLVM/MLIR yet. TODO: add one to MLIR.
   // In the meantime, use a simple inlined implementation based on truncated
@@ -6967,6 +6987,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                                         args[0], args[1]);
   }
   if (mlir::isa<mlir::IntegerType>(resultType)) {
+    genIntegerZeroDivisorCheck(builder, loc, args[1], /*isModulo=*/true);
     auto remainder =
         mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
     auto argXor = mlir::arith::XOrIOp::create(builder, loc, args[0], args[1]);

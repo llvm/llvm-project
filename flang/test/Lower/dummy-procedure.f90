@@ -113,6 +113,16 @@ subroutine test_atan2()
   call foo_atan2(atan2)
 end subroutine
 
+! Integer MOD wrapper must diagnose a zero divisor (direct and dummy-proc uses).
+! CHECK-LABEL: func.func @_QPtest_mod
+subroutine test_mod()
+  intrinsic :: mod
+  ! CHECK: %[[f:.*]] = fir.address_of(@fir.mod.i32.ref_i32.ref_i32) : (!fir.ref<i32>, !fir.ref<i32>) -> i32
+  ! CHECK: %[[fcast:.*]] = fir.emboxproc %[[f]] : ((!fir.ref<i32>, !fir.ref<i32>) -> i32) -> !fir.boxproc<() -> ()>
+  ! CHECK: fir.call @_QPfoo_mod(%[[fcast]]) {{.*}}: (!fir.boxproc<() -> ()>) -> ()
+  call foo_mod(mod)
+end subroutine
+
 ! Intrinsic implemented inlined
 ! CHECK-LABEL: func.func @_QPtest_aimag
 subroutine test_aimag()
@@ -165,6 +175,17 @@ end subroutine
   ! CHECK-DAG: %[[yload:.*]] = fir.load %[[y]] : !fir.ref<f32>
   ! CHECK: %[[atan2:.*]] = math.atan2 %[[xload]], %[[yload]] fastmath<contract> : f32
   ! CHECK: return %[[atan2]] : f32
+
+! CHECK-LABEL: func.func private @fir.mod.i32.ref_i32.ref_i32(
+! CHECK-SAME: %[[a:.*]]: !fir.ref<i32>, %[[p:.*]]: !fir.ref<i32>) -> i32
+  ! CHECK-DAG: %[[aload:.*]] = fir.load %[[a]] : !fir.ref<i32>
+  ! CHECK-DAG: %[[pload:.*]] = fir.load %[[p]] : !fir.ref<i32>
+  ! CHECK: %[[iszero:.*]] = arith.cmpi eq, %[[pload]], %c0{{.*}} : i32
+  ! CHECK: fir.if %[[iszero]] {
+  ! CHECK:   fir.call @_FortranAReportFatalUserError
+  ! CHECK: }
+  ! CHECK: %[[res:.*]] = arith.remsi %[[aload]], %[[pload]] : i32
+  ! CHECK: return %[[res]] : i32
 
 !CHECK-LABEL: func.func private @fir.aimag.f32.ref_z32(%arg0: !fir.ref<complex<f32>>)
   !CHECK: %[[load:.*]] = fir.load %arg0
