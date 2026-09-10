@@ -1783,8 +1783,17 @@ static bool isDeviceDataImpl(mlir::Value var) {
   assert(defOp && "expected defining op for non-block-argument value");
 
   // Check for CUDA attributes on the defining operation.
-  if (cuf::hasDeviceDataAttr(defOp))
+  if (cuf::hasDeviceDataAttr(defOp)) {
+    // A `managed` attribute on a POINTER describes the storage of the
+    // descriptor, not the target it designates: the target is established by
+    // pointer assignment and may live in host memory. An ALLOCATABLE obtains
+    // its storage through the attributed entity, so there the attribute does
+    // describe the data.
+    if (cuf::hasDataAttr(defOp, cuf::DataAttribute::Managed) &&
+        fir::isPointerType(currentVal.getType()))
+      return false;
     return true;
+  }
 
   // Handle operations that access a partial entity - check if the base entity
   // is device data.

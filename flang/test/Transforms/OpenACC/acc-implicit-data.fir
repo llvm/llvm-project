@@ -397,6 +397,96 @@ func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<none>>, i32, 
 
 // -----
 
+// Test that a managed POINTER descriptor is not treated as device data. The
+// attribute describes the storage of the descriptor, not the target it
+// designates: the target is established by pointer assignment and may live in
+// host memory, so the descriptor needs a copy rather than a deviceptr.
+func.func @test_cuda_managed_pointer_no_implicit_deviceptr(%arg0: !fir.box<!fir.heap<!fir.array<?xf64>>>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 2.500000e+00 : f64
+  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf64>>> {bindc_name = "p", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEp"} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  %1 = fir.declare %0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  acc.serial {
+    %2:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> (index, index, index)
+    %3 = fir.shift %2#0 : (index) -> !fir.shift<1>
+    %4 = fir.rebox %arg0(%3) : (!fir.box<!fir.heap<!fir.array<?xf64>>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf64>>>
+    fir.store %4 to %1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+    %5 = fir.load %1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+    %6 = fir.box_addr %5 : (!fir.box<!fir.ptr<!fir.array<?xf64>>>) -> !fir.ptr<!fir.array<?xf64>>
+    %7 = fir.coordinate_of %6, %c0 : (!fir.ptr<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+    fir.store %cst to %7 : !fir.ref<f64>
+    acc.yield
+  }
+  cuf.free %1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> {data_attr = #cuf.cuda<managed>}
+  return
+}
+
+// CHECK-LABEL: func.func @test_cuda_managed_pointer_no_implicit_deviceptr
+// CHECK-NOT: acc.deviceptr
+// CHECK: acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>){{.*}}name("p")
+// CHECK: acc.copyout {{.*}}name("p")
+// CHECK-NOT: acc.deviceptr
+
+// -----
+
+// Test that a managed POINTER descriptor of polymorphic type is recognized:
+// a CLASS(..), POINTER descriptor is a fir.class rather than a fir.box.
+func.func @test_cuda_managed_class_pointer_no_implicit_deviceptr() {
+  %0 = cuf.alloc !fir.class<!fir.ptr<!fir.type<_QMmTt{i:i32}>>> {bindc_name = "p", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEp"} -> !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTt{i:i32}>>>>
+  %1 = fir.declare %0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTt{i:i32}>>>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTt{i:i32}>>>>
+  acc.serial {
+    %2 = fir.load %1 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTt{i:i32}>>>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_cuda_managed_class_pointer_no_implicit_deviceptr
+// CHECK-NOT: acc.deviceptr
+// CHECK: acc.copyin {{.*}}name("p")
+// CHECK-NOT: acc.deviceptr
+
+// -----
+
+// Test that a managed ALLOCATABLE descriptor is still device data: an
+// ALLOCATABLE obtains its storage through the attributed entity, so there the
+// attribute does describe the data.
+func.func @test_cuda_managed_allocatable_implicit_deviceptr() {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  %1 = fir.declare %0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  acc.serial {
+    %2 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_cuda_managed_allocatable_implicit_deviceptr
+// CHECK-NOT: acc.copyin
+// CHECK: acc.deviceptr {{.*}}name("a")
+// CHECK-NOT: acc.copyout
+
+// -----
+
+// Test that only the managed attribute is special-cased: a POINTER descriptor
+// in device memory is device data.
+func.func @test_cuda_device_pointer_implicit_deviceptr() {
+  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf64>>> {bindc_name = "p", data_attr = #cuf.cuda<device>, uniq_name = "_QFEp"} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  %1 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  acc.serial {
+    %2 = fir.load %1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_cuda_device_pointer_implicit_deviceptr
+// CHECK-NOT: acc.copyin
+// CHECK: acc.deviceptr {{.*}}name("p")
+// CHECK-NOT: acc.copyout
+
+// -----
+
 // Test argument mapped with deviceptr but used not via data mapping.
 func.func @test_fir_declare_deviceptr_arg_in_parallel(%arg0: !fir.ref<!fir.array<10xf64>>) {
   %c10 = arith.constant 10 : index
