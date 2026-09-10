@@ -1331,18 +1331,18 @@ void LongJmpPass::relaxCalls(BinaryContext &BC, FragmentClusterLayout &Layout,
   auto createCallThunk = [&](const MCSymbol *TargetSymbol, bool IsShort,
                              bool IsForward) {
     BinaryFunction *Thunk = nullptr;
+    const size_t ThunkNumber = IsShort ? NumShortThunks++ : NumLongThunks++;
     std::string ThunkName =
         (Twine("__AArch64_") + (IsForward ? "forward_" : "backward_") +
-         (IsShort ? "short_call_" : "long_call_") + TargetSymbol->getName())
+         (IsShort ? "short_call_" : "long_call_") + TargetSymbol->getName() +
+         "_" + Twine(ThunkNumber))
             .str();
     if (IsShort) {
-      ++NumShortThunks;
       Thunk = BC.createThunkBinaryFunction(ThunkName);
       MCInst Inst;
       BC.MIB->createTailCall(Inst, TargetSymbol, BC.Ctx.get());
       Thunk->addBasicBlock()->addInstruction(Inst);
     } else {
-      ++NumLongThunks;
       Thunk = BC.createThunkBinaryFunction(ThunkName);
       InstructionListType Instructions;
       BC.MIB->createLongTailCall(Instructions, TargetSymbol, BC.Ctx.get());
@@ -1388,7 +1388,6 @@ void LongJmpPass::relaxCalls(BinaryContext &BC, FragmentClusterLayout &Layout,
         if (It != ReuseCluster->CallThunks.end()) {
           BinaryFunction *Thunk = It->second;
           ++NumLongThunksReused;
-          registerCallThunk(FC, TargetSymbol, Thunk);
           return Thunk;
         }
       }
