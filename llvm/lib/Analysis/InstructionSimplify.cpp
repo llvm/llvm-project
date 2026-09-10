@@ -2223,6 +2223,20 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getNullValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
+    if (Q.AC && Q.CxtI) {
+      if (auto Implied = isImpliedByAssume(Op0, Op1, Q, /*LHSIsTrue=*/true)) {
+        if (*Implied == true)
+          return Op0;
+        if (*Implied == false)
+          return ConstantInt::getFalse(Op0->getType());
+      }
+      if (auto Implied = isImpliedByAssume(Op1, Op0, Q, /*LHSIsTrue=*/true)) {
+        if (*Implied)
+          return Op1;
+        if (!*Implied)
+          return ConstantInt::getFalse(Op1->getType());
+      }
+    }
     if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
       // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
       if (*Implied == true)
@@ -2495,6 +2509,20 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getAllOnesValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
+    if (Q.AC && Q.CxtI) {
+      if (auto Imp = isImpliedByAssume(Op0, Op1, Q, /*LHSIsTrue=*/false)) {
+        if (*Imp == false)
+          return Op0;
+        if (*Imp == true)
+          return ConstantInt::getTrue(Op0->getType());
+      }
+      if (auto Imp = isImpliedByAssume(Op1, Op0, Q, /*LHSIsTrue=*/false)) {
+        if (*Imp == false)
+          return Op1;
+        if (*Imp == true)
+          return ConstantInt::getTrue(Op1->getType());
+      }
+    }
     if (std::optional<bool> Implied =
             isImpliedCondition(Op0, Op1, Q.DL, false)) {
       // If Op0 is false implies Op1 is false, then Op1 is a subset of Op0.
