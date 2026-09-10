@@ -63,7 +63,7 @@ void test_atomic_store_hint(char *c_ptr, __int128 *inv_ptr, float *f_ptr,
   __builtin_arm_atomic_store_with_hint(c_ptr, f_data, 0, 0); // expected-error {{arguments are of different types ('char' vs 'float')}}
   __builtin_arm_atomic_store_with_hint(inv_ptr, inv_data, 0, 0); // expected-error {{address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits}}
 
-  __builtin_arm_atomic_store_with_hint(const_c_ptr, c_data, __ATOMIC_RELAXED, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('char' invalid)}}
+  __builtin_arm_atomic_store_with_hint(const_c_ptr, c_data, __ATOMIC_RELAXED, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const char' invalid)}}
 
   __builtin_arm_atomic_store_with_hint(bit_ptr, bit_data, __ATOMIC_RELAXED, 0); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
 
