@@ -20,6 +20,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -55,6 +56,22 @@ static cl::opt<bool>
     CreateArchive("archive",
                   cl::desc("Write extracted files to a static archive"),
                   cl::cat(OffloadBinaryCategory));
+
+static cl::opt<bool> Compress("compress",
+                              cl::desc("Compress the packaged offload binary"),
+                              cl::cat(OffloadBinaryCategory));
+
+static cl::opt<compression::Format> CompressionFormat(
+    "compression-format", cl::desc("Format used with --compress"),
+    cl::values(
+        clEnumValN(compression::Format::Zstd, "zstd", "Zstandard compression"),
+        clEnumValN(compression::Format::Zlib, "zlib", "zlib compression")),
+    cl::init(compression::Format::Zstd), cl::cat(OffloadBinaryCategory));
+
+static cl::opt<int>
+    CompressionLevel("compression-level",
+                     cl::desc("Compression level used with --compress"),
+                     cl::init(-1), cl::cat(OffloadBinaryCategory));
 
 /// Path of the current binary.
 static const char *PackagerExecutable;
@@ -126,8 +143,23 @@ static Error bundleImages() {
     }
   }
 
-  SmallString<0> Buffer = OffloadBinary::write(AllImages);
-  if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+  SmallString<0> Buffer;
+  if (Compress) {
+    if (const char *Reason =
+            compression::getReasonIfUnsupported(CompressionFormat))
+      return createStringError(inconvertibleErrorCode(), Reason);
+    compression::Params Params(CompressionFormat);
+    if (CompressionLevel >= 0)
+      Params.level = CompressionLevel;
+    Expected<SmallString<0>> CompressedOrErr =
+        OffloadBinary::write(AllImages, Params);
+    if (!CompressedOrErr)
+      return CompressedOrErr.takeError();
+    Buffer = std::move(*CompressedOrErr);
+  } else {
+    Buffer = OffloadBinary::write(AllImages);
+  }
+  if (!Compress && Buffer.size() % OffloadBinary::getAlignment() != 0)
     return createStringError(inconvertibleErrorCode(),
                              "Offload binary has invalid size alignment");
 

@@ -17,11 +17,13 @@
 #ifndef LLVM_OBJECT_OFFLOADBINARY_H
 #define LLVM_OBJECT_OFFLOADBINARY_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -74,7 +76,7 @@ public:
   using string_iterator_range = iterator_range<string_iterator>;
 
   /// The current version of the binary used for backwards compatibility.
-  static const uint32_t Version = 2;
+  static const uint32_t Version = 3;
 
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
@@ -91,6 +93,7 @@ public:
     uint64_t Size;          // Size in bytes of this entire binary.
     uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
     uint64_t EntriesCount;  // Number of metadata entries in the binary.
+    uint64_t InflatedSize;  // Original size of the binary if compressed.
   };
 
   struct Entry {
@@ -137,6 +140,10 @@ public:
   LLVM_ABI static SmallString<0>
   write(ArrayRef<OffloadingImage> OffloadingData);
 
+  /// Serialize \p OffloadingData to a compressed binary with \p Compress.
+  LLVM_ABI static Expected<SmallString<0>>
+  write(ArrayRef<OffloadingImage> OffloadingData, compression::Params Compress);
+
   static uint64_t getAlignment() { return 8; }
 
   ImageKind getImageKind() const { return TheEntry->TheImageKind; }
@@ -160,10 +167,11 @@ public:
   static bool classof(const Binary *V) { return V->isOffloadFile(); }
 
 private:
-  OffloadBinary(MemoryBufferRef Source, const Header *TheHeader,
+  OffloadBinary(std::shared_ptr<MemoryBuffer> Owned, const Header *TheHeader,
                 const Entry *TheEntry, const uint64_t Index = 0)
-      : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),
-        TheHeader(TheHeader), TheEntry(TheEntry), Index(Index) {
+      : Binary(Binary::ID_Offload, *Owned), OwnedBuffer(std::move(Owned)),
+        Buffer(OwnedBuffer->getBufferStart()), TheHeader(TheHeader),
+        TheEntry(TheEntry), Index(Index) {
     // StringEntryV1 and StringEntry have ABI compatible Key/ValueOffset fields,
     // but different sizes, so we need to manually calculate offset.
     const char *StringMapBegin = &Buffer[TheEntry->StringOffset];
@@ -187,6 +195,8 @@ private:
 
   OffloadBinary(const OffloadBinary &Other) = delete;
 
+  /// Owned uncompressed binary. Shared between entries parsed from one blob.
+  std::shared_ptr<MemoryBuffer> OwnedBuffer;
   /// Map from keys to offsets in the binary.
   MapVector<StringRef, StringRef> StringData;
   /// Raw pointer to the MemoryBufferRef for convenience.
