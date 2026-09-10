@@ -11074,7 +11074,7 @@ def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this s
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
 def note_lifetime_safety_aliases_storage_lifetimebound : Note<
-  "%0 aliases the storage of %1 because %select{parameter %3|the implicit object parameter}2 is lifetimebound">;
+  "%0 aliases the storage of %1 because %select{parameter %3|the implicit object parameter}2 is %select{marked as|inferred as}4 lifetimebound">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
@@ -13429,11 +13429,11 @@ def err_builtin_matrix_invalid_member
     : Error<"invalid matrix member '%0' expected %1">;
 
 def warn_mismatched_import : Warning<
-  "import %select{module|name}0 (%1) does not match the import %select{module|name}0 (%2) of the "
+  "%select{import module|import name|export name}0 (%1) does not match the %select{import module|import name|export name}0 (%2) of the "
   "previous declaration">,
   InGroup<IgnoredAttributes>;
 def warn_import_on_definition : Warning<
-  "import %select{module|name}0 cannot be applied to a function with a definition">,
+  "import %select{module|name}0 cannot be applied to a %select{function|variable}1 with a definition">,
   InGroup<IgnoredAttributes>;
 
 def err_preserve_field_info_not_field : Error<

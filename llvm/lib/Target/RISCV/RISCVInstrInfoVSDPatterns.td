@@ -271,22 +271,6 @@ multiclass VPatBinaryFPSDNode_VV_VF_RM<SDPatternOperator vop, string instruction
   }
 }
 
-multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_name,
-                                   bit isSEWAware = 0> {
-  foreach fvti = AllFloatVectors in
-    let Predicates = GetVTypePredicates<fvti>.Predicates in
-    def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
-                                (fvti.Vector fvti.RegClass:$rs1))),
-              (!cast<Instruction>(
-                           !if(isSEWAware,
-                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW,
-                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX))
-                           (fvti.Vector (IMPLICIT_DEF)),
-                           fvti.RegClass:$rs1,
-                           (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                           fvti.AVL, fvti.Log2SEW, TA_MA)>;
-}
-
 multiclass VPatBinaryFPSDNode_R_VF_RM<SDPatternOperator vop, string instruction_name,
                                       list<VTypeInfo> vtilist = AllFloatVectors,
                                       bit isSEWAware = 0> {

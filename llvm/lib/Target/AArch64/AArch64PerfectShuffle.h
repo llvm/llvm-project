@@ -150,6 +150,26 @@ inline bool isUZPMask(ArrayRef<int> M, unsigned NumElts,
   return true;
 }
 
+/// isUZP_v_undef_Mask - Special case of isUZPMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
+inline bool isUZP_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
+                               unsigned &WhichResult) {
+  unsigned Half = NumElts / 2;
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  for (unsigned j = 0; j != 2; ++j) {
+    unsigned Idx = WhichResult;
+    for (unsigned i = 0; i != Half; ++i) {
+      int MIdx = M[i + j * Half];
+      if (MIdx >= 0 && (unsigned)MIdx != Idx)
+        return false;
+      Idx += 2;
+    }
+  }
+
+  return true;
+}
+
 /// Return true for trn1 or trn2 masks of the form:
 ///  <0, 8, 2, 10, 4, 12, 6, 14> (WhichResultOut = 0, OperandOrderOut = 0) or
 ///  <1, 9, 3, 11, 5, 13, 7, 15> (WhichResultOut = 1, OperandOrderOut = 0) or
@@ -198,6 +218,22 @@ inline bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
 
   WhichResultOut = (Result0Order0 || Result0Order1) ? 0 : 1;
   OperandOrderOut = (Result0Order0 || Result1Order0) ? 0 : 1;
+  return true;
+}
+
+/// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
+inline bool isTRN_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
+                               unsigned &WhichResult) {
+  if (NumElts % 2 != 0)
+    return false;
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
+        (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + WhichResult))
+      return false;
+  }
   return true;
 }
 
