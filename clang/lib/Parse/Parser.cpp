@@ -1056,7 +1056,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   DS.takeAttributesAppendingingFrom(DeclSpecAttrs);
 
   ParsedTemplateInfo TemplateInfo;
-  MaybeParseMicrosoftAttributes(DS.getAttributes());
+  MaybeParseMicrosoftAttributes(DS.getAttributes(), /*IsStmtContext=*/false);
   // Parse the common declaration-specifiers piece.
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              DeclSpecContext::DSC_top_level);

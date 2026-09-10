@@ -234,6 +234,11 @@ public:
   void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled);
   void CodeCompleteNaturalLanguage();
   void CodeCompleteAvailabilityPlatformName();
+  void CodeCompleteHLSLAttributes(
+      llvm::ArrayRef<AttributeCommonInfo::Syntax> Syntaxes,
+      std::optional<ParsedAttr::Kind> RestrictToKind = std::nullopt,
+      bool RequireStmt = false,
+      std::optional<ParsedAttr::Kind> ExcludeKind = std::nullopt);
   void
   GatherGlobalCodeCompletions(CodeCompletionAllocator &Allocator,
                               CodeCompletionTUInfo &CCTUInfo,

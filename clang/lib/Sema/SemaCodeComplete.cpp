@@ -10773,6 +10773,41 @@ void SemaCodeCompletion::GatherGlobalCodeCompletions(
                  Builder.data() + Builder.size());
 }
 
+void SemaCodeCompletion::CodeCompleteHLSLAttributes(
+    llvm::ArrayRef<AttributeCommonInfo::Syntax> Syntaxes,
+    std::optional<ParsedAttr::Kind> RestrictToKind, bool RequireStmt,
+    std::optional<ParsedAttr::Kind> ExcludeKind) {
+  ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_Attribute);
+
+  for (const auto *A : ParsedAttrInfo::getAllBuiltin()) {
+    if (!A->acceptsLangOpts(getLangOpts()))
+      continue;
+    if (RestrictToKind && A->AttrKind != *RestrictToKind)
+      continue;
+    if (ExcludeKind && A->AttrKind == *ExcludeKind)
+      continue;
+    if (A->IsStmt != RequireStmt)
+      continue;
+
+    for (const auto &S : A->Spellings) {
+      if (!llvm::is_contained(Syntaxes, S.Syntax))
+        continue;
+
+      CodeCompletionBuilder CCB(Results.getAllocator(),
+                                Results.getCodeCompletionTUInfo());
+      CCB.AddTypedTextChunk(
+          Results.getAllocator().CopyString(S.NormalizedFullName));
+      Results.AddResult(CodeCompletionResult(CCB.TakeString(), CCP_Keyword));
+    }
+  }
+
+  HandleCodeCompleteResults(&SemaRef, CodeCompleter,
+                            Results.getCompletionContext(), Results.data(),
+                            Results.size());
+}
+
 SemaCodeCompletion::SemaCodeCompletion(Sema &S,
                                        CodeCompleteConsumer *CompletionConsumer)
     : SemaBase(S), CodeCompleter(CompletionConsumer),
