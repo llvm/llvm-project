@@ -93,5 +93,4 @@ config.substitutions.append(("%target_triple", config.target_triple))
 
 # The architecture the runtime was built for, so tests can check the triple it
 # reports against an independent source.
-config.substitutions.append(
-    ("%target-arch", config.target_triple.split("-")[0]))
+config.substitutions.append(("%target-arch", config.target_triple.split("-")[0]))
