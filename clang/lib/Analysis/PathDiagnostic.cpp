@@ -531,6 +531,10 @@ static PathDiagnosticLocation getLocationForCaller(const StackFrame *SF,
     return PathDiagnosticLocation(Init.getInitializer()->getInit(), SM,
                                   CallerSF);
   }
+  case CFGElement::ListInitObjectBegin:
+  case CFGElement::ListInitObjectEnd:
+    return PathDiagnosticLocation(
+        Source.castAs<CFGListInitObject>().getListInitExpr(), SM, CallerSF);
   case CFGElement::AutomaticObjectDtor: {
     const CFGAutomaticObjDtor &Dtor = Source.castAs<CFGAutomaticObjDtor>();
     return PathDiagnosticLocation::createEnd(Dtor.getTriggerStmt(), SM,

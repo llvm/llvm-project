@@ -161,6 +161,11 @@ llvm::Expected<AdornedCFG> AdornedCFG::build(const Decl &D, Stmt &S,
   Options.AddTemporaryDtors = true;
   Options.AddInitializers = true;
   Options.AddCXXDefaultInitExprInCtors = true;
+  // Needed so that `this` inside a default member initializer used by a
+  // list-initialization is part of the CFG; the object it denotes is supplied
+  // by the surrounding CFGListInitObjectBegin/End markers.
+  Options.AddCXXDefaultInitExprInAggregates = true;
+  Options.AddListInitObjectMarkers = true;
   Options.AddLifetime = true;
   Options.AddParameterLifetimes = true;
 

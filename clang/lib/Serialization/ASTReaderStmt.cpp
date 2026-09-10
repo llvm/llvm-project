@@ -1281,6 +1281,8 @@ void ASTStmtReader::VisitInitListExpr(InitListExpr *E) {
       E->updateInit(Record.getContext(), I, Record.readSubExpr());
   }
   E->InitListExprBits.IsExplicit = Record.readBool();
+  E->InitListExprBits.InitializesObjectWithDefaultMemberInit =
+      Record.readBool();
 }
 
 void ASTStmtReader::VisitDesignatedInitExpr(DesignatedInitExpr *E) {
@@ -2402,6 +2404,7 @@ void ASTStmtReader::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
       E->setInitializedFieldInUnion(readDeclAs<FieldDecl>());
     }
   }
+  E->InitializesObjectWithDefaultMemberInit = Record.readBool();
   E->updateDependence();
 }
 
