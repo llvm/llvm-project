@@ -428,7 +428,7 @@ private:
                   ImplicitLocOpBuilder &b) const {
     auto argType = mlir::cast<FloatType>(arg.getType());
     auto negHalf = arith::ConstantOp::create(b, b.getFloatAttr(argType, -0.5));
-    auto negOne = arith::ConstantOp::create(b, b.getFloatAttr(argType, -1.0));
+    auto one = arith::ConstantOp::create(b, b.getFloatAttr(argType, 1.0));
 
     // Algorithm copied from cephes cosm1.
     SmallVector<double, 7> kCoeffs{
@@ -438,7 +438,7 @@ private:
         4.1666666666666666609054E-2,
     };
     Value cos = math::CosOp::create(b, arg, fmf);
-    Value forLargeArg = arith::AddFOp::create(b, cos, negOne, fmf);
+    Value forLargeArg = arith::SubFOp::create(b, cos, one, fmf);
 
     Value argPow2 = arith::MulFOp::create(b, arg, arg, fmf);
     Value argPow4 = arith::MulFOp::create(b, argPow2, argPow2, fmf);
@@ -759,13 +759,11 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
         complex::ReOp::create(b, loc, elementType, adaptor.getComplex());
     Value imag =
         complex::ImOp::create(b, loc, elementType, adaptor.getComplex());
-    Value negOne = arith::ConstantOp::create(b, elementType,
-                                             b.getFloatAttr(elementType, -1.0));
 
     if constexpr (std::is_same_v<Op, complex::TanOp>) {
       // tan(x+yi) = -i*tanh(-y + xi)
       std::swap(real, imag);
-      real = arith::MulFOp::create(b, real, negOne, fmf);
+      real = arith::NegFOp::create(b, real, fmf);
     }
 
     auto cst = [&](APFloat v) {
@@ -776,14 +774,14 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
     Value four = arith::ConstantOp::create(b, elementType,
                                            b.getFloatAttr(elementType, 4.0));
     Value twoReal = arith::AddFOp::create(b, real, real, fmf);
-    Value negTwoReal = arith::MulFOp::create(b, negOne, twoReal, fmf);
+    Value negTwoReal = arith::NegFOp::create(b, twoReal, fmf);
     Value expTwoRealMinusOne = math::ExpM1Op::create(b, twoReal, fmf);
     Value expNegTwoRealMinusOne = math::ExpM1Op::create(b, negTwoReal, fmf);
     Value realNum = arith::SubFOp::create(b, expTwoRealMinusOne,
                                           expNegTwoRealMinusOne, fmf);
     Value expProduct = arith::MulFOp::create(b, expTwoRealMinusOne,
                                              expNegTwoRealMinusOne, fmf);
-    Value expSumMinusTwo = arith::MulFOp::create(b, negOne, expProduct, fmf);
+    Value expSumMinusTwo = arith::NegFOp::create(b, expProduct, fmf);
 
     Value cosImag = math::CosOp::create(b, imag, fmf);
     Value cosImagSq = arith::MulFOp::create(b, cosImag, cosImag, fmf);
@@ -798,6 +796,8 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
 
     Value isInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ,
                                         expSumMinusTwo, inf, fmf);
+    Value negOne = arith::ConstantOp::create(b, elementType,
+                                             b.getFloatAttr(elementType, -1.0));
     Value realLimit = math::CopySignOp::create(b, negOne, real, fmf);
 
     Value resultReal = arith::SelectOp::create(
@@ -833,7 +833,7 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
     if constexpr (std::is_same_v<Op, complex::TanOp>) {
       // tan(x+yi) = -i*tanh(-y + xi)
       std::swap(resultReal, resultImag);
-      resultImag = arith::MulFOp::create(b, resultImag, negOne, fmf);
+      resultImag = arith::NegFOp::create(b, resultImag, fmf);
     }
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
@@ -1050,13 +1050,9 @@ struct RsqrtOpConversion : public OpConversionPattern<complex::RsqrtOp> {
 
     if (!arith::bitEnumContainsAll(fmf, arith::FastMathFlags::nnan |
                                             arith::FastMathFlags::ninf)) {
-      Value negOne = arith::ConstantOp::create(b, elementType,
-                                               b.getFloatAttr(elementType, -1));
-
       Value realSignedZero = math::CopySignOp::create(b, zero, real, fmf);
       Value imagSignedZero = math::CopySignOp::create(b, zero, imag, fmf);
-      Value negImagSignedZero =
-          arith::MulFOp::create(b, negOne, imagSignedZero, fmf);
+      Value negImagSignedZero = arith::NegFOp::create(b, imagSignedZero, fmf);
 
       Value absReal = math::AbsFOp::create(b, real, fmf);
       Value absImag = math::AbsFOp::create(b, imag, fmf);
