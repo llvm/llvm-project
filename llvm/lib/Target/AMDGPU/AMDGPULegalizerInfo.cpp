@@ -459,8 +459,7 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return false;
 
-  // VGPR ("as memory") accesses are never plain-legal; they are custom-lowered
-  // to G_AMDGPU_REG_LOAD/STORE.
+  // Never plain-legal; custom-lowered to G_AMDGPU_REG_LOAD/STORE.
   if (AS == AMDGPUAS::VGPR)
     return false;
 
@@ -560,10 +559,8 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
 }
 
-// Whether the VGPR ("as memory") load/store lowering handles a MemSize-bit
-// memory access producing/consuming a ValSize-bit value. Only whole-dword
-// accesses (those with a matching V_LOAD_IDX/V_STORE_IDX pseudo) are supported
-// for now; sub-dword (8/16-bit) support lands later.
+// Whether the VGPR ("as memory") lowering handles a MemSize-bit access
+// producing a ValSize-bit value. Whole-dword only for now.
 static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
   return MemSize == ValSize &&
          AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
@@ -1672,10 +1669,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
     // 64-bits.
     //
-    // VGPR ("as memory") accesses are custom-lowered to the legal
-    // G_AMDGPU_REG_LOAD/STORE target instructions. Always take the custom path
-    // so an unsupported (e.g. sub-dword) access is diagnosed cleanly rather
-    // than failing to legalize.
+    // Always take the custom path, so an unsupported access is diagnosed
+    // cleanly rather than failing to legalize.
     //
     // TODO: Should generalize bitcast action into coerce, which will also cover
     // inserting addrspacecasts.
@@ -2442,9 +2437,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(
 Register AMDGPULegalizerInfo::getSegmentAperture(unsigned AS,
                                                  MachineRegisterInfo &MRI,
                                                  MachineIRBuilder &B) const {
-  // See SITargetLowering::getSegmentAperture: an address space without an
-  // aperture of its own round-trips through the generic address space using the
-  // shared aperture tagged with its synthetic aperture number.
+  // See SITargetLowering::getSegmentAperture: an address space with no aperture
+  // of its own round-trips through the shared one, tagged with its synthetic
+  // aperture number.
   unsigned BaseAS = AS;
   unsigned SANum = AMDGPU::getSyntheticApertureNumber(AS);
   if (SANum != AMDGPU::SyntheticAperture::None)
@@ -3484,9 +3479,8 @@ static LLT widenToNextPowerOf2(LLT Ty) {
   return Ty.changeElementSize(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
-/// Lower a whole-dword G_LOAD / G_STORE on AMDGPUAS::VGPR into a legal
-/// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE indexed by the pointer's dword offset
-/// (pointer >> 2). Parallels the SelectionDAG LowerLoadStoreVGPR.
+/// Lower a whole-dword G_LOAD / G_STORE on AMDGPUAS::VGPR into
+/// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels LowerLoadStoreVGPR.
 static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
@@ -3498,21 +3492,13 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
 
   const LLT ValTy = MRI.getType(ValReg);
   const unsigned ValSize = ValTy.getSizeInBits();
-  // The GISel selection patterns for the indexed pseudos - and for the shift /
-  // readfirstlane that compute the index - match the extended integer LLT, so
-  // build the dword index (and the normalized register value below) with
-  // integer types rather than plain scalars.
+  // The selection patterns match the extended integer LLT, so build the index
+  // and the normalized value with integer types rather than plain scalars.
   const LLT I32 = LLT::integer(32);
 
-  // Only dword-aligned whole-dword, non-extending/non-truncating accesses are
-  // implemented. Reject anything else with a diagnostic instead of failing to
-  // legalize (sub-dword support lands in a later change).
-  //
-  // The alignment is checked here rather than in the size predicate: the index
-  // built below is the pointer shifted right by two, which discards the low two
-  // bits rather than accounting for them, so an under-aligned access would
-  // silently reach the dword containing the address instead of the bytes asked
-  // for. That is a property of how the address is formed, not of the size.
+  // Alignment is checked here rather than in the size predicate: the index is
+  // the pointer >> 2, so an under-aligned access would silently reach the
+  // containing dword. That is a property of the address, not of the size.
   if (!isVGPRLoadStoreSizeSupported(MMO.getMemoryType().getSizeInBits(),
                                     ValSize) ||
       MMO.getAlign() < Align(4)) {
@@ -3532,8 +3518,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   MachineInstrBuilder Two = B.buildConstant(I32, 2);
   const MachineInstrBuilder Index = B.buildLShr(I32, PtrAsInt, Two);
 
-  // Normalize the value to i32 / <N x i32> so a selection pattern always
-  // exists (e.g. for v4i8).
+  // Normalize to i32 / <N x i32> so a selection pattern exists (e.g. v4i8).
   LLT RegTy = ValTy;
   if (ValTy.getScalarSizeInBits() != 32) {
     unsigned NumDwords = ValSize / 32;

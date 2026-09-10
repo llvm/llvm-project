@@ -6897,26 +6897,10 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  // Give a VGPR "as memory" indexed access the M0 operand its expansion in
-  // AMDGPULowerVGPREncoding expects. There are too many of these opcodes - one
-  // per register class, load and store - to list as switch cases, so they are
-  // matched by class ahead of it.
-  //
-  // Under the VGPR indexing mode the expansion emits an s_set_gpr_idx_on, which
-  // reads the index out of its SGPR and clobbers M0, so the access only has to
-  // declare that clobber. With movrel the index has to be in M0, so copy it
-  // there and rewrite the access to read M0, which lets the index computation
-  // coalesce into the copy.
-  //
-  // This runs at FinalizeISel, after SIFixSGPRCopies has made a divergent index
-  // uniform with a waterfall loop, so the copy lands inside that loop next to
-  // the per-iteration index it has to carry. Assigning M0 during selection
-  // instead would defeat the waterfall, which legalizeOperands builds only when
-  // the index is not already in an SGPR class - and M0 is one.
-  //
-  // TODO: The copy is only needed because M0 is reserved. Once it is not, the
-  // index can be an ordinary virtual register copy that the coalescer folds
-  // away, and this can go.
+  // Must run after SIFixSGPRCopies, so that a divergent index is already
+  // uniform and the copy lands inside its waterfall loop. Assigning M0 during
+  // selection would suppress that loop, which legalizeOperands builds only for
+  // an index not already in an SGPR class.
   if (auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
     if (ST.useVGPRIndexMode()) {
       if (!MI.definesRegister(AMDGPU::M0, TRI))
@@ -6931,8 +6915,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       BuildMI(*BB, &MI, DL, TII->get(AMDGPU::COPY), AMDGPU::M0)
           .addReg(IdxOp.getReg());
       IdxOp.setReg(AMDGPU::M0);
-      // M0 is reserved, and the value copied into it can still be there for a
-      // later access, so this read must not kill it.
+      // M0 is reserved and may still hold this value at a later access.
       IdxOp.setIsKill(false);
     }
     return BB;
@@ -9449,10 +9432,9 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
-  // An address space that has no aperture of its own round-trips through the
-  // generic address space using a synthetic aperture: the shared aperture with
-  // the aperture number in its low bits. Dereferencing such a generic pointer
-  // is undefined behaviour; the round-trip only has to preserve the value.
+  // An address space with no aperture of its own round-trips through generic
+  // using the shared aperture tagged with its aperture number. Dereferencing
+  // such a pointer is UB; the round-trip only has to preserve the value.
   unsigned BaseAS = AS;
   unsigned SANum = AMDGPU::getSyntheticApertureNumber(AS);
   if (SANum != AMDGPU::SyntheticAperture::None)
@@ -13602,14 +13584,10 @@ static bool addressMayBeAccessedAsPrivate(const MachineMemOperand *MMO,
   return true;
 }
 
-// Lower a load or store of the VGPR ("as memory") address space (13) to a
-// REG_LOAD / REG_STORE target node. The 32-bit pointer is a byte offset into
-// the wave's view of its vector registers; the target node carries the dword
-// index (pointer >> 2). Recognizing a constant dword offset is left to the
-// selection patterns, which fold an (add index, imm) shape into the pseudo.
+// Lower a VGPR ("as memory") load or store to a REG_LOAD / REG_STORE node
+// carrying the dword index (pointer >> 2).
 //
-// TODO: sub-dword (8/16-bit) accesses are not yet supported; they are
-// diagnosed as unsupported below.
+// TODO: sub-dword (8/16-bit) accesses are diagnosed as unsupported below.
 SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -13617,11 +13595,8 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   EVT MemVT = MemOp->getMemoryVT();
   unsigned BitWidth = MemVT.getSizeInBits();
 
-  // Only dword-aligned whole-dword, non-extending/non-truncating accesses are
-  // implemented. Reject anything else with a diagnostic (replacing the value
-  // with poison) instead of failing instruction selection. Both callers -
-  // operation legalization and the pre-ISel combine - replace the node with
-  // this result, so the diagnostic is emitted exactly once.
+  // Both callers replace the node with this result, so the diagnostic is
+  // emitted exactly once.
   auto reportUnsupported = [&]() -> SDValue {
     const Function &F = DAG.getMachineFunction().getFunction();
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -13629,19 +13604,15 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
         "unsupported access of VGPR 'as memory' address space (13); only "
         "dword-aligned whole-dword loads and stores are implemented",
         DL.getDebugLoc()));
-    if (isa<StoreSDNode>(MemOp))
-      return MemOp->getChain();
-    return DAG.getMergeValues(
-        {DAG.getPOISON(Op.getValueType()), MemOp->getChain()}, DL);
+    SmallVector<EVT, 2> ResultTypes(Op->values());
+    return DAG.getErrorMergeValues(ResultTypes, MemOp->getChain(), DL);
   };
 
   if (BitWidth < 32)
     return reportUnsupported();
 
-  // The dword index built below is the pointer shifted right by two, which
-  // discards the low two bits rather than accounting for them, so an
-  // under-aligned access would silently reach the dword containing the address
-  // instead of the bytes asked for.
+  // The index is the pointer >> 2, so an under-aligned access would silently
+  // reach the containing dword rather than the bytes asked for.
   if (MemOp->getAlign() < Align(4))
     return reportUnsupported();
   if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
@@ -13661,8 +13632,7 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   SDValue Index = DAG.getNode(ISD::SRL, DL, MVT::i32, MemOp->getBasePtr(),
                               DAG.getConstant(2, DL, MVT::i32));
 
-  // View the access as i32 / <N x i32> when the memory type is not register
-  // legal (e.g. v4i8), bitcasting the value across.
+  // View as i32 / <N x i32> when the memory type is not register legal.
   EVT RegVT = MemVT;
   if (!isTypeLegal(RegVT)) {
     unsigned NumDwords = BitWidth / 32;
@@ -19372,9 +19342,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
       return Res;
     break;
   case ISD::LOAD:
-    // Lower a VGPR ("as memory") address space (13) load to a REG_LOAD target
-    // node. Done here (not via operation legalization) so it also fires at -O0,
-    // where a scalar load is otherwise Legal and never reaches LowerLOAD.
+    // Done here rather than via operation legalization so it also fires at
+    // -O0, where a scalar load is Legal and never reaches LowerLOAD.
     if (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR)
       if (SDValue V = LowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
         return V;
@@ -20845,17 +20814,13 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case ISD::LOAD: {
     const LoadSDNode *L = cast<LoadSDNode>(N);
     unsigned AS = L->getAddressSpace();
-    // A flat load may access private memory. A load of the VGPR "as memory"
-    // address space reads this lane's own registers, so it is divergent however
-    // uniform the index is - and it is still an ISD::LOAD until the pre-ISel
-    // combine turns it into a REG_LOAD below.
+    // A VGPR "as memory" load reads this lane's own registers, so it is
+    // divergent however uniform the index is.
     return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
            AS == AMDGPUAS::VGPR;
   }
-  // The lowered form of the above. Without this the DAG takes the node's
-  // divergence to be that of its operands, so a uniform index makes the loaded
-  // value look uniform, and a consumer that requires a uniform operand gets a
-  // v_readfirstlane - broadcasting one lane's value to the whole wave.
+  // As above, after the pre-ISel combine. Without this a uniform index would
+  // make the loaded value look uniform and consumers would v_readfirstlane it.
   case AMDGPUISD::REG_LOAD:
     return true;
   case ISD::CALLSEQ_END:
