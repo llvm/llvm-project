@@ -649,6 +649,14 @@ public:
       Status set_error;
 
       if (actually_write) {
+        if (!valobj_sp->CanSetValue()) {
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't write the new contents of {0} back into the "
+              "variable\nnote: Left operand of assignment is not an lvalue",
+              GetName());
+          return;
+        }
+
         valobj_sp->SetData(data, set_error);
 
         if (!set_error.Success()) {
