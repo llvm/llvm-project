@@ -240,6 +240,19 @@ llvm.func @rocdl.s.waitcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.buffer.inv() {
+  // CHECK-LABEL: rocdl.buffer.inv
+  // CHECK-NEXT: call void @llvm.amdgcn.buffer.inv(i32 0)
+  // CHECK-NEXT: call void @llvm.amdgcn.buffer.inv(i32 1)
+  // CHECK-NEXT: call void @llvm.amdgcn.buffer.inv(i32 16)
+  // CHECK-NEXT: call void @llvm.amdgcn.buffer.inv(i32 17)
+  rocdl.buffer.inv none
+  rocdl.buffer.inv sc0
+  rocdl.buffer.inv sc1
+  rocdl.buffer.inv sc0|sc1
+  llvm.return
+}
+
 llvm.func @rocdl.s.sleep() {
   // CHECK-LABEL: rocdl.s.sleep
   // CHECK-NEXT: call void @llvm.amdgcn.s.sleep(i32 0)
