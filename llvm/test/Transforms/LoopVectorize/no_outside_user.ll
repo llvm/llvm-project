@@ -40,8 +40,8 @@ define i32 @test1()  {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sle <2 x i32> [[VEC_IND]], splat (i32 10)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
@@ -113,8 +113,8 @@ define i32 @test2()  {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> splat (i32 1), <2 x i32> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sle <2 x i32> [[VEC_IND]], splat (i32 10)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> [[VEC_IND]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
@@ -189,10 +189,10 @@ define i32 @test3(i32 %N)  {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle <2 x i32> [[VEC_IND]], splat (i32 10)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP5]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 2)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[PREDPHI]], <2 x i32> splat (i32 1)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> splat (i32 2), <2 x i32> [[PREDPHI]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[PREDPHI1]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I1]]
@@ -274,8 +274,8 @@ define i32 @test4(i32 %N)  {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sle <2 x i32> [[VEC_IND]], splat (i32 10)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
@@ -536,8 +536,8 @@ define i8 @outside_user_non_phi()  {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp sle <2 x i32> [[VEC_IND]], splat (i32 10)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[PREDPHI]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]

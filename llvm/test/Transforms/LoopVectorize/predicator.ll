@@ -22,7 +22,7 @@ define void @diamond_phi2(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP3]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP3]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP20]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[PREDPHI]], ptr align 4 [[TMP21]], <4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP20]], 4
@@ -182,8 +182,10 @@ define void @blend_masks_triangle_phi(ptr noalias %p, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[C0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = select <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP5]], <4 x i1> splat (i1 true), <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

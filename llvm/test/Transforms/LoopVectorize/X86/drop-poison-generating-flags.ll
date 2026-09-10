@@ -790,11 +790,11 @@ define void @Bgep_inbounds_unconditionally_due_to_store(ptr noalias %B, ptr read
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 20)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], splat (i32 20)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[WIDE_LOAD1]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x float> splat (float 3.300000e+01), <4 x float> [[TMP5]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP5]], <4 x float> splat (float 3.300000e+01)
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
