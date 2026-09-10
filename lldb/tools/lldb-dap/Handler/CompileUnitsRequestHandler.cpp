@@ -29,12 +29,14 @@ CompileUnitsRequestHandler::Run(const CompileUnitsArguments &args) const {
 
     if (args.compileUnitIds.empty()) {
       const uint32_t num_units = curr_module.GetNumCompileUnits();
+      units.reserve(num_units);
       for (uint32_t j = 0; j < num_units; j++) {
         if (std::optional<CompileUnit> unit =
                 CreateCompileUnit(curr_module.GetCompileUnitAtIndex(j)))
           units.emplace_back(std::move(*unit));
       }
     } else {
+      units.reserve(args.compileUnitIds.size());
       for (const uint32_t id : args.compileUnitIds) {
         if (std::optional<CompileUnit> unit =
                 CreateCompileUnit(curr_module.GetCompileUnitAtIndex(id)))

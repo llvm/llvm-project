@@ -3,6 +3,7 @@ Test lldb-dap stackTrace request
 """
 
 import os
+from dataclasses import dataclass
 from typing import List, NamedTuple
 
 from lldbsuite.test.decorators import *
@@ -11,10 +12,19 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import (
     CompileUnit,
     CompileUnitsArgs,
+    CompileUnitsResponse,
     LaunchArgs,
     StackFrame,
     StackFrameFormat,
 )
+
+
+@dataclass(frozen=True)
+class _NoCompileUnitsArgs:
+    """A `compileUnits` request that carries no arguments at all."""
+
+    command_ = "compileUnits"
+    response_class_ = CompileUnitsResponse
 
 
 class _RecurseSource(NamedTuple):
@@ -362,3 +372,21 @@ class TestDAP_stackTrace(DAPTestCaseBase):
             CompileUnitsArgs(moduleId=module_id, compileUnitIds=[9999])
         ).result()
         self.assertEqual(response.body.compileUnits, [])
+
+    @skipIfWindows
+    def test_compile_units_without_arguments(self) -> None:
+        """Test that a compileUnits request without arguments is rejected."""
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        process_event = session.launch(LaunchArgs(program, stopOnEntry=True))
+        session.verify_stopped_on_entry(after=process_event)
+
+        response = session.send_request(_NoCompileUnitsArgs()).error()
+        body = self.expect_not_none(response.body)
+        error = self.expect_not_none(body.error)
+        self.assertEqual(
+            error.format,
+            "arguments required for command 'compileUnits' but none received",
+        )
+
+        session.continue_to_exit()
