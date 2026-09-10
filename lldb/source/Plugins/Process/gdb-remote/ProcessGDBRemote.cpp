@@ -1842,14 +1842,18 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   if (GetThreadStopInfoFromJSON(thread, m_jthreadsinfo_sp))
     return true;
 
-  // See if we got thread stop info for any threads valid stop info reasons
-  // threads via the "jstopinfo" packet stop reply packet key/value pair?
   if (m_jstopinfo_sp) {
-    // If we have "jstopinfo" then we have stop descriptions for all threads
-    // that have stop reasons, and if there is no entry for a thread, then it
-    // has no stop reason.
-    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp))
+    // If we have "jstopinfo" from the stop packet, then we have stop 
+    // descriptions for all threads that have stop reasons, and if there 
+    // is no entry for a thread, then it has no stop reason.
+    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
+      addr_t pc = thread->GetRegisterContext()->GetPC();
+      BreakpointSiteSP bp_site_sp =
+          thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+      if (bp_site_sp && IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
+        thread->SetThreadStoppedAtUnexecutedBP(pc);
       thread->SetStopInfo(StopInfoSP());
+    }
     return true;
   }
 
