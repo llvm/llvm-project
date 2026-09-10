@@ -2709,10 +2709,13 @@ def : Pat<(int_nvvm_ui2f_rz i32:$a), (CVT_f32_u32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_ui2f_rm i32:$a), (CVT_f32_u32 $a, CvtRM)>;
 def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
-// Utility to look up base and satfinite variants of a conversion intrinsic
+// Utility to look up base and satfinite variants of a conversion intrinsic.
+// Missing variants are left unset so this can be used when only one exists.
 class ToCvtIntrinsics<string suffix> {
-  Intrinsic base = !cast<Intrinsic>("int_nvvm_" # suffix);
-  Intrinsic sf = !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite");
+  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix),
+                       !cast<Intrinsic>("int_nvvm_" # suffix), ?);
+  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite"),
+                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite"), ?);
 }
 
 foreach rnd = ["rn", "rz"] in {
@@ -2839,34 +2842,29 @@ def : Pat<(int_nvvm_f2h_rn_ftz f32:$a), (CVT_f16_f32 $a, CvtRN_FTZ)>;
 def : Pat<(int_nvvm_f2h_rn f32:$a), (CVT_f16_f32 $a, CvtRN)>;
 
 foreach dst = ["e4m3x2", "e5m2x2"] in {
-  foreach relu = ["", "_relu"] in {
+  foreach relu = ["", "relu"] in {
     foreach rnd = ["rn", "rz"] in {
-      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # relu));
-      defvar Suffix = dst # "_" # rnd # relu;
-      defvar FF = !cast<Intrinsic>("int_nvvm_ff_to_" # Suffix);
-      defvar F16X2 = !cast<Intrinsic>("int_nvvm_f16x2_to_" # Suffix);
-      defvar BF16X2 =
-          !cast<Intrinsic>("int_nvvm_bf16x2_to_" # Suffix # "_satfinite");
+      defvar Relu     = !if(!empty(relu), "", "_" # relu);
+      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # Relu));
+      defvar Suffix   = dst # "_" # rnd # Relu;
+      defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
+      defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
+      defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
         defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
         defvar NeedsPZOSupport = !or(!eq(rnd, "rz"), !eq(pzo, 1));
-        defvar FFPreds =
-            !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
-                                 [hasFP8ConversionSupport]<Predicate>);
-        defvar BF16X2Preds =
-            !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
-                                 [hasFP16X2ToNarrowFPConversionSupport]<Predicate>);
+        defvar F32X2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                                 [hasFP8ConversionSupport]<Predicate>);
+        defvar BF16X2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                                  [hasFP16X2ToNarrowFPConversionSupport]<Predicate>);
 
-        def : Pat<(FF f32:$a, f32:$b, PZO),
-                  (!cast<NVPTXInst>("CVT_" # dst # "_f32") $a, $b, Mode)>,
-              Requires<FFPreds>;
-        def : Pat<(F16X2 v2f16:$a, PZO),
-                  (!cast<NVPTXInst>("CVT_" # dst # "_f16x2") $a, Mode)>,
-              Requires<FFPreds>;
-        def : Pat<(BF16X2 v2bf16:$a, PZO),
-                  (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2") $a, Mode)>,
+        def : Pat<(F32X2.base f32:$a, f32:$b, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_f32") $a, $b, Mode)>,
+              Requires<F32X2Preds>;
+        def : Pat<(F16X2.base v2f16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_f16x2") $a, Mode)>,
+              Requires<F32X2Preds>;
+        def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2") $a, Mode)>,
               Requires<BF16X2Preds>;
       }
     }
@@ -2922,33 +2920,29 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
 }
 
 foreach dst = ["e2m3x2", "e3m2x2"] in {
-  foreach relu = ["", "_relu"] in {
+  foreach relu = ["", "relu"] in {
     foreach rnd = ["rn", "rz"] in {
-      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # relu));
-      defvar Suffix = dst # "_" # rnd # relu # "_satfinite";
-      defvar FF = !cast<Intrinsic>("int_nvvm_ff_to_" # Suffix);
-      defvar F16X2 = !cast<Intrinsic>("int_nvvm_f16x2_to_" # Suffix);
-      defvar BF16X2 = !cast<Intrinsic>("int_nvvm_bf16x2_to_" # Suffix);
+      defvar Relu     = !if(!empty(relu), "", "_" # relu);
+      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # Relu));
+      defvar Suffix   = dst # "_" # rnd # Relu;
+      defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
+      defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
+      defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
         defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
         defvar NeedsPZOSupport = !or(!eq(rnd, "rz"), !eq(pzo, 1));
-        defvar FFPreds =
-            !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
-                                 [hasNarrowFPConversionSupport]<Predicate>);
-        defvar FPX2Preds =
-            !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
-                                 [hasFP16X2ToNarrowFPConversionSupport]<Predicate>);
+        defvar F32X2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                                 [hasNarrowFPConversionSupport]<Predicate>);
+        defvar FPX2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                                [hasFP16X2ToNarrowFPConversionSupport]<Predicate>);
 
-        def : Pat<(FF f32:$a, f32:$b, PZO),
-                  (!cast<NVPTXInst>("CVT_" # dst # "_f32_sf") $a, $b, Mode)>,
-              Requires<FFPreds>;
-        def : Pat<(F16X2 v2f16:$a, PZO),
-                  (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_sf") $a, Mode)>,
+        def : Pat<(F32X2.sf f32:$a, f32:$b, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_f32_sf") $a, $b, Mode)>,
+              Requires<F32X2Preds>;
+        def : Pat<(F16X2.sf v2f16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_sf") $a, Mode)>,
               Requires<FPX2Preds>;
-        def : Pat<(BF16X2 v2bf16:$a, PZO),
-                  (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf") $a, Mode)>,
+        def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf") $a, Mode)>,
               Requires<FPX2Preds>;
       }
     }
