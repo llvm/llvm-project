@@ -5,7 +5,7 @@
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // The warning is only emitted by tools that use the common printf interceptor.
-// UNSUPPORTED: ubsan, lsan
+// UNSUPPORTED: ubsan, lsan, hwasan, msan, rtsan
 
 #include <stdio.h>
 

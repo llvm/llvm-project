@@ -15,6 +15,7 @@
 
 #include <stdarg.h>
 
+#include "sanitizer_allocator_internal.h"
 #include "sanitizer_stacktrace.h"
 
 static const char *parse_number(const char *p, int *out) {
@@ -545,10 +546,12 @@ static void printf_common(void *ctx, const char *format, va_list aq) {
             "%s: WARNING: unexpected format specifier in printf "
             "interceptor: %.*s (reported once per process)\n",
             SanitizerToolName, static_cast<int>(dir.end - dir.begin), dir.begin);
-        BufferedStackTrace stack;
-        stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr,
-                     common_flags()->fast_unwind_on_fatal);
-        stack.Print();
+        auto* stack = new (InternalAlloc(sizeof(BufferedStackTrace)))
+            BufferedStackTrace();
+        stack->Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr,
+                      common_flags()->fast_unwind_on_fatal);
+        stack->Print();
+        InternalFree(stack);
       }
       break;
     }
