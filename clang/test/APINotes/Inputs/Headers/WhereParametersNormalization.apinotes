@@ -1,0 +1,136 @@
+---
+Name: WhereParametersNormalization
+Functions:
+- Name: normalizedEmpty
+  Where:
+    Parameters: []
+  SwiftName: normalizedEmpty()
+- Name: normalizedDefaults
+  Where:
+    Parameters:
+    - int
+    - double
+  SwiftName: normalizedDefaults(_:_:)
+- Name: normalizedWhitespace
+  Where:
+    Parameters:
+    - '  unsigned   int  '
+  SwiftName: normalizedWhitespace(_:)
+- Name: normalizedUnsigned
+  Where:
+    Parameters:
+    - unsigned
+  SwiftName: normalizedUnsigned(_:)
+- Name: normalizedTemplateSpacing
+  Where:
+    Parameters:
+    - 'NormalizationBox<int,double>'
+  SwiftName: normalizedTemplateSpacing(_:)
+- Name: normalizedPointerSpacing
+  Where:
+    Parameters:
+    - 'int*'
+  SwiftName: normalizedPointerSpacing(_:)
+- Name: normalizedRValueReferenceSpacing
+  Where:
+    Parameters:
+    - 'int&&'
+  SwiftName: normalizedRValueReferenceSpacing(_:)
+- Name: normalizedConstValue
+  Where:
+    Parameters:
+    - int
+  SwiftName: normalizedConstValue(_:)
+- Name: normalizedConstSpelling
+  Where:
+    Parameters:
+    - const int
+  SwiftName: normalizedConstSpelling(_:)
+- Name: normalizedConstSuffixSpelling
+  Where:
+    Parameters:
+    - int const
+  SwiftName: normalizedConstSuffixSpelling(_:)
+- Name: normalizedPointerConst
+  Where:
+    Parameters:
+    - 'int * const'
+  SwiftName: normalizedPointerConst(_:)
+- Name: normalizedPointeeConst
+  Where:
+    Parameters:
+    - 'const int *'
+  SwiftName: normalizedPointeeConst(_:)
+- Name: normalizedPointeeConstMismatch
+  Where:
+    Parameters:
+    - 'int *'
+  SwiftName: shouldNotApplyNormalizedPointeeConst(_:)
+- Name: normalizedAlias
+  Where:
+    Parameters:
+    - int
+  SwiftName: normalizedAlias(_:)
+- Name: normalizedDeepAlias
+  Where:
+    Parameters:
+    - int
+  SwiftName: normalizedDeepAlias(_:)
+- Name: normalizedDeepAliasSource
+  Where:
+    Parameters:
+    - NormalizationDeepAliasInt
+  SwiftName: normalizedDeepAliasSource(_:)
+- Name: normalizedIntermediateAliasMismatch
+  Where:
+    Parameters:
+    - NormalizationAliasAliasInt
+  SwiftName: shouldNotApplyNormalizedIntermediateAlias(_:)
+- Name: normalizedConstAlias
+  Where:
+    Parameters:
+    - int
+  SwiftName: normalizedConstAlias(_:)
+- Name: normalizedNullable
+  Where:
+    Parameters:
+    - 'char *'
+  SwiftName: normalizedNullable(_:)
+- Name: normalizedRawInt
+  Where:
+    Parameters:
+    - int
+  SwiftName: normalizedRawInt(_:)
+Tags:
+- Name: NormalizationWidget
+  Methods:
+  - Name: empty
+    Where:
+      Parameters: []
+    SwiftName: empty()
+  - Name: defaults
+    Where:
+      Parameters:
+      - int
+      - double
+    SwiftName: defaults(_:_:)
+  - Name: configure
+    Where:
+      Parameters:
+      - int
+    SwiftName: configure(_:)
+  - Name: pointerSpacing
+    Where:
+      Parameters:
+      - 'int*'
+    SwiftName: pointerSpacing(_:)
+  - Name: pointeeConstMismatch
+    Where:
+      Parameters:
+      - 'int *'
+    SwiftName: shouldNotApplyNormalizedPointeeConst(_:)
+  - Name: deepAlias
+    Where:
+      Parameters:
+      - int
+    SwiftName: deepAlias(_:)

@@ -66,6 +66,9 @@ enum class SwiftNewTypeKind {
 
 enum class SwiftSafetyKind { Unspecified, Safe, Unsafe, None };
 
+/// Normalize an API notes parameter selector spelling for matching.
+std::string normalizeAPINotesParameterSelector(llvm::StringRef Spelling);
+
 /// Describes API notes data for any entity.
 ///
 /// This is used as the base of all API notes.
