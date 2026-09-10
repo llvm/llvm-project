@@ -907,6 +907,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                         ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
                        MVT::i32, Custom);
     setOperationAction(ISD::LROUND, MVT::i32, Custom);
+  } else if (Subtarget.hasStdExtZfhOrZhinx()) {
+    // f16 is the only FP type whose finite values always fit in an i32 after
+    // truncation towards zero, so an f16 to i64 conversion can be done by
+    // converting to i32 and extending, rather than using a libcall.
+    setOperationAction({ISD::FP_TO_UINT, ISD::FP_TO_SINT,
+                        ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
+                       MVT::i64, Custom);
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
@@ -16363,12 +16370,35 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT: {
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-           "Unexpected custom legalisation");
     bool IsStrict = N->isStrictFPOpcode();
     bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT ||
                     N->getOpcode() == ISD::STRICT_FP_TO_SINT;
     SDValue Op0 = IsStrict ? N->getOperand(1) : N->getOperand(0);
+
+    // On RV32, only f16 operands are handled here; other operand types fall
+    // back to the default expansion, which uses a libcall.
+    if (!Subtarget.is64Bit()) {
+      assert(N->getValueType(0) == MVT::i64 &&
+             "Unexpected custom legalisation");
+      if (Op0.getValueType() != MVT::f16)
+        return;
+      SDValue Cvt;
+      if (IsStrict) {
+        Cvt = DAG.getNode(
+            IsSigned ? ISD::STRICT_FP_TO_SINT : ISD::STRICT_FP_TO_UINT, DL,
+            DAG.getVTList(MVT::i32, MVT::Other), N->getOperand(0), Op0);
+      } else {
+        Cvt = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT, DL,
+                          MVT::i32, Op0);
+      }
+      Results.push_back(DAG.getNode(
+          IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL, MVT::i64, Cvt));
+      if (IsStrict)
+        Results.push_back(Cvt.getValue(1));
+      return;
+    }
+
+    assert(N->getValueType(0) == MVT::i32 && "Unexpected custom legalisation");
     if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
       if (!isTypeLegal(Op0.getValueType()))

@@ -1991,11 +1991,8 @@ start:
 define i64 @fcvt_l_h(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_l_h:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    addi sp, sp, -16
-; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZFH-NEXT:    call __fixhfdi
-; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    fcvt.w.h a0, fa0, rtz
+; RV32IZFH-NEXT:    srai a1, a0, 31
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_l_h:
@@ -2005,11 +2002,8 @@ define i64 @fcvt_l_h(half %a) nounwind {
 ;
 ; RV32IDZFH-LABEL: fcvt_l_h:
 ; RV32IDZFH:       # %bb.0:
-; RV32IDZFH-NEXT:    addi sp, sp, -16
-; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IDZFH-NEXT:    call __fixhfdi
-; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    fcvt.w.h a0, fa0, rtz
+; RV32IDZFH-NEXT:    srai a1, a0, 31
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_l_h:
@@ -2019,11 +2013,8 @@ define i64 @fcvt_l_h(half %a) nounwind {
 ;
 ; RV32IZHINX-LABEL: fcvt_l_h:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    addi sp, sp, -16
-; RV32IZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZHINX-NEXT:    call __fixhfdi
-; RV32IZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZHINX-NEXT:    addi sp, sp, 16
+; RV32IZHINX-NEXT:    fcvt.w.h a0, a0, rtz
+; RV32IZHINX-NEXT:    srai a1, a0, 31
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: fcvt_l_h:
@@ -2033,11 +2024,8 @@ define i64 @fcvt_l_h(half %a) nounwind {
 ;
 ; RV32IZDINXZHINX-LABEL: fcvt_l_h:
 ; RV32IZDINXZHINX:       # %bb.0:
-; RV32IZDINXZHINX-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZDINXZHINX-NEXT:    call __fixhfdi
-; RV32IZDINXZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZDINXZHINX-NEXT:    addi sp, sp, 16
+; RV32IZDINXZHINX-NEXT:    fcvt.w.h a0, a0, rtz
+; RV32IZDINXZHINX-NEXT:    srai a1, a0, 31
 ; RV32IZDINXZHINX-NEXT:    ret
 ;
 ; RV64IZDINXZHINX-LABEL: fcvt_l_h:
@@ -2753,11 +2741,8 @@ start:
 define i64 @fcvt_lu_h(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_lu_h:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    addi sp, sp, -16
-; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZFH-NEXT:    call __fixunshfdi
-; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV32IZFH-NEXT:    li a1, 0
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_lu_h:
@@ -2767,11 +2752,8 @@ define i64 @fcvt_lu_h(half %a) nounwind {
 ;
 ; RV32IDZFH-LABEL: fcvt_lu_h:
 ; RV32IDZFH:       # %bb.0:
-; RV32IDZFH-NEXT:    addi sp, sp, -16
-; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IDZFH-NEXT:    call __fixunshfdi
-; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV32IDZFH-NEXT:    li a1, 0
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_lu_h:
@@ -2781,11 +2763,8 @@ define i64 @fcvt_lu_h(half %a) nounwind {
 ;
 ; RV32IZHINX-LABEL: fcvt_lu_h:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    addi sp, sp, -16
-; RV32IZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZHINX-NEXT:    call __fixunshfdi
-; RV32IZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZHINX-NEXT:    addi sp, sp, 16
+; RV32IZHINX-NEXT:    fcvt.wu.h a0, a0, rtz
+; RV32IZHINX-NEXT:    li a1, 0
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: fcvt_lu_h:
@@ -2795,11 +2774,8 @@ define i64 @fcvt_lu_h(half %a) nounwind {
 ;
 ; RV32IZDINXZHINX-LABEL: fcvt_lu_h:
 ; RV32IZDINXZHINX:       # %bb.0:
-; RV32IZDINXZHINX-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZDINXZHINX-NEXT:    call __fixunshfdi
-; RV32IZDINXZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZDINXZHINX-NEXT:    addi sp, sp, 16
+; RV32IZDINXZHINX-NEXT:    fcvt.wu.h a0, a0, rtz
+; RV32IZDINXZHINX-NEXT:    li a1, 0
 ; RV32IZDINXZHINX-NEXT:    ret
 ;
 ; RV64IZDINXZHINX-LABEL: fcvt_lu_h:
