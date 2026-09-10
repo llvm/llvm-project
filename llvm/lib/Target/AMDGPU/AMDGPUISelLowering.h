@@ -87,6 +87,7 @@ protected:
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFEXPF64(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFPOW(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
 
@@ -427,6 +428,15 @@ public:
     return true;
   }
 };
+
+/// Strip fabs/fneg/fcopysign from a value to get the underlying source.
+/// Useful for comparing values where sign doesn't matter (e.g., frexp).
+inline SDValue peekFPSignOps(SDValue Val) {
+  while (Val.getOpcode() == ISD::FNEG || Val.getOpcode() == ISD::FABS ||
+         Val.getOpcode() == ISD::FCOPYSIGN)
+    Val = Val.getOperand(0);
+  return Val;
+}
 
 } // End namespace llvm
 

@@ -27,10 +27,6 @@ def GlobalDocumentation {
 AMDGPU Builtins
 ===============
 
-.. contents::
-   :local:
-   :depth: 2
-
 This document describes the AMDGPU target-specific builtins available in Clang.
 Most of these builtins provide direct access to AMDGPU hardware instructions
 and intrinsics.
@@ -580,7 +576,7 @@ and adds the 32x16 f32 accumulator ``C``.
 - ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
   3 = neg(abs)).
 
-Requires target feature ``wmma-n16-insts`` and wave32.
+Requires target feature ``wmma-f4-insts`` and wave32.
 }];
 }
 
@@ -601,7 +597,7 @@ WMMA with per-operand scale factors applied during the computation.
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
 
-Requires target feature ``wmma-n16-insts`` and wave32.
+Requires target feature ``wmma-f4-insts`` and wave32.
 }];
 }
 
@@ -676,6 +672,28 @@ scale variant.
   matrix A or B data can be reused from a previous WMMA instruction.
 
 Requires target feature ``wmma-n16-insts`` and wave32.
+}];
+}
+
+def DocWMMA_scale16_f4_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Scaled wave matrix multiply-accumulate with 64-bit (16-bit per element)
+scale exponents, as opposed to the 32-bit exponents used by the non-16
+scale variant.
+
+- For ``..._f8f6f4`` variants, ``matrix_a_fmt`` / ``matrix_b_fmt`` are format
+  selectors for A and B. They must be compile-time constants.
+- ``c_mod``: accumulator modifier.
+- ``matrix_a_scale`` / ``matrix_b_scale``: scale factor selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_fmt`` / ``matrix_b_scale_fmt``: scale format selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 64-bit scale exponents.
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-f4-insts`` and wave32.
 }];
 }
 

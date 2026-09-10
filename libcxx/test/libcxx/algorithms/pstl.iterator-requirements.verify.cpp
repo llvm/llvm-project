@@ -158,6 +158,11 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::is_heap(pol, non_random, non_random);       // expected-error@*:* {{static assertion failed: is_heap}}
+    (void)std::is_heap(pol, non_random, non_random, pred); // expected-error@*:* {{static assertion failed: is_heap}}
+  }
+
+  {
     (void)std::is_heap_until(
         pol, non_random, non_random); // expected-error@*:* {{static assertion failed: is_heap_until}}
     (void)std::is_heap_until(

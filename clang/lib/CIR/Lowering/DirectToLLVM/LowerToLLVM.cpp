@@ -1255,7 +1255,7 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
   llvm::StringRef llvmSyncScope = getLLVMSyncScope(adaptor.getSyncScope());
   rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
       op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
-      llvmOrder, llvmSyncScope);
+      llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
   return mlir::success();
 }
 
@@ -1453,7 +1453,7 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
       getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
   auto rmwVal = mlir::LLVM::AtomicRMWOp::create(
       rewriter, op.getLoc(), llvmBinOp, adaptor.getPtr(), adaptor.getVal(),
-      llvmOrder, llvmSyncScope);
+      llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
 
   mlir::Value result = rmwVal.getResult();
   if (!op.getFetchFirst()) {
@@ -2373,11 +2373,9 @@ cir::direct::CIRToLLVMVecMaskedLoadOpLowering::matchAndRewrite(
   unsigned alignment =
       (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmResTy));
 
-  mlir::IntegerAttr alignAttr = rewriter.getI32IntegerAttr(alignment);
-
   auto newLoad = mlir::LLVM::MaskedLoadOp::create(
       rewriter, op.getLoc(), llvmResTy, adaptor.getAddr(), adaptor.getMask(),
-      adaptor.getPassThru(), alignAttr);
+      adaptor.getPassThru(), alignment);
 
   rewriter.replaceOp(op, newLoad.getResult());
   return mlir::success();
@@ -5429,6 +5427,7 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
       /*tail_call_kind*/
       mlir::LLVM::TailCallKindAttr::get(
           getContext(), mlir::LLVM::tailcallkind::TailCallKind::None),
+      /*convergent=*/mlir::UnitAttr(),
       mlir::LLVM::AsmDialectAttr::get(getContext(), llDialect),
       rewriter.getArrayAttr(opAttrs));
 
@@ -5608,6 +5607,7 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
           /*has_side_effects=*/mlir::UnitAttr{},
           /*is_align_stack=*/mlir::UnitAttr{},
           /*tail_call_kind=*/mlir::LLVM::TailCallKindAttr{},
+          /*convergent=*/{},
           /*asm_dialect=*/mlir::LLVM::AsmDialectAttr{},
           /*operand_attrs=*/mlir::ArrayAttr{})
           .getResult(0);

@@ -232,10 +232,11 @@ inline constexpr uint64_t AlwaysExecutesFreq = 1ULL << 63;
 BranchProbability getExecutionProbability(BlockFrequency Freq);
 
 /// Computes for each block in \p Blocks, which must be in reverse post-order,
-/// the frequency with which it executes relative to the first (header) block.
+/// the frequency with which it executes relative to the first (header) block,
+/// and whether that frequency was composed using any estimated branch weights.
 /// The frequency of a block is the sum over its incoming edges, or std::nullopt
 /// if any edge on a path reaching it lacks branch weights.
-DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>>
+DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
 namespace detail {
@@ -374,9 +375,11 @@ public:
   /// Reassociate all the blocks connected to \p Old so that they now point to
   /// \p New.
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
-    for (auto *Pred : to_vector(Old->getPredecessors()))
+    auto Preds = to_vector(Old->getPredecessors());
+    auto Succs = to_vector(Old->getSuccessors());
+    for (auto *Pred : Preds)
       Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors()))
+    for (auto *Succ : Succs)
       Succ->replacePredecessor(Old, New);
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
