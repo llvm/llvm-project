@@ -1,3 +1,5 @@
+// UNSUPPORTED: llvm-driver
+
 // If a toolchain uses an external assembler, the test would fail because using
 // an external assember would increase job counts. Most toolchains in tree
 // use integrated assembler, but we still support external assembler.
