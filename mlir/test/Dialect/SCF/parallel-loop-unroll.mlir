@@ -1,7 +1,13 @@
+// RUN: mlir-opt %s -test-parallel-loop-unrolling -split-input-file | FileCheck %s --check-prefix=CHECK-NO-UNROLL
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2' -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2 loop-depth=1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-INNER
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-BY-3
 
+// CHECK-NO-UNROLL-LABEL: func @unroll_simple_parallel_loop
+// CHECK-NO-UNROLL: [[C1:%.*]] = arith.constant 1 : index
+// CHECK-NO-UNROLL: scf.parallel {{.*}} step ([[C1]], [[C1]], [[C1]])
+// CHECK-NO-UNROLL-NOT: affine.apply
+// CHECK-NO-UNROLL: return
 func.func @unroll_simple_parallel_loop(%src: memref<1x16x12xf32>, %dst: memref<1x16x12xf32>) {
   %c12 = arith.constant 12 : index
   %c16 = arith.constant 16 : index

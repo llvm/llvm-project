@@ -46,6 +46,9 @@ struct TestParallelLoopUnrollingPass
   }
 
   void runOnOperation() override {
+    if (unrollFactors.empty())
+      return;
+
     SmallVector<scf::ParallelOp, 4> loops;
     getOperation()->walk([&](scf::ParallelOp parLoop) {
       if (getNestingDepth(parLoop) == loopDepth)
