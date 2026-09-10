@@ -495,16 +495,12 @@ define dso_local i32 @value(i64 noundef %b1, i64 noundef %b2) {
 ; CHECK-NEXT:    ldr x19, [sp, #1672] // 8-byte Reload
 ; CHECK-NEXT:    fadd s6, s0, s6
 ; CHECK-NEXT:    bics xzr, x0, x3
-; CHECK-NEXT:    ldr x20, [sp, #1664] // 8-byte Reload
-; CHECK-NEXT:    ldr x21, [sp, #1656] // 8-byte Reload
-; CHECK-NEXT:    ldr x22, [sp, #1648] // 8-byte Reload
-; CHECK-NEXT:    ldr x23, [sp, #1640] // 8-byte Reload
-; CHECK-NEXT:    ldr x24, [sp, #1632] // 8-byte Reload
-; CHECK-NEXT:    ldr x25, [sp, #1624] // 8-byte Reload
-; CHECK-NEXT:    ldr x26, [sp, #1616] // 8-byte Reload
-; CHECK-NEXT:    ldr x27, [sp, #1608] // 8-byte Reload
-; CHECK-NEXT:    ldr x28, [sp, #1600] // 8-byte Reload
-; CHECK-NEXT:    ldr x29, [sp, #1592] // 8-byte Reload
+; CHECK-NEXT:    add x1, sp, #1592
+; CHECK-NEXT:    ldp x21, x20, [x1, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x23, x22, [x1, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x25, x24, [x1, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x27, x26, [x1, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x28, [x1] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmadd s7, s6, s5, s7
 ; CHECK-NEXT:    ldr x30, [sp, #1584] // 8-byte Reload
 ; CHECK-NEXT:    ldr x11, [sp, #1576] // 8-byte Reload
