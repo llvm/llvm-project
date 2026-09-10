@@ -2117,7 +2117,8 @@ public:
 /// template argument list imposed by the compound requirement.
 class RequiresExprBodyDecl : public Decl, public DeclContext {
   RequiresExprBodyDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc)
-      : Decl(RequiresExprBody, DC, StartLoc), DeclContext(RequiresExprBody) {}
+      : Decl(RequiresExprBody, DC, StartLoc),
+        DeclContext(RequiresExprBody, this) {}
 
 public:
   friend class ASTDeclReader;

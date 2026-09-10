@@ -103,7 +103,7 @@ bool Decl::isOutOfLine() const {
 
 TranslationUnitDecl::TranslationUnitDecl(ASTContext &ctx)
     : Decl(TranslationUnit, nullptr, SourceLocation()),
-      DeclContext(TranslationUnit), redeclarable_base(ctx), Ctx(ctx) {}
+      DeclContext(TranslationUnit, this), redeclarable_base(ctx), Ctx(ctx) {}
 
 //===----------------------------------------------------------------------===//
 // NamedDecl Implementation
@@ -3073,7 +3073,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            const AssociatedConstraint &TrailingRequiresClause)
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
-      DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
+      DeclContext(DK, this), redeclarable_base(C), Body(), ODRHash(0),
       EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
   assert(T.isNull() || T->isFunctionType());
   FunctionDeclBits.SClass = S;
@@ -4939,7 +4939,8 @@ const FieldDecl *FieldDecl::findCountedByField() const {
 TagDecl::TagDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
                  SourceLocation L, IdentifierInfo *Id, TagDecl *PrevDecl,
                  SourceLocation StartL)
-    : TypeDecl(DK, DC, L, Id, StartL), DeclContext(DK), redeclarable_base(C),
+    : TypeDecl(DK, DC, L, Id, StartL), DeclContext(DK, this),
+      redeclarable_base(C),
       TypedefNameDeclOrQualifier((TypedefNameDecl *)nullptr) {
   assert((DK != Enum || TK == TagTypeKind::Enum) &&
          "EnumDecl not matched with TagTypeKind::Enum");
@@ -5501,7 +5502,7 @@ unsigned RecordDecl::getODRHash() {
 //===----------------------------------------------------------------------===//
 
 BlockDecl::BlockDecl(DeclContext *DC, SourceLocation CaretLoc)
-    : Decl(Block, DC, CaretLoc), DeclContext(Block) {
+    : Decl(Block, DC, CaretLoc), DeclContext(Block, this) {
   setIsVariadic(false);
   setCapturesCXXThis(false);
   setBlockMissingReturnType(true);
@@ -5724,7 +5725,7 @@ BlockDecl *BlockDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
 
 OutlinedFunctionDecl::OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams)
     : Decl(OutlinedFunction, DC, SourceLocation()),
-      DeclContext(OutlinedFunction), NumParams(NumParams),
+      DeclContext(OutlinedFunction, this), NumParams(NumParams),
       BodyAndNothrow(nullptr, false) {}
 
 OutlinedFunctionDecl *OutlinedFunctionDecl::Create(ASTContext &C,
@@ -5752,7 +5753,7 @@ void OutlinedFunctionDecl::setNothrow(bool Nothrow) {
 }
 
 CapturedDecl::CapturedDecl(DeclContext *DC, unsigned NumParams)
-    : Decl(Captured, DC, SourceLocation()), DeclContext(Captured),
+    : Decl(Captured, DC, SourceLocation()), DeclContext(Captured, this),
       NumParams(NumParams), ContextParam(0), BodyAndNothrow(nullptr, false) {}
 
 CapturedDecl *CapturedDecl::Create(ASTContext &C, DeclContext *DC,
@@ -5971,8 +5972,9 @@ HLSLBufferDecl::HLSLBufferDecl(DeclContext *DC, bool CBuffer,
                                SourceLocation KwLoc, IdentifierInfo *ID,
                                SourceLocation IDLoc, SourceLocation LBrace)
     : NamedDecl(Decl::Kind::HLSLBuffer, DC, IDLoc, DeclarationName(ID)),
-      DeclContext(Decl::Kind::HLSLBuffer), LBraceLoc(LBrace), KwLoc(KwLoc),
-      IsCBuffer(CBuffer), HasValidPackoffset(false), LayoutStruct(nullptr) {}
+      DeclContext(Decl::Kind::HLSLBuffer, this), LBraceLoc(LBrace),
+      KwLoc(KwLoc), IsCBuffer(CBuffer), HasValidPackoffset(false),
+      LayoutStruct(nullptr) {}
 
 HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
                                        DeclContext *LexicalParent, bool CBuffer,

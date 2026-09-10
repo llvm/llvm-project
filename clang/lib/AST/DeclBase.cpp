@@ -1079,24 +1079,8 @@ const AttrVec &Decl::getAttrs() const {
   return getASTContext().getDeclAttrs(this);
 }
 
-Decl *Decl::castFromDeclContext (const DeclContext *D) {
-  if (Decl *Cached = D->CachedDecl.load(std::memory_order_relaxed))
-    return Cached;
-
-  Decl::Kind DK = D->getDeclKind();
-  Decl *Result = nullptr;
-  switch (DK) {
-#define DECL(NAME, BASE)
-#define DECL_CONTEXT(NAME)                                                     \
-  case Decl::NAME:                                                             \
-    Result = static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));          \
-    break;
-#include "clang/AST/DeclNodes.inc"
-  default:
-    llvm_unreachable("a decl that inherits DeclContext isn't handled");
-  }
-  D->CachedDecl.store(Result, std::memory_order_relaxed);
-  return Result;
+Decl *Decl::castFromDeclContext(const DeclContext *D) {
+  return const_cast<Decl *>(D->getAsDecl());
 }
 
 DeclContext *Decl::castToDeclContext(const Decl *D) {
@@ -1315,7 +1299,7 @@ Decl *DeclContext::getNonClosureAncestor() {
 // DeclContext Implementation
 //===----------------------------------------------------------------------===//
 
-DeclContext::DeclContext(Decl::Kind K) {
+DeclContext::DeclContext(Decl::Kind K, Decl *D) : CorrespondingDecl(D) {
   DeclContextBits.DeclKind = K;
   setHasExternalLexicalStorage(false);
   setHasExternalVisibleStorage(false);

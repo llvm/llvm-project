@@ -33,7 +33,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/VersionTuple.h"
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -1465,8 +1464,6 @@ enum class LinkageSpecLanguageIDs;
 ///   BlockDecl
 ///   CapturedDecl
 class DeclContext {
-  friend class Decl;
-
   /// For makeDeclVisibleInContextImpl
   friend class ASTDeclReader;
   /// For checking the new bits in the Serialization part.
@@ -2104,11 +2101,8 @@ protected:
   /// another pointer.
   mutable Decl *LastDecl = nullptr;
 
-  /// The corresponding declaration, cached after the first conversion.
-  /// This correspondence is immutable. Relaxed atomics allow concurrent
-  /// read-only AST traversals to populate the cache without synchronizing
-  /// mutations to the AST itself.
-  mutable std::atomic<Decl *> CachedDecl = nullptr;
+  /// The declaration corresponding to this context.
+  Decl *const CorrespondingDecl;
 
   /// Build up a chain of declarations.
   ///
@@ -2116,7 +2110,7 @@ protected:
   static std::pair<Decl *, Decl *>
   BuildDeclChain(ArrayRef<Decl*> Decls, bool FieldsAlreadyLoaded);
 
-  DeclContext(Decl::Kind K);
+  DeclContext(Decl::Kind K, Decl *D);
 
 public:
   ~DeclContext();
@@ -2132,15 +2126,9 @@ public:
   const char *getDeclKindName() const;
 
   /// Return the declaration containing this context.
-  Decl *getAsDecl() {
-    if (Decl *Cached = CachedDecl.load(std::memory_order_relaxed))
-      return Cached;
-    return Decl::castFromDeclContext(this);
-  }
+  Decl *getAsDecl() { return CorrespondingDecl; }
 
-  const Decl *getAsDecl() const {
-    return const_cast<DeclContext *>(this)->getAsDecl();
-  }
+  const Decl *getAsDecl() const { return CorrespondingDecl; }
 
   /// getParent - Returns the containing DeclContext.
   DeclContext *getParent() { return getAsDecl()->getDeclContext(); }
