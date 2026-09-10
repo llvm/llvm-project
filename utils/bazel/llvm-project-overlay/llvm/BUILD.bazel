@@ -53,7 +53,7 @@ exports_files([
     "include/llvm/Option/OptParser.td",
     # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
     "include/llvm/TargetParser/TripleName.def",
-    "utils/extract_symbols.py", # Needed for test/tools/extract_symbols tests
+    "utils/extract_symbols.py",  # Needed for test/tools/extract_symbols tests
     "utils/get_triple_system_name.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
