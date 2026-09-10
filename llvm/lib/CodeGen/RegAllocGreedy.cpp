@@ -2424,8 +2424,7 @@ BlockFrequency RAGreedy::calcRematCost(const LiveInterval &VirtReg,
     if (!HasNoFirstCSRReg)
       return BlockFrequency::max();
 
-    RematCost +=
-        SpillPlacer->getBlockFrequency(UseMI.getParent()->getNumber());
+    RematCost += SpillPlacer->getBlockFrequency(UseMI.getParent()->getNumber());
     HasUse = true;
   }
 
