@@ -12016,19 +12016,28 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
     Cmp = SDValue(DAG.getMachineNode(FcmpOp, Dl, MVT::i32, LHS, LHS), 0);
   }
 
-  // fcNan  -> sub_un (FU): 1 when NaN
-  // ~fcNan -> sub_eq (EQ): 1 when not NaN (ordered self-compare is equal)
-  unsigned SubReg = (Category == fcNan) ? PPC::sub_un : PPC::sub_eq;
-  SDValue Bit = SDValue(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Cmp,
-                         DAG.getTargetConstant(SubReg, Dl, MVT::i32)),
-      0);
+  if (Subtarget.useCRBits()) {
+    // fcNan  -> sub_un (FU): 1 when NaN
+    // ~fcNan -> sub_eq (EQ): 1 when not NaN (ordered self-compare is equal)
+    unsigned SubReg = (Category == fcNan) ? PPC::sub_un : PPC::sub_eq;
+    return SDValue(
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Cmp,
+                           DAG.getTargetConstant(SubReg, Dl, MVT::i32)),
+        0);
+  }
 
-  EVT ResultVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  // Widen MVT::i1 -> ResultVT when !useCRBits() (legal type is i32).
-  if (ResultVT != MVT::i1)
-    return DAG.getZExtOrTrunc(Bit, Dl, ResultVT);
-  return Bit;
+  // !useCRBits(): MVT::i1 is not a legal type ¡ª never emit EXTRACT_SUBREG to
+  // i1.  Use SELECT_CC_I4 directly on the CR field (Cmp, MVT::i32) to produce
+  // a legal MVT::i32 result without creating any i1 node.
+  // PRED_UN: true when FU (unordered/NaN) bit is set.
+  // PRED_EQ: true when EQ bit is set (ordered self-compare => not NaN).
+  unsigned Pred = (Category == fcNan) ? PPC::PRED_UN : PPC::PRED_EQ;
+  return SDValue(
+      DAG.getMachineNode(PPC::SELECT_CC_I4, Dl, MVT::i32,
+                         {Cmp, DAG.getConstant(1, Dl, MVT::i32),
+                          DAG.getConstant(0, Dl, MVT::i32),
+                          DAG.getTargetConstant(Pred, Dl, MVT::i32)}),
+      0);
 }
 
 // Adjust the length value for a load/store with length to account for the
