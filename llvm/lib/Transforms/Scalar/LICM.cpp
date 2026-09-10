@@ -2393,8 +2393,6 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
   // keep the common case free.
   std::optional<SmallPtrSet<const StoreInst *, 8>> StoresWithInvariantAATags;
   auto HasInvariantAATags = [&](const StoreInst *SI) {
-    if (!SI->getAAMetadata())
-      return false;
     if (!StoresWithInvariantAATags)
       StoresWithInvariantAATags = collectStoresWithInvariantAATags(MSSA, DT, L);
     return StoresWithInvariantAATags->contains(SI);
@@ -2406,7 +2404,8 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
     if (isPotentiallyPromotable(I, L)) {
       AttemptingPromotion.insert(I);
       if (StoreInst *SI = dyn_cast<StoreInst>(I);
-          SI && !SafetyInfo->isGuaranteedToExecute(*SI, DT) &&
+          SI && SI->getAAMetadata() &&
+          !SafetyInfo->isGuaranteedToExecute(*SI, DT) &&
           !HasInvariantAATags(SI)) {
         // Promotion requires inserting a new store at the loop exits; we need
         // to prove that store doesn't alias anything, in addition to proving
