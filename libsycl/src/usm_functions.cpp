@@ -154,7 +154,7 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
   void *Ptr{};
   auto OLDevice = detail::getSyclObjImpl(syclDevice)->getOLHandle();
 
-  ol_result_t Result;
+  ol_result_t Result{};
   if (alignment == 0) {
     Result =
         kind == usm::alloc::host
