@@ -1838,14 +1838,16 @@ bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
 
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
-  // packet
+  // packet (we're at a public stop).
   if (GetThreadStopInfoFromJSON(thread, m_jthreadsinfo_sp))
     return true;
 
+  // See if the stop-reply packet (T05 etc) included a `jstopinfo` key
+  // with a mach exception description for any thread that has a stop reason.
   if (m_jstopinfo_sp) {
-    // If we have "jstopinfo" from the stop packet, then we have stop 
-    // descriptions for all threads that have stop reasons, and if there 
-    // is no entry for a thread, then it has no stop reason.
+    // Any thread not described in `jstopinfo` has no stop reason.
+    // Mark if it's at a breakpoint site that hasn't been hit yet, and
+    // then filll in a no-reason StopInfo.
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
       addr_t pc = thread->GetRegisterContext()->GetPC();
       BreakpointSiteSP bp_site_sp =
