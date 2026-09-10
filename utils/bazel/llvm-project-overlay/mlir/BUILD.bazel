@@ -17,7 +17,7 @@ load(
     "mlir_c_api_cc_library",
 )
 load(":linalggen.bzl", "genlinalg")
-load(":tblgen.bzl", "gentbl_cc_library", "td_library")
+load(":tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_op_defs", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -5524,7 +5524,14 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/*X86*.h",
             "lib/Dialect/LLVMIR/IR/XeVM*.cpp",
             "lib/Dialect/LLVMIR/IR/XeVM*.h",
+            # LLVMOps.cpp is a shard template, not compiled directly: see
+            # gentbl_sharded_op_defs below.
+            "lib/Dialect/LLVMIR/IR/LLVMOps.cpp",
         ],
+    ) + gentbl_sharded_op_defs(
+        name = "LLVMOpsShardGen",
+        shard_count = 8,
+        source_file = "lib/Dialect/LLVMIR/IR/LLVMOps.cpp",
     ),
     hdrs = glob(
         ["include/mlir/Dialect/LLVMIR/*.h"],
