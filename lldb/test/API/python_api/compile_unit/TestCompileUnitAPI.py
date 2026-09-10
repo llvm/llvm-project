@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class CompileUnitAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def test(self):
         """Exercise some SBCompileUnit APIs."""
         self.build()
@@ -51,3 +53,20 @@ class CompileUnitAPITestCase(TestBase):
                 0, line_entry.GetLine(), line_entry.GetFileSpec(), True
             ),
         )
+
+    def find_main_compile_unit(self) -> lldb.SBCompileUnit:
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        main_cu = target.FindModule(lldb.SBFileSpec("a.out")).compile_unit["main.c"]
+        self.assertTrue(main_cu.IsValid(), "Main executable CU is not valid")
+        return main_cu
+
+    def test_is_optimized(self):
+        """A compile unit built with optimization reports it."""
+        self.build(dictionary={"CFLAGS_EXTRAS": "-O1"})
+        self.assertTrue(self.find_main_compile_unit().GetIsOptimized())
+
+    def test_is_not_optimized(self):
+        """A compile unit built without optimization reports it."""
+        self.build()
+        self.assertFalse(self.find_main_compile_unit().GetIsOptimized())
