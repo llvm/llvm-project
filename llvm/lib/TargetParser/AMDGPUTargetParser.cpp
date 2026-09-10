@@ -36,7 +36,6 @@ struct GPUNameAlias {
 struct GPUInfo {
   StringTable::Offset Name;
   Triple::SubArchType SubArch;
-  unsigned ArchFeatures;
   AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
@@ -48,7 +47,6 @@ struct GPUInfo {
 // Per-GPU data for the R600 GPUKinds.
 struct R600Info {
   StringTable::Offset Name;
-  R600FeatureKind ArchFeatures;
   R600FeatureBitset Features;
 };
 
@@ -310,21 +308,6 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchAMDGCN(StringRef CPU) {
 AMDGPU::GPUKind llvm::AMDGPU::parseArchR600(StringRef CPU) {
   return parseArchImpl(CPU, R600GPUTable, R600FirstGPUKind, R600NameStrTab,
                        R600GPUAliases);
-}
-
-unsigned AMDGPU::getArchAttrAMDGCN(GPUKind AK) {
-  const GPUInfo *Info = getAMDGPUInfo(AK);
-  return Info ? Info->ArchFeatures : FEATURE_NONE;
-}
-
-unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
-  const GPUInfo *Info = getAMDGPUInfo(getGPUKindFromSubArch(SubArch));
-  return Info ? Info->ArchFeatures : FEATURE_NONE;
-}
-
-R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
-  const R600Info *Info = getR600Info(AK);
-  return Info ? Info->ArchFeatures : R600_FEATURE_NONE;
 }
 
 const AMDGPUFeatureBitset &AMDGPU::getFeatureBitset(GPUKind AK) {
