@@ -2375,38 +2375,39 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
   return BlockFrequency(SpillCost);
 }
 
-bool RAGreedy::shouldAvoidCSRForRemat(const LiveInterval &VirtReg,
-                                      AllocationOrder &Order) const {
+BlockFrequency RAGreedy::calcRematCost(const LiveInterval &VirtReg,
+                                       AllocationOrder &Order) const {
   if (!VirtReg.isSpillable())
-    return false;
+    return BlockFrequency::max();
 
   // This logic is intentionally narrow: handle a single concrete value
   // whose def can be cheaply rematerialized at every use.
   if (!VirtReg.containsOneValue())
-    return false;
+    return BlockFrequency::max();
   const VNInfo *OnlyVNI = VirtReg.getValNumInfo(0);
   if (OnlyVNI->isUnused() || OnlyVNI->isPHIDef())
-    return false;
+    return BlockFrequency::max();
 
   MachineInstr *DefMI = LIS->getInstructionFromIndex(OnlyVNI->def);
   if (!DefMI || !TII->isReMaterializable(*DefMI) ||
       !TII->isAsCheapAsAMove(*DefMI))
-    return false;
+    return BlockFrequency::max();
 
   // Only consider live ranges with register-mask interference. This limits the
   // heuristic to avoiding a first-use CSR required by a call rather than by
   // register pressure.
   if (!Matrix->checkRegMaskInterference(VirtReg))
-    return false;
+    return BlockFrequency::max();
 
-  unsigned NumUses = 0;
+  BlockFrequency RematCost;
+  bool HasUse = false;
   for (MachineInstr &UseMI : MRI->use_nodbg_instructions(VirtReg.reg())) {
     if (!UseMI.readsVirtualRegister(VirtReg.reg()))
       continue;
 
     SlotIndex UseIdx = LIS->getInstructionIndex(UseMI).getRegSlot(true);
     if (!VirtRegAuxInfo::allUsesAvailableAt(DefMI, UseIdx, *LIS, *MRI, *TII))
-      return false;
+      return BlockFrequency::max();
 
     // Check if any register that is not a first-use CSR is available as
     // destination for the rematerialization.
@@ -2421,26 +2422,14 @@ bool RAGreedy::shouldAvoidCSRForRemat(const LiveInterval &VirtReg,
       }
     }
     if (!HasNoFirstCSRReg)
-      return false;
+      return BlockFrequency::max();
 
-    ++NumUses;
+    RematCost +=
+        SpillPlacer->getBlockFrequency(UseMI.getParent()->getNumber());
+    HasUse = true;
   }
 
-  if (!NumUses)
-    return false;
-
-  // Ideally, this would be handled with the CSR cost model, but the scales
-  // differ. The rationale for allowing a fan-out of 3 is simple: Saving and
-  // restoring the CSR will require at least two moves, so we can allow three
-  // uses, as the first is free and the two materializations will at most have
-  // the same cost as CSR save/restore.
-  // FIXME: Properly integrate into CSR cost model.
-  if (NumUses > 3)
-    return false;
-
-  LLVM_DEBUG(dbgs() << "  rejecting CSR: cheap remat available for " << NumUses
-                    << " use(s) with no-first-CSR registers\n");
-  return true;
+  return HasUse ? RematCost : BlockFrequency::max();
 }
 
 /// Using a CSR for the first time has a cost because it causes push|pop
@@ -2459,7 +2448,7 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     // the spill cost is lower than CSRCost.
     SA->analyze(&VirtReg);
     if (calcSpillCost(VirtReg) >= CSRCost &&
-        !shouldAvoidCSRForRemat(VirtReg, Order)) {
+        calcRematCost(VirtReg, Order) >= CSRCost) {
       return PhysReg;
     }
 
@@ -2477,7 +2466,7 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                  NumCands, true /*IgnoreCSR*/);
     if (BestCand == NoCand) {
-      if (shouldAvoidCSRForRemat(VirtReg, Order)) {
+      if (calcRematCost(VirtReg, Order) < CSRCost) {
         CostPerUseLimit = 1;
         return MCRegister();
       }
@@ -2489,7 +2478,7 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     doRegionSplit(VirtReg, BestCand, false/*HasCompact*/, NewVRegs);
     return MCRegister();
   }
-  if (shouldAvoidCSRForRemat(VirtReg, Order)) {
+  if (calcRematCost(VirtReg, Order) < CSRCost) {
     CostPerUseLimit = 1;
     return MCRegister();
   }
