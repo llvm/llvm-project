@@ -18,6 +18,7 @@ static_library("Analyses") {
     "PointerFlow/PointerFlowAnalysis.cpp",
     "PointerFlow/PointerFlowExtractor.cpp",
     "PointerFlow/PointerFlowFormat.cpp",
+    "PointerFlow/PointerFlowPairs.cpp",
     "SSAFAnalysesCommon.cpp",
     "SharedLexicalRepresentation/EntitySourceLocationExtractor.cpp",
     "SharedLexicalRepresentation/SharedLexicalRepresentationFormat.cpp",
