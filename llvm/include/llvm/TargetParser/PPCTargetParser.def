@@ -321,17 +321,23 @@ PPC_AIX_CLONES_FEATURE("vsx",                 "vsx",       111)
 PPC_AIX_CLONES_FEATURE("popcntd",             "arch_2_06", 112)
 //                    Base features: 50-99 (below pwr7=100)
 PPC_AIX_CLONES_FEATURE("altivec",             "altivec",   50)
+
+// A special non-feature entry, that holds the priority for the negative form
+// (e.g. no-vsx) for features that can be disabled at runtime. This should have
+// the highest priority among all features and cpus.
+// See llvm::PPC::canDisableFeatureOnAIX() query.
+PPC_AIX_CLONES_FEATURE("NEGATIVE-FEATURE",    "",         1000)
 #undef PPC_AIX_CLONES_FEATURE
 
 #ifndef PPC_AIX_CLONES_CPU
 #define PPC_AIX_CLONES_CPU(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, PRIORITY)
 #endif
-PPC_AIX_CLONES_CPU("pwr7",                    "arch_2_06", 100)
-PPC_AIX_CLONES_CPU("pwr8",                    "arch_2_07", 200)
-PPC_AIX_CLONES_CPU("pwr9",                    "arch_3_00", 300)
-PPC_AIX_CLONES_CPU("pwr10",                   "arch_3_1",  400)
 // Power11 implements the same ISA as Power10
 PPC_AIX_CLONES_CPU("pwr11",                   "arch_3_1",  500)
+PPC_AIX_CLONES_CPU("pwr10",                   "arch_3_1",  400)
+PPC_AIX_CLONES_CPU("pwr9",                    "arch_3_00", 300)
+PPC_AIX_CLONES_CPU("pwr8",                    "arch_2_07", 200)
+PPC_AIX_CLONES_CPU("pwr7",                    "arch_2_06", 100)
 #undef PPC_AIX_CLONES_CPU
 
 // PPC_SYSTEMCONFIG_TYPE defines the IR data structure of kernel variable

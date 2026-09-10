@@ -152,5 +152,10 @@ bool isValidFeatureName(StringRef Name) {
   const BasicSubtargetFeatureKV *F = llvm::lower_bound(A, Name);
   return F != A.end() && StringRef(F->Key) == Name;
 }
+
+bool canDisableFeatureOnAIX(StringRef Name) {
+  return Name == "vsx" || Name == "htm";
+}
+
 } // namespace PPC
 } // namespace llvm

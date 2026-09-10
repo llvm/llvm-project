@@ -728,10 +728,24 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   assert(Features.size() == 1 && "one feature/cpu per clone on PowerPC");
   ParsedTargetAttr ParsedAttr = parseTargetAttr(Features[0]);
 
-  // Priority scheme: Features requiring POWERXX are higher than cpu=pwrXX
-  // but lower than cpu=pwr(XX+1). This ensures proper version selection.
-  // Example: mma (POWER10 feature) > cpu=pwr10 > power9-vector (POWER9 feature)
-
+  // Priority scheme:
+  // CPU specifications: 100-500 (pwr7=100, pwr8=200, ..., pwr11=500)
+  // For target-features, they can be divided into 3 categories:
+  // 1) non-CPU properties (e.g. invariant-function-descriptors); those cannot
+  //    be tested at runtime, and are currently excluded from target_clones.
+  // 2) CPU properties that cannot be disabled (e.g. mma); these features map to
+  //    CPUs directly:
+  //     +feature => __builtin_cpu_supports("<minimum-cpu>")
+  //              => true for CPU <minimum-cpu> and above.
+  //     -feature => !__builtin_cpu_supports("<minimum-cpu>")
+  //              => true for CPU <minimum-cpu-minus-one> and below.
+  // 3) CPU properties that can be disabled (e.g. vsx); those can map to CPUs
+  // directly for the positive requirement (same as (2));
+  // for the negative requirement checking the CPU is incorrect:
+  //   target_clones(no-vsx, cpu=pwr8)
+  // should pick no-vsx when vsx is disabled at runtime, so we need to test
+  // negative form of category 3 first, and will only allow one negative form
+  // from this category on a target_clones.
   if (!ParsedAttr.CPU.empty()) {
     int Priority = llvm::StringSwitch<int>(ParsedAttr.CPU)
 #define PPC_AIX_CLONES_CPU(CPU_NAME, _, PRIORITY)                      \
@@ -741,13 +755,20 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     return llvm::APInt(32, Priority);
   }
 
-  // Feature strings: priority between cpu=pwrN and cpu=pwr(N+1)
+  // Feature strings
   if (!ParsedAttr.Features.empty()) {
     StringRef Feature = ParsedAttr.Features[0];
+    bool IsNegated = Feature.starts_with("-");
     // Remove leading '+' or '-'
     if (Feature.starts_with("+") || Feature.starts_with("-"))
       Feature = Feature.drop_front(1);
 
+    // Check if this is a negative category 3 feature (highest priority)
+    // Sema guarantees there's only one such version on a target_clones.
+    if (IsNegated && llvm::PPC::canDisableFeatureOnAIX(Feature))
+      Feature = "NEGATIVE-FEATURE";
+
+    // Regular feature priority (positive or negative category 2)
     int Priority = llvm::StringSwitch<int>(Feature)
 #define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, PRIORITY)                      \
   .Case(FEATURE_NAME, PRIORITY)
