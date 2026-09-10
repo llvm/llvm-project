@@ -121,8 +121,8 @@ struct CUDAKernelTy : public GenericKernelTy {
     if (auto Err = Plugin::check(Res, "error in cuFuncGetAttribute: %s"))
       return Err;
 
-    // The maximum number of threads cannot exceed the maximum of the kernel.
-    MaxNumThreads = std::min(MaxNumThreads, (uint32_t)MaxThreads);
+    // The maximum number of threads per block for this kernel's function.
+    MaxNumThreads = (uint32_t)MaxThreads;
 
     int SharedMemSize;
     Res = cuFuncGetAttribute(&SharedMemSize,
@@ -162,12 +162,19 @@ struct CUDAKernelTy : public GenericKernelTy {
                               const uint32_t NumThreads[3],
                               uint32_t DynBlockMemSize) const override;
 
+  /// Return the maximum number of threads per block for this kernel's
+  /// function, as reported by the CUDA driver.
+  uint32_t getMaxThreads() const override { return MaxNumThreads; }
+
 private:
   /// The CUDA kernel function to execute.
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
   mutable uint32_t MaxDynBlockMemSize = 49152;
+  /// The maximum number of threads per block this kernel's function may use,
+  /// as reported by the CUDA driver.
+  uint32_t MaxNumThreads = 0;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
