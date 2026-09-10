@@ -4989,9 +4989,9 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     if (Op0VT == MVT::bf16 && IsStrict) {
       SDValue Ext1 =
           DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {MVT::f32, MVT::Other},
-                      {Op0, Op.getOperand(0)});
+                      {Op.getOperand(0), Op0});
       return DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {VT, MVT::Other},
-                         {Ext1, Ext1.getValue(1)});
+                         {Ext1.getValue(1), Ext1});
     }
     if (Op0VT == MVT::bf16)
       return DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), VT,
