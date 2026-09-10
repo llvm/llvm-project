@@ -156,7 +156,7 @@ public:
     if (invoke_callback) {
       rcu_singly_list_view ready_callbacks;
       ready_callbacks.splice_back(retired_queue_stage2_);
-      ready_callbacks.for_each([](auto* node) { node->__callback_(); });
+      ready_callbacks.for_each([](auto* node) { node->__callback_(node); });
     }
 
     std::atomic_signal_fence(memory_order_seq_cst);
@@ -166,7 +166,7 @@ public:
     if (invoke_callback) {
       rcu_singly_list_view ready_callbacks;
       ready_callbacks.splice_back(retired_queue_stage2_);
-      ready_callbacks.for_each([](auto* node) { node->__callback_(); });
+      ready_callbacks.for_each([](auto* node) { node->__callback_(node); });
     }
     std::atomic_thread_fence(memory_order_seq_cst);
   }
