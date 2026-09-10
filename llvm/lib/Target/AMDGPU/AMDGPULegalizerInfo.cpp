@@ -1853,10 +1853,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .legalIf([=](const LegalityQuery &Query) -> bool {
             return isLoadStoreLegal(ST, Query);
           })
-          // VGPR ("as memory") extending loads are custom-lowered to
-          // G_AMDGPU_REG_LOAD_BITS. Always take the custom path so an
-          // unsupported access is diagnosed cleanly rather than failing to
-          // legalize.
+          // Always take the custom path, so an unsupported access is
+          // diagnosed cleanly rather than failing to legalize.
           .customIf([](const LegalityQuery &Query) -> bool {
             return Query.Types[1].getAddressSpace() == AMDGPUAS::VGPR;
           });
@@ -3563,9 +3561,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
     return true;
   }
 
-  // Handle bytes and aligned shorts. These become a bit-field extract out of
-  // the containing dword (loads), or a read-modify-write of it (stores); see
-  // AMDGPULowerIdxOps.
+  // Bytes and aligned shorts; see AMDGPULowerIdxOps.
   if (MemSize < 32) {
     assert(MemSize == 8 || MemSize == 16);
     assert(MemSize <= ValSize && ValSize <= 32);

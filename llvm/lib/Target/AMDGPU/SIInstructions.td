@@ -1162,6 +1162,8 @@ def V_LOAD_IDX_BITS : VPseudoInstSI<(outs VGPR_32:$data),
   let mayLoad = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
+  // See the whole-dword pseudos above: the inserter supplies the M0 operand.
+  let usesCustomInserter = 1;
 }
 
 // Used for byte or short stores.
@@ -1174,11 +1176,11 @@ def V_STORE_IDX_BITS : VPseudoInstSI<(outs),
   let mayStore = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
+  // See the whole-dword pseudos above: the inserter supplies the M0 operand.
+  let usesCustomInserter = 1;
 }
 
-// Select the REG_LOAD_BITS/REG_STORE_BITS target nodes into the sub-dword
-// indexed pseudos. As for the whole-dword patterns above, an (add idx, imm)
-// shape folds a constant dword offset into the pseudo's $offset operand.
+// As above, an (add idx, imm) shape folds a constant dword offset into $offset.
 def : GCNPat<
   (i32 (SIreg_load_bits (add i32:$idx, (i32 imm:$offset)),
                         (i32 imm:$bitsize), i32:$bitoffset,
@@ -4962,9 +4964,8 @@ def G_AMDGPU_REG_STORE : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
-// Sub-dword (8/16-bit) counterparts of the above. In addition to the dword
-// index they carry the bit position of the access within that dword, and are
-// lowered to a read-modify-write of the whole dword (see AMDGPULowerIdxOps).
+// Sub-dword counterparts of the above, additionally carrying the bit position
+// within the dword. Lowered to a read-modify-write (see AMDGPULowerIdxOps).
 def G_AMDGPU_REG_LOAD_BITS : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$dword_index, type1:$bitsize,
