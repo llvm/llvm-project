@@ -259,7 +259,8 @@ public:
   virtual RuntimeDefinition getRuntimeDefinition() const = 0;
 
   /// Returns the expression whose value will be the result of this call.
-  /// Null if and only if 'this' is a CXXDestructorCall.
+  /// Null if and only if 'this' is a CXXDestructorCall or a
+  /// CleanupFunctionCall.
   virtual const Expr *getOriginExpr() const {
     return Origin.dyn_cast<const Expr *>();
   }
