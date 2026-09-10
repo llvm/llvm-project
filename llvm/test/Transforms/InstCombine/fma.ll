@@ -995,3 +995,32 @@ define half @fma_non_negone(half %x, half %y) {
   %sub = call half @llvm.fma.f16(half %x, half -1.5, half %y)
   ret half %sub
 }
+
+declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>)
+
+; fma is elementwise, so an undemanded result lane makes the matching operand
+; lane undemanded too: the insert into the dropped lane is removed.
+define <4 x float> @fma_undemanded_elt(<4 x float> %a, <4 x float> %b, <4 x float> %c, float %x) {
+; CHECK-LABEL: @fma_undemanded_elt(
+; CHECK-NEXT:    [[FMA:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[FMA]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %a3 = insertelement <4 x float> %a, float %x, i64 3
+  %fma = call <4 x float> @llvm.fma.v4f32(<4 x float> %a3, <4 x float> %b, <4 x float> %c)
+  %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x float> %r
+}
+
+define <4 x float> @fmuladd_undemanded_elt(<4 x float> %a, <4 x float> %b, <4 x float> %c, float %x) {
+; CHECK-LABEL: @fmuladd_undemanded_elt(
+; CHECK-NEXT:    [[FMA:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[FMA]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %b3 = insertelement <4 x float> %b, float %x, i64 3
+  %fma = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %a, <4 x float> %b3, <4 x float> %c)
+  %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x float> %r
+}
