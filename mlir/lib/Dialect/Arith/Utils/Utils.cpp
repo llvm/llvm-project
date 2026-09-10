@@ -169,7 +169,6 @@ static Value convertScalarToIntDtype(ImplicitLocOpBuilder &b, Value operand,
 static Value convertScalarToFpDtype(ImplicitLocOpBuilder &b, Value operand,
                                     FloatType toType, bool isUnsigned) {
   // If operand is integer, cast directly to the float type.
-  // Note that it is unclear how to cast from BF16<->FP16.
   if (isa<IntegerType>(operand.getType())) {
     if (isUnsigned)
       return arith::UIToFPOp::create(b, toType, operand);
@@ -180,7 +179,7 @@ static Value convertScalarToFpDtype(ImplicitLocOpBuilder &b, Value operand,
       return arith::ExtFOp::create(b, toType, operand);
     if (toType.getWidth() < fromFpTy.getWidth())
       return arith::TruncFOp::create(b, toType, operand);
-    return operand;
+    return arith::ConvertFOp::create(b, toType, operand);
   }
 
   return {};
