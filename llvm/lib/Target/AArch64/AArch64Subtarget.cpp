@@ -120,6 +120,7 @@ AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
 
   ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
   initializeProperties(HasMinSize);
+
   return *this;
 }
 
