@@ -1,0 +1,10 @@
+## Test that we produce an error if the YAML input is invalid.
+# RUN: not llvm-pdbutil yaml2pdb %s --pdb=%t.pdb 2>&1 | FileCheck %s
+
+---
+- A list is not valid
+# CHECK: invalid-yaml.test:[[@LINE-1]]:1: error: not a mapping
+# CHECK-NEXT: - A list
+# CHECK-NEXT: ^
+# CHECK-NEXT: llvm-pdbutil: failed to parse YAML input:
+...

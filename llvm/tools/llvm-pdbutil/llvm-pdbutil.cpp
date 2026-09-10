@@ -819,15 +819,23 @@ static void yamlToPdb(StringRef Path, unsigned DocNum) {
 
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
 
-  llvm::yaml::Input In(Buffer->getBuffer());
+  llvm::yaml::Input In(
+      Buffer->getMemBufferRef(), nullptr,
+      [](const SMDiagnostic &Diag, void *) { Diag.print(nullptr, errs()); });
+
   for (unsigned CurrentDoc = 1; CurrentDoc < DocNum; ++CurrentDoc) {
     if (!In.nextDocument())
       ExitOnErr(createFileError(
           Path, createStringErrorV("cannot find the {0}{1} document", DocNum,
                                    getOrdinalSuffix(DocNum))));
   }
+
   pdb::yaml::PdbObject YamlObj(Allocator);
   In >> YamlObj;
+
+  if (std::error_code EC = In.error())
+    ExitOnErr(
+        createStringErrorV("failed to parse YAML input: {0}", EC.message()));
 
   PDBFileBuilder Builder(Allocator);
 
