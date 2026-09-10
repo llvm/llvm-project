@@ -487,7 +487,7 @@ static VPWideningInfo getWideningInfo(const VPRecipeBase &R) {
   case VPRecipeBase::VPExpressionSC: {
     auto *Expr = cast<VPExpressionRecipe>(&R);
     return Expr->isVectorToScalar()
-               ? (VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic)
+               ? VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic
                : VPWideningInfo::Wide;
   }
   case VPRecipeBase::VPReductionSC:
@@ -495,7 +495,7 @@ static VPWideningInfo getWideningInfo(const VPRecipeBase &R) {
     auto *Red = cast<VPReductionRecipe>(&R);
     return Red->isPartialReduction()
                ? VPWideningInfo::Wide
-               : (VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic);
+               : VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic;
   }
   case VPRecipeBase::VPReplicateSC: {
     auto *Rep = cast<VPReplicateRecipe>(&R);
@@ -528,7 +528,6 @@ static VPWideningInfo getWideningInfo(const VPRecipeBase &R) {
   case VPRecipeBase::VPReductionPHISC:
     return VPWideningInfo::Wide;
   }
-  llvm_unreachable("Fell off end of switch: unknown recipe class");
 }
 
 static VPWideningInfo getWideningInfo(const VPValue *VPV) {
@@ -622,6 +621,10 @@ bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
   if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(R))
     return SIVSteps->doesGeneratePerAllLanes();
   return false;
+}
+
+bool vputils::doesGenerateSingleScalar(const VPValue *V) {
+  return getWideningInfo(V).producesSingleScalarResult();
 }
 
 VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
