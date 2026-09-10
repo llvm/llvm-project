@@ -86,9 +86,10 @@ exit:
 define i32 @sgt_stride_4_variable_bound(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'sgt_stride_4_variable_bound'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride_4_variable_bound
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((3 + (-1 * %m) + %n) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((3 + (-1 * %m) + %n) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add nsw i32 %n, 4
@@ -115,9 +116,10 @@ ret:
 define i32 @ugt_stride_4_variable_bound(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'ugt_stride_4_variable_bound'
 ; CHECK-NEXT:  Determining loop execution counts for: @ugt_stride_4_variable_bound
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((3 + (-1 * %m) + %n) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((3 + (-1 * %m) + %n) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add nuw i32 %n, 4
@@ -145,9 +147,10 @@ ret:
 define i32 @sgt_stride_3_variable_bound(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'sgt_stride_3_variable_bound'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride_3_variable_bound
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin ((-1 * (%n smin %m)) + %n)))<nuw><nsw> + (-1 * (%n smin %m)) + %n) /u 3) + (1 umin ((-1 * (%n smin %m)) + %n)))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1431655765
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * (%n smin %m)) + %n)))<nuw><nsw> + (-1 * (%n smin %m)) + %n) /u 3) + (1 umin ((-1 * (%n smin %m)) + %n)))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add nsw i32 %n, 3
@@ -170,9 +173,9 @@ ret:
 define void @sgt_stride_4_no_overflow(i32 %n) {
 ; CHECK-LABEL: 'sgt_stride_4_no_overflow'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride_4_no_overflow
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((3 + %n) /u 4)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((3 + %n)<nsw> /u 4)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 536870912
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((3 + %n) /u 4)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((3 + %n)<nsw> /u 4)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -371,9 +374,10 @@ exit:
 define void @sgt_variable_stride_guard(i32 %start, i32 %bound, i32 %stride) {
 ; CHECK-LABEL: 'sgt_variable_stride_guard'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_variable_stride_guard
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin ((-1 * (%start smin %bound)) + %start)))<nuw><nsw> + (-1 * (%start smin %bound)) + %start) /u (1 umax %stride)) + (1 umin ((-1 * (%start smin %bound)) + %start)))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * (%start smin %bound)) + %start)))<nuw><nsw> + (-1 * (%start smin %bound)) + %start) /u (1 umax %stride)) + (1 umin ((-1 * (%start smin %bound)) + %start)))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %guard = icmp sgt i32 %stride, 0
