@@ -34,14 +34,14 @@ struct Point3D {
 // AST:     int z;
 // AST: };
 // AST: template <typename T> void test_template_single_binding(T p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp parallel
 // AST:         {
 // AST:             use(a);
 // AST:         }
 // AST: }
 // AST: template<> void test_template_single_binding<Point>(Point p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp parallel
 // AST:         {
 // AST:             use(a);
@@ -60,7 +60,7 @@ void test_template_single_binding(T p) {
 // CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
 //
 // AST: template <typename T> void test_template_two_bindings(T p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel reduction(+: result)
 // AST:         {
@@ -68,7 +68,7 @@ void test_template_single_binding(T p) {
 // AST:         }
 // AST: }
 // AST: template<> void test_template_two_bindings<Point>(Point p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel reduction(+: result)
 // AST:         {
@@ -89,7 +89,7 @@ void test_template_two_bindings(T p) {
 // CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
 //
 // AST: template <typename T> int test_template_three_bindings(T p) {
-// AST:     auto = p;
+// AST:     auto [x, y, z] = p;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel reduction(+: result)
 // AST:         {
@@ -98,7 +98,7 @@ void test_template_two_bindings(T p) {
 // AST:     return result;
 // AST: }
 // AST: template<> int test_template_three_bindings<Point3D>(Point3D p) {
-// AST:     auto = p;
+// AST:     auto [x, y, z] = p;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel reduction(+: result)
 // AST:         {
@@ -122,7 +122,7 @@ int test_template_three_bindings(T p) {
 // CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
 //
 // AST: template <typename T> int test_template_reuse_bindings(T p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel reduction(+: result)
 // AST:         {
@@ -131,7 +131,7 @@ int test_template_three_bindings(T p) {
 // AST:     return result;
 // AST: }
 // AST: template<> int test_template_reuse_bindings<Point>(Point p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel reduction(+: result)
 // AST:         {
@@ -154,7 +154,7 @@ int test_template_reuse_bindings(T p) {
 // CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
 //
 // AST: template <typename T> int test_template_nested(T p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel
 // AST:         {
@@ -166,7 +166,7 @@ int test_template_reuse_bindings(T p) {
 // AST:     return result;
 // AST: }
 // AST: template<> int test_template_nested<Point>(Point p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel
 // AST:         {
@@ -195,7 +195,7 @@ int test_template_nested(T p) {
 // CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
 //
 // AST: template <typename T> void test_template_multiple_regions(T p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int result1 = 0, result2 = 0;
 // AST:     #pragma omp parallel reduction(+: result1)
 // AST:         {
@@ -203,7 +203,7 @@ int test_template_nested(T p) {
 // AST:         }
 // AST: }
 // AST: template<> void test_template_multiple_regions<Point>(Point p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int result1 = 0, result2 = 0;
 // AST:     #pragma omp parallel reduction(+: result1)
 // AST:         {
@@ -226,7 +226,7 @@ typedef unsigned int size_t;
 //
 // AST: typedef unsigned int size_t;
 // AST: template <typename T, size_t N> int test_template_array(T (&arr)[N]) {
-// AST:     auto = arr;
+// AST:     auto [a, b] = arr;
 // AST:     int result = 0;
 // AST:     #pragma omp parallel reduction(+: result)
 // AST:         {
@@ -235,7 +235,7 @@ typedef unsigned int size_t;
 // AST:     return result;
 // AST: }
 // AST: template<> int test_template_array<int, 2U>(int (&arr)[2]) {
-// AST:     auto = {arr[*]};
+// AST:     auto [a, b] = {arr[*]};
 // AST:     int result = 0;
 // AST:     #pragma omp parallel reduction(+: result)
 // AST:         {
@@ -262,7 +262,7 @@ struct Pair {
 
 // CHECK-LABEL: define {{.*}}@_Z28test_dependent_decompositionI{{.*}}
 // AST: template <typename T> void test_dependent_decomposition(Pair<T> p) {
-// AST:    auto = p;
+// AST:    auto [a, b] = p;
 // AST:    #pragma omp parallel shared(a,b)
 // AST:       {
 // AST:            a = a + T(1);
@@ -270,7 +270,7 @@ struct Pair {
 // AST:        }
 // AST: }
 // AST: template<> void test_dependent_decomposition<int>(Pair<int> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp parallel shared(a,b)
 // AST:         {
 // AST:             a = a + int(1);
@@ -278,7 +278,7 @@ struct Pair {
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_decomposition<double>(Pair<double> p) {
-// AST:         auto = p;
+// AST:         auto [a, b] = p;
 // AST:     #pragma omp parallel shared(a,b)
 // AST:         {
 // AST:             a = a + double(1);
@@ -299,7 +299,7 @@ void test_dependent_decomposition(Pair<T> p) {
 
 // CHECK-LABEL: define {{.*}}@_Z24test_dependent_reductionI{{.*}}
 // AST: template <typename T> T test_dependent_reduction(Pair<T> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     T sum = T(0);
 // AST:     #pragma omp parallel for reduction(+: sum)
 // AST:         for (int i = 0; i < 10; ++i) {
@@ -308,7 +308,7 @@ void test_dependent_decomposition(Pair<T> p) {
 // AST:     return sum;
 // AST: }
 // AST: template<> int test_dependent_reduction<int>(Pair<int> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     int sum = int(0);
 // AST:     #pragma omp parallel for reduction(+: sum)
 // AST:         for (int i = 0; i < 10; ++i) {
@@ -317,7 +317,7 @@ void test_dependent_decomposition(Pair<T> p) {
 // AST:     return sum;
 // AST: }
 // AST: template<> double test_dependent_reduction<double>(Pair<double> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     double sum = double(0);
 // AST:     #pragma omp parallel for reduction(+: sum)
 // AST:         for (int i = 0; i < 10; ++i) {
@@ -339,21 +339,21 @@ T test_dependent_reduction(Pair<T> p) {
 
 // CHECK-LABEL: define {{.*}}@_Z27test_dependent_firstprivateI{{.*}}
 // AST: template <typename T> void test_dependent_firstprivate(Pair<T> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp parallel firstprivate(a,b)
 // AST:         {
 // AST:             T local = a + b;
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_firstprivate<int>(Pair<int> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp parallel firstprivate(a,b)
 // AST:         {
 // AST:             int local = a + b;
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_firstprivate<double>(Pair<double> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp parallel firstprivate(a,b)
 // AST:         {
 // AST:             double local = a + b;
@@ -371,21 +371,21 @@ void test_dependent_firstprivate(Pair<T> p) {
 
 // CHECK-LABEL: define {{.*}}@_Z19test_dependent_taskI{{.*}}
 // AST: template <typename T> void test_dependent_task(Pair<T> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp task shared(a)
 // AST:         {
 // AST:             a = a + T(10);
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_task<int>(Pair<int> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp task shared(a)
 // AST:         {
 // AST:             a = a + int(10);
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_task<double>(Pair<double> p) {
-// AST:     auto = p;
+// AST:     auto [a, b] = p;
 // AST:     #pragma omp task shared(a)
 // AST:         {
 // AST:             a = a + double(10);
@@ -408,21 +408,21 @@ struct Triple {
 
 // CHECK-LABEL: define {{.*}}@_Z30test_dependent_partial_captureIiEv6TripleIT_E
 // AST: template <typename T> void test_dependent_partial_capture(Triple<T> p) {
-// AST:     auto = p;
+// AST:     auto [a, b, c] = p;
 // AST:     #pragma omp parallel firstprivate(a)
 // AST:         {
 // AST:             T result = a + b + c;
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_partial_capture<int>(Triple<int> p) {
-// AST:     auto = p;
+// AST:     auto [a, b, c] = p;
 // AST:     #pragma omp parallel firstprivate(a)
 // AST:         {
 // AST:             int result = a + b + c;
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_partial_capture<double>(Triple<double> p) {
-// AST:     auto = p;
+// AST:     auto [a, b, c] = p;
 // AST:     #pragma omp parallel firstprivate(a)
 // AST:         {
 // AST:             double result = a + b + c;
@@ -439,24 +439,24 @@ void test_dependent_partial_capture(Triple<T> p) {
 
 // CHECK-LABEL: define {{.*}}@_Z32test_dependent_multiple_capturesI{{.*}}
 // AST: template <typename T> void test_dependent_multiple_captures(Pair<T> p1, Pair<T> p2) {
-// AST:     auto = p1;
-// AST:     auto = p2;
+// AST:     auto [a, b] = p1;
+// AST:     auto [c, d] = p2;
 // AST:     #pragma omp parallel shared(a,b,c,d)
 // AST:         {
 // AST:             T result = a + b + c + d;
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_multiple_captures<int>(Pair<int> p1, Pair<int> p2) {
-// AST:     auto = p1;
-// AST:     auto = p2;
+// AST:     auto [a, b] = p1;
+// AST:     auto [c, d] = p2;
 // AST:     #pragma omp parallel shared(a,b,c,d)
 // AST:         {
 // AST:             int result = a + b + c + d;
 // AST:         }
 // AST: }
 // AST: template<> void test_dependent_multiple_captures<double>(Pair<double> p1, Pair<double> p2) {
-// AST:     auto = p1;
-// AST:     auto = p2;
+// AST:     auto [a, b] = p1;
+// AST:     auto [c, d] = p2;
 // AST:     #pragma omp parallel shared(a,b,c,d)
 // AST:         {
 // AST:             double result = a + b + c + d;

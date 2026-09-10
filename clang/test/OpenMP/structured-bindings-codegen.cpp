@@ -889,7 +889,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l42.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -939,7 +939,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l52.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1011,7 +1011,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z21test_firstprivate_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[P:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[P:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1039,7 +1039,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z15test_shared_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1065,7 +1065,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z18test_reduction_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SUM:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SUM:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1128,27 +1128,27 @@ void test_target_map_orig_use_binding() {
 // CHECK:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST:%.*]], i64 0, i64 0
 // CHECK:    store ptr [[SUM1]], ptr [[TMP15]], align 8
 // CHECK:    [[TMP16:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP4]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z18test_reduction_dsav.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
-// CHECK:    switch i32 [[TMP16]], [[DOTOMP_REDUCTION_DEFAULT:label %.*]] [
-// CHECK:      i32 1, [[DOTOMP_REDUCTION_CASE1:label %.*]]
-// CHECK:      i32 2, [[DOTOMP_REDUCTION_CASE2:label %.*]]
+// CHECK:    switch i32 [[TMP16]], label %[[DOTOMP_REDUCTION_DEFAULT:.*]] [
+// CHECK:      i32 1, label %[[DOTOMP_REDUCTION_CASE1:.*]]
+// CHECK:      i32 2, label %[[DOTOMP_REDUCTION_CASE2:.*]]
 // CHECK:    ]
-// CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
+// CHECK:       [[DOTOMP_REDUCTION_CASE1]]:
 // CHECK:    [[TMP17:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK:    [[TMP18:%.*]] = load i32, ptr [[SUM1]], align 4
 // CHECK:    [[ADD6:%.*]] = add nsw i32 [[TMP17]], [[TMP18]]
 // CHECK:    store i32 [[ADD6]], ptr [[TMP1]], align 4
 // CHECK:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP4]], ptr @.gomp_critical_user_.reduction.var)
-// CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
-// CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
+// CHECK:    br label %[[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[DOTOMP_REDUCTION_CASE2]]:
 // CHECK:    [[TMP19:%.*]] = load i32, ptr [[SUM1]], align 4
 // CHECK:    [[TMP20:%.*]] = atomicrmw add ptr [[TMP1]], i32 [[TMP19]] monotonic, align 4
-// CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
-// CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
+// CHECK:    br label %[[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[DOTOMP_REDUCTION_DEFAULT]]:
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @_Z18test_reduction_dsav.omp_outlined.omp.reduction.reduction_func(
-// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1175,7 +1175,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z18test_parallel_for_v.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1245,7 +1245,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z23test_parallel_for_simd_v.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1304,11 +1304,11 @@ void test_target_map_orig_use_binding() {
 // CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
-// CHECK:    br i1 [[TMP15]], [[DOTOMP_FINAL_THEN:label %.*]], [[DOTOMP_FINAL_DONE:label %.*]]
-// CHECK:       [[_OMP_FINAL_THEN:.*:]]
+// CHECK:    br i1 [[TMP15]], label %[[DOTOMP_FINAL_THEN:.*]], label %[[DOTOMP_FINAL_DONE:.*]]
+// CHECK:       [[DOTOMP_FINAL_THEN]]:
 // CHECK:    store i32 10, ptr [[I]], align 4
-// CHECK:    br [[DOTOMP_FINAL_DONE]]
-// CHECK:       [[_OMP_FINAL_DONE:.*:]]
+// CHECK:    br label %[[DOTOMP_FINAL_DONE]]
+// CHECK:       [[DOTOMP_FINAL_DONE]]:
 // CHECK:    ret void
 //
 //
@@ -1430,7 +1430,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_privates_map.(
-// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1442,7 +1442,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry.(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1504,7 +1504,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_privates_map..10(
-// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]], ptr noalias noundef [[TMP2:%.*]]) #[[ATTR6]] {
+// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]], ptr noalias noundef [[TMP2:%.*]]) #[[ATTR7]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1520,7 +1520,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..11(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1588,7 +1588,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_privates_map..13(
-// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]], ptr noalias noundef [[TMP2:%.*]]) #[[ATTR6]] {
+// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]], ptr noalias noundef [[TMP2:%.*]]) #[[ATTR7]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1604,7 +1604,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..14(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1684,7 +1684,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_privates_map..16(
-// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1696,7 +1696,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..17(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1765,7 +1765,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_privates_map..19(
-// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1777,7 +1777,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..20(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -1829,7 +1829,7 @@ void test_target_map_orig_use_binding() {
 // CHECK:    [[CONV1_I:%.*]] = sext i32 [[TMP25]] to i64
 // CHECK:    [[TMP26:%.*]] = load i64, ptr [[DOTUB__ADDR_I]], align 8, !noalias [[META81]]
 // CHECK:    [[CMP_I:%.*]] = icmp ule i64 [[CONV1_I]], [[TMP26]]
-// CHECK:    br i1 [[CMP_I]], label %[[OMP_INNER_FOR_BODY_I:.*]], [[DOTOMP_OUTLINED__18_EXIT:label %.*]]
+// CHECK:    br i1 [[CMP_I]], label %[[OMP_INNER_FOR_BODY_I:.*]], label %[[DOTOMP_OUTLINED__18_EXIT:.*]]
 // CHECK:       [[OMP_INNER_FOR_BODY_I]]:
 // CHECK:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_I]], align 4, !noalias [[META81]]
 // CHECK:    store i32 [[TMP27]], ptr [[I_I:%.*]], align 4, !noalias [[META81]]
@@ -1844,7 +1844,7 @@ void test_target_map_orig_use_binding() {
 // CHECK:    [[ADD4_I:%.*]] = add nsw i32 [[TMP31]], 1
 // CHECK:    store i32 [[ADD4_I]], ptr [[DOTOMP_IV_I]], align 4, !noalias [[META81]]
 // CHECK:    br label %[[OMP_INNER_FOR_COND_I]]
-// CHECK:       [[_OMP_OUTLINED__18_EXIT:.*:]]
+// CHECK:       [[DOTOMP_OUTLINED__18_EXIT]]:
 // CHECK:    ret i32 0
 //
 //
@@ -1961,7 +1961,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z17test_template_basI5PointEiT_.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1981,27 +1981,27 @@ void test_target_map_orig_use_binding() {
 // CHECK:    [[TMP6:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 // CHECK:    [[TMP8:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP7]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z17test_template_basI5PointEiT_.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
-// CHECK:    switch i32 [[TMP8]], [[DOTOMP_REDUCTION_DEFAULT:label %.*]] [
-// CHECK:      i32 1, [[DOTOMP_REDUCTION_CASE1:label %.*]]
-// CHECK:      i32 2, [[DOTOMP_REDUCTION_CASE2:label %.*]]
+// CHECK:    switch i32 [[TMP8]], label %[[DOTOMP_REDUCTION_DEFAULT:.*]] [
+// CHECK:      i32 1, label %[[DOTOMP_REDUCTION_CASE1:.*]]
+// CHECK:      i32 2, label %[[DOTOMP_REDUCTION_CASE2:.*]]
 // CHECK:    ]
-// CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
+// CHECK:       [[DOTOMP_REDUCTION_CASE1]]:
 // CHECK:    [[TMP9:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[RESULT1]], align 4
 // CHECK:    [[ADD2:%.*]] = add nsw i32 [[TMP9]], [[TMP10]]
 // CHECK:    store i32 [[ADD2]], ptr [[TMP1]], align 4
 // CHECK:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.reduction.var)
-// CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
-// CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
+// CHECK:    br label %[[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[DOTOMP_REDUCTION_CASE2]]:
 // CHECK:    [[TMP11:%.*]] = load i32, ptr [[RESULT1]], align 4
 // CHECK:    [[TMP12:%.*]] = atomicrmw add ptr [[TMP1]], i32 [[TMP11]] monotonic, align 4
-// CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
-// CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
+// CHECK:    br label %[[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[DOTOMP_REDUCTION_DEFAULT]]:
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @_Z17test_template_basI5PointEiT_.omp_outlined.omp.reduction.reduction_func(
-// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -2038,7 +2038,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_privates_map..24(
-// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -2050,7 +2050,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..25(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -2088,7 +2088,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z24test_template_3_bindingsI7Point3DEiT_.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noundef nonnull align 4 dereferenceable(12) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noundef nonnull align 4 dereferenceable(12) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2111,27 +2111,27 @@ void test_target_map_orig_use_binding() {
 // CHECK:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // CHECK:    [[TMP9:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP8]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z24test_template_3_bindingsI7Point3DEiT_.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
-// CHECK:    switch i32 [[TMP9]], [[DOTOMP_REDUCTION_DEFAULT:label %.*]] [
-// CHECK:      i32 1, [[DOTOMP_REDUCTION_CASE1:label %.*]]
-// CHECK:      i32 2, [[DOTOMP_REDUCTION_CASE2:label %.*]]
+// CHECK:    switch i32 [[TMP9]], label %[[DOTOMP_REDUCTION_DEFAULT:.*]] [
+// CHECK:      i32 1, label %[[DOTOMP_REDUCTION_CASE1:.*]]
+// CHECK:      i32 2, label %[[DOTOMP_REDUCTION_CASE2:.*]]
 // CHECK:    ]
-// CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
+// CHECK:       [[DOTOMP_REDUCTION_CASE1]]:
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK:    [[TMP11:%.*]] = load i32, ptr [[RESULT1]], align 4
 // CHECK:    [[ADD3:%.*]] = add nsw i32 [[TMP10]], [[TMP11]]
 // CHECK:    store i32 [[ADD3]], ptr [[TMP1]], align 4
 // CHECK:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP8]], ptr @.gomp_critical_user_.reduction.var)
-// CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
-// CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
+// CHECK:    br label %[[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[DOTOMP_REDUCTION_CASE2]]:
 // CHECK:    [[TMP12:%.*]] = load i32, ptr [[RESULT1]], align 4
 // CHECK:    [[TMP13:%.*]] = atomicrmw add ptr [[TMP1]], i32 [[TMP12]] monotonic, align 4
-// CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
-// CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
+// CHECK:    br label %[[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[DOTOMP_REDUCTION_DEFAULT]]:
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @_Z24test_template_3_bindingsI7Point3DEiT_.omp_outlined.omp.reduction.reduction_func(
-// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -2168,7 +2168,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z19test_static_bindingv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2199,7 +2199,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z26test_static_binding_sharedv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2296,7 +2296,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_privates_map..29(
-// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -2308,7 +2308,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..30(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -2353,7 +2353,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z11test_nestedv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2381,7 +2381,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..32(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -2423,7 +2423,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z22test_reference_bindingv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2455,7 +2455,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z18test_const_bindingv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2482,7 +2482,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z22test_multiple_bindingsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2517,7 +2517,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z32test_multiple_bindings_mixed_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP1:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[P1:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP1:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[P1:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2564,7 +2564,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z21test_array_3_elementsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(12) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(12) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2592,7 +2592,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z11test_singlev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2627,7 +2627,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z13test_sectionsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2654,27 +2654,27 @@ void test_target_map_orig_use_binding() {
 // CHECK:    br i1 [[CMP]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
 // CHECK:       [[OMP_INNER_FOR_BODY]]:
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_]], align 4
-// CHECK:    switch i32 [[TMP10]], [[DOTOMP_SECTIONS_EXIT:label %.*]] [
-// CHECK:      i32 0, [[DOTOMP_SECTIONS_CASE:label %.*]]
-// CHECK:      i32 1, [[DOTOMP_SECTIONS_CASE1:label %.*]]
+// CHECK:    switch i32 [[TMP10]], label %[[DOTOMP_SECTIONS_EXIT:.*]] [
+// CHECK:      i32 0, label %[[DOTOMP_SECTIONS_CASE:.*]]
+// CHECK:      i32 1, label %[[DOTOMP_SECTIONS_CASE1:.*]]
 // CHECK:    ]
-// CHECK:       [[_OMP_SECTIONS_CASE:.*:]]
+// CHECK:       [[DOTOMP_SECTIONS_CASE]]:
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP11:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:    [[TMP12:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
 // CHECK:    store i32 [[ADD]], ptr [[SUM:%.*]], align 4
-// CHECK:    br [[DOTOMP_SECTIONS_EXIT]]
-// CHECK:       [[_OMP_SECTIONS_CASE1:.*:]]
+// CHECK:    br label %[[DOTOMP_SECTIONS_EXIT]]
+// CHECK:       [[DOTOMP_SECTIONS_CASE1]]:
 // CHECK:    [[X2:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP13:%.*]] = load i32, ptr [[X2]], align 4
 // CHECK:    [[Y3:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:    [[TMP14:%.*]] = load i32, ptr [[Y3]], align 4
 // CHECK:    [[SUB:%.*]] = sub nsw i32 [[TMP13]], [[TMP14]]
 // CHECK:    store i32 [[SUB]], ptr [[DIFF:%.*]], align 4
-// CHECK:    br [[DOTOMP_SECTIONS_EXIT]]
-// CHECK:       [[_OMP_SECTIONS_EXIT:.*:]]
+// CHECK:    br label %[[DOTOMP_SECTIONS_EXIT]]
+// CHECK:       [[DOTOMP_SECTIONS_EXIT]]:
 // CHECK:    br label %[[OMP_INNER_FOR_INC:.*]]
 // CHECK:       [[OMP_INNER_FOR_INC]]:
 // CHECK:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_]], align 4
@@ -2696,7 +2696,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z20test_nested_parallelv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2707,7 +2707,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z20test_nested_parallelv.omp_outlined.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2837,7 +2837,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z32test_private_individual_bindingsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2855,7 +2855,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z37test_firstprivate_individual_bindingsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2878,7 +2878,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z20test_static_bindingsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2900,7 +2900,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z14test_shadowingv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2950,7 +2950,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z31test_simd_private_then_parallelv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3023,7 +3023,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z24test_lastprivate_bindingv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3078,12 +3078,12 @@ void test_target_map_orig_use_binding() {
 // CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
-// CHECK:    br i1 [[TMP13]], [[DOTOMP_LASTPRIVATE_THEN:label %.*]], [[DOTOMP_LASTPRIVATE_DONE:label %.*]]
-// CHECK:       [[_OMP_LASTPRIVATE_THEN:.*:]]
+// CHECK:    br i1 [[TMP13]], label %[[DOTOMP_LASTPRIVATE_THEN:.*]], label %[[DOTOMP_LASTPRIVATE_DONE:.*]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_THEN]]:
 // CHECK:    [[TMP14:%.*]] = load i32, ptr [[A]], align 4
 // CHECK:    store i32 [[TMP14]], ptr [[X]], align 4
-// CHECK:    br [[DOTOMP_LASTPRIVATE_DONE]]
-// CHECK:       [[_OMP_LASTPRIVATE_DONE:.*:]]
+// CHECK:    br label %[[DOTOMP_LASTPRIVATE_DONE]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_DONE]]:
 // CHECK:    ret void
 //
 //
@@ -3097,7 +3097,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z27test_binding_name_collisionv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3150,7 +3150,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z31test_firstprivate_nontrivial_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3278,7 +3278,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z32test_firstprivate_ref_binding_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3310,7 +3310,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z38test_firstprivate_const_ref_binding_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3342,7 +3342,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z38test_firstprivate_multiple_bindings_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3399,7 +3399,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z36test_firstprivate_with_destructor_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3449,7 +3449,7 @@ void test_target_map_orig_use_binding() {
 // CHECK:    store i32 [[V]], ptr [[V_ADDR:%.*]], align 4
 // CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_WITHDTOR:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR12:[0-9]+]]
+// CHECK:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR13:[0-9]+]]
 // CHECK:    [[TMP0:%.*]] = load i32, ptr [[V_ADDR]], align 4
 // CHECK:    store i32 [[TMP0]], ptr [[CALL]], align 4
 // CHECK:    store ptr [[CALL]], ptr [[PTR]], align 8
@@ -3480,7 +3480,7 @@ void test_target_map_orig_use_binding() {
 // CHECK:    store ptr [[OTHER]], ptr [[OTHER_ADDR:%.*]], align 8
 // CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_WITHDTOR:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR12]]
+// CHECK:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR13]]
 // CHECK:    [[TMP0:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META18]], !align [[META131]]
 // CHECK:    [[PTR2:%.*]] = getelementptr inbounds nuw [[STRUCT_WITHDTOR]], ptr [[TMP0]], i32 0, i32 0
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[PTR2]], align 8
@@ -3500,7 +3500,7 @@ void test_target_map_orig_use_binding() {
 // CHECK:    [[ISNULL:%.*]] = icmp eq ptr [[TMP0]], null
 // CHECK:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // CHECK:       [[DELETE_NOTNULL]]:
-// CHECK:    call void @_ZdlPvm(ptr noundef [[TMP0]], i64 noundef 4) #[[ATTR13:[0-9]+]]
+// CHECK:    call void @_ZdlPvm(ptr noundef [[TMP0]], i64 noundef 4) #[[ATTR14:[0-9]+]]
 // CHECK:    br label %[[DELETE_END]]
 // CHECK:       [[DELETE_END]]:
 // CHECK:    ret void
@@ -3562,7 +3562,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z35test_firstprivate_array_bindings_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(24) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(24) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3625,7 +3625,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z34test_firstprivate_nested_struct_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3746,7 +3746,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z46test_firstprivate_ref_binding_both_bindings_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3788,7 +3788,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z52test_firstprivate_const_ref_binding_both_bindings_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3884,7 +3884,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z24test_parallel_for_linearv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3949,13 +3949,13 @@ void test_target_map_orig_use_binding() {
 // CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
-// CHECK:    br i1 [[TMP17]], [[DOTOMP_LINEAR_PU:label %.*]], [[DOTOMP_LINEAR_PU_DONE:label %.*]]
-// CHECK:       [[_OMP_LINEAR_PU:.*:]]
+// CHECK:    br i1 [[TMP17]], label %[[DOTOMP_LINEAR_PU:.*]], label %[[DOTOMP_LINEAR_PU_DONE:.*]]
+// CHECK:       [[DOTOMP_LINEAR_PU]]:
 // CHECK:    [[X6:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP18:%.*]] = load i32, ptr [[A]], align 4
 // CHECK:    store i32 [[TMP18]], ptr [[X6]], align 4
-// CHECK:    br [[DOTOMP_LINEAR_PU_DONE]]
-// CHECK:       [[_OMP_LINEAR_PU_DONE:.*:]]
+// CHECK:    br label %[[DOTOMP_LINEAR_PU_DONE]]
+// CHECK:       [[DOTOMP_LINEAR_PU_DONE]]:
 // CHECK:    call void @__kmpc_barrier(ptr @[[GLOB7]], i32 [[TMP4]])
 // CHECK:    ret void
 //
@@ -3970,7 +3970,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z25test_taskloop_lastprivatev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4002,7 +4002,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_privates_map..34(
-// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK-SAME: ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -4014,7 +4014,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..35(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -4081,17 +4081,17 @@ void test_target_map_orig_use_binding() {
 // CHECK:       [[OMP_INNER_FOR_END_I]]:
 // CHECK:    [[TMP31:%.*]] = load i32, ptr [[DOTLITER__ADDR_I]], align 4, !noalias [[META143]]
 // CHECK:    [[TMP32:%.*]] = icmp ne i32 [[TMP31]], 0
-// CHECK:    br i1 [[TMP32]], [[DOTOMP_LASTPRIVATE_THEN_I:label %.*]], [[DOTOMP_OUTLINED__33_EXIT:label %.*]]
-// CHECK:       [[_OMP_LASTPRIVATE_THEN_I:.*:]]
+// CHECK:    br i1 [[TMP32]], label %[[DOTOMP_LASTPRIVATE_THEN_I:.*]], label %[[DOTOMP_OUTLINED__33_EXIT:.*]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_THEN_I]]:
 // CHECK:    [[TMP33:%.*]] = load i32, ptr [[TMP23]], align 4
 // CHECK:    store i32 [[TMP33]], ptr [[TMP22]], align 4
-// CHECK:    br [[DOTOMP_OUTLINED__33_EXIT]]
-// CHECK:       [[_OMP_OUTLINED__33_EXIT:.*:]]
+// CHECK:    br label %[[DOTOMP_OUTLINED__33_EXIT]]
+// CHECK:       [[DOTOMP_OUTLINED__33_EXIT]]:
 // CHECK:    ret i32 0
 //
 //
 // CHECK-LABEL: define internal void @.omp_task_dup.(
-// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], i32 noundef [[TMP2:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], i32 noundef [[TMP2:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -4115,7 +4115,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z16test_task_sharedv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4135,7 +4135,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal noundef i32 @.omp_task_entry..37(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 [[TMP0]], ptr [[DOTADDR:%.*]], align 4
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
@@ -4171,7 +4171,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z42test_parallel_for_firstprivate_lastprivatev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4229,12 +4229,12 @@ void test_target_map_orig_use_binding() {
 // CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
-// CHECK:    br i1 [[TMP14]], [[DOTOMP_LASTPRIVATE_THEN:label %.*]], [[DOTOMP_LASTPRIVATE_DONE:label %.*]]
-// CHECK:       [[_OMP_LASTPRIVATE_THEN:.*:]]
+// CHECK:    br i1 [[TMP14]], label %[[DOTOMP_LASTPRIVATE_THEN:.*]], label %[[DOTOMP_LASTPRIVATE_DONE:.*]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_THEN]]:
 // CHECK:    [[TMP15:%.*]] = load i32, ptr [[A]], align 4
 // CHECK:    store i32 [[TMP15]], ptr [[X1]], align 4
-// CHECK:    br [[DOTOMP_LASTPRIVATE_DONE]]
-// CHECK:       [[_OMP_LASTPRIVATE_DONE:.*:]]
+// CHECK:    br label %[[DOTOMP_LASTPRIVATE_DONE]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_DONE]]:
 // CHECK:    call void @__kmpc_barrier(ptr @[[GLOB7]], i32 [[TMP4]])
 // CHECK:    ret void
 //
@@ -4249,7 +4249,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z29test_shared_plus_firstprivatev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4276,7 +4276,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z28test_shared_plus_lastprivatev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4333,12 +4333,12 @@ void test_target_map_orig_use_binding() {
 // CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
-// CHECK:    br i1 [[TMP14]], [[DOTOMP_LASTPRIVATE_THEN:label %.*]], [[DOTOMP_LASTPRIVATE_DONE:label %.*]]
-// CHECK:       [[_OMP_LASTPRIVATE_THEN:.*:]]
+// CHECK:    br i1 [[TMP14]], label %[[DOTOMP_LASTPRIVATE_THEN:.*]], label %[[DOTOMP_LASTPRIVATE_DONE:.*]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_THEN]]:
 // CHECK:    [[TMP15:%.*]] = load i32, ptr [[B]], align 4
 // CHECK:    store i32 [[TMP15]], ptr [[Y]], align 4
-// CHECK:    br [[DOTOMP_LASTPRIVATE_DONE]]
-// CHECK:       [[_OMP_LASTPRIVATE_DONE:.*:]]
+// CHECK:    br label %[[DOTOMP_LASTPRIVATE_DONE]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_DONE]]:
 // CHECK:    ret void
 //
 //
@@ -4354,7 +4354,7 @@ void test_target_map_orig_use_binding() {
 //
 //
 // CHECK-LABEL: define internal void @_Z29test_private_plus_lastprivatev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR4]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4410,12 +4410,12 @@ void test_target_map_orig_use_binding() {
 // CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
-// CHECK:    br i1 [[TMP14]], [[DOTOMP_LASTPRIVATE_THEN:label %.*]], [[DOTOMP_LASTPRIVATE_DONE:label %.*]]
-// CHECK:       [[_OMP_LASTPRIVATE_THEN:.*:]]
+// CHECK:    br i1 [[TMP14]], label %[[DOTOMP_LASTPRIVATE_THEN:.*]], label %[[DOTOMP_LASTPRIVATE_DONE:.*]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_THEN]]:
 // CHECK:    [[TMP15:%.*]] = load i32, ptr [[B]], align 4
 // CHECK:    store i32 [[TMP15]], ptr [[Y]], align 4
-// CHECK:    br [[DOTOMP_LASTPRIVATE_DONE]]
-// CHECK:       [[_OMP_LASTPRIVATE_DONE:.*:]]
+// CHECK:    br label %[[DOTOMP_LASTPRIVATE_DONE]]
+// CHECK:       [[DOTOMP_LASTPRIVATE_DONE]]:
 // CHECK:    ret void
 //
 //
