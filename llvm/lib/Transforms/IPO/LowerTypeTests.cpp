@@ -1650,6 +1650,19 @@ void LowerTypeTestsModule::createJumpTable(
                                    ConstantAsMetadata::get(ConstantInt::get(
                                        Int64Ty, JumpTableEntrySize))}));
 
+  // The jump table is an artificial function without profile data. Jump tables
+  // with hot entries are expected to be placed in hot sections. Profile
+  // information is not available at this point, so we cannot analyze entry
+  // counts to make a more deliberate decision. However, large cold jump tables
+  // are unlikely (more entries make it more likely that some are hot), and
+  // small cold jump tables will not make much difference in section overhead.
+  // Therefore, mark the jump table hot whenever profile summary is present.
+  if (M.getProfileSummary(/*IsCS=*/false) ||
+      M.getProfileSummary(/*IsCS=*/true)) {
+    F->addFnAttr(Attribute::Hot);
+    F->setSectionPrefix("hot");
+  }
+
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
 
