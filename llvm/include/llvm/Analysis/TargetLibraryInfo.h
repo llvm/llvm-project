@@ -249,6 +249,9 @@ public:
   /// This queries the 'wchar_size' metadata.
   LLVM_ABI unsigned getWCharSize(const Module &M) const;
 
+  /// Returns the size of the default wchar_t type in bytes.
+  LLVM_ABI unsigned getDefaultWCharSize(const Module &M) const;
+
   /// Returns the size of the size_t type in bits.
   LLVM_ABI unsigned getSizeTSize(const Module &M) const;
 
@@ -569,6 +572,11 @@ public:
   /// \copydoc TargetLibraryInfoImpl::getWCharSize()
   unsigned getWCharSize(const Module &M) const {
     return Impl->getWCharSize(M);
+  }
+
+  /// \copydoc TargetLibraryInfoImpl::getDefaultWCharSize()
+  unsigned getDefaultWCharSize(const Module &M) const {
+    return Impl->getDefaultWCharSize(M);
   }
 
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()
