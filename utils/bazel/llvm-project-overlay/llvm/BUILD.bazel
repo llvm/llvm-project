@@ -1992,6 +1992,7 @@ cc_library(
         ":Core",
         ":MC",
         ":Support",
+        ":TargetParser",
     ],
 )
 
