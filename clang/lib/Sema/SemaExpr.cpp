@@ -2549,7 +2549,7 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
 }
 
 // Diagnose when a macro cannot be expanded because it's a function-like macro
-// being used as an object-like macro. Returns true if a diagnostic is emitted.
+// being used as a function-like macro. Returns true if a diagnostic is emitted.
 static bool diagnoseFunctionLikeMacro(Sema &SemaRef, DeclarationName Name,
                                       SourceLocation TypoLoc) {
 
@@ -2557,6 +2557,17 @@ static bool diagnoseFunctionLikeMacro(Sema &SemaRef, DeclarationName Name,
     if (II->hasMacroDefinition()) {
       MacroInfo *MI = SemaRef.PP.getMacroInfo(II);
       if (MI && MI->isFunctionLike()) {
+        // If the identifier is immediately followed by '(', the user did
+        // attempt to invoke it as a function-like macro; the failure is
+        // for some other reason (e.g. wrong argument count), which the
+        // preprocessor already diagnosed separately. Don't suggest adding
+        // parens in that case, since they're already there.
+        SourceManager &SM = SemaRef.getSourceManager();
+        const LangOptions &LangOpts = SemaRef.getLangOpts();
+        std::optional<Token> NextTok =
+            Lexer::findNextToken(TypoLoc, SM, LangOpts);
+        if (NextTok && NextTok->is(tok::l_paren))
+          return false;
         SemaRef.Diag(TypoLoc,
                      diag::err_undeclared_var_use_suggest_func_like_macro)
             << II->getName();

@@ -133,8 +133,7 @@ void test_NE() {
 // CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{110:9-110:9}:"("
 // CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{110:32-110:32}:")"
 
-#define INIT(var, init) Foo var = init; // expected-note 3{{macro 'INIT' defined here}}
-// expected-note@-1 2{{'INIT' defined here as a function-like macro}}
+#define INIT(var, init) Foo var = init; // expected-note 3{{defined here}}
 // Can't use an initializer list as a macro argument.  The commas in the list
 // will be interpretted as argument separaters and adding parenthesis will
 // make it no longer an initializer list.
@@ -150,23 +149,22 @@ void test() {
   // Can't be fixed by parentheses.
   INIT(e, {1, 2, 3});
   // expected-error@-1 {{too many arguments provided}}
-  // expected-error@-2 {{'INIT' is defined as an object-like macro; did you mean 'INIT(...)'?}}
+  // expected-error@-2 {{use of undeclared identifier}}
   // expected-note@-3 {{cannot use initializer list at the beginning of a macro argument}}
 
   // Can't be fixed by parentheses.
   INIT(e, {1, 2, 3} + {1, 2, 3});
   // expected-error@-1 {{too many arguments provided}}
-  // expected-error@-2 {{'INIT' is defined as an object-like macro; did you mean 'INIT(...)'?}}
+  // expected-error@-2 {{use of undeclared identifier}}
   // expected-note@-3 {{cannot use initializer list at the beginning of a macro argument}}
 }
 
-// CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{146:11-146:11}:"("
-// CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{146:23-146:23}:")"
+// CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{145:11-145:11}:"("
+// CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{145:23-145:23}:")"
 
 #define M(name,a,b,c,d,e,f,g,h,i,j,k,l) \
   Foo name = a + b + c + d + e + f + g + h + i + j + k + l;
 // expected-note@-2 2{{defined here}}
-// expected-note@-3 {{'M' defined here as a function-like macro}}
 void test2() {
   M(F1, Foo(), Foo(), Foo(), Foo(), Foo(), Foo(),
         Foo(), Foo(), Foo(), Foo(), Foo(), Foo());
@@ -179,6 +177,6 @@ void test2() {
   M(F3, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3},
         {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3});
   // expected-error@-2 {{too many arguments provided}}
-  // expected-error@-3 {{'M' is defined as an object-like macro; did you mean 'M(...)'?}}
+  // expected-error@-3 {{use of undeclared identifier}}
   // expected-note@-4 {{cannot use initializer list at the beginning of a macro argument}}
 }
