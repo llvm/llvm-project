@@ -1,5 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -mtriple=amdgpu10.10-amd-amdhsa \
+; RUN:   -passes=amdgpu-uniform-intrinsic-combine -S < %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu10.10-amd-amdhsa \
 ; RUN:   -passes='amdgpu-uniform-intrinsic-combine,reassociate' \
 ; RUN:   -verify-analysis-invalidation -disable-output < %s
 
@@ -10,12 +12,20 @@ declare i64 @llvm.amdgcn.ballot.i64(i1)
 
 ; The pass must report a change when erasing an already unused ballot.
 define amdgpu_kernel void @erase_unused_ballot() {
+; CHECK-LABEL: define amdgpu_kernel void @erase_unused_ballot()
+; CHECK-NOT: call i64 @llvm.amdgcn.ballot
+; CHECK: ret void
 entry:
   %mask = call i64 @llvm.amdgcn.ballot.i64(i1 false)
   ret void
 }
 
 define amdgpu_kernel void @invalidate_uniformity_info() {
+; CHECK-LABEL: define amdgpu_kernel void @invalidate_uniformity_info()
+; CHECK: ballot:
+; CHECK-NEXT: %[[MASK:.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 false)
+; CHECK-NEXT: %[[NOT:.*]] = xor i1 false, true
+; CHECK-NEXT: %none.active = icmp eq i64 %[[MASK]], 0
 entry:
   %base = mul i32 0, 0
   %factor = zext i16 0 to i32
