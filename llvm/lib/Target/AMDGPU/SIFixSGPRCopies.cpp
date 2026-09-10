@@ -457,7 +457,7 @@ getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
 // This is intended to combine M0 initializations, but can work with any
 // SGPR. A VGPR cannot be processed since we cannot guarantee vector
 // executioon.
-static bool hoistAndMergeSGPRInits(unsigned Reg, MachineFunction &MF,
+static bool hoistAndMergeSGPRInits(unsigned Reg, ArrayRef<MachineInstr *> Calls,
                                    const MachineRegisterInfo &MRI,
                                    const TargetRegisterInfo *TRI,
                                    MachineDominatorTree &MDT,
@@ -469,13 +469,10 @@ static bool hoistAndMergeSGPRInits(unsigned Reg, MachineFunction &MF,
   SmallVector<MachineInstr*, 8> Clobbers;
   // List of instructions marked for deletion.
   SmallPtrSet<MachineInstr *, 8> MergedInstrs;
-  // Instructions already classified as an init or a clobber.
-  SmallPtrSet<MachineInstr *, 16> Classified;
 
   bool Changed = false;
 
   for (MachineInstr &MI : MRI.def_instructions(Reg)) {
-    Classified.insert(&MI);
     MachineOperand *Imm = nullptr;
     for (MachineOperand &MO : MI.operands()) {
       if ((MO.isReg() && ((MO.isDef() && MO.getReg() != Reg) || !MO.isDef())) ||
@@ -492,15 +489,11 @@ static bool hoistAndMergeSGPRInits(unsigned Reg, MachineFunction &MF,
       Clobbers.push_back(&MI);
   }
 
-  if (Inits.empty())
-    return false;
-
   // Calls clobber Reg with a regmask operand instead of an explicit def, so
-  // they do not appear on the def list of Reg.
-  for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &MI : MBB)
-      if (!Classified.contains(&MI) && MI.modifiesRegister(Reg, TRI))
-        Clobbers.push_back(&MI);
+  // they are not on the def list of Reg.
+  for (MachineInstr *MI : Calls)
+    if (MI->modifiesRegister(Reg, TRI))
+      Clobbers.push_back(MI);
 
   for (auto &Init : Inits) {
     auto &Defs = Init.second;
@@ -650,11 +643,17 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
   // Instructions to re-legalize after changing register classes
   SmallVector<MachineInstr *, 8> Relegalize;
+  SmallVector<MachineInstr *, 4> Calls;
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
+
+      // Record calls while walking the function so that hoistAndMergeSGPRInits
+      // can find the registers they clobber through their regmask operand.
+      if (MI.isCall())
+        Calls.push_back(&MI);
 
       switch (MI.getOpcode()) {
       default:
@@ -824,7 +823,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
     TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
 
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
-    hoistAndMergeSGPRInits(AMDGPU::M0, MF, *MRI, TRI, *MDT, TII);
+    hoistAndMergeSGPRInits(AMDGPU::M0, Calls, *MRI, TRI, *MDT, TII);
 
   SiblingPenalty.clear();
   V2SCopies.clear();
