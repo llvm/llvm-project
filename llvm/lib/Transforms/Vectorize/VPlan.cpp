@@ -2000,3 +2000,18 @@ bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
                        Intrinsic::experimental_noalias_scope_decl},
                       ID);
 }
+
+uint64_t VPCostContext::getReplicateRegionCostDivisor(
+    const VPRegionBlock *Region) const {
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+  std::optional<VPExecutionFrequency> Freq =
+      Region->getEntryBranchOnMask()->getExecutionFrequency();
+  if (!Freq)
+    return 1;
+  // A recorded frequency is neither zero nor always-executing, so the
+  // probability is non-zero and the division below is safe.
+  return divideNearest(
+      BranchProbability::getDenominator(),
+      vputils::getExecutionProbability(Freq->Freq).getNumerator());
+}

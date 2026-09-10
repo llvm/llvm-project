@@ -3755,9 +3755,13 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 //===----------------------------------------------------------------------===//
 
 std::string NVVM::MBarrierInitOp::getPtx() {
-  bool isShared = isPtrInSharedCTASpace(getAddr());
-  return isShared ? std::string("mbarrier.init.shared.b64 [%0], %1;")
-                  : std::string("mbarrier.init.b64 [%0], %1;");
+  std::string space = isPtrInSharedCTASpace(getAddr()) ? ".shared" : "";
+  // Layout v0 is the default, so it is emitted as a plain mbarrier.init.
+  std::string layout =
+      getLayout() == 1 ? std::string(".layout::v1") : std::string();
+
+  return llvm::formatv("mbarrier.init{0}{1}.b64 [%0], %1;", layout, space)
+      .str();
 }
 
 std::string NVVM::MBarrierArriveExpectTxOp::getPtx() {
@@ -4081,19 +4085,28 @@ PMEventOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   return {llvm::Intrinsic::nvvm_pm_event_mask, {maskVal}};
 }
 
+bool MBarrierInitOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  // Add all the operands but not the attrs to the asmValues list.
+  // The layout attr is already baked into the PTX string by getPtx(), so
+  // passing it along here too would shift the operand numbering.
+  for (auto val : getOperands())
+    asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
+
+  return false;
+}
+
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierInitOp>(op);
-  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
-  llvm::Intrinsic::ID id = isShared ? llvm::Intrinsic::nvvm_mbarrier_init_shared
-                                    : llvm::Intrinsic::nvvm_mbarrier_init;
 
-  // Fill the Intrinsic Args
-  llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(thisOp.getAddr()));
-  args.push_back(mt.lookupValue(thisOp.getCount()));
-
-  return {id, std::move(args)};
+  // The intrinsic is overloaded on the mbarrier pointer, so the address space
+  // selects the generic or shared::cta form on its own.
+  return {llvm::Intrinsic::nvvm_mbarrier_init,
+          {mt.lookupValue(thisOp.getAddr()), mt.lookupValue(thisOp.getCount()),
+           builder.getInt32(thisOp.getLayout())}};
 }
 
 mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
@@ -4105,6 +4118,15 @@ mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
                                : llvm::Intrinsic::nvvm_mbarrier_inval;
 
   return {id, {mt.lookupValue(thisOp.getAddr())}};
+}
+
+mlir::NVVM::IDArgPair MBarrierCheckLayoutOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierCheckLayoutOp>(op);
+
+  return {
+      llvm::Intrinsic::nvvm_mbarrier_check_layout,
+      {mt.lookupValue(thisOp.getAddr()), builder.getInt32(thisOp.getLayout())}};
 }
 
 mlir::NVVM::IDArgPair MBarrierExpectTxOp::getIntrinsicIDAndArgs(
@@ -4637,6 +4659,9 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   llvm::Value *cg =
       llvm::ConstantInt::get(llvm::Type::getInt32Ty(mt.getLLVMContext()), val);
 
+  // validate_pattern = disabled
+  llvm::Value *validatePattern = builder.getInt32(0);
+
   if (!isCTAOnly) {
     // For shared::cluster, all the arguments that we build are applicable.
     args.push_back(hasMC ? mt.lookupValue(mcMask) : i16Zero);
@@ -4644,10 +4669,12 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
     args.push_back(builder.getInt1(hasMC));
     args.push_back(builder.getInt1(hasCacheHint));
     args.push_back(cg);
+    args.push_back(validatePattern);
   } else {
     // For shared::cta, only cache-hint is applicable.
     args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
     args.push_back(builder.getInt1(hasCacheHint));
+    args.push_back(validatePattern);
   }
 
   constexpr size_t numDims = 5;  // 1D to 5D
@@ -5505,38 +5532,29 @@ NVVM::IDArgPair ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(
   return {ids[idx], std::move(args)};
 }
 
-llvm::Intrinsic::ID
-Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
-                                      LLVM::ModuleTranslation &mt,
-                                      llvm::SmallVector<llvm::Value *> &args) {
+mlir::NVVM::IDArgPair Tcgen05AllocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
                                       : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
 
-  // Fill the Intrinsic Args
-  args.push_back(mt.lookupValue(curOp.getAddr()));
-  args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
-
-  return id;
+  return {id,
+          {mt.lookupValue(curOp.getAddr()), mt.lookupValue(curOp.getNCols()),
+           builder.getInt1(curOp.getIsExclusive())}};
 }
 
-llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
-    Operation &op, LLVM::ModuleTranslation &mt,
-    llvm::SmallVector<llvm::Value *> &args) {
+mlir::NVVM::IDArgPair Tcgen05DeallocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
-  auto id = (curOp.getGroup() == CTAGroupKind::CTA_1)
-                ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
-                : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
+  llvm::Intrinsic::ID id = (curOp.getGroup() == CTAGroupKind::CTA_1)
+                               ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
+                               : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
 
-  // Fill the Intrinsic Args
-  args.push_back(mt.lookupValue(curOp.getTaddr()));
-  args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
-
-  return id;
+  return {id,
+          {mt.lookupValue(curOp.getTaddr()), mt.lookupValue(curOp.getNCols()),
+           builder.getInt1(curOp.getIsExclusive())}};
 }
 
 llvm::Intrinsic::ID
@@ -7148,9 +7166,14 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const unsigned targetFullSmVersion =
+  std::optional<unsigned> targetFullSmVersion =
       NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
-  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
+  if (!targetFullSmVersion)
+    return emitError(gpuModule->getLoc())
+           << "invalid NVVM target chip \"" << getChip()
+           << "\", expected sm_<version>[a|f]";
+
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(*targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -7160,7 +7183,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
+              if (!requirement.isCompatibleWith(*targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }
