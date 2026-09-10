@@ -8,7 +8,7 @@
 
 @g = external global i64
 
-define void @f(i64 noundef %x) {
+define void @test_coerced_value_not_numbered(i64 noundef %x) {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: i64 noundef [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
