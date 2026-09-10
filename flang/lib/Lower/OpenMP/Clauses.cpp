@@ -319,7 +319,9 @@ MAKE_INCOMPLETE_CLASS(Interop, Interop);
 MAKE_INCOMPLETE_CLASS(Local, Local);
 MAKE_INCOMPLETE_CLASS(Memscope, Memscope);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
+MAKE_INCOMPLETE_CLASS(ReductionKind, ReductionKind);
 MAKE_INCOMPLETE_CLASS(Safesync, Safesync);
+MAKE_INCOMPLETE_CLASS(Shift, Shift);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
 List<IteratorSpecifier>
