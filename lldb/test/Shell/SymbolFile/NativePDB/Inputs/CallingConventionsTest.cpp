@@ -1,3 +1,4 @@
+// clang-format off
 int FuncCCall() { return 0; }
 auto FuncCCallPtr = &FuncCCall;
 

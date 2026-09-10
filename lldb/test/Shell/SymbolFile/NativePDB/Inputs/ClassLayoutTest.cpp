@@ -79,9 +79,7 @@ public:
   explicit Class(int a) { m_public = a; } // Test first reference of m_public.
   ~Class() {}
 
-  static int StaticMemberFunc(int a, ...) {
-    return 1;
-  } // Test static member function.
+  static int StaticMemberFunc(int a, ...) { return 1; } // Test static member function.
   int Get() { return 1; }
   int f(Friend c) { return c.f(); }
   inline bool operator==(const Class &rhs) const // Test operator.

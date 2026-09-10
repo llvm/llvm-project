@@ -1,5 +1,5 @@
-breakpoint set --file VariablesLocationsTest.cpp --line 6
-breakpoint set --file VariablesLocationsTest.cpp --line 15
+breakpoint set --file VariablesLocationsTest.cpp --line 7
+breakpoint set --file VariablesLocationsTest.cpp --line 16
 
 run
 
