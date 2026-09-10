@@ -58,6 +58,9 @@ enum class InfoKind : uint8_t {
   /// string (at the given `.amdgpu.strtab` offset) so the linker can match
   /// it against INFO_INDIRECT_CALL entries.  [u32]
   INFO_TYPEID = 10,
+  /// Occupancy used to compile the function.
+  /// [u32]
+  INFO_OCCUPANCY = 11,
 };
 
 /// Per-function flags packed into INFO_FLAGS entries.
