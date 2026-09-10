@@ -31,6 +31,17 @@ struct CallableTool {
   explicit operator bool() const { return Main != nullptr; }
 };
 
+/// Configures process-wide behavior owned by an LLVM tool session.
+struct LLVMToolSessionOptions {
+  /// Prefer a registered in-process tool even when its executable is not an
+  /// alias of the session executable. This is useful for hosts whose tools do
+  /// not exist as separate files, such as browser applications.
+  bool PreferInProcessTools = false;
+
+  bool InstallPipeSignalExitHandler = true;
+  bool NeedsPOSIXUtilitySignalHandling = false;
+};
+
 /// Describes how a tool was invoked and provides access to its host session.
 class ToolContext {
   LLVMToolSession *Session = nullptr;
@@ -55,6 +66,14 @@ public:
 
   /// Invokes another tool registered with the same host session.
   LLVM_ABI int callTool(ArrayRef<const char *> Args) const;
+
+  /// Returns true when Executable names a registered tool owned by this host.
+  /// A tool is owned when it is an alias of the session executable or when the
+  /// session explicitly prefers its registered in-process tools.
+  LLVM_ABI bool canExecuteInProcess(StringRef Executable) const;
+
+  /// Returns true when this invocation is owned by a long-lived tool session.
+  bool isInProcess() const { return Session != nullptr; }
 };
 
 /// Owns LLVM process initialization and an in-process tool registry.
@@ -65,8 +84,7 @@ public:
 class LLVM_ABI LLVMToolSession {
 public:
   LLVMToolSession(int &Argc, char **&Argv, ArrayRef<CallableTool> Tools,
-                  bool InstallPipeSignalExitHandler = true,
-                  bool NeedsPOSIXUtilitySignalHandling = false);
+                  LLVMToolSessionOptions Options = {});
   ~LLVMToolSession();
 
   LLVMToolSession(const LLVMToolSession &) = delete;
@@ -82,6 +100,7 @@ private:
   std::unique_ptr<Impl> PImpl;
 
   ErrorOr<CallableTool> findTool(StringRef Name) const;
+  bool canExecuteInProcess(StringRef Executable) const;
   ToolContext makeContext(StringRef InvokedName);
 
   friend class ToolContext;

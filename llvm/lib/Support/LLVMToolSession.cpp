@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 
@@ -41,12 +42,14 @@ struct LLVMToolSession::Impl {
   InitLLVM Initialization;
   std::string ExecutablePath;
   std::vector<std::pair<std::string, ToolMainFn>> Tools;
+  bool PreferInProcessTools;
 
   Impl(int &Argc, char **&Argv, ArrayRef<CallableTool> RegisteredTools,
-       bool InstallPipeSignalExitHandler, bool NeedsPOSIXUtilitySignalHandling)
-      : Initialization(Argc, Argv, InstallPipeSignalExitHandler,
-                       NeedsPOSIXUtilitySignalHandling),
-        ExecutablePath(Argv[0]) {
+       LLVMToolSessionOptions Options)
+      : Initialization(Argc, Argv, Options.InstallPipeSignalExitHandler,
+                       Options.NeedsPOSIXUtilitySignalHandling),
+        ExecutablePath(Argv[0]),
+        PreferInProcessTools(Options.PreferInProcessTools) {
     Tools.reserve(RegisteredTools.size());
     for (const CallableTool &Tool : RegisteredTools)
       Tools.emplace_back(Tool.Name.str(), Tool.Main);
@@ -55,11 +58,8 @@ struct LLVMToolSession::Impl {
 
 LLVMToolSession::LLVMToolSession(int &Argc, char **&Argv,
                                  ArrayRef<CallableTool> Tools,
-                                 bool InstallPipeSignalExitHandler,
-                                 bool NeedsPOSIXUtilitySignalHandling)
-    : PImpl(std::make_unique<Impl>(Argc, Argv, Tools,
-                                   InstallPipeSignalExitHandler,
-                                   NeedsPOSIXUtilitySignalHandling)) {}
+                                 LLVMToolSessionOptions Options)
+    : PImpl(std::make_unique<Impl>(Argc, Argv, Tools, Options)) {}
 
 LLVMToolSession::~LLVMToolSession() = default;
 
@@ -68,6 +68,18 @@ ErrorOr<CallableTool> LLVMToolSession::findTool(StringRef Name) const {
     if (matchesToolName(RegisteredName, Name))
       return CallableTool{RegisteredName, Main};
   return make_error_code(std::errc::no_such_file_or_directory);
+}
+
+bool LLVMToolSession::canExecuteInProcess(StringRef Executable) const {
+  if (!findTool(Executable))
+    return false;
+  if (PImpl->PreferInProcessTools)
+    return true;
+
+  bool IsSessionExecutable = false;
+  return !sys::fs::equivalent(PImpl->ExecutablePath, Executable,
+                              IsSessionExecutable) &&
+         IsSessionExecutable;
 }
 
 ToolContext LLVMToolSession::makeContext(StringRef InvokedName) {
@@ -116,4 +128,8 @@ int ToolContext::callTool(ArrayRef<const char *> Args) const {
   if (!Session)
     return -1;
   return Session->callTool(Args);
+}
+
+bool ToolContext::canExecuteInProcess(StringRef Executable) const {
+  return Session && Session->canExecuteInProcess(Executable);
 }

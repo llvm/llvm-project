@@ -387,6 +387,15 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
 
+  // Prefer subtools owned by the embedding host over spawning subprocesses.
+  // Integrated cc1 jobs already have their own in-process execution path.
+  for (Command &Job : C->getJobs()) {
+    if (Job.InProcess)
+      continue;
+    if (ToolContext.canExecuteInProcess(Job.getExecutable()))
+      Job.setInProcessToolContext(ToolContext);
+  }
+
   Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
   if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
     auto Level =

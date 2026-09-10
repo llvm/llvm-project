@@ -23,7 +23,10 @@ int linkerMain(int Argc, char **Argv, const ToolContext &Context) {
   ++LinkerCalls;
   EXPECT_EQ(Argc, 3);
   EXPECT_STREQ(Argv[0], "wasm-ld");
+  EXPECT_TRUE(Context.isInProcess());
   EXPECT_TRUE(Context.getCallableTool("clang"));
+  EXPECT_TRUE(Context.canExecuteInProcess("clang"));
+  EXPECT_FALSE(Context.canExecuteInProcess("not-an-llvm-tool"));
   return 0;
 }
 
@@ -57,7 +60,9 @@ int main(int Argc, char **Argv) {
       {"clang", compilerMain},
       {"wasm-ld", linkerMain},
   };
-  Session = std::make_unique<LLVMToolSession>(Argc, Argv, Tools);
+  LLVMToolSessionOptions Options;
+  Options.PreferInProcessTools = true;
+  Session = std::make_unique<LLVMToolSession>(Argc, Argv, Tools, Options);
   testing::InitGoogleTest(&Argc, Argv);
   int Result = RUN_ALL_TESTS();
   Session.reset();

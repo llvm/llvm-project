@@ -24,6 +24,10 @@
 #include <utility>
 #include <vector>
 
+namespace llvm {
+class ToolContext;
+}
+
 namespace clang {
 namespace driver {
 
@@ -151,6 +155,9 @@ class Command {
   /// Information on executable run provided by OS.
   mutable std::optional<llvm::sys::ProcessStatistics> ProcStat;
 
+  /// The host context used to invoke this command without spawning a process.
+  const llvm::ToolContext *InProcessToolContext = nullptr;
+
   /// The bound architecture for this command (e.g. "arm64", "gfx90a").
   std::string BoundArchStr;
 
@@ -237,6 +244,13 @@ public:
   }
 
   void replaceExecutable(const char *Exe) { Executable = Exe; }
+
+  /// Execute this command through a tool registered with the given host
+  /// context instead of starting a subprocess.
+  void setInProcessToolContext(const llvm::ToolContext &Context) {
+    InProcessToolContext = &Context;
+    InProcess = true;
+  }
 
   const char *getExecutable() const { return Executable; }
 
