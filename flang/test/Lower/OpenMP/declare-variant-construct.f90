@@ -1,8 +1,8 @@
 ! RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s
 
-! DECLARE VARIANT callee resolution with combined/composite construct
-! selectors. The bases and their variants are sibling module procedures, so
+! DECLARE VARIANT callee resolution with construct selectors, including
+! combined/composite selectors. Bases and variants are sibling procedures, so
 ! each variant is accessible at every reference to its base.
 
 module m
@@ -48,6 +48,18 @@ contains
   end subroutine vsub_lo
   subroutine vsub_hi
   end subroutine vsub_hi
+
+  subroutine base_simd
+    !$omp declare variant (vsub_simd) match (construct={simd})
+  end subroutine base_simd
+  subroutine vsub_simd
+  end subroutine vsub_simd
+
+  subroutine base_do_simd
+    !$omp declare variant (vsub_do_simd) match (construct={do, simd})
+  end subroutine base_do_simd
+  subroutine vsub_do_simd
+  end subroutine vsub_do_simd
 
   ! The combined directive selector decomposes to {target, teams}; it matches
   ! only when both constructs enclose the call.
@@ -157,4 +169,47 @@ contains
   subroutine test_score_ranking
     call base_score()
   end subroutine test_score_ranking
+
+  ! Without an enclosing SIMD construct, neither selector matches.
+
+  ! CHECK-LABEL: func.func @_QMmPtest_outside_simd(
+  ! CHECK: fir.call @_QMmPbase_simd()
+  ! CHECK: fir.call @_QMmPbase_do_simd()
+  subroutine test_outside_simd
+    call base_simd()
+    call base_do_simd()
+  end subroutine test_outside_simd
+
+  ! SIMD supplies its construct trait, but not the DO trait.
+
+  ! CHECK-LABEL: func.func @_QMmPtest_inside_simd(
+  ! CHECK: omp.simd
+  ! CHECK: omp.loop_nest
+  ! CHECK: fir.call @_QMmPvsub_simd()
+  ! CHECK: fir.call @_QMmPbase_do_simd()
+  subroutine test_inside_simd(n)
+    integer :: n, i
+    !$omp simd
+    do i = 1, n
+      call base_simd()
+      call base_do_simd()
+    end do
+  end subroutine test_inside_simd
+
+  ! DO SIMD supplies both traits in DO -> SIMD order.
+
+  ! CHECK-LABEL: func.func @_QMmPtest_inside_do_simd(
+  ! CHECK: omp.wsloop
+  ! CHECK: omp.simd
+  ! CHECK: omp.loop_nest
+  ! CHECK: fir.call @_QMmPvsub_simd()
+  ! CHECK: fir.call @_QMmPvsub_do_simd()
+  subroutine test_inside_do_simd(n)
+    integer :: n, i
+    !$omp do simd
+    do i = 1, n
+      call base_simd()
+      call base_do_simd()
+    end do
+  end subroutine test_inside_do_simd
 end module m

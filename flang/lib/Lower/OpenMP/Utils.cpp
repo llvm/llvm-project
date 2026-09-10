@@ -1442,6 +1442,8 @@ void collectEnclosingConstructTraits(
   // be able to match construct={target, parallel}. The final reverse yields
   // outermost-to-innermost order as required by OMPContext.
   for (; op; op = op->getParentOp()) {
+    if (mlir::isa<mlir::omp::SimdOp>(op))
+      constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
     if (mlir::isa<mlir::omp::WsloopOp>(op))
       constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
     if (mlir::isa<mlir::omp::ParallelOp>(op))
