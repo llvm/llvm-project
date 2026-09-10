@@ -1,4 +1,5 @@
 // Texture1D
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture1D -o \
 // RUN:   - %s | FileCheck %s -DTEXTURE=Texture1D

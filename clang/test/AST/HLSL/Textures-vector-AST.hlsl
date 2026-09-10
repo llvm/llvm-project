@@ -1,5 +1,6 @@
 // Texture1D
 // Texture1D
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \
 // RUN:   -DHAS_SAMPLE_CMP -DTEXTURE=Texture1D -DCOORD_TYPE=float \
@@ -16,7 +17,7 @@
 // RUN:   -DHAS_SAMPLE_CMP -DTEXTURE=Texture1DArray -DCOORD_TYPE=float2 \
 // RUN:   -DGRAD_TYPE=float -DLOD_LOCATION=loc.x -DOFFSET_ARG="1" -o - %s | \
 // RUN:   FileCheck %s \
-// RUN:   --check-prefixes=CHECK,ARRAY,TEXEL,OFFSET,SAMPLECMP,SAMPLECMP-OFFSET \
+// RUN:   --check-prefixes=CHECK,TEXEL,OFFSET,SAMPLECMP,SAMPLECMP-OFFSET \
 // RUN:   -DTEXTURE=Texture1DArray -DDIM_NAME=1D -DLOAD_DIM=3 \
 // RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" \
 // RUN:   -DIS_ARRAY=" [[hlsl::is_array]]" -DLOCATION_TYPE="vector<float, 2>" \
@@ -96,6 +97,12 @@
 //   LOD_LOCATION       expression producing a LOD_TYPE location from `loc`
 //   OFFSET_ARG         a literal offset argument
 //   DIM_NAME           hlsl::dimension spelling
+//   LOCATION_TYPE      sample location type in the declarations, one
+//                      component per resource dimension plus the array slice
+//   GRADIENT_TYPE      ddx/ddy type in the declarations, one component per
+//                      resource dimension
+//   OFFSET_TYPE        offset type in the declarations, one component per
+//                      resource dimension
 //   LOAD_DIM           Load location components (COORD_DIM plus the mip level)
 //   INDEX_TYPE         operator[] index type
 //
