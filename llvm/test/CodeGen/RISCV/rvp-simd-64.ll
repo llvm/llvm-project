@@ -7866,3 +7866,253 @@ define i64 @test_pm4addsu_v4i16_i64(<4 x i16> %a, <4 x i16> %b) {
   %r = call i64 @llvm.riscv.pm4addsu.i64.v4i16(<4 x i16> %a, <4 x i16> %b)
   ret i64 %r
 }
+
+; Packed Multiply Parts Accumulate.
+declare <2 x i32> @llvm.riscv.pmacc.00.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmacc.01.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmacc.11.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmaccu.00.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmaccu.01.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmaccu.11.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmaccsu.00.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmaccsu.11.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
+declare i64 @llvm.riscv.macc.00.i64.v2i32(i64, <2 x i32>, <2 x i32>)
+declare i64 @llvm.riscv.macc.01.i64.v2i32(i64, <2 x i32>, <2 x i32>)
+declare i64 @llvm.riscv.macc.11.i64.v2i32(i64, <2 x i32>, <2 x i32>)
+declare i64 @llvm.riscv.maccu.00.i64.v2i32(i64, <2 x i32>, <2 x i32>)
+declare i64 @llvm.riscv.maccu.01.i64.v2i32(i64, <2 x i32>, <2 x i32>)
+declare i64 @llvm.riscv.maccu.11.i64.v2i32(i64, <2 x i32>, <2 x i32>)
+declare i64 @llvm.riscv.maccsu.00.i64.v2i32(i64, <2 x i32>, <2 x i32>)
+declare i64 @llvm.riscv.maccsu.11.i64.v2i32(i64, <2 x i32>, <2 x i32>)
+
+define <2 x i32> @test_pmacc_h00_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmacc_h00_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    macc.h00 a1, a3, a5
+; RV32-NEXT:    macc.h00 a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmacc_h00_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmacc.w.h00 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmacc.00.v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmacc_h01_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmacc_h01_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    macc.h01 a1, a3, a5
+; RV32-NEXT:    macc.h01 a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmacc_h01_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmacc.w.h01 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmacc.01.v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmacc_h11_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmacc_h11_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    macc.h11 a1, a3, a5
+; RV32-NEXT:    macc.h11 a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmacc_h11_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmacc.w.h11 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmacc.11.v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmaccu_h00_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmaccu_h00_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccu.h00 a1, a3, a5
+; RV32-NEXT:    maccu.h00 a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmaccu_h00_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmaccu.w.h00 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmaccu.00.v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmaccu_h01_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmaccu_h01_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccu.h01 a1, a3, a5
+; RV32-NEXT:    maccu.h01 a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmaccu_h01_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmaccu.w.h01 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmaccu.01.v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmaccu_h11_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmaccu_h11_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccu.h11 a1, a3, a5
+; RV32-NEXT:    maccu.h11 a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmaccu_h11_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmaccu.w.h11 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmaccu.11.v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmaccsu_h00_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmaccsu_h00_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccsu.h00 a1, a3, a5
+; RV32-NEXT:    maccsu.h00 a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmaccsu_h00_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmaccsu.w.h00 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmaccsu.00.v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmaccsu_h11_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmaccsu_h11_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccsu.h11 a1, a3, a5
+; RV32-NEXT:    maccsu.h11 a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmaccsu_h11_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmaccsu.w.h11 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmaccsu.11.v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b)
+  ret <2 x i32> %r
+}
+
+define i64 @test_macc_w00_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_macc_w00_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    wmacc a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_macc_w00_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    macc.w00 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.macc.00.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  ret i64 %r
+}
+
+define i64 @test_macc_w01_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_macc_w01_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    wmacc a0, a2, a5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_macc_w01_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    macc.w01 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.macc.01.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  ret i64 %r
+}
+
+define i64 @test_macc_w11_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_macc_w11_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    wmacc a0, a3, a5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_macc_w11_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    macc.w11 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.macc.11.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  ret i64 %r
+}
+
+define i64 @test_maccu_w00_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_maccu_w00_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    wmaccu a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_maccu_w00_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    maccu.w00 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.maccu.00.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  ret i64 %r
+}
+
+define i64 @test_maccu_w01_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_maccu_w01_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    wmaccu a0, a2, a5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_maccu_w01_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    maccu.w01 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.maccu.01.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  ret i64 %r
+}
+
+define i64 @test_maccu_w11_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_maccu_w11_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    wmaccu a0, a3, a5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_maccu_w11_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    maccu.w11 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.maccu.11.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  ret i64 %r
+}
+
+define i64 @test_maccsu_w00_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_maccsu_w00_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    wmaccsu a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_maccsu_w00_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    maccsu.w00 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.maccsu.00.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  ret i64 %r
+}
+
+define i64 @test_maccsu_w11_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_maccsu_w11_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    wmaccsu a0, a3, a5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_maccsu_w11_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    maccsu.w11 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.maccsu.11.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  ret i64 %r
+}

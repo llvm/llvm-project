@@ -23330,20 +23330,19 @@ static SDValue getBT(SDValue Src, SDValue BitNo, const SDLoc &DL, SelectionDAG &
       DAG.MaskedValueIsZero(BitNo, APInt(BitNo.getValueSizeInBits(), 32)))
     Src = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Src);
 
-  // If the operand types disagree, extend the shift amount to match.  Since
+  // If the operand types disagree, adjust the shift amount to match.  Since
   // BT ignores high bits (like shifts) we can use anyextend.
   if (Src.getValueType() != BitNo.getValueType()) {
     // Peek through a mask/modulo operation.
     // TODO: DAGCombine fails to do this as it just checks isTruncateFree, but
     // we probably need a better IsDesirableToPromoteOp to handle this as well.
     if (BitNo.getOpcode() == ISD::AND && BitNo->hasOneUse())
-      BitNo = DAG.getNode(ISD::AND, DL, Src.getValueType(),
-                          DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(),
-                                      BitNo.getOperand(0)),
-                          DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(),
-                                      BitNo.getOperand(1)));
+      BitNo = DAG.getNode(
+          ISD::AND, DL, Src.getValueType(),
+          DAG.getAnyExtOrTrunc(BitNo.getOperand(0), DL, Src.getValueType()),
+          DAG.getAnyExtOrTrunc(BitNo.getOperand(1), DL, Src.getValueType()));
     else
-      BitNo = DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(), BitNo);
+      BitNo = DAG.getAnyExtOrTrunc(BitNo, DL, Src.getValueType());
   }
 
   return DAG.getNode(X86ISD::BT, DL, MVT::i32, Src, BitNo);

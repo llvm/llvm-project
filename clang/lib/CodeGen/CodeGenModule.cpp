@@ -2467,17 +2467,14 @@ static void AppendCPUSpecificCPUDispatchMangling(const CodeGenModule &CGM,
     Out << ".resolver";
 }
 
-// Returns true if GD is a function/var decl with internal linkage and
+// Returns true if GD is a function decl with internal linkage and
 // needs a unique suffix after the mangled name.
 static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
                                         CodeGenModule &CGM) {
   const Decl *D = GD.getDecl();
-  if (CGM.getModuleNameHash().empty() || D->hasAttr<AsmLabelAttr>())
-    return false;
-  return (isa<FunctionDecl>(D) &&
-          CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage) ||
-         (isa<VarDecl>(D) && CGM.getContext().GetGVALinkageForVariable(
-                                 cast<VarDecl>(D)) == GVA_Internal);
+  return !CGM.getModuleNameHash().empty() && isa<FunctionDecl>(D) &&
+         !D->hasAttr<AsmLabelAttr>() &&
+         (CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage);
 }
 
 static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
