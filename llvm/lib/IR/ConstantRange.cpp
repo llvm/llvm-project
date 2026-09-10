@@ -1049,14 +1049,8 @@ ConstantRange ConstantRange::binaryOp(const BinaryOperator &BO,
   if (const auto *OBO = dyn_cast<OverflowingBinaryOperator>(&BO))
     return overflowingBinaryOp(BO.getOpcode(), Other, OBO->getNoWrapKind());
 
-  // Treat 'or disjoint' as both 'add nuw nsw' and binary or, picking the best
-  // from both.
-  const auto *PDI = dyn_cast<PossiblyDisjointInst>(&BO);
-  if (PDI && PDI->isDisjoint()) {
-    using OBO = OverflowingBinaryOperator;
-    return addWithNoWrap(Other, OBO::NoUnsignedWrap | OBO::NoSignedWrap)
-        .intersectWith(binaryOr(Other));
-  }
+  if (BO.getOpcode() == Instruction::Or)
+    return binaryOr(Other, cast<PossiblyDisjointInst>(BO).isDisjoint());
 
   return binaryOp(BO.getOpcode(), Other);
 }
@@ -1645,7 +1639,8 @@ ConstantRange ConstantRange::binaryAnd(const ConstantRange &Other) const {
   return KnownBitsRange.intersectWith(UMinUMaxRange);
 }
 
-ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
+ConstantRange ConstantRange::binaryOr(const ConstantRange &Other,
+                                      bool IsDisjoint) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
@@ -1662,7 +1657,16 @@ ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
   // Upper wrapped range.
   ConstantRange UMaxUMinRange = getNonEmpty(
       APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin()), UpperBound);
-  return KnownBitsRange.intersectWith(UMaxUMinRange);
+  ConstantRange Result = KnownBitsRange.intersectWith(UMaxUMinRange);
+
+  if (IsDisjoint) {
+    // Treat 'or disjoint' as both 'add nuw nsw' and binary or, picking the best
+    // from both.
+    using OBO = OverflowingBinaryOperator;
+    Result = addWithNoWrap(Other, OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                 .intersectWith(Result);
+  }
+  return Result;
 }
 
 ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
