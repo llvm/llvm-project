@@ -149,22 +149,18 @@ isaTransposeOpInterface(GenericOp genericOp);
 /// Checks whether a given `genericOp` is semantically equivalent to a single
 /// linalg elementwise unary op, e.g.
 /// `linalg.elementwise <exp>`.
-/// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
-/// included in the check. Note that these operations can only be represented by
-/// the category op.
+/// Operations with non-identity indexing maps are included in the check, as
+/// they can be represented by the category op.
 /// A linalg.generic body could be a series of unary elementwise ops e.g.
 /// `exp(neg(x))`, such as formed by linalg op fusion. Here we restrict it to
 /// detecting cases where body is a single computation op.
-bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp,
-                                       bool allowNonIdentityMaps = false);
+bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a single linalg
 /// elementwise binary op e.g. linalg.sub.
-/// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
-/// included in the check. Note that these operations can only be represented by
-/// the category op.
-bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp,
-                                        bool allowNonIdentityMaps = false);
+/// Operations with non-identity indexing maps are included in the check, as
+/// they can be represented by the category op.
+bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
 /// Supports two patterns:

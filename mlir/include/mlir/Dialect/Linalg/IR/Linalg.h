@@ -147,6 +147,21 @@ template <typename OpTy,
                                       std::is_same_v<OpTy, linalg::UnPackOp>>>
 SmallVector<int64_t> getPackedOuterShapeWithoutTransposition(OpTy packOrUnPack);
 
+/// Elementwise Arity and Kind groups.
+struct ArityGroupAndKind {
+  // The enum class {Unary, Binary, Ternary, ..}
+  ElementwiseArityGroup arityGroup;
+
+  // The kind (e.g. `exp` or `add`) belonging to the arity group.
+  union Kind {
+    UnaryFn unaryFn;
+    BinaryFn binaryFn;
+    TernaryFn ternaryFn;
+  } kind;
+};
+ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind);
+
+
 /// Specialization of `linalg.matmul` op that has a transpose map on A
 class MatmulTransposeAOp : public MatmulOp {
   /// Create an affine map for a transpose-A matmul. Used only in the builders.
