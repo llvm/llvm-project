@@ -240,7 +240,7 @@ define amdgpu_kernel void @memcpy_p3_p4_minsize(ptr addrspace(4) %0) #0 {
 ; CHECK-NEXT:    ds_write_b128 v25, v[0:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
 ; CHECK-NEXT:    ds_write_b128 v25, v[4:7] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[26:29], v25, s[0:1] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v25, s[0:1] offset:96
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v25, s[0:1] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(5)
 ; CHECK-NEXT:    ds_write_b128 v25, v[8:11] offset:32
@@ -251,7 +251,7 @@ define amdgpu_kernel void @memcpy_p3_p4_minsize(ptr addrspace(4) %0) #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    ds_write_b128 v25, v[20:23] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b128 v25, v[26:29] offset:96
+; CHECK-NEXT:    ds_write_b128 v25, v[0:3] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ds_write_b128 v25, v[4:7] offset:112
 ; CHECK-NEXT:    s_endpgm
@@ -528,7 +528,7 @@ define amdgpu_kernel void @memcpy_p3_p4_optsize(ptr addrspace(4) %0) #1 {
 ; CHECK-NEXT:    ds_write_b128 v25, v[0:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
 ; CHECK-NEXT:    ds_write_b128 v25, v[4:7] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[26:29], v25, s[0:1] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v25, s[0:1] offset:96
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v25, s[0:1] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(5)
 ; CHECK-NEXT:    ds_write_b128 v25, v[8:11] offset:32
@@ -539,7 +539,7 @@ define amdgpu_kernel void @memcpy_p3_p4_optsize(ptr addrspace(4) %0) #1 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    ds_write_b128 v25, v[20:23] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b128 v25, v[26:29] offset:96
+; CHECK-NEXT:    ds_write_b128 v25, v[0:3] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ds_write_b128 v25, v[4:7] offset:112
 ; CHECK-NEXT:    s_endpgm
