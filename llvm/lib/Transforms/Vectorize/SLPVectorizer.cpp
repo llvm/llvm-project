@@ -18003,7 +18003,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
            CostKind == TTI::TCK_Latency) &&
           findStoreLoadForwardingHazardForLoad(LI0, E->Scalars.size())) {
         Type *STLFVecTy = getWidenedType(LI0->getType(), E->Scalars.size());
-        VecLdCost += TTI->getStoreLoadForwardingConflictCost(STLFVecTy, CostKind);
+        VecLdCost +=
+            TTI->getStoreLoadForwardingConflictCost(STLFVecTy, CostKind);
       }
       return VecLdCost + CommonCost;
     };
