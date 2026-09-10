@@ -30,10 +30,10 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
   auto Result = callNoCheck(olCreateContext, DeviceIds.size(), DeviceIds.data(),
                             &MOffloadContext);
   if (isFailed(Result)) {
-    if (Result->Code == OL_ERRC_INVALID_SIZE) {
+    if (Result->Code == OL_ERRC_INVALID_SIZE)
       throw sycl::exception(make_error_code(errc::invalid),
                             "Device list must not be empty");
-    }
+
     checkAndThrow(Result);
   }
 }
