@@ -239,22 +239,26 @@ struct Prefetch {
   bool Writes = false;
   /// The (first seen) prefetched instruction.
   Instruction *MemI = nullptr;
+  /// The pointer that the instruction is loading from or storing to.
+  Value *PtrVal = nullptr;
 
   /// Constructor to create a new Prefetch for \p I.
-  Prefetch(const SCEVAddRecExpr *L, Instruction *I) : LSCEVAddRec(L) {
-    addInstruction(I);
+  Prefetch(const SCEVAddRecExpr *L, Instruction *I, Value *Ptr, bool WriteMem)
+      : LSCEVAddRec(L) {
+    addInstruction(I, Ptr, WriteMem);
   };
 
   /// Add the instruction \param I to this prefetch. If it's not the first
   /// one, 'InsertPt' and 'Writes' will be updated as required.
   /// \param PtrDiff the known constant address difference to the first added
   /// instruction.
-  void addInstruction(Instruction *I, DominatorTree *DT = nullptr,
-                      int64_t PtrDiff = 0) {
+  void addInstruction(Instruction *I, Value *Ptr, bool WriteMem,
+                      DominatorTree *DT = nullptr, int64_t PtrDiff = 0) {
     if (!InsertPt) {
       MemI = I;
+      PtrVal = Ptr;
       InsertPt = I;
-      Writes = isa<StoreInst>(I);
+      Writes = WriteMem;
     } else {
       BasicBlock *PrefBB = InsertPt->getParent();
       BasicBlock *InsBB = I->getParent();
@@ -264,7 +268,7 @@ struct Prefetch {
           InsertPt = DomBB->getTerminator();
       }
 
-      if (isa<StoreInst>(I) && PtrDiff == 0)
+      if (WriteMem && PtrDiff == 0)
         Writes = true;
     }
   }
@@ -326,15 +330,33 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     for (auto &I : *BB) {
       Value *PtrValue;
       Instruction *MemI;
+      bool WriteMem;
 
       if (LoadInst *LMemI = dyn_cast<LoadInst>(&I)) {
         MemI = LMemI;
         PtrValue = LMemI->getPointerOperand();
+        WriteMem = false;
       } else if (StoreInst *SMemI = dyn_cast<StoreInst>(&I)) {
         if (!doPrefetchWrites()) continue;
         MemI = SMemI;
         PtrValue = SMemI->getPointerOperand();
-      } else continue;
+        WriteMem = true;
+      } else if (IntrinsicInst *IntrI = dyn_cast<IntrinsicInst>(&I)) {
+        MemIntrinsicInfo IntrInfo;
+        bool IsTgtMemIntrinsic = TTI->getTgtMemIntrinsic(IntrI, IntrInfo);
+        if (!IsTgtMemIntrinsic)
+          continue;
+        if (!IntrInfo.PtrVal)
+          continue;
+        if (!IntrInfo.isUnordered())
+          continue;
+        if (IntrInfo.WriteMem && !doPrefetchWrites())
+          continue;
+        MemI = IntrI;
+        PtrValue = IntrInfo.PtrVal;
+        WriteMem = IntrInfo.WriteMem;
+      } else
+        continue;
 
       unsigned PtrAddrSpace = PtrValue->getType()->getPointerAddressSpace();
       if (!TTI->shouldPrefetchAddressSpace(PtrAddrSpace))
@@ -359,14 +381,14 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
             dyn_cast<SCEVConstant>(PtrDiff)) {
           int64_t PD = std::abs(ConstPtrDiff->getValue()->getSExtValue());
           if (PD < (int64_t) TTI->getCacheLineSize()) {
-            Pref.addInstruction(MemI, DT, PD);
+            Pref.addInstruction(MemI, PtrValue, WriteMem, DT, PD);
             DupPref = true;
             break;
           }
         }
       }
       if (!DupPref)
-        Prefetches.push_back(Prefetch(LSCEVAddRec, MemI));
+        Prefetches.push_back(Prefetch(LSCEVAddRec, MemI, PtrValue, WriteMem));
     }
 
   unsigned TargetMinStride =
@@ -409,9 +431,8 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
                              ConstantInt::get(I32, 3),
                              ConstantInt::get(I32, 1)});
     ++NumPrefetches;
-    LLVM_DEBUG(dbgs() << "  Access: "
-               << *P.MemI->getOperand(isa<LoadInst>(P.MemI) ? 0 : 1)
-               << ", SCEV: " << *P.LSCEVAddRec << "\n");
+    LLVM_DEBUG(dbgs() << "  Access: " << *P.PtrVal
+                      << ", SCEV: " << *P.LSCEVAddRec << "\n");
     ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "Prefetched", P.MemI)
           << "prefetched memory access";
