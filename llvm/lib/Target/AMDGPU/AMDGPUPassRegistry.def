@@ -121,6 +121,7 @@ MACHINE_FUNCTION_PASS("amdgpu-global-isel-divergence-lowering",
 MACHINE_FUNCTION_PASS("amdgpu-insert-delay-alu", AMDGPUInsertDelayAluPass())
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("amdgpu-lower-vgpr-encoding", AMDGPULowerVGPREncodingPass())
+MACHINE_FUNCTION_PASS("amdgpu-optimize-vgpr-encoding", AMDGPUOptimizeVGPREncodingPass())
 MACHINE_FUNCTION_PASS("amdgpu-mark-last-scratch-load", AMDGPUMarkLastScratchLoadPass())
 MACHINE_FUNCTION_PASS("amdgpu-pre-ra-long-branch-reg", GCNPreRALongBranchRegPass())
 MACHINE_FUNCTION_PASS("amdgpu-reserve-wwm-regs", AMDGPUReserveWWMRegsPass())
