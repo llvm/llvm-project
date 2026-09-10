@@ -73,9 +73,12 @@ const __device__ double CAY = ca.cpow(2.0, 2);
 
 namespace ns1 {
   // host-note@+3 {{'value_func' declared here}}
-  // expected-note@+2 7{{'value_func' declared here}}
+  // expected-note@+2 9{{'value_func' declared here}}
   // expected-note@+1 {{candidate function not viable: call to __device__ function from __host__ function}}
 __device__ constexpr inline int value_func() {
+  return 32;
+}
+__device__ constexpr inline int another_value_func() {
   return 32;
 }
 }
@@ -124,6 +127,12 @@ namespace ns2 {
     DefArg(int a = 1 + value_func()) : data(a) {}
   };
   DefArg testDefArg;
+  // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+
+  unsigned twotimes = ns1::value_func() + ns1::another_value_func();
+  // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
+
+  unsigned twotimes1 = ns1::value_func() + ns1::value_func();
   // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
 
 }

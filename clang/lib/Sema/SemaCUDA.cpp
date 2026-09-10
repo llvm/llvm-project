@@ -785,7 +785,8 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
       void CheckForWrongSidedCall(const FunctionDecl *FD) {
         CUDAFunctionTarget InitFnTarget = SCRef.IdentifyTarget(FD);
         if (InitFnTarget != CUDAFunctionTarget::Host &&
-            InitFnTarget != CUDAFunctionTarget::HostDevice) {
+            InitFnTarget != CUDAFunctionTarget::HostDevice &&
+            !VD->isInvalidDecl()) {
           SCRef.Diag(VD->getLocation(),
                      diag::err_ref_bad_target_global_initializer)
               << InitFnTarget << FD;
@@ -806,7 +807,6 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
                      diag::note_cuda_managed_var_in_glob_init);
         }
       }
-
       void VisitCallExpr(const CallExpr *CE) {
         const FunctionDecl *InitFn = CE->getDirectCallee();
         if (InitFn)
