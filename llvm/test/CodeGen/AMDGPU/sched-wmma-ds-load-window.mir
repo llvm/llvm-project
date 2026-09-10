@@ -1,11 +1,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -verify-misched -o - %s | FileCheck %s
 #
-# Test for the WMMASchedule DAG mutation on an 8x8 outer product tile
-# (64 DS_READ_B128, 8 A/B fragments, 64 V_WMMA). Without the mutation the
-# scheduler schedules all 64 loads at the beginning of the block; the mutation
-# debunches these loads.
-#
-# XFAIL: *
+# Test the WMMASchedule DAG mutation with the default max-occupancy scheduler on
+# an 8x8 outer product tile (64 DS_READ_B128, 8 A and 8 B fragments, and 64
+# V_WMMA instructions).
 
 --- |
   target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
@@ -27,18 +24,38 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: wmma_op
-    ; CHECK:      V_WMMA
-    ; CHECK-NEXT: V_WMMA
-    ; CHECK-NEXT: DS_READ_B128
-    ; CHECK-NEXT: DS_READ_B128
-    ; CHECK-NEXT: DS_READ_B128
-    ; CHECK-NEXT: DS_READ_B128
-    ; CHECK-NEXT: V_WMMA
-    ; CHECK-NEXT: DS_READ_B128
-    ; CHECK-NEXT: DS_READ_B128
-    ; CHECK-NEXT: DS_READ_B128
-    ; CHECK-NEXT: DS_READ_B128
-    ; CHECK-NEXT: V_WMMA
+    ; CHECK-COUNT-40: DS_READ_B128
+    ; CHECK-COUNT-8:  V_WMMA
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-COUNT-8:  V_WMMA
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-COUNT-8:  V_WMMA
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-COUNT-8:  V_WMMA
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-COUNT-8:  V_WMMA
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-COUNT-8:  V_WMMA
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-NEXT:     DS_READ_B128
+    ; CHECK-COUNT-16: V_WMMA
     successors: %bb.1(0x80000000)
     %ptra:vgpr_32 = IMPLICIT_DEF
     %ptrb:vgpr_32 = IMPLICIT_DEF

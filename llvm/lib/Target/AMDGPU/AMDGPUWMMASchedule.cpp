@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/Debug.h"
+#include <cmath>
 #include <optional>
 #define DEBUG_TYPE "amdgpu-wmma-sched"
 
@@ -300,29 +301,28 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
         dbgs() << "    W[" << P << "] = " << Hist[P] << "\n";
   });
 
-  // For each fragment (in order), find the earliest position it
-  // can be placed so the live set never exceeds the budget, then
-  // add a WMMAS[Earliest] -> ds_load edge - this is what leads to
-  // the debunching.
+  // For each fragment (in order), find the earliest WMMA at which it can be
+  // live without exceeding the budget, then add a
+  // Wmmas[EarliestLivePos - 1] -> ds_load edge to prevent its subloads from
+  // being scheduled before that boundary.
   LLVM_DEBUG(
       dbgs()
       << "\n--- [6] debunch: pull loads earlier into budget slack ----\n"
          "For each fragment, scan earlier W[] positions while the budget\n"
-         "still has room. The earliest such position gets an artificial\n"
-         "WMMA -> ds_load edge that stops the scheduler from bunching that "
-         "load\n"
-         "any earlier. 'unconstrained' = it already fits at W[0], so no edge\n"
-         "is needed; the histogram is updated cumulatively so later\n"
-         "fragments only use the slack that's left over.\n");
+         "still has room. EarliestLivePos is the first W[] position whose\n"
+         "histogram includes the fragment. If it is not W[0], add artificial\n"
+         "W[EarliestLivePos - 1] -> ds_load edges so its subloads cannot move\n"
+         "before that boundary. The histogram is updated cumulatively so\n"
+         "later fragments only use the slack that's left over.\n");
   for (auto &[_, F] : Frags) {
     long Pos = F.LatestCycle / static_cast<long>(*WmmaLatency);
     unsigned LateStartPos = Pos < 0 ? 0 : static_cast<unsigned>(Pos);
-    unsigned Earliest = LateStartPos;
+    unsigned EarliestLivePos = LateStartPos;
     for (int P = static_cast<int>(LateStartPos) - 1; P >= 0; --P) {
       const unsigned Candidate = static_cast<unsigned>(P);
       if (Hist[Candidate] + F.VGPRs > Budget)
         break;
-      Earliest = Candidate;
+      EarliestLivePos = Candidate;
       Hist[Candidate] += F.VGPRs;
     }
     LLVM_DEBUG({
@@ -330,14 +330,20 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
       for (unsigned I = 0; I < F.Subloads.size(); ++I)
         dbgs() << (I ? ", " : "") << "SU" << F.Subloads[I]->NodeNum;
       dbgs() << ") (vgprs=" << F.VGPRs << ", consumers W[" << F.MinPos << ".."
-             << F.MaxPos << "]) earliest=W[" << Earliest << "]"
-             << (Earliest ? " edge added\n" : " unconstrained\n");
+             << F.MaxPos << "]) EarliestLivePos=W[" << EarliestLivePos << "]";
+      if (EarliestLivePos)
+        dbgs() << " anchor=W[" << EarliestLivePos - 1 << "]\n";
+      else
+        dbgs() << " unconstrained\n";
     });
     // No need to add an edge if the load can be scheduled at the beginning.
-    if (Earliest == 0)
+    if (EarliestLivePos == 0)
       continue;
+    // Hist[EarliestLivePos] models the fragment as live at
+    // Wmmas[EarliestLivePos], so the edge must come from the
+    // preceding WMMA.
     for (SUnit *L : F.Subloads)
-      DAG->addEdge(L, SDep(Wmmas[Earliest], SDep::Artificial));
+      DAG->addEdge(L, SDep(Wmmas[EarliestLivePos - 1], SDep::Artificial));
   }
 
   LLVM_DEBUG({
