@@ -1601,6 +1601,40 @@ Instruction *InstCombinerImpl::foldDivCeil(BinaryOperator &I) {
   return BinaryOperator::CreateUDiv(NUWAdd, Y);
 }
 
+/// Fold: add (select (icmp slt (srem X, N), 0), N, 0), (srem X, N)
+/// to: and X, (N - 1)
+static Instruction *foldAddwithSRemSelect(BinaryOperator &Add,
+                                          InstCombiner::BuilderTy &Builder,
+                                          const SimplifyQuery &SQ) {
+  Value *Sel, *Rem;
+  if (!match(&Add, m_c_Add(m_Value(Sel), m_Value(Rem))))
+    return nullptr;
+
+  Value *X, *Modulus;
+  if (!match(Rem, m_SRem(m_Value(X), m_Value(Modulus))))
+    return nullptr;
+
+  Value *Cmp, *TrueVal, *FalseVal;
+  if (!match(Sel, m_Select(m_Value(Cmp), m_Value(TrueVal), m_Value(FalseVal))))
+    return nullptr;
+
+  CmpPredicate Pred;
+  Value *CmpLHS;
+  if (!match(Cmp, m_ICmp(Pred, m_Value(CmpLHS), m_Zero())) ||
+      Pred != ICmpInst::ICMP_SLT || CmpLHS != Rem)
+    return nullptr;
+
+  if (TrueVal != Modulus || !match(FalseVal, m_Zero()))
+    return nullptr;
+
+  if (!isKnownToBeAPowerOfTwo(Modulus, false, SQ))
+    return nullptr;
+
+  Value *ModulusMinusOne =
+      Builder.CreateAdd(Modulus, Constant::getAllOnesValue(Modulus->getType()));
+  return BinaryOperator::CreateAnd(X, ModulusMinusOne);
+}
+
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = simplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1630,6 +1664,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return X;
 
   if (Instruction *X = foldNoWrapAdd(I, Builder))
+    return X;
+
+  if (Instruction *X = foldAddwithSRemSelect(I, Builder, SQ))
     return X;
 
   if (Instruction *R = foldBinOpShiftWithShift(I))
