@@ -35,8 +35,8 @@ void func() {
 }
 
 // SPIRV: attributes #0
-// SPIRV-SAME: "nvvm.maxntid"="84"
-// SPIRV-SAME: "omp_target_thread_limit"="84" 
+// SPIRV-SAME: "nvvm.maxntid"="20"
+// SPIRV-SAME: "omp_target_thread_limit"="20"
 // SPIRV: attributes #4
 // SPIRV-SAME: "amdgpu-waves-per-eu"="3,7"
 // SPIRV-SAME: "nvvm.maxntid"="17"
