@@ -59,7 +59,6 @@ MATCHER_P(snippet, S, "") {
   return (arg.Name + arg.CompletionSnippetSuffix).str() == S;
 }
 MATCHER_P(qName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
-MATCHER_P(hasName, Name, "") { return arg.Name == Name; }
 MATCHER_P(templateArgs, TemplArgs, "") {
   return arg.TemplateSpecializationArgs == TemplArgs;
 }

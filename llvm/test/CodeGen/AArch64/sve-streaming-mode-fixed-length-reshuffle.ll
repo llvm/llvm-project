@@ -11,12 +11,7 @@ define <4 x i1> @reshuffle_v4i1_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: reshuffle_v4i1_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    mov z1.s, z0.s[3]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
-; CHECK-NEXT:    mov z3.s, z0.s[1]
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %el0 = extractelement <vscale x 4 x i1> %a, i32 0
   %el1 = extractelement <vscale x 4 x i1> %a, i32 1

@@ -66,7 +66,7 @@ define void @func_mov_fi_i32_offset() #0 {
 ; GFX9-MUBUF-NEXT:  v_add_u32_e32 v0, 4, [[SCALED]]
 
 ; FIXME: Should commute and shrink
-; GFX9-FLATSCR: v_add_u32_e64 v0, 4, s32
+; GFX9-FLATSCR: v_add_u32_e64 v0, s32, 4
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0

@@ -536,10 +536,11 @@ define void @ptrtoaddr_gep(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      EMIT ir<%p> = getelementptr inbounds ir<null>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%idx> = ptrtoaddr ir<%p> to i64
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
-; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -549,7 +550,7 @@ define void @ptrtoaddr_gep(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<101>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

@@ -520,14 +520,17 @@ static bool potentiallyWritesIntoIvar(const Decl *Parent,
                                       const ObjCIvarDecl *Ivar) {
   using namespace ast_matchers;
   const char *IvarBind = "Ivar";
-  if (!Parent || !Parent->hasBody())
+  if (!Parent)
+    return false;
+  Stmt *Body = Parent->getBody();
+  if (!Body)
     return false;
   StatementMatcher WriteIntoIvarM = binaryOperator(
       hasOperatorName("="),
       hasLHS(ignoringParenImpCasts(
           objcIvarRefExpr(hasDeclaration(equalsNode(Ivar))).bind(IvarBind))));
   StatementMatcher ParentM = stmt(hasDescendant(WriteIntoIvarM));
-  auto Matches = match(ParentM, *Parent->getBody(), Parent->getASTContext());
+  auto Matches = match(ParentM, *Body, Parent->getASTContext());
   for (BoundNodes &Match : Matches) {
     auto IvarRef = Match.getNodeAs<ObjCIvarRefExpr>(IvarBind);
     if (IvarRef->isFreeIvar())

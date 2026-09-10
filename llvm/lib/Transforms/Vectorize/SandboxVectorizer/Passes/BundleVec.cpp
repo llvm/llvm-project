@@ -50,20 +50,6 @@ static BundleTy getOperand(ArrayRef<Value *> Bndl, unsigned OpIdx) {
   return Operands;
 }
 
-/// \Returns the BB iterator after the lowest instruction in \p Vals, or the top
-/// of BB if no instruction found in \p Vals.
-static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
-                                                      BasicBlock *BB) {
-  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals, BB));
-  if (BotI == nullptr)
-    // We are using BB->begin() (or after PHIs) as the fallback insert point.
-    return BB->empty()
-               ? BB->begin()
-               : std::next(
-                     VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
-  return std::next(BotI->getIterator());
-}
-
 Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
                                     ArrayRef<Value *> Operands) {
   auto CreateVectorInstr = [](ArrayRef<Value *> Bndl,
@@ -75,7 +61,7 @@ Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
     Type *ScalarTy = VecUtils::getElementType(Utils::getExpectedType(Bndl[0]));
     auto *VecTy = VecUtils::getWideType(ScalarTy, VecUtils::getNumLanes(Bndl));
 
-    BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(
+    BasicBlock::iterator WhereIt = VecUtils::getInsertPointAfterInstrs(
         Bndl, cast<Instruction>(Bndl[0])->getParent());
 
     auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
@@ -175,35 +161,17 @@ Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
   return NewI;
 }
 
-void BundleVec::tryEraseDeadInstrs() {
-  DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
-  // The dead instrs could span BBs, so we need to collect and sort them per BB.
-  for (auto *DeadI : DeadInstrCandidates)
-    SortedDeadInstrCandidates[DeadI->getParent()].push_back(DeadI);
-  for (auto &Pair : SortedDeadInstrCandidates)
-    sort(Pair.second,
-         [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
-  for (const auto &Pair : SortedDeadInstrCandidates) {
-    for (Instruction *I : reverse(Pair.second)) {
-      if (I->hasNUses(0)) {
-        // Erase the dead instructions bottom-to-top.
-        LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Erase dead: " << *I << "\n");
-        I->eraseFromParent();
-      }
-    }
-  }
-  DeadInstrCandidates.clear();
-}
-
 Value *BundleVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
                                 BasicBlock *UserBB) {
-  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs({VecOp}, UserBB);
+  BasicBlock::iterator WhereIt =
+      VecUtils::getInsertPointAfterInstrs({VecOp}, UserBB);
   return ShuffleVectorInst::create(VecOp, VecOp, Mask, WhereIt,
                                    VecOp->getContext(), "VShuf");
 }
 
 Value *BundleVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
-  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack, UserBB);
+  BasicBlock::iterator WhereIt =
+      VecUtils::getInsertPointAfterInstrs(ToPack, UserBB);
 
   Type *ScalarTy = VecUtils::getCommonScalarType(ToPack);
   unsigned Lanes = VecUtils::getNumLanes(ToPack);
@@ -251,31 +219,6 @@ Value *BundleVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
     }
   }
   return LastInsert;
-}
-
-void BundleVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
-  for (Value *V : Bndl)
-    DeadInstrCandidates.insert(cast<Instruction>(V));
-  // Also collect the GEPs of vectorized loads and stores.
-  auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
-  switch (Opcode) {
-  case Instruction::Opcode::Load: {
-    for (Value *V : drop_begin(Bndl))
-      if (auto *Ptr =
-              dyn_cast<Instruction>(cast<LoadInst>(V)->getPointerOperand()))
-        DeadInstrCandidates.insert(Ptr);
-    break;
-  }
-  case Instruction::Opcode::Store: {
-    for (Value *V : drop_begin(Bndl))
-      if (auto *Ptr =
-              dyn_cast<Instruction>(cast<StoreInst>(V)->getPointerOperand()))
-        DeadInstrCandidates.insert(Ptr);
-    break;
-  }
-  default:
-    break;
-  }
 }
 
 Action *BundleVec::vectorizeRec(ArrayRef<Value *> Bndl,
@@ -462,7 +405,7 @@ Value *BundleVec::emitVectors() {
       // Collect any potentially dead scalar instructions, including the
       // original scalars and pointer operands of loads/stores.
       if (NewVec != nullptr)
-        collectPotentiallyDeadInstrs(Bndl);
+        DeadInstrMorgue.collectPotentiallyDeadInstrs(Bndl);
 
       // Emit unpacks for all external uses, if any.
       emitUnpacksForExternalUses(ActionPtr->Bndl, NewVec);
@@ -495,7 +438,7 @@ Value *BundleVec::emitVectors() {
           DescrInstrs.push_back(I);
       }
       BasicBlock::iterator WhereIt =
-          getInsertPointAfterInstrs(DescrInstrs, UserBB);
+          VecUtils::getInsertPointAfterInstrs(DescrInstrs, UserBB);
 
       Value *LastV = PoisonValue::get(ResTy);
       Context &Ctx = LastV->getContext();
@@ -574,7 +517,6 @@ bool BundleVec::tryVectorize(ArrayRef<Value *> Bndl,
   Change = false;
   if (LLVM_UNLIKELY(InvocationCnt++ >= StopAt && StopAt != StopAtDisabled))
     return false;
-  DeadInstrCandidates.clear();
   Legality.clear();
   Actions.clear();
   DebugBndlCnt = 0;
@@ -583,7 +525,7 @@ bool BundleVec::tryVectorize(ArrayRef<Value *> Bndl,
                     << "Vec: Vectorization Actions:\n";
              Actions.dump());
   emitVectors();
-  tryEraseDeadInstrs();
+  DeadInstrMorgue.tryEraseDeadInstrs();
   return Change;
 }
 
