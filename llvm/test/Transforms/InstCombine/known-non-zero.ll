@@ -100,8 +100,8 @@ define void @D60846_miscompile(ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[COMMON:%.*]] ]
-; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i16 [[I]], 0
-; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[COMMON]], label [[NON_ZERO:%.*]]
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = trunc nuw i16 [[I]] to i1
+; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[NON_ZERO:%.*]], label [[COMMON]]
 ; CHECK:       non_zero:
 ; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[COMMON]]

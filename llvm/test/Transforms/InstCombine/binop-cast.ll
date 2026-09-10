@@ -261,8 +261,8 @@ define i32 @xor_sext_to_sel_multi_use_constant_mask(i1 %y) {
 define i64 @PR63321(ptr %ptr, i64 %c) !prof !0 {
 ; CHECK-LABEL: @PR63321(
 ; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[PTR:%.*]], align 1, !range [[RNG2:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[VAL]], 0
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i64 [[C:%.*]], i64 0, !prof [[PROF1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i8 [[VAL]] to i1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i64 0, i64 [[C:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %val = load i8, ptr %ptr, align 1, !range !{i8 0, i8 2}
@@ -301,9 +301,8 @@ define i32 @and_add_bool_to_select(i1 %x, i32 %y) {
 
 define i32 @and_add_bool_no_fold(i32 %y) !prof !0 {
 ; CHECK-LABEL: @and_add_bool_no_fold(
-; CHECK-NEXT:    [[X:%.*]] = and i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 0, !prof [[PROF1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y:%.*]] to i1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 0, i32 [[Y]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %x = and i32 %y, 1

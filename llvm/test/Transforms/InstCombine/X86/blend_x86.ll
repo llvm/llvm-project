@@ -383,8 +383,7 @@ define <32 x i8> @shl_pblendvb_v32i8(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2
 
 define <4 x float> @shl_blendvps_v4f32(<4 x float> %a0, <4 x float> %a1, <4 x i32> %a2) {
 ; CHECK-LABEL: @shl_blendvps_v4f32(
-; CHECK-NEXT:    [[S_MASK:%.*]] = and <4 x i32> [[A2:%.*]], splat (i32 1)
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq <4 x i32> [[S_MASK]], zeroinitializer
+; CHECK-NEXT:    [[DOTNOT:%.*]] = trunc <4 x i32> [[A2:%.*]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[DOTNOT]], <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;

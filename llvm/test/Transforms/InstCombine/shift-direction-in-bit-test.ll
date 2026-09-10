@@ -226,8 +226,8 @@ define i1 @t12_shift_of_const0(i32 %x, i32 %y, i32 %z) {
 define i1 @t13_shift_of_const1(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @t13_shift_of_const1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[Y:%.*]], 0
-; CHECK-NEXT:    [[T1:%.*]] = and i32 [[Z:%.*]], 1
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[Z:%.*]], 1
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = select i1 [[TMP1]], i1 true, i1 [[T2]]
 ; CHECK-NEXT:    ret i1 [[T3]]
 ;
@@ -241,8 +241,8 @@ define i1 @t14_and_with_const0(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @t14_and_with_const0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    [[T3:%.*]] = select i1 [[TMP1]], i1 true, i1 [[T2]]
+; CHECK-NEXT:    [[T21:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[TMP1]], i1 true, i1 [[T21]]
 ; CHECK-NEXT:    ret i1 [[T3]]
 ;
   %t0 = shl i32 %x, %y

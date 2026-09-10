@@ -36,12 +36,9 @@ define <2 x i1> @and_cmp_is_trunc_even_with_poison_elt(<2 x i64> %a) {
   ret <2 x i1> %r
 }
 
-; TODO: This could be just 1 instruction (trunc), but our poison matching is incomplete.
-
 define <2 x i1> @and_cmp_is_trunc_even_with_poison_elts(<2 x i64> %a) {
 ; CHECK-LABEL: @and_cmp_is_trunc_even_with_poison_elts(
-; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[A:%.*]], <i64 poison, i64 1>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i64> [[T]], <i64 poison, i64 0>
+; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t = and <2 x i64> %a, <i64 poison, i64 1>
