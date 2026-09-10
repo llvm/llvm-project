@@ -9,9 +9,9 @@
 
 ; Check that the order of the sections is tin -> _start -> pat.
 
-; CHECK:      [[#%x, ADDR:]]       1  FUNC    LOCAL  DEFAULT    1 pat
-; CHECK:      [[#%x, ADDR - 31]]   1  FUNC    LOCAL  DEFAULT    1 tin
-; CHECK:      [[#%x, ADDR - 15]]   15 FUNC    GLOBAL DEFAULT    1 _start
+; CHECK:      [[#%x, ADDR:]]       1  FUNC    LOCAL  DEFAULT    [[#IDX:]] pat
+; CHECK:      [[#%x, ADDR - 31]]   1  FUNC    LOCAL  DEFAULT    [[#IDX]] tin
+; CHECK:      [[#%x, ADDR - 15]]   15 FUNC    GLOBAL DEFAULT    [[#IDX]] _start
 
 ;--- order
 .text : {

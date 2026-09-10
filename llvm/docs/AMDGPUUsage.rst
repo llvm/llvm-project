@@ -1014,6 +1014,13 @@ consumed by the AMDGPU backend during code generation.
        produce an error. Modules with **any** (absent flag) are compatible
        with any setting.
 
+       XNACK is disabled if ``SH_MEM_CONFIG.ADDRESS_MODE = GPUVM`` on chips
+       that support XNACK. The current default kernel driver setting is XNACK
+       disabled on the graphics ring and XNACK enabled on the compute ring.
+       If XNACK is enabled, the VMEM latency can be worse. If XNACK is
+       disabled, the 2 SGPRs otherwise reserved for the XNACK mask can be used
+       for general purposes.
+
    * - ``amdgpu.sramecc``
      - ``i32``
      - Error
@@ -1138,7 +1145,7 @@ supported for the ``amdgcn`` target.
      *reserved for future use*             10
      *reserved for future use*             11
      *reserved for downstream use (LLPC)*  12
-     *reserved for future use*             13
+     VGPR                                  13              N/A         VGPR             32      0xFFFFFFFF
      *reserved for future use*             14
      Barrier                               15              N/A         N/A              32      0
      *reserved for future use*             16
@@ -1175,6 +1182,9 @@ supported for the ``amdgcn`` target.
 
   A global address space address has the same value when used as a flat address
   so no conversion is needed.
+
+  See also :ref:`synthetic apertures<amdgpu-synthetic-apertures>` which exist
+  in the generic address space.
 
 **Global and Constant**
   The global and constant address spaces both use global virtual addresses,
@@ -1354,9 +1364,28 @@ supported for the ``amdgcn`` target.
   a buffer strided pointer, this means that the base pointer is ``align(4)``, that
   the offset is a multiple of 4 bytes, and that the stride is a multiple of 4.
 
+**VGPR**
+  The VGPR address space presents a memory view of the wave's vector registers.
+  The 32-bit address is a byte address into the thread's view of vector
+  registers. For example, loading 4 bytes from address ``12`` reads the contents
+  of ``v3``. Storing 8 bytes to address ``32`` overwrites the contents of
+  ``v[8:9]``.
+
+  Use of this address space by frontends is strongly discouraged. It has unusual
+  and subtle lifetime rules due to the potential for interaction with normal
+  register allocation. It exists primarily for internal purposes of the backend,
+  such as promoting ``alloca`` instructions from the private address space into
+  VGPRs.
+
+  In particular, memory in this address space that was allocated by an
+  ``alloca`` is not visible while in a called function. Attempting to dereference
+  a pointer to such memory in a called function is undefined behavior.
+
 **Barrier**
   This address space represents barrier IDs (introduced in GFX12) as addresses.
-  It does not map directly to any addressable memory, thus pointers into this address space:
+  It does not map directly to any addressable memory and is implemented using
+  :ref:`synthetic apertures<amdgpu-synthetic-apertures>`, thus pointers into
+  this address space:
 
   * Never alias with any other pointers outside this address space.
   * Cannot be dereferenced.
@@ -1370,16 +1399,57 @@ supported for the ``amdgcn`` target.
   The ``NULL`` pointer (as a constant) can be consumed by some intrinsics and
   corresponds to the NULL named barrier.
 
-  These pointers do not have a corresponding hardware aperture but safe round-tripping
-  through the generic address space is still possible. Attempting to dereference a
-  generic pointer derived from a barrier pointer is undefined behavior.
-
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
   file is modelled as a memory in a distinct address space because it is indexed
   by an address-like offset in place of named registers, and because register
   accesses affect LGKMcnt. This is an internal address space used only by the
   compiler. Do not use this address space for IR pointers.
+
+.. _amdgpu-synthetic-apertures:
+
+Synthetic Apertures
+~~~~~~~~~~~~~~~~~~~
+
+*Synthetic apertures* are defined that enable safe roundtrips of pointers
+from special address spaces through the generic address space. Attempting to
+dereference generic pointers obtained in this way (using e.g. `load` or
+`store`) has undefined behavior.
+
+The address size of an address spaces that use synthetic apertures can only be 32 bits
+wide or less. The full width of the source pointer is usable and preserved when converting it
+from/to the generic address space.
+
+The following synthetic apertures are defined:
+
+.. table:: AMDGPU Synthetic Apertures
+    :name: amdgpu-synthetic-apertures-table
+    :widths: 30 10 30 30
+
+    ============ ======= ============== ================================================================
+    Name         Number  Mask           Corresponding :ref:`Address Space<amdgpu-address-spaces-table>`
+    ============ ======= ============== ================================================================
+    BARRIER      1       ``0x00000001`` Barrier
+    ============ ======= ============== ================================================================
+
+Converting a pointer to generic (64 bits) using synthetic apertures is done as follows:
+
+  * The value of the source pointer (32 bits) becomes the lower 32 bits of the generic pointer.
+  * The upper 32 bits are a bitwise ``OR`` of:
+
+    * The upper 32 bits of the LDS segment aperture.
+
+      * **NOTE:** The lower 48 bits of the LDS segment aperture are expected to be zeroes.
+
+    * The relevant mask in the :ref:`above table<amdgpu-synthetic-apertures-table>`.
+
+      * **NOTE:** The upper 16 bits of the mask are expected to be zeroes.
+
+The conversion back to the original address space can simply be done by discarding the
+upper 32 bits of the generic pointer.
+
+As the LDS aperture is defined by its 16 most significant bits, we can theoretically
+support up to ``(1 << 16) - 1`` synthetic apertures safely.
 
 .. _amdgpu-memory-scopes:
 

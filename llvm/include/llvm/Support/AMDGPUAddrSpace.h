@@ -50,7 +50,10 @@ enum : unsigned {
 
   RESERVED_ADDRESS_SPACE_11 = 11, ///< Reserved for downstream use.
 
-  RESERVED_ADDRESS_SPACE_13 = 13, ///< Reserved for downstream use.
+  VGPR = 13, ///< Address space for VGPRs. The 32-bit address is a byte offset
+             ///< into the wave's view of its vector registers. Note this shares
+             ///< its numeric value with CONSTANT_BUFFER_5, which is only used
+             ///< by the (graphics) R600 path.
 
   RESERVED_ADDRESS_SPACE_14 = 14, ///< Reserved for downstream use.
 
@@ -97,11 +100,6 @@ enum : unsigned {
   // Some places use this if the address space can't be determined.
   UNKNOWN_ADDRESS_SPACE = ~0u,
 };
-
-/// The BARRIER AS does not have an aperture in HW, so when converting
-/// BARRIER addresses from/to generic, we represent them as LDS addresses
-/// offset by a large amount so they can never alias with real LDS memory.
-static constexpr unsigned BarrierAddrLDSOffset = 0x802000u;
 } // end namespace AMDGPUAS
 
 namespace AMDGPU {
@@ -199,6 +197,7 @@ constexpr int64_t getNullPointerValue(unsigned AS) {
   case PRIVATE_ADDRESS:
   case LOCAL_ADDRESS:
   case REGION_ADDRESS:
+  case VGPR:
     return -1;
   default:
     return 0;

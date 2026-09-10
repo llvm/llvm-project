@@ -51,6 +51,15 @@ enum AMDGPUFeature : unsigned {
 
 using AMDGPUFeatureBitset = Bitset<NUM_FEATURES>;
 
+/// One enumerator per frontend-visible R600 feature bit; R600_NUM_FEATURES is
+/// the count.
+enum R600Feature : unsigned {
+#define GET_R600_FEATURE_ENUM
+#include "llvm/TargetParser/R600TargetParserDef.inc"
+};
+
+using R600FeatureBitset = Bitset<R600_NUM_FEATURES>;
+
 /// Instruction set architecture version.
 struct IsaVersion {
   uint8_t Major;
@@ -177,6 +186,9 @@ LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
 
 /// Returns \p AK's feature bitset, or an empty bitset if unknown.
 LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
+
+/// Returns R600 GPU \p AK's feature bitset, or an empty bitset if unknown.
+LLVM_ABI const R600FeatureBitset &getFeatureBitsetR600(GPUKind AK);
 
 /// Appends the feature name of each bit set in \p Features to \p Names.
 LLVM_ABI void getFeatureNames(const AMDGPUFeatureBitset &Features,
@@ -356,6 +368,14 @@ public:
   /// "<triple>-<processor>:<features>" directive string.
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
+
+  /// Construct a TargetID for triple \p TT and processor \p CPU, taking the
+  /// xnack/sramecc modes from the subtarget \p FeatureString (a comma-separated
+  /// "+xnack,-sramecc" list). Unspecified modes keep the processor's default.
+  /// The assembler uses this because it has no target directive to carry the
+  /// mode.
+  static TargetID createFromSubtargetFeatures(const Triple &TT, StringRef CPU,
+                                              StringRef FeatureString);
 
   /// Returns true if \p Other denotes the same target as *this, i.e. the same
   /// processor and xnack/sramecc settings on a compatible triple. This is a

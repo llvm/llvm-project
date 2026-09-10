@@ -261,19 +261,13 @@ features cannot lower the translation-unit ABI level;
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
-- `-funique-internal-linkage-names` now gives internal global variables a
-  unique `.__uniq.<module-hash>` suffix, as it already does for functions. This
-  helps profiling tools distinguish static variables with the same name in
-  different source files. LLVM can demangle these suffixes for both functions
-  and data symbols. GNU libiberty can demangle suffixed function symbols, but
-  leaves suffixed data symbols unchanged. The option remains opt-in, and
-  variables with explicit assembly labels keep their original names.
-
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
 
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
+
+- Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`
 
 ### Improvements to Clang's diagnostics
 
@@ -298,6 +292,12 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
+
+- When a `constexpr` range-based for loop variable cannot be initialized by a
+  constant expression, Clang now emits a single note identifying the read of
+  the loop's implicit `__begin` variable, instead of a generic note about
+  reading a non-constexpr variable followed by a `declared here` note.
+  (#GH211926)
 
 - Fixed concept template parameters not being recognized in `-Wdocumentation`
   when mentioned in tparam comments. (#GH64087)
@@ -482,6 +482,9 @@ features cannot lower the translation-unit ABI level;
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
 
+- Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
+  (#GH181730)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -509,6 +512,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
+- Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -520,6 +524,10 @@ features cannot lower the translation-unit ABI level;
   format warnings to errors. (#GH211943)
 - Fixed a wrong code generation in `__builtin_clear_padding` wherein the
   wrong bits of the `_BitInt` type were cleared in big-endian mode.
+- Fixed an assertion failure when `__builtin_vectorelements` is applied to a
+  reference to a vector type; `vec_step` (in C++ for OpenCL) and
+  `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
+  types that their evaluation silently mishandled. (#GH216997)
 
 #### Bug Fixes to Attribute Support
 
@@ -550,6 +558,10 @@ features cannot lower the translation-unit ABI level;
   included. (#GH213299)
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
+
+- Fixed an assertion failure when `#embed` was used in the braced initializer
+  of an array new-expression, or of an array whose elements are of class type.
+  (#GH128985)
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
@@ -652,6 +664,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
   function that is not a constructor. (#GH194298)
 
+- Fixed an assertion when a defaulted comparison operator was synthesized for a
+  class with an invalid non-static data member, such as one qualified with an
+  address space. (#GH194605)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -682,6 +698,9 @@ features cannot lower the translation-unit ABI level;
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
   on `if consteval {}`. (#GH220004)
+- Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
+  evaluated to a value not representable by a signed integer, such as an
+  unsigned wrap around. (#GH221418)
 
 ### OpenACC Specific Changes
 
