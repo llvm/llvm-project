@@ -1110,9 +1110,9 @@ class MapInfoFinalizationPass
       mlir::omp::MapInfoOp op, fir::FirOpBuilder &builder,
       mlir::Operation *target, mlir::Value descriptor,
       llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers,
-      bool isAttachNever, bool isAttachAlways, bool isHasDeviceAddrFlag,
+      bool isAttachNever, bool isAttachAlways, bool mapOnlyDescriptor,
       bool descCanBeDeferred, bool canOptimizeDescViaPrivatization,
-      mlir::FlatSymbolRefAttr mapperId, bool mapOnlyDescriptor) {
+      mlir::FlatSymbolRefAttr mapperId) {
     bool isRefPtrPtee =
         bitEnumContainsAll(op.getMapType(),
                            mlir::omp::ClauseMapFlags::ref_ptr) &&
@@ -1131,7 +1131,7 @@ class MapInfoFinalizationPass
     // For has_device_address we currently do not emit the base address
     // or an attach map.
     mlir::omp::MapInfoOp baseAddr;
-    if (!isHasDeviceAddrFlag) {
+    if (!mapOnlyDescriptor) {
       baseAddr =
           genBaseAddrMap(op.getLoc(), descriptor, op, op.getMapType(), builder,
                          /*IsRefPtee=*/false, mapperId);
@@ -1168,7 +1168,7 @@ class MapInfoFinalizationPass
         /*partial_map=*/builder.getBoolAttr(false));
 
     mlir::Operation *attachMap = nullptr;
-    if (!isAttachNever && !isHasDeviceAddrFlag && !mapOnlyDescriptor) {
+    if (!isAttachNever && !mapOnlyDescriptor) {
       attachMap =
           genImplicitAttachMap(op, descriptor, mapMemberUsers, target, builder,
                                mlir::omp::ClauseMapFlags::ref_ptr |
@@ -1186,6 +1186,12 @@ class MapInfoFinalizationPass
         !getUseDeviceAddrBlockArg(op, *target))
       deferrableDesc.push_back(std::make_pair(newMapInfoOp, attachMap));
     return newMapInfoOp;
+  }
+
+  /// This function checks if the given value is the result of fir::alloca
+  /// operation
+  bool isAllocaOp(mlir::Value &val) {
+    return mlir::isa<fir::AllocaOp>(val.getDefiningOp());
   }
 
   // This function handles the splitting of allocatable/pointer maps in
@@ -1206,6 +1212,7 @@ class MapInfoFinalizationPass
     bool canOptimizeDescViaPrivatization = false;
     llvm::SmallVector<ParentAndPlacement> mapMemberUsers;
     getMemberUserList(op, mapMemberUsers);
+
     // TODO: map the addendum segment of the descriptor, similarly to the
     // base address/data pointer member.
     bool mapOnlyDescriptor = false;
@@ -1225,7 +1232,7 @@ class MapInfoFinalizationPass
 
     mlir::Value descriptor = getDescriptorFromBoxMap(
         op, builder, descCanBeDeferred, canOptimizeDescViaPrivatization);
-    bool isNewDescriptor = mlir::isa<fir::AllocaOp>(descriptor.getDefiningOp());
+    bool isNewDescriptor = isAllocaOp(descriptor);
     bool isUseDeviceAddrItem =
         (getUseDeviceAddrBlockArg(op, *target) != nullptr);
     bool isArray = false;
@@ -1274,7 +1281,7 @@ class MapInfoFinalizationPass
       newMapInfo = genRefPtrPteeOrDefaultMap(
           op, builder, target, descriptor, mapMemberUsers, isAttachNever,
           isAttachAlways, mapOnlyDescriptor, descCanBeDeferred,
-          canOptimizeDescViaPrivatization, mapperId, canOptimizeUseDeviceAddr);
+          canOptimizeDescViaPrivatization, mapperId);
     }
     return newMapInfo;
   }
@@ -1499,12 +1506,7 @@ class MapInfoFinalizationPass
     // use_device_addr.
     auto allocaTgtDescriptor =
         fir::AllocaOp::create(builder, loc, arg.getType());
-    auto allocaHostDescriptor =
-        fir::AllocaOp::create(builder, loc, arg.getType());
-    fir::StoreOp::create(builder, loc, arg, allocaHostDescriptor);
-    auto hostDescriptor =
-        fir::LoadOp::create(builder, loc, allocaHostDescriptor);
-    auto hostAddrPtr = fir::BoxAddrOp::create(builder, loc, hostDescriptor);
+    auto hostAddrPtr = fir::BoxAddrOp::create(builder, loc, arg);
     auto convertedAddr = fir::ConvertOp::create(
         builder, loc,
         fir::LLVMPointerType::get(builder.getContext(), builder.getI8Type()),
@@ -1516,11 +1518,11 @@ class MapInfoFinalizationPass
     llvm::SmallVector<mlir::Value> lbounds;
     llvm::SmallVector<mlir::Value> extents;
     llvm::SmallVector<mlir::Value> strides;
-    fir::factory::genDimInfoFromBox(builder, loc, hostDescriptor, &lbounds,
-                                    &extents, &strides);
+    fir::factory::genDimInfoFromBox(builder, loc, arg, &lbounds, &extents,
+                                    &strides);
     auto newDescriptor =
-        fir::CreateBoxOp::create(builder, loc, hostDescriptor.getType(),
-                                 convertedGPUAddr, lbounds, extents, strides);
+        fir::CreateBoxOp::create(builder, loc, arg.getType(), convertedGPUAddr,
+                                 lbounds, extents, strides);
     fir::StoreOp::create(builder, loc, newDescriptor, allocaTgtDescriptor);
     auto res = fir::LoadOp::create(builder, loc, allocaTgtDescriptor);
     arg.replaceUsesWithIf(res, [&](mlir::OpOperand &use) {

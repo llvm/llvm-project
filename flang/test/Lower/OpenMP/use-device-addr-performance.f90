@@ -8,10 +8,7 @@
 !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>) map_clauses(always, to, literal) capture(ByRef) name("x") -> !fir.ref<!fir.array<?xi32>>
 !CHECK: omp.target_data use_device_addr(%[[MAP]] -> %[[ARG:.*]] : !fir.ref<!fir.array<?xi32>>) {
 !CHECK:   %[[ALLOCA_TGT_DESC:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
-!CHECK:   %[[ALLOCA_HOST_DESC:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
-!CHECK:   fir.store %[[ARG]] to %[[ALLOCA_HOST_DESC]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
-!CHECK:   %[[LOADED_HOST_DESC:.*]] = fir.load %[[ALLOCA_HOST_DESC]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
-!CHECK:   %[[HOST_ARR_ADDR:.*]] = fir.box_addr %[[LOADED_HOST_DESC]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+!CHECK:   %[[HOST_ARR_ADDR:.*]] = fir.box_addr %[[ARG]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 !CHECK:   %[[HOST_ARR_PTR:.*]] = fir.convert %[[HOST_ARR_ADDR]] : (!fir.ref<!fir.array<?xi32>>) -> !fir.llvm_ptr<i8>
 !CHECK:   %[[DEVICE_ID:.*]] = fir.call @omp_get_default_device() : () -> i32
 !CHECK:   %[[DEVICE_ID_CONV:.*]] = fir.convert %[[DEVICE_ID]] : (i32) -> i64
@@ -19,7 +16,7 @@
 !CHECK:   %[[TGT_PTR:.*]] = fir.call @__tgt_get_mapped_ptr(%[[DEVICE_ID_CONV]], %[[PTR_ARG]]) : (i64, !fir.llvm_ptr<i8>) -> !fir.llvm_ptr<i8>
 !CHECK:   %[[TGT_PTR_CONV:.*]] = fir.convert %[[TGT_PTR]] : (!fir.llvm_ptr<i8>) -> !fir.ref<!fir.array<?xi32>>
 !CHECK:   %[[C0:.*]] = arith.constant 0 : index
-!CHECK:   %[[ARR_DIMS:.*]]:3 = fir.box_dims %[[LOADED_HOST_DESC]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+!CHECK:   %[[ARR_DIMS:.*]]:3 = fir.box_dims %[[ARG]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 !CHECK:   %[[TGT_DESC:.*]] = fir.create_box %[[TGT_PTR_CONV]] lbs(%[[ARR_DIMS]]#0) extents(%[[ARR_DIMS]]#1) strides(%[[ARR_DIMS]]#2) : (!fir.ref<!fir.array<?xi32>>, index, index, index) -> !fir.box<!fir.array<?xi32>>
 !CHECK:   fir.store %[[TGT_DESC]] to %[[ALLOCA_TGT_DESC]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
 !CHECK:   %[[RES_TGT_DESC:.*]] = fir.load %[[ALLOCA_TGT_DESC]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
