@@ -15,42 +15,123 @@ using LIBC_NAMESPACE::FileMode;
 TEST(LlvmLibcFileModeTest, FirstCharacterMustBeAValidMode) {
   // creates a table structure to group tests
   struct TestCase {
-    const char *test_name;
+    const char *test_description;
     const char *mode;
     bool expects;
   };
 
-  constexpr TestCase valid_modes[] = {
-      {.test_name = "valid append mode", .mode = "a", .expects = true},
-      {.test_name = "valid read mode", .mode = "r", .expects = true},
-      {.test_name = "valid write mode", .mode = "w", .expects = true},
-  };
-
-  for (const TestCase &tc : valid_modes) {
-    const FileMode mode(tc.mode);
-    EXPECT_EQ(mode.is_valid(), tc.expects);
-  };
-
-  constexpr TestCase invalid_first_char_modes[] = {
-      {.test_name = "update mode set as the first character",
+  // testing for first character to be valid mode
+  constexpr TestCase first_char_modes[] = {
+      {.test_description = "valid append mode", .mode = "a", .expects = true},
+      {.test_description = "valid read mode", .mode = "r", .expects = true},
+      {.test_description = "valid write mode", .mode = "w", .expects = true},
+      {.test_description = "update mode set as the first character",
        .mode = "+",
        .expects = false},
-      {.test_name = "binary content set as the first character",
+      {.test_description = "binary content set as the first character",
        .mode = "b",
        .expects = false},
-      {.test_name = "exclusive create set as the first character",
+      {.test_description = "exclusive create set as the first character",
        .mode = "x",
-       .expects = false},
-  };
+       .expects = false}};
 
-  for (const TestCase &tc : invalid_first_char_modes) {
+  for (const TestCase &tc : first_char_modes) {
     const FileMode mode(tc.mode);
     EXPECT_EQ(mode.is_valid(), tc.expects);
   };
 }
 
-// Test(LlvmLibcFileModeTest, OnlyOneMainModeAllowed) {}
-//
+TEST(LlvmLibcFileModeTest, OnlyOneMainModeAllowed) {
+  struct TestCase {
+    const char *test_description;
+    const char *mode;
+    bool expects;
+    const char *message = "";
+  };
+
+  // This tracks all possible valid combinations for a file mode with a main
+  // mode both the ones that are allowed and the ones not allowed. The list is
+  // exhaustive
+  //
+  // These are the valid main mode combinations
+  //  read(r) = [update(+), binary(b)]
+  //  write(w) = [update(+), binary(b), exclusive(x)]
+  //  append(a) = [update(+), binary(b)]
+  //
+  // Invalid main mode combinations are
+  //  read(r) = [write(w), append(a)]
+  //  apppend(a) = [read(r), write(w)]
+  constexpr TestCase modes_combination[] = {
+      // read(r) = [update(+), binary(b)]
+      {.test_description = "read and update", .mode = "r+", .expects = true},
+      {.test_description = "read binary", .mode = "rb", .expects = true},
+
+      // write(w) = [update(+), binary(b), exclusive(x)]
+      {.test_description = "write and update", .mode = "w+", .expects = true},
+      {.test_description = "write binary", .mode = "wb", .expects = true},
+      {.test_description = "write exclusive", .mode = "wx", .expects = true},
+
+      // append(a) = [update(+), binary(b)]
+      {.test_description = "append and update", .mode = "a+", .expects = true},
+      {.test_description = "append binary", .mode = "ab", .expects = true},
+
+      // invalid main mode = read
+      {
+          .test_description = "read and write",
+          .mode = "rw",
+          .expects = false,
+          .message = "read and write are both main modes and there can be only "
+                     "one main mode",
+      },
+      {
+          .test_description = "read and append",
+          .mode = "ra",
+          .expects = false,
+          .message =
+              "read and append are both main modes and there can be only "
+              "one main mode",
+      },
+
+      // invalid main mode = write
+      {
+          .test_description = "write and read",
+          .mode = "wr",
+          .expects = false,
+          .message = "write and read are all main modes and there can be only "
+                     "one main mode",
+      },
+      {
+          .test_description = "write and append",
+          .mode = "wr",
+          .expects = false,
+          .message = "write and read are all main modes and there can be only "
+                     "one main mode",
+      },
+      {
+          .test_description = "append and read",
+          .mode = "wr",
+          .expects = false,
+          .message = "append and read are all main modes and there can be only "
+                     "one main mode",
+      },
+      {
+          .test_description = "read,write and append",
+          .mode = "rwa",
+          .expects = false,
+          .message =
+              "read, write and append are all main modes and there can be only "
+              "one main mode",
+      },
+  };
+
+  for (const TestCase &tc : modes_combination) {
+    const FileMode mode(tc.mode);
+    EXPECT_EQ(mode.is_valid(), tc.expects) << tc.message;
+  };
+}
+
+// TEST(LlvmLibcFileModeTest, AllPossibleValidModes) {}
+
 // Test(LlvmLibcFileModeTest, WriteAllowedMode) {}
 //
 // Test(LlvmLibcFileModeTest, FileModeIsReadAllowed) {}
