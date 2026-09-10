@@ -28,41 +28,26 @@ define void @test1() #1 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #768
 ; CHECK-NEXT:    .cfi_def_cfa_offset 784
-; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    add x0, sp, #512
 ; CHECK-NEXT:    mov w1, wzr
 ; CHECK-NEXT:    mov w2, #512 // =0x200
-; CHECK-NEXT:    str xzr, [sp, #760]
-; CHECK-NEXT:    str xzr, [sp, #752]
-; CHECK-NEXT:    str xzr, [sp, #744]
-; CHECK-NEXT:    str xzr, [sp, #736]
-; CHECK-NEXT:    str xzr, [sp, #728]
-; CHECK-NEXT:    str xzr, [sp, #720]
-; CHECK-NEXT:    str xzr, [sp, #712]
-; CHECK-NEXT:    str xzr, [sp, #704]
-; CHECK-NEXT:    str xzr, [sp, #696]
-; CHECK-NEXT:    str xzr, [sp, #688]
-; CHECK-NEXT:    str xzr, [sp, #680]
-; CHECK-NEXT:    str xzr, [sp, #672]
-; CHECK-NEXT:    str xzr, [sp, #664]
-; CHECK-NEXT:    str xzr, [sp, #656]
-; CHECK-NEXT:    str xzr, [sp, #648]
-; CHECK-NEXT:    str xzr, [sp, #640]
-; CHECK-NEXT:    str xzr, [sp, #632]
-; CHECK-NEXT:    str xzr, [sp, #624]
-; CHECK-NEXT:    str xzr, [sp, #616]
-; CHECK-NEXT:    str xzr, [sp, #608]
-; CHECK-NEXT:    str xzr, [sp, #600]
-; CHECK-NEXT:    str xzr, [sp, #592]
-; CHECK-NEXT:    str xzr, [sp, #584]
-; CHECK-NEXT:    str xzr, [sp, #576]
-; CHECK-NEXT:    str xzr, [sp, #568]
-; CHECK-NEXT:    str xzr, [sp, #560]
-; CHECK-NEXT:    str xzr, [sp, #552]
-; CHECK-NEXT:    str xzr, [sp, #544]
-; CHECK-NEXT:    str xzr, [sp, #536]
-; CHECK-NEXT:    str xzr, [sp, #528]
-; CHECK-NEXT:    str xzr, [sp, #520]
-; CHECK-NEXT:    str xzr, [sp, #512]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #240]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #224]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #208]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #192]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #176]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #160]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #144]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #128]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #112]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #96]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #80]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #64]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #48]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #32]
+; CHECK-NEXT:    stp xzr, xzr, [x0, #16]
+; CHECK-NEXT:    stp xzr, xzr, [x0]
+; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    bl memset
 ; CHECK-NEXT:    add x0, sp, #512
 ; CHECK-NEXT:    mov x1, sp
