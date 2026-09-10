@@ -18,9 +18,10 @@ void dummyAsyncHandler(exception_list) {}
 TEST(Context, DefaultConstructor) {
   mock::MockWrapper Mock;
 
-  // This line triggers lazy platform discovery, which we want to suppress
-  // from the expected calls of the mock lib.
-  // TODO: remove once context is properly implemented
+  // Platform discovery creates default context that increases the actual
+  // number of calls to olCreateContext to 2 in total. Constructing device to
+  // exclude default context from counting in further expectations.
+  // TODO: remove once context is properly implemented.
   std::ignore = device{};
 
   EXPECT_CALL(Mock.get(), olCreateContext(_, _, _)).Times(1);

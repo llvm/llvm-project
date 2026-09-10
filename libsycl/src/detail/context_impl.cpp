@@ -19,21 +19,20 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
     : MAsyncHandler(AsyncHandler), MDevices(std::move(DeviceList)) {
   // TODO: Remove this when property_list is implemented
   std::ignore = PropList;
-  assert(!MDevices.empty() && "Device list must not be empty");
 
   std::vector<ol_device_handle_t> DeviceIds;
   DeviceIds.reserve(MDevices.size());
   for (DeviceImpl *D : MDevices) {
-    assert(D && "Device list must not contain null entries");
     DeviceIds.push_back(D->getOLHandle());
   }
 
   auto Result = callNoCheck(olCreateContext, DeviceIds.size(), DeviceIds.data(),
                             &MOffloadContext);
-  if (isFailed(Result))
+  if (isFailed(Result)) {
     throw sycl::exception(make_error_code(errc::invalid),
                           "Failed to create SYCL context: " +
                               formatCodeString(Result));
+  }
 }
 
 ContextImpl::~ContextImpl() {
