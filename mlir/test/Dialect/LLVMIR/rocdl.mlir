@@ -1872,23 +1872,23 @@ gpu.module @gpu_module_target_id_settings attributes {
 
 // -----
 
-// expected-error@below {{'rocdl.xnack' is only supported on modules}}
+// expected-error@below {{"rocdl.xnack" is only supported on modules}}
 llvm.func private @xnack_on_func() attributes {rocdl.xnack = true}
 
 // -----
 
-// expected-error@below {{'rocdl.sramecc' is only supported on modules}}
+// expected-error@below {{"rocdl.sramecc" is only supported on modules}}
 llvm.func private @sramecc_on_func() attributes {rocdl.sramecc = true}
 
 // -----
 
-// expected-error@below {{'rocdl.xnack' must be a boolean}}
+// expected-error@below {{"rocdl.xnack" must be a boolean}}
 module attributes {rocdl.xnack = "on"} {
 }
 
 // -----
 
-// expected-error@below {{'rocdl.sramecc' must be a boolean}}
+// expected-error@below {{"rocdl.sramecc" must be a boolean}}
 module attributes {rocdl.sramecc = 1 : i32} {
 }
 
