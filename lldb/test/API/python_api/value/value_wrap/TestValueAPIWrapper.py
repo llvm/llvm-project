@@ -112,9 +112,8 @@ class ValueAPIWrapper(TestBase):
         self.assertEqual(i32_minus_two % u32_two, 0)
 
         # Test __divmod__(other).
-        # FIXME: Returns one number right now - should return a tuple.
-        # self.assertEqual(divmod(u32_four, 3), divmod(4, 3))
-        # self.assertEqual(divmod(u32_four, i32_two), divmod(4, 2))
+        self.assertEqual(divmod(u32_four, 3), divmod(4, 3))
+        self.assertEqual(divmod(u32_four, i32_two), divmod(4, 2))
 
         # Test __pow__(other).
         self.assertEqual(u32_two**2, 4)
@@ -185,7 +184,9 @@ class ValueAPIWrapper(TestBase):
         ):
             _unused = u32_one != True
 
-        # FIXME: Missing __index__ for oct(), hex(), etc.
+        # Test __index__().
+        self.assertEqual(hex(u32_four), "0x4")
+        self.assertEqual(oct(u32_four), "0o4")
 
     def test_in_place_modifiers(self):
         """Test in-place operators (__i...__(self, other))."""
@@ -234,18 +235,32 @@ class ValueAPIWrapper(TestBase):
         self.assertEqual(kind, 6)
 
         # Test __ifloordiv__(other).
-        # FIXME: Passes too many arguments to __floordiv__.
+        kind //= 5
+        self.assertEqual(kind, 1)
+        self.assertIsInstance(kind, int)
+        kind = engine.kind
+        self.assertEqual(kind, 1)
+
+        kind *= 6
+        kind = engine.kind
+        self.assertEqual(kind, 6)
 
         # Test __imod__(other).
-        # FIXME: Passes too many arguments to __mod__.
+        kind %= 4
+        self.assertEqual(kind, 2)
+        self.assertIsInstance(kind, int)
+        kind = engine.kind
+        self.assertEqual(kind, 2)
 
         # Test __ipow__(other).
-        # FIXME: Passes too many arguments to __pow__.
+        kind **= 3
+        self.assertEqual(kind, 8)
+        self.assertIsInstance(kind, int)
+        kind = engine.kind
+        self.assertEqual(kind, 8)
 
         # Reset value
-        kind *= 0
-        kind = engine.kind
-        kind += 1
+        kind //= 8
         kind = engine.kind
         self.assertEqual(kind, 1)
         self.assertIsInstance(kind, lldb.value)
@@ -265,14 +280,27 @@ class ValueAPIWrapper(TestBase):
         self.assertEqual(kind, 4)
 
         # Test __iand__(other).
-        # FIXME: Passes too many arguments to __and__.
+        kind |= 8
+        self.assertEqual(kind, 12)
+        self.assertIsInstance(kind, int)
+        kind = engine.kind
+        self.assertEqual(kind, 0b1100)
 
         # Test __ixor__(other).
-        # FIXME: Passes too many arguments to __xor__.
+        kind ^= 0b1111
+        self.assertEqual(kind, 0b0011)
+        self.assertIsInstance(kind, int)
+        kind = engine.kind
+        self.assertEqual(kind, 0b0011)
 
         # Test __ior__(other).
-        # FIXME: Passes too many arguments to __or__.
+        kind |= 0b1000
+        self.assertEqual(kind, 0b1011)
+        self.assertIsInstance(kind, int)
+        kind = engine.kind
+        self.assertEqual(kind, 0b1011)
 
         process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
-        self.assertEqual(process.GetExitStatus(), 4)  # Last value of `engine.kind`.
+        # Last value of `engine.kind`.
+        self.assertEqual(process.GetExitStatus(), 0b1011)
