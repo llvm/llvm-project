@@ -13,7 +13,6 @@
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
@@ -97,8 +96,6 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
       "output-split-marker",
       llvm::cl::desc("Split marker to use for merging the ouput"),
       llvm::cl::init(""));
-
-  llvm::InitLLVM y(argc, argv);
 
   // Add flags for all the registered translations.
   llvm::cl::list<const Translation *, bool, TranslationParser>

@@ -1,4 +1,4 @@
-//===-- llc.cpp - LLVM Native Code Generator entry point -----------------===//
+//===- NVVMOps.cpp - NVVM operation definitions --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/InitLLVM.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
-extern "C" int llcMain(int argc, char **argv);
+#include "IR/NVVMOps.h"
 
-int main(int argc, char **argv) {
-  llvm::InitLLVM X(argc, argv);
-  return llcMain(argc, argv);
-}
+using namespace mlir;
+using namespace NVVM;
+
+#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
