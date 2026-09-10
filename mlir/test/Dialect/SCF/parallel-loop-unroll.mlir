@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-parallel-loop-unrolling -split-input-file | FileCheck %s --check-prefix=CHECK-NO-UNROLL
+// RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,0' -split-input-file | FileCheck %s --check-prefix=CHECK-NO-UNROLL
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2' -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2 loop-depth=1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-INNER
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-BY-3

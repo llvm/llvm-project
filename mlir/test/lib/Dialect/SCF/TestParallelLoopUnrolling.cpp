@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
 
@@ -46,7 +47,7 @@ struct TestParallelLoopUnrollingPass
   }
 
   void runOnOperation() override {
-    if (unrollFactors.empty())
+    if (unrollFactors.empty() || llvm::is_contained(unrollFactors, 0))
       return;
 
     SmallVector<scf::ParallelOp, 4> loops;
