@@ -573,16 +573,14 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 
     Defining a unary linalg.elementwise with default indexing-map:
     ```mlir
-    %exp = linalg.elementwise
-        kind=#linalg.elementwise_kind<exp>
+    %exp = linalg.elementwise <exp>
         ins(%x : tensor<4x16x8xf32>)
         outs(%y: tensor<4x16x8xf32>) -> tensor<4x16x8xf32>
     ```
 
     Defining a binary linalg.elementwise with user-defined indexing-map:
     ```mlir
-    %add = linalg.elementwise
-        kind=#linalg.elementwise_kind<add>
+    %add = linalg.elementwise <add>
         indexing_maps = [#transpose, #broadcast, #identity]
         ins(%exp, %arg1 : tensor<4x16x8xf32>, tensor<4x16xf32>)
         outs(%arg2: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>

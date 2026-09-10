@@ -381,6 +381,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
 
     # sys/statfs.h entrypoints
@@ -1426,6 +1427,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fgets
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
+    libc.src.stdio.fmemopen
     libc.src.stdio.fopen
     libc.src.stdio.freopen
     libc.src.stdio.fopencookie
