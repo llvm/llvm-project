@@ -772,6 +772,13 @@ public:
                               VariableLocationKind VarLocKind,
                               const GlobalVariable *GV = nullptr) const {}
 
+  /// The attribute describing the DWARF address space of a pointer or
+  /// reference type. Targets whose DWARF extensions define their own
+  /// attribute for this can override it.
+  virtual dwarf::Attribute getTypeAddressSpaceAttribute() const {
+    return dwarf::DW_AT_address_class;
+  }
+
   //===--------------------------------------------------------------------===//
   // Main entry points.
   //

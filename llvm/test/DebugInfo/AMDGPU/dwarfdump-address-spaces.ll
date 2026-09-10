@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llc -mtriple=x86_64--gnu -filetype=obj --verify-machineinstrs < %s | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefixes=COMMON,X86
 ; RUN: llc -mtriple=amdgpu9.00--amdhsa -filetype=obj < %s | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefixes=COMMON,AMDGPU
 
