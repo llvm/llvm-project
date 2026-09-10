@@ -490,29 +490,25 @@ static SVal castArgToParamTypeIfNeeded(const CallEvent &Call,
 /// \param ParamDecl the declared parameter initialized by this argument.
 /// \param DeclParamIdx index of \p ParamDecl among the callee's declared
 /// parameters. See CallEvent::getDeclaredParameterIndex().
-/// \param ASTArgIdx index of \p ArgExpr in the origin expression's argument
-/// list. See CallEvent::getASTArgumentIndex(). Note that this is not
-/// necessarily equal to \p DeclParamIdx.
 static void addParameterValueToBindings(const StackFrame *CalleeSF,
                                         CallEvent::BindingsTy &Bindings,
                                         SValBuilder &SVB, const CallEvent &Call,
                                         const ParmVarDecl *ParamDecl,
-                                        unsigned DeclParamIdx,
-                                        unsigned ASTArgIdx, const Expr *ArgExpr,
-                                        SVal ArgVal) {
+                                        unsigned DeclParamIdx, unsigned Idx) {
   assert(ParamDecl && "Formal parameter has no decl?");
 
   // TODO: Support allocator calls.
   if (Call.getKind() != CE_CXXAllocator)
-    if (Call.isArgumentConstructedDirectly(ASTArgIdx))
+    if (Call.isArgumentConstructedDirectly(Call.getASTArgumentIndex(Idx)))
       return;
 
+  SVal ArgVal = Call.getArgSVal(Idx);
   // TODO: Allocators should receive the correct size and possibly alignment,
   // determined in compile-time but not represented as arg-expressions,
   // which makes getArgSVal() fail and return UnknownVal.
   if (ArgVal.isUnknown())
     return;
-
+  const Expr *ArgExpr = Call.getArgExpr(Idx);
   // Cast the argument value to match the type of the parameter in some
   // edge-cases.
   ArgVal = castArgToParamTypeIfNeeded(Call, DeclParamIdx, ArgExpr, ArgVal, SVB);
@@ -542,9 +538,7 @@ static void addParameterValuesToBindings(const StackFrame *CalleeSF,
       break;
 
     addParameterValueToBindings(CalleeSF, Bindings, SVB, Call,
-                                parameters[*DeclParamIdx], *DeclParamIdx,
-                                Call.getASTArgumentIndex(Idx),
-                                Call.getArgExpr(Idx), Call.getArgSVal(Idx));
+                                parameters[*DeclParamIdx], *DeclParamIdx, Idx);
   }
 
   // FIXME: Variadic arguments are not handled at all right now.
