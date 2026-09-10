@@ -75,7 +75,11 @@ class GCNBreakLoadClusterDepsImpl {
                                   const std::bitset<NumVGPR32> &BannedRegs,
                                   bool MIMustBeKiller = false);
   bool isVGPRLoad(MachineInstr &MI) const {
-    return SIInstrInfo::isVMEM(MI) && MI.mayLoad() &&
+    // Exclude image (MIMG/VIMAGE/VSAMPLE) loads.  Their address operands are
+    // per-coordinate VGPRs, not the reused address chain this pass targets, and
+    // renaming them fights GCNNSAReassign, which deliberately picks the NSA
+    // address-register layout (renaming forces the larger NSA encoding).
+    return SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isImage(MI) && MI.mayLoad() &&
            MI.getOperand(0).isReg() &&
            TRI->isVGPR(*MRI, MI.getOperand(0).getReg());
   }
@@ -286,9 +290,13 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   // Iterate over registers in physical register class
   const TargetRegisterClass &DefinedRegClass =
       *TRI->getPhysRegBaseClass(OldReg);
+  // A candidate tuple occupies CandLanes 32-bit registers starting at its
+  // hardware index, so its highest lane is index + CandLanes - 1.  Require the
+  // whole tuple to fit under the budget, not just its first lane.
+  unsigned CandLanes = TRI->getRegSizeInBits(DefinedRegClass).getFixedValue() / 32;
   unsigned I;
   for (I = 0; I < DefinedRegClass.getRegisters().size(); I++) {
-    if (TRI->getHWRegIndex(DefinedRegClass.getRegisters()[I]) >=
+    if (TRI->getHWRegIndex(DefinedRegClass.getRegisters()[I]) + CandLanes >
         OccupancyBudget)
       continue;
     if (LRU.available(DefinedRegClass.getRegisters()[I]) &&
@@ -492,6 +500,10 @@ bool GCNBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
           DynamicBlockSize),
       DynamicBlockSize);
+  // The occupancy-derived budget above can exceed the function's own VGPR
+  // limit (e.g. an "amdgpu-num-vgpr" attribute).  Cap it so a rename never
+  // introduces a register beyond what the function is allowed to use.
+  OccupancyBudget = std::min(OccupancyBudget, ST->getMaxNumVGPRs(MF));
 
   bool ToReturn = false;
   for (MachineBasicBlock &MBB : MF)
