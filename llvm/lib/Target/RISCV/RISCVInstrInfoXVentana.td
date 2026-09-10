@@ -28,18 +28,5 @@ def VT_MASKC : VTMaskedMove<0b110, "vt.maskc">,
 def VT_MASKCN : VTMaskedMove<0b111, "vt.maskcn">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
-let Predicates = [HasVendorXVentanaCondOps] in {
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
-          (VT_MASKC GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
-          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
-
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
-          (VT_MASKC GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
-          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
-          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
-          (VT_MASKC GPR:$rs1, GPR:$rc)>;
-} // Predicates = [HasVendorXVentanaCondOps]
+let Predicates = [HasVendorXVentanaCondOps] in
+defm : CondOpsPat<VT_MASKC, VT_MASKCN>;

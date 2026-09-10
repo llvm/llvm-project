@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
-#include "Char.h"
 #include "Context.h"
 #include "Function.h"
-#include "Integral.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -18,67 +16,6 @@
 
 using namespace clang;
 using namespace clang::interp;
-
-unsigned Program::getOrCreateNativePointer(const void *Ptr) {
-  auto [It, Inserted] =
-      NativePointerIndices.try_emplace(Ptr, NativePointers.size());
-  if (Inserted)
-    NativePointers.push_back(Ptr);
-
-  return It->second;
-}
-
-const void *Program::getNativePointer(unsigned Idx) const {
-  return NativePointers[Idx];
-}
-
-unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
-  const size_t CharWidth = S->getCharByteWidth();
-  const size_t BitWidth = CharWidth * Ctx.getCharBit();
-  unsigned StringLength = S->getLength();
-
-  OptPrimType CharType =
-      Ctx.classify(S->getType()->castAsArrayTypeUnsafe()->getElementType());
-  assert(CharType);
-
-  if (!Base)
-    Base = S;
-
-  // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(Base, S->getType().getTypePtr(),
-                                        *CharType, StringLength + 1,
-                                        /*IsConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false,
-                                        /*IsVolatile=*/false);
-
-  // Allocate storage for the string.
-  // The byte length does not include the null terminator.
-  unsigned GlobalIndex = Globals.size();
-  unsigned Sz = Desc->getAllocSize() + Block::GlobalMD;
-  auto *G = new (Allocator, Sz) Global(Ctx.getEvalID(), Desc, Block::GlobalMD,
-                                       /*IsStatic=*/true, /*IsExtern=*/false);
-  G->block()->invokeCtor();
-
-  new (G->block()->rawData())
-      GlobalInlineDescriptor{GlobalInitState::Initialized};
-  Globals.push_back(G);
-
-  const Pointer Ptr(G->block());
-  if (CharWidth == 1) {
-    std::memcpy(&Ptr.elem<char>(0), S->getString().data(), StringLength);
-  } else {
-    // Construct the string in storage.
-    for (unsigned I = 0; I <= StringLength; ++I) {
-      uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
-      INT_TYPE_SWITCH_NO_BOOL(*CharType,
-                              Ptr.elem<T>(I) = T::from(CodePoint, BitWidth););
-    }
-  }
-  Ptr.initializeAllElements();
-
-  return GlobalIndex;
-}
 
 Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
@@ -142,9 +79,11 @@ unsigned Program::getOrCreateDummy(DeclOrExpr D, bool IsConstexprUnknown) {
     const auto *VD = D.asValueDecl();
     IsWeak = VD->isWeak();
     QT = VD->getType();
-    if (QT->isPointerOrReferenceType())
+
+    if (QT->isReferenceType())
       QT = QT->getPointeeType();
   }
+
   assert(!QT.isNull());
 
   Descriptor *Desc;
@@ -218,7 +157,7 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
     // block.
     auto [Iter, Inserted] = GlobalIndices.try_emplace(Redecl);
     if (Inserted) {
-      GlobalIndices[Redecl] = *Idx;
+      Iter->second = *Idx;
       continue;
     }
 
@@ -293,10 +232,10 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
 }
 
 Function *Program::getFunction(const FunctionDecl *F) {
-  F = F->getCanonicalDecl();
+  F = F->getFirstDecl();
   assert(F);
   auto It = Funcs.find(F);
-  return It == Funcs.end() ? nullptr : It->second.get();
+  return It == Funcs.end() ? nullptr : It->second;
 }
 
 Record *Program::getOrCreateRecord(const RecordDecl *RD) {
@@ -386,7 +325,8 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     const bool IsMutable = FD->isMutable();
     const bool IsVolatile = FT.isVolatileQualified();
     const Descriptor *Desc;
-    if (OptPrimType T = Ctx.classify(FT)) {
+    OptPrimType T = Ctx.classify(FT);
+    if (T) {
       Desc = createDescriptor(FD, *T, nullptr, IsConst,
                               /*IsTemporary=*/false, IsMutable, IsVolatile);
       HasPtrField = HasPtrField || (T == PT_Ptr);
@@ -400,7 +340,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     } else {
       Desc = allocateDescriptor(FD);
     }
-    Fields.emplace_back(FD, Desc, BaseSize);
+    Fields.emplace_back(FD, Desc, BaseSize, T);
     BaseSize += align(Desc->getAllocSize());
   }
 

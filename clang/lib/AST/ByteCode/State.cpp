@@ -8,8 +8,7 @@
 
 #include "State.h"
 #include "Frame.h"
-#include "Program.h"
-#include "clang/AST/ASTContext.h"
+#include "Source.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/OptionalDiagnostic.h"
 
@@ -18,10 +17,11 @@ using namespace clang::interp;
 
 State::~State() {}
 
-bool State::shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId) {
+bool State::emitRelaxedDiag(SourceLocation Loc, diag::kind DiagId) {
   if (!Ctx.getLangOpts().MSVCCompat ||
       (!EvalStatus.ExtendedDiag && !InConstantContext))
     return false;
+
   switch (DiagId) {
   case diag::note_constexpr_invalid_cast_ptrtoint:
     addExtendedDiag(Loc, diag::warn_relaxed_constant_fold_cast);
@@ -59,7 +59,7 @@ OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
 
 OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
-  if (shouldRelaxDiag(Loc, DiagId)) {
+  if (emitRelaxedDiag(Loc, DiagId)) {
     setActiveDiagnostic(false);
     return OptionalDiagnostic();
   }

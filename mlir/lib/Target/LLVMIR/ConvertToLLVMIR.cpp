@@ -31,6 +31,7 @@ void registerToLLVMIRTranslation() {
         if (!llvmModule)
           return failure();
 
+        llvmModule->renumberMetadataForAssembly();
         llvmModule->print(output, nullptr);
         return success();
       },

@@ -110,7 +110,10 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
     ConversionPatternRewriter &rewriter) const {
   Location loc = atomicOp.getLoc();
 
-  ArrayRef<NamedAttribute> origAttrs = atomicOp->getAttrs();
+  NamedAttrList origAttrs(atomicOp->getDiscardableAttrDictionary());
+  atomicOp->getName().walkInherentAttrs(
+      atomicOp,
+      [&](StringRef name, Attribute &attr) { origAttrs.append(name, attr); });
   ValueRange operands = adaptor.getOperands();
   Value data = operands.take_front()[0];
   ValueRange invariantArgs = operands.drop_front();

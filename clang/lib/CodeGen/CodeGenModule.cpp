@@ -48,6 +48,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
@@ -73,6 +74,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
@@ -432,6 +434,8 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
         Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
     CompatInfo.Clang11Compat =
         Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
+    CompatInfo.ClassifyUnnamedBitFields =
+        Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 
@@ -1297,7 +1301,11 @@ void CodeGenModule::Release() {
         llvm::ConstantArray::get(ATy, UsedArray), "__clang_gpu_used_external");
     addCompilerUsedGlobal(GV);
   }
-  if (LangOpts.HIP) {
+  // Skip __hip_cuid_ under incremental extensions (clang-repl): a repl session
+  // is one semantic TU, so this per-TU marker is useless in host and device IR.
+  // On the host it also collides, as every module shares one CUID and emits the
+  // same symbol at JIT link.
+  if (LangOpts.HIP && !LangOpts.IncrementalExtensions) {
     // Emit a unique ID so that host and device binaries from the same
     // compilation unit can be associated.
     auto *GV = new llvm::GlobalVariable(
@@ -3068,26 +3076,6 @@ void CodeGenModule::GenKernelArgMetadata(llvm::Function *Fn,
                     llvm::MDNode::get(VMContext, argNames));
 }
 
-/// Determines whether the language options require us to model
-/// unwind exceptions.  We treat -fexceptions as mandating this
-/// except under the fragile ObjC ABI with only ObjC exceptions
-/// enabled.  This means, for example, that C with -fexceptions
-/// enables this.
-static bool hasUnwindExceptions(const LangOptions &LangOpts) {
-  // If exceptions are completely disabled, obviously this is false.
-  if (!LangOpts.Exceptions) return false;
-
-  // If C++ exceptions are enabled, this is true.
-  if (LangOpts.CXXExceptions) return true;
-
-  // If ObjC exceptions are enabled, this depends on the ABI.
-  if (LangOpts.ObjCExceptions) {
-    return LangOpts.ObjCRuntime.hasUnwindExceptions();
-  }
-
-  return true;
-}
-
 static bool requiresMemberFunctionPointerTypeMetadata(CodeGenModule &CGM,
                                                       const CXXMethodDecl *MD) {
   // Check that the type metadata can ever actually be used by a call.
@@ -3130,7 +3118,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute("stack-probe-size",
                    std::to_string(CodeGenOpts.StackProbeSize));
 
-  if (!hasUnwindExceptions(LangOpts))
+  if (!CodeGenUtils::hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
 
   if (std::optional<llvm::Attribute::AttrKind> Attr =
@@ -3456,9 +3444,11 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     llvm::erase_if(Features, [&](const std::string& F) {
        return getTarget().isReadOnlyFeature(F.substr(1));
     });
-    llvm::sort(Features);
-    Attrs.addAttribute("target-features", llvm::join(Features, ","));
-    AddedAttr = true;
+    if (!Features.empty()) {
+      llvm::sort(Features);
+      Attrs.addAttribute("target-features", llvm::join(Features, ","));
+      AddedAttr = true;
+    }
   }
   // Add metadata for AArch64 Function Multi Versioning.
   if (getTarget().getTriple().isAArch64()) {
@@ -4251,7 +4241,7 @@ llvm::Constant *CodeGenModule::EmitAnnotationArgs(const AnnotateAttr *Attr) {
   for (Expr *E : Exprs) {
     ID.Add(cast<clang::ConstantExpr>(E)->getAPValueResult());
   }
-  llvm::Constant *&Lookup = AnnotationArgs[ID.ComputeHash()];
+  llvm::Constant *&Lookup = AnnotationArgs[ID.computeHash()];
   if (Lookup)
     return Lookup;
 
@@ -9117,7 +9107,7 @@ CodeGenModule::getOrCreateMSVCGlobalDeleteWrapper(const FunctionDecl *GlobOD) {
     // uses ::delete that alias is replaced by a real forwarding body, leaving
     // the empty otherwise unreferenced, so explicitly mark it used to ensure
     // it is always emitted (matching MSVC).
-    appendToUsed(M, {EmptyFn});
+    addUsedGlobal(EmptyFn);
   }
 
   // The wrapper defaults to a weak alias to the trapping __empty_global_delete

@@ -370,16 +370,39 @@ FrontendAction::FrontendAction() : Instance(nullptr) {}
 
 FrontendAction::~FrontendAction() {}
 
+TranslationUnitKind FrontendAction::getTranslationUnitKind() {
+  // The ASTContext, if exists, knows the exact TUKind of the frondend.
+  if (Instance && Instance->hasASTContext())
+    return Instance->getASTContext().TUKind;
+  return TU_Complete;
+}
+
+bool FrontendAction::BeginSourceFileAction(CompilerInstance &CI) {
+  if (CurrentInput.isPreprocessed())
+    CI.getPreprocessor().SetMacroExpansionOnlyInDirectives();
+  return true;
+}
+
+void FrontendAction::EndSourceFileAction() {
+  if (CurrentInput.isPreprocessed())
+    // Reset the preprocessor macro expansion to the default.
+    getCompilerInstance().getPreprocessor().SetEnableMacroExpansion();
+}
+
 void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
                                      std::unique_ptr<ASTUnit> AST) {
   this->CurrentInput = CurrentInput;
   CurrentASTUnit = std::move(AST);
 }
 
+std::unique_ptr<ASTUnit> FrontendAction::takeCurrentASTUnit() {
+  return std::move(CurrentASTUnit);
+}
+
 Module *FrontendAction::getCurrentModule() const {
   CompilerInstance &CI = getCompilerInstance();
   return CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
-      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch*/false);
+      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch=*/false);
 }
 
 std::unique_ptr<ASTConsumer>
