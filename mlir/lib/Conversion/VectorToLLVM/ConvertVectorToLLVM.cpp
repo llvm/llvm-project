@@ -345,7 +345,7 @@ public:
     // Replace with the gather intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
         gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
-        adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
+        adaptor.getPassThru(), align);
     return success();
   }
 
@@ -403,8 +403,7 @@ public:
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
-        scatter, adaptor.getValueToStore(), ptrs, adaptor.getMask(),
-        rewriter.getI32IntegerAttr(align));
+        scatter, adaptor.getValueToStore(), ptrs, adaptor.getMask(), align);
     return success();
   }
 

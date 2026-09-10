@@ -26,6 +26,10 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: _SC_THREADS
     macro_header: unistd-macros.h
+  - macro_name: _SC_GETGR_R_SIZE_MAX
+    macro_header: unistd-macros.h
+  - macro_name: _SC_GETPW_R_SIZE_MAX
+    macro_header: unistd-macros.h
   - macro_name: _SC_NPROCESSORS_CONF
     macro_header: unistd-macros.h
   - macro_name: _SC_NPROCESSORS_ONLN
