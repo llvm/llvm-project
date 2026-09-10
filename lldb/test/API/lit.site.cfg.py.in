@@ -36,6 +36,7 @@ config.enabled_plugins = []
 config.lldb_executable = lit_config.substitute('@LLDB_TEST_EXECUTABLE@')
 config.test_triple = '@LLDB_TEST_TRIPLE@'
 config.test_compiler = lit_config.substitute('@LLDB_TEST_COMPILER@')
+config.fortran_test_compiler = lit_config.substitute('@LLDB_TEST_FORTRAN_COMPILER@')
 config.dsymutil = lit_config.substitute('@LLDB_TEST_DSYMUTIL@')
 config.make = lit_config.substitute('@LLDB_TEST_MAKE@')
 config.has_libcxx = @LLDB_HAS_LIBCXX@
