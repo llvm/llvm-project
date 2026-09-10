@@ -74,7 +74,7 @@ static bool areBinOpsSwapped(GenericOp genericOp) {
 //     linalg.yield %0: f32
 //   } -> tensor<?xf32>
 // Here, the returned index is 1, and the generic op can be represented as
-//   %0 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+//   %0 = linalg.elementwise <mul>
 //          indexing_maps = [#mapA, affine_map<(d0) -> ()>, #mapRes]
 //          ins(%A, %cst : tensor<?xf32>, f32) outs(...) -> tensor<?xf32>
 static bool findIndexOfScalarOperand(GenericOp genericOp, int &index) {
@@ -105,7 +105,7 @@ static bool findIndexOfScalarOperand(GenericOp genericOp, int &index) {
 //     } -> tensor<?x?xf32>
 //
 // is specialized to
-//   linalg.elementwise kind=#linalg.elementwise_kind<exp> ...
+//   linalg.elementwise <exp> ...
 //
 // A named op is emitted instead for binary/ternary ops that still have a
 // linalg.* named equivalent (e.g. linalg.add).
