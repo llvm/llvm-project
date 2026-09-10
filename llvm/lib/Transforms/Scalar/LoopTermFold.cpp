@@ -259,7 +259,7 @@ static bool RunTermFold(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     cast<Instruction>(LoopValue)->dropPoisonGeneratingFlags();
 
   // SCEVExpander for both use in preheader and latch
-  SCEVExpander Expander(SE, "lsr_fold_term_cond");
+  SCEVExpander Expander(SE, "lsr_fold_term_cond", true, MSSAU.get());
 
   assert(Expander.isSafeToExpand(TermValueS) &&
          "Terminating value was checked safe in canFoldTerminatingCondition");

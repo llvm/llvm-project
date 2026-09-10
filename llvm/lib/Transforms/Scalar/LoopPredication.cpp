@@ -1234,7 +1234,7 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
           cast<CondBrInst>(BB->getTerminator()));
   }
 
-  SCEVExpander Expander(*SE, "loop-predication");
+  SCEVExpander Expander(*SE, "loop-predication", true, MSSAU);
   bool Changed = false;
   for (auto *Guard : Guards)
     Changed |= widenGuardConditions(Guard, Expander);
