@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
-#include "OffloadPolicy.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
@@ -32,10 +31,6 @@ PluginManager *PM = nullptr;
 
 void PluginManager::init() {
   TIMESCOPE();
-  if (OffloadPolicy::isOffloadDisabled()) {
-    ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
-    return;
-  }
 
   ODBG(ODT_Init) << "Loading RTLs";
 
