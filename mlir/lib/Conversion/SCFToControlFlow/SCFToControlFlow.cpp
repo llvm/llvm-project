@@ -315,9 +315,10 @@ struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
 
 static void copyLLVMDialectAttrs(Operation *from, Operation *to) {
   SmallVector<NamedAttribute> llvmAttrs;
-  llvm::copy_if(from->getAttrs(), std::back_inserter(llvmAttrs), [](auto attr) {
-    return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
-  });
+  llvm::copy_if(from->getDiscardableAttrs(), std::back_inserter(llvmAttrs),
+                [](auto attr) {
+                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
+                });
   to->setDiscardableAttrs(llvmAttrs);
 }
 

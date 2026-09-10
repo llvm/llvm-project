@@ -329,6 +329,14 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createInlineHLFIRAssign({/*onlyScalarRHS=*/true});
     });
+  } else if (config.EnableCUDA) {
+    // Same at O0 for CUDA Fortran device code, where the runtime call also
+    // inflates the stack frame the device linker reserves for the kernel.
+    // The module holds host code too, hence onlyCUDADeviceContext.
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
+      return hlfir::createInlineHLFIRAssign(
+          {/*onlyScalarRHS=*/true, /*onlyCUDADeviceContext=*/true});
+    });
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
       {/*tryFusingAssignments=*/optLevel != llvm::OptimizationLevel::O0}));
