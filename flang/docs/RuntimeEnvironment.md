@@ -36,6 +36,9 @@ Determines data conversions applied to unformatted I/O.
 
 ## `FLANG_RT_COPYOUT_MODIFIED_ONLY`
 
+The system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY` selects how
+the runtime performs copy-out.
+
 When the compiler passes a copy of an actual argument to a procedure
 (copy-in/copy-out), the runtime skips the copy-out entirely when the
 temporary copy is still bitwise-identical to the original, and performs
@@ -43,8 +46,8 @@ the normal whole-object copy-out otherwise. This avoids stores to the
 original argument when the callee never modified the data -- in
 particular, stores into read-only storage backing a non-definable actual
 argument.
-Set `FLANG_RT_COPYOUT_MODIFIED_ONLY=0` to restore the unconditional
-copy-out.
+Set the system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY=0` to
+restore the unconditional copy-out.
 
 ## `FORT_CHECK_POINTER_DEALLOCATION`
 

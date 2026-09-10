@@ -74,7 +74,8 @@ struct ExecutionEnvironment {
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
   bool truncateStream{true}; // FORT_TRUNCATE_STREAM
   bool noEmptyAllocation{false}; // FORT_NO_EMPTY_ALLOCATION
-  // FLANG_RT_COPYOUT_MODIFIED_ONLY=0 restores the unconditional copy-out
+  // The system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
+  // restores the unconditional copy-out
   // of argument temporaries (CopyOutAssign copies every element back
   // instead of only the elements the callee modified).
   bool copyOutModifiedOnly{true}; // FLANG_RT_COPYOUT_MODIFIED_ONLY

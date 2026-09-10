@@ -849,7 +849,8 @@ void RTDEF(CopyOutAssign)(
   // onward the copy is unconditional: a per-element conditional store
   // measures far slower on partially-modified data (branch misprediction),
   // and a modified temporary means the variable is legally writable anyway.
-  // FLANG_RT_COPYOUT_MODIFIED_ONLY=0 restores the unconditional copy-out.
+  // Setting the system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
+  // restores the unconditional copy-out.
   if (var) {
     if (executionEnvironment.copyOutModifiedOnly) {
       ShallowCopyModifiedSuffix(*var, temp);
