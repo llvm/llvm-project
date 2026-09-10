@@ -59,7 +59,10 @@ add_entrypoint_object(
     libc.hdr.types.struct_dirent
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.dirent.closedir
     libc.src.dirent.opendir
+    libc.src.dirent.readdir
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
