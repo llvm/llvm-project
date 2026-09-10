@@ -11,7 +11,6 @@
 #define _LIBCPP___RCU_RCU_DOMAIN_H
 
 #include <__config>
-#include <__functional/function_ref.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/is_constructible.h>
 #include <__utility/move.h>
@@ -26,8 +25,9 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
 struct __rcu_node {
-  function_ref<void()> __callback_ = std::cw<[] {}>;
-  __rcu_node* __next_              = nullptr;
+  using __cb_type        = void(__rcu_node*);
+  __cb_type* __callback_ = [](__rcu_node*) {};
+  __rcu_node* __next_    = nullptr;
 };
 
 template <class _Tp, class _Deleter>
@@ -36,12 +36,13 @@ struct __rcu_node_with_deleter : __rcu_node {
   _LIBCPP_NO_UNIQUE_ADDRESS _Deleter __deleter_ = _Deleter();
 
   _LIBCPP_HIDE_FROM_ABI __rcu_node_with_deleter(_Tp* __obj, _Deleter __deleter) : __obj_(__obj), __deleter_(__deleter) {
-    __callback_ = function_ref<void()>(std::cw<&__rcu_node_with_deleter::__destroy>, this);
+    __callback_ = &__rcu_node_with_deleter::__destroy;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __destroy() const {
-    __deleter_(__obj_);
-    delete this;
+  _LIBCPP_HIDE_FROM_ABI static void __destroy(__rcu_node* __node) {
+    auto __self = static_cast<__rcu_node_with_deleter*>(__node);
+    __self->__deleter_(__self->__obj_);
+    delete __self;
   }
 };
 
