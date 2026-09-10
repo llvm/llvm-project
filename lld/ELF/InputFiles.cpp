@@ -1265,8 +1265,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
 
 // Add the undefined symbols of the embedded unoptimized dynamic debugging
 // object so that the outer link resolves the inner link's dependencies. Tag
-// those reached by an inner relocation against a SHT_PROGBITS SHF_ALLOC
-// section with `isDynDbgRef`; the rest are only needed by debug sections.
+// those reached by an inner relocation against a SHF_ALLOC section with
+// `isDynDbgRef`; the rest are only needed by debug sections.
 template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
   MemoryBufferRef dbgMb(toStringRef(dynDbgSec->contentMaybeDecompress()),
                         mb.getBufferIdentifier());
@@ -1291,7 +1291,7 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
     if (!isStaticRelSecType(sh.sh_type))
       continue;
     const Elf_Shdr &target = *CHECK2(obj.getSection(sh.sh_info), &dbgObj);
-    if (target.sh_type != SHT_PROGBITS || !(target.sh_flags & SHF_ALLOC))
+    if (!(target.sh_flags & SHF_ALLOC))
       continue;
     if (sh.sh_type == SHT_CREL) {
       auto [rels, relas] = CHECK2(obj.crels(sh), &dbgObj);
