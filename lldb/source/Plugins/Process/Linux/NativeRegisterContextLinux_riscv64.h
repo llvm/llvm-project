@@ -12,7 +12,7 @@
 #define lldb_NativeRegisterContextLinux_riscv64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/RegisterInfoCommon_riscv64.h"
+#include "Register/Common/RegisterInfoCommon_riscv64.h"
 
 #include <asm/ptrace.h>
 

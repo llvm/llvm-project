@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_PPC64LE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_PPC64LE_H
 
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Register/Arch/lldb-ppc64le-register-enums.h"
 #include "RegisterInfoInterface.h"
 #include "Utility/PPC64LE_DWARF_Registers.h"
 #include "lldb/Target/RegisterContext.h"

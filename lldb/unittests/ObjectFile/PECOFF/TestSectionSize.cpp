@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 
@@ -75,4 +75,3 @@ symbols:         []
   // without the zero padding, instead of SizeOfRawData (512).
   EXPECT_EQ(section_data.GetByteSize(), (uint64_t)496);
 }
-

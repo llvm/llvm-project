@@ -1,0 +1,52 @@
+//===-- RegisterInfoFreeBSD_powerpc.h -------------------------*- C++
+//-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLDB_SOURCE_REGISTER_FREEBSD_REGISTERINFOFREEBSD_POWERPC_H
+#define LLDB_SOURCE_REGISTER_FREEBSD_REGISTERINFOFREEBSD_POWERPC_H
+
+#include "Register/RegisterInfoInterface.h"
+
+class RegisterInfoFreeBSD_powerpc
+    : public lldb_private::RegisterInfoInterface {
+public:
+  RegisterInfoFreeBSD_powerpc(const lldb_private::ArchSpec &target_arch);
+  ~RegisterInfoFreeBSD_powerpc() override;
+
+  size_t GetGPRSize() const override;
+
+  const lldb_private::RegisterInfo *GetRegisterInfo() const override;
+
+  uint32_t GetRegisterCount() const override;
+};
+
+class RegisterInfoFreeBSD_powerpc32 : public RegisterInfoFreeBSD_powerpc {
+public:
+  RegisterInfoFreeBSD_powerpc32(const lldb_private::ArchSpec &target_arch);
+  ~RegisterInfoFreeBSD_powerpc32() override;
+
+  size_t GetGPRSize() const override;
+
+  const lldb_private::RegisterInfo *GetRegisterInfo() const override;
+
+  uint32_t GetRegisterCount() const override;
+};
+
+class RegisterInfoFreeBSD_powerpc64 : public RegisterInfoFreeBSD_powerpc {
+public:
+  RegisterInfoFreeBSD_powerpc64(const lldb_private::ArchSpec &target_arch);
+  ~RegisterInfoFreeBSD_powerpc64() override;
+
+  size_t GetGPRSize() const override;
+
+  const lldb_private::RegisterInfo *GetRegisterInfo() const override;
+
+  uint32_t GetRegisterCount() const override;
+};
+
+#endif // LLDB_SOURCE_REGISTER_FREEBSD_REGISTERINFOFREEBSD_POWERPC_H

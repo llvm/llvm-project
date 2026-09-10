@@ -13,9 +13,9 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_x86.h"
-#include "Plugins/Process/Utility/RegisterContext_x86.h"
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "Register/Linux/RegisterInfoLinux_x86.h"
+#include "Register/Arch/RegisterContext_x86.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 #include <optional>
 #include <sys/uio.h>
 

@@ -19,7 +19,7 @@
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/ARMUtils.h"
-#include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Register/Arch/lldb-arm64-register-enums.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -40,7 +40,7 @@
 
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
-#include "Plugins/Process/Utility/RegisterInfos_arm64.h"
+#include "Register/Arch/RegisterInfos_arm64.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"

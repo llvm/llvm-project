@@ -1,0 +1,37 @@
+static_library("Register") {
+  output_name = "lldbRegister"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+
+  # Uses source-relative includes for own headers.
+  include_dirs = [ "//lldb/source" ]
+  sources = [
+    "Arch/RegisterContext_x86.cpp",
+    "Arch/RegisterInfos_x86_64_with_base_shared.cpp",
+    "Common/RegisterInfoCommonDynamic_riscv32.cpp",
+    "Common/RegisterInfoCommon_arm.cpp",
+    "Common/RegisterInfoCommon_arm64.cpp",
+    "Common/RegisterInfoCommon_loongarch64.cpp",
+    "Common/RegisterInfoCommon_ppc64.cpp",
+    "Common/RegisterInfoCommon_ppc64le.cpp",
+    "Common/RegisterInfoCommon_riscv32.cpp",
+    "Common/RegisterInfoCommon_riscv64.cpp",
+    "Common/RegisterTypeDetector_arm64.cpp",
+    "FreeBSD/RegisterInfoFreeBSD_i386.cpp",
+    "FreeBSD/RegisterInfoFreeBSD_powerpc.cpp",
+    "FreeBSD/RegisterInfoFreeBSD_x86_64.cpp",
+    "Linux/RegisterInfoLinux_i386.cpp",
+    "Linux/RegisterInfoLinux_s390x.cpp",
+    "Linux/RegisterInfoLinux_x86_64.cpp",
+    "NetBSD/RegisterInfoNetBSD_i386.cpp",
+    "NetBSD/RegisterInfoNetBSD_x86_64.cpp",
+    "OpenBSD/RegisterInfoOpenBSD_i386.cpp",
+    "OpenBSD/RegisterInfoOpenBSD_x86_64.cpp",
+    "Windows/RegisterInfoWindows_i386.cpp",
+    "Windows/RegisterInfoWindows_x86_64.cpp",
+  ]
+}

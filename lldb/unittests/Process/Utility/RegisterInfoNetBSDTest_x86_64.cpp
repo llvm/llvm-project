@@ -16,9 +16,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
-#include "Plugins/Process/Utility/RegisterInfoNetBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoNetBSD_x86_64.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
+#include "Register/NetBSD/RegisterInfoNetBSD_i386.h"
+#include "Register/NetBSD/RegisterInfoNetBSD_x86_64.h"
 
 using namespace lldb;
 using namespace lldb_private;

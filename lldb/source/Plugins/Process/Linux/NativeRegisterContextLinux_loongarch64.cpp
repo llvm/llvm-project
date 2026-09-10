@@ -12,8 +12,8 @@
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/Utility/RegisterInfoCommon_loongarch64.h"
-#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
+#include "Register/Common/RegisterInfoCommon_loongarch64.h"
+#include "Register/Arch/lldb-loongarch-register-enums.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"

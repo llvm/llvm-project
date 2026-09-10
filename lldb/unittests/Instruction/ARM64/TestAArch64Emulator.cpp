@@ -16,8 +16,8 @@
 #include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
-#include "Plugins/Process/Utility/RegisterInfoCommon_arm64.h"
-#include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Register/Common/RegisterInfoCommon_arm64.h"
+#include "Register/Arch/lldb-arm64-register-enums.h"
 
 using namespace lldb;
 using namespace lldb_private;

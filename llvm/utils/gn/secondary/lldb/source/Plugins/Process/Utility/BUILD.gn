@@ -1,46 +1,8 @@
-static_library("Register") {
-  output_name = "lldbRegister"
-  configs += [ "//llvm/utils/gn/build:lldb_code" ]
-  deps = [
-    "//lldb/source/Utility",
-    "//llvm/lib/Support",
-    "//llvm/lib/TargetParser",
-  ]
-
-  # Uses source-relative includes for own headers.
-  include_dirs = [ "//lldb/source" ]
-  sources = [
-    "RegisterInfoFreeBSD_i386.cpp",
-    "RegisterInfoFreeBSD_powerpc.cpp",
-    "RegisterInfoFreeBSD_x86_64.cpp",
-    "RegisterInfoLinux_i386.cpp",
-    "RegisterInfoLinux_s390x.cpp",
-    "RegisterInfoLinux_x86_64.cpp",
-    "RegisterInfoNetBSD_i386.cpp",
-    "RegisterInfoNetBSD_x86_64.cpp",
-    "RegisterInfoOpenBSD_i386.cpp",
-    "RegisterInfoOpenBSD_x86_64.cpp",
-    "RegisterInfoWindows_i386.cpp",
-    "RegisterInfoWindows_x86_64.cpp",
-    "RegisterContext_x86.cpp",
-    "RegisterInfoCommonDynamic_riscv32.cpp",
-    "RegisterInfoCommon_arm.cpp",
-    "RegisterInfoCommon_arm64.cpp",
-    "RegisterInfoCommon_loongarch64.cpp",
-    "RegisterInfoCommon_ppc64.cpp",
-    "RegisterInfoCommon_ppc64le.cpp",
-    "RegisterInfoCommon_riscv32.cpp",
-    "RegisterInfoCommon_riscv64.cpp",
-    "RegisterInfos_x86_64_with_base_shared.cpp",
-    "RegisterTypeDetector_arm64.cpp",
-  ]
-}
-
 static_library("Utility") {
   output_name = "lldbPluginProcessUtility"
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
-    ":Register",
+    "//lldb/source/Register",
     #"//lldb/source/Breakpoint", # 3-hop dependency cycle.
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",

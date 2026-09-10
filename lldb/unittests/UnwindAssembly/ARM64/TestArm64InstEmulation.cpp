@@ -32,6 +32,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "Register/Arch/lldb-arm64-register-enums.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace lldb;
