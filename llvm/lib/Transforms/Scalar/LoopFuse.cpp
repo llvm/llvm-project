@@ -89,6 +89,8 @@ STATISTIC(
 STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
 STATISTIC(FusionTooLarge, "Fusion exceeds the combined-body cost budget");
 STATISTIC(UnknownFusionSize, "Fusion body cost could not be computed");
+STATISTIC(InsufficientReuse,
+          "Fusion has insufficient cross-loop reused values");
 STATISTIC(NonIdenticalGuards, "Candidates have different guards");
 STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block with "
                              "instructions that cannot be moved");
@@ -115,6 +117,10 @@ static cl::opt<unsigned> FusionMaxCodeSize(
     cl::desc("Maximum estimated combined cost of fused loop bodies "
              "(0 disables the limit)"));
 
+static cl::opt<unsigned> FusionMinReusedValues(
+    "loop-fusion-min-reused-values", cl::Hidden, cl::init(1),
+    cl::desc("Minimum number of distinct values reused across fused loops"));
+
 #ifndef NDEBUG
 static cl::opt<bool>
     VerboseFusionDebugging("loop-fusion-verbose-debug",
@@ -128,13 +134,17 @@ enum class FusionProfitabilityResult {
   Profitable,
   TooLarge,
   UnknownSize,
+  InsufficientReuse,
 };
 
 struct FusionProfitabilityInfo {
   FusionProfitabilityResult Result =
       FusionProfitabilityResult::Profitable;
   std::optional<unsigned> CombinedCost;
+  unsigned ReusedValueCount = 0;
 };
+
+using ReusedValueSet = SmallPtrSet<const Instruction *, 4>;
 
 /// This class is used to represent a candidate for loop fusion. When it is
 /// constructed, it checks the conditions for loop fusion to ensure that it
@@ -642,6 +652,11 @@ private:
     if (!EnableFusionCostModel)
       return true;
 
+    if (Info.ReusedValueCount < FusionMinReusedValues) {
+      Info.Result = FusionProfitabilityResult::InsufficientReuse;
+      return false;
+    }
+
     std::optional<unsigned> Size0 = estimateLoopCodeSize(FC0);
     std::optional<unsigned> Size1 = estimateLoopCodeSize(FC1);
     if (!Size0 || !Size1) {
@@ -901,7 +916,10 @@ private:
 
         // Check the dependencies across the loops and do not fuse if it would
         // violate them.
-        if (!dependencesAllowFusion(FC0, FC1)) {
+        ReusedValueSet ReusedValues;
+        if (!dependencesAllowFusion(FC0, FC1,
+                                    EnableFusionCostModel ? &ReusedValues
+                                                          : nullptr)) {
           LLVM_DEBUG(dbgs() << "Memory dependencies do not allow fusion!\n");
           ++InvalidDependencies;
           reportLoopFusion<OptimizationRemarkMissed>(
@@ -938,21 +956,27 @@ private:
         }
 
         FusionProfitabilityInfo ProfitabilityInfo;
+        ProfitabilityInfo.ReusedValueCount = ReusedValues.size();
         bool BeneficialToFuse =
             isBeneficialFusion(FC0, FC1, ProfitabilityInfo);
         if (!BeneficialToFuse) {
-          if (ProfitabilityInfo.Result ==
-              FusionProfitabilityResult::TooLarge) {
+          switch (ProfitabilityInfo.Result) {
+          case FusionProfitabilityResult::InsufficientReuse:
+            ++InsufficientReuse;
+            reportFusionInsufficientReuse(FC0, FC1, ProfitabilityInfo);
+            break;
+          case FusionProfitabilityResult::TooLarge:
             ++FusionTooLarge;
             reportFusionTooLarge(FC0, FC1, ProfitabilityInfo);
-          } else {
-            assert(ProfitabilityInfo.Result ==
-                       FusionProfitabilityResult::UnknownSize &&
-                   "Unexpected unprofitable fusion result");
+            break;
+          case FusionProfitabilityResult::UnknownSize:
             ++UnknownFusionSize;
             reportLoopFusion<OptimizationRemarkMissed>(
                 FC0, FC1, "UnknownFusionSize",
                 "Fusion body cost could not be computed");
+            break;
+          case FusionProfitabilityResult::Profitable:
+            llvm_unreachable("Unexpected profitable fusion result");
           }
           continue;
         }
@@ -1178,7 +1202,8 @@ private:
   /// @p L1) allow loop fusion of @p L0 and @p L1.
   bool dependencesAllowFusion(const FusionCandidate &FC0,
                               const FusionCandidate &FC1, Instruction &I0,
-                              Instruction &I1) {
+                              Instruction &I1,
+                              ReusedValueSet *ReusedValues = nullptr) {
 #ifndef NDEBUG
     if (VerboseFusionDebugging) {
       LLVM_DEBUG(dbgs() << "Check dep: " << I0 << " vs " << I1 << "\n");
@@ -1231,6 +1256,14 @@ private:
 
     assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
+    unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
+
+    if (ReusedValues && !DepResult->isConfused() && DepResult->isFlow() &&
+        CurDir == Dependence::DVEntry::EQ) {
+      ReusedValues->insert(&I0);
+      LLVM_DEBUG(dbgs() << "Same-iteration reuse via " << I0 << "\n");
+    }
+
     if (DepResult->isScalar(CurLoopLevel, true)) {
       if (DepResult->isInput() || DepResult->isOutput()) {
         LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant "
@@ -1246,7 +1279,6 @@ private:
       //     A[i] = ...;
       //   for (i)
       //     A[i] += ...;
-      unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
       if (!(CurDir & Dependence::DVEntry::GT) &&
           !(CurDir & Dependence::DVEntry::LT)) {
         LLVM_DEBUG(dbgs() << "Safe to fuse same-iteration scalar dependence\n");
@@ -1257,8 +1289,6 @@ private:
           dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
       return false;
     }
-
-    unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
 
     // Check if the direction vector does not include greater direction. In
     // that case, the dependency is not a backward loop-carried and is legal
@@ -1282,7 +1312,8 @@ private:
 
   /// Perform a dependence check and return if @p FC0 and @p FC1 can be fused.
   bool dependencesAllowFusion(const FusionCandidate &FC0,
-                              const FusionCandidate &FC1) {
+                              const FusionCandidate &FC1,
+                              ReusedValueSet *ReusedValues) {
     LLVM_DEBUG(dbgs() << "Check if " << FC0 << " can be fused with " << FC1
                       << "\n");
     assert(FC0.L->getLoopDepth() == FC1.L->getLoopDepth());
@@ -1304,7 +1335,8 @@ private:
           return false;
         }
       for (Instruction *ReadL1 : FC1.MemReads)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1)) {
+        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1,
+                                    ReusedValues)) {
           return false;
         }
     }
@@ -1724,6 +1756,25 @@ private:
         << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName())) << " and "
         << NV("Cand2", StringRef(FC1.Preheader->getName())) << ": "
         << RemarkMsg);
+  }
+
+  void reportFusionInsufficientReuse(
+      const FusionCandidate &FC0, const FusionCandidate &FC1,
+      const FusionProfitabilityInfo &Info) {
+    assert(Info.ReusedValueCount < FusionMinReusedValues &&
+           "Expected insufficient reuse");
+
+    using namespace ore;
+    ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "InsufficientReuse",
+                                      FC0.L->getStartLoc(), FC0.Preheader)
+             << "[" << FC0.Preheader->getParent()->getName()
+             << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
+             << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
+             << ": found "
+             << NV("ReusedValueCount", Info.ReusedValueCount)
+             << " cross-loop reused values; configured minimum is "
+             << NV("MinimumReusedValues",
+                   unsigned(FusionMinReusedValues)));
   }
 
   void reportFusionTooLarge(const FusionCandidate &FC0,
