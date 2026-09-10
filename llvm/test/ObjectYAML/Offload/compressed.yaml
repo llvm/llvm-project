@@ -1,0 +1,30 @@
+# REQUIRES: zstd
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+!Offload
+Compression:      zstd
+Members:
+  - ImageKind:        IMG_Cubin
+    OffloadKind:      OFK_HIP
+    Flags:            0
+    String:
+    - Key:              "triple"
+      Value:            "amdgcn-amd-amdhsa"
+    - Key:              "arch"
+      Value:            "gfx90a"
+    Content:          "deadbeef"
+
+# CHECK: --- !Offload
+# CHECK-NEXT: Compression:     zstd
+# CHECK-NEXT: Members:
+# CHECK-NEXT:   - ImageKind:       IMG_Cubin
+# CHECK-NEXT:     OffloadKind:     OFK_HIP
+# CHECK-NEXT:     Flags:           0
+# CHECK-NEXT:     String:
+# CHECK-NEXT:       - Key:             triple
+# CHECK-NEXT:         Value:           amdgcn-amd-amdhsa
+# CHECK-NEXT:       - Key:             arch
+# CHECK-NEXT:         Value:           gfx90a
+# CHECK-NEXT:     Content:         DEADBEEF
+# CHECK-NEXT: ...

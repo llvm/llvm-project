@@ -8,6 +8,8 @@
 
 #include "llvm/Object/OffloadBinary.h"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/Constants.h"
@@ -21,33 +23,20 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+
+#include <cassert>
+#include <cstddef>
+#include <memory>
 
 using namespace llvm;
 using namespace llvm::object;
 
 namespace {
-
-/// A MemoryBuffer that shares ownership of the underlying memory.
-/// This allows multiple OffloadBinary instances to share the same buffer.
-class SharedMemoryBuffer : public MemoryBuffer {
-public:
-  SharedMemoryBuffer(std::shared_ptr<MemoryBuffer> Buf)
-      : SharedBuf(std::move(Buf)) {
-    init(SharedBuf->getBufferStart(), SharedBuf->getBufferEnd(),
-         /*RequiresNullTerminator=*/false);
-  }
-
-  BufferKind getBufferKind() const override { return MemoryBuffer_Malloc; }
-
-  StringRef getBufferIdentifier() const override {
-    return SharedBuf->getBufferIdentifier();
-  }
-
-private:
-  const std::shared_ptr<MemoryBuffer> SharedBuf;
-};
 
 /// Attempts to extract all the embedded device images contained inside the
 /// buffer \p Contents. The buffer is expected to contain a valid offloading
@@ -70,23 +59,18 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
       return HeaderOrErr.takeError();
     const OffloadBinary::Header *Header = *HeaderOrErr;
 
-    // Create a copy of original memory containing only the current binary.
-    std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
-        Buffer->getBuffer().take_front(Header->Size),
-        Contents.getBufferIdentifier());
-
-    auto BinariesOrErr = OffloadBinary::create(*BufferCopy);
+    MemoryBufferRef Slice(Buffer->getBuffer().take_front(Header->Size),
+                          Contents.getBufferIdentifier());
+    auto BinariesOrErr = OffloadBinary::create(Slice);
     if (!BinariesOrErr)
       return BinariesOrErr.takeError();
 
-    // Share ownership among multiple OffloadFiles.
-    std::shared_ptr<MemoryBuffer> SharedBuffer =
-        std::shared_ptr<MemoryBuffer>(std::move(BufferCopy));
-
     for (auto &Binary : *BinariesOrErr) {
-      std::unique_ptr<SharedMemoryBuffer> SharedBufferPtr =
-          std::make_unique<SharedMemoryBuffer>(SharedBuffer);
-      Binaries.emplace_back(std::move(Binary), std::move(SharedBufferPtr));
+      std::unique_ptr<MemoryBuffer> View = MemoryBuffer::getMemBuffer(
+          Binary->getMemoryBufferRef().getBuffer(),
+          Binary->getMemoryBufferRef().getBufferIdentifier(),
+          /*RequiresNullTerminator=*/false);
+      Binaries.emplace_back(std::move(Binary), std::move(View));
     }
 
     Offset += Header->Size;
@@ -197,11 +181,55 @@ Error extractFromArchive(const Archive &Library,
   return Error::success();
 }
 
+bool isCompressed(const OffloadBinary::Header &Header) {
+  return Header.Version >= 3 && Header.InflatedSize != 0;
+}
+
+Expected<std::unique_ptr<MemoryBuffer>>
+decompressOffloadBinary(MemoryBufferRef Buf) {
+  const auto *Header =
+      reinterpret_cast<const OffloadBinary::Header *>(Buf.getBufferStart());
+  if (Header->EntriesOffset > Header->Size ||
+      Header->InflatedSize < Header->EntriesOffset)
+    return errorCodeToError(object_error::unexpected_eof);
+
+  // Get the compressed binary blob after the header.
+  StringRef Compressed = Buf.getBuffer()
+                             .take_front(Header->Size)
+                             .drop_front(Header->EntriesOffset);
+  uint64_t BodySize = Header->InflatedSize - Header->EntriesOffset;
+
+  compression::Format Format = identify_magic(Compressed) == file_magic::zstd
+                                   ? compression::Format::Zstd
+                                   : compression::Format::Zlib;
+  if (const char *Reason = compression::getReasonIfUnsupported(Format))
+    return createStringError(Reason);
+
+  SmallVector<uint8_t, 0> Body;
+  if (Error Err = compression::decompress(
+          Format, arrayRefFromStringRef(Compressed), Body, BodySize))
+    return std::move(Err);
+
+  // Restore the old header data for the newly uncompressed blob.
+  OffloadBinary::Header Restored = *Header;
+  Restored.Size = Restored.InflatedSize;
+  Restored.InflatedSize = 0;
+  if (Restored.EntriesOffset + Body.size() != Restored.Size)
+    return errorCodeToError(object_error::parse_failed);
+
+  SmallString<0> Out;
+  Out.reserve(Restored.Size);
+  Out.append(StringRef(reinterpret_cast<const char *>(&Restored),
+                       Restored.EntriesOffset));
+  Out.append(toStringRef(Body));
+  return MemoryBuffer::getMemBufferCopy(Out, Buf.getBufferIdentifier());
+}
+
 } // namespace
 
 Expected<const OffloadBinary::Header *>
 OffloadBinary::extractHeader(MemoryBufferRef Buf) {
-  if (Buf.getBufferSize() < sizeof(Header) + sizeof(Entry))
+  if (Buf.getBufferSize() < sizeof(Header))
     return errorCodeToError(object_error::parse_failed);
 
   // Check for 0x10FF1OAD magic bytes.
@@ -217,15 +245,21 @@ OffloadBinary::extractHeader(MemoryBufferRef Buf) {
   if (TheHeader->Version == 0 || TheHeader->Version > OffloadBinary::Version)
     return errorCodeToError(object_error::parse_failed);
 
-  if (TheHeader->Size > Buf.getBufferSize() ||
-      TheHeader->Size < sizeof(Entry) || TheHeader->Size < sizeof(Header))
+  if (TheHeader->Size > Buf.getBufferSize() || TheHeader->Size < sizeof(Header))
+    return errorCodeToError(object_error::unexpected_eof);
+
+  if (isCompressed(*TheHeader))
+    return TheHeader;
+
+  if (TheHeader->Size < sizeof(Entry))
     return errorCodeToError(object_error::unexpected_eof);
 
   uint64_t EntriesCount =
       (TheHeader->Version == 1) ? 1 : TheHeader->EntriesCount;
   uint64_t EntriesSize = sizeof(Entry) * EntriesCount;
   if (TheHeader->EntriesOffset > TheHeader->Size - EntriesSize ||
-      EntriesSize > TheHeader->Size - sizeof(Header))
+      // v1/v2 headers are 32 bytes; sizeof(Header) grew in v3.
+      EntriesSize > TheHeader->Size - offsetof(Header, InflatedSize))
     return errorCodeToError(object_error::unexpected_eof);
 
   return TheHeader;
@@ -233,20 +267,39 @@ OffloadBinary::extractHeader(MemoryBufferRef Buf) {
 
 Expected<SmallVector<std::unique_ptr<OffloadBinary>>>
 OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
-  auto HeaderOrErr = OffloadBinary::extractHeader(Buf);
+  auto HeaderOrErr = extractHeader(Buf);
+  if (!HeaderOrErr)
+    return HeaderOrErr.takeError();
+  const Header *OnDisk = *HeaderOrErr;
+
+  // The binary data may be a compressed image.
+  std::shared_ptr<MemoryBuffer> Binary;
+  if (isCompressed(*OnDisk)) {
+    auto DecompressedOrErr = decompressOffloadBinary(Buf);
+    if (!DecompressedOrErr)
+      return DecompressedOrErr.takeError();
+    Binary = std::shared_ptr<MemoryBuffer>(std::move(*DecompressedOrErr));
+  } else {
+    Binary = std::shared_ptr<MemoryBuffer>(MemoryBuffer::getMemBufferCopy(
+        Buf.getBuffer().take_front(OnDisk->Size), Buf.getBufferIdentifier()));
+  }
+
+  // Owned is now an uncompressed OffloadBinary, parse it as before.
+  MemoryBufferRef Owned = *Binary;
+  HeaderOrErr = extractHeader(Owned);
   if (!HeaderOrErr)
     return HeaderOrErr.takeError();
   const Header *TheHeader = *HeaderOrErr;
 
-  const char *Start = Buf.getBufferStart();
+  const char *Start = Owned.getBufferStart();
   const Entry *Entries =
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);
 
   auto validateEntry = [&](const Entry *TheEntry) -> Error {
-    if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-        TheEntry->StringOffset > Buf.getBufferSize() ||
+    if (TheEntry->ImageOffset > Owned.getBufferSize() ||
+        TheEntry->StringOffset > Owned.getBufferSize() ||
         TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
-            Buf.getBufferSize())
+            Owned.getBufferSize())
       return errorCodeToError(object_error::unexpected_eof);
     return Error::success();
   };
@@ -259,7 +312,8 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
     if (auto Err = validateEntry(TheEntry))
       return std::move(Err);
 
-    Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, *Index));
+    Binaries.emplace_back(
+        new OffloadBinary(Binary, TheHeader, TheEntry, *Index));
     return std::move(Binaries);
   }
 
@@ -269,7 +323,7 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
     if (auto Err = validateEntry(TheEntry))
       return std::move(Err);
 
-    Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, I));
+    Binaries.emplace_back(new OffloadBinary(Binary, TheHeader, TheEntry, I));
   }
 
   return std::move(Binaries);
@@ -305,7 +359,7 @@ SmallString<0> OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData) {
   // Create the header and fill in the offsets. The entries will be directly
   // placed after the header in memory. Align the size to the alignment of the
   // header so this can be placed contiguously in a single section.
-  Header TheHeader;
+  Header TheHeader{};
   TheHeader.Size = alignTo(BinaryDataSize + TotalImagesSize, getAlignment());
   TheHeader.EntriesOffset = sizeof(Header);
   TheHeader.EntriesCount = EntriesCount;
@@ -360,6 +414,37 @@ SmallString<0> OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData) {
   OS.write_zeros(TheHeader.Size - OS.tell());
   assert(TheHeader.Size == OS.tell() && "Size mismatch");
 
+  return Data;
+}
+
+Expected<SmallString<0>>
+OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData,
+                     compression::Params Compress) {
+  if (const char *Reason = compression::getReasonIfUnsupported(Compress.format))
+    return createStringError(Reason);
+
+  // Write the complete offloading binary as normal.
+  SmallString<0> Uncompressed = write(OffloadingData);
+  OffloadBinary::Header Header =
+      *reinterpret_cast<const OffloadBinary::Header *>(Uncompressed.data());
+
+  // Compress the entries after the header with the requested configuration.
+  StringRef Body = StringRef(Uncompressed).drop_front(Header.EntriesOffset);
+  SmallVector<uint8_t, 0> CompressedBuffer;
+  compression::compress(Compress, arrayRefFromStringRef(Body),
+                        CompressedBuffer);
+
+  // Reset the header sizes and create the newly compressed binary.
+  Header.InflatedSize = Uncompressed.size();
+  Header.Size = Header.EntriesOffset + CompressedBuffer.size();
+
+  SmallString<0> Data;
+  Data.reserve(Header.Size);
+  raw_svector_ostream OS(Data);
+  OS << StringRef(reinterpret_cast<const char *>(&Header),
+                  Header.EntriesOffset);
+  OS << toStringRef(CompressedBuffer);
+  assert(Header.Size == OS.tell() && "Size mismatch");
   return Data;
 }
 

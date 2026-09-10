@@ -1,7 +1,13 @@
 #include "llvm/Object/OffloadBinary.h"
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <random>
 
 using namespace llvm;
@@ -272,4 +278,66 @@ TEST(OffloadingTest, checkEdgeCases) {
     EXPECT_EQ(Binaries[0]->getString("large_key"), LargeValue);
     EXPECT_EQ(Binaries[0]->getString("large_key").size(), 4096u);
   }
+}
+
+TEST(OffloadingTest, checkCompressedRoundTrip) {
+  std::optional<compression::Params> Params;
+  if (compression::zstd::isAvailable())
+    Params = compression::Params(compression::Format::Zstd);
+  else if (compression::zlib::isAvailable())
+    Params = compression::Params(compression::Format::Zlib);
+  else
+    GTEST_SKIP() << "compression is unsupported";
+
+  std::string ImageContent(4096, 'A');
+  ImageContent += std::string(4096, 'B');
+
+  OffloadBinary::OffloadingImage Data;
+  Data.TheImageKind = IMG_Object;
+  Data.TheOffloadKind = OFK_HIP;
+  Data.Flags = 7;
+  Data.StringData["triple"] = "amdgcn-amd-amdhsa";
+  Data.StringData["arch"] = "gfx90a";
+  Data.Image = MemoryBuffer::getMemBuffer(ImageContent, "", false);
+
+  SmallString<0> Uncompressed = OffloadBinary::write(Data);
+  Expected<SmallString<0>> CompressedOrErr =
+      OffloadBinary::write(Data, *Params);
+  ASSERT_THAT_EXPECTED(CompressedOrErr, Succeeded());
+  SmallString<0> &Compressed = *CompressedOrErr;
+  EXPECT_LT(Compressed.size(), Uncompressed.size());
+
+  // Verify that the uncompressed and compressed versions are identical.
+  auto HeaderOrErr = OffloadBinary::extractHeader(MemoryBufferRef(
+      StringRef(Compressed.data(), Compressed.size()), "compressed"));
+  ASSERT_THAT_EXPECTED(HeaderOrErr, Succeeded());
+  EXPECT_EQ((*HeaderOrErr)->Size, Compressed.size());
+  EXPECT_EQ((*HeaderOrErr)->InflatedSize, Uncompressed.size());
+
+  auto BinaryBuffer = MemoryBuffer::getMemBufferCopy(Compressed);
+  auto BinariesOrErr = OffloadBinary::create(*BinaryBuffer);
+  ASSERT_THAT_EXPECTED(BinariesOrErr, Succeeded());
+  ASSERT_EQ(BinariesOrErr->size(), 1u);
+
+  OffloadBinary &Binary = *(*BinariesOrErr)[0];
+  EXPECT_EQ(Binary.getImageKind(), IMG_Object);
+  EXPECT_EQ(Binary.getOffloadKind(), OFK_HIP);
+  EXPECT_EQ(Binary.getFlags(), 7u);
+  EXPECT_EQ(Binary.getTriple(), "amdgcn-amd-amdhsa");
+  EXPECT_EQ(Binary.getArch(), "gfx90a");
+  EXPECT_EQ(Binary.getImage(), ImageContent);
+  EXPECT_EQ(Binary.getSize(), Uncompressed.size());
+
+  // The concatenated form should still extract properly when compressed.
+  SmallString<0> Concat = Compressed;
+  Concat.append(Uncompressed);
+  SmallVector<OffloadFile> Files;
+  ASSERT_THAT_ERROR(
+      extractOffloadBinaries(
+          MemoryBufferRef(StringRef(Concat.data(), Concat.size()), "concat"),
+          Files),
+      Succeeded());
+  ASSERT_EQ(Files.size(), 2u);
+  EXPECT_EQ(Files[0].getBinary()->getImage(), ImageContent);
+  EXPECT_EQ(Files[1].getBinary()->getImage(), ImageContent);
 }
