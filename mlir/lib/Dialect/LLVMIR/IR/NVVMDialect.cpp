@@ -37,10 +37,12 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <optional>
 #include <string>
+#include <utility>
 
 using namespace mlir;
 using namespace NVVM;
@@ -1082,7 +1084,8 @@ void MmaOp::print(OpAsmPrinter &p) {
                                          getLayoutBAttrName(),
                                          getMultiplicandAPtxTypeAttrName(),
                                          getMultiplicandBPtxTypeAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print the types of the operands and result.
   p << " : " << "(";
@@ -1398,7 +1401,9 @@ LogicalResult MmaOp::verify() {
   // Verify the operand types for segments of A, B, and C operands.
   std::array<StringRef, 3> operandNames{"A", "B", "C"};
   for (const auto &iter : llvm::enumerate(
-           SmallVector<AllowedTypes, 3>{expectedA, expectedB, expectedC})) {
+           std::array<AllowedTypes, 3>{std::move(expectedA),
+                                       std::move(expectedB),
+                                       std::move(expectedC)})) {
     auto spec = this->getODSOperandIndexAndLength(iter.index());
     SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
                                       operand_type_begin() + spec.first +
@@ -1575,7 +1580,8 @@ void MmaSpOp::print(OpAsmPrinter &p) {
                           getMultiplicandAPtxTypeAttrName(),
                           getMultiplicandBPtxTypeAttrName(),
                           getOrderedMetadataAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict((*this)->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
   p << " : ";
   p << "(";
   for (int i = 0; i < 3; ++i) {
@@ -1916,7 +1922,9 @@ LogicalResult MmaSpOp::verify() {
   // Verify the operand types for segments of A, B, and C operands.
   std::array<StringRef, 3> operandNames{"A", "B", "C"};
   for (const auto &iter : llvm::enumerate(
-           SmallVector<AllowedTypes, 3>{expectedA, expectedB, expectedC})) {
+           std::array<AllowedTypes, 3>{std::move(expectedA),
+                                       std::move(expectedB),
+                                       std::move(expectedC)})) {
     auto spec = this->getODSOperandIndexAndLength(iter.index());
     SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
                                       operand_type_begin() + spec.first +
@@ -2165,7 +2173,8 @@ void MmaBlockScaleOp::print(OpAsmPrinter &p) {
                           getMultiplicandBPtxTypeAttrName(),
                           getScaleVecSizeAttrName(),
                           getBlockScaleFormatAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print type signature
   p << " : (";
@@ -2423,7 +2432,8 @@ void MmaSpBlockScaleOp::print(OpAsmPrinter &p) {
                           getOrderedMetadataAttrName(),
                           getScaleVecSizeAttrName(),
                           getBlockScaleFormatAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print type signature
   p << " : (";
@@ -3014,8 +3024,7 @@ static LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
       return success();
     break;
   case NVVM::WGMMATypes::bf16:
-    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
-        typeB == NVVM::WGMMATypes::bf16)
+    if (typeD == NVVM::WGMMATypes::f32 && typeB == NVVM::WGMMATypes::bf16)
       return success();
     break;
   case NVVM::WGMMATypes::e4m3:
@@ -3604,14 +3613,6 @@ static LogicalResult verifyAddSubFOp(OpType op) {
       return op.emitOpError("FTZ and saturation are not supported for bf16 and "
                             "vector<2xbf16> additions/subtractions");
   }
-
-  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
-  // PTX instructions since the corresponding LLVM intrinsic is missing. This
-  // should be removed once the intrinsics for f16 addition (with FTZ only) are
-  // available.
-  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
-    return op.emitOpError("FTZ with no saturation is not supported for f16 and "
-                          "vector<2xf16> additions/subtractions");
 
   return success();
 }
@@ -4636,6 +4637,9 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   llvm::Value *cg =
       llvm::ConstantInt::get(llvm::Type::getInt32Ty(mt.getLLVMContext()), val);
 
+  // validate_pattern = disabled
+  llvm::Value *validatePattern = builder.getInt32(0);
+
   if (!isCTAOnly) {
     // For shared::cluster, all the arguments that we build are applicable.
     args.push_back(hasMC ? mt.lookupValue(mcMask) : i16Zero);
@@ -4643,10 +4647,12 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
     args.push_back(builder.getInt1(hasMC));
     args.push_back(builder.getInt1(hasCacheHint));
     args.push_back(cg);
+    args.push_back(validatePattern);
   } else {
     // For shared::cta, only cache-hint is applicable.
     args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
     args.push_back(builder.getInt1(hasCacheHint));
+    args.push_back(validatePattern);
   }
 
   constexpr size_t numDims = 5;  // 1D to 5D
@@ -5504,38 +5510,29 @@ NVVM::IDArgPair ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(
   return {ids[idx], std::move(args)};
 }
 
-llvm::Intrinsic::ID
-Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
-                                      LLVM::ModuleTranslation &mt,
-                                      llvm::SmallVector<llvm::Value *> &args) {
+mlir::NVVM::IDArgPair Tcgen05AllocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
                                       : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
 
-  // Fill the Intrinsic Args
-  args.push_back(mt.lookupValue(curOp.getAddr()));
-  args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
-
-  return id;
+  return {id,
+          {mt.lookupValue(curOp.getAddr()), mt.lookupValue(curOp.getNCols()),
+           builder.getInt1(curOp.getIsExclusive())}};
 }
 
-llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
-    Operation &op, LLVM::ModuleTranslation &mt,
-    llvm::SmallVector<llvm::Value *> &args) {
+mlir::NVVM::IDArgPair Tcgen05DeallocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
-  auto id = (curOp.getGroup() == CTAGroupKind::CTA_1)
-                ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
-                : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
+  llvm::Intrinsic::ID id = (curOp.getGroup() == CTAGroupKind::CTA_1)
+                               ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
+                               : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
 
-  // Fill the Intrinsic Args
-  args.push_back(mt.lookupValue(curOp.getTaddr()));
-  args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
-
-  return id;
+  return {id,
+          {mt.lookupValue(curOp.getTaddr()), mt.lookupValue(curOp.getNCols()),
+           builder.getInt1(curOp.getIsExclusive())}};
 }
 
 llvm::Intrinsic::ID
@@ -5625,6 +5622,9 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
+  // TODO: Add support for PZO modifier
+  args.push_back(builder.getInt1(false));
+
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
     return {rndRNIds[idx], std::move(args)};
@@ -5672,6 +5672,9 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
   args.push_back(mt.lookupValue(op.getSrcLo()));
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
+
+  // TODO: Add support for PZO modifier
+  args.push_back(builder.getInt1(false));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5811,12 +5814,13 @@ LogicalResult Tcgen05StOp::verify() {
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
 /// have ConstantRangeAttr.
-static void nvvmInferResultRanges(Operation *op, Value result,
+static void nvvmInferResultRanges(std::optional<LLVM::ConstantRangeAttr> range,
+                                  Value result,
                                   ArrayRef<::mlir::ConstantIntRanges> argRanges,
                                   SetIntRangeFn setResultRanges) {
-  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
-    setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
-                             rangeAttr.getLower(), rangeAttr.getUpper()});
+  if (range) {
+    setResultRanges(result, {range->getLower(), range->getUpper(),
+                             range->getLower(), range->getUpper()});
   } else {
     setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
   }
@@ -7000,8 +7004,8 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   }
   // blocksareclusters must be used along with reqntid and cluster_dim
   if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
-    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
-        !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
+    if (!op->hasDiscardableAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasDiscardableAttr(NVVMDialect::getClusterDimAttrName())) {
       return op->emitError()
              << "'" << attrName << "' attribute must be used along with " << "'"
              << NVVMDialect::getReqntidAttrName() << "' and " << "'"
@@ -7020,7 +7024,7 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   if (!funcOp)
     return success();
 
-  bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName());
+  bool isKernel = op->hasDiscardableAttr(NVVMDialect::getKernelFuncAttrName());
   StringAttr attrName = argAttr.getName();
   if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
     if (!isKernel) {
@@ -7140,9 +7144,14 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const unsigned targetFullSmVersion =
+  std::optional<unsigned> targetFullSmVersion =
       NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
-  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
+  if (!targetFullSmVersion)
+    return emitError(gpuModule->getLoc())
+           << "invalid NVVM target chip \"" << getChip()
+           << "\", expected sm_<version>[a|f]";
+
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(*targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -7152,7 +7161,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
+              if (!requirement.isCompatibleWith(*targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }

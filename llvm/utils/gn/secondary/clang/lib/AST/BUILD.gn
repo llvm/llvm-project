@@ -79,6 +79,7 @@ static_library("AST") {
     "ByteCode/InterpBlock.cpp",
     "ByteCode/InterpBuiltin.cpp",
     "ByteCode/InterpBuiltinBitCast.cpp",
+    "ByteCode/InterpBuiltinObjectSize.cpp",
     "ByteCode/InterpFrame.cpp",
     "ByteCode/InterpShared.cpp",
     "ByteCode/InterpStack.cpp",

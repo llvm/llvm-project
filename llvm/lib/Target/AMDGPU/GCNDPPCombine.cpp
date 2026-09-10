@@ -44,7 +44,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 
 using namespace llvm;
 
@@ -746,8 +745,24 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       break;
     }
 
+    // We have to be careful to prevent trying to fold into the first source
+    // operand of instructions that apply DPP to the second source operand.
+    // This could be directly, or when folding into an instruction that will
+    // get commuted into one.
+    int FoldedOp =
+        (Use == Src0) ? static_cast<int>(OrigOp) : TII->commuteOpcode(OrigOp);
+    if (FoldedOp < 0 || TII->isSrc1DPPRevOpcode(*ST, FoldedOp)) {
+      LLVM_DEBUG(
+          dbgs() << "  failed: Use operand cannot have DPP applied to it\n");
+      break;
+    }
+
+    // Without DPALU DPP there are no 64-bit DPP encodings. The 64-bit move is
+    // rejected above, but a 32-bit move folded into a source of a 64-bit
+    // instruction reaches here, so the operands have to be checked too.
     if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP) &&
-        AMDGPU::isDPALU_DPP32BitOpc(OrigOp)) {
+        (AMDGPU::isDPALU_DPP32BitOpc(OrigOp) ||
+         AMDGPU::hasAny64BitVGPROperands(TII->get(OrigOp), *TII, *ST))) {
       LLVM_DEBUG(dbgs() << "  " << OrigMI
                         << "  failed: DPP ALU DPP is not supported\n");
       break;
