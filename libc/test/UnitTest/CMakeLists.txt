@@ -169,7 +169,9 @@ add_unittest_framework_library(
   SRCS
     ${libc_hermetic_test_support_srcs}
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
+    libc.src.__support.libc_errno
 )
 
 add_header_library(

@@ -1154,23 +1154,30 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::experimental_vector_match: {
-    auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
-    EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    unsigned SearchSize = NeedleTy->getNumElements();
-    auto IsSupportedTypeAndSearchSize = [&]() {
-      if (SearchVT == MVT::nxv8i16 || SearchVT == MVT::v8i16)
-        return SearchSize == 8;
-
-      if (SearchVT == MVT::nxv16i8 || SearchVT == MVT::v16i8 ||
-          SearchVT == MVT::v8i8)
-        return SearchSize == 8 || SearchSize == 16;
-
-      return false;
-    };
-
-    if (!ST->hasSVE2() || !ST->isSVEAvailable() ||
-        !IsSupportedTypeAndSearchSize())
+    if (!ST->hasSVE2() || !ST->isSVEAvailable())
       break;
+
+    auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+
+    // We expand vector.matches with <= 2 elements to a chain of compares.
+    unsigned SearchSize = NeedleTy->getNumElements();
+    if (SearchSize <= 2)
+      break;
+
+    auto [LegalParts, SearchVT] = getTypeLegalizationCost(ICA.getArgTypes()[0]);
+    if (!is_contained(
+            {MVT::nxv8i16, MVT::nxv16i8, MVT::v8i16, MVT::v16i8, MVT::v8i8},
+            SearchVT.SimpleTy))
+      break;
+
+    unsigned ElementSizeInBits = SearchVT.getScalarSizeInBits();
+
+    // Number of needle elements we can compare per `match` instruction.
+    unsigned NeedleEltsPerMatch = AArch64::SVEBitsPerBlock / ElementSizeInBits;
+
+    // How many `match` instructions we need to match `SearchSize` elements.
+    unsigned MatchesRequiredForNeedle =
+        llvm::divideCeil(SearchSize, NeedleEltsPerMatch);
 
     // Base cost for MATCH instructions. At least on the Neoverse V2 and
     // Neoverse V3, these are cheap operations with the same latency as a
@@ -1180,7 +1187,8 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     InstructionCost Cost = 4;
     if (isa<FixedVectorType>(RetTy))
       Cost += 10;
-    return Cost;
+
+    return Cost * LegalParts * MatchesRequiredForNeedle;
   }
   case Intrinsic::cttz: {
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);

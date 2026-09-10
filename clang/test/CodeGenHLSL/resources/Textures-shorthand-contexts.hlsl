@@ -6,6 +6,12 @@
 // RUN:   --check-prefixes=CHECK,CHECK-TEXEL
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
+// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture3D -DCOORD_DIM=3 -DDXIL_TY=4 -DRW=0 \
+// RUN:   --check-prefixes=CHECK,CHECK-TEXEL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 -DDXIL_TY=5 \
