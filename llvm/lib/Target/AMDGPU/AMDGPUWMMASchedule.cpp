@@ -106,7 +106,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   }
 
   // The following means the DAG Mutation cannot do anything useful.
-  if (Loads.empty() || !WmmaLatency || Wmmas.empty())
+  if (Loads.empty() || Wmmas.empty())
     return;
 
   LLVM_DEBUG(
