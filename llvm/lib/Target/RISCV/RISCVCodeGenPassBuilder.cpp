@@ -113,18 +113,17 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
     addMachineFunctionPass(RISCVVLOptimizerPass(), PMW);
   }
 
-  // TODO: RISCVVectorPeepholePass
-  // TODO: RISCVFoldMemOffsetPass
+  addMachineFunctionPass(RISCVVectorPeepholePass(), PMW);
+  addMachineFunctionPass(RISCVFoldMemOffsetPass(), PMW);
 
   Base::addMachineSSAOptimization(PMW);
 
-  if (TM.getTargetTriple().isRISCV64()) {
-    // TODO: RISCVOptWInstrsPass
-  }
+  if (TM.getTargetTriple().isRISCV64())
+    addMachineFunctionPass(RISCVOptWInstrsPass(), PMW);
 }
 
 void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  // TODO: RISCVPreRAExpandPseudoPass
+  addMachineFunctionPass(RISCVExpandPseudoPreRAPass(), PMW);
   if (getOptLevel() != CodeGenOptLevel::None) {
     // TODO: RISCVMergeBaseOffsetOptPass
     // TODO: RISCVPreAllocZilsdOptPass
@@ -146,7 +145,7 @@ void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void RISCVCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
-  // TODO: RISCVPostRAExpandPseudoPass
+  addMachineFunctionPass(RISCVExpandPseudoPostRAPass(), PMW);
 
   addMachineFunctionPass(MachineKCFIPass(), PMW);
   if (getOptLevel() != CodeGenOptLevel::None) {
@@ -177,7 +176,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
     // TODO: RISCVMoveMergePass
     // TODO: RISCVPushPopOptimizationPass
   }
-  // TODO: RISCVExpandPseudoPass
+  addMachineFunctionPass(RISCVExpandPseudoPreEmitPass(), PMW);
 
   // Add QC Relaxation Markers as late as possible, and only for RV32
   if (getOptLevel() != CodeGenOptLevel::None &&
@@ -185,7 +184,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
     // TODO: RISCVQCRelaxMarkingPass
   }
 
-  // TODO: RISCVExpandAtomicPseudoPass
+  addMachineFunctionPass(RISCVExpandPseudoAtomicsPass(), PMW);
 
   // KCFI indirect call checks are lowered to a bundle.
   addMachineFunctionPass(

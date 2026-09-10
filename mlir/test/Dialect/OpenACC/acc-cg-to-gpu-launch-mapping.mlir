@@ -15,7 +15,7 @@ func.func @par0_loop() {
       scf.reduce
     } {acc.par_dims = #acc<par_dims[sequential]>}
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -37,7 +37,7 @@ func.func @par1_loop() {
       scf.reduce
     } {acc.par_dims = #acc<par_dims[thread_x]>}
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -64,7 +64,7 @@ func.func @par1_0_loop() {
       scf.reduce
     } {acc.par_dims = #acc<par_dims[thread_x]>}
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -91,7 +91,7 @@ func.func @par0_1_loop() {
       scf.reduce
     } {acc.par_dims = #acc<par_dims[sequential]>}
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -118,7 +118,7 @@ func.func @par2_1_loop() {
       scf.reduce
     } {acc.par_dims = #acc<par_dims[thread_y]>}
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -150,7 +150,7 @@ func.func @par2_0_1_loop() {
       scf.reduce
     } {acc.par_dims = #acc<par_dims[thread_y]>}
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -170,7 +170,7 @@ func.func @empty() {
   acc.compute_region {
   ^bb1:
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -191,7 +191,7 @@ func.func @empty_some_known_launch_arg() {
   %par_dim1 = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.compute_region launch(%arg0 = %par_dim1) {
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -231,7 +231,7 @@ func.func @empty_all_known_launch_arg() {
   %par_dim6 = acc.par_width %c128 par_dim(#acc.par_dim<block_z>)
   acc.compute_region launch(%tx = %par_dim1, %ty = %par_dim2, %tz = %par_dim3, %bx = %par_dim4, %by = %par_dim5, %bz = %par_dim6) {
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -272,6 +272,6 @@ func.func @using_block_args(%arr : memref<?xf32>) {
       }
     }
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }

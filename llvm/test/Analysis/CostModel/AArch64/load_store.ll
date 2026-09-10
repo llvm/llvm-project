@@ -626,130 +626,130 @@ define i32 @stores_partial_align1(i32 %arg) {
 ; CHECK-LABEL: 'stores_partial_align1'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <1 x i64> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <3 x i64> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <5 x i64> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <6 x i64> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <5 x i64> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <6 x i64> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <7 x i64> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <1 x double> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <3 x double> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <5 x double> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <6 x double> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <5 x double> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <6 x double> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <7 x double> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <1 x i32> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <2 x i32> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x i32> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x i32> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <5 x i32> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <6 x i32> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <7 x i32> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <9 x i32> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <10 x i32> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <11 x i32> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <12 x i32> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <7 x i32> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <9 x i32> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <10 x i32> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <11 x i32> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <12 x i32> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <13 x i32> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <14 x i32> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <15 x i32> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <15 x i32> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <1 x float> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <2 x float> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x float> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x float> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <5 x float> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <6 x float> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <7 x float> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <9 x float> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <10 x float> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <11 x float> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <12 x float> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <7 x float> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <9 x float> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <10 x float> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <11 x float> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <12 x float> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <13 x float> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <14 x float> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <15 x float> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <15 x float> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <1 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: store <2 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <4 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <5 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <6 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <7 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <5 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <6 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: store <7 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <9 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <10 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <11 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <11 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <12 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <13 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <14 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <15 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <17 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <18 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <19 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <20 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <21 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <22 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <23 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <24 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <13 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <14 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:1 SizeLat:2 for: store <15 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <17 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <18 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <19 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <20 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <21 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <22 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:1 SizeLat:4 for: store <23 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <24 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <25 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <26 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <27 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <27 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <28 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <29 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <30 x i16> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <31 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <29 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <30 x i16> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:1 SizeLat:4 for: store <31 x i16> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <1 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: store <2 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <4 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <5 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <6 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <7 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <5 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <6 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: store <7 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <8 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <9 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <10 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <11 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <12 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <13 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <14 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: store <15 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <9 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <10 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: store <11 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <12 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: store <13 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: store <14 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: store <15 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <17 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <18 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <19 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <19 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <20 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <21 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <22 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <23 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <21 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <22 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:1 SizeLat:2 for: store <23 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <24 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <25 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <26 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <27 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <28 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <29 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <30 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <31 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <33 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <34 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <35 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <36 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <37 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <38 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <39 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <40 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <41 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <42 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <43 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <44 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <45 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <46 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <47 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <48 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <25 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <26 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:1 SizeLat:2 for: store <27 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:1 SizeLat:2 for: store <28 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:1 SizeLat:2 for: store <29 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:1 SizeLat:2 for: store <30 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:1 SizeLat:2 for: store <31 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <33 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <34 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <35 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <36 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <37 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <38 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:1 SizeLat:4 for: store <39 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <40 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <41 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <42 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:1 SizeLat:4 for: store <43 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:1 SizeLat:4 for: store <44 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:1 SizeLat:4 for: store <45 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:1 SizeLat:4 for: store <46 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:1 SizeLat:4 for: store <47 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:1 SizeLat:4 for: store <48 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <49 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <50 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <51 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <51 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <52 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <53 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <54 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <55 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <53 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <54 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:1 SizeLat:4 for: store <55 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <56 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <57 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <58 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <59 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <60 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <61 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <62 x i8> undef, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <63 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <57 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <58 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:1 SizeLat:4 for: store <59 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:1 SizeLat:4 for: store <60 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:1 SizeLat:4 for: store <61 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:1 SizeLat:4 for: store <62 x i8> undef, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:1 SizeLat:4 for: store <63 x i8> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x i1> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: store <5 x i1> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: store <6 x i1> undef, ptr undef, align 1
@@ -2123,130 +2123,130 @@ define i32 @loads_partial_align1(i32 %arg) {
 ; CHECK-LABEL: 'loads_partial_align1'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %1 = load <1 x i64>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %2 = load <3 x i64>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %3 = load <5 x i64>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %4 = load <6 x i64>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %3 = load <5 x i64>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %4 = load <6 x i64>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %5 = load <7 x i64>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %6 = load <1 x double>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %7 = load <3 x double>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %8 = load <5 x double>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %9 = load <6 x double>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %8 = load <5 x double>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %9 = load <6 x double>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %10 = load <7 x double>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %11 = load <1 x i32>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %12 = load <2 x i32>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %13 = load <3 x i32>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %13 = load <3 x i32>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %14 = load <5 x i32>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %15 = load <6 x i32>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %16 = load <7 x i32>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %17 = load <9 x i32>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %18 = load <10 x i32>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %19 = load <11 x i32>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %20 = load <12 x i32>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %16 = load <7 x i32>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %17 = load <9 x i32>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %18 = load <10 x i32>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %19 = load <11 x i32>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %20 = load <12 x i32>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %21 = load <13 x i32>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %22 = load <14 x i32>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %23 = load <15 x i32>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %23 = load <15 x i32>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %24 = load <1 x float>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %25 = load <2 x float>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %26 = load <3 x float>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %26 = load <3 x float>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %27 = load <5 x float>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %28 = load <6 x float>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %29 = load <7 x float>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %30 = load <9 x float>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %31 = load <10 x float>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %32 = load <11 x float>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %33 = load <12 x float>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %29 = load <7 x float>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %30 = load <9 x float>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %31 = load <10 x float>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %32 = load <11 x float>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %33 = load <12 x float>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %34 = load <13 x float>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %35 = load <14 x float>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %36 = load <15 x float>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %36 = load <15 x float>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %37 = load <1 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %38 = load <2 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %39 = load <3 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %39 = load <3 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %40 = load <4 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %41 = load <5 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %42 = load <6 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %43 = load <7 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %41 = load <5 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %42 = load <6 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:4 SizeLat:1 for: %43 = load <7 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %44 = load <9 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %45 = load <10 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %46 = load <11 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %46 = load <11 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %47 = load <12 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %48 = load <13 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %49 = load <14 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %50 = load <15 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %51 = load <17 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %52 = load <18 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %53 = load <19 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %54 = load <20 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %55 = load <21 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %56 = load <22 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %57 = load <23 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %58 = load <24 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %48 = load <13 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %49 = load <14 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:5 SizeLat:2 for: %50 = load <15 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %51 = load <17 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %52 = load <18 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %53 = load <19 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %54 = load <20 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %55 = load <21 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %56 = load <22 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:7 SizeLat:4 for: %57 = load <23 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %58 = load <24 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %59 = load <25 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %60 = load <26 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %61 = load <27 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %61 = load <27 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %62 = load <28 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %63 = load <29 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %64 = load <30 x i16>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %65 = load <31 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %63 = load <29 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %64 = load <30 x i16>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:7 SizeLat:4 for: %65 = load <31 x i16>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %66 = load <1 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %67 = load <2 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:4 SizeLat:1 for: %68 = load <3 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %69 = load <4 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %70 = load <5 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %71 = load <6 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %72 = load <7 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %70 = load <5 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %71 = load <6 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:4 SizeLat:1 for: %72 = load <7 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %73 = load <8 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %74 = load <9 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %75 = load <10 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %76 = load <11 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %77 = load <12 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %78 = load <13 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %79 = load <14 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %80 = load <15 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %74 = load <9 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %75 = load <10 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:4 SizeLat:1 for: %76 = load <11 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %77 = load <12 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:4 SizeLat:1 for: %78 = load <13 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:4 SizeLat:1 for: %79 = load <14 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:4 SizeLat:1 for: %80 = load <15 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %81 = load <17 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %82 = load <18 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %83 = load <19 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %83 = load <19 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %84 = load <20 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %85 = load <21 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %86 = load <22 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %87 = load <23 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %85 = load <21 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %86 = load <22 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:5 SizeLat:2 for: %87 = load <23 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %88 = load <24 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %89 = load <25 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %90 = load <26 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %91 = load <27 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %92 = load <28 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %93 = load <29 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %94 = load <30 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %95 = load <31 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %96 = load <33 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %97 = load <34 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %98 = load <35 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %99 = load <36 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %100 = load <37 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %101 = load <38 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %102 = load <39 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %103 = load <40 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %104 = load <41 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %105 = load <42 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %106 = load <43 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %107 = load <44 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %108 = load <45 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %109 = load <46 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %110 = load <47 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %111 = load <48 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %89 = load <25 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %90 = load <26 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:5 SizeLat:2 for: %91 = load <27 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:5 SizeLat:2 for: %92 = load <28 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:5 SizeLat:2 for: %93 = load <29 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:5 SizeLat:2 for: %94 = load <30 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:5 SizeLat:2 for: %95 = load <31 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %96 = load <33 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %97 = load <34 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %98 = load <35 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %99 = load <36 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %100 = load <37 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %101 = load <38 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:7 SizeLat:4 for: %102 = load <39 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %103 = load <40 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %104 = load <41 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %105 = load <42 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:7 SizeLat:4 for: %106 = load <43 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:7 SizeLat:4 for: %107 = load <44 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:7 SizeLat:4 for: %108 = load <45 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:7 SizeLat:4 for: %109 = load <46 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:7 SizeLat:4 for: %110 = load <47 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:4 for: %111 = load <48 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %112 = load <49 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %113 = load <50 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %114 = load <51 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %114 = load <51 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %115 = load <52 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %116 = load <53 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %117 = load <54 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %118 = load <55 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %116 = load <53 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %117 = load <54 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:7 SizeLat:4 for: %118 = load <55 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %119 = load <56 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %120 = load <57 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %121 = load <58 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %122 = load <59 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %123 = load <60 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %124 = load <61 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %125 = load <62 x i8>, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %126 = load <63 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %120 = load <57 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %121 = load <58 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:7 SizeLat:4 for: %122 = load <59 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:7 SizeLat:4 for: %123 = load <60 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:7 SizeLat:4 for: %124 = load <61 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:7 SizeLat:4 for: %125 = load <62 x i8>, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:7 SizeLat:4 for: %126 = load <63 x i8>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:4 SizeLat:1 for: %127 = load <3 x i1>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:4 SizeLat:1 for: %128 = load <5 x i1>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:4 SizeLat:1 for: %129 = load <6 x i1>, ptr undef, align 1

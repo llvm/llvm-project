@@ -1232,11 +1232,10 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // ("canonicalizing" it), so all references see the same address, and the
   // resolver is called exactly once. This may result in two GOT entries: one
   // in .got.plt for the IRELATIVE, and one in .got pointing to the canonical
-  // IPLT entry (for GOT-generating relocations).
-  //
-  // We clone the symbol to preserve the original resolver address for the
-  // IRELATIVE addend. The clone is tracked in ctx.irelativeSyms so that linker
-  // relaxation can adjust its value when the resolver address changes.
+  // IPLT entry (for GOT-generating relocations). We clone the symbol to
+  // preserve the original resolver address for the IRELATIVE addend. The clone
+  // is tracked in ctx.irelativeSyms so that linker relaxation can adjust its
+  // value when the resolver address changes.
   //
   // Note: IRELATIVE relocations are needed even in static executables; see
   // `addRelIpltSymbols`.
@@ -1254,20 +1253,24 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     return true;
   }
 
-  sym.isInIplt = true;
-
-  auto *irelativeSym = makeDefined(cast<Defined>(sym));
-  irelativeSym->allocateAux(ctx);
-  ctx.irelativeSyms.push_back(irelativeSym);
-  auto &dyn = getIRelativeSection(ctx);
-  addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
-              *irelativeSym);
-  sym.allocateAux(ctx);
-  ctx.symAux.back().pltIdx = ctx.symAux[irelativeSym->auxIdx].pltIdx;
+  auto addIpltEntry = [&](Symbol &irelativeSym) {
+    irelativeSym.isInIplt = true;
+    irelativeSym.allocateAux(ctx);
+    auto &dyn = getIRelativeSection(ctx);
+    addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn,
+                ctx.target->iRelativeRel, irelativeSym);
+  };
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
+    auto *irelativeSym = addSyntheticLocal(ctx, d.getName(), d.type, d.value,
+                                           d.size, *d.section);
+    addIpltEntry(*irelativeSym);
+    ctx.irelativeSyms.push_back(irelativeSym);
+    sym.isInIplt = true;
+    sym.allocateAux(ctx);
+    ctx.symAux.back().pltIdx = ctx.symAux[irelativeSym->auxIdx].pltIdx;
     d.section = ctx.in.iplt.get();
     d.value = d.getPltIdx(ctx) * ctx.target->ipltEntrySize;
     d.size = 0;
@@ -1277,9 +1280,12 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
 
     if (flags & NEEDS_GOT)
       addGotEntry(ctx, sym);
-  } else if (flags & NEEDS_GOT) {
-    // Redirect GOT accesses to point to the Igot.
-    sym.gotInIgot = true;
+  } else {
+    addIpltEntry(sym);
+    if (flags & NEEDS_GOT) {
+      // Redirect GOT accesses to point to the Igot.
+      sym.gotInIgot = true;
+    }
   }
   return true;
 }

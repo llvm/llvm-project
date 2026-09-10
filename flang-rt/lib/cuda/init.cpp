@@ -15,6 +15,8 @@
 
 extern "C" {
 
+char Mcuda_compiled;
+
 void RTDEF(CUFInit)() {
   // Perform ctx initialization based on execution environment if necessary.
   if (Fortran::runtime::executionEnvironment.cudaStackLimit) {

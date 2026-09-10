@@ -11,7 +11,7 @@ module attributes {gpu.container_module} {
   }
 
   func.func @foo(%buffer: memref<?xf32>) {
-  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : i64
+  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : i64) : i64
   // CHECK: [[C32:%.*]] = llvm.mlir.constant(32 : i32) : i32
   // CHECK: [[C256:%.*]] = llvm.mlir.constant(256 : i32) : i32
     %c8 = arith.constant 8 : index
@@ -45,10 +45,10 @@ module attributes {gpu.container_module} {
   }
 
   func.func @foo(%buffer: memref<?xf32>) {
-  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : i64
+  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : i64) : i64
   // CHECK: [[C32:%.*]] = llvm.mlir.constant(32 : i32) : i32
   // CHECK: [[C256:%.*]] = llvm.mlir.constant(256 : i32) : i32
-  // CHECK: [[C2:%.*]] = llvm.mlir.constant(2 : index) : i64
+  // CHECK: [[C2:%.*]] = llvm.mlir.constant(2 : i64) : i64
     %c8 = arith.constant 8 : index    
     %c32 = arith.constant 32 : i32
     %c256 = arith.constant 256 : i32
@@ -76,10 +76,10 @@ module attributes {gpu.container_module} {
   gpu.binary @kernel_module [#gpu.object<#rocdl.target, "blob">]
 
   func.func @foo(%buffer: memref<?xf32>) {
-  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : i64
+  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : i64) : i64
   // CHECK: [[C32:%.*]] = llvm.mlir.constant(32 : i32) : i32
   // CHECK: [[C256:%.*]] = llvm.mlir.constant(256 : i32) : i32
-  // CHECK: [[C2:%.*]] = llvm.mlir.constant(2 : index) : i64
+  // CHECK: [[C2:%.*]] = llvm.mlir.constant(2 : i64) : i64
     %c8 = arith.constant 8 : index
     %c32 = arith.constant 32 : i32
     %c256 = arith.constant 256 : i32
