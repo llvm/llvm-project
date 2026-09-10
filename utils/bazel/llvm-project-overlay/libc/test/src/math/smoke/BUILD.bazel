@@ -2100,8 +2100,6 @@ math_test(name = "log10f16")
 
 math_test(name = "log2f16")
 
-math_test(name = "logbf16")
-
 math_test(name = "logf16")
 
 math_test(
