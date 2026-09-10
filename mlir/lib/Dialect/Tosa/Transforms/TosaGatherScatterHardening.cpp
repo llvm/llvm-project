@@ -22,9 +22,11 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <algorithm>
 #include <cstdint>
+#include <type_traits>
 
 namespace mlir {
 namespace tosa {
@@ -58,33 +60,58 @@ static FailureOr<int64_t> getIndexUpperBound(Operation *op) {
 }
 
 /// Returns whether the indices already have sufficiently restrictive bounds.
+template <typename OuterOp, typename InnerOp>
 static bool isAlreadyHardened(Value indices, int64_t requiredUpperBound) {
-  auto minimumOp = indices.getDefiningOp<tosa::MinimumOp>();
-  if (!minimumOp)
+  static_assert(
+      (std::is_same_v<OuterOp, tosa::MinimumOp> &&
+       std::is_same_v<InnerOp, tosa::MaximumOp>) ||
+          (std::is_same_v<OuterOp, tosa::MaximumOp> &&
+           std::is_same_v<InnerOp, tosa::MinimumOp>),
+      "expected a tosa::MinimumOp/tosa::MaximumOp pair in either order");
+
+  auto outerOp = indices.getDefiningOp<OuterOp>();
+  if (!outerOp)
     return false;
 
-  Value maximumResult = minimumOp.getInput1();
-  llvm::APInt upperBound;
-  if (!matchPattern(minimumOp.getInput2(), m_ConstantInt(&upperBound))) {
-    maximumResult = minimumOp.getInput2();
-    if (!matchPattern(minimumOp.getInput1(), m_ConstantInt(&upperBound)))
-      return false;
+  // Either operand can be the bound, including when both are constants. A
+  // constant match alone is not enough: try the other operand if it is unsafe.
+  for (unsigned boundOperand = 0; boundOperand < 2; ++boundOperand) {
+    llvm::APInt outerBound;
+    if (!matchPattern(outerOp->getOperand(boundOperand),
+                      m_ConstantInt(&outerBound)))
+      continue;
+
+    llvm::APInt requiredUpper(outerBound.getBitWidth(),
+                              static_cast<uint64_t>(requiredUpperBound));
+    // The outer bound must itself be in range, since it can override the inner
+    // bound, e.g. minimum(maximum(x, 0), -1) would produce -1. This guarantees
+    // the other operand is meeting the outer bound check (e.g. smaller or equal
+    // to the required upper bound if outer op is a minimum). The inner
+    // operation only needs to enforce the opposite bound.
+    if (outerBound.isNegative() || outerBound.sgt(requiredUpper))
+      continue;
+
+    auto matchesInnerBound = [&](Value value) {
+      llvm::APInt innerBound;
+      if (!matchPattern(value, m_ConstantInt(&innerBound)))
+        return false;
+      return isa<tosa::MinimumOp>(outerOp) ? !innerBound.isNegative()
+                                           : innerBound.sle(requiredUpper);
+    };
+
+    // Check whether other operand of the outer op is also a constant and is
+    // meeting the inner bound check. No inner op involved and the result is
+    // therefore completely within bound thanks to the earlier check.
+    Value innerResult = outerOp->getOperand(1 - boundOperand);
+    if (matchesInnerBound(innerResult))
+      return true;
+    // The other outer op operand is not a constant so check that the inner op
+    // enforces inner bound check.
+    if (auto innerOp = innerResult.getDefiningOp<InnerOp>())
+      if (llvm::any_of(innerOp->getOperands(), matchesInnerBound))
+        return true;
   }
-
-  auto maximumOp = maximumResult.getDefiningOp<tosa::MaximumOp>();
-  if (!maximumOp)
-    return false;
-
-  llvm::APInt lowerBound;
-  if (!matchPattern(maximumOp.getInput2(), m_ConstantInt(&lowerBound)) &&
-      !matchPattern(maximumOp.getInput1(), m_ConstantInt(&lowerBound)))
-    return false;
-
-  unsigned bitWidth = upperBound.getBitWidth();
-  llvm::APInt requiredUpper(bitWidth,
-                            static_cast<uint64_t>(requiredUpperBound));
-  return lowerBound.getBitWidth() == bitWidth && !lowerBound.isNegative() &&
-         !upperBound.isNegative() && upperBound.sle(requiredUpper);
+  return false;
 }
 
 /// Creates a rank-two splat constant suitable for index broadcasting.
@@ -114,7 +141,10 @@ struct HardenIndexUsePattern final : OpRewritePattern<OpTy> {
     }
 
     Value indices = op->getOperand(1);
-    if (isAlreadyHardened(indices, *upperBound))
+    if (isAlreadyHardened<tosa::MinimumOp, tosa::MaximumOp>(indices,
+                                                            *upperBound) ||
+        isAlreadyHardened<tosa::MaximumOp, tosa::MinimumOp>(indices,
+                                                            *upperBound))
       return rewriter.notifyMatchFailure(op, "indices are already hardened");
 
     auto indicesType = cast<ShapedType>(indices.getType());
