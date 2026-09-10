@@ -19,6 +19,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -68,7 +69,8 @@ static StringRef ToolName;
 static cl::list<std::string> InputFileNames(cl::Positional,
                                             cl::desc("<input object files>"));
 
-static int MinLength = 4;
+static constexpr int DefaultMinLength = 4;
+static int MinLength = DefaultMinLength;
 static bool PrintFileName;
 
 enum radix { none, octal, hexadecimal, decimal };
@@ -88,41 +90,156 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
   }
 }
 
-static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
-  auto print = [&OS, FileName](unsigned Offset, StringRef L) {
-    if (L.size() < static_cast<size_t>(MinLength))
-      return;
+static bool isStringChar(char C) { return isPrint(C) || C == '\t'; }
+
+static void strings(raw_ostream &OS, StringRef FileName,
+                    sys::fs::file_t Handle) {
+  SmallString<sys::fs::DefaultReadChunkSize> Buffer;
+  auto printHeader = [&OS, FileName](size_t StringStart) {
     if (PrintFileName)
       OS << FileName << ": ";
     switch (Radix) {
     case none:
       break;
     case octal:
-      OS << format("%7o ", Offset);
+      OS << format("%7o ", StringStart);
       break;
     case hexadecimal:
-      OS << format("%7x ", Offset);
+      OS << format("%7x ", StringStart);
       break;
     case decimal:
-      OS << format("%7u ", Offset);
+      OS << format("%7u ", StringStart);
       break;
     }
-    OS << L << '\n';
   };
 
-  const char *B = Contents.begin();
-  const char *P = nullptr, *E = nullptr, *S = nullptr;
-  for (P = Contents.begin(), E = Contents.end(); P < E; ++P) {
-    if (isPrint(*P) || *P == '\t') {
-      if (S == nullptr)
-        S = P;
-    } else if (S) {
-      print(S - B, StringRef(S, P - S));
-      S = nullptr;
+  // To handle very large files without consuming excessive memory, we read the
+  // file in a little at a time and process it then rather than reading the
+  // entire file at once.
+  //
+  // A string is only buffered until it is known to be long enough to print;
+  // from then on it is streamed out directly, so an arbitrarily long string
+  // never needs an arbitrarily large buffer. Candidate therefore only ever
+  // holds a run that is shorter than MinLength and that was cut off by the end
+  // of a chunk.
+  const size_t Min = MinLength;
+  SmallString<DefaultMinLength> Candidate;
+  bool InString = false;
+  // Offset of the start of the current chunk within the file.
+  size_t ChunkOffset = 0;
+
+  Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
+
+  // To prevent performance regression under O0, access the raw pointer instead
+  // of using methods provided by the standard library, which are not inlined
+  // under O0.
+  while (true) {
+    Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
+        Handle, MutableArrayRef(Buffer.data(), Buffer.size()));
+    if (!ReadBytesOrErr) {
+      errs() << FileName << ": "
+             << errorToErrorCode(ReadBytesOrErr.takeError()).message() << '\n';
+      return;
     }
+    size_t ChunkSize = *ReadBytesOrErr;
+    if (ChunkSize == 0)
+      break;
+
+    const char *const Begin = Buffer.data();
+    const char *const End = Begin + ChunkSize;
+    const char *Cur = Begin;
+
+    // Handle the remaining part from the previous chunk.
+    // The previous chunk can be either shorter than MinSize or part of the
+    // string.
+    // Keep the buffer size bounded. With a small Min, a long string spanning
+    // multiple chunks will have at most DefaultReadChunkSize bytes, since the
+    // buffer is printed immediately with the header (guarded by the second if).
+    // With a large Min, the buffer must hold at least Min bytes, since we need
+    // enough data to decide whether to print it.
+    if (InString || !Candidate.empty()) {
+      // Find the end of the current buffer
+      while (Cur != End && isStringChar(*Cur))
+        ++Cur;
+      size_t Len = Cur - Begin;
+      if (InString) {
+        // Print the remaining part if the previous chunk has already printed
+        // the header. E.g. header: aaaaa | bbbbb, where | is the chunk
+        // boundary.                        ^
+        OS << StringRef(Begin, Len);
+      } else if (Candidate.size() + Len >= Min) {
+        // If the header hasn't been printed yet (e.g. the previous candidate
+        // was smaller than Min), but we can print it now, print the header
+        // first, followed by the candidate from the previous chunk and the
+        // current string. E.g. '\0' | bbbbbb
+        //                             ^
+        printHeader(ChunkOffset - Candidate.size());
+        OS << Candidate << StringRef(Begin, Len);
+        Candidate.clear();
+        InString = true;
+      } else if (Cur == End) {
+        // If the current chunk + previous candidate is still smaller than Min ,
+        // append it to Candidate
+        Candidate.append(Begin, End);
+      } else {
+        // If the string has terminated but is still smaller than Min, clear the
+        // buffer since it is too short to print.
+        Candidate.clear();
+      }
+
+      if (Cur == End) {
+        // Finish handling the current chunk and update ChunkOffset.
+        ChunkOffset += ChunkSize;
+        continue;
+      }
+      if (InString) {
+        // We haven't reached the end of the chunk, which means the string is
+        // terminated. Add a '\n' to start printing a new string.
+        OS << '\n';
+        InString = false;
+      }
+    }
+
+    // At this point, we are always at the start of a new string because the
+    // remaining part of the previous string has already been handled.
+    const char *StrHead = nullptr;
+    for (; Cur != End; ++Cur) {
+      if (isStringChar(*Cur)) {
+        // Find the start of the next string
+        if (!StrHead)
+          StrHead = Cur;
+      } else if (StrHead) {
+        // If it is not a StringChar, we have reached the end of the current
+        // string. Try to print it.
+        if (static_cast<size_t>(Cur - StrHead) >= Min) {
+          printHeader(ChunkOffset + (StrHead - Begin));
+          OS << StringRef(StrHead, Cur - StrHead) << '\n';
+        }
+        StrHead = nullptr;
+      }
+    }
+
+    // The last string spans multiple chunks. If it is larger than Min, print
+    // the header immediately and set the InString flag to avoid printing it
+    // again.
+    // e.g. aaaaa | bbbbb
+    //          ^
+    if (StrHead) {
+      size_t Len = End - StrHead;
+      // Print it, or append it to Candidate if it is too short.
+      if (Len >= Min) {
+        printHeader(ChunkOffset + (StrHead - Begin));
+        OS << StringRef(StrHead, Len);
+        InString = true;
+      } else {
+        Candidate.append(StrHead, End);
+      }
+    }
+    ChunkOffset += ChunkSize;
   }
-  if (S)
-    print(S - B, StringRef(S, E - S));
+
+  if (InString)
+    OS << '\n';
 }
 
 int main(int argc, char **argv) {
@@ -174,13 +291,19 @@ int main(int argc, char **argv) {
     InputFileNames.push_back("-");
 
   for (const auto &File : InputFileNames) {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
-        MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/true);
-    if (std::error_code EC = Buffer.getError())
-      errs() << File << ": " << EC.message() << '\n';
-    else
-      strings(llvm::outs(), File == "-" ? "{standard input}" : File,
-              Buffer.get()->getMemBufferRef().getBuffer());
+    if (File == "-") {
+      strings(llvm::outs(), "{standard input}", sys::fs::getStdinHandle());
+    } else {
+      Expected<sys::fs::file_t> FDOrErr =
+          sys::fs::openNativeFileForRead(File, sys::fs::OF_TextWithCRLF);
+      if (!FDOrErr) {
+        errs() << File
+               << ": cannot open file: " << toString(FDOrErr.takeError())
+               << '\n';
+        continue;
+      }
+      strings(llvm::outs(), File, *FDOrErr);
+    }
   }
 
   return EXIT_SUCCESS;
