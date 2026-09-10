@@ -7513,10 +7513,10 @@ define <16 x double> @global_extload_v16bf16_to_v16f64(ptr addrspace(1) %ptr) #0
 ; GFX8-LABEL: global_extload_v16bf16_to_v16f64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v10, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[2:5], v[0:1]
-; GFX8-NEXT:    flat_load_dwordx4 v[6:9], v[10:11]
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dwordx4 v[6:9], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(1)
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX8-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2

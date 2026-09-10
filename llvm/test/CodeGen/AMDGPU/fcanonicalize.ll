@@ -6365,9 +6365,9 @@ define amdgpu_kernel void @test_canonicalize_value_f16_flush(ptr addrspace(1) %a
 ; GFX6-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, s0, v2
-; GFX6-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX6-SDAG-NEXT:    flat_load_ushort v0, v[4:5]
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
+; GFX6-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX6-SDAG-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -6578,9 +6578,9 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_flush(ptr addrspace(1) 
 ; GFX6-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, s0, v2
-; GFX6-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX6-SDAG-NEXT:    flat_load_dword v0, v[4:5]
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
+; GFX6-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX6-SDAG-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
@@ -7031,9 +7031,9 @@ define amdgpu_kernel void @test_canonicalize_value_f16_denorm(ptr addrspace(1) %
 ; GFX6-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, s0, v2
-; GFX6-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX6-SDAG-NEXT:    flat_load_ushort v0, v[4:5]
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
+; GFX6-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX6-SDAG-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -7245,9 +7245,9 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_denorm(ptr addrspace(1)
 ; GFX6-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, s0, v2
-; GFX6-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX6-SDAG-NEXT:    flat_load_dword v0, v[4:5]
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
+; GFX6-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX6-SDAG-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0

@@ -265,12 +265,12 @@ define amdgpu_ps float @flat_xchg_saddr_i32_rtn_neg2048(ptr inreg %sbase, i32 %v
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff800, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-SDAG-NEXT:    buffer_wbl2 sc1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    flat_atomic_swap v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    flat_atomic_swap v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc1
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
@@ -1398,12 +1398,12 @@ define amdgpu_ps float @flat_add_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-SDAG-NEXT:    buffer_wbl2 sc1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    flat_atomic_add v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    flat_atomic_add v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc1
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
@@ -2342,12 +2342,12 @@ define amdgpu_ps float @flat_sub_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-SDAG-NEXT:    buffer_wbl2 sc1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    flat_atomic_sub v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    flat_atomic_sub v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc1
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
@@ -3294,12 +3294,12 @@ define amdgpu_ps float @flat_and_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-SDAG-NEXT:    buffer_wbl2 sc1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    flat_atomic_and v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    flat_atomic_and v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc1
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
@@ -4246,12 +4246,12 @@ define amdgpu_ps float @flat_or_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %voff
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-SDAG-NEXT:    buffer_wbl2 sc1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    flat_atomic_or v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    flat_atomic_or v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc1
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
@@ -5198,12 +5198,12 @@ define amdgpu_ps float @flat_xor_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-SDAG-NEXT:    buffer_wbl2 sc1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    flat_atomic_xor v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    flat_atomic_xor v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc1
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
@@ -6136,10 +6136,10 @@ define amdgpu_ps float @flat_max_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
-; GFX950-SDAG-NEXT:    flat_atomic_smax v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    flat_atomic_smax v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -7008,10 +7008,10 @@ define amdgpu_ps float @flat_min_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
-; GFX950-SDAG-NEXT:    flat_atomic_smin v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    flat_atomic_smin v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -7880,10 +7880,10 @@ define amdgpu_ps float @flat_umax_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
-; GFX950-SDAG-NEXT:    flat_atomic_umax v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    flat_atomic_umax v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -8752,10 +8752,10 @@ define amdgpu_ps float @flat_umin_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
-; GFX950-SDAG-NEXT:    flat_atomic_umin v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    flat_atomic_umin v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -9642,12 +9642,12 @@ define amdgpu_ps float @flat_cmpxchg_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-SDAG-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    flat_atomic_cmpswap v0, v[4:5], v[2:3] sc0 sc1
+; GFX950-SDAG-NEXT:    flat_atomic_cmpswap v0, v[0:1], v[2:3] sc0 sc1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc0 sc1
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
@@ -10628,10 +10628,10 @@ define amdgpu_ps float @flat_inc_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
-; GFX950-SDAG-NEXT:    flat_atomic_inc v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    flat_atomic_inc v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -11535,10 +11535,10 @@ define amdgpu_ps float @flat_dec_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
-; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 0xffffff80, v0
+; GFX950-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-SDAG-NEXT:    s_nop 1
-; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
-; GFX950-SDAG-NEXT:    flat_atomic_dec v0, v[4:5], v2 sc0
+; GFX950-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX950-SDAG-NEXT:    flat_atomic_dec v0, v[0:1], v2 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
 ;

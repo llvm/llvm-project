@@ -3325,9 +3325,9 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_12bit_max(ptr addrspace(1
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0xfffff000, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, -1, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xfffff000, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, -1, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -3430,9 +3430,9 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_13bit_max(ptr addrspace(1
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0xffffe000, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, -1, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, -1, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -3441,10 +3441,10 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_13bit_max(ptr addrspace(1
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0xffffe000, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -3453,10 +3453,10 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_13bit_max(ptr addrspace(1
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0xffffe000, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -3792,9 +3792,9 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_11bit_max(ptr addrspac
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0xfffff000, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, -1, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xfffff000, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, -1, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -3897,9 +3897,9 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_12bit_max(ptr addrspac
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0xffffe000, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, -1, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, -1, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -3908,10 +3908,10 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_12bit_max(ptr addrspac
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0xffffe000, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -3920,10 +3920,10 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_12bit_max(ptr addrspac
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0xffffe000, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4006,9 +4006,9 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_13bit_max(ptr addrspac
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0xffffc000, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, -1, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xffffc000, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, -1, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -4017,10 +4017,10 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_13bit_max(ptr addrspac
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0xffffc000, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xffffc000, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4029,10 +4029,10 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_13bit_max(ptr addrspac
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0xffffc000, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xffffc000, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4119,9 +4119,9 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, 2, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off offset:2047 glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047 glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -4130,10 +4130,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:2047 glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:2047 glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4142,10 +4142,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:2047 glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:2047 glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4154,10 +4154,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:2047 scope:SCOPE_SYS
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:2047 scope:SCOPE_SYS
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4166,10 +4166,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX12-SDAG-FAKE16:       ; %bb.0:
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:2047 scope:SCOPE_SYS
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:2047 scope:SCOPE_SYS
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4236,9 +4236,9 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0x800, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, 2, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x800, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -4247,10 +4247,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:2048 glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:2048 glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4259,10 +4259,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:2048 glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:2048 glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4271,10 +4271,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:2048 scope:SCOPE_SYS
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:2048 scope:SCOPE_SYS
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4283,10 +4283,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX12-SDAG-FAKE16:       ; %bb.0:
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:2048 scope:SCOPE_SYS
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:2048 scope:SCOPE_SYS
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4353,9 +4353,9 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0x800, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, 2, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off offset:2047 glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x800, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047 glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -4364,10 +4364,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:4095 glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095 glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4376,10 +4376,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:4095 glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095 glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4388,10 +4388,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:4095 scope:SCOPE_SYS
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095 scope:SCOPE_SYS
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4400,10 +4400,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX12-SDAG-FAKE16:       ; %bb.0:
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:4095 scope:SCOPE_SYS
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095 scope:SCOPE_SYS
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4470,9 +4470,9 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0x1000, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, 2, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -4481,10 +4481,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0x1000, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4493,10 +4493,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0x1000, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4505,10 +4505,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:4096 scope:SCOPE_SYS
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4096 scope:SCOPE_SYS
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4517,10 +4517,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX12-SDAG-FAKE16:       ; %bb.0:
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:4096 scope:SCOPE_SYS
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4096 scope:SCOPE_SYS
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4587,9 +4587,9 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0x1800, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, 2, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off offset:2047 glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x1800, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047 glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -4598,10 +4598,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0x1000, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:4095 glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095 glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4610,10 +4610,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0x1000, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:4095 glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095 glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4622,10 +4622,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:8191 scope:SCOPE_SYS
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:8191 scope:SCOPE_SYS
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4634,10 +4634,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX12-SDAG-FAKE16:       ; %bb.0:
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:8191 scope:SCOPE_SYS
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:8191 scope:SCOPE_SYS
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4704,9 +4704,9 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v2, s0, 0x2000, s0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, s0, 2, s1, s0
-; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[2:3], off glc dlc
+; GFX10-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x2000, s0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off glc dlc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-SDAG-NEXT:    s_endpgm
@@ -4715,10 +4715,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0x2000, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x2000, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4727,10 +4727,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0x2000, s0
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x2000, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
@@ -4739,10 +4739,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[2:3], off offset:8192 scope:SCOPE_SYS
+; GFX12-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:8192 scope:SCOPE_SYS
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
@@ -4751,10 +4751,10 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX12-SDAG-FAKE16:       ; %bb.0:
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v2, s0, 0, s0
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 2, s1, s0
-; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[2:3], off offset:8192 scope:SCOPE_SYS
+; GFX12-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX12-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:8192 scope:SCOPE_SYS
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm

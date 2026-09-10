@@ -285,11 +285,11 @@ define amdgpu_kernel void @v_brev_i32(ptr addrspace(1) noalias %out, ptr addrspa
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; SI-NEXT:    v_mov_b32_e32 v3, 0
-; SI-NEXT:    buffer_load_dword v0, v[2:3], s[8:11], 0 addr64
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
@@ -304,9 +304,9 @@ define amdgpu_kernel void @v_brev_i32(ptr addrspace(1) noalias %out, ptr addrspa
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    v_mov_b32_e32 v1, s3
-; FLAT-NEXT:    v_add_u32_e32 v2, vcc, s2, v0
-; FLAT-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; FLAT-NEXT:    flat_load_dword v0, v[2:3]
+; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
+; FLAT-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; FLAT-NEXT:    flat_load_dword v0, v[0:1]
 ; FLAT-NEXT:    s_mov_b32 s3, 0xf000
 ; FLAT-NEXT:    s_mov_b32 s2, -1
 ; FLAT-NEXT:    s_waitcnt vmcnt(0)
@@ -321,9 +321,9 @@ define amdgpu_kernel void @v_brev_i32(ptr addrspace(1) noalias %out, ptr addrspa
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GISEL-NEXT:    v_add_u32_e32 v2, vcc, v0, v2
-; GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GISEL-NEXT:    flat_load_dword v0, v[2:3]
+; GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GISEL-NEXT:    flat_load_dword v0, v[0:1]
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_bfrev_b32_e32 v2, v0

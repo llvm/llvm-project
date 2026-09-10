@@ -42,10 +42,10 @@ define amdgpu_kernel void @madak_f32(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
-; GFX8-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dword v5, v[0:1]
-; GFX8-NEXT:    flat_load_dword v2, v[6:7]
+; GFX8-NEXT:    flat_load_dword v2, v[2:3]
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -513,10 +513,10 @@ define amdgpu_kernel void @madak_inline_imm_f32(ptr addrspace(1) noalias %out, p
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
-; GFX8-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dword v5, v[0:1]
-; GFX8-NEXT:    flat_load_dword v2, v[6:7]
+; GFX8-NEXT:    flat_load_dword v2, v[2:3]
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -1029,10 +1029,10 @@ define amdgpu_kernel void @no_madak_src0_modifier_f32(ptr addrspace(1) noalias %
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
-; GFX8-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dword v5, v[0:1]
-; GFX8-NEXT:    flat_load_dword v2, v[6:7]
+; GFX8-NEXT:    flat_load_dword v2, v[2:3]
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; GFX8-NEXT:    s_mov_b32 s0, 0x41200000
@@ -1183,10 +1183,10 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(ptr addrspace(1) noalias %
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
-; GFX8-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dword v5, v[0:1]
-; GFX8-NEXT:    flat_load_dword v2, v[6:7]
+; GFX8-NEXT:    flat_load_dword v2, v[2:3]
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; GFX8-NEXT:    s_mov_b32 s0, 0x41200000

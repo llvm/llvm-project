@@ -115,10 +115,10 @@ define amdgpu_kernel void @v_cvt_pknorm_i16_f32(ptr addrspace(1) %out, ptr addrs
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v6, vcc, s4, v4
-; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v2, vcc, s4, v4
+; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[6:7] glc
+; VI:    flat_load_dword v2, v[2:3] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -265,10 +265,10 @@ define amdgpu_kernel void @v_cvt_pknorm_i16_f32_fneg_lo(ptr addrspace(1) %out, p
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v6, vcc, s4, v4
-; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v2, vcc, s4, v4
+; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[6:7] glc
+; VI:    flat_load_dword v2, v[2:3] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -335,10 +335,10 @@ define amdgpu_kernel void @v_cvt_pknorm_i16_f32_fneg_hi(ptr addrspace(1) %out, p
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v6, vcc, s4, v4
-; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v2, vcc, s4, v4
+; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[6:7] glc
+; VI:    flat_load_dword v2, v[2:3] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -405,10 +405,10 @@ define amdgpu_kernel void @v_cvt_pknorm_i16_f32_fneg_lo_hi(ptr addrspace(1) %out
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v6, vcc, s4, v4
-; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v2, vcc, s4, v4
+; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[6:7] glc
+; VI:    flat_load_dword v2, v[2:3] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -477,10 +477,10 @@ define amdgpu_kernel void @v_cvt_pknorm_i16_f32_fneg_fabs_lo_fneg_hi(ptr addrspa
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v6, vcc, s4, v4
-; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v2, vcc, s4, v4
+; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[6:7] glc
+; VI:    flat_load_dword v2, v[2:3] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc

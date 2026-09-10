@@ -14,10 +14,10 @@ define amdgpu_kernel void @v_test_imax_sge_i16(ptr addrspace(1) %out, ptr addrsp
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_load_ushort v5, v[0:1]
-; VI-NEXT:    flat_load_ushort v2, v[6:7]
+; VI-NEXT:    flat_load_ushort v2, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -62,10 +62,10 @@ define amdgpu_kernel void @v_test_imax_sge_v2i16(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_load_dword v5, v[0:1]
-; VI-NEXT:    flat_load_dword v2, v[6:7]
+; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -237,10 +237,10 @@ define amdgpu_kernel void @v_test_imax_sgt_i16(ptr addrspace(1) %out, ptr addrsp
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_load_ushort v5, v[0:1]
-; VI-NEXT:    flat_load_ushort v2, v[6:7]
+; VI-NEXT:    flat_load_ushort v2, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -285,10 +285,10 @@ define amdgpu_kernel void @v_test_umax_uge_i16(ptr addrspace(1) %out, ptr addrsp
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_load_ushort v5, v[0:1]
-; VI-NEXT:    flat_load_ushort v2, v[6:7]
+; VI-NEXT:    flat_load_ushort v2, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -333,10 +333,10 @@ define amdgpu_kernel void @v_test_umax_ugt_i16(ptr addrspace(1) %out, ptr addrsp
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_load_ushort v5, v[0:1]
-; VI-NEXT:    flat_load_ushort v2, v[6:7]
+; VI-NEXT:    flat_load_ushort v2, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -380,10 +380,10 @@ define amdgpu_kernel void @v_test_umax_ugt_v2i16(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_add_u32_e32 v6, vcc, s4, v4
-; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_load_dword v5, v[0:1]
-; VI-NEXT:    flat_load_dword v2, v[6:7]
+; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc

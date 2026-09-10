@@ -1444,12 +1444,12 @@ define hidden void @or_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v4, 0x3ff, v31
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 2, v4
-; GFX9-NEXT:    v_add_co_u32_e32 v10, vcc, v2, v4
-; GFX9-NEXT:    v_addc_co_u32_e32 v11, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_load_dword v2, v[10:11], off
-; GFX9-NEXT:    v_add_co_u32_e32 v12, vcc, v0, v4
-; GFX9-NEXT:    v_addc_co_u32_e32 v13, vcc, 0, v1, vcc
-; GFX9-NEXT:    global_load_dword v0, v[12:13], off
+; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
+; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX9-NEXT:    global_load_dword v2, v[2:3], off
+; GFX9-NEXT:    v_add_co_u32_e32 v10, vcc, v0, v4
+; GFX9-NEXT:    v_addc_co_u32_e32 v11, vcc, 0, v1, vcc
+; GFX9-NEXT:    global_load_dword v0, v[10:11], off
 ; GFX9-NEXT:    s_mov_b32 s4, 0x2010005
 ; GFX9-NEXT:    s_movk_i32 s5, 0x102
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
@@ -1919,12 +1919,12 @@ define hidden void @sub_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_and_b32_e32 v4, 0x3ff, v31
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 2, v4
-; GFX10-NEXT:    v_add_co_u32 v10, vcc_lo, v2, v4
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v11, vcc_lo, 0, v3, vcc_lo
-; GFX10-NEXT:    v_add_co_u32 v12, vcc_lo, v0, v4
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v13, vcc_lo, 0, v1, vcc_lo
-; GFX10-NEXT:    global_load_dword v2, v[10:11], off
-; GFX10-NEXT:    global_load_dword v0, v[12:13], off
+; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v4
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v11, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    global_load_dword v2, v[2:3], off
+; GFX10-NEXT:    global_load_dword v0, v[10:11], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 24, v2
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 16, v2

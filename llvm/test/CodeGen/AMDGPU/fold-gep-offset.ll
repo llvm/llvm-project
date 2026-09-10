@@ -412,11 +412,11 @@ define void @flat_offset_inbounds_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX10-GISEL-NEXT:    v_lshlrev_b64 v[4:5], 2, v[4:5]
-; GFX10-GISEL-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v4
-; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e64 v11, null, v1, v5, vcc_lo
+; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
+; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e64 v9, null, v1, v5, vcc_lo
 ; GFX10-GISEL-NEXT:    s_clause 0x1
-; GFX10-GISEL-NEXT:    flat_load_dwordx4 v[4:7], v[10:11] offset:12
-; GFX10-GISEL-NEXT:    flat_load_dword v8, v[10:11] offset:28
+; GFX10-GISEL-NEXT:    flat_load_dwordx4 v[4:7], v[8:9] offset:12
+; GFX10-GISEL-NEXT:    flat_load_dword v8, v[8:9] offset:28
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
 ; GFX10-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[4:7]
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(1)
@@ -443,12 +443,12 @@ define void @flat_offset_inbounds_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX11-GISEL-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b64 v[4:5], 2, v[4:5]
-; GFX11-GISEL-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v4
+; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v11, null, v1, v5, vcc_lo
+; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v9, null, v1, v5, vcc_lo
 ; GFX11-GISEL-NEXT:    s_clause 0x1
-; GFX11-GISEL-NEXT:    flat_load_b128 v[4:7], v[10:11] offset:12
-; GFX11-GISEL-NEXT:    flat_load_b32 v8, v[10:11] offset:28
+; GFX11-GISEL-NEXT:    flat_load_b128 v[4:7], v[8:9] offset:12
+; GFX11-GISEL-NEXT:    flat_load_b32 v8, v[8:9] offset:28
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
 ; GFX11-GISEL-NEXT:    flat_store_b128 v[2:3], v[4:7]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(1)
@@ -466,13 +466,13 @@ define void @flat_offset_inbounds_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX12-GISEL-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b64_e32 v[4:5], 2, v[4:5]
-; GFX12-GISEL-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v4
+; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v11, null, v1, v5, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v9, null, v1, v5, vcc_lo
 ; GFX12-GISEL-NEXT:    s_clause 0x1
-; GFX12-GISEL-NEXT:    flat_load_b128 v[4:7], v[10:11] offset:12
-; GFX12-GISEL-NEXT:    flat_load_b32 v8, v[10:11] offset:28
+; GFX12-GISEL-NEXT:    flat_load_b128 v[4:7], v[8:9] offset:12
+; GFX12-GISEL-NEXT:    flat_load_b32 v8, v[8:9] offset:28
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x101
 ; GFX12-GISEL-NEXT:    flat_store_b128 v[2:3], v[4:7]
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x1

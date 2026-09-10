@@ -434,12 +434,12 @@ define amdgpu_kernel void @v_uint_to_fp_v4i64_to_v4f32(ptr addrspace(1) %out, pt
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, 0
-; GFX6-NEXT:    v_lshlrev_b32_e32 v10, 5, v0
-; GFX6-NEXT:    v_mov_b32_e32 v11, 0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
+; GFX6-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX6-NEXT:    buffer_load_dwordx4 v[1:4], v[10:11], s[4:7], 0 addr64 offset:16
-; GFX6-NEXT:    buffer_load_dwordx4 v[5:8], v[10:11], s[4:7], 0 addr64
+; GFX6-NEXT:    buffer_load_dwordx4 v[1:4], v[8:9], s[4:7], 0 addr64 offset:16
+; GFX6-NEXT:    buffer_load_dwordx4 v[5:8], v[8:9], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v10, 4, v0
 ; GFX6-NEXT:    v_mov_b32_e32 v11, v9
 ; GFX6-NEXT:    s_mov_b64 s[2:3], s[6:7]
@@ -724,12 +724,12 @@ define amdgpu_kernel void @v_uint_to_fp_v4i64_to_v4f16(ptr addrspace(1) %out, pt
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, 0
-; GFX6-NEXT:    v_lshlrev_b32_e32 v10, 5, v0
-; GFX6-NEXT:    v_mov_b32_e32 v11, 0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
+; GFX6-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX6-NEXT:    buffer_load_dwordx4 v[1:4], v[10:11], s[4:7], 0 addr64 offset:16
-; GFX6-NEXT:    buffer_load_dwordx4 v[5:8], v[10:11], s[4:7], 0 addr64
+; GFX6-NEXT:    buffer_load_dwordx4 v[1:4], v[8:9], s[4:7], 0 addr64 offset:16
+; GFX6-NEXT:    buffer_load_dwordx4 v[5:8], v[8:9], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v10, 3, v0
 ; GFX6-NEXT:    v_mov_b32_e32 v11, v9
 ; GFX6-NEXT:    s_mov_b64 s[2:3], s[6:7]

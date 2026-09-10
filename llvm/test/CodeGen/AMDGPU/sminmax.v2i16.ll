@@ -272,11 +272,11 @@ define amdgpu_kernel void @v_abs_v2i16_2(ptr addrspace(1) %out, ptr addrspace(1)
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s10, 0
 ; CI-NEXT:    s_mov_b32 s11, s7
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CI-NEXT:    v_mov_b32_e32 v3, 0
-; CI-NEXT:    buffer_load_dword v0, v[2:3], s[8:11], 0 addr64
+; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
 ; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    s_mov_b32 s4, s0
 ; CI-NEXT:    s_mov_b32 s5, s1

@@ -4711,10 +4711,10 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; GENERIC-NEXT:    s_mov_b32 s11, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, 0
 ; GENERIC-NEXT:    s_mov_b32 s3, s11
-; GENERIC-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
-; GENERIC-NEXT:    v_mov_b32_e32 v4, 0
+; GENERIC-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GENERIC-NEXT:    v_mov_b32_e32 v2, 0
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    buffer_load_dword v1, v[3:4], s[0:3], 0 addr64 glc
+; GENERIC-NEXT:    buffer_load_dword v1, v[1:2], s[0:3], 0 addr64 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GENERIC-NEXT:    s_mov_b32 s10, -1
@@ -5161,10 +5161,10 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; SI-MOVREL-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, 0
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, s11
-; SI-MOVREL-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v4, 0
+; SI-MOVREL-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dword v1, v[3:4], s[0:3], 0 addr64 glc
+; SI-MOVREL-NEXT:    buffer_load_dword v1, v[1:2], s[0:3], 0 addr64 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; SI-MOVREL-NEXT:    s_mov_b32 s10, -1
