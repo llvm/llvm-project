@@ -51,6 +51,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -148,6 +149,12 @@ static cl::opt<unsigned>
     SharedMemoryLimit("openmp-opt-shared-limit", cl::Hidden,
                       cl::desc("Maximum amount of shared memory to use."),
                       cl::init(std::numeric_limits<unsigned>::max()));
+
+static cl::opt<unsigned> MaxCalleesForSpecialization(
+    "openmp-opt-max-callees-for-specialization", cl::Hidden,
+    cl::desc("Number of possible callees above which an indirect call site is "
+             "left alone rather than specialized into an if-cascade."),
+    cl::init(3));
 
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
@@ -545,6 +552,53 @@ struct OMPInformationCache : public InformationCache {
     collectUses(RFI, /*CollectStats*/ false);
   }
 
+  /// Attach !callback metadata to a runtime function that takes one, so that
+  /// the Attributor sees the edge from the runtime call to the callback and
+  /// AAKernelInfo can look inside it. The runtime declares these functions
+  /// without the metadata, so OpenMPOpt supplies it from the table in
+  /// OMPKinds.def.
+  void setCallbackMetadata(Function *F, unsigned ArgNo, ArrayRef<int> Indices,
+                           bool IsVarArg) {
+    if (!F || F->hasMetadata(LLVMContext::MD_callback))
+      return;
+
+    LLVMContext &Ctx = F->getContext();
+    MDBuilder MDB(Ctx);
+    F->addMetadata(LLVMContext::MD_callback,
+                   *MDNode::get(Ctx, {MDB.createCallbackEncoding(ArgNo, Indices,
+                                                                 IsVarArg)}));
+  }
+
+  /// The callback a runtime function was handed, if it is one we can analyze.
+  /// Returns null when the call takes no callback, or when the callback is not
+  /// a definition this module can see, in which case its contents are unknown
+  /// and callers have to stay conservative.
+  static Function *getAnalyzableCallback(const CallBase &CB) {
+    Function *Callee = CB.getCalledFunction();
+    if (!Callee)
+      return nullptr;
+    MDNode *CallbackMD = Callee->getMetadata(LLVMContext::MD_callback);
+    if (!CallbackMD || CallbackMD->getNumOperands() == 0)
+      return nullptr;
+    // TODO: A runtime function with more than one callback would need each of
+    // them checked; none of the ones in the table have more than one.
+    auto *Encoding = dyn_cast<MDNode>(CallbackMD->getOperand(0));
+    if (!Encoding || Encoding->getNumOperands() == 0)
+      return nullptr;
+    auto *ArgNoMD = dyn_cast<ConstantAsMetadata>(Encoding->getOperand(0));
+    if (!ArgNoMD)
+      return nullptr;
+    uint64_t ArgNo =
+        cast<ConstantInt>(ArgNoMD->getValue())->getLimitedValue(UINT64_MAX);
+    if (ArgNo >= CB.arg_size())
+      return nullptr;
+    auto *Callback =
+        dyn_cast<Function>(CB.getArgOperand(ArgNo)->stripPointerCasts());
+    if (!Callback || Callback->isDeclaration())
+      return nullptr;
+    return Callback;
+  }
+
   // Helper function to recollect uses of all runtime functions.
   void recollectUses() {
     for (int Idx = 0; Idx < RFIs.size(); ++Idx)
@@ -628,6 +682,10 @@ struct OMPInformationCache : public InformationCache {
       });                                                                      \
     }                                                                          \
   }
+
+#define OMP_RTL_CB_INFO(_Enum, _Name, _ArgNo, _ArgIndices, _IsVarArg)          \
+  setCallbackMetadata(M.getFunction(_Name), _ArgNo, _ArgIndices, _IsVarArg);
+
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
     // Remove the `noinline` attribute from `__kmpc`, `ompx::` and `omp_`
@@ -1199,8 +1257,8 @@ private:
           InsertPointTy(ParentBB, ParentBB->end()), DL);
       OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
-      cantFail(
-          OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
+      cantFail(OMPInfoCache.OMPBuilder.createBarrier({SeqAfterIP, DL},
+                                                     OMPD_parallel));
 
       UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
@@ -1314,8 +1372,9 @@ private:
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
           cantFail(OMPInfoCache.OMPBuilder.createBarrier(
-              InsertPointTy(NewCI->getParent(),
-                            NewCI->getNextNode()->getIterator()),
+              {InsertPointTy(NewCI->getParent(),
+                             NewCI->getNextNode()->getIterator()),
+               NewCI->getDebugLoc()},
               OMPD_parallel));
         }
 
@@ -1819,10 +1878,13 @@ private:
 
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
-      // unfortunate but we work around it for now.
+      // unfortunate but we work around it for now. No instruction is emitted
+      // here, so there is no debug location to preserve.
       if (!OMPInfoCache.OMPBuilder.getInsertionPoint().getBlock())
-        OMPInfoCache.OMPBuilder.updateToLocation(OpenMPIRBuilder::InsertPointTy(
-            &F.getEntryBlock(), F.getEntryBlock().begin()));
+        OMPInfoCache.OMPBuilder.updateToLocation(
+            {OpenMPIRBuilder::InsertPointTy(&F.getEntryBlock(),
+                                            F.getEntryBlock().begin()),
+             DebugLoc()});
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
       uint32_t SrcLocStrSize;
@@ -4150,11 +4212,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
       FunctionCallee BarrierFn =
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
               M, OMPRTL___kmpc_barrier_simple_spmd);
-      OMPInfoCache.OMPBuilder.updateToLocation(InsertPointTy(
-          RegionBarrierBB, RegionBarrierBB->getFirstInsertionPt()));
+      OMPInfoCache.OMPBuilder.updateToLocation(
+          {InsertPointTy(RegionBarrierBB,
+                         RegionBarrierBB->getFirstInsertionPt()),
+           DL});
       CallInst *Barrier =
           OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid});
-      Barrier->setDebugLoc(DL);
       OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
 
       // Second barrier ensures workers have read broadcast values.
@@ -4820,6 +4883,24 @@ struct AAKernelInfoFunction : AAKernelInfo {
     bool AllSPMDStatesWereFixed = true;
     auto CheckCallInst = [&](Instruction &I) {
       auto &CB = cast<CallBase>(I);
+      // A runtime function that takes a callback runs the user's code inside
+      // it, so whatever the callback reaches this kernel reaches too. Fold the
+      // callback's state in; without this the call tells us nothing about the
+      // parallel regions on the other side of it.
+      if (Function *Callback = OMPInformationCache::getAnalyzableCallback(CB)) {
+        LLVM_DEBUG(dbgs() << TAG << "folding in callback "
+                          << Callback->getName() << " of " << CB << "\n");
+        if (auto *CallbackAA = A.getAAFor<AAKernelInfo>(
+                *this, IRPosition::function(*Callback), DepClassTy::OPTIONAL)) {
+          getState() ^= CallbackAA->getState();
+          AllSPMDStatesWereFixed &=
+              CallbackAA->SPMDCompatibilityTracker.isAtFixpoint();
+          AllParallelRegionStatesWereFixed &=
+              CallbackAA->ReachedKnownParallelRegions.isAtFixpoint();
+          AllParallelRegionStatesWereFixed &=
+              CallbackAA->ReachedUnknownParallelRegions.isAtFixpoint();
+        }
+      }
       auto *CBAA = A.getAAFor<AAKernelInfo>(
           *this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
       if (!CBAA)
@@ -4995,7 +5076,10 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         // state based on the callee state in updateImpl.
         return;
       }
-      if (NumCallees > 1) {
+      // More than one callee normally means an indirect call we cannot resolve.
+      // A runtime function carrying !callback is the exception: the extra edge
+      // is the callback, which we analyze rather than give up on.
+      if (NumCallees > 1 && !Callee->hasMetadata(LLVMContext::MD_callback)) {
         indicatePessimisticFixpoint();
         return;
       }
@@ -5091,10 +5175,27 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_free_shared:
         // Return without setting a fixpoint, to be resolved in updateImpl.
         return;
+      // The twelve static-loop entry points split into the two groups below.
+      // Both come out SPMD-incompatible, but for different reasons: the first
+      // because the call is single-threaded by construction, the second only
+      // because SPMD-ization cannot yet guard per iteration. They are kept
+      // apart so the second can be relaxed on its own once it can.
       case OMPRTL___kmpc_distribute_static_loop_4:
       case OMPRTL___kmpc_distribute_static_loop_4u:
       case OMPRTL___kmpc_distribute_static_loop_8:
       case OMPRTL___kmpc_distribute_static_loop_8u:
+        // A plain `distribute` spreads its iterations over the teams, not over
+        // the threads of a team: the runtime runs it with TId 0 and a team size
+        // of one, and asserts the kernel is at parallel level 0. One thread per
+        // block calls it, which is what generic mode gives it. In SPMD mode
+        // every thread would call it, each running the whole of its block's
+        // share of the loop body, so the kernel cannot be SPMD-ized however
+        // analyzable the body is.
+        if (!OMPInformationCache::getAnalyzableCallback(CB))
+          ReachedUnknownParallelRegions.insert(&CB);
+        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+        SPMDCompatibilityTracker.insert(&CB);
+        break;
       case OMPRTL___kmpc_distribute_for_static_loop_4:
       case OMPRTL___kmpc_distribute_for_static_loop_4u:
       case OMPRTL___kmpc_distribute_for_static_loop_8:
@@ -5103,14 +5204,16 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_for_static_loop_4u:
       case OMPRTL___kmpc_for_static_loop_8:
       case OMPRTL___kmpc_for_static_loop_8u:
-        // Parallel regions might be reached by these calls, as they take a
-        // callback argument potentially containing arbitrary user-provided
-        // code.
-        ReachedUnknownParallelRegions.insert(&CB);
-        // TODO: The presence of these calls on their own does not prevent a
-        // kernel from being SPMD-izable. We mark it as such because we need
-        // further changes in order to also consider the contents of the
-        // callbacks passed to them.
+        // These index by the thread's own id, so unlike a plain distribute they
+        // are meant to be called by every thread of the block, and a kernel
+        // reaching one is not SPMD-incompatible for that reason alone. What
+        // stops us is the transform rather than the analysis: SPMD-ization
+        // guards whatever has to stay single-threaded with a block-wide
+        // barrier, and a barrier placed inside a loop body only some threads
+        // run is divergent. Until guarding can express "the thread that owns
+        // this iteration", stay conservative here too.
+        if (!OMPInformationCache::getAnalyzableCallback(CB))
+          ReachedUnknownParallelRegions.insert(&CB);
         SPMDCompatibilityTracker.indicatePessimisticFixpoint();
         SPMDCompatibilityTracker.insert(&CB);
         break;
@@ -5165,7 +5268,9 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         getState() = FnAA->getState();
         return ChangeStatus::CHANGED;
       }
-      if (NumCallees > 1)
+      // See the matching check in initialize: a !callback runtime function has
+      // a second call edge by construction, and it is one we can analyze.
+      if (NumCallees > 1 && !F->hasMetadata(LLVMContext::MD_callback))
         return indicatePessimisticFixpoint();
 
       CallBase &CB = cast<CallBase>(getAssociatedValue());
@@ -5830,6 +5935,23 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
   return *AA;
 }
 
+/// Bound the if-cascade AAIndirectCallInfo builds for an indirect call. Device
+/// code reaches its callees through function-pointer tables and virtual
+/// dispatch, so a call site can see every address-taken candidate in the
+/// module; specializing all of them costs more in code size and compile time
+/// than the direct calls are worth.
+///
+/// This is a threshold on the call site rather than a limit on how many callees
+/// get specialized: the Attributor asks about each callee with the same total,
+/// so a site above the threshold keeps its indirect call instead of getting
+/// this many direct ones plus a fallback.
+static bool shouldSpecializeIndirectCallee(Attributor &,
+                                           const AbstractAttribute &,
+                                           CallBase &, Function &,
+                                           unsigned NumAssumedCallees) {
+  return NumAssumedCallees <= MaxCalleesForSpecialization;
+}
+
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
@@ -5916,6 +6038,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
   AC.IPOAmendableCB = [](const Function &F) {
     return F.hasFnAttribute("kernel");
   };
@@ -5996,6 +6119,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
 
   Attributor A(Functions, InfoCache, AC);
 

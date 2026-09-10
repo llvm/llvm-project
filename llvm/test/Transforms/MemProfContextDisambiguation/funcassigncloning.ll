@@ -102,7 +102,7 @@ attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #5 = { "disable-tail-calls"="true" }
 attributes #6 = { builtin }
 
-!0 = !{!1, !3, !5}
+!0 = !{!3, !5, !1}
 !1 = !{!2, !"cold"}
 !2 = !{i64 -3461278137325233666, i64 -7799663586031895603}
 !3 = !{!4, !"notcold"}
@@ -131,40 +131,40 @@ attributes #6 = { builtin }
 ; DUMP: Node [[ENEW1ORIG:0x[a-z0-9]+]]
 ; DUMP: 	  %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
-; DUMP: 	ContextIds: 2 3
+; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[C:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 2
-; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 3
+; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[C:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1
+; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 2
 ; DUMP: 	Clones: [[ENEW1CLONE:0x[a-z0-9]+]]
-
-; DUMP: Node [[D:0x[a-z0-9]+]]
-; DUMP:           call void @_Z1EPPcS0_(ptr noundef %0, ptr noundef %1) (clone 0)
-; DUMP:         AllocTypes: NotColdCold
-; DUMP:         ContextIds: 1 6
-; DUMP:         CalleeEdges:
-; DUMP:                 Edge from Callee [[ENEW1CLONE]] to Caller: [[D]] AllocTypes: Cold ContextIds: 1
-; DUMP:                 Edge from Callee [[ENEW2ORIG:0x[a-z0-9]+]] to Caller: [[D]] AllocTypes: NotCold ContextIds: 6
-; DUMP:         CallerEdges:
-
+;
 ; DUMP: Node [[C]]
 ; DUMP: 	  call void @_Z1EPPcS0_(ptr noundef %0, ptr noundef %1)	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
-; DUMP: 	ContextIds: 2 5
+; DUMP: 	ContextIds: 1 5
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[C]] AllocTypes: NotCold ContextIds: 2
+; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[C]] AllocTypes: NotCold ContextIds: 1
 ; DUMP: 		Edge from Callee [[ENEW2CLONE:0x[a-z0-9]+]] to Caller: [[C]] AllocTypes: Cold ContextIds: 5
 ; DUMP: 	CallerEdges:
-
+;
 ; DUMP: Node [[B]]
 ; DUMP: 	  call void @_Z1EPPcS0_(ptr noundef %0, ptr noundef %1)	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
-; DUMP: 	ContextIds: 3 4
+; DUMP: 	ContextIds: 2 4
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 3
-; DUMP: 		Edge from Callee [[ENEW2ORIG]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 4
+; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 2
+; DUMP: 		Edge from Callee [[ENEW2ORIG:0x[a-z0-9]+]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 4
 ; DUMP: 	CallerEdges:
-
+;
+; DUMP: Node [[D:0x[a-z0-9]+]]
+; DUMP:           call void @_Z1EPPcS0_(ptr noundef %0, ptr noundef %1) (clone 0)
+; DUMP:         AllocTypes: NotColdCold
+; DUMP:         ContextIds: 3 6
+; DUMP:         CalleeEdges:
+; DUMP:                 Edge from Callee [[ENEW1CLONE]] to Caller: [[D]] AllocTypes: Cold ContextIds: 3
+; DUMP:                 Edge from Callee [[ENEW2ORIG]] to Caller: [[D]] AllocTypes: NotCold ContextIds: 6
+; DUMP:         CallerEdges:
+;
 ; DUMP: Node [[ENEW2ORIG]]
 ; DUMP: 	  %call1 = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
@@ -174,16 +174,16 @@ attributes #6 = { builtin }
 ; DUMP: 		Edge from Callee [[ENEW2ORIG]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 4
 ; DUMP: 		Edge from Callee [[ENEW2ORIG]] to Caller: [[D]] AllocTypes: NotCold ContextIds: 6
 ; DUMP: 	Clones: [[ENEW2CLONE]]
-
+;
 ; DUMP: Node [[ENEW1CLONE]]
 ; DUMP: 	  %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6	(clone 0)
 ; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 1
+; DUMP: 	ContextIds: 3
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[ENEW1CLONE]] to Caller: [[D]] AllocTypes: Cold ContextIds: 1
+; DUMP: 		Edge from Callee [[ENEW1CLONE]] to Caller: [[D]] AllocTypes: Cold ContextIds: 3
 ; DUMP: 	Clone of [[ENEW1ORIG]]
-
+;
 ; DUMP: Node [[ENEW2CLONE]]
 ; DUMP: 	  %call1 = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6	(clone 0)
 ; DUMP: 	AllocTypes: Cold
