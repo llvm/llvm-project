@@ -70,6 +70,48 @@ exit:
   ret void
 }
 
+define void @deinterleave3_nxv3i16_load(ptr noalias readonly %src, ptr noalias %out, i64 %n) #0 {
+; CHECK-LABEL: LV: Checking a loop in 'deinterleave3_nxv3i16_load'
+; CHECK: Cost of 3 for VF vscale x 8: INTERLEAVE-GROUP with factor 3, ir<%ptr.b>
+entry:
+  br label %loop
+
+loop:
+  %iv    = phi i64   [ 0,   %entry ], [ %iv.next, %loop ]
+  %sum.b = phi double[ 0.0, %entry ], [ %add.b,   %loop ]
+  %sum.g = phi double[ 0.0, %entry ], [ %add.g,   %loop ]
+  %sum.r = phi double[ 0.0, %entry ], [ %add.r,   %loop ]
+
+  %ptr.b = getelementptr inbounds { i16, i16, i16 }, ptr %src, i64 %iv, i32 0
+  %load.b = load i16, ptr %ptr.b, align 2
+
+  %ptr.g = getelementptr inbounds { i16, i16, i16 }, ptr %src, i64 %iv, i32 1
+  %load.g = load i16, ptr %ptr.g, align 2
+
+  %ptr.r = getelementptr inbounds { i16, i16, i16 }, ptr %src, i64 %iv, i32 2
+  %load.r = load i16, ptr %ptr.r, align 2
+
+  %ext.b = uitofp i16 %load.b to double
+  %ext.g = uitofp i16 %load.g to double
+  %ext.r = uitofp i16 %load.r to double
+
+  %add.b = fadd double %sum.b, %ext.b
+  %add.g = fadd double %sum.g, %ext.g
+  %add.r = fadd double %sum.r, %ext.r
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %done    = icmp eq i64 %iv.next, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  store double %add.b, ptr %out, align 8
+  %out1 = getelementptr inbounds double, ptr %out, i64 1
+  store double %add.g, ptr %out1, align 8
+  %out2 = getelementptr inbounds double, ptr %out, i64 2
+  store double %add.r, ptr %out2, align 8
+  ret void
+}
+
 ; Check that the increased low-VF interleaved-store cost prevents selection of
 ; an SVE epilogue.
 
@@ -85,7 +127,7 @@ exit:
 ; CHECK: LV: Selecting VF: vscale x 16
 ; CHECK: LEV: Vectorizing epilogue loop with VF = 8
 define void @deinterleave4_nxv4i16_load_interleave4_nxv4i8_store(
-    ptr readonly %src, ptr writeonly %out, i32 %n) #0 {
+  ptr readonly %src, ptr writeonly %out, i32 %n) #0 {
 entry:
   %empty = icmp eq i32 %n, 0
   br i1 %empty, label %exit, label %loop
@@ -122,6 +164,47 @@ loop:
 
   %src.next = getelementptr inbounds i16, ptr %src.iv, i64 4
   %out.next = getelementptr inbounds i8, ptr %out.iv, i64 4
+  %iv.next = add nsw i32 %iv, -1
+  %done = icmp eq i32 %iv.next, 0
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: LV: Checking a loop in 'deinterleave3_nxv3i16_load_interleave3_nxv3i16_store'
+; CHECK: Cost of 3 for VF vscale x 8: INTERLEAVE-GROUP with factor 3, ir<%ptr.b>
+; CHECK: Cost of 3 for VF vscale x 8: INTERLEAVE-GROUP with factor 3, ir<%out.b>
+define void @deinterleave3_nxv3i16_load_interleave3_nxv3i16_store(
+  ptr readonly %src, ptr writeonly %out, i32 %n) #0 {
+entry:
+  %empty = icmp eq i32 %n, 0
+  br i1 %empty, label %exit, label %loop
+
+loop:
+  %src.iv = phi ptr [ %src.next, %loop ], [ %src, %entry ]
+  %out.iv = phi ptr [ %out.next, %loop ], [ %out, %entry ]
+  %iv = phi i32 [ %iv.next, %loop ], [ %n, %entry ]
+
+  %ptr.b = getelementptr inbounds { i16, i16, i16 }, ptr %src.iv, i64 0, i32 0
+  %ptr.g = getelementptr inbounds { i16, i16, i16 }, ptr %src.iv, i64 0, i32 1
+  %ptr.r = getelementptr inbounds { i16, i16, i16 }, ptr %src.iv, i64 0, i32 2
+  %load.b = load i16, ptr %ptr.b, align 2
+  %load.g = load i16, ptr %ptr.g, align 2
+  %load.r = load i16, ptr %ptr.r, align 2
+
+  %shift.b = lshr i16 %load.b, 8
+  %shift.g = lshr i16 %load.g, 8
+  %shift.r = lshr i16 %load.r, 8
+  %out.b = getelementptr inbounds { i16, i16, i16 }, ptr %out.iv, i64 0, i32 0
+  %out.g = getelementptr inbounds { i16, i16, i16 }, ptr %out.iv, i64 0, i32 1
+  %out.r = getelementptr inbounds { i16, i16, i16 }, ptr %out.iv, i64 0, i32 2
+  store i16 %shift.b, ptr %out.b, align 2
+  store i16 %shift.g, ptr %out.g, align 2
+  store i16 %shift.r, ptr %out.r, align 2
+
+  %src.next = getelementptr inbounds { i16, i16, i16 }, ptr %src.iv, i64 1
+  %out.next = getelementptr inbounds { i16, i16, i16 }, ptr %out.iv, i64 1
   %iv.next = add nsw i32 %iv, -1
   %done = icmp eq i32 %iv.next, 0
   br i1 %done, label %exit, label %loop

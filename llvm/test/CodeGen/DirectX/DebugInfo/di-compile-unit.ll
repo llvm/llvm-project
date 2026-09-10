@@ -1,4 +1,5 @@
-; RUN: llc %s -o - | FileCheck %s
+; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s -DDWARF_FLAG_BEHAVIOR=7
+; RUN: llc %s -o - | FileCheck %s -DDWARF_FLAG_BEHAVIOR=2
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 !llvm.dbg.cu = !{!0}
@@ -13,5 +14,5 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 ; CHECK: !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "Some Compiler", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: !1 = !DIFile(filename: "di-compile-unit.src", directory: "/some-path")
 ; CHECK: !2 = !{}
-; CHECK: !{i32 2, !"Dwarf Version", i32 2}
+; CHECK: !{i32 [[DWARF_FLAG_BEHAVIOR]], !"Dwarf Version", i32 2}
 ; CHECK: !{i32 2, !"Debug Info Version", i32 3}
