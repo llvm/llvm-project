@@ -130,7 +130,7 @@ exit:
 ; Test case for https://github.com/llvm/llvm-project/issues/106780.
 define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) vscale_range(2, 1024) {
 ; CHECK-LABEL: define i32 @cost_of_exit_branch_and_cond_insts(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i1 [[C:%.*]], i16 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i1 [[C:%.*]], i16 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[X]] to i32
 ; CHECK-NEXT:    [[UMAX3:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP0]], i32 111)
@@ -141,11 +141,7 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) vs
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[X]] to i32
-; CHECK-NEXT:    [[UMAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP3]], i32 111)
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 770, [[UMAX1]]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP4]], i32 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[SMAX4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP7]]
@@ -269,7 +265,7 @@ return:
 ; Test case for https://github.com/llvm/llvm-project/issues/107473.
 define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_phi_in_latch_redundant(
-; CHECK-SAME: ptr [[DST:%.*]], i32 [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

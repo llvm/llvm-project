@@ -76,8 +76,8 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-LABEL: define void @ir_tbaa_different(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[END:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoaddr ptr [[BASE]] to i64
 ; CHECK-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoaddr ptr [[BASE]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END2]], -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[BASE2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
@@ -85,9 +85,7 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[END2]], -8
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP17]], [[BASE2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP12]], -8
+; CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP1]], -8
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 8
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
