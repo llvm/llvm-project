@@ -2254,12 +2254,45 @@ int AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(
   }
 }
 
+/// \returns The condition code operand index for \p Instr if it is a branch,
+/// a select or a conditional compare, and -1 otherwise.
+///
+/// A conditional compare reads NZCV through its condition code operand just
+/// like a branch or a select does, so its use of the flags is analyzed the
+/// same way. It then defines a new NZCV value, which ends the range in which
+/// the flags of the compare being optimized are live.
+static int findCondCodeUseOperandIdx(const MachineInstr &Instr) {
+  switch (Instr.getOpcode()) {
+  default:
+    return AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(Instr);
+
+  case AArch64::CCMPWi:
+  case AArch64::CCMPXi:
+  case AArch64::CCMPWr:
+  case AArch64::CCMPXr:
+  case AArch64::CCMNWi:
+  case AArch64::CCMNXi:
+  case AArch64::CCMNWr:
+  case AArch64::CCMNXr:
+  case AArch64::FCCMPHrr:
+  case AArch64::FCCMPSrr:
+  case AArch64::FCCMPDrr:
+  case AArch64::FCCMPEHrr:
+  case AArch64::FCCMPESrr:
+  case AArch64::FCCMPEDrr: {
+    // $Rn, $Rm or $imm, $nzcv, $cond, implicit-def $nzcv, implicit $nzcv
+    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV, /*TRI=*/nullptr);
+    assert(Idx >= 2);
+    return Idx - 2;
+  }
+  }
+}
+
 /// Find a condition code used by the instruction.
 /// Returns AArch64CC::Invalid if either the instruction does not use condition
 /// codes or we don't optimize CmpInstr in the presence of such instructions.
 static AArch64CC::CondCode findCondCodeUsedByInstr(const MachineInstr &Instr) {
-  int CCIdx =
-      AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(Instr);
+  int CCIdx = findCondCodeUseOperandIdx(Instr);
   return CCIdx >= 0 ? static_cast<AArch64CC::CondCode>(
                           Instr.getOperand(CCIdx).getImm())
                     : AArch64CC::Invalid;
@@ -2560,7 +2593,7 @@ bool AArch64InstrInfo::removeCmpToZeroOrOne(
   if (IsInvertCC) {
     // Invert condition codes in CmpInstr CC users
     for (MachineInstr *CCUseInstr : CCUseInstrs) {
-      int Idx = findCondCodeUseOperandIdxForBranchOrSelect(*CCUseInstr);
+      int Idx = findCondCodeUseOperandIdx(*CCUseInstr);
       assert(Idx >= 0 && "Unexpected instruction using CC.");
       MachineOperand &CCOperand = CCUseInstr->getOperand(Idx);
       AArch64CC::CondCode CCUse = AArch64CC::getInvertedCondCode(
