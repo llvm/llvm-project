@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV32_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV32_H
 
-#include "Plugins/Process/Utility/RegisterInfoCommonDynamic_riscv32.h"
+#include "Register/Common/RegisterInfoCommonDynamic_riscv32.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"

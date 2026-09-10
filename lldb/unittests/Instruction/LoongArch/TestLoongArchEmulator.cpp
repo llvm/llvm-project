@@ -15,8 +15,8 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/Instruction/LoongArch/EmulateInstructionLoongArch.h"
-#include "Plugins/Process/Utility/RegisterInfoCommon_loongarch64.h"
-#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
+#include "Register/Common/RegisterInfoCommon_loongarch64.h"
+#include "Register/Arch/lldb-loongarch-register-enums.h"
 
 using namespace llvm;
 using namespace lldb;

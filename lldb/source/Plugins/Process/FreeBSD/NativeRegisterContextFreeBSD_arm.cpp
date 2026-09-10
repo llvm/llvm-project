@@ -15,7 +15,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoCommon_arm.h"
+#include "Register/Common/RegisterInfoCommon_arm.h"
 
 // clang-format off
 #include <sys/param.h>

@@ -21,7 +21,7 @@
 
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
-#include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Register/Arch/lldb-arm64-register-enums.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace lldb;

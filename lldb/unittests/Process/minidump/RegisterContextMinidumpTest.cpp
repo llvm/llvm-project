@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/Process/Utility/RegisterInfoLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_x86_64.h"
+#include "Register/Linux/RegisterInfoLinux_i386.h"
+#include "Register/Linux/RegisterInfoLinux_x86_64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_32.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_ARM.h"

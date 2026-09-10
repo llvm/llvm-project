@@ -11,7 +11,7 @@
 
 #include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
-#include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataBufferHeap.h"

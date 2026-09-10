@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionRISCV.h"
-#include "Plugins/Process/Utility/RegisterInfoInterface.h"
-#include "Plugins/Process/Utility/RegisterInfoCommon_riscv32.h"
-#include "Plugins/Process/Utility/RegisterInfoCommon_riscv64.h"
-#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
+#include "Register/RegisterInfoInterface.h"
+#include "Register/Common/RegisterInfoCommon_riscv32.h"
+#include "Register/Common/RegisterInfoCommon_riscv64.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
 #include "RISCVCInstructions.h"
 #include "RISCVInstructions.h"
 

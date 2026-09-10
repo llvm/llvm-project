@@ -11,7 +11,7 @@
 #include "NativeRegisterContextWindows_i386.h"
 
 #include "NativeThreadWindows.h"
-#include "Plugins/Process/Utility/RegisterInfoWindows_i386.h"
+#include "Register/Windows/RegisterInfoWindows_i386.h"
 #include "ProcessWindowsLog.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"

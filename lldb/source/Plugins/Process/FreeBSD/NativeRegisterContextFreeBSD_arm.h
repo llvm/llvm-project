@@ -18,7 +18,7 @@
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoCommon_arm.h"
+#include "Register/Common/RegisterInfoCommon_arm.h"
 
 #include <array>
 

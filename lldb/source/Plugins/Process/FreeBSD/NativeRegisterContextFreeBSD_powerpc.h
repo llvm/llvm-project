@@ -17,7 +17,7 @@
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoFreeBSD_powerpc.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
 
 #include <array>
 #include <optional>
