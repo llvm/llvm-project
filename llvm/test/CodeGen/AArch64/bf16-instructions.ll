@@ -1577,11 +1577,11 @@ define i8 @test_fptosi_sat_i8(bfloat %a) {
 ; CHECK-LABEL: test_fptosi_sat_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    mov w8, #127 // =0x7f
+; CHECK-NEXT:    mov w9, #127 // =0x7f
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcvtzs w9, s0
-; CHECK-NEXT:    cmp w9, #127
-; CHECK-NEXT:    csel w8, w9, w8, lt
+; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    cmp w8, #127
+; CHECK-NEXT:    csel w8, w8, w9, lt
 ; CHECK-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-NEXT:    cmn w8, #128
 ; CHECK-NEXT:    csel w0, w8, w9, gt
@@ -1633,11 +1633,11 @@ define i8 @test_fptoui_sat_i8(bfloat %a) {
 ; CHECK-LABEL: test_fptoui_sat_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    mov w8, #255 // =0xff
+; CHECK-NEXT:    mov w9, #255 // =0xff
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcvtzu w9, s0
-; CHECK-NEXT:    cmp w9, #255
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    fcvtzu w8, s0
+; CHECK-NEXT:    cmp w8, #255
+; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret
   %i = call i8 @llvm.fptoui.sat.i8.bf16(bfloat %a)
   ret i8 %i
@@ -1708,10 +1708,10 @@ define bfloat @test_uitofp_i64(i64 %a) #0 {
 ; CHECK-CVT-LABEL: test_uitofp_i64:
 ; CHECK-CVT:       // %bb.0:
 ; CHECK-CVT-NEXT:    lsr x9, x0, #53
+; CHECK-CVT-NEXT:    and x10, x0, #0xfffffffffffff000
 ; CHECK-CVT-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-CVT-NEXT:    cmp x9, #0
-; CHECK-CVT-NEXT:    and x9, x0, #0xfffffffffffff000
-; CHECK-CVT-NEXT:    csel x9, x9, x0, ne
+; CHECK-CVT-NEXT:    csel x9, x10, x0, ne
 ; CHECK-CVT-NEXT:    ucvtf d0, x9
 ; CHECK-CVT-NEXT:    cset w9, ne
 ; CHECK-CVT-NEXT:    tst x0, #0xfff
@@ -1778,13 +1778,13 @@ define bfloat @test_sitofp_i64(i64 %a) #0 {
 ; CHECK-CVT-LABEL: test_sitofp_i64:
 ; CHECK-CVT:       // %bb.0:
 ; CHECK-CVT-NEXT:    cmp x0, #0
-; CHECK-CVT-NEXT:    and x11, x0, #0x8000000000000000
 ; CHECK-CVT-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-CVT-NEXT:    cneg x9, x0, mi
 ; CHECK-CVT-NEXT:    lsr x10, x9, #53
+; CHECK-CVT-NEXT:    and x11, x9, #0xfffffffffffff000
 ; CHECK-CVT-NEXT:    cmp x10, #0
-; CHECK-CVT-NEXT:    and x10, x9, #0xfffffffffffff000
-; CHECK-CVT-NEXT:    csel x10, x10, x9, ne
+; CHECK-CVT-NEXT:    csel x10, x11, x9, ne
+; CHECK-CVT-NEXT:    and x11, x0, #0x8000000000000000
 ; CHECK-CVT-NEXT:    scvtf d0, x10
 ; CHECK-CVT-NEXT:    cset w10, ne
 ; CHECK-CVT-NEXT:    tst x9, #0xfff
@@ -1812,8 +1812,8 @@ define bfloat @test_sitofp_i64(i64 %a) #0 {
 ; CHECK-BF16-NEXT:    cmp x9, #0
 ; CHECK-BF16-NEXT:    csel x9, x10, x8, ne
 ; CHECK-BF16-NEXT:    and x10, x0, #0x8000000000000000
-; CHECK-BF16-NEXT:    cset w11, ne
 ; CHECK-BF16-NEXT:    scvtf d0, x9
+; CHECK-BF16-NEXT:    cset w11, ne
 ; CHECK-BF16-NEXT:    tst x8, #0xfff
 ; CHECK-BF16-NEXT:    fmov x9, d0
 ; CHECK-BF16-NEXT:    orr x8, x9, x10

@@ -414,18 +414,18 @@ entry:
 define <2 x i128> @v2i128(<2 x i128> %d) {
 ; CHECK-SD-LABEL: v2i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    clz x8, x0
-; CHECK-SD-NEXT:    clz x9, x1
+; CHECK-SD-NEXT:    clz x9, x0
+; CHECK-SD-NEXT:    clz x11, x2
+; CHECK-SD-NEXT:    clz x8, x1
+; CHECK-SD-NEXT:    clz x10, x3
+; CHECK-SD-NEXT:    add x9, x9, #64
+; CHECK-SD-NEXT:    add x11, x11, #64
 ; CHECK-SD-NEXT:    cmp x1, #0
-; CHECK-SD-NEXT:    add x8, x8, #64
-; CHECK-SD-NEXT:    clz x10, x2
+; CHECK-SD-NEXT:    csel x0, x8, x9, ne
 ; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    csel x0, x9, x8, ne
-; CHECK-SD-NEXT:    clz x8, x3
-; CHECK-SD-NEXT:    add x9, x10, #64
 ; CHECK-SD-NEXT:    cmp x3, #0
+; CHECK-SD-NEXT:    csel x2, x10, x11, ne
 ; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    csel x2, x8, x9, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i128:
@@ -442,8 +442,8 @@ define <2 x i128> @v2i128(<2 x i128> %d) {
 ; CHECK-GI-NEXT:    csel x1, x10, xzr, eq
 ; CHECK-GI-NEXT:    cmp w8, #1
 ; CHECK-GI-NEXT:    add x9, x9, #64
-; CHECK-GI-NEXT:    clz x10, x3
 ; CHECK-GI-NEXT:    adc x8, xzr, xzr
+; CHECK-GI-NEXT:    clz x10, x3
 ; CHECK-GI-NEXT:    cmp x3, #0
 ; CHECK-GI-NEXT:    csel x2, x9, x10, eq
 ; CHECK-GI-NEXT:    csel x3, x8, xzr, eq
@@ -458,48 +458,48 @@ define <3 x i128> @v3i128(<3 x i128> %d) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    clz x8, x0
 ; CHECK-SD-NEXT:    clz x9, x1
-; CHECK-SD-NEXT:    cmp x1, #0
-; CHECK-SD-NEXT:    add x8, x8, #64
 ; CHECK-SD-NEXT:    clz x10, x2
-; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    csel x0, x9, x8, ne
-; CHECK-SD-NEXT:    clz x8, x3
-; CHECK-SD-NEXT:    add x9, x10, #64
-; CHECK-SD-NEXT:    cmp x3, #0
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    csel x2, x8, x9, ne
-; CHECK-SD-NEXT:    clz x8, x4
-; CHECK-SD-NEXT:    clz x9, x5
 ; CHECK-SD-NEXT:    add x8, x8, #64
+; CHECK-SD-NEXT:    cmp x1, #0
+; CHECK-SD-NEXT:    clz x11, x5
+; CHECK-SD-NEXT:    csel x0, x9, x8, ne
+; CHECK-SD-NEXT:    add x9, x10, #64
+; CHECK-SD-NEXT:    clz x10, x4
+; CHECK-SD-NEXT:    clz x8, x3
+; CHECK-SD-NEXT:    add x10, x10, #64
+; CHECK-SD-NEXT:    cmp x3, #0
+; CHECK-SD-NEXT:    csel x2, x8, x9, ne
 ; CHECK-SD-NEXT:    cmp x5, #0
+; CHECK-SD-NEXT:    csel x4, x11, x10, ne
+; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    mov x5, xzr
-; CHECK-SD-NEXT:    csel x4, x9, x8, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i128:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, wzr
 ; CHECK-GI-NEXT:    clz x9, x0
-; CHECK-GI-NEXT:    clz x11, x1
+; CHECK-GI-NEXT:    clz x10, x1
 ; CHECK-GI-NEXT:    cmp w8, #1
 ; CHECK-GI-NEXT:    add x9, x9, #64
-; CHECK-GI-NEXT:    adc x10, xzr, xzr
+; CHECK-GI-NEXT:    adc x11, xzr, xzr
 ; CHECK-GI-NEXT:    cmp x1, #0
-; CHECK-GI-NEXT:    csel x0, x9, x11, eq
+; CHECK-GI-NEXT:    csel x0, x9, x10, eq
+; CHECK-GI-NEXT:    csel x1, x11, xzr, eq
 ; CHECK-GI-NEXT:    clz x9, x2
-; CHECK-GI-NEXT:    csel x1, x10, xzr, eq
 ; CHECK-GI-NEXT:    cmp w8, #1
 ; CHECK-GI-NEXT:    add x9, x9, #64
-; CHECK-GI-NEXT:    clz x11, x3
 ; CHECK-GI-NEXT:    adc x10, xzr, xzr
+; CHECK-GI-NEXT:    clz x11, x3
 ; CHECK-GI-NEXT:    cmp x3, #0
 ; CHECK-GI-NEXT:    csel x2, x9, x11, eq
 ; CHECK-GI-NEXT:    clz x9, x4
 ; CHECK-GI-NEXT:    csel x3, x10, xzr, eq
 ; CHECK-GI-NEXT:    cmp w8, #1
 ; CHECK-GI-NEXT:    add x9, x9, #64
-; CHECK-GI-NEXT:    clz x10, x5
 ; CHECK-GI-NEXT:    adc x8, xzr, xzr
+; CHECK-GI-NEXT:    clz x10, x5
 ; CHECK-GI-NEXT:    cmp x5, #0
 ; CHECK-GI-NEXT:    csel x4, x9, x10, eq
 ; CHECK-GI-NEXT:    csel x5, x8, xzr, eq
@@ -513,26 +513,26 @@ define <4 x i128> @v4i128(<4 x i128> %d) {
 ; CHECK-SD-LABEL: v4i128:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    clz x9, x0
-; CHECK-SD-NEXT:    clz x8, x2
 ; CHECK-SD-NEXT:    clz x10, x1
+; CHECK-SD-NEXT:    clz x8, x3
 ; CHECK-SD-NEXT:    add x9, x9, #64
 ; CHECK-SD-NEXT:    cmp x1, #0
-; CHECK-SD-NEXT:    add x8, x8, #64
-; CHECK-SD-NEXT:    csel x0, x10, x9, ne
-; CHECK-SD-NEXT:    clz x9, x3
-; CHECK-SD-NEXT:    cmp x3, #0
-; CHECK-SD-NEXT:    csel x2, x9, x8, ne
-; CHECK-SD-NEXT:    clz x8, x4
-; CHECK-SD-NEXT:    clz x9, x5
-; CHECK-SD-NEXT:    add x8, x8, #64
-; CHECK-SD-NEXT:    cmp x5, #0
 ; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    csel x4, x9, x8, ne
+; CHECK-SD-NEXT:    csel x0, x10, x9, ne
+; CHECK-SD-NEXT:    clz x9, x2
+; CHECK-SD-NEXT:    clz x10, x4
+; CHECK-SD-NEXT:    add x9, x9, #64
+; CHECK-SD-NEXT:    cmp x3, #0
+; CHECK-SD-NEXT:    mov x3, xzr
+; CHECK-SD-NEXT:    csel x2, x8, x9, ne
+; CHECK-SD-NEXT:    clz x8, x5
+; CHECK-SD-NEXT:    add x9, x10, #64
+; CHECK-SD-NEXT:    cmp x5, #0
+; CHECK-SD-NEXT:    csel x4, x8, x9, ne
 ; CHECK-SD-NEXT:    clz x8, x6
 ; CHECK-SD-NEXT:    clz x9, x7
 ; CHECK-SD-NEXT:    add x8, x8, #64
 ; CHECK-SD-NEXT:    cmp x7, #0
-; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    csel x6, x9, x8, ne
 ; CHECK-SD-NEXT:    mov x5, xzr
 ; CHECK-SD-NEXT:    mov x7, xzr
@@ -542,37 +542,37 @@ define <4 x i128> @v4i128(<4 x i128> %d) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, wzr
 ; CHECK-GI-NEXT:    clz x9, x0
-; CHECK-GI-NEXT:    clz x11, x1
+; CHECK-GI-NEXT:    clz x10, x1
 ; CHECK-GI-NEXT:    cmp w8, #1
 ; CHECK-GI-NEXT:    add x9, x9, #64
-; CHECK-GI-NEXT:    adc x10, xzr, xzr
+; CHECK-GI-NEXT:    adc x11, xzr, xzr
 ; CHECK-GI-NEXT:    cmp x1, #0
-; CHECK-GI-NEXT:    csel x0, x9, x11, eq
+; CHECK-GI-NEXT:    csel x0, x9, x10, eq
+; CHECK-GI-NEXT:    csel x1, x11, xzr, eq
 ; CHECK-GI-NEXT:    clz x9, x2
-; CHECK-GI-NEXT:    csel x1, x10, xzr, eq
 ; CHECK-GI-NEXT:    cmp w8, #1
 ; CHECK-GI-NEXT:    add x9, x9, #64
-; CHECK-GI-NEXT:    clz x11, x3
 ; CHECK-GI-NEXT:    adc x10, xzr, xzr
+; CHECK-GI-NEXT:    clz x11, x3
 ; CHECK-GI-NEXT:    cmp x3, #0
 ; CHECK-GI-NEXT:    csel x2, x9, x11, eq
 ; CHECK-GI-NEXT:    clz x9, x4
 ; CHECK-GI-NEXT:    csel x3, x10, xzr, eq
 ; CHECK-GI-NEXT:    cmp w8, #1
 ; CHECK-GI-NEXT:    add x9, x9, #64
-; CHECK-GI-NEXT:    clz x11, x5
 ; CHECK-GI-NEXT:    adc x10, xzr, xzr
+; CHECK-GI-NEXT:    clz x11, x5
 ; CHECK-GI-NEXT:    cmp x5, #0
 ; CHECK-GI-NEXT:    csel x4, x9, x11, eq
-; CHECK-GI-NEXT:    clz x9, x6
 ; CHECK-GI-NEXT:    csel x5, x10, xzr, eq
+; CHECK-GI-NEXT:    clz x9, x6
 ; CHECK-GI-NEXT:    cmp w8, #1
 ; CHECK-GI-NEXT:    add x9, x9, #64
-; CHECK-GI-NEXT:    clz x10, x7
-; CHECK-GI-NEXT:    adc x8, xzr, xzr
+; CHECK-GI-NEXT:    clz x8, x7
+; CHECK-GI-NEXT:    adc x10, xzr, xzr
 ; CHECK-GI-NEXT:    cmp x7, #0
-; CHECK-GI-NEXT:    csel x6, x9, x10, eq
-; CHECK-GI-NEXT:    csel x7, x8, xzr, eq
+; CHECK-GI-NEXT:    csel x6, x9, x8, eq
+; CHECK-GI-NEXT:    csel x7, x10, xzr, eq
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = call <4 x i128> @llvm.ctlz(<4 x i128> %d, i1 false)

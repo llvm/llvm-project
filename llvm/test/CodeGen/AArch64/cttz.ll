@@ -549,21 +549,21 @@ define <2 x i128> @v2i128(<2 x i128> %d) {
 ; CHECK-SD-LABEL: v2i128:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    rbit x8, x1
+; CHECK-SD-NEXT:    rbit x11, x3
 ; CHECK-SD-NEXT:    rbit x9, x0
-; CHECK-SD-NEXT:    rbit x10, x3
-; CHECK-SD-NEXT:    rbit x11, x2
-; CHECK-SD-NEXT:    cmp x0, #0
+; CHECK-SD-NEXT:    rbit x10, x2
 ; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    clz x8, x8
+; CHECK-SD-NEXT:    clz x11, x11
 ; CHECK-SD-NEXT:    clz x9, x9
 ; CHECK-SD-NEXT:    clz x10, x10
 ; CHECK-SD-NEXT:    add x8, x8, #64
-; CHECK-SD-NEXT:    mov x3, xzr
+; CHECK-SD-NEXT:    add x11, x11, #64
+; CHECK-SD-NEXT:    cmp x0, #0
 ; CHECK-SD-NEXT:    csel x0, x9, x8, ne
-; CHECK-SD-NEXT:    clz x8, x11
-; CHECK-SD-NEXT:    add x9, x10, #64
 ; CHECK-SD-NEXT:    cmp x2, #0
-; CHECK-SD-NEXT:    csel x2, x8, x9, ne
+; CHECK-SD-NEXT:    csel x2, x10, x11, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i128:
@@ -601,27 +601,27 @@ define <3 x i128> @v3i128(<3 x i128> %d) {
 ; CHECK-SD-NEXT:    rbit x8, x1
 ; CHECK-SD-NEXT:    rbit x9, x0
 ; CHECK-SD-NEXT:    rbit x11, x3
-; CHECK-SD-NEXT:    rbit x10, x2
-; CHECK-SD-NEXT:    cmp x0, #0
 ; CHECK-SD-NEXT:    rbit x12, x5
+; CHECK-SD-NEXT:    rbit x10, x2
+; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    clz x8, x8
 ; CHECK-SD-NEXT:    clz x9, x9
-; CHECK-SD-NEXT:    clz x11, x11
-; CHECK-SD-NEXT:    add x8, x8, #64
-; CHECK-SD-NEXT:    clz x10, x10
-; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    csel x0, x9, x8, ne
-; CHECK-SD-NEXT:    add x8, x11, #64
-; CHECK-SD-NEXT:    cmp x2, #0
-; CHECK-SD-NEXT:    rbit x9, x4
-; CHECK-SD-NEXT:    csel x2, x10, x8, ne
-; CHECK-SD-NEXT:    clz x8, x12
-; CHECK-SD-NEXT:    add x8, x8, #64
-; CHECK-SD-NEXT:    cmp x4, #0
 ; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    clz x9, x9
+; CHECK-SD-NEXT:    add x8, x8, #64
+; CHECK-SD-NEXT:    cmp x0, #0
+; CHECK-SD-NEXT:    clz x10, x10
+; CHECK-SD-NEXT:    csel x0, x9, x8, ne
+; CHECK-SD-NEXT:    rbit x8, x4
+; CHECK-SD-NEXT:    clz x9, x11
+; CHECK-SD-NEXT:    clz x11, x12
+; CHECK-SD-NEXT:    add x9, x9, #64
+; CHECK-SD-NEXT:    cmp x2, #0
+; CHECK-SD-NEXT:    csel x2, x10, x9, ne
+; CHECK-SD-NEXT:    clz x8, x8
+; CHECK-SD-NEXT:    add x11, x11, #64
+; CHECK-SD-NEXT:    cmp x4, #0
+; CHECK-SD-NEXT:    csel x4, x8, x11, ne
 ; CHECK-SD-NEXT:    mov x5, xzr
-; CHECK-SD-NEXT:    csel x4, x9, x8, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i128:
@@ -666,38 +666,38 @@ entry:
 define <4 x i128> @v4i128(<4 x i128> %d) {
 ; CHECK-SD-LABEL: v4i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rbit x9, x1
-; CHECK-SD-NEXT:    rbit x10, x0
-; CHECK-SD-NEXT:    rbit x8, x3
-; CHECK-SD-NEXT:    rbit x11, x2
-; CHECK-SD-NEXT:    cmp x0, #0
+; CHECK-SD-NEXT:    rbit x10, x1
+; CHECK-SD-NEXT:    rbit x9, x0
+; CHECK-SD-NEXT:    rbit x11, x3
+; CHECK-SD-NEXT:    rbit x8, x2
 ; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    clz x9, x9
-; CHECK-SD-NEXT:    clz x10, x10
-; CHECK-SD-NEXT:    clz x8, x8
-; CHECK-SD-NEXT:    add x9, x9, #64
-; CHECK-SD-NEXT:    add x8, x8, #64
 ; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    csel x0, x10, x9, ne
+; CHECK-SD-NEXT:    clz x10, x10
+; CHECK-SD-NEXT:    clz x9, x9
+; CHECK-SD-NEXT:    add x10, x10, #64
+; CHECK-SD-NEXT:    cmp x0, #0
+; CHECK-SD-NEXT:    clz x8, x8
+; CHECK-SD-NEXT:    csel x0, x9, x10, ne
 ; CHECK-SD-NEXT:    clz x9, x11
-; CHECK-SD-NEXT:    rbit x10, x4
-; CHECK-SD-NEXT:    rbit x11, x5
-; CHECK-SD-NEXT:    cmp x2, #0
-; CHECK-SD-NEXT:    mov x5, xzr
-; CHECK-SD-NEXT:    csel x2, x9, x8, ne
-; CHECK-SD-NEXT:    clz x8, x10
-; CHECK-SD-NEXT:    rbit x10, x7
-; CHECK-SD-NEXT:    clz x9, x11
-; CHECK-SD-NEXT:    cmp x4, #0
-; CHECK-SD-NEXT:    rbit x11, x6
+; CHECK-SD-NEXT:    rbit x10, x5
 ; CHECK-SD-NEXT:    add x9, x9, #64
-; CHECK-SD-NEXT:    mov x7, xzr
-; CHECK-SD-NEXT:    csel x4, x8, x9, ne
+; CHECK-SD-NEXT:    rbit x11, x4
+; CHECK-SD-NEXT:    cmp x2, #0
+; CHECK-SD-NEXT:    csel x2, x8, x9, ne
 ; CHECK-SD-NEXT:    clz x8, x10
+; CHECK-SD-NEXT:    rbit x9, x7
+; CHECK-SD-NEXT:    clz x10, x11
+; CHECK-SD-NEXT:    add x8, x8, #64
+; CHECK-SD-NEXT:    rbit x11, x6
+; CHECK-SD-NEXT:    cmp x4, #0
+; CHECK-SD-NEXT:    csel x4, x10, x8, ne
+; CHECK-SD-NEXT:    clz x8, x9
 ; CHECK-SD-NEXT:    clz x9, x11
 ; CHECK-SD-NEXT:    add x8, x8, #64
 ; CHECK-SD-NEXT:    cmp x6, #0
 ; CHECK-SD-NEXT:    csel x6, x9, x8, ne
+; CHECK-SD-NEXT:    mov x5, xzr
+; CHECK-SD-NEXT:    mov x7, xzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v4i128:

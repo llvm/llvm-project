@@ -249,31 +249,18 @@ define i1 @test_setcc3(fp128 %lhs, fp128 %rhs) {
 
 ; olt == !uge, which LLVM optimizes this to.
 define i32 @test_br_cc(fp128 %lhs, fp128 %rhs) {
-; CHECK-SD-LABEL: test_br_cc:
-; CHECK-SD:       // %bb.0: // %common.ret
-; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    bl __lttf2
-; CHECK-SD-NEXT:    mov w8, #29 // =0x1d
-; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    mov w9, #42 // =0x2a
-; CHECK-SD-NEXT:    csel w0, w9, w8, mi
-; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_br_cc:
-; CHECK-GI:       // %bb.0: // %common.ret
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl __lttf2
-; CHECK-GI-NEXT:    mov w8, #29 // =0x1d
-; CHECK-GI-NEXT:    mov w9, #42 // =0x2a
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w9, w8, mi
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_br_cc:
+; CHECK:       // %bb.0: // %common.ret
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl __lttf2
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    mov w9, #42 // =0x2a
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    csel w0, w9, w8, mi
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
   %cond = fcmp olt fp128 %lhs, %rhs
   br i1 %cond, label %iftrue, label %iffalse
 

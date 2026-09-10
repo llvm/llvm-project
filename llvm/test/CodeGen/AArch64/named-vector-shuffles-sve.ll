@@ -587,11 +587,11 @@ define <vscale x 16 x i8> @splice_nxv16i8_neg17(<vscale x 16 x i8> %a, <vscale x
 ; CHECK-NEXT:    mov w9, #17 // =0x11
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #17
-; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    csel x9, x8, x9, lo
 ; CHECK-NEXT:    add x8, x10, x8
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    ldr z0, [x8]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -631,11 +631,11 @@ define <vscale x 8 x i16> @splice_nxv8i16_neg9(<vscale x 8 x i16> %a, <vscale x 
 ; CHECK-NEXT:    mov w9, #18 // =0x12
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #18
-; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    csel x9, x8, x9, lo
 ; CHECK-NEXT:    add x8, x10, x8
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    ldr z0, [x8]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -741,11 +741,11 @@ define <vscale x 8 x half> @splice_nxv8f16_neg9(<vscale x 8 x half> %a, <vscale 
 ; CHECK-NEXT:    mov w9, #18 // =0x12
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #18
-; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    csel x9, x8, x9, lo
 ; CHECK-NEXT:    add x8, x10, x8
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    ldr z0, [x8]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1118,8 +1118,8 @@ define <vscale x 4 x i32> @splice_left_nxv4i32_variable_offset(<vscale x 4 x i32
 ; CHECK-NEXT:    rdvl x9, #1
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x9, x8]
@@ -1141,9 +1141,9 @@ define <vscale x 4 x i32> @splice_right_nxv4i32_variable_offset(<vscale x 4 x i3
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    add x9, x10, x9
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    sub x8, x9, x8
 ; CHECK-NEXT:    ldr z0, [x8]
 ; CHECK-NEXT:    addvl sp, sp, #2

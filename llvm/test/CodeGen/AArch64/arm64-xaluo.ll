@@ -1347,11 +1347,11 @@ define i8 @uaddo.selectboth.i8(i8 %a, i8 %b) {
 ;
 ; CHECK-GI-LABEL: uaddo.selectboth.i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    mov w8, #10 // =0xa
-; CHECK-GI-NEXT:    add w9, w9, w0, uxtb
-; CHECK-GI-NEXT:    cmp w9, w9, uxtb
-; CHECK-GI-NEXT:    csel w0, w9, w8, ne
+; CHECK-GI-NEXT:    and w8, w1, #0xff
+; CHECK-GI-NEXT:    mov w9, #10 // =0xa
+; CHECK-GI-NEXT:    add w8, w8, w0, uxtb
+; CHECK-GI-NEXT:    cmp w8, w8, uxtb
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-FI-LABEL: uaddo.selectboth.i8:
@@ -1611,11 +1611,11 @@ define i8 @usubo.selectboth.i8(i8 %a, i8 %b) {
 ;
 ; CHECK-GI-LABEL: usubo.selectboth.i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    and w9, w0, #0xff
-; CHECK-GI-NEXT:    mov w8, #10 // =0xa
-; CHECK-GI-NEXT:    sub w9, w9, w1, uxtb
-; CHECK-GI-NEXT:    cmp w9, w9, uxtb
-; CHECK-GI-NEXT:    csel w0, w9, w8, ne
+; CHECK-GI-NEXT:    and w8, w0, #0xff
+; CHECK-GI-NEXT:    mov w9, #10 // =0xa
+; CHECK-GI-NEXT:    sub w8, w8, w1, uxtb
+; CHECK-GI-NEXT:    cmp w8, w8, uxtb
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-FI-LABEL: usubo.selectboth.i8:
@@ -1841,12 +1841,12 @@ define i8 @umulo.selectboth.i8(i8 %a, i8 %b) {
 ;
 ; CHECK-GI-LABEL: umulo.selectboth.i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    and w9, w0, #0xff
-; CHECK-GI-NEXT:    and w10, w1, #0xff
-; CHECK-GI-NEXT:    mov w8, #10 // =0xa
-; CHECK-GI-NEXT:    mul w9, w9, w10
-; CHECK-GI-NEXT:    cmp w9, w9, uxtb
-; CHECK-GI-NEXT:    csel w0, w9, w8, ne
+; CHECK-GI-NEXT:    and w8, w0, #0xff
+; CHECK-GI-NEXT:    and w9, w1, #0xff
+; CHECK-GI-NEXT:    mul w8, w8, w9
+; CHECK-GI-NEXT:    mov w9, #10 // =0xa
+; CHECK-GI-NEXT:    cmp w8, w8, uxtb
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-FI-LABEL: umulo.selectboth.i8:
@@ -1991,12 +1991,12 @@ define i32 @umulo.selectboth.i32(i32 %a, i32 %b) {
 ;
 ; CHECK-GI-LABEL: umulo.selectboth.i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    umull x9, w0, w1
-; CHECK-GI-NEXT:    mov w8, #10 // =0xa
-; CHECK-GI-NEXT:    mul w10, w0, w1
-; CHECK-GI-NEXT:    lsr x9, x9, #32
-; CHECK-GI-NEXT:    cmp w9, #0
-; CHECK-GI-NEXT:    csel w0, w10, w8, ne
+; CHECK-GI-NEXT:    umull x8, w0, w1
+; CHECK-GI-NEXT:    mov w10, #10 // =0xa
+; CHECK-GI-NEXT:    mul w9, w0, w1
+; CHECK-GI-NEXT:    lsr x8, x8, #32
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    csel w0, w9, w10, ne
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-FI-LABEL: umulo.selectboth.i32:
@@ -2051,29 +2051,29 @@ entry:
 define i64 @umulo.selectboth.i64(i64 %a, i64 %b) {
 ; CHECK-SD-LABEL: umulo.selectboth.i64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mul x8, x0, x1
+; CHECK-SD-NEXT:    mov w10, #10 // =0xa
 ; CHECK-SD-NEXT:    umulh x9, x0, x1
-; CHECK-SD-NEXT:    mov w8, #10 // =0xa
-; CHECK-SD-NEXT:    mul x10, x0, x1
 ; CHECK-SD-NEXT:    cmp xzr, x9
-; CHECK-SD-NEXT:    csel x0, x10, x8, ne
+; CHECK-SD-NEXT:    csel x0, x8, x10, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: umulo.selectboth.i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    umulh x9, x0, x1
-; CHECK-GI-NEXT:    mov w8, #10 // =0xa
-; CHECK-GI-NEXT:    mul x10, x0, x1
-; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    csel x0, x10, x8, ne
+; CHECK-GI-NEXT:    umulh x8, x0, x1
+; CHECK-GI-NEXT:    mov w10, #10 // =0xa
+; CHECK-GI-NEXT:    mul x9, x0, x1
+; CHECK-GI-NEXT:    cmp x8, #0
+; CHECK-GI-NEXT:    csel x0, x9, x10, ne
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-FI-LABEL: umulo.selectboth.i64:
 ; CHECK-FI:       // %bb.0: // %entry
+; CHECK-FI-NEXT:    mul x8, x0, x1
+; CHECK-FI-NEXT:    mov x10, #10 // =0xa
 ; CHECK-FI-NEXT:    umulh x9, x0, x1
-; CHECK-FI-NEXT:    mov x8, #10 // =0xa
-; CHECK-FI-NEXT:    mul x10, x0, x1
 ; CHECK-FI-NEXT:    cmp xzr, x9
-; CHECK-FI-NEXT:    csel x0, x10, x8, ne
+; CHECK-FI-NEXT:    csel x0, x8, x10, ne
 ; CHECK-FI-NEXT:    ret
 entry:
   %m = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)

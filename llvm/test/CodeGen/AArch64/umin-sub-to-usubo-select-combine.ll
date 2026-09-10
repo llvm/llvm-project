@@ -35,8 +35,8 @@ define i64 @underflow_compare_fold_i64_multi_use(i64 %a, i64 %b, ptr addrspace(1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub x8, x0, x1
 ; CHECK-NEXT:    cmp x8, x0
-; CHECK-NEXT:    str x8, [x2]
 ; CHECK-NEXT:    csel x0, x8, x0, lo
+; CHECK-NEXT:    str x8, [x2]
 ; CHECK-NEXT:    ret
   %sub = sub i64 %a, %b
   store i64 %sub, ptr addrspace(1) %ptr
@@ -76,8 +76,8 @@ define i32 @underflow_compare_fold_i32_multi_use(i32 %a, i32 %b, ptr addrspace(1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w0, w1
 ; CHECK-NEXT:    cmp w8, w0
-; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    csel w0, w8, w0, lo
+; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %sub = sub i32 %a, %b
   store i32 %sub, ptr addrspace(1) %ptr
