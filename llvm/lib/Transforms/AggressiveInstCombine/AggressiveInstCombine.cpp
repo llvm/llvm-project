@@ -2475,9 +2475,8 @@ static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
   if (!MI || isa<ConstantInt>(MI->getLength()))
     return false;
 
-  SimplifyQuery SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo=*/true);
-  KnownBits KnownLen =
-      computeKnownBits(MI->getLength(), SQ.getWithInstruction(MI));
+  SimplifyQuery SQ(DL, &TLI, &DT, &AC, MI);
+  KnownBits KnownLen = computeKnownBits(MI->getLength(), SQ);
   if (!KnownLen.getMaxValue().isOne())
     return false;
 
@@ -2487,9 +2486,8 @@ static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(
       IsNonZero, MI->getIterator(), /*Unreachable=*/false,
       /*BranchWeights=*/nullptr, &DTU);
-  MI->moveBefore(ThenTerm->getIterator());
 
-  IRBuilder<> StoreBuilder(MI);
+  IRBuilder<> StoreBuilder(ThenTerm);
   StoreInst *Store = StoreBuilder.CreateAlignedStore(
       MI->getValue(), MI->getDest(), MI->getDestAlign(), MI->isVolatile());
   Store->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
