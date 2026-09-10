@@ -41,11 +41,11 @@ int ompd_load_library(const char *name) {
     return -1;
   }
 
-  std::string errMsg;
+  std::string ErrMsg;
   llvm::sys::DynamicLibrary NewLib =
-      llvm::sys::DynamicLibrary::getLibrary(name, &errMsg);
+      llvm::sys::DynamicLibrary::getLibrary(name, &ErrMsg);
   if (!NewLib.isValid()) {
-    set_error(errMsg.empty() ? "failed to load OMPD library" : errMsg.c_str());
+    set_error(ErrMsg.empty() ? "failed to load OMPD library" : ErrMsg.c_str());
     return -1;
   }
 
