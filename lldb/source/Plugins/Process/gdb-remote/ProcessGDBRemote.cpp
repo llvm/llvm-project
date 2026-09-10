@@ -1846,8 +1846,9 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // with a mach exception description for any thread that has a stop reason.
   if (m_jstopinfo_sp) {
     // Any thread not described in `jstopinfo` has no stop reason.
-    // Mark if it's at a breakpoint site that hasn't been hit yet, and
-    // then filll in a no-reason StopInfo.
+    // If a no-stop-reason thread is stopped at a breakpoint site (but
+    // hasn't yet hit the breakpoint instruction), note that in the
+    // Thread state so we will hit the breakpoint when we resume execution.
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
       addr_t pc = thread->GetRegisterContext()->GetPC();
       BreakpointSiteSP bp_site_sp =
