@@ -32,6 +32,7 @@ TEST(USMFunctions, DeviceAllocation) {
   context Ctx = Q.get_context();
   ol_device_handle_t OLDev = detail::getSyclObjImpl(Dev)->getOLHandle();
 
+  EXPECT_CALL(Mock.get(), olMemAllocAligned(_, _, _, _, _)).Times(0);
   EXPECT_CALL(Mock.get(), olMemAlloc(OLDev, OL_ALLOC_TYPE_DEVICE, NumBytes, _))
       .Times(1);
   void *Ptr1 = malloc_device(NumBytes, Dev, Ctx);
@@ -40,6 +41,7 @@ TEST(USMFunctions, DeviceAllocation) {
   EXPECT_CALL(Mock.get(), olMemFree(Ptr1)).Times(1);
   free(Ptr1, Ctx);
 
+  EXPECT_CALL(Mock.get(), olMemAlloc(_, _, _, _)).Times(0);
   EXPECT_CALL(Mock.get(), olMemAllocAligned(OLDev, OL_ALLOC_TYPE_DEVICE,
                                             NumBytes, Alignment, _))
       .Times(1);
@@ -57,6 +59,7 @@ TEST(USMFunctions, HostAllocation) {
   ol_device_handle_t OLDev =
       detail::getSyclObjImpl(Q.get_device())->getOLHandle();
 
+  EXPECT_CALL(Mock.get(), olMemAllocAlignedHost(_, _, _, _)).Times(0);
   EXPECT_CALL(Mock.get(), olMemAllocHost(OLDev, NumBytes, _)).Times(1);
   void *Ptr1 = malloc_host(NumBytes, Ctx);
   EXPECT_NE(Ptr1, nullptr);
@@ -64,6 +67,7 @@ TEST(USMFunctions, HostAllocation) {
   EXPECT_CALL(Mock.get(), olMemFree(Ptr1)).Times(1);
   free(Ptr1, Ctx);
 
+  EXPECT_CALL(Mock.get(), olMemAllocHost(_, _, _)).Times(0);
   EXPECT_CALL(Mock.get(), olMemAllocAlignedHost(OLDev, NumBytes, Alignment, _))
       .Times(1);
   void *Ptr2 = aligned_alloc_host(Alignment, NumBytes, Ctx);
@@ -80,6 +84,7 @@ TEST(USMFunctions, SharedAllocation) {
   context Ctx = Q.get_context();
   ol_device_handle_t OLDev = detail::getSyclObjImpl(Dev)->getOLHandle();
 
+  EXPECT_CALL(Mock.get(), olMemAllocAligned(_, _, _, _, _)).Times(0);
   EXPECT_CALL(Mock.get(), olMemAlloc(OLDev, OL_ALLOC_TYPE_MANAGED, NumBytes, _))
       .Times(1);
   void *Ptr1 = malloc_shared(NumBytes, Dev, Ctx);
@@ -88,6 +93,7 @@ TEST(USMFunctions, SharedAllocation) {
   EXPECT_CALL(Mock.get(), olMemFree(Ptr1)).Times(1);
   free(Ptr1, Ctx);
 
+  EXPECT_CALL(Mock.get(), olMemAlloc(_, _, _, _)).Times(0);
   EXPECT_CALL(Mock.get(), olMemAllocAligned(OLDev, OL_ALLOC_TYPE_MANAGED,
                                             NumBytes, Alignment, _))
       .Times(1);
@@ -123,26 +129,23 @@ TEST(USMFunctions, InvalidAlignment) {
 
   constexpr size_t NonPowerOf2Alignment = 3;
 
+  EXPECT_CALL(Mock.get(), olMemAlloc(_, _, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olMemAllocHost(_, _, _)).Times(0);
+
   EXPECT_CALL(Mock.get(), olMemAllocAligned(OLDev, OL_ALLOC_TYPE_DEVICE,
                                             NumBytes, NonPowerOf2Alignment, _))
-      .Times(1)
-      .WillOnce(Return(mock::getMockLiboffload().makeEmptyStrError(
-          OL_ERRC_INVALID_ARGUMENT)));
+      .Times(1);
   EXPECT_EQ(aligned_alloc_device(NonPowerOf2Alignment, NumBytes, Dev, Ctx),
             nullptr);
 
   EXPECT_CALL(Mock.get(),
               olMemAllocAlignedHost(OLDev, NumBytes, NonPowerOf2Alignment, _))
-      .Times(1)
-      .WillOnce(Return(mock::getMockLiboffload().makeEmptyStrError(
-          OL_ERRC_INVALID_ARGUMENT)));
+      .Times(1);
   EXPECT_EQ(aligned_alloc_host(NonPowerOf2Alignment, NumBytes, Ctx), nullptr);
 
   EXPECT_CALL(Mock.get(), olMemAllocAligned(OLDev, OL_ALLOC_TYPE_MANAGED,
                                             NumBytes, NonPowerOf2Alignment, _))
-      .Times(1)
-      .WillOnce(Return(mock::getMockLiboffload().makeEmptyStrError(
-          OL_ERRC_INVALID_ARGUMENT)));
+      .Times(1);
   EXPECT_EQ(aligned_alloc_shared(NonPowerOf2Alignment, NumBytes, Dev, Ctx),
             nullptr);
 }
@@ -155,6 +158,9 @@ TEST(USMFunctions, ZeroAlignmentSucceeds) {
   ol_device_handle_t OLDev = detail::getSyclObjImpl(Dev)->getOLHandle();
 
   constexpr size_t ZeroAlignment = 0;
+
+  EXPECT_CALL(Mock.get(), olMemAllocAligned(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olMemAllocAlignedHost(_, _, _, _)).Times(0);
 
   EXPECT_CALL(Mock.get(), olMemAlloc(OLDev, OL_ALLOC_TYPE_DEVICE, NumBytes, _))
       .Times(1);
@@ -187,6 +193,9 @@ TEST(USMFunctions, TemplatedAlignment) {
   device Dev = Q.get_device();
   context Ctx = Q.get_context();
   ol_device_handle_t OLDev = detail::getSyclObjImpl(Dev)->getOLHandle();
+
+  EXPECT_CALL(Mock.get(), olMemAlloc(_, _, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olMemAllocHost(_, _, _)).Times(0);
 
   EXPECT_CALL(Mock.get(), olMemAllocAligned(OLDev, OL_ALLOC_TYPE_DEVICE,
                                             sizeof(Over), alignof(Over), _))

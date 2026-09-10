@@ -382,7 +382,9 @@ void mock::MockLiboffload::initDefault() {
                     AllocType == OL_ALLOC_TYPE_MANAGED);
         EXPECT_GT(Size, 0);
         EXPECT_GT(Alignment, 0);
-        EXPECT_EQ(Alignment & (Alignment - 1), 0);
+        if ((Alignment & (Alignment - 1)) != 0) {
+          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        }
         EXPECT_NE(AllocationOut, nullptr);
 
         *AllocationOut = mock::createDummyHandle<void *>();
@@ -396,7 +398,9 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(Device, nullptr);
         EXPECT_GT(Size, 0);
         EXPECT_GT(Alignment, 0);
-        EXPECT_EQ(Alignment & (Alignment - 1), 0);
+        if ((Alignment & (Alignment - 1)) != 0) {
+          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        }
         EXPECT_NE(AllocationOut, nullptr);
 
         *AllocationOut = mock::createDummyHandle<void *>();
