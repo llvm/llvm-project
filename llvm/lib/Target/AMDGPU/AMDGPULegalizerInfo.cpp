@@ -3278,7 +3278,7 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   if (PtrTy.getSizeInBits() == 32)
     B.buildExtract(DstReg, PCReg, 0);
   else
-    B.buildCast(DstReg, PCReg);
+    B.buildCopy(DstReg, PCReg);
   return true;
 }
 
@@ -3294,7 +3294,7 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     B.buildInstr(AMDGPU::S_MOV_B64)
         .addDef(Addr)
         .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
-    B.buildCast(DstReg, Addr);
+    B.buildCopy(DstReg, Addr);
     return;
   }
 
@@ -8287,12 +8287,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
           MRI.createVirtualRegister({WaveMaskRC, MRI.getType(Def)});
       Register NewUse =
           MRI.createVirtualRegister({WaveMaskRC, MRI.getType(Use)});
-      MachineInstr *UseDef = MRI.getVRegDef(Use);
-      Helper.Observer.changingInstr(*UseDef);
-      Helper.Observer.changingAllUsesOfReg(MRI, Use);
-      MRI.replaceRegWith(Use, NewUse);
-      Helper.Observer.changedInstr(*UseDef);
-      Helper.Observer.finishedChangingAllUsesOfReg();
 
       MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
 
@@ -8300,6 +8294,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         std::swap(CondBrTarget, UncondBrTarget);
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
+      B.buildCopy(NewUse, Use);
       if (IntrID == Intrinsic::amdgcn_if) {
         B.buildInstr(AMDGPU::SI_IF)
             .addDef(NewDef)
@@ -8323,6 +8318,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       MI.eraseFromParent();
       BrCond->eraseFromParent();
+      // SI_IF and SI_ELSE are terminators, so replace uses of Def rather than
+      // defining Def with a following copy.
       Helper.Observer.changingAllUsesOfReg(MRI, Def);
       MRI.replaceRegWith(Def, NewDef);
       Helper.Observer.finishedChangingAllUsesOfReg();
@@ -8344,17 +8341,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       Register Reg = MI.getOperand(2).getReg();
       Register NewReg = MRI.createVirtualRegister(
           {TRI->getWaveMaskRegClass(), MRI.getType(Reg)});
-      MachineInstr *RegDef = MRI.getVRegDef(Reg);
-      Helper.Observer.changingInstr(*RegDef);
-      Helper.Observer.changingAllUsesOfReg(MRI, Reg);
-      MRI.replaceRegWith(Reg, NewReg);
-      Helper.Observer.changedInstr(*RegDef);
-      Helper.Observer.finishedChangingAllUsesOfReg();
 
       if (Negated)
         std::swap(CondBrTarget, UncondBrTarget);
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
+      B.buildCopy(NewReg, Reg);
       B.buildInstr(AMDGPU::SI_LOOP).addUse(NewReg).addMBB(UncondBrTarget);
 
       if (Br)
