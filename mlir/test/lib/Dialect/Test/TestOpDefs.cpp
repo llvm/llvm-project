@@ -26,6 +26,10 @@ SymbolTable::Visibility OverriddenSymbolVisibilityOp::getVisibility() {
   return SymbolTable::Visibility::Private;
 }
 
+StringAttr OverriddenSymbolVisibilityOp::getNameAttr() {
+  return getSymNameAttr();
+}
+
 static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   switch (visibility) {
   case SymbolTable::Visibility::Private:

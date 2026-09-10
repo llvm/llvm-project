@@ -131,8 +131,7 @@ private:
     // the function.  This field has no meaning for a variable sized element.
     int64_t SPOffset;
 
-    // The size of this object on the stack. 0 means a variable sized object,
-    // ~0ULL means a dead object.
+    // The size of this object on the stack. 0 means a variable sized object.
     uint64_t Size;
 
     // The required alignment of this stack slot.
@@ -157,6 +156,11 @@ private:
     /// If true, this stack slot is used for spilling a callee saved register
     /// in the calling convention of the containing function.
     bool isCalleeSaved = false;
+
+    /// If true, this stack object has been removed and no longer occupies a
+    /// stack slot. Kept separate from Size so that an object of UINT64_MAX
+    /// bytes is not mistaken for a dead one.
+    bool isDead = false;
 
     /// Identifier for stack memory type analagous to address space. If this is
     /// non-0, the meaning is target defined. Offsets cannot be directly
@@ -808,7 +812,7 @@ public:
   bool isDeadObjectIndex(int ObjectIdx) const {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
-    return Objects[ObjectIdx+NumFixedObjects].Size == ~0ULL;
+    return Objects[ObjectIdx + NumFixedObjects].isDead;
   }
 
   /// Returns true if the specified index corresponds to a variable sized
@@ -842,7 +846,7 @@ public:
   /// Remove or mark dead a statically sized stack object.
   void RemoveStackObject(int ObjectIdx) {
     // Mark it dead.
-    Objects[ObjectIdx+NumFixedObjects].Size = ~0ULL;
+    Objects[ObjectIdx + NumFixedObjects].isDead = true;
   }
 
   /// Notify the MachineFrameInfo object that a variable sized object has been

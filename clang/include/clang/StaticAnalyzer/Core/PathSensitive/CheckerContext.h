@@ -220,7 +220,7 @@ public:
                const ProgramPointTag *Tag = nullptr) {
     if (!State)
       State = getState();
-    addTransition(State, generateSink(State, getPredecessor()));
+    generateSink(State, getPredecessor());
   }
 
   /// Generate a transition to a node that will be used to report
