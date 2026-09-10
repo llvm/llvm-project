@@ -2518,6 +2518,22 @@ public:
   }
 };
 
+/// Preserves assembler policy features that are independent of the selected
+/// architecture or CPU across calls to MCSubtargetInfo::setDefaultFeatures().
+class PolicyFeaturePreserver {
+  // List of assembler policies that must survive .arch and .cpu directives.
+  static constexpr FeatureBitset ToPreserve = {AArch64::FeatureNoLFILoads,
+                                               AArch64::FeatureNoLFIStores};
+  FeatureBitset SavedFeatures;
+
+public:
+  explicit PolicyFeaturePreserver(const MCSubtargetInfo &STI)
+      : SavedFeatures(STI.getFeatureBits() & ToPreserve) {}
+  void restore(MCSubtargetInfo &STI) const {
+    STI.SetFeatureBitsTransitively(SavedFeatures);
+  }
+};
+
 } // end anonymous namespace.
 
 void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
@@ -7252,10 +7268,13 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   AArch64Features.push_back(AArch64::StrTab[ArchInfo->ArchFeature]);
   AArch64::getExtensionFeatures(ArchInfo->DefaultExts, AArch64Features);
 
+  PolicyFeaturePreserver PolicyPreserver(getSTI());
   MCSubtargetInfo &STI = copySTI();
-  std::vector<std::string> ArchFeatures(AArch64Features.begin(), AArch64Features.end());
+  std::vector<std::string> ArchFeatures(AArch64Features.begin(),
+                                        AArch64Features.end());
   STI.setDefaultFeatures("generic", /*TuneCPU*/ "generic",
                          join(ArchFeatures.begin(), ArchFeatures.end(), ","));
+  PolicyPreserver.restore(STI);
 
   SmallVector<StringRef, 4> RequestedExtensions;
   if (!ExtensionString.empty())
@@ -7349,8 +7368,10 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
   }
   ExpandCryptoAEK(*CpuArch, RequestedExtensions);
 
+  PolicyFeaturePreserver PolicyPreserver(getSTI());
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
+  PolicyPreserver.restore(STI);
   CurLoc = incrementLoc(CurLoc, CPU.size());
 
   for (auto Name : RequestedExtensions) {
