@@ -661,7 +661,7 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
       // Calls that only access inaccessible memory do not block sinking the
       // load.
       if (auto *CB = dyn_cast<CallBase>(BBI))
-        if (CB->onlyAccessesInaccessibleMemory())
+        if (CB->onlyAccessesNonaddressableMemory())
           continue;
       return false;
     }

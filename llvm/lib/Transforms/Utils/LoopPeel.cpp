@@ -451,7 +451,7 @@ static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
       // Calls that only access inaccessible memory can never alias with loads.
       if (I.mayWriteToMemory() &&
           !(isa<CallBase>(I) &&
-            cast<CallBase>(I).onlyAccessesInaccessibleMemory()))
+            cast<CallBase>(I).onlyAccessesNonaddressableMemory()))
         return 0;
 
       if (LoadUsers.contains(&I))

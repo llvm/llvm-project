@@ -497,6 +497,18 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     ME &= MemoryEffects::argMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOnly")
     ME &= MemoryEffects::inaccessibleMemOnly();
+  else if (R->getName() == "IntrReadFPControlOnly")
+    ME &= MemoryEffects::fpcontrolOnly(ModRefInfo::Ref);
+  else if (R->getName() == "IntrWriteFPControlOnly")
+    ME &= MemoryEffects::fpcontrolOnly(ModRefInfo::Mod);
+  else if (R->getName() == "IntrUpdateFPStatusOnly")
+    ME &= MemoryEffects::fpstatusOnly(ModRefInfo::ModRef);
+  else if (R->getName() == "IntrReadFPEnvironmentOnly")
+    ME &= MemoryEffects::fpenvironmentOnly(ModRefInfo::Ref);
+  else if (R->getName() == "IntrWriteFPEnvironmentOnly")
+    ME &= MemoryEffects::fpenvironmentOnly(ModRefInfo::Mod);
+  else if (R->getName() == "IntrFPOperationOnly")
+    ME &= MemoryEffects::fpoperationOnly();
   else if (R->isSubClassOf("IntrRead")) {
     MemoryEffects ReadMask = MemoryEffects::writeOnly();
     for (const Record *RLoc : R->getValueAsListOfDefs("MemLoc"))
@@ -654,6 +666,8 @@ CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
           .Case("TargetMem0", IRMemLocation::TargetMem0)
           .Case("TargetMem1", IRMemLocation::TargetMem1)
           .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)
+          .Case("FPControl", IRMemLocation::FPControl)
+          .Case("FPStatus", IRMemLocation::FPStatus)
           .Default(IRMemLocation::Other); // fallback enum
 
   if (Loc == IRMemLocation::Other)
