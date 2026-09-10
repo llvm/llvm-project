@@ -79,9 +79,9 @@ struct InputFileInfo {
   }
 };
 
-/// Where a module file keeps its own copy of an input file. \c FID names the
-/// copy and \c Offset is where its locations start. \c FID is invalid for an
-/// input file the module file wrote no source location entries for.
+/// Where a module file keeps an input file. \c FID names the file and
+/// \c Offset is where its locations start. \c FID is invalid if the module
+/// file wrote no source location entries for the input file.
 struct InputFileLoc {
   FileID FID;
   SourceLocation::UIntTy Offset = 0;
@@ -312,9 +312,8 @@ public:
   /// The input file infos that have been loaded from this AST file.
   std::vector<InputFileInfo> InputFileInfosLoaded;
 
-  /// Where this module file keeps each of its input files. We read this out of
-  /// the source location entries the first time something asks, since only a
-  /// module write needs it.
+  /// Where this module file keeps each input file. Built from source location
+  /// entries on first use.
   std::vector<InputFileLoc> InputFileLocsLoaded;
   bool InputFileLocsLoadedBuilt = false;
 

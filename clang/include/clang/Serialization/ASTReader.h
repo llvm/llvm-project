@@ -1449,22 +1449,18 @@ private:
   };
 
 public:
-  /// Returns where a loaded module keeps the input file with resolved path
-  /// \p Path and size \p Size. The returned \c FID is invalid when no loaded
-  /// module has the file.
+  /// Returns where a loaded module keeps the input file with path \p Path and
+  /// size \p Size, or an invalid \c FID if no loaded module has the file.
   serialization::InputFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
 
 private:
-  /// An input file of a loaded module, as its own serialized data describes
-  /// it.
   struct LoadedInputFile {
     off_t Size;
     ModuleFile *F;
     unsigned InputID;
   };
 
-  /// The input files of every loaded module, keyed by resolved path, in module
-  /// index order. Filled on first use.
+  /// Input files of loaded modules, keyed by resolved path. Built on first use.
   llvm::StringMap<SmallVector<LoadedInputFile, 1>> LoadedInputFiles;
   bool LoadedInputFilesBuilt = false;
 
@@ -1472,14 +1468,14 @@ private:
   serialization::InputFileLoc getLoadedInputFileLoc(ModuleFile &F,
                                                     unsigned InputID);
 
-  /// The offset an SLoc entry's locations start at, and the index of the input
-  /// file it names. \c InputID is zero for an entry that is not a file.
+  /// The offset of an SLoc entry and the input file it names. \c InputID is
+  /// zero for entries that are not files.
   struct SLocEntryInfo {
     SourceLocation::UIntTy Offset = 0;
     unsigned InputID = 0;
   };
 
-  /// Read the offset and input file index out of the SLoc entry at local index
+  /// Reads the offset and input file index from the SLoc entry at local index
   /// \p Index in \p F.
   llvm::Expected<SLocEntryInfo> readSLocFileEntry(ModuleFile *F,
                                                   unsigned Index);

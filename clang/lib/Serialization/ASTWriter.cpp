@@ -5574,11 +5574,9 @@ void ASTWriter::computeNonAffectingInputFiles() {
 
   auto AffectingModuleMaps = GetAffectingModuleMaps(*PP, WritingModule);
 
-  // Unlike a SourceLocation, a FileID is written as an index into our own SLoc
-  // table, so it cannot name a file we leave out. Collect the files something
-  // still refers to by FileID, mirroring the conditions under which the loops
-  // that write these tables emit one. Only local files can be named that way,
-  // and we skip the invalid FileID so it never becomes a key here.
+  // A FileID is serialized as an index into this module's SLoc table, so
+  // collect the local files named by records written below. The invalid FileID
+  // cannot be stored in a DenseSet, so skip it.
   llvm::DenseSet<FileID> NamedFileIDs;
   if (SrcMgr.getMainFileID().isValid())
     NamedFileIDs.insert(SrcMgr.getMainFileID());
@@ -5599,16 +5597,15 @@ void ASTWriter::computeNonAffectingInputFiles() {
   NonAffectingFileIDAdjustments.push_back(FileIDAdjustment);
   NonAffectingOffsetAdjustments.push_back(OffsetAdjustment);
 
-  // Leaves \p FID out of this module file. A nonzero \p RedirectAdjustment
-  // points its locations at a loaded copy instead.
+  // Leaves \p FID out of this module. A nonzero \p RedirectAdjustment redirects
+  // its locations to a loaded copy.
   auto MarkNonAffecting = [&](FileID FID, int64_t RedirectAdjustment) {
     FileIDAdjustment += 1;
     // Even empty files take up one element in the offset table.
     OffsetAdjustment += SrcMgr.getFileIDSize(FID) + 1;
 
-    // If the previous file was non-affecting as well, just extend its entry
-    // with our information. Files that point at different copies must stay in
-    // separate ranges, since we keep one redirect per range.
+    // Adjacent files with the same redirect can share a range. Files redirected
+    // to different copies need separate ranges.
     if (!NonAffectingFileIDs.empty() &&
         NonAffectingFileIDs.back().ID == FID.ID - 1 &&
         NonAffectingRedirectAdjustments.back() == RedirectAdjustment) {
@@ -5644,14 +5641,12 @@ void ASTWriter::computeNonAffectingInputFiles() {
       if (!AffectingModuleMaps)
         continue;
 
-      // Don't prune module maps that are affecting. The submodule block names
-      // them by FileID when an inferred module was uniqued by one, so they
-      // cannot be redirected either.
+      // Affecting module maps may be named by FileID in the submodule block, so
+      // they cannot be redirected.
       if (AffectingModuleMaps->DefinitionFileIDs.contains(FID))
         continue;
 
-      // A module map nothing points into can be left out along with its
-      // locations.
+      // A module map with no affecting locations can be left out.
       IsSLocAffecting[I] = false;
       IsSLocFileEntryAffecting[I] =
           AffectingModuleMaps->DefinitionFiles.contains(*Cache->OrigEntry);
@@ -5662,12 +5657,8 @@ void ASTWriter::computeNonAffectingInputFiles() {
     if (NamedFileIDs.contains(FID))
       continue;
 
-    // A module we import may already have this input file. If it does, we
-    // point our locations at its copy instead of writing a second set of
-    // entries for the same text. The input file record is still written, so
-    // validation continues to work. We ask by path and size, which a module
-    // records for every input it has, so the answer comes out of what it
-    // wrote and its own entries stay untouched.
+    // Reuse the source location entries of a loaded module that already has
+    // this input file.
     if (!hasChain())
       continue;
     serialization::InputFileLoc Loaded = getChain()->getLoadedFileLoc(
@@ -6205,8 +6196,8 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
   // Write the control block
   WriteControlBlock(*PP, isysroot);
-  // The import locations in the control block had to stay local. Now that it
-  // has been written, we can start rewriting.
+  // Import locations in the control block must remain local, so start rewriting
+  // only after it has been written.
   ControlBlockWritten = true;
 
   // Write the remaining AST contents.
@@ -6875,10 +6866,8 @@ SourceLocation ASTWriter::getRedirectedLocation(SourceLocation Loc) const {
 SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {
   if (Loc.isInvalid())
     return Loc;
-  // A location in a file we left out must move to the loaded copy first, since
-  // the shift below only handles locations that are still local. This stays out
-  // of getAdjustment because getAdjustedOffset shares it, and we call that on
-  // file sizes and on the next local offset as well.
+  // Redirect locations in omitted files before adjusting local offsets.
+  // getAdjustment() is also used for values that are not source locations.
   if (ControlBlockWritten && !Loc.isMacroID())
     if (SourceLocation Redirected = getRedirectedLocation(Loc);
         Redirected.isValid())
@@ -7281,8 +7270,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
   if (FID.isInvalid())
     return;
   assert(SM.getSLocEntry(FID).isFile());
-  // We don't build a per-file declaration table for a file we left out. The
-  // module that has the file already built one.
+  // A redirected file already has its declaration table in the loaded module.
   if (!IsSLocAffecting[FID.ID])
     return;
 

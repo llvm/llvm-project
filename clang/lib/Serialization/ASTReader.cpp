@@ -1866,22 +1866,20 @@ ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
 
 void ASTReader::buildLoadedInputFiles() {
   LoadedInputFilesBuilt = true;
-  // ModuleManager hands modules out in index order, so the copy we settle on
-  // for a file does not depend on the order things happened to be loaded in.
+  // ModuleManager iterates modules in index order, so the copy chosen for a
+  // file does not depend on module load order.
   for (ModuleFile &F : ModuleMgr) {
     for (unsigned I = 0, N = F.InputFilesLoaded.size(); I != N; ++I) {
       InputFileInfo FI = getInputFileInfo(F, I + 1);
       if (FI.UnresolvedImportedFilename.empty())
         continue;
-      // An overridden input holds a buffer rather than the contents of the
-      // path it names, so its path and size describe nothing we can match on.
+      // An overridden input holds a buffer rather than the file named by its
+      // path, so its path and size cannot identify matching contents.
       if (FI.Overridden)
         continue;
       auto Filename =
           ResolveImportedPath(PathBuf, FI.UnresolvedImportedFilename, F);
-      // Both sides of a comparison have to spell a path the same way, so make
-      // it absolute and drop any dot segments. This works on the string alone
-      // and reads nothing from the file system.
+      // Make both paths absolute and remove dot segments before comparing them.
       SmallString<128> Key(*Filename);
       FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
       LoadedInputFiles[Key].push_back({FI.StoredSize, &F, I + 1});
@@ -1896,8 +1894,8 @@ InputFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F, unsigned InputID) {
     for (unsigned I = 0; I != F.LocalNumSLocEntries; ++I) {
       Expected<SLocEntryInfo> MaybeInfo = readSLocFileEntry(&F, I);
       if (!MaybeInfo) {
-        // Losing an entry only costs us a redirect, so leave the file to the
-        // module that is writing it rather than failing the write.
+        // Failing to find an entry only prevents a redirect, so leave the file
+        // local rather than failing the write.
         consumeError(MaybeInfo.takeError());
         continue;
       }
@@ -1930,9 +1928,8 @@ InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
   for (const LoadedInputFile &In : Known->second) {
     if (In.Size != Size)
       continue;
-    // A module that has the file as an input may still have left its source
-    // location entries out, in which case it has no copy to point at and we
-    // keep looking.
+    // An input file may have no source location entries, leaving no copy to
+    // redirect to.
     InputFileLoc Loc = getLoadedInputFileLoc(*In.F, In.InputID);
     if (Loc.FID.isValid())
       return Loc;
