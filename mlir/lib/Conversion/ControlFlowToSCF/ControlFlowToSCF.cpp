@@ -139,7 +139,7 @@ FailureOr<Operation *>
 ControlFlowToSCFTransformation::createUnreachableTerminator(Location loc,
                                                             OpBuilder &builder,
                                                             Region &region) {
-  return (Operation *)ub::UnreachableOp::create(builder, loc);
+  return ub::UnreachableOp::create(builder, loc).getOperation();
 }
 
 bool ControlFlowToSCFTransformation::isUnreachableTerminator(Operation *op) {
