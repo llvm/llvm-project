@@ -15,6 +15,7 @@ define i32 @ctsel_fallback_i32(i1 %c, i32 %x, i32 %y) {
 ; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    srai a0, a0, 63
 ; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    #ARITH_FENCE
 ; CHECK-NEXT:    xor a0, a2, a0
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.ct.select.i32(i1 %c, i32 %x, i32 %y)
@@ -28,6 +29,7 @@ define i64 @ctsel_fallback_i64(i1 %c, i64 %x, i64 %y) {
 ; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    srai a0, a0, 63
 ; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    #ARITH_FENCE
 ; CHECK-NEXT:    xor a0, a2, a0
 ; CHECK-NEXT:    ret
   %r = call i64 @llvm.ct.select.i64(i1 %c, i64 %x, i64 %y)

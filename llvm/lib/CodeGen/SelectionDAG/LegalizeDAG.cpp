@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -3222,16 +3221,9 @@ SDValue SelectionDAGLegalize::ExpandCTSELECT(SDNode *Node) {
   // on the same-size integer; vectors build the mask as a scalar then splat
   // (avoids illegal vNi1).
   //
-  // The masked-diff is routed through a virtual register (CopyToReg /
-  // CopyFromReg) below as a forward-looking DAGCombine barrier. This is
-  // *not* required for correctness against any combiner in tree today —
-  // DAGCombiner has no rewrite that recognizes XOR/AND/XOR-with-sext-mask
-  // and reconstructs a SELECT. The chain edge is defense-in-depth against
-  // a hypothetical future fold of that form: the dependency partitions the
-  // bitwise sequence into a region the combiner can't see through. Cost is
-  // at most a coalesce-able MOV per call. ISD::ARITH_FENCE would serve the
-  // same purpose (ISel already selects it for any legal type); switching to
-  // it is left to a follow-up.
+  // The masked-diff passes through an ARITH_FENCE so no future combine can
+  // fold the XOR/AND/XOR sequence back into a SELECT. No in-tree combine does
+  // that today; the fence is defense-in-depth and emits no code.
   SDValue Cond = Node->getOperand(0);
   SDValue T = Node->getOperand(1);
   SDValue F = Node->getOperand(2);
@@ -3371,20 +3363,8 @@ SDValue SelectionDAGLegalize::ExpandCTSELECT(SDNode *Node) {
   SDValue XorTF = DAG.getNode(ISD::XOR, dl, WorkingVT, WorkingT, WorkingF);
   SDValue TM = DAG.getNode(ISD::AND, dl, WorkingVT, XorTF, Mask);
 
-  // Forward-looking DAGCombine barrier (see header): route the masked-diff
-  // through a vreg so the chain edge partitions it from the surrounding
-  // bitwise ops, guarding against a future combiner that might fold
-  // XOR/AND/XOR-with-sext-mask back to SELECT. WorkingVT is legal here, so
-  // it always has a register class; only scalable vectors are skipped,
-  // conservatively.
-  if (!WorkingVT.isScalableVector()) {
-    const TargetRegisterClass *RC = TLI.getRegClassFor(WorkingVT.getSimpleVT());
-    MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
-    Register TMReg = MRI.createVirtualRegister(RC);
-    SDValue Chain = DAG.getEntryNode();
-    Chain = DAG.getCopyToReg(Chain, dl, TMReg, TM);
-    TM = DAG.getCopyFromReg(Chain, dl, TMReg, WorkingVT);
-  }
+  // DAGCombine barrier (see above).
+  TM = DAG.getNode(ISD::ARITH_FENCE, dl, WorkingVT, TM);
 
   SDValue Res = DAG.getNode(ISD::XOR, dl, WorkingVT, WorkingF, TM);
 
