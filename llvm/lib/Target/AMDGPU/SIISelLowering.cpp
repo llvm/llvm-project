@@ -17069,9 +17069,10 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     }
   }
 
-  // if PeekThoughBitcast(Vec)[MapIdx(CIdx)] == undef &&
+  // if PeekThroughBitcast(Vec)[MapIdx(CIdx)] is a undef/poison &&
   //    VecEltSize < PeekThroughEltSize, then
-  // EXTRACT_VECTOR_ELT(bitcast(build_vector(..., undef, ...)), CIdx) => undef
+  // EXTRACT_VECTOR_ELT(bitcast(build_vector(..., undef/poison, ...)), CIdx) =>
+  //    undef/poison (inherits the undef or poison from the element)
   auto *IndexC = dyn_cast<ConstantSDNode>(N->getOperand(1));
   SDValue PeekThroughVec = peekThroughBitcasts(Vec);
   EVT PeekThroughVecVT = PeekThroughVec.getValueType();
@@ -19165,7 +19166,7 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 SDValue
 SITargetLowering::performBuildVectorCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
-  // TODO: Lower for all targets instead of just v_mov_b64 enabled ones,
+  // TODO: Perform for all targets instead of just v_mov_b64 enabled ones,
   // lower could still enable s_mov_b64 which is supported on all targets.
   const GCNSubtarget *ST = getSubtarget();
   if (DCI.Level < AfterLegalizeDAG || !ST->hasVMovB64Inst())
@@ -19185,10 +19186,8 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
   if ((SizeBits % 64) != 0 || EltSize == 64)
     return SDValue();
 
-  // Construct the 64b values.
-  SmallVector<uint64_t, 8> ImmVals;
-  uint64_t ImmVal = 0;
-  uint64_t ImmSize = 0;
+  SmallVector<APInt, 8> SrcBits;
+  BitVector SrcUndef(N->getNumOperands(), false);
   for (SDValue Operand : N->ops()) {
     // Build_vector with constants only.
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(Operand);
@@ -19199,49 +19198,48 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
     if (!C && !FPC && !BV)
       return SDValue();
 
-    uint64_t Val = 0;
+    APInt Elt;
     if (BV) {
-      if (!BV->isConstant())
+      BitVector Undef;
+      SmallVector<APInt> Elts;
+      if (!BV->getConstantRawBits(/*IsLittleEndian=*/true, EltSize, Elts,
+                                  Undef))
         return SDValue();
-      bool IsLE = DAG.getDataLayout().isLittleEndian();
-      BitVector UndefElements;
-      SmallVector<APInt> RawBits;
-      if (!BV->getConstantRawBits(IsLE, EltSize, RawBits, UndefElements))
-        return SDValue();
-
-      assert(RawBits.size() == 1 &&
+      assert(Elts.size() == 1 &&
              "BuildVector constant value retrieval expected 1 element");
-
-      if (UndefElements.any())
+      if (Undef.any())
         return SDValue();
-
-      Val = RawBits[0].getZExtValue();
+      Elt = Elts[0];
     } else {
-      Val = C ? C->getZExtValue()
-              : FPC->getValueAPF().bitcastToAPInt().getZExtValue();
+      Elt = C ? C->getAPIntValue().trunc(EltSize)
+              : FPC->getValueAPF().bitcastToAPInt();
     }
-    ImmVal |= Val << ImmSize;
-    ImmSize += EltSize;
-    if (ImmSize == 64) {
-      if (!isUInt<32>(ImmVal))
-        return SDValue();
-      ImmVals.push_back(ImmVal);
-      ImmVal = 0;
-      ImmSize = 0;
-    }
+    SrcBits.push_back(Elt);
   }
 
+  BitVector UndefElts;
+  SmallVector<APInt, 4> RawBits;
+  BuildVectorSDNode::recastRawBits(/*IsLittleEndian=*/true,
+                                   /*DstEltSizeInBits=*/64, RawBits, SrcBits,
+                                   UndefElts, SrcUndef);
+  if (UndefElts.any())
+    return SDValue();
+
+  for (const APInt &Bits : RawBits)
+    if (!isUInt<32>(Bits.getZExtValue()))
+      return SDValue();
+
   // Avoid emitting build_vector with 1 element and directly emit value.
-  if (ImmVals.size() == 1) {
-    SDValue Val = DAG.getConstant(ImmVals[0], SL, MVT::i64);
+  if (RawBits.size() == 1) {
+    SDValue Val = DAG.getConstant(RawBits[0], SL, MVT::i64);
     return DAG.getBitcast(VT, Val);
   }
 
   // Construct and return build_vector with 64b elements.
-  if (!ImmVals.empty()) {
-    SmallVector<SDValue, 8> VectorConsts(ImmVals.size());
-    for (unsigned i = 0; i < ImmVals.size(); ++i)
-      VectorConsts[i] = DAG.getConstant(ImmVals[i], SL, MVT::i64);
+  if (!RawBits.empty()) {
+    SmallVector<SDValue, 8> VectorConsts(RawBits.size());
+    for (unsigned i = 0; i < RawBits.size(); ++i)
+      VectorConsts[i] = DAG.getConstant(RawBits[i], SL, MVT::i64);
     unsigned NewNumElts = SizeBits / 64;
     LLVMContext &Ctx = *DAG.getContext();
     EVT NewVT = EVT::getVectorVT(Ctx, MVT::i64, NewNumElts);
