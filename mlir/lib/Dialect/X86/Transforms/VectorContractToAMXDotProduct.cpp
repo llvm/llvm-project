@@ -27,6 +27,47 @@ using namespace mlir::x86;
 
 namespace {
 
+static bool isZeroVectorConstant(mlir::Operation *op) {
+  auto constantOp = llvm::dyn_cast<mlir::arith::ConstantOp>(op);
+  if (!constantOp)
+    return false;
+
+  auto vectorType = llvm::dyn_cast<mlir::VectorType>(constantOp.getType());
+  if (!vectorType)
+    return false;
+
+  auto denseAttr =
+      llvm::dyn_cast<mlir::DenseElementsAttr>(constantOp.getValue());
+  if (!denseAttr || !denseAttr.isSplat())
+    return false;
+
+  mlir::Type elementType = vectorType.getElementType();
+
+  if (llvm::isa<mlir::FloatType>(elementType)) {
+    return denseAttr.getSplatValue<llvm::APFloat>().isZero();
+  }
+
+  if (llvm::isa<mlir::IntegerType>(elementType)) {
+    return denseAttr.getSplatValue<llvm::APInt>().isZero();
+  }
+
+  return false;
+}
+
+/*static bool isZeroVectorConstant(mlir::Operation *op) {
+  auto constantOp = llvm::dyn_cast<mlir::arith::ConstantOp>(op);
+  if (!constantOp)
+    return false;
+
+  auto denseAttr =
+      llvm::dyn_cast<mlir::DenseElementsAttr>(constantOp.getValue());
+  if (!denseAttr)
+    return false;
+
+  return denseAttr.isSplat() &&
+         denseAttr.getSplatValue<llvm::APFloat>().isZero();
+}*/
+
 // Recursively follows single-use values through scf.yield operations
 // and returns the first non-yield user result in the contraction chain.
 static Value contractionUsersAfterYield(Value v) {
@@ -309,19 +350,19 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
           vec2 = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get((16 * offset), ipType), vec2);
 
-        vector::ShuffleOp shuffle1;
-        vector::ShuffleOp shuffle2;
+        vector::ShuffleOp writeVal1;
+        vector::ShuffleOp writeVal2;
 
         if (ipType.isBF16()) {
 
-          shuffle1 = vector::ShuffleOp::create(
+          writeVal1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
               vec2,
               ArrayRef<int64_t>{0,  32, 1,  33, 2,  34, 3,  35, 8,  40, 9,
                                 41, 10, 42, 11, 43, 16, 48, 17, 49, 18, 50,
                                 19, 51, 24, 56, 25, 57, 26, 58, 27, 59});
 
-          shuffle2 = vector::ShuffleOp::create(
+          writeVal2 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
               vec2,
               ArrayRef<int64_t>{4,  36, 5,  37, 6,  38, 7,  39, 12, 44, 13,
@@ -332,7 +373,7 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
         if (ipType.isSignlessInteger(8) || ipType.isF8E5M2() ||
             ipType.isF8E4M3FN()) {
 
-          shuffle1 = vector::ShuffleOp::create(
+          writeVal1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
               vec2,
               ArrayRef<int64_t>{
@@ -342,7 +383,7 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
                   113, 18,  50, 82,  114, 19,  51,  83,  115, 24,  56,  88, 120,
                   25,  57,  89, 121, 26,  58,  90,  122, 27,  59,  91,  123});
 
-          shuffle2 = vector::ShuffleOp::create(
+          writeVal2 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
               vec2,
               ArrayRef<int64_t>{
@@ -357,9 +398,9 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
         Value ivShuff1 = arith::DivUIOp::create(rewriter, loc, iv, cStep);
         Value ivShuff2 = arith::AddIOp::create(rewriter, loc, ivShuff1, c16);
 
-        vector::StoreOp::create(rewriter, loc, shuffle1, packedBuffer,
+        vector::StoreOp::create(rewriter, loc, writeVal1, packedBuffer,
                                 ValueRange{indxToStoreInBuffer, ivShuff1, c0});
-        vector::StoreOp::create(rewriter, loc, shuffle2, packedBuffer,
+        vector::StoreOp::create(rewriter, loc, writeVal2, packedBuffer,
                                 ValueRange{indxToStoreInBuffer, ivShuff2, c0});
 
         scf::YieldOp::create(nestedBuilder, loc);
@@ -802,6 +843,8 @@ struct VectorContractToAMXDotProduct
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
 
+    bool isAccZeroVectorConstant = isZeroVectorConstant(accReadOp);
+
     // Only the contract result's first consumer is needed, not the final
     // store. This keeps the lowering independent of the epilogue ops (truncf,
     // bias add, ReLU, ...) that sit between the contraction and the write.
@@ -955,31 +998,31 @@ struct VectorContractToAMXDotProduct
                   VectorType::get(16 * (blockingFactor / 2), ipType), subview,
                   range2);
 
-              vector::ShuffleOp shuffle1;
-              vector::ShuffleOp shuffle2;
+              vector::ShuffleOp writeVal1;
+              vector::ShuffleOp writeVal2;
 
               if (blockingFactor == 2) {
 
-                shuffle1 = vector::ShuffleOp::create(
+                writeVal1 = vector::ShuffleOp::create(
                     rewriter, loc, VectorType::get({16}, ipType), vec1, vec2,
                     ArrayRef<int64_t>{0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21,
                                       6, 22, 7, 23});
 
-                shuffle2 = vector::ShuffleOp::create(
+                writeVal2 = vector::ShuffleOp::create(
                     rewriter, loc, VectorType::get({16}, ipType), vec1, vec2,
                     ArrayRef<int64_t>{8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13,
                                       29, 14, 30, 15, 31});
               }
 
               if (blockingFactor == 4) {
-                shuffle1 = vector::ShuffleOp::create(
+                writeVal1 = vector::ShuffleOp::create(
                     rewriter, loc, VectorType::get({32}, ipType), vec1, vec2,
                     ArrayRef<int64_t>{0, 16, 32, 48, 1, 17, 33, 49,
                                       2, 18, 34, 50, 3, 19, 35, 51,
                                       4, 20, 36, 52, 5, 21, 37, 53,
                                       6, 22, 38, 54, 7, 23, 39, 55});
 
-                shuffle2 = vector::ShuffleOp::create(
+                writeVal2 = vector::ShuffleOp::create(
                     rewriter, loc, VectorType::get({32}, ipType), vec1, vec2,
                     ArrayRef<int64_t>{8,  24, 40, 56, 9,  25, 41, 57,
                                       10, 26, 42, 58, 11, 27, 43, 59,
@@ -990,9 +1033,9 @@ struct VectorContractToAMXDotProduct
               auto rem = arith::DivUIOp::create(
                   rewriter, loc, rewriter.getIndexType(), iv, step);
 
-              vector::StoreOp::create(rewriter, loc, shuffle1, packedBuffer,
+              vector::StoreOp::create(rewriter, loc, writeVal1, packedBuffer,
                                       ValueRange{rem, c0});
-              vector::StoreOp::create(rewriter, loc, shuffle2, packedBuffer,
+              vector::StoreOp::create(rewriter, loc, writeVal2, packedBuffer,
                                       ValueRange{rem, nextStoreIndx});
 
               scf::YieldOp::create(nestedBuilder, loc);
@@ -1069,12 +1112,13 @@ struct VectorContractToAMXDotProduct
 
       loopLists.push_back(dyn_cast<scf::ForOp>(parent));
 
-      if (accReadOp->getBlock() == parent->getBlock()) {
+      if (resultBlock == parent->getBlock()) {
         break;
       }
 
       current = parent;
     }
+
     if (loopLists.size() > 2 || loopLists.size() == 0)
       return rewriter.notifyMatchFailure(
           contractOp, "Rewrite is supported until reduction loop depth of 2.");
@@ -1113,7 +1157,6 @@ struct VectorContractToAMXDotProduct
     for (mlir::Operation &op : loopLists[0].getBody()->getOperations()) {
 
       if (auto contract = llvm::dyn_cast<mlir::vector::ContractionOp>(op)) {
-
         LogicalResult validate = validateContractOps(
             rewriter, contract, dimValue, srcBuffLhs, srcBuffRhs, true);
 
@@ -1123,6 +1166,16 @@ struct VectorContractToAMXDotProduct
               "The associated contract operations doesn't satisfy "
               "the re-write conditions either the dimensions are "
               "wrong or MemRef source are different or many users.");
+
+        Operation *contractReadOp =
+            traceToVectorReadLikeParentOperation(contract.getAcc());
+
+        if ((isAccZeroVectorConstant &&
+             !isZeroVectorConstant(contractReadOp)) ||
+            (!isAccZeroVectorConstant && isZeroVectorConstant(contractReadOp)))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The input acc should be a zero constant or "
+                          "transfer_read for all contracts");
 
         ops.push_back(contract);
       }
@@ -1418,11 +1471,14 @@ struct VectorContractToAMXDotProduct
     Value srcBuffAcc;
     SmallVector<Value> indicesAcc;
 
-    llvm::TypeSwitch<Operation *>(accReadOp).Case<TransferReadOp, LoadOp>(
-        [&](auto readOp) {
-          srcBuffAcc = readOp.getOperand(0);
+    Operation *accWrite =
+        traceToVectorWriteLikeUserOperation(contractOp.getResult());
 
-          auto indices = readOp.getIndices();
+    llvm::TypeSwitch<Operation *>(accWrite)
+        .Case<vector::TransferWriteOp, vector::StoreOp>([&](auto writeOp) {
+          srcBuffAcc = writeOp->getOperand(1);
+
+          auto indices = writeOp.getIndices();
           indicesAcc.reserve(indices.size());
 
           llvm::transform(indices, std::back_inserter(indicesAcc),
@@ -1470,50 +1526,54 @@ struct VectorContractToAMXDotProduct
               vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
                                      resultBuffer, ValueRange{iv, c16});
 
-          Value shuffle1 = row;
-          Value shuffle2 = row2;
+          Value writeVal1 = row;
+          Value writeVal2 = row2;
 
           if (!isVnni) {
-            shuffle1 = vector::ShuffleOp::create(
+            writeVal1 = vector::ShuffleOp::create(
                 rewriter, loc, VectorType::get(16, opType), row, row2,
                 ArrayRef<int64_t>{0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20,
                                   21, 22, 23});
 
-            shuffle2 = vector::ShuffleOp::create(
+            writeVal2 = vector::ShuffleOp::create(
                 rewriter, loc, VectorType::get(16, opType), row, row2,
                 ArrayRef<int64_t>{8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15,
                                   28, 29, 30, 31});
           }
-          indicesAcc[indicesAcc.size() - 2] = iv;
-          indicesAcc[indicesAcc.size() - 1] = c0;
 
-          Value valueCRow1 =
-              vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
-                                     srcBuffAcc, indicesAcc);
-          indicesAcc[indicesAcc.size() - 1] = c16;
+          if (!isAccZeroVectorConstant) {
+            indicesAcc[indicesAcc.size() - 2] = iv;
+            indicesAcc[indicesAcc.size() - 1] = c0;
 
-          Value valueCRow2 =
-              vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
-                                     srcBuffAcc, indicesAcc);
+            Value valueCRow1 = vector::LoadOp::create(
+                rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
+                indicesAcc);
+            indicesAcc[indicesAcc.size() - 1] = c16;
 
-          Value addOp;
-          Value addOp2;
+            Value valueCRow2 = vector::LoadOp::create(
+                rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
+                indicesAcc);
 
-          if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
-            addOp = arith::AddFOp::create(rewriter, loc, shuffle1, valueCRow1);
+            if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
+              writeVal1 =
+                  arith::AddFOp::create(rewriter, loc, writeVal1, valueCRow1);
 
-            addOp2 = arith::AddFOp::create(rewriter, loc, shuffle2, valueCRow2);
+              writeVal2 =
+                  arith::AddFOp::create(rewriter, loc, writeVal2, valueCRow2);
+            }
+
+            if (ipType.isSignlessInteger(8)) {
+              writeVal1 =
+                  arith::AddIOp::create(rewriter, loc, writeVal1, valueCRow1);
+
+              writeVal2 =
+                  arith::AddIOp::create(rewriter, loc, writeVal2, valueCRow2);
+            }
           }
 
-          if (ipType.isSignlessInteger(8)) {
-            addOp = arith::AddIOp::create(rewriter, loc, shuffle1, valueCRow1);
-
-            addOp2 = arith::AddIOp::create(rewriter, loc, shuffle2, valueCRow2);
-          }
-
-          vector::StoreOp::create(rewriter, loc, addOp, resultBuffer,
+          vector::StoreOp::create(rewriter, loc, writeVal1, resultBuffer,
                                   ValueRange{iv, c0});
-          vector::StoreOp::create(rewriter, loc, addOp2, resultBuffer,
+          vector::StoreOp::create(rewriter, loc, writeVal2, resultBuffer,
                                   ValueRange{iv, c16});
 
           scf::YieldOp::create(nestedBuilder, loc);

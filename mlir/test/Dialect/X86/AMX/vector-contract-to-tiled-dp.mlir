@@ -547,6 +547,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
+      transform.apply_patterns.x86.move_accumulator_for_contract_loop
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -685,6 +686,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
+      transform.apply_patterns.x86.move_accumulator_for_contract_loop
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -958,6 +960,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
+      transform.apply_patterns.x86.move_accumulator_for_contract_loop
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
