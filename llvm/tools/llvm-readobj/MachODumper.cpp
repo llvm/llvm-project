@@ -827,7 +827,6 @@ void MachODumper::printNeededLibraries() {
 
   for (const auto &Command : Obj->load_commands()) {
     if (Command.C.cmd == MachO::LC_LOAD_DYLIB ||
-        Command.C.cmd == MachO::LC_ID_DYLIB ||
         Command.C.cmd == MachO::LC_LOAD_WEAK_DYLIB ||
         Command.C.cmd == MachO::LC_REEXPORT_DYLIB ||
         Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB ||

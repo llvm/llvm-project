@@ -232,7 +232,7 @@ features cannot lower the translation-unit ABI level;
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
-- Added support for the `__builtin_strlcat` builtin.
+- Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
 ### New Compiler Flags
 
@@ -261,14 +261,6 @@ features cannot lower the translation-unit ABI level;
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
-- `-funique-internal-linkage-names` now gives internal global variables a
-  unique `.__uniq.<module-hash>` suffix, as it already does for functions. This
-  helps profiling tools distinguish static variables with the same name in
-  different source files. LLVM can demangle these suffixes for both functions
-  and data symbols. GNU libiberty can demangle suffixed function symbols, but
-  leaves suffixed data symbols unchanged. The option remains opt-in, and
-  variables with explicit assembly labels keep their original names.
-
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -279,8 +271,8 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
-- `-Wfortify-source` now diagnoses when `strlcat` or `__builtin_strlcat` is called with a size
-  argument larger than the destination buffer.
+- `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
+  `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
@@ -489,6 +481,14 @@ features cannot lower the translation-unit ABI level;
   zero size, unless the size is provably zero: a zero-sized base element or a
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
+
+- Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
+  (#GH181730)
+
+- `-Wdelete-abstract-non-virtual-dtor` and `-Wdelete-non-abstract-non-virtual-dtor`
+  no longer warn when the selected deallocation function is a destroying
+  `operator delete`, since such a delete expression never invokes the
+  destructor. (#GH65524)
 
 ### Improvements to Clang's time-trace
 
@@ -703,6 +703,9 @@ features cannot lower the translation-unit ABI level;
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
   on `if consteval {}`. (#GH220004)
+- Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
+  evaluated to a value not representable by a signed integer, such as an
+  unsigned wrap around. (#GH221418)
 
 ### OpenACC Specific Changes
 
