@@ -73,6 +73,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/InitializePasses.h"
@@ -1986,13 +1987,17 @@ bool isNotVisibleOnUnwindInLoop(const Value *Object, const Loop *L,
          isNotCapturedBeforeOrInLoop(Object, L, DT);
 }
 
-bool isThreadLocalObject(const Value *Object, const Loop *L, DominatorTree *DT,
-                         TargetTransformInfo *TTI) {
+bool isThreadLocalObject(const Value *Object, const Loop *L,
+                         DominatorTree *DT) {
   // The object must be function-local to start with, and then not captured
   // before/in the loop.
-  return (isIdentifiedFunctionLocal(Object) &&
-          isNotCapturedBeforeOrInLoop(Object, L, DT)) ||
-         (TTI->isSingleThreaded() || SingleThread);
+  if (isIdentifiedFunctionLocal(Object) &&
+      isNotCapturedBeforeOrInLoop(Object, L, DT))
+    return true;
+
+  // In a single-threaded environment, all objects are effectively thread-local.
+  const Module *M = L->getHeader()->getModule();
+  return M->getThreadModel() == ThreadModel::Single || SingleThread;
 }
 
 } // namespace
@@ -2241,7 +2246,7 @@ bool llvm::promoteLoopAccessesToScalars(
         (!ExplicitlyDereferenceableOnly ||
          isDereferenceablePointer(SomePtr, AccessTy, MDL,
                                   /*IgnoreFree=*/true)) &&
-        isThreadLocalObject(Object, CurLoop, DT, TTI))
+        isThreadLocalObject(Object, CurLoop, DT))
       StoreSafety = StoreSafe;
   }
 
