@@ -37,6 +37,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
+#include <array>
 #include <map>
 #include <memory>
 #include <optional>
@@ -2376,9 +2377,34 @@ void LoweringPreparePass::lowerStdOp(cir::StdOpInterface typedOp) {
     resultType = op->getResult(0).getType();
   cir::CallOp call = builder.createCallOp(
       op->getLoc(), typedOp.getOriginalFnAttr(), resultType, op->getOperands());
-  for (mlir::NamedAttribute attr : op->getAttrs())
-    if (attr.getName() != typedOp.getOriginalFnAttrName())
-      call->setAttr(attr.getName(), attr.getValue());
+  if (auto attr = op->getDiscardableAttrOfType<mlir::UnitAttr>(
+          call.getNothrowAttrName()))
+    call.setNothrowAttr(attr);
+  if (auto attr = op->getDiscardableAttrOfType<cir::InlineKindAttr>(
+          call.getInlineKindAttrName()))
+    call.setInlineKindAttr(attr);
+  if (auto attr = op->getDiscardableAttrOfType<mlir::UnitAttr>(
+          call.getMusttailAttrName()))
+    call.setMusttailAttr(attr);
+  if (auto attr = op->getDiscardableAttrOfType<cir::SideEffectAttr>(
+          call.getSideEffectAttrName()))
+    call.setSideEffectAttr(attr);
+  if (auto attr = op->getDiscardableAttrOfType<mlir::ArrayAttr>(
+          call.getArgAttrsAttrName()))
+    call.setArgAttrsAttr(attr);
+  if (auto attr = op->getDiscardableAttrOfType<mlir::ArrayAttr>(
+          call.getResAttrsAttrName()))
+    call.setResAttrsAttr(attr);
+
+  std::array callPropertyNames{
+      call.getNothrowAttrName(),  call.getInlineKindAttrName(),
+      call.getMusttailAttrName(), call.getSideEffectAttrName(),
+      call.getArgAttrsAttrName(), call.getResAttrsAttrName(),
+  };
+  for (mlir::NamedAttribute attr : op->getDiscardableAttrs()) {
+    if (!llvm::is_contained(callPropertyNames, attr.getName()))
+      call->setDiscardableAttr(attr.getName(), attr.getValue());
+  }
 
   op->replaceAllUsesWith(call);
   op->erase();

@@ -1378,15 +1378,17 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
     printer << ")";
   }
 
-  llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
-      CIRDialect::getCalleeAttrName(),
-      CIRDialect::getMustTailAttrName(),
-      CIRDialect::getNoThrowAttrName(),
-      CIRDialect::getSideEffectAttrName(),
-      CIRDialect::getOperandSegmentSizesAttrName(),
-      llvm::StringRef("res_attrs"),
-      llvm::StringRef("arg_attrs")};
-  printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
+  llvm::SmallVector<mlir::NamedAttribute> attrs(
+      op->getDiscardableAttrDictionary().getValue());
+  mlir::StringAttr inlineKindName = callLikeOp.getInlineKindAttrName();
+  if (std::optional<mlir::Attribute> inlineKind =
+          op->getInherentAttr(inlineKindName);
+      inlineKind && *inlineKind)
+    attrs.emplace_back(inlineKindName, *inlineKind);
+  llvm::sort(attrs, [](mlir::NamedAttribute lhs, mlir::NamedAttribute rhs) {
+    return lhs.getName().strref() < rhs.getName().strref();
+  });
+  printer.printOptionalAttrDict(attrs);
   printer << " : ";
   if (calleeSym || !argAttrs) {
     call_interface_impl::printFunctionSignature(
@@ -1630,7 +1632,8 @@ void cir::IfOp::print(OpAsmPrinter &p) {
                   /*printBlockTerminators=*/!omitRegionTerm(elseRegion));
   }
 
-  p.printOptionalAttrDict(getOperation()->getAttrs());
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 }
 
 /// Default callback for IfOp builders.
@@ -4233,11 +4236,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   if (getSideEffects())
     p << " side_effects";
 
-  std::array elidedAttrs{
-      llvm::StringRef("asm_flavor"),        llvm::StringRef("asm_string"),
-      llvm::StringRef("constraints"),       llvm::StringRef("operand_attrs"),
-      llvm::StringRef("operands_segments"), llvm::StringRef("side_effects")};
-  p.printOptionalAttrDict(getOperation()->getAttrs(), elidedAttrs);
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 
   if (auto v = getRes())
     p << " -> " << v.getType();

@@ -930,6 +930,20 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
   newCall->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, newArgAttrs));
 }
 
+static void copyCallAttributes(cir::CallOp source, cir::CallOp target) {
+  target.setNothrow(source.getNothrow());
+  target.setInlineKind(source.getInlineKind());
+  target.setMusttail(source.getMusttail());
+  target.setSideEffect(source.getSideEffect());
+  if (mlir::ArrayAttr argAttrs = source.getArgAttrsAttr())
+    target.setArgAttrsAttr(argAttrs);
+  if (mlir::ArrayAttr resAttrs = source.getResAttrsAttr())
+    target.setResAttrsAttr(resAttrs);
+  for (mlir::NamedAttribute attr : source->getDiscardableAttrs())
+    if (!target->hasDiscardableAttr(attr.getName()))
+      target->setDiscardableAttr(attr.getName(), attr.getValue());
+}
+
 /// For an indirect call, prepend the callee function pointer as operand 0 so
 /// CallOp::create rebuilds it as an indirect call, bitcasting it to a function
 /// pointer whose signature matches the rewritten operands and return type.
@@ -1019,9 +1033,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   prependIndirectCallee(call, sretArgs, sretVoidTy, builder);
   auto newCall = cir::CallOp::create(
       builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
-  for (mlir::NamedAttribute attr : call->getAttrs())
-    if (!newCall->hasAttr(attr.getName()))
-      newCall->setAttr(attr.getName(), attr.getValue());
+  copyCallAttributes(call, newCall);
 
   // Shape the per-argument attrs exactly as the non-sret path does
   // (signext / zeroext for Extend, drop Ignore slots, byval / align for
@@ -1392,9 +1404,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   prependIndirectCallee(call, newArgs, callRetTy, builder);
   auto newCall = cir::CallOp::create(builder, call.getLoc(),
                                      call.getCalleeAttr(), callRetTy, newArgs);
-  for (mlir::NamedAttribute attr : call->getAttrs())
-    if (!newCall->hasAttr(attr.getName()))
-      newCall->setAttr(attr.getName(), attr.getValue());
+  copyCallAttributes(call, newCall);
 
   // Direct return with coercion: the new call returns the coerced type;
   // emit a coercion back to the original type for the call's existing uses.
