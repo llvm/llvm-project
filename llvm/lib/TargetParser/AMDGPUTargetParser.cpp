@@ -484,7 +484,7 @@ unsigned AMDGPU::getLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
   if (getFeatureBitset(AK).test(FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY))
     Size *= 2;
 
-  // In CU mode the work-group runs on two SIMDs and reaches only their half.
+  // In half-SIMD mode the work-group reaches only half of the block.
   if (!FullSIMDMode)
     Size /= 2;
 
