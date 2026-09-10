@@ -308,10 +308,8 @@ bool SIInstrInfo::isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode) {
 bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   assert(isVALU(MI, /*AllowLDSDMA=*/true));
 
-  // A VGPR "as memory" indexed access reads or writes the per-lane vector
-  // registers of the active lanes, so which lanes are active is part of what it
-  // does. Its implicit use of EXEC must not be treated as ignorable, or the
-  // access could be moved across a write to EXEC.
+  // Which lanes are active is part of what such an access does, so its implicit
+  // use of EXEC is not ignorable; otherwise it could move across an EXEC write.
   if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
     return true;
 
@@ -675,13 +673,9 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     BaseOp = &LdStIdx->getIdxOp();
     OffsetOp = &LdStIdx->getOffsetOp();
 
-    // Callers compare two accesses by base operand and constant offset, and
-    // treat identical bases as the same address. That only holds while the base
-    // names a value. On a movrel subtarget every one of these reads M0, so two
-    // accesses with unrelated indices compare as the same base and would be
-    // declared disjoint on their offsets alone; M0 can also be redefined
-    // between them, which the comparison does not look for. Report such an
-    // access as opaque instead.
+    // Callers treat identical base operands as the same address, which only
+    // holds while the base names a value. On a movrel subtarget these all read
+    // M0, and M0 can be redefined between them, so report them as opaque.
     if (!BaseOp->isReg() || !BaseOp->getReg().isVirtual())
       return false;
 
@@ -4331,8 +4325,7 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.isBundle() || MIb.isBundle())
     return false;
 
-  // VGPR "as memory" indexed accesses only alias each other, and then only
-  // when their [idx+offset, idx+offset+width) dword ranges overlap.
+  // These only alias each other, and only on overlapping dword ranges.
   const bool IsLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
   const bool IsLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
   if (IsLdStIdxA || IsLdStIdxB) {
@@ -7791,14 +7784,12 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // A VGPR "as memory" indexed load/store needs its dword index in an SGPR (it
-  // becomes M0). A divergent (VGPR) index is made uniform with a waterfall
-  // loop that executes the access once per unique index across the wave.
+  // The dword index must be in an SGPR (it becomes M0), so a divergent index is
+  // made uniform with a waterfall loop.
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
     MachineOperand *Idx = &LdStIdx->getIdxOp();
-    // Waterfall any non-SGPR index. isSGPRReg handles both virtual and physical
-    // registers, so a physical (non-SGPR) index - not expected here, but still
-    // possible - is made uniform rather than silently skipped.
+    // isSGPRReg handles physical registers too, so an unexpected physical index
+    // is waterfalled rather than silently skipped.
     if (Idx->isReg() && !RI.isSGPRReg(MRI, Idx->getReg()))
       CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
     return CreatedBB;
@@ -11321,9 +11312,8 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
     return ValueUniformity::Default;
   }
 
-  // A VGPR ("as memory") indexed load is always divergent: it reads the wave's
-  // per-lane view of its vector registers, so even a uniform index yields a
-  // per-lane (divergent) value.
+  // Always divergent: it reads the wave's per-lane registers, so even a uniform
+  // index yields a per-lane value.
   if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
     return ValueUniformity::NeverUniform;
 
@@ -11438,9 +11428,7 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
     return ValueUniformity::Default;
   }
 
-  // As above for the generic opcodes, but after instruction selection: an
-  // indexed load reads the wave's per-lane view of its vector registers, so
-  // even a uniform index yields a divergent value.
+  // As above, after instruction selection.
   if (isa<AMDGPUMI::VLoadIdxInst>(MI))
     return ValueUniformity::NeverUniform;
 

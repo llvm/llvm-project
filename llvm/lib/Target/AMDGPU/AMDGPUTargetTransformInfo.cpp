@@ -1208,9 +1208,8 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
 
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results. The same is true of the VGPR ("as memory") address
-  // space: it is a per-lane view of the vector registers, so an access at a
-  // uniform offset still yields a per-lane (divergent) value.
+  // different results. The VGPR ("as memory") space is likewise divergent: it
+  // is a per-lane view, so even a uniform offset yields a per-lane value.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
