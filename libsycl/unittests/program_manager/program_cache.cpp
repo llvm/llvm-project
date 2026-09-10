@@ -75,8 +75,7 @@ getKernel(const std::shared_ptr<detail::ContextImpl> &Context,
 } // namespace
 
 // A program belongs to the context it was created in, so two contexts over the
-// same device must not share one. Before the cache was keyed by context, the
-// second context silently reused the first context's program.
+// same device must not share one.
 TEST(ProgramCache, ProgramIsCreatedPerContext) {
   mock::MockWrapper Mock;
   allowContextAndProgramLifetimeCalls(Mock.get());

@@ -130,8 +130,8 @@ protected:
       MDeviceImageManagers;
 
   // Contexts that may hold programs created from the device images above. A
-  // context owns its programs, so it is the only one that can destroy them, and
-  // it must do so before an image they were created from is destroyed.
+  // context is the sole owner of its programs, and it must destroy them before
+  // the image they were created from is destroyed.
   //
   // Entries are weak and pruned lazily: a context can be destroyed at any point
   // and ~ContextImpl must not call back into this class, because that would
