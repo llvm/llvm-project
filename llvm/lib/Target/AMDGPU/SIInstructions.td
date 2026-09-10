@@ -4681,13 +4681,13 @@ def fpimm_neg_pow2_prefer_ldexp_f64 : FPImmLeaf<f64, [{
 def : GCNPat<
   (any_fmul (f64 (VOP3Mods f64:$src0, i32:$src0_mods)),
             fpimm_pos_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 i32:$src0_mods, VSrc_b64:$src0,
+  (V_LDEXP_F64_e64 i32:$src0_mods, VSrc_NoLit64_b64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 
 def : GCNPat<
   (any_fmul f64:$src0, fpimm_neg_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 SRCMODS.NEG, VSrc_b64:$src0,
+  (V_LDEXP_F64_e64 SRCMODS.NEG, VSrc_NoLit64_b64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 
@@ -4697,7 +4697,7 @@ def : GCNPat<
 // for a second operand.
 def : GCNPat<
   (any_fmul (fabs f64:$src0), fpimm_neg_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 SRCMODS.NEG_ABS, VSrc_b64:$src0,
+  (V_LDEXP_F64_e64 SRCMODS.NEG_ABS, VSrc_NoLit64_b64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 

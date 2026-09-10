@@ -2019,7 +2019,7 @@ class getSDWASrcForVT <ValueType VT> {
 // given VT.
 class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
   RegisterOperand ret =
-  !cond(!eq(VT, f64)       : VSrc_f64,
+  !cond(!eq(VT, f64)       : VSrc_NoLit64_f64,
         !eq(VT, f32)       : VSrc_f32,
         !eq(VT, f16)       : !if(IsTrue16, VSrcT_f16, VSrc_f16),
         !eq(VT, bf16)      : !if(IsTrue16, VSrcT_bf16, VSrc_bf16),
@@ -2039,7 +2039,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT.Size, 192)  : VRegSrc_192,
         !eq(VT.Size, 128)  : VRegSrc_128,
         !eq(VT.Size, 96)   : VRegSrc_96,
-        !eq(VT.Size, 64)   : VSrc_b64,
+        !eq(VT.Size, 64)   : VSrc_NoLit64_b64,
         1                  : VSrc_b32);
 }
 
