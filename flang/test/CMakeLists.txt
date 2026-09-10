@@ -61,6 +61,15 @@ check_cxx_source_compiles(
   "
   HAVE_LDBL_MANT_DIG_113)
 
+# Check whether the flang compiler itself can fold REAL(16) intrinsic calls
+# through libquadmath. This mirrors the HAS_QUADMATHLIB condition in
+# flang/lib/Evaluate/CMakeLists.txt (FOUND_QUADMATH_LIB is computed and
+# cached there, which runs before this directory).
+set(FLANG_FOLD_REAL16_QUADMATH "")
+if (FLANG_INCLUDE_QUADMATH_H AND FOUND_QUADMATH_LIB)
+  set(FLANG_FOLD_REAL16_QUADMATH "TRUE")
+endif ()
+
 # FIXME In out-of-tree builds, "SHLIBDIR" is undefined and passing it to
 # `configure_lit_site_cfg` leads to a configuration error. This is currently
 # only required by plugins/examples, which are not supported in out-of-tree
