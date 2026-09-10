@@ -319,15 +319,12 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     unsigned LateStartPos = Pos < 0 ? 0 : static_cast<unsigned>(Pos);
     unsigned Earliest = LateStartPos;
     for (int P = static_cast<int>(LateStartPos) - 1; P >= 0; --P) {
-      if (Hist[static_cast<unsigned>(P)] + F.VGPRs <= Budget)
-        Earliest = static_cast<unsigned>(P);
-      else
+      const unsigned Candidate = static_cast<unsigned>(P);
+      if (Hist[Candidate] + F.VGPRs > Budget)
         break;
+      Earliest = Candidate;
+      Hist[Candidate] += F.VGPRs;
     }
-    // Update the histogram so later fragments don't schedule earlier and
-    // exceed the budget.
-    for (unsigned P = Earliest; P < LateStartPos; ++P)
-      Hist[P] += F.VGPRs;
     LLVM_DEBUG({
       dbgs() << "[6] frag (";
       for (unsigned I = 0; I < F.Subloads.size(); ++I)
