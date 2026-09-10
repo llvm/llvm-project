@@ -164,7 +164,9 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
     const bool HasSampledTarget =
         llvm::any_of(CallTargets, [](const auto &C) { return C.second != 0; });
     for (const auto &C : CallTargets) {
-      // Zero-count targets carry no evidence of another sampled callee.
+      // Zero-count targets remain meaningful in the profile, but should not
+      // obscure a uniquely sampled callee when choosing a matching anchor.
+      // Ignore them here when sampled targets exist; retain all-zero locations.
       if (HasSampledTarget && C.second == 0)
         continue;
       InsertAnchor(Loc, C.first, ProfileAnchors);
@@ -180,7 +182,8 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
     const bool HasSampledCallee = llvm::any_of(
         Callees, [](const auto &C) { return C.second.getTotalSamples() != 0; });
     for (const auto &C : Callees) {
-      // Zero-sample inline frames carry no evidence of another call target.
+      // Apply the same anchor selection policy to inline callees, preserving
+      // zero-sample frames in the profile.
       if (HasSampledCallee && C.second.getTotalSamples() == 0)
         continue;
       InsertAnchor(Loc, C.first, ProfileAnchors);
