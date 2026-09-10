@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// FileMode class handles everything regarding the mode of the file, be it's
+// FileMode class handles everything regarding the mode of the file, be it
 // opening mode or content type.
 class FileMode {
 public:
