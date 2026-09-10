@@ -14660,8 +14660,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
         assert(Operands[I].getValueType().isSimple() &&
                isLegalVTForZvzipOperand(Operands[I].getSimpleValueType(),
                                         Subtarget));
-        SDValue V1 = DAG.getFreeze(Operands[I]);
-        SDValue V2 = DAG.getFreeze(Operands[I + 1]);
         // Do not generate VECTOR_INTERLEAVE2 + CONCAT_VECTORS here. Because
         // when those two nodes are subsequently lowered, there will
         // be a bunch of insert_subvector and extract_subvector generated.
@@ -14672,7 +14670,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
         // We could write additional combining rules for those VSLIDEUP/DOWN_VL
         // but it'll probably be a lot easier to just not generate
         // VECTOR_INTERLEAVE2 + CONCAT_VECTORS in the first place here.
-        Operands[I / 2] = lowerZvzipVZIP(V1, V2, DL, DAG, Subtarget);
+        Operands[I / 2] =
+            lowerZvzipVZIP(Operands[I], Operands[I + 1], DL, DAG, Subtarget);
       }
     }
 
