@@ -342,7 +342,7 @@ public:
   void writeTo(uint8_t *buf) const override;
   void setUp();
 
-  static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+  static constexpr llvm::StringLiteral objcMsgSendStubPrefix = "_objc_msgSend$";
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
 
@@ -354,6 +354,8 @@ private:
   size_t getStubSize() const;
 
   std::vector<Defined *> symbols;
+  // Total byte size of all stubs added so far.
+  size_t stubsSize = 0;
   Symbol *objcMsgSend = nullptr;
 };
 
