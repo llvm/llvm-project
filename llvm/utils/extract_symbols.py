@@ -155,6 +155,10 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
         # because they are used for debugging only.
         if symbol.startswith(("?dump@", "?dumpColor@", "?printPretty@")):
             return None
+        # Remove clang::interp:: symbols: the bytecode interpreter's headers are
+        # private to clang/lib/AST/ByteCode, so no plugin can reference them.
+        if "@interp@clang@@" in symbol:
+            return None
         return symbol
     # Keep mangled global variables and static class members in llvm:: namespace.
     # These have a type mangling that looks like (this is derived from
