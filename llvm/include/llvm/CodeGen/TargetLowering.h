@@ -476,7 +476,7 @@ public:
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
-  /// ISD::VP_ADD, ISD::VP_SUB, etc. It must be a legal scalar integer type,
+  /// ISD::VP_UDIV, ISD::VP_SDIV, etc. It must be a legal scalar integer type,
   /// and must be at least as large as i32. The EVL is implicitly zero-extended
   /// to any larger type.
   virtual MVT getVPExplicitVectorLengthTy() const { return MVT::i32; }
@@ -1775,6 +1775,24 @@ public:
     return Action == Legal || Action == Custom;
   }
 
+  /// Return how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor and VT should be handled.
+  LegalizeAction getVectorInterleaveAction(unsigned Opc, unsigned Factor,
+                                           EVT VT) const {
+    assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
+    VectorInterleaveActionKey Key = {Opc, Factor, VT.getSimpleVT().SimpleTy};
+    auto It = VectorInterleaveActions.find(Key);
+    return It != VectorInterleaveActions.end() ? It->second : Expand;
+  }
+
+  /// Return true if a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor and fragment type is legal or custom.
+  bool isVectorInterleaveLegalOrCustom(unsigned Opc, unsigned Factor,
+                                       EVT VT) const {
+    LegalizeAction Action = getVectorInterleaveAction(Opc, Factor, VT);
+    return Action == Legal || Action == Custom;
+  }
+
   /// If the action for this operation is to promote, this method returns the
   /// ValueType to promote to.
   MVT getTypeToPromoteTo(unsigned Op, MVT VT) const {
@@ -2279,8 +2297,14 @@ public:
   /// require a more complex expansion.
   unsigned getMinCmpXchgSizeInBits() const { return MinCmpXchgSizeInBits; }
 
-  /// Whether the target supports unaligned atomic operations.
-  bool supportsUnalignedAtomics() const { return SupportsUnalignedAtomics; }
+  /// Return true if the target supports an atomic access of \p SizeInBytes
+  /// bytes at the given \p Alignment. The default implementation only allows
+  /// naturally aligned atomics, unless setSupportsUnalignedAtomics(true) was
+  /// called.
+  virtual bool isAtomicAlignmentSupported(Align Alignment,
+                                          uint64_t SizeInBytes) const {
+    return SupportsUnalignedAtomics || Alignment.value() >= SizeInBytes;
+  }
 
   /// Whether AtomicExpandPass should automatically insert fences and reduce
   /// ordering for this atomic. This should be true for most architectures with
@@ -2873,6 +2897,23 @@ protected:
                                  MVT InputVT, LegalizeAction Action) {
     for (unsigned Opc : Opcodes)
       setPartialReduceMLAAction(Opc, AccVT, InputVT, Action);
+  }
+
+  /// Indicate how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor Factor and type VT should be treated.
+  void setVectorInterleaveAction(unsigned Opc, unsigned Factor, MVT VT,
+                                 LegalizeAction Action) {
+    assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
+    VectorInterleaveActionKey Key = {Opc, Factor, VT.SimpleTy};
+    VectorInterleaveActions[Key] = Action;
+  }
+
+  void setVectorInterleaveAction(ArrayRef<unsigned> Opcodes,
+                                 ArrayRef<unsigned> Factors, MVT VT,
+                                 LegalizeAction Action) {
+    for (unsigned Opc : Opcodes)
+      for (unsigned Factor : Factors)
+        setVectorInterleaveAction(Opc, Factor, VT, Action);
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -3673,10 +3714,6 @@ public:
       if (isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, ToVT))
         return ISD::STRICT_FP_TO_SINT;
       break;
-    case ISD::VP_FP_TO_UINT:
-      if (isOperationLegalOrCustom(ISD::VP_FP_TO_SINT, ToVT))
-        return ISD::VP_FP_TO_SINT;
-      break;
     default:
       break;
     }
@@ -3908,6 +3945,12 @@ private:
   /// keep a LegalizeAction which indicates how instruction selection should
   /// deal with this operation.
   DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
+
+  using VectorInterleaveActionKey =
+      std::tuple<unsigned, unsigned, MVT::SimpleValueType>;
+  /// For each vector (de)interleave opcode, interleave factor and fragment
+  /// type combination, keep the corresponding LegalizeAction.
+  DenseMap<VectorInterleaveActionKey, LegalizeAction> VectorInterleaveActions;
 
   ValueTypeActionImpl ValueTypeActions;
 
@@ -5770,20 +5813,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTPOP(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTPOP nodes.
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandVPCTPOP(SDNode *N, SelectionDAG &DAG) const;
-
   /// Expand CTLZ/CTLZ_ZERO_POISON nodes. Expands vector/scalar CTLZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand VP_CTLZ/VP_CTLZ_ZERO_POISON nodes.
-  /// \param N Node to expand
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTLS (count leading sign bits) nodes.
   /// CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
@@ -5802,11 +5836,6 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand VP_CTTZ/VP_CTTZ_ZERO_POISON nodes.
-  /// \param N Node to expand
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_POISON nodes.
   /// \param N Node to expand
@@ -5853,21 +5882,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandBSWAP(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_BSWAP nodes. Expands VP_BSWAP nodes with
-  /// i16/i32/i64 scalar types. Returns SDValue() if expand fails. \param N Node
-  /// to expand \returns The expansion result or SDValue() if it fails.
-  SDValue expandVPBSWAP(SDNode *N, SelectionDAG &DAG) const;
-
   /// Expand BITREVERSE nodes. Expands scalar/vector BITREVERSE nodes.
   /// Returns SDValue() if expand fails.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandBITREVERSE(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand VP_BITREVERSE nodes. Expands VP_BITREVERSE nodes with
-  /// i8/i16/i32/i64 scalar types. \param N Node to expand \returns The
-  /// expansion result or SDValue() if it fails.
-  SDValue expandVPBITREVERSE(SDNode *N, SelectionDAG &DAG) const;
 
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
@@ -6030,32 +6049,28 @@ public:
       SmallVectorImpl<SDValue> &Results,
       std::optional<unsigned> CallRetResNo = {}) const;
 
-  /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
-  /// on the current target. A VP_SETCC will additionally be given a Mask
-  /// and/or EVL not equal to SDValue().
+  /// Legalize a SETCC with given LHS and RHS and condition code CC on the
+  /// current target.
   ///
   /// If the SETCC has been legalized using AND / OR, then the legalized node
   /// will be stored in LHS. RHS and CC will be set to SDValue(). NeedInvert
-  /// will be set to false. This will also hold if the VP_SETCC has been
-  /// legalized using VP_AND / VP_OR.
+  /// will be set to false.
   ///
-  /// If the SETCC / VP_SETCC has been legalized by using
-  /// getSetCCSwappedOperands(), then the values of LHS and RHS will be
-  /// swapped, CC will be set to the new condition, and NeedInvert will be set
-  /// to false.
+  /// If the SETCC has been legalized by using getSetCCSwappedOperands(), then
+  /// the values of LHS and RHS will be swapped, CC will be set to the new
+  /// condition, and NeedInvert will be set to false.
   ///
-  /// If the SETCC / VP_SETCC has been legalized using the inverse condcode,
-  /// then LHS and RHS will be unchanged, CC will set to the inverted condcode,
-  /// and NeedInvert will be set to true. The caller must invert the result of
-  /// the SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to
-  /// swap the effect of a true/false result.
+  /// If the SETCC has been legalized using the inverse condcode, then LHS and
+  /// RHS will be unchanged, CC will set to the inverted condcode, and
+  /// NeedInvert will be set to true. The caller must invert the result of the
+  /// SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to swap
+  /// the effect of a true/false result.
   ///
-  /// \returns true if the SETCC / VP_SETCC has been legalized, false if it
-  /// hasn't.
+  /// \returns true if the SETCC has been legalized, false if it hasn't.
   bool LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT, SDValue &LHS,
-                             SDValue &RHS, SDValue &CC, SDValue Mask,
-                             SDValue EVL, bool &NeedInvert, const SDLoc &dl,
-                             SDValue &Chain, bool IsSignaling = false) const;
+                             SDValue &RHS, SDValue &CC, bool &NeedInvert,
+                             const SDLoc &dl, SDValue &Chain,
+                             bool IsSignaling = false) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

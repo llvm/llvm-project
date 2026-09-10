@@ -452,12 +452,12 @@ int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,
 }
 
 addr_t DynamicLoader::ReadPointer(addr_t addr) {
-  Status error;
-  addr_t value = m_process->ReadPointerFromMemory(addr, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> value = m_process->ReadPointerFromMemory(addr);
+  if (!value) {
+    llvm::consumeError(value.takeError());
     return LLDB_INVALID_ADDRESS;
-  else
-    return value;
+  }
+  return *value;
 }
 
 void DynamicLoader::LoadOperatingSystemPlugin(bool flush)

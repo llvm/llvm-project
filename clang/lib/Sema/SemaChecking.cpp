@@ -1450,7 +1450,11 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIstrncpy:
   case Builtin::BI__builtin_strncpy:
   case Builtin::BIstpncpy:
-  case Builtin::BI__builtin_stpncpy: {
+  case Builtin::BI__builtin_stpncpy:
+  case Builtin::BIstrlcat:
+  case Builtin::BI__builtin_strlcat:
+  case Builtin::BIstrlcpy:
+  case Builtin::BI__builtin_strlcpy: {
     // Whether these functions overflow depends on the runtime strlen of the
     // string, not just the buffer size, so emitting the "always overflow"
     // diagnostic isn't quite right. We should still diagnose passing a buffer
@@ -2314,7 +2318,7 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::ppc64le:
     return PPC().CheckPPCBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::amdgpu:
-    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
+    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
   case llvm::Triple::riscv32be:
@@ -3015,8 +3019,9 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
     if (MPT->isMemberDataPointer())
       return BinOp;
 
+    // Give the synthesized expression a valid source range for diagnostics.
     auto *MemCall = new (S.Context)
-        ParenExpr(SourceLocation(), SourceLocation(), BinOp.get());
+        ParenExpr(TheCall->getBeginLoc(), TheCall->getRParenLoc(), BinOp.get());
 
     return S.ActOnCallExpr(S.getCurScope(), MemCall, TheCall->getBeginLoc(),
                            Args.drop_front(2), TheCall->getRParenLoc());
@@ -13265,7 +13270,8 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
 }
 
 // Helper function to filter out cases for constant width constant conversion.
-// Don't warn on char array initialization or for non-decimal values.
+// Don't warn on unsigned char array initialization or for non-decimal
+// values.
 static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
                                           SourceLocation CC) {
   // If initializing from a constant, and the constant starts with '0',
@@ -13278,9 +13284,9 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
       return false;
   }
 
-  // If the CC location points to a '{', and the type is char, then assume
-  // assume it is an array initialization.
-  if (CC.isValid() && T->isCharType()) {
+  // If the CC location points to a '{' and the type is an unsigned char
+  // type, assume it is an array initialization.
+  if (T->isCharType() && !T->isSignedIntegerType() && CC.isValid()) {
     const char FirstContextCharacter =
         S.getSourceManager().getCharacterData(CC)[0];
     if (FirstContextCharacter == '{')
@@ -13584,6 +13590,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (TargetBT && TargetBT->isSveVLSBuiltinType())
     Target = TargetBT->getSveEltType(Context).getTypePtr();
+
+  // Nothing to diagnose if stripping the wrappers left identical element types
+  // (e.g. a scalar splatted to a vector of its own type).
+  if (Source == Target)
+    return;
 
   // If the source is floating point...
   if (SourceBT && SourceBT->isFloatingPoint()) {
@@ -16592,19 +16603,13 @@ static bool isLayoutCompatibleUnion(const ASTContext &C, const RecordDecl *RD1,
                                                           RD2->fields());
 
   for (auto *Field1 : RD1->fields()) {
-    auto I = UnmatchedFields.begin();
-    auto E = UnmatchedFields.end();
-
-    for ( ; I != E; ++I) {
-      if (isLayoutCompatible(C, Field1, *I, /*IsUnionMember=*/true)) {
-        bool Result = UnmatchedFields.erase(*I);
-        (void) Result;
-        assert(Result);
-        break;
-      }
-    }
-    if (I == E)
+    auto It = llvm::find_if(UnmatchedFields, [&](const FieldDecl *Field2) {
+      return isLayoutCompatible(C, Field1, Field2, /*IsUnionMember=*/true);
+    });
+    if (It == UnmatchedFields.end())
       return false;
+    [[maybe_unused]] bool Result = UnmatchedFields.erase(*It);
+    assert(Result);
   }
 
   return UnmatchedFields.empty();

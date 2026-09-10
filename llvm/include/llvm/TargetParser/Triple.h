@@ -268,6 +268,7 @@ public:
     AMDGPUSubArch1201,
 
     AMDGPUSubArch12_5,
+    AMDGPUSubArch1250S,
     AMDGPUSubArch1250,
     AMDGPUSubArch1251,
 
@@ -1265,6 +1266,26 @@ public:
   bool supportsCOMDAT() const {
     return !(isOSBinFormatMachO() || isOSBinFormatXCOFF() ||
              isOSBinFormatDXContainer());
+  }
+
+  /// Tests whether the target supports debug entry values.
+  bool supportsDebugEntryValues() const {
+    switch (getArch()) {
+    case Triple::x86:
+    case Triple::x86_64:
+    case Triple::aarch64:
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::mips:
+    case Triple::mipsel:
+    case Triple::mips64:
+    case Triple::mips64el:
+    case Triple::riscv32:
+    case Triple::riscv64:
+      return true;
+    default:
+      return false;
+    }
   }
 
   /// Tests whether the target uses emulated TLS as default.

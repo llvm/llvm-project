@@ -377,6 +377,12 @@ public:
     uint32_t LowerBound;
     uint32_t Size;
 
+    ResourceBinding() : BindingID(0), Space(0), LowerBound(0), Size(0) {}
+    ResourceBinding(uint32_t BindingID, uint32_t Space, uint32_t LowerBound,
+                    uint32_t Size)
+        : BindingID(BindingID), Space(Space), LowerBound(LowerBound),
+          Size(Size) {}
+
     bool operator==(const ResourceBinding &RHS) const {
       return std::tie(BindingID, Space, LowerBound, Size) ==
              std::tie(RHS.BindingID, RHS.Space, RHS.LowerBound, RHS.Size);

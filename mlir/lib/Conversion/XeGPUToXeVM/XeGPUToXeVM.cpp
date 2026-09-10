@@ -804,7 +804,7 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       Value loaded =
           LLVM::LoadOp::create(rewriter, loc, valOrResTy, basePtrLLVM);
       // Set cache control attribute on the load operation.
-      loaded.getDefiningOp()->setAttr(
+      loaded.getDefiningOp()->setDiscardableAttr(
           "cache_control", xevm::LoadCacheControlAttr::get(
                                ctxt, translateLoadXeGPUCacheHint(
                                          op.getL1Hint(), op.getL3Hint())));
@@ -832,7 +832,7 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       auto storeOp =
           LLVM::StoreOp::create(rewriter, loc, adaptor.getValue(), basePtrLLVM);
       // Set cache control attribute on the store operation.
-      storeOp.getOperation()->setAttr(
+      storeOp.getOperation()->setDiscardableAttr(
           "cache_control", xevm::StoreCacheControlAttr::get(
                                ctxt, translateStoreXeGPUCacheHint(
                                          op.getL1Hint(), op.getL3Hint())));
@@ -1249,7 +1249,7 @@ class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
     for (int i = 0; i < srcOrDstVecTy.getNumElements(); i++) {
       auto val = vector::ExtractOp::create(rewriter, loc, resVec, i);
       Value idx = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(),
-                                           rewriter.getIndexAttr(i));
+                                           rewriter.getI64IntegerAttr(i));
       Value currPtr =
           LLVM::GEPOp::create(rewriter, loc, ptrTypeLLVM,
                               srcOrDstVecTy.getElementType(), basePtrLLVM, idx);

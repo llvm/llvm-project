@@ -688,7 +688,7 @@ func.func @linalg_add_reshape_consumer_fusion(%arg0 : tensor<?x?xf32>,
                                               %sz1: index) ->
                                               tensor<?x?x4x5xf32>
 {
-  %0 = linalg.add ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %0 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
        outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %1 = tensor.expand_shape %0 [[0], [1, 2, 3]] output_shape [%sz0, %sz1, 4, 5] :
     tensor<?x?xf32> into tensor<?x?x4x5xf32>
@@ -720,7 +720,7 @@ func.func @linalg_add_reshape_producer_fusion(%arg0 : tensor<?x7x?x8xf32>,
 {
   %0 = tensor.collapse_shape %arg0 [[0, 1], [2, 3]] :
     tensor<?x7x?x8xf32> into tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
        outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }

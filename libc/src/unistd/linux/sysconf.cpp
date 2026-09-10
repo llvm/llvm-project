@@ -127,6 +127,11 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   switch (name) {
   case _SC_ARG_MAX:
     return get_arg_max();
+  case _SC_CLK_TCK:
+    // On Linux, this is a counterpart of kernel constant USER_HZ, which is
+    // set to 100 on most platforms for user-space compatibility:
+    // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/param.h#L6
+    return 100;
   case _SC_PAGESIZE:
     return get_page_size();
   case _SC_NPROCESSORS_CONF:
@@ -135,6 +140,14 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
     return get_nprocessors_onln();
   case _SC_THREADS:
     return _POSIX_THREADS;
+  case _SC_GETGR_R_SIZE_MAX:
+    // No recommended buffer size for getgrgid_r/getgrnam_r, as they work
+    // with any user-supplied buffer.
+    return -1;
+  case _SC_GETPW_R_SIZE_MAX:
+    // No recommended buffer size for getpwuid_r/getpwnam_r, as they work
+    // with any user-supplied buffer.
+    return -1;
   case _SC_OPEN_MAX:
     return get_open_max();
   case _SC_PHYS_PAGES:

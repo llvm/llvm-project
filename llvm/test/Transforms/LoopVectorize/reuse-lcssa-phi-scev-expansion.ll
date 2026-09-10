@@ -206,11 +206,11 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    br i1 [[INVAR_C]], label %[[LOOP_2_PREHEADER:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i32 [ [[IV_1]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[INDVAR]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 2, [[STEP]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[IV_1_LCSSA]], [[TMP0]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[INDVAR]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[SMAX]], [[TMP3]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
