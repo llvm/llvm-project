@@ -653,7 +653,7 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
           return Diag(CurLoc, diag::err_ppc_feature_no_runtime_detection)
                  << FeatureName;
         // All target_clones feature names must be valid target feature names.
-        assert(isValidFeatureName(FeatureName));
+        assert(TargetInfo.isValidFeatureName(FeatureName));
       }
       SmallString<64> CPU;
       if (LHS.starts_with("cpu=")) {
