@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/limits_macros.h"
+#include "src/__support/wctype_utils.h"
 #include "src/wchar/wcsncasecmp.h"
 #include "test/UnitTest/Test.h"
 
@@ -47,6 +48,18 @@ TEST(LlvmLibcWcsncasecmpTest, MatchingStringsIgnoreCaseUnlimited) {
   EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"aBc", INT_MAX), 0);
   EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"abC", INT_MAX), 0);
   EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"abc", L"ABC", INT_MAX), 0);
+
+#if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"Βγδ", L"βγδ", INT_MAX), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βΓδ", L"βγδ", INT_MAX), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγΔ", L"βγδ", INT_MAX), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"ΒΓΔ", L"βγδ", INT_MAX), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγδ", L"Βγδ", INT_MAX), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγδ", L"βΓδ", INT_MAX), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγδ", L"βγΔ", INT_MAX), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcsncasecmp(L"βγδ", L"ΒΓΔ", INT_MAX), 0);
+#endif // LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
 }
 
 TEST(LlvmLibcWcsncasecmpTest, NonMatchingStringsUnlimited) {

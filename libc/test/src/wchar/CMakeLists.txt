@@ -228,6 +228,7 @@ add_libc_test(
   SRCS
     wcscasecmp_test.cpp
   DEPENDS
+    libc.src.__support.wctype_utils
     libc.src.wchar.wcscasecmp
 )
 
@@ -238,6 +239,7 @@ add_libc_test(
   SRCS
     wcsncasecmp_test.cpp
   DEPENDS
+    libc.src.__support.wctype_utils
     libc.src.wchar.wcsncasecmp
 )
 

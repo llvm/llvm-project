@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/wctype_utils.h"
 #include "src/wchar/wcscasecmp.h"
 #include "test/UnitTest/Test.h"
 
@@ -45,6 +46,18 @@ TEST(LlvmLibcWcscasecmpTest, MatchingStringsIgnoreCase) {
   EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"abc", L"aBc"), 0);
   EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"abc", L"abC"), 0);
   EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"abc", L"ABC"), 0);
+
+#if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
+  EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"Βγδ", L"βγδ"), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"βΓδ", L"βγδ"), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"βγΔ", L"βγδ"), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"ΒΓΔ", L"βγδ"), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"βγδ", L"Βγδ"), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"βγδ", L"βΓδ"), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"βγδ", L"βγΔ"), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcscasecmp(L"βγδ", L"ΒΓΔ"), 0);
+#endif // LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
 }
 
 TEST(LlvmLibcWcscasecmpTest, NonMatchingStrings) {
