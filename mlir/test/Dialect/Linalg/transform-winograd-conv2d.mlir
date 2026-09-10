@@ -8,7 +8,7 @@ func.func @conv2d(%arg0: tensor<2x10x10x5xf32>, %arg1: tensor<2x3x3x5xf32>, %arg
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.winograd_conv2d %0 { fmr = 1: i32 } : (!transform.any_op) -> (!transform.any_op)
+    %1 = transform.structured.winograd_conv2d %0 fmr(F_4_3) : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -29,7 +29,7 @@ func.func @conv2d_unaligned(%arg0: tensor<2x11x11x5xf32>, %arg1: tensor<2x3x3x5x
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.winograd_conv2d %0 { fmr = 1: i32 } : (!transform.any_op) -> (!transform.any_op)
+    %1 = transform.structured.winograd_conv2d %0 fmr(F_4_3) : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -54,7 +54,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @+1 {{this operation is not supported to convert to Winograd Conv2D}}
-    %1 = transform.structured.winograd_conv2d %0 { fmr = 1: i32 } : (!transform.any_op) -> (!transform.any_op)
+    %1 = transform.structured.winograd_conv2d %0 fmr(F_4_3) : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -70,7 +70,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @+1 {{apply Winograd Conv2D failed}}
-    %1 = transform.structured.winograd_conv2d %0 { fmr = 1: i32 } : (!transform.any_op) -> (!transform.any_op)
+    %1 = transform.structured.winograd_conv2d %0 fmr(F_4_3) : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -86,7 +86,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @+1 {{apply Winograd Conv2D failed}}
-    %1 = transform.structured.winograd_conv2d %0 { fmr = 1: i32 } : (!transform.any_op) -> (!transform.any_op)
+    %1 = transform.structured.winograd_conv2d %0 fmr(F_4_3) : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
