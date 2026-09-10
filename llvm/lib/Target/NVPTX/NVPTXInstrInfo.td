@@ -741,16 +741,19 @@ let hasSideEffects = false in {
     def _f32 :
       BasicFlagsNVPTXInst<(outs B16:$dst),
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-                "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.f32">,
+                "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
+                  F8Name # "x2.f32">,
       Requires<[PTX81, SM89]>;
     def _f16x2 :
       BasicFlagsNVPTXInst<(outs B16:$dst),
                 (ins B32:$src), (ins CvtMode:$mode),
-                "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.f16x2">,
+                "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
+                  F8Name # "x2.f16x2">,
       Requires<[PTX81, SM89]>;
     def _bf16x2 :
       BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
-                "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.bf16x2">,
+                "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
+                  F8Name # "x2.bf16x2">,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
   }
 
@@ -849,14 +852,17 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
     def _f32_sf :
       BasicFlagsNVPTXInst<(outs B16:$dst),
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-                "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.f32">;
+                "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
+                  FP6Name # "x2.f32">;
     def _f16x2_sf : 
       BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
-              "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.f16x2">,
+              "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
+                FP6Name # "x2.f16x2">,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
     def _bf16x2_sf : 
       BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
-              "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.bf16x2">,
+              "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
+                FP6Name # "x2.bf16x2">,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
   }
 

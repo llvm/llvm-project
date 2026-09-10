@@ -2085,7 +2085,8 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF32x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$a, $b, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2127,7 +2128,8 @@ class NVVM_ConvertFPx2ToF6x2Op<string srcType>
 
   string llvmBuilder = [{
     auto intId = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$src, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2181,7 +2183,10 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    llvm::SmallVector<llvm::Value *> args = {$a, $b};
+    if (!mlir::isa<mlir::Float8E8M0FNUType>($dstTy))
+      args.push_back(builder.getInt1(false));
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2227,7 +2232,8 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF16x2ToF8x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$a, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2277,7 +2283,10 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    llvm::SmallVector<llvm::Value *> args = {$src};
+    if (!mlir::isa<mlir::Float8E8M0FNUType>($dstTy))
+      args.push_back(builder.getInt1(false));
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
