@@ -444,41 +444,13 @@ static bool isSupportedContractionPair(Operation *first, Operation *second) {
   return false;
 }
 
-// Converts linalg.generic to named linalg.*matmul* where possible.
-static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
-                                                        GenericOp genericOp,
-                                                        bool emitCategoryOp) {
-  if (genericOp.getNumDpsInputs() != 2 || genericOp.getNumDpsInits() != 1)
-    return failure();
-
-  // Early exit if not projected permutations.
-  auto mapRange = genericOp.getIndexingMapsArray();
-  if (llvm::any_of(mapRange,
-                   [](AffineMap m) { return !m.isProjectedPermutation(); }))
-    return failure();
-
-  // Only contractions that can be represented by named linalg ops are
-  // eligible for specialization:
-  //   - mul + add    (floating-point, integer, complex)
-  //   - and + or     (bool)
-  if (!mlir::linalg::detail::isContractionBody(*genericOp.getBlock(),
-                                               isSupportedContractionPair))
-    return failure();
-
-  // Determine the cast type for the named matmul op, or bail out if casts
-  // cannot be represented by the named op.
-  std::optional<TypeFn> castTy = getCastTypeForMatmulLikeOp(genericOp);
-  if (!castTy)
-    return rewriter.notifyMatchFailure(
-        genericOp, "contains invalid cast ops for the named matmul op");
-
-  // In case of category op, wider range of variants is supported.
-  if (emitCategoryOp)
-    return replaceWithMatmulVariant<ContractOp>(
-        rewriter, genericOp, castTy, genericOp.getIndexingMapsArray());
-
-  // Further checks for named variants.
-  //
+// Attempts to specialize `genericOp` to a specific named matmul variant
+// (`matmul`, `batch_matmul`, or `mmt4d`). Returns failure without modifying the
+// IR if no named variant matches. `castTy` is the cast type inferred for the
+// contraction body.
+static FailureOr<LinalgOp>
+specializeToNamedContraction(RewriterBase &rewriter, GenericOp genericOp,
+                             std::optional<TypeFn> castTy) {
   // Linalg generic contraction can be across multiple axis e.g.
   // ```
   //      linalg.generic
@@ -577,6 +549,52 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   }
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy,
                                             namedOpMaps);
+}
+
+// Converts linalg.generic to named linalg.*matmul* where possible, falling
+// back to the generic `linalg.contract` op otherwise.
+static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
+                                                        GenericOp genericOp,
+                                                        bool emitCategoryOp) {
+  if (genericOp.getNumDpsInputs() != 2 || genericOp.getNumDpsInits() != 1)
+    return failure();
+
+  // Early exit if not projected permutations.
+  auto mapRange = genericOp.getIndexingMapsArray();
+  if (llvm::any_of(mapRange,
+                   [](AffineMap m) { return !m.isProjectedPermutation(); }))
+    return failure();
+
+  // Only contractions that can be represented by named linalg ops are
+  // eligible for specialization:
+  //   - mul + add    (floating-point, integer, complex)
+  //   - and + or     (bool)
+  if (!mlir::linalg::detail::isContractionBody(*genericOp.getBlock(),
+                                               isSupportedContractionPair))
+    return failure();
+
+  // Determine the cast type for the named matmul op, or bail out if casts
+  // cannot be represented by the named op.
+  std::optional<TypeFn> castTy = getCastTypeForMatmulLikeOp(genericOp);
+  if (!castTy)
+    return rewriter.notifyMatchFailure(
+        genericOp, "contains invalid cast ops for the named matmul op");
+
+  // TODO: When `emitCategoryOp` is set, skip the named-variant matching below
+  // and go straight to the `linalg.contract` category op.
+
+  // Try to specialize to a specific named matmul variant first.
+  if (!emitCategoryOp) {
+    FailureOr<LinalgOp> namedOp =
+        specializeToNamedContraction(rewriter, genericOp, castTy);
+    if (succeeded(namedOp))
+      return namedOp;
+  }
+
+  // No named variant matched; fall back to the generic `linalg.contract` op,
+  // which supports a wider range of variants.
+  return replaceWithMatmulVariant<ContractOp>(
+      rewriter, genericOp, castTy, genericOp.getIndexingMapsArray());
 }
 
 /// Utility to specialize a `genericOp` with a convolution op of type `ConvOpTy`

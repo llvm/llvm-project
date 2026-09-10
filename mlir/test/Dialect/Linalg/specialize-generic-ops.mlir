@@ -1029,11 +1029,8 @@ func.func @op_multi_reduction(%A: tensor<10x20x30xf32>,
 
 // ALL-LABEL: op_multi_reduction
 
-// Cannot be lifted to named matrix multiply.
-// NAMED: linalg.generic
-
-// CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract
+// ALL-NOT: linalg.generic
+// ALL: linalg.contract
 
 // -----
 
@@ -1059,11 +1056,8 @@ func.func @batch_matmul_non_identity_batch(%A: tensor<4x2x8xf32>, %B: tensor<2x8
 
 // ALL-LABEL: batch_matmul_non_identity_batch
 
-// Cannot be lifted to named matrix multiply.
-// NAMED: linalg.generic
-
-// CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract
+// ALL-NOT: linalg.generic
+// ALL: linalg.contract
 
 // -----
 
@@ -1087,10 +1081,8 @@ func.func @op_matvec(%A: tensor<?x?xf32>, %B: tensor<?xf32>, %Out: tensor<?xf32>
 
 // ALL-LABEL: op_matvec
 
-// NAMED: linalg.generic
-
-// CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract
+// ALL-NOT: linalg.generic
+// ALL: linalg.contract
 
 // -----
 
@@ -1556,11 +1548,8 @@ func.func @op_matmul_broadcast_a(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
 
 // ALL-LABEL: op_matmul_broadcast_a
 
-// NAMED: linalg.generic
-// NAMED-NOT: linalg.matmul
-
-// CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract
+// ALL-NOT: linalg.generic
+// ALL: linalg.contract
 
 // -----
 
@@ -1585,11 +1574,8 @@ func.func @op_batch_matmul_broadcast_a(%A: tensor<16x8xf32>, %B: tensor<2x8x16xf
 
 // ALL-LABEL: op_batch_matmul_broadcast_a
 
-// NAMED: linalg.generic
-// NAMED-NOT: linalg.batch_matmul
-
-// CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract
+// ALL-NOT: linalg.generic
+// ALL: linalg.contract
 
 // -----
 
@@ -1614,11 +1600,8 @@ func.func @op_batch_matmul_broadcast_b(%A: tensor<2x16x8xf32>, %B: tensor<8xf32>
 
 // ALL-LABEL: op_batch_matmul_broadcast_b
 
-// NAMED: linalg.generic
-// NAMED-NOT: linalg.batch_matmul
-
-// CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract
+// ALL-NOT: linalg.generic
+// ALL: linalg.contract
 
 // -----
 
@@ -1808,8 +1791,5 @@ func.func @negative_op_mmt4d(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
 
 // ALL-LABEL: negative_op_mmt4d
 
-// NAMED-NOT: linalg.mmt4d
-// NAMED: linalg.generic
-
-// CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract
+// ALL-NOT: linalg.generic
+// ALL: linalg.contract
