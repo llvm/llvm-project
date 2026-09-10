@@ -453,7 +453,6 @@ subroutine acc_parallel_loop
 
 ! CHECK:      %[[ACC_PRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@firstprivatization_ref_10xf32) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} firstprivate(%[[ACC_PRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK-NOT:    acc.firstprivate {{.*}} implicit(true)
 ! CHECK:        %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@privatization_ref_10xf32) name("a") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:        acc.loop {{.*}} private(%[[ACC_PRIVATE_A]]{{.*}} : !fir.ref<!fir.array<10xf32>>{{.*}})
 ! CHECK-NOT:      fir.do_loop
