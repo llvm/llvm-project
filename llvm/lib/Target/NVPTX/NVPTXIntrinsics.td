@@ -2581,7 +2581,6 @@ let Predicates = [hasRubinFamilySupport, doNoF32FTZ] in
               (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
   }
 
-
 // Mixed precision - Downconverting
 
 // f16x2 - rz rounding mode, only with ftz
