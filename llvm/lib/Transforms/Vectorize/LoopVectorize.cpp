@@ -3355,6 +3355,79 @@ static bool hasFindLastReductionPhi(VPlan &Plan) {
                              RedPhi->getRecurrenceKind());
                 });
 }
+
+/// Determine how to lower the epilogue for the vector epilogue loop.
+/// Check if there are any conflicts that prevent tail-folding the epilogue.
+/// \return CM_EpilogueNotNeededFoldTail if epilogue tail-folding is possible,
+/// otherwise CM_EpilogueAllowed.
+static EpilogueLowering
+getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
+                        OptimizationRemarkEmitter *ORE,
+                        LoopVectorizationLegality &LVL,
+                        LoopVectorizeHints &Hints) {
+  // Epilogue TF is only enabled when explicitly requested via command line.
+  if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
+      EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
+    return CM_EpilogueAllowed;
+
+  if (!EnableEpilogueVectorization) {
+    reportVectorizationInfo(
+        "Options conflict, epilogue vectorization is disallowed while "
+        "epilogue tail-folding allowed!",
+        "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (!Hints.getWidth() || !hasForcedEpilogueVF()) {
+    reportVectorizationInfo("For now, epilogue tail-folding can't be "
+                            "applied without forced main/epilogue loop VF",
+                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (ElementCount::isKnownLE(Hints.getWidth(), EpilogueVectorizationForceVF)) {
+    reportVectorizationInfo("For now, epilogue tail-folding can't be applied "
+                            "when VF of the main loop <= VF of the epilogue",
+                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (!L->isInnermost()) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported for outer loop",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  // If scalar epilogue is explicitly required, we can't apply TF.
+  if (MainCM.requiresScalarEpilogue(/*IsVectorizing*/ true)) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding can't be applied because scalar epilogue is "
+        "required. Fall back to a normal epilogue",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  // If having epilogue is NOT allowed, then no epilogue to apply TF for.
+  if (!MainCM.isEpilogueAllowed()) {
+    reportVectorizationInfo("Not applying tail-folding to the epilogue, since "
+                            "no epilogue is allowed.",
+                            "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (L->getExitingBlock() != L->getLoopLatch() ||
+      LVL.hasUncountableEarlyExit()) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported yet for early-exit loops",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  // We can apply tail-folding on the vectorized epilogue loop.
+  return CM_EpilogueNotNeededFoldTail;
+}
+
 bool VFSelectionContext::isEpilogueVectorizationProfitable(
     const ElementCount VF, const unsigned IC) const {
   // FIXME: We need a much better cost-model to take different parameters such
@@ -7033,78 +7106,6 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
     return CM_EpilogueNotNeededFoldTail;
 
   return CM_EpilogueAllowed;
-}
-
-/// Determine how to lower the epilogue for the vector epilogue loop.
-/// Check if there are any conflicts that prevent tail-folding the epilogue.
-/// \return CM_EpilogueNotNeededFoldTail if epilogue tail-folding is possible,
-/// otherwise CM_EpilogueAllowed.
-static EpilogueLowering
-getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
-                        OptimizationRemarkEmitter *ORE,
-                        LoopVectorizationLegality &LVL,
-                        LoopVectorizeHints &Hints) {
-  // Epilogue TF is only enabled when explicitly requested via command line.
-  if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
-      EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
-    return CM_EpilogueAllowed;
-
-  if (!EnableEpilogueVectorization) {
-    reportVectorizationInfo(
-        "Options conflict, epilogue vectorization is disallowed while "
-        "epilogue tail-folding allowed!",
-        "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  if (!Hints.getWidth() || !hasForcedEpilogueVF()) {
-    reportVectorizationInfo("For now, epilogue tail-folding can't be "
-                            "applied without forced main/epilogue loop VF",
-                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  if (ElementCount::isKnownLE(Hints.getWidth(), EpilogueVectorizationForceVF)) {
-    reportVectorizationInfo("For now, epilogue tail-folding can't be applied "
-                            "when VF of the main loop <= VF of the epilogue",
-                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  if (!L->isInnermost()) {
-    reportVectorizationInfo(
-        "Epilogue tail-folding is not supported for outer loop",
-        "InvalidTailFoldedEpilogue", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  // If scalar epilogue is explicitly required, we can't apply TF.
-  if (MainCM.requiresScalarEpilogue(/*IsVectorizing*/ true)) {
-    reportVectorizationInfo(
-        "Epilogue tail-folding can't be applied because scalar epilogue is "
-        "required. Fall back to a normal epilogue",
-        "InvalidTailFoldedEpilogue", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  // If having epilogue is NOT allowed, then no epilogue to apply TF for.
-  if (!MainCM.isEpilogueAllowed()) {
-    reportVectorizationInfo("Not applying tail-folding to the epilogue, since "
-                            "no epilogue is allowed.",
-                            "InvalidTailFoldedEpilogue", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  if (L->getExitingBlock() != L->getLoopLatch() ||
-      LVL.hasUncountableEarlyExit()) {
-    reportVectorizationInfo(
-        "Epilogue tail-folding is not supported yet for early-exit loops",
-        "InvalidTailFoldedEpilogue", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  // We can apply tail-folding on the vectorized epilogue loop.
-  return CM_EpilogueNotNeededFoldTail;
 }
 
 // Emit a remark if there are stores to floats that required a floating point
