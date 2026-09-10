@@ -26,10 +26,9 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
-
-template <__signed_or_unsigned_integer _Tp>
+template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_add(_Tp __x, _Tp __y) noexcept {
+  static_assert(__is_signed_integer_v<_Tp> || __is_unsigned_integer_v<_Tp>);
 #  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
   return __builtin_elementwise_add_sat(__x, __y);
 #  else
@@ -49,6 +48,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_add(_Tp __x, _Tp __y) noexcept 
   }
 #  endif
 }
+
+#if _LIBCPP_STD_VER >= 20
 
 template <__signed_or_unsigned_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_sub(_Tp __x, _Tp __y) noexcept {
