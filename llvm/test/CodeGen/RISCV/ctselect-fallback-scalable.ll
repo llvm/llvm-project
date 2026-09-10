@@ -20,6 +20,7 @@ define <vscale x 4 x i32> @ctsel_nxv4i32(i1 %c, <vscale x 4 x i32> %x, <vscale x
 ; RV64V-NEXT:    slli a0, a0, 63
 ; RV64V-NEXT:    srai a0, a0, 63
 ; RV64V-NEXT:    vand.vx v8, v8, a0
+; RV64V-NEXT:    #ARITH_FENCE
 ; RV64V-NEXT:    vxor.vv v8, v10, v8
 ; RV64V-NEXT:    ret
 ;
@@ -30,6 +31,7 @@ define <vscale x 4 x i32> @ctsel_nxv4i32(i1 %c, <vscale x 4 x i32> %x, <vscale x
 ; RV32V-NEXT:    slli a0, a0, 31
 ; RV32V-NEXT:    srai a0, a0, 31
 ; RV32V-NEXT:    vand.vx v8, v8, a0
+; RV32V-NEXT:    #ARITH_FENCE
 ; RV32V-NEXT:    vxor.vv v8, v10, v8
 ; RV32V-NEXT:    ret
   %r = call <vscale x 4 x i32> @llvm.ct.select.nxv4i32(i1 %c, <vscale x 4 x i32> %x, <vscale x 4 x i32> %y)
@@ -44,6 +46,7 @@ define <vscale x 2 x i64> @ctsel_nxv2i64(i1 %c, <vscale x 2 x i64> %x, <vscale x
 ; RV64V-NEXT:    slli a0, a0, 63
 ; RV64V-NEXT:    srai a0, a0, 63
 ; RV64V-NEXT:    vand.vx v8, v8, a0
+; RV64V-NEXT:    #ARITH_FENCE
 ; RV64V-NEXT:    vxor.vv v8, v10, v8
 ; RV64V-NEXT:    ret
 ;
@@ -58,6 +61,7 @@ define <vscale x 2 x i64> @ctsel_nxv2i64(i1 %c, <vscale x 2 x i64> %x, <vscale x
 ; RV32V-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32V-NEXT:    vsext.vf2 v12, v14
 ; RV32V-NEXT:    vand.vv v8, v8, v12
+; RV32V-NEXT:    #ARITH_FENCE
 ; RV32V-NEXT:    vxor.vv v8, v10, v8
 ; RV32V-NEXT:    ret
   %r = call <vscale x 2 x i64> @llvm.ct.select.nxv2i64(i1 %c, <vscale x 2 x i64> %x, <vscale x 2 x i64> %y)
@@ -72,6 +76,7 @@ define <vscale x 4 x float> @ctsel_nxv4f32(i1 %c, <vscale x 4 x float> %x, <vsca
 ; RV64V-NEXT:    slli a0, a0, 63
 ; RV64V-NEXT:    srai a0, a0, 63
 ; RV64V-NEXT:    vand.vx v8, v8, a0
+; RV64V-NEXT:    #ARITH_FENCE
 ; RV64V-NEXT:    vxor.vv v8, v10, v8
 ; RV64V-NEXT:    ret
 ;
@@ -82,6 +87,7 @@ define <vscale x 4 x float> @ctsel_nxv4f32(i1 %c, <vscale x 4 x float> %x, <vsca
 ; RV32V-NEXT:    slli a0, a0, 31
 ; RV32V-NEXT:    srai a0, a0, 31
 ; RV32V-NEXT:    vand.vx v8, v8, a0
+; RV32V-NEXT:    #ARITH_FENCE
 ; RV32V-NEXT:    vxor.vv v8, v10, v8
 ; RV32V-NEXT:    ret
   %r = call <vscale x 4 x float> @llvm.ct.select.nxv4f32(i1 %c, <vscale x 4 x float> %x, <vscale x 4 x float> %y)
@@ -96,6 +102,7 @@ define <vscale x 2 x double> @ctsel_nxv2f64(i1 %c, <vscale x 2 x double> %x, <vs
 ; RV64V-NEXT:    slli a0, a0, 63
 ; RV64V-NEXT:    srai a0, a0, 63
 ; RV64V-NEXT:    vand.vx v8, v8, a0
+; RV64V-NEXT:    #ARITH_FENCE
 ; RV64V-NEXT:    vxor.vv v8, v10, v8
 ; RV64V-NEXT:    ret
 ;
@@ -110,6 +117,7 @@ define <vscale x 2 x double> @ctsel_nxv2f64(i1 %c, <vscale x 2 x double> %x, <vs
 ; RV32V-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32V-NEXT:    vsext.vf2 v12, v14
 ; RV32V-NEXT:    vand.vv v8, v8, v12
+; RV32V-NEXT:    #ARITH_FENCE
 ; RV32V-NEXT:    vxor.vv v8, v10, v8
 ; RV32V-NEXT:    ret
   %r = call <vscale x 2 x double> @llvm.ct.select.nxv2f64(i1 %c, <vscale x 2 x double> %x, <vscale x 2 x double> %y)
