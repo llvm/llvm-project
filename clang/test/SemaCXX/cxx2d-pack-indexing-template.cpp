@@ -105,6 +105,18 @@ auto ctad() {
   return x;
 }
 static_assert(__is_same(decltype(ctad<Deduce>()), Deduce<int>));
+
+template <template <class> class... TT>
+auto ctad_paren() {
+  return TT...[0](42);
+}
+static_assert(__is_same(decltype(ctad_paren<Deduce>()), Deduce<int>));
+
+template <template <class> class... TT>
+auto ctad_braced() {
+  return TT...[1]{42};
+}
+static_assert(__is_same(decltype(ctad_braced<A, Deduce>()), Deduce<int>));
 }
 
 namespace deduction_guides {

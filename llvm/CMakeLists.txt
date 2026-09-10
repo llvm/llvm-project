@@ -219,6 +219,13 @@ if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 endif ()
 
+if (CLANG_ENABLE_CIR AND "clang" IN_LIST LLVM_ENABLE_PROJECTS AND
+    NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(STATUS "Enabling MLIR as a dependency of ClangIR")
+  list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+  list(APPEND LLVM_DEPENDENCY_ONLY_PROJECTS "mlir")
+endif()
+
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
     "become a fatal error in a future release. Please use "

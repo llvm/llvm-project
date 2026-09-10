@@ -340,20 +340,24 @@ def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
     per-function stack budget, and whether the allocation is a user variable or
     a compiler temporary. Heap-to-stack conversions are only performed where the
     allocation is provably freed on all paths through the function.
+
+    The policy normally comes from the fir.allocation_policy module attribute.
+    These options override it field by field, and only when set explicitly.
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect",
     "mlir::arith::ArithDialect"
   ];
   let options = [
-    Option<"stackArrays", "stack-arrays", "bool", /*default=*/"false",
+    Option<"stackArrays", "stack-arrays", "bool",
+           /*default=*/"fir::AllocationPolicy::stackArraysDefault",
            "Place all array allocations on the stack (-fstack-arrays); "
-           "otherwise use the size/kind-based placement policy.">,
-    Option<"smallArrayThresholdBytes", "small-array-threshold", "std::size_t",
-           /*default=*/"64",
+           "otherwise use the size-based placement policy.">,
+    Option<"smallArrayThresholdBytes", "small-array-threshold", "uint64_t",
+           /*default=*/"fir::AllocationPolicy::smallArrayThresholdBytesDefault",
            "Constant-size arrays up to this many bytes are considered small.">,
-    Option<"totalStackLimitBytes", "total-stack-limit", "std::size_t",
-           /*default=*/"4194304",
+    Option<"totalStackLimitBytes", "total-stack-limit", "uint64_t",
+           /*default=*/"fir::AllocationPolicy::totalStackLimitBytesDefault",
            "Per-function budget (bytes) for small arrays placed on the stack.">
   ];
 }
