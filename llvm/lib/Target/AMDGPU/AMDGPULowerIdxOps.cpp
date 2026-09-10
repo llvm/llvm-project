@@ -14,9 +14,9 @@
 ///   V_STORE_IDX_BITS -> V_LOAD_IDX_B32 + V_BFI_B32 + V_STORE_IDX_B32
 ///
 /// A sub-dword store is therefore a read-modify-write of the containing dword.
-/// This runs after SITargetLowering::finalizeLowering has given the pseudo its
-/// M0 operand, so the whole-dword accesses created here inherit it, and before
-/// register allocation because it introduces new virtual registers.
+/// Runs after the custom inserter has given the pseudo its M0 operand, so the
+/// accesses created here inherit it, and before register allocation because it
+/// introduces new virtual registers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -56,11 +56,10 @@ private:
   MachineRegisterInfo *MRI;
 };
 
-// An indexed access takes its index from M0 where the subtarget has movrel, and
-// clobbers M0 through s_set_gpr_idx_on where it indexes with the VGPR indexing
-// mode. SITargetLowering::finalizeLowering picks between the two and records a
-// clobber as an implicit def, so a whole-dword access replacing the pseudo here
-// has to carry that over: the index itself comes along with the operand.
+// Under the VGPR indexing mode the access clobbers M0 rather than reading it,
+// which the custom inserter records as an implicit def. A whole-dword access
+// replacing the pseudo has to carry that over; the index itself comes along
+// with the operand.
 void AMDGPULowerIdxOpsImpl::inheritM0Def(const MachineInstr &MI,
                                          const MachineInstrBuilder &MIB) const {
   if (MI.definesRegister(AMDGPU::M0, TRI))
@@ -184,9 +183,8 @@ public:
   AMDGPULowerIdxOpsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    // This is required lowering, not an optimization: nothing else expands the
-    // sub-dword pseudos, and AMDGPULowerVGPREncoding cannot lower them. It
-    // therefore must not be skipped for optnone functions.
+    // Required lowering, not an optimization: nothing else expands the
+    // sub-dword pseudos, so this must run even for optnone functions.
     return AMDGPULowerIdxOpsImpl(MF).run(MF);
   }
 

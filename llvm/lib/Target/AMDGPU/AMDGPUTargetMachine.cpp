@@ -1839,9 +1839,8 @@ void GCNPassConfig::addFastRegAlloc() {
 
 void GCNPassConfig::addPreRegAlloc() {
   // Expand the sub-dword VGPR "as memory" pseudos into a whole-dword access
-  // plus a bit-field extract/insert. The index of the access it expands has
-  // already been copied into M0 by SITargetLowering::finalizeLowering, and the
-  // whole-dword access created here inherits it.
+  // plus a bit-field extract/insert. Must follow the custom inserter, which
+  // puts the index in M0 for the access created here to inherit.
   addPass(&AMDGPULowerIdxOpsID);
 
   if (getOptLevel() != CodeGenOptLevel::None)
@@ -2654,8 +2653,7 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  // Expand the sub-dword VGPR "as memory" pseudos into a whole-dword access
-  // plus a bit-field extract/insert; see the comment in GCNPassConfig.
+  // See GCNPassConfig::addPreRegAlloc for why this is unconditional.
   addMachineFunctionPass(AMDGPULowerIdxOpsPass(), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None)

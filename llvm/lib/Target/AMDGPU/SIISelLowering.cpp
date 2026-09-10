@@ -13609,16 +13609,13 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
     return DAG.getErrorMergeValues(ResultTypes, MemOp->getChain(), DL);
   };
 
-  // Handle bytes and aligned shorts. These become a bit-field extract out of
-  // the containing dword (loads), or a read-modify-write of it (stores); see
-  // AMDGPULowerIdxOps.
+  // Bytes and aligned shorts; see AMDGPULowerIdxOps.
   if (BitWidth < 32) {
     if (BitWidth != 8 && BitWidth != 16)
       return reportUnsupported();
 
-    // The access becomes a bit-field extract from (or insert into) the dword
-    // containing it, so it must not straddle a dword boundary. An 8-bit access
-    // never can; a 16-bit one only if it is 2-byte aligned.
+    // A bit-field extract must not straddle a dword boundary, which natural
+    // alignment guarantees.
     if (MemOp->getAlign() < Align(BitWidth / 8))
       return reportUnsupported();
 
@@ -13721,9 +13718,8 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
       Value = DAG.getNode(ISD::BITCAST, DL, ResVT, Value);
     return DAG.getMergeValues({Value, LoadChain}, DL);
   }
-  // Whole-dword accesses index by pointer >> 2, so an under-aligned one would
-  // silently reach the containing dword. The sub-dword path above computes a
-  // bit offset and carries its own alignment rule.
+  // Indexing by pointer >> 2 means an under-aligned access would silently reach
+  // the containing dword.
   if (MemOp->getAlign() < Align(4))
     return reportUnsupported();
 

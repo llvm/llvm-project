@@ -5482,10 +5482,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
-  // The lowering of a VGPR "as memory" indexed access relies on it having
-  // exactly one memory operand, since a sub-dword store synthesizes a load
-  // operand from it, and on the index carrying no subregister, since
-  // SITargetLowering::finalizeLowering rewrites it in place to M0.
+  // Lowering relies on exactly one memory operand, since a sub-dword store
+  // synthesizes a load operand from it, and on the index carrying no
+  // subregister, since the custom inserter rewrites it in place to M0.
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
     if (MI.getNumMemOperands() != 1) {
       ErrInfo = "v_load/store_idx should have exactly one memory operand.";

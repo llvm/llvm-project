@@ -326,13 +326,13 @@ define i32 @load_i8_divergent(ptr addrspace(13) %p) {
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    v_cmpx_eq_u32_e32 s2, v2
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr2
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, v1, 8
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_wrexec_b32 s1, s1
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr2
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX12-SDAG-NEXT:  ; %bb.2:
 ; GFX12-SDAG-NEXT:    s_mov_b32 exec_lo, s0
@@ -395,13 +395,13 @@ define void @store_i8_divergent(ptr addrspace(13) %p, i8 %v) {
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v0
 ; GFX12-SDAG-NEXT:    v_bfi_b32 v0, v0, v1, v2
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr2
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_wrexec_b32 s1, s1
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr2
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-SDAG-NEXT:  ; %bb.2:
 ; GFX12-SDAG-NEXT:    s_mov_b32 exec_lo, s0
