@@ -1462,44 +1462,40 @@ static void insertCheckBlockBeforeVectorLoop(VPlan &Plan,
 }
 
 void VPlanTransforms::modelGeneratedMainLoopBlocks(
-    VPlan &Plan, VPlan &MainPlan, VPIRBasicBlock *EnteredFrom) {
-  // Map blocks from MainPlan to new, empty VPIRBasicBlocks in Plan, so the
-  // skeleton CFG can be modeled explicitly. MainPlan's entry maps to Plan's
-  // now-disconnected entry, its scalar PH to EnteredFrom, mapped last so it can
-  // be dropped as source below. Blocks without successors have no edges.
-  auto *MainEntry = cast<VPIRBasicBlock>(MainPlan.getEntry());
-  auto *MainScalarPH = cast<VPIRBasicBlock>(MainPlan.getScalarPreheader());
-  SmallVector<VPIRBasicBlock *> BypassBlocks;
-  SmallMapVector<VPIRBasicBlock *, VPIRBasicBlock *, 8> Old2NewVPBB;
-  Old2NewVPBB[MainEntry] = cast<VPIRBasicBlock>(Plan.getEntry());
+    VPlan &EpiPlan, VPlan &MainPlan, VPIRBasicBlock *EnteredFrom) {
+  // Map blocks from MainPlan to new, empty VPIRBasicBlocks in EpiPlan, so the
+  // skeleton CFG can be modeled explicitly. MainPlan's entry maps to EpiPlan's
+  // now-disconnected entry and its scalar PH to EnteredFrom.
+  VPBlockBase *MainEntry = MainPlan.getEntry();
+  VPBlockBase *MainScalarPH = MainPlan.getScalarPreheader();
+  SmallMapVector<VPBlockBase *, VPBlockBase *, 8> Old2NewVPBB;
+  Old2NewVPBB[MainEntry] = EpiPlan.getEntry();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       MainEntry);
-  for (VPIRBasicBlock *VPBB : VPBlockUtils::blocksAs<VPIRBasicBlock>(RPOT)) {
-    // Collect bypass blocks (minimum iteration checks, runtime checks).
-    if (VPBB->getNumSuccessors() == 2 &&
-        VPBB->getSuccessors()[0] == MainScalarPH)
-      BypassBlocks.push_back(VPBB);
+  for (VPIRBasicBlock *VPBB : VPBlockUtils::blocksAs<VPIRBasicBlock>(RPOT))
+    // Skip entry block and exit blocks/scalar loop header; they are already
+    // modeling in the epilogue plan.
     if (VPBB != MainEntry && VPBB != MainScalarPH && VPBB->hasSuccessors())
       Old2NewVPBB[VPBB] =
-          Plan.createEmptyVPIRBasicBlock(VPBB->getIRBasicBlock());
-  }
+          EpiPlan.createEmptyVPIRBasicBlock(VPBB->getIRBasicBlock());
   Old2NewVPBB[MainScalarPH] = EnteredFrom;
 
-  // First, connect the edges from the bypass blocks to the scalar preheader, in
-  // reverse order, to preserve the predecessor order of the generated IR. The
-  // last bypass block branches into Plan and is mirrored below.
-  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
-  for (VPIRBasicBlock *MainVPBB : reverse(drop_end(BypassBlocks))) {
-    VPBlockUtils::connectBlocks(Old2NewVPBB[MainVPBB], ScalarPH);
-    addIncomingForLastPredecessor(ScalarPH);
+  // First, connect the edges from the bypass blocks (minimum iteration checks,
+  // runtime checks) to the scalar preheader, in reverse order, to preserve the
+  // predecessor order of the generated IR.
+  VPBasicBlock *EpiScalarPH = EpiPlan.getScalarPreheader();
+  for (VPBlockBase *MainVPBB :
+       reverse(drop_end(drop_begin(MainScalarPH->predecessors())))) {
+    VPBlockUtils::connectBlocks(Old2NewVPBB.lookup(MainVPBB), EpiScalarPH);
+    addIncomingForLastPredecessor(EpiScalarPH);
   }
 
   // Mirror MainPlan's CFG, skipping the bypass edges connected above, which
-  // come first, and edges to blocks not modeled in Plan.
+  // come first, and edges to blocks not modeled in EpiPlan.
   for (auto &[MainVPBB, VPBB] : drop_end(Old2NewVPBB))
     for (VPBlockBase *Succ :
          drop_begin(MainVPBB->getSuccessors(), VPBB->getNumSuccessors()))
-      if (auto *SuccVPBB = Old2NewVPBB.lookup(cast<VPIRBasicBlock>(Succ)))
+      if (auto *SuccVPBB = Old2NewVPBB.lookup(Succ))
         VPBlockUtils::connectBlocks(VPBB, SuccVPBB);
 
   // EnteredFrom is the only modeled block with phis; re-use the incoming values
@@ -1508,7 +1504,7 @@ void VPlanTransforms::modelGeneratedMainLoopBlocks(
     auto *PhiR = cast<VPIRPhi>(&R);
     for (VPIRBasicBlock *Pred :
          VPBlockUtils::blocksAs<VPIRBasicBlock>(EnteredFrom->getPredecessors()))
-      PhiR->addIncoming(Plan.getOrAddLiveIn(
+      PhiR->addIncoming(EpiPlan.getOrAddLiveIn(
           PhiR->getIRPhi().getIncomingValueForBlock(Pred->getIRBasicBlock())));
   }
 }

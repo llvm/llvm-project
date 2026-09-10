@@ -233,11 +233,11 @@ struct VPlanTransforms {
                                bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector
-  /// loop in \p Plan during epilogue vectorization, wrapping each in a
-  /// VPIRBasicBlock, with \p EnteredFrom the block \p Plan is entered from.
-  /// Edges from blocks bypassing both vector loops are redirected to \p Plan's
-  /// scalar preheader, all others are mirrored.
-  static void modelGeneratedMainLoopBlocks(VPlan &Plan, VPlan &MainPlan,
+  /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
+  /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
+  /// Edges from blocks bypassing both vector loops are redirected to \p
+  /// EpiPlan's scalar preheader, all others are mirrored.
+  static void modelGeneratedMainLoopBlocks(VPlan &EpiPlan, VPlan &MainPlan,
                                            VPIRBasicBlock *EnteredFrom);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
