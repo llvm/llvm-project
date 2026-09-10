@@ -1086,75 +1086,11 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
 
 TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
                               StringRef FeatureString) {
-  TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
-                    STI.getFeatureBits().test(FeatureXNACKOnOffModes)
-                        ? TargetIDSetting::Any
-                        : TargetIDSetting::Unsupported,
-                    STI.getFeatureBits().test(FeatureSupportsSRAMECC)
-                        ? TargetIDSetting::Any
-                        : TargetIDSetting::Unsupported);
-
-  // Check if xnack or sramecc is explicitly enabled or disabled.  In the
-  // absence of the target features we assume we must generate code that can run
-  // in any environment.
-  SubtargetFeatures Features(FeatureString);
-  std::optional<bool> XnackRequested;
-  std::optional<bool> SramEccRequested;
-
-  for (const std::string &Feature : Features.getFeatures()) {
-    if (Feature == "+xnack")
-      XnackRequested = true;
-    else if (Feature == "-xnack")
-      XnackRequested = false;
-    else if (Feature == "+sramecc")
-      SramEccRequested = true;
-    else if (Feature == "-sramecc")
-      SramEccRequested = false;
-  }
-
-  // Only allow changing xnack setting if the target supports on/off modes.
-  // Targets without on/off mode support keep their initial setting
-  // (Unsupported).
-
-  bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
-  bool SramEccSupported = TargetID.isSramEccSupported();
-
-  if (XnackRequested) {
-    if (XnackSupported) {
-      TargetID.setXnackSetting(*XnackRequested ? TargetIDSetting::On
-                                               : TargetIDSetting::Off);
-    } else {
-      // If a specific xnack setting was requested and this GPU does not support
-      // xnack emit a warning. Setting will remain set to "Unsupported".
-      if (*XnackRequested) {
-        errs() << "warning: xnack 'On' was requested for a processor that does "
-                  "not support it!\n";
-      } else {
-        errs() << "warning: xnack 'Off' was requested for a processor that "
-                  "does not support it!\n";
-      }
-    }
-  }
-
-  if (SramEccRequested) {
-    if (SramEccSupported) {
-      TargetID.setSramEccSetting(*SramEccRequested ? TargetIDSetting::On
-                                                   : TargetIDSetting::Off);
-    } else {
-      // If a specific sramecc setting was requested and this GPU does not
-      // support sramecc emit a warning. Setting will remain set to
-      // "Unsupported".
-      if (*SramEccRequested) {
-        errs() << "warning: sramecc 'On' was requested for a processor that "
-                  "does not support it!\n";
-      } else {
-        errs() << "warning: sramecc 'Off' was requested for a processor that "
-                  "does not support it!\n";
-      }
-    }
-  }
-
-  return TargetID;
+  // In codegen the mode comes from module flags and FeatureString is empty, so
+  // the processor defaults apply. The assembler has no target directive, so it
+  // pins the mode via the +xnack/-xnack/+sramecc/-sramecc feature string.
+  return TargetID::createFromSubtargetFeatures(STI.getTargetTriple(),
+                                               STI.getCPU(), FeatureString);
 }
 
 namespace IsaInfo {
@@ -1253,8 +1189,6 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                     getNumWorkGroupSIMDs(isFullSIMDMode(STI)));
 }
 
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI) { return 1; }
-
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize) {
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));
@@ -1348,12 +1282,6 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
   return ExtraSGPRs;
 }
 
-unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
-                          bool FlatScrUsed) {
-  return getNumExtraSGPRs(STI, VCCUsed, FlatScrUsed,
-                          STI.getFeatureBits().test(AMDGPU::FeatureXNACK));
-}
-
 static unsigned getGranulatedNumRegisterBlocks(unsigned NumRegs,
                                                unsigned Granule) {
   return divideCeil(std::max(1u, NumRegs), Granule);
@@ -1404,17 +1332,6 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,
 
 unsigned getArchVGPRAllocGranule() { return 4; }
 
-unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI) {
-  if (STI.getFeatureBits().test(FeatureGFX90AInsts))
-    return 512;
-  if (!isGFX10Plus(STI))
-    return 256;
-  bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
-  if (STI.getFeatureBits().test(Feature1536VGPRs))
-    return IsWave32 ? 1536 : 768;
-  return IsWave32 ? 1024 : 512;
-}
-
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
   const auto &Features = STI.getFeatureBits();
   if (Features.test(Feature1024AddressableVGPRs))
@@ -1439,9 +1356,11 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo &STI,
                                       unsigned NumVGPRs,
                                       unsigned DynamicVGPRBlockSize) {
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
   return getNumWavesPerEUWithNumVGPRs(
       NumVGPRs, getVGPRAllocGranule(STI, DynamicVGPRBlockSize),
-      getMaxWavesPerEU(parseArchAMDGCN(STI.getCPU())), getTotalNumVGPRs(STI));
+      getMaxWavesPerEU(Kind), AMDGPU::getTotalNumVGPRs(Kind, IsWave32));
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
@@ -1487,11 +1406,13 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   if (DynamicVGPREnabled)
     return 0;
 
-  unsigned MaxWavesPerEU = getMaxWavesPerEU(parseArchAMDGCN(STI.getCPU()));
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned MaxWavesPerEU = getMaxWavesPerEU(Kind);
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
 
-  unsigned TotNumVGPRs = getTotalNumVGPRs(STI);
+  unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(
+      Kind, STI.getFeatureBits().test(FeatureWavefrontSize32));
   unsigned AddrsableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
   unsigned Granule = getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
@@ -1514,12 +1435,16 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
+  unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(
+      parseArchAMDGCN(STI.getCPU()),
+      STI.getFeatureBits().test(FeatureWavefrontSize32));
+
   // In dynamic VGPR mode, WavesPerEU does not imply a VGPR limit.
   bool DynamicVGPREnabled = (DynamicVGPRBlockSize != 0);
   unsigned MaxNumVGPRs =
       DynamicVGPREnabled
-          ? getTotalNumVGPRs(STI)
-          : alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
+          ? TotNumVGPRs
+          : alignDown(TotNumVGPRs / WavesPerEU,
                       getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
   unsigned AddressableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
@@ -2475,7 +2400,10 @@ unsigned getDynamicVGPRBlockSize(const Function &F) {
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeatureXNACK);
+  // Only hardwired-on xnack (gfx1250) is knowable from the subtarget alone;
+  // toggleable targets take their mode from the TargetID.
+  return STI.hasFeature(AMDGPU::FeatureSupportsXNACK) &&
+         !STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes);
 }
 
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {
@@ -2687,6 +2615,10 @@ bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
          Reg == AMDGPU::SCC;
 }
 
+bool isRsrcIndexReg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getRegClass(AMDGPU::RsrcReg32RegClassID).contains(Reg);
+}
+
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
   return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI16;
 }
@@ -2826,6 +2758,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
@@ -3272,6 +3205,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
     break;
   case OPERAND_REG_IMM_BF16:
   case OPERAND_REG_IMM_FP16:
+  case OPERAND_REG_IMM_NOINLINE_FP16:
   case OPERAND_REG_INLINE_C_BF16:
   case OPERAND_REG_INLINE_C_FP16:
     return Imm & 0xffff;
@@ -3345,7 +3279,7 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
-           CB->paramHasAttr(ArgNo, Attribute::ByVal);
+           CB->isByValArgument(ArgNo);
   default:
     return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }

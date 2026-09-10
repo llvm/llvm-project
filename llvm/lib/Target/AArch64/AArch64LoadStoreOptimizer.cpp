@@ -868,8 +868,9 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
-static bool isRewritableImplicitDef(const MachineOperand &MO) {
-  switch (MO.getParent()->getOpcode()) {
+static bool isRewritableImplicitDef(const MachineInstr &MI,
+                                    const MachineOperand &MO) {
+  switch (MI.getOpcode()) {
   default:
     return MO.isRenamable();
   case AArch64::ORRWrs:
@@ -1082,7 +1083,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                         MI.getRegClassConstraint(OpIdx, TII, TRI))
                   MatchingReg = GetMatchingSubReg(RC);
                 else {
-                  if (!isRewritableImplicitDef(MOP))
+                  if (!isRewritableImplicitDef(MI, MOP))
                     continue;
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1749,7 +1750,7 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
   // FIXME: Can we also match a mixed sext/zext unscaled/scaled pair?
 }
 
-static bool canRenameMOP(const MachineOperand &MOP,
+static bool canRenameMOP(const MachineInstr &MI, const MachineOperand &MOP,
                          const TargetRegisterInfo *TRI) {
   if (MOP.isReg()) {
     auto *RegClass = TRI->getMinimalPhysRegClass(MOP.getReg());
@@ -1774,10 +1775,10 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // them must be known. For example, in ORRWrs the implicit-def
     // corresponds to the result register.
     if (MOP.isImplicit() && MOP.isDef()) {
-      if (!isRewritableImplicitDef(MOP))
+      if (!isRewritableImplicitDef(MI, MOP))
         return false;
-      return TRI->isSuperOrSubRegisterEq(
-          MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
+      return TRI->isSuperOrSubRegisterEq(MI.getOperand(0).getReg(),
+                                         MOP.getReg());
     }
   }
   return MOP.isImplicit() ||
@@ -1847,7 +1848,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
         if (!MOP.isReg() || !MOP.isDef() || MOP.isDebug() || !MOP.getReg() ||
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
-        if (!canRenameMOP(MOP, TRI)) {
+        if (!canRenameMOP(MI, MOP, TRI)) {
           LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
@@ -1860,7 +1861,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
 
-        if (!canRenameMOP(MOP, TRI)) {
+        if (!canRenameMOP(MI, MOP, TRI)) {
           LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
@@ -1914,7 +1915,7 @@ static bool canRenameUntilSecondLoad(
           if (!MOP.isReg() || MOP.isDebug() || !MOP.getReg() ||
               !TRI->regsOverlap(MOP.getReg(), RegToRename))
             continue;
-          if (!canRenameMOP(MOP, TRI)) {
+          if (!canRenameMOP(MI, MOP, TRI)) {
             LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
             return false;
           }

@@ -1920,14 +1920,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.CoveragePrefixMap.emplace_back(Split.first, Split.second);
   }
 
-  const llvm::Triple::ArchType DebugEntryValueArchs[] = {
-      llvm::Triple::x86,     llvm::Triple::x86_64, llvm::Triple::aarch64,
-      llvm::Triple::arm,     llvm::Triple::armeb,  llvm::Triple::mips,
-      llvm::Triple::mipsel,  llvm::Triple::mips64, llvm::Triple::mips64el,
-      llvm::Triple::riscv32, llvm::Triple::riscv64};
-
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
-      llvm::is_contained(DebugEntryValueArchs, T.getArch()))
+      T.supportsDebugEntryValues())
     Opts.EmitCallSiteInfo = true;
 
   if (!Opts.EnableDIPreservationVerify && Opts.DIBugsReportFilePath.size()) {
@@ -1945,8 +1939,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
+  // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
+  // which enables the pass whenever the optimization pipeline runs.
   Opts.InterchangeLoops =
-      Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
+      Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, true);
   Opts.FuseLoops = Args.hasFlag(OPT_fexperimental_loop_fusion,
                                 OPT_fno_experimental_loop_fusion, false);
   Opts.BinutilsVersion =

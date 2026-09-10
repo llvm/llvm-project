@@ -28,7 +28,7 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
     llvm::cl::init(false), llvm::cl::Hidden);
 
 llvm::cl::opt<bool> wrapUnstructuredConstructsInExecuteRegion(
-    "wrap-unstructured-constructs-in-execute-region", llvm::cl::init(false),
+    "wrap-unstructured-constructs-in-execute-region", llvm::cl::init(true),
     llvm::cl::desc("try to wrap unstructured constructs' CFGs in "
                    "self-contained MLIR regions"));
 
@@ -2629,7 +2629,7 @@ static bool isOmpLoopBody(const Fortran::lower::pft::Evaluation &eval,
   if (!loop)
     return false;
 
-  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
   auto [depth, _] =
       semantics::omp::GetAffectedNestDepthWithReason(loop->BeginDir(), version);
   int64_t n = depth.value.value_or(1);

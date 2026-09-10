@@ -61,29 +61,6 @@ bool VPlanTransforms::simplifyKnownEVL(VPlan &Plan, ElementCount VF,
   return false;
 }
 
-template <typename Op0_t, typename Op1_t> struct RemoveMask_match {
-  Op0_t In;
-  Op1_t &Out;
-
-  RemoveMask_match(const Op0_t &In, Op1_t &Out) : In(In), Out(Out) {}
-
-  template <typename OpTy> bool match(OpTy *V) const {
-    if (m_Specific(In).match(V)) {
-      Out = nullptr;
-      return true;
-    }
-    return m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V);
-  }
-};
-
-/// Match a specific mask \p In, or a combination of it (logical-and In, Out).
-/// Returns the remaining part \p Out if so, or nullptr otherwise.
-template <typename Op0_t, typename Op1_t>
-static inline RemoveMask_match<Op0_t, Op1_t> m_RemoveMask(const Op0_t &In,
-                                                          Op1_t &Out) {
-  return RemoveMask_match<Op0_t, Op1_t>(In, Out);
-}
-
 static std::optional<Intrinsic::ID> getVPDivRemIntrinsic(Intrinsic::ID IntrID) {
   switch (IntrID) {
   case Intrinsic::masked_udiv:
@@ -397,29 +374,10 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
           .createScalarZExtOrTrunc(&EVL, Plan.getVF().getScalarType(),
                                    DebugLoc::getUnknown());
 
-  assert(all_of(Plan.getVF().users(),
-                [&Plan](VPUser *U) {
-                  auto IsAllowedUser =
-                      IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                              VPWidenIntOrFpInductionRecipe,
-                              VPWidenMemIntrinsicRecipe>;
-                  if (match(U, m_Trunc(m_Specific(&Plan.getVF()))))
-                    return all_of(cast<VPSingleDefRecipe>(U)->users(),
-                                  IsAllowedUser);
-                  return IsAllowedUser(U);
-                }) &&
-         "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
 
-  assert(all_of(Plan.getVFxUF().users(),
-                match_fn(m_CombineOr(
-                    m_c_Add(m_Specific(LoopRegion->getCanonicalIV()),
-                            m_Specific(&Plan.getVFxUF())),
-                    m_Isa<VPWidenPointerInductionRecipe>()))) &&
-         "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
-         "increment of the canonical induction.");
   Plan.getVFxUF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
     // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
     // canonical induction must not be updated.

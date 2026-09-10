@@ -76,4 +76,8 @@ mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
                       const llvm::APInt &rhs);
 
 mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
+
+mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
+                                mlir::DataLayout const &dataLayout,
+                                mlir::Type type);
 #endif

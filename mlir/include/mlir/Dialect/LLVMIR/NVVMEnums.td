@@ -32,9 +32,7 @@ def FPRoundingMode : I32EnumAttr<"FPRoundingMode", "NVVM FPRoundingMode kind",
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-def FPRoundingModeAttr : EnumAttr<NVVM_Dialect, FPRoundingMode, "fp_rnd_mode"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def FPRoundingModeAttr : EnumAttr<NVVM_Dialect, FPRoundingMode, "fp_rnd_mode">;
 
 def SaturationModeNone   : I32EnumAttrCase<"NONE", 0, "none">;
 def SaturationModeFinite : I32EnumAttrCase<"SATFINITE", 1, "satfinite">;
@@ -66,7 +64,6 @@ def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt)
 }];
- let assemblyFormat = "`<` $value `>`";
 }
 
 #endif // NVVMIR_ENUMS
