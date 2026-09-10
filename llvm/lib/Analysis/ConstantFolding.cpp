@@ -2432,16 +2432,11 @@ static Constant *constantFoldVectorPartialReduceAdd(Constant *Acc,
   unsigned NumAccElts = AccTy->getNumElements();
   unsigned NumInputElts = InputTy->getNumElements();
 
-  SmallVector<Constant *> ResultElts;
-  ResultElts.reserve(NumAccElts);
-
+  SmallVector<Constant *> ResultElts(NumAccElts);
   for (unsigned I = 0; I < NumAccElts; ++I) {
-    Constant *AccElt = Acc->getAggregateElement(I);
-
-    if (!AccElt)
+    ResultElts[I] = Acc->getAggregateElement(I);
+    if (!ResultElts[I])
       return nullptr;
-
-    ResultElts.push_back(AccElt);
   }
 
   for (unsigned I = 0; I < NumInputElts; ++I) {
