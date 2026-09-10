@@ -412,29 +412,7 @@ public:
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
           DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
-          const DataLayout *DL, OptimizationRemarkEmitter *ORE)
-      : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), LI(Li), DT(Dt),
-        AC(AC), DB(DB), DL(DL), ORE(ORE), CostKind(getSLPCostKind(Func)),
-        Builder(Se->getContext(), TargetFolder(*DL)) {
-    CodeMetrics::collectEphemeralValues(F, AC, EphValues);
-    // Use the vector register size specified by the target unless overridden
-    // by a command-line option.
-    // TODO: It would be better to limit the vectorization factor based on
-    //       data type rather than just register size. For example, x86 AVX has
-    //       256-bit registers, but it does not support integer operations
-    //       at that width (that requires AVX2).
-    if (MaxVectorRegSizeOption.getNumOccurrences())
-      MaxVecRegSize = MaxVectorRegSizeOption;
-    else
-      MaxVecRegSize =
-          TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-              .getFixedValue();
-
-    if (MinVectorRegSizeOption.getNumOccurrences())
-      MinVecRegSize = MinVectorRegSizeOption;
-    else
-      MinVecRegSize = TTI->getMinVectorRegisterBitWidth();
-  }
+          const DataLayout *DL, OptimizationRemarkEmitter *ORE);
 
   /// Vectorize the tree that starts with the elements in \p VL.
   /// Returns the vectorized root.
@@ -802,26 +780,15 @@ public:
   /// \returns the number of parts, the type \p VecTy is split at the codegen
   /// phase. The type legalization queries are repeated for the very same types
   /// during the analysis, so the results are cached for the function.
-  unsigned getNumberOfParts(
-      Type *VecTy, Type *ScalarTy,
-      unsigned Limit = std::numeric_limits<unsigned>::max()) const {
-    auto [It, Inserted] =
-        NumberOfPartsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
-    if (Inserted)
-      It->second = slpvectorizer::getNumberOfParts(*TTI, VecTy, ScalarTy,
-                                                   SLPReVec, Limit);
-    return It->second;
-  }
+  unsigned
+  getNumberOfParts(Type *VecTy, Type *ScalarTy,
+                   unsigned Limit = std::numeric_limits<unsigned>::max()) const;
 
   unsigned getMinVF(unsigned Sz) const {
     return std::max(2U, getMinVecRegSize() / Sz);
   }
 
-  unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
-    unsigned MaxVF = MaxVFOption.getNumOccurrences() ?
-      MaxVFOption : TTI->getMaximumVF(ElemWidth, Opcode);
-    return MaxVF ? MaxVF : UINT_MAX;
-  }
+  unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const;
 
   /// Check if homogeneous aggregate is isomorphic to some VectorType.
   /// Accepts homogeneous multidimensional aggregate of scalars/vectors like
@@ -1076,176 +1043,7 @@ public:
     /// Also, checks if \p V1 and \p V2 are compatible with instructions in \p
     /// MainAltOps.
     int getShallowScore(Value *V1, Value *V2, Instruction *U1, Instruction *U2,
-                        ArrayRef<Value *> MainAltOps) const {
-      if (!isValidElementType(V1->getType(), SLPReVec) ||
-          !isValidElementType(V2->getType(), SLPReVec))
-        return LookAheadHeuristics::ScoreFail;
-
-      if (V1 == V2) {
-        if (isa<LoadInst>(V1)) {
-          // Retruns true if the users of V1 and V2 won't need to be extracted.
-          auto AllUsersAreInternal = [U1, U2, this](Value *V1, Value *V2) {
-            // Bail out if we have too many uses to save compilation time.
-            if (V1->hasNUsesOrMore(UsesLimit) || V2->hasNUsesOrMore(UsesLimit))
-              return false;
-
-            auto AllUsersVectorized = [U1, U2, this](Value *V) {
-              return llvm::all_of(V->users(), [U1, U2, this](Value *U) {
-                return U == U1 || U == U2 || R.isVectorized(U);
-              });
-            };
-            return AllUsersVectorized(V1) && AllUsersVectorized(V2);
-          };
-          // A broadcast of a load can be cheaper on some targets.
-          if (R.TTI->isLegalBroadcastLoad(V1->getType(),
-                                          ElementCount::getFixed(NumLanes)) &&
-              ((int)V1->getNumUses() == NumLanes ||
-               AllUsersAreInternal(V1, V2)))
-            return LookAheadHeuristics::ScoreSplatLoads;
-        }
-        if (isa<UndefValue>(V1))
-          return LookAheadHeuristics::ScoreUndef;
-        if (isConstant(V1))
-          return LookAheadHeuristics::ScoreSameConstants;
-        return LookAheadHeuristics::ScoreSplat;
-      }
-
-      auto CheckSameEntryOrFail = [&]() {
-        if (ArrayRef<TreeEntry *> TEs1 = R.getTreeEntries(V1); !TEs1.empty()) {
-          SmallPtrSet<TreeEntry *, 4> Set(llvm::from_range, TEs1);
-          if (ArrayRef<TreeEntry *> TEs2 = R.getTreeEntries(V2);
-              !TEs2.empty() &&
-              any_of(TEs2, [&](TreeEntry *E) { return Set.contains(E); }))
-            return LookAheadHeuristics::ScoreSplatLoads;
-        }
-        return LookAheadHeuristics::ScoreFail;
-      };
-
-      auto *LI1 = dyn_cast<LoadInst>(V1);
-      auto *LI2 = dyn_cast<LoadInst>(V2);
-      if (LI1 && LI2) {
-        if (LI1->getParent() != LI2->getParent() || !LI1->isSimple() ||
-            !LI2->isSimple())
-          return CheckSameEntryOrFail();
-
-        std::optional<int64_t> Dist = getPointersDiff(
-            LI1->getType(), LI1->getPointerOperand(), LI2->getType(),
-            LI2->getPointerOperand(), DL, SE, /*StrictCheck=*/true);
-        if (!Dist || *Dist == 0) {
-          if (getUnderlyingObject(LI1->getPointerOperand()) ==
-                  getUnderlyingObject(LI2->getPointerOperand()) &&
-              R.TTI->isLegalMaskedGather(
-                  getWidenedType(LI1->getType(), NumLanes), LI1->getAlign()))
-            return LookAheadHeuristics::ScoreMaskedGatherCandidate;
-          return CheckSameEntryOrFail();
-        }
-        // The distance is too large - still may be profitable to use masked
-        // loads/gathers.
-        if (std::abs(*Dist) > NumLanes / 2)
-          return LookAheadHeuristics::ScoreMaskedGatherCandidate;
-        // This still will detect consecutive loads, but we might have "holes"
-        // in some cases. It is ok for non-power-2 vectorization and may produce
-        // better results. It should not affect current vectorization.
-        return (*Dist > 0) ? LookAheadHeuristics::ScoreConsecutiveLoads
-                           : LookAheadHeuristics::ScoreReversedLoads;
-      }
-
-      auto *C1 = dyn_cast<Constant>(V1);
-      auto *C2 = dyn_cast<Constant>(V2);
-      if (C1 && C2)
-        return LookAheadHeuristics::ScoreConstants;
-
-      // Consider constants and buildvector compatible.
-      if ((C1 && isa<InsertElementInst>(V2)) ||
-          (C2 && isa<InsertElementInst>(V1)))
-        return LookAheadHeuristics::ScoreSameOpcode;
-
-      // Extracts from consecutive indexes of the same vector better score as
-      // the extracts could be optimized away.
-      Value *EV1;
-      ConstantInt *Ex1Idx;
-      if (match(V1, m_ExtractElt(m_Value(EV1), m_ConstantInt(Ex1Idx)))) {
-        // Undefs are always profitable for extractelements.
-        // Compiler can easily combine poison and extractelement <non-poison> or
-        // undef and extractelement <poison>. But combining undef +
-        // extractelement <non-poison-but-may-produce-poison> requires some
-        // extra operations.
-        if (isa<UndefValue>(V2))
-          return (isa<PoisonValue>(V2) || isUndefVector(EV1).all())
-                     ? LookAheadHeuristics::ScoreConsecutiveExtracts
-                     : LookAheadHeuristics::ScoreSameOpcode;
-        Value *EV2 = nullptr;
-        ConstantInt *Ex2Idx = nullptr;
-        if (match(V2,
-                  m_ExtractElt(m_Value(EV2), m_CombineOr(m_ConstantInt(Ex2Idx),
-                                                         m_Undef())))) {
-          // Undefs are always profitable for extractelements.
-          if (!Ex2Idx)
-            return LookAheadHeuristics::ScoreConsecutiveExtracts;
-          if (isUndefVector(EV2).all() && EV2->getType() == EV1->getType())
-            return LookAheadHeuristics::ScoreConsecutiveExtracts;
-          if (EV2 == EV1) {
-            int Idx1 = Ex1Idx->getZExtValue();
-            int Idx2 = Ex2Idx->getZExtValue();
-            int Dist = Idx2 - Idx1;
-            // The distance is too large - still may be profitable to use
-            // shuffles.
-            if (std::abs(Dist) == 0)
-              return LookAheadHeuristics::ScoreSplat;
-            if (std::abs(Dist) > NumLanes / 2)
-              return LookAheadHeuristics::ScoreSameOpcode;
-            return (Dist > 0) ? LookAheadHeuristics::ScoreConsecutiveExtracts
-                              : LookAheadHeuristics::ScoreReversedExtracts;
-          }
-          return LookAheadHeuristics::ScoreAltOpcodes;
-        }
-        return CheckSameEntryOrFail();
-      }
-
-      auto *I1 = dyn_cast<Instruction>(V1);
-      auto *I2 = dyn_cast<Instruction>(V2);
-      if (I1 && I2) {
-        if (I1->getParent() != I2->getParent())
-          return CheckSameEntryOrFail();
-        Value *V;
-        Value *Cond;
-        // ZExt i1 to something must be considered same opcode for select i1
-        // cmp, x, y
-        // Required to better match the transformation after
-        // BoUpSLP::matchesInversedZExtSelect analysis.
-        if ((match(I1, m_ZExt(m_Value(V))) &&
-             match(I2, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
-             V->getType() == Cond->getType()) ||
-            (match(I2, m_ZExt(m_Value(V))) &&
-             match(I1, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
-             V->getType() == Cond->getType()))
-          return LookAheadHeuristics::ScoreSameOpcode;
-        SmallVector<Value *, 4> Ops(MainAltOps);
-        Ops.push_back(I1);
-        Ops.push_back(I2);
-        InstructionsState S = getSameOpcode(Ops, TLI);
-        // Note: Only consider instructions with <= 2 operands to avoid
-        // complexity explosion.
-        if (S &&
-            (S.getMainOp()->getNumOperands() <= 2 || !MainAltOps.empty() ||
-             !S.isAltShuffle()) &&
-            all_of(Ops, [&S](Value *V) {
-              return isa<PoisonValue>(V) ||
-                     cast<Instruction>(V)->getNumOperands() ==
-                         S.getMainOp()->getNumOperands();
-            }))
-          return S.isAltShuffle() ? LookAheadHeuristics::ScoreAltOpcodes
-                                  : LookAheadHeuristics::ScoreSameOpcode;
-      }
-
-      if (I1 && isa<PoisonValue>(V2))
-        return LookAheadHeuristics::ScoreSameOpcode;
-
-      if (isa<UndefValue>(V2))
-        return LookAheadHeuristics::ScoreUndef;
-
-      return CheckSameEntryOrFail();
-    }
+                        ArrayRef<Value *> MainAltOps) const;
 
     /// Go through the operands of \p LHS and \p RHS recursively until
     /// MaxLevel, and return the cummulative score. \p U1 and \p U2 are
@@ -1519,38 +1317,8 @@ public:
     /// the order of the operands by just considering the immediate
     /// predecessors.
     int getLookAheadScore(Value *LHS, Value *RHS, ArrayRef<Value *> MainAltOps,
-                          int Lane, unsigned OpIdx, unsigned Idx,
-                          bool &IsUsed, const SmallBitVector &UsedLanes) {
-      LookAheadHeuristics LookAhead(TLI, DL, SE, R, getNumLanes(),
-                                    LookAheadMaxDepth);
-      // Keep track of the instruction stack as we recurse into the operands
-      // during the look-ahead score exploration.
-      int Score =
-          LookAhead.getScoreAtLevelRec(LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
-                                       /*CurrLevel=*/1, MainAltOps);
-      if (Score) {
-        int SplatScore =
-            getSplatScore(Lane, OpIdx, Idx, UsedLanes) * ScoreScaleFactor;
-        if (Score <= -SplatScore) {
-          // Failed score.
-          Score = 0;
-        } else {
-          Score += SplatScore;
-          // Scale score to see the difference between different operands
-          // and similar operands but all vectorized/not all vectorized
-          // uses. It does not affect actual selection of the best
-          // compatible operand in general, just allows to select the
-          // operand with all vectorized uses.
-          const int SF = (LHS == RHS && isConstant(LHS))
-                             ? ScoreConstantScaleFactor
-                             : ScoreScaleFactor;
-          Score *= SF;
-          Score += getExternalUseScore(Lane, OpIdx, Idx);
-          IsUsed = true;
-        }
-      }
-      return Score;
-    }
+                          int Lane, unsigned OpIdx, unsigned Idx, bool &IsUsed,
+                          const SmallBitVector &UsedLanes);
 
     /// Best defined scores per lanes between the passes. Used to choose the
     /// best operand (with the highest score) between the passes.
@@ -2186,23 +1954,7 @@ public:
   /// of the cost, considered to be good enough score.
   std::pair<std::optional<int>, int>
   findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates,
-                   int Limit = LookAheadHeuristics::ScoreFail) const {
-    LookAheadHeuristics LookAhead(*TLI, *DL, *SE, *this, /*NumLanes=*/2,
-                                  RootLookAheadMaxDepth);
-    int BestScore = Limit;
-    std::optional<int> Index;
-    for (int I : seq<int>(0, Candidates.size())) {
-      int Score = LookAhead.getScoreAtLevelRec(Candidates[I].first,
-                                               Candidates[I].second,
-                                               /*U1=*/nullptr, /*U2=*/nullptr,
-                                               /*CurrLevel=*/1, {});
-      if (Score > BestScore) {
-        BestScore = Score;
-        Index = I;
-      }
-    }
-    return std::make_pair(Index, BestScore);
-  }
+                   int Limit = LookAheadHeuristics::ScoreFail) const;
 
   /// Checks if the instruction is marked for deletion.
   bool isDeleted(Instruction *I) const { return DeletedInstructions.count(I); }
@@ -4251,8 +4003,7 @@ private:
   /// extractelements/insertelements only or nodes with instructions, with
   /// uses/operands outside of the block.
   struct BlockScheduling {
-    BlockScheduling(BasicBlock *BB)
-        : BB(BB), ChunkSize(BB->size()), ChunkPos(ChunkSize) {}
+    BlockScheduling(BasicBlock *BB);
 
     void clear() {
       ScheduledBundles.clear();
@@ -5274,7 +5025,7 @@ private:
     int ScheduleRegionSize = 0;
 
     /// The maximum size allowed for the scheduling region.
-    int ScheduleRegionSizeLimit = ScheduleRegionSizeBudget;
+    int ScheduleRegionSizeLimit;
 
     /// Operands that are modeled as copyable elements in a previously built
     /// vectorized node and that are used directly by another,
@@ -5369,6 +5120,279 @@ private:
   /// bitwidth analysis attempt, like trunc, IToFP or ICmp.
   DenseSet<unsigned> ExtraBitWidthNodes;
 };
+
+BoUpSLP::BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
+                 TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
+                 DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
+                 const DataLayout *DL, OptimizationRemarkEmitter *ORE)
+    : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), LI(Li), DT(Dt), AC(AC),
+      DB(DB), DL(DL), ORE(ORE), CostKind(getSLPCostKind(Func)),
+      Builder(Se->getContext(), TargetFolder(*DL)) {
+  CodeMetrics::collectEphemeralValues(F, AC, EphValues);
+  // Use the vector register size specified by the target unless overridden
+  // by a command-line option.
+  // TODO: It would be better to limit the vectorization factor based on
+  //       data type rather than just register size. For example, x86 AVX has
+  //       256-bit registers, but it does not support integer operations
+  //       at that width (that requires AVX2).
+  if (MaxVectorRegSizeOption.getNumOccurrences())
+    MaxVecRegSize = MaxVectorRegSizeOption;
+  else
+    MaxVecRegSize =
+        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+            .getFixedValue();
+
+  if (MinVectorRegSizeOption.getNumOccurrences())
+    MinVecRegSize = MinVectorRegSizeOption;
+  else
+    MinVecRegSize = TTI->getMinVectorRegisterBitWidth();
+}
+
+unsigned BoUpSLP::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
+  unsigned MaxVF = MaxVFOption.getNumOccurrences()
+                       ? MaxVFOption
+                       : TTI->getMaximumVF(ElemWidth, Opcode);
+  return MaxVF ? MaxVF : UINT_MAX;
+}
+
+int BoUpSLP::VLOperands::getLookAheadScore(Value *LHS, Value *RHS,
+                                           ArrayRef<Value *> MainAltOps,
+                                           int Lane, unsigned OpIdx,
+                                           unsigned Idx, bool &IsUsed,
+                                           const SmallBitVector &UsedLanes) {
+  LookAheadHeuristics LookAhead(TLI, DL, SE, R, getNumLanes(),
+                                LookAheadMaxDepth);
+  // Keep track of the instruction stack as we recurse into the operands
+  // during the look-ahead score exploration.
+  int Score =
+      LookAhead.getScoreAtLevelRec(LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
+                                   /*CurrLevel=*/1, MainAltOps);
+  if (Score) {
+    int SplatScore =
+        getSplatScore(Lane, OpIdx, Idx, UsedLanes) * ScoreScaleFactor;
+    if (Score <= -SplatScore) {
+      // Failed score.
+      Score = 0;
+    } else {
+      Score += SplatScore;
+      // Scale score to see the difference between different operands
+      // and similar operands but all vectorized/not all vectorized
+      // uses. It does not affect actual selection of the best
+      // compatible operand in general, just allows to select the
+      // operand with all vectorized uses.
+      const int SF = (LHS == RHS && isConstant(LHS)) ? ScoreConstantScaleFactor
+                                                     : ScoreScaleFactor;
+      Score *= SF;
+      Score += getExternalUseScore(Lane, OpIdx, Idx);
+      IsUsed = true;
+    }
+  }
+  return Score;
+}
+
+std::pair<std::optional<int>, int>
+BoUpSLP::findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates,
+                          int Limit) const {
+  LookAheadHeuristics LookAhead(*TLI, *DL, *SE, *this, /*NumLanes=*/2,
+                                RootLookAheadMaxDepth);
+  int BestScore = Limit;
+  std::optional<int> Index;
+  for (int I : seq<int>(0, Candidates.size())) {
+    int Score =
+        LookAhead.getScoreAtLevelRec(Candidates[I].first, Candidates[I].second,
+                                     /*U1=*/nullptr, /*U2=*/nullptr,
+                                     /*CurrLevel=*/1, {});
+    if (Score > BestScore) {
+      BestScore = Score;
+      Index = I;
+    }
+  }
+  return std::make_pair(Index, BestScore);
+}
+
+BoUpSLP::BlockScheduling::BlockScheduling(BasicBlock *BB)
+    : BB(BB), ChunkSize(BB->size()), ChunkPos(ChunkSize),
+      ScheduleRegionSizeLimit(ScheduleRegionSizeBudget) {}
+
+int BoUpSLP::LookAheadHeuristics::getShallowScore(
+    Value *V1, Value *V2, Instruction *U1, Instruction *U2,
+    ArrayRef<Value *> MainAltOps) const {
+  if (!isValidElementType(V1->getType(), SLPReVec) ||
+      !isValidElementType(V2->getType(), SLPReVec))
+    return LookAheadHeuristics::ScoreFail;
+
+  if (V1 == V2) {
+    if (isa<LoadInst>(V1)) {
+      // Retruns true if the users of V1 and V2 won't need to be extracted.
+      auto AllUsersAreInternal = [U1, U2, this](Value *V1, Value *V2) {
+        // Bail out if we have too many uses to save compilation time.
+        if (V1->hasNUsesOrMore(UsesLimit) || V2->hasNUsesOrMore(UsesLimit))
+          return false;
+
+        auto AllUsersVectorized = [U1, U2, this](Value *V) {
+          return llvm::all_of(V->users(), [U1, U2, this](Value *U) {
+            return U == U1 || U == U2 || R.isVectorized(U);
+          });
+        };
+        return AllUsersVectorized(V1) && AllUsersVectorized(V2);
+      };
+      // A broadcast of a load can be cheaper on some targets.
+      if (R.TTI->isLegalBroadcastLoad(V1->getType(),
+                                      ElementCount::getFixed(NumLanes)) &&
+          ((int)V1->getNumUses() == NumLanes || AllUsersAreInternal(V1, V2)))
+        return LookAheadHeuristics::ScoreSplatLoads;
+    }
+    if (isa<UndefValue>(V1))
+      return LookAheadHeuristics::ScoreUndef;
+    if (isConstant(V1))
+      return LookAheadHeuristics::ScoreSameConstants;
+    return LookAheadHeuristics::ScoreSplat;
+  }
+
+  auto CheckSameEntryOrFail = [&]() {
+    if (ArrayRef<TreeEntry *> TEs1 = R.getTreeEntries(V1); !TEs1.empty()) {
+      SmallPtrSet<TreeEntry *, 4> Set(llvm::from_range, TEs1);
+      if (ArrayRef<TreeEntry *> TEs2 = R.getTreeEntries(V2);
+          !TEs2.empty() &&
+          any_of(TEs2, [&](TreeEntry *E) { return Set.contains(E); }))
+        return LookAheadHeuristics::ScoreSplatLoads;
+    }
+    return LookAheadHeuristics::ScoreFail;
+  };
+
+  auto *LI1 = dyn_cast<LoadInst>(V1);
+  auto *LI2 = dyn_cast<LoadInst>(V2);
+  if (LI1 && LI2) {
+    if (LI1->getParent() != LI2->getParent() || !LI1->isSimple() ||
+        !LI2->isSimple())
+      return CheckSameEntryOrFail();
+
+    std::optional<int64_t> Dist = getPointersDiff(
+        LI1->getType(), LI1->getPointerOperand(), LI2->getType(),
+        LI2->getPointerOperand(), DL, SE, /*StrictCheck=*/true);
+    if (!Dist || *Dist == 0) {
+      if (getUnderlyingObject(LI1->getPointerOperand()) ==
+              getUnderlyingObject(LI2->getPointerOperand()) &&
+          R.TTI->isLegalMaskedGather(getWidenedType(LI1->getType(), NumLanes),
+                                     LI1->getAlign()))
+        return LookAheadHeuristics::ScoreMaskedGatherCandidate;
+      return CheckSameEntryOrFail();
+    }
+    // The distance is too large - still may be profitable to use masked
+    // loads/gathers.
+    if (std::abs(*Dist) > NumLanes / 2)
+      return LookAheadHeuristics::ScoreMaskedGatherCandidate;
+    // This still will detect consecutive loads, but we might have "holes"
+    // in some cases. It is ok for non-power-2 vectorization and may produce
+    // better results. It should not affect current vectorization.
+    return (*Dist > 0) ? LookAheadHeuristics::ScoreConsecutiveLoads
+                       : LookAheadHeuristics::ScoreReversedLoads;
+  }
+
+  auto *C1 = dyn_cast<Constant>(V1);
+  auto *C2 = dyn_cast<Constant>(V2);
+  if (C1 && C2)
+    return LookAheadHeuristics::ScoreConstants;
+
+  // Consider constants and buildvector compatible.
+  if ((C1 && isa<InsertElementInst>(V2)) || (C2 && isa<InsertElementInst>(V1)))
+    return LookAheadHeuristics::ScoreSameOpcode;
+
+  // Extracts from consecutive indexes of the same vector better score as
+  // the extracts could be optimized away.
+  Value *EV1;
+  ConstantInt *Ex1Idx;
+  if (match(V1, m_ExtractElt(m_Value(EV1), m_ConstantInt(Ex1Idx)))) {
+    // Undefs are always profitable for extractelements.
+    // Compiler can easily combine poison and extractelement <non-poison> or
+    // undef and extractelement <poison>. But combining undef +
+    // extractelement <non-poison-but-may-produce-poison> requires some
+    // extra operations.
+    if (isa<UndefValue>(V2))
+      return (isa<PoisonValue>(V2) || isUndefVector(EV1).all())
+                 ? LookAheadHeuristics::ScoreConsecutiveExtracts
+                 : LookAheadHeuristics::ScoreSameOpcode;
+    Value *EV2 = nullptr;
+    ConstantInt *Ex2Idx = nullptr;
+    if (match(V2, m_ExtractElt(m_Value(EV2), m_CombineOr(m_ConstantInt(Ex2Idx),
+                                                         m_Undef())))) {
+      // Undefs are always profitable for extractelements.
+      if (!Ex2Idx)
+        return LookAheadHeuristics::ScoreConsecutiveExtracts;
+      if (isUndefVector(EV2).all() && EV2->getType() == EV1->getType())
+        return LookAheadHeuristics::ScoreConsecutiveExtracts;
+      if (EV2 == EV1) {
+        int Idx1 = Ex1Idx->getZExtValue();
+        int Idx2 = Ex2Idx->getZExtValue();
+        int Dist = Idx2 - Idx1;
+        // The distance is too large - still may be profitable to use
+        // shuffles.
+        if (std::abs(Dist) == 0)
+          return LookAheadHeuristics::ScoreSplat;
+        if (std::abs(Dist) > NumLanes / 2)
+          return LookAheadHeuristics::ScoreSameOpcode;
+        return (Dist > 0) ? LookAheadHeuristics::ScoreConsecutiveExtracts
+                          : LookAheadHeuristics::ScoreReversedExtracts;
+      }
+      return LookAheadHeuristics::ScoreAltOpcodes;
+    }
+    return CheckSameEntryOrFail();
+  }
+
+  auto *I1 = dyn_cast<Instruction>(V1);
+  auto *I2 = dyn_cast<Instruction>(V2);
+  if (I1 && I2) {
+    if (I1->getParent() != I2->getParent())
+      return CheckSameEntryOrFail();
+    Value *V;
+    Value *Cond;
+    // ZExt i1 to something must be considered same opcode for select i1
+    // cmp, x, y
+    // Required to better match the transformation after
+    // BoUpSLP::matchesInversedZExtSelect analysis.
+    if ((match(I1, m_ZExt(m_Value(V))) &&
+         match(I2, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
+         V->getType() == Cond->getType()) ||
+        (match(I2, m_ZExt(m_Value(V))) &&
+         match(I1, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
+         V->getType() == Cond->getType()))
+      return LookAheadHeuristics::ScoreSameOpcode;
+    SmallVector<Value *, 4> Ops(MainAltOps);
+    Ops.push_back(I1);
+    Ops.push_back(I2);
+    InstructionsState S = getSameOpcode(Ops, TLI);
+    // Note: Only consider instructions with <= 2 operands to avoid
+    // complexity explosion.
+    if (S &&
+        (S.getMainOp()->getNumOperands() <= 2 || !MainAltOps.empty() ||
+         !S.isAltShuffle()) &&
+        all_of(Ops, [&S](Value *V) {
+          return isa<PoisonValue>(V) ||
+                 cast<Instruction>(V)->getNumOperands() ==
+                     S.getMainOp()->getNumOperands();
+        }))
+      return S.isAltShuffle() ? LookAheadHeuristics::ScoreAltOpcodes
+                              : LookAheadHeuristics::ScoreSameOpcode;
+  }
+
+  if (I1 && isa<PoisonValue>(V2))
+    return LookAheadHeuristics::ScoreSameOpcode;
+
+  if (isa<UndefValue>(V2))
+    return LookAheadHeuristics::ScoreUndef;
+
+  return CheckSameEntryOrFail();
+}
+
+unsigned BoUpSLP::getNumberOfParts(Type *VecTy, Type *ScalarTy,
+                                   unsigned Limit) const {
+  auto [It, Inserted] =
+      NumberOfPartsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
+  if (Inserted)
+    It->second =
+        slpvectorizer::getNumberOfParts(*TTI, VecTy, ScalarTy, SLPReVec, Limit);
+  return It->second;
+}
 
 template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
   using FirstInfo = DenseMapInfo<BoUpSLP::TreeEntry *>;
