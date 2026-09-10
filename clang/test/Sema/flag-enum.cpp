@@ -11,9 +11,9 @@ enum class [[clang::flag_enum]] WithoutOps { D0 = 1, D1 = 8 };
 // expected-warning@-1 {{'operator~' is not available for flag-like enumeration type 'WithoutOps'}}
 
 WithOps operator|(WithOps L, WithOps R);
-WithOps operator&(WithOps L, WithOps R);
-WithOps operator^(WithOps L, WithOps R);
-WithOps operator~(WithOps L);
+WithOps operator&(WithOps const& L, WithOps const& R);
+WithOps operator^(WithOps L, WithOps&& R);
+WithOps operator~(WithOps const&& L);
 
 namespace test {
 enum class [[clang::flag_enum]] Foo { A=1, B=2 };
@@ -25,10 +25,12 @@ enum class [[clang::flag_enum]] Foo { A=1, B=2 };
 // expected-warning@-1 {{'operator^' is deleted for flag-like enumeration type 'Foo': reason}} \
 //   expected-note@#deleted2 {{candidate function has been explicitly deleted}} \
 // expected-warning@-1 {{'operator~' is not available for flag-like enumeration type 'Foo'}}
+//   expected-note@#nonviable {{candidate function not viable: expects an lvalue for 1st argument}}
 
 Foo operator|(Foo lhs, Foo rhs); // #candidate1
 Foo operator&(Foo L, Foo R) = delete; // #deleted1
 Foo operator^(Foo L, Foo R) = delete("reason"); // #deleted2
+Foo operator~(Foo& L); // #nonviable
 }
 
 constexpr test::Foo operator|(test::Foo lhs, test::Foo rhs); // #candidate2
