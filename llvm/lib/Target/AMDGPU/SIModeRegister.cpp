@@ -15,7 +15,6 @@
 //
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include <optional>
@@ -99,6 +98,10 @@ public:
   // which is used in Phase 3 if we need to insert a mode change.
   MachineInstr *FirstInsertionPoint = nullptr;
 
+  // Call and return sites, each paired with the block local mode changes that
+  // precede it. Phase 3 merges the pair with Pred to get the mode at the site.
+  SmallVector<std::pair<MachineInstr *, Status>, 2> BoundarySites;
+
   // A flag to indicate whether an Exit value has been set (we can't tell by
   // examining the Exit value itself as all values may be valid results).
   bool ExitSet = false;
@@ -124,7 +127,14 @@ public:
 
   bool Changed = false;
 
-  bool EnforceCallBoundary = false;
+  // Set during Phase 1. A restore at a boundary would undo an explicit request,
+  // so the mixed case is not handled.
+  bool AnyNonDefaultMode = false;
+  bool AnyWritesRoundMode = false;
+
+  bool enforceCallBoundary() const {
+    return AnyNonDefaultMode && !AnyWritesRoundMode;
+  }
 
   bool run(MachineFunction &MF);
 
@@ -136,7 +146,7 @@ public:
 
   Status getInstructionMode(MachineInstr &MI, const SIInstrInfo *TII);
 
-  void insertSetreg(MachineBasicBlock &MBB, MachineInstr *I,
+  void insertSetreg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                     const SIInstrInfo *TII, Status InstrMode);
 };
 
@@ -211,18 +221,11 @@ getModeSetregField(const MachineInstr &MI, const SIInstrInfo *TII) {
   return std::make_pair(Offset, maskTrailingOnes<unsigned>(Width) << Offset);
 }
 
-// A mode the program asked for outlives the function and is not undone.
-static bool writesRoundMode(const MachineInstr &MI, const SIInstrInfo *TII) {
-  if (MI.getOpcode() == AMDGPU::S_ROUND_MODE)
-    return true;
-  auto Field = getModeSetregField(MI, TII);
-  return Field && (Field->second & AMDGPU::Hwreg::FP_ROUND_MASK);
-}
-
-// Not the wave-ending opcodes or the epilog return. Tail calls: see isCall.
+// Not the wave-ending opcodes. Tail calls: see isCall.
 static bool isReturnToCaller(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::SI_RETURN:
+  case AMDGPU::SI_RETURN_TO_EPILOG:
   case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
   case AMDGPU::S_SETPC_B64_return:
     return true;
@@ -238,10 +241,6 @@ static bool isReturnToCaller(const MachineInstr &MI) {
 Status SIModeRegister::getInstructionMode(MachineInstr &MI,
                                           const SIInstrInfo *TII) {
   unsigned Opcode = MI.getOpcode();
-  // Caller and callee agree on the default mode (AMDGPUUsage.rst, "MODE
-  // register").
-  if (EnforceCallBoundary && (MI.isCall() || isReturnToCaller(MI)))
-    return DefaultStatus;
   if (TII->usesFPDPRounding(MI) || isFPTruncRoundPseudo(MI)) {
     switch (Opcode) {
     case AMDGPU::V_INTERP_P1LL_F16:
@@ -292,14 +291,15 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
 // the value of disjoint parts of the Mode register when we don't know the
 // value of the intervening bits. In that case we need to use more than one
 // setreg instruction.
-void SIModeRegister::insertSetreg(MachineBasicBlock &MBB, MachineInstr *MI,
+void SIModeRegister::insertSetreg(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator I,
                                   const SIInstrInfo *TII, Status InstrMode) {
   while (InstrMode.Mask) {
     unsigned Offset = llvm::countr_zero<unsigned>(InstrMode.Mask);
     unsigned Width = llvm::countr_one<unsigned>(InstrMode.Mask >> Offset);
     unsigned Value = (InstrMode.Mode >> Offset) & ((1 << Width) - 1);
     using namespace AMDGPU::Hwreg;
-    BuildMI(MBB, MI, nullptr, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+    BuildMI(MBB, I, nullptr, TII->get(AMDGPU::S_SETREG_IMM32_B32))
         .addImm(Value)
         .addImm(HwregEncoding::encode(ID_MODE, Offset, Width));
     ++NumSetregInserted;
@@ -339,12 +339,16 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
   bool RequirePending = true;
   Status IPChange;
   for (MachineInstr &MI : MBB) {
+    // getInstructionMode rewrites the pseudos, so classify MI before the call.
+    AnyNonDefaultMode |= mayNeedNonDefaultMode(MI);
+    AnyWritesRoundMode |= MI.getOpcode() == AMDGPU::S_ROUND_MODE;
     Status InstrMode = getInstructionMode(MI, TII);
     if (auto Field = getModeSetregField(MI, TII)) {
       // We preserve any explicit mode register setreg instruction we encounter,
       // as we assume it has been inserted by a higher authority (this is
       // likely to be a very rare occurrence).
       auto [Offset, Mask] = *Field;
+      AnyWritesRoundMode |= (Mask & FP_ROUND_MODE_DP(0x3)) != 0;
 
       // If an InsertionPoint is set we will insert a setreg there.
       if (InsertionPoint) {
@@ -366,6 +370,11 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
       } else {
         NewInfo->Change = NewInfo->Change.mergeUnknown(Mask);
       }
+    } else if (MI.isCall() || isReturnToCaller(MI)) {
+      // Whether a restore is needed is a whole function property, so only
+      // record the site here. Change is unaffected: Phase 3 pairs any restore
+      // it inserts with a re-set after the call.
+      NewInfo->BoundarySites.emplace_back(&MI, NewInfo->Change);
     } else if (!NewInfo->Change.isCompatible(InstrMode)) {
       // This instruction uses the Mode register and its requirements aren't
       // compatible with the current mode.
@@ -491,6 +500,20 @@ void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
     else
       insertSetreg(MBB, &MBB.instr_front(), TII, Delta);
   }
+
+  // Restore the default at the sites recorded in Phase 1.
+  if (!enforceCallBoundary())
+    return;
+  for (auto &[MI, ChangeAtSite] : BlockInfo[ThisBlock]->BoundarySites) {
+    Status AtSite = BlockInfo[ThisBlock]->Pred.merge(ChangeAtSite);
+    if (AtSite.isCompatible(DefaultStatus))
+      continue;
+    insertSetreg(MBB, MI, TII, AtSite.delta(DefaultStatus));
+    // Phase 1 modelled the site as mode preserving, so put the mode back.
+    if (!MI->isTerminator())
+      insertSetreg(MBB, std::next(MI->getIterator()), TII,
+                   DefaultStatus.delta(AtSite));
+  }
 }
 
 bool SIModeRegisterLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -518,16 +541,6 @@ bool SIModeRegister::run(MachineFunction &MF) {
   BlockInfo.resize(MF.getNumBlockIDs());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
-
-  // The mixed case is not handled: a restore would undo the program's request.
-  auto AnyInstr = [&MF](function_ref<bool(const MachineInstr &)> P) {
-    return any_of(
-        MF, [&P](const MachineBasicBlock &MBB) { return any_of(MBB, P); });
-  };
-  EnforceCallBoundary = AnyInstr(mayNeedNonDefaultMode) &&
-                        !AnyInstr([TII](const MachineInstr &MI) {
-                          return writesRoundMode(MI, TII);
-                        });
 
   // Processing is performed in a number of phases
 
