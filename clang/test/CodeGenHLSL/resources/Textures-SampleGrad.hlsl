@@ -164,7 +164,12 @@
 //   COORD_TYPE         sample location type (DIM components plus the array
 //                      slice)
 //   GRAD_CXX           ddx/ddy type in the C++ signature
+//   GRAD_LLVM          ddx/ddy type in the IR
 //   COORD_CXX          sample location type in the C++ signature
+//   COORD_LLVM         sample location type in the IR
+//   OFFSET_CXX         offset type in the C++ signature
+//   OFFSET_LLVM        offset type in the IR
+//   OFFSET_ZERO        the all-zero offset as it appears in the IR
 //   DXIL_TY            dx.Texture resource-kind operand
 //   RW                 dx.Texture UAV operand
 //   OFFSET_CONST       the offset literal as it appears in the IR

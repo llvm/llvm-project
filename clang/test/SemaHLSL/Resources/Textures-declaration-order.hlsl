@@ -8,6 +8,10 @@
 // types. Both patterns are only defined on demand by HLSLExternalSemaSource, so
 // completing one of them must not prevent the other one from being completed.
 // See https://github.com/llvm/llvm-project/issues/212575.
+//
+//   SCALAR_FIRST       defined to declare the scalar element types first, and
+//                      left undefined to declare the vector ones first, so
+//                      that both orders are covered
 
 // expected-no-diagnostics
 

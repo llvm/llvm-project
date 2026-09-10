@@ -201,6 +201,8 @@
 //   REG1               register binding for Tex2
 //   REG2               register binding for Tex3
 //   TEXTURE            resource type name
+//   INDEX_CXX_U        operator[] index type in the C++ signature
+//   INDEX_LLVM         operator[] index type in the IR
 //   COORD_TYPE         sample location type (DIM components plus the array
 //                      slice)
 //   ROV_OR_COUNT       the overloaded second dx handle operand: IsROV for

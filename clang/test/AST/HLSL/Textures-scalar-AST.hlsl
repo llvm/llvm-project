@@ -87,6 +87,8 @@
 //                      methods
 //   HAS_GATHER         defined for types that have the Gather* methods
 //   TEXTURE            resource type name
+//   IS_ARRAY           the hlsl::is_array attribute as it appears on the
+//                      handle of an array texture, empty otherwise
 //   COORD_TYPE         sample location type (DIM components plus the array
 //                      slice)
 //   GRAD_TYPE          SampleGrad ddx/ddy type, one component per resource
