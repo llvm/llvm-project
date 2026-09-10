@@ -10,6 +10,7 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a2, a0
 ; RV64-NEXT:    ret
 ;
@@ -19,6 +20,7 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a2, a0
 ; RV32-NEXT:    ret
   %result = call i8 @llvm.ct.select.i8(i1 %cond, i8 %a, i8 %b)
@@ -31,6 +33,7 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a2, a0
 ; RV64-NEXT:    ret
 ;
@@ -40,6 +43,7 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) {
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a2, a0
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
@@ -53,6 +57,7 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a2, a0
 ; RV64-NEXT:    ret
 ;
@@ -61,10 +66,12 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) {
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    xor a1, a1, a3
 ; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    xor a2, a2, a4
 ; RV32-NEXT:    and a1, a1, a0
+; RV32-NEXT:    xor a2, a2, a4
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    and a2, a2, a0
 ; RV32-NEXT:    xor a0, a3, a1
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a1, a4, a2
 ; RV32-NEXT:    ret
   %result = call i64 @llvm.ct.select.i64(i1 %cond, i64 %a, i64 %b)
@@ -78,6 +85,7 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a2, a0
 ; RV64-NEXT:    ret
 ;
@@ -87,6 +95,7 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) {
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a2, a0
 ; RV32-NEXT:    ret
   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %a, ptr %b)
@@ -98,12 +107,14 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) {
 ; RV64-LABEL: test_ctselect_const_true:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a1, a0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_const_true:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    xor a0, a0, a1
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
@@ -113,12 +124,16 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) {
 define i32 @test_ctselect_const_false(i32 %a, i32 %b) {
 ; RV64-LABEL: test_ctselect_const_false:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    xor a0, a1, a0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_const_false:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
   ret i32 %result
@@ -135,6 +150,7 @@ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; RV64-NEXT:    xor a2, a2, a3
 ; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a3, a0
 ; RV64-NEXT:    ret
 ;
@@ -145,6 +161,7 @@ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; RV32-NEXT:    xor a2, a2, a3
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    and a0, a2, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a3, a0
 ; RV32-NEXT:    ret
   %cond = icmp eq i32 %x, %y
@@ -160,6 +177,7 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; RV64-NEXT:    xor a2, a2, a3
 ; RV64-NEXT:    neg a0, a0
 ; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a3, a0
 ; RV64-NEXT:    ret
 ;
@@ -169,6 +187,7 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; RV32-NEXT:    xor a2, a2, a3
 ; RV32-NEXT:    neg a0, a0
 ; RV32-NEXT:    and a0, a2, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a3, a0
 ; RV32-NEXT:    ret
   %cond = icmp ult i32 %x, %y
@@ -186,6 +205,7 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
 ; RV64-NEXT:    xor a1, a1, a2
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a2, a0
 ; RV64-NEXT:    ret
 ;
@@ -197,6 +217,7 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
 ; RV32-NEXT:    xor a1, a1, a2
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a2, a0
 ; RV32-NEXT:    ret
   %a = load i32, ptr %p1
@@ -212,10 +233,12 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    xor a2, a2, a3
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a3, a0
 ; RV64-NEXT:    ret
 ;
@@ -223,10 +246,12 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    xor a2, a2, a3
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a2, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a3, a0
 ; RV32-NEXT:    ret
   %inner = call i1 @llvm.ct.select.i1(i1 %c1, i1 true, i1 false)
@@ -242,10 +267,12 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    xor a2, a2, a3
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a3, a0
 ; RV64-NEXT:    ret
 ;
@@ -253,10 +280,12 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    xor a2, a2, a3
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a2, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a3, a0
 ; RV32-NEXT:    ret
   %inner = call i1 @llvm.ct.select.i1(i1 %c1, i1 true, i1 false)
@@ -274,10 +303,12 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    xor a3, a3, a4
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a3, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a4, a0
 ; RV64-NEXT:    ret
 ;
@@ -286,10 +317,12 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    and a0, a0, a2
 ; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    xor a3, a3, a4
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a3, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a4, a0
 ; RV32-NEXT:    ret
   %inner2 = call i1 @llvm.ct.select.i1(i1 %c2, i1 true, i1 false)
@@ -305,15 +338,19 @@ define i32 @test_ctselect_double_nested_mixed_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x,
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    xor a3, a3, a4
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a3, a3, a0
 ; RV64-NEXT:    xor a4, a4, a5
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a3, a4, a3
 ; RV64-NEXT:    and a0, a3, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a5, a0
 ; RV64-NEXT:    ret
 ;
@@ -321,15 +358,19 @@ define i32 @test_ctselect_double_nested_mixed_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x,
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    xor a3, a3, a4
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a3, a3, a0
 ; RV32-NEXT:    xor a4, a4, a5
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a3, a4, a3
 ; RV32-NEXT:    and a0, a3, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a5, a0
 ; RV32-NEXT:    ret
   %inner1 = call i1 @llvm.ct.select.i1(i1 %c1, i1 true, i1 false)
@@ -350,10 +391,12 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
 ; RV64-NEXT:    srai a1, a1, 63
 ; RV64-NEXT:    and a1, a2, a1
 ; RV64-NEXT:    xor a3, a3, a4
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    xor a1, a3, a1
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a4, a0
 ; RV64-NEXT:    ret
 ;
@@ -364,10 +407,12 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
 ; RV32-NEXT:    srai a1, a1, 31
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    xor a3, a3, a4
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    xor a1, a3, a1
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a4, a0
 ; RV32-NEXT:    ret
   %inner = call i32 @llvm.ct.select.i32(i1 %cond2, i32 %a, i32 %b)
@@ -384,6 +429,7 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) {
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    lui a1, 522240
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    ret
 ;
@@ -394,6 +440,7 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) {
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    lui a1, 522240
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a0, a1
 ; RV32-NEXT:    ret
   %result = call float @llvm.ct.select.f32(i1 %cond, float 0x7FF8000000000000, float 0x7FF0000000000000)
@@ -410,18 +457,22 @@ define double @test_ctselect_f64_nan_inf(i1 %cond) {
 ; RV64-NEXT:    li a2, 2047
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    slli a2, a2, 52
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_f64_nan_inf:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 128
+; RV32-NEXT:    li a2, 0
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    lui a1, 128
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    lui a1, 524032
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a1, a0, a1
-; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    ret
   %result = call double @llvm.ct.select.f64(i1 %cond, double 0x7FF8000000000000, double 0x7FF0000000000000)
   ret double %result
@@ -435,6 +486,7 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a2, a0
 ; RV64-NEXT:    ret
 ;
@@ -444,6 +496,7 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) {
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a0, a2, a0
 ; RV32-NEXT:    ret
   %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
@@ -457,6 +510,7 @@ define double @test_ctselect_f64(i1 %cond, double %a, double %b) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a0, a2, a0
 ; RV64-NEXT:    ret
 ;
@@ -465,10 +519,12 @@ define double @test_ctselect_f64(i1 %cond, double %a, double %b) {
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    xor a1, a1, a3
 ; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    xor a2, a2, a4
 ; RV32-NEXT:    and a1, a1, a0
+; RV32-NEXT:    xor a2, a2, a4
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    and a2, a2, a0
 ; RV32-NEXT:    xor a0, a3, a1
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a1, a4, a2
 ; RV32-NEXT:    ret
   %result = call double @llvm.ct.select.f64(i1 %cond, double %a, double %b)
@@ -479,61 +535,69 @@ define double @test_ctselect_f64(i1 %cond, double %a, double %b) {
 define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; RV64-LABEL: test_ctselect_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lw a4, 0(a3)
-; RV64-NEXT:    lw a5, 0(a2)
-; RV64-NEXT:    lw a6, 8(a2)
+; RV64-NEXT:    lw a4, 0(a2)
+; RV64-NEXT:    lw a5, 8(a2)
+; RV64-NEXT:    lw a6, 0(a3)
 ; RV64-NEXT:    lw a7, 8(a3)
 ; RV64-NEXT:    lw t0, 16(a3)
 ; RV64-NEXT:    lw a3, 24(a3)
 ; RV64-NEXT:    lw t1, 16(a2)
 ; RV64-NEXT:    lw a2, 24(a2)
-; RV64-NEXT:    xor a5, a5, a4
 ; RV64-NEXT:    slli a1, a1, 63
+; RV64-NEXT:    xor a4, a4, a6
 ; RV64-NEXT:    srai a1, a1, 63
-; RV64-NEXT:    xor a6, a6, a7
+; RV64-NEXT:    and a4, a4, a1
+; RV64-NEXT:    xor a5, a5, a7
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    and a5, a5, a1
+; RV64-NEXT:    xor a4, a6, a4
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    xor a6, t1, t0
 ; RV64-NEXT:    and a6, a6, a1
-; RV64-NEXT:    xor t1, t1, t0
 ; RV64-NEXT:    xor a2, a2, a3
-; RV64-NEXT:    and t1, t1, a1
+; RV64-NEXT:    xor a5, a7, a5
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    and a1, a2, a1
-; RV64-NEXT:    xor a4, a4, a5
-; RV64-NEXT:    xor a2, a7, a6
-; RV64-NEXT:    xor a5, t0, t1
+; RV64-NEXT:    xor a2, t0, a6
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a1, a3, a1
 ; RV64-NEXT:    sw a4, 0(a0)
-; RV64-NEXT:    sw a2, 4(a0)
-; RV64-NEXT:    sw a5, 8(a0)
+; RV64-NEXT:    sw a5, 4(a0)
+; RV64-NEXT:    sw a2, 8(a0)
 ; RV64-NEXT:    sw a1, 12(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a4, 0(a3)
-; RV32-NEXT:    lw a5, 0(a2)
-; RV32-NEXT:    lw a6, 4(a2)
+; RV32-NEXT:    lw a4, 0(a2)
+; RV32-NEXT:    lw a5, 4(a2)
+; RV32-NEXT:    lw a6, 0(a3)
 ; RV32-NEXT:    lw a7, 4(a3)
 ; RV32-NEXT:    lw t0, 8(a3)
 ; RV32-NEXT:    lw a3, 12(a3)
 ; RV32-NEXT:    lw t1, 8(a2)
 ; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    xor a5, a5, a4
 ; RV32-NEXT:    slli a1, a1, 31
+; RV32-NEXT:    xor a4, a4, a6
 ; RV32-NEXT:    srai a1, a1, 31
-; RV32-NEXT:    xor a6, a6, a7
+; RV32-NEXT:    and a4, a4, a1
+; RV32-NEXT:    xor a5, a5, a7
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    and a5, a5, a1
+; RV32-NEXT:    xor a4, a6, a4
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    xor a6, t1, t0
 ; RV32-NEXT:    and a6, a6, a1
-; RV32-NEXT:    xor t1, t1, t0
 ; RV32-NEXT:    xor a2, a2, a3
-; RV32-NEXT:    and t1, t1, a1
+; RV32-NEXT:    xor a5, a7, a5
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    xor a4, a4, a5
-; RV32-NEXT:    xor a2, a7, a6
-; RV32-NEXT:    xor a5, t0, t1
+; RV32-NEXT:    xor a2, t0, a6
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a1, a3, a1
 ; RV32-NEXT:    sw a4, 0(a0)
-; RV32-NEXT:    sw a2, 4(a0)
-; RV32-NEXT:    sw a5, 8(a0)
+; RV32-NEXT:    sw a5, 4(a0)
+; RV32-NEXT:    sw a2, 8(a0)
 ; RV32-NEXT:    sw a1, 12(a0)
 ; RV32-NEXT:    ret
   %result = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b)
@@ -542,61 +606,69 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 ; RV64-LABEL: test_ctselect_v4f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lw a4, 0(a3)
-; RV64-NEXT:    lw a5, 0(a2)
-; RV64-NEXT:    lw a6, 8(a2)
+; RV64-NEXT:    lw a4, 0(a2)
+; RV64-NEXT:    lw a5, 8(a2)
+; RV64-NEXT:    lw a6, 0(a3)
 ; RV64-NEXT:    lw a7, 8(a3)
 ; RV64-NEXT:    lw t0, 16(a3)
 ; RV64-NEXT:    lw a3, 24(a3)
 ; RV64-NEXT:    lw t1, 16(a2)
 ; RV64-NEXT:    lw a2, 24(a2)
-; RV64-NEXT:    xor a5, a5, a4
 ; RV64-NEXT:    slli a1, a1, 63
+; RV64-NEXT:    xor a4, a4, a6
 ; RV64-NEXT:    srai a1, a1, 63
-; RV64-NEXT:    xor a6, a6, a7
+; RV64-NEXT:    and a4, a4, a1
+; RV64-NEXT:    xor a5, a5, a7
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    and a5, a5, a1
+; RV64-NEXT:    xor a4, a6, a4
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    xor a6, t1, t0
 ; RV64-NEXT:    and a6, a6, a1
-; RV64-NEXT:    xor t1, t1, t0
 ; RV64-NEXT:    xor a2, a2, a3
-; RV64-NEXT:    and t1, t1, a1
+; RV64-NEXT:    xor a5, a7, a5
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    and a1, a2, a1
-; RV64-NEXT:    xor a4, a4, a5
-; RV64-NEXT:    xor a2, a7, a6
-; RV64-NEXT:    xor a5, t0, t1
+; RV64-NEXT:    xor a2, t0, a6
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    xor a1, a3, a1
 ; RV64-NEXT:    sw a4, 0(a0)
-; RV64-NEXT:    sw a2, 4(a0)
-; RV64-NEXT:    sw a5, 8(a0)
+; RV64-NEXT:    sw a5, 4(a0)
+; RV64-NEXT:    sw a2, 8(a0)
 ; RV64-NEXT:    sw a1, 12(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_v4f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a4, 0(a3)
-; RV32-NEXT:    lw a5, 0(a2)
-; RV32-NEXT:    lw a6, 4(a2)
+; RV32-NEXT:    lw a4, 0(a2)
+; RV32-NEXT:    lw a5, 4(a2)
+; RV32-NEXT:    lw a6, 0(a3)
 ; RV32-NEXT:    lw a7, 4(a3)
 ; RV32-NEXT:    lw t0, 8(a3)
 ; RV32-NEXT:    lw a3, 12(a3)
 ; RV32-NEXT:    lw t1, 8(a2)
 ; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    xor a5, a5, a4
 ; RV32-NEXT:    slli a1, a1, 31
+; RV32-NEXT:    xor a4, a4, a6
 ; RV32-NEXT:    srai a1, a1, 31
-; RV32-NEXT:    xor a6, a6, a7
+; RV32-NEXT:    and a4, a4, a1
+; RV32-NEXT:    xor a5, a5, a7
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    and a5, a5, a1
+; RV32-NEXT:    xor a4, a6, a4
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    xor a6, t1, t0
 ; RV32-NEXT:    and a6, a6, a1
-; RV32-NEXT:    xor t1, t1, t0
 ; RV32-NEXT:    xor a2, a2, a3
-; RV32-NEXT:    and t1, t1, a1
+; RV32-NEXT:    xor a5, a7, a5
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    xor a4, a4, a5
-; RV32-NEXT:    xor a2, a7, a6
-; RV32-NEXT:    xor a5, t0, t1
+; RV32-NEXT:    xor a2, t0, a6
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    xor a1, a3, a1
 ; RV32-NEXT:    sw a4, 0(a0)
-; RV32-NEXT:    sw a2, 4(a0)
-; RV32-NEXT:    sw a5, 8(a0)
+; RV32-NEXT:    sw a5, 4(a0)
+; RV32-NEXT:    sw a2, 8(a0)
 ; RV32-NEXT:    sw a1, 12(a0)
 ; RV32-NEXT:    ret
   %result = call <4 x float> @llvm.ct.select.v4f32(i1 %cond, <4 x float> %a, <4 x float> %b)
@@ -613,56 +685,64 @@ define <8 x i32> @test_ctselect_v8i32(i1 %cond, <8 x i32> %a, <8 x i32> %b) {
 ; RV64-NEXT:    .cfi_offset s0, -8
 ; RV64-NEXT:    .cfi_offset s1, -16
 ; RV64-NEXT:    .cfi_offset s2, -24
-; RV64-NEXT:    lw a4, 32(a3)
-; RV64-NEXT:    lw a5, 40(a3)
-; RV64-NEXT:    lw a6, 48(a3)
-; RV64-NEXT:    lw a7, 56(a3)
-; RV64-NEXT:    lw t0, 32(a2)
-; RV64-NEXT:    lw t1, 40(a2)
-; RV64-NEXT:    lw t2, 48(a2)
-; RV64-NEXT:    lw t3, 56(a2)
-; RV64-NEXT:    lw t4, 0(a3)
-; RV64-NEXT:    lw t5, 0(a2)
-; RV64-NEXT:    lw t6, 8(a2)
-; RV64-NEXT:    lw s0, 8(a3)
-; RV64-NEXT:    lw s1, 16(a3)
-; RV64-NEXT:    lw a3, 24(a3)
-; RV64-NEXT:    lw s2, 16(a2)
-; RV64-NEXT:    lw a2, 24(a2)
-; RV64-NEXT:    xor t5, t5, t4
+; RV64-NEXT:    lw a4, 0(a2)
+; RV64-NEXT:    lw a5, 0(a3)
+; RV64-NEXT:    lw a6, 8(a3)
+; RV64-NEXT:    lw a7, 16(a3)
+; RV64-NEXT:    lw t0, 24(a3)
+; RV64-NEXT:    lw t1, 8(a2)
+; RV64-NEXT:    lw t2, 16(a2)
+; RV64-NEXT:    lw t3, 24(a2)
+; RV64-NEXT:    xor a4, a4, a5
 ; RV64-NEXT:    slli a1, a1, 63
 ; RV64-NEXT:    srai a1, a1, 63
-; RV64-NEXT:    xor t6, t6, s0
-; RV64-NEXT:    and t5, t5, a1
-; RV64-NEXT:    and t6, t6, a1
-; RV64-NEXT:    xor s2, s2, s1
-; RV64-NEXT:    xor a2, a2, a3
-; RV64-NEXT:    and s2, s2, a1
-; RV64-NEXT:    and a2, a2, a1
-; RV64-NEXT:    xor t0, t0, a4
-; RV64-NEXT:    xor t1, t1, a5
-; RV64-NEXT:    and t0, t0, a1
+; RV64-NEXT:    lw t4, 32(a3)
+; RV64-NEXT:    lw t5, 40(a3)
+; RV64-NEXT:    lw t6, 48(a3)
+; RV64-NEXT:    lw a3, 56(a3)
+; RV64-NEXT:    and a4, a4, a1
+; RV64-NEXT:    xor t1, t1, a6
+; RV64-NEXT:    lw s0, 32(a2)
+; RV64-NEXT:    lw s1, 40(a2)
+; RV64-NEXT:    lw s2, 48(a2)
+; RV64-NEXT:    lw a2, 56(a2)
+; RV64-NEXT:    #ARITH_FENCE
 ; RV64-NEXT:    and t1, t1, a1
-; RV64-NEXT:    xor t2, t2, a6
-; RV64-NEXT:    xor t3, t3, a7
+; RV64-NEXT:    xor a4, a5, a4
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    xor a5, t2, a7
+; RV64-NEXT:    and a5, a5, a1
+; RV64-NEXT:    xor t2, t3, t0
+; RV64-NEXT:    xor a6, a6, t1
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    and t1, t2, a1
+; RV64-NEXT:    xor a5, a7, a5
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    xor a7, s0, t4
+; RV64-NEXT:    and a7, a7, a1
+; RV64-NEXT:    xor t2, s1, t5
+; RV64-NEXT:    xor t0, t0, t1
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    and t1, t2, a1
+; RV64-NEXT:    xor a7, t4, a7
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    xor t2, s2, t6
 ; RV64-NEXT:    and t2, t2, a1
-; RV64-NEXT:    and a1, t3, a1
-; RV64-NEXT:    xor t3, t4, t5
-; RV64-NEXT:    xor t4, s0, t6
-; RV64-NEXT:    xor t5, s1, s2
-; RV64-NEXT:    xor a2, a3, a2
-; RV64-NEXT:    xor a3, a4, t0
-; RV64-NEXT:    xor a4, a5, t1
-; RV64-NEXT:    xor a5, a6, t2
-; RV64-NEXT:    xor a1, a7, a1
-; RV64-NEXT:    sw a3, 16(a0)
-; RV64-NEXT:    sw a4, 20(a0)
-; RV64-NEXT:    sw a5, 24(a0)
+; RV64-NEXT:    xor a2, a2, a3
+; RV64-NEXT:    xor t1, t5, t1
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    xor a2, t6, t2
+; RV64-NEXT:    #ARITH_FENCE
+; RV64-NEXT:    xor a1, a3, a1
+; RV64-NEXT:    sw a7, 16(a0)
+; RV64-NEXT:    sw t1, 20(a0)
+; RV64-NEXT:    sw a2, 24(a0)
 ; RV64-NEXT:    sw a1, 28(a0)
-; RV64-NEXT:    sw t3, 0(a0)
-; RV64-NEXT:    sw t4, 4(a0)
-; RV64-NEXT:    sw t5, 8(a0)
-; RV64-NEXT:    sw a2, 12(a0)
+; RV64-NEXT:    sw a4, 0(a0)
+; RV64-NEXT:    sw a6, 4(a0)
+; RV64-NEXT:    sw a5, 8(a0)
+; RV64-NEXT:    sw t0, 12(a0)
 ; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
@@ -683,56 +763,64 @@ define <8 x i32> @test_ctselect_v8i32(i1 %cond, <8 x i32> %a, <8 x i32> %b) {
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    .cfi_offset s1, -8
 ; RV32-NEXT:    .cfi_offset s2, -12
-; RV32-NEXT:    lw a4, 16(a3)
-; RV32-NEXT:    lw a5, 20(a3)
-; RV32-NEXT:    lw a6, 24(a3)
-; RV32-NEXT:    lw a7, 28(a3)
-; RV32-NEXT:    lw t0, 16(a2)
-; RV32-NEXT:    lw t1, 20(a2)
-; RV32-NEXT:    lw t2, 24(a2)
-; RV32-NEXT:    lw t3, 28(a2)
-; RV32-NEXT:    lw t4, 0(a3)
-; RV32-NEXT:    lw t5, 0(a2)
-; RV32-NEXT:    lw t6, 4(a2)
-; RV32-NEXT:    lw s0, 4(a3)
-; RV32-NEXT:    lw s1, 8(a3)
-; RV32-NEXT:    lw a3, 12(a3)
-; RV32-NEXT:    lw s2, 8(a2)
-; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    xor t5, t5, t4
+; RV32-NEXT:    lw a4, 0(a2)
+; RV32-NEXT:    lw a5, 0(a3)
+; RV32-NEXT:    lw a6, 4(a3)
+; RV32-NEXT:    lw a7, 8(a3)
+; RV32-NEXT:    lw t0, 12(a3)
+; RV32-NEXT:    lw t1, 4(a2)
+; RV32-NEXT:    lw t2, 8(a2)
+; RV32-NEXT:    lw t3, 12(a2)
+; RV32-NEXT:    xor a4, a4, a5
 ; RV32-NEXT:    slli a1, a1, 31
 ; RV32-NEXT:    srai a1, a1, 31
-; RV32-NEXT:    xor t6, t6, s0
-; RV32-NEXT:    and t5, t5, a1
-; RV32-NEXT:    and t6, t6, a1
-; RV32-NEXT:    xor s2, s2, s1
-; RV32-NEXT:    xor a2, a2, a3
-; RV32-NEXT:    and s2, s2, a1
-; RV32-NEXT:    and a2, a2, a1
-; RV32-NEXT:    xor t0, t0, a4
-; RV32-NEXT:    xor t1, t1, a5
-; RV32-NEXT:    and t0, t0, a1
+; RV32-NEXT:    lw t4, 16(a3)
+; RV32-NEXT:    lw t5, 20(a3)
+; RV32-NEXT:    lw t6, 24(a3)
+; RV32-NEXT:    lw a3, 28(a3)
+; RV32-NEXT:    and a4, a4, a1
+; RV32-NEXT:    xor t1, t1, a6
+; RV32-NEXT:    lw s0, 16(a2)
+; RV32-NEXT:    lw s1, 20(a2)
+; RV32-NEXT:    lw s2, 24(a2)
+; RV32-NEXT:    lw a2, 28(a2)
+; RV32-NEXT:    #ARITH_FENCE
 ; RV32-NEXT:    and t1, t1, a1
-; RV32-NEXT:    xor t2, t2, a6
-; RV32-NEXT:    xor t3, t3, a7
+; RV32-NEXT:    xor a4, a5, a4
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    xor a5, t2, a7
+; RV32-NEXT:    and a5, a5, a1
+; RV32-NEXT:    xor t2, t3, t0
+; RV32-NEXT:    xor a6, a6, t1
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    and t1, t2, a1
+; RV32-NEXT:    xor a5, a7, a5
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    xor a7, s0, t4
+; RV32-NEXT:    and a7, a7, a1
+; RV32-NEXT:    xor t2, s1, t5
+; RV32-NEXT:    xor t0, t0, t1
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    and t1, t2, a1
+; RV32-NEXT:    xor a7, t4, a7
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    xor t2, s2, t6
 ; RV32-NEXT:    and t2, t2, a1
-; RV32-NEXT:    and a1, t3, a1
-; RV32-NEXT:    xor t3, t4, t5
-; RV32-NEXT:    xor t4, s0, t6
-; RV32-NEXT:    xor t5, s1, s2
-; RV32-NEXT:    xor a2, a3, a2
-; RV32-NEXT:    xor a3, a4, t0
-; RV32-NEXT:    xor a4, a5, t1
-; RV32-NEXT:    xor a5, a6, t2
-; RV32-NEXT:    xor a1, a7, a1
-; RV32-NEXT:    sw a3, 16(a0)
-; RV32-NEXT:    sw a4, 20(a0)
-; RV32-NEXT:    sw a5, 24(a0)
+; RV32-NEXT:    xor a2, a2, a3
+; RV32-NEXT:    xor t1, t5, t1
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    and a1, a2, a1
+; RV32-NEXT:    xor a2, t6, t2
+; RV32-NEXT:    #ARITH_FENCE
+; RV32-NEXT:    xor a1, a3, a1
+; RV32-NEXT:    sw a7, 16(a0)
+; RV32-NEXT:    sw t1, 20(a0)
+; RV32-NEXT:    sw a2, 24(a0)
 ; RV32-NEXT:    sw a1, 28(a0)
-; RV32-NEXT:    sw t3, 0(a0)
-; RV32-NEXT:    sw t4, 4(a0)
-; RV32-NEXT:    sw t5, 8(a0)
-; RV32-NEXT:    sw a2, 12(a0)
+; RV32-NEXT:    sw a4, 0(a0)
+; RV32-NEXT:    sw a6, 4(a0)
+; RV32-NEXT:    sw a5, 8(a0)
+; RV32-NEXT:    sw t0, 12(a0)
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
