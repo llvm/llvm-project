@@ -41,7 +41,7 @@ using namespace llvm::PatternMatch;
 /// Wrapper for querying uniformity info that first checks locally tracked
 /// instructions.
 static bool
-isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
+isDivergentUseWithNew(const Use &U, UniformityInfo &UI,
                       const ValueMap<const Value *, bool> &Tracker) {
   Value *V = U.get();
   if (auto It = Tracker.find(V); It != Tracker.end())
@@ -50,8 +50,7 @@ isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
 }
 
 /// Optimizes uniform intrinsics calls if their operand can be proven uniform.
-static bool optimizeUniformIntrinsic(IntrinsicInst &II,
-                                     const UniformityInfo &UI,
+static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
                                      ValueMap<const Value *, bool> &Tracker) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
   /// We deliberately do not simplify readfirstlane with a uniform argument, so
@@ -65,6 +64,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << '\n');
     II.replaceAllUsesWith(Src);
+    UI.forgetValue(&II);
     II.eraseFromParent();
     return true;
   }
@@ -100,8 +100,10 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
       }
     }
     // Erase the intrinsic if it has no remaining uses.
-    if (II.use_empty())
+    if (II.use_empty()) {
+      UI.forgetValue(&II);
       II.eraseFromParent();
+    }
     return Changed;
   }
   case Intrinsic::amdgcn_wave_shuffle: {
@@ -111,6 +113,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
     // Like with readlane, if Value is uniform then just propagate it
     if (!isDivergentUseWithNew(Val, UI, Tracker)) {
       II.replaceAllUsesWith(Val);
+      UI.forgetValue(&II);
       II.eraseFromParent();
       return true;
     }
@@ -133,7 +136,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 }
 
 /// Iterates over intrinsic calls in the Function to optimize.
-static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
+static bool runUniformIntrinsicCombine(Function &F, UniformityInfo &UI) {
   bool IsChanged = false;
   ValueMap<const Value *, bool> Tracker;
 
@@ -149,7 +152,7 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
 PreservedAnalyses
 AMDGPUUniformIntrinsicCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
-  const auto &UI = AM.getResult<UniformityInfoAnalysis>(F);
+  auto &UI = AM.getResult<UniformityInfoAnalysis>(F);
   if (!runUniformIntrinsicCombine(F, UI))
     return PreservedAnalyses::all();
 
@@ -181,7 +184,7 @@ char &llvm::AMDGPUUniformIntrinsicCombineLegacyPassID =
 bool AMDGPUUniformIntrinsicCombineLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
-  const UniformityInfo &UI =
+  UniformityInfo &UI =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   return runUniformIntrinsicCombine(F, UI);
 }
