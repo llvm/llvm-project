@@ -121,6 +121,10 @@ class Compilation {
   /// Whether we're compiling for diagnostic purposes.
   bool ForDiagnostics = false;
 
+  /// Whether the in-process cc1 callback supports repeated invocation.
+  /// Reusable callbacks must free per-invocation state before returning.
+  bool CC1MainIsReusable = false;
+
   /// Whether an error during the parsing of the input args.
   bool ContainsError;
 
@@ -134,7 +138,8 @@ class Compilation {
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
               llvm::opt::InputArgList *Args,
-              llvm::opt::DerivedArgList *TranslatedArgs, bool ContainsError);
+              llvm::opt::DerivedArgList *TranslatedArgs, bool ContainsError,
+              bool CC1MainIsReusable);
   ~Compilation();
 
   const Driver &getDriver() const { return TheDriver; }
@@ -336,6 +341,8 @@ public:
 
   /// Return true if we're compiling for diagnostics.
   bool isForDiagnostics() const { return ForDiagnostics; }
+
+  bool isCC1MainReusable() const { return CC1MainIsReusable; }
 
   /// Return whether an error during the parsing of the input args.
   bool containsError() const { return ContainsError; }
