@@ -234,8 +234,7 @@ ORC_RT_C_EXPORT void orc_rt_log_printf(orc_rt_log_Level Level,
  * are filled lazily (and read) atomically by orc_rt_log_osLogHandle. An
  * implementation detail of that accessor; do not use directly.
  */
-ORC_RT_C_EXPORT os_log_t
-    orc_rt_log_OSLogHandles[orc_rt_log_Category_Count];
+ORC_RT_C_EXPORT os_log_t orc_rt_log_OSLogHandles[orc_rt_log_Category_Count];
 
 /*
  * Cold path for orc_rt_log_osLogHandle: creates the handle for Category (in the
