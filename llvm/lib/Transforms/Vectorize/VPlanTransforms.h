@@ -663,7 +663,7 @@ struct VPlanTransforms {
 
   /// Wrap recipes in \p Plan into expression recipes that can help
   /// cost/register pressure estimation.
-  static void prepareForCostModel(VPlan &Plan);
+  static void foldPredicateMerge(VPlan &Plan);
 };
 
 } // namespace llvm
