@@ -1262,17 +1262,13 @@ void SymtabSection::emitStabs() {
 
   llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
-  std::vector<ObjFile *> stabFiles;
-  for (const SortingPair &pair : symbolsNeedingStabs) {
-    ObjFile *file = cast<ObjFile>(pair.first->originalIsec->getFile());
-    if (stabFiles.empty() || stabFiles.back() != file)
-      stabFiles.push_back(file);
+  llvm::MapVector<ObjFile *, std::string> stabFiles;
+  for (const auto &[defined, fileId] : symbolsNeedingStabs) {
+    ObjFile *file = cast<ObjFile>(defined->originalIsec->getFile());
+    stabFiles[file] = "";
   }
-  std::vector<std::string> stabSourceFiles(
-      stabFiles.empty() ? 0 : stabFiles.back()->id + 1);
-  parallelFor(0, stabFiles.size(), [&](size_t i) {
-    stabSourceFiles[stabFiles[i]->id] = stabFiles[i]->sourceFile();
-  });
+  parallelForEach(stabFiles,
+                  [&](auto &it) { it.second = it.first->sourceFile(); });
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
@@ -1293,7 +1289,7 @@ void SymtabSection::emitStabs() {
         emitEndSourceStab();
       lastFile = file;
 
-      emitBeginSourceStab(stabSourceFiles[file->id]);
+      emitBeginSourceStab(stabFiles[file]);
       emitObjectFileStab(file);
     }
 
