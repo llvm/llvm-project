@@ -46,40 +46,28 @@ define zeroext i1 @test_is_nan_f64(double %x) #0 {
 ; P8-NEXT:    isel r3, r4, r3, un
 ; P8-NEXT:    blr
 ;
+; P9-LABEL: test_is_nan_f64:
+; P9:       # %bb.0:
+; P9-NEXT:    xststdcdp cr0, f1, 64
+; P9-NEXT:    li r3, 0
+; P9-NEXT:    li r4, 1
+; P9-NEXT:    iseleq r3, r4, r3
+; P9-NEXT:    blr
+;
 ; P8-32-NOVSX-LABEL: test_is_nan_f64:
 ; P8-32-NOVSX:       # %bb.0:
-; P8-32-NOVSX-NEXT:    stfd f1, -8(r1)
-; P8-32-NOVSX-NEXT:    lis r5, 32752
-; P8-32-NOVSX-NEXT:    lwz r4, -8(r1)
-; P8-32-NOVSX-NEXT:    lwz r3, -4(r1)
-; P8-32-NOVSX-NEXT:    clrlwi r4, r4, 1
-; P8-32-NOVSX-NEXT:    cmpw r4, r5
-; P8-32-NOVSX-NEXT:    xoris r4, r4, 32752
-; P8-32-NOVSX-NEXT:    cmplwi cr1, r4, 0
-; P8-32-NOVSX-NEXT:    crandc 4*cr5+lt, gt, 4*cr1+eq
-; P8-32-NOVSX-NEXT:    cmpwi r3, 0
-; P8-32-NOVSX-NEXT:    li r3, 1
-; P8-32-NOVSX-NEXT:    crandc 4*cr5+gt, 4*cr1+eq, eq
-; P8-32-NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; P8-32-NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; P8-32-NOVSX-NEXT:    fcmpu cr0, f1, f1
+; P8-32-NOVSX-NEXT:    li r3, 0
+; P8-32-NOVSX-NEXT:    li r4, 1
+; P8-32-NOVSX-NEXT:    isel r3, r4, r3, un
 ; P8-32-NOVSX-NEXT:    blr
 ;
 ; P8-32-LABEL: test_is_nan_f64:
 ; P8-32:       # %bb.0:
-; P8-32-NEXT:    stfd f1, -8(r1)
-; P8-32-NEXT:    lis r5, 32752
-; P8-32-NEXT:    lwz r4, -8(r1)
-; P8-32-NEXT:    lwz r3, -4(r1)
-; P8-32-NEXT:    clrlwi r4, r4, 1
-; P8-32-NEXT:    cmpw r4, r5
-; P8-32-NEXT:    xoris r4, r4, 32752
-; P8-32-NEXT:    cmplwi cr1, r4, 0
-; P8-32-NEXT:    crandc 4*cr5+lt, gt, 4*cr1+eq
-; P8-32-NEXT:    cmpwi r3, 0
-; P8-32-NEXT:    li r3, 1
-; P8-32-NEXT:    crandc 4*cr5+gt, 4*cr1+eq, eq
-; P8-32-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; P8-32-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; P8-32-NEXT:    xscmpudp cr0, f1, f1
+; P8-32-NEXT:    li r3, 0
+; P8-32-NEXT:    li r4, 1
+; P8-32-NEXT:    isel r3, r4, r3, un
 ; P8-32-NEXT:    blr
   %result = call i1 @llvm.is.fpclass.f64(double %x, i32 3)
   ret i1 %result
@@ -110,40 +98,27 @@ define zeroext i1 @test_is_not_nan_f64(double %x) #0 {
 ; P8-NEXT:    iseleq r3, r4, r3
 ; P8-NEXT:    blr
 ;
+; P9-LABEL: test_is_not_nan_f64:
+; P9:       # %bb.0:
+; P9-NEXT:    xststdcdp cr0, f1, 64
+; P9-NEXT:    li r3, 1
+; P9-NEXT:    iseleq r3, 0, r3
+; P9-NEXT:    blr
+;
 ; P8-32-NOVSX-LABEL: test_is_not_nan_f64:
 ; P8-32-NOVSX:       # %bb.0:
-; P8-32-NOVSX-NEXT:    stfd f1, -8(r1)
-; P8-32-NOVSX-NEXT:    lis r5, 32752
-; P8-32-NOVSX-NEXT:    lwz r4, -8(r1)
-; P8-32-NOVSX-NEXT:    lwz r3, -4(r1)
-; P8-32-NOVSX-NEXT:    clrlwi r4, r4, 1
-; P8-32-NOVSX-NEXT:    cmpw r4, r5
-; P8-32-NOVSX-NEXT:    xoris r4, r4, 32752
-; P8-32-NOVSX-NEXT:    cmplwi cr1, r4, 0
-; P8-32-NOVSX-NEXT:    crandc 4*cr5+lt, lt, 4*cr1+eq
-; P8-32-NOVSX-NEXT:    cmpwi r3, 0
-; P8-32-NOVSX-NEXT:    li r3, 1
-; P8-32-NOVSX-NEXT:    crand 4*cr5+gt, 4*cr1+eq, eq
-; P8-32-NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; P8-32-NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; P8-32-NOVSX-NEXT:    fcmpu cr0, f1, f1
+; P8-32-NOVSX-NEXT:    li r3, 0
+; P8-32-NOVSX-NEXT:    li r4, 1
+; P8-32-NOVSX-NEXT:    iseleq r3, r4, r3
 ; P8-32-NOVSX-NEXT:    blr
 ;
 ; P8-32-LABEL: test_is_not_nan_f64:
 ; P8-32:       # %bb.0:
-; P8-32-NEXT:    stfd f1, -8(r1)
-; P8-32-NEXT:    lis r5, 32752
-; P8-32-NEXT:    lwz r4, -8(r1)
-; P8-32-NEXT:    lwz r3, -4(r1)
-; P8-32-NEXT:    clrlwi r4, r4, 1
-; P8-32-NEXT:    cmpw r4, r5
-; P8-32-NEXT:    xoris r4, r4, 32752
-; P8-32-NEXT:    cmplwi cr1, r4, 0
-; P8-32-NEXT:    crandc 4*cr5+lt, lt, 4*cr1+eq
-; P8-32-NEXT:    cmpwi r3, 0
-; P8-32-NEXT:    li r3, 1
-; P8-32-NEXT:    crand 4*cr5+gt, 4*cr1+eq, eq
-; P8-32-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; P8-32-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; P8-32-NEXT:    xscmpudp cr0, f1, f1
+; P8-32-NEXT:    li r3, 0
+; P8-32-NEXT:    li r4, 1
+; P8-32-NEXT:    iseleq r3, r4, r3
 ; P8-32-NEXT:    blr
   %result = call i1 @llvm.is.fpclass.f64(double %x, i32 1020)
   ret i1 %result

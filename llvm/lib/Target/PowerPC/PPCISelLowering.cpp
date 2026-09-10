@@ -819,7 +819,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   if (Subtarget.hasFPU()) {
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
-    if (Subtarget.use64BitRegs())
+    if (Subtarget.use64BitRegs() ||
+        (Subtarget.hasAltivec() && Subtarget.useCRBits()))
       setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
   }
 
