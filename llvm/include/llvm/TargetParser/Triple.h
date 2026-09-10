@@ -1268,6 +1268,26 @@ public:
              isOSBinFormatDXContainer());
   }
 
+  /// Tests whether the target supports debug entry values.
+  bool supportsDebugEntryValues() const {
+    switch (getArch()) {
+    case Triple::x86:
+    case Triple::x86_64:
+    case Triple::aarch64:
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::mips:
+    case Triple::mipsel:
+    case Triple::mips64:
+    case Triple::mips64el:
+    case Triple::riscv32:
+    case Triple::riscv64:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// Tests whether the target uses emulated TLS as default.
   ///
   /// Note: Android API level 29 (10) introduced ELF TLS.
