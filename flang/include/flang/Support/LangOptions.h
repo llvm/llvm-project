@@ -47,7 +47,7 @@ public:
     FortranUnspecified, // default
     Fortran2018,
     Fortran2023,
-    Fortran202Y,
+    Fortran2028,
   };
 
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;

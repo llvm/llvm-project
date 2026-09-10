@@ -2052,7 +2052,7 @@ static void CheckSystemClockIntArgsSameKind(
         if (!commonKind) {
           commonKind = dyType->kind();
         } else if (*commonKind != dyType->kind()) {
-          foldingContext.Warn(common::LanguageFeature::SystemClockStrict,
+          foldingContext.Warn(common::UsageWarning::SystemClockStrict,
               arg->sourceLocation(),
               "Integer arguments to SYSTEM_CLOCK should have the same kind. Given %d and %d."_warn_en_US,
               *commonKind, dyType->kind());
@@ -2071,7 +2071,7 @@ static void CheckSystemClockMinSize(evaluate::ActualArguments &arguments,
       auto dyType{arg->GetType()};
       if (dyType && dyType->category() == TypeCategory::Integer &&
           dyType->kind() < defaultInt) {
-        foldingContext.Warn(common::LanguageFeature::SystemClockStrict,
+        foldingContext.Warn(common::UsageWarning::SystemClockStrict,
             arg->sourceLocation(),
             "Integer argument to SYSTEM_CLOCK should be an integer with kind >= %d. Given %d."_warn_en_US,
             defaultInt, dyType->kind());
@@ -2082,7 +2082,7 @@ static void CheckSystemClockMinSize(evaluate::ActualArguments &arguments,
 
 static void CheckSystemClock(
     evaluate::ActualArguments &arguments, SemanticsContext &context) {
-  if (context.ShouldWarn(common::LanguageFeature::SystemClockStrict)) {
+  if (context.ShouldWarn(common::UsageWarning::SystemClockStrict)) {
     // Fortran 2023 limits integer arguments to SYSTEM_CLOCK to all having the
     // same kind.
     CheckSystemClockIntArgsSameKind(arguments, context.foldingContext());

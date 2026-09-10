@@ -1205,20 +1205,20 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       res.getFrontendOpts().features.WarnOnAllNonstandard();
       res.getLangOpts().setFortranStandard(
           Fortran::common::LangOptions::Fortran2023);
-    } else if (standard == "f202Y") {
+    } else if (standard == "f2028") {
       res.getFrontendOpts().features.WarnOnAllNonstandard();
       res.getLangOpts().setFortranStandard(
-          Fortran::common::LangOptions::Fortran202Y);
+          Fortran::common::LangOptions::Fortran2028);
     } else {
       const unsigned diagID =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                                "Only 'f2018', 'f2023', or 'f202Y' are "
+                                "Only 'f2018', 'f2023', or 'f2028' are "
                                 "accepted to -std= currently.");
       diags.Report(diagID);
     }
   }
 
-  // -f{no-}system-clock-strict
+  // SystemClockStrict warning check
   {
     // Fortran 2023 introduced restrictions to the arguements of SYSTEM_CLOCK.
     // Since violations of these restrictions can cause unexpected or incorrect
@@ -1226,22 +1226,20 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     // by default. However, since these restrictions are not in Fortran 2018,
     // these reports should be warnings and not errors. There are two ways to
     // enable/disable these warnings:
-    //  -f{no-}system-clock-strict
-    //  -std=f20{18,23}
-    // Rules for enabling/disabling these warnings:
-    //  - If one or more of `-f{no-}system-clock-strict` appear, then the last
-    //    dictates whether or not the warnings are enabled.
-    //  - If no `-f{no-}system-clock-strict` flags appear and Fortran 2018 has
-    //    been set as the Fortran standard to follow, that is `-std=f2018` is
-    //    the last `std` flag, then the warnings are disabled.
-    //  - Otherwise, the warnings are enabled.
-    const bool enable_warning =
-        args.hasFlag(clang::options::OPT_fsystem_clock_strict,
-                     clang::options::OPT_fno_system_clock_strict,
-                     res.getLangOpts().getFortranStandard() !=
-                         Fortran::common::LangOptions::Fortran2018);
+    //  -W{no-}system-clock-strict
+    //  -std=f20{18,23,28}
+    // Scheme for setting the SystemClockStrict warning:
+    //  - If Fortran 2018 has been set as the Fortran standard to follow, that
+    //    is `-std=f2018` is the last `std` flag, then this warning is
+    //    disabled. Otherwise, the warning is enabled.
+    //  - Later, when the warning flags are parsed, if one or more of
+    //    `-W{no-}system-clock-strict` appear, then the last dictates whether
+    //    or not the warnings are enabled. In this case, whatever is set below
+    //    is overwritten by the last of those flags.
+    const bool enable_warning = res.getLangOpts().getFortranStandard() !=
+                                    Fortran::common::LangOptions::Fortran2018;
     res.getFrontendOpts().features.EnableWarning(
-        Fortran::common::LanguageFeature::SystemClockStrict, enable_warning);
+        Fortran::common::UsageWarning::SystemClockStrict, enable_warning);
   }
 
   // -fcoarray

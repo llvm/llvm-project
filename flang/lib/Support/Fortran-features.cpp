@@ -218,7 +218,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::IoImpliedDoIndexConflict);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
   warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
-  warnLanguage_.set(LanguageFeature::SystemClockStrict);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
@@ -328,7 +327,7 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
 
 void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
   // This feature is set independently and is on by default:
-  bool clockStrict = warnLanguage_.test(LanguageFeature::SystemClockStrict);
+  bool clockStrict = warnUsage_.test(UsageWarning::SystemClockStrict);
 
   warnLanguage_.reset();
   if (yes) {
@@ -341,7 +340,7 @@ void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
   }
 
   // This feature is set independently and is on by default:
-  warnLanguage_.set(LanguageFeature::SystemClockStrict, clockStrict);
+  warnUsage_.set(UsageWarning::SystemClockStrict, clockStrict);
 }
 
 void LanguageFeatureControl::WarnOnAllUsage(bool yes) {

@@ -318,11 +318,6 @@ def fno_realloc_lhs : Flag<["-"], "fno-realloc-lhs">, Group<f_Group>,
 def frealloc_lhs : Flag<["-"], "frealloc-lhs">, Group<f_Group>,
   HelpText<"If an allocatable left-hand side of an intrinsic assignment is unallocated or its shape/type does not match the right-hand side, then it is automatically (re)allocated">;
 
-def fno_system_clock_strict : Flag<["-"], "fno-system-clock-strict">, Group<f_Group>,
-  HelpText<"Do not issue warnings for violations of SYSTEM_CLOCK argument restrictions from Fortran 2023">;
-def fsystem_clock_strict : Flag<["-"], "fsystem-clock-strict">, Group<f_Group>,
-  HelpText<"Issue warnings for violations of SYSTEM_CLOCK argument restrictions from Fortran 2023 (default)">;
-
 //===----------------------------------------------------------------------===//
 // Coarray Options
 //===----------------------------------------------------------------------===//
