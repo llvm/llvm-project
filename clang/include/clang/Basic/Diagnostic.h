@@ -439,6 +439,7 @@ private:
     void clear(bool Soft) {
       // Just clear the cache when in soft mode.
       Files.clear();
+      LastFile = nullptr;
       if (!Soft) {
         FirstDiagState = CurDiagState = nullptr;
         CurDiagStateLoc = SourceLocation();
@@ -496,6 +497,11 @@ private:
 
     /// The diagnostic states for each file.
     mutable std::map<FileID, File> Files;
+
+    /// Cache the most recently accessed file. Diagnostic lookups commonly
+    /// stay within one source file for long runs.
+    mutable FileID LastFileID;
+    mutable File *LastFile = nullptr;
 
     /// The initial diagnostic state.
     DiagState *FirstDiagState;
