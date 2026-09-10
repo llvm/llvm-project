@@ -1,0 +1,51 @@
+# XFAIL: *
+
+## A relocated program header table can share a PT_LOAD with the ELF header
+## without immediately following it. The table must not make earlier retained
+## section contents move relative to their segment data.
+##
+## FIXME: Remove XFAIL once the relocated program header table is treated as
+## an occupied range during --only-keep-debug layout.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %python %S/Inputs/relocated-phdr.py relocate %t 0x1000
+# RUN: %python %S/Inputs/relocated-phdr.py verify %t
+# RUN: llvm-objcopy --only-keep-debug %t %t.dbg
+# RUN: %python %S/Inputs/relocated-phdr.py verify %t.dbg
+# RUN: llvm-readelf -x .note %t.dbg | FileCheck %s
+
+# CHECK:      Hex dump of section '.note':
+# CHECK-NEXT: 0x00000100 04000000 04000000 01000000 474e5500
+# CHECK-NEXT: 0x00000110 01020304
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x100
+    Offset:       0x100
+    Content:      040000000400000001000000474e550001020304
+  - Name:    .debug_info
+    Type:    SHT_PROGBITS
+    Offset:  0x2000
+    Content: '00'
+ProgramHeaders:
+  - Type:     PT_PHDR
+    Flags:    [ PF_R ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    FileSize: 0x70
+    MemSize:  0x70
+    Align:    8
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0
+    FileSize: 0x1070
+    MemSize:  0x1070
+    Align:    0x1000

@@ -2458,8 +2458,12 @@ static uint64_t layoutSegmentsForOnlyKeepDebug(std::vector<Segment *> &Segments,
                                                uint64_t HdrEnd) {
   uint64_t MaxOffset = 0;
   for (Segment *Seg : Segments) {
-    if (Seg->Type == PT_PHDR)
+    if (Seg->Type == PT_PHDR) {
+      // PT_PHDR is preserved at its original offset. Include it in the output
+      // extent even when all section data before it was compacted away.
+      MaxOffset = std::max(MaxOffset, Seg->Offset + Seg->FileSize);
       continue;
+    }
 
     // The segment offset is generally the offset of the first section.
     //
@@ -2519,8 +2523,12 @@ template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
     // For --only-keep-debug, the sections that did not preserve contents were
     // changed to SHT_NOBITS. We now rewrite sh_offset fields of sections, and
     // then rewrite p_offset/p_filesz of program headers.
-    uint64_t HdrEnd =
-        sizeof(Elf_Ehdr) + llvm::size(Obj.segments()) * sizeof(Elf_Phdr);
+    uint64_t HdrEnd = sizeof(Elf_Ehdr);
+    if (Obj.ProgramHdrSegment.Offset == HdrEnd ||
+        (Obj.ProgramHdrSegment.ParentSegment != nullptr &&
+         Obj.ProgramHdrSegment.ParentSegment ==
+             Obj.ElfHdrSegment.ParentSegment))
+      HdrEnd = Obj.ProgramHdrSegment.Offset + Obj.ProgramHdrSegment.FileSize;
     Offset = layoutSectionsForOnlyKeepDebug(Obj, HdrEnd);
     Offset = std::max(Offset,
                       layoutSegmentsForOnlyKeepDebug(OrderedSegments, HdrEnd));
