@@ -1070,13 +1070,13 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   // No single conditional move for a 128-bit vector, but we can emit a sequence
   // of csetm (~1), dup (~5, cross domain), bsl (~2).
   if (AArch64::FPR128RegClass.hasSubClassEq(RC) &&
-      Subtarget.isNeonAvailable()) {
+      Subtarget.isNeonAvailable() &&
+      !MBB.getParent()->getFunction().hasMinSize()) {
     CondCycles = 8 + ExtraCondLat;
     TrueCycles = FalseCycles = 2;
     return true;
   }
 
-  // Can't do vectors.
   return false;
 }
 
@@ -1291,6 +1291,7 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
   // A 128-bit vector has no conditional move so blend the operands with a mask
   // built from the flags.
   if (MRI.constrainRegClass(DstReg, &AArch64::FPR128RegClass)) {
+    assert(Subtarget.isNeonAvailable() && "Expected NEON for a vector select");
     MRI.constrainRegClass(TrueReg, &AArch64::FPR128RegClass);
     MRI.constrainRegClass(FalseReg, &AArch64::FPR128RegClass);
     Register CondSet = MRI.createVirtualRegister(&AArch64::GPR64RegClass);

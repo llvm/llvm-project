@@ -111,18 +111,29 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: diamond_minsize
   ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $q0, $q1, $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr128 = COPY $q0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
-  ; CHECK-NEXT:   [[SUBv4i32_:%[0-9]+]]:fpr128 = SUBv4i32 [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   TBZW [[COPY2]], 0, %bb.2
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADDv4i32_:%[0-9]+]]:fpr128 = ADDv4i32 [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $wzr = ANDSWri [[COPY2]], 0, implicit-def $nzcv
-  ; CHECK-NEXT:   [[CSINVXr:%[0-9]+]]:gpr64 = CSINVXr $xzr, $xzr, 1, implicit $nzcv
-  ; CHECK-NEXT:   [[DUPv2i64gpr:%[0-9]+]]:fpr128 = DUPv2i64gpr [[CSINVXr]]
-  ; CHECK-NEXT:   [[BSPv16i8_:%[0-9]+]]:fpr128 = BSPv16i8 [[DUPv2i64gpr]], [[SUBv4i32_]], [[ADDv4i32_]]
-  ; CHECK-NEXT:   $q0 = COPY [[BSPv16i8_]]
+  ; CHECK-NEXT:   B %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[SUBv4i32_:%[0-9]+]]:fpr128 = SUBv4i32 [[COPY]], [[COPY1]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr128 = PHI [[ADDv4i32_]], %bb.1, [[SUBv4i32_]], %bb.2
+  ; CHECK-NEXT:   $q0 = COPY [[PHI]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
   bb.0:
     successors: %bb.1, %bb.2
