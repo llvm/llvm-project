@@ -234,3 +234,72 @@ void test_split(void) {
   // CHECK: store i32 20, ptr %i
   // After loop: i should be 20 (loop-exit value per OpenMP 6.0 spec)
 }
+
+void test_unroll(void) {
+  // CHECK-LABEL: define {{.*}} @test_unroll
+  int i;
+  #pragma omp unroll partial(2)
+  for (i = 5; i <= 10; i += 2) {
+  }
+  // CHECK: for.end:
+  // CHECK-NEXT: ret void
+  // Unroll does not privatize i, so no explicit finalization is emitted.
+}
+
+void test_fuse(void) {
+  // CHECK-LABEL: define {{.*}} @test_fuse
+  int i, j;
+  #pragma omp fuse
+  {
+    for (i = 0; i < 10; i++) {
+    }
+    for (j = 5; j <= 15; j += 2) {
+    }
+  }
+  // CHECK: store i32 10, ptr %i
+  // CHECK: store i32 17, ptr %j
+  // After fuse: i should be 10, j should be 17 (loop-exit values per OpenMP 6.0
+  // spec).
+}
+
+void test_for_tile(void) {
+  // CHECK-LABEL: define {{.*}} @test_for_tile
+  int i;
+  #pragma omp for
+  #pragma omp tile sizes(2)
+  for (i = 5; i <= 10; i += 2) {
+  }
+  // CHECK: omp.loop.exit:
+  // CHECK-NOT: store {{.*}}, ptr %i
+  // CHECK: call void @__kmpc_for_static_fini
+  // i is private to the `for` construct; its post-loop value is unspecified,
+  // so no restoring store is expected for i after omp.loop.exit.
+}
+
+void test_for_stripe(void) {
+  // CHECK-LABEL: define {{.*}} @test_for_stripe
+  int i;
+  #pragma omp for
+  #pragma omp stripe sizes(2)
+  for (i = 5; i <= 10; i += 2) {
+  }
+  // CHECK: omp.loop.exit:
+  // CHECK-NOT: store {{.*}}, ptr %i
+  // CHECK: call void @__kmpc_for_static_fini
+  // Same rationale as test_for_tile.
+}
+
+void test_for_lastprivate_tile(void) {
+  // CHECK-LABEL: define {{.*}} @test_for_lastprivate_tile
+  int i;
+  #pragma omp parallel num_threads(2) shared(i)
+  #pragma omp for lastprivate(i)
+  #pragma omp tile sizes(2)
+  for (i = 5; i <= 10; i += 2) {
+  }
+  // With lastprivate(i), the runtime copies out i for the thread that
+  // executes the last logical iteration; the tile transformation must not
+  // emit its own restoring store on top of that.
+  // CHECK: omp.loop.exit:
+  // CHECK: call void @__kmpc_for_static_fini
+}
