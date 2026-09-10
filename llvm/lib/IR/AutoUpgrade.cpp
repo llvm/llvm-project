@@ -2076,13 +2076,6 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
-      // Upgrade tcgen05.mma intrinsics missing collector_usage_b.
-      IID = shouldUpgradeNVPTXTcgen05MMAIntrinsic(F, Name);
-      if (IID != Intrinsic::not_intrinsic) {
-        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
-        return NewFn != F;
-      }
-
       // Upgrade mbarrier.init intrinsics missing the layout operand.
       IID = shouldUpgradeNVPTXMBarrierInitIntrinsic(Name);
       if (IID != Intrinsic::not_intrinsic) {

@@ -1567,6 +1567,20 @@ class APPLYPRIORITY_BULK_TENSOR_OVERRIDE_INTR<int dim, string mode,
       NVVM_EVICT_POLICY_RANGED_ARGPROP<PolicyIdx, 1>.Prop);
 }
 
+// Pre-computes the ImmArg property list with optional trailing defaults.
+class BuildImmArgProps<list<LLVMType> flags, list<LLVMType> param_types,
+                       list<DefaultValue> trailing_defaults = []> {
+  defvar NumFlags = !size(flags);
+  defvar NumDefaults = !size(trailing_defaults);
+  defvar FirstDefault = !sub(NumFlags, NumDefaults);
+  list<IntrinsicProperty> Props =
+      !foreach(i, !range(flags),
+          ImmArg<ArgIndex<!add(i, !size(param_types))>,
+                 !if(!lt(i, FirstDefault),
+                     NoDefault,
+                     trailing_defaults[!sub(i, FirstDefault)])>);
+}
+
 let TargetPrefix = "nvvm" in {
 
   //
@@ -3156,6 +3170,22 @@ foreach op = ["dec", "inc"] in
 // Exit
 def int_nvvm_exit : NVVMBuiltin,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
+
+class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
+                list<LLVMType> param_types,
+                list<LLVMType> flags,
+                list<IntrinsicProperty> intr_properties,
+                string name = "",
+                list<DefaultValue> trailing_flag_defaults = []>
+  : DefaultAttrsIntrinsic<
+        ret_types,
+        !listconcat(param_types, flags),
+        !listconcat(intr_properties,
+                    BuildImmArgProps<flags, param_types, trailing_flag_defaults>.Props),
+        name> {
+  assert !le(!size(trailing_flag_defaults), !size(flags)),
+         "number of trailing flag defaults exceeds number of flags";
+}
 
 // TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
 foreach dim = 1...5 in {
