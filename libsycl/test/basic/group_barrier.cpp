@@ -4,14 +4,19 @@
 
 #include <sycl/sycl.hpp>
 
-#include <algorithm>
 #include <iostream>
 
 constexpr int LocalSize = 8;
 constexpr int WorkGroups = 4;
 constexpr int GlobalSize = WorkGroups * LocalSize;
+// Keep the value ranges of different work-groups disjoint, so that reading
+// another work-group's data is detected as well.
+constexpr int GroupBias = LocalSize + 2;
+// The barrier is a synchronization primitive, so run the same scenario several
+// times to reduce the chance of a race passing unnoticed.
+constexpr int Iterations = 4;
 
-static bool runBarrierCase(sycl::queue &Q, int GroupBias, bool MaxCase) {
+static bool runBarrierCase(sycl::queue &Q, int Iteration) {
   int *Data = sycl::malloc_shared<int>(GlobalSize, Q);
   int *LocalData = sycl::malloc_shared<int>(GlobalSize, Q);
 
@@ -25,13 +30,8 @@ static bool runBarrierCase(sycl::queue &Q, int GroupBias, bool MaxCase) {
 
         if (Lid == 0) {
           int Result = GroupData[0];
-          if (MaxCase) {
-            for (int I = 1; I < LocalSize; ++I)
-              Result = std::max(Result, GroupData[I]);
-          } else {
-            for (int I = 1; I < LocalSize; ++I)
-              Result += GroupData[I];
-          }
+          for (int I = 1; I < LocalSize; ++I)
+            Result += GroupData[I];
           GroupData[0] = Result;
         }
 
@@ -48,14 +48,13 @@ static bool runBarrierCase(sycl::queue &Q, int GroupBias, bool MaxCase) {
       const int Value = Gid * GroupBias + Lid + 1;
       Expected += Value;
     }
-    if (MaxCase)
-      Expected = Gid * GroupBias + LocalSize;
 
     for (int Lid = 0; Lid < LocalSize; ++Lid) {
       const int Index = Gid * LocalSize + Lid;
       if (Data[Index] != Expected) {
-        std::cerr << "Mismatch at group " << Gid << " lane " << Lid << ": got "
-                  << Data[Index] << ", expected " << Expected << std::endl;
+        std::cerr << "Iteration " << Iteration << ": mismatch at group " << Gid
+                  << " lane " << Lid << ": got " << Data[Index] << ", expected "
+                  << Expected << std::endl;
         Failure = true;
       }
     }
@@ -69,10 +68,9 @@ static bool runBarrierCase(sycl::queue &Q, int GroupBias, bool MaxCase) {
 int main() {
   sycl::queue Q;
 
-  if (!runBarrierCase(Q, 10, false))
-    return 1;
-  if (!runBarrierCase(Q, 17, true))
-    return 1;
+  for (int I = 0; I < Iterations; ++I)
+    if (!runBarrierCase(Q, I))
+      return 1;
 
   return 0;
 }
