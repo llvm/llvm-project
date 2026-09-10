@@ -26,9 +26,9 @@ TypeSystemFortran::~TypeSystemFortran() = default;
 TypeSystemFortran::TypeSystemFortran() = default;
 
 void TypeSystemFortran::Initialize() {
-  PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), "fortran AST context plug-in", CreateInstance,
-      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions());
+  PluginManager::RegisterPlugin(GetPluginNameStatic(), "fortran plug-in",
+                                CreateInstance, GetSupportedLanguagesForTypes(),
+                                GetSupportedLanguagesForExpressions());
 }
 
 void TypeSystemFortran::Terminate() {
