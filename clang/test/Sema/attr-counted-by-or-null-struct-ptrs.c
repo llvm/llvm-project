@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -verify=expected,immediate %s
+// RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -verify %s
 // RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -Wpointer-arith -verify %s
 
 #define __counted_by_or_null(f)  __attribute__((counted_by_or_null(f)))
@@ -105,8 +105,6 @@ struct on_pointer_anon_count {
 //==============================================================================
 // __counted_by_or_null on struct member pointer in type attribute position
 //==============================================================================
-// TODO: Correctly parse counted_by_or_null as a type attribute. Currently it is parsed
-// as a declaration attribute
 
 struct on_member_pointer_complete_ty_ty_pos {
   int count;
@@ -158,14 +156,16 @@ struct on_member_pointer_fn_ptr_ty_ty_pos {
   fn_ptr_ty __counted_by_or_null(count) fn_ptr;
 };
 
-// Forbidden: the pointee is a function type. With
-// -fexperimental-late-parse-attributes it's still treated as a declaration
-// attribute on the outermost pointer until late parsing handles type
-// attributes.
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
   int count;
-  // immediate-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
+  // expected-error@+1{{cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
   void (* __counted_by_or_null(count) * fn_ptr)(void);
+};
+
+struct on_member_pointer_fn_ptr_ty_ty_ty_pos_inner {
+  int count;
+  // expected-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
+  void (** __counted_by_or_null(count) * fn_ptr)(void);
 };
 
 struct on_member_pointer_struct_with_vla_ty_pos {
@@ -184,12 +184,8 @@ struct on_member_pointer_struct_with_annotated_vla_ty_pos {
 };
 
 struct on_nested_pointer_inner {
-  // Nested bounds attributes are not allowed. With
-  // -fexperimental-late-parse-attributes it's still treated as a declaration
-  // attribute on the outermost pointer until late parsing handles type
-  // attributes.
   int count;
-  // immediate-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
+  // expected-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
   struct size_known *__counted_by_or_null(count) *buf;
 };
 

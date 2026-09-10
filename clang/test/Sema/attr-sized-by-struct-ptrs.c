@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,immediate %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify %s
 
 #define __sized_by(f)  __attribute__((sized_by(f)))
@@ -149,14 +149,16 @@ struct on_member_pointer_fn_ptr_ty_ty_pos {
   fn_ptr_ty __sized_by(size) fn_ptr;
 };
 
-// Forbidden: the pointee is a function type. With
-// -fexperimental-late-parse-attributes it's still treated as a declaration
-// attribute on the outermost pointer until late parsing handles type
-// attributes.
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
   int size;
-  // immediate-error@+1{{'sized_by' cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
+  // expected-error@+1{{cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
   void (* __sized_by(size) * fn_ptr)(void);
+};
+
+struct on_member_pointer_fn_ptr_ty_ty_ty_pos_inner {
+  int size;
+  // expected-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
+  void (** __sized_by(size) * fn_ptr)(void);
 };
 
 struct on_member_pointer_struct_with_vla_ty_pos {
@@ -170,12 +172,8 @@ struct on_member_pointer_struct_with_annotated_vla_ty_pos {
 };
 
 struct on_nested_pointer_inner {
-  // Nested bounds attributes are not allowed. With
-  // -fexperimental-late-parse-attributes it's still treated as a declaration
-  // attribute on the outermost pointer until late parsing handles type
-  // attributes.
   int size;
-  // immediate-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
+  // expected-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
   struct size_known *__sized_by(size) *buf;
 };
 
