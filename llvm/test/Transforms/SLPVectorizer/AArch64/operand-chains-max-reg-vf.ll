@@ -6,25 +6,30 @@ define void @call_operands_wider_than_reg(ptr %p, ptr %q) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 0
+; CHECK-NEXT:    [[P_4:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[Q_0:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[P_0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[Q_0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i32> [[TMP2]], i64 0
+; CHECK-NEXT:    [[Q_4:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[Q_0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[P_4]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[Q_4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    call void @f(i32 [[TMP6]])
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i32> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP2]], i64 1
 ; CHECK-NEXT:    call void @f(i32 [[TMP7]])
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i64 2
 ; CHECK-NEXT:    call void @g(i32 [[TMP8]])
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP2]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP2]], i64 3
 ; CHECK-NEXT:    call void @g(i32 [[TMP9]])
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i32> [[TMP2]], i64 4
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    call void @h(i32 [[TMP10]])
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP2]], i64 5
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP5]], i64 1
 ; CHECK-NEXT:    call void @h(i32 [[TMP11]])
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i32> [[TMP2]], i64 6
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP5]], i64 2
 ; CHECK-NEXT:    call void @k(i32 [[TMP12]])
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i32> [[TMP2]], i64 7
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP5]], i64 3
 ; CHECK-NEXT:    call void @k(i32 [[TMP13]])
 ; CHECK-NEXT:    ret void
 ;
