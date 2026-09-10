@@ -95,6 +95,22 @@ std::string ConvertDebugInfoSizeToString(uint64_t debug_size) {
   return oss.str();
 }
 
+std::optional<protocol::CompileUnit>
+CreateCompileUnit(const lldb::SBCompileUnit &unit) {
+  const lldb::SBFileSpec file_spec = unit.GetFileSpec();
+  if (!file_spec.IsValid())
+    return std::nullopt;
+
+  std::array<char, PATH_MAX> path_buffer{};
+  const uint32_t path_size =
+      file_spec.GetPath(path_buffer.data(), path_buffer.size());
+
+  protocol::CompileUnit result;
+  result.id = unit.GetIDInModule();
+  result.compileUnitPath = std::string(path_buffer.data(), path_size);
+  return result;
+}
+
 std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
                                              lldb::SBModule &module,
                                              bool id_only) {

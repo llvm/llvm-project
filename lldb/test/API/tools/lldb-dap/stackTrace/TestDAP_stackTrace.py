@@ -8,7 +8,13 @@ from typing import List, NamedTuple
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StackFrame, StackFrameFormat
+from lldbsuite.test.tools.lldb_dap.types import (
+    CompileUnit,
+    CompileUnitsArgs,
+    LaunchArgs,
+    StackFrame,
+    StackFrameFormat,
+)
 
 
 class _RecurseSource(NamedTuple):
@@ -294,3 +300,65 @@ class TestDAP_stackTrace(DAPTestCaseBase):
                     expected_id,
                     f"expected moduleId '{expected_id}' for {source_name}, got: {module_id}",
                 )
+
+    @skipIfWindows
+    def test_stack_frame_compile_unit_id(self) -> None:
+        """Test that a stack frame's compileUnitId resolves to its source file."""
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        source = self.getSourcePath("main.c")
+        lines = [line_number(source, "recurse end")]
+
+        with session.configure(LaunchArgs(program=program)) as ctx:
+            breakpoint_ids = session.resolve_source_breakpoints(source, lines)
+
+        stop_event = session.verify_stopped_on_breakpoint(
+            breakpoint_ids, after=ctx.process_event
+        )
+        thread_id = self.expect_not_none(stop_event.body.threadId)
+        stack_frames = session.stack_trace(thread_id).body.stackFrames
+
+        ids = {
+            frame.compileUnitId
+            for frame in stack_frames
+            if frame.compileUnitId is not None
+        }
+        self.assertEqual(len(ids), 1, f"expected a single compile unit, got: {ids}")
+        compile_unit_id = ids.pop()
+        self.assertEqual(stack_frames[0].compileUnitId, compile_unit_id)
+
+        expected = CompileUnit(id=compile_unit_id, compileUnitPath=source)
+        module_id = self.expect_not_none(stack_frames[0].moduleId)
+
+        response = session.send_request(CompileUnitsArgs(moduleId=module_id)).result()
+        all_units = response.body.compileUnits
+        self.assertIn(expected, all_units)
+        self.assertGreater(len(all_units), 1, "test needs a module with several CUs")
+
+        response = session.send_request(
+            CompileUnitsArgs(moduleId=module_id, compileUnitIds=[compile_unit_id])
+        ).result()
+        self.assertEqual(response.body.compileUnits, [expected])
+
+    @skipIfWindows
+    def test_unknown_compile_unit_id(self) -> None:
+        """Test that an id no compile unit has resolves to nothing."""
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        source = self.getSourcePath("main.c")
+        lines = [line_number(source, "recurse end")]
+
+        with session.configure(LaunchArgs(program=program)) as ctx:
+            breakpoint_ids = session.resolve_source_breakpoints(source, lines)
+
+        stop_event = session.verify_stopped_on_breakpoint(
+            breakpoint_ids, after=ctx.process_event
+        )
+        thread_id = self.expect_not_none(stop_event.body.threadId)
+        top_frame = session.stack_trace(thread_id).body.stackFrames[0]
+        module_id = self.expect_not_none(top_frame.moduleId)
+
+        response = session.send_request(
+            CompileUnitsArgs(moduleId=module_id, compileUnitIds=[9999])
+        ).result()
+        self.assertEqual(response.body.compileUnits, [])

@@ -9,35 +9,39 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "Protocol/ProtocolRequests.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
-#include "lldb/Host/PosixApi.h" // IWYU pragma: keep
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
-static CompileUnit CreateCompileUnit(lldb::SBCompileUnit &unit) {
-  char unit_path_arr[PATH_MAX];
-  unit.GetFileSpec().GetPath(unit_path_arr, sizeof(unit_path_arr));
-  std::string unit_path(unit_path_arr);
-  return {std::move(unit_path)};
-}
-
-/// The `compileUnits` request returns an array of path of compile units for
-/// given module specified by `moduleId`.
-llvm::Expected<CompileUnitsResponseBody> CompileUnitsRequestHandler::Run(
-    const std::optional<CompileUnitsArguments> &args) const {
+/// The `compileUnits` request returns the compile units of the module named by
+/// `moduleId`, narrowed to `compileUnitIds` when specified.
+llvm::Expected<CompileUnitsResponseBody>
+CompileUnitsRequestHandler::Run(const CompileUnitsArguments &args) const {
   std::vector<CompileUnit> units;
+
   int num_modules = dap.target.GetNumModules();
   for (int i = 0; i < num_modules; i++) {
-    auto curr_module = dap.target.GetModuleAtIndex(i);
-    if (args->moduleId == curr_module.GetUUIDString()) {
-      int num_units = curr_module.GetNumCompileUnits();
-      for (int j = 0; j < num_units; j++) {
-        auto curr_unit = curr_module.GetCompileUnitAtIndex(j);
-        units.emplace_back(CreateCompileUnit(curr_unit));
+    lldb::SBModule curr_module = dap.target.GetModuleAtIndex(i);
+    if (args.moduleId != curr_module.GetUUIDString())
+      continue;
+
+    if (args.compileUnitIds.empty()) {
+      const uint32_t num_units = curr_module.GetNumCompileUnits();
+      for (uint32_t j = 0; j < num_units; j++) {
+        if (std::optional<CompileUnit> unit =
+                CreateCompileUnit(curr_module.GetCompileUnitAtIndex(j)))
+          units.emplace_back(std::move(*unit));
       }
-      break;
+    } else {
+      for (const uint32_t id : args.compileUnitIds) {
+        if (std::optional<CompileUnit> unit =
+                CreateCompileUnit(curr_module.GetCompileUnitAtIndex(id)))
+          units.emplace_back(std::move(*unit));
+      }
     }
+    break;
   }
   return CompileUnitsResponseBody{std::move(units)};
 }
