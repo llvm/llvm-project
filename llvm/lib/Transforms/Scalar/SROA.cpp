@@ -4831,6 +4831,107 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
   return SubTy;
 }
 
+/// This is a helper class that's used by presplitLoadsAndStores to split a
+/// slice into smaller slices, including splitting the corresponding load/store
+/// instruction.
+class SliceSplitter {
+  IRBuilderTy &IRB;
+  const DataLayout &DL;
+
+  /// The instruction that's being split.
+  Instruction *SplitI;
+
+  /// The split points that the slice is being split at. There's also an
+  /// implicit split point at the start and end of the slice.
+  const std::vector<uint64_t> &Splits;
+
+  /// The size of the slice that's being split.
+  unsigned SliceSize;
+
+public:
+  SliceSplitter(IRBuilderTy &IRB, const DataLayout &DL, Instruction *SplitI,
+                std::vector<uint64_t> &Splits, unsigned SliceSize)
+      : IRB(IRB), DL(DL), SplitI(SplitI), Splits(Splits), SliceSize(SliceSize) {
+
+  }
+
+  /// An iterator which iterates over the sub-slices that we want to split the
+  /// slice into.
+  struct Iterator {
+    SliceSplitter &SS;
+    unsigned Idx;
+    Iterator(SliceSplitter &SS, bool IsEnd) : SS(SS) {
+      Idx = IsEnd ? SS.Splits.size() + 1 : 0;
+    }
+    bool operator!=(const Iterator &Other) { return Idx != Other.Idx; }
+    uint64_t getOffset() { return Idx == 0 ? 0 : SS.Splits[Idx - 1]; }
+    uint64_t getSize() {
+      uint64_t NextOffset =
+          Idx < SS.Splits.size() ? SS.Splits[Idx] : SS.SliceSize;
+      return NextOffset - getOffset();
+    }
+    void operator++() { ++Idx; }
+    Iterator &operator*() { return *this; }
+  };
+
+  Iterator begin() { return Iterator(*this, false); }
+
+  Iterator end() { return Iterator(*this, true); }
+
+  LoadInst *createLoad(Value *BasePtr, Iterator &It) {
+    Type *PartTy = Type::getIntNTy(SplitI->getContext(), It.getSize() * 8);
+    Type *PartPtrTy = BasePtr->getType();
+    unsigned AS = getLoadStoreAddressSpace(SplitI);
+    LoadInst *PLoad = IRB.CreateAlignedLoad(
+        PartTy,
+        getAdjustedPtr(IRB, DL, BasePtr,
+                       APInt(DL.getIndexSizeInBits(AS), It.getOffset()),
+                       PartPtrTy, BasePtr->getName() + "."),
+        getAdjustedAlignment(SplitI, It.getOffset()),
+        /*IsVolatile*/ false, SplitI->getName());
+    PLoad->copyMetadata(*SplitI, {LLVMContext::MD_mem_parallel_loop_access,
+                                  LLVMContext::MD_access_group});
+    return PLoad;
+  }
+
+  StoreInst *createStore(Value *StoreVal, Value *BasePtr, Iterator &It) {
+    Type *PartPtrTy = BasePtr->getType();
+    unsigned AS = getLoadStoreAddressSpace(SplitI);
+    StoreInst *PStore = IRB.CreateAlignedStore(
+        StoreVal,
+        getAdjustedPtr(IRB, DL, BasePtr,
+                       APInt(DL.getIndexSizeInBits(AS), It.getOffset()),
+                       PartPtrTy, BasePtr->getName() + "."),
+        getAdjustedAlignment(SplitI, It.getOffset()),
+        /*IsVolatile*/ false);
+    PStore->copyMetadata(*SplitI, {LLVMContext::MD_mem_parallel_loop_access,
+                                   LLVMContext::MD_access_group,
+                                   LLVMContext::MD_DIAssignID});
+    AAMDNodes AATags = SplitI->getAAMetadata();
+    if (AATags)
+      PStore->setAAMetadata(
+          AATags.adjustForAccess(It.getOffset(), StoreVal->getType(), DL));
+
+    return PStore;
+  }
+
+  Slice createSlice(Instruction *I, uint64_t BaseOffset, Iterator &It) {
+    unsigned PtrIdx = 0;
+    if (auto *LI = dyn_cast<LoadInst>(I))
+      PtrIdx = LI->getPointerOperandIndex();
+    else if (auto *SI = dyn_cast<StoreInst>(I))
+      PtrIdx = SI->getPointerOperandIndex();
+    else
+      llvm_unreachable("Slice must be for a load or store");
+    Slice S(BaseOffset + It.getOffset(),
+            BaseOffset + It.getOffset() + It.getSize(),
+            &I->getOperandUse(PtrIdx), /*IsSplittable*/ false);
+    LLVM_DEBUG(dbgs() << "    new slice [" << S.beginOffset() << ", "
+                      << S.endOffset() << "): " << *I << "\n");
+    return S;
+  }
+};
+
 /// Pre-split loads and stores to simplify rewriting.
 ///
 /// We want to break up the splittable load+store pairs as much as
@@ -5073,43 +5174,16 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
     LLVM_DEBUG(dbgs() << "  Splitting load: " << *LI << "\n");
 
-    uint64_t PartOffset = 0, PartSize = Offsets.Splits.front();
-    int Idx = 0, Size = Offsets.Splits.size();
-    for (;;) {
-      auto *PartTy = Type::getIntNTy(LI->getContext(), PartSize * 8);
-      auto AS = LI->getPointerAddressSpace();
-      auto *PartPtrTy = LI->getPointerOperandType();
-      LoadInst *PLoad = IRB.CreateAlignedLoad(
-          PartTy,
-          getAdjustedPtr(IRB, DL, BasePtr,
-                         APInt(DL.getIndexSizeInBits(AS), PartOffset),
-                         PartPtrTy, BasePtr->getName() + "."),
-          getAdjustedAlignment(LI, PartOffset),
-          /*IsVolatile*/ false, LI->getName());
-      PLoad->copyMetadata(*LI, {LLVMContext::MD_mem_parallel_loop_access,
-                                LLVMContext::MD_access_group});
+    SliceSplitter Splitter(IRB, DL, LI, Offsets.Splits, SliceSize);
+    for (auto Part : Splitter) {
+      LoadInst *PLoad = Splitter.createLoad(BasePtr, Part);
 
       // Append this load onto the list of split loads so we can find it later
       // to rewrite the stores.
       SplitLoads.push_back(PLoad);
 
       // Now build a new slice for the alloca.
-      NewSlices.push_back(
-          Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
-                &PLoad->getOperandUse(PLoad->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
-      LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
-                        << ", " << NewSlices.back().endOffset()
-                        << "): " << *PLoad << "\n");
-
-      // See if we've handled all the splits.
-      if (Idx >= Size)
-        break;
-
-      // Setup the next partition.
-      PartOffset = Offsets.Splits[Idx];
-      ++Idx;
-      PartSize = (Idx < Size ? Offsets.Splits[Idx] : SliceSize) - PartOffset;
+      NewSlices.push_back(Splitter.createSlice(PLoad, BaseOffset, Part));
     }
 
     // Now that we have the split loads, do the slow walk over all uses of the
@@ -5127,31 +5201,15 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
       Value *StoreBasePtr = SI->getPointerOperand();
       IRB.SetInsertPoint(SI);
-      AAMDNodes AATags = SI->getAAMetadata();
 
       LLVM_DEBUG(dbgs() << "    Splitting store of load: " << *SI << "\n");
 
-      for (int Idx = 0, Size = SplitLoads.size(); Idx < Size; ++Idx) {
-        LoadInst *PLoad = SplitLoads[Idx];
-        uint64_t PartOffset = Idx == 0 ? 0 : Offsets.Splits[Idx - 1];
-        auto *PartPtrTy = SI->getPointerOperandType();
-
-        auto AS = SI->getPointerAddressSpace();
-        StoreInst *PStore = IRB.CreateAlignedStore(
-            PLoad,
-            getAdjustedPtr(IRB, DL, StoreBasePtr,
-                           APInt(DL.getIndexSizeInBits(AS), PartOffset),
-                           PartPtrTy, StoreBasePtr->getName() + "."),
-            getAdjustedAlignment(SI, PartOffset),
-            /*IsVolatile*/ false);
-        PStore->copyMetadata(*SI, {LLVMContext::MD_mem_parallel_loop_access,
-                                   LLVMContext::MD_access_group,
-                                   LLVMContext::MD_DIAssignID});
-
-        if (AATags)
-          PStore->setAAMetadata(
-              AATags.adjustForAccess(PartOffset, PLoad->getType(), DL));
-        LLVM_DEBUG(dbgs() << "      +" << PartOffset << ":" << *PStore << "\n");
+      SliceSplitter Splitter(IRB, DL, SI, Offsets.Splits, SliceSize);
+      for (auto Part : Splitter) {
+        LoadInst *PLoad = SplitLoads[Part.Idx];
+        StoreInst *PStore = Splitter.createStore(PLoad, StoreBasePtr, Part);
+        LLVM_DEBUG(dbgs() << "      +" << Part.getOffset() << ":" << *PStore
+                          << "\n");
       }
 
       // We want to immediately iterate on any allocas impacted by splitting
@@ -5214,64 +5272,26 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       LLVM_DEBUG(dbgs() << "          of load: " << *LI << "\n");
     }
 
-    uint64_t PartOffset = 0, PartSize = Offsets.Splits.front();
-    int Idx = 0, Size = Offsets.Splits.size();
-    for (;;) {
-      auto *PartTy = Type::getIntNTy(Ty->getContext(), PartSize * 8);
-      auto *LoadPartPtrTy = LI->getPointerOperandType();
-      auto *StorePartPtrTy = SI->getPointerOperandType();
-
+    SliceSplitter Splitter(IRB, DL, LI, Offsets.Splits, StoreSize);
+    for (auto Part : Splitter) {
       // Either lookup a split load or create one.
       LoadInst *PLoad;
       if (SplitLoads) {
-        PLoad = (*SplitLoads)[Idx];
+        PLoad = (*SplitLoads)[Part.Idx];
       } else {
         IRB.SetInsertPoint(LI);
-        auto AS = LI->getPointerAddressSpace();
-        PLoad = IRB.CreateAlignedLoad(
-            PartTy,
-            getAdjustedPtr(IRB, DL, LoadBasePtr,
-                           APInt(DL.getIndexSizeInBits(AS), PartOffset),
-                           LoadPartPtrTy, LoadBasePtr->getName() + "."),
-            getAdjustedAlignment(LI, PartOffset),
-            /*IsVolatile*/ false, LI->getName());
-        PLoad->copyMetadata(*LI, {LLVMContext::MD_mem_parallel_loop_access,
-                                  LLVMContext::MD_access_group});
+        PLoad = Splitter.createLoad(LoadBasePtr, Part);
       }
 
       // And store this partition.
       IRB.SetInsertPoint(SI);
-      auto AS = SI->getPointerAddressSpace();
-      StoreInst *PStore = IRB.CreateAlignedStore(
-          PLoad,
-          getAdjustedPtr(IRB, DL, StoreBasePtr,
-                         APInt(DL.getIndexSizeInBits(AS), PartOffset),
-                         StorePartPtrTy, StoreBasePtr->getName() + "."),
-          getAdjustedAlignment(SI, PartOffset),
-          /*IsVolatile*/ false);
-      PStore->copyMetadata(*SI, {LLVMContext::MD_mem_parallel_loop_access,
-                                 LLVMContext::MD_access_group});
+      StoreInst *PStore = Splitter.createStore(PLoad, StoreBasePtr, Part);
 
       // Now build a new slice for the alloca.
-      NewSlices.push_back(
-          Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
-                &PStore->getOperandUse(PStore->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
-      LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
-                        << ", " << NewSlices.back().endOffset()
-                        << "): " << *PStore << "\n");
+      NewSlices.push_back(Splitter.createSlice(PStore, BaseOffset, Part));
       if (!SplitLoads) {
         LLVM_DEBUG(dbgs() << "      of split load: " << *PLoad << "\n");
       }
-
-      // See if we've finished all the splits.
-      if (Idx >= Size)
-        break;
-
-      // Setup the next partition.
-      PartOffset = Offsets.Splits[Idx];
-      ++Idx;
-      PartSize = (Idx < Size ? Offsets.Splits[Idx] : StoreSize) - PartOffset;
     }
 
     // We want to immediately iterate on any allocas impacted by splitting
