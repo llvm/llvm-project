@@ -830,10 +830,10 @@ class ShortWriteFile : public File {
 
 public:
   explicit ShortWriteFile(char *buffer, size_t buflen, int bufmode, bool owned,
-                          ModeFlags modeflags, size_t max_write_bytes)
+                          FileMode mode, size_t max_write_bytes)
       : LIBC_NAMESPACE::File(&short_write, &short_read, &short_seek,
                              &short_close, reinterpret_cast<uint8_t *>(buffer),
-                             buflen, bufmode, owned, modeflags),
+                             buflen, bufmode, owned, mode),
         pos(0), max_write(max_write_bytes) {}
 
   void reset() { pos = 0; }
@@ -848,9 +848,9 @@ public:
 TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
   LIBC_NAMESPACE::AllocChecker ac;
   // Unbuffered so writes go directly to platform_write, limited to 2 bytes.
-  ShortWriteFile *f = new (ac) ShortWriteFile(
-      nullptr, 0, _IONBF, true, LIBC_NAMESPACE::File::mode_flags("w"),
-      /*max_write_bytes=*/2);
+  ShortWriteFile *f =
+      new (ac) ShortWriteFile(nullptr, 0, _IONBF, true, FileMode("w"),
+                              /*max_write_bytes=*/2);
   ASSERT_FALSE(f == nullptr);
 
   // € (U+20AC) encodes to 3 UTF-8 bytes: 0xE2 0x82 0xAC.

@@ -13,6 +13,7 @@
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/file_mode.h"
 #include "src/__support/alloc-checker.h"
 
 #include "src/__support/libc_errno.h"
@@ -33,7 +34,7 @@ class CookieFile : public LIBC_NAMESPACE::File {
 
 public:
   CookieFile(void *c, cookie_io_functions_t cops, uint8_t *buffer,
-             size_t bufsize, File::ModeFlags mode)
+             size_t bufsize, FileMode mode)
       : File(&cookie_write, &cookie_read, &CookieFile::cookie_seek,
              &cookie_close, buffer, bufsize, 0 /* default buffering mode */,
              true /* File owns buffer */, mode),
@@ -92,8 +93,8 @@ LLVM_LIBC_FUNCTION(::FILE *, fopencookie,
       return nullptr;
   }
   AllocChecker ac;
-  auto *file = new (ac) CookieFile(
-      cookie, ops, buffer, File::DEFAULT_BUFFER_SIZE, File::mode_flags(mode));
+  auto *file = new (ac) CookieFile(cookie, ops, buffer,
+                                   File::DEFAULT_BUFFER_SIZE, FileMode(mode));
   if (!ac)
     return nullptr;
   return reinterpret_cast<::FILE *>(file);
