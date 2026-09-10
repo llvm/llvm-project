@@ -22,7 +22,7 @@ end program p
 ! CHECK: omp.private {type = private} @[[I_PRIV:.*Ei_private.*]] : i32
 
 ! CHECK-LABEL: func.func @_QQmain()
-! CHECK:         %[[I_ALLOC:.*]] = fir.alloca i32 {bindc_name = "i"
+! CHECK:         %[[I_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "i"
 ! CHECK:         %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ALLOC]] {uniq_name = "_QFEi"}
 ! CHECK:         omp.parallel {
 
