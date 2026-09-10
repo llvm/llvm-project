@@ -4582,7 +4582,7 @@ bool Parser::ParseCXX11AttributeArgs(
     // Eat the left paren, then skip to the ending right paren.
     ConsumeParen();
     if (!SkipUntil(tok::r_paren, StopAtUnbalanced)) {
-      Diag(Tok, diag::err_expected) << tok::r_paren;
+      Diag(Tok, diag::ext_unbalanced_attribute_args);
       SkipUntil(tok::r_paren, StopAtSemi);
     }
     return false;
