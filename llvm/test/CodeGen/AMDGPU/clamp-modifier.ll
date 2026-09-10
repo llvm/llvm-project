@@ -1588,11 +1588,11 @@ define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f16_src(ptr addrspace(1) %ou
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 1, v0
-; SI-NEXT:    v_mov_b32_e32 v4, 0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    buffer_load_ushort v1, v[3:4], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_ushort v1, v[1:2], s[4:7], 0 addr64
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, 0
 ; SI-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3

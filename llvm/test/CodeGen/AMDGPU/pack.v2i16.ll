@@ -344,9 +344,9 @@ define amdgpu_kernel void @v_pack_v2i16_imm_lo(ptr addrspace(1) %in1) #0 {
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_mov_b32_e32 v1, s1
-; GFX803-NEXT:    v_add_u32_e32 v2, vcc, s0, v0
-; GFX803-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GFX803-NEXT:    flat_load_dword v0, v[2:3] glc
+; GFX803-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
+; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX803-NEXT:    flat_load_dword v0, v[0:1] glc
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX803-NEXT:    v_or_b32_e32 v0, 0x7b, v0
@@ -360,10 +360,10 @@ define amdgpu_kernel void @v_pack_v2i16_imm_lo(ptr addrspace(1) %in1) #0 {
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX7-NEXT:    s_mov_b32 s3, 0x100f000
 ; GFX7-NEXT:    s_mov_b32 s2, 0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX7-NEXT:    v_mov_b32_e32 v3, 0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX7-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    buffer_load_dword v0, v[2:3], s[0:3], 0 addr64 glc
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, 0x7b, v0
@@ -407,9 +407,9 @@ define amdgpu_kernel void @v_pack_v2i16_inline_imm_lo(ptr addrspace(1) %in1) #0 
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_mov_b32_e32 v1, s1
-; GFX803-NEXT:    v_add_u32_e32 v2, vcc, s0, v0
-; GFX803-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GFX803-NEXT:    flat_load_dword v0, v[2:3] glc
+; GFX803-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
+; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX803-NEXT:    flat_load_dword v0, v[0:1] glc
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX803-NEXT:    v_or_b32_e32 v0, 64, v0
@@ -423,10 +423,10 @@ define amdgpu_kernel void @v_pack_v2i16_inline_imm_lo(ptr addrspace(1) %in1) #0 
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX7-NEXT:    s_mov_b32 s3, 0x100f000
 ; GFX7-NEXT:    s_mov_b32 s2, 0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX7-NEXT:    v_mov_b32_e32 v3, 0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX7-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    buffer_load_dword v0, v[2:3], s[0:3], 0 addr64 glc
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, 64, v0
@@ -487,10 +487,10 @@ define amdgpu_kernel void @v_pack_v2i16_imm_hi(ptr addrspace(1) %in0) #0 {
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX7-NEXT:    s_mov_b32 s3, 0x100f000
 ; GFX7-NEXT:    s_mov_b32 s2, 0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX7-NEXT:    v_mov_b32_e32 v3, 0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX7-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    buffer_load_dword v0, v[2:3], s[0:3], 0 addr64 glc
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, 0x7b0000, v0
@@ -550,10 +550,10 @@ define amdgpu_kernel void @v_pack_v2i16_inline_imm_hi(ptr addrspace(1) %in0) #0 
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX7-NEXT:    s_mov_b32 s3, 0x100f000
 ; GFX7-NEXT:    s_mov_b32 s2, 0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX7-NEXT:    v_mov_b32_e32 v3, 0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX7-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    buffer_load_dword v0, v[2:3], s[0:3], 0 addr64 glc
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, 0x70000, v0

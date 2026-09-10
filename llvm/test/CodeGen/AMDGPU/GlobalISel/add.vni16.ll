@@ -17,26 +17,26 @@ define void @add_v3i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrs
 ; GFX8-NEXT:    v_add_u32_e32 v16, vcc, 2, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v17, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_ushort v8, v[0:1]
-; GFX8-NEXT:    v_add_u32_e32 v18, vcc, 4, v2
 ; GFX8-NEXT:    flat_load_ushort v9, v[6:7]
 ; GFX8-NEXT:    flat_load_ushort v10, v[14:15]
-; GFX8-NEXT:    v_addc_u32_e32 v19, vcc, 0, v3, vcc
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 4, v2
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_ushort v11, v[2:3]
 ; GFX8-NEXT:    flat_load_ushort v12, v[16:17]
-; GFX8-NEXT:    flat_load_ushort v6, v[18:19]
+; GFX8-NEXT:    flat_load_ushort v6, v[6:7]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 2, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 4, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(2)
-; GFX8-NEXT:    v_add_u16_e32 v7, v8, v11
+; GFX8-NEXT:    v_add_u16_e32 v19, v8, v11
 ; GFX8-NEXT:    s_waitcnt vmcnt(1)
 ; GFX8-NEXT:    v_add_u16_e32 v8, v9, v12
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_add_u16_e32 v6, v10, v6
-; GFX8-NEXT:    flat_store_short v[4:5], v7
+; GFX8-NEXT:    v_add_u16_e32 v18, v10, v6
+; GFX8-NEXT:    flat_store_short v[4:5], v19
 ; GFX8-NEXT:    flat_store_short v[0:1], v8
-; GFX8-NEXT:    flat_store_short v[2:3], v6
+; GFX8-NEXT:    flat_store_short v[2:3], v18
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;

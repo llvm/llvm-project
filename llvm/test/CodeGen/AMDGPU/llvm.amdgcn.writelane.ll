@@ -640,9 +640,9 @@ define amdgpu_kernel void @test_writelane_vreg_lane_i32(ptr addrspace(1) %out, p
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX802-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; GFX802-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX802-SDAG-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
-; GFX802-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GFX802-SDAG-NEXT:    flat_load_dword v0, v[2:3]
+; GFX802-SDAG-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
+; GFX802-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX802-SDAG-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX802-SDAG-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX802-SDAG-NEXT:    s_waitcnt lgkmcnt(0)

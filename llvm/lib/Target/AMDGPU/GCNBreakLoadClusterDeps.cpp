@@ -188,21 +188,26 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
 
     // First, go forward from def to find the kill
     if (DefToRename) {
-      std::bitset<NumVGPR32> ClobberedSubregs;
+      std::bitset<NumVGPR32> ClobberedSubregs, DefinedSubregs;
       MachineInstr *NewKiller = KillerIns ? KillerIns : nullptr;
       Register OldOldReg = OldReg;
-      for (MachineBasicBlock::iterator It = std::next(
-               MachineBasicBlock::iterator(DefToRename->getIterator()));
+      for (MachineBasicBlock::iterator It = DefToRename->getIterator();
            (OldRegClobbers & ~ClobberedSubregs).any() && It != MBB.end();
            ++It) {
         auto Subregs = getUsesAndDefsFor(*It);
         if ((Subregs.second & OldRegClobbers).any())
           NewKiller = &*It;
-        ClobberedSubregs |= Subregs.first;
+
+        std::bitset<NumVGPR32> NewlyDefinedComponents =
+            Subregs.first & OldRegClobbers & ~DefinedSubregs;
+        ClobberedSubregs |= Subregs.first & ~NewlyDefinedComponents;
+        DefinedSubregs |= NewlyDefinedComponents;
 
         // Handle promoting OldReg to a super-register of it
         Register NewOldReg =
-            promoteToSuperRegister(*std::prev(It), OldReg, true, false);
+            It != DefToRename
+                ? promoteToSuperRegister(*std::prev(It), OldReg, true, false)
+                : OldReg;
         NewOldReg = promoteToSuperRegister(*It, NewOldReg, false, true);
         if (NewOldReg != OldReg) {
           Changed = true;
@@ -211,7 +216,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         }
       }
 
-      if (NewKiller != KillerIns) {
+      if (NewKiller != KillerIns && NewKiller != DefToRename) {
         KillerIns = NewKiller;
         Changed = true;
       }
