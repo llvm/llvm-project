@@ -1,14 +1,9 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=amdgpu10.10-amd-amdhsa \
-; RUN:   -passes=amdgpu-uniform-intrinsic-combine -S < %s | FileCheck %s
-; RUN: opt -mtriple=amdgpu10.10-amd-amdhsa \
-; RUN:   -passes='amdgpu-uniform-intrinsic-combine,reassociate' \
-; RUN:   -verify-analysis-invalidation -disable-output < %s
+; RUN: opt -mtriple=amdgpu10.10-amd-amdhsa -passes=amdgpu-uniform-intrinsic-combine -S < %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu10.10-amd-amdhsa -passes='amdgpu-uniform-intrinsic-combine,reassociate' -verify-analysis-invalidation -disable-output < %s
 
 ; Reassociate must not use uniformity information that refers to invalidated
 ; cycle information after the combine changes the IR.
-
-declare i64 @llvm.amdgcn.ballot.i64(i1)
 
 ; The pass must report a change when erasing an already unused ballot.
 define amdgpu_kernel void @erase_unused_ballot() {
