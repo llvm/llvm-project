@@ -150,10 +150,25 @@ Branch the Git trunk using the following procedure:
 Tagging the LLVM Release Candidates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Tag release candidates:
+Before tagging each release candidate, bump the version suffix on the release
+branch to match the release candidate number.  This ensures that builds from the
+release branch produce the correct version string (e.g. ``libLLVM-X.Y-rcN.so``
+instead of ``libLLVM-X.Y-git.so``).
+
+For RC1:
 
 ::
 
+  $ llvm/utils/release/bump-version.py --rc 1 X.Y.Z
+  $ git commit -am "Bump version to X.Y.Z-rc1"
+  $ git tag -sa llvmorg-X.Y.Z-rcN
+
+For RC2 and subsequent release candidates, use the corresponding RC number:
+
+::
+
+  $ llvm/utils/release/bump-version.py --rc N X.Y.Z
+  $ git commit -am "Bump version to X.Y.Z-rcN"
   $ git tag -sa llvmorg-X.Y.Z-rcN
 
 The pre-packaged source tarballs will be automatically generated via the
@@ -385,7 +400,16 @@ version number tag and changes in basic system requirements.
 Tag the LLVM Final Release
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Tag the final release sources:
+Before tagging the final release, clear the version suffix so that builds
+produce the correct un-suffixed version string (e.g. ``libLLVM-X.Y.so``
+instead of ``libLLVM-X.Y-rcN.so``):
+
+::
+
+  $ llvm/utils/release/bump-version.py X.Y.Z
+  $ git commit -am "Bump version to X.Y.Z"
+
+Then tag the final release sources:
 
 ::
 
