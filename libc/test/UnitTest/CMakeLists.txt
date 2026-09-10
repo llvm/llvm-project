@@ -256,6 +256,15 @@ add_unittest_framework_library(
 )
 
 add_header_library(
+  CharLiteralUtils
+  HDRS
+    CharLiteralUtils.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ErrnoSetterMatcher
   HDRS
     ErrnoSetterMatcher.h
