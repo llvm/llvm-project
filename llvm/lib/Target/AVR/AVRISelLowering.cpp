@@ -1951,9 +1951,11 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
     Register ExtByte = 0;
     if (ArithmeticShift) {
       // Sign-extend bit that was shifted out last.
+      Register UndefReg = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(TargetOpcode::IMPLICIT_DEF), UndefReg);
       BuildMI(*BB, MI, dl, TII.get(AVR::SBCRdRr), HighByte)
-          .addReg(HighByte, RegState::Undef)
-          .addReg(HighByte, RegState::Undef);
+          .addReg(UndefReg)
+          .addReg(UndefReg);
       ExtByte = HighByte;
       // The highest bit of the original value is the same as the zero-extend
       // byte, so HighByte and ExtByte are the same.

@@ -87,16 +87,24 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   if (Reg.isVirtual()) {
     // For virtual registers, mark all uses as <undef>, and convert users to
     // implicit-def when possible.
+    bool AllUsesUndef = true;
     for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
-      MO.setIsUndef();
       MachineInstr *UserMI = MO.getParent();
+      // A tied use is rewritten to the register of its def, which a sibling
+      // read marked undef could not follow. Leave those reads a definition.
+      if (UserMI->hasTiedAndOtherReadOf(Reg, MO.getSubReg())) {
+        AllUsesUndef = false;
+        continue;
+      }
+      MO.setIsUndef();
       if (!canTurnIntoImplicitDef(UserMI))
         continue;
       LLVM_DEBUG(dbgs() << "Converting to IMPLICIT_DEF: " << *UserMI);
       UserMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
       WorkList.insert(UserMI);
     }
-    MI->eraseFromParent();
+    if (AllUsesUndef)
+      MI->eraseFromParent();
     return;
   }
 

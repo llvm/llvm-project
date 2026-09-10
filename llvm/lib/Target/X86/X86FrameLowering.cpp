@@ -1117,9 +1117,17 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
 
   // Add code to MBB to check for overflow and set the new target stack pointer
   // to zero if so.
-  BuildMI(&MBB, DL, TII.get(X86::XOR64rr), ZeroReg)
-      .addReg(ZeroReg, RegState::Undef)
-      .addReg(ZeroReg, RegState::Undef);
+  if (InProlog) {
+    BuildMI(&MBB, DL, TII.get(X86::XOR64rr), ZeroReg)
+        .addReg(ZeroReg, RegState::Undef)
+        .addReg(ZeroReg, RegState::Undef);
+  } else {
+    Register Zero32 = MRI.createVirtualRegister(&X86::GR32RegClass);
+    BuildMI(&MBB, DL, TII.get(X86::MOV32r0), Zero32);
+    BuildMI(&MBB, DL, TII.get(X86::SUBREG_TO_REG), ZeroReg)
+        .addReg(Zero32)
+        .addImm(X86::sub_32bit);
+  }
   BuildMI(&MBB, DL, TII.get(X86::MOV64rr), CopyReg).addReg(X86::RSP);
   BuildMI(&MBB, DL, TII.get(X86::SUB64rr), TestReg)
       .addReg(CopyReg)

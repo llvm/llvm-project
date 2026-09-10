@@ -515,6 +515,10 @@ DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
         }
         if (MO.readsReg()) {
           bool CrossCopy = false;
+          // A tied use is rewritten to the register of its def, which a
+          // sibling read marked undef could not follow.
+          if (OpMI.hasTiedAndOtherReadOf(Reg, MO.getSubReg()))
+            continue;
           if (isUndefRegAtInput(MO, RegInfo)) {
             LLVM_DEBUG(dbgs() << "Marking operand '" << MO << "' as undef in "
                               << OpMI);
