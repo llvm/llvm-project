@@ -382,6 +382,14 @@ public:
     return DwarfLineTablesCUMap[CUID];
   }
 
+  unsigned getOutputDwarfFileIndex(unsigned CUID,
+                                   unsigned InputFileIndex) const {
+    const auto It = DwarfLineTablesCUMap.find(CUID);
+    return It == DwarfLineTablesCUMap.end()
+               ? InputFileIndex
+               : It->second.translateFileIndex(InputFileIndex);
+  }
+
   Expected<unsigned> getDwarfFile(StringRef Directory, StringRef FileName,
                                   unsigned FileNumber,
                                   std::optional<MD5::MD5Result> Checksum,

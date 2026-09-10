@@ -679,8 +679,9 @@ SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
                             MCSymbol &InstrLabel,
                             const DWARFDebugLine::Row &CurrentRow) {
     const uint64_t TargetUnitIndex = TargetCU.getOffset();
-    unsigned TargetFilenum = CurrentRow.File;
     const uint32_t CurrentUnitIndex = RowReference.DwCompileUnitIndex;
+    unsigned TargetFilenum =
+        BC.getOutputDwarfFileIndex(CurrentUnitIndex, CurrentRow.File);
     // If the CU id from the current instruction location does not
     // match the target CU id, it means that we have come across some
     // inlined code (by BOLT).  We must look up the CU for the instruction's
