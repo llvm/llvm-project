@@ -9,8 +9,8 @@ define i32 @src_i32_check_no_overflow(i32 noundef %a) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], -1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.umax.i32(i32 [[A]], i32 1)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[COND]], [[A]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl nuw i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = call i32 @llvm.umax.i32(i32 [[MUL2]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -25,8 +25,8 @@ define i32 @src_i32_nuw(i32 noundef %a) {
 ; CHECK-LABEL: define i32 @src_i32_nuw(
 ; CHECK-SAME: i32 noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.umax.i32(i32 [[A]], i32 1)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[COND]], [[A]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl nuw i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = call i32 @llvm.umax.i32(i32 [[MUL2]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -39,8 +39,8 @@ define i32 @src_i32_nsw(i32 noundef %a) {
 ; CHECK-LABEL: define i32 @src_i32_nsw(
 ; CHECK-SAME: i32 noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.umax.i32(i32 [[A]], i32 1)
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], [[COND]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl nsw i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = call i32 @llvm.umax.i32(i32 [[MUL2]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -53,8 +53,8 @@ define <4 x i32> @src_v4i32_nsw(<4 x i32> noundef %a) {
 ; CHECK-LABEL: define <4 x i32> @src_v4i32_nsw(
 ; CHECK-SAME: <4 x i32> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[A]], <4 x i32> splat (i32 1))
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <4 x i32> [[COND]], [[A]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl nuw <4 x i32> [[A]], splat (i32 1)
+; CHECK-NEXT:    [[ADD:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[MUL2]], <4 x i32> splat (i32 1))
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
 entry:
@@ -67,8 +67,8 @@ define i64 @src_i64_nuw(i64 noundef %a) {
 ; CHECK-LABEL: define i64 @src_i64_nuw(
 ; CHECK-SAME: i64 noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i64 @llvm.umax.i64(i64 [[A]], i64 1)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i64 [[COND]], [[A]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl nuw i64 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = call i64 @llvm.umax.i64(i64 [[MUL2]], i64 1)
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
 entry:
@@ -81,8 +81,8 @@ define i128 @src_i128_nuw(i128 noundef %a) {
 ; CHECK-LABEL: define i128 @src_i128_nuw(
 ; CHECK-SAME: i128 noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i128 @llvm.umax.i128(i128 [[A]], i128 1)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i128 [[COND]], [[A]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl nuw i128 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = call i128 @llvm.umax.i128(i128 [[MUL2]], i128 1)
 ; CHECK-NEXT:    ret i128 [[ADD]]
 ;
 entry:

@@ -1984,6 +1984,18 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     I.setHasNoUnsignedWrap(true);
   }
 
+  // X + umax(X, 1) --> umax(X << 1, 1) if X + X does not overflow.
+  if (match(&I,
+            m_c_Add(m_Value(A), m_OneUse(m_c_UMax(m_Deferred(A), m_One())))) &&
+      (I.hasNoUnsignedWrap() || I.hasNoSignedWrap())) {
+    auto One = ConstantInt::get(Ty, 1);
+    return replaceInstUsesWith(
+        I, Builder.CreateIntrinsic(
+               Intrinsic::umax, {Ty},
+               {One, Builder.CreateShl(A, One, "mul2", I.hasNoUnsignedWrap(),
+                                       I.hasNoSignedWrap())}));
+  }
+
   if (Instruction *V = canonicalizeLowbitMask(I, Builder))
     return V;
 
