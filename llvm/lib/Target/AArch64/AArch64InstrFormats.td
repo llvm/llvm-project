@@ -9203,11 +9203,12 @@ multiclass BaseSIMDThreeSameVectorBF16DotI<bit Q, bit U, string asm,
 
   foreach DupTypes = [VTPair<AccumType, v4f32>,
                       VTPair<ChangeElementTypeToInteger<AccumType>.VT, v4i32>] in {
+    let Predicates = [IsLE] in
     def : Pat<(AccumType (int_aarch64_neon_bfdot
                 (AccumType RegType:$Rd), (InputType RegType:$Rn),
                 (InputType (bitconvert
-                  (DupTypes.VT0 (AArch64duplane32 (DupTypes.VT1
-                    (bitconvert (v8bf16 V128:$Rm))), VectorIndexS:$Idx)))))),
+                  (DupTypes.VT0 (AArch64duplane32 (DupTypes.VT1 V128:$Rm),
+                                                  VectorIndexS:$Idx)))))),
               (!cast<Instruction>(NAME) $Rd, $Rn, $Rm, VectorIndexS:$Idx)>;
   }
 }
