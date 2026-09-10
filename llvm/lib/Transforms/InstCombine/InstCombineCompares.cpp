@@ -6832,34 +6832,8 @@ static Instruction *processUZExtIdiom(ICmpInst &I, Value *Val,
   // In order to replace the original result with a narrower one, all uses must
   // ignore upper bits of the result. The number of used low bits must be not
   // greater than the width of add or mul.with.overflow.
-  if (Val->hasNUsesOrMore(2))
-    for (User *U : Val->users()) {
-      if (U == &I)
-        continue;
-      if (TruncInst *TI = dyn_cast<TruncInst>(U)) {
-        // Check if truncation ignores bits above ResultWidth.
-        unsigned TruncWidth = TI->getType()->getPrimitiveSizeInBits();
-        if (TruncWidth > ResultWidth)
-          return nullptr;
-      } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
-        // Check if AND ignores bits above ResultWidth.
-        if (BO->getOpcode() != Instruction::And)
-          return nullptr;
-        if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
-          const APInt &CVal = CI->getValue();
-          if (CVal.getBitWidth() - CVal.countl_zero() > ResultWidth)
-            return nullptr;
-        } else {
-          // In this case we could have the operand of the binary operation
-          // being defined in another block, and performing the replacement
-          // could break the dominance relation.
-          return nullptr;
-        }
-      } else {
-        // Other uses prohibit this transformation.
-        return nullptr;
-      }
-    }
+  if (!IC.canReplaceWideOverflowIdiomUsers(Val, ResultWidth, &I))
+    return nullptr;
 
   // Recognize patterns
   switch (I.getPredicate()) {
@@ -6925,29 +6899,7 @@ static Instruction *processUZExtIdiom(ICmpInst &I, Value *Val,
   IC.addToWorklist(Instr);
 
   // Replace uses of the original add/mul result with the new arithmetic result
-  if (Val->hasNUsesOrMore(2)) {
-    for (User *U : make_early_inc_range(Val->users())) {
-      if (U == &I)
-        continue;
-      if (TruncInst *TI = dyn_cast<TruncInst>(U)) {
-        if (TI->getType()->getPrimitiveSizeInBits() == ResultWidth)
-          IC.replaceInstUsesWith(*TI, ArithResult);
-        else
-          TI->setOperand(0, ArithResult);
-      } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
-        assert(BO->getOpcode() == Instruction::And);
-        // Replace (ArithResult & mask) --> zext (ArithResult & short_mask)
-        ConstantInt *CI = cast<ConstantInt>(BO->getOperand(1));
-        APInt ShortMask = CI->getValue().trunc(ResultWidth);
-        Value *ShortAnd = Builder.CreateAnd(ArithResult, ShortMask);
-        Value *Zext = Builder.CreateZExt(ShortAnd, BO->getType());
-        IC.replaceInstUsesWith(*BO, Zext);
-      } else {
-        llvm_unreachable("Unexpected Binary operation");
-      }
-      IC.addToWorklist(cast<Instruction>(U));
-    }
-  }
+  IC.replaceWideOverflowIdiomUsers(Val, ResultWidth, ArithResult, &I);
 
   return IC.replaceInstUsesWith(I, OverflowCheck);
 }

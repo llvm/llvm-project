@@ -2037,6 +2037,55 @@ static Value *foldCmpIntrinsicOfExtended(IntrinsicInst *II,
   return Builder.CreateIntrinsic(II->getType(), NewIID, {X, Y});
 }
 
+static Instruction *foldUMinSatOverflow(IntrinsicInst &II, Value *I0, Value *I1,
+                                        InstCombiner::BuilderTy &Builder,
+                                        InstCombinerImpl &IC) {
+  // umin(mul/add(zext(A), zext(B)), MaxVal) ->
+  // select(umul/uadd.with.overflow(A, B), MaxVal, zext(mul/add))
+  const APInt *C;
+  Value *X, *Y;
+  if (match(I1, m_APInt(C)) &&
+      match(I0, m_BinOp(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y))))) {
+    unsigned Opc = cast<BinaryOperator>(I0)->getOpcode();
+    if (Opc == Instruction::Mul || Opc == Instruction::Add) {
+      Type *Ty = X->getType();
+      if (Ty == Y->getType() && Ty->isIntOrIntVectorTy()) {
+        unsigned SrcBitWidth = Ty->getScalarSizeInBits();
+        unsigned DstBitWidth = I0->getType()->getScalarSizeInBits();
+        bool IsMul = Opc == Instruction::Mul;
+
+        if (C->isMask(SrcBitWidth) &&
+            DstBitWidth >= (IsMul ? 2 * SrcBitWidth : SrcBitWidth + 1)) {
+          // Check that all other users of the wide binop only need the
+          // low bits (trunc to <= SrcBitWidth, or and with low mask).
+          // This mirrors processUZExtIdiom's multi-use handling.
+          if (!IC.canReplaceWideOverflowIdiomUsers(I0, SrcBitWidth, &II))
+            return nullptr;
+
+          Value *Val, *Ov;
+          if (IsMul) {
+            Value *Ovf = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow,
+                                                 Ty, {X, Y},
+                                                 /*FMFSource=*/nullptr, "umul");
+            Val = Builder.CreateExtractValue(Ovf, 0, "umul.value");
+            Ov = Builder.CreateExtractValue(Ovf, 1, "umul.overflow");
+          } else {
+            Val = Builder.CreateAdd(X, Y, "uadd");
+            Ov = Builder.CreateICmpULT(Val, X, "uadd.overflow");
+          }
+          Value *ZExtVal = Builder.CreateZExt(
+              Val, I0->getType(), IsMul ? "umul.zext" : "uadd.zext");
+
+          // Replace other users of the wide binop with the narrow result.
+          IC.replaceWideOverflowIdiomUsers(I0, SrcBitWidth, Val, &II);
+          return SelectInst::Create(Ov, I1, ZExtVal);
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -2265,6 +2314,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             foldMinimumOverTrailingOrLeadingZeroCount<Intrinsic::ctlz>(
                 I0, I1, DL, Builder))
       return replaceInstUsesWith(*II, FoldedCtlz);
+
+    if (Instruction *I = foldUMinSatOverflow(*II, I0, I1, Builder, *this))
+      return I;
+
     [[fallthrough]];
   }
   case Intrinsic::umax: {
