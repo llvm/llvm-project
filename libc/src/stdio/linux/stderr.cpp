@@ -20,9 +20,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 constexpr size_t STDERR_BUFFER_SIZE = 0;
-constexpr FileMode append_mode("a");
 static LinuxFile StdErr(2, nullptr, STDERR_BUFFER_SIZE, _IONBF, false,
-                        append_mode);
+                        FileMode::APPEND_MODE);
 
 LLVM_LIBC_VARIABLE(FILE *, stderr) = reinterpret_cast<FILE *>(&StdErr);
 
