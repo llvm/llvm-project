@@ -20,6 +20,7 @@ add_mlir_conversion_library(MLIRTosaToLinalg
   MLIRLinalgUtils
   MLIRMathDialect
   MLIRPass
+  MLIRSCFDialect
   MLIRSupport
   MLIRTensorDialect
   MLIRTosaDialect
