@@ -119,8 +119,7 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : EnableAIXExtendedAltivecABI(false),
-        HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
+      : EnableAIXExtendedAltivecABI(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
         FunctionSections(false), DataSections(false),
@@ -144,16 +143,6 @@ public:
   /// nonvolitle vector registers. When false, the code generator only uses
   /// volatile vector registers which is the default setting on AIX.
   unsigned EnableAIXExtendedAltivecABI : 1;
-
-  /// HonorSignDependentRoundingFPMath - This returns true when the
-  /// -enable-sign-dependent-rounding-fp-math is specified.  If this returns
-  /// false (the default), the code generator is allowed to assume that the
-  /// rounding behavior is the default (round-to-zero for all floating point
-  /// to integer conversions, and round-to-nearest for all other arithmetic
-  /// truncations).  If this is enabled (set to true), the code generator must
-  /// assume that the rounding mode may dynamically change.
-  unsigned HonorSignDependentRoundingFPMathOption : 1;
-  LLVM_ABI bool HonorSignDependentRoundingFPMath() const;
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for

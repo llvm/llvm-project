@@ -79,7 +79,6 @@ CGOPT(FramePointerKind, FramePointerUsage)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
-CGOPT(bool, EnableHonorSignDependentRoundingFPMath)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
 CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
 CGOPT(SwiftAsyncFramePointerMode, SwiftAsyncFramePointer)
@@ -254,12 +253,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
     cl::init(DenormalMode::Invalid),
     DenormFlagEnumOptions);
   CGBINDOPT(DenormalFP32Math);
-
-  static cl::opt<bool> EnableHonorSignDependentRoundingFPMath(
-      "enable-sign-dependent-rounding-fp-math", cl::Hidden,
-      cl::desc("Force codegen to assume rounding mode can change dynamically"),
-      cl::init(false));
-  CGBINDOPT(EnableHonorSignDependentRoundingFPMath);
 
   static cl::opt<FloatABI::ABIType> FloatABIForCalls(
       "float-abi", cl::desc("Choose float ABI type"),
@@ -572,8 +565,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
 
-  Options.HonorSignDependentRoundingFPMathOption =
-      getEnableHonorSignDependentRoundingFPMath();
   Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();

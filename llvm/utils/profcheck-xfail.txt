@@ -25,7 +25,6 @@ Transforms/GVN/opaque-ptr.ll
 Transforms/GVN/pr69301.ll
 Transforms/IndVarSimplify/debugloc-rem-subst.ll
 Transforms/IndVarSimplify/eliminate-rem.ll
-Transforms/IndVarSimplify/invalidate-modified-lcssa-phi.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
@@ -79,11 +78,8 @@ Transforms/InstCombine/strchr-1.ll
 Transforms/InstCombine/strchr-3.ll
 Transforms/InstCombine/strlen-1.ll
 Transforms/InstCombine/strrchr-3.ll
-Transforms/InstCombine/sub-xor-cmp.ll
 Transforms/InstCombine/truncating-saturate.ll
 Transforms/InstCombine/unordered-fcmp-select.ll
-Transforms/InstCombine/wcslen-1.ll
-Transforms/InstCombine/wcslen-3.ll
 Transforms/InstCombine/xor-and-or.ll
 Transforms/InstCombine/zext-bool-add-sub.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
@@ -93,6 +89,7 @@ Transforms/LowerAtomic/atomic-swap.ll
 Transforms/LowerConstantIntrinsics/builtin-object-size-phi.ll
 Transforms/LowerConstantIntrinsics/objectsize_basic.ll
 Transforms/OpenMP/always_inline_device.ll
+Transforms/OpenMP/callback_parallel_regions.ll
 Transforms/OpenMP/custom_state_machines.ll
 Transforms/OpenMP/custom_state_machines_remarks.ll
 Transforms/OpenMP/get_hardware_num_threads_in_block_fold.ll
@@ -110,9 +107,7 @@ Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math.ll
-Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math-binary.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
-Transforms/SimplifyCFG/switch-select-remap.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
 Transforms/TailCallElim/accum_recursion.ll
@@ -123,4 +118,3 @@ Transforms/TailCallElim/inf-recursion.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
-tools/opt/mtune.ll
