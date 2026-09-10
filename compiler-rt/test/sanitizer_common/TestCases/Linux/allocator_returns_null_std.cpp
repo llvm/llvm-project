@@ -27,4 +27,8 @@ int main(int argc, char **argv) {
 }
 
 // CHECK: #{{[0-9]+.*}}allocator_returns_null_std.cpp
-// CHECK: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null_std.cpp.*}} in main
+// std::vector::resize uses throwing operator new[]. asan forces
+// may_return_null=true on Allocate so std::get_new_handler() runs first; the
+// chain-exhausted abort path emits "out-of-memory" rather than the in-place
+// "allocation-size-too-big" emitted by other sanitizers.
+// CHECK: {{SUMMARY: .*Sanitizer: (allocation-size-too-big|out-of-memory).*allocator_returns_null_std.cpp.*}} in main
