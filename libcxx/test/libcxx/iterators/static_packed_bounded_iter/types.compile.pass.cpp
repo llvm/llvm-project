@@ -18,7 +18,7 @@
 #include <iterator>
 #include <type_traits>
 
-using Iter = std::__static_packed_bounded_iterator<int*, int[], 2>;
+using Iter = std::__static_packed_bounded_iterator<int*, 2>;
 
 static_assert(std::is_same_v<Iter::value_type, int>, "");
 static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>, "");

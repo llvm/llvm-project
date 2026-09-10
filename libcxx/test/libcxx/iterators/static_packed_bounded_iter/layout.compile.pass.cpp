@@ -17,7 +17,7 @@
 #include <cstddef>
 #include <type_traits>
 
-using Iter = std::__static_packed_bounded_iterator<int*, int[], 2>;
+using Iter = std::__static_packed_bounded_iterator<int*, 2>;
 
 static_assert(sizeof(Iter) == sizeof(void*));
 static_assert(alignof(Iter) == alignof(void*));

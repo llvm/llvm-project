@@ -31,9 +31,9 @@ void test() {
 
   constexpr long sz = std::size(arr);
 
-  using BoundedIter = std::__static_packed_bounded_iterator<Ptr, decltype(arr), sz>;
+  using BoundedIter = std::__static_packed_bounded_iterator<Ptr, sz>;
 
-  BoundedIter it = std::__make_static_packed_bounded_iter<Ptr, decltype(arr), sz>(Ptr(arr), 0);
+  BoundedIter it = std::__make_static_packed_bounded_iter<Ptr, sz>(Ptr(arr), 0);
 
   TEST_LIBCPP_ASSERT_FAILURE(
       it--, "__static_packed_bounded_iterator::operator--: Attempt to rewind an iterator past the start");

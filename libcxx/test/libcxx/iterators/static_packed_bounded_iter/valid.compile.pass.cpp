@@ -19,8 +19,7 @@
 #include "test_iterators.h"
 
 template <typename Ptr, std::size_t _Cap>
-concept test =
-    requires(Ptr a) { typename std::__static_packed_bounded_iterator<Ptr, std::decay_t<decltype(*a)>[], _Cap>; };
+concept test = requires(Ptr a) { typename std::__static_packed_bounded_iterator<Ptr, _Cap>; };
 
 static_assert(test<std::int32_t*, 1>);
 static_assert(test<std::int32_t*, 2>);

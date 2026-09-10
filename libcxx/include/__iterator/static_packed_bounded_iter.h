@@ -56,7 +56,7 @@ consteval bool __range_fits_in_alignment(size_t __alignment, size_t __num_elems)
   return __allowed_range > __num_elems;
 }
 
-template <class _Ptr, class _Tag, size_t _RangeCapacity>
+template <class _Ptr, size_t _RangeCapacity>
   requires(is_pointer_v<_Ptr> && std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr>), _RangeCapacity))
 class __static_packed_bounded_iterator {
 public:
@@ -90,20 +90,20 @@ private:
                             "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
   }
 
-  template <class _Ptr2, class, size_t _RangeCapacity2>
+  template <class _Ptr2, size_t _RangeCapacity2>
     requires(is_pointer_v<_Ptr2> && std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr2>), _RangeCapacity2))
   friend class __static_packed_bounded_iterator;
 
 public:
-  template <class _Ptr2, class _Tag2, size_t _RangeCapacity2>
+  template <class _Ptr2, size_t _RangeCapacity2>
   friend auto __make_static_packed_bounded_iter(_Ptr2, size_t) noexcept;
 
   __static_packed_bounded_iterator()
     requires is_default_constructible_v<_Ptr>
   = default;
 
-  template <convertible_to<_Ptr> _Ptr2, class _Tag2>
-  __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _Tag2, _RangeCapacity>& __y)
+  template <convertible_to<_Ptr> _Ptr2>
+  __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _RangeCapacity>& __y)
       : __data_(__y.__data_) {}
 
   [[nodiscard]] reference operator*() const noexcept {
@@ -235,9 +235,9 @@ public:
   }
 };
 
-template <class _Ptr, class _Tag, size_t _RangeCapacity>
+template <class _Ptr, size_t _RangeCapacity>
 auto __make_static_packed_bounded_iter(_Ptr __base, size_t __offset) noexcept {
-  return __static_packed_bounded_iterator<_Ptr, _Tag, _RangeCapacity>(__base) + __offset;
+  return __static_packed_bounded_iterator<_Ptr, _RangeCapacity>(__base) + __offset;
 }
 
 _LIBCPP_END_NAMESPACE_STD

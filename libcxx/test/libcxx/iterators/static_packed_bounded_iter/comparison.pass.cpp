@@ -30,9 +30,9 @@ template <class Iter>
 constexpr bool tests() {
   Foo array[]             = {0, 1};
   Foo* b                  = array + 0;
-  using BoundedIter       = std::__static_packed_bounded_iterator<Iter, decltype(array), std::size(array)>;
-  BoundedIter const iter1 = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 0);
-  BoundedIter const iter2 = std::__make_static_packed_bounded_iter<Iter, decltype(array), std::size(array)>(Iter(b), 2);
+  using BoundedIter       = std::__static_packed_bounded_iterator<Iter, std::size(array)>;
+  BoundedIter const iter1 = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 0);
+  BoundedIter const iter2 = std::__make_static_packed_bounded_iter<Iter, std::size(array)>(Iter(b), 2);
 
   // operator==
   {
@@ -84,8 +84,8 @@ constexpr bool tests() {
 // constexpr friendly rather than forgetting this may have been an issue, now that it technically isn't possible.
 
 static constinit Foo array[] = {3, 4};
-using It                     = std::__static_packed_bounded_iterator<Foo*, decltype(array), std::size(array)>;
-static It iter1 = std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(array, 1);
+using It                     = std::__static_packed_bounded_iterator<Foo*, std::size(array)>;
+static It iter1              = std::__make_static_packed_bounded_iter<Foo*, std::size(array)>(array, 1);
 
 constexpr void test2(It a, It b) { assert(a == b); }
 
@@ -93,7 +93,7 @@ int main(int, char**) {
   tests<Foo*>();
   // static_assert(tests<Foo*>(), ""); TODO: This type is not constexpr.
 
-  test2(iter1, std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(array, 1));
+  test2(iter1, std::__make_static_packed_bounded_iter<Foo*, std::size(array)>(array, 1));
 
   return 0;
 }

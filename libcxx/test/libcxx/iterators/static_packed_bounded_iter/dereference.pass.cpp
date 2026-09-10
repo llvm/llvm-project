@@ -27,10 +27,10 @@ constexpr bool tests() {
   Foo array[] = {Foo{40}, Foo{41}, Foo{42}, Foo{43}, Foo{44}};
   Foo* b      = array + 0;
 
-  using BoundedIter = std::__static_packed_bounded_iterator<Foo*, decltype(array), std::size(array)>;
+  using BoundedIter = std::__static_packed_bounded_iterator<Foo*, std::size(array)>;
 
-  BoundedIter const iter1 = std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(Iter(b), 0);
-  BoundedIter const iter2 = std::__make_static_packed_bounded_iter<Foo*, decltype(array), std::size(array)>(Iter(b), 5);
+  BoundedIter const iter1 = std::__make_static_packed_bounded_iter<Foo*, std::size(array)>(Iter(b), 0);
+  BoundedIter const iter2 = std::__make_static_packed_bounded_iter<Foo*, std::size(array)>(Iter(b), 5);
 
   // operator*
   assert(*iter1 == Foo{40});

@@ -27,19 +27,19 @@ struct Derived : public Base {
 };
 
 template <typename T, std::size_t _Capacity>
-using Iter = std::__static_packed_bounded_iterator<T, T, _Capacity>;
+using Iter = std::__static_packed_bounded_iterator<T, _Capacity>;
 
 constexpr bool test() {
   {
     Derived a[1] = {{2}};
-    auto it      = std::__make_static_packed_bounded_iter<Derived*, Derived*, 1>(a, 0);
+    auto it      = std::__make_static_packed_bounded_iter<Derived*, 1>(a, 0);
 
     assert(it->x == 1);
     assert(it->y == 2);
 
     static_assert(std::is_convertible_v<Derived*, Base*>);
 
-    auto it2 = std::__static_packed_bounded_iterator<Base*, Derived*, 1>{it};
+    auto it2 = std::__static_packed_bounded_iterator<Base*, 1>{it};
     assert(it2->x == 1);
   }
 
