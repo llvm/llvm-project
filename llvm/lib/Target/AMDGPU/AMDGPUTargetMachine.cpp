@@ -610,11 +610,6 @@ static cl::opt<bool>
                        cl::desc("Enable loop data prefetch on AMDGPU"),
                        cl::Hidden, cl::init(false));
 
-static cl::opt<bool>
-    EnableVGPREncodingOpt("amdgpu-enable-vgpr-encoding-optimization", cl::Hidden,
-                          cl::init(false),
-                          cl::desc("Enable VGPR encoding optimization pass"));
-
 static cl::opt<std::string>
     AMDGPUSchedStrategy("amdgpu-sched-strategy",
                         cl::desc("Select custom AMDGPU scheduling strategy."),
@@ -2013,7 +2008,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
 
-  if (EnableVGPREncodingOpt)
+  if (getOptLevel() >= CodeGenOptLevel::Aggressive)
     addPass(&SIAMDGPUOptimizeVGPREncodingLegacyID);
 
   addPreRewrite();
@@ -2752,7 +2747,7 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
   else
     addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
 
-  if (EnableVGPREncodingOpt)
+  if (getOptLevel() >= CodeGenOptLevel::Aggressive)
     addMachineFunctionPass(AMDGPUOptimizeVGPREncodingPass(), PMW);
 
   addPreRewrite(PMW);
