@@ -6028,6 +6028,10 @@ def mtail_call : Flag<["-"], "mtail-call">, Group<m_wasm_Features_Group>;
 def mno_tail_call : Flag<["-"], "mno-tail-call">, Group<m_wasm_Features_Group>;
 def mwide_arithmetic : Flag<["-"], "mwide-arithmetic">, Group<m_wasm_Features_Group>;
 def mno_wide_arithmetic : Flag<["-"], "mno-wide-arithmetic">, Group<m_wasm_Features_Group>;
+def mwasm_opt_args_EQ : Joined<["-"], "mwasm-opt-args=">,
+  Group<m_wasm_Features_Driver_Group>,
+  HelpText<"Pass <arg> to wasm-opt (WebAssembly only); may be specified multiple times">,
+  MetaVarName<"<arg>">;
 def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver_Group>,
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">,

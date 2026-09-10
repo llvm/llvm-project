@@ -30,6 +30,19 @@
 // LINK_OPT: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_OPT: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
 
+// -mwasm-opt-args= passes arguments to wasm-opt without passing them to wasm-ld.
+// UNSUPPORTED: system-windows
+// RUN: rm -rf %t-wasm-opt
+// RUN: mkdir -p %t-wasm-opt/bin
+// RUN: ln -s %clang %t-wasm-opt/bin/wasm-opt
+// RUN: %clang -### -O2 --target=wasm32-unknown-unknown --sysroot=/foo \
+// RUN:   -B%t-wasm-opt/bin %s -mwasm-opt-args=--disable-bulk-memory \
+// RUN:   -mwasm-opt-args=--converge 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_OPT_ARGS %s
+// WASM_OPT_ARGS: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" {{.*}} "-o" "a.out"
+// WASM_OPT_ARGS-NOT: "--disable-bulk-memory"
+// WASM_OPT_ARGS: wasm-opt{{.*}}" "a.out" "-O2" "--disable-bulk-memory" "--converge" "-o" "a.out"
+
 // A basic C link command-line with known OS.
 
 // RUN: %clang -### --target=wasm32-wasi --sysroot=/foo %s 2>&1 \
