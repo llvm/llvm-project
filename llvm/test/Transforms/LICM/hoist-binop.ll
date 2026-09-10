@@ -429,7 +429,7 @@ loop:
   br label %loop
 }
 
-; Preserve NSW for constant invariant operands and enable hoistAdd().
+; Preserve NSW for constant operands and enable hoistAdd().
 define void @add_nsw_constant_operands(i32 %start) {
 ; CHECK-LABEL: @add_nsw_constant_operands(
 ; CHECK-NEXT:  entry:
@@ -465,7 +465,7 @@ define void @add_nsw_nonconstant_operands(i32 %start, i16 %c1, i16 %c2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ADD2_REASS:%.*]] = add nsw i32 [[IV]], [[INVARIANT_OP]]
-; CHECK-NEXT:    call void @use(i32 [[ADD2_REASS]])
+; CHECK-NEXT:    call void @use.i32(i32 [[ADD2_REASS]])
 ; CHECK-NEXT:    [[NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -478,7 +478,7 @@ loop:
   %iv = phi i32 [ %start, %entry ], [ %next, %loop ]
   %add1 = add nsw i32 %iv, %c1.ext
   %add2 = add nsw i32 %add1, %c2.ext
-  call void @use(i32 %add2)
+  call void @use.i32(i32 %add2)
   %next = add i32 %iv, 1
   br label %loop
 }
@@ -494,7 +494,7 @@ define void @add_nsw_vector_operands(<2 x i32> %start, <2 x i16> %c1, <2 x i16> 
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi <2 x i32> [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ADD2_REASS:%.*]] = add nsw <2 x i32> [[IV]], [[INVARIANT_OP]]
-; CHECK-NEXT:    call void @use(<2 x i32> [[ADD2_REASS]])
+; CHECK-NEXT:    call void @use.v2i32(<2 x i32> [[ADD2_REASS]])
 ; CHECK-NEXT:    [[NEXT]] = add <2 x i32> [[IV]], splat (i32 1)
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -507,7 +507,7 @@ loop:
   %iv = phi <2 x i32> [ %start, %entry ], [ %next, %loop ]
   %add1 = add nsw <2 x i32> %iv, %c1.ext
   %add2 = add nsw <2 x i32> %add1, %c2.ext
-  call void @use(<2 x i32> %add2)
+  call void @use.v2i32(<2 x i32> %add2)
   %next = add <2 x i32> %iv, <i32 1, i32 1>
   br label %loop
 }
@@ -525,7 +525,7 @@ define void @add_nsw_assumed_operands(i32 %start, i32 %c1, i32 %c2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ADD2_REASS:%.*]] = add nsw i32 [[IV]], [[INVARIANT_OP]]
-; CHECK-NEXT:    call void @use(i32 [[ADD2_REASS]])
+; CHECK-NEXT:    call void @use.i32(i32 [[ADD2_REASS]])
 ; CHECK-NEXT:    [[NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -540,7 +540,7 @@ loop:
   %iv = phi i32 [ %start, %entry ], [ %next, %loop ]
   %add1 = add nsw i32 %iv, %c1
   %add2 = add nsw i32 %add1, %c2
-  call void @use(i32 %add2)
+  call void @use.i32(i32 %add2)
   %next = add i32 %iv, 1
   br label %loop
 }
@@ -557,7 +557,7 @@ define void @add_only_outer_nsw(i32 %start, i16 %c1, i16 %c2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ADD2_REASS:%.*]] = add i32 [[IV]], [[INVARIANT_OP]]
-; CHECK-NEXT:    call void @use(i32 [[ADD2_REASS]])
+; CHECK-NEXT:    call void @use.i32(i32 [[ADD2_REASS]])
 ; CHECK-NEXT:    [[NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -570,7 +570,7 @@ loop:
   %iv = phi i32 [ %start, %entry ], [ %next, %loop ]
   %add1 = add i32 %iv, %c1.ext
   %add2 = add nsw i32 %add1, %c2.ext
-  call void @use(i32 %add2)
+  call void @use.i32(i32 %add2)
   %next = add i32 %iv, 1
   br label %loop
 }
@@ -1225,4 +1225,6 @@ loop:
 }
 
 declare void @llvm.assume(i1)
+declare void @use.i32(i32)
+declare void @use.v2i32(<2 x i32>)
 declare void @use()
