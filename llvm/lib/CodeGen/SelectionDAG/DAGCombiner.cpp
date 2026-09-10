@@ -9840,8 +9840,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     // question
     if (Index >= NarrowByteWidth)
       return L->getExtensionType() == ISD::ZEXTLOAD
-                 ? std::optional<ByteProvider>(
-                       ByteProvider::getConstantZero())
+                 ? std::optional<ByteProvider>(ByteProvider::getConstantZero())
                  : std::nullopt;
 
     unsigned BPVectorIndex = VectorIndex.value_or(0U);
@@ -10153,7 +10152,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
   auto MemoryByteOffset = [&](ByteProvider P) {
     assert(P.hasSrc() && "Must be a memory byte provider");
-    auto *Load = cast<LoadSDNode>(*P.Src);
+    auto *Load = cast<LoadSDNode>(P.getSrc());
 
     unsigned LoadBitWidth = Load->getMemoryVT().getScalarSizeInBits();
 
@@ -10191,7 +10190,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
       continue;
     }
     assert(P->hasSrc() && "provenance should either be memory or zero");
-    auto *L = cast<LoadSDNode>(*P->Src);
+    auto *L = cast<LoadSDNode>(P->getSrc());
 
     // All loads must share the same chain
     SDValue LChain = L->getChain();
@@ -10264,7 +10263,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // So the combined value can be loaded from the first load address.
   if (MemoryByteOffset(*FirstByteProvider) != 0)
     return SDValue();
-  auto *FirstLoad = cast<LoadSDNode>(*FirstByteProvider->Src);
+  auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->getSrc());
 
   // Before legalization we allow introducing loads that are wider than legal,
   // which will later be split into legally sized loads. This enables us to

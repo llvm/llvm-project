@@ -15567,7 +15567,7 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
       // Set the index of the second distinct Src node
       SecondSrc = {i, PermNodes[i].SrcOffset / 4};
-      assert(!(PermNodes[SecondSrc->first].Src->getValueSizeInBits() % 8));
+      assert(!(PermNodes[SecondSrc->first].getSrc().getValueSizeInBits() % 8));
       SrcByteAdjust = 0;
     }
     assert((PermOp.SrcOffset % 4) + SrcByteAdjust < 8);
@@ -15575,7 +15575,7 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     PermMask |= ((PermOp.SrcOffset % 4) + SrcByteAdjust) << (i * 8);
   }
   SDLoc DL(N);
-  SDValue Op = *PermNodes[FirstSrc.first].Src;
+  SDValue Op = PermNodes[FirstSrc.first].getSrc();
   Op = getDWordFromOffset(DAG, DL, Op, FirstSrc.second);
   assert(Op.getValueSizeInBits() == 32);
 
@@ -15592,7 +15592,7 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       return DAG.getBitcast(MVT::getIntegerVT(32), Op);
   }
 
-  SDValue OtherOp = SecondSrc ? *PermNodes[SecondSrc->first].Src : Op;
+  SDValue OtherOp = SecondSrc ? PermNodes[SecondSrc->first].getSrc() : Op;
 
   if (SecondSrc) {
     OtherOp = getDWordFromOffset(DAG, DL, OtherOp, SecondSrc->second);
@@ -15906,16 +15906,16 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
 
   std::optional<ByteProvider> BP0 =
       calculateByteProvider(SDValue(N, 0), 0, 0, 0);
-  if (!BP0 || BP0->SrcOffset >= 4 || !BP0->Src)
+  if (!BP0 || BP0->SrcOffset >= 4 || !BP0->hasSrc())
     return SDValue();
-  SDValue V0 = *BP0->Src;
+  SDValue V0 = BP0->getSrc();
 
   std::optional<ByteProvider> BP1 =
       calculateByteProvider(SDValue(N, 0), 1, 0, 1);
-  if (!BP1 || BP1->SrcOffset >= 4 || !BP1->Src)
+  if (!BP1 || BP1->SrcOffset >= 4 || !BP1->hasSrc())
     return SDValue();
 
-  SDValue V1 = *BP1->Src;
+  SDValue V1 = BP1->getSrc();
 
   if (V0 == V1)
     return SDValue();
@@ -17489,12 +17489,12 @@ static void placeSources(ByteProvider &Src0, ByteProvider &Src1,
                          SmallVectorImpl<DotSrc> &Src0s,
                          SmallVectorImpl<DotSrc> &Src1s, int Step) {
 
-  assert(Src0.Src.has_value() && Src1.Src.has_value());
+  assert(Src0.hasSrc() && Src1.hasSrc());
   // Src0s and Src1s are empty, just place arbitrarily.
   if (Step == 0) {
-    Src0s.push_back({*Src0.Src, ((Src0.SrcOffset % 4) << 24) + 0x0c0c0c,
+    Src0s.push_back({Src0.getSrc(), ((Src0.SrcOffset % 4) << 24) + 0x0c0c0c,
                      Src0.SrcOffset / 4});
-    Src1s.push_back({*Src1.Src, ((Src1.SrcOffset % 4) << 24) + 0x0c0c0c,
+    Src1s.push_back({Src1.getSrc(), ((Src1.SrcOffset % 4) << 24) + 0x0c0c0c,
                      Src1.SrcOffset / 4});
     return;
   }
@@ -17518,7 +17518,7 @@ static void placeSources(ByteProvider &Src0, ByteProvider &Src1,
     for (int I = 0; I < 2; I++) {
       SmallVectorImpl<DotSrc> &Srcs = I == 0 ? Src0s : Src1s;
       auto MatchesFirst = [&BPP](DotSrc &IterElt) {
-        return IterElt.SrcOp == *BPP.first.Src &&
+        return IterElt.SrcOp == BPP.first.getSrc() &&
                (IterElt.DWordOffset == (BPP.first.SrcOffset / 4));
       };
 
@@ -17532,14 +17532,15 @@ static void placeSources(ByteProvider &Src0, ByteProvider &Src1,
     if (FirstGroup != -1) {
       SmallVectorImpl<DotSrc> &Srcs = FirstGroup == 1 ? Src0s : Src1s;
       auto MatchesSecond = [&BPP](DotSrc &IterElt) {
-        return IterElt.SrcOp == *BPP.second.Src &&
+        return IterElt.SrcOp == BPP.second.getSrc() &&
                (IterElt.DWordOffset == (BPP.second.SrcOffset / 4));
       };
       auto *Match = llvm::find_if(Srcs, MatchesSecond);
       if (Match != Srcs.end()) {
         Match->PermMask = addPermMasks(SecondMask, Match->PermMask);
       } else
-        Srcs.push_back({*BPP.second.Src, SecondMask, BPP.second.SrcOffset / 4});
+        Srcs.push_back(
+            {BPP.second.getSrc(), SecondMask, BPP.second.SrcOffset / 4});
       return;
     }
   }
@@ -17551,11 +17552,11 @@ static void placeSources(ByteProvider &Src0, ByteProvider &Src1,
   unsigned FMask = 0xFF << (8 * (3 - Step));
 
   Src0s.push_back(
-      {*Src0.Src,
+      {Src0.getSrc(),
        ((Src0.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
        Src0.SrcOffset / 4});
   Src1s.push_back(
-      {*Src1.Src,
+      {Src1.getSrc(),
        ((Src1.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
        Src1.SrcOffset / 4});
 }

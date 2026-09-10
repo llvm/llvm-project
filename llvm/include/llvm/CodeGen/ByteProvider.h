@@ -16,10 +16,12 @@
 #define LLVM_CODEGEN_BYTEPROVIDER_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include <optional>
 
 namespace llvm {
+
+class SDNode;
+class SDValue;
 
 /// Represents known origin of an individual byte in combine pattern. The
 /// value of the byte is either constant zero, or comes from memory /
@@ -28,36 +30,39 @@ namespace llvm {
 /// are used to extract Bytes.
 class ByteProvider {
 private:
-  ByteProvider(std::optional<SDValue> Src, int64_t DestOffset,
+  ByteProvider(SDNode *Node, unsigned ResNo, int64_t DestOffset,
                int64_t SrcOffset)
-      : Src(Src), DestOffset(DestOffset), SrcOffset(SrcOffset) {}
+      : Node(Node), ResNo(ResNo), DestOffset(DestOffset), SrcOffset(SrcOffset) {
+  }
 
 public:
-  // For constant zero providers Src is set to nullopt. For actual providers
-  // Src represents the node which originally produced the relevant bits.
-  std::optional<SDValue> Src = std::nullopt;
+  // For constant zero providers Node is null. For actual providers Node and
+  // ResNo represent the SDValue which originally produced the relevant bits.
+  SDNode *Node = nullptr;
+  unsigned ResNo = 0;
   // DestOffset and SrcOffset are producer defined, see DAGCombiner.cpp.
   int64_t DestOffset = 0;
   int64_t SrcOffset = 0;
 
   ByteProvider() = default;
 
-  static ByteProvider getSrc(std::optional<SDValue> Val, int64_t ByteOffset,
-                             int64_t VectorOffset) {
-    return ByteProvider(Val, ByteOffset, VectorOffset);
+  static ByteProvider getSrc(SDValue Val, int64_t ByteOffset,
+                             int64_t VectorOffset);
+
+  static ByteProvider getConstantZero() { return ByteProvider(); }
+  bool isConstantZero() const { return !Node; }
+
+  bool hasSrc() const { return Node != nullptr; }
+
+  /// Returns the SDValue this byte comes from. Only valid if hasSrc().
+  SDValue getSrc() const;
+
+  bool hasSameSrc(const ByteProvider &Other) const {
+    return Other.Node == Node && Other.ResNo == ResNo;
   }
-
-  static ByteProvider getConstantZero() {
-    return ByteProvider(std::nullopt, 0, 0);
-  }
-  bool isConstantZero() const { return !Src; }
-
-  bool hasSrc() const { return Src.has_value(); }
-
-  bool hasSameSrc(const ByteProvider &Other) const { return Other.Src == Src; }
 
   bool operator==(const ByteProvider &Other) const {
-    return Other.Src == Src && Other.DestOffset == DestOffset &&
+    return hasSameSrc(Other) && Other.DestOffset == DestOffset &&
            Other.SrcOffset == SrcOffset;
   }
 };
@@ -67,41 +72,16 @@ using SDByteProviderRecurseFn =
 
 /// Visits both operands even once one answers, because \p Recurse may have
 /// side effects (DAGCombiner accumulates an and mask there).
-inline std::optional<ByteProvider>
+std::optional<ByteProvider>
 calculateByteProviderForOr(SDValue Op, unsigned Index,
-                           SDByteProviderRecurseFn Recurse) {
-  std::optional<ByteProvider> LHS = Recurse(Op.getOperand(0), Index);
-  if (!LHS)
-    return std::nullopt;
-  std::optional<ByteProvider> RHS = Recurse(Op.getOperand(1), Index);
-  if (!RHS)
-    return std::nullopt;
-
-  // A well formed or has two ByteProviders for each byte, one of which is
-  // constant zero.
-  if (LHS->isConstantZero())
-    return RHS;
-  if (RHS->isConstantZero())
-    return LHS;
-  return std::nullopt;
-}
+                           SDByteProviderRecurseFn Recurse);
 
 /// \p NarrowBitWidth is a parameter because it is not always the operand
 /// width, for instance sign_extend_inreg takes it from the VTSDNode.
-inline std::optional<ByteProvider>
+std::optional<ByteProvider>
 calculateByteProviderForExtend(SDValue Op, unsigned Index,
                                unsigned NarrowBitWidth, bool ZeroFills,
-                               SDByteProviderRecurseFn Recurse) {
-  if (NarrowBitWidth % 8 != 0)
-    return std::nullopt;
-
-  if (Index >= NarrowBitWidth / 8) {
-    if (!ZeroFills)
-      return std::nullopt;
-    return ByteProvider::getConstantZero();
-  }
-  return Recurse(Op.getOperand(0), Index);
-}
+                               SDByteProviderRecurseFn Recurse);
 
 } // end namespace llvm
 
