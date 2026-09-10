@@ -151,12 +151,11 @@ mlir::Location CIRGenFunction::getLoc(SourceLocation srcLoc) {
     return mlir::FileLineColLoc::get(builder.getStringAttr(filename),
                                      pLoc.getLine(), pLoc.getColumn());
   }
-  // We expect to have a currSrcLoc set, so we assert here, but it isn't
-  // critical for the correctness of compilation, so in non-assert builds
-  // we fallback on using an unknown location.
-  assert(currSrcLoc && "expected to inherit some source location");
-  if (currSrcLoc)
-    return *currSrcLoc;
+  // We expect to have a currSrcLoc set, but it isn't critical for the
+  // correctness of compilation, so in non-assert builds we fallback on using an
+  // unknown location.
+  if (currSrcLoc && currSrcLoc->isValid())
+    return getLoc(*currSrcLoc);
   // We're brave, but time to give up.
   return builder.getUnknownLoc();
 }
@@ -164,19 +163,24 @@ mlir::Location CIRGenFunction::getLoc(SourceLocation srcLoc) {
 mlir::Location CIRGenFunction::getLoc(SourceRange srcLoc) {
   // Some AST nodes might contain invalid source locations (e.g.
   // CXXDefaultArgExpr), workaround that to still get something out.
-  if (srcLoc.isValid()) {
-    mlir::Location beg = getLoc(srcLoc.getBegin());
-    mlir::Location end = getLoc(srcLoc.getEnd());
-    SmallVector<mlir::Location, 2> locs = {beg, end};
-    mlir::Attribute metadata;
-    return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
-  }
-  // We expect to have a currSrcLoc set, so we assert here, but it isn't
-  // critical for the correctness of compilation, so in non-assert builds
-  // we fallback on using an unknown location.
-  assert(currSrcLoc && "expected to inherit some source location");
-  if (currSrcLoc)
-    return *currSrcLoc;
+
+  // SourceRange is only valid if BOTH are valid, so get the fused location from
+  // the 2-mlir::Location version of this.
+  if (srcLoc.isValid())
+    return getLoc(getLoc(srcLoc.getBegin()), getLoc(srcLoc.getEnd()));
+
+  // If only ONE of the two is valid, try our hardest to get this right.
+  if (srcLoc.getBegin().isValid())
+    return getLoc(srcLoc.getBegin());
+  if (srcLoc.getEnd().isValid())
+    return getLoc(srcLoc.getEnd());
+
+  // We expect to have a currSrcLoc set, but it isn't critical for the
+  // correctness of compilation, so in non-assert builds we fallback on using an
+  // unknown location.
+  if (currSrcLoc &&
+      (currSrcLoc->getBegin().isValid() || currSrcLoc->getEnd().isValid()))
+    return getLoc(*currSrcLoc);
   // We're brave, but time to give up.
   return builder.getUnknownLoc();
 }
@@ -764,8 +768,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   SourceRange bodyRange =
       body ? body->getSourceRange() : funcDecl->getLocation();
 
-  SourceLocRAIIObject fnLoc{*this, loc.isValid() ? getLoc(loc)
-                                                 : builder.getUnknownLoc()};
+  SourceLocRAIIObject fnLoc{*this, funcDecl->getSourceRange()};
 
   auto validMLIRLoc = [&](clang::SourceLocation clangLoc) {
     return clangLoc.isValid() ? getLoc(clangLoc) : builder.getUnknownLoc();
@@ -1564,7 +1567,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   baseType = eltType;
 
   mlir::Value numElements =
-      builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
+      builder.getConstInt(getLoc(*currSrcLoc), sizeTy, countFromCLAs);
 
   // If we had any VLA dimensions, factor them in.
   if (numVLAElements)

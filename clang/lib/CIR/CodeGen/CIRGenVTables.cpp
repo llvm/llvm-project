@@ -666,6 +666,7 @@ void CIRGenFunction::finishThunk() {
 }
 
 void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
+                                               SourceRange fnLoc,
                                                const ThunkInfo *thunk,
                                                bool isUnprototyped) {
   assert(isa<CXXMethodDecl>(curGD.getDecl()) &&
@@ -744,8 +745,9 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
   // Now emit our call.
   CIRGenCallee cirCallee = CIRGenCallee::forDirect(callee, curGD);
   mlir::Location loc = builder.getUnknownLoc();
-  RValue rv = emitCall(*curFnInfo, cirCallee, slot, callArgs,
-                       /*callOrTryCall=*/nullptr, /*isMustTail=*/false, loc);
+  RValue rv =
+      emitCall(*curFnInfo, cirCallee, slot, callArgs,
+               /*callOrTryCall=*/nullptr, /*isMustTail=*/false, fnLoc);
 
   // Consider return adjustment if we have ThunkInfo.
   if (thunk && !thunk->Return.isEmpty())
@@ -805,6 +807,7 @@ void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
 }
 
 void CIRGenFunction::generateThunk(cir::FuncOp fn,
+                                   SourceRange fnLoc,
                                    const CIRGenFunctionInfo &fnInfo,
                                    GlobalDecl gd, const ThunkInfo &thunk,
                                    bool isUnprototyped) {
@@ -822,7 +825,7 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
 
   // Create lexical scope - must stay alive for entire thunk generation.
   // startFunction() requires currLexScope to be set.
-  SourceLocRAIIObject locRAII(*this, fn.getLoc());
+  SourceLocRAIIObject locRAII(*this, fnLoc);
   LexicalScope lexScope{*this, fn.getLoc(), entryBb};
 
   startThunk(fn, gd, fnInfo, isUnprototyped);
@@ -839,7 +842,7 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
   cir::FuncOp calleeOp = cgm.getAddrOfFunction(gd, ty, /*forVTable=*/true);
 
   // Make the call and return the result.
-  emitCallAndReturnForThunk(calleeOp, &thunk, isUnprototyped);
+  emitCallAndReturnForThunk(calleeOp, fnLoc, &thunk, isUnprototyped);
 }
 
 static bool shouldEmitVTableThunk(CIRGenModule &cgm, const CXXMethodDecl *md,
@@ -974,7 +977,8 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
     // Normal thunk body generation.
     mlir::OpBuilder::InsertionGuard guard(cgm.getBuilder());
     CIRGenFunction cgf(cgm, cgm.getBuilder());
-    cgf.generateThunk(thunkFn, fnInfo, gd, thunkAdjustments, isUnprototyped);
+    cgf.generateThunk(thunkFn, md->getSourceRange(), fnInfo, gd,
+                      thunkAdjustments, isUnprototyped);
   }
 
   setThunkProperties(cgm, thunkAdjustments, thunkFn, forVTable, gd);

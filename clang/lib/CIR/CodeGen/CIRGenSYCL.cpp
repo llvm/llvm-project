@@ -54,8 +54,7 @@ void CIRGenFunction::emitSYCLKernelCaller(
   // Synthesized entry point: no FunctionDecl, emitted with an empty GlobalDecl.
   curGD = GlobalDecl();
 
-  SourceLocRAIIObject fnLoc{*this, loc.isValid() ? getLoc(loc)
-                                                 : builder.getUnknownLoc()};
+  SourceLocRAIIObject fnLoc{*this, loc};
 
   mlir::Location fusedLoc = getLoc(bodyRange);
   mlir::Block *entryBB = funcOp.addEntryBlock();

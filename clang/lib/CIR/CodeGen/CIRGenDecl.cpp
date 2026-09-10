@@ -810,7 +810,7 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
-void CIRGenFunction::emitScalarInit(const Expr *init, mlir::Location loc,
+void CIRGenFunction::emitScalarInit(const Expr *init, SourceRange loc,
                                     LValue lvalue, bool capturedByInit) {
   assert(!cir::MissingFeatures::objCLifetime());
 
@@ -826,7 +826,7 @@ void CIRGenFunction::emitScalarInit(const Expr *init, mlir::Location loc,
 
 void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
                                     LValue lvalue, bool capturedByInit) {
-  SourceLocRAIIObject loc{*this, getLoc(init->getSourceRange())};
+  SourceLocRAIIObject loc{*this, init->getSourceRange()};
   if (capturedByInit) {
     cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: captured by init");
     return;
@@ -843,7 +843,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
   case cir::TEK_Scalar:
-    emitScalarInit(init, getLoc(d->getSourceRange()), lvalue);
+    emitScalarInit(init, d->getSourceRange(), lvalue);
     return;
   case cir::TEK_Complex: {
     mlir::Value complex = emitComplexExpr(init);
@@ -1292,13 +1292,14 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
       size = constIntAttr.getUInt();
     auto arrayTy = cir::ArrayType::get(cirElementType, size);
     mlir::Value arrayOp = builder.createPtrBitcast(begin, arrayTy);
-    cir::ArrayDtor::create(builder, *currSrcLoc, arrayOp, regionBuilder);
+    cir::ArrayDtor::create(builder, getLoc(*currSrcLoc), arrayOp,
+                           regionBuilder);
     return;
   }
 
   // For a dynamic array size (VLA), use the dynamic form of ArrayDtor.
   mlir::Value elemBegin = builder.createPtrBitcast(begin, cirElementType);
-  cir::ArrayDtor::create(builder, *currSrcLoc, elemBegin, numElements,
+  cir::ArrayDtor::create(builder, getLoc(*currSrcLoc), elemBegin, numElements,
                          regionBuilder);
 }
 
