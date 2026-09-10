@@ -1434,6 +1434,15 @@ void CodeGenModule::Release() {
                             llvm::FloatABI::getABITypeName(FloatABI)));
   }
 
+  // Record the thread model as a module flag when it differs from the target
+  // default.
+  llvm::ThreadModel ThreadModel =
+      LangOpts.getThreadModel() == LangOptions::ThreadModelKind::Single
+          ? llvm::ThreadModel::Single
+          : llvm::ThreadModel::POSIX;
+  if (ThreadModel != getTriple().getDefaultThreadModel())
+    getModule().setThreadModel(ThreadModel);
+
   if (getTypes().isLongDoubleReferenced()) {
     const llvm::fltSemantics *flt = &getTarget().getLongDoubleFormat();
 
