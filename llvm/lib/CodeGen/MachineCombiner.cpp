@@ -585,6 +585,8 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
 
     // Only used when VerifyPatternOrder is enabled.
     [[maybe_unused]] long PrevLatencyDiff = std::numeric_limits<long>::max();
+    [[maybe_unused]] CombinerObjective PrevObjective =
+        CombinerObjective::Default;
 
     for (const auto P : Patterns) {
       SmallVector<MachineInstr *, 16> InsInstrs;
@@ -612,15 +614,21 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
 
       // Check that the difference between original and new latency is
       // decreasing for later patterns. This helps to discover sub-optimal
-      // pattern orderings.
+      // pattern orderings. Patterns with different objectives are not
+      // comparable: a pattern that must reduce the depth (e.g. splitting an
+      // accumulation chain) may save less latency than a fusion pattern that
+      // is only tried as a fallback after it.
       if (VerifyPatternOrder && TSchedModel.hasInstrSchedModelOrItineraries()) {
         auto [NewRootLatency, RootLatency] = getLatenciesForInstrSequences(
             MI, InsInstrs, DelInstrs, TraceEnsemble->getTrace(MBB));
         long CurrentLatencyDiff = ((long)RootLatency) - ((long)NewRootLatency);
-        assert(CurrentLatencyDiff <= PrevLatencyDiff &&
+        CombinerObjective Objective = getCombinerObjective(P);
+        assert((Objective != PrevObjective ||
+                CurrentLatencyDiff <= PrevLatencyDiff) &&
                "Current pattern is expected to be better than the previous "
                "pattern.");
         PrevLatencyDiff = CurrentLatencyDiff;
+        PrevObjective = Objective;
       }
 
       if (IncrementalUpdate && LastUpdate != BlockIter) {

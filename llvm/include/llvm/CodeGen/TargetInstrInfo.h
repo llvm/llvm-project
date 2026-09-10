@@ -1377,6 +1377,48 @@ public:
                              DenseMap<Register, unsigned> &InstrIdxForVirtReg,
                              Register ResultReg) const;
 
+  /// Description of an FP accumulation-chain link for the machine combiner's
+  /// FP accumulation chain reassociation (MachineCombinerPattern::FMA_CHAIN).
+  struct FMAChainLinkInfo {
+    /// Opcode of the add merging two sub-chains.
+    unsigned AddOpc;
+    /// Opcode of the plain multiply starting a new sub-chain for a fused
+    /// (FMA) link, or 0 for an unfused (FADD) link, where the new sub-chain
+    /// starts at the link's increment operand.
+    unsigned MulOpc;
+    /// Operand index of the accumulator register for a fused link, or -1 if
+    /// the accumulator is not a register (e.g. a folded memory operand),
+    /// which ends the chain. Ignored for unfused links, where the
+    /// accumulator is whichever source operand is defined by the previous
+    /// link.
+    int AccOpIdx;
+  };
+
+  /// Describe \P MI as an FP accumulation-chain link, or return std::nullopt
+  /// if \P MI is not a supported accumulation instruction. Reassociation is
+  /// only performed when the instruction carries the reassoc and nsz flags and
+  /// cannot raise FP exceptions; the generic driver checks that separately.
+  virtual std::optional<FMAChainLinkInfo>
+  getFMAChainLinkInfo(const MachineInstr &MI) const {
+    return std::nullopt;
+  }
+
+  /// Find a chain of FP accumulation instructions ending at \P Root that can
+  /// be split into two shorter chains for increased ILP. Only done at
+  /// aggressive optimization levels when not reducing register pressure and
+  /// not optimizing for size.
+  bool getFMAChainPatterns(MachineInstr &Root,
+                           SmallVectorImpl<unsigned> &Patterns,
+                           bool DoRegPressureReduce) const;
+
+  /// Rewrite the FP accumulation chain ending at \P Root as two shorter
+  /// chains combined by a single add.
+  void
+  reassociateFMAChain(MachineInstr &Root,
+                      SmallVectorImpl<MachineInstr *> &InsInstrs,
+                      SmallVectorImpl<MachineInstr *> &DelInstrs,
+                      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const;
+
   /// Return the inverse operation opcode if it exists for \P Opcode (e.g. add
   /// for sub and vice versa).
   virtual std::optional<unsigned> getInverseOpcode(unsigned Opcode) const {

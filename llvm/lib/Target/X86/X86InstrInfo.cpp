@@ -10916,6 +10916,86 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   }
 }
 
+// Return the VMUL/VADD opcodes matching the given VFMADD 231-form opcode for
+// FMA chain reassociation. Returns false for anything that is not a
+// supported unmasked VFMADD.
+static bool getFMAChainMulAddOpcodes(unsigned Opc231, unsigned &MulRR,
+                                     unsigned &MulRM, unsigned &AddRR) {
+  switch (Opc231) {
+  default:
+    return false;
+#define X86_FMA_CHAIN_OPS(FMA231, MUL, MULM, ADD)                              \
+  case X86::FMA231:                                                            \
+    MulRR = X86::MUL;                                                          \
+    MulRM = X86::MULM;                                                         \
+    AddRR = X86::ADD;                                                          \
+    return true;
+    X86_FMA_CHAIN_OPS(VFMADD231PDr, VMULPDrr, VMULPDrm, VADDPDrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDm, VMULPDrr, VMULPDrm, VADDPDrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDYr, VMULPDYrr, VMULPDYrm, VADDPDYrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDYm, VMULPDYrr, VMULPDYrm, VADDPDYrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDZ128r, VMULPDZ128rr, VMULPDZ128rm,
+                      VADDPDZ128rr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDZ128m, VMULPDZ128rr, VMULPDZ128rm,
+                      VADDPDZ128rr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDZ256r, VMULPDZ256rr, VMULPDZ256rm,
+                      VADDPDZ256rr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDZ256m, VMULPDZ256rr, VMULPDZ256rm,
+                      VADDPDZ256rr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDZr, VMULPDZrr, VMULPDZrm, VADDPDZrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PDZm, VMULPDZrr, VMULPDZrm, VADDPDZrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSr, VMULPSrr, VMULPSrm, VADDPSrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSm, VMULPSrr, VMULPSrm, VADDPSrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSYr, VMULPSYrr, VMULPSYrm, VADDPSYrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSYm, VMULPSYrr, VMULPSYrm, VADDPSYrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSZ128r, VMULPSZ128rr, VMULPSZ128rm,
+                      VADDPSZ128rr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSZ128m, VMULPSZ128rr, VMULPSZ128rm,
+                      VADDPSZ128rr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSZ256r, VMULPSZ256rr, VMULPSZ256rm,
+                      VADDPSZ256rr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSZ256m, VMULPSZ256rr, VMULPSZ256rm,
+                      VADDPSZ256rr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSZr, VMULPSZrr, VMULPSZrm, VADDPSZrr)
+    X86_FMA_CHAIN_OPS(VFMADD231PSZm, VMULPSZrr, VMULPSZrm, VADDPSZrr)
+    X86_FMA_CHAIN_OPS(VFMADD231SDr, VMULSDrr, VMULSDrm, VADDSDrr)
+    X86_FMA_CHAIN_OPS(VFMADD231SDm, VMULSDrr, VMULSDrm, VADDSDrr)
+    X86_FMA_CHAIN_OPS(VFMADD231SDZr, VMULSDZrr, VMULSDZrm, VADDSDZrr)
+    X86_FMA_CHAIN_OPS(VFMADD231SDZm, VMULSDZrr, VMULSDZrm, VADDSDZrr)
+    X86_FMA_CHAIN_OPS(VFMADD231SSr, VMULSSrr, VMULSSrm, VADDSSrr)
+    X86_FMA_CHAIN_OPS(VFMADD231SSm, VMULSSrr, VMULSSrm, VADDSSrr)
+    X86_FMA_CHAIN_OPS(VFMADD231SSZr, VMULSSZrr, VMULSSZrm, VADDSSZrr)
+    X86_FMA_CHAIN_OPS(VFMADD231SSZm, VMULSSZrr, VMULSSZrm, VADDSSZrr)
+#undef X86_FMA_CHAIN_OPS
+  }
+}
+
+std::optional<TargetInstrInfo::FMAChainLinkInfo>
+X86InstrInfo::getFMAChainLinkInfo(const MachineInstr &MI) const {
+  const X86InstrFMA3Group *G =
+      getFMA3Group(MI.getOpcode(), MI.getDesc().TSFlags);
+  if (!G || G->isKMasked() || G->isIntrinsic())
+    return std::nullopt;
+  unsigned MulRR, MulRM, AddRR;
+  if (!getFMAChainMulAddOpcodes(G->get231Opcode(), MulRR, MulRM, AddRR))
+    return std::nullopt;
+  FMAChainLinkInfo Info;
+  Info.AddOpc = AddRR;
+  unsigned Opc = MI.getOpcode();
+  if (Opc == G->get231Opcode())
+    Info.AccOpIdx = 1;
+  else if (Opc == G->get132Opcode())
+    Info.AccOpIdx = 2;
+  else
+    // For the 213 memory form the folded load is the accumulator.
+    Info.AccOpIdx = MI.mayLoad() ? -1 : 3;
+  // The plain multiply starting a new sub-chain is a memory form iff a
+  // multiplicand of MI is a folded load, which is the case exactly for the
+  // memory forms of the 231 and 132 forms.
+  Info.MulOpc = MI.mayLoad() && Info.AccOpIdx != -1 ? MulRM : MulRR;
+  return Info;
+}
+
 bool X86InstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {

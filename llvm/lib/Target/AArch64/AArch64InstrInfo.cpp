@@ -7886,6 +7886,41 @@ static bool getMaddPatterns(MachineInstr &Root,
   return Found;
 }
 
+std::optional<TargetInstrInfo::FMAChainLinkInfo>
+AArch64InstrInfo::getFMAChainLinkInfo(const MachineInstr &MI) const {
+  FMAChainLinkInfo Info;
+  switch (MI.getOpcode()) {
+  default:
+    return std::nullopt;
+#define AARCH64_FMA_CHAIN(FMA, ADD, MUL, ACC)                                  \
+  case AArch64::FMA:                                                           \
+    Info = {AArch64::ADD, MUL, ACC};                                           \
+    break;
+    // Scalar fused multiply-add: Rd = Rn * Rm + Ra.
+    AARCH64_FMA_CHAIN(FMADDSrrr, FADDSrr, AArch64::FMULSrr, 3)
+    AARCH64_FMA_CHAIN(FMADDDrrr, FADDDrr, AArch64::FMULDrr, 3)
+    // Vector fused multiply-accumulate: Vd += Vn * Vm.
+    AARCH64_FMA_CHAIN(FMLAv2f32, FADDv2f32, AArch64::FMULv2f32, 1)
+    AARCH64_FMA_CHAIN(FMLAv4f32, FADDv4f32, AArch64::FMULv4f32, 1)
+    AARCH64_FMA_CHAIN(FMLAv2f64, FADDv2f64, AArch64::FMULv2f64, 1)
+    AARCH64_FMA_CHAIN(FMLAv2i32_indexed, FADDv2f32, AArch64::FMULv2i32_indexed,
+                      1)
+    AARCH64_FMA_CHAIN(FMLAv4i32_indexed, FADDv4f32, AArch64::FMULv4i32_indexed,
+                      1)
+    AARCH64_FMA_CHAIN(FMLAv2i64_indexed, FADDv2f64, AArch64::FMULv2i64_indexed,
+                      1)
+    // Unfused FP add: the accumulator is whichever source operand is defined
+    // by the previous link of the chain.
+    AARCH64_FMA_CHAIN(FADDSrr, FADDSrr, 0, -1)
+    AARCH64_FMA_CHAIN(FADDDrr, FADDDrr, 0, -1)
+    AARCH64_FMA_CHAIN(FADDv2f32, FADDv2f32, 0, -1)
+    AARCH64_FMA_CHAIN(FADDv4f32, FADDv4f32, 0, -1)
+    AARCH64_FMA_CHAIN(FADDv2f64, FADDv2f64, 0, -1)
+#undef AARCH64_FMA_CHAIN
+  }
+  return Info;
+}
+
 bool AArch64InstrInfo::isAccumulationOpcode(unsigned Opcode) const {
   switch (Opcode) {
   default:
@@ -8725,6 +8760,13 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
   // Integer patterns
   if (getMaddPatterns(Root, Patterns))
     return true;
+
+  // The FMA chain reassociation must be tried before the FMUL+FADD fusion
+  // patterns: fusing the chain end would otherwise always win and the chain
+  // would never be split. The fusion patterns are kept as fallbacks for the
+  // case that the split does not reduce the critical path.
+  bool FoundFMAChain = getFMAChainPatterns(Root, Patterns, DoRegPressureReduce);
+
   // Floating point patterns
   if (getFMULPatterns(Root, Patterns))
     return true;
@@ -8739,6 +8781,9 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
 
   // Load patterns
   if (getLoadPatterns(Root, Patterns))
+    return true;
+
+  if (FoundFMAChain)
     return true;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
