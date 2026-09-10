@@ -30,7 +30,11 @@ endif()
 # Generate ClangConfig.cmake for the build tree.
 set(CLANG_CONFIG_CMAKE_DIR "${clang_cmake_builddir}")
 set(CLANG_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
-set(CLANG_CONFIG_INCLUDE_EXPORTS "include(\"${clang_cmake_builddir}/ClangTargets.cmake\")")
+if(NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  set(CLANG_CONFIG_INCLUDE_EXPORTS "include(\"${clang_cmake_builddir}/ClangTargets.cmake\")")
+else()
+  set(CLANG_CONFIG_INCLUDE_EXPORTS "")
+endif()
 set(CLANG_CONFIG_INCLUDE_DIRS
   "${CLANG_SOURCE_DIR}/include"
   "${CLANG_BINARY_DIR}/include"
