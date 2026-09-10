@@ -992,6 +992,16 @@ void TargetPassConfig::addISelPrepare() {
   addPass(createSafeStackPass());
   addPass(createStackProtectorPass());
 
+  // Merge 'allocas` after SafeStack/StackProtector, not before: both inspect
+  // individual allocas' types/sizes to decide what needs protecting, and
+  // merging first would replace that per-alloca picture with one opaque
+  // combined buffer, changing their heuristics' input. Whatever plain
+  // AllocaInsts remain once they're done is the correct, reduced candidate set
+  // for merging. The MergeAllocas pass requires a lot of other passes to run,
+  // so we skip it for non-opt builds.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createMergeAllocasPass());
+
   if (PrintISelInput)
     addPass(createPrintFunctionPass(
         dbgs(), "\n\n*** Final LLVM Code input to ISel ***\n"));

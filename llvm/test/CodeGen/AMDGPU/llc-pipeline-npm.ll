@@ -182,6 +182,7 @@
 ; GCN-O2-NEXT:     inline-asm-prepare
 ; GCN-O2-NEXT:     safe-stack
 ; GCN-O2-NEXT:     stack-protector
+; GCN-O2-NEXT:     merge-allocas
 ; GCN-O2-NEXT:     verify
 ; GCN-O2-NEXT: amdgpu-asm-printer-begin
 ; GCN-O2-NEXT: cgscc
@@ -369,6 +370,7 @@
 ; GCN-O3-NEXT:     inline-asm-prepare
 ; GCN-O3-NEXT:     safe-stack
 ; GCN-O3-NEXT:     stack-protector
+; GCN-O3-NEXT:     merge-allocas
 ; GCN-O3-NEXT:     verify
 ; GCN-O3-NEXT: amdgpu-asm-printer-begin
 ; GCN-O3-NEXT: cgscc
