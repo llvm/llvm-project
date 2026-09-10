@@ -64,36 +64,36 @@ public:
       file_mode_ = 0;
   }
 
-  bool write_allowed() const {
+  constexpr bool write_allowed() const {
     return is_write() || is_append() || is_update();
   }
 
-  bool read_allowed() const { return is_read() || is_update(); }
+  constexpr bool read_allowed() const { return is_read() || is_update(); }
 
-  bool is_valid() const { return file_mode_ != 0; }
+  constexpr bool is_valid() const { return file_mode_ != 0; }
 
-  bool is_append() const {
+  constexpr bool is_append() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::APPEND)) != 0;
   }
 
-  bool is_update() const {
+  constexpr bool is_update() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::PLUS)) != 0;
   }
 
-  bool is_write() const {
+  constexpr bool is_write() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::WRITE)) != 0;
   }
 
-  bool is_read() const {
+  constexpr bool is_read() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::READ)) != 0;
   }
 
-  bool is_binary_format() const {
+  constexpr bool is_binary_format() const {
     return (file_mode_ & static_cast<Mode>(ContentType::BINARY)) != 0;
   }
 
   // checks if a file was created for writing
-  bool is_exclusive_create() const {
+  constexpr bool is_exclusive_create() const {
     return (file_mode_ & static_cast<Mode>(CreateType::EXCLUSIVE)) != 0;
   }
 
