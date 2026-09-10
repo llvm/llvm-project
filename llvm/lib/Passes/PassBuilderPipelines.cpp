@@ -2376,6 +2376,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
                                       .convertSwitchRangeToICmp(true)
                                       .convertSwitchToArithmetic(true)
+                                      .convertThreeWayCmpSwitch(true)
                                       .hoistCommonInsts(true)
                                       .speculateUnpredictables(true)));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(LateFPM)));

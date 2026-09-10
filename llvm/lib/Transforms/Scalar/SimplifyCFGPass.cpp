@@ -363,6 +363,8 @@ void SimplifyCFGPass::printPipeline(
      << "switch-to-arithmetic;";
   OS << (Options.ConvertSwitchToLookupTable ? "" : "no-")
      << "switch-to-lookup;";
+  OS << (Options.ConvertThreeWayCmpSwitch ? "" : "no-")
+     << "three-way-cmp-switch;";
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
   OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
   OS << (Options.HoistLoadsStoresWithCondFaulting ? "" : "no-")

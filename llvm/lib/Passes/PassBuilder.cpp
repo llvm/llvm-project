@@ -1244,6 +1244,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.convertSwitchToArithmetic(Enable);
     } else if (ParamName == "switch-to-lookup") {
       Result.convertSwitchToLookupTable(Enable);
+    } else if (ParamName == "three-way-cmp-switch") {
+      Result.convertThreeWayCmpSwitch(Enable);
     } else if (ParamName == "keep-loops") {
       Result.needCanonicalLoops(Enable);
     } else if (ParamName == "hoist-common-insts") {

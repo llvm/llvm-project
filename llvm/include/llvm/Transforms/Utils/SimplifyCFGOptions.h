@@ -26,6 +26,7 @@ struct SimplifyCFGOptions {
   bool ConvertSwitchRangeToICmp = false;
   bool ConvertSwitchToArithmetic = false;
   bool ConvertSwitchToLookupTable = false;
+  bool ConvertThreeWayCmpSwitch = false;
   bool NeedCanonicalLoop = true;
   bool HoistCommonInsts = false;
   bool HoistLoadsStoresWithCondFaulting = false;
@@ -55,6 +56,10 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &convertSwitchToLookupTable(bool B) {
     ConvertSwitchToLookupTable = B;
+    return *this;
+  }
+  SimplifyCFGOptions &convertThreeWayCmpSwitch(bool B) {
+    ConvertThreeWayCmpSwitch = B;
     return *this;
   }
   SimplifyCFGOptions &needCanonicalLoops(bool B) {
