@@ -1328,8 +1328,14 @@ void ScopBuilder::buildEscapingDependences(Instruction *Inst) {
   // Check for uses of this instruction outside the scop. Because we do not
   // iterate over such instructions and therefore did not "ensure" the existence
   // of a write, we must determine such use here.
-  if (scop->isEscaping(Inst))
+  // The ensured write lives on a ScopStmt that removeStmtNotInDomainMap() may
+  // delete when its domain is empty, dropping the escaping value's array; pre-
+  // registering the SAI keeps it alive for code generation.
+  if (scop->isEscaping(Inst)) {
     ensureValueWrite(Inst);
+    scop->getOrCreateScopArrayInfo(Inst, Inst->getType(), {},
+                                   MemoryKind::Value);
+  }
 }
 
 void ScopBuilder::addRecordedAssumptions() {
