@@ -791,32 +791,37 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *CoordLODOp = EmitScalarExpr(E->getArg(1));
     const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
+    const auto &Attrs = RT->getAttrs();
+
     Value *CoordOp = nullptr;
     Value *LODOp = nullptr;
-    if (RT->getAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV) {
+    if (Attrs.ResourceClass == llvm::dxil::ResourceClass::UAV) {
       // A UAV descriptor binds a single mip slice, so a RWTexture location is
       // all coordinate and there is no mip level to select.
       CoordOp = CoordLODOp;
       LODOp = llvm::PoisonValue::get(Int32Ty);
     } else {
-      auto *CoordLODVecTy = cast<llvm::FixedVectorType>(CoordLODOp->getType());
-      unsigned NumElts = CoordLODVecTy->getNumElements();
-      assert(NumElts >= 2 && "CoordLOD must have at least 2 elements");
-
       // Split CoordLOD into Coord and LOD. 1D resources use a scalar
       // coordinate rather than a 1-element vector.
-      if (NumElts == 2) {
+      unsigned CoordSize =
+          clang::hlsl::getResourceDimensions(Attrs.ResourceDimension) +
+          (Attrs.IsArray ? 1 : 0);
+      assert(cast<llvm::FixedVectorType>(CoordLODOp->getType())
+                     ->getNumElements() == CoordSize + 1 &&
+             "CoordLOD must have one element per coordinate, plus the level");
+
+      if (CoordSize == 1) {
         CoordOp = Builder.CreateExtractElement(CoordLODOp, uint64_t(0),
                                                "hlsl.load.coord");
       } else {
         SmallVector<int, 4> Mask;
-        for (unsigned I = 0; I < NumElts - 1; ++I)
+        for (unsigned I = 0; I < CoordSize; ++I)
           Mask.push_back(I);
         CoordOp =
             Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
       }
-      LODOp = Builder.CreateExtractElement(CoordLODOp, NumElts - 1,
-                                           "hlsl.load.lod");
+      LODOp =
+          Builder.CreateExtractElement(CoordLODOp, CoordSize, "hlsl.load.lod");
     }
 
     SmallVector<Value *, 4> Args;
