@@ -11,6 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
+#include "hdr/sys_stat_macros.h" // For S_IS*, S_IF*, and S_IR* flags.
+#include "hdr/types/mode_t.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
