@@ -85,9 +85,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   // Gather WMMAs (numbered in program order) and ds_loads.
   MapVector<SUnit *, unsigned> Wmmas; // Ordered WMMA SUnits
   SmallVector<LoadInfo> Loads;
-  std::optional<unsigned> LoadLatency;
   std::optional<unsigned> WmmaLatency;
-  std::optional<double> LDSBandwidth;
 
   for (SUnit &SU : DAG->SUnits) {
     MachineInstr *MI = SU.getInstr();
@@ -103,17 +101,12 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     }
 
     // Gather DS_LOADs
-    if (TII->isDS(*MI) && MI->mayLoad()) {
-      if (!LoadLatency)
-        LoadLatency = SM->computeInstrLatency(MI);
-      if (!LDSBandwidth)
-        LDSBandwidth = std::ceil(SM->computeReciprocalThroughput(MI));
+    if (TII->isDS(*MI) && MI->mayLoad())
       Loads.push_back({&SU});
-    }
   }
 
   // The following means the DAG Mutation cannot do anything useful.
-  if (!LoadLatency || !LDSBandwidth || !WmmaLatency || Wmmas.empty())
+  if (Loads.empty() || !WmmaLatency || Wmmas.empty())
     return;
 
   LLVM_DEBUG(
@@ -127,8 +120,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
          "WMMAs are numbered W[0..N-1] in program order.\n"
          "========================================================\n"
       << "config: " << Wmmas.size() << " WMMAs, " << Loads.size()
-      << " ds_loads; loadlat=" << *LoadLatency << " wmmalat=" << *WmmaLatency
-      << " ldsbw=" << (unsigned)*LDSBandwidth << "\n");
+      << " ds_loads; wmmalat=" << *WmmaLatency << "\n");
 
   // Order the WMMAs.
   LLVM_DEBUG(
@@ -173,13 +165,14 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     if (LI.MinPos == UINT_MAX)
       continue;
     SUnit *EarliestConsumer = Wmmas.begin()[LI.MinPos].first;
+    const unsigned LoadLatency = SM->computeInstrLatency(LI.SU->getInstr());
     // Correct latency of edges between ds_load and earliest WMMA consumer
     for (SDep &S : LI.SU->Succs)
       if (S.getSUnit() == EarliestConsumer && S.getKind() == SDep::Data)
-        S.setLatency(*LoadLatency);
+        S.setLatency(LoadLatency);
     for (SDep &P : EarliestConsumer->Preds)
       if (P.getSUnit() == LI.SU && P.getKind() == SDep::Data)
-        P.setLatency(*LoadLatency);
+        P.setLatency(LoadLatency);
     EarliestConsumer->setDepthDirty();
     LI.SU->setHeightDirty();
     LLVM_DEBUG({
@@ -188,7 +181,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
              << LI.MaxPos << "] (";
       for (unsigned I = 0; I < Consumers.size(); ++I)
         dbgs() << (I ? ", " : "") << "SU" << Consumers[I]->NodeNum;
-      dbgs() << "); set latency " << *LoadLatency << " on edge -> W["
+      dbgs() << "); set latency " << LoadLatency << " on edge -> W["
              << LI.MinPos << "]\n";
     });
   }
@@ -211,12 +204,14 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     if (LI.MinPos == UINT_MAX)
       continue;
     if (Prev) {
+      const unsigned Spacing = static_cast<unsigned>(
+          std::ceil(SM->computeReciprocalThroughput(Prev->getInstr())));
       SDep D(Prev, SDep::Artificial);
-      D.setLatency(*LDSBandwidth);
+      D.setLatency(Spacing);
       DAG->addEdge(LI.SU, D);
       LLVM_DEBUG(dbgs() << "[3+4] ds_load SU" << Prev->NodeNum << " -> SU"
-                        << LI.SU->NodeNum << " (spacing latency "
-                        << (unsigned)*LDSBandwidth << ")\n");
+                        << LI.SU->NodeNum << " (spacing latency " << Spacing
+                        << ")\n");
     }
     Prev = LI.SU;
   }
@@ -236,22 +231,26 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
          "honor the ds_load -> ds_load spacing.\n");
   for (LoadInfo &LI : Loads)
     if (LI.MinPos != UINT_MAX) {
-      LI.LatestCycle = (long)LI.MinPos * (*WmmaLatency) - (long)(*LoadLatency);
+      const long LoadLatency =
+          static_cast<long>(SM->computeInstrLatency(LI.SU->getInstr()));
+      LI.LatestCycle = (long)LI.MinPos * (*WmmaLatency) - LoadLatency;
       LLVM_DEBUG(dbgs() << "[lat] ds_load SU" << LI.SU->NodeNum
                         << ": LatestCycle=" << LI.LatestCycle << " (W["
                         << LI.MinPos << "]*" << *WmmaLatency << " - "
-                        << *LoadLatency << ")\n");
+                        << LoadLatency << ")\n");
     }
   long PrevLatest = LONG_MAX;
   for (int I = (int)Loads.size() - 1; I >= 0; --I) {
     LoadInfo &LI = Loads[I];
     if (LI.MinPos == UINT_MAX)
       continue;
-    long Spaced = PrevLatest - (long)(*LDSBandwidth);
+    const long Spacing = static_cast<long>(
+        std::ceil(SM->computeReciprocalThroughput(LI.SU->getInstr())));
+    long Spaced = PrevLatest - Spacing;
     if (Spaced < LI.LatestCycle) {
       LLVM_DEBUG(dbgs() << "[space] ds_load SU" << LI.SU->NodeNum
                         << ": LatestCycle " << LI.LatestCycle << " -> "
-                        << Spaced << " (spaced " << (unsigned)*LDSBandwidth
+                        << Spaced << " (spaced " << Spacing
                         << " before next load's " << PrevLatest << ")\n");
       LI.LatestCycle = Spaced;
     }
