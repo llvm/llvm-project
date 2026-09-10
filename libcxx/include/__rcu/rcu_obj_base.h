@@ -11,7 +11,6 @@
 #define _LIBCPP___RCU_RCU_OBJ_BASE_H
 
 #include <__config>
-#include <__functional/function_ref.h>
 #include <__memory/unique_ptr.h> // for default_delete
 #include <__rcu/rcu_domain.h>
 #include <__type_traits/is_assignable.h>
@@ -36,7 +35,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void retire(_Dp __deleter = _Dp(), rcu_domain& __dom = rcu_default_domain()) noexcept {
     static_assert(std::is_base_of_v<rcu_obj_base, _Tp>, "T must be an rcu-protectable type.");
     __deleter_  = std::move(__deleter);
-    __callback_ = function_ref<void()>(std::cw<&rcu_obj_base::__destroy>, this);
+    __callback_ = &rcu_obj_base::__destroy;
     __dom.__retire(this);
   }
 
@@ -49,7 +48,10 @@ protected:
   _LIBCPP_HIDE_FROM_ABI ~rcu_obj_base()                              = default;
 
 private:
-  _LIBCPP_HIDE_FROM_ABI void __destroy() { __deleter_(static_cast<_Tp*>(this)); }
+  _LIBCPP_HIDE_FROM_ABI static void __destroy(__rcu_node* __node) {
+    auto __self = static_cast<_Tp*>(__node);
+    __self->__deleter_(__self);
+  }
 
   _LIBCPP_NO_UNIQUE_ADDRESS _Dp __deleter_ = _Dp();
 };
