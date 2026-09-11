@@ -117,14 +117,14 @@ func.func @vector_add_2d(%M : index, %N : index) -> f32 {
       // CHECK: %[[SPLAT1:.*]] = arith.constant dense<1.000000e+00> : vector<128xf32>
       // CHECK: %[[A5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
       // CHECK: %[[B5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
-      // CHECK: %[[S5:.*]] = arith.addf %[[A5]], %[[B5]] : vector<128xf32>
+      // CHECK: %[[S5:.*]] = arith.addf %[[A5]], %[[B5]] fastmath<nnan> {test.marker} : vector<128xf32>
       // CHECK: %[[S6:.*]] = arith.addf %[[S5]], %[[SPLAT1]] : vector<128xf32>
       // CHECK: %[[S7:.*]] = arith.addf %[[S5]], %[[SPLAT2]] : vector<128xf32>
       // CHECK: %[[S8:.*]] = arith.addf %[[S7]], %[[S6]] : vector<128xf32>
       // CHECK: vector.transfer_write %[[S8]], {{.*}} : vector<128xf32>, memref<?x?xf32>
       %a5 = affine.load %A[%i4, %i5] : memref<?x?xf32, 0>
       %b5 = affine.load %B[%i4, %i5] : memref<?x?xf32, 0>
-      %s5 = arith.addf %a5, %b5 : f32
+      %s5 = arith.addf %a5, %b5 fastmath<nnan> {test.marker} : f32
       // non-scoped %f1
       %s6 = arith.addf %s5, %f1 : f32
       // non-scoped %f2

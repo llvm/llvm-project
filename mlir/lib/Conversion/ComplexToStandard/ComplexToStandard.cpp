@@ -592,13 +592,14 @@ struct NegOpConversion : public OpConversionPattern<complex::NegOp> {
     auto loc = op.getLoc();
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlags fmf = op.getFastMathFlagsAttr().getValue();
 
     Value real =
         complex::ReOp::create(rewriter, loc, elementType, adaptor.getComplex());
     Value imag =
         complex::ImOp::create(rewriter, loc, elementType, adaptor.getComplex());
-    Value negReal = arith::NegFOp::create(rewriter, loc, real);
-    Value negImag = arith::NegFOp::create(rewriter, loc, imag);
+    Value negReal = arith::NegFOp::create(rewriter, loc, real, fmf);
+    Value negImag = arith::NegFOp::create(rewriter, loc, imag, fmf);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, negReal, negImag);
     return success();
   }
@@ -851,11 +852,13 @@ struct ConjOpConversion : public OpConversionPattern<complex::ConjOp> {
     auto loc = op.getLoc();
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlags fmf = op.getFastMathFlagsAttr().getValue();
     Value real =
         complex::ReOp::create(rewriter, loc, elementType, adaptor.getComplex());
     Value imag =
         complex::ImOp::create(rewriter, loc, elementType, adaptor.getComplex());
-    Value negImag = arith::NegFOp::create(rewriter, loc, elementType, imag);
+    Value negImag =
+        arith::NegFOp::create(rewriter, loc, elementType, imag, fmf);
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, negImag);
 

@@ -23,6 +23,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -134,13 +135,35 @@ void llvm::verifyAMDGPUFunctionMetadata(VerifierSupport &VS,
   verifyAMDGPUReqdWorkGroupSize(VS, F);
 }
 
+void llvm::verifyAMDGPUGlobalVariable(VerifierSupport &VS,
+                                      const GlobalVariable &GV) {
+  // This is not required for other targets so we only check for AMDGPU.
+  if (!VS.TT.isAMDGPU())
+    return;
+
+  // The VGPR address space is a view of one wave's own vector registers, which
+  // exist only while that wave runs. A global variable needs storage that
+  // outlives any particular wave, so there is nothing here for it to name.
+  if (GV.getAddressSpace() == AMDGPUAS::VGPR)
+    VS.CheckFailed("global variable on amdgpu must not be in addrspace(13)",
+                   &GV);
+}
+
 void llvm::verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI) {
   // This is not required for other targets so we only check for AMDGPU.
   if (!VS.TT.isAMDGPU())
     return;
 
-  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    VS.CheckFailed("alloca on amdgpu must be in addrspace(5)", &AI);
+  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS &&
+      AI.getAddressSpace() != AMDGPUAS::VGPR)
+    VS.CheckFailed("alloca on amdgpu must be in addrspace(5) or addrspace(13)",
+                   &AI);
+
+  // Only static allocas can live in VGPRs; a dynamically sized one has no
+  // register-file representation. (Other address spaces are already rejected
+  // above, so this only adds the more specific diagnostic for addrspace(13).)
+  if (!AI.isStaticAlloca() && AI.getAddressSpace() == AMDGPUAS::VGPR)
+    VS.CheckFailed("dynamic alloca on amdgpu must be in addrspace(5)", &AI);
 }
 
 bool llvm::isAMDGPUCallBrIntrinsic(Intrinsic::ID ID) {
@@ -192,9 +215,9 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
       break;
     }
 
-    Check(Call.hasABIParamAttr(2, Attribute::InReg),
+    Check(Call.paramHasAttr(2, Attribute::InReg),
           "SGPR arguments must have the `inreg` attribute", &Call);
-    Check(!Call.hasABIParamAttr(3, Attribute::InReg),
+    Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
 
     ConstantInt *FlagsArg = cast<ConstantInt>(Call.getArgOperand(4));
@@ -232,7 +255,7 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     }
 
     unsigned InactiveIdx = 1;
-    Check(!Call.hasABIParamAttr(InactiveIdx, Attribute::InReg),
+    Check(!Call.paramHasAttr(InactiveIdx, Attribute::InReg),
           "Value for inactive lanes must not have the `inreg` attribute",
           &Call);
     Check(isa<Argument>(Call.getArgOperand(InactiveIdx)),
@@ -262,7 +285,7 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
       Check(CallArg->getType() == FuncArg.getType(),
             "Argument types must match", &Call);
 
-      Check(Call.hasABIParamAttr(FuncArg.getArgNo(), Attribute::InReg) ==
+      Check(Call.paramHasAttr(FuncArg.getArgNo(), Attribute::InReg) ==
                 FuncArg.hasInRegAttr(),
             "Argument inreg attributes must match", &Call);
     }

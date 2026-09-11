@@ -156,6 +156,8 @@ class IRTranslatorImpl {
 
     bool contains(const Value &V) const { return ValToVRegs.contains(&V); }
 
+    void reserveVRegs(unsigned NumValues) { ValToVRegs.reserve(NumValues); }
+
     void reset() {
       ValToVRegs.clear();
       TypeToOffsets.clear();
@@ -5073,10 +5075,14 @@ bool IRTranslatorImpl::runOnMachineFunction(
 
   bool IsVarArg = F.isVarArg();
   bool HasMustTailInVarArgFn = false;
+  // Use arguments and instructions to estimate the number of mapped values and
+  // virtual registers.
+  unsigned NumValues = F.arg_size();
 
   // Create all blocks, in IR order, to preserve the layout.
   FuncInfo.MBBMap.resize(F.getMaxBlockNumber());
   for (const BasicBlock &BB: F) {
+    NumValues += BB.size();
     auto *&MBB = FuncInfo.MBBMap[BB.getNumber()];
 
     MBB = MF->CreateMachineBasicBlock(&BB);
@@ -5094,6 +5100,9 @@ bool IRTranslatorImpl::runOnMachineFunction(
     if (!HasMustTailInVarArgFn)
       HasMustTailInVarArgFn = checkForMustTailInVarArgFn(IsVarArg, BB);
   }
+
+  VMap.reserveVRegs(NumValues);
+  MRI->reserveVirtRegs(NumValues);
 
   MF->getFrameInfo().setHasMustTailInVarArgFunc(HasMustTailInVarArgFn);
 

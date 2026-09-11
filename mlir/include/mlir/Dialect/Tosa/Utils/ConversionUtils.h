@@ -13,7 +13,6 @@
 #ifndef DIALECT_TOSA_UTILS_COVERSION_UTILS_H_
 #define DIALECT_TOSA_UTILS_COVERSION_UTILS_H_
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"

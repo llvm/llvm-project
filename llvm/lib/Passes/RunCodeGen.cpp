@@ -31,17 +31,18 @@ static cl::opt<cl::boolOrDefault>
                         "option will default to what the target prefers."),
                cl::init(cl::boolOrDefault::BOU_UNSET));
 
-static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
-                                      raw_pwrite_stream &OS,
-                                      std::unique_ptr<ToolOutputFile> &DwoOS,
-                                      CodeGenFileType CGFT,
-                                      bool PrintPipelinePasses,
-                                      bool DisableVerify) {
+static Error
+runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
+                         std::unique_ptr<ToolOutputFile> &DwoOS,
+                         CodeGenFileType CGFT, bool PrintPipelinePasses,
+                         bool DisableVerify, bool DisableSimplifyLibCalls) {
   legacy::PassManager CodeGenPasses;
   CodeGenPasses.add(
       createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
   // Add LibraryInfo.
   TargetLibraryInfoImpl TLII(TM.getTargetTriple(), TM.Options.VecLib);
+  if (DisableSimplifyLibCalls)
+    TLII.disableAllFunctions();
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
 
   const TargetOptions &Options = TM.Options;
@@ -98,7 +99,7 @@ Error llvm::runCodeGenPipeline(TargetMachine &TM, Module &M,
                                raw_pwrite_stream &OS,
                                std::unique_ptr<ToolOutputFile> &DwoOS,
                                CodeGenFileType CGFT, bool PrintPipelinePasses,
-                               bool DisableVerify,
+                               bool DisableVerify, bool DisableSimplifyLibCalls,
                                IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   if (ForceNewPM == cl::boolOrDefault::BOU_TRUE ||
       (TM.shouldDefaultToNewPM() &&
@@ -107,5 +108,5 @@ Error llvm::runCodeGenPipeline(TargetMachine &TM, Module &M,
   }
 
   return runCodeGenPipelineLegacy(TM, M, OS, DwoOS, CGFT, PrintPipelinePasses,
-                                  DisableVerify);
+                                  DisableVerify, DisableSimplifyLibCalls);
 }

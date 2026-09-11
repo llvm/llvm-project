@@ -80,7 +80,6 @@ CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
-CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
 CGOPT(SwiftAsyncFramePointerMode, SwiftAsyncFramePointer)
 CGOPT(bool, DontPlaceZerosInBSS)
 CGOPT(bool, EnableGuaranteedTailCallOpt)
@@ -264,17 +263,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                  clEnumValN(FloatABI::Hard, "hard",
                             "Hard float ABI (uses FP registers)")));
   CGBINDOPT(FloatABIForCalls);
-
-  static cl::opt<FPOpFusion::FPOpFusionMode> FuseFPOps(
-      "fp-contract", cl::desc("Enable aggressive formation of fused FP ops"),
-      cl::init(FPOpFusion::Standard),
-      cl::values(
-          clEnumValN(FPOpFusion::Fast, "fast",
-                     "Fuse FP ops whenever profitable"),
-          clEnumValN(FPOpFusion::Standard, "on", "Only fuse 'blessed' FP ops."),
-          clEnumValN(FPOpFusion::Strict, "off",
-                     "Only fuse FP ops when the result won't be affected.")));
-  CGBINDOPT(FuseFPOps);
 
   static cl::opt<SwiftAsyncFramePointerMode> SwiftAsyncFramePointer(
       "swift-async-fp",
@@ -563,8 +551,6 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
 TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
-  Options.AllowFPOpFusion = getFuseFPOps();
-
   Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
