@@ -1239,7 +1239,6 @@ void SymtabSection::emitStabs() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       // Excluded symbols should have been filtered out in finalizeContents().
       assert(defined->includeInSymtab);
-
       if (defined->isAbsolute())
         continue;
 
@@ -1263,6 +1262,14 @@ void SymtabSection::emitStabs() {
 
   llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
+  llvm::MapVector<ObjFile *, std::string> stabFiles;
+  for (const auto &[defined, fileId] : symbolsNeedingStabs) {
+    ObjFile *file = cast<ObjFile>(defined->originalIsec->getFile());
+    stabFiles[file] = "";
+  }
+  parallelForEach(stabFiles,
+                  [&](auto &it) { it.second = it.first->sourceFile(); });
+
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
   // originated.
@@ -1282,7 +1289,7 @@ void SymtabSection::emitStabs() {
         emitEndSourceStab();
       lastFile = file;
 
-      emitBeginSourceStab(file->sourceFile());
+      emitBeginSourceStab(stabFiles[file]);
       emitObjectFileStab(file);
     }
 
