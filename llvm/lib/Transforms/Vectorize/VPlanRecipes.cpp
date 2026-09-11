@@ -1194,8 +1194,7 @@ Value *VPInstruction::generate(VPTransformState &State,
   }
   case VPInstruction::VFMultipleLoad: {
     unsigned VFMultiple = cast<VPConstantInt>(getOperand(0))->getZExtValue();
-    auto *WideDataTy = VectorType::get(
-        getScalarType(), State.VF.multiplyCoefficientBy(VFMultiple));
+    auto *WideDataTy = VectorType::get(getScalarType(), State.VF * VFMultiple);
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
@@ -1205,8 +1204,7 @@ Value *VPInstruction::generate(VPTransformState &State,
   case VPInstruction::VFMultipleStore: {
     unsigned VFMultiple = cast<VPConstantInt>(getOperand(0))->getZExtValue();
     Type *ScalarStoreTy = getOperand(3)->getScalarType();
-    auto *WideDataTy = VectorType::get(
-        ScalarStoreTy, State.VF.multiplyCoefficientBy(VFMultiple));
+    auto *WideDataTy = VectorType::get(ScalarStoreTy, State.VF * VFMultiple);
 
     Value *WideData = PoisonValue::get(WideDataTy);
     for (unsigned I = 0; I < VFMultiple; ++I) {
