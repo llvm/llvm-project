@@ -44,50 +44,6 @@ using namespace Fortran::runtime::io;
 
 #define mkIOKey(X) FirmkKey(IONAME(X))
 
-namespace Fortran::lower {
-/// Static table of IO runtime calls
-///
-/// This logical map contains the name and type builder function for each IO
-/// runtime function listed in the tuple. This table is fully constructed at
-/// compile-time. Use the `mkIOKey` macro to access the table.
-static constexpr std::tuple<
-    mkIOKey(BeginBackspace), mkIOKey(BeginClose), mkIOKey(BeginEndfile),
-    mkIOKey(BeginExternalFormattedInput), mkIOKey(BeginExternalFormattedOutput),
-    mkIOKey(BeginExternalListInput), mkIOKey(BeginExternalListOutput),
-    mkIOKey(BeginFlush), mkIOKey(BeginInquireFile),
-    mkIOKey(BeginInquireIoLength), mkIOKey(BeginInquireUnit),
-    mkIOKey(BeginInternalArrayFormattedInput),
-    mkIOKey(BeginInternalArrayFormattedOutput),
-    mkIOKey(BeginInternalArrayListInput), mkIOKey(BeginInternalArrayListOutput),
-    mkIOKey(BeginInternalFormattedInput), mkIOKey(BeginInternalFormattedOutput),
-    mkIOKey(BeginInternalListInput), mkIOKey(BeginInternalListOutput),
-    mkIOKey(BeginOpenNewUnit), mkIOKey(BeginOpenUnit), mkIOKey(BeginRewind),
-    mkIOKey(BeginUnformattedInput), mkIOKey(BeginUnformattedOutput),
-    mkIOKey(BeginWait), mkIOKey(BeginWaitAll),
-    mkIOKey(CheckUnitNumberInRange64), mkIOKey(CheckUnitNumberInRange128),
-    mkIOKey(EnableHandlers), mkIOKey(EndIoStatement),
-    mkIOKey(GetAsynchronousId), mkIOKey(GetIoLength), mkIOKey(GetIoMsg),
-    mkIOKey(GetNewUnit), mkIOKey(GetSize), mkIOKey(InputAscii),
-    mkIOKey(InputComplex32), mkIOKey(InputComplex64), mkIOKey(InputDerivedType),
-    mkIOKey(InputDescriptor), mkIOKey(InputInteger), mkIOKey(InputLogical),
-    mkIOKey(InputNamelist), mkIOKey(InputReal32), mkIOKey(InputReal64),
-    mkIOKey(InquireCharacter), mkIOKey(InquireInteger64),
-    mkIOKey(InquireLogical), mkIOKey(InquirePendingId), mkIOKey(OutputAscii),
-    mkIOKey(OutputComplex32), mkIOKey(OutputComplex64),
-    mkIOKey(OutputDerivedType), mkIOKey(OutputDescriptor),
-    mkIOKey(OutputInteger8), mkIOKey(OutputInteger16), mkIOKey(OutputInteger32),
-    mkIOKey(OutputInteger64), mkIOKey(OutputInteger128), mkIOKey(OutputLogical),
-    mkIOKey(OutputNamelist), mkIOKey(OutputReal32), mkIOKey(OutputReal64),
-    mkIOKey(SetAccess), mkIOKey(SetAction), mkIOKey(SetAdvance),
-    mkIOKey(SetAsynchronous), mkIOKey(SetBlank), mkIOKey(SetCarriagecontrol),
-    mkIOKey(SetConvert), mkIOKey(SetDecimal), mkIOKey(SetDelim),
-    mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm),
-    mkIOKey(SetLeadingZero), mkIOKey(SetPad), mkIOKey(SetPos),
-    mkIOKey(SetPosition), mkIOKey(SetRec), mkIOKey(SetRecl), mkIOKey(SetRound),
-    mkIOKey(SetSign), mkIOKey(SetStatus)>
-    newIOTable;
-} // namespace Fortran::lower
-
 namespace {
 /// IO statements may require exceptional condition handling. A statement that
 /// encounters an exceptional condition may branch to a label given on an ERR
@@ -123,20 +79,6 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
                       mlir::Value cookie, const D &ioImpliedDo,
                       bool isFormatted, bool checkResult, mlir::Value &ok,
                       bool inLoop);
-
-/// Helper function to retrieve the name of the IO function given the key `A`
-template <typename A>
-[[maybe_unused]] static constexpr const char *getName() {
-  return std::get<A>(Fortran::lower::newIOTable).name;
-}
-
-/// Helper function to retrieve the type model signature builder of the IO
-/// function as defined by the key `A`
-template <typename A>
-[[maybe_unused]] static constexpr fir::runtime::FuncTypeBuilderFunc
-getTypeModel() {
-  return std::get<A>(Fortran::lower::newIOTable).getTypeModel();
-}
 
 inline int64_t getLength(mlir::Type argTy) {
   return mlir::cast<fir::SequenceType>(argTy).getShape()[0];
