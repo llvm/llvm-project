@@ -2355,7 +2355,10 @@ llvm::APInt *GetTraitScore(
     return nullptr;
 
   auto constVal = evaluate::ToInt64(*typedExpr);
-  if (!constVal)
+  // Reachability can request scores before CheckTraitScore diagnoses them.
+  // Treat an invalid score as absent during recovery rather than passing a
+  // negative value to the unsigned scorer.
+  if (!constVal || *constVal < 0)
     return nullptr;
 
   scoreStorage = llvm::APInt(64, *constVal);

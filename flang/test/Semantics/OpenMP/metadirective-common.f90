@@ -26,6 +26,33 @@ subroutine f02_zero_score
   !$omp & when(user={condition(score(0): .true.)}: nothing)
 end
 
+! Competing candidates reach scoring before the SCORE diagnostic is emitted.
+! A score of -1 must not wrap the initial score to zero and crash selection.
+subroutine f02_ranked_negative_scores(flag)
+  logical :: flag
+  integer :: i
+  !$omp metadirective &
+!ERROR: SCORE expression must be a non-negative constant integer expression
+  !$omp & when(user={condition(score(-1): .true.)}: nothing) &
+  !$omp & when(implementation={vendor(llvm)}: simd) otherwise(nothing)
+  do i = 1, 4
+  end do
+
+  !$omp metadirective &
+!ERROR: SCORE expression must be a non-negative constant integer expression
+  !$omp & when(user={condition(score(-1): flag)}: nothing) &
+  !$omp & when(implementation={vendor(llvm)}: simd) otherwise(nothing)
+  do i = 1, 4
+  end do
+
+  !$omp metadirective &
+!ERROR: SCORE expression must be a non-negative constant integer expression
+  !$omp & when(implementation={vendor(score(-1): llvm)}: nothing) &
+  !$omp & when(user={condition(.true.)}: simd) otherwise(nothing)
+  do i = 1, 4
+  end do
+end
+
 subroutine f03(x)
   integer :: x
   !$omp metadirective &
