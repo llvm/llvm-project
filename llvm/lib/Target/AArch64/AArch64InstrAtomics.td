@@ -60,6 +60,13 @@ let Predicates = [HasRCPC] in {
   def : Pat<(acquiring_load<atomic_load_nonext_64> GPR64sp:$ptr), (LDAPRX GPR64sp:$ptr)>;
 }
 
+// Unconditional patterns for the __ldapr* MSVC builtins. These force LDAPR*
+// emission regardless of the RCPC subtarget feature.
+def : Pat<(i32 (int_aarch64_ldapr8  GPR64sp:$Rn)), (LDAPRB_cg GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_ldapr16 GPR64sp:$Rn)), (LDAPRH_cg GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_ldapr32 GPR64sp:$Rn)), (LDAPRW_cg GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_ldapr64 GPR64sp:$Rn)), (LDAPRX_cg GPR64sp:$Rn)>;
+
 // 8-bit loads
 def : Pat<(seq_cst_load<atomic_load_azext_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
 def : Pat<(acquiring_load<atomic_load_azext_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
@@ -477,9 +484,8 @@ def : Pat<(stlxr_4 (and GPR64:$val, 0xffffffff), GPR64sp:$addr),
           (STLXRW (EXTRACT_SUBREG GPR64:$val, sub_32), GPR64sp:$addr)>;
 
 
-// And clear exclusive.
-
-def : Pat<(int_aarch64_clrex), (CLREX 0xf)>;
+// And clear exclusive. The (int_aarch64_clrex imm) pattern is defined on the
+// CLREX instruction in AArch64InstrInfo.td.
 
 //===----------------------------------
 // Atomic cmpxchg for -O0
@@ -567,6 +573,128 @@ let Predicates = [HasLSFE] in {
   defm : LDBFPOPregister_patterns<"LDBFMAX",   "atomic_load_fmaximum">;
   defm : LDBFPOPregister_patterns<"LDBFMIN",   "atomic_load_fminimum">;
 }
+
+// Unconditional patterns for the __cas* MSVC builtins to emit CAS* regardless
+// of the LSE subtarget feature.  cas{b,h} use only the low bits of the
+// comparison register, so the zero extension masking emitted by CodeGen
+// (zext i8/i16 -> i32 -> 'and w,w,#mask') is redundant.
+def : Pat<(i32 (int_aarch64_cas8  GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 255)),   (and GPR32:$Rt, (i32 255)))),
+          (CASB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_cas8  GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_cas16 GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 65535)), (and GPR32:$Rt, (i32 65535)))),
+          (CASH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_cas16 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_cas32 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASW_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_cas64 GPR64sp:$Rn, GPR64:$Rs, GPR64:$Rt)),
+          (CASX_cg GPR64:$Rs, GPR64:$Rt, GPR64sp:$Rn)>;
+
+// Unconditional patterns for the __casa* MSVC builtins (acquire ordering).
+def : Pat<(i32 (int_aarch64_casa8  GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 255)),   (and GPR32:$Rt, (i32 255)))),
+          (CASAB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casa8  GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASAB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casa16 GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 65535)), (and GPR32:$Rt, (i32 65535)))),
+          (CASAH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casa16 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASAH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casa32 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASAW_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_casa64 GPR64sp:$Rn, GPR64:$Rs, GPR64:$Rt)),
+          (CASAX_cg GPR64:$Rs, GPR64:$Rt, GPR64sp:$Rn)>;
+
+// Unconditional patterns for the __casl* MSVC builtins (release ordering).
+def : Pat<(i32 (int_aarch64_casl8  GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 255)),   (and GPR32:$Rt, (i32 255)))),
+          (CASLB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casl8  GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASLB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casl16 GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 65535)), (and GPR32:$Rt, (i32 65535)))),
+          (CASLH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casl16 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASLH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casl32 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASLW_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_casl64 GPR64sp:$Rn, GPR64:$Rs, GPR64:$Rt)),
+          (CASLX_cg GPR64:$Rs, GPR64:$Rt, GPR64sp:$Rn)>;
+
+// Unconditional patterns for the __casal* MSVC builtins (acquire/release ordering).
+def : Pat<(i32 (int_aarch64_casal8  GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 255)),   (and GPR32:$Rt, (i32 255)))),
+          (CASALB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casal8  GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASALB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casal16 GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 65535)), (and GPR32:$Rt, (i32 65535)))),
+          (CASALH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casal16 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASALH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casal32 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASALW_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_casal64 GPR64sp:$Rn, GPR64:$Rs, GPR64:$Rt)),
+          (CASALX_cg GPR64:$Rs, GPR64:$Rt, GPR64sp:$Rn)>;
+
+// Unconditional patterns for the __swp* MSVC builtins (no ordering).
+// As with swp{b,h}, the zero-extension mask may survive or be eliminated by the
+// DAG combiner, so both masked and plain forms are needed.
+def : Pat<(i32 (int_aarch64_swp8  GPR64sp:$Rn, (and GPR32:$Rs, (i32 255)))),
+          (SWPB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swp8  GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swp16 GPR64sp:$Rn, (and GPR32:$Rs, (i32 65535)))),
+          (SWPH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swp16 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swp32 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPW_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_swp64 GPR64sp:$Rn, GPR64:$Rs)),
+          (SWPX_cg GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(i32 (int_aarch64_swpa8  GPR64sp:$Rn, (and GPR32:$Rs, (i32 255)))),
+          (SWPAB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpa8  GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPAB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpa16 GPR64sp:$Rn, (and GPR32:$Rs, (i32 65535)))),
+          (SWPAH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpa16 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPAH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpa32 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPAW_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_swpa64 GPR64sp:$Rn, GPR64:$Rs)),
+          (SWPAX_cg GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(i32 (int_aarch64_swpl8  GPR64sp:$Rn, (and GPR32:$Rs, (i32 255)))),
+          (SWPLB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpl8  GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPLB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpl16 GPR64sp:$Rn, (and GPR32:$Rs, (i32 65535)))),
+          (SWPLH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpl16 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPLH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpl32 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPLW_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_swpl64 GPR64sp:$Rn, GPR64:$Rs)),
+          (SWPLX_cg GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(i32 (int_aarch64_swpal8  GPR64sp:$Rn, (and GPR32:$Rs, (i32 255)))),
+          (SWPALB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpal8  GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPALB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpal16 GPR64sp:$Rn, (and GPR32:$Rs, (i32 65535)))),
+          (SWPALH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpal16 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPALH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpal32 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPALW_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_swpal64 GPR64sp:$Rn, GPR64:$Rs)),
+          (SWPALX_cg GPR64:$Rs, GPR64sp:$Rn)>;
 
 // v8.9a/v9.4a FEAT_LRCPC patterns
 let Predicates = [HasRCPC3, HasNEON] in {
