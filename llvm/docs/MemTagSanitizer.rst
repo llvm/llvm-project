@@ -12,7 +12,9 @@ running MemTagSanitizer does not exist as of Oct 2019.
 
 MemTagSanitizer is a fast memory error detector and **a code hardening
 tool** based on the Armv8.5-A `Memory Tagging Extension`_. It
-detects a similar class of errors as `AddressSanitizer`_ or `HardwareAssistedAddressSanitizer`_, but with
+detects a similar class of errors as :external+clang:doc:`AddressSanitizer` or
+:external+clang:doc:`HardwareAssistedAddressSanitizer
+<HardwareAssistedAddressSanitizerDesign>`, but with
 **much** lower overhead.
 
 MemTagSanitizer overhead is expected to be in low single digits, both
@@ -39,7 +41,8 @@ adds the memory tagging feature, without changing anything else.
 Implementation
 ==============
 
-See `HardwareAssistedAddressSanitizer`_ for a general overview of a
+See :external+clang:doc:`HardwareAssistedAddressSanitizer
+<HardwareAssistedAddressSanitizerDesign>` for a general overview of a
 tag-based approach to memory safety.  MemTagSanitizer follows a
 similar implementation strategy, but with the tag storage (shadow)
 provided by the hardware.
@@ -97,5 +100,3 @@ More information
 * `Memory Tagging Whitepaper <https://arxiv.org/pdf/1802.09517.pdf>`_
 
 .. _Memory Tagging Extension: https://community.arm.com/developer/ip-products/processors/b/processors-ip-blog/posts/arm-a-profile-architecture-2018-developments-armv85a
-.. _AddressSanitizer: https://clang.llvm.org/docs/AddressSanitizer.html
-.. _HardwareAssistedAddressSanitizer: https://clang.llvm.org/docs/HardwareAssistedAddressSanitizerDesign.html

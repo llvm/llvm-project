@@ -41,11 +41,11 @@ level:
 clang-format-fuzzer
 -------------------
 
-A |generic fuzzer| that runs clang-format_ on C++ text fragments. Some of the
+A |generic fuzzer| that runs :external+clang:doc:`clang-format <ClangFormat>`
+on C++ text fragments. Some of the
 bugs this fuzzer has reported are `on bugzilla`__
 and `on OSS Fuzz's tracker`__.
 
-.. _clang-format: https://clang.llvm.org/docs/ClangFormat.html
 __ https://llvm.org/pr23052
 __ https://bugs.chromium.org/p/oss-fuzz/issues/list?q=proj-llvm+clang-format-fuzzer
 

@@ -51,7 +51,7 @@ LLVM: through remark diagnostics, or through serialized remarks.
 See also the clang flags
 [-Rpass](https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports)
 and
-[-fsave-optimization-record](http://clang.llvm.org/docs/UsersManual.html#cmdoption-f-no-save-optimization-record).
+{external+clang:option}`-fsave-optimization-record <-f[no-]save-optimization-record>`.
 
 ### Remark diagnostics
 
