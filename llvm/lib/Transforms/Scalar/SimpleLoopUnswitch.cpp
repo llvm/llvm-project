@@ -275,6 +275,32 @@ static bool areLoopExitPHIsLoopInvariant(const Loop &L,
   llvm_unreachable("Basic blocks should never be empty!");
 }
 
+/// Return true if every LCSSA PHI in \p ExitBB has, on the edge from the loop
+/// header, either a loop-invariant incoming value or a header PHI.
+///
+/// A header PHI is treated as acceptable because on a header-to-exit edge the
+/// loop body has not run, so the PHI still holds its unique preheader (entry)
+/// value.
+static bool areLoopExitPHIsTrivialFromHeader(const Loop &L,
+                                             const BasicBlock &ExitBB) {
+  const BasicBlock *Header = L.getHeader();
+  for (const Instruction &I : ExitBB) {
+    const auto *PN = dyn_cast<PHINode>(&I);
+    if (!PN)
+      // No more PHIs to check.
+      return true;
+
+    const Value *V = PN->getIncomingValueForBlock(Header);
+    if (L.isLoopInvariant(V))
+      continue;
+
+    const auto *HeaderPN = dyn_cast<PHINode>(V);
+    if (!HeaderPN || HeaderPN->getParent() != Header)
+      return false;
+  }
+  llvm_unreachable("Basic blocks should never be empty!");
+}
+
 /// Copy a set of loop invariant values \p Invariants and insert them at the
 /// end of \p BB and conditionally branch on the copied condition. We only
 /// branch on a single value.
@@ -647,10 +673,19 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
   auto *ContinueBB = BI.getSuccessor(1 - LoopExitSuccIdx);
   auto *ParentBB = BI.getParent();
+
+  // If the exit incomings aren't loop-invariant, the unswitch is still trivial
+  // when the branch is in the header and every non-invariant incoming is a
+  // header PHI. Those incomings are repaired after unswitching.
+  bool TrivialFromHeader = false;
   if (!ModifiedBranch &&
       !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
-    LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
-    return false;
+    TrivialFromHeader = ParentBB == L.getHeader() &&
+                        areLoopExitPHIsTrivialFromHeader(L, *LoopExitBB);
+    if (!TrivialFromHeader) {
+      LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
+      return false;
+    }
   }
 
   // When unswitching only part of the branch's condition, we need the exit
@@ -698,6 +733,20 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   // the conditional branch. We will change the preheader to have a conditional
   // branch on LoopCond.
   BasicBlock *OldPH = L.getLoopPreheader();
+
+  // Remember each header PHI's value coming from the preheader. We use it later
+  // to fix up the exit, and SplitEdge below is about to change these PHIs.
+  SmallDenseMap<PHINode *, Value *, 4> HeaderEntryValues;
+  if (TrivialFromHeader) {
+    assert(ParentBB == L.getHeader() &&
+           "Header-PHI relaxation only applies to a header branch");
+    for (PHINode &PN : ParentBB->phis()) {
+      Value *EntryV = PN.getIncomingValueForBlock(OldPH);
+      assert(EntryV && "Header PHI must have a preheader incoming value");
+      HeaderEntryValues[&PN] = EntryV;
+    }
+  }
+
   BasicBlock *NewPH = SplitEdge(OldPH, L.getHeader(), &DT, &LI, MSSAU);
 
   // Now that we have a place to insert the conditional branch, create a place
@@ -789,6 +838,21 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   else
     rewritePHINodesForExitAndUnswitchedBlocks(*LoopExitBB, *UnswitchedBB,
                                               *ParentBB, *OldPH, FullUnswitch);
+
+  // On the OldPH edge, replace header-PHI incomings with the snapshotted
+  // entry values.
+  if (!HeaderEntryValues.empty())
+    for (PHINode &PN : UnswitchedBB->phis())
+      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
+        if (PN.getIncomingBlock(I) != OldPH)
+          continue;
+        auto *HeaderPN = dyn_cast<PHINode>(PN.getIncomingValue(I));
+        if (!HeaderPN)
+          continue;
+        auto It = HeaderEntryValues.find(HeaderPN);
+        if (It != HeaderEntryValues.end())
+          PN.setIncomingValue(I, It->second);
+      }
 
   // The constant we can replace all of our invariants with inside the loop
   // body. If any of the invariants have a value other than this the loop won't

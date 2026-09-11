@@ -1478,3 +1478,137 @@ lbl1.loopexit:                                    ; preds = %for.cond1
 ; CHECK-NEXT:    i32 2, label %lbl1.loopexit
 ; CHECK-NEXT:  ]
 }
+
+; Trivially unswitchable header branch whose exit LCSSA phi uses a header phi.
+define i32 @test_unswitch_header_phi(i1 %c) {
+; CHECK-LABEL: @test_unswitch_header_phi(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %c, label %entry.split, label %exit
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %header
+
+header:
+  %acc = phi i32 [ 0, %entry ], [ %next, %latch ]
+  br i1 %c, label %latch, label %exit
+; CHECK:       header:
+; CHECK-NEXT:    %acc = phi i32 [ 0, %entry.split ], [ %next, %latch ]
+; CHECK-NEXT:    br label %latch
+
+latch:
+  %next = add i32 %acc, 1
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %next = add i32 %acc, 1
+; CHECK-NEXT:    br label %header
+
+exit:
+  %r = phi i32 [ %acc, %header ]
+  ret i32 %r
+; CHECK:       exit:
+; CHECK-NEXT:    %r = phi i32 [ 0, %entry ]
+; CHECK-NEXT:    ret i32 %r
+}
+
+; Header branch whose exit LCSSA phi uses a non-phi header value: not trivially
+; unswitchable, so the loop is left unchanged.
+define i32 @test_no_unswitch_header_nonphi(i1 %c) {
+; CHECK-LABEL: @test_no_unswitch_header_nonphi(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label %header
+
+header:
+  %acc = phi i32 [ 0, %entry ], [ %next, %latch ]
+  %sum = add i32 %acc, 5
+  br i1 %c, label %latch, label %exit
+; CHECK:       header:
+; CHECK-NEXT:    %acc = phi i32 [ 0, %entry ], [ %next, %latch ]
+; CHECK-NEXT:    %sum = add i32 %acc, 5
+; CHECK-NEXT:    br i1 %c, label %latch, label %exit
+
+latch:
+  %next = add i32 %acc, 1
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %next = add i32 %acc, 1
+; CHECK-NEXT:    br label %header
+
+exit:
+  %r = phi i32 [ %sum, %header ]
+  ret i32 %r
+; CHECK:       exit:
+; CHECK-NEXT:    %r = phi i32 [ %sum, %header ]
+; CHECK-NEXT:    ret i32 %r
+}
+
+; Trivially unswitchable header branch whose exit has two LCSSA phis: one with a
+; loop-invariant incoming, one with a header phi incoming.
+define i32 @test_unswitch_header_phi_mixed(i1 %c, i32 %inv) {
+; CHECK-LABEL: @test_unswitch_header_phi_mixed(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %c, label %entry.split, label %exit
+
+header:
+  %acc = phi i32 [ 0, %entry ], [ %next, %latch ]
+  br i1 %c, label %latch, label %exit
+; CHECK:       header:
+; CHECK-NEXT:    %acc = phi i32 [ 0, %entry.split ], [ %next, %latch ]
+; CHECK-NEXT:    br label %latch
+
+latch:
+  %next = add i32 %acc, 1
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %next = add i32 %acc, 1
+; CHECK-NEXT:    br label %header
+
+exit:
+  %r = phi i32 [ %acc, %header ]
+  %s = phi i32 [ %inv, %header ]
+  %sum = add i32 %r, %s
+  ret i32 %sum
+; CHECK:       exit:
+; CHECK-NEXT:    %r = phi i32 [ 0, %entry ]
+; CHECK-NEXT:    %s = phi i32 [ %inv, %entry ]
+; CHECK-NEXT:    %sum = add i32 %r, %s
+; CHECK-NEXT:    ret i32 %sum
+}
+
+; Trivially unswitchable header branch whose exit LCSSA phi uses a header phi
+; whose entry value is defined in the preheader, not a constant.
+define i32 @test_unswitch_header_phi_nonconst(i1 %c, i32 %x) {
+; CHECK-LABEL: @test_unswitch_header_phi_nonconst(
+entry:
+  %init = add i32 %x, 3
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %init = add i32 %x, 3
+; CHECK-NEXT:    br i1 %c, label %entry.split, label %exit
+
+header:
+  %acc = phi i32 [ %init, %entry ], [ %next, %latch ]
+  br i1 %c, label %latch, label %exit
+; CHECK:       header:
+; CHECK-NEXT:    %acc = phi i32 [ %init, %entry.split ], [ %next, %latch ]
+; CHECK-NEXT:    br label %latch
+
+latch:
+  %next = add i32 %acc, 1
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %next = add i32 %acc, 1
+; CHECK-NEXT:    br label %header
+
+exit:
+  %r = phi i32 [ %acc, %header ]
+  ret i32 %r
+; CHECK:       exit:
+; CHECK-NEXT:    %r = phi i32 [ %init, %entry ]
+; CHECK-NEXT:    ret i32 %r
+}
