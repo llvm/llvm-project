@@ -1380,6 +1380,17 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       Value *NegX = Builder.CreateNeg(X, "neg");
       return BinaryOperator::CreateAnd(NegX, X);
     }
+
+    // 1 << X --> X + 1 if 0 <= X <= 1.
+    if (computeKnownBits(Op1, &I).countMaxActiveBits() <= 1) {
+      auto *Add = BinaryOperator::CreateNUWAdd(Op1, ConstantInt::get(Ty, 1));
+      // The result can be as large as 2, which is only representable as a
+      // non-negative signed value when Ty has more than 2 bits (otherwise
+      // the constant 2 is itself already negative, e.g. i2 2 == -2).
+      if (BitWidth > 2)
+        Add->setHasNoSignedWrap();
+      return Add;
+    }
   }
 
   // LHS << (cttz RHS) --> (RHS & -RHS) * LHS
@@ -1416,6 +1427,18 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   // lshr 1, X --> zext (X == 0)
   if (match(Op0, m_One()))
     return new ZExtInst(Builder.CreateIsNull(Op1), Ty);
+
+  // 2 >> X --> 2 - X if 0 <= X <= 1.
+  if (match(Op0, m_SpecificInt(2)) &&
+      computeKnownBits(Op1, &I).countMaxActiveBits() <= 1) {
+    auto *Sub = BinaryOperator::CreateNUWSub(ConstantInt::get(Ty, 2), Op1);
+    // The result can be as large as 2, which is only representable as a
+    // non-negative signed value when Ty has more than 2 bits (otherwise
+    // the constant 2 is itself already negative, e.g. i2 2 == -2).
+    if (BitWidth > 2)
+      Sub->setHasNoSignedWrap();
+    return Sub;
+  }
 
   // (iN (~X) u>> (N - 1)) --> zext (X > -1)
   if (match(Op0, m_OneUse(m_Not(m_Value(X)))) &&
