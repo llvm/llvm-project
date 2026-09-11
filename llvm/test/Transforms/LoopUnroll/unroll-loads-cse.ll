@@ -461,9 +461,72 @@ exit:
   ret void
 }
 
+; The !invariant.group store in %entry dominates the load in the loop, but is
+; outside the loop and thus has no MemoryAccess in the loop-scoped MemorySSA
+; loadCSE builds. Make sure we don't crash looking one up.
+define void @cse_invariant_group_clobber_outside_loop(ptr %src, ptr noalias %dst, i64 %N) {
+; CHECK-LABEL: define void @cse_invariant_group_clobber_outside_loop(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 0, ptr [[SRC]], align 8, !invariant.group [[META8:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK:       entry.new:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[SRC]], align 8, !invariant.group [[META8]]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[L]], ptr [[GEP_DST]], align 8
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    store i64 [[L]], ptr [[GEP_DST_1]], align 8
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       exit.unr-lcssa:
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER]], label [[EXIT:%.*]]
+; CHECK:       loop.epil.preheader:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR]], [[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
+; CHECK-NEXT:    br label [[LOOP_EPIL:%.*]]
+; CHECK:       loop.epil:
+; CHECK-NEXT:    [[L_EPIL:%.*]] = load i64, ptr [[SRC]], align 8, !invariant.group [[META8]]
+; CHECK-NEXT:    [[GEP_DST_EPIL:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV_EPIL_INIT]]
+; CHECK-NEXT:    store i64 [[L_EPIL]], ptr [[GEP_DST_EPIL]], align 8
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i64 0, ptr %src, align 8, !invariant.group !3
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %l = load i64, ptr %src, align 8, !invariant.group !3
+  %gep.dst = getelementptr inbounds i64, ptr %dst, i64 %iv
+  store i64 %l, ptr %gep.dst, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop, !llvm.loop !1
+
+exit:
+  ret void
+}
+
 !0 = !{!"llvm.loop.mustprogress"}
 !1 = distinct !{!1, !0, !2}
 !2 = !{!"llvm.loop.unroll.count", i32 2}
+!3 = distinct !{}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.mustprogress"}
@@ -473,4 +536,6 @@ exit:
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
+; CHECK: [[META8]] = distinct !{}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
 ;.
