@@ -529,7 +529,9 @@ struct CombineTransferReadOpTranspose final
         result = arith::ExtUIOp::create(rewriter, loc, op.getType(), result)
                      .getResult();
       else
-        result = arith::ExtFOp::create(rewriter, loc, op.getType(), result)
+        result = arith::ExtFOp::create(rewriter, loc, TypeRange{op.getType()},
+                                       ValueRange{result},
+                                       arith::ExtFOp::Properties{})
                      .getResult();
     }
 

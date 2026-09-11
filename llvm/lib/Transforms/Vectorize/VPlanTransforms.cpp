@@ -799,7 +799,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *Def = dyn_cast<VPRecipeWithIRFlags>(U);
       auto *RepR = dyn_cast<VPReplicateRecipe>(U);
       // Skip recipes that shouldn't be narrowed.
-      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
+      if (!Def ||
+          !isa<VPReplicateRecipe, VPWidenRecipe, VPWidenGEPRecipe>(Def) ||
           Def->user_empty() || !Def->getUnderlyingValue() ||
           (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
@@ -3007,7 +3008,7 @@ void VPlanTransforms::createInterleaveGroups(
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
 /// generating the values for the comparison. The recipes are stored in
 /// \p Recipes.
-static std::optional<VPValue *>
+static VPValue *
 getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
                              VPBasicBlock *LatchVPBB) {
   // Given a plain CFG VPlan loop with countable latch exiting block
@@ -3064,7 +3065,7 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   if (!match(LatchVPBB->getTerminator(),
              m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
                                 m_VPValue())))
-    return std::nullopt;
+    return nullptr;
 
   SmallVector<VPValue *, 4> Worklist;
   Worklist.push_back(UncountableCondition);
@@ -3079,7 +3080,7 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
     //        starting with the simplest set of loops we can, and multiple
     //        users means needing to add PHI nodes in the transform.
     if (V->getNumUsers() > 1)
-      return std::nullopt;
+      return nullptr;
 
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
@@ -3091,11 +3092,11 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
       VPRecipeBase *GepR = Op1->getDefiningRecipe();
       // Only matching base + single offset term for now.
       if (GepR->getNumOperands() != 2)
-        return std::nullopt;
+        return nullptr;
       // Matching a GEP with a loop-invariant base ptr.
       if (!match(GepR, m_VPInstruction<Instruction::GetElementPtr>(
                            m_LiveIn(), m_VPValue())))
-        return std::nullopt;
+        return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
     } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
@@ -3103,14 +3104,14 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
       Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
-      return std::nullopt;
+      return nullptr;
   }
 
   // If we couldn't match anything, don't return the condition. It may be
   // defined outside the loop.
   if (Recipes.empty() ||
       none_of(Recipes, match_fn(m_VPInstruction<Instruction::GetElementPtr>())))
-    return std::nullopt;
+    return nullptr;
 
   return UncountableCondition;
 }
@@ -3185,8 +3186,7 @@ static bool handleUncountableExitsWithSideEffects(
   // version of the loop.
   SmallVector<VPInstruction *, 8> ConditionRecipes;
 
-  std::optional<VPValue *> Cond =
-      getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
+  VPValue *Cond = getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
   if (!Cond)
     return false;
 
@@ -3253,7 +3253,7 @@ static bool handleUncountableExitsWithSideEffects(
   // Create a mask to represent all lanes that fully execute in the vector loop,
   // stopping short of any early exit.
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
-  VPValue *FirstActive = MaskBuilder.createFirstActiveLane(*Cond);
+  VPValue *FirstActive = MaskBuilder.createFirstActiveLane(Cond);
   Type *IVScalarTy = IV->getScalarType();
   VPValue *Zero = Plan.getZero(IVScalarTy);
   FirstActive =

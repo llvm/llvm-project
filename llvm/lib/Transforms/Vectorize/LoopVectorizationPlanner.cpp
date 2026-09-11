@@ -30,8 +30,6 @@ using namespace LoopVectorizationUtils;
 
 #define DEBUG_TYPE "loop-vectorize"
 
-extern cl::opt<bool> VPlanBuildOuterloopStressTest;
-
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
@@ -52,10 +50,15 @@ static cl::opt<bool> ForceTargetSupportsScalableVectors(
         "Pretend that scalable vectors are supported, even if the target does "
         "not support them. This flag should only be used for testing."));
 
-cl::opt<bool> llvm::PreferInLoopReductions(
-    "prefer-inloop-reductions", cl::init(false), cl::Hidden,
-    cl::desc("Prefer in-loop vector reductions, "
-             "overriding the targets preference."));
+static cl::opt<bool>
+    PreferInLoopReductions("prefer-inloop-reductions", cl::init(false),
+                           cl::Hidden,
+                           cl::desc("Prefer in-loop vector reductions, "
+                                    "overriding the targets preference."));
+
+namespace llvm {
+extern cl::opt<bool> VPlanBuildOuterloopStressTest;
+} // namespace llvm
 
 /// Note: This currently only applies to `llvm.masked.load` and
 /// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.

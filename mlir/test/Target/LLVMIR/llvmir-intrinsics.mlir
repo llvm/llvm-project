@@ -1130,6 +1130,12 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
   // CHECK: call float @llvm.vp.reduce.fmin.v8f32
   "llvm.intr.vp.reduce.fmin" (%f, %C, %mask, %evl) :
          (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  // CHECK: call float @llvm.vp.reduce.fmaximum.v8f32
+  "llvm.intr.vp.reduce.fmaximum" (%f, %C, %mask, %evl) :
+         (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  // CHECK: call float @llvm.vp.reduce.fminimum.v8f32
+  "llvm.intr.vp.reduce.fminimum" (%f, %C, %mask, %evl) :
+         (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
 
   // CHECK: call <8 x i32> @llvm.vp.merge.v8i32
   "llvm.intr.vp.merge" (%mask, %A, %B, %evl) :
@@ -2128,6 +2134,8 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare float @llvm.vp.reduce.fmul.v8f32(float, <8 x float>, <8 x i1>, i32)
 // CHECK-DAG: declare float @llvm.vp.reduce.fmax.v8f32(float, <8 x float>, <8 x i1>, i32)
 // CHECK-DAG: declare float @llvm.vp.reduce.fmin.v8f32(float, <8 x float>, <8 x i1>, i32)
+// CHECK-DAG: declare float @llvm.vp.reduce.fmaximum.v8f32(float, <8 x float>, <8 x i1>, i32)
+// CHECK-DAG: declare float @llvm.vp.reduce.fminimum.v8f32(float, <8 x float>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.merge.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32)
 // CHECK-DAG: declare void @llvm.experimental.vp.strided.store.v8i32.p0.i32(<8 x i32>, ptr captures(none), i32, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i32(ptr captures(none), i32, <8 x i1>, i32)

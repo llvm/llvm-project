@@ -88,6 +88,10 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::min_element(std::execution::par, std::begin(a), std::end(a), pred2);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::minmax_element(std::execution::par, std::begin(a), std::end(a));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::minmax_element(std::execution::par, std::begin(a), std::end(a), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::mismatch(std::execution::par, std::begin(a), std::end(a), std::begin(b));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::mismatch(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
