@@ -61,7 +61,6 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
 #include <iterator>
-#include <optional>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -4022,43 +4021,16 @@ static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
 
 static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
                                  const ArgList &Args, ArgStringList &CmdArgs) {
-  bool KernelOrKext = false;
-  bool Freestanding = false;
-  bool UseBuiltins = true;
-  std::optional<bool> ExplicitUseBuiltins;
-  for (const Arg *A : Args) {
-    switch (A->getOption().getID()) {
-    case options::OPT_fbuiltin:
-      A->claim();
-      ExplicitUseBuiltins = true;
-      UseBuiltins = true;
-      break;
-    case options::OPT_fno_builtin:
-      A->claim();
-      ExplicitUseBuiltins = false;
-      UseBuiltins = false;
-      break;
-    case options::OPT_ffreestanding:
-      A->claim();
-      Freestanding = true;
-      UseBuiltins = false;
-      break;
-    case options::OPT_fhosted:
-      A->claim();
-      Freestanding = KernelOrKext;
-      UseBuiltins = ExplicitUseBuiltins.value_or(!Freestanding);
-      break;
-    case options::OPT_mkernel:
-    case options::OPT_fapple_kext:
-      A->claim();
-      KernelOrKext = true;
-      Freestanding = true;
-      UseBuiltins = false;
-      break;
-    default:
-      break;
-    }
-  }
+  bool Freestanding =
+      Args.hasFlag(options::OPT_ffreestanding, options::OPT_fhosted, false) ||
+      Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
+  const Arg *BuiltinArg = Args.getLastArg(
+      options::OPT_fbuiltin, options::OPT_fno_builtin,
+      options::OPT_ffreestanding, options::OPT_fhosted, options::OPT_mkernel,
+      options::OPT_fapple_kext);
+  bool UseBuiltins =
+      !BuiltinArg || BuiltinArg->getOption().matches(options::OPT_fbuiltin) ||
+      BuiltinArg->getOption().matches(options::OPT_fhosted);
 
   if (!UseBuiltins)
     CmdArgs.push_back("-fno-builtin");

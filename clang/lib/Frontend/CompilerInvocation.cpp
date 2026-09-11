@@ -4296,22 +4296,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Args.hasFlag(OPT_fconvergent_functions, OPT_fno_convergent_functions,
                    HasConvergentOperations);
 
-  Opts.NoBuiltin = false;
-  for (const Arg *A : Args) {
-    switch (A->getOption().getID()) {
-    case OPT_fbuiltin:
-      A->claim();
-      Opts.NoBuiltin = false;
-      break;
-    case OPT_fno_builtin:
-    case OPT_ffreestanding:
-      A->claim();
-      Opts.NoBuiltin = true;
-      break;
-    default:
-      break;
-    }
-  }
+  Opts.NoBuiltin = Args.hasFlag(OPT_fno_builtin, OPT_ffreestanding,
+                                OPT_fbuiltin, false);
   if (!Opts.NoBuiltin)
     getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
   if (Arg *A = Args.getLastArg(options::OPT_LongDouble_Group)) {

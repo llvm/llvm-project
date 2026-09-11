@@ -7,6 +7,8 @@
 // RUN: %clang -target i386-unknown-unknown -fbuiltin -ffreestanding -O2 -emit-llvm -S %s -o - | not grep 'declare noundef i32 @puts'
 // RUN: %clang -target i386-unknown-unknown -ffreestanding -fbuiltin -ffreestanding -O2 -emit-llvm -S %s -o - | not grep 'declare noundef i32 @puts'
 // RUN: %clang -target i386-unknown-unknown -ffreestanding -fbuiltin -fno-builtin -O2 -emit-llvm -S %s -o - | not grep 'declare noundef i32 @puts'
+// RUN: %clang -target i386-unknown-unknown -fno-builtin -fhosted -O2 -emit-llvm -S %s -o - | grep 'declare noundef i32 @puts' | count 1
+// RUN: %clang -target i386-unknown-unknown -fhosted -fno-builtin -O2 -emit-llvm -S %s -o - | not grep 'declare noundef i32 @puts'
 
 int printf(const char *, ...);
 
