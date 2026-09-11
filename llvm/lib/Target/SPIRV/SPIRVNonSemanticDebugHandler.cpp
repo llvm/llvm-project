@@ -257,21 +257,37 @@ unsigned SPIRVNonSemanticDebugHandler::toNSDISrcLang(unsigned DwarfSrcLang) {
   }
 }
 
-// Collect distinct DILocations from LLVM IR. DebugLine pre-emission and MIR
-// lookups assume every machine-instruction debug location already appeared
-// here; a codegen-only location would not be collected and emission will be
-// skipped.
-static void collectUniqueDebugLocations(const Module &M,
-                                        SetVector<const DILocation *> &Out) {
+// Collect distinct DILocations and DILocalVariables from LLVM IR.
+//
+// DILocations come from instruction debug locations and from the debug records
+// attached to them. DebugLine pre-emission and MIR lookups assume every
+// machine-instruction debug location already appeared here; a codegen-only
+// location would not be collected and emission will be skipped.
+//
+// DILocalVariables come from the DbgVariableRecords attached to instructions
+// and from the retained nodes of each DISubprogram. Retained nodes are needed
+// because a variable with no remaining debug record (e.g. optimized away) must
+// still get a DebugLocalVariable.
+static void collectDebugLocationsAndLocalVariables(
+    const Module &M, SetVector<const DILocation *> &Locations,
+    SetVector<const DILocalVariable *> &LVs) {
   for (const Function &F : M) {
-    if (!F.getSubprogram())
+    const DISubprogram *SP = F.getSubprogram();
+    if (!SP)
       continue;
+    for (const MDNode *N : SP->getRetainedNodes())
+      if (const auto *LV = dyn_cast_or_null<DILocalVariable>(N))
+        LVs.insert(LV);
     for (const Instruction &I : instructions(F)) {
       if (const DILocation *DL = I.getDebugLoc().get())
-        Out.insert(DL);
-      for (DbgRecord &DR : I.getDbgRecordRange())
+        Locations.insert(DL);
+      for (DbgRecord &DR : I.getDbgRecordRange()) {
         if (const DILocation *DL = DR.getDebugLoc().get())
-          Out.insert(DL);
+          Locations.insert(DL);
+        if (const auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
+          if (const DILocalVariable *LV = DVR->getVariable())
+            LVs.insert(LV);
+      }
     }
   }
 }
@@ -310,6 +326,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   SubprogramDefinitions.clear();
   UniqueDebugLocations.clear();
   GlobalVariableDebugInfoMap.clear();
+  LocalVariables.clear();
   LexicalBlocks.clear();
   DebugScopeRegs.clear();
   DebugInlinedAtRegs.clear();
@@ -393,7 +410,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
         GV, GlobalVariableDebugInfo{Expr, DIGVToLLVMGV.lookup(GV)});
   }
 
-  collectUniqueDebugLocations(*M, UniqueDebugLocations);
+  collectDebugLocationsAndLocalVariables(*M, UniqueDebugLocations,
+                                         LocalVariables);
 
   // DILexicalBlock and DINamespace scopes are lowered to DebugLexicalBlock.
   // Collect them in parent-before-child order so they can be later emitted in a
@@ -908,6 +926,43 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
                      VoidTypeReg, ExtInstSetReg, Ops, MAI);
 }
 
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugLocalVariable(
+    const DILocalVariable *LV, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  assert(LV && "LV must not be null in emitDebugLocalVariable");
+
+  auto ParentRegOpt = resolveScope(LV->getScope());
+  if (!ParentRegOpt)
+    return std::nullopt;
+
+  MCRegister TyReg = CachedDebugInfoNoneReg;
+  if (const DIType *Ty = LV->getType()) {
+    auto TyRegOpt = lookupOptReg(DebugScopeRegs, Ty);
+    if (!TyRegOpt)
+      return std::nullopt;
+    TyReg = *TyRegOpt;
+  }
+
+  MCRegister NameReg = getCachedOpStringReg(LV->getName());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      LV->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(LV->getLine()), I32TypeReg, MAI);
+  // DILocalVariable has no column field. Column is hardcoded to 0.
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+  MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(LV), I32TypeReg, MAI);
+
+  SmallVector<MCRegister, 8> Ops = {NameReg, TyReg,         SrcReg,  LineReg,
+                                    ColReg,  *ParentRegOpt, FlagsReg};
+  if (unsigned Arg = LV->getArg())
+    Ops.push_back(emitOpConstantI32(Arg, I32TypeReg, MAI));
+
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugLocalVariable, VoidTypeReg,
+                     ExtInstSetReg, Ops, MAI);
+}
+
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
     const DICompositeType *VT, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
@@ -1139,6 +1194,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     emitOpStringIfNew(GV->getName(), MAI);
     emitOpStringIfNew(GV->getLinkageName(), MAI);
     emitAndCacheScopePathOpStringReg(GV->getFile(), MAI);
+  }
+
+  for (const DILocalVariable *LV : LocalVariables) {
+    emitOpStringIfNew(LV->getName(), MAI);
+    emitAndCacheScopePathOpStringReg(LV->getFile(), MAI);
   }
 
   // Cache the path OpString each DebugLexicalBlock uses (source file), plus
@@ -1674,6 +1734,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
                                            ExtInstSetReg, MAI))
       DebugScopeRegs[S] = *LBReg;
   }
+
+  // Emit DebugLocalVariable after DebugFunction and their lexical blocks so the
+  // Parent operand can resolve.
+  for (const DILocalVariable *LV : LocalVariables)
+    emitDebugLocalVariable(LV, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
 
   // Emit DebugGlobalVariable for each collected DIGlobalVariable.
   for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)

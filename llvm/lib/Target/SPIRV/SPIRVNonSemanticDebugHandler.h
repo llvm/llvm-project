@@ -104,6 +104,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   MapVector<const DIGlobalVariable *, GlobalVariableDebugInfo>
       GlobalVariableDebugInfoMap;
 
+  // Distinct DILocalVariable nodes collected in beginModule() from dbg records
+  // and from DISubprogram retained nodes.
+  SetVector<const DILocalVariable *> LocalVariables;
+
   // Distinct DILexicalBlock and DINamespace scopes, parent-before-child
   // order, collected in beginModule() for DebugLexicalBlock emission.
   SetVector<const DIScope *> LexicalBlocks;
@@ -350,6 +354,23 @@ private:
                                               MCRegister I32TypeReg,
                                               MCRegister ExtInstSetReg,
                                               SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugLocalVariable for the source local variable \p LV:
+  /// Name, Type, Source, Line, Column, Parent, Flags, and an optional Arg
+  /// Number. Line, Column, Flags, and Arg Number are emitted as \c OpConstant
+  /// ids as required for non-semantic debug info. Column is always 0:
+  /// \c DILocalVariable has no column field.
+  ///
+  /// Arg Number is appended when \p LV is a parameter.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p LV's scope is not an emitted local scope,
+  /// if a non-null type was not emitted in \c DebugScopeRegs, or if
+  /// \c resolveScope returns no id for the Parent operand.
+  std::optional<MCRegister>
+  emitDebugLocalVariable(const DILocalVariable *LV, MCRegister VoidTypeReg,
+                         MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+                         SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugGlobalVariable for the source global variable \p GV.
   ///
