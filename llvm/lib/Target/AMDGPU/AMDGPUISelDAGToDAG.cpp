@@ -502,6 +502,79 @@ SDNode *AMDGPUDAGToDAGISel::packConstantV2I16(const SDNode *N,
   return nullptr;
 }
 
+/// Match \p Op as a 32-bit element that V_PK_MOV_B32 can read as one half of a
+/// 64-bit operand. \p HighHalf is set to the half of the aligned pair that the
+/// element occupies in the register it comes from, which is the half op_sel has
+/// to select for the REG_SEQUENCE built around it to fold away again.
+static bool matchPkMovHalf(SDValue Op, bool &HighHalf) {
+  if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !Op.getValueType().bitsEq(MVT::i32))
+    return false;
+
+  auto *IdxC = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+  if (!IdxC)
+    return false;
+
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  if (!SrcVT.isVector() || !SrcVT.getVectorElementType().bitsEq(MVT::i32) ||
+      !Src->isDivergent())
+    return false;
+
+  HighHalf = IdxC->getZExtValue() & 1;
+  return true;
+}
+
+SDValue AMDGPUDAGToDAGISel::buildPkMovOperand(SDValue Elt, bool HighHalf,
+                                              const SDLoc &DL) {
+  // Build the pair rather than extracting it out of whatever register the
+  // element lives in. The containing aligned pair need not exist there at all,
+  // as it does not for the last element of a 3-element vector. When it does
+  // exist this REG_SEQUENCE coalesces back into a plain subregister reference.
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  SDValue Undef = SDValue(
+      CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i32), 0);
+  const SDValue Ops[] = {
+      CurDAG->getTargetConstant(
+          TRI->getDefaultVectorSuperClassForBitWidth(64)->getID(), DL,
+          MVT::i32),
+      HighHalf ? Undef : Elt,
+      CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32),
+      HighHalf ? Elt : Undef,
+      CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32)};
+  return SDValue(
+      CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::v2i32, Ops),
+      0);
+}
+
+bool AMDGPUDAGToDAGISel::matchPkMovPair(SDValue Lo, SDValue Hi, const SDLoc &DL,
+                                        SmallVectorImpl<SDValue> &Ops) {
+  bool LoHigh, HiHigh;
+  if (!matchPkMovHalf(Lo, LoHigh) || !matchPkMovHalf(Hi, HiHigh))
+    return false;
+
+  // The low result lane always comes from src0 and the high one from src1, so a
+  // packed move only saves anything when both elements sit in the wrong half.
+  // Otherwise a plain subregister copy is at least as cheap.
+  if (!LoHigh || HiHigh)
+    return false;
+
+  SDValue ZeroMods = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  // op_sel picks the high half of src0. op_sel_hi is set on both sources purely
+  // to keep it from being printed.
+  Ops.append({CurDAG->getTargetConstant(
+                  SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1, DL, MVT::i32),
+              buildPkMovOperand(Lo, LoHigh, DL),
+              CurDAG->getTargetConstant(SISrcMods::OP_SEL_1, DL, MVT::i32),
+              buildPkMovOperand(Hi, HiHigh, DL),
+              ZeroMods,   // clamp
+              ZeroMods,   // op_sel
+              ZeroMods,   // op_sel_hi
+              ZeroMods,   // neg_lo
+              ZeroMods}); // neg_hi
+  return true;
+}
+
 void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   EVT VT = N->getValueType(0);
   unsigned NumVectorElts = VT.getVectorNumElements();
@@ -540,6 +613,49 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
           CurDAG->getMachineNode(AMDGPU::S_MOV_B64_IMM_PSEUDO, DL, VT, CV);
       CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, VT, SDValue(Copy, 0),
                            RegClass);
+      return;
+    }
+  }
+
+  // Two adjacent result lanes whose elements both have to cross halves can be
+  // produced by a single packed move rather than two copies. The lanes have to
+  // be an aligned pair, since that is the REG_SEQUENCE slot the move fills, and
+  // they have to be the only defined elements: packing every pair of a fully
+  // defined vector can drag values out of AGPRs, where the per-lane copies this
+  // otherwise expands to are cheaper.
+  if (IsGCN && Subtarget->hasPkMovB32() && N->isDivergent() &&
+      EltVT.getSizeInBits() == 32 && N->getNumOperands() == NumVectorElts) {
+    SmallVector<SmallVector<SDValue, 9>, 2> PairOps(NumVectorElts / 2);
+    bool AnyPacked = false;
+    if (NumVectorElts <= 4) {
+      for (unsigned I = 0, E = NumVectorElts / 2; I != E; ++I)
+        AnyPacked |= matchPkMovPair(N->getOperand(2 * I),
+                                    N->getOperand(2 * I + 1), DL, PairOps[I]);
+    }
+
+    if (AnyPacked) {
+      // A single pair covering the whole result needs no REG_SEQUENCE.
+      if (NumVectorElts == 2) {
+        CurDAG->SelectNodeTo(N, AMDGPU::V_PK_MOV_B32, N->getVTList(),
+                             PairOps[0]);
+        return;
+      }
+
+      SmallVector<SDValue, 32 * 2 + 1> Args = {RegClass};
+      for (unsigned I = 0; I != NumVectorElts;) {
+        bool UsePacked =
+            I % 2 == 0 && I / 2 < PairOps.size() && !PairOps[I / 2].empty();
+        unsigned NumRegs = UsePacked ? 2 : 1;
+        Args.push_back(UsePacked ? SDValue(CurDAG->getMachineNode(
+                                               AMDGPU::V_PK_MOV_B32, DL,
+                                               MVT::v2i32, PairOps[I / 2]),
+                                           0)
+                                 : N->getOperand(I));
+        Args.push_back(CurDAG->getTargetConstant(
+            SIRegisterInfo::getSubRegFromChannel(I, NumRegs), DL, MVT::i32));
+        I += NumRegs;
+      }
+      CurDAG->SelectNodeTo(N, AMDGPU::REG_SEQUENCE, N->getVTList(), Args);
       return;
     }
   }
