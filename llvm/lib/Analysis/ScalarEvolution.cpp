@@ -13723,23 +13723,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
         const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
 
-        if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
-            isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
-          return true;
-
-        // (RHS > Start - 1) implies RHS >= Start.
-        // * "RHS >= Start" is trivially equivalent to "RHS > Start - 1" if
-        //   "Start - 1" doesn't overflow.
-        // * For signed comparison, if Start - 1 does overflow, it's equal
-        //   to INT_MAX, and "RHS >s INT_MAX" is trivially false.
-        // * For unsigned comparison, if Start - 1 does overflow, it's equal
-        //   to UINT_MAX, and "RHS >u UINT_MAX" is trivially false.
-        //
-        // FIXME: Should isLoopEntryGuardedByCond do this for us?
-        auto CondGT = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
-        auto *StartMinusOne =
-            getAddExpr(OrigStart, getMinusOne(OrigStart->getType()));
-        return isLoopEntryGuardedByCond(L, CondGT, OrigRHS, StartMinusOne);
+        return isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
+               isKnownPredicate(CondGE, GuardedRHS, GuardedStart);
       };
 
       // If we know that RHS >= Start in the context of loop, then we know
