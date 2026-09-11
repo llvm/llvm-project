@@ -60,9 +60,9 @@ LLVMToolSession::LLVMToolSession(int &Argc, char **&Argv,
                                  bool NeedsPOSIXUtilitySignalHandling) {
   assert(Argc > 0 && Argv && Argv[0] &&
          "LLVMToolSession requires a valid argv[0]");
-  PImpl = std::make_unique<Impl>(Argc, Argv, Tools,
-                                 InstallPipeSignalExitHandler,
-                                 NeedsPOSIXUtilitySignalHandling);
+  PImpl =
+      std::make_unique<Impl>(Argc, Argv, Tools, InstallPipeSignalExitHandler,
+                             NeedsPOSIXUtilitySignalHandling);
 }
 
 LLVMToolSession::~LLVMToolSession() = default;
