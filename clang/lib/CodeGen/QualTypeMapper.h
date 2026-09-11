@@ -41,6 +41,7 @@ private:
   const llvm::abi::Type *convertBuiltinType(const clang::BuiltinType *BT);
   const llvm::abi::Type *convertArrayType(const clang::ArrayType *AT);
   const llvm::abi::Type *convertVectorType(const clang::VectorType *VT);
+  const llvm::abi::Type *convertSVEBuiltinType(const clang::BuiltinType *BT);
   const llvm::abi::Type *convertRecordType(const clang::RecordType *RT);
   const llvm::abi::Type *convertEnumType(const clang::EnumType *ET);
   const llvm::abi::Type *convertComplexType(const ComplexType *CT);

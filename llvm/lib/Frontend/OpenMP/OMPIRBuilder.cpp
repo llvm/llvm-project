@@ -2404,14 +2404,15 @@ static Value *emitTaskDependencies(
   Type *DependInfo = OMPBuilder.DependInfo;
 
   Value *DepArray = nullptr;
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
-  Builder.SetInsertPoint(
-      OldIP.getBlock()->getParent()->getEntryBlock().getTerminator());
-
   Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
-  DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
-
-  Builder.restoreIP(OldIP);
+  {
+    // Use a InsertPointGuard to restore the location back along with the
+    // insertion point.
+    IRBuilderBase::InsertPointGuard IPGuard(Builder);
+    Builder.SetInsertPoint(
+        Builder.GetInsertBlock()->getParent()->getEntryBlock().getTerminator());
+    DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+  }
 
   for (const auto &[DepIdx, Dep] : enumerate(Dependencies)) {
     Value *Base =
@@ -2446,16 +2447,16 @@ void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc,
     DepArray = Dependencies.DepArray;
     NumDeps = Dependencies.NumDeps;
   } else if (!Dependencies.Deps.empty()) {
-    InsertPointTy OldIP = Builder.saveIP();
-    BasicBlock &entryBB =
-        Builder.GetInsertBlock()->getParent()->getEntryBlock();
-    Builder.SetInsertPoint(&entryBB, entryBB.getFirstInsertionPt());
-
     DepArrayTy = ArrayType::get(DependInfo, Dependencies.Deps.size());
-    DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
     NumDeps = Builder.getInt32(Dependencies.Deps.size());
+    {
+      IRBuilderBase::InsertPointGuard IPGuard(Builder);
+      BasicBlock &entryBB =
+          Builder.GetInsertBlock()->getParent()->getEntryBlock();
+      Builder.SetInsertPoint(&entryBB, entryBB.getFirstInsertionPt());
+      DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+    }
 
-    Builder.restoreIP(OldIP);
     for (const auto &[DepIdx, Dep] : enumerate(Dependencies.Deps)) {
       Value *Base =
           Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, DepIdx);
@@ -5560,8 +5561,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
       Type *IntPtrTy = Builder.getInt32Ty();
       Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
       Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
-      Value *Buff = Builder.CreateMalloc(IntPtrTy, ScanVarsType[i], Allocsize,
-                                         AllocSpan, nullptr, "arr");
+      Value *Buff =
+          Builder.CreateMalloc(IntPtrTy, Allocsize, AllocSpan, nullptr, "arr");
       Builder.CreateStore(Buff, (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]]);
     }
     return Error::success();

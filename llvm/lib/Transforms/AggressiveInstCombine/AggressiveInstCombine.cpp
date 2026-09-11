@@ -1250,7 +1250,8 @@ static bool tryToRecognizeTableBasedCttzOrLog2(Instruction &I,
     return false;
 
   GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
-  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
+  if (!GVTable || !GVTable->isConstant() ||
+      !GVTable->hasDefinitiveInitializer())
     return false;
 
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
