@@ -82,16 +82,16 @@ void SchedulingPoint::dump() const {
 
 void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
   // Find where we should schedule the instructions.
-  assert(ScheduleTopItOpt && "Should have been set by now!");
+  assert(ScheduleFrontierOpt && "Should have been set by now!");
   auto Where = Dir == SchedDirection::BottomUp
-                   ? ScheduleTopItOpt->getIterator()
-                   : ScheduleTopItOpt->getNext().getIterator();
+                   ? ScheduleFrontierOpt->getIterator()
+                   : ScheduleFrontierOpt->getNext().getIterator();
   // Move all instructions in `Bndl` to `Where`.
   Bndl.cluster(Where);
   // Update the last scheduled bundle.
-  ScheduleTopItOpt = Dir == SchedDirection::BottomUp
-                         ? Bndl.getTop()->getInstruction()->getIterator()
-                         : Bndl.getBot()->getInstruction()->getIterator();
+  ScheduleFrontierOpt = Dir == SchedDirection::BottomUp
+                            ? Bndl.getTop()->getInstruction()->getIterator()
+                            : Bndl.getBot()->getInstruction()->getIterator();
   // Set nodes as "scheduled" and decrement the UnscheduledSuccs/Preds counter
   // of all dependency predecessors/successors.
   for (DGNode *N : Bndl) {
@@ -126,12 +126,13 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
     return;
   // If the instruction is inserted below the top-of-schedule then we mark it as
   // "scheduled".
-  bool IsScheduled = ScheduleTopItOpt &&
-                     ScheduleTopItOpt->getIterator() != I->getParent()->end() &&
-                     ((Dir == SchedDirection::BottomUp &&
-                       (*ScheduleTopItOpt.value()).comesBefore(I)) ||
-                      (Dir == SchedDirection::TopDown &&
-                       I->comesBefore(&*ScheduleTopItOpt.value())));
+  bool IsScheduled =
+      ScheduleFrontierOpt &&
+      ScheduleFrontierOpt->getIterator() != I->getParent()->end() &&
+      ((Dir == SchedDirection::BottomUp &&
+        (*ScheduleFrontierOpt.value()).comesBefore(I)) ||
+       (Dir == SchedDirection::TopDown &&
+        I->comesBefore(&*ScheduleFrontierOpt.value())));
   if (IsScheduled)
     N->setScheduled();
   // If the new instruction is above the top of schedule we need to remove its
@@ -149,6 +150,81 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
         SuccN->incrUnscheduledDeps();
       }
     }
+  }
+}
+
+void Scheduler::notifyEraseInstr(Instruction *I) {
+  // We don't maintain the state while reverting.
+  if (Ctx.getTracker().getState() == Tracker::TrackerState::Reverting)
+    return;
+  auto *N = DAG.getNode(I);
+  if (N == nullptr)
+    return;
+  ReadyList.remove(N);
+  // Also decrement the unscheduledDep counter for the dependents and add them
+  // to the ready list if they become ready.
+  auto UpdateNodeAndTryAddToReadyList = [this, N](DGNode *DepN) {
+    if (DepN->scheduled())
+      return;
+    if (!N->scheduled() && !DepN->ready())
+      DepN->decrUnscheduledDeps();
+    if (DepN->ready() && !ReadyList.contains(DepN))
+      ReadyList.insert(DepN);
+  };
+  if (Dir == SchedDirection::BottomUp) {
+    for (auto *DepN : N->preds(DAG))
+      UpdateNodeAndTryAddToReadyList(DepN);
+  } else if (Dir == SchedDirection::TopDown) {
+    for (auto *DepN : N->succs(DAG))
+      UpdateNodeAndTryAddToReadyList(DepN);
+  }
+}
+
+void Scheduler::notifyMoveInstr(Instruction *I, const BBIterator &To) {
+  // We don't maintain the state while reverting.
+  if (Ctx.getTracker().getState() == Tracker::TrackerState::Reverting)
+    return;
+  // We assume that the dependencies have not changed because the user will
+  // only attempt instruction moves that don't modify the dependencies, because
+  // if they did they would not be legal.
+  //
+  // If this assumption does not hold, we would need to empty the ready list and
+  // re-fill it.
+}
+void Scheduler::notifySetUse(const Use &U, Value *NewSrc) {
+  // We don't maintain the state while reverting.
+  if (Ctx.getTracker().getState() == Tracker::TrackerState::Reverting)
+    return;
+  Instruction *DstI = cast<Instruction>(U.getUser());
+  DGNode *DstN = DAG.getNode(DstI);
+  Value *OldSrc = U.get();
+  DGNode *OldSrcN = isa<Instruction>(OldSrc)
+                        ? DAG.getNode(cast<Instruction>(OldSrc))
+                        : nullptr;
+  DGNode *NewSrcN = isa<Instruction>(NewSrc)
+                        ? DAG.getNode(cast<Instruction>(NewSrc))
+                        : nullptr;
+  switch (Dir) {
+  case SchedDirection::BottomUp: {
+    // Check if OldSrc is now ready and add it to the ready list.
+    if (OldSrcN && OldSrcN->ready() && !OldSrcN->scheduled() &&
+        !ReadyList.contains(OldSrcN))
+      ReadyList.insert(OldSrcN);
+    // Check if NewSrcN needs to be removed from the ready list.
+    if (NewSrcN && (!DstN || !DstN->scheduled()) && !NewSrcN->ready())
+      ReadyList.remove(NewSrcN);
+    break;
+  }
+  case SchedDirection::TopDown: {
+    // Check if we need to add DstN to the ready list.
+    if (DstN && DstN->ready() && !NewSrcN->scheduled() &&
+        !ReadyList.contains(NewSrcN))
+      ReadyList.insert(NewSrcN);
+    // Check if we need to remove DstN from the ready list.
+    if (DstN && !DstN->ready())
+      ReadyList.remove(NewSrcN);
+    break;
+  }
   }
 }
 
@@ -215,11 +291,11 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
       auto Res = TryScheduleBndl(ReadyN);
       switch (Res) {
       case TryScheduleRes::Success:
-        // We successfully scheduled ReadyN, keep scheduling.
+        // We successfully scheduled ReadyN's bundle, keep scheduling.
         continue;
       case TryScheduleRes::Failure:
-        // We failed to schedule ReadyN, defer it to later and keep scheduling
-        // other ready instructions.
+        // We failed to schedule ReadyN's bundle, defer it to later and keep
+        // scheduling other ready instructions.
         Retry.push_back(ReadyN);
         continue;
       case TryScheduleRes::Finished:
@@ -238,6 +314,12 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
       }
     }
   }
+
+  // The Retry vector contains the ready nodes that were removed from the ready
+  // list but we could not schedule them (along with their parent bundle).
+  // Insert them back in.
+  for (auto *RetryN : Retry)
+    ReadyList.insert(RetryN);
 
   eraseBundle(InstrsSB);
   return false;
@@ -295,11 +377,11 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   // Note: this figure assumes bottom-up scheduling. In top-down we have the
   // top-down mirror image.
   Instruction *TopI = Dir == SchedDirection::BottomUp
-                          ? &*ScheduleTopItOpt.value()
+                          ? &*ScheduleFrontierOpt.value()
                           : VecUtils::getHighest(Instrs);
   Instruction *LowestI = Dir == SchedDirection::BottomUp
                              ? VecUtils::getLowest(Instrs)
-                             : &*ScheduleTopItOpt.value();
+                             : &*ScheduleFrontierOpt.value();
   Interval<Instruction> ResetIntvl(TopI, LowestI);
   // The DAG Nodes contain state like the number of UnscheduledSuccs and the
   // Scheduled flag. We need to reset their state. We need to do this for all
@@ -346,6 +428,28 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
       ReadyList.insert(N);
   }
 }
+
+#ifndef NDEBUG
+void Scheduler::assertSameDirection(ArrayRef<Instruction *> Instrs) const {
+  // Check that we are not switching scheduling direction.
+  switch (Dir) {
+  case SchedDirection::BottomUp:
+    assert(none_of(Instrs,
+                   [this](Instruction *I) {
+                     return ScheduleFrontierOpt->comesBefore(*I);
+                   }) &&
+           "Wrong scheduling direction!");
+    break;
+  case SchedDirection::TopDown:
+    assert(all_of(Instrs,
+                  [this](Instruction *I) {
+                    return ScheduleFrontierOpt->comesBefore(*I);
+                  }) &&
+           "Wrong scheduling direction!");
+    break;
+  }
+}
+#endif // NDEBUG
 
 bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
   assert(all_of(drop_begin(Instrs),
@@ -394,20 +498,22 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // re-schedule.
     DAG.extend(Instrs);
     trimSchedule(Instrs);
-    ScheduleTopItOpt = GetSchedPoint(Dir, Instrs);
+    ScheduleFrontierOpt = GetSchedPoint(Dir, Instrs);
     return tryScheduleUntil(Instrs);
   case BndlSchedState::NoneScheduled: {
     // TODO: Set the window of the DAG that we are interested in.
-    if (!ScheduleTopItOpt)
+    if (!ScheduleFrontierOpt) {
       // We start scheduling at the bottom instr of Instrs (top in TopDown).
-      ScheduleTopItOpt = GetSchedPoint(Dir, Instrs);
+      ScheduleFrontierOpt = GetSchedPoint(Dir, Instrs);
+    } else {
+#ifndef NDEBUG
+      assertSameDirection(Instrs);
+#endif
+    }
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes from the new interval to ready list if they are ready.
-    Interval<Instruction> InstrsInterval(Instrs);
-    Interval<Instruction> ScanForReady =
-        InstrsInterval.getUnionInterval(Extension);
-    for (auto &I : ScanForReady) {
+    for (auto &I : Extension) {
       auto *N = DAG.getNode(&I);
       if (N->scheduled())
         continue;
@@ -428,8 +534,8 @@ void Scheduler::dump(raw_ostream &OS) const {
   OS << "Dir=" << schedDirectionToStr(Dir) << " "
      << (Dir == SchedDirection::BottomUp ? "Top" : "Bottom")
      << " of schedule: ";
-  if (ScheduleTopItOpt)
-    OS << **ScheduleTopItOpt;
+  if (ScheduleFrontierOpt)
+    OS << **ScheduleFrontierOpt;
   else
     OS << "Empty";
   OS << "\n";

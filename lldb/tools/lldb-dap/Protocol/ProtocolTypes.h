@@ -1044,6 +1044,9 @@ struct ExceptionDetails {
 llvm::json::Value toJSON(const ExceptionDetails &);
 
 struct CompileUnit {
+  /// Identifier within the module. Not unique across modules.
+  uint32_t id = LLDB_INVALID_INDEX32;
+
   /// Path of compile unit.
   String compileUnitPath;
 };
@@ -1125,6 +1128,9 @@ struct StackFrame {
 
   /// The module associated with this frame, if any.
   std::optional<String> moduleId;
+
+  /// The compile unit associated with this frame, if any.
+  std::optional<uint32_t> compileUnitId;
 
   /// A hint for how to present this frame in the UI. A value of `label` can be
   /// used to indicate that the frame is an artificial frame that is used as a

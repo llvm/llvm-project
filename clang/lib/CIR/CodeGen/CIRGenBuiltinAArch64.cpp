@@ -205,7 +205,10 @@ emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                              funcResTy, args)
         .getResult();
   } else {
-    return Operation::create(builder, loc, funcResTy, args).getResult();
+    return Operation::create(
+               builder, loc, mlir::TypeRange{funcResTy}, args,
+               cir::getDefaultProperties<Operation>(builder.getContext()))
+        .getResult();
   }
 }
 
@@ -573,6 +576,12 @@ emitCommonNeonSISDBuiltinExpr(CIRGenFunction &cgf,
   case NEON::BI__builtin_neon_vuqaddh_s16:
   case NEON::BI__builtin_neon_vuqadds_s32:
   case NEON::BI__builtin_neon_vuqaddd_s64:
+  case NEON::BI__builtin_neon_vqrshrns_n_s32:
+  case NEON::BI__builtin_neon_vqrshrns_n_u32:
+  case NEON::BI__builtin_neon_vqrshrnh_n_s16:
+  case NEON::BI__builtin_neon_vqrshrnh_n_u16:
+  case NEON::BI__builtin_neon_vqrshruns_n_s32:
+  case NEON::BI__builtin_neon_vqrshrunh_n_s16:
     break;
   }
 

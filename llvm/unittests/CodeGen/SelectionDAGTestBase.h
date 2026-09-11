@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -62,17 +61,17 @@ protected:
     AliasedG = M->getNamedAlias("g_alias");
     ASSERT_TRUE(AliasedG && "Could not get alias g_alias!");
 
-    MachineModuleInfo MMI(TM.get());
+    // MMI must outlive SetUp(): MachineFunction stores MMI's MCContext
+    // by reference.
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
+                                           MMI->getContext(), 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
       reportFatalUsageError("Failed to create SelectionDAG?");
-    OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-              MMI, nullptr);
+    DAG->init(*MF, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
@@ -89,6 +88,8 @@ protected:
   Function *F;
   GlobalVariable *G;
   GlobalAlias *AliasedG;
+  // MMI must be declared before MF and DAG so it is destroyed after them.
+  std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<SelectionDAG> DAG;
 };
