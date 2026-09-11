@@ -4360,6 +4360,25 @@ LogicalResult LLVM::SincosOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ModfOp (intrinsic)
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::ModfOp::verify() {
+  auto operandType = getOperand().getType();
+  auto resultType = getResult().getType();
+  auto resultStructType =
+      mlir::dyn_cast<mlir::LLVM::LLVMStructType>(resultType);
+  if (!resultStructType || resultStructType.getBody().size() != 2 ||
+      resultStructType.getBody()[0] != operandType ||
+      resultStructType.getBody()[1] != operandType) {
+    return emitOpError("expected result type to be an homogeneous struct with "
+                       "two elements matching the operand type, but got ")
+           << resultType;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AssumeOp (intrinsic)
 //===----------------------------------------------------------------------===//
 
