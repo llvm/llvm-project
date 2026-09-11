@@ -75,7 +75,10 @@ static cl::opt<bool>
 
 static cl::opt<bool> GCNTrackers(
     "amdgpu-use-amdgpu-trackers", cl::Hidden,
-    cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
+    cl::desc("Use the AMDGPU specific RPTrackers during scheduling. Can be "
+             "set per-function by the \"amdgpu-use-amdgpu-trackers\" "
+             "function attribute, unless this flag is explicitly passed on "
+             "the command line, in which case this flag takes precedence."),
     cl::init(false));
 
 static cl::opt<unsigned> PendingQueueLimit(
@@ -135,8 +138,18 @@ const unsigned ScheduleMetrics::ScaleFactor = 100;
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C), TargetOccupancy(0), MF(nullptr),
       DownwardTracker(*C->LIS), UpwardTracker(*C->LIS), HasHighPressure(false) {
-  if (GCNTrackers.getNumOccurrences() > 0)
+  if (GCNTrackers.getNumOccurrences() > 0) {
+    // An explicit command-line flag always wins, regardless of any
+    // per-function attribute (see the "amdgpu-use-amdgpu-trackers"
+    // function attribute below).
     GCNTrackersOverride = GCNTrackers;
+  } else if (C->MF->getFunction()
+                 .getFnAttribute("amdgpu-use-amdgpu-trackers")
+                 .getValueAsBool()) {
+    // Let individual functions opt in to the AMDGPU RP trackers without
+    // having to flip the flag for the whole module.
+    GCNTrackersOverride = true;
+  }
 }
 
 void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
