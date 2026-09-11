@@ -37,6 +37,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LICM.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
@@ -52,6 +53,7 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -2328,6 +2330,56 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
           Fn(MUD->getMemoryInst());
 }
 
+/// Returns whether \p I is a memory access that may be a candidate for
+/// promotion out of the loop \p L.
+static bool isPotentiallyPromotable(const Instruction *I, const Loop *L) {
+  if (const auto *SI = dyn_cast<StoreInst>(I)) {
+    const Value *PtrOp = SI->getPointerOperand();
+    if (isStrongerThanMonotonic(SI->getOrdering()))
+      return false;
+    return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+  }
+  if (const auto *LI = dyn_cast<LoadInst>(I)) {
+    const Value *PtrOp = LI->getPointerOperand();
+    if (isStrongerThanMonotonic(LI->getOrdering()))
+      return false;
+    return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+  }
+  return false;
+}
+
+/// Returns the potentially promotable stores with AA tags that are valid along
+/// all non-unwinding execution paths of the loop \p L, which allows for the AA
+/// tags to be used when deciding promotions.
+static SmallPtrSet<const StoreInst *, 8>
+collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
+  SmallDenseMap<MemoryLocation, SmallVector<const StoreInst *, 1>, 4>
+      StoresByLoc;
+  foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
+    const auto *SI = dyn_cast<StoreInst>(I);
+    if (SI && SI->getAAMetadata() && isPotentiallyPromotable(SI, L))
+      StoresByLoc[MemoryLocation::get(SI)].push_back(SI);
+  });
+
+  // This only looks at explicit exiting blocks. If we ever start sinking
+  // stores into unwind edges, this will break.
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  SmallPtrSet<const StoreInst *, 8> StoresWithInvariantAATags;
+  for (const auto &Stores : llvm::make_second_range(StoresByLoc)) {
+    // Without exiting blocks the loop is never left, and promotion has no
+    // exit block to insert a store into either.
+    if (llvm::all_of(ExitingBlocks, [&](BasicBlock *ExitingBB) {
+          return llvm::any_of(Stores, [&](const StoreInst *SI) {
+            return DT->dominates(SI->getParent(), ExitingBB);
+          });
+        }))
+      StoresWithInvariantAATags.insert_range(Stores);
+  }
+  return StoresWithInvariantAATags;
+}
+
 // The bool indicates whether there might be reads outside the set, in which
 // case only loads may be promoted.
 static SmallVector<PointersAndHasReadsOutsideSet, 0>
@@ -2337,39 +2389,29 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
   BatchAAResults BatchAA(*AA);
   AliasSetTracker AST(BatchAA);
 
-  auto IsPotentiallyPromotable = [L](const Instruction *I) {
-    if (const auto *SI = dyn_cast<StoreInst>(I)) {
-      const Value *PtrOp = SI->getPointerOperand();
-      if (isStrongerThanMonotonic(SI->getOrdering()))
-        return false;
-      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
-    }
-    if (const auto *LI = dyn_cast<LoadInst>(I)) {
-      const Value *PtrOp = LI->getPointerOperand();
-      if (isStrongerThanMonotonic(LI->getOrdering()))
-        return false;
-      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
-    }
-    return false;
+  // Only conditionally executed stores need this, so compute it on demand to
+  // keep the common case free.
+  std::optional<SmallPtrSet<const StoreInst *, 8>> StoresWithInvariantAATags;
+  auto HasInvariantAATags = [&](const StoreInst *SI) {
+    if (!StoresWithInvariantAATags)
+      StoresWithInvariantAATags = collectStoresWithInvariantAATags(MSSA, DT, L);
+    return StoresWithInvariantAATags->contains(SI);
   };
 
   // Populate AST with potentially promotable accesses.
   SmallPtrSet<Value *, 16> AttemptingPromotion;
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
-    if (IsPotentiallyPromotable(I)) {
+    if (isPotentiallyPromotable(I, L)) {
       AttemptingPromotion.insert(I);
       if (StoreInst *SI = dyn_cast<StoreInst>(I);
-          SI && !SafetyInfo->isGuaranteedToExecute(*SI, DT)) {
+          SI && SI->getAAMetadata() &&
+          !SafetyInfo->isGuaranteedToExecute(*SI, DT) &&
+          !HasInvariantAATags(SI)) {
         // Promotion requires inserting a new store at the loop exits; we need
         // to prove that store doesn't alias anything, in addition to proving
         // aliasing for the stores we're removing. The new store is executed
         // unconditionally, so when we're proving aliasing for that store, we
-        // can't rely on AA tags for stores which are conditionally executed.
-        //
-        // As a future improvement, we could avoid stripping AA tags in more
-        // cases. isGuaranteedToExecute() is stronger than what we need.
-        // We only need to prove that every exit from the loop is dominated
-        // by a store to the same location with the same AA tag.
+        // can only rely on AA tags that likewise hold unconditionally.
         AST.addWithoutAATags(SI);
       } else {
         AST.add(I);
