@@ -1609,20 +1609,19 @@ static Instruction *foldAddwithSRemSelect(BinaryOperator &Add,
                                           const SimplifyQuery &SQ) {
   Value *Sel, *Rem, *X, *Modulus, *Cmp, *TrueVal, *FalseVal, *CmpLHS;
   CmpPredicate Pred;
-  
+
   if (match(&Add, m_c_Add(m_Value(Sel), m_Value(Rem))) &&
       match(Rem, m_SRem(m_Value(X), m_Value(Modulus))) &&
       match(Sel, m_Select(m_Value(Cmp), m_Value(TrueVal), m_Value(FalseVal))) &&
       match(Cmp, m_ICmp(Pred, m_Value(CmpLHS), m_Zero())) &&
-      Pred == ICmpInst::ICMP_SLT && CmpLHS == Rem &&
-      TrueVal == Modulus && match(FalseVal, m_Zero()) &&
-      isKnownToBeAPowerOfTwo(Modulus, false, SQ)) {
-    
-    Value *ModulusMinusOne =
-        Builder.CreateAdd(Modulus, Constant::getAllOnesValue(Modulus->getType()));
+      Pred == ICmpInst::ICMP_SLT && CmpLHS == Rem && TrueVal == Modulus &&
+      match(FalseVal, m_Zero()) && isKnownToBeAPowerOfTwo(Modulus, false, SQ)) {
+
+    Value *ModulusMinusOne = Builder.CreateAdd(
+        Modulus, Constant::getAllOnesValue(Modulus->getType()));
     return BinaryOperator::CreateAnd(X, ModulusMinusOne);
   }
-  
+
   return nullptr;
 }
 
