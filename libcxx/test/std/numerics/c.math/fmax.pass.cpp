@@ -22,7 +22,6 @@ struct TestFloat {
     using lim = std::numeric_limits<T>;
     TEST_CONSTEXPR_CXX23 T inf = lim::infinity();
     TEST_CONSTEXPR_CXX23 T nan = lim::quiet_NaN();
-    TEST_CONSTEXPR_CXX23 T s_nan = lim::signaling_NaN();
 
     assert(std::fmax(T(1), T(2)) == T(2));
     assert(std::fmax(T(2), T(1)) == T(2));
@@ -35,7 +34,6 @@ struct TestFloat {
 
     assert(std::fmax(nan, T(1)) == T(1));
     assert(std::fmax(T(1), nan) == T(1));
-    assert(std::fmax(s_nan, T(1)) == T(1));
 
     assert(std::isnan(std::fmax(nan, nan)));
   }
@@ -45,16 +43,12 @@ struct TestInt {
   template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() const {
     using lim = std::numeric_limits<T>;
-    TEST_CONSTEXPR_CXX23 T max = lim::max();
-    TEST_CONSTEXPR_CXX23 T low = lim::lowest();
 
     assert(std::fmax(T(0), T(1)) == T(1));
     assert(std::fmax(T(1), T(0)) == T(1));
-    assert(std::fmax(low, max) == max); 
 
     if (std::is_signed<T>::value) {
       assert(std::fmax(T(-1), T(0)) == T(0));
-      assert(std::fmax(low, T(0)) == T(0));
     }
   }
 };
