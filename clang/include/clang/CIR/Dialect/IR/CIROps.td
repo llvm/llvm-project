@@ -7689,7 +7689,8 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$lhs,
     CIR_AnyFloatOrVecOfFloatType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    OptionalAttr<CIR_FenvAttr>:$fenv,
+    OptionalAttr<CIR_FastMathAttr>:$fastmath
   );
 
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
@@ -7701,7 +7702,8 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
                    "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
+      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
     }]>
   ];
 
@@ -7725,7 +7727,6 @@ def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
     `cir.fmaxnum` returns the larger of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
-  // Needs custom lowering for FastmathFlags::nsz.
   let llvmOp = "";
 }
 
@@ -7746,7 +7747,6 @@ def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
     `cir.fminnum` returns the smaller of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
-  // Needs custom lowering for FastmathFlags::nsz.
   let llvmOp = "";
 }
 

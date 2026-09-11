@@ -849,6 +849,32 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FastMathFlagsAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_FMFnone     : I32BitEnumAttrCaseNone<"none">;
+def CIR_FMFnsz      : I32BitEnumAttrCaseBit<"nsz",      0>;
+def CIR_FMFnnan     : I32BitEnumAttrCaseBit<"nnan",     1>;
+def CIR_FMFninf     : I32BitEnumAttrCaseBit<"ninf",     2>;
+def CIR_FMFarcp     : I32BitEnumAttrCaseBit<"arcp",     3>;
+def CIR_FMFcontract : I32BitEnumAttrCaseBit<"contract", 4>;
+def CIR_FMFafn      : I32BitEnumAttrCaseBit<"afn",      5>;
+def CIR_FMFreassoc  : I32BitEnumAttrCaseBit<"reassoc",  6>;
+def CIR_FMFfast     : I32BitEnumAttrCaseGroup<"fast", [
+    CIR_FMFnsz, CIR_FMFnnan, CIR_FMFninf, CIR_FMFarcp,
+    CIR_FMFcontract, CIR_FMFafn, CIR_FMFreassoc]>;
+
+def CIR_FastMathFlags : CIR_I32BitEnum<"FastMathFlags",
+    "Floating-point fast-math flags", [
+  CIR_FMFnone, CIR_FMFnsz, CIR_FMFnnan, CIR_FMFninf, CIR_FMFarcp,
+  CIR_FMFcontract, CIR_FMFafn, CIR_FMFreassoc, CIR_FMFfast
+]> {
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def CIR_FastMathAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
+
+//===----------------------------------------------------------------------===//
 // FenvAttr
 //===----------------------------------------------------------------------===//
 
