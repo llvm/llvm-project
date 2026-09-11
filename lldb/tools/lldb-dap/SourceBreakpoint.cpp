@@ -33,8 +33,7 @@ namespace lldb_dap {
 SourceBreakpoint::SourceBreakpoint(DAP &dap,
                                    const protocol::SourceBreakpoint &breakpoint)
     : Breakpoint(dap, breakpoint.condition, breakpoint.hitCondition),
-      m_log_message(breakpoint.logMessage.value_or("")),
-      m_line(breakpoint.line),
+      m_log_message(breakpoint.logMessage), m_line(breakpoint.line),
       m_column(breakpoint.column.value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
 llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {

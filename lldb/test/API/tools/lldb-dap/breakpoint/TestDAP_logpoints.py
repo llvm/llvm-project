@@ -78,7 +78,9 @@ class TestDAP_logpoints(DAPTestCaseBase):
             )
         session.continue_to_exit()
 
-    def check_logpoint_to_breakpoint_conversion(self, log_message):
+    @skipIfWindows
+    def test_logmessage_claeared(self):
+        """Tests removing logMessage restores a stopping breakpoint."""
         session = self.build_and_create_session()
         initial_stop = self.stop_at_before_loop_line(session)
         loop_line = line_number("main.cpp", "// break loop")
@@ -97,7 +99,7 @@ class TestDAP_logpoints(DAPTestCaseBase):
         [breakpoint_id, _] = session.resolve_source_breakpoints(
             self.main_path,
             [
-                SourceBreakpoint(loop_line, logMessage=log_message),
+                SourceBreakpoint(loop_line, logMessage=None),
                 SourceBreakpoint(after_loop_line),
             ],
         )
@@ -130,16 +132,6 @@ class TestDAP_logpoints(DAPTestCaseBase):
         ]
         self.assertEqual(messages, [log_prefix + str(i) for i in range(1, 10)])
         session.continue_to_exit()
-
-    @skipIfWindows
-    def test_logmessage_none(self):
-        """Tests removing logMessage restores a stopping breakpoint."""
-        self.check_logpoint_to_breakpoint_conversion(None)
-
-    @skipIfWindows
-    def test_logmessage_empty(self):
-        """Tests clearing logMessage restores a stopping breakpoint."""
-        self.check_logpoint_to_breakpoint_conversion("")
 
     @skipIfWindows
     def test_logmessage_advanced(self):

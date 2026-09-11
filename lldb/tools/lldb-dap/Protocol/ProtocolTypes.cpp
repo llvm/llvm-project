@@ -855,10 +855,13 @@ bool fromJSON(const llvm::json::Value &Params, Breakpoint &BP,
 bool fromJSON(const llvm::json::Value &Params, SourceBreakpoint &SB,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("line", SB.line) && O.mapOptional("column", SB.column) &&
+  std::optional<String> log_message;
+  if (!(O && O.mapOptional("logMessage", log_message)))
+    return false;
+  SB.logMessage = log_message.value_or("");
+  return O.map("line", SB.line) && O.mapOptional("column", SB.column) &&
          O.mapOptional("condition", SB.condition) &&
          O.mapOptional("hitCondition", SB.hitCondition) &&
-         O.mapOptional("logMessage", SB.logMessage) &&
          O.mapOptional("mode", SB.mode);
 }
 
@@ -871,8 +874,8 @@ llvm::json::Value toJSON(const SourceBreakpoint &SB) {
     result.insert({"condition", *SB.condition});
   if (SB.hitCondition)
     result.insert({"hitCondition", *SB.hitCondition});
-  if (SB.logMessage)
-    result.insert({"logMessage", *SB.logMessage});
+  if (!SB.logMessage.empty())
+    result.insert({"logMessage", SB.logMessage});
   if (SB.mode)
     result.insert({"mode", *SB.mode});
 
