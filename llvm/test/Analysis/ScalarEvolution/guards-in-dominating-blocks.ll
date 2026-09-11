@@ -35,9 +35,9 @@ exit:
 define void @guard_before_merge_without_phi(ptr %p, i1 %c) {
 ; CHECK-LABEL: 'guard_before_merge_without_phi'
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_before_merge_without_phi
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 umax (-1 + %n)))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 umax (-1 + %n)))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-2 + %n)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -134,9 +134,9 @@ exit:
 define void @guard_on_false_edge_before_merge(ptr %p, i1 %c) {
 ; CHECK-LABEL: 'guard_on_false_edge_before_merge'
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_on_false_edge_before_merge
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 umax (-1 + %n)))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 umax (-1 + %n)))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-2 + %n)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -171,13 +171,13 @@ exit:
 define void @multiple_guards_before_merges(ptr %p, ptr %q, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: 'multiple_guards_before_merges'
 ; CHECK-NEXT:  Determining loop execution counts for: @multiple_guards_before_merges
-; CHECK-NEXT:  Loop %loop.header: <multiple exits> backedge-taken count is ((-1 + (1 umax (-1 + %k))) umin (-1 + (1 umax (-1 + %n))))
-; CHECK-NEXT:    exit count for loop.header: (-1 + (1 umax (-1 + %k)))
-; CHECK-NEXT:    exit count for loop.latch: (-1 + (1 umax (-1 + %n)))
+; CHECK-NEXT:  Loop %loop.header: <multiple exits> backedge-taken count is ((-2 + %k) umin (-2 + %n))
+; CHECK-NEXT:    exit count for loop.header: (-2 + %k)
+; CHECK-NEXT:    exit count for loop.latch: (-2 + %n)
 ; CHECK-NEXT:  Loop %loop.header: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %loop.header: symbolic max backedge-taken count is ((-1 + (1 umax (-1 + %k))) umin (-1 + (1 umax (-1 + %n))))
-; CHECK-NEXT:    symbolic max exit count for loop.header: (-1 + (1 umax (-1 + %k)))
-; CHECK-NEXT:    symbolic max exit count for loop.latch: (-1 + (1 umax (-1 + %n)))
+; CHECK-NEXT:  Loop %loop.header: symbolic max backedge-taken count is ((-2 + %k) umin (-2 + %n))
+; CHECK-NEXT:    symbolic max exit count for loop.header: (-2 + %k)
+; CHECK-NEXT:    symbolic max exit count for loop.latch: (-2 + %n)
 ; CHECK-NEXT:  Loop %loop.header: Trip multiple is 1
 ;
 entry:
