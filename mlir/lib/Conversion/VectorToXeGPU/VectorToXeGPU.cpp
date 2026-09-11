@@ -110,9 +110,6 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   unsigned vecRank = vecTy.getRank();
   if (vecRank == 0)
     return rewriter.notifyMatchFailure(xferOp, "0D vectors are not supported");
-  // An out-of-bounds transfer is not rejected here. A block instruction gets a
-  // boundary check from its descriptor, and the scattered path masks off the
-  // out-of-bounds elements instead.
 
   AffineMap map = xferOp.getPermutationMap();
   if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
@@ -396,6 +393,28 @@ static Value computeInBoundsMask(VectorTransferOpInterface xferOp,
   return vector::ConstantMaskOp::create(rewriter, loc, maskType, vectorShape);
 }
 
+// Builds the predicate that a single-element transfer is in bounds.
+static Value computeUnitInBoundsPredicate(VectorTransferOpInterface xferOp,
+                                          PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+  AffineMap map = xferOp.getPermutationMap();
+  OperandRange indices = xferOp.getIndices();
+
+  Value pred;
+  for (unsigned v = 0, e = xferOp.getVectorType().getRank(); v < e; ++v) {
+    if (xferOp.isDimInBounds(v))
+      continue;
+    unsigned d = cast<AffineDimExpr>(map.getResult(v)).getPosition();
+    Value bound = getMemrefDimSize(xferOp, d, rewriter);
+    Value dimPred = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, indices[d], bound);
+    pred = pred
+               ? arith::AndIOp::create(rewriter, loc, pred, dimPred).getResult()
+               : dimPred;
+  }
+  return pred;
+}
+
 // Compute the element-wise offsets for vector.gather or vector.scatter ops.
 //
 // This function linearizes the base offsets of the gather/scatter operation
@@ -506,32 +525,15 @@ static Value memrefToIndexPtr(OpType xferOp, PatternRewriter &rewriter) {
       .getResult();
 }
 
-// Builds the predicate that a single-element transfer is in bounds.
-//
-// The one element it touches sits at `indices`, so it is in bounds iff
-// `indices[d] < dim(d)` for every memref dimension `d` that a vector dimension
-// not declared in-bounds maps to. Dimensions the transfer declares in-bounds
-// are skipped; non-vector dimensions are always in bounds by the op's contract.
-// Returns a null value when every dimension is in bounds.
-static Value computeUnitInBoundsPredicate(VectorTransferOpInterface xferOp,
-                                          PatternRewriter &rewriter) {
-  Location loc = xferOp.getLoc();
-  AffineMap map = xferOp.getPermutationMap();
-  OperandRange indices = xferOp.getIndices();
-
-  Value pred;
-  for (unsigned v = 0, e = xferOp.getVectorType().getRank(); v < e; ++v) {
-    if (xferOp.isDimInBounds(v))
-      continue;
-    unsigned d = cast<AffineDimExpr>(map.getResult(v)).getPosition();
-    Value bound = getMemrefDimSize(xferOp, d, rewriter);
-    Value dimPred = arith::CmpIOp::create(
-        rewriter, loc, arith::CmpIPredicate::slt, indices[d], bound);
-    pred = pred
-               ? arith::AndIOp::create(rewriter, loc, pred, dimPred).getResult()
-               : dimPred;
-  }
-  return pred;
+// Returns true if every use of `vec` extracts a scalar element from it. An
+// unused value does not qualify.
+static bool isUsedAsScalar(Value vec) {
+  if (vec.use_empty())
+    return false;
+  return llvm::all_of(vec.getUsers(), [](Operation *user) {
+    auto extractOp = dyn_cast<vector::ExtractOp>(user);
+    return extractOp && !isa<VectorType>(extractOp.getResult().getType());
+  });
 }
 
 // Lowers a transfer of a single element to a scalar `memref.load`.
@@ -709,12 +711,12 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return success();
     }
 
-    // A 1-D transfer of a single element is a scalar load, not a one-lane
-    // gather. Taking it here keeps such a read - an out-of-bounds one in
-    // particular, which the scattered path would give a one-lane mask - out of
-    // the vector paths entirely. Only rank 1 is taken: a higher-rank unit-size
-    // vector can still be a block access.
-    if (loadedVecTy.getRank() == 1 && loadedVecTy.getNumElements() == 1)
+    // A transfer of a single element that is only ever extracted to a scalar is
+    // a scalar load, at any rank. The vector is a wrapper the consumers undo,
+    // so neither an nd descriptor of one element nor a one-lane gather buys
+    // anything. A unit-size vector genuinely used as a vector keeps the vector
+    // paths below.
+    if (loadedVecTy.getNumElements() == 1 && isUsedAsScalar(readOp.getResult()))
       return lowerToScalarLoadOp(readOp, rewriter);
 
     // TODO: This check needs to be replaced with proper uArch capability check.

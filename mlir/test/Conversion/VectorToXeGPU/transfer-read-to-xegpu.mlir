@@ -455,20 +455,21 @@ gpu.func @load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
 // -----
 gpu.module @xevm_module {
 gpu.func @load_unit_1D_vector(%source: memref<8x16x32xf32>,
-    %offset: index) -> vector<1xf32> {
+    %offset: index) -> f32 {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
     {in_bounds = [true]} : memref<8x16x32xf32>, vector<1xf32>
-  gpu.return %0 : vector<1xf32>
+  %1 = vector.extract %0[0] : f32 from vector<1xf32>
+  gpu.return %1 : f32
 }
 
-// A single-element transfer addresses one location, which the transfer's own
-// indices already name, so it is a scalar load - no descriptor, no gather.
+// A single-element transfer whose result is only extracted to a scalar
+// addresses one location, which the transfer's own indices already name, so it
+// is a scalar load - no descriptor, no gather.
 // CHECK-LABEL:  @load_unit_1D_vector(
 // CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[OFFSET:.+]]: index
-// CHECK:        %[[VAL:.+]] = memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]] : memref<8x16x32xf32>
-// CHECK:        %[[RES:.+]] = vector.broadcast %[[VAL]] : f32 to vector<1xf32>
+// CHECK:        %[[RES:.+]] = memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]] : memref<8x16x32xf32>
 // CHECK-NOT:    xegpu.load
 // CHECK:        return %[[RES]]
 }
@@ -476,11 +477,12 @@ gpu.func @load_unit_1D_vector(%source: memref<8x16x32xf32>,
 // -----
 gpu.module @xevm_module {
 gpu.func @load_out_of_bounds_unit_1D_vector(%source: memref<8x16x32xf32>,
-    %offset: index) -> vector<1xf32> {
+    %offset: index) -> f32 {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
     {in_bounds = [false]} : memref<8x16x32xf32>, vector<1xf32>
-  gpu.return %0 : vector<1xf32>
+  %1 = vector.extract %0[0] : f32 from vector<1xf32>
+  gpu.return %1 : f32
 }
 
 // An out-of-bounds transfer must not touch memory, so the scalar load is
@@ -491,15 +493,32 @@ gpu.func @load_out_of_bounds_unit_1D_vector(%source: memref<8x16x32xf32>,
 // CHECK-DAG:    %[[PAD:.+]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:    %[[C32:.+]] = arith.constant 32 : index
 // CHECK:        %[[INB:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C32]] : index
-// CHECK:        %[[VAL:.+]] = scf.if %[[INB]] -> (f32) {
+// CHECK:        %[[RES:.+]] = scf.if %[[INB]] -> (f32) {
 // CHECK:          %[[LOAD:.+]] = memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]] : memref<8x16x32xf32>
 // CHECK:          scf.yield %[[LOAD]] : f32
 // CHECK:        } else {
 // CHECK:          scf.yield %[[PAD]] : f32
 // CHECK:        }
-// CHECK:        %[[RES:.+]] = vector.broadcast %[[VAL]] : f32 to vector<1xf32>
 // CHECK-NOT:    xegpu.load
 // CHECK:        return %[[RES]]
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @no_scalar_load_unit_1D_vector_used_as_vector(
+    %source: memref<8x16x32xf32>, %offset: index) -> vector<1xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
+    : memref<8x16x32xf32>, vector<1xf32>
+  gpu.return %0 : vector<1xf32>
+}
+
+// A unit-size vector that is genuinely used as a vector keeps the vector
+// paths - only a read that its consumers unwrap to a scalar becomes a scalar
+// load.
+// CHECK-LABEL:  @no_scalar_load_unit_1D_vector_used_as_vector(
+// CHECK-NOT:    memref.load
+// CHECK:        xegpu.load
 }
 
 // -----
@@ -529,6 +548,33 @@ gpu.func @load_out_of_bounds_unit_1D_vector_dynamic(
 // CHECK:          scf.yield %[[PAD]] : i32
 // CHECK:        }
 // CHECK-NOT:    vector.broadcast
+// CHECK:        return %[[RES]]
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_out_of_bounds_unit_2D_vector(%source: memref<8x16xf32>,
+    %offset: index) -> f32 {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %offset], %c0
+    : memref<8x16xf32>, vector<1x1xf32>
+  %1 = vector.extract %0[0, 0] : f32 from vector<1x1xf32>
+  gpu.return %1 : f32
+}
+
+// A single element is a scalar load at any rank - a 1x1 block descriptor buys
+// nothing. Each not-in-bounds dimension contributes a term to the guard.
+// CHECK-LABEL:  @load_out_of_bounds_unit_2D_vector(
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16xf32>,
+// CHECK-SAME:   %[[OFFSET:.+]]: index
+// CHECK-DAG:    %[[C8:.+]] = arith.constant 8 : index
+// CHECK-DAG:    %[[C16:.+]] = arith.constant 16 : index
+// CHECK:        %[[INB0:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C8]] : index
+// CHECK:        %[[INB1:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C16]] : index
+// CHECK:        %[[INB:.+]] = arith.andi %[[INB0]], %[[INB1]] : i1
+// CHECK:        %[[RES:.+]] = scf.if %[[INB]] -> (f32) {
+// CHECK:          memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]]] : memref<8x16xf32>
+// CHECK-NOT:    xegpu.load_nd
 // CHECK:        return %[[RES]]
 }
 
