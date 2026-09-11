@@ -113,6 +113,12 @@ file(COPY .
   PATTERN CMakeFiles EXCLUDE
   PATTERN llvm-driver-template.cpp.in
   )
+file(COPY
+  ${LLVM_COMMON_CMAKE_UTILS}/Modules/AddLit.cmake
+  ${LLVM_COMMON_CMAKE_UTILS}/Modules/GetSubprojectTitle.cmake
+  DESTINATION ${llvm_cmake_builddir}
+  NO_SOURCE_PERMISSIONS
+  )
 
 #
 # Generate LLVMConfig.cmake for the install tree.
@@ -170,6 +176,8 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLVMConfig.cmake
     ${llvm_cmake_builddir}/LLVMConfigVersion.cmake
     LLVM-Config.cmake
+    ${LLVM_COMMON_CMAKE_UTILS}/Modules/AddLit.cmake
+    ${LLVM_COMMON_CMAKE_UTILS}/Modules/GetSubprojectTitle.cmake
     DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
     COMPONENT cmake-exports)
 

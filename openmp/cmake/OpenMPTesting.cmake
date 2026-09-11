@@ -1,3 +1,5 @@
+include(AddLit)
+
 # Keep track if we have all dependencies.
 set(ENABLE_CHECK_TARGETS TRUE)
 

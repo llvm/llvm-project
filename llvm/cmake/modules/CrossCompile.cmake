@@ -1,4 +1,5 @@
 include(AddLLVM)
+include(GetSubprojectTitle)
 include(LLVMExternalProjectUtils)
 
 

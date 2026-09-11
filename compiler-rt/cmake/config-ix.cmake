@@ -1,5 +1,4 @@
 include(CMakePushCheckState)
-include(AddLLVM)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckIncludeFiles)
