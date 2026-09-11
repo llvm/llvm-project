@@ -45,6 +45,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 #include <algorithm>
 #include <optional>
@@ -423,7 +424,10 @@ public:
                    AddressClass addr_class)
       : Instruction(address, addr_class),
         m_disasm_wp(std::static_pointer_cast<DisassemblerLLVMC>(
-            disasm.shared_from_this())) {}
+            disasm.shared_from_this())),
+        // Add new VLIW targets here.
+        m_is_vliw(disasm.GetArchitecture().GetMachine() ==
+                  llvm::Triple::hexagon) {}
 
   ~InstructionLLVMC() override = default;
 
@@ -594,10 +598,13 @@ public:
 
         bool use_hex_immediates = true;
         Disassembler::HexImmediateStyle hex_style = Disassembler::eHexStyleC;
+        bool is_hexagon = false;
 
         if (exe_ctx) {
           Target *target = exe_ctx->GetTargetPtr();
           if (target) {
+            is_hexagon = (target->GetArchitecture().GetMachine() ==
+                          llvm::Triple::hexagon);
             use_hex_immediates = target->GetUseHexImmediates();
             hex_style = target->GetHexImmediateStyle();
 
@@ -681,19 +688,29 @@ public:
           m_mnemonics = std::string(mnemonic_strm.GetString());
           return;
         }
+        if (is_hexagon) {
+          // Hexagon packets are multi-line strings separated by '\n'.
+          // The complete string (including '\v' separators) is stored in
+          // m_opcode_name and used by Dump() to display the packet.
+          // Other VLIW architectures should make sure this is true for
+          // their disassembly as well.
+          m_opcode_name = out_string;
+          m_markup_opcode_name = markup_out_string;
+        } else {
 
-        static RegularExpression s_regex(
-            llvm::StringRef("[ \t]*([^ ^\t]+)[ \t]*([^ ^\t].*)?"));
+          static RegularExpression s_regex(
+              llvm::StringRef("[ \t]*([^ ^\t]+)[ \t]*([^ ^\t].*)?"));
 
-        llvm::SmallVector<llvm::StringRef, 4> matches;
-        if (s_regex.Execute(out_string, &matches)) {
-          m_opcode_name = matches[1].str();
-          m_mnemonics = matches[2].str();
-        }
-        matches.clear();
-        if (s_regex.Execute(markup_out_string, &matches)) {
-          m_markup_opcode_name = matches[1].str();
-          m_markup_mnemonics = matches[2].str();
+          llvm::SmallVector<llvm::StringRef, 4> matches;
+          if (s_regex.Execute(out_string, &matches)) {
+            m_opcode_name = matches[1].str();
+            m_mnemonics = matches[2].str();
+          }
+          matches.clear();
+          if (s_regex.Execute(markup_out_string, &matches)) {
+            m_markup_opcode_name = matches[1].str();
+            m_markup_mnemonics = matches[2].str();
+          }
         }
       }
     }
@@ -1177,9 +1194,93 @@ public:
     return m_is_call;
   }
 
+  void DumpMnemonicOperandsAndComment(StreamString &ss,
+                                      const DumpContext &ctx) override {
+    if (m_is_vliw)
+      DumpVLIWMnemonicOperandsAndComment(ss, ctx);
+    else
+      Instruction::DumpMnemonicOperandsAndComment(ss, ctx);
+  }
+
+  void DumpVLIWMnemonicOperandsAndComment(StreamString &ss,
+                                          const DumpContext &ctx) {
+    // Set bundle start/end delimiters based on the VLIW architecture.
+    // Add cases for new VLIW targets here.
+    const char *bundle_start = nullptr;
+    const char *bundle_end = nullptr;
+    DisassemblerSP disasm_sp = m_disasm_wp.lock();
+    const bool is_hexagon =
+        disasm_sp &&
+        disasm_sp->GetArchitecture().GetMachine() == llvm::Triple::hexagon;
+    if (is_hexagon) {
+      bundle_start = "{ ";
+      bundle_end = " }";
+    }
+
+    llvm::StringRef packetStringRef(m_opcode_name);
+    std::pair<llvm::StringRef, llvm::StringRef> splitPacket =
+        packetStringRef.rsplit('\n');
+    llvm::StringRef postScript = splitPacket.second;
+    splitPacket = splitPacket.first.split('\n');
+    const char *preamble = bundle_start;
+    const char *postamble = bundle_end;
+    bool printPostamble = true;
+    bool done = false;
+    do {
+      if (ctx.show_address) {
+        Debugger::FormatDisassemblerAddress(ctx.disassembly_addr_format,
+                                            ctx.sym_ctx, ctx.prev_sym_ctx,
+                                            ctx.exe_ctx, &m_address, ss);
+        const uint32_t min_inst_byte_size =
+            disasm_sp ? disasm_sp->GetArchitecture().GetMinimumOpcodeByteSize()
+                      : 4;
+        m_address.Slide(min_inst_byte_size);
+        ss.FillLastLineToColumn(ctx.max_address_text_size, ' ');
+      }
+      if (ctx.show_bytes)
+        m_opcode.Dump(&ss, 12);
+      if (splitPacket.first.empty()) {
+        ss.PutCString("<unknown>");
+        printPostamble = false;
+        done = true;
+      } else {
+        ss.PutCString(preamble);
+        preamble = "  ";
+        // Hexagon duplex instructions are two sub-instructions packed
+        // into one instruction slot, separated by '\v'.
+        if (is_hexagon &&
+            splitPacket.first.find('\v') != llvm::StringRef::npos) {
+          std::pair<llvm::StringRef, llvm::StringRef> duplex =
+              splitPacket.first.split('\v');
+          ss.PutCString(duplex.first.str().c_str());
+          ss.PutChar('\n');
+          ss.FillLastLineToColumn(ctx.max_address_text_size + 4, ' ');
+          ss.PutCString(duplex.second.str().c_str());
+        } else
+          ss.PutCString(splitPacket.first.str().c_str());
+        splitPacket = splitPacket.second.split('\n');
+        done = splitPacket.first.empty();
+        if (!done)
+          ss.PutChar('\n');
+      }
+    } while (!done);
+    if (printPostamble)
+      ss.PutCString(postamble);
+    if (!m_comment.empty()) {
+      ss.PutCString("        ; ");
+      ss.PutCString(m_comment.c_str());
+    }
+    if (!postScript.empty()) {
+      ss.PutChar('\n');
+      ss.FillLastLineToColumn(ctx.max_address_text_size, ' ');
+      ss.PutCString(postScript.str().c_str());
+    }
+  }
+
 protected:
   std::weak_ptr<DisassemblerLLVMC> m_disasm_wp;
 
+  bool m_is_vliw = false;
   bool m_is_valid = false;
   bool m_using_file_addr = false;
   bool m_has_visited_instruction = false;
@@ -1209,7 +1310,7 @@ protected:
     if (!m_opcode.GetData(data))
       return;
 
-    bool is_alternate_isa;
+    bool is_alternate_isa = false;
     lldb::addr_t pc = m_address.GetFileAddress();
     DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
         GetDisasmToUse(is_alternate_isa, disasm);
@@ -1229,6 +1330,27 @@ protected:
     m_is_load = mc_disasm_ptr->IsLoad(inst);
     m_is_authenticated = mc_disasm_ptr->IsAuthenticated(inst);
     m_is_barrier = mc_disasm_ptr->IsBarrier(inst);
+
+    bool does_branch = m_does_branch;
+    bool has_delay_slot = m_has_delay_slot;
+    bool is_call = m_is_call;
+
+    // The first operand of a Hexagon bundle is an immediate with flags.
+    // Skip it.
+    // Iterate over the rest of the operands, calling CanBranch().
+    for (unsigned i = 1; i < inst.getNumOperands(); i++) {
+      llvm::MCOperand op = inst.getOperand(i);
+      if (!op.isInst())
+        continue;
+      const llvm::MCInst *cmi = op.getInst();
+      llvm::MCInst mi = *cmi;
+      does_branch = mc_disasm_ptr->CanBranch(mi);
+      has_delay_slot = mc_disasm_ptr->HasDelaySlot(inst);
+      is_call = mc_disasm_ptr->IsCall(inst);
+    }
+    m_does_branch = does_branch;
+    m_has_delay_slot = has_delay_slot;
+    m_is_call = is_call;
   }
 
 private:
@@ -1360,11 +1482,22 @@ bool DisassemblerLLVMC::MCDisasmInstance::GetMCInst(const uint8_t *opcode_data,
   llvm::ArrayRef<uint8_t> data(opcode_data, opcode_data_len);
   llvm::MCDisassembler::DecodeStatus status;
 
-  status = m_disasm_up->getInstruction(mc_inst, size, data, pc, llvm::nulls());
-  if (status == llvm::MCDisassembler::Success)
-    return true;
-  else
-    return false;
+  const bool is_hexagon =
+      m_context_up &&
+      m_context_up->getTargetTriple().getArch() == llvm::Triple::hexagon;
+
+  if (is_hexagon) {
+    status = m_disasm_up->getInstructionBundle(mc_inst, size, data, pc,
+                                               llvm::nulls());
+    if (status == llvm::MCDisassembler::Fail)
+      status =
+          m_disasm_up->getInstruction(mc_inst, size, data, pc, llvm::nulls());
+  } else {
+    status =
+        m_disasm_up->getInstruction(mc_inst, size, data, pc, llvm::nulls());
+  }
+
+  return status == llvm::MCDisassembler::Success;
 }
 
 void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
