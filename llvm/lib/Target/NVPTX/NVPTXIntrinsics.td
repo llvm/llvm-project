@@ -2538,7 +2538,7 @@ foreach rnd = FPRoundingModes in {
              f32:$b, rnd_imm))]>,
         Requires<[SM100]>;
 
-  let Predicates = [hasRubinFamilySupport] in {
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
     foreach t = [F16X2RT, BF16X2RT] in {
       def INT_NVVM_MIXED_ADD_ # rnd # _f32x2_ # t.PtxType :
         BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b),
@@ -2568,7 +2568,7 @@ let Predicates = [SM100, doNoF32FTZ] in {
             (INT_NVVM_MIXED_ADD_rn_f32_bf16 B16:$a, B32:$b)>;
 }
 
-let Predicates = [hasRubinFamilySupport, doNoF32FTZ] in
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
   foreach t = [F16X2RT, BF16X2RT] in {
     defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_rn_f32x2_" # t.PtxType);
 
@@ -2585,7 +2585,7 @@ let Predicates = [hasRubinFamilySupport, doNoF32FTZ] in
 
 // f16x2 - rz rounding mode, only with ftz
 // bf16x2 - rz rounding mode, without ftz
-let Predicates = [hasRubinFamilySupport] in
+let Predicates = [hasFP16x2MixedPrecisionSupport] in
   foreach t = [F16X2RT, BF16X2RT] in {
     defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
     defvar AddOp = !cast<Intrinsic>("int_nvvm_fadd" # !if(!eq(ftz, ""), "", "_ftz"));
@@ -2683,7 +2683,7 @@ foreach rnd = FPRoundingModes in {
              (f32 (fneg f32:$b)), rnd_imm))]>,
         Requires<[SM100]>;
 
-  let Predicates = [hasRubinFamilySupport] in {
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
     foreach t = [F16X2RT, BF16X2RT] in {
       // combineFAddWithNeg has already folded the fneg into a sub node.
       defvar SubOp = !cast<SDNode>("sub_" # rnd);
@@ -2715,7 +2715,7 @@ let Predicates = [SM100, doNoF32FTZ] in {
             (INT_NVVM_MIXED_SUB_rn_f32_bf16 B16:$a, B32:$b)>;
 }
 
-let Predicates = [hasRubinFamilySupport, doNoF32FTZ] in
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
   foreach t = [F16X2RT, BF16X2RT] in {
     defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_rn_f32x2_" # t.PtxType);
 
@@ -2732,7 +2732,7 @@ let Predicates = [hasRubinFamilySupport, doNoF32FTZ] in
 
 // f16x2 - rz rounding mode, only with ftz
 // bf16x2 - rz rounding mode, without ftz
-let Predicates = [hasRubinFamilySupport] in
+let Predicates = [hasFP16x2MixedPrecisionSupport] in
   foreach t = [F16X2RT, BF16X2RT] in {
     defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
     defvar SubOp = !cast<SDNode>("sub_rz" # !if(!eq(ftz, ""), "", "_ftz"));
