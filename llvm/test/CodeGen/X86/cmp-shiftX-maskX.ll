@@ -1051,18 +1051,16 @@ define i1 @shr_to_rotl_eq_i3_s2_fail(i3 %x) {
   ret i1 %r
 }
 
-; 3 divides 6, so the rotate form is still fine on a non-power-of-two width.
+; 3 divides 6, so the rotate form would be valid here, but i6 has no legal
+; rotate (it would be expanded back to shifts), so keep the shift+mask form.
 define i1 @shr_to_rotl_eq_i6_s3(i6 %x) {
 ; CHECK-LABEL: shr_to_rotl_eq_i6_s3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andb $63, %al
+; CHECK-NEXT:    andb $56, %al
 ; CHECK-NEXT:    shlb $3, %dil
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shrb $3, %cl
-; CHECK-NEXT:    orb %dil, %cl
-; CHECK-NEXT:    andb $63, %cl
-; CHECK-NEXT:    cmpb %cl, %al
+; CHECK-NEXT:    andb $56, %dil
+; CHECK-NEXT:    cmpb %dil, %al
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %shr = lshr i6 %x, 3
@@ -1071,8 +1069,8 @@ define i1 @shr_to_rotl_eq_i6_s3(i6 %x) {
   ret i1 %r
 }
 
-define i64 @issue220542(i64 %0) {
-; CHECK-LABEL: issue220542:
+define i64 @pr220542(i64 %0) {
+; CHECK-LABEL: pr220542:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrl $8, %edi
 ; CHECK-NEXT:    leal (,%rdi,4), %eax

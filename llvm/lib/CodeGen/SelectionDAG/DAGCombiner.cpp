@@ -14981,7 +14981,7 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
   // Then:
   // If C1 divides the bit width, then the rotate and shift+and versions are
-  // equivilent, so we can interchange them depending on target preference.
+  // equivalent, so we can interchange them depending on target preference.
   // Otherwise, if we have the shift+and version we can interchange srl/shl
   // which inturn affects the constant C0. We can use this to get better
   // constants again determined by target preference.
