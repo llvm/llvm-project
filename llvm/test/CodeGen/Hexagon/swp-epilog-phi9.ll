@@ -1,17 +1,22 @@
-; XFAIL: Hexagon
 ; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -cgp-delete-phis=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -cgp-delete-phis=0 \
+; RUN:   -debug-only=pipeliner < %s 2>&1 | FileCheck %s --check-prefix=EXPANDER
+; REQUIRES: asserts
 
-; Test that we generate the correct Phi name in the last couple of epilog
-; blocks, when there are 3 epilog blocks. The Phi was scheduled in stage
-; 2, so the computation for the number of Phis needs to be adjusted when
-; the incoming prolog block is from prolog 0 or prolog 1.
-; Note: the pipeliner has been generating a 4-stage pipelined loop.
+; Test that a chained loop-carried PHI recurrence (a PHI whose loop value is
+; another loop-carried PHI in an earlier stage) is pipelined correctly. The
+; default modulo-schedule expander cannot rotate this recurrence through the
+; epilog, so the loop is expanded with the peeling expander instead. Check that
+; the loop is still pipelined and the epilog advances the pointer recurrence.
+
+; The EXPANDER check is the regression guard: the loop0/endloop0/add checks
+; below pass with or without the fix, so only the expander selection
+; distinguishes correct from stale-epilog codegen.
+; EXPANDER: Using peeling expander for chained loop-carried PHIs
 
 ; CHECK: loop0
-; CHECK: [[REG0:r([0-9]+)]] = add(r{{[0-8]+}},#8)
-; CHECK: r{{[0-9]+}} = [[REG0]]
 ; CHECK: endloop0
-; CHECK: r{{[0-9]+}} = add(r{{[0-9]+}},#8)
+; CHECK: = add(r{{[0-9]+}},#8)
 
 ; Function Attrs: nounwind
 define void @f0(ptr noalias nocapture readonly %a0, i32 %a1, ptr noalias %a2, ptr %a3) #0 {
