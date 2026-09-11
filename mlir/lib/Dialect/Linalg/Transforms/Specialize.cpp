@@ -594,8 +594,8 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 
   // No named variant matched; fall back to the generic `linalg.contract` op,
   // which supports a wider range of variants.
-  return replaceWithMatmulVariant<ContractOp>(
-      rewriter, genericOp, castTy, genericOp.getIndexingMapsArray());
+  return replaceWithMatmulVariant<ContractOp>(rewriter, genericOp, castTy,
+                                              genericOp.getIndexingMapsArray());
 }
 
 /// Utility to specialize a `genericOp` with a convolution op of type `ConvOpTy`
@@ -698,9 +698,9 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 // Categorize linalg generic to named op where possible.
 //===----------------------------------------------------------------------===//
-FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
-    RewriterBase &rewriter, GenericOp genericOp,
-    bool emitCategoryOps) {
+FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
+                                                      GenericOp genericOp,
+                                                      bool emitCategoryOps) {
   // Elementwise - e.g. exp, add are always category ops
   if (isaElemwiseSingleUnaryOpInterface(genericOp) ||
       isaElemwiseSingleBinaryOpInterface(genericOp) ||
@@ -710,8 +710,7 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
 
   // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
-    return specializeLinalgContractions(rewriter, genericOp,
-                                        emitCategoryOps);
+    return specializeLinalgContractions(rewriter, genericOp, emitCategoryOps);
   }
 
   // Early exit in case of category specialization.
@@ -788,5 +787,6 @@ void LinalgSpecializeGenericOpsPass::runOnOperation() {
 
 void mlir::linalg::populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns, bool emitCategoryOps) {
-  patterns.add<LinalgSpecializationPattern>(patterns.getContext(), emitCategoryOps);
+  patterns.add<LinalgSpecializationPattern>(patterns.getContext(),
+                                            emitCategoryOps);
 }

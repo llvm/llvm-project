@@ -68,8 +68,7 @@ static FailureOr<LinalgOp> generalizeToContractOp(RewriterBase &rewriter,
     attributes.push_back(rewriter.getNamedAttr("cast", castAttr));
 
   LinalgOp contractOp = rewriter.replaceOpWithNewOp<ContractOp>(
-      namedOp,
-      ValueRange{namedOp.getDpsInputs()[0], namedOp.getDpsInputs()[1]},
+      namedOp, ValueRange{namedOp.getDpsInputs()[0], namedOp.getDpsInputs()[1]},
       ValueRange{namedOp.getDpsInits()[0]}, attributes);
   return contractOp;
 }
@@ -85,7 +84,8 @@ FailureOr<LinalgOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
     FailureOr<LinalgOp> contractOp = generalizeToContractOp(rewriter, linalgOp);
     if (succeeded(contractOp))
       return contractOp;
-    return rewriter.notifyMatchFailure(linalgOp, "failed to categorize to named op");
+    return rewriter.notifyMatchFailure(linalgOp,
+                                       "failed to categorize to named op");
   }
 
   SmallVector<Value> inputs = linalgOp.getDpsInputs();
@@ -136,5 +136,6 @@ void LinalgGeneralizeNamedOpsPass::runOnOperation() {
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
     RewritePatternSet &patterns, bool emitCategoryOps) {
-  patterns.add<LinalgGeneralizationPattern>(patterns.getContext(), emitCategoryOps);
+  patterns.add<LinalgGeneralizationPattern>(patterns.getContext(),
+                                            emitCategoryOps);
 }

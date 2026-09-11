@@ -301,7 +301,6 @@ bool linalg::isaElemwiseSingleTernaryOpInterface(linalg::GenericOp op) {
            !op.payloadUsesValueFromOperand(inputOpOperand2));
 }
 
-
 //===----------------------------------------------------------------------===//
 // ContractionOpInterface implementation
 //===----------------------------------------------------------------------===//
