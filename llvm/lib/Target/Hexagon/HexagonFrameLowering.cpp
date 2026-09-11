@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -2348,9 +2349,8 @@ bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
   return Changed;
 }
 
-void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                                BitVector &SavedRegs,
-                                                RegScavenger *RS) const {
+void HexagonFrameLowering::processFunctionBeforeCalleeSaves(
+    MachineFunction &MF, RegScavenger *RS, const RegisterClassInfo &RCI) const {
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
   SavedRegs.resize(HRI.getNumRegs());
@@ -2372,17 +2372,18 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   // Replace predicate register pseudo spill code.
-  SmallVector<Register,8> NewRegs;
+  SmallVector<Register, 8> NewRegs;
   expandSpillMacros(MF, NewRegs);
-  if (OptimizeSpillSlots && !isOptNone(MF))
-    optimizeSpillSlots(MF, NewRegs);
+  if (OptimizeSpillSlots && !isOptNone(MF)) {
+    optimizeSpillSlots(MF, NewRegs, RCI);
+  }
 
   // We need to reserve a spill slot if scavenging could potentially require
   // spilling a scavenged register.
   if (!NewRegs.empty() || mayOverflowFrameOffset(MF)) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    SetVector<const TargetRegisterClass*> SpillRCs;
+    SetVector<const TargetRegisterClass *> SpillRCs;
     // Reserve an int register in any case, because it could be used to hold
     // the stack offset in case it does not fit into a spill instruction.
     SpillRCs.insert(&Hexagon::IntRegsRegClass);
@@ -2395,12 +2396,12 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
         continue;
       unsigned Num = 1;
       switch (RC->getID()) {
-        case Hexagon::IntRegsRegClassID:
-          Num = NumberScavengerSlots;
-          break;
-        case Hexagon::HvxQRRegClassID:
-          Num = 2; // Vector predicate spills also need a vector register.
-          break;
+      case Hexagon::IntRegsRegClassID:
+        Num = NumberScavengerSlots;
+        break;
+      case Hexagon::HvxQRRegClassID:
+        Num = 2; // Vector predicate spills also need a vector register.
+        break;
       }
       unsigned S = HRI.getSpillSize(*RC);
       Align A = HRI.getSpillAlign(*RC);
@@ -2410,15 +2411,29 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
       }
     }
   }
+}
+
+void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                                BitVector &SavedRegs,
+                                                RegScavenger *RS) const {
+  auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+
+  SavedRegs.resize(HRI.getNumRegs());
+
+  // If we have a function containing __builtin_eh_return we want to spill and
+  // restore all callee saved registers. Pretend that they are used.
+  if (MF.getInfo<HexagonMachineFunctionInfo>()->hasEHReturn())
+    for (const MCPhysReg *R = HRI.getCalleeSavedRegs(&MF); *R; ++R)
+      SavedRegs.set(*R);
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 }
 
-Register HexagonFrameLowering::findPhysReg(MachineFunction &MF,
-      HexagonBlockRanges::IndexRange &FIR,
-      HexagonBlockRanges::InstrIndexMap &IndexMap,
-      HexagonBlockRanges::RegToRangeMap &DeadMap,
-      const TargetRegisterClass *RC) const {
+Register HexagonFrameLowering::findPhysReg(
+    MachineFunction &MF, HexagonBlockRanges::IndexRange &FIR,
+    HexagonBlockRanges::InstrIndexMap &IndexMap,
+    HexagonBlockRanges::RegToRangeMap &DeadMap, const TargetRegisterClass *RC,
+    const RegisterClassInfo &RCI) const {
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   auto &MRI = MF.getRegInfo();
 
@@ -2432,7 +2447,7 @@ Register HexagonFrameLowering::findPhysReg(MachineFunction &MF,
     return false;
   };
 
-  for (Register Reg : HRI.getRawAllocationOrder(*RC, MF)) {
+  for (Register Reg : RCI.getOrder(RC)) {
     bool Dead = true;
     for (auto R : HexagonBlockRanges::expandToSubRegs({Reg,0}, MRI, HRI)) {
       if (isDead(R.Reg))
@@ -2446,8 +2461,9 @@ Register HexagonFrameLowering::findPhysReg(MachineFunction &MF,
   return 0;
 }
 
-void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
-      SmallVectorImpl<Register> &VRegs) const {
+void HexagonFrameLowering::optimizeSpillSlots(
+    MachineFunction &MF, SmallVectorImpl<Register> &VRegs,
+    const RegisterClassInfo &RCI) const {
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HII = *HST.getInstrInfo();
   auto &HRI = *HST.getRegisterInfo();
@@ -2699,7 +2715,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
                                                   SrcOp.getSubReg() };
         auto *RC = HII.getRegClass(SI.getDesc(), 2);
         // The this-> is needed to unconfuse MSVC.
-        Register FoundR = this->findPhysReg(MF, Range, IM, DM, RC);
+        Register FoundR = this->findPhysReg(MF, Range, IM, DM, RC, RCI);
         LLVM_DEBUG(dbgs() << "Replacement reg:" << printReg(FoundR, &HRI)
                           << '\n');
         if (FoundR == 0)

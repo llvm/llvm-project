@@ -26,6 +26,7 @@ class HexagonRegisterInfo;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
+class RegisterClassInfo;
 class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 
@@ -79,6 +80,11 @@ public:
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+      RegScavenger *RS = nullptr) const override;
+  void
+  processFunctionBeforeCalleeSaves(MachineFunction &MF, RegScavenger *RS,
+                                   const RegisterClassInfo &RCI) const override;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
       RegScavenger *RS) const override;
 
@@ -172,11 +178,12 @@ private:
       SmallVectorImpl<Register> &NewRegs) const;
 
   Register findPhysReg(MachineFunction &MF, HexagonBlockRanges::IndexRange &FIR,
-      HexagonBlockRanges::InstrIndexMap &IndexMap,
-      HexagonBlockRanges::RegToRangeMap &DeadMap,
-      const TargetRegisterClass *RC) const;
-  void optimizeSpillSlots(MachineFunction &MF,
-      SmallVectorImpl<Register> &VRegs) const;
+                       HexagonBlockRanges::InstrIndexMap &IndexMap,
+                       HexagonBlockRanges::RegToRangeMap &DeadMap,
+                       const TargetRegisterClass *RC,
+                       const RegisterClassInfo &RCI) const;
+  void optimizeSpillSlots(MachineFunction &MF, SmallVectorImpl<Register> &VRegs,
+                          const RegisterClassInfo &RCI) const;
 
   void findShrunkPrologEpilog(MachineFunction &MF, MachineBasicBlock *&PrologB,
       MachineBasicBlock *&EpilogB) const;
