@@ -3456,6 +3456,30 @@ value of its first argument instead of calling the specified function
 or intrinsic. This is achieved with `PATCHINST` relocations on the
 target instructions (see the AArch64 psABI for details).
 
+(atomicity)=
+
+#### Atomicity Operand Bundles
+
+An `"atomicity"` operand bundle records that a call implements an atomic
+memory access, for cases where the atomicity cannot be recovered from the
+call itself. At most one such bundle may be present, and it must have exactly
+two operands: a metadata string naming an atomic ordering and a metadata
+string naming a synchronization scope, where the empty string denotes system
+scope.
+
+```llvm
+call void @store_release(ptr %p, i32 %val)
+    [ "atomicity"(metadata !"release", metadata !"agent") ]
+```
+
+A call carrying the bundle reports `true` from `Instruction::isAtomic`, so
+generic transforms treat it like any other atomic operation. The bundle
+carries no memory effects of its own, so it does not make an
+otherwise-analyzable call opaque.
+
+A target lowers the bundle onto the selected instruction. Targets are
+expected to document the orderings and scope names they accept.
+
 (moduleasm)=
 
 ### Module-Level Inline Assembly
