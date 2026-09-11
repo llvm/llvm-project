@@ -3,7 +3,7 @@
 
 ! CHECK: error: Semantic errors in
 
-! The inner PARALLEL gives the construct candidate score 3, not 2.
+! Matching the inner PARALLEL gives the construct candidate a score of 3.
 subroutine repeated_parallel(n)
   integer :: n, i
   !$omp parallel
@@ -64,7 +64,7 @@ subroutine repeated_parallel_prefix(flag, n)
   !$omp end parallel
 end subroutine
 
-! Ranking a matching unknown-vendor exclusion must not abort.
+! MATCH_NONE with an unknown vendor remains applicable during ranking.
 subroutine match_none_unknown_vendor(n)
   integer :: n, i
   !$omp metadirective &
@@ -78,7 +78,7 @@ subroutine match_none_unknown_vendor(n)
   end do
 end subroutine
 
-! A higher-scored dynamic implicit NOTHING keeps the path without DO alive.
+! A higher-scored dynamic implicit NOTHING leaves a reachable path without DO.
 subroutine omitted_score(flag, n)
   logical :: flag
   integer :: n, i, j
@@ -142,7 +142,7 @@ subroutine escaped_region(flag, n)
   end do
 end subroutine
 
-! A loop also consumes pending groups. Update every enclosing scope boundary,
+! Consuming pending groups at a loop preserves every enclosing scope boundary,
 ! including those of nested selected regions.
 subroutine escaped_nested_region_after_loop(flag, n)
   logical :: flag
