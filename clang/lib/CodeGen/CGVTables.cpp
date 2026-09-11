@@ -829,18 +829,30 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       if (RelativeCXXABIVTables)
         return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
 
-      // For NVPTX devices in OpenMP emit special functon as null pointers,
-      // otherwise linking ends up with unresolved references.
-      if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPIsTargetDevice &&
-          CGM.getTriple().isNVPTX())
-        return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-      llvm::Constant *fn = cast<llvm::Constant>(
+      auto *F = cast<llvm::Function>(
           CGM.CreateRuntimeFunction(fnTy, name).getCallee());
-      if (auto f = dyn_cast<llvm::Function>(fn))
-        f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      return fn;
+      F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+      // The Microsoft ABI uses the same function name for pure and deleted
+      // virtual functions.
+      if (!F->empty())
+        return F;
+
+      // For device compilation, provide a weak definition that
+      // traps, otherwise linking ends up with unresolved references.
+      if (CGM.getLangOpts().isTargetDevice()) {
+        F->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
+        CodeGenFunction CGF(CGM);
+        const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
+        CGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI,
+                          FunctionArgList{});
+        CGF.EmitTrapCallAndMakeUnreachable();
+        CGF.FinishFunction();
+      }
+
+      return F;
     };
 
     llvm::Constant *fnPtr;

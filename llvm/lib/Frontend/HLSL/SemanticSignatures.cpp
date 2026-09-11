@@ -85,6 +85,22 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
     };
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::ViewID: {
+    static constexpr IOType InOrPatchConstant =
+        IOType::In | IOType::PatchConstantOrPrimitive;
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Hull, InOrPatchConstant, SemanticInterpretation::NotAllocated},
+        {Triple::Domain, InOrPatchConstant,
+         SemanticInterpretation::NotAllocated},
+        {Triple::Geometry, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Mesh, InOrPatchConstant, SemanticInterpretation::NotAllocated},
+        {Triple::Amplification, IOType::In,
+         SemanticInterpretation::NotAllocated},
+    };
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::Target: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Pixel, IOType::Out, SemanticInterpretation::Target}};
