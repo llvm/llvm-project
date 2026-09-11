@@ -719,7 +719,7 @@ struct CheckFallThroughDiagnostics {
     // might be overridden by non-noreturn functions.
     bool isVirtualMethod = false;
     if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Func))
-      isVirtualMethod = Method->isVirtual();
+      isVirtualMethod = Method->isVirtual(S.Context);
 
     // Don't suggest that template instantiations be marked "noreturn"
     bool isTemplateInstantiation = false;

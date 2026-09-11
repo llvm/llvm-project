@@ -2403,7 +2403,7 @@ static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
     Info.Note(FD->getLocation(), diag::note_declared_at);
     return false;
   }
-  return isForManglingOnly(Kind) || FD->isVirtual() ||
+  return isForManglingOnly(Kind) || FD->isVirtual(Info.Ctx) ||
          !FD->hasAttr<DLLImportAttr>();
 }
 
@@ -6512,7 +6512,7 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
   // constant expression (prior to C++20). We can still constant-fold such a
   // call.
   if (!Info.Ctx.getLangOpts().CPlusPlus20 && isa<CXXMethodDecl>(Declaration) &&
-      cast<CXXMethodDecl>(Declaration)->isVirtual())
+      cast<CXXMethodDecl>(Declaration)->isVirtual(Info.Ctx))
     Info.CCEDiag(CallLoc, diag::note_constexpr_virtual_call);
 
   if (Definition && Definition->isInvalidDecl()) {

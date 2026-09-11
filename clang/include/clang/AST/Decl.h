@@ -1362,6 +1362,9 @@ public:
   /// definition of a static data member.
   bool isOutOfLine() const override;
 
+  /// As above, using the already-known owning AST context.
+  bool isOutOfLine(ASTContext &C) const;
+
   /// Returns true for file scoped variable declaration.
   bool isFileVarDecl() const {
     Kind K = getKind();
@@ -1667,10 +1670,16 @@ public:
   /// from which it was instantiated.
   VarDecl *getInstantiatedFromStaticDataMember() const;
 
+  /// As above, using the already-known owning AST context.
+  VarDecl *getInstantiatedFromStaticDataMember(ASTContext &C) const;
+
   /// If this variable is an instantiation of a variable template or a
   /// static data member of a class template, determine what kind of
   /// template specialization or instantiation this is.
   TemplateSpecializationKind getTemplateSpecializationKind() const;
+
+  /// As above, using the already-known owning AST context.
+  TemplateSpecializationKind getTemplateSpecializationKind(ASTContext &C) const;
 
   /// Get the template specialization kind of this variable for the purposes of
   /// template instantiation. This differs from getTemplateSpecializationKind()
@@ -1687,6 +1696,9 @@ public:
   /// class template specialization, retrieves the member specialization
   /// information.
   MemberSpecializationInfo *getMemberSpecializationInfo() const;
+
+  /// As above, using the already-known owning AST context.
+  MemberSpecializationInfo *getMemberSpecializationInfo(ASTContext &C) const;
 
   /// For a static data member that was instantiated from a static
   /// data member of a class template, set the template specialiation kind.
@@ -1710,6 +1722,9 @@ public:
   /// getDescribedVarTemplate() retrieves the VarTemplateDecl from
   /// a VarDecl.
   VarTemplateDecl *getDescribedVarTemplate() const;
+
+  /// As above, using the already-known owning AST context.
+  VarTemplateDecl *getDescribedVarTemplate(ASTContext &C) const;
 
   void setDescribedVarTemplate(VarTemplateDecl *Template);
 
@@ -2942,10 +2957,16 @@ public:
   /// parameters have default arguments (in C++).
   unsigned getMinRequiredArguments() const;
 
+  /// As above, using the already-known owning AST context.
+  unsigned getMinRequiredArguments(const ASTContext &C) const;
+
   /// Returns the minimum number of non-object arguments needed to call this
   /// function. This produces the same value as getMinRequiredArguments except
   /// it does not count the explicit object argument, if any.
   unsigned getMinRequiredExplicitArguments() const;
+
+  /// As above, using the already-known owning AST context.
+  unsigned getMinRequiredExplicitArguments(const ASTContext &C) const;
 
   bool hasCXXExplicitFunctionObjectParameter() const;
 

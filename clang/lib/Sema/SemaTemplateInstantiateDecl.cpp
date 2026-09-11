@@ -2983,8 +2983,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
 
     llvm::FoldingSetInsertToken InsertToken;
-    FunctionDecl *SpecFunc =
-        FunctionTemplate->findSpecialization(Innermost, InsertToken);
+    FunctionDecl *SpecFunc = FunctionTemplate->findSpecialization(
+        Innermost, InsertToken, &SemaRef.Context);
 
     // If we already have a function template specialization, return it.
     if (SpecFunc)
@@ -3357,8 +3357,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
 
     llvm::FoldingSetInsertToken InsertToken;
-    FunctionDecl *SpecFunc =
-        FunctionTemplate->findSpecialization(Innermost, InsertToken);
+    FunctionDecl *SpecFunc = FunctionTemplate->findSpecialization(
+        Innermost, InsertToken, &SemaRef.Context);
 
     // If we already have a function template specialization, return it.
     if (SpecFunc)
@@ -3738,11 +3738,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // because being e.g. a copy constructor depends on the instantiated
   // arguments.
   if (auto *Constructor = dyn_cast<CXXConstructorDecl>(Method)) {
-    if (Constructor->isDefaultConstructor() ||
-        Constructor->isCopyOrMoveConstructor())
+    if (Constructor->isDefaultConstructor(SemaRef.Context) ||
+        Constructor->isCopyOrMoveConstructor(SemaRef.Context))
       Method->setIneligibleOrNotSelected(true);
-  } else if (Method->isCopyAssignmentOperator() ||
-             Method->isMoveAssignmentOperator()) {
+  } else if (Method->isCopyAssignmentOperator(&SemaRef.Context) ||
+             Method->isMoveAssignmentOperator(&SemaRef.Context)) {
     Method->setIneligibleOrNotSelected(true);
   }
 
@@ -4805,7 +4805,7 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
   llvm::FoldingSetInsertToken InsertToken;
   ClassTemplateSpecializationDecl *PrevDecl =
       InstClassTemplate->findSpecialization(CTAI.CanonicalConverted,
-                                            InsertToken);
+                                            InsertToken, &SemaRef.Context);
 
   // Check whether we've already seen a conflicting instantiation of this
   // declaration (for instance, if there was a prior implicit instantiation).
@@ -4912,8 +4912,8 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
 
   // Check whether we've already seen a declaration of this specialization.
   llvm::FoldingSetInsertToken InsertToken;
-  VarTemplateSpecializationDecl *PrevDecl =
-      InstVarTemplate->findSpecialization(CTAI.CanonicalConverted, InsertToken);
+  VarTemplateSpecializationDecl *PrevDecl = InstVarTemplate->findSpecialization(
+      CTAI.CanonicalConverted, InsertToken, &SemaRef.Context);
 
   // Check whether we've already seen a conflicting instantiation of this
   // declaration (for instance, if there was a prior implicit instantiation).
@@ -4957,7 +4957,7 @@ TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
       VarTemplate, TSI->getType(), TSI, D->getStorageClass(), Converted);
   if (!PrevDecl) {
     llvm::FoldingSetInsertToken InsertToken;
-    VarTemplate->findSpecialization(Converted, InsertToken);
+    VarTemplate->findSpecialization(Converted, InsertToken, &SemaRef.Context);
     VarTemplate->AddSpecialization(Var, InsertToken);
   }
 
@@ -6287,7 +6287,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         // If this is an MS ABI dllexport default constructor, instantiate any
         // default arguments.
         if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-            Ctor->isDefaultConstructor()) {
+            Ctor->isDefaultConstructor(Context)) {
           if (DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>())
             BuildCtorClosureDefaultArgs(Attr->getLocation(), Ctor);
         }
@@ -6373,7 +6373,7 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
     MultiLevelList.addOuterTemplateArguments(
         PartialSpec, PartialSpecArgs->asArray(), /*Final=*/false);
   } else {
-    assert(VarTemplate == FromVar->getDescribedVarTemplate());
+    assert(VarTemplate == FromVar->getDescribedVarTemplate(Context));
     IsMemberSpec = VarTemplate->isMemberSpecialization();
     MultiLevelList.addOuterTemplateArguments(VarTemplate, Converted,
                                              /*Final=*/false);
@@ -6434,7 +6434,7 @@ void Sema::BuildVariableInstantiation(
   // produce a variable template specialization.
   bool InstantiatingSpecFromTemplate =
       isa<VarTemplateSpecializationDecl>(NewVar) &&
-      (OldVar->getDescribedVarTemplate() ||
+      (OldVar->getDescribedVarTemplate(Context) ||
        isa<VarTemplatePartialSpecializationDecl>(OldVar));
 
   // If we are instantiating a local extern declaration, the
@@ -6445,7 +6445,7 @@ void Sema::BuildVariableInstantiation(
   if (OldVar->isLocalExternDecl()) {
     NewVar->setLocalExternDecl();
     NewVar->setLexicalDeclContext(Owner);
-  } else if (OldVar->isOutOfLine())
+  } else if (OldVar->isOutOfLine(Context))
     NewVar->setLexicalDeclContext(OldVar->getLexicalDeclContext());
   NewVar->setTSCSpec(OldVar->getTSCSpec());
   NewVar->setInitStyle(OldVar->getInitStyle());
@@ -6494,7 +6494,7 @@ void Sema::BuildVariableInstantiation(
       NewVar->getDeclContext()->makeDeclVisibleInContext(NewVar);
   }
 
-  if (!OldVar->isOutOfLine()) {
+  if (!OldVar->isOutOfLine(Context)) {
     if (NewVar->getDeclContext()->isFunctionOrMethod())
       CurrentInstantiationScope->InstantiatedLocal(OldVar, NewVar);
   }
@@ -6758,11 +6758,11 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   } PassToConsumerRAII(Consumer, Var);
 
   // If we already have a definition, we're done.
-  if (VarDecl *Def = Var->getDefinition()) {
+  if (VarDecl *Def = Var->getDefinition(Context)) {
     // We may be explicitly instantiating something we've already implicitly
     // instantiated.
-    Def->setTemplateSpecializationKind(Var->getTemplateSpecializationKind(),
-                                       PointOfInstantiation);
+    Def->setTemplateSpecializationKind(
+        Var->getTemplateSpecializationKind(Context), PointOfInstantiation);
     return;
   }
 
@@ -6789,7 +6789,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                                                    /*AtEndOfTU=*/AtEndOfTU);
 
   VarDecl *OldVar = Var;
-  if (Def->isStaticDataMember() && !Def->isOutOfLine()) {
+  if (Def->isStaticDataMember() && !Def->isOutOfLine(Context)) {
     // We're instantiating an inline static data member whose definition was
     // provided inside the class.
     InstantiateVariableInitializer(Var, Def, TemplateArgs);
@@ -6842,8 +6842,9 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
 
   if (Var) {
     PassToConsumerRAII.Var = Var;
-    Var->setTemplateSpecializationKind(OldVar->getTemplateSpecializationKind(),
-                                       OldVar->getPointOfInstantiation());
+    Var->setTemplateSpecializationKind(
+        OldVar->getTemplateSpecializationKind(Context),
+        OldVar->getPointOfInstantiation());
     // Emit any deferred warnings for the variable's initializer
     AnalysisWarnings.issueWarningsForRegisteredVarDecl(Var);
   }
@@ -7622,7 +7623,7 @@ void Sema::PerformPendingInstantiations(bool LocalOnly, bool AtEndOfTU) {
 
     PrettyDeclStackTraceEntry CrashInfo(Context, Var, SourceLocation(),
                                         "instantiating variable definition");
-    bool DefinitionRequired = Var->getTemplateSpecializationKind() ==
+    bool DefinitionRequired = Var->getTemplateSpecializationKind(Context) ==
                               TSK_ExplicitInstantiationDefinition;
 
     // Instantiate static data member definitions or variable template

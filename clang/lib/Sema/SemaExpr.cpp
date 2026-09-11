@@ -6139,7 +6139,8 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   unsigned ExplicitObjectParameterOffset = HasExplicitObjectParameter ? 1 : 0;
   unsigned NumParams = Proto->getNumParams();
   bool Invalid = false;
-  unsigned MinArgs = FDecl ? FDecl->getMinRequiredArguments() : NumParams;
+  unsigned MinArgs =
+      FDecl ? FDecl->getMinRequiredArguments(Context) : NumParams;
   unsigned FnKind = Fn->getType()->isBlockPointerType()
                        ? 1 /* block */
                        : (IsExecConfig ? 3 /* kernel function (exec config) */
@@ -6640,7 +6641,7 @@ static void checkDirectCallValidity(Sema &S, const Expr *Fn,
                          /*PartialOverloading=*/false) &&
       !Callee->isVariadic())
     return;
-  if (Callee->getMinRequiredArguments() > ArgExprs.size())
+  if (Callee->getMinRequiredArguments(S.Context) > ArgExprs.size())
     return;
 
   if (const EnableIfAttr *Attr =
@@ -20740,9 +20741,10 @@ static void DoMarkVarDeclReferenced(
   if (Var->isInvalidDecl())
     return;
 
-  auto *MSI = Var->getMemberSpecializationInfo();
-  TemplateSpecializationKind TSK = MSI ? MSI->getTemplateSpecializationKind()
-                                       : Var->getTemplateSpecializationKind();
+  auto *MSI = Var->getMemberSpecializationInfo(SemaRef.Context);
+  TemplateSpecializationKind TSK =
+      MSI ? MSI->getTemplateSpecializationKind()
+          : Var->getTemplateSpecializationKind(SemaRef.Context);
 
   OdrUseContext OdrUse = isOdrUseContext(SemaRef);
   bool UsableInConstantExpr =

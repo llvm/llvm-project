@@ -84,6 +84,23 @@ bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
       Paths);
 }
 
+bool CXXRecordDecl::isDerivedFrom(ASTContext &C, const CXXRecordDecl *Base,
+                                  CXXBasePaths &Paths) const {
+  if (getCanonicalDecl() == Base->getCanonicalDecl())
+    return false;
+
+  Paths.setOrigin(const_cast<CXXRecordDecl *>(this));
+
+  const CXXRecordDecl *BaseDecl = Base->getCanonicalDecl();
+  return lookupInBases(
+      C,
+      [BaseDecl](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
+        return Specifier->getType()->getAsRecordDecl() &&
+               FindBaseClass(Specifier, Path, BaseDecl);
+      },
+      Paths);
+}
+
 bool CXXRecordDecl::isVirtuallyDerivedFrom(const CXXRecordDecl *Base) const {
   if (!getNumVBases())
     return false;
@@ -303,9 +320,15 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
 bool CXXRecordDecl::lookupInBases(BaseMatchesCallback BaseMatches,
                                   CXXBasePaths &Paths,
                                   bool LookupInDependent) const {
+  return lookupInBases(getASTContext(), BaseMatches, Paths, LookupInDependent);
+}
+
+bool CXXRecordDecl::lookupInBases(ASTContext &C,
+                                  BaseMatchesCallback BaseMatches,
+                                  CXXBasePaths &Paths,
+                                  bool LookupInDependent) const {
   // If we didn't find anything, report that.
-  if (!Paths.lookupInBases(getASTContext(), this, BaseMatches,
-                           LookupInDependent))
+  if (!Paths.lookupInBases(C, this, BaseMatches, LookupInDependent))
     return false;
 
   // If we're not recording paths or we won't ever find ambiguities,

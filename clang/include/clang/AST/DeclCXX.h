@@ -1553,6 +1553,9 @@ public:
   /// Returns the destructor decl for this class.
   CXXDestructorDecl *getDestructor() const;
 
+  /// Find the destructor using the owning AST context supplied by the caller.
+  CXXDestructorDecl *getDestructor(ASTContext &C) const;
+
   /// Returns the destructor decl for this class.
   bool hasDeletedDestructor() const;
 
@@ -1619,6 +1622,10 @@ public:
   /// \todo add a separate parameter to configure IsDerivedFrom, rather than
   /// tangling input and output in \p Paths
   bool isDerivedFrom(const CXXRecordDecl *Base, CXXBasePaths &Paths) const;
+
+  /// As above, using the already-known owning AST context.
+  bool isDerivedFrom(ASTContext &C, const CXXRecordDecl *Base,
+                     CXXBasePaths &Paths) const;
 
   /// Determine whether this class is virtually derived from
   /// the class \p Base.
@@ -1694,6 +1701,10 @@ public:
   /// subobject that matches the search criteria.
   bool lookupInBases(BaseMatchesCallback BaseMatches, CXXBasePaths &Paths,
                      bool LookupInDependent = false) const;
+
+  /// As above, using the already-known owning AST context.
+  bool lookupInBases(ASTContext &C, BaseMatchesCallback BaseMatches,
+                     CXXBasePaths &Paths, bool LookupInDependent = false) const;
 
   /// Base-class lookup callback that determines whether the given
   /// base class specifier refers to a specific class declaration.
@@ -2212,6 +2223,14 @@ public:
     return CD->size_overridden_methods() != 0;
   }
 
+  /// As above, using the already-known owning AST context.
+  bool isVirtual(const ASTContext &C) const {
+    const CXXMethodDecl *CD = getCanonicalDecl();
+    if (CD->isVirtualAsWritten() || CD->isPureVirtual())
+      return true;
+    return CD->size_overridden_methods(C) != 0;
+  }
+
   /// If it's possible to devirtualize a call to this method, return the called
   /// function. Otherwise, return null.
 
@@ -2241,10 +2260,20 @@ public:
 
   /// Determine whether this is a copy-assignment operator, regardless
   /// of whether it was declared implicitly or explicitly.
-  bool isCopyAssignmentOperator() const;
+  bool isCopyAssignmentOperator() const {
+    return isCopyAssignmentOperator(nullptr);
+  }
+
+  /// As above; if provided, C must be the owning AST context.
+  bool isCopyAssignmentOperator(const ASTContext *C) const;
 
   /// Determine whether this is a move assignment operator.
-  bool isMoveAssignmentOperator() const;
+  bool isMoveAssignmentOperator() const {
+    return isMoveAssignmentOperator(nullptr);
+  }
+
+  /// As above; if provided, C must be the owning AST context.
+  bool isMoveAssignmentOperator(const ASTContext *C) const;
 
   /// Determine whether this is a copy or move constructor or a copy or move
   /// assignment operator.
@@ -2282,10 +2311,16 @@ public:
   method_iterator end_overridden_methods() const;
   unsigned size_overridden_methods() const;
 
+  /// As above, using the already-known owning AST context.
+  unsigned size_overridden_methods(const ASTContext &C) const;
+
   using overridden_method_range = llvm::iterator_range<
       llvm::TinyPtrVector<const CXXMethodDecl *>::const_iterator>;
 
   overridden_method_range overridden_methods() const;
+
+  /// As above, using the already-known owning AST context.
+  overridden_method_range overridden_methods(const ASTContext &C) const;
 
   /// Return the parent of this method declaration, which
   /// is the class in which this method is defined.
@@ -2801,6 +2836,9 @@ public:
   /// default-initialize a class of this type.
   bool isDefaultConstructor() const;
 
+  /// As above, using the already-known owning AST context.
+  bool isDefaultConstructor(const ASTContext &C) const;
+
   /// Whether this constructor is a copy constructor (C++ [class.copy]p2,
   /// which can be used to copy the class.
   ///
@@ -2842,7 +2880,10 @@ public:
   ///
   /// \param TypeQuals Will be set to the type qualifiers on the reference
   /// parameter, if in fact this is a copy or move constructor.
-  bool isCopyOrMoveConstructor(unsigned &TypeQuals) const;
+  /// If supplied, C is the owning context and avoids recovering it from
+  /// parents.
+  bool isCopyOrMoveConstructor(unsigned &TypeQuals,
+                               const ASTContext *C = nullptr) const;
 
   /// Determine whether this a copy or move constructor.
   bool isCopyOrMoveConstructor() const {
@@ -2850,15 +2891,27 @@ public:
     return isCopyOrMoveConstructor(Quals);
   }
 
+  /// As above, using the already-known owning AST context.
+  bool isCopyOrMoveConstructor(const ASTContext &C) const {
+    unsigned Quals;
+    return isCopyOrMoveConstructor(Quals, &C);
+  }
+
   /// Whether this constructor is a
   /// converting constructor (C++ [class.conv.ctor]), which can be
   /// used for user-defined conversions.
   bool isConvertingConstructor(bool AllowExplicit) const;
 
+  /// As above, using the already-known owning AST context.
+  bool isConvertingConstructor(const ASTContext &C, bool AllowExplicit) const;
+
   /// Determine whether this is a member template specialization that
   /// would copy the object to itself. Such constructors are never used to copy
   /// an object.
   bool isSpecializationCopyingObject() const;
+
+  /// As above, using the already-known owning AST context.
+  bool isSpecializationCopyingObject(const ASTContext &C) const;
 
   /// Determine whether this is an implicit constructor synthesized to
   /// model a call to a constructor inherited from a base class.

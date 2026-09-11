@@ -4200,7 +4200,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
         bool Usable = !Info.Constructor->isInvalidDecl();
         if (!ListInitializing)
           Usable = Usable && Info.Constructor->isConvertingConstructor(
-                                 /*AllowExplicit*/ true);
+                                 S.Context, /*AllowExplicit*/ true);
         if (Usable) {
           bool SuppressUserConversions = !ConstructorsOnly;
           // C++20 [over.best.ics.general]/4.5:
@@ -7271,11 +7271,12 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
   return false;
 }
 
-static bool isNonViableMultiVersionOverload(FunctionDecl *FD) {
+static bool isNonViableMultiVersionOverload(ASTContext &Context,
+                                            FunctionDecl *FD) {
   if (FD->isTargetMultiVersionDefault())
     return false;
 
-  if (!FD->getASTContext().getTargetInfo().getTriple().isAArch64())
+  if (!Context.getTargetInfo().getTriple().isAArch64())
     return FD->isTargetMultiVersion();
 
   if (!FD->isMultiVersion())
@@ -7286,7 +7287,7 @@ static bool isNonViableMultiVersionOverload(FunctionDecl *FD) {
   unsigned SeenAt = 0;
   unsigned I = 0;
   bool HasDefault = false;
-  FD->getASTContext().forEachMultiversionedFunctionVersion(
+  Context.forEachMultiversionedFunctionVersion(
       FD, [&](const FunctionDecl *CurFD) {
         if (FD == CurFD)
           SeenAt = I;
@@ -7419,7 +7420,7 @@ void Sema::AddOverloadCandidate(
     }
   }
 
-  if (isNonViableMultiVersionOverload(Function)) {
+  if (isNonViableMultiVersionOverload(Context, Function)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
     return;
@@ -7431,7 +7432,8 @@ void Sema::AddOverloadCandidate(
     //   of a class object to an object of its class type.
     CanQualType ClassType =
         Context.getCanonicalTagType(Constructor->getParent());
-    if (Args.size() == 1 && Constructor->isSpecializationCopyingObject() &&
+    if (Args.size() == 1 &&
+        Constructor->isSpecializationCopyingObject(Context) &&
         (Context.hasSameUnqualifiedType(ClassType, Args[0]->getType()) ||
          IsDerivedFrom(Args[0]->getBeginLoc(), Args[0]->getType(),
                        ClassType))) {
@@ -7490,7 +7492,7 @@ void Sema::AddOverloadCandidate(
   // (8.3.6). For the purposes of overload resolution, the
   // parameter list is truncated on the right, so that there are
   // exactly m parameters.
-  unsigned MinRequiredArgs = Function->getMinRequiredArguments();
+  unsigned MinRequiredArgs = Function->getMinRequiredArguments(Context);
   if (!AggregateCandidateDeduction && Args.size() < MinRequiredArgs &&
       !PartialOverloading) {
     // Not enough arguments.
@@ -8029,7 +8031,7 @@ void Sema::AddMethodCandidate(
   // (8.3.6). For the purposes of overload resolution, the
   // parameter list is truncated on the right, so that there are
   // exactly m parameters.
-  unsigned MinRequiredArgs = Method->getMinRequiredArguments() -
+  unsigned MinRequiredArgs = Method->getMinRequiredArguments(Context) -
                              ExplicitOffset +
                              int(ImplicitObjectMethodTreatedAsStatic);
 
@@ -8139,7 +8141,7 @@ void Sema::AddMethodCandidate(
     return;
   }
 
-  if (isNonViableMultiVersionOverload(Method)) {
+  if (isNonViableMultiVersionOverload(Context, Method)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
   }
@@ -8734,7 +8736,7 @@ void Sema::AddConversionCandidate(
     return;
   }
 
-  if (isNonViableMultiVersionOverload(Conversion)) {
+  if (isNonViableMultiVersionOverload(Context, Conversion)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
   }
@@ -11764,7 +11766,7 @@ ClassifyOverloadCandidate(Sema &S, const NamedDecl *Found,
           return oc_constructor;
       }
 
-      if (Ctor->isDefaultConstructor())
+      if (Ctor->isDefaultConstructor(S.Context))
         return oc_implicit_default_constructor;
 
       if (Ctor->isMoveConstructor())
@@ -12313,7 +12315,7 @@ static bool CheckArityMismatch(Sema &S, OverloadCandidate *Cand,
                                unsigned NumArgs, bool IsAddressOf = false) {
   assert(Cand->Function && "Candidate is required to be a function.");
   FunctionDecl *Fn = Cand->Function;
-  unsigned MinParams = Fn->getMinRequiredExplicitArguments() +
+  unsigned MinParams = Fn->getMinRequiredExplicitArguments(S.Context) +
                        ((IsAddressOf && !Fn->isStatic()) ? 1 : 0);
 
   // With invalid overloaded operators, it's possible that we think we
@@ -12353,7 +12355,7 @@ static void DiagnoseArityMismatch(Sema &S, NamedDecl *Found, Decl *D,
 
   // TODO: treat calls to a missing default constructor as a special case
   const auto *FnTy = Fn->getType()->castAs<FunctionProtoType>();
-  unsigned MinParams = Fn->getMinRequiredExplicitArguments() +
+  unsigned MinParams = Fn->getMinRequiredExplicitArguments(S.Context) +
                        ((IsAddressOf && !Fn->isStatic()) ? 1 : 0);
 
   // at least / at most / exactly
@@ -13175,7 +13177,7 @@ struct CompareOverloadCandidatesForDisplay {
     if (C->Function) {
       if (NumArgs > C->Function->getNumParams() && !C->Function->isVariadic())
         return ovl_fail_too_many_arguments;
-      if (NumArgs < C->Function->getMinRequiredArguments())
+      if (NumArgs < C->Function->getMinRequiredArguments(S.Context))
         return ovl_fail_too_few_arguments;
     }
 

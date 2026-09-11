@@ -748,6 +748,13 @@ bool CXXRecordDecl::lambdaIsDefaultConstructibleAndAssignable() const {
 }
 
 void CXXRecordDecl::addedMember(Decl *D) {
+  // Recover the owning context only if needed, then forward it to helpers.
+  ASTContext *Context = nullptr;
+  auto GetContext = [&]() -> ASTContext & {
+    if (!Context)
+      Context = &getASTContext();
+    return *Context;
+  };
   if (!D->isImplicit() && !isa<FieldDecl>(D) && !isa<IndirectFieldDecl>(D) &&
       (!isa<TagDecl>(D) ||
        cast<TagDecl>(D)->getTagKind() == TagTypeKind::Class ||
@@ -771,7 +778,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
   }
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
-    if (Method->isVirtual()) {
+    if (Method->isVirtual(GetContext())) {
       // C++ [dcl.init.aggr]p1:
       //   An aggregate is an array or a class with [...] no virtual functions.
       data().Aggregate = false;
@@ -823,9 +830,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
         // Note that we have a user-declared constructor.
         data().UserDeclaredConstructor = true;
 
-        const TargetInfo &TI = getASTContext().getTargetInfo();
+        const TargetInfo &TI = GetContext().getTargetInfo();
         if ((!Constructor->isDeleted() && !Constructor->isDefaulted()) ||
-            !TI.areDefaultedSMFStillPOD(getLangOpts())) {
+            !TI.areDefaultedSMFStillPOD(GetContext().getLangOpts())) {
           // C++ [class]p4:
           //   A POD-struct is an aggregate class [...]
           // Since the POD bit is meant to be C++03 POD-ness, clear it even if
@@ -835,7 +842,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
         }
       }
 
-      if (Constructor->isDefaultConstructor()) {
+      if (Constructor->isDefaultConstructor(GetContext())) {
         SMKind |= SMF_DefaultConstructor;
 
         if (Constructor->isUserProvided())
@@ -863,7 +870,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // C++20 [dcl.init.aggr]p1:
       //   An aggregate is an array or a class with no user-declared [...]
       //   constructors
-      if (getASTContext().getLangOpts().CPlusPlus20
+      if (GetContext().getLangOpts().CPlusPlus20
               ? !Constructor->isImplicit()
               : (Constructor->isUserProvided() || Constructor->isExplicit()))
         data().Aggregate = false;
@@ -878,9 +885,11 @@ void CXXRecordDecl::addedMember(Decl *D) {
     //   [...] has at least one constexpr constructor or constructor template
     //   (possibly inherited from a base class) that is not a copy or move
     //   constructor [...]
-    if (Constructor->isConstexpr() && !Constructor->isCopyOrMoveConstructor())
+    if (Constructor->isConstexpr() &&
+        !Constructor->isCopyOrMoveConstructor(GetContext()))
       data().HasConstexprNonCopyMoveConstructor = true;
-    if (!isa<CXXConstructorDecl>(D) && Constructor->isDefaultConstructor())
+    if (!isa<CXXConstructorDecl>(D) &&
+        Constructor->isDefaultConstructor(GetContext()))
       data().HasInheritedDefaultConstructor = true;
   }
 
@@ -889,7 +898,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (isa<CXXDestructorDecl>(D))
       SMKind |= SMF_Destructor;
 
-    if (Method->isCopyAssignmentOperator()) {
+    if (Method->isCopyAssignmentOperator(&GetContext())) {
       SMKind |= SMF_CopyAssignment;
 
       const auto *ParamTy =
@@ -898,7 +907,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
         data().HasDeclaredCopyAssignmentWithConstParam = true;
     }
 
-    if (Method->isMoveAssignmentOperator())
+    if (Method->isMoveAssignmentOperator(&GetContext()))
       SMKind |= SMF_MoveAssignment;
 
     // Keep the list of conversion functions up-to-date.
@@ -914,7 +923,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       if (Conversion->getPrimaryTemplate()) {
         // We don't record specializations.
       } else {
-        ASTContext &Ctx = getASTContext();
+        ASTContext &Ctx = GetContext();
         ASTUnresolvedSet &Conversions = data().Conversions.get(Ctx);
         NamedDecl *Primary =
             FunTmpl ? cast<NamedDecl>(FunTmpl) : cast<NamedDecl>(Conversion);
@@ -940,10 +949,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
       if (!Method->isImplicit()) {
         data().UserDeclaredSpecialMembers |= SMKind;
 
-        const TargetInfo &TI = getASTContext().getTargetInfo();
+        const TargetInfo &TI = GetContext().getTargetInfo();
         if ((!Method->isDeleted() && !Method->isDefaulted() &&
              SMKind != SMF_MoveAssignment) ||
-            !TI.areDefaultedSMFStillPOD(getLangOpts())) {
+            !TI.areDefaultedSMFStillPOD(GetContext().getLangOpts())) {
           // C++03 [class]p4:
           //   A POD-struct is an aggregate class that has [...] no user-defined
           //   copy assignment operator and no user-defined destructor.
@@ -974,7 +983,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
   // Handle non-static data members.
   if (const auto *Field = dyn_cast<FieldDecl>(D)) {
-    ASTContext &Context = getASTContext();
+    ASTContext &Context = GetContext();
 
     // C++2a [class]p7:
     //   A standard-layout class is a class that:
@@ -1189,7 +1198,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   brace-or-equal-initializers for non-static data members.
       //
       // This rule was removed in C++14.
-      if (!getASTContext().getLangOpts().CPlusPlus14)
+      if (!GetContext().getLangOpts().CPlusPlus14)
         data().Aggregate = false;
 
       // C++11 [class]p10:
@@ -1456,7 +1465,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (data().Empty && !IsZeroSize)
       data().Empty = false;
 
-    if (getLangOpts().HLSL) {
+    if (GetContext().getLangOpts().HLSL) {
       const Type *Ty = Field->getType()->getUnqualifiedDesugaredType();
       while (isa<ConstantArrayType>(Ty))
         Ty = Ty->getArrayElementTypeNoTypeQual();
@@ -1474,7 +1483,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
   if (auto *Shadow = dyn_cast<UsingShadowDecl>(D)) {
     if (Shadow->getDeclName().getNameKind()
           == DeclarationName::CXXConversionFunctionName) {
-      ASTContext &Ctx = getASTContext();
+      ASTContext &Ctx = GetContext();
       data().Conversions.get(Ctx).addDecl(Ctx, Shadow, Shadow->getAccess());
     }
   }
@@ -1501,7 +1510,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
   // relevant HLSL feature proposals that will depend on this changing:
   // * 0005-strict-initializer-lists.md
   // * https://github.com/microsoft/hlsl-specs/pull/325
-  if (getLangOpts().HLSL)
+  if (GetContext().getLangOpts().HLSL)
     data().Aggregate = data().UserDeclaredSpecialMembers == 0;
 }
 
@@ -2127,7 +2136,10 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
 }
 
 CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
-  ASTContext &Context = getASTContext();
+  return getDestructor(getASTContext());
+}
+
+CXXDestructorDecl *CXXRecordDecl::getDestructor(ASTContext &Context) const {
   CanQualType ClassType = Context.getCanonicalTagType(this);
 
   DeclarationName Name =
@@ -2727,7 +2739,7 @@ bool CXXMethodDecl::isImplicitObjectMemberFunction() const {
   return !isStatic() && !hasCXXExplicitFunctionObjectParameter();
 }
 
-bool CXXMethodDecl::isCopyAssignmentOperator() const {
+bool CXXMethodDecl::isCopyAssignmentOperator(const ASTContext *C) const {
   // C++0x [class.copy]p17:
   //  A user-declared copy assignment operator X::operator= is a non-static
   //  non-template member function of class X with exactly one parameter of
@@ -2743,12 +2755,12 @@ bool CXXMethodDecl::isCopyAssignmentOperator() const {
   if (const auto *Ref = ParamType->getAs<LValueReferenceType>())
     ParamType = Ref->getPointeeType();
 
-  ASTContext &Context = getASTContext();
+  const ASTContext &Context = C ? *C : getASTContext();
   CanQualType ClassType = Context.getCanonicalTagType(getParent());
   return Context.hasSameUnqualifiedType(ClassType, ParamType);
 }
 
-bool CXXMethodDecl::isMoveAssignmentOperator() const {
+bool CXXMethodDecl::isMoveAssignmentOperator(const ASTContext *C) const {
   // C++0x [class.copy]p19:
   //  A user-declared move assignment operator X::operator= is a non-static
   //  non-template member function of class X with exactly one parameter of type
@@ -2763,7 +2775,7 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
     return false;
   ParamType = ParamType->getPointeeType();
 
-  ASTContext &Context = getASTContext();
+  const ASTContext &Context = C ? *C : getASTContext();
   CanQualType ClassType = Context.getCanonicalTagType(getParent());
   return Context.hasSameUnqualifiedType(ClassType, ParamType);
 }
@@ -2824,11 +2836,24 @@ unsigned CXXMethodDecl::size_overridden_methods() const {
   return getASTContext().overridden_methods_size(this);
 }
 
+unsigned CXXMethodDecl::size_overridden_methods(const ASTContext &C) const {
+  if (isa<CXXConstructorDecl>(this))
+    return 0;
+  return C.overridden_methods_size(this);
+}
+
 CXXMethodDecl::overridden_method_range
 CXXMethodDecl::overridden_methods() const {
   if (isa<CXXConstructorDecl>(this))
     return overridden_method_range(nullptr, nullptr);
   return getASTContext().overridden_methods(this);
+}
+
+CXXMethodDecl::overridden_method_range
+CXXMethodDecl::overridden_methods(const ASTContext &C) const {
+  if (isa<CXXConstructorDecl>(this))
+    return overridden_method_range(nullptr, nullptr);
+  return C.overridden_methods(this);
 }
 
 static QualType getThisObjectType(ASTContext &C, const FunctionProtoType *FPT,
@@ -3054,6 +3079,10 @@ bool CXXConstructorDecl::isDefaultConstructor() const {
   return getMinRequiredArguments() == 0;
 }
 
+bool CXXConstructorDecl::isDefaultConstructor(const ASTContext &C) const {
+  return getMinRequiredArguments(C) == 0;
+}
+
 bool
 CXXConstructorDecl::isCopyConstructor(unsigned &TypeQuals) const {
   return isCopyOrMoveConstructor(TypeQuals) &&
@@ -3066,7 +3095,8 @@ bool CXXConstructorDecl::isMoveConstructor(unsigned &TypeQuals) const {
 }
 
 /// Determine whether this is a copy or move constructor.
-bool CXXConstructorDecl::isCopyOrMoveConstructor(unsigned &TypeQuals) const {
+bool CXXConstructorDecl::isCopyOrMoveConstructor(unsigned &TypeQuals,
+                                                 const ASTContext *C) const {
   // C++ [class.copy]p2:
   //   A non-template constructor for class X is a copy constructor
   //   if its first parameter is of type X&, const X&, volatile X& or
@@ -3089,7 +3119,7 @@ bool CXXConstructorDecl::isCopyOrMoveConstructor(unsigned &TypeQuals) const {
     return false;
 
   // Is it a reference to our class type?
-  ASTContext &Context = getASTContext();
+  const ASTContext &Context = C ? *C : getASTContext();
 
   QualType PointeeType = ParamRefType->getPointeeType();
   CanQualType ClassTy = Context.getCanonicalTagType(getParent());
@@ -3121,6 +3151,25 @@ bool CXXConstructorDecl::isConvertingConstructor(bool AllowExplicit) const {
              : getMinRequiredArguments() <= 1;
 }
 
+bool CXXConstructorDecl::isConvertingConstructor(const ASTContext &C,
+                                                 bool AllowExplicit) const {
+  // C++ [class.conv.ctor]p1:
+  //   A constructor declared without the function-specifier explicit
+  //   that can be called with a single parameter specifies a
+  //   conversion from the type of its first parameter to the type of
+  //   its class. Such a constructor is called a converting
+  //   constructor.
+  if (isExplicit() && !AllowExplicit)
+    return false;
+
+  // FIXME: This has nothing to do with the definition of converting
+  // constructor, but is convenient for how we use this function in overload
+  // resolution.
+  return getNumParams() == 0
+             ? getType()->castAs<FunctionProtoType>()->isVariadic()
+             : getMinRequiredArguments(C) <= 1;
+}
+
 bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   if (!hasOneParamOrDefaultArgs() || getDescribedFunctionTemplate() != nullptr)
     return false;
@@ -3128,6 +3177,20 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   const ParmVarDecl *Param = getParamDecl(0);
 
   ASTContext &Context = getASTContext();
+  CanQualType ParamType = Param->getType()->getCanonicalTypeUnqualified();
+
+  // Is it the same as our class type?
+  CanQualType ClassTy = Context.getCanonicalTagType(getParent());
+  return ParamType == ClassTy;
+}
+
+bool CXXConstructorDecl::isSpecializationCopyingObject(
+    const ASTContext &Context) const {
+  if (!hasOneParamOrDefaultArgs() || getDescribedFunctionTemplate() != nullptr)
+    return false;
+
+  const ParmVarDecl *Param = getParamDecl(0);
+
   CanQualType ParamType = Param->getType()->getCanonicalTypeUnqualified();
 
   // Is it the same as our class type?

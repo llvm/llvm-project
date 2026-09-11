@@ -1968,7 +1968,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
       return false;
 
     if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (MD->isVirtual() || IsDisallowedCopyOrAssign(MD))
+      if (MD->isVirtual(Context) || IsDisallowedCopyOrAssign(MD))
         return false;
     } else {
       // 'static inline' functions are defined in headers; don't warn.
@@ -9332,7 +9332,7 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
     for (NamedDecl *BaseND : BaseRecord->lookup(Name)) {
       CXXMethodDecl *BaseMD =
           dyn_cast<CXXMethodDecl>(BaseND->getCanonicalDecl());
-      if (!BaseMD || !BaseMD->isVirtual() ||
+      if (!BaseMD || !BaseMD->isVirtual(Context) ||
           IsOverride(MD, BaseMD, /*UseMemberUsingDeclRules=*/false,
                      /*ConsiderCudaAttrs=*/true))
         continue;
@@ -9354,7 +9354,7 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
     return false;
   };
 
-  DC->lookupInBases(VisitBase, Paths);
+  DC->lookupInBases(Context, VisitBase, Paths);
   return !Overridden.empty();
 }
 
@@ -11705,7 +11705,7 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
            << FuncTemplates;
 
   if (const auto *NewCXXFD = dyn_cast<CXXMethodDecl>(NewFD)) {
-    if (NewCXXFD->isVirtual())
+    if (NewCXXFD->isVirtual(Context))
       return Diag(NoSupportDiagIDAt.first, NoSupportDiagIDAt.second)
              << VirtFuncs;
 
@@ -12678,7 +12678,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
           Method->isCanonicalDecl()) {
         AddOverriddenMethods(Method->getParent(), Method);
       }
-      if (Method->isVirtual() && NewFD->getTrailingRequiresClause())
+      if (Method->isVirtual(Context) && NewFD->getTrailingRequiresClause())
         // C++2a [class.virtual]p6
         // A virtual method shall not have a requires-clause.
         Diag(NewFD->getTrailingRequiresClause().ConstraintExpr->getBeginLoc(),

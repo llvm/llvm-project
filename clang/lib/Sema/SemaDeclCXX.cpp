@@ -673,7 +673,8 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   // default argument makes the function a special member function, the program
   // is ill-formed. This can only happen for constructors.
   if (isa<CXXConstructorDecl>(New) &&
-      New->getMinRequiredArguments() < Old->getMinRequiredArguments()) {
+      New->getMinRequiredArguments(Context) <
+          Old->getMinRequiredArguments(Context)) {
     CXXSpecialMemberKind NewSM =
                              cast<CXXMethodDecl>(New)->getSpecialMemberKind(),
                          OldSM =
@@ -3066,8 +3067,8 @@ bool Sema::AttachBaseSpecifiers(CXXRecordDecl *Class,
     if (IndirectBaseTypes.count(CanonicalBase)) {
       CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                          /*DetectVirtual=*/true);
-      bool found
-        = Class->isDerivedFrom(CanonicalBase->getAsCXXRecordDecl(), Paths);
+      bool found = Class->isDerivedFrom(
+          Context, CanonicalBase->getAsCXXRecordDecl(), Paths);
       assert(found);
       (void)found;
 
@@ -3115,7 +3116,7 @@ bool Sema::IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
       !Derived->isBeingDefined())
     return false;
 
-  return Derived->isDerivedFrom(Base, Paths);
+  return Derived->isDerivedFrom(Context, Base, Paths);
 }
 
 bool Sema::IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
@@ -3305,7 +3306,7 @@ void Sema::CheckOverrideControl(NamedDecl *D) {
        MD->getType()->isDependentType()))
     return;
 
-  if (MD && !MD->isVirtual()) {
+  if (MD && !MD->isVirtual(Context)) {
     // If we have a non-virtual method, check if it hides a virtual method.
     // (In that case, it's most likely the method has the wrong type.)
     SmallVector<CXXMethodDecl *, 8> OverloadedMethods;
@@ -3330,7 +3331,7 @@ void Sema::CheckOverrideControl(NamedDecl *D) {
     // FIXME: We might want to attempt typo correction here.
   }
 
-  if (!MD || !MD->isVirtual()) {
+  if (!MD || !MD->isVirtual(Context)) {
     if (OverrideAttr *OA = D->getAttr<OverrideAttr>()) {
       Diag(OA->getLocation(),
            diag::override_keyword_only_allowed_on_virtual_member_functions)
@@ -3351,7 +3352,7 @@ void Sema::CheckOverrideControl(NamedDecl *D) {
   //   If a function is marked with the virt-specifier override and
   //   does not override a member function of a base class, the program is
   //   ill-formed.
-  bool HasOverriddenMethods = MD->size_overridden_methods() != 0;
+  bool HasOverriddenMethods = MD->size_overridden_methods(Context) != 0;
   if (MD->hasAttr<OverrideAttr>() && !HasOverriddenMethods)
     Diag(MD->getLocation(), diag::err_function_marked_override_not_overriding)
       << MD->getDeclName();
@@ -3372,7 +3373,7 @@ void Sema::DiagnoseAbsenceOfOverrideControl(NamedDecl *D, bool Inconsistent) {
   if (SpellingLoc.isValid() && getSourceManager().isInSystemHeader(SpellingLoc))
       return;
 
-  if (MD->size_overridden_methods() > 0) {
+  if (MD->size_overridden_methods(Context) > 0) {
     auto EmitDiag = [&](unsigned DiagInconsistent, unsigned DiagSuggest) {
       unsigned DiagID =
           Inconsistent && !Diags.isIgnored(DiagInconsistent, MD->getLocation())
@@ -3937,8 +3938,8 @@ namespace {
       if (Constructor)
         S.Diag(Constructor->getLocation(),
                diag::note_uninit_in_this_constructor)
-          << (Constructor->isDefaultConstructor() && Constructor->isImplicit());
-
+            << (Constructor->isDefaultConstructor(Context) &&
+                Constructor->isImplicit());
     }
 
     void HandleValue(Expr *E, bool AddressOf) {
@@ -6367,7 +6368,8 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
       // default arguments.
       if (S.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
         auto *CD = dyn_cast<CXXConstructorDecl>(MD);
-        if (CD && CD->isDefaultConstructor() && TSK == TSK_Undeclared) {
+        if (CD && CD->isDefaultConstructor(S.Context) &&
+            TSK == TSK_Undeclared) {
           S.BuildCtorClosureDefaultArgs(
               CD->getAttr<DLLExportAttr>()->getLocation(), CD);
         }
@@ -6424,7 +6426,7 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
 
     // Look for exported default constructors.
     auto *CD = dyn_cast<CXXConstructorDecl>(Member);
-    if (!CD || !CD->isDefaultConstructor())
+    if (!CD || !CD->isDefaultConstructor(S.Context))
       continue;
     auto *Attr = CD->getAttr<DLLExportAttr>();
     if (!Attr)
@@ -7066,7 +7068,7 @@ static bool
 ReportOverrides(Sema &S, unsigned DiagID, const CXXMethodDecl *MD,
                 llvm::function_ref<bool(const CXXMethodDecl *)> Report) {
   bool IssuedDiagnostic = false;
-  for (const CXXMethodDecl *O : MD->overridden_methods()) {
+  for (const CXXMethodDecl *O : MD->overridden_methods(S.Context)) {
     if (Report(O)) {
       if (!IssuedDiagnostic) {
         S.Diag(MD->getLocation(), DiagID) << MD->getDeclName();
@@ -7139,8 +7141,9 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
   // Warn if the class has virtual methods but non-virtual public destructor.
   if (Record->isPolymorphic() && !Record->isDependentType()) {
-    CXXDestructorDecl *dtor = Record->getDestructor();
-    if ((!dtor || (!dtor->isVirtual() && dtor->getAccess() == AS_public)) &&
+    CXXDestructorDecl *dtor = Record->getDestructor(Context);
+    if ((!dtor ||
+         (!dtor->isVirtual(Context) && dtor->getAccess() == AS_public)) &&
         !Record->hasAttr<FinalAttr>())
       Diag(dtor ? dtor->getLocation() : Record->getLocation(),
            diag::warn_non_virtual_dtor)
@@ -7157,7 +7160,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
   // Warn if the class has a final destructor but is not itself marked final.
   if (!Record->hasAttr<FinalAttr>()) {
-    if (const CXXDestructorDecl *dtor = Record->getDestructor()) {
+    if (const CXXDestructorDecl *dtor = Record->getDestructor(Context)) {
       if (const FinalAttr *FA = dtor->getAttr<FinalAttr>()) {
         Diag(FA->getLocation(), diag::warn_final_dtor_non_final_class)
             << FA->isSpelledAsSealed()
@@ -7328,8 +7331,8 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     // function right away.
     // FIXME: We can defer doing this until the vtable is marked as used.
     if (CSM != CXXSpecialMemberKind::Invalid && !M->isDeleted() &&
-        M->isDefaulted() && M->isConstexpr() && M->size_overridden_methods() &&
-        EffectivelyConstexprDestructor)
+        M->isDefaulted() && M->isConstexpr() &&
+        M->size_overridden_methods(Context) && EffectivelyConstexprDestructor)
       DefineDefaultedFunction(*this, M, M->getLocation());
 
     if (!Incomplete)
@@ -7341,7 +7344,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   // type is a literal type, which is a prerequisite for determining whether
   // other special member functions are valid and whether they're implicitly
   // 'constexpr'.
-  if (CXXDestructorDecl *Dtor = Record->getDestructor())
+  if (CXXDestructorDecl *Dtor = Record->getDestructor(Context))
     CompleteMemberFunction(Dtor);
 
   bool HasMethodWithOverrideControl = false,
@@ -7358,7 +7361,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
         if (M->hasAttr<OverrideAttr>()) {
           HasMethodWithOverrideControl = true;
-        } else if (M->size_overridden_methods() > 0) {
+        } else if (M->size_overridden_methods(Context) > 0) {
           HasOverridingMethodWithoutOverrideControl = true;
         } else {
           // Warn on newly-declared virtual methods in `final` classes
@@ -7464,7 +7467,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
                      {OO_Array_New, {}}};
   for (auto *D : Record->decls()) {
     const FunctionDecl *FnDecl = D->getAsFunction();
-    if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
+    if (!FnDecl || !Context.isTypeAwareOperatorNewOrDelete(FnDecl))
       continue;
     assert(FnDecl->getDeclName().isAnyOperatorNewOrDelete());
     TypeAwareDecls[FnDecl->getOverloadedOperator()].push_back(FnDecl);
@@ -10073,7 +10076,7 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
   // C++11 [class.dtor]p5:
   // -- for a virtual destructor, lookup of the non-array deallocation function
   //    results in an ambiguity or in a function that is deleted or inaccessible
-  if (CSM == CXXSpecialMemberKind::Destructor && MD->isVirtual()) {
+  if (CSM == CXXSpecialMemberKind::Destructor && MD->isVirtual(Context)) {
     FunctionDecl *OperatorDelete = nullptr;
     CanQualType DeallocType = Context.getCanonicalTagType(RD);
     DeclarationName Name =
@@ -10179,7 +10182,7 @@ static bool findTrivialSpecialMember(Sema &S, CXXRecordDecl *RD,
       if (RD->needsImplicitDefaultConstructor())
         S.DeclareImplicitDefaultConstructor(RD);
       for (auto *CI : RD->ctors()) {
-        if (!CI->isDefaultConstructor())
+        if (!CI->isDefaultConstructor(S.Context))
           continue;
         DefCtor = CI;
         if (!DefCtor->isUserProvided())
@@ -10486,11 +10489,13 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
     llvm_unreachable("not a special member");
   }
 
-  if (MD->getMinRequiredArguments() < MD->getNumParams()) {
+  if (MD->getMinRequiredArguments(Context) < MD->getNumParams()) {
     if (Diagnose)
-      Diag(MD->getParamDecl(MD->getMinRequiredArguments())->getLocation(),
-           diag::note_nontrivial_default_arg)
-        << MD->getParamDecl(MD->getMinRequiredArguments())->getSourceRange();
+      Diag(
+          MD->getParamDecl(MD->getMinRequiredArguments(Context))->getLocation(),
+          diag::note_nontrivial_default_arg)
+          << MD->getParamDecl(MD->getMinRequiredArguments(Context))
+                 ->getSourceRange();
     return false;
   }
   if (MD->isVariadic()) {
@@ -10531,7 +10536,7 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
   // C++11 [class.dtor]p5:
   //   A destructor is trivial if [...]
   //    -- the destructor is not virtual
-  if (CSM == CXXSpecialMemberKind::Destructor && MD->isVirtual()) {
+  if (CSM == CXXSpecialMemberKind::Destructor && MD->isVirtual(Context)) {
     if (Diagnose)
       Diag(MD->getLocation(), diag::note_nontrivial_virtual_dtor) << RD;
     return false;
@@ -10556,7 +10561,7 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
 
     // Must have a virtual method.
     for (const auto *MI : RD->methods()) {
-      if (MI->isVirtual()) {
+      if (MI->isVirtual(Context)) {
         SourceLocation MLoc = MI->getBeginLoc();
         Diag(MLoc, diag::note_nontrivial_has_virtual) << RD << 0;
         return false;
@@ -10580,12 +10585,12 @@ struct FindHiddenVirtualMethod {
 private:
   /// Check whether any most overridden method from MD in Methods
   static bool CheckMostOverridenMethods(
-      const CXXMethodDecl *MD,
+      const ASTContext &C, const CXXMethodDecl *MD,
       const llvm::SmallPtrSetImpl<const CXXMethodDecl *> &Methods) {
-    if (MD->size_overridden_methods() == 0)
+    if (MD->size_overridden_methods(C) == 0)
       return Methods.count(MD->getCanonicalDecl());
-    for (const CXXMethodDecl *O : MD->overridden_methods())
-      if (CheckMostOverridenMethods(O, Methods))
+    for (const CXXMethodDecl *O : MD->overridden_methods(C))
+      if (CheckMostOverridenMethods(C, O, Methods))
         return true;
     return false;
   }
@@ -10608,7 +10613,7 @@ public:
         MD = MD->getCanonicalDecl();
         foundSameNameMethod = true;
         // Interested only in hidden virtual methods.
-        if (!MD->isVirtual())
+        if (!MD->isVirtual(S->Context))
           continue;
         // If the method we are checking overrides a method from its base
         // don't warn about the other overloaded methods. Clang deviates from
@@ -10623,7 +10628,8 @@ public:
         if (!S->IsOverload(Method, MD, false))
           return true;
         // Collect the overload only if its hidden.
-        if (!CheckMostOverridenMethods(MD, OverridenAndUsingBaseMethods))
+        if (!CheckMostOverridenMethods(S->Context, MD,
+                                       OverridenAndUsingBaseMethods))
           overloadedMethods.push_back(MD);
       }
     }
@@ -10637,13 +10643,14 @@ public:
 } // end anonymous namespace
 
 /// Add the most overridden methods from MD to Methods
-static void AddMostOverridenMethods(const CXXMethodDecl *MD,
-                        llvm::SmallPtrSetImpl<const CXXMethodDecl *>& Methods) {
-  if (MD->size_overridden_methods() == 0)
+static void
+AddMostOverridenMethods(const ASTContext &C, const CXXMethodDecl *MD,
+                        llvm::SmallPtrSetImpl<const CXXMethodDecl *> &Methods) {
+  if (MD->size_overridden_methods(C) == 0)
     Methods.insert(MD->getCanonicalDecl());
   else
-    for (const CXXMethodDecl *O : MD->overridden_methods())
-      AddMostOverridenMethods(O, Methods);
+    for (const CXXMethodDecl *O : MD->overridden_methods(C))
+      AddMostOverridenMethods(C, O, Methods);
 }
 
 void Sema::FindHiddenVirtualMethods(CXXMethodDecl *MD,
@@ -10665,10 +10672,10 @@ void Sema::FindHiddenVirtualMethods(CXXMethodDecl *MD,
     if (UsingShadowDecl *shad = dyn_cast<UsingShadowDecl>(ND))
       ND = shad->getTargetDecl();
     if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(ND))
-      AddMostOverridenMethods(MD, FHVM.OverridenAndUsingBaseMethods);
+      AddMostOverridenMethods(Context, MD, FHVM.OverridenAndUsingBaseMethods);
   }
 
-  if (DC->lookupInBases(FHVM, Paths))
+  if (DC->lookupInBases(Context, FHVM, Paths))
     OverloadedMethods = FHVM.OverloadedMethods;
 }
 
@@ -14369,10 +14376,12 @@ CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
 void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
                                             CXXConstructorDecl *Constructor) {
   DefaultedFunctionFPFeaturesRAII RestoreFP(*this, Constructor);
-  assert((Constructor->isDefaulted() && Constructor->isDefaultConstructor() &&
-          !Constructor->doesThisDeclarationHaveABody() &&
-          !Constructor->isDeleted()) &&
-    "DefineImplicitDefaultConstructor - call it for implicit default ctor");
+  assert(
+      (Constructor->isDefaulted() &&
+       Constructor->isDefaultConstructor(Context) &&
+       !Constructor->doesThisDeclarationHaveABody() &&
+       !Constructor->isDeleted()) &&
+      "DefineImplicitDefaultConstructor - call it for implicit default ctor");
   if (Constructor->willHaveBody() || Constructor->isInvalidDecl())
     return;
 

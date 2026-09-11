@@ -2257,20 +2257,20 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // FIXME: How do you declare (but not define) a partial specialization of
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
-    if (isOutOfLine() &&
+    if (isOutOfLine(C) &&
         !(getCanonicalDecl()->isInline() &&
           getCanonicalDecl()->isConstexpr()) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
          // template for which we have not yet instantiated the initializer.
-         (getFirstDecl()->isOutOfLine()
-              ? getTemplateSpecializationKind() == TSK_Undeclared
-              : getTemplateSpecializationKind() !=
+         (getFirstDecl()->isOutOfLine(C)
+              ? getTemplateSpecializationKind(C) == TSK_Undeclared
+              : getTemplateSpecializationKind(C) !=
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    if (!isOutOfLine() && isInline())
+    if (!isOutOfLine(C) && isInline())
       return Definition;
     return DeclarationOnly;
   }
@@ -2453,6 +2453,16 @@ bool VarDecl::isOutOfLine() const {
   if (VarDecl *VD = getInstantiatedFromStaticDataMember())
     return VD->isOutOfLine();
 
+  return false;
+}
+
+bool VarDecl::isOutOfLine(ASTContext &C) const {
+  if (Decl::isOutOfLine())
+    return true;
+  if (!isStaticDataMember())
+    return false;
+  if (VarDecl *VD = getInstantiatedFromStaticDataMember(C))
+    return VD->isOutOfLine(C);
   return false;
 }
 
@@ -2748,6 +2758,12 @@ VarDecl *VarDecl::getInstantiatedFromStaticDataMember() const {
   return nullptr;
 }
 
+VarDecl *VarDecl::getInstantiatedFromStaticDataMember(ASTContext &C) const {
+  if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo(C))
+    return cast<VarDecl>(MSI->getInstantiatedFrom());
+  return nullptr;
+}
+
 TemplateSpecializationKind VarDecl::getTemplateSpecializationKind() const {
   if (const auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(this))
     return Spec->getSpecializationKind();
@@ -2755,6 +2771,15 @@ TemplateSpecializationKind VarDecl::getTemplateSpecializationKind() const {
   if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo())
     return MSI->getTemplateSpecializationKind();
 
+  return TSK_Undeclared;
+}
+
+TemplateSpecializationKind
+VarDecl::getTemplateSpecializationKind(ASTContext &C) const {
+  if (const auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(this))
+    return Spec->getSpecializationKind();
+  if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo(C))
+    return MSI->getTemplateSpecializationKind();
   return TSK_Undeclared;
 }
 
@@ -2782,6 +2807,11 @@ SourceLocation VarDecl::getPointOfInstantiation() const {
 VarTemplateDecl *VarDecl::getDescribedVarTemplate() const {
   return dyn_cast_if_present<VarTemplateDecl *>(
       getASTContext().getTemplateOrSpecializationInfo(this));
+}
+
+VarTemplateDecl *VarDecl::getDescribedVarTemplate(ASTContext &C) const {
+  return dyn_cast_if_present<VarTemplateDecl *>(
+      C.getTemplateOrSpecializationInfo(this));
 }
 
 void VarDecl::setDescribedVarTemplate(VarTemplateDecl *Template) {
@@ -2873,6 +2903,14 @@ MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
     // return getASTContext().getInstantiatedFromStaticDataMember(this);
     return dyn_cast_if_present<MemberSpecializationInfo *>(
         getASTContext().getTemplateOrSpecializationInfo(this));
+  return nullptr;
+}
+
+MemberSpecializationInfo *
+VarDecl::getMemberSpecializationInfo(ASTContext &C) const {
+  if (isStaticDataMember())
+    return dyn_cast_if_present<MemberSpecializationInfo *>(
+        C.getTemplateOrSpecializationInfo(this));
   return nullptr;
 }
 
@@ -3889,7 +3927,11 @@ void FunctionDecl::setParams(ASTContext &C,
 /// function parameters, if some of the parameters have default
 /// arguments (in C++) or are parameter packs (C++11).
 unsigned FunctionDecl::getMinRequiredArguments() const {
-  if (!getASTContext().getLangOpts().CPlusPlus)
+  return getMinRequiredArguments(getASTContext());
+}
+
+unsigned FunctionDecl::getMinRequiredArguments(const ASTContext &C) const {
+  if (!C.getLangOpts().CPlusPlus)
     return getNumParams();
 
   // Note that it is possible for a parameter with no default argument to
@@ -3917,6 +3959,12 @@ unsigned FunctionDecl::getNumNonObjectParams() const {
 
 unsigned FunctionDecl::getMinRequiredExplicitArguments() const {
   return getMinRequiredArguments() -
+         static_cast<unsigned>(hasCXXExplicitFunctionObjectParameter());
+}
+
+unsigned
+FunctionDecl::getMinRequiredExplicitArguments(const ASTContext &C) const {
+  return getMinRequiredArguments(C) -
          static_cast<unsigned>(hasCXXExplicitFunctionObjectParameter());
 }
 

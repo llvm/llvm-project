@@ -2546,7 +2546,7 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 
   CXXBasePaths Paths;
   Paths.setOrigin(LookupRec);
-  if (!LookupRec->lookupInBases(BaseCallback, Paths))
+  if (!LookupRec->lookupInBases(Context, BaseCallback, Paths))
     return false;
 
   R.setNamingClass(LookupRec);

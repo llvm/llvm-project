@@ -3979,8 +3979,8 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
     // Find the class template specialization declaration that
     // corresponds to these arguments.
     llvm::FoldingSetInsertToken InsertToken;
-    ClassTemplateSpecializationDecl *Decl =
-        ClassTemplate->findSpecialization(CTAI.CanonicalConverted, InsertToken);
+    ClassTemplateSpecializationDecl *Decl = ClassTemplate->findSpecialization(
+        CTAI.CanonicalConverted, InsertToken, &Context);
     if (!Decl) {
       // This is the first time we have referenced this class template
       // specialization. Create the canonical declaration and add it to
@@ -4473,8 +4473,8 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     PrevDecl = VarTemplate->findPartialSpecialization(
         CTAI.CanonicalConverted, TemplateParams, InsertToken);
   else
-    PrevDecl =
-        VarTemplate->findSpecialization(CTAI.CanonicalConverted, InsertToken);
+    PrevDecl = VarTemplate->findSpecialization(CTAI.CanonicalConverted,
+                                               InsertToken, &Context);
 
   VarTemplateSpecializationDecl *Specialization = nullptr;
 
@@ -4660,8 +4660,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // Find the variable template specialization declaration that
   // corresponds to these arguments.
   llvm::FoldingSetInsertToken InsertToken;
-  if (VarTemplateSpecializationDecl *Spec =
-          Template->findSpecialization(CTAI.CanonicalConverted, InsertToken)) {
+  if (VarTemplateSpecializationDecl *Spec = Template->findSpecialization(
+          CTAI.CanonicalConverted, InsertToken, &Context)) {
     checkSpecializationReachability(TemplateNameLoc, Spec);
     if (Spec->getType()->isUndeducedType()) {
       if (ParsingInitForAutoVars.count(Spec))
@@ -8954,8 +8954,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     PrevDecl = ClassTemplate->findPartialSpecialization(
         CTAI.CanonicalConverted, TemplateParams, InsertToken);
   else
-    PrevDecl =
-        ClassTemplate->findSpecialization(CTAI.CanonicalConverted, InsertToken);
+    PrevDecl = ClassTemplate->findSpecialization(CTAI.CanonicalConverted,
+                                                 InsertToken, &Context);
 
   ClassTemplateSpecializationDecl *Specialization = nullptr;
 
@@ -10353,8 +10353,8 @@ DeclResult Sema::ActOnExplicitInstantiation(
   // Find the class template specialization declaration that
   // corresponds to these arguments.
   llvm::FoldingSetInsertToken InsertToken;
-  ClassTemplateSpecializationDecl *PrevDecl =
-      ClassTemplate->findSpecialization(CTAI.CanonicalConverted, InsertToken);
+  ClassTemplateSpecializationDecl *PrevDecl = ClassTemplate->findSpecialization(
+      CTAI.CanonicalConverted, InsertToken, &Context);
 
   TemplateSpecializationKind PrevDecl_TSK
     = PrevDecl ? PrevDecl->getTemplateSpecializationKind() : TSK_Undeclared;

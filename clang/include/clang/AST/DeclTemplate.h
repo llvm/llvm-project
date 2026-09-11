@@ -777,13 +777,15 @@ protected:
 
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
-  findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
+  findSpecializationImpl(ASTContext *C,
+                         llvm::FoldingSetVector<EntryType> &Specs,
                          llvm::FoldingSetInsertToken &InsertToken,
                          ProfileArguments... ProfileArgs);
 
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
-  findSpecializationLocally(llvm::FoldingSetVector<EntryType> &Specs,
+  findSpecializationLocally(ASTContext *C,
+                            llvm::FoldingSetVector<EntryType> &Specs,
                             llvm::FoldingSetInsertToken &InsertToken,
                             ProfileArguments... ProfileArgs);
 
@@ -1031,8 +1033,10 @@ public:
 
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
+  /// C, if supplied, is the already-known owning AST context.
   FunctionDecl *findSpecialization(ArrayRef<TemplateArgument> Args,
-                                   llvm::FoldingSetInsertToken &InsertToken);
+                                   llvm::FoldingSetInsertToken &InsertToken,
+                                   ASTContext *C = nullptr);
 
   FunctionTemplateDecl *getCanonicalDecl() override {
     return cast<FunctionTemplateDecl>(
@@ -2340,9 +2344,11 @@ public:
 
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
+  /// C, if supplied, is the already-known owning AST context.
   ClassTemplateSpecializationDecl *
   findSpecialization(ArrayRef<TemplateArgument> Args,
-                     llvm::FoldingSetInsertToken &InsertToken);
+                     llvm::FoldingSetInsertToken &InsertToken,
+                     ASTContext *C = nullptr);
 
   /// Insert the specified specialization knowing that it is not already
   /// in. InsertToken must be obtained from findSpecialization.
@@ -3102,9 +3108,11 @@ public:
 
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
+  /// C, if supplied, is the already-known owning AST context.
   VarTemplateSpecializationDecl *
   findSpecialization(ArrayRef<TemplateArgument> Args,
-                     llvm::FoldingSetInsertToken &InsertToken);
+                     llvm::FoldingSetInsertToken &InsertToken,
+                     ASTContext *C = nullptr);
 
   /// Insert the specified specialization knowing that it is not already
   /// in. InsertToken must be obtained from findSpecialization.

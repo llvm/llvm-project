@@ -7039,7 +7039,8 @@ void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
       (LangOpts.CUDA && !shouldEmitCUDAGlobalVar(VD)))
     return;
 
-  TemplateSpecializationKind TSK = VD->getTemplateSpecializationKind();
+  TemplateSpecializationKind TSK =
+      VD->getTemplateSpecializationKind(getContext());
   // If we have a definition, this might be a deferred decl. If the
   // instantiation is explicit, make sure we emit it at the end.
   if (VD->getDefinition() && TSK == TSK_ExplicitInstantiationDefinition)
