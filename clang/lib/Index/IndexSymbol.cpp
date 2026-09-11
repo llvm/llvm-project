@@ -570,8 +570,6 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::NonTypeTemplateParm: return "non-type-template-param";
   case SymbolKind::Concept:
     return "concept";
-  case SymbolKind::Count:
-    break;
   }
   llvm_unreachable("invalid symbol kind");
 }

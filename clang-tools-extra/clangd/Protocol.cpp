@@ -371,8 +371,6 @@ SymbolKind indexSymbolKindToSymbolKind(const index::SymbolInfo &Info) {
     return SymbolKind::TypeParameter;
   case index::SymbolKind::Concept:
     return SymbolKind::Interface;
-  case index::SymbolKind::Count:
-    break;
   }
   llvm_unreachable("invalid symbol kind");
 }

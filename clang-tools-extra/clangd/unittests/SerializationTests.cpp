@@ -265,8 +265,8 @@ TEST(SerializationTest, BinaryConversions) {
 // produces invalid YAML (or aborts with assertions enabled).
 TEST(SerializationTest, YAMLSymbolKindRoundTrip) {
   SymbolSlab::Builder Builder;
-  for (auto K = static_cast<unsigned>(index::SymbolKind::Unknown);
-       K < static_cast<unsigned>(index::SymbolKind::Count); ++K) {
+  for (unsigned K = static_cast<unsigned>(index::SymbolKind::Unknown);
+       K <= static_cast<unsigned>(index::SymbolKind::Concept); ++K) {
     std::string Name = "Sym" + std::to_string(K);
     Symbol Sym = symbol(Name);
     Sym.SymInfo.Kind = static_cast<index::SymbolKind>(K);
