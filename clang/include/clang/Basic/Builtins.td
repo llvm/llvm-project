@@ -5440,7 +5440,7 @@ def HLSLResourceHandleFromHeap : LangBuiltin<"HLSL_LANG"> {
 def HLSLResourceCounterHandleFromHeap : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_counterhandlefromheap"];
   let Attributes = [NoThrow];
-  let Prototype = "__hlsl_resource_t(__hlsl_resource_t, uint32_t)";
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t)";
 }
 
 def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {

@@ -1077,10 +1077,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       return MainHandle;
 
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
-    Value *IndexOp = EmitScalarExpr(E->getArg(1));
     llvm::Intrinsic::ID IntrinsicID =
         llvm::Intrinsic::spv_resource_counterhandlefromheap;
-    SmallVector<Value *> Args{MainHandle, IndexOp};
+    SmallVector<Value *> Args{MainHandle};
     return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
                              Args);
   }

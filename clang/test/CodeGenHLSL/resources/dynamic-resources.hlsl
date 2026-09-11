@@ -106,4 +106,4 @@ export void testCounterBuffer(unsigned Index) {
 // SPV-DAG: call target("spirv.VulkanBuffer", %S, 2, 0) @llvm.spv.resource.handlefromheap{{.*}}(i32 %{{.*}})
 // SPV-DAG: call target("spirv.Sampler") @llvm.spv.resource.handlefromheap{{.*}}(i32 %{{.*}})
 // SPV-DAG: call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefromheap{{.*}}(i32 %{{.*}})
-// SPV-DAG: call target("spirv.VulkanBuffer", i32, 12, 1) @llvm.spv.resource.counterhandlefromheap{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %{{.*}}, i32 %{{.*}}) [ "convergencectrl"(token %{{.*}}) ]
+// SPV-DAG: call target("spirv.VulkanBuffer", i32, 12, 1) @llvm.spv.resource.counterhandlefromheap{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %{{.*}}) [ "convergencectrl"(token %{{.*}}) ]

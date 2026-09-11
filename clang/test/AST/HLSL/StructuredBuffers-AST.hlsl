@@ -159,11 +159,9 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-HANDLE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-COUNTER-HANDLE-NEXT: CStyleCastExpr {{.*}} '__hlsl_resource_t
 // CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromheap' '__hlsl_resource_t (__hlsl_resource_t, unsigned int) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromheap' '__hlsl_resource_t (__hlsl_resource_t) noexcept'
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} lvalue .__handle
 // CHECK-COUNTER-HANDLE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} 'unsigned int' lvalue .Index
-// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::__hlsl_heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__hlsl_heap_resource_info'
 // CHECK-NEXT: AlwaysInlineAttr
 
 // Static __createFromBinding method

@@ -1246,8 +1246,7 @@ BuiltinTypeDeclBuilder::addHeapResourceInfoConstructor(bool HasCounter) {
   if (HasCounter) {
     QualType CounterHandleType = getResourceCounterHandleField()->getType();
     MB.callBuiltin("__builtin_hlsl_resource_counterhandlefromheap",
-                   CounterHandleType, PH::Handle,
-                   MB.createMemberExpr(PH::_0, IndexField))
+                   CounterHandleType, PH::Handle)
         .assign(PH::CounterHandle, PH::LastStmt);
   }
 
