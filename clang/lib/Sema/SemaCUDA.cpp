@@ -776,39 +776,63 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
   } else {
     // This is a host-side global variable.  Check that the initializer is
     // callable from the host side.
-    const FunctionDecl *InitFn = nullptr;
-    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(Init)) {
-      InitFn = CE->getConstructor();
-    } else if (const CallExpr *CE = dyn_cast<CallExpr>(Init)) {
-      InitFn = CE->getDirectCallee();
-    }
-    if (InitFn) {
-      CUDAFunctionTarget InitFnTarget = IdentifyTarget(InitFn);
-      if (InitFnTarget != CUDAFunctionTarget::Host &&
-          InitFnTarget != CUDAFunctionTarget::HostDevice) {
-        Diag(VD->getLocation(), diag::err_ref_bad_target_global_initializer)
-            << InitFnTarget << InitFn;
-        Diag(InitFn->getLocation(), diag::note_previous_decl) << InitFn;
-        VD->setInvalidDecl();
-      }
-    }
+
     struct GlobVarInitChecker : ConstEvaluatedExprVisitor<GlobVarInitChecker> {
+    private:
       using Base = ConstEvaluatedExprVisitor<GlobVarInitChecker>;
       SemaCUDA &SCRef;
-      SourceLocation InitLoc;
+      VarDecl *VD;
+      void CheckForWrongSidedCall(const FunctionDecl *FD) {
+        CUDAFunctionTarget InitFnTarget = SCRef.IdentifyTarget(FD);
+        if (InitFnTarget != CUDAFunctionTarget::Host &&
+            InitFnTarget != CUDAFunctionTarget::HostDevice &&
+            !VD->isInvalidDecl()) {
+          SCRef.Diag(VD->getLocation(),
+                     diag::err_ref_bad_target_global_initializer)
+              << InitFnTarget << FD;
+          SCRef.Diag(FD->getLocation(), diag::note_previous_decl) << FD;
+          VD->setInvalidDecl();
+        }
+      }
 
-      GlobVarInitChecker(SemaCUDA &S, SourceLocation L)
-          : Base(S.getASTContext()), SCRef(S), InitLoc(L) {}
+    public:
+      GlobVarInitChecker(SemaCUDA &S, VarDecl *VD)
+          : Base(S.getASTContext()), SCRef(S), VD(VD) {}
       void VisitDeclRefExpr(const DeclRefExpr *DRE) {
         if (auto *VarD = dyn_cast<VarDecl>(DRE->getDecl());
             VarD && VarD->hasAttr<HIPManagedAttr>()) {
           SCRef.Diag(DRE->getLocation(),
                      diag::err_cuda_invalid_use_of_managedvar);
-          SCRef.Diag(InitLoc, diag::note_cuda_managed_var_in_glob_init);
+          SCRef.Diag(VD->getLocation(),
+                     diag::note_cuda_managed_var_in_glob_init);
         }
       }
+      void VisitCallExpr(const CallExpr *CE) {
+        const FunctionDecl *InitFn = CE->getDirectCallee();
+        if (InitFn)
+          CheckForWrongSidedCall(InitFn);
+        Base::VisitCallExpr(CE);
+      }
+
+      void VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+        const CXXConstructorDecl *Ctor = CE->getConstructor();
+        if (Ctor) {
+          CheckForWrongSidedCall(Ctor);
+          for (auto *I : Ctor->inits())
+            Visit(I->getInit());
+        }
+        Base::VisitCXXConstructExpr(CE);
+      }
+
+      void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
+        Visit(E->getExpr());
+      }
+
+      void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
+        Visit(E->getExpr());
+      }
     };
-    GlobVarInitChecker Checker(*this, VD->getLocation());
+    GlobVarInitChecker Checker(*this, VD);
     Checker.Visit(Init);
   }
 }
