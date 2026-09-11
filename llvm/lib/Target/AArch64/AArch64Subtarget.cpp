@@ -39,6 +39,10 @@ static cl::opt<bool>
 EnableEarlyIfConvert("aarch64-early-ifcvt", cl::desc("Enable the early if "
                      "converter pass"), cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableCCMP("aarch64-enable-ccmp",
+                                cl::desc("Enable the CCMP formation pass"),
+                                cl::init(true), cl::Hidden);
+
 // If OS supports TBI, use this flag to enable it.
 static cl::opt<bool>
 UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
@@ -564,6 +568,8 @@ void AArch64Subtarget::adjustSchedDependency(
 bool AArch64Subtarget::enableEarlyIfConversion() const {
   return EnableEarlyIfConvert;
 }
+
+bool AArch64Subtarget::enableCCMPFormation() const { return EnableCCMP; }
 
 bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
   if (!UseAddressTopByteIgnored)
