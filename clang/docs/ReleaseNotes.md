@@ -670,6 +670,9 @@ features cannot lower the translation-unit ABI level;
   (#GH214128)
 - Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
   function that is not a constructor. (#GH194298)
+- Fixed a crash when list-initializing an array of unknown bound from an empty
+  initializer list whose element type is an uninstantiated class template
+  specialization or an incomplete class. (#GH217883)
 
 - Fixed an assertion when a defaulted comparison operator was synthesized for a
   class with an invalid non-static data member, such as one qualified with an
