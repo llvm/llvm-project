@@ -1255,6 +1255,17 @@ private:
     mlir::Type boxType = fir::wrapInClassOrBoxType(
         type, obj.type.type().IsPolymorphic(), obj.type.type().IsAssumedType());
 
+    // When LoweringOptions::NoCFIDescriptor is set: for BIND(C) dummies whose
+    // only reason to require a descriptor is an assumed-shape, deferred-shape,
+    // or assumed-rank array (not allocatable/pointer, which always need a
+    // descriptor), fall back to the legacy by-address convention instead of a
+    // standard Fortran 2018 CFI descriptor.
+    const bool useLegacyBindCArrayPassing =
+        isBindC && getConverter().getLoweringOptions().getNoCFIDescriptor() &&
+        (obj.type.attrs().test(TypeAndShape::Attr::AssumedShape) ||
+         obj.type.attrs().test(TypeAndShape::Attr::DeferredShape) ||
+         obj.type.attrs().test(TypeAndShape::Attr::AssumedRank));
+
     if (obj.attrs.test(Attrs::Allocatable) || obj.attrs.test(Attrs::Pointer)) {
       // Pass as fir.ref<fir.box> or fir.ref<fir.class>
       const bool isVolatile = obj.attrs.test(Attrs::Volatile);
@@ -1262,6 +1273,17 @@ private:
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
+    } else if (useLegacyBindCArrayPassing) {
+      mlir::emitWarning(
+          loc,
+          llvm::Twine("argument '") + characteristics->name +
+              "' will be passed by address, not a Fortran 2018 CFI descriptor, "
+              "because CFI descriptor support is disabled for this "
+              "compilation");
+      mlir::Type refType = fir::ReferenceType::get(type);
+      addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
+                    attrs);
+      addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
     } else if (obj.IsPassedByDescriptor(isBindC)) {
       // Pass as fir.box or fir.class
       addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
