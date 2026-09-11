@@ -13583,16 +13583,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         }
       }
     }
-    if (BECount == nullptr) {
-      // If we cannot calculate ExactBECount, we can calculate the MaxBECount,
-      // given the start, stride and max value for the end bound of the
-      // loop (RHS), and the fact that IV does not overflow (which is
-      // checked above).
-      const SCEV *MaxBECount = computeMaxBECountForLT(
-          Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
-      return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
-                       MaxBECount, false /*MaxOrZero*/, Predicates);
-    }
   } else {
     // Let End = max(RHS,Start).  We use the expression (End-Start)/Stride to
     // describe the backedge count: if the backedge is taken at least once then
