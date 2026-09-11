@@ -137,6 +137,15 @@ def LLVM_FractionExpOp : LLVM_TwoResultIntrOp<"frexp", [0, 1], [],
     let assemblyFormat = "`(` operands `)` attr-dict `:` "
         "functional-type(operands, results)";
 }
+def LLVM_ModfOp : LLVM_TwoResultIntrOp<"modf", [], [0],
+    [Pure], /*requiresFastmath=*/1> {
+    let arguments =
+        (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+        DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` attr-dict `:` "
+        "functional-type(operands, results)";
+    let hasVerifier = 1;
+}
 def LLVM_FAbsOp : LLVM_UnaryIntrOpF<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrOpF<"ceil">;
 def LLVM_FFloorOp : LLVM_UnaryIntrOpF<"floor">;
