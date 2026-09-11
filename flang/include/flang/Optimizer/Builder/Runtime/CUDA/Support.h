@@ -20,7 +20,7 @@ class FirOpBuilder;
 namespace fir::runtime::cuda {
 
 /// Generate runtime call to synchronize the CUDA device.
-void getCUDADeviceSynchronize(fir::FirOpBuilder &builder, mlir::Location loc);
+void genCUDADeviceSynchronize(fir::FirOpBuilder &builder, mlir::Location loc);
 
 } // namespace fir::runtime::cuda
 

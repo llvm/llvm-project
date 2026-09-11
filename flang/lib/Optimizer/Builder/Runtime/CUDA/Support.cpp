@@ -15,7 +15,7 @@ using namespace fir::runtime::cuda;
 static constexpr llvm::StringRef kCudaDeviceSynchronizeName =
     "_QPcudadevicesynchronize";
 
-void fir::runtime::cuda::getCUDADeviceSynchronize(fir::FirOpBuilder &builder,
+void fir::runtime::cuda::genCUDADeviceSynchronize(fir::FirOpBuilder &builder,
                                                   mlir::Location loc) {
   mlir::func::FuncOp func =
       builder.getNamedFunction(kCudaDeviceSynchronizeName);
@@ -33,9 +33,3 @@ void fir::runtime::cuda::getCUDADeviceSynchronize(fir::FirOpBuilder &builder,
   call.setProcedureAttrsAttr(fir::FortranProcedureFlagsEnumAttr::get(
       builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic));
 }
-
-//  %1315 = fir.call @_QPcudadevicesynchronize() proc_attrs<intrinsic>
-//  fastmath<contract> : () -> i32
-
-//  func.func private @_QPcudadevicesynchronize() -> i32 attributes
-//  {fir.proc_attrs = #fir.proc_attrs<intrinsic>}

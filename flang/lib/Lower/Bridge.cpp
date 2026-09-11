@@ -2007,7 +2007,7 @@ private:
             fir::runtime::cuda::genDeviceIsActive(*builder, loc);
         builder->genIfThen(loc, active)
             .genThen([&]() {
-              fir::runtime::cuda::getCUDADeviceSynchronize(*builder, loc);
+              fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
               bridge.cudaCleanupCtx().finalizeAndKeep();
             })
             .end();
