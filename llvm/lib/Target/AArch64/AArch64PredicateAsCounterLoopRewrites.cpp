@@ -132,10 +132,10 @@ static ElementCount getSVEElementCount(unsigned ElementSizeInBits) {
 /// Returns the largest scalar access size of masked loads/stores in loop \p L
 /// where \p MaskPhi is used as the mask. TODO: This heuristic may need
 /// refinement based on the frequency of different access sizes.
-static std::optional<unsigned>
-getLargestMaskedMemAccessSizeInBits(const Loop &L, PHINode &MaskPhi) {
+static unsigned getLargestMaskedMemAccessSizeInBits(const Loop &L,
+                                                    PHINode &MaskPhi) {
   const DataLayout &DL = MaskPhi.getModule()->getDataLayout();
-  std::optional<unsigned> LargestAccessSizeInBits;
+  unsigned LargestAccessSizeInBits = 0;
 
   for (User *U : MaskPhi.users()) {
     auto *II = dyn_cast<IntrinsicInst>(U);
@@ -151,7 +151,7 @@ getLargestMaskedMemAccessSizeInBits(const Loop &L, PHINode &MaskPhi) {
       continue;
 
     unsigned AccessSizeInBits = getScalarSizeInBits(DL, II->getAccessType());
-    if (!LargestAccessSizeInBits || AccessSizeInBits > LargestAccessSizeInBits)
+    if (AccessSizeInBits > LargestAccessSizeInBits)
       LargestAccessSizeInBits = AccessSizeInBits;
   }
 
@@ -181,15 +181,14 @@ static Intrinsic::ID getWhileLOIntrinsic(unsigned ElementSizeInBits) {
 static Value *buildWideMask(IRBuilder<> &Builder, const MaskRewriteCandidate &C,
                             Value *Count) {
   ElementCount LegalEC = getSVEElementCount(C.ElementSizeInBits);
-  Module *M = Builder.GetInsertBlock()->getModule();
   Type *LegalMaskTy = VectorType::get(Builder.getInt1Ty(), LegalEC);
-  FunctionCallee PExtX2 = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::aarch64_sve_pext_x2, {LegalMaskTy});
 
   Value *WideMask = PoisonValue::get(C.MaskPhi->getType());
   for (unsigned PairOffset = 0; PairOffset != C.VectorScale / 2; ++PairOffset) {
-    auto *Pair = Builder.CreateCall(
-        PExtX2, {Count, Builder.getInt32(PairOffset)}, "pn.pext.pair");
+    auto *Pair =
+        Builder.CreateIntrinsic(Intrinsic::aarch64_sve_pext_x2, {LegalMaskTy},
+                                {Count, Builder.getInt32(PairOffset)},
+                                /*FMFSource=*/{}, "pn.pext.pair");
     for (unsigned SliceInPair = 0; SliceInPair != 2; ++SliceInPair) {
       Value *Part = Builder.CreateExtractValue(Pair, SliceInPair, "pn.pext");
       unsigned Slice = PairOffset * 2 + SliceInPair;
@@ -210,11 +209,11 @@ static Value *createWhileLO(IRBuilder<> &Builder, unsigned ElementSizeInBits,
     Start = Builder.CreateZExt(Start, Builder.getInt64Ty());
     End = Builder.CreateZExt(End, Builder.getInt64Ty());
   }
-  Module *M = Builder.GetInsertBlock()->getModule();
-  auto ID = getWhileLOIntrinsic(ElementSizeInBits);
-  FunctionCallee WhileLO = Intrinsic::getOrInsertDeclaration(M, ID);
-  return Builder.CreateCall(
-      WhileLO, {Start, End, Builder.getInt32(VectorScale)}, "pn.mask");
+
+  Intrinsic::ID WhileLO = getWhileLOIntrinsic(ElementSizeInBits);
+  return Builder.CreateIntrinsic(WhileLO,
+                                 {Start, End, Builder.getInt32(VectorScale)},
+                                 /*FMFSource=*/{}, "pn.mask");
 }
 
 class AArch64PredicateAsCounterLoopRewrites : public LoopPass {
@@ -307,10 +306,9 @@ std::optional<MaskRewriteCandidate>
 AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
                                                     PHINode &Phi) const {
   auto *PhiTy = dyn_cast<ScalableVectorType>(Phi.getType());
-  if (!PhiTy || !PhiTy->getElementType()->isIntegerTy(1)) {
-    logMatchFailure(Phi, "phi type is not a scalable i1 vector mask");
+  if (!PhiTy || !PhiTy->getElementType()->isIntegerTy(1))
     return std::nullopt;
-  }
+
   if (Phi.getNumIncomingValues() != 2) {
     logMatchFailure(Phi, Twine("phi has ")
                              .concat(Twine(Phi.getNumIncomingValues()))
@@ -348,21 +346,17 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
     return std::nullopt;
   }
 
-  std::optional<unsigned> PreferredMaskElementSizeInBits =
+  unsigned PreferredMaskElementSizeInBits =
       getLargestMaskedMemAccessSizeInBits(L, Phi);
-  if (!PreferredMaskElementSizeInBits) {
-    logMatchFailure(Phi, "mask phi has no masked load/store users in the loop");
-    return std::nullopt;
-  }
 
-  if (!is_contained({8u, 16u, 32u, 64u}, *PreferredMaskElementSizeInBits)) {
+  if (!is_contained({8u, 16u, 32u, 64u}, PreferredMaskElementSizeInBits)) {
     logMatchFailure(Phi, Twine("unsupported element size in bits: ")
-                             .concat(Twine(*PreferredMaskElementSizeInBits)));
+                             .concat(Twine(PreferredMaskElementSizeInBits)));
     return std::nullopt;
   }
 
   unsigned SVEMaskElements =
-      AArch64::SVEBitsPerBlock / *PreferredMaskElementSizeInBits;
+      AArch64::SVEBitsPerBlock / PreferredMaskElementSizeInBits;
   if (WideMaskElements <= SVEMaskElements) {
     logMatchFailure(Phi, Twine("wide mask element count ")
                              .concat(Twine(WideMaskElements))
@@ -379,7 +373,7 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
   }
 
   return MaskRewriteCandidate{&Phi, StartMask, NextMask, VectorScale,
-                              *PreferredMaskElementSizeInBits};
+                              PreferredMaskElementSizeInBits};
 }
 
 bool AArch64PredicateAsCounterLoopRewrites::rewriteCandidate(
