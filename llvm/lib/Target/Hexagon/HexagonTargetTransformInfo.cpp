@@ -46,6 +46,10 @@ static cl::opt<bool> EmitLookupTables("hexagon-emit-lookup-tables",
 static cl::opt<bool> HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true),
     cl::Hidden, cl::desc("Enable masked loads/stores for HVX"));
 
+static cl::opt<bool> HexagonEnableMemmove(
+    "hexagon-enable-memmove", cl::init(false), cl::Hidden,
+    cl::desc("Always promote safe loop access to memmove"));
+
 // Constant "cost factor" to make floating point operations more expensive
 // in terms of vectorization cost. This isn't the best way, but it should
 // do. Ultimately, the cost should use cycles.
@@ -229,6 +233,41 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
                                 OpInfo, I);
+}
+
+/* Do not promote loop access to memmove if source or destination
+ * array cannot be aligned to 8 byte boundary. memmove is beneficial
+ * only if source and destination are 8 byte aligned or memmove
+ * supports unaligned accesses. For example
+ * char a[100] ;
+ * for(i=n; i> 0; i--)
+ *     a[i] = a[i-1];
+ * We can never align source and destination simultaneously at
+ * 8 byte boundary. If we convert this loop to memmove then
+ * memmove will do alignment checks and it fails so eventually
+ * do copy byte by byte. As a result, memmove will be relatively
+ * slow (due to call overhead and checks inside memmove)
+ * as compared to the loop access for unaligned accesses.*/
+
+bool HexagonTTIImpl::isMemmoveProfitable(Value *DestPtr, Value *SourcePtr,
+                                         ScalarEvolution *SE) const {
+  if (HexagonEnableMemmove)
+    return true;
+
+  // memmove is only efficient on Hexagon when src and dst can be simultaneously
+  // 8-byte aligned. Use SE to compute the constant byte difference between the
+  // two pointers. If it is not a multiple of 8, they can never be
+  // simultaneously aligned — keep the original loop instead.
+
+  std::optional<APInt> Diff = SE->computeConstantDifference(
+      SE->getSCEV(DestPtr), SE->getSCEV(SourcePtr));
+
+  // Conservatively return false if we can't reason the difference between the
+  // pointers
+  if (!Diff)
+    return false;
+
+  return Diff->getSExtValue() % 8 == 0;
 }
 
 InstructionCost
