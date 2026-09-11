@@ -341,8 +341,10 @@ The {doc}`CodeOfConduct` applies to all office hours.
       [gcal](https://calendar.google.com/calendar/embed?src=c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com)
     - [GoogleMeet](https://meet.google.com/hhk-xpdj-gvx)
     - English, Romanian
-  * - Aaron Ballman (he/him)
-    - Clang internals; frontend attributes; clang-tidy; clang-query; AST matchers
+  * - Clang Maintainers (chaired by Aaron Ballman)
+    - Maintainers with various backgrounds attend, so anything related to Clang
+      internals. If you have a specific topic, reach out to Aaron in advance and
+      he can try to have the correct experts attend.
     - Monthly, 2nd Monday and 3rd Friday of the month at 10:00am Eastern and again at 2:00pm Eastern, for 60 minutes.
       [ics](https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics)
       [gcal](https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com)
