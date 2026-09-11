@@ -679,8 +679,10 @@ NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
   NVPTX::Scope Scope = resolveScope(Scopes[N->getSyncScopeID()], Subtarget);
   if (!Subtarget->hasAtomScope()) {
     if (Scope == NVPTX::Scope::System)
-      reportFatalUsageError(
-          "NVPTX system scope atomics require sm_60 or later");
+      CurDAG->getContext()->diagnose(DiagnosticInfoUnsupported(
+          CurDAG->getMachineFunction().getFunction(),
+          "NVPTX system scope atomics require sm_60 or later",
+          N->getDebugLoc()));
     return NVPTX::Scope::DefaultDevice;
   }
   return Scope;
