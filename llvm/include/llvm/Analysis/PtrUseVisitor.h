@@ -26,6 +26,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -134,6 +135,7 @@ protected:
 
     UseAndIsOffsetKnownPair UseAndIsOffsetKnown;
     APInt Offset;
+    APInt HighOffset;
   };
 
   /// The worklist of to-visit uses.
@@ -158,6 +160,9 @@ protected:
   /// The constant offset of the use if that is known.
   APInt Offset;
 
+  /// The maximum constant offset of the use if that is known.
+  APInt HighOffset;
+
   /// @}
 
   /// Note that the constructor is protected because this class must be a base
@@ -174,7 +179,14 @@ protected:
   ///
   /// This routine does the heavy lifting of the pointer walk by computing
   /// offsets and looking through GEPs.
-  LLVM_ABI bool adjustOffsetForGEP(GetElementPtrInst &GEPI);
+  ///
+  /// If `RangeAnalysis` is provided, it is queried for the signed range of
+  /// each non-constant index, and the low and high bounds of that range are
+  /// accumulated into `Offset` and `HighOffset` respectively.
+  LLVM_ABI bool adjustOffsetForGEP(
+      GetElementPtrInst &GEPI,
+      function_ref<bool(const Value &, ConstantRange &)> RangeAnalysis =
+          nullptr);
 };
 
 } // end namespace detail
@@ -230,6 +242,7 @@ public:
     IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(I.getType()));
     IsOffsetKnown = true;
     Offset = APInt(IntIdxTy->getBitWidth(), 0);
+    HighOffset = Offset;
     PI.reset();
 
     // Enqueue the uses of this pointer.
@@ -240,8 +253,10 @@ public:
       UseToVisit ToVisit = Worklist.pop_back_val();
       U = ToVisit.UseAndIsOffsetKnown.getPointer();
       IsOffsetKnown = ToVisit.UseAndIsOffsetKnown.getInt();
-      if (IsOffsetKnown)
+      if (IsOffsetKnown) {
         Offset = std::move(ToVisit.Offset);
+        HighOffset = std::move(ToVisit.HighOffset);
+      }
 
       Instruction *I = cast<Instruction>(U->getUser());
       static_cast<DerivedT*>(this)->visit(I);
@@ -274,9 +289,13 @@ protected:
       return;
 
     // If we can't walk the GEP, clear the offset.
-    if (!adjustOffsetForGEP(GEPI)) {
+    if (!adjustOffsetForGEP(GEPI, [&](const Value &V, ConstantRange &CR) {
+          return static_cast<DerivedT *>(this)->getNonConstantGepIndexRange(
+              GEPI, V, CR);
+        })) {
       IsOffsetKnown = false;
       Offset = APInt();
+      HighOffset = APInt();
     }
 
     // Enqueue the users now that the offset has been adjusted.
@@ -308,6 +327,14 @@ protected:
   void visitCallBase(CallBase &CB) {
     PI.setEscaped(&CB);
     Base::visitCallBase(CB);
+  }
+
+  /// Report the signed range a non-constant GEP index can take, if known.
+  ///
+  /// \returns false if the range cannot be determined.
+  bool getNonConstantGepIndexRange(const GetElementPtrInst &, const Value &,
+                                   ConstantRange &) const {
+    return false;
   }
 };
 
