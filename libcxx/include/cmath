@@ -196,13 +196,13 @@ floating_point fma (arithmetic x, arithmetic y, arithmetic z);
 float          fmaf(float x, float y, float z);
 long double    fmal(long double x, long double y, long double z);
 
-floating_point fmax (arithmetic x, arithmetic y);
-float          fmaxf(float x, float y);
-long double    fmaxl(long double x, long double y);
+floating_point fmax (arithmetic x, arithmetic y);   // constexpr since C++23
+float          fmaxf(float x, float y);             // constexpr since C++23
+long double    fmaxl(long double x, long double y); // constexpr since C++23
 
-floating_point fmin (arithmetic x, arithmetic y);
-float          fminf(float x, float y);
-long double    fminl(long double x, long double y);
+floating_point fmin (arithmetic x, arithmetic y);   // constexpr since C++23
+float          fminf(float x, float y);             // constexpr since C++23
+long double    fminl(long double x, long double y); // constexpr since C++23
 
 double         hermite(unsigned n, double x);                    // C++17
 float          hermite(unsigned n, float x);                     // C++17
