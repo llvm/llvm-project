@@ -1,10 +1,6 @@
-=======================================
-LLVM's Optional Rich Disassembly Output
-=======================================
+# LLVM's Optional Rich Disassembly Output
 
-
-Introduction
-============
+## Introduction
 
 LLVM's default disassembly output is raw text. To allow consumers more ability
 to introspect the instructions' textual representation or to reformat for a more
@@ -21,23 +17,21 @@ mismatches between consumers and producers. That is, the syntax generally does
 not carry semantics beyond "this text has an annotation," so consumers can
 simply ignore annotations they do not understand or do not care about.
 
-After calling ``LLVMCreateDisasm()`` to create a disassembler context the
+After calling `LLVMCreateDisasm()` to create a disassembler context the
 optional output is enable with this call:
 
-.. code-block:: c
+```c
+LLVMSetDisasmOptions(DC, LLVMDisassembler_Option_UseMarkup);
+```
 
-    LLVMSetDisasmOptions(DC, LLVMDisassembler_Option_UseMarkup);
-
-Then subsequent calls to ``LLVMDisasmInstruction()`` will return output strings
+Then subsequent calls to `LLVMDisasmInstruction()` will return output strings
 with the marked up annotations.
 
-Instruction Annotations
-=======================
+## Instruction Annotations
 
-.. _contextual markups:
+(contextual-markups)=
 
-Contextual markups
-------------------
+### Contextual markups
 
 Annotated assembly display will supply contextual markup to help clients more
 efficiently implement things like pretty printers. Most markup will be target
@@ -46,13 +40,13 @@ specific knowledge.
 
 Annotated assembly goes through the normal instruction printer, but optionally
 includes contextual tags on portions of the instruction string. An annotation
-is any '<' '>' delimited section of text(1).
+is any '\<' '>' delimited section of text(1).
 
-.. code-block:: bat
-
-    annotation: '<' tag-name tag-modifier-list ':' annotated-text '>'
-    tag-name: identifier
-    tag-modifier-list: comma delimited identifier list
+```bat
+annotation: '<' tag-name tag-modifier-list ':' annotated-text '>'
+tag-name: identifier
+tag-modifier-list: comma delimited identifier list
+```
 
 The tag-name is an identifier which gives the type of the annotation. For the
 first pass, this will be very simple, with memory references, registers, and
@@ -68,17 +62,16 @@ clients.
 For example, a possible annotation of an ARM load of a stack-relative location
 might be annotated as:
 
-.. code-block:: text
+```text
+ldr <reg gpr:r0>, <mem regoffset:[<reg gpr:sp>, <imm:#4>]>
+```
 
-   ldr <reg gpr:r0>, <mem regoffset:[<reg gpr:sp>, <imm:#4>]>
+1: For assembly dialects in which '\<' and/or '>' are legal tokens, a literal token is escaped by following immediately with a repeat of the character. For example, a literal '\<' character is output as '\<<' in an annotated assembly string.
 
-
-1: For assembly dialects in which '<' and/or '>' are legal tokens, a literal token is escaped by following immediately with a repeat of the character.  For example, a literal '<' character is output as '<<' in an annotated assembly string.
-
-C API Details
--------------
+### C API Details
 
 The intended consumers of this information use the C API, therefore the new C
 API function for the disassembler will be added to provide an option to produce
-disassembled instructions with annotations, ``LLVMSetDisasmOptions()`` and the
-``LLVMDisassembler_Option_UseMarkup`` option (see above).
+disassembled instructions with annotations, `LLVMSetDisasmOptions()` and the
+`LLVMDisassembler_Option_UseMarkup` option (see above).
+
