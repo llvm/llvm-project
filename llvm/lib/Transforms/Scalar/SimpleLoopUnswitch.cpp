@@ -275,13 +275,15 @@ static bool areLoopExitPHIsLoopInvariant(const Loop &L,
   llvm_unreachable("Basic blocks should never be empty!");
 }
 
-/// Return true if every LCSSA PHI in \p ExitBB has, on the edge from the loop
-/// header, either a loop-invariant incoming value or a header PHI.
+/// Return true if every LCSSA PHI in \p ExitBB has, on the edge from the
+/// \p ExitingBB, either a loop-invariant incoming value or a header PHI.
 ///
-/// A header PHI is treated as acceptable because on a header-to-exit edge the
-/// loop body has not run, so the PHI still holds its unique preheader (entry)
+/// A header PHI is acceptable only when the caller has ensured \p ExitingBB
+/// dominates the latch: the invariant exit then fires on the first iteration,
+/// before the latch runs, so the header PHI still holds its preheader (entry)
 /// value.
 static bool areLoopExitPHIsTrivialFromHeader(const Loop &L,
+                                             const BasicBlock &ExitingBB,
                                              const BasicBlock &ExitBB) {
   const BasicBlock *Header = L.getHeader();
   for (const Instruction &I : ExitBB) {
@@ -290,7 +292,7 @@ static bool areLoopExitPHIsTrivialFromHeader(const Loop &L,
       // No more PHIs to check.
       return true;
 
-    const Value *V = PN->getIncomingValueForBlock(Header);
+    const Value *V = PN->getIncomingValueForBlock(&ExitingBB);
     if (L.isLoopInvariant(V))
       continue;
 
@@ -675,13 +677,14 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   auto *ParentBB = BI.getParent();
 
   // If the exit incomings aren't loop-invariant, the unswitch is still trivial
-  // when the branch is in the header and every non-invariant incoming is a
+  // when ParentBB dominates the latch and every non-invariant incoming is a
   // header PHI. Those incomings are repaired after unswitching.
   bool TrivialFromHeader = false;
   if (!ModifiedBranch &&
       !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
-    TrivialFromHeader = ParentBB == L.getHeader() &&
-                        areLoopExitPHIsTrivialFromHeader(L, *LoopExitBB);
+    TrivialFromHeader =
+        DT.dominates(ParentBB, L.getLoopLatch()) &&
+        areLoopExitPHIsTrivialFromHeader(L, *ParentBB, *LoopExitBB);
     if (!TrivialFromHeader) {
       LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
       return false;
@@ -738,9 +741,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   // to fix up the exit, and SplitEdge below is about to change these PHIs.
   SmallDenseMap<PHINode *, Value *, 4> HeaderEntryValues;
   if (TrivialFromHeader) {
-    assert(ParentBB == L.getHeader() &&
-           "Header-PHI relaxation only applies to a header branch");
-    for (PHINode &PN : ParentBB->phis()) {
+    for (PHINode &PN : L.getHeader()->phis()) {
       Value *EntryV = PN.getIncomingValueForBlock(OldPH);
       assert(EntryV && "Header PHI must have a preheader incoming value");
       HeaderEntryValues[&PN] = EntryV;

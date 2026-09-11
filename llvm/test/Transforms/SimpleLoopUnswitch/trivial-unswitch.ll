@@ -1612,3 +1612,47 @@ exit:
 ; CHECK-NEXT:    %r = phi i32 [ %init, %entry ]
 ; CHECK-NEXT:    ret i32 %r
 }
+
+; Trivially unswitchable branch that is not in the header but dominates the
+; latch, whose exit LCSSA phi uses a header phi. The header branch unswitches
+; first, then %mid is reached and also unswitches.
+define i32 @test_unswitch_nonheader_phi(i1 %c1, i1 %c2) {
+; CHECK-LABEL: @test_unswitch_nonheader_phi(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %c1, label %exit1, label %entry.split
+
+header:
+  %acc = phi i32 [ 0, %entry ], [ %next, %latch ]
+  br i1 %c1, label %exit1, label %mid
+; CHECK:       entry.split:
+; CHECK-NEXT:    br i1 %c2, label %exit2, label %entry.split.split
+; CHECK:       header:
+; CHECK-NEXT:    %acc = phi i32 [ 0, %entry.split.split ], [ %next, %latch ]
+; CHECK-NEXT:    br label %mid
+
+mid:
+  br i1 %c2, label %exit2, label %latch
+; CHECK:       mid:
+; CHECK-NEXT:    br label %latch
+
+latch:
+  %next = add i32 %acc, 1
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %next = add i32 %acc, 1
+; CHECK-NEXT:    br label %header
+
+exit1:
+  ret i32 100
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i32 100
+
+exit2:
+  %r = phi i32 [ %acc, %mid ]
+  ret i32 %r
+; CHECK:       exit2:
+; CHECK-NEXT:    %r = phi i32 [ 0, %entry.split ]
+; CHECK-NEXT:    ret i32 %r
+}
