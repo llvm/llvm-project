@@ -87,12 +87,20 @@ IncrementalHIPDeviceParser::Parse(llvm::StringRef Input) {
 llvm::Expected<llvm::StringRef> IncrementalHIPDeviceParser::GenerateHSACO() {
   auto &PTU = PTUs.back();
 
+  // The module has already been optimized by the incremental
+  // EmitLLVMOnlyAction (via its own call to emitBackendOutput()). Reuse
+  // Clang's normal target machine and code-generation options here, but
+  // disable the optimization pipeline so it doesn't run a second time on
+  // the same module; we only need this call for its object-code emission.
+  CodeGenOptions CodeGenOptsForObj = DeviceCI.getCodeGenOpts();
+  CodeGenOptsForObj.DisableLLVMPasses = true;
+
   llvm::SmallVector<char, 0> Object;
   auto ObjOS = std::make_unique<llvm::raw_svector_ostream>(Object);
   clang::emitBackendOutput(
-      DeviceCI, DeviceCI.getCodeGenOpts(),
-      DeviceCI.getTarget().getDataLayoutString(), PTU.TheModule.get(),
-      Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(), std::move(ObjOS));
+      DeviceCI, CodeGenOptsForObj, DeviceCI.getTarget().getDataLayoutString(),
+      PTU.TheModule.get(), Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(),
+      std::move(ObjOS));
 
   std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
   llvm::StringRef ExeDir = llvm::sys::path::parent_path(Exe);
