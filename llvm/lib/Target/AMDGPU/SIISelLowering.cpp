@@ -15101,10 +15101,10 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
 // ultimately provides. \p SrcIndex is the byte of the src that maps to this
 // dest of the or byte. \p Depth tracks how many recursive iterations we have
 // performed.
-static const std::optional<ByteProvider> calculateSrcByte(const SDValue Op,
-                                                          uint64_t DestByte,
-                                                          uint64_t SrcIndex = 0,
-                                                          unsigned Depth = 0) {
+static std::optional<ByteProvider> calculateSrcByte(const SDValue Op,
+                                                    uint64_t DestByte,
+                                                    uint64_t SrcIndex = 0,
+                                                    unsigned Depth = 0) {
   // We may need to recursively traverse a series of SRLs
   if (Depth >= 6)
     return std::nullopt;
@@ -15171,7 +15171,7 @@ static const std::optional<ByteProvider> calculateSrcByte(const SDValue Op,
 // the byte position of the Op that corresponds with the originally requested
 // byte of the Or \p Depth tracks how many recursive iterations we have
 // performed. \p StartingIndex is the originally requested byte of the Or
-static const std::optional<ByteProvider>
+static std::optional<ByteProvider>
 calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
                       unsigned StartingIndex = 0) {
   // Finding Src tree of RHS of or typically requires at least 1 additional
@@ -15187,14 +15187,18 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
   bool IsVec = Op.getValueType().isVector();
   switch (Op.getOpcode()) {
-  case ISD::OR:
+  case ISD::OR: {
     if (IsVec)
       return std::nullopt;
-    return calculateByteProviderForOr(
-        Op, Index, [&](SDValue NextOp, unsigned NextIndex) {
-          return calculateByteProvider(NextOp, NextIndex, Depth + 1,
-                                       StartingIndex);
-        });
+
+    std::optional<ByteProvider> RHS = calculateByteProvider(
+        Op.getOperand(1), Index, Depth + 1, StartingIndex);
+    if (!RHS)
+      return std::nullopt;
+    return selectOrByteProvider(calculateByteProvider(Op.getOperand(0), Index,
+                                                      Depth + 1, StartingIndex),
+                                RHS);
+  }
 
   case ISD::AND: {
     if (IsVec)
@@ -15305,19 +15309,24 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     if (IsVec)
       return std::nullopt;
 
-    unsigned NarrowBitWidth = Op->getOperand(0).getValueSizeInBits();
+    SDValue NarrowOp = Op->getOperand(0);
+    unsigned NarrowBitWidth = NarrowOp.getValueSizeInBits();
     if (Op->getOpcode() == ISD::SIGN_EXTEND_INREG ||
         Op->getOpcode() == ISD::AssertZext ||
         Op->getOpcode() == ISD::AssertSext) {
       auto *VTSign = cast<VTSDNode>(Op->getOperand(1));
       NarrowBitWidth = VTSign->getVT().getSizeInBits();
     }
-    return calculateByteProviderForExtend(
-        Op, Index, NarrowBitWidth, Op.getOpcode() == ISD::ZERO_EXTEND,
-        [&](SDValue NextOp, unsigned NextIndex) {
-          return calculateByteProvider(NextOp, NextIndex, Depth + 1,
-                                       StartingIndex);
-        });
+    switch (classifyNarrowByte(Index, NarrowBitWidth,
+                               Op.getOpcode() == ISD::ZERO_EXTEND)) {
+    case NarrowByteAction::Unknown:
+      return std::nullopt;
+    case NarrowByteAction::ConstantZero:
+      return ByteProvider::getConstantZero();
+    case NarrowByteAction::FromNarrow:
+      return calculateByteProvider(NarrowOp, Index, Depth + 1, StartingIndex);
+    }
+    llvm_unreachable("fully handled switch");
   }
 
   case ISD::TRUNCATE: {
@@ -15339,21 +15348,16 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   case ISD::LOAD: {
     auto *L = cast<LoadSDNode>(Op.getNode());
 
-    unsigned NarrowBitWidth = L->getMemoryVT().getSizeInBits();
-    if (NarrowBitWidth % 8 != 0)
+    switch (classifyNarrowByte(Index, L->getMemoryVT().getSizeInBits(),
+                               L->getExtensionType() == ISD::ZEXTLOAD)) {
+    case NarrowByteAction::Unknown:
       return std::nullopt;
-    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
-
-    // If the width of the load does not reach byte we are trying to provide for
-    // and it is not a ZEXTLOAD, then the load does not provide for the byte in
-    // question
-    if (Index >= NarrowByteWidth) {
-      return L->getExtensionType() == ISD::ZEXTLOAD
-                 ? std::optional<ByteProvider>(ByteProvider::getConstantZero())
-                 : std::nullopt;
+    case NarrowByteAction::ConstantZero:
+      return ByteProvider::getConstantZero();
+    case NarrowByteAction::FromNarrow:
+      return calculateSrcByte(Op, StartingIndex, Index);
     }
-
-    return calculateSrcByte(Op, StartingIndex, Index);
+    llvm_unreachable("fully handled switch");
   }
 
   case ISD::BSWAP: {

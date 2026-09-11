@@ -11,17 +11,10 @@
 using namespace llvm;
 
 std::optional<ByteProvider>
-llvm::calculateByteProviderForOr(SDValue Op, unsigned Index,
-                                 SDByteProviderRecurseFn Recurse) {
-  std::optional<ByteProvider> RHS = Recurse(Op.getOperand(1), Index);
-  if (!RHS)
+llvm::selectOrByteProvider(const std::optional<ByteProvider> &LHS,
+                           const std::optional<ByteProvider> &RHS) {
+  if (!LHS || !RHS)
     return std::nullopt;
-  std::optional<ByteProvider> LHS = Recurse(Op.getOperand(0), Index);
-  if (!LHS)
-    return std::nullopt;
-
-  // A well formed or has two ByteProviders for each byte, one of which is
-  // constant zero.
   if (LHS->isConstantZero())
     return RHS;
   if (RHS->isConstantZero())
@@ -29,17 +22,12 @@ llvm::calculateByteProviderForOr(SDValue Op, unsigned Index,
   return std::nullopt;
 }
 
-std::optional<ByteProvider>
-llvm::calculateByteProviderForExtend(SDValue Op, unsigned Index,
-                                     unsigned NarrowBitWidth, bool ZeroFills,
-                                     SDByteProviderRecurseFn Recurse) {
+NarrowByteAction llvm::classifyNarrowByte(unsigned Index,
+                                          unsigned NarrowBitWidth,
+                                          bool ZeroFills) {
   if (NarrowBitWidth % 8 != 0)
-    return std::nullopt;
-
-  if (Index >= NarrowBitWidth / 8) {
-    if (!ZeroFills)
-      return std::nullopt;
-    return ByteProvider::getConstantZero();
-  }
-  return Recurse(Op.getOperand(0), Index);
+    return NarrowByteAction::Unknown;
+  if (Index < NarrowBitWidth / 8)
+    return NarrowByteAction::FromNarrow;
+  return ZeroFills ? NarrowByteAction::ConstantZero : NarrowByteAction::Unknown;
 }

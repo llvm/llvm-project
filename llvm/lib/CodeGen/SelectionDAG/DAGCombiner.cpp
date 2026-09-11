@@ -9733,7 +9733,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     return std::nullopt;
   unsigned ByteWidth = BitWidth / 8;
   assert(Index < ByteWidth && "invalid index requested");
-  (void) ByteWidth;
+  (void)ByteWidth;
 
   auto Recurse = [&](SDValue NextOp, unsigned NextIndex) {
     return calculateByteProvider(NextOp, NextIndex, Depth + 1, VectorIndex,
@@ -9741,8 +9741,12 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
   };
 
   switch (Op.getOpcode()) {
-  case ISD::OR:
-    return calculateByteProviderForOr(Op, Index, Recurse);
+  case ISD::OR: {
+    std::optional<ByteProvider> LHS = Recurse(Op.getOperand(0), Index);
+    if (!LHS)
+      return std::nullopt;
+    return selectOrByteProvider(LHS, Recurse(Op.getOperand(1), Index));
+  }
   case ISD::SHL: {
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!ShiftOp)
@@ -9764,10 +9768,19 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND:
-    return calculateByteProviderForExtend(
-        Op, Index, Op->getOperand(0).getScalarValueSizeInBits(),
-        Op.getOpcode() == ISD::ZERO_EXTEND, Recurse);
+  case ISD::ZERO_EXTEND: {
+    SDValue NarrowOp = Op->getOperand(0);
+    switch (classifyNarrowByte(Index, NarrowOp.getScalarValueSizeInBits(),
+                               Op.getOpcode() == ISD::ZERO_EXTEND)) {
+    case NarrowByteAction::Unknown:
+      return std::nullopt;
+    case NarrowByteAction::ConstantZero:
+      return ByteProvider::getConstantZero();
+    case NarrowByteAction::FromNarrow:
+      return Recurse(NarrowOp, Index);
+    }
+    llvm_unreachable("fully handled switch");
+  }
   case ISD::BSWAP:
     return Recurse(Op->getOperand(0), ByteWidth - Index - 1);
   case ISD::AND: {
@@ -9830,21 +9843,16 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     if (!L->isSimple() || L->isIndexed())
       return std::nullopt;
 
-    unsigned NarrowBitWidth = L->getMemoryVT().getScalarSizeInBits();
-    if (NarrowBitWidth % 8 != 0)
+    switch (classifyNarrowByte(Index, L->getMemoryVT().getScalarSizeInBits(),
+                               L->getExtensionType() == ISD::ZEXTLOAD)) {
+    case NarrowByteAction::Unknown:
       return std::nullopt;
-    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
-
-    // If the width of the load does not reach byte we are trying to provide for
-    // and it is not a ZEXTLOAD, then the load does not provide for the byte in
-    // question
-    if (Index >= NarrowByteWidth)
-      return L->getExtensionType() == ISD::ZEXTLOAD
-                 ? std::optional<ByteProvider>(ByteProvider::getConstantZero())
-                 : std::nullopt;
-
-    unsigned BPVectorIndex = VectorIndex.value_or(0U);
-    return ByteProvider::getSrc(Op, Index, BPVectorIndex);
+    case NarrowByteAction::ConstantZero:
+      return ByteProvider::getConstantZero();
+    case NarrowByteAction::FromNarrow:
+      return ByteProvider::getSrc(Op, Index, VectorIndex.value_or(0U));
+    }
+    llvm_unreachable("fully handled switch");
   }
   }
 

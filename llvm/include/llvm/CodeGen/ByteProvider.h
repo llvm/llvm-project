@@ -15,7 +15,6 @@
 #ifndef LLVM_CODEGEN_BYTEPROVIDER_H
 #define LLVM_CODEGEN_BYTEPROVIDER_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include <optional>
 
@@ -35,9 +34,8 @@ public:
   // For constant zero providers Src is null. For actual providers Src is the
   // value which originally produced the relevant bits.
   SDValue Src;
-  // DestOffset and SrcOffset are producer defined, see DAGCombiner.cpp.
-  int64_t DestOffset = 0;
-  int64_t SrcOffset = 0;
+  int64_t DestOffset = 0; // Load byte in DAGCombiner, unused in AMDGPU.
+  int64_t SrcOffset = 0;  // Vector lane in DAGCombiner, byte in Src in AMDGPU.
 
   ByteProvider() = default;
 
@@ -59,21 +57,17 @@ public:
   }
 };
 
-using SDByteProviderRecurseFn =
-    function_ref<std::optional<ByteProvider>(SDValue, unsigned)>;
-
-/// Visits both operands even once one answers, because \p Recurse may have
-/// side effects (DAGCombiner accumulates an and mask there).
+/// In a well formed or, one of the two byte providers is constant zero.
 std::optional<ByteProvider>
-calculateByteProviderForOr(SDValue Op, unsigned Index,
-                           SDByteProviderRecurseFn Recurse);
+selectOrByteProvider(const std::optional<ByteProvider> &LHS,
+                     const std::optional<ByteProvider> &RHS);
 
-/// \p NarrowBitWidth is a parameter because it is not always the operand
-/// width, for instance sign_extend_inreg takes it from the VTSDNode.
-std::optional<ByteProvider>
-calculateByteProviderForExtend(SDValue Op, unsigned Index,
-                               unsigned NarrowBitWidth, bool ZeroFills,
-                               SDByteProviderRecurseFn Recurse);
+enum class NarrowByteAction { Unknown, ConstantZero, FromNarrow };
+
+/// FromNarrow keeps \p Index. \p NarrowBitWidth is not always the operand
+/// width, sign_extend_inreg takes it from the VTSDNode.
+NarrowByteAction classifyNarrowByte(unsigned Index, unsigned NarrowBitWidth,
+                                    bool ZeroFills);
 
 } // end namespace llvm
 
