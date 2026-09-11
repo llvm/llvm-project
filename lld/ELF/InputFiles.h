@@ -395,7 +395,6 @@ std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 
 // Name of embedded unoptimized dynamic debug input/output section.
 constexpr StringRef dynDbgSecName = ".debug_llvm_dyndbg";
-
 } // namespace elf
 } // namespace lld
 
