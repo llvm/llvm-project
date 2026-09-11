@@ -837,7 +837,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[I1_LOAD:.*]] = cir.load align(8) %[[I1]] : !cir.ptr<!s64i>, !s64i
   // CIR-NEXT: %[[I2_LOAD:.*]] = cir.load align(8) %[[I2]] : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: cir.call_llvm_intrinsic "smin" %31, %32 : (!s64i, !s64i) -> !s64i
+  // CIR-NEXT: cir.call_llvm_intrinsic "smin" %[[I1_LOAD]], %[[I2_LOAD]] : (!s64i, !s64i) -> !s64i
 
   // LLVM:      [[I1:%.+]] = load i64, ptr %[[ADDR_I1]], align 8
   // LLVM-NEXT: [[I2:%.+]] = load i64, ptr %[[ADDR_I2]], align 8

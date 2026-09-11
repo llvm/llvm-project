@@ -77,7 +77,7 @@ bf16x8 pfmax16b(bf16x8 a, bf16x8 b) {
 	return __builtin_elementwise_maxnum(a, b);
 }
 // CIR-LABEL: @_Z7pfmax32Dv4_fS_(
-// CIR:          cir.call_llvm_intrinsic "maxnum" %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float> loc(#loc93)
+// CIR:          cir.call_llvm_intrinsic "maxnum" %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
 //
 // LLVM-LABEL: @_Z7pfmax32Dv4_fS_(
 // LLVM:         call <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
