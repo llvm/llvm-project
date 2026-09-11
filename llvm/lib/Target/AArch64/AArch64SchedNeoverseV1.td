@@ -104,8 +104,10 @@ def V1Write_1c_1I      : SchedWriteRes<[V1UnitI]>   { let Latency = 1; }
 def V1Write_1c_1I_1Flg : SchedWriteRes<[V1UnitI, V1UnitFlg]>   { let Latency = 1; }
 def V1Write_4c_1L      : SchedWriteRes<[V1UnitL]>   { let Latency = 4; }
 def V1Write_6c_1L      : SchedWriteRes<[V1UnitL]>   { let Latency = 6; }
+def V1Write_4c_3L      : SchedWriteRes<[V1UnitL, V1UnitL, V1UnitL]> { let Latency = 4; }
 def V1Write_1c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 1; }
 def V1Write_4c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 4; }
+def V1Write_4c_2L01    : SchedWriteRes<[V1UnitL01,V1UnitL01]> { let Latency = 4; }
 def V1Write_6c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 6; }
 def V1Write_2c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 2; }
 def V1Write_2c_1M_1Flg : SchedWriteRes<[V1UnitM, V1UnitFlg]>   { let Latency = 2; }
@@ -248,12 +250,14 @@ let Latency = 7, NumMicroOps = 3 in
 def V1Write_7c_2M0_1V01     : SchedWriteRes<[V1UnitM0, V1UnitM0, V1UnitV01]>;
 let Latency = 8, NumMicroOps = 3 in
 def V1Write_8c_1L_2V        : SchedWriteRes<[V1UnitL, V1UnitV, V1UnitV]>;
-let Latency = 4, NumMicroOps = 3 in
-def V1Write_4c_3L        : SchedWriteRes<[V1UnitL, V1UnitL, V1UnitL]>;
 let Latency = 6, NumMicroOps = 3 in
 def V1Write_6c_3L           : SchedWriteRes<[V1UnitL, V1UnitL, V1UnitL]>;
 let Latency = 5, NumMicroOps = 3 in
-def V1Write_5c_2I_1L     : SchedWriteRes<[V1UnitI, V1UnitI, V1UnitL]>;
+def V1Write_5c_1I_2L     : SchedWriteRes<[V1UnitI, V1UnitL, V1UnitL]>;
+let Latency = 5, NumMicroOps = 3 in
+def V1Write_5c_1I_2L01     : SchedWriteRes<[V1UnitI, V1UnitL01, V1UnitL01]>;
+let Latency = 1, NumMicroOps = 3 in
+def V1Write_1c_1I_1L01_1D: SchedWriteRes<[V1UnitI, V1UnitL01, V1UnitD]>;
 let Latency = 2, NumMicroOps = 3 in
 def V1Write_2c_1L01_1S_1V   : SchedWriteRes<[V1UnitL01, V1UnitS, V1UnitV]>;
 let Latency = 4, NumMicroOps = 3 in
@@ -728,16 +732,16 @@ def : SchedAlias<WriteAdr,   V1Write_1c_1I>;
 def : SchedAlias<WriteLDHi, V1Write_4c_1L>;
 def : InstRW<[V1Write_4c_1L, V1Write_0c_0Z], (instrs LDPWi, LDNPWi)>;
 def : InstRW<[V1Write_4c_3L, V1Write_0c_0Z], (instrs LDPXi, LDNPXi)>;
-def : InstRW<[WriteAdr, V1Write_4c_1L, V1Write_0c_0Z],
+def : InstRW<[WriteAdr, V1Write_4c_1L01, V1Write_0c_0Z],
              (instrs LDPWpost, LDPWpre)>;
-def : InstRW<[WriteAdr, V1Write_4c_3L, V1Write_0c_0Z],
+def : InstRW<[WriteAdr, V1Write_4c_2L01, V1Write_0c_0Z],
              (instrs LDPXpost, LDPXpre)>;
 
 // Load pair, signed immed offset, signed words
-def : InstRW<[V1Write_5c_2I_1L, V1Write_0c_0Z], (instrs LDPSWi)>;
+def : InstRW<[V1Write_5c_1I_2L, V1Write_0c_0Z], (instrs LDPSWi)>;
 
 // Load pair, immed post or pre-index, signed words
-def : InstRW<[WriteAdr, V1Write_5c_2I_1L, V1Write_0c_0Z],
+def : InstRW<[WriteAdr, V1Write_5c_1I_2L01, V1Write_0c_0Z],
              (instrs LDPSWpost, LDPSWpre)>;
 
 
