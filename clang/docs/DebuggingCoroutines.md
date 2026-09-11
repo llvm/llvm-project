@@ -600,7 +600,7 @@ gets emitted, but none of them are really interesting regarding debugging
 information.
 
 For more details on the IR representation of coroutines and the relevant
-optimization passes, see [Coroutines in LLVM](https://llvm.org/docs/Coroutines.html).
+optimization passes, see {external+llvm:doc}`Coroutines in LLVM <Coroutines>`.
 
 Emitting debug information inside `CoroSplit` forces us to generate
 insufficient debugging information. Usually, the compiler generates debug
@@ -1264,4 +1264,3 @@ The authors of the Folly libraries wrote a blog post series on how they debug co
 Besides some topics also covered here (stack traces from the debugger), Folly's blog post series also covers
 additional topics, such as capturing async stack traces in performance profiles via eBPF filters
 and printing async stack traces on crashes.
-

@@ -730,7 +730,7 @@ We augment the `clang` driver with the following flags:
   point to the folder where the library is installed / built under a
   `/rocprim` subfolder;
 
-The [--offload-arch](https://llvm.org/docs/AMDGPUUsage.html#amdgpu-processors)
+The {external+llvm:ref}`--offload-arch <amdgpu-processors>`
 flag can be used to specify the accelerator for which offload code is to be
 generated.
 
@@ -874,7 +874,7 @@ At the moment, C++ Standard Parallelism Offload is only available for AMD GPUs,
 when the [ROCm](https://rocm.docs.amd.com/en/latest/) stack is used, on the
 Linux operating system. Support is synthesised in the following table:
 
-| [Processor](https://llvm.org/docs/AMDGPUUsage.html#amdgpu-processors) | HMM Mode | Interposition Mode |
+| {external+llvm:ref}`Processor <amdgpu-processors>` | HMM Mode | Interposition Mode |
 | ---------------------------------------------------------------------- | -------- | ------------------ |
 | GCN GFX9 (Vega)                                                        | YES      | YES                |
 | GCN GFX10.1 (RDNA 1)                                                   | *NO*     | YES                |

@@ -39,7 +39,7 @@ the performance improvement.
 The 3.9 release of clang includes ThinLTO support. However, ThinLTO
 is under active development, and new features, improvements and bugfixes
 are being added for the next release. For the latest ThinLTO support,
-[build a recent version of clang and LLVM](https://llvm.org/docs/CMake.html).
+{external+llvm:doc}`build a recent version of clang and LLVM <CMake>`.
 
 ### Linkers
 
@@ -51,7 +51,7 @@ ThinLTO is currently supported for the following linkers:
 
 - **gold (via the gold-plugin)**:
   Similar to monolithic LTO, this requires using
-  a [gold linker configured with plugins enabled](https://llvm.org/docs/GoldPlugin.html).
+  a {external+llvm:doc}`gold linker configured with plugins enabled <GoldPlugin>`.
 - **ld64**:
   Starting with [Xcode 8](https://developer.apple.com/xcode/).
 - **lld**:
@@ -197,8 +197,8 @@ with ThinLTO, follow these steps:
 
 1. The host [compiler](#compiler) must be a version of clang that supports ThinLTO.
 2. The host [linker](#linker) must support ThinLTO (and in the case of gold, must be
-   [configured with plugins enabled](https://llvm.org/docs/GoldPlugin.html)).
-3. Use the following additional [CMake variables](https://llvm.org/docs/CMake.html#options-and-variables)
+   {external+llvm:doc}`configured with plugins enabled <GoldPlugin>`).
+3. Use the following additional {external+llvm:ref}`CMake variables <options and variables>`
    when configuring the bootstrap compiler build:
 
 > - `-DLLVM_ENABLE_LTO=Thin`
@@ -233,7 +233,7 @@ Integrated Distributed ThinLTO (DTLTO) enables the distribution of backend
 ThinLTO compilations via external distribution systems, such as Incredibuild,
 during the traditional link step.
 
-The implementation is documented here: <https://llvm.org/docs/DTLTO.html>.
+The implementation is {external+llvm:doc}`documented here <DTLTO>`.
 
 #### Command-Line Options
 

@@ -105,7 +105,7 @@ Clang can be configured to use one of several different linkers:
 - MSVC's link.exe
 
 Link-time optimization is natively supported by lld, and supported via
-a [linker plugin](https://llvm.org/docs/GoldPlugin.html) when using gold.
+a {external+llvm:doc}`linker plugin <GoldPlugin>` when using gold.
 
 The default linker varies between targets, and can be overridden via the
 `-fuse-ld=<linker name>` flag.
@@ -295,7 +295,7 @@ of the [C++ standard library](https://en.cppreference.com/w/cpp).
 
 #### libc++ (LLVM)
 
-[libc++](https://libcxx.llvm.org/) is LLVM's implementation of the C++
+{external+libcxx:doc}`libc++ <index>` is LLVM's implementation of the C++
 standard library, aimed at being a complete implementation of the C++
 standards from C++11 onwards.
 

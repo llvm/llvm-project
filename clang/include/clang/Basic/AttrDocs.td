@@ -231,7 +231,7 @@ extensions. Section 5 covers named address spaces.
 
 [amdgpu usage guide]: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
 [iso tr18037]: https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip
-[nvptx usage guide]: https://llvm.org/docs/NVPTXUsage.html#address-spaces
+[nvptx usage guide]: inv:llvm:std:label#address-spaces
   }];
 }
 
@@ -3638,8 +3638,8 @@ An error will be given if:
 def AMDGPUAvailableVisibleDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
-This attribute controls availability and visibility as described in the [AMDGPU
-Memory Model](https://llvm.org/docs/AMDGPUMemoryModel.html). When placed on
+This attribute controls availability and visibility as described in the
+{external+llvm:doc}`AMDGPU Memory Model <AMDGPUMemoryModel>`. When placed on
 an atomic expression or fence, the resulting atomic or fence instruction carries
 the corresponding *AV Metadata*.
 
@@ -7718,7 +7718,7 @@ should be enabled for the function body. This can also be applied to a method
 in Objective C. This attribute will take precedence over the command line flag
 in the case where {option}`-mno-speculative-load-hardening` is specified.
 
-[slh]: https://llvm.org/docs/SpeculativeLoadHardening.html
+[slh]: inv:llvm:std:doc#SpeculativeLoadHardening
 
 Speculative Load Hardening is a best-effort mitigation against
 information leak attacks that make use of control flow

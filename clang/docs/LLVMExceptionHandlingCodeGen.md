@@ -9,7 +9,7 @@ flow patterns used to model normal and exceptional exits, and it outlines how
 the generated IR differs across common ABI models.
 
 For details on the LLVM IR representation of exception handling, see
-[LLVM Exception Handling](https://llvm.org/docs/ExceptionHandling.html).
+{external+llvm:doc}`LLVM Exception Handling <ExceptionHandling>`.
 
 ## Core Model
 
@@ -232,4 +232,3 @@ void f() {
 The above function names and flow are accurate as of LLVM 22.0, but this is
 subject to change as the code evolves, and this document might not be updated to
 reflect the exact functions used.
-

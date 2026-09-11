@@ -30,9 +30,9 @@ This document contains the release notes for the Clang C/C++/Objective-C
 frontend, part of the LLVM Compiler Infrastructure, release {{env.config.release}}. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
-general LLVM release notes, see [the LLVM
-documentation](https://llvm.org/docs/ReleaseNotes.html). For the libc++ release notes,
-see [this page](https://libcxx.llvm.org/ReleaseNotes.html). All LLVM releases
+general LLVM release notes, see
+{external+llvm:doc}`the LLVM documentation <ReleaseNotes>`. For the libc++ release notes,
+see {external+libcxx:doc}`this page <ReleaseNotes>`. All LLVM releases
 may be downloaded from the [LLVM releases web site](https://llvm.org/releases/).
 
 For more information about Clang or LLVM, including information about the
