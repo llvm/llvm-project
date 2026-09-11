@@ -14318,6 +14318,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
+        "include/mlir/Dialect/Bufferization/IR/BufferizationDialect.h",
         "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Bufferization/IR/UnstructuredControlFlow.h",
         "include/mlir/Dialect/Bufferization/IR/ValueBoundsOpInterfaceImpl.h",
