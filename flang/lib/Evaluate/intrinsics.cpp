@@ -3962,6 +3962,22 @@ static bool CheckAtomicDefineAndRef(FoldingContext &context,
 // Applies any semantic checks peculiar to an intrinsic.
 // TODO: Move the rest of these checks to Semantics/check-call.cpp.
 static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
+  // Actual arguments may have been retained in named-constant designator
+  // form for the benefit of nonintrinsic calls (storage association); the
+  // checks below inspect constant values structurally, so fold such
+  // arguments back to their values first.
+  for (auto &arg : call.arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
+        if (auto dataRef{ExtractDataRef(
+                *expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)};
+            dataRef &&
+            IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate())) {
+          *expr = Fold(context, std::move(*expr));
+        }
+      }
+    }
+  }
   bool ok{true};
   const std::string &name{call.specificIntrinsic.name};
   if (name == "allocated") {

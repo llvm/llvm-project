@@ -45,6 +45,8 @@ using common::LanguageFeature;
 using common::NumericOperator;
 using common::TypeCategory;
 
+static void FoldNamedConstantActuals(FoldingContext &, ActualArguments &);
+
 static inline std::string ToUpperCase(std::string_view str) {
   return parser::ToUpperCaseLetters(str);
 }
@@ -3468,6 +3470,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
               CallCharacteristics{name.source.ToString(), isSubroutine},
               localArguments, GetFoldingContext())}) {
         CheckBadExplicitType(*specificCall, *symbol);
+        FoldNamedConstantActuals(GetFoldingContext(), specificCall->arguments);
         return CalleeAndArguments{
             ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
             std::move(specificCall->arguments)};
@@ -3498,6 +3501,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
             CallCharacteristics{name.ToString(), isSubroutine}, arguments,
             GetFoldingContext())}) {
       CheckBadExplicitType(*specificCall, *symbol);
+      FoldNamedConstantActuals(GetFoldingContext(), specificCall->arguments);
       return CalleeAndArguments{
           ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
           std::move(specificCall->arguments)};
@@ -4913,11 +4917,34 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
   return std::nullopt;
 }
 
+// Fold actual arguments that were retained in named-constant designator form
+// (see ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray) once the callee
+// has resolved to an intrinsic procedure.  Intrinsic argument checking and
+// intrinsic folding inspect constant values structurally, and the storage
+// identity of a named constant is irrelevant to an intrinsic procedure.
+static void FoldNamedConstantActuals(
+    FoldingContext &context, ActualArguments &arguments) {
+  for (auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
+        if (auto dataRef{ExtractDataRef(
+                *expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)};
+            dataRef &&
+            semantics::IsNamedConstant(
+                dataRef->GetFirstSymbol().GetUltimate())) {
+          *expr = Fold(context, std::move(*expr));
+        }
+      }
+    }
+  }
+}
+
 MaybeExpr ExpressionAnalyzer::MakeFunctionRef(
     parser::CharBlock intrinsic, ActualArguments &&arguments) {
   if (std::optional<SpecificCall> specificCall{
           context_.intrinsics().Probe(CallCharacteristics{intrinsic.ToString()},
               arguments, GetFoldingContext())}) {
+    FoldNamedConstantActuals(GetFoldingContext(), specificCall->arguments);
     return MakeFunctionRef(intrinsic,
         ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
         std::move(specificCall->arguments));
@@ -5844,7 +5871,44 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
     }
   }
   auto restorer{context_.AllowNullPointer()};
-  return context_.Analyze(expr);
+  MaybeExpr result{context_.Analyze(expr)};
+  // For actual arguments of procedure references, retain a designator whose
+  // base is a named constant in designator form instead of replacing it by
+  // its folded Constant value, so that lowering associates the dummy argument
+  // with the named constant's storage.  This matters for sequence association
+  // of an array element actual argument (F'2023 15.5.2.12) and whenever the
+  // dummy's address is meaningful (e.g. OpenACC/OpenMP present checks).
+  // The inner Analyze calls below do not apply the outer folding performed
+  // by Analyze(parser::Expr), and folding still sees through the retained
+  // designator wherever a constant value is needed later.
+  if (isProcedureCall_ && result) {
+    // Look only at an expression that is itself a designator: a
+    // parenthesized designator is a primary, i.e. an expression
+    // (F'2023 R1001), and must keep its folded value.
+    if (const auto *designator{
+            std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {
+      if (const auto *name{parser::Unwrap<parser::Name>(designator->value())}) {
+        // Whole named-constant array.
+        if (name->symbol &&
+            semantics::IsNamedConstant(name->symbol->GetUltimate()) &&
+            name->symbol->Rank() > 0) {
+          return context_.Analyze(*name);
+        }
+      } else if (result->Rank() == 0) {
+        // Named-constant array element (or array component of a scalar
+        // named constant of derived type), e.g. a(1) or pt%arr(1).
+        if (const auto *ae{
+                parser::Unwrap<parser::ArrayElement>(designator->value())}) {
+          const auto &baseName{parser::GetFirstName(ae->Base())};
+          if (baseName.symbol &&
+              semantics::IsNamedConstant(baseName.symbol->GetUltimate())) {
+            return context_.Analyze(*ae);
+          }
+        }
+      }
+    }
+  }
+  return result;
 }
 
 bool ArgumentAnalyzer::AreConformable() const {

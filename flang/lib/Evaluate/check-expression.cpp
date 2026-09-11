@@ -1657,8 +1657,21 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
           : nullptr};
   const bool forCopyIn{!forCopyOut};
   if (!evaluate::IsVariable(*actual)) {
-    // Expressions are copy-in, but not copy-out.
-    return forCopyIn;
+    // A designator whose base object is a named constant is not a variable,
+    // but it still designates an object with storage.  It never needs
+    // copy-out, since a named constant is not definable; whether it needs
+    // copy-in depends on its contiguity, like a variable, so fall through
+    // to the analysis below.  Other expressions are copy-in, but not
+    // copy-out.
+    const auto dataRef{ExtractDataRef(
+        *actual, /*intoSubstring=*/true, /*intoComplexPart=*/true)};
+    if (!dataRef ||
+        !semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate())) {
+      return forCopyIn;
+    }
+    if (forCopyOut) {
+      return false;
+    }
   }
   if (forCopyOut) {
     // F2023 8.5.10 C846/p2/p6: a nonpointer INTENT(IN) dummy and its
@@ -1675,7 +1688,11 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
       }
     }
   }
-  auto maybeContigActual{IsContiguous(*actual, fc)};
+  // Copy decisions depend on the actual argument's physical contiguity,
+  // so do not let sections of named constants be presumed contiguous here
+  // (they are for IS_CONTIGUOUS(), but their storage is what it is).
+  auto maybeContigActual{
+      IsContiguous(*actual, fc, /*namedConstantSectionsAreContiguous=*/false)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {

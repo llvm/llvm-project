@@ -1387,19 +1387,24 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
 
   bool mustDoCopyIn{false};
   bool mustDoCopyOut{false};
+  // Default to suggesting a copy when the copy analysis does not run, so
+  // that the parameter-object temporary below stays conservative in
+  // contexts that disable the analysis.
+  bool suggestCopyIn{true};
+  bool suggestCopyOut{true};
 
   if (callContext.doCopyIn) {
     Fortran::evaluate::FoldingContext &foldingContext{
         callContext.converter.getFoldingContext()};
 
-    bool suggestCopyIn = Fortran::evaluate::ActualArgNeedsCopy(
-                             arg.entity, arg.characteristics, foldingContext,
-                             /*forCopyOut=*/false)
-                             .value_or(true);
-    bool suggestCopyOut = Fortran::evaluate::ActualArgNeedsCopy(
-                              arg.entity, arg.characteristics, foldingContext,
-                              /*forCopyOut=*/true)
-                              .value_or(true);
+    suggestCopyIn = Fortran::evaluate::ActualArgNeedsCopy(
+                        arg.entity, arg.characteristics, foldingContext,
+                        /*forCopyOut=*/false)
+                        .value_or(true);
+    suggestCopyOut = Fortran::evaluate::ActualArgNeedsCopy(
+                         arg.entity, arg.characteristics, foldingContext,
+                         /*forCopyOut=*/true)
+                         .value_or(true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = actual.isArray() && suggestCopyOut;
   }
@@ -1496,13 +1501,17 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     if (mustSetDynamicTypeToDummyType)
       entity = genSetDynamicTypeToDummyType(entity);
     if (arg.hasValueAttribute() ||
-        // Constant expressions might be lowered as variables with
-        // 'parameter' attribute. Even though the constant expressions
-        // are not definable and explicit assignments to them are not
-        // possible, we have to create a temporary copies when we pass
-        // them down the call stack because of potential compiler
-        // generated writes in copy-out.
-        isParameterObjectOrSubObject(entity)) {
+        // Named constants and constant expressions might be lowered as
+        // variables with the 'parameter' attribute.  Whether a copy is
+        // needed for argument association is decided by the copy-in/copy-out
+        // analysis like for any other object; but when a copy is needed, it
+        // must be made via a temporary rather than via the runtime copy-in
+        // machinery below, both because the entity may be a raw address
+        // (genCopyIn requires a descriptor) and because compiler-generated
+        // copy-out must never target the read-only storage of a
+        // non-definable actual argument.
+        (isParameterObjectOrSubObject(entity) &&
+         (suggestCopyIn || suggestCopyOut))) {
       // Make a copy in a temporary.
       auto copy = hlfir::AsExprOp::create(builder, loc, entity);
       mlir::Type storageType = entity.getType();
