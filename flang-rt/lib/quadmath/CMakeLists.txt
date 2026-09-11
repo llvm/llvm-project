@@ -16,6 +16,8 @@
 
 include(CheckLibraryExists)
 include(CheckIncludeFile)
+include(CheckCSourceCompiles)
+include(CMakePushCheckState)
 
 set(sources
   acos.cpp
@@ -84,6 +86,49 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
       message(FATAL_ERROR
         "FLANG_RUNTIME_F128_MATH_LIB setting requires quadmath.h "
         "to be available: ${FLANG_RUNTIME_F128_MATH_LIB}"
+        )
+    endif()
+  elseif (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libm")
+    # glibc 2.26 and later export the *f128 entry points from libm itself, so
+    # this route pulls in no third-party library at all.
+    #
+    # This compiles rather than looking for a symbol, because a symbol in libm
+    # is not the same thing as a declaration in a header and the two really do
+    # come apart. On the LLVM premerge Linux runner sinf128 is present in libm
+    # while <complex.h> declares no cabsf128: a check_library_exists test
+    # passes there and every complex entry point then fails to compile.
+    #
+    # Both halves are tested because they are gated separately and it is the
+    # complex half that goes missing. Taking the addresses is the point - that
+    # needs a declaration and nothing else, so the check cannot be satisfied by
+    # an implicit declaration or by the linker finding the symbol anyway.
+    cmake_push_check_state()
+    set(CMAKE_REQUIRED_DEFINITIONS -D__STDC_WANT_IEC_60559_TYPES_EXT__=1)
+    set(CMAKE_REQUIRED_LIBRARIES m)
+    check_c_source_compiles("
+#include <complex.h>
+#include <math.h>
+void *scalar = (void *)&sinf128;
+void *complex_ = (void *)&cabsf128;
+int main(void) { return scalar == complex_; }
+" HAVE_LIBM_F128_DECLARATIONS)
+    cmake_pop_check_state()
+    if (HAVE_LIBM_F128_DECLARATIONS)
+      add_compile_definitions(HAS_LIBMF128)
+      # glibc gates the *f128 prototypes behind this, and it has to be on the
+      # command line rather than in a header: no header can guarantee it is
+      # seen before <cmath> or <complex.h> in every translation unit, and when
+      # it is not, the prototypes silently do not appear. Measured on glibc
+      # 2.43: <cmath> exposes sqrtf128 without it but <complex.h> does not
+      # expose cabsf128, so a header-based definition looks correct on the
+      # scalar half and fails on the complex half of the same build.
+      add_compile_definitions(__STDC_WANT_IEC_60559_TYPES_EXT__=1)
+    else()
+      message(FATAL_ERROR
+        "FLANG_RUNTIME_F128_MATH_LIB=libm requires a libm whose headers "
+        "declare both the scalar and the complex *f128 entry points "
+        "(glibc 2.26 or later, with a compiler it recognises as supporting "
+        "_Float128). The symbols being present in libm is not enough."
         )
     endif()
   else()

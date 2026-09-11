@@ -576,7 +576,97 @@ template <> struct HostRuntimeLibrary<__complex128, LibraryVersion::Libm> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif // HAS_QUADMATHLIB
+
+#elif HAS_LIBMF128_HOST
+template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
+  using F = FuncPointer<__float128, __float128>;
+  using F2 = FuncPointer<__float128, __float128, __float128>;
+  using FN = FuncPointer<__float128, int, __float128>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::acosf128}>::Create("acos"),
+      FolderFactory<F, F{::acoshf128}>::Create("acosh"),
+      FolderFactory<F, F{::asinf128}>::Create("asin"),
+      FolderFactory<F, F{::asinhf128}>::Create("asinh"),
+      FolderFactory<F, F{::atanf128}>::Create("atan"),
+      FolderFactory<F2, F2{::atan2f128}>::Create("atan2"),
+      FolderFactory<F, F{::atanhf128}>::Create("atanh"),
+      FolderFactory<F, F{::j0f128}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1f128}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnf128}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0f128}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1f128}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynf128}>::Create("bessel_yn"),
+      FolderFactory<F, F{cosf128}>::Create("cos"),
+      FolderFactory<F, F{coshf128}>::Create("cosh"),
+      FolderFactory<F, F{::erff128}>::Create("erf"),
+      FolderFactory<F, F{::erfcf128}>::Create("erfc"),
+      FolderFactory<F, F{::expf128}>::Create("exp"),
+      FolderFactory<F, F{::tgammaf128}>::Create("gamma"),
+      FolderFactory<F, F{::logf128}>::Create("log"),
+      FolderFactory<F, F{::log10f128}>::Create("log10"),
+      FolderFactory<F, F{::lgammaf128}>::Create("log_gamma"),
+      FolderFactory<F2, F2{::powf128}>::Create("pow"),
+      FolderFactory<F, F{::sinf128}>::Create("sin"),
+      FolderFactory<F, F{::sinhf128}>::Create("sinh"),
+      FolderFactory<F, F{::tanf128}>::Create("tan"),
+      FolderFactory<F, F{::tanhf128}>::Create("tanh"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+
+// glibc declares the complex *f128 entry points in <complex.h> for C only; in
+// C++ they are hidden, though the symbols are in libm and the ABI is the one
+// mode(TC) produces. Declaring them here is deliberate. The signatures are
+// fixed by TS 18661-3 and the glibc ABI, and no separate canary is needed: the
+// table below takes each function's address, so a change in visibility or
+// signature is a build error at that line rather than a silent drift back to
+// libquadmath. Do not delete this block expecting the headers to provide them.
+extern "C" {
+host::HostComplex128 cacosf128(host::HostComplex128);
+host::HostComplex128 cacoshf128(host::HostComplex128);
+host::HostComplex128 casinf128(host::HostComplex128);
+host::HostComplex128 casinhf128(host::HostComplex128);
+host::HostComplex128 catanf128(host::HostComplex128);
+host::HostComplex128 catanhf128(host::HostComplex128);
+host::HostComplex128 ccosf128(host::HostComplex128);
+host::HostComplex128 ccoshf128(host::HostComplex128);
+host::HostComplex128 cexpf128(host::HostComplex128);
+host::HostComplex128 clogf128(host::HostComplex128);
+host::HostComplex128 cpowf128(host::HostComplex128, host::HostComplex128);
+host::HostComplex128 csinf128(host::HostComplex128);
+host::HostComplex128 csinhf128(host::HostComplex128);
+host::HostComplex128 csqrtf128(host::HostComplex128);
+host::HostComplex128 ctanf128(host::HostComplex128);
+host::HostComplex128 ctanhf128(host::HostComplex128);
+}
+template <>
+struct HostRuntimeLibrary<host::HostComplex128, LibraryVersion::Libm> {
+  using F = FuncPointer<host::HostComplex128, host::HostComplex128>;
+  using F2 = FuncPointer<host::HostComplex128, host::HostComplex128,
+      host::HostComplex128>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{cacosf128}>::Create("acos"),
+      FolderFactory<F, F{cacoshf128}>::Create("acosh"),
+      FolderFactory<F, F{casinf128}>::Create("asin"),
+      FolderFactory<F, F{casinhf128}>::Create("asinh"),
+      FolderFactory<F, F{catanf128}>::Create("atan"),
+      FolderFactory<F, F{catanhf128}>::Create("atanh"),
+      FolderFactory<F, F{ccosf128}>::Create("cos"),
+      FolderFactory<F, F{ccoshf128}>::Create("cosh"),
+      FolderFactory<F, F{cexpf128}>::Create("exp"),
+      FolderFactory<F, F{clogf128}>::Create("log"),
+      FolderFactory<F2, F2{cpowf128}>::Create("pow"),
+      FolderFactory<F, F{csinf128}>::Create("sin"),
+      FolderFactory<F, F{csinhf128}>::Create("sinh"),
+      FolderFactory<F, F{csqrtf128}>::Create("sqrt"),
+      FolderFactory<F, F{ctanf128}>::Create("tan"),
+      FolderFactory<F, F{ctanhf128}>::Create("tanh"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif // HAS_QUADMATHLIB || HAS_LIBMF128_HOST
 
 /// Define pgmath description
 #if LINK_WITH_LIBPGMATH
@@ -686,7 +776,11 @@ static const HostRuntimeMap *GetHostRuntimeMapVersion(DynamicType resultType) {
             GetHostRuntimeMapHelper<long double, version>(resultType)}) {
       return map;
     }
-#if HAS_QUADMATHLIB
+#if HAS_QUADMATHLIB || HAS_LIBMF128_HOST
+    // Both routes present __float128 here; only the library behind the table
+    // differs. Guarding this on HAS_QUADMATHLIB alone compiled the libm tables
+    // and then never reached them, so REAL(16) folding failed on a build that
+    // had everything it needed.
     if (const auto *map{
             GetHostRuntimeMapHelper<__float128, version>(resultType)}) {
       return map;
@@ -710,6 +804,11 @@ static const HostRuntimeMap *GetHostRuntimeMapVersion(DynamicType resultType) {
 #if HAS_QUADMATHLIB
     if (const auto *map{
             GetHostRuntimeMapHelper<__complex128, version>(resultType)}) {
+      return map;
+    }
+#elif HAS_LIBMF128_HOST
+    if (const auto *map{GetHostRuntimeMapHelper<host::HostComplex128, version>(
+            resultType)}) {
       return map;
     }
 #endif
