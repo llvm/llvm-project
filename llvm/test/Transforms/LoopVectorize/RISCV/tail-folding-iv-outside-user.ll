@@ -64,3 +64,52 @@ loop:
 exit:
   ret i32 %iv2
 }
+
+; Make sure an induction-derived compare that is only used after the loop does
+; not require a vector induction just to extract its last active lane.
+define i1 @induction_compare_live_out(ptr %p, i32 %start, i64 %n) {
+; CHECK-LABEL: define i1 @induction_compare_live_out(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[START:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDEX1]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> zeroinitializer, ptr align 4 [[TMP2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[INDEX1]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[START]], -1
+; CHECK-NEXT:    [[TMP6:%.*]] = sub nuw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32 [[TMP8]], 0
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, -1
+  %out = icmp ne i32 %iv.next, 0
+  %gep = getelementptr inbounds i32, ptr %p, i64 %index
+  store i32 0, ptr %gep, align 4
+  %index.next = add nuw i64 %index, 1
+  %cmp = icmp ult i64 %index.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i1 %out
+}
