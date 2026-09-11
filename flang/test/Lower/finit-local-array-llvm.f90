@@ -97,9 +97,9 @@ end subroutine
 ! ZERO:        store i32 0,
 
 ! ---------------------------------------------------------------------------
-! Array of derived type  type(t) :: x(2)  (Thread 3/4 regression)
-! Loop strides by sizeof(%t); initAddr recurses into each record element so
-! all fields receive the pattern rather than a zeroinitializer.
+! Array of derived type  type(t) :: x(2)
+! Outer loop strides by sizeof(%t); each element is byte-filled via an inner
+! loop, covering all fields and internal padding.
 ! ---------------------------------------------------------------------------
 subroutine test_array_of_struct(res)
   type :: t
@@ -126,8 +126,8 @@ end subroutine
 
 ! ---------------------------------------------------------------------------
 ! Rank-2 array of derived type  type(t) :: x(2,3) -- 6 elements
-! Flat loop must stride by sizeof(%t) via rank-1 view; initAddr recurses
-! into each record so all fields of all 6 elements receive the pattern.
+! Flat loop strides by sizeof(%t) via a rank-1 view; each element is
+! byte-filled, covering all fields and padding of all 6 elements.
 ! ---------------------------------------------------------------------------
 subroutine test_array_of_struct_2d(res)
   type :: t

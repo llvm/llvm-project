@@ -214,7 +214,7 @@ end subroutine
 
 ! ---------------------------------------------------------------------------
 ! CHARACTER(10) -- fixed-length scalar.
-! zero: fir.zero_bits over the whole character type.
+! zero: byte-loop over 10 bytes via an i8 view.
 ! hex: byte-loop over 10 bytes via an i8 view.
 ! ---------------------------------------------------------------------------
 subroutine test_char10(res)
@@ -478,7 +478,7 @@ end subroutine
 ! ---------------------------------------------------------------------------
 ! CHARACTER(kind=2, len=3) -- fixed-length, higher kind.
 ! hex: byte-loop over 3*2=6 bytes via an i8 view.
-! zero: fir.zero_bits over the whole type.
+! zero: byte-loop over 3*2=6 bytes via an i8 view.
 ! ---------------------------------------------------------------------------
 subroutine test_char2_fixed(res)
   character(kind=2, len=3) :: res
@@ -502,6 +502,7 @@ end subroutine
 ! ---------------------------------------------------------------------------
 ! CHARACTER(kind=4, len=2) -- fixed-length, wider kind.
 ! hex: byte-loop over 2*4=8 bytes via an i8 view.
+! zero: byte-loop over 2*4=8 bytes via an i8 view.
 ! ---------------------------------------------------------------------------
 subroutine test_char4_fixed(res)
   character(kind=4, len=2) :: res
