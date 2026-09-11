@@ -1424,11 +1424,7 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
     }
   } else {
     // No operators delete[] were found, so emit a trap.
-    llvm::CallInst *TrapCall = CGF.EmitTrapCall(llvm::Intrinsic::trap);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
-    CGF.Builder.CreateUnreachable();
-    CGF.Builder.ClearInsertionPoint();
+    CGF.EmitTrapCallAndMakeUnreachable();
   }
 
   CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
@@ -1446,11 +1442,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
   if (DtorType != Dtor_Base && Dtor->getParent()->isAbstract()) {
-    llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
-    Builder.CreateUnreachable();
-    Builder.ClearInsertionPoint();
+    EmitTrapCallAndMakeUnreachable();
     return;
   }
 

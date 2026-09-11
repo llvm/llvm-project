@@ -1086,16 +1086,6 @@ public:
   LLVM_ABI SDValue getBitcastedAnyExtOrTrunc(SDValue Op, const SDLoc &DL,
                                              EVT VT);
 
-  /// Convert Op, which must be of integer type, to the
-  /// integer type VT, by first bitcasting (from potential vector) to
-  /// corresponding scalar type then either sign-extending or truncating it.
-  LLVM_ABI SDValue getBitcastedSExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
-
-  /// Convert Op, which must be of integer type, to the
-  /// integer type VT, by first bitcasting (from potential vector) to
-  /// corresponding scalar type then either zero-extending or truncating it.
-  LLVM_ABI SDValue getBitcastedZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
-
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.
   LLVM_ABI SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
@@ -1756,7 +1746,8 @@ public:
 
   /// Return an AddrSpaceCastSDNode.
   LLVM_ABI SDValue getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
-                                    unsigned SrcAS, unsigned DestAS);
+                                    unsigned SrcAS, unsigned DestAS,
+                                    const SDNodeFlags Flags = SDNodeFlags());
 
   /// Return a freeze using the SDLoc of the value operand.
   LLVM_ABI SDValue getFreeze(SDValue V);
@@ -2101,6 +2092,13 @@ public:
   /// Create a stack temporary suitable for holding either of the specified
   /// value types.
   LLVM_ABI SDValue CreateStackTemporary(EVT VT1, EVT VT2);
+
+  /// Emit a store/load combination to the stack. This stores
+  /// SrcOp to a stack slot of type SlotVT, truncating it if needed. It then
+  /// does a load from the stack slot to DestVT, extending it if needed. The
+  /// resultant code need not be legal.
+  LLVM_ABI SDValue emitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
+                                    const SDLoc &DL, SDValue Chain);
 
   LLVM_ABI SDValue FoldSymbolOffset(unsigned Opcode, EVT VT,
                                     const GlobalAddressSDNode *GA,

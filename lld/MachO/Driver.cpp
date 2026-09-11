@@ -2077,6 +2077,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->warnThinArchiveMissingMembers =
       args.hasFlag(OPT_warn_thin_archive_missing_members,
                    OPT_no_warn_thin_archive_missing_members, true);
+  config->warnMissingSubsectionsViaSymbols =
+      args.hasFlag(OPT_warn_missing_subsections_via_symbols,
+                   OPT_no_warn_missing_subsections_via_symbols, false);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
   config->disableVerify = args.hasArg(OPT_disable_verify);
   config->separateCstringLiteralSections =
