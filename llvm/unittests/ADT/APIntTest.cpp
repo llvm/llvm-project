@@ -1097,6 +1097,12 @@ TEST(APIntTest, divrem_big7) {
           {224, "80000000800000010000000f", 16});
 }
 
+TEST(APIntTest, divrem_big8) {
+  // A test for KnuthDiv step D3 when qp = b + 1.
+  testDiv({128, "8000000080000001", 16}, {128, "ffffffff", 16},
+          {128, "7fffffff80000001", 16});
+}
+
 void testDiv(APInt a, uint64_t b, APInt c) {
   auto p = a * b + c;
 
