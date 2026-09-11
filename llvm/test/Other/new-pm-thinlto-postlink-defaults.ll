@@ -125,7 +125,6 @@
 ; CHECK-O23-NEXT: Running pass: VectorCombinePass
 ; CHECK-O23-NEXT: Running pass: MergedLoadStoreMotionPass
 ; CHECK-O23-NEXT: Running pass: GVNPass
-; CHECK-O23-NEXT: Running analysis: MemoryDependenceAnalysis
 ; CHECK-O1-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O1-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O-NEXT: Running pass: SCCPPass
