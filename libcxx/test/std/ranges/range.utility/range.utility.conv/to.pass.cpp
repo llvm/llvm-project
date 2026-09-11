@@ -511,19 +511,20 @@ struct EmplaceOrInsert {
 
   constexpr int* begin() { return buffer_; }
   constexpr int* end() { return buffer_ + size_; }
-  constexpr int size() const { return size_; }
+  constexpr std::size_t size() const { return size_; }
 
   constexpr int* emplace(int* where, int val) {
     called_emplace = true;
-    return __insert_impl(where, val);
+    return insert_impl(where, val);
   }
 
   constexpr int* insert(int* where, int val) {
     called_insert = true;
-    return __insert_impl(where, val);
+    return insert_impl(where, val);
   }
 
-  constexpr int* __insert_impl(int* where, int val) {
+private:
+  constexpr int* insert_impl(int* where, int val) {
     assert(size() + 1 <= Capacity);
     std::shift_right(where, end(), 1);
     *where = val;
