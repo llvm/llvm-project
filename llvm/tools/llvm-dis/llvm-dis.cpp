@@ -86,6 +86,10 @@ static cl::opt<bool>
                                  "then materialize only the metadata"),
                         cl::cat(DisCategory));
 
+static cl::opt<bool>
+    DisableDITypeMap("disable-debug-info-type-map",
+                     cl::desc("Don't use a uniquing type map for debug info"));
+
 static cl::opt<bool> PrintThinLTOIndexOnly(
     "print-thinlto-index-only",
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
@@ -192,6 +196,9 @@ int main(int argc, char **argv) {
     LLVMContext Context;
     Context.setDiagnosticHandler(
         std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
+
+    if (!DisableDITypeMap)
+      Context.enableDebugTypeODRUniquing();
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(InputFilename);

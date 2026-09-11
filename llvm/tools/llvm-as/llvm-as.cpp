@@ -62,6 +62,10 @@ static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::value_desc("layout-string"),
                                          cl::init(""), cl::cat(AsCat));
 
+static cl::opt<bool>
+    DisableDITypeMap("disable-debug-info-type-map",
+                     cl::desc("Don't use a uniquing type map for debug info"));
+
 static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
   // Infer the output filename if needed.
   if (OutputFilename.empty()) {
@@ -113,6 +117,9 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm .ll -> .bc assembler\n");
   LLVMContext Context;
 
+  if (!DisableDITypeMap)
+    Context.enableDebugTypeODRUniquing();
+
   // Parse the file now...
   SMDiagnostic Err;
   auto SetDataLayout = [](StringRef, StringRef) -> std::optional<std::string> {
@@ -135,6 +142,14 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
+
+  // The verifier seems to use DebugTypeODRUniquing as an (inconsistent) proxy
+  // for whether module linking is taking place. To maintain previous llvm-as
+  // behaviour, don't leave DebugTypeODRUniquing "on" for the verifier.
+  // FIXME: Improve this situation, because it means opt and llvm-as have
+  // different verifier paths.
+  if (!DisableDITypeMap)
+    Context.disableDebugTypeODRUniquing();
 
   if (!DisableVerify) {
     std::string ErrorStr;
