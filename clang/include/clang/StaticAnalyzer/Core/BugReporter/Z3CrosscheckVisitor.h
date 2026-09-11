@@ -37,7 +37,7 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 
-  void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
+  void finalizeVisitor(const ExplodedNode *EndPathNode, BugReporterContext &BRC,
                        PathSensitiveBugReport &BR) override;
 
 private:

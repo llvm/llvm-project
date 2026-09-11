@@ -60,7 +60,7 @@ static bool runCGProfilePass(Module &M, FunctionAnalysisManager &FAM,
     Count = SaturatingAdd(Count, NewCount);
   };
   // Ignore error here.  Indirect calls are ignored if this fails.
-  (void)(bool)Symtab.create(M, InLTO);
+  consumeError(Symtab.create(M, InLTO));
   for (auto &F : M) {
     // Avoid extra cost of running passes for BFI when the function doesn't have
     // entry count.

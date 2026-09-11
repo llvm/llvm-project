@@ -291,3 +291,38 @@ define ptr @get_extern_weak_hidden_func() nounwind {
 ; PIC-NEXT:    .long extern_weak_hidden_func(GOT_PREL)-(.LPC12_0+8-.Ltmp7)
   ret ptr @extern_weak_hidden_func
 }
+
+;; TLS weak symbols must not use the .reloc/R_ARM_REL32 path; they require
+;; TLS-specific relocations (R_ARM_TLS_GD32 etc.), not R_ARM_REL32. Using
+;; R_ARM_REL32 for a TLS symbol produces a wrong address and crashes at runtime.
+@tls_weak_var = weak dso_local thread_local global i32 42
+define ptr @get_tls_weak_var() nounwind {
+; STATIC-LABEL: get_tls_weak_var:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    .save {r11, lr}
+; STATIC-NEXT:    push {r11, lr}
+; STATIC-NEXT:    ldr r1, .LCPI13_0
+; STATIC-NEXT:    bl __aeabi_read_tp
+; STATIC-NEXT:    add r0, r0, r1
+; STATIC-NEXT:    pop {r11, pc}
+; STATIC-NEXT:    .p2align 2
+; STATIC-NEXT:  @ %bb.1:
+; STATIC-NEXT:  .LCPI13_0:
+; STATIC-NEXT:    .long tls_weak_var(TPOFF)
+;
+; PIC-LABEL: get_tls_weak_var:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    .save {r11, lr}
+; PIC-NEXT:    push {r11, lr}
+; PIC-NEXT:    ldr r0, .LCPI13_0
+; PIC-NEXT:  .LPC13_0:
+; PIC-NEXT:    add r0, pc, r0
+; PIC-NEXT:    bl __tls_get_addr
+; PIC-NEXT:    pop {r11, pc}
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI13_0:
+; PIC-NEXT:  .Ltmp8:
+; PIC-NEXT:    .long tls_weak_var(TLSGD)-(.LPC13_0+8-.Ltmp8)
+  ret ptr @tls_weak_var
+}

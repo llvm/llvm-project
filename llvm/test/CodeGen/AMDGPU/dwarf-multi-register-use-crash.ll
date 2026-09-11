@@ -11,6 +11,7 @@ declare ptr @__kmpc_alloc_shared()
 define weak_odr void @test(i32 %0) #1 !dbg !34 {
 ; CHECK-LABEL: test:
 ; CHECK:       .Lfunc_begin0:
+; CHECK-NEXT:    .file 1 "dummy" "dummy" md5 0xb67bec84bdce3730b4a6f2ed8d50b85c
 ; CHECK-NEXT:    .loc 1 288 0 ; dummy:288:0
 ; CHECK-NEXT:    .cfi_sections .debug_frame
 ; CHECK-NEXT:    .cfi_startproc

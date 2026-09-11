@@ -69,7 +69,7 @@ exit:
 
 !0 = !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 ; test2
 ;
@@ -114,7 +114,7 @@ exit:
 
 !3 = !{!3, !4, !5}
 !4 = !{!"llvm.loop.vectorize.width", i32 8}
-!5 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!5 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 ; test3
 ;
@@ -162,7 +162,7 @@ exit:
 
 !6 = !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.width", i32 2}
-!8 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!8 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 ; test4
 ;
@@ -214,7 +214,7 @@ exit:
 
 !9 = !{!9, !10, !11}
 !10 = !{!"llvm.loop.vectorize.width", i32 4}
-!11 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!11 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 ; test5
 ;
@@ -262,7 +262,7 @@ exit:
 
 !12 = !{!12, !13, !14}
 !13 = !{!"llvm.loop.vectorize.width", i32 4}
-!14 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!14 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 ; test6
 ;
@@ -313,7 +313,7 @@ exit:
 
 !15 = !{!15, !16, !17}
 !16 = !{!"llvm.loop.vectorize.width", i32 16}
-!17 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!17 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 ; CHECK-NO-SVE-REMARKS-LABEL: LV: Checking a loop in 'test_no_sve'
 ; CHECK-NO-SVE-REMARKS: LV: User VF=vscale x 4 is ignored because scalable vectors are not available.
@@ -344,7 +344,7 @@ exit:
 
 !18 = !{!18, !19, !20}
 !19 = !{!"llvm.loop.vectorize.width", i32 4}
-!20 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!20 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 ; Test the LV falls back to fixed-width vectorization if scalable vectors are
 ; supported but max vscale is undefined.
@@ -381,4 +381,4 @@ exit:
 attributes #0 = { vscale_range(1, 16) }
 !21 = !{!21, !22, !23}
 !22 = !{!"llvm.loop.vectorize.width", i32 4}
-!23 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!23 = !{!"llvm.loop.vectorize.scalable.enable"}

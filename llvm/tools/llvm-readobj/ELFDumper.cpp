@@ -701,7 +701,6 @@ private:
     if (F.Column != 0)
       OS.PadToColumn(F.Column);
     OS << F.Str;
-    OS.flush();
     return OS;
   }
   void printHashedSymbol(const Elf_Sym *Sym, unsigned SymIndex,
@@ -1684,6 +1683,7 @@ constexpr EnumStringDef<unsigned, 2> ElfHeaderNVPTXFlagsDefs[] = {
     ENUM_ENT(EF_CUDA_SM100, "sm_100"),
     ENUM_ENT(EF_CUDA_SM101, "sm_101"),
     ENUM_ENT(EF_CUDA_SM103, "sm_103"),
+    ENUM_ENT(EF_CUDA_SM107, "sm_107"),
     ENUM_ENT(EF_CUDA_SM110, "sm_110"),
     ENUM_ENT(EF_CUDA_SM120, "sm_120"),
     ENUM_ENT(EF_CUDA_SM121, "sm_121"),
@@ -1711,6 +1711,7 @@ constexpr EnumStringDef<unsigned, 2> ElfHeaderNVPTXFlagsDefs[] = {
     ENUM_ENT(EF_CUDA_SM100 << EF_CUDA_SM_OFFSET, "sm_100"),
     ENUM_ENT(EF_CUDA_SM101 << EF_CUDA_SM_OFFSET, "sm_101"),
     ENUM_ENT(EF_CUDA_SM103 << EF_CUDA_SM_OFFSET, "sm_103"),
+    ENUM_ENT(EF_CUDA_SM107 << EF_CUDA_SM_OFFSET, "sm_107"),
     ENUM_ENT(EF_CUDA_SM110 << EF_CUDA_SM_OFFSET, "sm_110"),
     ENUM_ENT(EF_CUDA_SM120 << EF_CUDA_SM_OFFSET, "sm_120"),
     ENUM_ENT(EF_CUDA_SM121 << EF_CUDA_SM_OFFSET, "sm_121"),
@@ -5330,7 +5331,7 @@ void GNUELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
-  OS << "GNUStyle::printCGProfile not implemented\n";
+  OS << "GNU output style is not supported for --cg-profile\n";
 }
 
 template <class ELFT>
@@ -5464,7 +5465,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
 
 template <class ELFT>
 void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
-  OS << "GNUStyle::printBBAddrMaps not implemented\n";
+  OS << "GNU output style is not supported for --bb-addr-map\n";
 }
 
 static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
@@ -6253,6 +6254,8 @@ const NoteType OpenBSDCoreNoteTypes[] = {
     {ELF::NT_OPENBSD_REGS, "NT_OPENBSD_REGS (regular registers)"},
     {ELF::NT_OPENBSD_FPREGS, "NT_OPENBSD_FPREGS (floating point registers)"},
     {ELF::NT_OPENBSD_WCOOKIE, "NT_OPENBSD_WCOOKIE (window cookie)"},
+    {ELF::NT_OPENBSD_PACMASK,
+     "NT_OPENBSD_PACMASK (AArch64 Pointer Authentication Code mask)"},
 };
 
 const NoteType AMDNoteTypes[] = {
@@ -6906,7 +6909,7 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printELFLinkerOptions() {
-  OS << "printELFLinkerOptions not implemented!\n";
+  OS << "GNU output style is not supported for --elf-linker-options\n";
 }
 
 template <class ELFT>

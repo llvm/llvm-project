@@ -1,31 +1,31 @@
-add_libc_unittest(
+add_libc_test(
   parser_test
   SUITE
     libc-support-tests
   SRCS
     parser_test.cpp
-  LINK_LIBRARIES
-    LibcPrintfHelpers
   DEPENDS
     libc.src.__support.printf_core.parser
     libc.src.__support.printf_core.core_structs
     libc.src.__support.CPP.string_view
     libc.src.__support.arg_list
+    libc.test.UnitTest.PrintfMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   writer_test
   SUITE
     libc-support-tests
   SRCS
     writer_test.cpp
   DEPENDS
+    libc.test.UnitTest.CharLiteralUtils
     libc.src.__support.printf_core.writer
     libc.src.string.memory_utils.inline_memcpy
     libc.src.__support.CPP.string_view
 )
 
-add_libc_unittest(
+add_libc_test(
   converter_test
   SUITE
     libc-support-tests

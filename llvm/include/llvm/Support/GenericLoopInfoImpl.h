@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/GenericLoopInfo.h"
@@ -304,23 +305,6 @@ void LoopBase<BlockT, LoopT>::addBasicBlockToLoop(
   }
 }
 
-/// replaceChildLoopWith - This is used when splitting loops up.  It replaces
-/// the OldChild entry in our children list with NewChild, and updates the
-/// parent pointer of OldChild to be null and the NewChild to be this loop.
-/// This updates the loop depth of the new child.
-template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::replaceChildLoopWith(LoopT *OldChild,
-                                                   LoopT *NewChild) {
-  assert(!isInvalid() && "Loop not in a valid state!");
-  assert(OldChild->ParentLoop == this && "This loop is already broken!");
-  assert(!NewChild->ParentLoop && "NewChild already has a parent!");
-  typename std::vector<LoopT *>::iterator I = find(SubLoops, OldChild);
-  assert(I != SubLoops.end() && "OldChild not in loop!");
-  *I = NewChild;
-  OldChild->ParentLoop = nullptr;
-  NewChild->ParentLoop = static_cast<LoopT *>(this);
-}
-
 /// verifyLoop - Verify loop structure
 template <class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::verifyLoop() const {
@@ -461,12 +445,67 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, bool Verbose,
 /// program order.
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
+  analyzeImpl(DomTree, /*ReuseLoop=*/{});
+}
+
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyzeImpl(
+    const DomTreeBase<BlockT> &DomTree, ReuseLoopT ReuseLoop) {
+  analyzeImpl(
+      DomTree.getRootNode()->getBlock()->getParent(),
+      [&]() -> const DomTreeBase<BlockT> & { return DomTree; }, ReuseLoop);
+}
+
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyze(ParentT F) {
+  DomTreeBase<BlockT> DomTree;
+  analyze(F, [&]() -> const DomTreeBase<BlockT> & {
+    DomTree.recalculate(*F);
+    return DomTree;
+  });
+}
+
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyze(
+    ParentT F, function_ref<const DomTreeBase<BlockT> &()> GetDomTree) {
+  analyzeImpl(F, GetDomTree, /*ReuseLoop=*/{});
+}
+
+template <class BlockT, class LoopT>
+SmallVector<std::pair<LoopT *, BlockT *>, 4>
+LoopInfoBase<BlockT, LoopT>::recompute(const DomTreeBase<BlockT> &DomTree) {
+  // Index the loops by header so the analysis can find them again, and empty
+  // them out for it to refill.
+  MapVector<BlockT *, LoopT *> ReuseByHeader;
+  for (LoopT *L : getLoopsInPreorder()) {
+    ReuseByHeader[L->getHeader()] = L;
+    L->clear();
+  }
+  BBMap.clear();
+  TopLevelLoops.clear();
+  BlockLayout.reset();
+
+  analyzeImpl(DomTree,
+              [&](BlockT *Header) { return ReuseByHeader.lookup(Header); });
+
+  // ReuseByHeader is in preorder, so the report is deterministic.
+  SmallVector<std::pair<LoopT *, BlockT *>, 4> Removed;
+  for (auto [Header, L] : ReuseByHeader)
+    if (lookupLoopFor(Header) != L)
+      Removed.emplace_back(L, Header);
+  return Removed;
+}
+
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyzeImpl(
+    ParentT F, function_ref<const DomTreeBase<BlockT> &()> GetDomTree,
+    ReuseLoopT ReuseLoop) {
   using BlockTraits = GraphTraits<BlockT *>;
   auto num = [](const BlockT *BB) {
     return GraphTraits<const BlockT *>::getNumber(BB);
   };
 
-  ParentPtr = DomTree.getRootNode()->getBlock()->getParent();
+  ParentPtr = F;
   BlockNumberEpoch = GraphTraits<ParentT>::getNumberEpoch(ParentPtr);
   unsigned MaxNumber = GraphTraits<ParentT>::getMaxNumber(ParentPtr);
 
@@ -593,6 +632,9 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     // splice the header out of the chain of every other block.
     for (unsigned H : Reentries)
       Info[H].Pos = IsReentered;
+    const DomTreeBase<BlockT> &DomTree = GetDomTree();
+    assert(DomTree.getRootNode()->getBlock() ==
+           GraphTraits<ParentT>::getEntryNode(ParentPtr));
     DomTree.updateDFSNumbers();
     SmallVector<unsigned, 0> Mark(MaxNumber, NoBlock);
     SmallVector<BlockT *, 8> Worklist;
@@ -645,7 +687,9 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
       // Whatever reaches a latch without passing the header is in the loop.
       for (unsigned I = 0; I != Worklist.size(); ++I)
         for (BlockT *Pred : inverse_children<BlockT *>(Worklist[I]))
-          enqueue(Pred);
+          // Do not enqueue any unreachable nodes.
+          if (Blocks[num(Pred)])
+            enqueue(Pred);
       // Without a backedge the header forms no loop at all.
       Info[H].Pos = HasBackedge ? IsHeader : OffPath;
       // Partition the header's blocks: the loop keeps the ones the traversal
@@ -682,7 +726,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     LoopT *Enclosing = H == NoBlock ? nullptr : BBMap[H];
     LoopT *L = Enclosing;
     if (Info[B].Pos == IsHeader) {
-      L = allocateLoop(BB);
+      L = allocateLoop(BB, ReuseLoop);
       L->setParentLoop(Enclosing);
     }
     BBMap[B] = L;
@@ -870,8 +914,7 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
 #endif
 
 template <class BlockT, class LoopT>
-void LoopInfoBase<BlockT, LoopT>::verify(
-    const DomTreeBase<BlockT> &DomTree) const {
+void LoopInfoBase<BlockT, LoopT>::verify() const {
   DenseSet<const LoopT *> Loops;
   for (iterator I = begin(), E = end(); I != E; ++I) {
     assert((*I)->isOutermost() && "Top-level loop has a parent!");
@@ -909,7 +952,7 @@ void LoopInfoBase<BlockT, LoopT>::verify(
 
   // Recompute LoopInfo to verify loops structure.
   LoopInfoBase<BlockT, LoopT> OtherLI;
-  OtherLI.analyze(DomTree);
+  OtherLI.analyze(ParentPtr);
 
   // Build a map we can use to move from our LI to the computed one. This
   // allows us to ignore the particular order in any layer of the loop forest

@@ -141,9 +141,8 @@ public:
   LogicalResult checkInvalid(Operation *op);
 
   template <typename T>
-  LogicalResult checkProfileOrExtension(
-      Operation *op, const tosa::TargetEnv &targetEnv,
-      const SmallVector<ArrayRef<T>> &specDefinedProfileSet);
+  LogicalResult checkProfileOrExtension(Operation *op,
+                                        const tosa::TargetEnv &targetEnv);
 
   bool isSameTypeInfo(TypeInfo a, TypeInfo b) {
     return a.typeID == b.typeID && a.bitWidth == b.bitWidth &&

@@ -34,8 +34,21 @@ bb4:                                              ; preds = %bb1
   ret i32 %add3
 }
 
+; The loop pass adaptor only runs the loop canonicalization passes for functions
+; that contain loops, so @baz needs a loop of its own to get any passes run on
+; it.
 define i32 @baz(i32 %arg) {
-  ret i32 0;
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %phi = phi i32 [ 0, %bb ], [ %add, %bb1 ]
+  %add = add i32 %phi, 1
+  %icmp = icmp slt i32 %phi, %arg
+  br i1 %icmp, label %bb1, label %bb4
+
+bb4:                                              ; preds = %bb1
+  ret i32 %add
 }
 
 ; NUMBER:  Running pass 1 LoopSimplifyPass on bar
@@ -44,8 +57,13 @@ define i32 @baz(i32 %arg) {
 ; NUMBER-NEXT: Running pass 4 LoopDeletionPass on loop %bb1 in function bar
 ; NUMBER-NEXT: Running pass 5 LoopSimplifyPass on baz
 ; NUMBER-NEXT: Running pass 6 LCSSAPass on baz
+; NUMBER-NEXT: Running pass 7 IndVarSimplifyPass on loop %bb1 in function baz
+; NUMBER-NEXT: Running pass 8 LoopDeletionPass on loop %bb1 in function baz
 ; NUMBER-NOT: Running pass
 
 ; NUMBER-FILTERED: Running pass 1 LoopSimplifyPass on baz
 ; NUMBER-FILTERED-NEXT: Running pass 2 LCSSAPass on baz
+; NUMBER-FILTERED-NEXT: Running pass 3 IndVarSimplifyPass on loop %bb1 in function baz
+; NUMBER-FILTERED-NEXT: Running pass 4 LoopDeletionPass on loop %bb1 in function baz
+; NUMBER-FILTERED-NOT: Running pass
 

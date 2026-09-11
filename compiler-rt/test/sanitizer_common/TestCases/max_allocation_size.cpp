@@ -46,6 +46,8 @@
 // Symbolizer needs to allocated memory when reporting.
 // UNSUPPORTED: internal_symbolizer
 
+// UNSUPPORTED: rtsan
+
 #include <assert.h>
 #include <errno.h>
 #include <limits>

@@ -10,7 +10,7 @@ program ompx_hold
     implicit none
     integer :: presence_check
 
-!CHECK-NOT: omptarget message: device mapping required by 'present' map type modifier does not exist for host address{{.*}}
+!CHECK-NOT: message: device mapping required by 'present' map type modifier does not exist for host address{{.*}}
 !$omp target data map(ompx_hold, tofrom: presence_check)
 !$omp target exit data map(delete: presence_check)
 !$omp target map(present, tofrom: presence_check)
@@ -18,7 +18,7 @@ program ompx_hold
 !$omp end target
 !$omp end target data
 
-!CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address{{.*}}
+!CHECK: message: device mapping required by 'present' map type modifier does not exist for host address{{.*}}
 !$omp target data map(tofrom: presence_check)
 !$omp target exit data map(delete: presence_check)
 !$omp target map(present, tofrom: presence_check)
