@@ -2,6 +2,7 @@
 ; RUN: opt -p loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S %s | FileCheck %s
 
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
+declare void @init_mem(ptr, i64)
 
 ; These loops have two exits: an early exit and the latch. The vectorizer
 ; computes the trip count from the latch and emits that computation in the
@@ -10,53 +11,25 @@ declare i32 @llvm.cttz.i32(i32, i1 immarg)
 ; well defined on that path must not be computed unconditionally in the
 ; preheader.
 
-; FIXME: %ct is poison when %x is 0, so %d may be poison. The udiv is currently
-; speculated into the preheader, where it can divide by poison, which is UB. The
-; original loop returns 0 without evaluating %d when %skip is true, so this is a
-; miscompile and the loop must not be vectorized.
+; %ct is poison when %x is 0, so %d may be poison and speculating (63 /u %d)
+; would divide by poison, which is UB. The original loop returns 0 without ever
+; evaluating %d when %skip is true, so do not vectorize.
 define i32 @udiv_by_poison_step(i32 %x, i1 %skip) {
 ; CHECK-LABEL: define i32 @udiv_by_poison_step(
 ; CHECK-SAME: i32 [[X:%.*]], i1 [[SKIP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    [[D:%.*]] = add nuw nsw i32 [[CT]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 63, [[D]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[SKIP]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[N_VEC]], [[D]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
-; CHECK:       [[VECTOR_BODY_INTERIM]]:
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[SKIP]], label %[[EXIT]], label %[[LATCH]]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[SKIP]], label %[[EXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], [[D]]
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp uge i32 [[INC]], 64
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, %[[LOOP1]] ], [ [[INC]], %[[LATCH]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, %[[LOOP1]] ], [ [[INC]], %[[LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -106,7 +79,7 @@ define i32 @udiv_by_nonzero_nonpoison_step(i32 noundef %x, i1 %skip) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -121,7 +94,7 @@ define i32 @udiv_by_nonzero_nonpoison_step(i32 noundef %x, i1 %skip) {
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], [[D]]
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp uge i32 [[INC]], 64
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[INC]], %[[LATCH]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -137,6 +110,143 @@ loop:
 
 latch:
   %inc = add nuw nsw i32 %i, %d
+  %done = icmp uge i32 %inc, 64
+  br i1 %done, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  %r = phi i32 [ 0, %loop ], [ %inc, %latch ]
+  ret i32 %r
+}
+
+; Same reasoning, but with a loop-varying early exit: the loop leaves early
+; when a loaded byte is zero. The trip count is still taken from the latch, so
+; %d being poison must still prevent vectorization.
+define i32 @udiv_by_poison_step_early_exit_load(i32 %x) {
+; CHECK-LABEL: define i32 @udiv_by_poison_step_early_exit_load(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[P:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P]], i64 1024)
+; CHECK-NEXT:    [[CT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[D:%.*]] = add nuw nsw i32 [[CT]], 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[JNEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i32 [[J]]
+; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[FOUND:%.*]] = icmp eq i8 [[LD]], 0
+; CHECK-NEXT:    br i1 [[FOUND]], label %[[EXIT:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], [[D]]
+; CHECK-NEXT:    [[JNEXT]] = add nuw nsw i32 [[J]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp uge i32 [[INC]], 64
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP0]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[INC]], %[[LATCH]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %p = alloca [1024 x i8]
+  call void @init_mem(ptr %p, i64 1024)
+  %ct = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %d = add nuw nsw i32 %ct, 1
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %inc, %latch ]
+  %j = phi i32 [ 0, %entry ], [ %jnext, %latch ]
+  %gep = getelementptr inbounds i8, ptr %p, i32 %j
+  %ld = load i8, ptr %gep, align 1
+  %found = icmp eq i8 %ld, 0
+  br i1 %found, label %exit, label %latch
+
+latch:
+  %inc = add nuw nsw i32 %i, %d
+  %jnext = add nuw nsw i32 %j, 1
+  %done = icmp uge i32 %inc, 64
+  br i1 %done, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  %r = phi i32 [ 0, %loop ], [ %inc, %latch ]
+  ret i32 %r
+}
+
+; Same loop-varying early exit, but the divisor is known non-zero and not
+; poison, so the trip count is safe to speculate and the loop is vectorized.
+; This confirms the loop above is only rejected because of the poison divisor.
+define i32 @udiv_by_nonzero_nonpoison_step_early_exit_load(i32 noundef %x) {
+; CHECK-LABEL: define i32 @udiv_by_nonzero_nonpoison_step_early_exit_load(
+; CHECK-SAME: i32 noundef [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[P:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P]], i64 1024)
+; CHECK-NEXT:    [[CT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    [[D:%.*]] = add nuw nsw i32 [[CT]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 63, [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[N_VEC]], [[D]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[P]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[JNEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i32 [[J]]
+; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[FOUND:%.*]] = icmp eq i8 [[LD]], 0
+; CHECK-NEXT:    br i1 [[FOUND]], label %[[EXIT]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], [[D]]
+; CHECK-NEXT:    [[JNEXT]] = add nuw nsw i32 [[J]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp uge i32 [[INC]], 64
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[INC]], %[[LATCH]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %p = alloca [1024 x i8]
+  call void @init_mem(ptr %p, i64 1024)
+  %ct = call i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %d = add nuw nsw i32 %ct, 1
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %inc, %latch ]
+  %j = phi i32 [ 0, %entry ], [ %jnext, %latch ]
+  %gep = getelementptr inbounds i8, ptr %p, i32 %j
+  %ld = load i8, ptr %gep, align 1
+  %found = icmp eq i8 %ld, 0
+  br i1 %found, label %exit, label %latch
+
+latch:
+  %inc = add nuw nsw i32 %i, %d
+  %jnext = add nuw nsw i32 %j, 1
   %done = icmp uge i32 %inc, 64
   br i1 %done, label %exit, label %loop, !llvm.loop !0
 
