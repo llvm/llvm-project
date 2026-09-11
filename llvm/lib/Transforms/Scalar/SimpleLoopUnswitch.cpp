@@ -258,36 +258,16 @@ static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
 
 /// Check that all the LCSSA PHI nodes in the loop exit block have trivial
 /// incoming values along this edge.
+///
+/// If \p UsedHeaderPHI is non-null, a header PHI incoming is accepted too and
+/// *UsedHeaderPHI is set; the caller then substitutes the header PHI's
+/// preheader (entry) value after unswitching.
 static bool areLoopExitPHIsLoopInvariant(const Loop &L,
                                          const BasicBlock &ExitingBB,
-                                         const BasicBlock &ExitBB) {
+                                         const BasicBlock &ExitBB,
+                                         bool *UsedHeaderPHI = nullptr) {
   for (const Instruction &I : ExitBB) {
     auto *PN = dyn_cast<PHINode>(&I);
-    if (!PN)
-      // No more PHIs to check.
-      return true;
-
-    // If the incoming value for this edge isn't loop invariant the unswitch
-    // won't be trivial.
-    if (!L.isLoopInvariant(PN->getIncomingValueForBlock(&ExitingBB)))
-      return false;
-  }
-  llvm_unreachable("Basic blocks should never be empty!");
-}
-
-/// Return true if every LCSSA PHI in \p ExitBB has, on the edge from the
-/// \p ExitingBB, either a loop-invariant incoming value or a header PHI.
-///
-/// A header PHI is acceptable only when the caller has ensured \p ExitingBB
-/// dominates the latch: the invariant exit then fires on the first iteration,
-/// before the latch runs, so the header PHI still holds its preheader (entry)
-/// value.
-static bool areLoopExitPHIsTrivialFromHeader(const Loop &L,
-                                             const BasicBlock &ExitingBB,
-                                             const BasicBlock &ExitBB) {
-  const BasicBlock *Header = L.getHeader();
-  for (const Instruction &I : ExitBB) {
-    const auto *PN = dyn_cast<PHINode>(&I);
     if (!PN)
       // No more PHIs to check.
       return true;
@@ -296,9 +276,12 @@ static bool areLoopExitPHIsTrivialFromHeader(const Loop &L,
     if (L.isLoopInvariant(V))
       continue;
 
-    const auto *HeaderPN = dyn_cast<PHINode>(V);
-    if (!HeaderPN || HeaderPN->getParent() != Header)
+    if (!UsedHeaderPHI)
       return false;
+    const auto *HeaderPN = dyn_cast<PHINode>(V);
+    if (!HeaderPN || HeaderPN->getParent() != L.getHeader())
+      return false;
+    *UsedHeaderPHI = true;
   }
   llvm_unreachable("Basic blocks should never be empty!");
 }
@@ -677,18 +660,14 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   auto *ParentBB = BI.getParent();
 
   // If the exit incomings aren't loop-invariant, the unswitch is still trivial
-  // when ParentBB dominates the latch and every non-invariant incoming is a
+  // when branch dominates the latch and every non-invariant incoming is a
   // header PHI. Those incomings are repaired after unswitching.
+  // Branch always dominates the latch as guaranteed by the caller.
   bool TrivialFromHeader = false;
-  if (!ModifiedBranch &&
-      !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
-    TrivialFromHeader =
-        DT.dominates(ParentBB, L.getLoopLatch()) &&
-        areLoopExitPHIsTrivialFromHeader(L, *ParentBB, *LoopExitBB);
-    if (!TrivialFromHeader) {
-      LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
-      return false;
-    }
+  if (!ModifiedBranch && !areLoopExitPHIsLoopInvariant(
+                             L, *ParentBB, *LoopExitBB, &TrivialFromHeader)) {
+    LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
+    return false;
   }
 
   // When unswitching only part of the branch's condition, we need the exit
@@ -736,18 +715,6 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   // the conditional branch. We will change the preheader to have a conditional
   // branch on LoopCond.
   BasicBlock *OldPH = L.getLoopPreheader();
-
-  // Remember each header PHI's value coming from the preheader. We use it later
-  // to fix up the exit, and SplitEdge below is about to change these PHIs.
-  SmallDenseMap<PHINode *, Value *, 4> HeaderEntryValues;
-  if (TrivialFromHeader) {
-    for (PHINode &PN : L.getHeader()->phis()) {
-      Value *EntryV = PN.getIncomingValueForBlock(OldPH);
-      assert(EntryV && "Header PHI must have a preheader incoming value");
-      HeaderEntryValues[&PN] = EntryV;
-    }
-  }
-
   BasicBlock *NewPH = SplitEdge(OldPH, L.getHeader(), &DT, &LI, MSSAU);
 
   // Now that we have a place to insert the conditional branch, create a place
@@ -840,19 +807,16 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     rewritePHINodesForExitAndUnswitchedBlocks(*LoopExitBB, *UnswitchedBB,
                                               *ParentBB, *OldPH, FullUnswitch);
 
-  // On the OldPH edge, replace header-PHI incomings with the snapshotted
-  // entry values.
-  if (!HeaderEntryValues.empty())
+  // OldPH branches here without entering the loop, so a header PHI is still
+  // its entry value. Read it from NewPH, the preheader created by the split.
+  if (TrivialFromHeader)
     for (PHINode &PN : UnswitchedBB->phis())
       for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
         if (PN.getIncomingBlock(I) != OldPH)
           continue;
         auto *HeaderPN = dyn_cast<PHINode>(PN.getIncomingValue(I));
-        if (!HeaderPN)
-          continue;
-        auto It = HeaderEntryValues.find(HeaderPN);
-        if (It != HeaderEntryValues.end())
-          PN.setIncomingValue(I, It->second);
+        if (HeaderPN && HeaderPN->getParent() == L.getHeader())
+          PN.setIncomingValue(I, HeaderPN->getIncomingValueForBlock(NewPH));
       }
 
   // The constant we can replace all of our invariants with inside the loop
