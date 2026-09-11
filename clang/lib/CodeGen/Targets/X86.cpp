@@ -8,9 +8,11 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -1238,22 +1240,6 @@ class X86_64ABIInfo : public ABIInfo {
   /// should just return Memory for the aggregate).
   static Class merge(Class Accum, Class Field);
 
-  /// postMerge - Implement the X86_64 ABI post merging algorithm.
-  ///
-  /// Post merger cleanup, reduces a malformed Hi and Lo pair to
-  /// final MEMORY or SSE classes when necessary.
-  ///
-  /// \param AggregateSize - The size of the current aggregate in
-  /// the classification process.
-  ///
-  /// \param Lo - The classification for the parts of the type
-  /// residing in the low word of the containing object.
-  ///
-  /// \param Hi - The classification for the parts of the type
-  /// residing in the higher words of the containing object.
-  ///
-  void postMerge(unsigned AggregateSize, Class &Lo, Class &Hi) const;
-
   /// classify - Determine the x86_64 register classes in which the
   /// given type T should be passed.
   ///
@@ -1280,8 +1266,17 @@ class X86_64ABIInfo : public ABIInfo {
   ///
   /// If the \arg Lo class is ComplexX87, then the \arg Hi class will
   /// also be ComplexX87.
-  void classify(QualType T, uint64_t OffsetBase, Class &Lo, Class &Hi,
-                bool isNamedArg, bool IsRegCall = false) const;
+  void classify(QualType T, uint64_t OffsetBase,
+                SmallVectorImpl<Class> &EightBytes, bool isNamedArg,
+                bool isRegCall = false) const;
+
+  void classifyClang23(QualType T, uint64_t OffsetBase,
+                       SmallVectorImpl<Class> &EightBytes, bool isNamedArg,
+                       bool isRegCall) const;
+
+  void classifyClang24(QualType T, uint64_t OffsetBase,
+                       SmallVectorImpl<Class> &EightBytes,
+                       bool isNamedArg) const;
 
   llvm::Type *GetByteVectorType(QualType Ty) const;
   llvm::Type *GetSSETypeAtOffset(llvm::Type *IRType,
@@ -1362,6 +1357,16 @@ class X86_64ABIInfo : public ABIInfo {
       return false;
 
     return true;
+  }
+
+  // For Clang 24 the classification algorithm was refactored to properly
+  // implement psABI spec, locking these platforms to the old classification
+  // algorithm to preserve ABI compatibility
+  bool useLegacyClassificationAlgorithm() const {
+    const llvm::Triple &Triple = getTarget().getTriple();
+    return getContext().getLangOpts().getClangABICompat() <=
+               LangOptions::ClangABI::Ver23 ||
+           Triple.isOSDarwin() || Triple.isPS() || Triple.isOSFreeBSD();
   }
 
   X86AVXABILevel AVXLevel;
@@ -1800,39 +1805,6 @@ void WinX86_64TargetCodeGenInfo::setTargetAttributes(
   addStackProbeTargetAttributes(D, GV, CGM);
 }
 
-void X86_64ABIInfo::postMerge(unsigned AggregateSize, Class &Lo,
-                              Class &Hi) const {
-  // AMD64-ABI 3.2.3p2: Rule 5. Then a post merger cleanup is done:
-  //
-  // (a) If one of the classes is Memory, the whole argument is passed in
-  //     memory.
-  //
-  // (b) If X87UP is not preceded by X87, the whole argument is passed in
-  //     memory.
-  //
-  // (c) If the size of the aggregate exceeds two eightbytes and the first
-  //     eightbyte isn't SSE or any other eightbyte isn't SSEUP, the whole
-  //     argument is passed in memory. NOTE: This is necessary to keep the
-  //     ABI working for processors that don't support the __m256 type.
-  //
-  // (d) If SSEUP is not preceded by SSE or SSEUP, it is converted to SSE.
-  //
-  // Some of these are enforced by the merging logic.  Others can arise
-  // only with unions; for example:
-  //   union { _Complex double; unsigned; }
-  //
-  // Note that clauses (b) and (c) were added in 0.98.
-  //
-  if (Hi == Memory)
-    Lo = Memory;
-  if (Hi == X87Up && Lo != X87 && honorsRevision0_98())
-    Lo = Memory;
-  if (AggregateSize > 128 && (Lo != SSE || Hi != SSEUp))
-    Lo = Memory;
-  if (Hi == SSEUp && Lo != SSE)
-    Hi = SSE;
-}
-
 static X86AVXABILevel getEffectiveX86AVXABILevel(CodeGenTypes &CGT,
                                                  X86AVXABILevel GlobalAVXLevel,
                                                  const FunctionDecl *FD) {
@@ -1899,17 +1871,527 @@ X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
   return SSE;
 }
 
-void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
-                             Class &Hi, bool isNamedArg, bool IsRegCall) const {
-  // FIXME: This code can be simplified by introducing a simple value class for
-  // Class pairs with appropriate constructor methods for the various
+void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
+                             SmallVectorImpl<Class> &EightBytes,
+                             bool isNamedArg, bool IsRegCall) const {
+  if (useLegacyClassificationAlgorithm() || IsRegCall) {
+    // RegCall is a separate ABI from the SysV psABI. Keep its classification
+    // on the pre-Clang-24 rules so this SysV classifier refactor
+    // does not silently break ABI.
+    classifyClang23(Ty, OffsetBase, EightBytes, isNamedArg, IsRegCall);
+  } else {
+    classifyClang24(Ty, OffsetBase, EightBytes, isNamedArg);
+  }
+}
+
+void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
+                                    SmallVectorImpl<Class> &EightBytes,
+                                    bool isNamedArg) const {
+  // Helpers
+  auto ClassifyAsMemory = [&]() {
+    if (EightBytes.empty())
+      EightBytes.push_back(Memory);
+    else
+      llvm::fill(EightBytes, Memory);
+  };
+
+  auto PostMerge = [&]() {
+    if (llvm::is_contained(EightBytes, Memory)) {
+      ClassifyAsMemory();
+      return;
+    }
+
+    for (unsigned I = 1, E = EightBytes.size(); I != E; ++I) {
+      if (EightBytes[I] == X87Up && EightBytes[I - 1] != X87) {
+        assert(EightBytes.size() == 2 && "Expected two eightbytes");
+        ClassifyAsMemory();
+        return;
+      }
+    }
+
+    if (EightBytes.size() > 2) {
+      if (EightBytes.front() != SSE) {
+        ClassifyAsMemory();
+        return;
+      }
+
+      for (Class C : drop_begin(EightBytes)) {
+        if (C != SSEUp) {
+          ClassifyAsMemory();
+          return;
+        }
+      }
+    }
+
+    for (unsigned I = 1, E = EightBytes.size(); I != E; ++I) {
+      if (EightBytes[I] == SSEUp && EightBytes[I - 1] != SSE &&
+          EightBytes[I - 1] != SSEUp) {
+        EightBytes[I] = SSE;
+      }
+    }
+  };
+
+  auto MergeIntoEightByte = [&](uint64_t Offset, Class C) {
+    if (C == NoClass)
+      return;
+    assert(Offset / 64 < EightBytes.size() &&
+           "classification offset is outside the containing type");
+    EightBytes[Offset / 64] = merge(EightBytes[Offset / 64], C);
+  };
+
+  auto MergeIntoAdjacentEightBytes =
+      [&](uint64_t Offset, SmallVector<Class> ToBeMergedEightBytes) {
+        uint64_t currentOffset = Offset;
+        for (Class ToBeMergedEightByte : ToBeMergedEightBytes) {
+          MergeIntoEightByte(currentOffset, ToBeMergedEightByte);
+          currentOffset = llvm::alignDown(currentOffset, uint64_t(64)) + 64;
+        }
+      };
+
+  auto SetEightByte = [&](uint64_t Offset, Class C) {
+    EightBytes[Offset / 64] = C;
+  };
+
+  auto SetAdjacentEightBytes = [&](uint64_t Offset, Class LoClass,
+                                   Class HiClass) {
+    SetEightByte(Offset, LoClass);
+    SetEightByte(llvm::alignDown(Offset, uint64_t(64)) + 64, HiClass);
+  };
+
+  auto SetTouchedEightBytes = [&](uint64_t Size, Class C) {
+    for (uint64_t Offset = OffsetBase, End = OffsetBase + Size; Offset < End;
+         Offset = llvm::alignDown(Offset, uint64_t(64)) + 64)
+      SetEightByte(Offset, C);
+  };
+
+  // End Helpers
+
+  // Resize the EigthBytes vector if needed to fit the type
+  uint64_t Size = getContext().getTypeSize(Ty);
+  unsigned Required = (OffsetBase + Size + 63) / 64;
+  if (EightBytes.size() < Required)
+    EightBytes.resize(Required, NoClass);
+
+  if (Size == 0) {
+    EightBytes.resize(1, NoClass);
+    return; // No need to classify empty types, return NoClass
+  }
+
+  // Type classification begin
+
+  // Overflow behaviour types
+  if (const OverflowBehaviorType *OBT = Ty->getAs<OverflowBehaviorType>()) {
+    classifyClang24(OBT->getUnderlyingType(), OffsetBase, EightBytes,
+                    isNamedArg);
+    return;
+  }
+
+  // Atomic types usually classify the same way as their value type. If Clang
+  // promotes the atomic storage size, fall back to memory so the full storage
+  // representation is preserved across the ABI boundary.
+  if (const AtomicType *AT = Ty->getAs<AtomicType>()) {
+    QualType ValueTy = AT->getValueType();
+    if (Size != getContext().getTypeSize(ValueTy)) {
+      ClassifyAsMemory();
+      return;
+    }
+
+    classifyClang24(ValueTy, OffsetBase, EightBytes, isNamedArg);
+    return;
+  }
+
+  // Built In Types
+  if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+    BuiltinType::Kind K = BT->getKind();
+
+    if (K == BuiltinType::Void)
+      return;
+    if (K == BuiltinType::Int128 || K == BuiltinType::UInt128) {
+      SetAdjacentEightBytes(OffsetBase, Integer, Integer);
+      return;
+    }
+    if (K >= BuiltinType::Bool && K <= BuiltinType::LongLong) {
+      SetEightByte(OffsetBase, Integer);
+      return;
+    }
+    if (K == BuiltinType::Float || K == BuiltinType::Double ||
+        K == BuiltinType::Float16 || K == BuiltinType::BFloat16) {
+      SetEightByte(OffsetBase, SSE);
+      return;
+    }
+    if (K == BuiltinType::Float128) {
+      SetAdjacentEightBytes(OffsetBase, SSE, SSEUp);
+      return;
+    }
+    if (K == BuiltinType::LongDouble) {
+      const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
+      if (LDF == &llvm::APFloat::IEEEquad())
+        SetAdjacentEightBytes(OffsetBase, SSE, SSEUp);
+      else if (LDF == &llvm::APFloat::x87DoubleExtended())
+        SetAdjacentEightBytes(OffsetBase, X87, X87Up);
+      else if (LDF == &llvm::APFloat::IEEEdouble())
+        SetEightByte(OffsetBase, SSE);
+      else
+        llvm_unreachable("unexpected long double representation!");
+      return;
+    }
+    ClassifyAsMemory();
+    return;
+  }
+
+  // Enums
+  if (const auto *ED = Ty->getAsEnumDecl()) {
+    // Classify the underlying integer type.
+    classifyClang24(ED->getIntegerType(), OffsetBase, EightBytes, isNamedArg);
+    return;
+  }
+
+  // Ptrs
+  if (Ty->hasPointerRepresentation() || Ty->isPipeType()) {
+    SetEightByte(OffsetBase, Integer);
+    return;
+  }
+
+  // C++ pointer-to-member types have integer-class storage: data member
+  // pointers are one ptrdiff_t, and member function pointers are two.
+  if (Ty->isMemberPointerType()) {
+    SetTouchedEightBytes(Size, Integer);
+    return;
+  }
+
+  // Vector & Matrix types
+  // Matrix types are "flattened" and then classified as a m*n vector with the
+  // same element type.
+  const VectorType *VT = Ty->getAs<VectorType>();
+  const MatrixType *MT = Ty->getAs<MatrixType>();
+  bool IsVectorOrMatrix = VT != nullptr || MT != nullptr;
+  if (IsVectorOrMatrix) {
+    QualType ElementType;
+    bool IsSingleElementVector = false;
+    if (VT) {
+      ElementType = VT->getElementType();
+      IsSingleElementVector = VT->getNumElements() == 1;
+    } else if (MT) {
+      ElementType = MT->getElementType();
+    } else {
+      llvm_unreachable("invalid vector or matrix type");
+    }
+    ElementType = getContext().getCanonicalType(ElementType);
+
+    auto IsFPVectorElement = [&]() {
+      return ElementType->isFloat16Type() || ElementType->isBFloat16Type() ||
+             ElementType == getContext().FloatTy ||
+             ElementType == getContext().DoubleTy;
+    };
+
+    auto SetEightByteClasses = [&](Class FirstClass, Class RestClass) {
+      // Vector objects should not start partway through one eightbyte and
+      // cross into another here. Aggregate classification rejects unaligned
+      // non-bit-field vector fields as MEMORY before recursing. Matrix types
+      // use element alignment, so they can still have a partial first chunk.
+      [[maybe_unused]] bool HasPartialFirstEightByte =
+          OffsetBase % 64 && OffsetBase / 64 != (OffsetBase + Size - 1) / 64;
+      if (VT)
+        assert(!HasPartialFirstEightByte &&
+               "unaligned vector should have been classified as memory");
+
+      SetEightByte(OffsetBase, FirstClass);
+      for (uint64_t Offset = llvm::alignDown(OffsetBase, uint64_t(64)) + 64,
+                    End = OffsetBase + Size;
+           Offset < End; Offset += 64)
+        SetEightByte(Offset, RestClass);
+    };
+
+    if (IsSingleElementVector && IsFPVectorElement()) {
+      // GCC passes single-element floating-point vectors in memory. This is a
+      // compatibility rule, not a psABI classification rule.
+      ClassifyAsMemory();
+      return;
+    }
+
+    // The psABI does not specify how arbitrary GNU vector extension types such
+    // as vectors of __int128 are classified. Match GCC, which passes vectors
+    // of __int128 wider than 128 bits in memory on platforms that opt in to
+    // this compatibility behavior.
+    if (passInt128VectorsInMem() && Size > 128 &&
+        (ElementType->isSpecificBuiltinType(BuiltinType::Int128) ||
+         ElementType->isSpecificBuiltinType(BuiltinType::UInt128))) {
+      ClassifyAsMemory();
+      return;
+    }
+
+    // The psABI explicitly classifies named vector types like __m64 and __m128
+    // as SSE/SSEUP, but it does not spell out arbitrary GNU vector extension
+    // integer vectors. We decided to match GCC 15.2.0 which classifies
+    // integer vectors up to 32 bits as INTEGER, while 64-bit and wider integer
+    // vectors use SSE/SSEUP vector classes.
+    if (Size <= 32) {
+      // The ABI classifies floating-point vector elements as SSE. Small
+      // integer vectors are passed as INTEGER, matching GCC for:
+      // 4 bytes - <4 x char>, <2 x short>, <1 x int>
+      // 2 bytes - <2 x char>, <1 x short>
+      // 1 byte  - <1 x char>
+      Class C = IsFPVectorElement() ? SSE : Integer;
+
+      SetEightByteClasses(C, C);
+    } else if (Size == 64) {
+      SetEightByteClasses(SSE, SSE);
+    } else if (Size == 128 ||
+               (isNamedArg && Size <= getNativeVectorSizeForAVXABI(AVXLevel))) {
+      SetEightByteClasses(SSE, SSEUp);
+    } else {
+      // Any other types that are not explicity handled should be passed as
+      // memory
+      ClassifyAsMemory();
+    }
+
+    return;
+  }
+
+  // Complex types
+  if (const ComplexType *CT = Ty->getAs<ComplexType>()) {
+    QualType ET = getContext().getCanonicalType(CT->getElementType());
+
+    uint64_t Size = getContext().getTypeSize(Ty);
+    if (ET->isIntegralOrEnumerationType()) {
+      if (Size <= 64)
+        SetEightByte(OffsetBase, Integer);
+      else if (Size <= 128)
+        SetAdjacentEightBytes(OffsetBase, Integer, Integer);
+    } else if (ET->isFloat16Type() || ET == getContext().FloatTy ||
+               ET->isBFloat16Type()) {
+      SetEightByte(OffsetBase, SSE);
+    } else if (ET == getContext().DoubleTy) {
+      SetAdjacentEightBytes(OffsetBase, SSE, SSE);
+    } else if (ET == getContext().LongDoubleTy) {
+      const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
+      if (LDF == &llvm::APFloat::IEEEquad())
+        ClassifyAsMemory();
+      else if (LDF == &llvm::APFloat::x87DoubleExtended())
+        SetEightByte(OffsetBase, ComplexX87);
+      else if (LDF == &llvm::APFloat::IEEEdouble())
+        SetAdjacentEightBytes(OffsetBase, SSE, SSE);
+      else
+        llvm_unreachable("unexpected long double representation!");
+    } else if (ET->isFloat128Type()) {
+      ClassifyAsMemory();
+    }
+
+    // If this complex type crosses an eightbyte boundary then it
+    // should be split.
+    uint64_t EB_Real = (OffsetBase) / 64;
+    uint64_t EB_Imag = (OffsetBase + getContext().getTypeSize(ET)) / 64;
+    if (EightBytes[EB_Imag] == NoClass && EB_Real != EB_Imag)
+      SetAdjacentEightBytes(OffsetBase, EightBytes[EB_Real],
+                            EightBytes[EB_Real]);
+
+    return;
+  }
+
+  // BitInt Types
+  if (const auto *EITy = Ty->getAs<BitIntType>()) {
+    if (EITy->getNumBits() <= 64)
+      SetEightByte(OffsetBase, Integer);
+    else if (EITy->getNumBits() <= 128)
+      SetAdjacentEightBytes(OffsetBase, Integer, Integer);
+    else {
+      // Larger values need to get passed in memory.
+      ClassifyAsMemory();
+    }
+
+    return;
+  }
+
+  // Arrays
+  if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
+    // Arrays are treated like structures.
+
+    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
+    // than eight eightbytes, ..., it has class MEMORY.
+    if (Size > 512) {
+      ClassifyAsMemory();
+      return;
+    }
+
+    // AMD64-ABI 3.2.3p2: Rule 1. If ..., or it contains unaligned
+    // fields, it has class MEMORY.
+    //
+    // Only need to check alignment of array base.
+    if (OffsetBase % getContext().getTypeAlign(AT->getElementType())) {
+      ClassifyAsMemory();
+      return;
+    }
+
+    // Otherwise implement simplified merge. We could be smarter about
+    // this, but it isn't worth it and would be harder to verify.
+    uint64_t EltSize = getContext().getTypeSize(AT->getElementType());
+    uint64_t ArraySize = AT->getZExtSize();
+
+    for (uint64_t i = 0, Offset = OffsetBase; i < ArraySize;
+         ++i, Offset += EltSize) {
+      SmallVector<Class> ArrayElEightBytes;
+      classifyClang24(AT->getElementType(), Offset % 64, ArrayElEightBytes,
+                      isNamedArg);
+      MergeIntoAdjacentEightBytes(Offset, ArrayElEightBytes);
+      if (llvm::is_contained(EightBytes, Memory))
+        break;
+    }
+
+    PostMerge();
+    return;
+  }
+
+  // CXX Record Type
+  if (const RecordType *RT = Ty->getAsCanonical<RecordType>()) {
+    // uint64_t Size = getContext().getTypeSize(Ty);
+
+    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
+    // than eight eightbytes, ..., it has class MEMORY.
+    if (Size > 512) {
+      ClassifyAsMemory();
+      return;
+    }
+
+    // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
+    // copy constructor or a non-trivial destructor, it is passed by
+    // invisible reference.
+    if (getRecordArgABI(RT, getCXXABI())) {
+      ClassifyAsMemory();
+      return;
+    }
+
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
+
+    // Assume variable sized types are passed in memory.
+    if (RD->hasFlexibleArrayMember()) {
+      ClassifyAsMemory();
+      return;
+    }
+
+    const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
+
+    // If this is a C++ record, classify the bases first.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const auto &I : CXXRD->bases()) {
+        assert(!I.isVirtual() && !I.getType()->isDependentType() &&
+               "Unexpected base class!");
+        const auto *Base = I.getType()->castAsCXXRecordDecl();
+
+        // Classify this field.
+        //
+        // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate exceeds
+        // a single eightbyte, each is classified separately. Each
+        // eightbyte gets initialized to class NO_CLASS.
+        SmallVector<Class> BaseEightBytes;
+        uint64_t Offset =
+            OffsetBase + getContext().toBits(Layout.getBaseClassOffset(Base));
+        classifyClang24(I.getType(), Offset % 64, BaseEightBytes, isNamedArg);
+        // If the base is memory the whole record will be passed as memory
+        if (BaseEightBytes[0] == Memory) {
+          ClassifyAsMemory();
+          return;
+        }
+        MergeIntoAdjacentEightBytes(Offset, BaseEightBytes);
+      }
+    }
+
+    // Classify the fields one at a time, merging the results.
+    unsigned idx = 0;
+
+    for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
+         i != e; ++i, ++idx) {
+      uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
+      bool BitField = i->isBitField();
+
+      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
+      // storage and classify like named ones, matching GCC.
+      if (BitField && i->isZeroLengthBitField())
+        continue;
+
+      bool IsInMemory =
+          Offset % getContext().getTypeAlign(i->getType().getCanonicalType());
+      // Note, skip this test for bit-fields, see below.
+      if (!BitField && IsInMemory) {
+        ClassifyAsMemory();
+        PostMerge();
+        return;
+      }
+
+      // Classify this field.
+      //
+      // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate
+      // exceeds a single eightbyte, each is classified
+      // separately. Each eightbyte gets initialized to class
+      // NO_CLASS.
+      // Bit-fields require special handling, they do not force the
+      // structure to be passed in memory even if unaligned, and
+      // therefore they can straddle an eightbyte.
+      if (BitField) {
+        assert(!i->isZeroLengthBitField());
+        uint64_t BitSize = i->getBitWidthValue();
+        for (uint64_t BitOffset = Offset, End = Offset + BitSize;
+             BitOffset < End;
+             BitOffset = llvm::alignDown(BitOffset, uint64_t(64)) + 64)
+          MergeIntoEightByte(BitOffset, Integer);
+      } else {
+        SmallVector<Class> FieldEightBytes;
+        classifyClang24(i->getType(), Offset % 64, FieldEightBytes, isNamedArg);
+        MergeIntoAdjacentEightBytes(Offset, FieldEightBytes);
+      }
+
+      if (llvm::is_contained(EightBytes, Memory))
+        break;
+    }
+
+    PostMerge();
+  }
+}
+
+void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
+                                    SmallVectorImpl<Class> &EightBytes,
+                                    bool isNamedArg, bool IsRegCall) const {
+  // FIXME: This code can be simplified by introducing a simple value class
+  // for Class pairs with appropriate constructor methods for the various
   // situations.
 
   // FIXME: Some of the split computations are wrong; unaligned vectors
   // shouldn't be passed in registers for example, so there is no chance they
   // can straddle an eightbyte. Verify & simplify.
+  if (EightBytes.empty())
+    EightBytes.resize(2, NoClass);
 
-  Lo = Hi = NoClass;
+  Class &Lo = EightBytes[0];
+  Class &Hi = EightBytes[1];
+  auto PostMerge = [&](unsigned AggregateSize) {
+    // AMD64-ABI 3.2.3p2: Rule 5. Then a post merger cleanup is done:
+    //
+    // (a) If one of the classes is Memory, the whole argument is passed in
+    //     memory.
+    //
+    // (b) If X87UP is not preceded by X87, the whole argument is passed in
+    //     memory.
+    //
+    // (c) If the size of the aggregate exceeds two eightbytes and the first
+    //     eightbyte isn't SSE or any other eightbyte isn't SSEUP, the whole
+    //     argument is passed in memory. NOTE: This is necessary to keep the
+    //     ABI working for processors that don't support the __m256 type.
+    //
+    // (d) If SSEUP is not preceded by SSE or SSEUP, it is converted to SSE.
+    //
+    // Some of these are enforced by the merging logic. Others can arise only
+    // with unions; for example:
+    //   union { _Complex double; unsigned; }
+    //
+    // Note that clauses (b) and (c) were added in 0.98.
+    if (Hi == Memory)
+      Lo = Memory;
+    if (Hi == X87Up && Lo != X87 && honorsRevision0_98())
+      Lo = Memory;
+    if (AggregateSize > 128 && (Lo != SSE || Hi != SSEUp))
+      Lo = Memory;
+    if (Hi == SSEUp && Lo != SSE)
+      Hi = SSE;
+  };
 
   Class &Current = OffsetBase < 64 ? Lo : Hi;
   Current = Memory;
@@ -1950,7 +2432,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
 
   if (const auto *ED = Ty->getAsEnumDecl()) {
     // Classify the underlying integer type.
-    classify(ED->getIntegerType(), OffsetBase, Lo, Hi, isNamedArg);
+    SmallVector<Class> IntEightBytes = {Lo, Hi};
+    classifyClang23(ED->getIntegerType(), OffsetBase, IntEightBytes, isNamedArg,
+                    IsRegCall);
     return;
   }
 
@@ -2031,9 +2515,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         return;
 
       // Arguments of 256-bits are split into four eightbyte chunks. The
-      // least significant one belongs to class SSE and all the others to class
-      // SSEUP. The original Lo and Hi design considers that types can't be
-      // greater than 128-bits, so a 64-bit split in Hi and Lo makes sense.
+      // least significant one belongs to class SSE and all the others to
+      // class SSEUP. The original Lo and Hi design considers that types can't
+      // be greater than 128-bits, so a 64-bit split in Hi and Lo makes sense.
       // This design isn't correct for 256-bits, but since there're no cases
       // where the upper parts would need to be inspected, avoid adding
       // complexity and just consider Hi to match the 64-256 part.
@@ -2042,8 +2526,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // registers if they are "named", i.e. not part of the "..." of a
       // variadic function.
       //
-      // Similarly, per 3.2.3. of the AVX512 draft, 512-bits ("named") args are
-      // split into eight eightbyte chunks, one SSE and seven SSEUP.
+      // Similarly, per 3.2.3. of the AVX512 draft, 512-bits ("named") args
+      // are split into eight eightbyte chunks, one SSE and seven SSEUP.
       Lo = SSE;
       Hi = SSEUp;
     }
@@ -2124,20 +2608,25 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     // contains a single 256-bit element. Since Lo and Hi logic isn't extended
     // to work for sizes wider than 128, early check and fallback to memory.
     //
+    // Note: There is a bug here, the assumption is that this is returning
+    // "Memory" but actually it is returning "NoClass" because Current is set to
+    // NoClass above. Fixed in the Clang 24 implementation.
     if (Size > 128 &&
         (Size != EltSize || Size > getNativeVectorSizeForAVXABI(AVXLevel)))
       return;
 
-    for (uint64_t i=0, Offset=OffsetBase; i<ArraySize; ++i, Offset += EltSize) {
-      Class FieldLo, FieldHi;
-      classify(AT->getElementType(), Offset, FieldLo, FieldHi, isNamedArg);
-      Lo = merge(Lo, FieldLo);
-      Hi = merge(Hi, FieldHi);
+    for (uint64_t i = 0, Offset = OffsetBase; i < ArraySize;
+         ++i, Offset += EltSize) {
+      SmallVector<Class> FieldEightBytes = {NoClass, NoClass};
+      classifyClang23(AT->getElementType(), Offset, FieldEightBytes, isNamedArg,
+                      IsRegCall);
+      Lo = merge(Lo, FieldEightBytes[0]);
+      Hi = merge(Hi, FieldEightBytes[1]);
       if (Lo == Memory || Hi == Memory)
         break;
     }
 
-    postMerge(Size, Lo, Hi);
+    PostMerge(Size);
     assert((Hi != SSEUp || Lo == SSE) && "Invalid SSEUp array classification.");
     return;
   }
@@ -2173,27 +2662,33 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         assert(!I.isVirtual() && !I.getType()->isDependentType() &&
                "Unexpected base class!");
         const auto *Base = I.getType()->castAsCXXRecordDecl();
+
         // Classify this field.
         //
         // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate exceeds a
-        // single eightbyte, each is classified separately. Each eightbyte gets
-        // initialized to class NO_CLASS.
-        Class FieldLo, FieldHi;
+        // single eightbyte, each is classified separately. Each eightbyte
+        // gets initialized to class NO_CLASS.
+        SmallVector<Class> FieldEightBytes = {NoClass, NoClass};
         uint64_t Offset =
-          OffsetBase + getContext().toBits(Layout.getBaseClassOffset(Base));
-        classify(I.getType(), Offset, FieldLo, FieldHi, isNamedArg);
-        Lo = merge(Lo, FieldLo);
-        Hi = merge(Hi, FieldHi);
+            OffsetBase + getContext().toBits(Layout.getBaseClassOffset(Base));
+        classifyClang23(I.getType(), Offset, FieldEightBytes, isNamedArg,
+                        IsRegCall);
+        // Note: There is a bug here for types larger than 128bits. Doesn't
+        // properly implement the SYSV classification algorithm. Fixed in
+        // Clang 24 implementation.
+        Lo = merge(Lo, FieldEightBytes[0]);
+        Hi = merge(Hi, FieldEightBytes[1]);
         if (returnCXXRecordGreaterThan128InMem() &&
             !isEmptyRecord(getContext(), I.getType(), true) &&
             (Size > 128 && (Size != getContext().getTypeSize(I.getType()) ||
                             Size > getNativeVectorSizeForAVXABI(AVXLevel)))) {
-          // The only case a 256(or 512)-bit wide vector could be used to return
-          // is when CXX record contains a single 256(or 512)-bit element.
+          // The only case a 256(or 512)-bit wide vector could be used to
+          // return is when CXX record contains a single 256(or 512)-bit
+          // element.
           Lo = Memory;
         }
         if (Lo == Memory || Hi == Memory) {
-          postMerge(Size, Lo, Hi);
+          PostMerge(Size);
           return;
         }
       }
@@ -2211,7 +2706,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
-           i != e; ++i, ++idx) {
+         i != e; ++i, ++idx) {
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
@@ -2225,11 +2720,12 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         continue;
 
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
-      // eight eightbytes, or it contains unaligned fields, it has class MEMORY.
+      // eight eightbytes, or it contains unaligned fields, it has class
+      // MEMORY.
       //
-      // The only case a 256-bit or a 512-bit wide vector could be used is when
-      // the struct contains a single 256-bit or 512-bit element. Early check
-      // and fallback to memory.
+      // The only case a 256-bit or a 512-bit wide vector could be used is
+      // when the struct contains a single 256-bit or 512-bit element. Early
+      // check and fallback to memory.
       //
       // FIXME: Extended the Lo and Hi logic properly to work for size wider
       // than 128.
@@ -2237,7 +2733,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
           ((!IsUnion && Size != getContext().getTypeSize(i->getType())) ||
            Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
         Lo = Memory;
-        postMerge(Size, Lo, Hi);
+        PostMerge(Size);
         return;
       }
 
@@ -2246,7 +2742,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // Note, skip this test for bit-fields, see below.
       if (!BitField && IsInMemory) {
         Lo = Memory;
-        postMerge(Size, Lo, Hi);
+        PostMerge(Size);
         return;
       }
 
@@ -2256,7 +2752,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // exceeds a single eightbyte, each is classified
       // separately. Each eightbyte gets initialized to class
       // NO_CLASS.
-      Class FieldLo, FieldHi;
+      SmallVector<Class> FieldEightBytes = {NoClass, NoClass};
 
       // Bit-fields require special handling, they do not force the
       // structure to be passed in memory even if unaligned, and
@@ -2272,28 +2768,33 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
 
         if (EB_Lo) {
           assert(EB_Hi == EB_Lo && "Invalid classification, type > 16 bytes.");
-          FieldLo = NoClass;
-          FieldHi = Integer;
+          FieldEightBytes[0] = NoClass;
+          FieldEightBytes[1] = Integer;
         } else {
-          FieldLo = Integer;
-          FieldHi = EB_Hi ? Integer : NoClass;
+          FieldEightBytes[0] = Integer;
+          FieldEightBytes[1] = EB_Hi ? Integer : NoClass;
         }
       } else
-        classify(i->getType(), Offset, FieldLo, FieldHi, isNamedArg);
-      Lo = merge(Lo, FieldLo);
-      Hi = merge(Hi, FieldHi);
+        classifyClang23(i->getType(), Offset, FieldEightBytes, isNamedArg,
+                        IsRegCall);
+      Lo = merge(Lo, FieldEightBytes[0]);
+      Hi = merge(Hi, FieldEightBytes[1]);
       if (Lo == Memory || Hi == Memory)
         break;
     }
 
-    postMerge(Size, Lo, Hi);
+    PostMerge(Size);
   }
 }
 
 ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
   // If this is a scalar LLVM value then assume LLVM will pass it in the right
   // place naturally.
-  if (!isAggregateTypeForABI(Ty)) {
+  // The legacy classifier relied on this fallback for ABI compatibility, even
+  // for vector types which it had classified as memory. The Clang 24
+  // classifier instead expects a memory classification to remain indirect.
+  if (!isAggregateTypeForABI(Ty) &&
+      (useLegacyClassificationAlgorithm() || !IsIllegalVectorType(Ty))) {
     // Treat an enum type as its underlying type.
     if (const auto *ED = Ty->getAsEnumDecl())
       Ty = ED->getIntegerType();
@@ -2310,6 +2811,13 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
 }
 
 bool X86_64ABIInfo::IsIllegalVectorType(QualType Ty) const {
+  if (const AtomicType *AT = Ty->getAs<AtomicType>()) {
+    // Preserve the pre-Clang 24 direct lowering of atomic vector types.
+    if (useLegacyClassificationAlgorithm())
+      return false;
+    Ty = AT->getValueType();
+  }
+
   if (const VectorType *VecTy = Ty->getAs<VectorType>()) {
     uint64_t Size = getContext().getTypeSize(VecTy);
     unsigned LargestVector = getNativeVectorSizeForAVXABI(AVXLevel);
@@ -2332,9 +2840,9 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
   //
   // This assumption is optimistic, as there could be free registers available
   // when we need to pass this argument in memory, and LLVM could try to pass
-  // the argument in the free register. This does not seem to happen currently,
-  // but this code would be much safer if we could mark the argument with
-  // 'onstack'. See PR12193.
+  // the argument in the free register. This does not seem to happen
+  // currently, but this code would be much safer if we could mark the
+  // argument with 'onstack'. See PR12193.
   if (!isAggregateTypeForABI(Ty) && !IsIllegalVectorType(Ty) &&
       !Ty->isBitIntType()) {
     // Treat an enum type as its underlying type.
@@ -2360,18 +2868,18 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
   // We do this by coercing the value into a scalar type which the backend can
   // handle naturally (i.e., without using byval).
   //
-  // For simplicity, we currently only do this when we have exhausted all of the
-  // free integer registers. Doing this when there are free integer registers
-  // would require more care, as we would have to ensure that the coerced value
-  // did not claim the unused register. That would require either reording the
-  // arguments to the function (so that any subsequent inreg values came first),
-  // or only doing this optimization when there were no following arguments that
-  // might be inreg.
+  // For simplicity, we currently only do this when we have exhausted all of
+  // the free integer registers. Doing this when there are free integer
+  // registers would require more care, as we would have to ensure that the
+  // coerced value did not claim the unused register. That would require
+  // either reording the arguments to the function (so that any subsequent
+  // inreg values came first), or only doing this optimization when there were
+  // no following arguments that might be inreg.
   //
   // We currently expect it to be rare (particularly in well written code) for
   // arguments to be passed on the stack when there are still free integer
-  // registers available (this would typically imply large structs being passed
-  // by value), so this seems like a fair tradeoff for now.
+  // registers available (this would typically imply large structs being
+  // passed by value), so this seems like a fair tradeoff for now.
   //
   // We can revisit this if the backend grows support for 'onstack' parameter
   // attributes. See PR12193.
@@ -2381,8 +2889,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
     // If this type fits in an eightbyte, coerce it into the matching integral
     // type, which will end up on the stack (with alignment 8).
     if (Align == 8 && Size <= 64)
-      return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(),
-                                                          Size));
+      return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), Size));
   }
 
   return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align),
@@ -2419,7 +2927,6 @@ llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
   uint64_t Size = getContext().getTypeSize(Ty);
   assert((Size == 128 || Size == 256 || Size == 512) && "Invalid type found!");
 
-
   // Return a LLVM IR vector type based on the size of 'Ty'.
   return llvm::FixedVectorType::get(llvm::Type::getDoubleTy(getVMContext()),
                                     Size / 64);
@@ -2427,9 +2934,10 @@ llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
 
 /// BitsContainNoUserData - Return true if the specified [start,end) bit range
 /// is known to either be off the end of the specified type or being in
-/// alignment padding.  The user type specified is known to be at most 128 bits
-/// in size, and have passed through X86_64ABIInfo::classify with a successful
-/// classification that put one of the two halves in the INTEGER class.
+/// alignment padding.  The user type specified is known to be at most 128
+/// bits in size, and have passed through X86_64ABIInfo::classify with a
+/// successful classification that put one of the two halves in the INTEGER
+/// class.
 ///
 /// It is conservatively correct to return false.
 static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
@@ -2445,15 +2953,17 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
     unsigned EltSize = (unsigned)Context.getTypeSize(AT->getElementType());
     unsigned NumElts = (unsigned)AT->getZExtSize();
 
-    // Check each element to see if the element overlaps with the queried range.
+    // Check each element to see if the element overlaps with the queried
+    // range.
     for (unsigned i = 0; i != NumElts; ++i) {
       // If the element is after the span we care about, then we're done..
-      unsigned EltOffset = i*EltSize;
-      if (EltOffset >= EndBit) break;
+      unsigned EltOffset = i * EltSize;
+      if (EltOffset >= EndBit)
+        break;
 
-      unsigned EltStart = EltOffset < StartBit ? StartBit-EltOffset :0;
+      unsigned EltStart = EltOffset < StartBit ? StartBit - EltOffset : 0;
       if (!BitsContainNoUserData(AT->getElementType(), EltStart,
-                                 EndBit-EltOffset, Context))
+                                 EndBit - EltOffset, Context))
         return false;
     }
     // If it overlaps no elements, then it is safe to process as padding.
@@ -2472,16 +2982,17 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
 
         // If the base is after the span we care about, ignore it.
         unsigned BaseOffset = Context.toBits(Layout.getBaseClassOffset(Base));
-        if (BaseOffset >= EndBit) continue;
+        if (BaseOffset >= EndBit)
+          continue;
 
-        unsigned BaseStart = BaseOffset < StartBit ? StartBit-BaseOffset :0;
-        if (!BitsContainNoUserData(I.getType(), BaseStart,
-                                   EndBit-BaseOffset, Context))
+        unsigned BaseStart = BaseOffset < StartBit ? StartBit - BaseOffset : 0;
+        if (!BitsContainNoUserData(I.getType(), BaseStart, EndBit - BaseOffset,
+                                   Context))
           return false;
       }
     }
 
-    // Verify that no field has data that overlaps the region of interest.  Yes
+    // Verify that no field has data that overlaps the region of interest. Yes
     // this could be sped up a lot by being smarter about queried fields,
     // however we're only looking at structs up to 16 bytes, so we don't care
     // much.
@@ -2491,10 +3002,11 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
       unsigned FieldOffset = (unsigned)Layout.getFieldOffset(idx);
 
       // If we found a field after the region we care about, then we're done.
-      if (FieldOffset >= EndBit) break;
+      if (FieldOffset >= EndBit)
+        break;
 
-      unsigned FieldStart = FieldOffset < StartBit ? StartBit-FieldOffset :0;
-      if (!BitsContainNoUserData(i->getType(), FieldStart, EndBit-FieldOffset,
+      unsigned FieldStart = FieldOffset < StartBit ? StartBit - FieldOffset : 0;
+      if (!BitsContainNoUserData(i->getType(), FieldStart, EndBit - FieldOffset,
                                  Context))
         return false;
     }
@@ -2535,14 +3047,27 @@ static llvm::Type *getFPTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
   return nullptr;
 }
 
-/// GetSSETypeAtOffset - Return a type that will be passed by the backend in the
-/// low 8 bytes of an XMM register, corresponding to the SSE class.
-llvm::Type *X86_64ABIInfo::
-GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
-                   QualType SourceTy, unsigned SourceOffset) const {
+/// GetSSETypeAtOffset - Return a type that will be passed by the backend in
+/// the low 8 bytes of an XMM register, corresponding to the SSE class.
+llvm::Type *X86_64ABIInfo::GetSSETypeAtOffset(llvm::Type *IRType,
+                                              unsigned IROffset,
+                                              QualType SourceTy,
+                                              unsigned SourceOffset) const {
   const llvm::DataLayout &TD = getDataLayout();
   unsigned SourceSize =
       (unsigned)getContext().getTypeSize(SourceTy) / 8 - SourceOffset;
+
+  // Keep 16-bit FP vector lanes visible when they fit in one SSE eightbyte.
+  // Reinterpreting them as double would make attributes like nofpclass describe
+  // carrier bits rather than the source vector elements.
+  if (IROffset == 0 && SourceOffset == 0) {
+    if (auto *VTy = dyn_cast<llvm::FixedVectorType>(IRType)) {
+      llvm::Type *EltTy = VTy->getElementType();
+      if (EltTy->is16bitFPTy() && TD.getTypeAllocSize(VTy) <= 8)
+        return VTy;
+    }
+  }
+
   llvm::Type *T0 = getFPTypeAtOffset(IRType, IROffset, TD);
   if (!T0 || T0->isDoubleTy())
     return llvm::Type::getDoubleTy(getVMContext());
@@ -2551,7 +3076,7 @@ GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
   llvm::Type *T1 = nullptr;
   unsigned T0Size = TD.getTypeAllocSize(T0);
   if (SourceSize > T0Size)
-      T1 = getFPTypeAtOffset(IRType, IROffset + T0Size, TD);
+    T1 = getFPTypeAtOffset(IRType, IROffset + T0Size, TD);
   if (T1 == nullptr) {
     // Check if IRType is a half/bfloat + float. float type will be in IROffset+4 due
     // to its alignment.
@@ -2712,8 +3237,20 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
 ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   // AMD64-ABI 3.2.3p4: Rule 1. Classify the return type with the
   // classification algorithm.
-  X86_64ABIInfo::Class Lo, Hi;
-  classify(RetTy, 0, Lo, Hi, /*isNamedArg*/ true);
+
+  SmallVector<X86_64ABIInfo::Class> EightBytes;
+  classify(RetTy, 0, EightBytes, /*isNamedArg*/ true);
+
+  X86_64ABIInfo::Class Lo = NoClass;
+  X86_64ABIInfo::Class Hi = NoClass;
+
+  if (EightBytes.size() > 0) {
+    Lo = EightBytes[0];
+  }
+
+  if (EightBytes.size() > 1) {
+    Hi = EightBytes[1];
+  }
 
   // Check some invariants.
   assert((Hi != Memory || Lo == Memory) && "Invalid memory classification.");
@@ -2848,8 +3385,19 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
                                     bool isNamedArg, bool IsRegCall) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
-  X86_64ABIInfo::Class Lo, Hi;
-  classify(Ty, 0, Lo, Hi, isNamedArg, IsRegCall);
+  SmallVector<X86_64ABIInfo::Class> EightBytes;
+  classify(Ty, 0, EightBytes, isNamedArg, IsRegCall);
+
+  X86_64ABIInfo::Class Lo = NoClass;
+  X86_64ABIInfo::Class Hi = NoClass;
+
+  if (EightBytes.size() > 0) {
+    Lo = EightBytes[0];
+  }
+
+  if (EightBytes.size() > 1) {
+    Hi = EightBytes[1];
+  }
 
   // Check some invariants.
   // FIXME: Enforce these by construction.

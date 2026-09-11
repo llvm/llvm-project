@@ -67,8 +67,8 @@ float4 pfmin32(float4 a, float4 b) {
 double2 pfmin64(double2 a, double2 b) {
 	return __builtin_elementwise_minnum(a, b);
 }
-// CHECK-LABEL: define dso_local noundef <2 x x86_fp80> @_Z7pfmin80Dv2_eS_(
-// CHECK-SAME: ptr noundef byval(<2 x x86_fp80>) align 32 [[TMP0:%.*]], ptr noundef byval(<2 x x86_fp80>) align 32 [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-LABEL: define dso_local void @_Z7pfmin80Dv2_eS_(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<2 x x86_fp80>) align 32 [[AGG_RESULT:%.*]], ptr noundef byval(<2 x x86_fp80>) align 32 [[TMP0:%.*]], ptr noundef byval(<2 x x86_fp80>) align 32 [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x x86_fp80>, align 32
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x x86_fp80>, align 32
@@ -79,7 +79,10 @@ double2 pfmin64(double2 a, double2 b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x x86_fp80>, ptr [[A_ADDR]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x x86_fp80>, ptr [[B_ADDR]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[ELT_MINNUM:%.*]] = call <2 x x86_fp80> @llvm.minnum.v2f80(<2 x x86_fp80> [[TMP2]], <2 x x86_fp80> [[TMP3]])
-// CHECK-NEXT:    ret <2 x x86_fp80> [[ELT_MINNUM]]
+// CHECK-NEXT:    store <2 x x86_fp80> [[ELT_MINNUM]], ptr [[AGG_RESULT]], align 32, !tbaa [[CHAR_TBAA6]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load <2 x x86_fp80>, ptr [[AGG_RESULT]], align 32, !tbaa [[CHAR_TBAA6]]
+// CHECK-NEXT:    store <2 x x86_fp80> [[TMP4]], ptr [[AGG_RESULT]], align 32, !tbaa [[CHAR_TBAA6]]
+// CHECK-NEXT:    ret void
 //
 ldouble2 pfmin80(ldouble2 a, ldouble2 b) {
 	return __builtin_elementwise_minnum(a, b);
@@ -146,8 +149,8 @@ double2 pfmax64(double2 a, double2 b) {
 	return __builtin_elementwise_maxnum(a, b);
 }
 
-// CHECK-LABEL: define dso_local noundef <2 x x86_fp80> @_Z7pfmax80Dv2_eS_(
-// CHECK-SAME: ptr noundef byval(<2 x x86_fp80>) align 32 [[TMP0:%.*]], ptr noundef byval(<2 x x86_fp80>) align 32 [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK-LABEL: define dso_local void @_Z7pfmax80Dv2_eS_(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<2 x x86_fp80>) align 32 [[AGG_RESULT:%.*]], ptr noundef byval(<2 x x86_fp80>) align 32 [[TMP0:%.*]], ptr noundef byval(<2 x x86_fp80>) align 32 [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x x86_fp80>, align 32
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x x86_fp80>, align 32
@@ -158,7 +161,10 @@ double2 pfmax64(double2 a, double2 b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x x86_fp80>, ptr [[A_ADDR]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x x86_fp80>, ptr [[B_ADDR]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[ELT_MINNUM:%.*]] = call <2 x x86_fp80> @llvm.minnum.v2f80(<2 x x86_fp80> [[TMP2]], <2 x x86_fp80> [[TMP3]])
-// CHECK-NEXT:    ret <2 x x86_fp80> [[ELT_MINNUM]]
+// CHECK-NEXT:    store <2 x x86_fp80> [[ELT_MINNUM]], ptr [[AGG_RESULT]], align 32, !tbaa [[CHAR_TBAA6]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load <2 x x86_fp80>, ptr [[AGG_RESULT]], align 32, !tbaa [[CHAR_TBAA6]]
+// CHECK-NEXT:    store <2 x x86_fp80> [[TMP4]], ptr [[AGG_RESULT]], align 32, !tbaa [[CHAR_TBAA6]]
+// CHECK-NEXT:    ret void
 //
 ldouble2 pfmax80(ldouble2 a, ldouble2 b) {
 	return __builtin_elementwise_minnum(a, b);
