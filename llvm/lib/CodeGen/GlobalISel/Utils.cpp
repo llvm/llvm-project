@@ -363,6 +363,7 @@ getConstantVRegValWithLookThrough(Register VReg, const MachineRegisterInfo &MRI,
         return std::nullopt;
       break;
     case TargetOpcode::G_INTTOPTR:
+    case TargetOpcode::G_BITCAST:
       VReg = MI->getOperand(1).getReg();
       break;
     default:
