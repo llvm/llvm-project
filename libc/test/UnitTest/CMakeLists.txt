@@ -50,6 +50,9 @@ function(_create_unittest_framework_library fq_target_name)
   endif()
 
   if(LLVM_LIBC_FULL_BUILD)
+    target_include_directories(
+      ${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR}
+    )
     _get_hermetic_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
     target_compile_options(${fq_target_name} PRIVATE ${compile_options} -nostdinc++)
   else()
@@ -122,6 +125,11 @@ add_unittest_framework_library(
     .LibcTest
 )
 
+set(libc_hermetic_test_support_srcs HermeticTestUtils.cpp)
+if(LIBC_TARGET_OS_IS_BAREMETAL AND LIBC_TARGET_ARCHITECTURE_IS_ARM)
+  list(APPEND libc_hermetic_test_support_srcs ArmBaremetalTestUtils.cpp)
+endif()
+
 if(LIBC_TEST_SUBPROCESS_TESTS)
   set(libc_death_test_deps
     libc.hdr.stdint_proxy
@@ -159,9 +167,11 @@ endif()
 add_unittest_framework_library(
   HermeticTestUtils
   SRCS
-    HermeticTestUtils.cpp
+    ${libc_hermetic_test_support_srcs}
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
+    libc.src.__support.libc_errno
 )
 
 add_header_library(
@@ -245,6 +255,15 @@ add_unittest_framework_library(
     libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.scanf_core.core_structs
+)
+
+add_header_library(
+  CharLiteralUtils
+  HDRS
+    CharLiteralUtils.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
 )
 
 add_header_library(

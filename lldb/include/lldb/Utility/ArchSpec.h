@@ -305,6 +305,7 @@ public:
     eCore_amd_gpu_gcn_GFX1172,
     eCore_amd_gpu_gcn_GFX1200,
     eCore_amd_gpu_gcn_GFX1201,
+    eCore_amd_gpu_gcn_GFX1250_STRICT,
     eCore_amd_gpu_gcn_GFX1250,
     eCore_amd_gpu_gcn_GFX1251,
     eCore_amd_gpu_gcn_GFX1310,

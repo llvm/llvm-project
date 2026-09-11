@@ -6,5 +6,10 @@ unittest("ABITests") {
     "//llvm/lib/IR",
     "//llvm/lib/Support",
   ]
-  sources = [ "AArch64TargetInfoTest.cpp" ]
+  sources = [
+    "AArch64TargetInfoTest.cpp",
+    "IRTypeMapperTest.cpp",
+    "X86TargetInfoTest.cpp",
+    "TypesTest.cpp",
+  ]
 }

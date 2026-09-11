@@ -185,6 +185,40 @@ if(LLVM_LIBC_FULL_BUILD)
 else()
   set(LLVM_LIBC_OVERLAY ON)
 endif()
+
+if(LIBC_ENABLE_COVERAGE)
+  if(LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_BAREMETAL)
+    message(FATAL_ERROR
+      "LIBC_ENABLE_COVERAGE is not supported on GPU or baremetal targets.")
+  endif()
+  if(LLVM_LIBC_FULL_BUILD)
+    set(target_arg "")
+    if(LIBC_TARGET_TRIPLE)
+      set(target_arg "--target=${LIBC_TARGET_TRIPLE}")
+    endif()
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} ${target_arg}
+              --print-file-name=libclang_rt.profile.a
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      OUTPUT_VARIABLE libc_profile_lib
+    )
+    if(NOT EXISTS "${libc_profile_lib}")
+      set(profile_arch_lib
+          "libclang_rt.profile-${LIBC_TARGET_ARCHITECTURE}.a")
+      execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} ${target_arg}
+                --print-file-name=${profile_arch_lib}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE libc_profile_lib
+      )
+    endif()
+    if(NOT EXISTS "${libc_profile_lib}")
+      message(FATAL_ERROR "Coverage enabled but profile runtime not found.")
+    endif()
+    set(LIBC_CLANG_PROFILE_LIB "${libc_profile_lib}"
+        CACHE INTERNAL "Clang profile runtime")
+  endif()
+endif()
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)

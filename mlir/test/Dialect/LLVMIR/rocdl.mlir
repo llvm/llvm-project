@@ -1227,10 +1227,10 @@ llvm.func @rocdl.s.barrier() {
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.init
-  // CHECK: rocdl.s.barrier.init %{{.*}} member_cnt = 1 : !llvm.ptr<3>
-  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<3>
+  // CHECK: rocdl.s.barrier.init %{{.*}} member_cnt = 1 : !llvm.ptr<15>
+  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<15>
   llvm.return
 }
 
@@ -1241,17 +1241,17 @@ llvm.func @rocdl.s.barrier.signal() {
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.signal.var
-  // CHECK: rocdl.s.barrier.signal.var %{{.*}} member_cnt = 1 : !llvm.ptr<3>
-  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<3>
+  // CHECK: rocdl.s.barrier.signal.var %{{.*}} member_cnt = 1 : !llvm.ptr<15>
+  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<15>
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.join
-  // CHECK: rocdl.s.barrier.join %{{.*}} : !llvm.ptr<3>
-  rocdl.s.barrier.join %ptr : !llvm.ptr<3>
+  // CHECK: rocdl.s.barrier.join %{{.*}} : !llvm.ptr<15>
+  rocdl.s.barrier.join %ptr : !llvm.ptr<15>
   llvm.return
 }
 
@@ -1283,17 +1283,17 @@ llvm.func @rocdl.s.get.barrier.state() {
   llvm.return
 }
 
-llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.get.named.barrier.state
-  // CHECK: rocdl.s.get.named.barrier.state %{{.*}} : !llvm.ptr<3> -> i32
-  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<3> -> i32
+  // CHECK: rocdl.s.get.named.barrier.state %{{.*}} : !llvm.ptr<15> -> i32
+  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<15> -> i32
   llvm.return
 }
 
-llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.wakeup.barrier
-  // CHECK: rocdl.s.wakeup.barrier %{{.*}} : !llvm.ptr<3>
-  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<3>
+  // CHECK: rocdl.s.wakeup.barrier %{{.*}} : !llvm.ptr<15>
+  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<15>
   llvm.return
 }
 
@@ -1737,12 +1737,12 @@ llvm.func @rocdl_dot_fdot2_family(%v2f16: vector<2xf16>, %v2bf16: vector<2xbf16>
                                   %f16: f16, %bf16: bf16, %f32: f32) -> f32 {
   // CHECK: rocdl.fdot2 %{{.*}}, %{{.*}}, %{{.*}} : (vector<2xf16>, vector<2xf16>, f32) -> f32
   %r0 = rocdl.fdot2 %v2f16, %v2f16, %f32 : (vector<2xf16>, vector<2xf16>, f32) -> f32
-  // CHECK: rocdl.fdot2 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true}> : (vector<2xf16>, vector<2xf16>, f32) -> f32
+  // CHECK: rocdl.fdot2 %{{.*}}, %{{.*}}, %{{.*}} <clamp = true> : (vector<2xf16>, vector<2xf16>, f32) -> f32
   %r0c = rocdl.fdot2 %v2f16, %v2f16, %f32 <{clamp = true}> : (vector<2xf16>, vector<2xf16>, f32) -> f32
 
   // CHECK: rocdl.fdot2.f32.bf16 %{{.*}}, %{{.*}}, %{{.*}} : (vector<2xbf16>, vector<2xbf16>, f32) -> f32
   %r1 = rocdl.fdot2.f32.bf16 %v2bf16, %v2bf16, %f32 : (vector<2xbf16>, vector<2xbf16>, f32) -> f32
-  // CHECK: rocdl.fdot2.f32.bf16 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true}> : (vector<2xbf16>, vector<2xbf16>, f32) -> f32
+  // CHECK: rocdl.fdot2.f32.bf16 %{{.*}}, %{{.*}}, %{{.*}} <clamp = true> : (vector<2xbf16>, vector<2xbf16>, f32) -> f32
   %r1c = rocdl.fdot2.f32.bf16 %v2bf16, %v2bf16, %f32 <{clamp = true}> : (vector<2xbf16>, vector<2xbf16>, f32) -> f32
 
   // CHECK: rocdl.fdot2.f16.f16 %{{.*}}, %{{.*}}, %{{.*}} : (vector<2xf16>, vector<2xf16>, f16) -> f16
@@ -1760,32 +1760,32 @@ llvm.func @rocdl_dot_fdot2_family(%v2f16: vector<2xf16>, %v2bf16: vector<2xbf16>
 llvm.func @rocdl_dot_sdot_udot_family(%v2i16: vector<2xi16>, %i32: i32) -> i32 {
   // CHECK: rocdl.sdot2 %{{.*}}, %{{.*}}, %{{.*}} : (vector<2xi16>, vector<2xi16>, i32) -> i32
   %r0 = rocdl.sdot2 %v2i16, %v2i16, %i32 : (vector<2xi16>, vector<2xi16>, i32) -> i32
-  // CHECK: rocdl.sdot2 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true}> : (vector<2xi16>, vector<2xi16>, i32) -> i32
+  // CHECK: rocdl.sdot2 %{{.*}}, %{{.*}}, %{{.*}} <clamp = true> : (vector<2xi16>, vector<2xi16>, i32) -> i32
   %r0c = rocdl.sdot2 %v2i16, %v2i16, %i32 <{clamp = true}> : (vector<2xi16>, vector<2xi16>, i32) -> i32
 
   // CHECK: rocdl.udot2 %{{.*}}, %{{.*}}, %{{.*}} : (vector<2xi16>, vector<2xi16>, i32) -> i32
   %r1 = rocdl.udot2 %v2i16, %v2i16, %i32 : (vector<2xi16>, vector<2xi16>, i32) -> i32
-  // CHECK: rocdl.udot2 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true}> : (vector<2xi16>, vector<2xi16>, i32) -> i32
+  // CHECK: rocdl.udot2 %{{.*}}, %{{.*}}, %{{.*}} <clamp = true> : (vector<2xi16>, vector<2xi16>, i32) -> i32
   %r1c = rocdl.udot2 %v2i16, %v2i16, %i32 <{clamp = true}> : (vector<2xi16>, vector<2xi16>, i32) -> i32
 
   // CHECK: rocdl.sdot4 %{{.*}}, %{{.*}}, %{{.*}} : (i32, i32, i32) -> i32
   %r2 = rocdl.sdot4 %i32, %i32, %i32 : (i32, i32, i32) -> i32
-  // CHECK: rocdl.sdot4 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.sdot4 %{{.*}}, %{{.*}}, %{{.*}} <clamp = true> : (i32, i32, i32) -> i32
   %r2c = rocdl.sdot4 %i32, %i32, %i32 <{clamp = true}> : (i32, i32, i32) -> i32
 
   // CHECK: rocdl.udot4 %{{.*}}, %{{.*}}, %{{.*}} : (i32, i32, i32) -> i32
   %r3 = rocdl.udot4 %i32, %i32, %i32 : (i32, i32, i32) -> i32
-  // CHECK: rocdl.udot4 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.udot4 %{{.*}}, %{{.*}}, %{{.*}} <clamp = true> : (i32, i32, i32) -> i32
   %r3c = rocdl.udot4 %i32, %i32, %i32 <{clamp = true}> : (i32, i32, i32) -> i32
 
   // CHECK: rocdl.sdot8 %{{.*}}, %{{.*}}, %{{.*}} : (i32, i32, i32) -> i32
   %r4 = rocdl.sdot8 %i32, %i32, %i32 : (i32, i32, i32) -> i32
-  // CHECK: rocdl.sdot8 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.sdot8 %{{.*}}, %{{.*}}, %{{.*}} <clamp = true> : (i32, i32, i32) -> i32
   %r4c = rocdl.sdot8 %i32, %i32, %i32 <{clamp = true}> : (i32, i32, i32) -> i32
 
   // CHECK: rocdl.udot8 %{{.*}}, %{{.*}}, %{{.*}} : (i32, i32, i32) -> i32
   %r5 = rocdl.udot8 %i32, %i32, %i32 : (i32, i32, i32) -> i32
-  // CHECK: rocdl.udot8 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.udot8 %{{.*}}, %{{.*}}, %{{.*}} <clamp = true> : (i32, i32, i32) -> i32
   %r5c = rocdl.udot8 %i32, %i32, %i32 <{clamp = true}> : (i32, i32, i32) -> i32
 
   llvm.return %r0 : i32
@@ -1797,20 +1797,20 @@ llvm.func @rocdl_dot_sdot_udot_family(%v2i16: vector<2xi16>, %i32: i32) -> i32 {
 llvm.func @rocdl_dot_sudot_family(%i32: i32) -> i32 {
   // CHECK: rocdl.sudot4 %{{.*}}, %{{.*}}, %{{.*}} : (i32, i32, i32) -> i32
   %r0 = rocdl.sudot4 %i32, %i32, %i32 : (i32, i32, i32) -> i32
-  // CHECK: rocdl.sudot4 %{{.*}}, %{{.*}}, %{{.*}} <{signA = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.sudot4 %{{.*}}, %{{.*}}, %{{.*}} <signA = true> : (i32, i32, i32) -> i32
   %r0a = rocdl.sudot4 %i32, %i32, %i32 <{signA = true}> : (i32, i32, i32) -> i32
-  // CHECK: rocdl.sudot4 %{{.*}}, %{{.*}}, %{{.*}} <{signB = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.sudot4 %{{.*}}, %{{.*}}, %{{.*}} <signB = true> : (i32, i32, i32) -> i32
   %r0b = rocdl.sudot4 %i32, %i32, %i32 <{signB = true}> : (i32, i32, i32) -> i32
-  // CHECK: rocdl.sudot4 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true, signA = true, signB = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.sudot4 %{{.*}}, %{{.*}}, %{{.*}} <signA = true, signB = true, clamp = true> : (i32, i32, i32) -> i32
   %r0c = rocdl.sudot4 %i32, %i32, %i32 <{clamp = true, signA = true, signB = true}> : (i32, i32, i32) -> i32
 
   // CHECK: rocdl.sudot8 %{{.*}}, %{{.*}}, %{{.*}} : (i32, i32, i32) -> i32
   %r1 = rocdl.sudot8 %i32, %i32, %i32 : (i32, i32, i32) -> i32
-  // CHECK: rocdl.sudot8 %{{.*}}, %{{.*}}, %{{.*}} <{signA = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.sudot8 %{{.*}}, %{{.*}}, %{{.*}} <signA = true> : (i32, i32, i32) -> i32
   %r1a = rocdl.sudot8 %i32, %i32, %i32 <{signA = true}> : (i32, i32, i32) -> i32
-  // CHECK: rocdl.sudot8 %{{.*}}, %{{.*}}, %{{.*}} <{signB = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.sudot8 %{{.*}}, %{{.*}}, %{{.*}} <signB = true> : (i32, i32, i32) -> i32
   %r1b = rocdl.sudot8 %i32, %i32, %i32 <{signB = true}> : (i32, i32, i32) -> i32
-  // CHECK: rocdl.sudot8 %{{.*}}, %{{.*}}, %{{.*}} <{clamp = true, signA = true, signB = true}> : (i32, i32, i32) -> i32
+  // CHECK: rocdl.sudot8 %{{.*}}, %{{.*}}, %{{.*}} <signA = true, signB = true, clamp = true> : (i32, i32, i32) -> i32
   %r1c = rocdl.sudot8 %i32, %i32, %i32 <{clamp = true, signA = true, signB = true}> : (i32, i32, i32) -> i32
 
   llvm.return %r0 : i32

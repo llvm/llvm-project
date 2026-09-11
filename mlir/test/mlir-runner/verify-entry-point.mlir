@@ -17,7 +17,7 @@ llvm.func @entry_inputs_void(%arg0: i32) {
 
 // CHECK-ENTRY-RESULT-VOID: Error: expected void function
 llvm.func @entry_result_void() -> (i32) {
-  %0 = llvm.mlir.constant(0 : index) : i32
+  %0 = llvm.mlir.constant(0 : i32) : i32
   llvm.return %0 : i32
 }
 
@@ -31,18 +31,18 @@ llvm.func @entry_inputs_i32(%arg0: i32) {
 
 // CHECK-ENTRY-RESULT-I32: Error: only single i32 function result supported
 llvm.func @entry_result_i32() -> (i64) {
-  %0 = llvm.mlir.constant(0 : index) : i64
+  %0 = llvm.mlir.constant(0 : i64) : i64
   llvm.return %0 : i64
 }
 
 // CHECK-ENTRY-RESULT-I64: Error: only single i64 function result supported
 llvm.func @entry_result_i64() -> (i32) {
-  %0 = llvm.mlir.constant(0 : index) : i32
+  %0 = llvm.mlir.constant(0 : i32) : i32
   llvm.return %0 : i32
 }
 
 // CHECK-ENTRY-RESULT-F32: Error: only single f32 function result supported
 llvm.func @entry_result_f32() -> (i32) {
-  %0 = llvm.mlir.constant(0 : index) : i32
+  %0 = llvm.mlir.constant(0 : i32) : i32
   llvm.return %0 : i32
 }

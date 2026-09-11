@@ -702,7 +702,7 @@ def FeatureStdExtV
       RISCVExtensionBitmask<0, 21>;
 
 def FeatureStdExtZvabd
-    : RISCVExperimentalExtension<0, 7, "Vector Absolute Difference">;
+    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference">;
 def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
@@ -1146,6 +1146,17 @@ def FeatureStdExtSsccfg
 
 def FeatureStdExtSsccptr
     : RISCVExtension<1, 0, "Main memory supports page table reads">;
+
+def FeatureStdExtSspmp
+    : RISCVExtension<1, 0, "S-level Physical Memory Protection (SPMP)",
+                     [FeatureStdExtSscsrind]>;
+def FeatureStdExtSspmpen
+    : RISCVExtension<1, 0, "Optimizing Context Switching of SPMP Entries",
+                     [FeatureStdExtSspmp]>;
+
+def FeatureStdExtSmpmpdeleg
+    : RISCVExtension<1, 0, "Sharing Hardware Resources between PMP and SPMP",
+                     [FeatureStdExtSmcsrind, FeatureStdExtSspmp]>;
 
 def FeatureStdExtSscofpmf
     : RISCVExtension<1, 0, "Count Overflow and Mode-Based Filtering">;
@@ -2238,7 +2249,3 @@ def TuneMIPSP8700
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors", [], InlineIgnore>;
-
-def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors",
-                                         [], InlineIgnore>;

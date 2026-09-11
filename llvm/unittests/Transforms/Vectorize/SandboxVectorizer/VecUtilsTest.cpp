@@ -622,6 +622,93 @@ bb2:
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(nullptr), nullptr);
 }
 
+TEST_F(VecUtilsTest, GetInsertPointAfterInstrs) {
+  parseIR(R"IR(
+define void @foo(i8 %v) {
+bb_phi:
+  %phi1 = phi i8 [0, %bb_phi], [1, %bb_phi]
+  %phi2 = phi i8 [0, %bb_phi], [1, %bb_phi]
+  %A = add i8 %v, 1
+  %B = add i8 %v, 2
+  %C = add i8 %v, 3
+  ret void
+
+bb_nophi:
+  %X = add i8 %v, 4
+  %Y = add i8 %v, 5
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  llvm::BasicBlock::Create(this->C, "bb_empty", &LLVMF);
+
+  sandboxir::Context Ctx(this->C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+
+  auto &BBPhi = getBasicBlockByName(F, "bb_phi");
+  auto It = BBPhi.begin();
+  auto *Phi1 = cast<sandboxir::PHINode>(&*It++);
+  auto *Phi2 = cast<sandboxir::PHINode>(&*It++);
+  auto *A = cast<sandboxir::Instruction>(&*It++);
+  auto *B = cast<sandboxir::Instruction>(&*It++);
+  auto *InstC = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  auto &BBNOPhi = getBasicBlockByName(F, "bb_nophi");
+  It = BBNOPhi.begin();
+  auto *X = cast<sandboxir::Instruction>(&*It++);
+  auto *Y = cast<sandboxir::Instruction>(&*It++);
+
+  auto &BBEmpty = getBasicBlockByName(F, "bb_empty");
+
+  auto *ArgV = F.getArg(0);
+
+  // 1. Non-PHI instructions in BB
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBPhi),
+            B->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A, B}, &BBPhi),
+            InstC->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({B, A}, &BBPhi),
+            InstC->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({InstC}, &BBPhi),
+            Ret->getIterator());
+
+  // 2. PHI instructions in BB
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi2}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(
+      sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1, Phi2}, &BBPhi),
+      A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1, B}, &BBPhi),
+            InstC->getIterator());
+
+  // 3. Fallback when BotI == nullptr (no matching instruction in BB)
+  // 3a. BB has PHIs
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({ArgV}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({X}, &BBPhi),
+            A->getIterator());
+
+  // 3b. BB has no PHIs
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBNOPhi),
+            Y->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({ArgV}, &BBNOPhi),
+            Y->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBNOPhi),
+            Y->getIterator());
+
+  // 3c. Empty BB
+  EXPECT_TRUE(BBEmpty.empty());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBEmpty),
+            BBEmpty.begin());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBEmpty),
+            BBEmpty.begin());
+}
+
 TEST_F(VecUtilsTest, GetCommonScalarType) {
   parseIR(R"IR(
 define void @foo(i8 %v, ptr %ptr) {
@@ -1040,6 +1127,146 @@ entry:
   EXPECT_TRUE(
       sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
           .empty());
+}
+
+TEST_F(VecUtilsTest, DeadInstructionMorgueCollectScalar) {
+  parseIR(R"IR(
+define void @scalar(i8 %v) {
+entry:
+  %live = add i8 %v, 1
+  %dead0 = add i8 %v, 2
+  %dead1 = add i8 %v, 3
+  %use_live = add i8 %live, %live
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("scalar");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Live = cast<sandboxir::Instruction>(&*It++);
+  auto *Dead0 = cast<sandboxir::Instruction>(&*It++);
+  auto *Dead1 = cast<sandboxir::Instruction>(&*It++);
+  auto *UseLive = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::VecUtils::DeadInstructionMorgue Morgue;
+  Morgue.collectPotentiallyDeadInstrs({Live, Dead0, Dead1});
+  Morgue.tryEraseDeadInstrs();
+
+  // %dead0 and %dead1 had no uses, so they should have been erased. %live is
+  // used by %use_live, so it (and %use_live) should survive.
+  It = BB.begin();
+  EXPECT_EQ(&*It++, Live);
+  EXPECT_EQ(&*It++, UseLive);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB.end());
+}
+
+TEST_F(VecUtilsTest, DeadInstructionMorgueCollectLoad) {
+  parseIR(R"IR(
+define void @loadtest(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("loadtest");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Gep0 = cast<sandboxir::Instruction>(&*It++);
+  It++; // %gep1, expected to be erased.
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::VecUtils::DeadInstructionMorgue Morgue;
+  Morgue.collectPotentiallyDeadInstrs({Ld0, Ld1});
+  Morgue.tryEraseDeadInstrs();
+
+  // %ld0 and %ld1 are collected directly and have no uses, so they are
+  // erased. Only the pointer operand of the non-first lane (%gep1) is
+  // collected -- %gep0 (pointer of the first lane) is intentionally skipped,
+  // since it would be reused as the pointer of a replacement vector load --
+  // so %gep0 survives even though it is now dead.
+  It = BB.begin();
+  EXPECT_EQ(&*It++, Gep0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB.end());
+}
+
+TEST_F(VecUtilsTest, DeadInstructionMorgueCollectStore) {
+  parseIR(R"IR(
+define void @storetest(ptr %p, float %v) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  store float %v, ptr %gep0
+  store float %v, ptr %gep1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("storetest");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Gep0 = cast<sandboxir::Instruction>(&*It++);
+  It++; // %gep1, expected to be erased.
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::VecUtils::DeadInstructionMorgue Morgue;
+  Morgue.collectPotentiallyDeadInstrs({St0, St1});
+  Morgue.tryEraseDeadInstrs();
+
+  // %st0 and %st1 are collected directly (stores are always "used" 0 times)
+  // and get erased. Only the pointer operand of the non-first lane (%gep1)
+  // is collected, so %gep0 survives even though it is now dead.
+  It = BB.begin();
+  EXPECT_EQ(&*It++, Gep0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB.end());
+}
+
+TEST_F(VecUtilsTest, DeadInstructionMorgueClearsCandidatesAfterErase) {
+  parseIR(R"IR(
+define void @clears(i8 %v) {
+entry:
+  %dead0 = add i8 %v, 1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("clears");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Dead0 = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::VecUtils::DeadInstructionMorgue Morgue;
+  Morgue.collectPotentiallyDeadInstrs({Dead0});
+  Morgue.tryEraseDeadInstrs();
+  // The candidate set should have been cleared by the first call, so a
+  // second call must be a safe no-op rather than trying to dereference the
+  // now-erased %dead0 instruction again.
+  Morgue.tryEraseDeadInstrs();
+
+  It = BB.begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB.end());
 }
 
 TEST_F(VecUtilsTest, GetNextUserBundle_VectorizedSeedUser) {

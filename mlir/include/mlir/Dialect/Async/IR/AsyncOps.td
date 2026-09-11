@@ -107,7 +107,8 @@ def Async_ExecuteOp :
 }
 
 def Async_FuncOp : Async_Op<"func",
-    [FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface]> {
+    [SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
+     OpAsmOpInterface]> {
   let summary = "async function operation";
   let description = [{
     An async function is like a normal function, but supports non-blocking
@@ -261,12 +262,12 @@ def Async_CallOp : Async_Op<"call",
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+      return getCalleeAttr();
     }
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
+      setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
     }
   }];
 
