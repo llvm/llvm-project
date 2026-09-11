@@ -156,9 +156,9 @@ exit:
 define void @uge_from_sgt_minus_one_negative(i32 %start, i32 %n) {
 ; CHECK-LABEL: 'uge_from_sgt_minus_one_negative'
 ; CHECK-NEXT:  Determining loop execution counts for: @uge_from_sgt_minus_one_negative
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%start umin %n)) + %start)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %n) + %start)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%start umin %n)) + %start)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %n) + %start)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
