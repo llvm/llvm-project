@@ -118,6 +118,12 @@ public:
   createUnreachableTerminator(Location loc, OpBuilder &builder,
                               Region &region) = 0;
 
+  /// Returns true if the given terminator is unreachable.
+  /// These terminators are allowed to be merged into
+  /// the exit block of any other return-like operation in the region, using
+  /// undefined values as operands instead of getting their own exit block.
+  virtual bool isUnreachableTerminator(Operation *op) { return false; }
+
   /// Helper function to create an unconditional branch using
   /// `createCFGSwitchOp`.
   void createSingleDestinationBranch(Location loc, OpBuilder &builder,
@@ -147,7 +153,10 @@ public:
 /// If the region contains only a single kind of return-like operation, all
 /// control flow graph operations will be converted successfully.
 /// Otherwise a single control flow graph operation branching to one block
-/// per return-like operation kind remains.
+/// per return-like operation kind remains. Terminators for which
+/// `CFGToSCFInterface::isUnreachableTerminator` returns true do not get their
+/// own exit block: if any other return-like exit block exists, they are
+/// turned into branches to it with undefined operands instead.
 ///
 /// The transformation currently requires that the region has no unreachable
 /// blocks and that all control flow graph operations have no side effects,
