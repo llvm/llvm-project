@@ -1,9 +1,15 @@
 ; RUN: opt -mtriple=x86_64-pc-linux-gnu -safestack-use-pointer-address \
-; RUN:   -passes='require<libcall-lowering-info>,function(require<domtree>,safe-stack,verify<domtree>)' \
-; RUN:   -disable-output < %s
+; RUN:   -passes='require<libcall-lowering-info>,function(require<domtree>,safe-stack,print<domtree>)' \
+; RUN:   -disable-output < %s 2>&1| FileCheck %s
 ; RUN: opt -mtriple=x86_64-pc-linux-gnu -safestack-use-pointer-address \
 ; RUN:   -domtree -safe-stack -loops -verify-dom-info \
 ; RUN:   -disable-output < %s
+
+; CHECK: DominatorTree for function: caller
+; CHECK: [1] %entry {{{[0-9]+}},{{[0-9]+}}} [0]
+; CHECK-NEXT: [2] %a.i {{{[0-9]+}},{{[0-9]+}}} [1]
+; CHECK-NEXT: [2] %__safestack_pointer_address.exit {{{[0-9]+}},{{[0-9]+}}} [1]
+; CHECK-NEXT: [2] %b.i {{{[0-9]+}},{{[0-9]+}}} [1]
 
 @unsafe_stack_pointer_a = thread_local global ptr null
 @unsafe_stack_pointer_b = thread_local global ptr null
