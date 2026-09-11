@@ -53,9 +53,7 @@ static uint64_t getClangVectorWidthInBits(const VectorType *VT) {
     EltWidth = getClangIntegerWidthInBits(IT);
   uint64_t Width =
       std::max<uint64_t>(8, EltWidth * VT->getNumElements().getKnownMinValue());
-  if (Width & (Width - 1))
-    Width = llvm::alignTo(Width, llvm::bit_ceil(Width));
-  return Width;
+  return llvm::bit_ceil(Width);
 }
 
 // The storage-container width of a type, mirroring Clang's getTypeSize. Used on

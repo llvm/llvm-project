@@ -207,7 +207,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectAAPCSSoft) {
 // Wider _BitInt types are returned indirectly.
 TEST_F(AArch64TargetInfoTest, ClassifyReturnBitIntAAPCS) {
   std::unique_ptr<TargetInfo> TI =
-      createAArch64TargetInfo(TB, AArch64ABIKind::AAPCS);
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
 
   for (const ABIType *RetTy : {BitInt7, UBitInt7, BitInt65, BitInt128}) {
     std::unique_ptr<FunctionInfo> FI =
@@ -229,7 +229,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnBitIntAAPCS) {
 // indirectly.
 TEST_F(AArch64TargetInfoTest, ClassifyReturnBitIntDarwin) {
   std::unique_ptr<TargetInfo> TI =
-      createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::DarwinPCS));
 
   for (const ABIType *RetTy : {BitInt65, BitInt128}) {
     std::unique_ptr<FunctionInfo> FI =
@@ -265,7 +265,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnBitIntDarwin) {
 // return path under Win64.
 TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectWin64) {
   std::unique_ptr<TargetInfo> TI =
-      createAArch64TargetInfo(TB, AArch64ABIKind::Win64);
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::Win64));
 
   for (const ABIType *RetTy :
        {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
@@ -335,7 +335,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectAAPCSSoft) {
 // Wider _BitInt types are passed indirectly without byval.
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentBitIntAAPCS) {
   std::unique_ptr<TargetInfo> TI =
-      createAArch64TargetInfo(TB, AArch64ABIKind::AAPCS);
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
 
   for (const ABIType *ArgTy : {BitInt7, UBitInt7, BitInt65, BitInt128}) {
     std::unique_ptr<FunctionInfo> FI =
@@ -356,7 +356,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentBitIntAAPCS) {
 // indirectly without byval.
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentBitIntDarwin) {
   std::unique_ptr<TargetInfo> TI =
-      createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::DarwinPCS));
 
   for (const ABIType *ArgTy : {BitInt65, BitInt128}) {
     std::unique_ptr<FunctionInfo> FI =
@@ -389,7 +389,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentBitIntDarwin) {
 // argument path under Win64.
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectWin64) {
   std::unique_ptr<TargetInfo> TI =
-      createAArch64TargetInfo(TB, AArch64ABIKind::Win64);
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::Win64));
 
   for (const ABIType *ArgTy :
        {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
@@ -414,7 +414,8 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
   for (AArch64ABIKind Kind :
        {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
         AArch64ABIKind::AAPCSSoft}) {
-    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Void, {TUInt});
     TI->computeInfo(*FI);
@@ -427,8 +428,8 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
       llvm::Align(1), StructPacking::Default, RecordFlags::IsTransparent);
 
   {
-    std::unique_ptr<TargetInfo> TI =
-        createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(
+        TB, AArch64ABIOptions(AArch64ABIKind::DarwinPCS));
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Void, {TUChar});
     TI->computeInfo(*FI);
@@ -437,7 +438,8 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
 
   for (AArch64ABIKind Kind : {AArch64ABIKind::AAPCS, AArch64ABIKind::Win64,
                               AArch64ABIKind::AAPCSSoft}) {
-    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Void, {TUChar});
     TI->computeInfo(*FI);
@@ -465,7 +467,8 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentRecordCannotPassInRegisters) {
   for (AArch64ABIKind Kind :
        {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
         AArch64ABIKind::AAPCSSoft}) {
-    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Void, {CannotPass});
     TI->computeInfo(*FI);

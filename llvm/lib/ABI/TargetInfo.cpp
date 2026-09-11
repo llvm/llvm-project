@@ -8,13 +8,10 @@
 
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cstdint>
 
 using namespace llvm::abi;
-using llvm::alignTo;
-using llvm::bit_ceil;
 using llvm::dyn_cast;
 
 bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
@@ -101,25 +98,12 @@ bool isEmptyRecordForHA(const Type *Ty) {
   return RT && RT->isEmpty();
 }
 
-/// Storage-container width mirroring Clang's ASTContext::getTypeSize for the
-/// types that matter to homogeneous-aggregate detection.
-uint64_t getHATypeSizeInBits(const Type *Ty) {
-  if (const auto *VT = dyn_cast<VectorType>(Ty)) {
-    uint64_t EltWidth = VT->getElementType()->getSizeInBits().getFixedValue();
-    uint64_t Width = std::max<uint64_t>(
-        8, EltWidth * VT->getNumElements().getKnownMinValue());
-    if (Width & (Width - 1))
-      Width = alignTo(Width, bit_ceil(Width));
-    return Width;
-  }
-  return Ty->getSizeInBits().getFixedValue();
-}
-
 } // namespace
 
 bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
                                         uint64_t &Members) const {
-  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+  // TODO: Keep this in sync with Clang's handling of matrix types.
+  if (const auto *AT = dyn_cast<ArrayType>(Ty); AT && !AT->isMatrixType()) {
     uint64_t NElements = AT->getNumElements();
     if (NElements == 0)
       return false;
@@ -153,6 +137,9 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
       // Ignore (non-zero arrays of) empty records.
       const Type *FT = FD.FieldType;
       while (const auto *AT = dyn_cast<ArrayType>(FT)) {
+        // TODO: Keep this in sync with Clang's handling of matrix types.
+        if (AT->isMatrixType())
+          break;
         if (AT->getNumElements() == 0)
           return false;
         FT = AT->getElementType();
@@ -176,7 +163,7 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
       return false;
 
     // Ensure there is no padding.
-    if (getHATypeSizeInBits(Base) * Members != getHATypeSizeInBits(Ty))
+    if (Base->getTypeAllocSize() * Members != Ty->getTypeAllocSize())
       return false;
   } else {
     Members = 1;
@@ -197,9 +184,12 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
       // If it's a non-power-of-2 vector, its ABI size is already a power-of-2,
       // so widen it explicitly to match Clang.
       if (const auto *VT = dyn_cast<VectorType>(Base)) {
+        assert(VT->isFixedLength() &&
+               "scalable vectors are never homogeneous aggregates");
         uint64_t EltSize =
             VT->getElementType()->getSizeInBits().getFixedValue();
-        unsigned NumElements = getHATypeSizeInBits(VT) / EltSize;
+        unsigned NumElements =
+            VT->getTypeAllocSize().getFixedValue() * 8 / EltSize;
         if (NumElements != VT->getNumElements().getKnownMinValue())
           Base = TB.getVectorType(VT->getElementType(),
                                   ElementCount::getFixed(NumElements),
@@ -208,7 +198,7 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
     }
 
     if (Base->isVector() != ElemTy->isVector() ||
-        getHATypeSizeInBits(Base) != getHATypeSizeInBits(ElemTy))
+        Base->getTypeAllocSize() != ElemTy->getTypeAllocSize())
       return false;
   }
   return Members > 0 && isHomogeneousAggregateSmallEnough(Base, Members);

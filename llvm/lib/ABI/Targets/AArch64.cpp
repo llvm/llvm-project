@@ -164,13 +164,11 @@ bool AArch64TargetInfo::isHomogeneousAggregateBaseType(const Type *Ty) const {
     return true;
 
   if (const auto *VT = dyn_cast<VectorType>(Ty)) {
-    // TODO: Reject SVE fixed-length data/predicate vectors once the type
-    // mapper can express them.
-    uint64_t EltWidth = VT->getElementType()->getSizeInBits().getFixedValue();
-    uint64_t VecSize = std::max<uint64_t>(
-        8, EltWidth * VT->getNumElements().getKnownMinValue());
-    if (VecSize & (VecSize - 1))
-      VecSize = alignTo(VecSize, bit_ceil(VecSize));
+    if (VT->isScalable())
+      return false;
+
+    uint64_t VecSize =
+        bit_ceil(std::max<uint64_t>(8, VT->getSizeInBits().getFixedValue()));
     if (VecSize == 64 || VecSize == 128)
       return true;
   }

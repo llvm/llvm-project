@@ -155,7 +155,7 @@ struct AArch64ABIOptions {
   bool IsMicrosoftCXXABI = false;
 
   AArch64ABIOptions() = default;
-  AArch64ABIOptions(AArch64ABIKind Kind) : Kind(Kind) {}
+  explicit AArch64ABIOptions(AArch64ABIKind Kind) : Kind(Kind) {}
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo>
