@@ -45,7 +45,15 @@ macro(add_optional_dependency variable description package found)
       set(maybe_quiet QUIET)
     endif()
     find_package(${package} ${ARG_VERSION} ${maybe_required} ${maybe_quiet})
-    set(${variable} "${${found}}")
+    # Callers name the result variable of the Find module, which is often
+    # all-caps. A package found in config mode instead only sets
+    # <PackageName>_FOUND, so accept either name: otherwise a dependency that
+    # ships a CMake config package looks missing and gets silently disabled.
+    if("${${found}}" OR "${${package}_FOUND}")
+      set(${variable} TRUE)
+    else()
+      set(${variable} FALSE)
+    endif()
   endif()
 
   message(STATUS "${description}: ${${variable}}")
