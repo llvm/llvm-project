@@ -24,6 +24,20 @@ from sphinx.util.tags import Tags
 
 _SHARED_STATIC_DIR = Path(__file__).parent / "_static"
 
+# LLVM project documentation sites that publish Sphinx inventories.
+LLVM_INTERSPHINX_MAPPING = {
+    "llvm": ("https://llvm.org/docs/", None),
+    "clang": ("https://clang.llvm.org/docs/", None),
+    "clang-tools-extra": ("https://clang.llvm.org/extra/", None),
+    "libc": ("https://libc.llvm.org/", None),
+    "libcxx": ("https://libcxx.llvm.org/", None),
+    "lld": ("https://lld.llvm.org/", None),
+    "lldb": ("https://lldb.llvm.org/", None),
+    "openmp": ("https://openmp.llvm.org/", None),
+    "flang": ("https://flang.llvm.org/docs/", None),
+    "polly": ("https://polly.llvm.org/docs/", None),
+}
+
 
 def common_conf(tags: Tags) -> Dict[str, Any]:
     # If your documentation needs a minimal Sphinx version, state it here.
