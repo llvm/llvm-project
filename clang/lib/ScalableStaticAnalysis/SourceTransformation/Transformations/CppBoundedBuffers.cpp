@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysis/SourceTransformation/Transformations/CppBoundedBuffers.h"
+#include "../../Analyses/SSAFAnalysesCommon.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LangOptions.h"
@@ -20,6 +23,7 @@
 #include "clang/Frontend/SSAFOptions.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"
+#include "clang/ScalableStaticAnalysis/Analyses/PointerFlow/PointerFlowPairs.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
 #include "clang/ScalableStaticAnalysis/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
@@ -27,12 +31,18 @@
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysis/SourceTransformation/TransformationRegistry.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Refactoring/AtomicChange.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 using namespace clang;
 using namespace clang::ssaf;
@@ -290,6 +300,11 @@ private:
 /// Rewrites or reports every collected declarator and function return.
 class RewriteVisitor : public DynamicRecursiveASTVisitor {
 public:
+  // Decls and their ClassifyResults for all that are successfully
+  // transformed by `emit`:
+  llvm::DenseMap<const Decl *, ClassifyResult> TransformedDecls;
+  llvm::DenseMap<const FunctionDecl *, ClassifyResult> TransformedReturns;
+
   RewriteVisitor(ASTContext &Ctx, DeclLevels &Decls, ReturnLevels &Returns,
                  SourceEditEmitter &Edits, TransformationReportEmitter &Report)
       : Ctx(Ctx), Decls(Decls), Returns(Returns), Edits(Edits), Report(Report) {
@@ -324,8 +339,12 @@ public:
 
     if (!FunTypeLoc)
       return report(FD, ReportReason::EmissionFailed);
-    return report(FD, emit(FD->getBeginLoc(), NameLoc,
-                           FunTypeLoc.getReturnLoc(), FD->getReturnType(), R));
+
+    auto Reason = emit(FD->getBeginLoc(), NameLoc, FunTypeLoc.getReturnLoc(),
+                       FD->getReturnType(), R);
+    if (!Reason)
+      TransformedReturns[FD] = R;
+    return report(FD, Reason);
   }
 
 private:
@@ -347,7 +366,12 @@ private:
 
     if (R.Skip)
       return (void)report(D, *R.Skip);
-    report(D, emit(D->getBeginLoc(), NameLoc, TSI->getTypeLoc(), T, R));
+
+    auto Reason = emit(D->getBeginLoc(), NameLoc, TSI->getTypeLoc(), T, R);
+
+    if (!Reason)
+      TransformedDecls[D] = R;
+    report(D, Reason);
   }
 
   /// Compute the precise source range for rewriting.  The produced range is
@@ -482,6 +506,113 @@ private:
   TransformationReportEmitter &Report;
 };
 
+// FIXME: adding report for any unsuccessful edits
+// FIXME: we need clusters to group edits atomically
+
+/// Traverses the whole TU and create edits for expressions in order to adapt to
+/// transformed Decls.
+class ExpressionRewriter {
+public:
+  ExpressionRewriter(
+      ASTContext &Ctx, const SSAFOptions &Opts, SourceEditEmitter &Edits,
+      const llvm::DenseMap<const Decl *, ClassifyResult> &TransformedDecls,
+      const llvm::DenseMap<const FunctionDecl *, ClassifyResult>
+          &TransformedReturns)
+      : Ctx(Ctx), Opts(Opts), Edits(Edits), TransformedDecls(TransformedDecls),
+        TransformedReturns(TransformedReturns) {}
+
+  /// Traverses the whole \c TU and create edits expressions in order to adapt
+  /// to transformed Decls.
+  void rewriteExprInTU(const TranslationUnitDecl *TU);
+
+  /// Provided pointer/array expression \c E that \c isExprBaseTransformed(E),
+  /// rewrite the expression if necessary to produce correct bounded type
+  /// expression.
+  ///
+  /// \return true iff a rewrite edit was created.
+  bool rewriteExpression(const Expr *E, tooling::AtomicChange &AC) const;
+
+  /// Adapt expressions of a pointer flow to Decl transformations.
+  /// \return \c tooling::AtomicChange if any edit was created.
+  std::optional<tooling::AtomicChange>
+  adaptPointerFlow(const PointerFlowPair &Pair) const;
+
+private:
+  /// Associate edit operations to \c CharSourceRange always, since they carry
+  /// token/char range info while single SourceLocation doesn't.  This way, the
+  /// edit kind (replacement or insertion) cannot be inferred from the input
+  /// (i.e., SourceRange vs. SourceLocation). Use this enum to explicitly
+  /// express the kinds.
+  enum EditKind { Replace, InsertAtBegin, InsertAtEnd };
+
+  /// \param Range The source locations associated with the edit. For any \c
+  /// EditKind, source locations are given by a \c CharSourceRange, which
+  /// carries the information of whether it is a token range or a char range.
+  /// \param NewText The text of the edit that will replace a source range or
+  /// be inserted at a location.
+  /// \param EditKind The kind of edit: replacement or insertion.
+  /// \param AC IN/OUT parameter. The new edit will be added to \c AC
+  /// \return true if edit is successfully added to \c AC
+  bool addEditToAtomicChange(CharSourceRange Range, StringRef NewText,
+                             EditKind EditKind,
+                             tooling::AtomicChange &AC) const;
+
+  /// \return true iff the base(s) of the pointer/array expression \c E  are all
+  /// transformed to have bounded types.
+  bool isExprBaseTransformed(const Expr *E) const;
+
+  /// \return a non-null pointer to a \c ClassifyResult, if `D` is transformed
+  /// to have bounded types.
+  const ClassifyResult *getDeclClassifyResultsIfTransformed(const Decl *D,
+                                                            bool IsRet) const;
+
+  /// \return a non-empty vector of \c ClassifyResult, the base(s) of the
+  /// pointer/array expression \c E  are all transformed to have bounded
+  /// types.
+  std::vector<const ClassifyResult *>
+  getPtrExprClassifyResultsIfTransformed(const Expr *E) const;
+
+  friend struct GetLHSClassifyResults;
+
+  //==----------------  Expression rewrite rules  -------------------==//
+
+  /// Provided that \c Pair LHS is NOT transformed but RHS is transformed,
+  /// wrap RHS in '(RHS).data()' if appropriate.
+  /// \return true iff RHS needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool appendDataCallToArg(const PointerFlowPair &Pair,
+                           tooling::AtomicChange &AC) const;
+
+  /// Provided that \c Pair LHS and RHS are both transformed,
+  /// wrap RHS in '(RHS).as_bounded<T>()', if their element types are not
+  /// identical.
+  /// \return true iff RHS needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool appendAsBoundedCallToArg(const PointerFlowPair &Pair,
+                                tooling::AtomicChange &AC) const;
+
+  /// Provided \c E is transformed, if it has the form '&e[i]' or '&*e',
+  /// edit it to '(e + i)' or 'e', resp.
+  /// \return true iff E needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool rewriteAddrofElementAccess(const Expr *E,
+                                   tooling::AtomicChange &AC) const;
+
+  /// Provided \c E is transformed, if it has the form
+  /// '(T*)e/static_cast<T>(e)/reinterpret_cast<T>(e)', edit it to
+  /// '(e).as_bounded<T>()'.
+  /// \return true iff E needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool rewritePointerCast(const Expr *E, tooling::AtomicChange &AC) const;
+
+  ASTContext &Ctx;
+  const SSAFOptions &Opts;
+  SourceEditEmitter &Edits;
+  const llvm::DenseMap<const Decl *, ClassifyResult> &TransformedDecls;
+  const llvm::DenseMap<const FunctionDecl *, ClassifyResult>
+      &TransformedReturns;
+};
+
 } // namespace
 
 namespace clang::ssaf {
@@ -607,13 +738,323 @@ void CppBoundedBuffers::HandleTranslationUnit(ASTContext &Ctx) {
   DeclLevels Decls;
   ReturnLevels Returns;
 
-  Decl *TU = Ctx.getTranslationUnitDecl();
+  auto *TU = Ctx.getTranslationUnitDecl();
   CollectVisitor(Reach, TUNamespace, LUNamespace, Decls, Returns)
       .TraverseDecl(TU);
-  RewriteVisitor(Ctx, Decls, Returns, Edits, Report).TraverseDecl(TU);
+  auto RV = RewriteVisitor(Ctx, Decls, Returns, Edits, Report);
+
+  RV.TraverseDecl(TU);
+
+  ExpressionRewriter ExprRewriter(Ctx, Opts, Edits, RV.TransformedDecls,
+                                  RV.TransformedReturns);
+
+  ExprRewriter.rewriteExprInTU(TU);
 }
 
 } // namespace clang::ssaf
+
+namespace {
+
+//===------------ ExpressionRewriter implementation --------------===//
+struct GetLHSClassifyResults {
+  const ExpressionRewriter &ER;
+
+  std::vector<const ClassifyResult *> operator()(const ValueDecl *D,
+                                                 bool IsRet) const {
+    if (const ClassifyResult *R =
+            ER.getDeclClassifyResultsIfTransformed(D, IsRet))
+      return {R};
+    return {};
+  }
+
+  std::vector<const ClassifyResult *> operator()(const Expr *E) const {
+    return ER.getPtrExprClassifyResultsIfTransformed(E);
+  }
+};
+
+std::optional<tooling::AtomicChange>
+ExpressionRewriter::adaptPointerFlow(const PointerFlowPair &Pair) const {
+  auto LHSClassifyResults = Pair.visitLHS(GetLHSClassifyResults{*this});
+  bool IsLHSTransformed = !LHSClassifyResults.empty();
+  bool IsRHSTransformed = isExprBaseTransformed(Pair.RHS);
+  tooling::AtomicChange AC("", "");
+
+  if (IsRHSTransformed)
+    rewriteExpression(Pair.RHS, AC);
+  if (!IsLHSTransformed && IsRHSTransformed)
+    appendDataCallToArg(Pair, AC);
+  if (IsLHSTransformed && IsRHSTransformed)
+    appendAsBoundedCallToArg(Pair, AC);
+  return AC;
+}
+
+bool ExpressionRewriter::rewriteExpression(const Expr *E,
+                                           tooling::AtomicChange &AC) const {
+  return rewriteAddrofElementAccess(E, AC) || rewritePointerCast(E, AC);
+}
+
+bool ExpressionRewriter::appendDataCallToArg(const PointerFlowPair &Pair,
+                                             tooling::AtomicChange &AC) const {
+  const auto *PVD =
+      dyn_cast_or_null<ParmVarDecl>(Pair.LHS.dyn_cast<const ValueDecl *>());
+
+  if (!PVD)
+    return false;
+
+  // '(RHS).data()' is a prvalue that can't bind to a reference. So bail.
+  if (PVD->getType()->isReferenceType())
+    return false;
+
+  QualType RTypeBeforeImpCast = Pair.RHS->IgnoreImpCasts()->getType();
+  QualType LType = PVD->getType().getNonReferenceType();
+
+  // If RHS has `void*` type, it will have `char*` after transformation and
+  // being appened '.data()'.  This type change may cause the callee to be
+  // silently swapped to a different overload. So bail.
+  if (RTypeBeforeImpCast->isVoidPointerType() && LType->isVoidPointerType())
+    return false;
+
+  CharSourceRange RHSRange = Lexer::getAsCharRange(
+      Pair.RHS->getSourceRange(), Ctx.getSourceManager(), Ctx.getLangOpts());
+
+  addEditToAtomicChange(RHSRange, "(", EditKind::InsertAtBegin, AC);
+  addEditToAtomicChange(RHSRange, ").data()", EditKind::InsertAtEnd, AC);
+  return true;
+}
+
+bool ExpressionRewriter::appendAsBoundedCallToArg(
+    const PointerFlowPair &Pair, tooling::AtomicChange &AC) const {
+  const auto *PVD =
+      dyn_cast_or_null<ParmVarDecl>(Pair.LHS.dyn_cast<const ValueDecl *>());
+
+  if (!PVD)
+    return false;
+
+  CharSourceRange RHSRange = Lexer::getAsCharRange(
+      Pair.RHS->getSourceRange(), Ctx.getSourceManager(), Ctx.getLangOpts());
+  QualType RTypeBeforeImpCast = Pair.RHS->IgnoreImpCasts()->getType();
+  QualType LType = PVD->getType().getNonReferenceType();
+  QualType RPteTy = RTypeBeforeImpCast->getPointeeType();
+  QualType LPteTy = LType->getPointeeType();
+
+  if (LPteTy.isNull() || RPteTy.isNull())
+    return false;
+
+  if (Ctx.hasSameType(LPteTy, RPteTy))
+    return false;
+
+  auto *LHSClassifyResult = getDeclClassifyResultsIfTransformed(PVD, false);
+
+  if (!LHSClassifyResult)
+    return false;
+
+  StringRef LHSInnerSpelling = LHSClassifyResult->InnerSpelling;
+
+  addEditToAtomicChange(RHSRange, "(", EditKind::InsertAtBegin, AC);
+  addEditToAtomicChange(
+      RHSRange,
+      (").as_bounded<" + LHSInnerSpelling + ">()").getSingleStringRef(),
+      EditKind::InsertAtEnd, AC);
+  return true;
+}
+
+bool ExpressionRewriter::rewriteAddrofElementAccess(
+    const Expr *E, tooling::AtomicChange &AC) const {
+  const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreParenImpCasts());
+  if (!UO || UO->getOpcode() != UO_AddrOf)
+    return false;
+
+  const Expr *SubExpr = UO->getSubExpr()->IgnoreParenImpCasts();
+  const Expr *Ptr, *Offset = nullptr;
+
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(SubExpr)) {
+    Ptr = ASE->getBase();
+    Offset = ASE->getIdx();
+  } else if (const auto *Deref = dyn_cast<UnaryOperator>(SubExpr);
+             Deref && Deref->getOpcode() == UO_Deref) {
+    Ptr = Deref->getSubExpr();
+  } else
+    return false;
+
+  rewriteExpression(Ptr, AC);
+  // Ptr may have been recursively edited, so its source range should stay
+  // intact.
+
+  const SourceManager &SM = Ctx.getSourceManager();
+  const LangOptions &LO = Ctx.getLangOpts();
+  auto PtrCR = Lexer::getAsCharRange(Ptr->getSourceRange(), SM, LO);
+  auto FullExprCR = Lexer::getAsCharRange(UO->getSourceRange(), SM, LO);
+  // Source range before `Ptr`:
+  auto PrePtrCR =
+      CharSourceRange::getCharRange(FullExprCR.getBegin(), PtrCR.getBegin());
+
+  if (!Offset) {
+    // Source range after `Ptr`:
+    auto PostPtrCR =
+        CharSourceRange::getCharRange(PtrCR.getEnd(), FullExprCR.getEnd());
+    // For '&*ptr' or '&(*ptr)', drop contents in PrePtrCR and PostPtrCR:
+    addEditToAtomicChange(PrePtrCR, "", EditKind::Replace, AC);
+    addEditToAtomicChange(PostPtrCR, "", EditKind::Replace, AC);
+    return true;
+  }
+
+  auto OffsetCR = Lexer::getAsCharRange(Offset->getSourceRange(), SM, LO);
+  auto PostPtrPreOffsetCR =
+      CharSourceRange::getCharRange(PtrCR.getEnd(), OffsetCR.getBegin());
+  auto PostOffsetCR =
+      CharSourceRange::getCharRange(OffsetCR.getEnd(), FullExprCR.getEnd());
+
+  // For '&ptr[offset]' or '&(ptr[offset])',
+  // 1. replace contents in PrePtrCR with "(", and
+  // 2. replace contents in PostPtrPreOffsetCR with " + ", and
+  // 3. replace contents in postOffsetCR  with ") ",
+  // results in '(ptr + offset)':
+  addEditToAtomicChange(PrePtrCR, "(", EditKind::Replace, AC);
+  addEditToAtomicChange(PostPtrPreOffsetCR, " + ", EditKind::Replace, AC);
+  addEditToAtomicChange(PostOffsetCR, ")", EditKind::Replace, AC);
+  return true;
+}
+
+bool ExpressionRewriter::rewritePointerCast(const Expr *E,
+                                             tooling::AtomicChange &AC) const {
+  const auto *CE = dyn_cast<ExplicitCastExpr>(E->IgnoreParenImpCasts());
+
+  if (!CE ||
+      !isa<CStyleCastExpr, CXXStaticCastExpr, CXXReinterpretCastExpr>(CE))
+    return false;
+
+  QualType DestTy = CE->getTypeAsWritten();
+  QualType DestPteTy = DestTy->getPointeeType();
+
+  if (!DestTy->isPointerType())
+    return false;
+
+  const Expr *Ptr = CE->getSubExpr();
+  rewriteExpression(Ptr, AC);
+  // Ptr may have been recursively edited, so its source range should stay
+  // intact.
+
+  const SourceManager &SM = Ctx.getSourceManager();
+  const LangOptions &LO = Ctx.getLangOpts();
+  CharSourceRange PtrCR =
+      Lexer::getAsCharRange(CE->getSubExpr()->getSourceRange(), SM, LO);
+  CharSourceRange FullCastExprCR =
+      Lexer::getAsCharRange(CE->getSourceRange(), SM, LO);
+  CharSourceRange PrePtrCR = CharSourceRange::getCharRange(
+      FullCastExprCR.getBegin(), PtrCR.getBegin());
+  CharSourceRange PostPtrCR =
+      CharSourceRange::getCharRange(PtrCR.getEnd(), FullCastExprCR.getEnd());
+  std::string T = spell(DestPteTy, Ctx);
+
+  // For `(T*)ptr` or *_cast<T>(ptr),
+  // 1. replace contents in PrePtrCR with "(", and
+  // 2. replace contents in PostPtrCR with ").as_bounded<T>()",
+  // results in '(ptr).as_bounded<T>()'.
+  addEditToAtomicChange(PrePtrCR, "(", EditKind::Replace, AC);
+  addEditToAtomicChange(PostPtrCR, ").as_bounded<" + T + ">()",
+                        EditKind::Replace, AC);
+  return true;
+}
+
+void ExpressionRewriter::rewriteExprInTU(const TranslationUnitDecl *TU) {
+  llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
+      ContributorGroups;
+
+  findContributors(Ctx, Opts, ContributorGroups,
+                   /*ExtractFromSystemHeaders=*/false);
+
+  llvm::SmallVector<PointerFlowPair> Pairs;
+  PointerFlowPairMatcher Matcher{Ctx};
+
+  for (auto &[GrpCano, ContriGrp] : ContributorGroups)
+    for (auto *ContriDecl : ContriGrp) {
+      auto PairsCollector = [&Pairs, &Matcher,
+                             &ContriDecl](const DynTypedNode &Node) {
+        Matcher.matches(Node, ContriDecl, Pairs);
+      };
+      findMatchesIn(ContriDecl, PairsCollector);
+    }
+
+  for (const PointerFlowPair &Pair : Pairs) {
+    if (auto AC = adaptPointerFlow(Pair);
+        AC && llvm::all_of(AC->getReplacements(),
+                           std::mem_fn(&tooling::Replacement::isApplicable)))
+      for (const tooling::Replacement &R : AC->getReplacements())
+        Edits.addReplacement(R);
+  }
+}
+
+bool ExpressionRewriter::isExprBaseTransformed(const Expr *E) const {
+  return !getPtrExprClassifyResultsIfTransformed(E).empty();
+}
+
+const ClassifyResult *
+ExpressionRewriter::getDeclClassifyResultsIfTransformed(const Decl *D,
+                                                        bool IsRet) const {
+  auto Lookup = [](const auto &Map, const auto *Key) {
+    auto It = Map.find(Key);
+    return It == Map.end() ? nullptr : &It->second;
+  };
+  return IsRet ? Lookup(TransformedReturns, cast<FunctionDecl>(D))
+               : Lookup(TransformedDecls, D);
+}
+
+std::vector<const ClassifyResult *>
+ExpressionRewriter::getPtrExprClassifyResultsIfTransformed(
+    const Expr *E) const {
+  auto DPLs = translateDeclPointerLevel(E, Ctx);
+
+  if (!DPLs) {
+    // Errors indicate no transformation for E. No further action.
+    llvm::consumeError(DPLs.takeError());
+    return {};
+  }
+
+  std::vector<const ClassifyResult *> Result;
+
+  for (auto &DPL : *DPLs) {
+    const auto *ClassifyResult =
+        getDeclClassifyResultsIfTransformed(DPL.Decl, DPL.IsReturn);
+
+    if (!ClassifyResult)
+      return {};
+    Result.push_back(ClassifyResult);
+  }
+  return Result;
+}
+
+bool ExpressionRewriter::addEditToAtomicChange(
+    CharSourceRange Range, StringRef NewText, EditKind EditKind,
+    tooling::AtomicChange &AC) const {
+  assert(Range.isCharRange());
+
+  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
+    // FIXME: report...
+    return false;
+
+  const SourceManager &SM = Ctx.getSourceManager();
+  llvm::Error Err = [&]() -> llvm::Error {
+    switch (EditKind) {
+    case Replace:
+      return AC.replace(SM, Range, NewText);
+    case InsertAtBegin:
+      return AC.insert(SM, Range.getBegin(), NewText, /*InsertAfter=*/false);
+    case InsertAtEnd:
+      return AC.insert(SM, Range.getEnd(), NewText, /*InsertAfter=*/true);
+    }
+    llvm_unreachable("unhandled EditKind");
+  }();
+
+  if (Err) {
+    llvm::consumeError(std::move(Err));
+    // FIXME: generate a Report
+    // If AtomicChange has an error,the whole should be discard
+    return false;
+  }
+  return true;
+}
+
+} // namespace
 
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
