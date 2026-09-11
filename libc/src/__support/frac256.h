@@ -23,25 +23,17 @@ namespace LIBC_NAMESPACE_DECL {
 struct Frac256 : public UInt<256> {
   using UInt<256>::UInt;
 
-  // Convert Frac256 number to Frac128 with round-to-nearest
-  // (using bit 127 as the rounding bit).
+  // Convert Frac256 number to Frac128 with truncation.
   LIBC_INLINE constexpr Frac128 to_frac128() const {
-    uint64_t round = val[1] >> 63;
-    uint64_t lo = val[2] + round;
-    uint64_t hi = val[3] + (lo < round ? 1 : 0);
-    return Frac128({lo, hi});
+    return Frac128({val[2], val[3]});
   }
 
   LIBC_INLINE constexpr explicit operator Frac128() const {
     return to_frac128();
   }
 
-  // Convert Frac256 number to Frac64 with round-to-nearest
-  // (using bit 191 as the rounding bit, i.e., bit 63 of limb 2).
-  LIBC_INLINE constexpr Frac64 to_frac64() const {
-    uint64_t round = val[2] >> 63;
-    return Frac64(val[3] + round);
-  }
+  // Convert Frac256 number to Frac64 with truncation.
+  LIBC_INLINE constexpr Frac64 to_frac64() const { return Frac64(val[3]); }
 
   LIBC_INLINE constexpr explicit operator Frac64() const { return to_frac64(); }
 
