@@ -28,7 +28,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
@@ -5154,7 +5156,44 @@ void CodeGenFunction::EmitCallArgs(
       std::swap(Args.back(), *(&Args.back() - 1));
   };
 
-  // Insert a stack save if we're going to need any inalloca args.
+  SmallVector<const CoroutineSuspendParameterBypassExpr *, 4>
+      BypassesToPreEvaluate;
+  if (isCoroutine() && hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
+    for (const Expr *A : ArgRange) {
+      if (auto *Bypass = dyn_cast<CoroutineSuspendParameterBypassExpr>(A)) {
+        BypassesToPreEvaluate.push_back(Bypass);
+      }
+    }
+  }
+
+  SmallVector<std::unique_ptr<OpaqueValueMapping>, 4> Mappings;
+  if (!BypassesToPreEvaluate.empty()) {
+    if (LeftToRight) {
+      for (const CoroutineSuspendParameterBypassExpr *Bypass :
+           BypassesToPreEvaluate) {
+        const auto *MTE = cast<MaterializeTemporaryExpr>(Bypass->getSubExpr());
+        LValue LV = EmitMaterializeTemporaryExpr(MTE);
+        const OpaqueValueExpr *OVE =
+            OpaqueValueExpr::findInCopyConstruct(Bypass->getMoveExpr());
+        assert(OVE && "OVE not found in MoveExpr");
+        Mappings.push_back(
+            std::make_unique<OpaqueValueMapping>(*this, OVE, LV));
+      }
+    } else {
+      for (int i = BypassesToPreEvaluate.size() - 1; i >= 0; --i) {
+        const CoroutineSuspendParameterBypassExpr *Bypass =
+            BypassesToPreEvaluate[i];
+        const auto *MTE = cast<MaterializeTemporaryExpr>(Bypass->getSubExpr());
+        LValue LV = EmitMaterializeTemporaryExpr(MTE);
+        const OpaqueValueExpr *OVE =
+            OpaqueValueExpr::findInCopyConstruct(Bypass->getMoveExpr());
+        assert(OVE && "OVE not found in MoveExpr");
+        Mappings.push_back(
+            std::make_unique<OpaqueValueMapping>(*this, OVE, LV));
+      }
+    }
+  }
+
   if (hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
     assert(getTarget().getTriple().getArch() == llvm::Triple::x86 &&
            "inalloca only supported on x86");
@@ -5278,15 +5317,37 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
+  bool IsBypassed = false;
+  const Expr *MoveExpr = nullptr;
+  const Expr *SubExpr = E;
+  if (auto *Bypass = dyn_cast<CoroutineSuspendParameterBypassExpr>(E)) {
+    IsBypassed = true;
+    MoveExpr = Bypass->getMoveExpr();
+    SubExpr = Bypass->getSubExpr();
+  }
+
   assert(type->isReferenceType() == E->isGLValue() &&
          "reference binding to unmaterialized r-value!");
 
   if (E->isGLValue()) {
     assert(E->getObjectKind() == OK_Ordinary);
-    return args.add(EmitReferenceBindingToExpr(E), type);
+    RValue RV = EmitReferenceBindingToExpr(SubExpr);
+    args.add(RV, type);
+    if (IsBypassed)
+      args.back().setMoveExpr(MoveExpr);
+    return;
   }
 
   bool HasAggregateEvalKind = hasAggregateEvaluationKind(type);
+
+  if (IsBypassed && HasAggregateEvalKind) {
+    const OpaqueValueExpr *OVE = OpaqueValueExpr::findInCopyConstruct(MoveExpr);
+    assert(OVE && "OVE not found in MoveExpr");
+    LValue LV = getOrCreateOpaqueLValueMapping(OVE);
+    args.addUncopiedAggregate(LV, type);
+    args.back().setMoveExpr(MoveExpr);
+    return;
+  }
 
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
@@ -5308,7 +5369,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     if (DestroyedInCallee)
       Slot.setExternallyDestructed();
 
-    EmitAggExpr(E, Slot);
+    EmitAggExpr(SubExpr, Slot);
     RValue RV = Slot.asRValue();
     args.add(RV, type);
 
@@ -5327,19 +5388,21 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   }
 
   if (HasAggregateEvalKind) {
-    auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+    auto *ICE = dyn_cast<ImplicitCastExpr>(SubExpr);
     if (ICE && ICE->getCastKind() == CK_LValueToRValue &&
         ICE->getSubExpr()->getType().getAddressSpace() !=
             LangAS::hlsl_constant &&
         !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
-      LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
+      LValue L = EmitLValue(cast<CastExpr>(SubExpr)->getSubExpr());
       assert(L.isSimple());
       args.addUncopiedAggregate(L, type);
       return;
     }
   }
 
-  args.add(EmitAnyExprToTemp(E), type);
+  args.add(EmitAnyExprToTemp(SubExpr), type);
+  if (IsBypassed)
+    args.back().setMoveExpr(MoveExpr);
 }
 
 QualType CodeGenFunction::getVarArgType(const Expr *Arg) {
@@ -5717,17 +5780,31 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     llvm::Instruction *IP = CallArgs.getStackBase();
     llvm::AllocaInst *AI;
     if (IP) {
-      IP = IP->getNextNode();
-      AI = new llvm::AllocaInst(ArgStruct, DL.getAllocaAddrSpace(), "argmem",
-                                IP->getIterator());
+      if (llvm::Instruction *Next = IP->getNextNode()) {
+        AI = new llvm::AllocaInst(ArgStruct, DL.getAllocaAddrSpace(), "argmem",
+                                  Next->getIterator());
+      } else {
+        AI = new llvm::AllocaInst(ArgStruct, DL.getAllocaAddrSpace(), "argmem",
+                                  IP->getParent());
+      }
     } else {
       AI = CreateTempAlloca(ArgStruct, "argmem");
     }
     auto Align = CallInfo.getArgStructAlignment();
     AI->setAlignment(Align.getAsAlign());
     AI->setUsedWithInAlloca(true);
+    if (isCoroutine()) {
+      AI->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                      llvm::MDNode::get(CGM.getLLVMContext(), {}));
+    }
     assert(AI->isUsedWithInAlloca() && !AI->isStaticAlloca());
     ArgMemory = RawAddress(AI, ArgStruct, Align);
+    if (isCoroutine()) {
+      CGBuilderTy::InsertPoint SavedIP = Builder.saveIP();
+      Builder.SetInsertPoint(AI->getParent(), std::next(AI->getIterator()));
+      EmitLifetimeStart(AI);
+      Builder.restoreIP(SavedIP);
+    }
   }
 
   ClangToLLVMArgMapping IRFunctionArgs(CGM.getContext(), CallInfo);
@@ -5813,6 +5890,30 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       assert(NumIRArgs == 0);
       assert(getTarget().getTriple().getArch() == llvm::Triple::x86);
       if (I->isAggregate()) {
+        if (I->isBypassed()) {
+          Address Addr = Address::invalid();
+          if (!ArgInfo.getInAllocaIndirect()) {
+            Addr = Builder.CreateStructGEP(ArgMemory,
+                                           ArgInfo.getInAllocaFieldIndex());
+          } else {
+            Addr = CreateMemTempWithoutCast(info_it->type,
+                                            "inalloca.indirect.tmp");
+          }
+          AggValueSlot Slot = AggValueSlot::forAddr(
+              Addr, I->Ty.getQualifiers(), AggValueSlot::IsDestructed,
+              AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+              AggValueSlot::DoesNotOverlap);
+          OpaqueValueMapping OVM(
+              *this, OpaqueValueExpr::findInCopyConstruct(I->getMoveExpr()),
+              I->getKnownLValue());
+          EmitAggExpr(I->getMoveExpr(), Slot);
+          if (ArgInfo.getInAllocaIndirect()) {
+            Address ArgSlot = Builder.CreateStructGEP(
+                ArgMemory, ArgInfo.getInAllocaFieldIndex());
+            Builder.CreateStore(Addr.emitRawPointer(*this), ArgSlot);
+          }
+          break;
+        }
         RawAddress Addr = I->hasLValue()
                               ? I->getKnownLValue().getAddress()
                               : I->getKnownRValue().getAggregateAddress();
@@ -6669,6 +6770,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // The stack cleanup for inalloca arguments has to run out of the normal
   // lexical order, so deactivate it and run it manually here.
   CallArgs.freeArgumentMemory(*this);
+  if (isCoroutine() && ArgMemory.isValid()) {
+    EmitLifetimeEnd(ArgMemory.getPointer());
+  }
 
   // Extract the return value.
   RValue Ret;

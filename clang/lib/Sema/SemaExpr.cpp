@@ -6258,6 +6258,113 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   return false;
 }
 
+static bool isWin32InAllocaRecord(ASTContext &Context, QualType Ty) {
+  const RecordType *RT = Ty->getAs<RecordType>();
+  if (!RT)
+    return false;
+  const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+  if (!RD)
+    return false;
+
+  const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
+  if (Triple.getArch() != llvm::Triple::x86 || !Triple.isOSWindows())
+    return false;
+  if (!Context.getTargetInfo().getCXXABI().isMicrosoft())
+    return false;
+
+  if (RD->canPassInRegisters())
+    return false;
+
+  TypeInfo Info = Context.getTypeInfo(Context.getCanonicalTagType(RD));
+  if (Info.isAlignRequired() && Info.Align > 4)
+    return false; // passed indirectly
+
+  return true;
+}
+
+namespace {
+class CoroutineSuspendPointDetector
+    : public ConstEvaluatedExprVisitor<CoroutineSuspendPointDetector> {
+  using Base = ConstEvaluatedExprVisitor<CoroutineSuspendPointDetector>;
+
+public:
+  bool Suspends = false;
+
+  CoroutineSuspendPointDetector(const ASTContext &Ctx) : Base(Ctx) {}
+
+  void Visit(const Expr *E) {
+    if (!E || Suspends)
+      return;
+    Base::Visit(E);
+  }
+
+  void VisitCoawaitExpr(const CoawaitExpr *E) { Suspends = true; }
+  void VisitCoyieldExpr(const CoyieldExpr *E) { Suspends = true; }
+  void VisitDependentCoawaitExpr(const DependentCoawaitExpr *E) {
+    Suspends = true;
+  }
+};
+} // namespace
+
+static bool containsCoroutineSuspendPoints(const ASTContext &Ctx,
+                                           const Expr *E) {
+  CoroutineSuspendPointDetector Detector(Ctx);
+  Detector.Visit(E);
+  return Detector.Suspends;
+}
+
+static bool callHasSuspend(Sema &S, ArrayRef<Expr *> Args) {
+  if (S.getCurFunction() && S.getCurFunction()->isCoroutine()) {
+    for (const Expr *A : Args) {
+      if (A && containsCoroutineSuspendPoints(S.Context, A))
+        return true;
+    }
+  }
+  return false;
+}
+
+static bool usesInAlloca(ASTContext &Context, const FunctionProtoType *Proto,
+                         ArrayRef<Expr *> Args) {
+  unsigned NumParams = Proto->getNumParams();
+  for (unsigned i = 0; i < NumParams; i++) {
+    if (isWin32InAllocaRecord(Context, Proto->getParamType(i)))
+      return true;
+  }
+  if (Proto->isVariadic()) {
+    for (size_t i = NumParams; i < Args.size(); i++) {
+      if (Args[i] && isWin32InAllocaRecord(Context, Args[i]->getType()))
+        return true;
+    }
+  }
+  return false;
+}
+
+static ExprResult InitializeAndBypassArg(Sema &S,
+                                         const InitializedEntity &Entity,
+                                         Expr *Arg, bool IsListInitialization,
+                                         bool AllowExplicit) {
+  ExprResult Materialized =
+      S.CreateMaterializeTemporaryExpr(Arg->getType(), Arg, false);
+  if (Materialized.isInvalid())
+    return ExprError();
+  Expr *PreBypassArg = Materialized.get();
+
+  auto *OVE = new (S.Context)
+      OpaqueValueExpr(PreBypassArg->getExprLoc(), PreBypassArg->getType(),
+                      PreBypassArg->getValueKind(),
+                      PreBypassArg->getObjectKind(), PreBypassArg);
+
+  ExprResult ArgE = S.PerformCopyInitialization(
+      Entity, SourceLocation(), OVE, IsListInitialization, AllowExplicit);
+  if (ArgE.isInvalid())
+    return ExprError();
+
+  Expr *Result = ArgE.getAs<Expr>();
+  Result = CoroutineSuspendParameterBypassExpr::Create(S.Context, PreBypassArg,
+                                                       Result);
+  return Result;
+}
+
 bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   const FunctionProtoType *Proto,
                                   unsigned FirstParam, ArrayRef<Expr *> Args,
@@ -6265,6 +6372,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   VariadicCallType CallType, bool AllowExplicit,
                                   bool IsListInitialization) {
   unsigned NumParams = Proto->getNumParams();
+  bool CallNeedsBypass =
+      callHasSuspend(*this, Args) && usesInAlloca(Context, Proto, Args);
   bool Invalid = false;
   size_t ArgIx = 0;
   // Continue to check argument types (even if we have too few/many args).
@@ -6324,9 +6433,16 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                         : diag::warn_obt_discarded_at_function_boundary)
             << Arg->getType() << ProtoArgType;
       }
-
-      ExprResult ArgE = PerformCopyInitialization(
-          Entity, SourceLocation(), Arg, IsListInitialization, AllowExplicit);
+      bool NeedsBypass = CallNeedsBypass &&
+                         (!ProtoArgType->isReferenceType() || Arg->isPRValue());
+      ExprResult ArgE;
+      if (NeedsBypass) {
+        ArgE = InitializeAndBypassArg(*this, Entity, Arg, IsListInitialization,
+                                      AllowExplicit);
+      } else {
+        ArgE = PerformCopyInitialization(Entity, SourceLocation(), Arg,
+                                         IsListInitialization, AllowExplicit);
+      }
       if (ArgE.isInvalid())
         return true;
 
@@ -6370,7 +6486,19 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       for (Expr *A : Args.slice(ArgIx)) {
         ExprResult Arg = DefaultVariadicArgumentPromotion(A, CallType, FDecl);
         Invalid |= Arg.isInvalid();
-        AllArgs.push_back(Arg.get());
+        if (!Arg.isInvalid()) {
+          Expr *E = Arg.get();
+          bool NeedsBypass = CallNeedsBypass && E->isPRValue();
+          if (NeedsBypass) {
+            InitializedEntity ArgEntity =
+                InitializedEntity::InitializeTemporary(E->getType());
+            ExprResult ArgE =
+                InitializeAndBypassArg(*this, ArgEntity, E, false, false);
+            if (!ArgE.isInvalid())
+              E = ArgE.getAs<Expr>();
+          }
+          AllArgs.push_back(E);
+        }
       }
     }
 

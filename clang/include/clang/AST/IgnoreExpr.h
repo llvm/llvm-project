@@ -109,6 +109,9 @@ inline Expr *IgnoreImplicitSingleStep(Expr *E) {
   if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
     return BTE->getSubExpr();
 
+  if (auto *Bypass = dyn_cast<CoroutineSuspendParameterBypassExpr>(E))
+    return Bypass->getSubExpr();
+
   return E;
 }
 
