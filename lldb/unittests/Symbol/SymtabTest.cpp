@@ -739,6 +739,11 @@ Symbols:
   // And we should be able to get it again once it has been created.
   Symtab *cached_module_symtab = module_sp->GetSymtab(/*can_create=*/false);
   ASSERT_EQ(module_symtab, cached_module_symtab);
+
+  SymbolFile *symbol_file = module_sp->GetSymbolFile();
+  ASSERT_NE(symbol_file, nullptr);
+  EXPECT_EQ(symbol_file->GetAbilities(),
+            static_cast<uint32_t>(SymbolFile::Symbols));
 }
 
 TEST_F(SymtabTest, TestSymbolTableCreatedOnDemand) {
