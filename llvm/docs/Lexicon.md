@@ -97,7 +97,7 @@ This document is a work in progress!
 
 **ento**
 :   This namespace houses the
-    [Clang Static Analyzer](https://clang.llvm.org/docs/ClangStaticAnalyzer.html).
+    [Clang Static Analyzer](inv:clang:std:doc#ClangStaticAnalyzer).
     It is an abbreviation of [entomology](https://en.wikipedia.org/wiki/Entomology).
 
       *"Entomology is the scientific study of insects."*
