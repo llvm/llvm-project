@@ -257,6 +257,62 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the X86 Backend
 
+* A masked gather/scatter that is split across several instructions is now
+  costed by how many instructions CodeGen emits, rather than by how many
+  legalized registers its operands occupy. The two differ when rounding the
+  length up to a power of two, which is what legalization does first, adds at
+  least one whole part with no live lane in it: a 24-lane qword-indexed gather
+  covers eight lanes per instruction, but legalizes to a 32-lane, four-register
+  form whose fourth register holds nothing live, so it is now costed as the
+  three instructions it becomes. This affects every subtarget that has a
+  hardware gather or scatter, at the lengths where that widening adds a dead
+  part, and it is the term that sets the code-size cost, so code-size costs
+  move as well. Lengths whose widening adds no whole dead part are unchanged.
+
+* All lanes of the original vector are now charged. Dividing the length by the
+  number of parts discarded the remainder, so a `v9i32` gather was costed as
+  eight lanes. This affects any length that is not a multiple of its part
+  count on any subtarget with a hardware gather or scatter. It does not change
+  code-size costs, which count instructions rather than lanes.
+
+* The index width of a masked gather/scatter is now derived whenever one is
+  priced, instead of only on AVX-512 targets at vector lengths of 16 or more.
+  Outside that window a gather through a 32-bit-index GEP was priced as though
+  its indices were pointer-width, tying it with the qword-indexed form that
+  CodeGen splits into roughly twice as many instructions. Non-AVX-512 targets
+  with a hardware gather, such as `skylake`, and AVX-512 targets at shorter
+  lengths, are the ones affected; operations that genuinely need 64-bit indices
+  are unchanged.
+
+  A narrow index only survives into the instruction if the addressing mode can
+  apply the GEP's stride as a scale, and the scale field encodes 1, 2, 4 and 8.
+  Any other stride is multiplied into the index first, and the product is
+  pointer-width, so such a gather is now costed with 64-bit indices. This
+  corrects a gather over an array of structures, the form a vectorized
+  `a[idx[i]].f` takes, which was previously costed at half the instructions
+  CodeGen emits.
+
+* That index width is also taken from the address space the pointers live in,
+  instead of assuming the width of address space 0. On x86 this matters for the
+  32-bit address spaces 270 and 271: a vector of those pointers is half as wide
+  as the same count of ordinary pointers, so it is no longer costed as though it
+  had to be split in two.
+
+* A mask known at compile time now decides which parts are counted, so a part
+  holding no live lane is not charged and an operation with no live lane at all
+  is free. A 24-lane qword-indexed gather with only its first eight lanes live
+  becomes one instruction rather than three, and only the live lanes are charged
+  for their memory accesses. Where the mask is not known, a gather still drops
+  the tail that legalization's widening added, because its result goes unused,
+  while a scatter counts it, because it survives as a store under a zeroed mask
+  that CodeGen still emits. How far that tail reaches follows the predicate:
+  with AVX512BW the mask fills a k-register as wide as the legalized vector, and
+  without it the mask is broken into 16-lane pieces and the tail stops at the
+  next of those.
+
+  Because these are the costs the loop vectorizer compares, some loops
+  containing a gather or scatter now vectorize at a wider factor than before.
+
 ### Changes to the OCaml bindings
 
 ### Changes to the Python bindings
