@@ -1149,7 +1149,10 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
 
       // Emit each statement individually, passing slot to constructor.
       for (const Stmt *S : CS->body()) {
-        if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(S))
+        const Stmt *Inner = S;
+        if (const auto *EWC = dyn_cast<ExprWithCleanups>(S))
+          Inner = EWC->getSubExpr();
+        if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Inner))
           CGF.EmitCXXConstructExpr(CtorExpr, Slot);
         else
           CGF.EmitStmt(S);

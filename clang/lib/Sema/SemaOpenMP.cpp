@@ -24381,7 +24381,7 @@ void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
 
   // For non-trivial types with user initializers, build an AST that
   // includes default construction first to initialize members before user
-  // initializer. This must be done BEFORE popping contexts.
+  // initializer. This must be done before popping contexts.
   if (Initializer && !DRD->getDeclContext()->isDependentContext()) {
     QualType ReductionType = DRD->getType();
     if (const auto *RD = ReductionType->getAsCXXRecordDecl()) {
@@ -24389,35 +24389,14 @@ void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
           SemaRef.LookupDefaultConstructor(const_cast<CXXRecordDecl *>(RD));
       if (DefaultCtor && !DefaultCtor->isDeleted() &&
           !DefaultCtor->isTrivial()) {
-        // Build default arguments for constructor parameters.
-        SmallVector<Expr *, 4> CtorArgs;
-        for (unsigned I : llvm::seq(DefaultCtor->getNumParams())) {
-          const ParmVarDecl *Param = DefaultCtor->getParamDecl(I);
-          if (Param->hasDefaultArg()) {
-            ExprResult DefArg = SemaRef.BuildCXXDefaultArgExpr(
-                D->getLocation(), DefaultCtor,
-                const_cast<ParmVarDecl *>(Param));
-            if (DefArg.isUsable())
-              CtorArgs.push_back(DefArg.get());
-          }
-        }
+        SemaRef.ActOnUninitializedDecl(OmpPrivParm);
+        if (Expr *DefaultInit = OmpPrivParm->getInit()) {
+          OmpPrivParm->setInit(nullptr);
 
-        // Build constructor expression targeting omp_priv.
-        ExprResult CtorCall = SemaRef.BuildCXXConstructExpr(
-            D->getLocation(), ReductionType, DefaultCtor,
-            /*Elidable=*/false, CtorArgs,
-            /*HadMultipleCandidates=*/false,
-            /*IsListInitialization=*/false,
-            /*IsStdInitListInitialization=*/false,
-            /*RequiresZeroInit=*/false, CXXConstructionKind::Complete,
-            SourceRange());
-
-        if (CtorCall.isUsable()) {
-          // Wrap constructor and user initializer in StmtExpr.
-          // Create CompoundStmt directly since we don't have an active
-          // scope.
+          // Wrap default-init and user initializer in a StmtExpr. Create
+          // CompoundStmt directly since we don't have an active scope.
           SmallVector<Stmt *, 2> Stmts;
-          Stmts.push_back(CtorCall.get());
+          Stmts.push_back(DefaultInit);
           Stmts.push_back(Initializer);
 
           CompoundStmt *CS =
