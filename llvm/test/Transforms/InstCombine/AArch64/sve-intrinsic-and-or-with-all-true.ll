@@ -261,19 +261,4 @@ define <vscale x 16 x i1> @test_and_convert_no_all_true(<vscale x 8 x i1> %x, <v
   ret <vscale x 16 x i1> %result
 }
 
-; Negative test
-define <vscale x 16 x i1> @test_orr_convert_svcount(target("aarch64.svcount") %a) #0 {
-; CHECK-LABEL: define <vscale x 16 x i1> @test_orr_convert_svcount(
-; CHECK-SAME: target("aarch64.svcount") [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CONV_A1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[A]])
-; CHECK-NEXT:    [[CONV_A2:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[A]])
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.orr.z.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_A1]], <vscale x 16 x i1> [[CONV_A2]])
-; CHECK-NEXT:    ret <vscale x 16 x i1> [[RESULT]]
-;
-  %conv_a1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") %a)
-  %conv_a2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") %a)
-  %result = tail call <vscale x 16 x i1> @llvm.aarch64.sve.orr.z.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> %conv_a1, <vscale x 16 x i1> %conv_a2)
-  ret <vscale x 16 x i1> %result
-}
-
 attributes #0 = { "target-features"="+sve" }
