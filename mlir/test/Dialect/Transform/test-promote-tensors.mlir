@@ -36,7 +36,7 @@ func.func @promote_out(%arg0: tensor<?x42xf32>, %arg1: tensor<?x42xf32>, %arg2: 
     // CHECK:  %[[ALLOC:.+]] = bufferization.alloc_tensor(%[[DIM0]], %[[DIM1]]) <{memory_space = 1 : i64}>
     // CHECK-NOT: materialize_in_destination
     // CHECK:  linalg.elementwise {{.*}} outs(%[[ALLOC]]
-    %0 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%arg0, %arg1 : tensor<?x42xf32>, tensor<?x42xf32>)
+    %0 = linalg.elementwise <add> ins(%arg0, %arg1 : tensor<?x42xf32>, tensor<?x42xf32>)
                     outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
     return %0 : tensor<?x?xf32>
 }
@@ -72,8 +72,8 @@ func.func @promote_in0_out_bufferize(%arg0: tensor<?x42xf32>, %arg1: tensor<42x?
     // CHECK:  %{{.+}} = memref.dim %{{.+}}, %{{.+}} : memref<?x42xf32, strided<[?, ?], offset: ?>>
     // CHECK:  %[[ALLOC_IN:.+]] = memref.alloc(%{{.+}}) alignment = 64 : memref<?x42xf32, 1>
     // CHECK:  memref.copy %[[IN0]], %[[ALLOC_IN]] : memref<?x42xf32, strided<[?, ?], offset: ?>> to memref<?x42xf32, 1>
-    // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%[[ALLOC_IN]], %[[IN1]] : memref<?x42xf32, 1>, memref<42x?xf32, strided<[?, ?], offset: ?>>) outs(%[[ALLOC_OUT]] : memref<?x?xf32, 1>)
-    %0 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%arg0, %arg1: tensor<?x42xf32>, tensor<42x?xf32>)
+    // CHECK: linalg.elementwise <add> ins(%[[ALLOC_IN]], %[[IN1]] : memref<?x42xf32, 1>, memref<42x?xf32, strided<[?, ?], offset: ?>>) outs(%[[ALLOC_OUT]] : memref<?x?xf32, 1>)
+    %0 = linalg.elementwise <add> ins(%arg0, %arg1: tensor<?x42xf32>, tensor<42x?xf32>)
                     outs(%arg2: tensor<?x?xf32>) -> tensor<?x?xf32>
     return %0 : tensor<?x?xf32>
 }
