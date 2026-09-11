@@ -653,6 +653,29 @@ TEST_F(ExtractFunctionTest, SingleStatement) {
       [[stream << "x";]]
     })cpp"),
               HasSubstr("extracted"));
+  // Selecting a subexpression of an operator call (rather than the whole
+  // statement) must not be extracted: it is not a standalone statement, and
+  // "extracting" it would replace only part of the expression.
+  EXPECT_EQ(apply(R"cpp(
+    struct Stream {};
+    Stream &operator<<(Stream &, int);
+    Stream stream;
+    void test() {
+      stream << [[3]];
+    })cpp"),
+            "unavailable");
+  // Same as above, but the selected subexpression is itself an
+  // (Unselected-but-fully-covered) CXXOperatorCallExpr nested as an argument
+  // of an outer call, rather than a Complete leaf expression.
+  EXPECT_EQ(apply(R"cpp(
+    struct Stream {};
+    Stream &operator<<(Stream &, int);
+    void foo(Stream &, int);
+    Stream stream;
+    void test() {
+      foo([[stream << 3]], 4);
+    })cpp"),
+            "unavailable");
 }
 
 } // namespace

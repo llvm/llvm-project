@@ -119,6 +119,29 @@ bool isRootStmt(const Node *N) {
   return true;
 }
 
+// Given a Child that is itself a single RootStmt (either because it's
+// completely selected, or because it's an isUnselectedRootStmtCandidate),
+// returns Child's enclosing statement, which is where we'll look for
+// Child's RootStmt siblings.
+//
+// If parent is a DeclStmt, even though it's unselected, we consider it a
+// root statement and return its parent instead. This is done because the
+// VarDecls claim the entire selection range of the Declaration and DeclStmt
+// is always unselected.
+//
+// Returns null if the (possibly DeclStmt-adjusted) parent is an Expr: this
+// means Child is merely a subexpression of a larger expression rather than
+// a genuine standalone statement, e.g. selecting just the "3" in
+// `stream << 3;`, and extracting it would produce broken code.
+const Node *getEnclosingStmt(const Node *Child) {
+  const Node *Parent = Child->Parent;
+  if (Parent->ASTNode.get<DeclStmt>())
+    Parent = Parent->Parent;
+  if (Parent->ASTNode.get<Expr>())
+    return nullptr;
+  return Parent;
+}
+
 // Returns the (unselected) parent of all RootStmts given the commonAncestor.
 // Returns null if:
 // 1. any node is partially selected
@@ -142,9 +165,7 @@ const Node *getParentOfRootStmts(const Node *CommonAnc) {
     // root statement in its own right, and we need its actual parent, same
     // as in the Complete case below.
     if (isUnselectedRootStmtCandidate(CommonAnc)) {
-      Parent = CommonAnc->Parent;
-      if (Parent->ASTNode.get<DeclStmt>())
-        Parent = Parent->Parent;
+      Parent = getEnclosingStmt(CommonAnc);
       break;
     }
     // Ensure all Children are RootStmts.
@@ -154,17 +175,11 @@ const Node *getParentOfRootStmts(const Node *CommonAnc) {
     // Only a fully-selected single statement can be selected.
     return nullptr;
   case SelectionTree::Selection::Complete:
-    // If the Common Ancestor is completely selected, then it's a root statement
-    // and its parent will be unselected.
-    Parent = CommonAnc->Parent;
-    // If parent is a DeclStmt, even though it's unselected, we consider it a
-    // root statement and return its parent. This is done because the VarDecls
-    // claim the entire selection range of the Declaration and DeclStmt is
-    // always unselected.
-    if (Parent->ASTNode.get<DeclStmt>())
-      Parent = Parent->Parent;
+    Parent = getEnclosingStmt(CommonAnc);
     break;
   }
+  if (!Parent)
+    return nullptr;
   // Ensure all Children are RootStmts.
   return llvm::all_of(Parent->Children, isRootStmt) ? Parent : nullptr;
 }
