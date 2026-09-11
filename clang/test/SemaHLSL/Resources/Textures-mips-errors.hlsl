@@ -3,16 +3,25 @@
 // RUN:   -DTEXTURE=Texture2D -DINDEX_TYPE=int2 -DHAS_MIPS -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=Texture3D -DINDEX_TYPE=int3 -DHAS_MIPS -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=Texture2DArray -DINDEX_TYPE=int3 -DHAS_MIPS -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=RWTexture2D -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=RWTexture3D -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=RWTexture2DArray -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=TextureCube -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=TextureCubeArray -verify %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

@@ -7,8 +7,8 @@ define dso_local void @foo_flat(ptr noundef %x, i64 %y.coerce0, i64 %y.coerce1, 
 ; CHECK-SAME: ptr noundef [[X:%.*]], i64 [[Y_COERCE0:%.*]], i64 [[Y_COERCE1:%.*]], i32 noundef [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[COND]], 0
-; CHECK-NEXT:    [[DOTY_COERCE1:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE1]]
 ; CHECK-NEXT:    [[DOTY_COERCE0:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE0]]
+; CHECK-NEXT:    [[DOTY_COERCE1:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE1]]
 ; CHECK-NEXT:    store i64 [[DOTY_COERCE0]], ptr [[X]], align 16
 ; CHECK-NEXT:    [[X_REPACK7:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    store i64 [[DOTY_COERCE1]], ptr [[X_REPACK7]], align 8
@@ -62,8 +62,8 @@ define dso_local void @foo_nested(ptr noundef %x, i64 %y.coerce0, i64 %y.coerce1
 ; CHECK-SAME: ptr noundef [[X:%.*]], i64 [[Y_COERCE0:%.*]], i64 [[Y_COERCE1:%.*]], i32 noundef [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[COND]], 0
-; CHECK-NEXT:    [[DOTY_COERCE1:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE1]]
 ; CHECK-NEXT:    [[DOTY_COERCE0:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE0]]
+; CHECK-NEXT:    [[DOTY_COERCE1:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE1]]
 ; CHECK-NEXT:    store i64 [[DOTY_COERCE0]], ptr [[X]], align 16
 ; CHECK-NEXT:    [[X_REPACK7:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    store i64 [[DOTY_COERCE1]], ptr [[X_REPACK7]], align 8
@@ -324,20 +324,13 @@ define dso_local void @foo_ptr(ptr noundef %x, ptr %p0, ptr %p1,
 ; CHECK-LABEL: define dso_local void @foo_ptr(
 ; CHECK-SAME: ptr noundef [[X:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], i32 noundef [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TEMP:%.*]] = alloca [[STRUCT_PTR4:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TEMP]])
-; CHECK-NEXT:    store ptr [[P0]], ptr [[TEMP]], align 8
-; CHECK-NEXT:    [[Y_SROA_2_0_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TEMP]], i64 8
-; CHECK-NEXT:    store ptr [[P1]], ptr [[Y_SROA_2_0_TEMP_SROA_IDX]], align 8
-; CHECK-NEXT:    [[Y_SROA_3_0_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TEMP]], i64 16
-; CHECK-NEXT:    store ptr [[P2]], ptr [[Y_SROA_3_0_TEMP_SROA_IDX]], align 8
-; CHECK-NEXT:    [[Y_SROA_4_0_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TEMP]], i64 24
-; CHECK-NEXT:    store ptr [[P3]], ptr [[Y_SROA_4_0_TEMP_SROA_IDX]], align 8
 ; CHECK-NEXT:    [[TOBOOL_PTR_NOT:%.*]] = icmp eq i32 [[COND]], 0
-; CHECK-NEXT:    [[DATA_SROA_0_0_COPYLOAD_PRE:%.*]] = load <4 x ptr>, ptr [[TEMP]], align 8
+; CHECK-NEXT:    [[Y_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[P0]], i64 0
+; CHECK-NEXT:    [[Y_SROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x ptr> [[Y_SROA_0_0_VEC_INSERT]], ptr [[P1]], i64 1
+; CHECK-NEXT:    [[Y_SROA_0_16_VEC_INSERT:%.*]] = insertelement <4 x ptr> [[Y_SROA_0_8_VEC_INSERT]], ptr [[P2]], i64 2
+; CHECK-NEXT:    [[DATA_SROA_0_0_COPYLOAD_PRE:%.*]] = insertelement <4 x ptr> [[Y_SROA_0_16_VEC_INSERT]], ptr [[P3]], i64 3
 ; CHECK-NEXT:    [[DATA_SROA_0_0_COPYLOAD:%.*]] = select i1 [[TOBOOL_PTR_NOT]], <4 x ptr> splat (ptr null), <4 x ptr> [[DATA_SROA_0_0_COPYLOAD_PRE]]
 ; CHECK-NEXT:    store <4 x ptr> [[DATA_SROA_0_0_COPYLOAD]], ptr [[X]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TEMP]])
 ; CHECK-NEXT:    ret void
 ;
   ptr %p2, ptr %p3,

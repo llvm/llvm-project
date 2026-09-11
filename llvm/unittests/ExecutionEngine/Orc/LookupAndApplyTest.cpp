@@ -96,6 +96,35 @@ TEST(LookupAndApplyTest, RecordAddrWeaklyReferencedAbsent) {
   cantFail(ES.endSession());
 }
 
+// The SymbolStringPtr overload behaves like the StringRef overload for a
+// present, required symbol -- the caller just does the interning itself.
+TEST(LookupAndApplyTest, RecordAddrSymbolStringPtr) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  auto &JD = ES.getBootstrapJITDylib();
+  defineAddr(JD, "addr_a", ExecutorAddr(AddrAValue));
+
+  ExecutorAddr A;
+  cantFail(lookupAndApply(JD, {recordAddr(ES.intern("addr_a"), &A)}));
+  EXPECT_EQ(A, ExecutorAddr(AddrAValue));
+
+  cantFail(ES.endSession());
+}
+
+// As above, but for a weakly-referenced symbol that is missing: records a
+// null address rather than failing the lookup.
+TEST(LookupAndApplyTest, RecordAddrSymbolStringPtrWeaklyReferencedAbsent) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  ExecutorAddr A(AddrAValue);
+  cantFail(
+      lookupAndApply(ES.getBootstrapJITDylib(),
+                     {recordAddr(ES.intern("absent"), &A,
+                                 SymbolLookupFlags::WeaklyReferencedSymbol)}));
+  EXPECT_EQ(A, ExecutorAddr());
+
+  cantFail(ES.endSession());
+}
+
 // Several prepare functions in one call are all applied, and a single one may
 // contribute more than one symbol.
 TEST(LookupAndApplyTest, MultiplePrepareFns) {

@@ -7,7 +7,7 @@
 ; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S %s | FileCheck %s --check-prefix=NO-VP
 
-define void @test_sdiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @test_sdiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_sdiv(
 ; IF-EVL-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -40,8 +40,7 @@ define void @test_sdiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP12]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP12]]
@@ -100,7 +99,7 @@ exit:
   ret void
 }
 
-define void @test_sdiv_divisor_invariant_nonconst(ptr noalias %a, i64 %b, ptr noalias %c) {
+define void @test_sdiv_divisor_invariant_nonconst(ptr noalias %a, i64 %b, ptr noalias %c) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_sdiv_divisor_invariant_nonconst(
 ; IF-EVL-SAME: ptr noalias [[A:%.*]], i64 [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -133,8 +132,7 @@ define void @test_sdiv_divisor_invariant_nonconst(ptr noalias %a, i64 %b, ptr no
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
@@ -189,7 +187,7 @@ exit:
   ret void
 }
 
-define void @test_sdiv_both_invariant_nonconst(ptr noalias %a, i64 %b, i64 %b2, ptr noalias %c) {
+define void @test_sdiv_both_invariant_nonconst(ptr noalias %a, i64 %b, i64 %b2, ptr noalias %c) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_sdiv_both_invariant_nonconst(
 ; IF-EVL-SAME: ptr noalias [[A:%.*]], i64 [[B:%.*]], i64 [[B2:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -225,8 +223,7 @@ define void @test_sdiv_both_invariant_nonconst(ptr noalias %a, i64 %b, i64 %b2, 
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
@@ -284,7 +281,7 @@ exit:
   ret void
 }
 
-define void @test_sdiv_divisor_invariant_minusone(ptr noalias %a, ptr noalias %c) {
+define void @test_sdiv_divisor_invariant_minusone(ptr noalias %a, ptr noalias %c) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_sdiv_divisor_invariant_minusone(
 ; IF-EVL-SAME: ptr noalias [[A:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -315,8 +312,7 @@ define void @test_sdiv_divisor_invariant_minusone(ptr noalias %a, ptr noalias %c
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
@@ -369,7 +365,7 @@ exit:
   ret void
 }
 
-define void @test_sdiv_divisor_invariant_safeimm(ptr noalias %a, ptr noalias %c) {
+define void @test_sdiv_divisor_invariant_safeimm(ptr noalias %a, ptr noalias %c) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_sdiv_divisor_invariant_safeimm(
 ; IF-EVL-SAME: ptr noalias [[A:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -400,8 +396,7 @@ define void @test_sdiv_divisor_invariant_safeimm(ptr noalias %a, ptr noalias %c)
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
@@ -454,7 +449,7 @@ exit:
   ret void
 }
 
-define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_udiv(
 ; IF-EVL-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -487,8 +482,7 @@ define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP12]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP12]]
@@ -547,7 +541,7 @@ exit:
   ret void
 }
 
-define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_srem(
 ; IF-EVL-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -580,8 +574,7 @@ define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP12]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP12]]
@@ -640,7 +633,7 @@ exit:
   ret void
 }
 
-define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_urem(
 ; IF-EVL-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -673,8 +666,7 @@ define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP12]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP12]]

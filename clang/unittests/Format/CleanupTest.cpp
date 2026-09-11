@@ -464,6 +464,39 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleNewHeadersAndSortGoogle) {
   EXPECT_EQ(Expected, formatAndApply(Code, Replaces));
 }
 
+TEST_F(CleanUpReplacementsTest, InsertMainHeaderAtTopAndSortLLVM) {
+  std::string Code = "int x;\n";
+  std::string Expected = "#include \"fix.h\"\n"
+                         "#include \"a.h\"\n"
+                         "#include \"b.h\"\n"
+                         "#include <vector>\n"
+                         "int x;\n";
+  tooling::Replacements Replaces = toReplacements({
+      createInsertion("#include \"b.h\""),
+      createInsertion("#include <vector>"),
+      createInsertion("#include \"a.h\""),
+      createInsertion("#include \"fix.h\""),
+  });
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, InsertMainHeaderAtTopAndSortGoogle) {
+  std::string Code = "int x;\n";
+  std::string Expected = "#include \"fix.h\"\n"
+                         "#include <vector>\n"
+                         "#include \"a.h\"\n"
+                         "#include \"b.h\"\n"
+                         "int x;\n";
+  tooling::Replacements Replaces = toReplacements({
+      createInsertion("#include \"b.h\""),
+      createInsertion("#include <vector>"),
+      createInsertion("#include \"a.h\""),
+      createInsertion("#include \"fix.h\""),
+  });
+  Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
 TEST_F(CleanUpReplacementsTest, NoNewLineAtTheEndOfCodeMultipleInsertions) {
   std::string Code = "#include <map>";
   // FIXME: a better behavior is to only append on newline to Code, but this

@@ -5,8 +5,18 @@
 // RUN:   --check-prefixes=CHECK,CHECK-TEXEL
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \
+// RUN:   -finclude-default-header -DTEXTURE=Texture3D -o - %s \
+// RUN:   | FileCheck %s -DTEXTURE=Texture3D -DDXIL_TY=4 -DRW=0 \
+// RUN:   --check-prefixes=CHECK,CHECK-TEXEL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \
 // RUN:   -finclude-default-header -DTEXTURE=TextureCube -o - %s \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DDXIL_TY=5 -DRW=0 \
+// RUN:   --check-prefixes=CHECK,CHECK-NOTEXEL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \
+// RUN:   -finclude-default-header -DTEXTURE=TextureCubeArray -o - %s \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DDXIL_TY=9 -DRW=0 \
 // RUN:   --check-prefixes=CHECK,CHECK-NOTEXEL
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \

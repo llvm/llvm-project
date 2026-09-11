@@ -526,6 +526,7 @@
 # NONSTREAMING-NEXT:  1      4     0.50                        dupm	z0.s, #0xfffffff9
 # NONSTREAMING-NEXT:  1      4     0.50                        dupm	z23.h, #0xfff9
 # NONSTREAMING-NEXT:  1      4     0.50                        dupm	z5.b, #0xf9
+# NONSTREAMING-NEXT:  1      3     0.50                        mov	z0.s, w1
 # NONSTREAMING-NEXT:  1      2     1.00                        eor	p0.b, p0/z, p0.b, p1.b
 # NONSTREAMING-NEXT:  1      3     0.50                        eor	z0.d, z0.d, #0x6
 # NONSTREAMING-NEXT:  1      3     0.50                        eor	z0.d, z0.d, #0xfffffffffffffff9
@@ -3946,6 +3947,7 @@
 # STREAMING-NEXT:     1      4     0.50                        dupm	z0.s, #0xfffffff9
 # STREAMING-NEXT:     1      4     0.50                        dupm	z23.h, #0xfff9
 # STREAMING-NEXT:     1      4     0.50                        dupm	z5.b, #0xf9
+# STREAMING-NEXT:     1      4     0.33                        mov	z0.s, w1
 # STREAMING-NEXT:     1      2     1.00                        eor	p0.b, p0/z, p0.b, p1.b
 # STREAMING-NEXT:     1      4     0.50                        eor	z0.d, z0.d, #0x6
 # STREAMING-NEXT:     1      4     0.50                        eor	z0.d, z0.d, #0xfffffffffffffff9
@@ -6940,11 +6942,11 @@
 
 # NONSTREAMING:      Resource pressure per iteration:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     393.00 54.00  9.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     221.00 2425.00  -     -     1382.50 1312.50 212.00 212.00 676.00
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     393.00 54.00  9.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     221.00 2425.00  -     -     1383.00 1313.00 212.00 212.00 676.00
 
 # STREAMING:         Resource pressure per iteration:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# STREAMING-NEXT:    2.67   2.67   2.67    -      -      -      -      -     225.00 14.00  9.00   245.00 211.00  -      -     464.50 267.50  -      -      -      -     122.00 1287.50 1.50  179.00 730.50 1.50   179.00  -     241.50 2093.50  -     -     184.50 172.50 6.00   6.00   435.00
+# STREAMING-NEXT:    3.00   3.00   3.00    -      -      -      -      -     225.00 14.00  9.00   245.00 211.00  -      -     464.50 267.50  -      -      -      -     122.00 1287.50 1.50  179.00 730.50 1.50   179.00  -     241.50 2093.50  -     -     184.50 172.50 6.00   6.00   435.00
 
 # NONSTREAMING:      Resource pressure by instruction:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
@@ -7455,6 +7457,7 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     dupm	z0.s, #0xfffffff9
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     dupm	z23.h, #0xfff9
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     dupm	z5.b, #0xf9
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     mov	z0.s, w1
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     eor	p0.b, p0/z, p0.b, p1.b
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     eor	z0.d, z0.d, #0x6
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     eor	z0.d, z0.d, #0xfffffffffffffff9
@@ -10876,6 +10879,7 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dupm	z0.s, #0xfffffff9
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dupm	z23.h, #0xfff9
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dupm	z5.b, #0xf9
+# STREAMING-NEXT:    0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	z0.s, w1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     eor	p0.b, p0/z, p0.b, p1.b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     eor	z0.d, z0.d, #0x6
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     eor	z0.d, z0.d, #0xfffffffffffffff9

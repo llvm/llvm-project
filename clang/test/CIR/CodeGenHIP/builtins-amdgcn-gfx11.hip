@@ -1,98 +1,98 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1100 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1101 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.01-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1102 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.02-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1103 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.03-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1150 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.50-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1151 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.51-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1152 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.52-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1153 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.53-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1100 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1101 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.01-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1102 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.02-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1103 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.03-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1150 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.50-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1151 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.51-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1152 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.52-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1153 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.53-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1100 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1101 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.01-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1102 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.02-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1103 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.03-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1150 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.50-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1151 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.51-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1152 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.52-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1153 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.53-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 #define __device__ __attribute__((device))

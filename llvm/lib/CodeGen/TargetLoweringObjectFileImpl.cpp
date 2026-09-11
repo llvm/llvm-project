@@ -2860,6 +2860,12 @@ bool TargetLoweringObjectFileGOFF::shouldPutJumpTableInFunctionSection(
   return true;
 }
 
+MCSection *TargetLoweringObjectFileGOFF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+  return TextSection;
+}
+
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return SelectSectionForGlobal(GO, Kind, TM);

@@ -890,6 +890,23 @@ TEST(StringMapCustomTest, SwapInvalidatesIterators) {
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 
+TEST(StringMapCustomTest, MoveConstructInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  auto It = Map.find("a");
+  StringMap<int> Other = std::move(Map);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(StringMapCustomTest, MoveAssignInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  auto It = Map.find("a");
+  StringMap<int> Other;
+  Other = std::move(Map);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
 TEST(StringMapCustomTest, IteratorComparability) {
   StringMap<int>::iterator I1, I2;
   EXPECT_EQ(I1, I2);

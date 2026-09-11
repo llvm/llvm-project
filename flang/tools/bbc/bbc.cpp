@@ -282,6 +282,12 @@ static llvm::cl::opt<bool>
                                  "the LHS of the intrinsic assignment"),
                   llvm::cl::init(true));
 
+static llvm::cl::opt<bool> fpSumReassociation(
+    "ffp-sum-reassociation",
+    llvm::cl::desc("Enable Fortran-standard compliant reassociation within "
+                   "individual REAL and COMPLEX sum expressions"),
+    llvm::cl::init(true));
+
 static llvm::cl::opt<bool> stackRepackArrays(
     "fstack-repack-arrays",
     llvm::cl::desc("Allocate temporary arrays for -frepack-arrays "
@@ -376,6 +382,7 @@ static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
 
   fir::OpenMPFIRPassPipelineOpts opts;
+  opts.isSimdOnly = false;
   opts.isTargetDevice = enableOpenMPDevice;
   opts.doConcurrentMappingKind =
       llvm::StringSwitch<DoConcurrentMappingKind>(
@@ -506,6 +513,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
+  loweringOptions.setSplitSumExpressionTree(fpSumReassociation);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);
   loweringOptions.setRepackArraysWhole(repackArraysWhole);
