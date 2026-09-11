@@ -9194,10 +9194,30 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
 
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
-        // Passing null to a nonnnull+noundef argument is undefined.
+        // Passing null to a nonnull+noundef argument is undefined.
         if (isa<ConstantPointerNull>(C) && C->getType()->isPointerTy() &&
-            CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
+            CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false)) {
+          // Call-site nonnull/dereferenceable is not a stable ABI contract:
+          // it may have been inferred when the argument was provably
+          // non-null and then gone stale (e.g. after inlining introduced a
+          // PHI with a null incoming). Treat nonnull as UB only when the
+          // callee itself declares it:
+          //   (a) an explicit 'nonnull' parameter attribute, or
+          //   (b) 'dereferenceable' (implies nonnull unless null pointers
+          //       are defined in the callee's address space).
+          const Function *Callee = CB->getCalledFunction();
+          if (!Callee || ArgIdx >= Callee->arg_size())
+            return false;
+          unsigned ArgAS =
+              CB->getArgOperand(ArgIdx)->getType()->getPointerAddressSpace();
+          bool CalleeImpliesNonNull =
+              Callee->hasParamAttribute(ArgIdx, Attribute::NonNull) ||
+              (Callee->hasParamAttribute(ArgIdx, Attribute::Dereferenceable) &&
+               !NullPointerIsDefined(Callee, ArgAS));
+          if (!CalleeImpliesNonNull)
+            return false;
           return !PtrValueMayBeModified;
+        }
         // Passing undef to a noundef argument is undefined.
         if (isa<UndefValue>(C) && CB->isPassingUndefUB(ArgIdx))
           return true;
