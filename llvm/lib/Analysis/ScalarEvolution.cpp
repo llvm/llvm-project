@@ -12263,6 +12263,15 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
                                    CanonicalFoundRHS);
   }
 
+  // X >= Y is equivalent to X > Y - 1, and this holds trivially when Y - 1
+  // does not overflow. When it does overflow, it must be INT_MAX, and the
+  // comparison would evaluate to false anyway.
+  if (ICmpInst::isGE(Pred) &&
+      isImpliedCondBalancedTypes(ICmpInst::getStrictPredicate(Pred), LHS,
+                                 getMinusSCEV(RHS, getOne(RHS->getType())),
+                                 FoundPred, FoundLHS, FoundRHS, CtxI))
+    return true;
+
   // Check if we can make progress by sharpening ranges.
   if (FoundPred == ICmpInst::ICMP_NE &&
       (isa<SCEVConstant>(FoundLHS) || isa<SCEVConstant>(FoundRHS))) {

@@ -10,9 +10,9 @@
 define void @sge_from_sgt_minus_one(i32 %start, i32 %n) {
 ; CHECK-LABEL: 'sge_from_sgt_minus_one'
 ; CHECK-NEXT:  Determining loop execution counts for: @sge_from_sgt_minus_one
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%start smin %n)) + %start)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %n) + %start)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%start smin %n)) + %start)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %n) + %start)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -34,9 +34,9 @@ exit:
 define void @uge_from_ugt_minus_one(i32 %start, i32 %n) {
 ; CHECK-LABEL: 'uge_from_ugt_minus_one'
 ; CHECK-NEXT:  Determining loop execution counts for: @uge_from_ugt_minus_one
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (%start umin %n)) + %start)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %n) + %start)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (%start umin %n)) + %start)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %n) + %start)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -59,9 +59,9 @@ exit:
 define void @sge_of_plus_one_from_sgt(i32 %x, i32 %z) {
 ; CHECK-LABEL: 'sge_of_plus_one_from_sgt'
 ; CHECK-NEXT:  Determining loop execution counts for: @sge_of_plus_one_from_sgt
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * ((1 + %z) smin %x)) + %x)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %z) + %x)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * ((1 + %z) smin %x)) + %x)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %z) + %x)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -84,9 +84,9 @@ exit:
 define void @uge_of_plus_one_from_ugt(i32 %x, i32 %z) {
 ; CHECK-LABEL: 'uge_of_plus_one_from_ugt'
 ; CHECK-NEXT:  Determining loop execution counts for: @uge_of_plus_one_from_ugt
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * ((1 + %z) umin %x)) + %x)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %z) + %x)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * ((1 + %z) umin %x)) + %x)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %z) + %x)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
