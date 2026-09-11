@@ -1543,6 +1543,35 @@ func.func @complex_tanh_nnan_ninf(%arg: complex<f32>) -> complex<f32> {
 
 // -----
 
+// CHECK-LABEL: func @complex_neg_with_fmf
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func.func @complex_neg_with_fmf(%arg: complex<f32>) -> complex<f32> {
+  %neg = complex.neg %arg fastmath<nnan,contract> : complex<f32>
+  return %neg : complex<f32>
+}
+// CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
+// CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
+// CHECK-DAG: %[[NEG_REAL:.*]] = arith.negf %[[REAL]] fastmath<nnan,contract> : f32
+// CHECK-DAG: %[[NEG_IMAG:.*]] = arith.negf %[[IMAG]] fastmath<nnan,contract> : f32
+// CHECK: %[[RESULT:.*]] = complex.create %[[NEG_REAL]], %[[NEG_IMAG]] : complex<f32>
+// CHECK: return %[[RESULT]] : complex<f32>
+
+// -----
+
+// CHECK-LABEL: func @complex_conj_with_fmf
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func.func @complex_conj_with_fmf(%arg: complex<f32>) -> complex<f32> {
+  %conj = complex.conj %arg fastmath<nnan,contract> : complex<f32>
+  return %conj : complex<f32>
+}
+// CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
+// CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
+// CHECK: %[[NEG_IMAG:.*]] = arith.negf %[[IMAG]] fastmath<nnan,contract> : f32
+// CHECK: %[[RESULT:.*]] = complex.create %[[REAL]], %[[NEG_IMAG]] : complex<f32>
+// CHECK: return %[[RESULT]] : complex<f32>
+
+// -----
+
 // CHECK-LABEL:   func.func @complex_angle_with_fmf
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
 func.func @complex_angle_with_fmf(%arg: complex<f32>) -> f32 {
