@@ -1,31 +1,36 @@
-## Show that llvm-strings uses the specified encoding.
+# Show that llvm-strings uses the specified encoding.
 RUN: echo a > %t
 RUN: echo ab >> %t
 RUN: echo abc >> %t
 RUN: echo abcd >> %t
 RUN: echo abcd€ >> %t
 
-## Check that long form options work.
+# Check that long form options work.
 RUN: llvm-strings --encoding s %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
 RUN: llvm-strings --encoding S %t | FileCheck --check-prefixes CHECK,CHECK-LOCALE --strict-whitespace --match-full-lines %s
 RUN: llvm-strings --encoding utf8 %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
 
-## Check that short form options work.
+# Check that short form options work.
 RUN: llvm-strings -e s %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
 RUN: llvm-strings -e S %t | FileCheck --check-prefixes CHECK,CHECK-LOCALE --strict-whitespace --match-full-lines %s
 RUN: llvm-strings -e utf8 %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
 
-## Check that the default output matches that of -e S.
+# Check that the default output matches that of -e S.
 RUN: llvm-strings -e S %t > %t.1
 RUN: llvm-strings %t > %t.2
 RUN: cmp %t.1 %t.2
 
+# The first line containing just abcd should always be matched.
 CHECK:abcd
-CHECK-ASCII-NOT:abcd€
+# In -e s, the bytes of € should not be included.
+CHECK-ASCII:abcd
+# In -e S, any bytes of € may or may not be included depending on the locale
+# in effect. The locale in effect may also be altered by llvm-lit.
 CHECK-LOCALE:abcd{{.*}}
+# In -e utf8, all bytes of € should be included.
 CHECK-UTF8:abcd€
 
-## Check that invalid --encoding values are rejected.
+# Check that invalid --encoding values are rejected.
 RUN: not llvm-strings --encoding x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
 RUN: not llvm-strings -e x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
 
