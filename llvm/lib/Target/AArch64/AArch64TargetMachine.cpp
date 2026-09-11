@@ -439,6 +439,8 @@ AArch64TargetMachine::~AArch64TargetMachine() = default;
 
 const AArch64Subtarget *
 AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
+  // Constructing the subtarget key is not cheap, avoid rebuilding it for
+  // repeated queries with the same function attributes.
   AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
   if (LastSubtarget && LastSubtargetAttrs == FnAttrs)
     return LastSubtarget;
