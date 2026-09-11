@@ -15129,11 +15129,17 @@ public:
       const NamedDecl *D1, ArrayRef<AssociatedConstraint> AC1,
       const NamedDecl *D2, ArrayRef<AssociatedConstraint> AC2);
 
+private:
+  friend class ConstraintSatisfactionChecker;
+  friend class SubstituteParameterMappings;
+
+  UnsignedOrNone EvaluateFoldExpandedConstraintSize(
+      const Expr *Pattern, const MultiLevelTemplateArgumentList &MLTAL);
+
   /// Cache the satisfaction of an atomic constraint.
   /// The key is based on the unsubstituted expression and the parameter
   /// mapping. This lets us not substituting the mapping more than once,
   /// which is (very!) expensive.
-  /// FIXME: this should be private.
   llvm::DenseMap<llvm::FoldingSetNodeID,
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
@@ -15145,7 +15151,6 @@ public:
   llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
       *CurrentCachedTemplateArgs = nullptr;
 
-private:
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in
   /// fact subsume the second's.
@@ -15165,23 +15170,6 @@ private:
 
   // The current stack of constraint satisfactions, so we can exit-early.
   llvm::SmallVector<SatisfactionStackEntryTy, 10> SatisfactionStack;
-
-  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to set up the
-  /// LocalInstantiationScope of the current non-lambda function. For lambdas,
-  /// use LambdaScopeForCallOperatorInstantiationRAII.
-  bool
-  SetupConstraintScope(FunctionDecl *FD,
-                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-                       const MultiLevelTemplateArgumentList &MLTAL,
-                       LocalInstantiationScope &Scope);
-
-  /// Used during constraint checking, sets up the constraint template argument
-  /// lists, and calls SetupConstraintScope to set up the
-  /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
-  std::optional<MultiLevelTemplateArgumentList>
-  SetupConstraintCheckingTemplateArgumentsAndScope(
-      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-      LocalInstantiationScope &Scope);
 
   ///@}
 

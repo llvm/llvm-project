@@ -329,7 +329,9 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     RecipeCost = computeCost(VF, Ctx);
     if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
         RecipeCost.isValid()) {
-      if (UI)
+      // VPDerivedIVRecipe and VPScalarIVStepsRecipe never have underlying
+      // instructions.
+      if (UI || isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(this))
         RecipeCost = InstructionCost(ForceTargetInstructionCost);
       else
         RecipeCost = InstructionCost(0);

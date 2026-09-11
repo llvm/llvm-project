@@ -465,6 +465,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.signal_macros
     .llvm-libc-types.pid_t
+    .llvm-libc-types.pthread_t
     .llvm-libc-types.sig_atomic_t
     .llvm-libc-types.sig_t
     .llvm-libc-types.sighandler_t
@@ -722,6 +723,15 @@ add_header_macro(
     .llvm-libc-types.sigset_t
     .llvm-libc-types.struct_timespec
     .llvm-libc-macros.sys_epoll_macros
+)
+
+add_header_macro(
+  sys_file
+  ../libc/include/sys/file.yaml
+  sys/file.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_file_macros
 )
 
 add_header_macro(

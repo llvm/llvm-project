@@ -9,6 +9,7 @@
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
