@@ -24,7 +24,7 @@ depending on the average size of your allocations.
 GWP-ASan vs. ASan
 =================
 
-Unlike `AddressSanitizer <https://clang.llvm.org/docs/AddressSanitizer.html>`_,
+Unlike :external+clang:doc:`AddressSanitizer`,
 GWP-ASan does not induce a significant performance overhead. ASan often requires
 the use of dedicated canaries to be viable in production environments, and as
 such is often impractical. Moreover, ASan's runtime is not developed with

@@ -16,7 +16,7 @@ component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
 Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
+the {external+libcxx:doc}`libc++ C++ standard library <index>`,
 the [LLD linker](https://lld.llvm.org), and more.
 
 (sources)=
@@ -631,10 +631,9 @@ with the latest Xcode:
 Note: There are some additional flags that need to be passed when building for
 iOS due to limitations in the iOS SDK.
 
-Check {doc}`HowToCrossCompileLLVM` and [Clang docs on how to cross-compile in general]
+Check {doc}`HowToCrossCompileLLVM` and
+{external+clang:doc}`Clang docs on how to cross-compile in general <CrossCompilation>`
 for more information about cross-compiling.
-
-[Clang docs on how to cross-compile in general]: https://clang.llvm.org/docs/CrossCompilation.html
 
 ### The Location of LLVM Object Files
 

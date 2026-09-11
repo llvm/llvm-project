@@ -1051,8 +1051,8 @@ consumed by the AMDGPU backend during code generation.
 Target ID
 ---------
 
-AMDGPU supports target IDs. See `Clang Offload Bundler
-<https://clang.llvm.org/docs/ClangOffloadBundler.html>`_ for a general
+AMDGPU supports target IDs. See :external+clang:doc:`Clang Offload Bundler
+<ClangOffloadBundler>` for a general
 description. The AMDGPU target specific information is:
 
 **processor**
@@ -1076,8 +1076,8 @@ description. The AMDGPU target specific information is:
 Code Object V2 to V3 Target ID
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The target ID syntax for code object V2 to V3 is the same as defined in `Clang
-Offload Bundler <https://clang.llvm.org/docs/ClangOffloadBundler.html>`_ except
+The target ID syntax for code object V2 to V3 is the same as defined in
+:external+clang:doc:`Clang Offload Bundler <ClangOffloadBundler>` except
 when used in the :ref:`amdgpu-assembler-directive-amdgcn-target` assembler
 directive and the bundle entry ID. In those cases it has the following BNF
 syntax:
@@ -1099,8 +1099,8 @@ Embedding Bundled Code Objects
 ------------------------------
 
 AMDGPU supports the HIP and OpenMP languages that perform code object embedding
-as described in `Clang Offload Bundler
-<https://clang.llvm.org/docs/ClangOffloadBundler.html>`_.
+as described in :external+clang:doc:`Clang Offload Bundler
+<ClangOffloadBundler>`.
 
 .. note::
 
@@ -22147,7 +22147,7 @@ Additional Documentation
 .. [AMD-ROCm] `AMD ROCm™ Platform <https://rocmdocs.amd.com/>`__
 .. [AMD-ROCm-github] `AMD ROCm™ github <http://github.com/ROCm>`__
 .. [AMD-ROCm-Release-Notes] `AMD ROCm Release Notes <https://github.com/ROCm/ROCm>`__
-.. [CLANG-ATTR] `Attributes in Clang <https://clang.llvm.org/docs/AttributeReference.html>`__
+.. [CLANG-ATTR] :external+clang:doc:`Attributes in Clang <AttributeReference>`
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__
 .. [ELF] `Executable and Linkable Format (ELF) <http://www.sco.com/developers/gabi/>`__
 .. [HRF] `Heterogeneous-race-free Memory Models <https://research.cs.wisc.edu/multifacet/papers/asplos14_hrf.pdf>`__

@@ -250,7 +250,9 @@ for name in os.listdir(command_guide_path):
 # man_show_urls = False
 
 # FIXME: Define intersphinx configuration.
-intersphinx_mapping = {}
+intersphinx_mapping = get_llvm_intersphinx_mapping(
+    "clang", "libcxx", "openmp", "flang"
+)
 
 # Pygment lexer are sometimes out of date (when parsing LLVM for example) or
 # wrong. Suppress the warning so the build doesn't abort.

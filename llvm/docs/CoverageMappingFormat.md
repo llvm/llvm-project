@@ -10,8 +10,8 @@ analysis using LLVM's and Clang's instrumentation based profiling
 This document is aimed at those who would like to know how LLVM's code coverage
 mapping works under the hood. A prior knowledge of how Clang's profile guided
 optimization works is useful, but not required. For those interested in using
-LLVM to provide code coverage analysis for their own programs, see the [Clang
-documentation](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html).
+LLVM to provide code coverage analysis for their own programs, see the
+{external+clang:doc}`Clang documentation <SourceBasedCodeCoverage>`.
 
 We start by briefly describing LLVM's code coverage mapping format and the
 way that Clang and LLVM's code coverage tool work with this format. After

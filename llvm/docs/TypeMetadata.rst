@@ -4,7 +4,8 @@ Type Metadata
 
 Type metadata is a mechanism that allows IR modules to co-operatively build
 pointer sets corresponding to addresses within a given set of globals. LLVM's
-`control flow integrity`_ implementation uses this metadata to efficiently
+:external+clang:doc:`control flow integrity <ControlFlowIntegrity>`
+implementation uses this metadata to efficiently
 check (at each call site) that a given address corresponds to either a
 valid vtable or function pointer for a given class or function type, and its
 whole-program devirtualization pass uses the metadata to identify potential
@@ -28,8 +29,6 @@ or functions.
 
 An intrinsic, :ref:`llvm.type.test <type.test>`, is used to test whether a
 given pointer is associated with a type identifier.
-
-.. _control flow integrity: https://clang.llvm.org/docs/ControlFlowIntegrity.html
 
 Representing Type Information using Type Metadata
 =================================================
@@ -141,7 +140,8 @@ the object file, construct bit vectors that map onto that memory region,
 and generate code at each of the ``llvm.type.test`` call sites to test
 pointers against those bit vectors. Because of the layout manipulation, the
 globals' definitions must be available at LTO time. For more information,
-see the `control flow integrity design document`_.
+see the :external+clang:doc:`control flow integrity design document
+<ControlFlowIntegrityDesign>`.
 
 A type identifier that identifies functions is transformed into a jump table,
 which is a block of code consisting of one branch instruction for each
@@ -159,8 +159,6 @@ as the former will be the jump table entry if a jump table is necessary.
 
 The `GlobalLayoutBuilder`_ class is responsible for laying out the globals
 efficiently to minimize the sizes of the underlying bitsets.
-
-.. _control flow integrity design document: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html
 
 :Example:
 
