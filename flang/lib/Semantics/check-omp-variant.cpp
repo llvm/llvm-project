@@ -187,13 +187,11 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  OmpVerifyModifiers(
-      x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
   // Record this WHEN clause's context selector so the variant directive it
   // controls can be paired with it for static-applicability matching. A
   // well-formed WHEN clause has exactly one modifier, its context selector;
   // pair it only in that case, which also makes front() safe. Any other count
-  // is malformed and already diagnosed by OmpVerifyModifiers above.
+  // is malformed and already diagnosed by VerifyModifiers.
   if (const auto &modifiers{std::get<0>(x.v.t)};
       modifiers && modifiers->size() == 1) {
     currentWhenSelector_ =
@@ -744,6 +742,22 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
     metadirectiveLoopVariants_.push_back(
         {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
+    // Metadirective is "pure", but its selected variant may not be.
+    // Check the variant independently only when metadirective is legal;
+    // otherwise, the outer metadirective check already reports the error.
+    if (GetDirectiveNest(MetadirectiveNest)) {
+      llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+      if (version >= llvm::omp::getDirectivePureSince(
+                         llvm::omp::Directive::OMPD_metadirective)) {
+        CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);
+      }
+      if (IsDoConcurrentLegal(version)) {
+        CheckDirectiveInDoConcurrent(x.DirName().source, dirId, x);
+      }
+    } else {
+      CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);
+      CheckDirectiveInDoConcurrent(x.DirName().source, dirId, x);
+    }
   }
 }
 

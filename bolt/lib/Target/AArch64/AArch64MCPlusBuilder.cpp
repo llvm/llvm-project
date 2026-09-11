@@ -766,7 +766,7 @@ public:
     case AArch64::LDRSWl:
       AddrReg = DataReg;
       OpCode = AArch64::LDRSWui;
-      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
       break;
     default:
       llvm_unreachable("LDR (literal) or LDRSW (literal) expected");
@@ -2658,7 +2658,7 @@ public:
            isAArch64ExclusiveStore(Inst);
   }
 
-  bool isCleanRegXOR(const MCInst &Inst) const override {
+  bool isCleanReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::EORXrs:
     case AArch64::EORWrs:
@@ -3663,6 +3663,33 @@ public:
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
                           ELF::R_AARCH64_ADD_ABS_LO12_NC);
     return Insts;
+  }
+
+  InstructionListType materializeConstant(BinaryContext &BC, const MCInst &Inst,
+                                          StringRef ConstantData,
+                                          uint64_t Offset) const override {
+    // Size in bytes that Inst loads from memory.
+    uint8_t DataSize = 0;
+    switch (Inst.getOpcode()) {
+    case AArch64::LDRWl:
+      DataSize = 4;
+      break;
+    case AArch64::LDRXl:
+      DataSize = 8;
+      break;
+    default:
+      return InstructionListType{};
+    }
+
+    if (Offset + DataSize > ConstantData.size())
+      return InstructionListType{};
+
+    DataExtractor DE(ConstantData, BC.AsmInfo->isLittleEndian());
+    const uint64_t Imm = DE.getUnsigned(&Offset, DataSize);
+
+    const MCPhysReg Dest = Inst.getOperand(0).getReg();
+
+    return createLoadImmediate(Dest, Imm);
   }
 
   std::optional<Relocation>
