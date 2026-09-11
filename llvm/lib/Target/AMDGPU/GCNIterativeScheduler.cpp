@@ -80,12 +80,12 @@ static void printLivenessInfo(raw_ostream &OS,
   auto *const BB = Begin->getParent();
   const auto &MRI = BB->getParent()->getRegInfo();
 
-  const auto LiveIns = getLiveRegsBefore(*Begin, *LIS);
-  OS << "LIn RP: " << print(getRegPressure(MRI, LiveIns));
+  const auto LiveIns = getVirtLiveRegsBefore(*Begin, *LIS);
+  OS << "LIn RP: " << print(getVirtRegPressure(MRI, LiveIns));
 
   const auto BottomMI = End == BB->end() ? std::prev(End) : End;
-  const auto LiveOuts = getLiveRegsAfter(*BottomMI, *LIS);
-  OS << "LOt RP: " << print(getRegPressure(MRI, LiveOuts));
+  const auto LiveOuts = getVirtLiveRegsAfter(*BottomMI, *LIS);
+  OS << "LOt RP: " << print(getVirtRegPressure(MRI, LiveOuts));
 }
 
 LLVM_DUMP_METHOD

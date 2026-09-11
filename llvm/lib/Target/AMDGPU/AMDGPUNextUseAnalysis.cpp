@@ -2454,7 +2454,7 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
       UseDistancePair Furthest;
       UseDistancePair FurthestSubreg;
       RelevantUses.clear();
-      NUA.getNextUseDistances(RPTracker.getLiveRegs(), MI, Furthest,
+      NUA.getNextUseDistances(RPTracker.getVirtLiveRegs(), MI, Furthest,
                               &FurthestSubreg, &RelevantUses);
 
       J.objectBegin();
