@@ -43,34 +43,31 @@ COMPILER_RT_VISIBILITY void INSTR_PROF_INSTRUMENT_GPU_FUNC(uint64_t *counter,
   }
 }
 
+// Linearized 3D block index: x + Nx * (y + Ny * z).
+static uint64_t block_id_linear(void) {
+  uint32_t nx = __gpu_num_blocks_x();
+  return (uint64_t)__gpu_block_id_x() + (uint64_t)nx * __gpu_block_id_y() +
+         (uint64_t)nx * __gpu_num_blocks_y() * __gpu_block_id_z();
+}
+
 // Block-level sampling for offload PGO. For GPU kernels with stationary
 // behavior (where all thread blocks execute the same code paths regardless of
 // block ID), partial sampling significantly reduces instrumentation overhead
 // without losing PGO performance gains.
 //
 // Returns 1 if this block should be instrumented, 0 to skip. Samples by
-// matching lower bits of the x-dimension block ID to zero.
+// matching lower bits of the linearized 3D block ID to zero.
 //   sampling_bits=0: all blocks (100%)
-//   sampling_bits=3: every 8th block in x (12.5%, default)
-//
-// Note: We use only block_id_x rather than a fully linearized 3D block ID.
-// The 3D linearization requires __gpu_num_blocks_x/y which expands to
-// __builtin_amdgcn_workgroup_size_x/y. With -mcode-object-version=none (used
-// to build compiler-rt profile runtime), the compiler emits a load of
-// __oclc_ABI_version to select the correct ABI path. Since the profile runtime
-// is linked after device libs are internalized, __oclc_ABI_version is no longer
-// available. Using block_id_x directly avoids this dependency. For typical
-// kernels with large 1D or x-dominant grids this is sufficient; blocks sharing
-// the same x-index are sampled together in 3D grids (minor uniformity loss).
+//   sampling_bits=3: every 8th block (12.5%, default)
 COMPILER_RT_VISIBILITY int __llvm_profile_sampling_gpu(uint32_t sampling_bits) {
   if (sampling_bits == 0)
     return 1;
 
-  uint32_t block_id = __gpu_block_id_x();
-  if (sampling_bits >= 32)
+  uint64_t block_id = block_id_linear();
+  if (sampling_bits >= 64)
     return block_id == 0;
 
-  uint32_t mask = (1u << sampling_bits) - 1;
+  uint64_t mask = (UINT64_C(1) << sampling_bits) - 1;
   return (block_id & mask) == 0;
 }
 
