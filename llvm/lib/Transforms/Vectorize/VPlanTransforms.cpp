@@ -5677,6 +5677,36 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                            });
 }
 
+/// Replace the stride and all integral casts derived from it. Some casts might
+/// be defined outside VPlan and modeled as live-ins only, so process users at
+/// the LLVM IR level to discover them.
+static void replaceUsesInVectorLoopThroughCastsRecursively(VPlan &Plan,
+                                                           ScalarEvolution &SE,
+                                                           Value *V,
+                                                           const SCEV *ToSCEV) {
+  VPValue *From = Plan.getLiveIn(V);
+  if (From) {
+    assert(From->getScalarType() == ToSCEV->getType() &&
+           "Wrong type for ToSCEV!");
+    VPValue *To = Plan.getConstantInt(cast<SCEVConstant>(ToSCEV)->getAPInt());
+
+    // Original scalar loop can still use `From`, make sure to only rewrite
+    // uses inside the vector loop that we guard with the checks.
+    From->replaceUsesWithIf(To, [&](VPUser &U, unsigned) {
+      auto *R = cast<VPRecipeBase>(&U);
+      return R->getRegion() || R->getParent() == Plan.getVectorPreheader();
+    });
+  }
+
+  for (User *U : V->users())
+    if (isa<SExtInst>(U))
+      replaceUsesInVectorLoopThroughCastsRecursively(
+          Plan, SE, U, SE.getSignExtendExpr(ToSCEV, U->getType()));
+    else if (isa<ZExtInst, TruncInst>(U))
+      replaceUsesInVectorLoopThroughCastsRecursively(
+          Plan, SE, U, SE.getTruncateOrZeroExtend(ToSCEV, U->getType()));
+}
+
 void VPlanTransforms::multiversionForUnitStridedMemOps(
     VPlan &Plan, VPCostContext &CostCtx, VFRange &Range,
     ArrayRef<VPInstruction *> MemOps) {
@@ -5789,34 +5819,8 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
 
     StridePredicates = StridePredicates.getUnionWith(NewPred, *SE);
 
-    // Replace the stride and all integral casts derived from it. Some casts
-    // might be defined outside VPlan and modeled as live-ins only, so we need
-    // to process users at the LLVM IR level in order to discover them.
-    auto ReplaceUsesInVectorLoopThroughCastsRecursively =
-        [&](auto &Self, Value *V, const SCEV *ToSCEV) -> void {
-      VPValue *From = Plan.getLiveIn(V);
-      if (From) {
-        assert(From->getScalarType() == ToSCEV->getType() &&
-               "Wrong type for ToSCEV!");
-        VPValue *To =
-            Plan.getConstantInt(cast<SCEVConstant>(ToSCEV)->getAPInt());
-
-        // Original scalar loop can still use `From`, make sure to only rewrite
-        // uses inside the vector loop that we guard with the checks.
-        From->replaceUsesWithIf(To, [&](VPUser &U, unsigned) {
-          auto *R = cast<VPRecipeBase>(&U);
-          return R->getRegion() || R->getParent() == Plan.getVectorPreheader();
-        });
-      }
-
-      for (User *U : V->users())
-        if (isa<SExtInst>(U))
-          Self(Self, U, SE->getSignExtendExpr(ToSCEV, U->getType()));
-        else if (isa<ZExtInst, TruncInst>(U))
-          Self(Self, U, SE->getTruncateOrZeroExtend(ToSCEV, U->getType()));
-    };
-    ReplaceUsesInVectorLoopThroughCastsRecursively(
-        ReplaceUsesInVectorLoopThroughCastsRecursively, StrideVal, MVConst);
+    replaceUsesInVectorLoopThroughCastsRecursively(Plan, *SE, StrideVal,
+                                                   MVConst);
   }
 
   if (StridePredicates.isAlwaysTrue())
