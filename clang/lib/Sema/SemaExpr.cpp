@@ -3067,8 +3067,12 @@ ExprResult Sema::BuildQualifiedDeclarationNameExpr(
     // is invalid because it's derived from an invalid base class, then missing
     // members were likely supposed to be inherited.
     DeclContext *DC = computeDeclContext(SS);
+    // A nested class instantiation may have disabled SFINAE while recursively
+    // looking back into a still-being-defined outer class.
     if (const auto *CD = dyn_cast<CXXRecordDecl>(DC))
-      if (CD->isInvalidDecl() || CD->isBeingDefined())
+      if (CD->isInvalidDecl() ||
+          (CD->isBeingDefined() && !isSFINAEContext() &&
+           hasSFINAEContextInDescendantClassInstantiation(CD)))
         return ExprError();
     Diag(NameInfo.getLoc(), diag::err_no_member)
       << NameInfo.getName() << DC << SS.getRange();
