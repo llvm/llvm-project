@@ -69,6 +69,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include <atomic>
+#include <tuple>
+#include <type_traits>
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -4125,6 +4127,35 @@ findInnermostPrivateLeaf(ConstructQueue::const_iterator item,
 // clause). Currently we leave these as they were before, but in the future we
 // can minimize the mapping by sending across exactly what we require to be
 // specification compliant.
+static bool isSymbolUsedInNonPrivateClause(const semantics::Symbol &target,
+                                           ConstructQueue::const_iterator item,
+                                           const ConstructQueue &queue) {
+  const semantics::Symbol &ultimateTarget = target.GetUltimate();
+
+  // Start at the first nested leaf. The target leaf may contain implementation
+  // clauses synthesized while decomposing private list items on nested leaves;
+  // those should not make a private-only source variable look like it also
+  // appeared in another user clause.
+  for (ConstructQueue::const_iterator it = std::next(item); it != queue.end();
+       ++it) {
+    for (const Clause &clause : it->clauses) {
+      // Do not consider private itself. Also do not consider map clauses here:
+      // explicit target-level maps are already accounted for via mapObjects,
+      // and construct decomposition may synthesize map-like clauses for nested
+      // private list items.
+      if (clause.id == llvm::omp::Clause::OMPC_private ||
+          clause.id == llvm::omp::Clause::OMPC_map)
+        continue;
+
+      if (visitSymbolsInClause(clause, [&](const semantics::Symbol &sym) {
+            return sym.GetUltimate() == ultimateTarget;
+          }))
+        return true;
+    }
+  }
+  return false;
+}
+
 static bool isTargetLocalCloneable(const semantics::Symbol &sym,
                                    semantics::SemanticsContext &semaCtx) {
   const semantics::Symbol &ult = sym.GetUltimate();
@@ -4176,16 +4207,20 @@ static void collectTargetNestedPrivateSyms(
     bool &innermostLeafIsTeams) {
   innermostLeafIsTeams = false;
 
-  // Avoid capturing symbols on anything with explicit mapping or privatization.
+  // Avoid capturing symbols on anything with explicit mapping, privatization,
+  // or any other clause-level use that relies on the original symbol.
   auto isExcluded = [&](const semantics::Symbol *sym) {
     const semantics::Symbol &ult = sym->GetUltimate();
     if (llvm::any_of(mapObjects, [&](const Object &o) {
           return o.sym() && o.sym()->GetUltimate() == ult;
         }))
       return true;
-    return llvm::any_of(
-        dsp.getAllSymbolsToPrivatize(),
-        [&](const semantics::Symbol *p) { return p->GetUltimate() == ult; });
+    if (llvm::any_of(dsp.getAllSymbolsToPrivatize(),
+                     [&](const semantics::Symbol *p) {
+                       return p->GetUltimate() == ult;
+                     }))
+      return true;
+    return isSymbolUsedInNonPrivateClause(*sym, item, queue);
   };
 
   ConstructQueue::const_iterator innermostPrivateLeaf =

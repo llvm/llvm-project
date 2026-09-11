@@ -9,6 +9,7 @@
 #define FORTRAN_LOWER_OPENMP_CLAUSES_H
 
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
@@ -20,6 +21,7 @@
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -377,6 +379,114 @@ struct Clause : public ClauseBase {
   // "source" will be ignored by tomp::type::operator==.
   parser::CharBlock source;
 };
+
+namespace detail {
+template <typename T, typename = void>
+struct HasClauseWrapperTrait : std::false_type {};
+template <typename T>
+struct HasClauseWrapperTrait<T, std::void_t<typename T::WrapperTrait>>
+    : T::WrapperTrait {};
+
+template <typename T, typename = void>
+struct HasClauseTupleTrait : std::false_type {};
+template <typename T>
+struct HasClauseTupleTrait<T, std::void_t<typename T::TupleTrait>>
+    : T::TupleTrait {};
+
+template <typename T, typename = void>
+struct HasClauseUnionTrait : std::false_type {};
+template <typename T>
+struct HasClauseUnionTrait<T, std::void_t<typename T::UnionTrait>>
+    : T::UnionTrait {};
+
+template <typename T>
+struct IsStdOptional : std::false_type {};
+template <typename T>
+struct IsStdOptional<std::optional<T>> : std::true_type {};
+
+template <typename T>
+struct IsStdTuple : std::false_type {};
+template <typename... Ts>
+struct IsStdTuple<std::tuple<Ts...>> : std::true_type {};
+} // namespace detail
+
+template <typename T, typename Callback>
+bool visitSymbolsInClausePayload(const T &value, Callback callback);
+
+template <typename Callback>
+bool visitSymbolsInClausePayload(const SomeExpr &expr, Callback callback) {
+  for (semantics::SymbolRef ref : evaluate::CollectSymbols(expr))
+    if (callback(*ref))
+      return true;
+  return false;
+}
+
+template <typename Callback>
+bool visitSymbolsInClausePayload(const Object &object, Callback callback) {
+  if (const semantics::Symbol *sym = object.sym())
+    if (callback(*sym))
+      return true;
+
+  // Include references appearing in designators, such as array section bounds
+  // or subscripts in map/depend list items.
+  if (object.ref())
+    return visitSymbolsInClausePayload(*object.ref(), callback);
+
+  return false;
+}
+
+template <typename Callback>
+bool visitSymbolsInClausePayload(const ObjectList &objects, Callback callback) {
+  for (const Object &object : objects)
+    if (visitSymbolsInClausePayload(object, callback))
+      return true;
+  return false;
+}
+
+template <typename T, unsigned N, typename Callback>
+bool visitSymbolsInClausePayload(const llvm::SmallVector<T, N> &values,
+                                 Callback callback) {
+  for (const T &value : values)
+    if (visitSymbolsInClausePayload(value, callback))
+      return true;
+  return false;
+}
+
+template <typename T, typename Callback>
+bool visitSymbolsInClausePayload(const T &value, Callback callback) {
+  using U = llvm::remove_cvref_t<T>;
+
+  if constexpr (detail::IsStdOptional<U>::value) {
+    return value && visitSymbolsInClausePayload(*value, callback);
+  } else if constexpr (detail::IsStdTuple<U>::value) {
+    return std::apply(
+        [&](const auto &...tupleValues) {
+          return (visitSymbolsInClausePayload(tupleValues, callback) || ...);
+        },
+        value);
+  } else if constexpr (detail::HasClauseWrapperTrait<U>::value) {
+    return visitSymbolsInClausePayload(value.v, callback);
+  } else if constexpr (detail::HasClauseTupleTrait<U>::value) {
+    return visitSymbolsInClausePayload(value.t, callback);
+  } else if constexpr (detail::HasClauseUnionTrait<U>::value) {
+    return Fortran::common::visit(
+        [&](const auto &variantValue) {
+          return visitSymbolsInClausePayload(variantValue, callback);
+        },
+        value.u);
+  } else {
+    return false;
+  }
+}
+
+template <typename Callback>
+bool visitSymbolsInClause(const Clause &clause, Callback callback) {
+  return Fortran::common::visit(
+      [&](const auto &specificClause) {
+        return visitSymbolsInClausePayload(specificClause, callback);
+      },
+      clause.u);
+}
 
 template <typename Specific>
 Clause makeClause(llvm::omp::Clause id, Specific &&specific,
