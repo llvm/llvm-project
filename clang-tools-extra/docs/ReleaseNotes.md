@@ -87,6 +87,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 - clangd now applies clang-tidy fix-it post-processing before exposing fixes.
 
+- The `Extract to function` tweak is now offered for selections consisting of
+  a single expression-statement (e.g. a lone function call or an overloaded
+  operator call such as `stream << 42;`), which it previously refused to
+  extract.
+
 #### Signature help
 
 #### Cross-references
@@ -94,6 +99,10 @@ infrastructure are described first, followed by tool-specific sections.
 #### Objective-C
 
 #### Miscellaneous
+
+- Fixed `clangd-indexer --format=yaml` emitting invalid YAML when indexing
+  C++20 concepts.
+  ([#206875](https://github.com/llvm/llvm-project/issues/206875))
 
 ### Improvements to clang-doc
 

@@ -2460,8 +2460,10 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_rt_sigprocmask",
+        ":__support_osutil_linux_syscall_wrappers_tgkill",
         ":__support_osutil_syscall",
         ":hdr_signal_macros",
+        ":types_pid_t",
         ":types_sigset_t",
     ],
 )
@@ -2813,6 +2815,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_tgkill",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/tgkill.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_printf_core_printf_config",
     hdrs = ["src/__support/printf_core/printf_config.h"],
 )
@@ -2825,6 +2843,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_macros_config",
+        ":__support_macros_properties_types",
         ":__support_printf_core_printf_config",
     ],
 )
@@ -4376,6 +4395,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_linux_thread",
     srcs = ["src/__support/threads/linux/thread.cpp"],
+    copt_sets = ["threading"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -4394,6 +4414,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
+        ":__support_osutil_linux_syscall_wrappers_getpid",
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_mprotect",
         ":__support_osutil_linux_syscall_wrappers_munmap",
@@ -4402,17 +4423,20 @@ libc_support_library(
         ":__support_osutil_linux_syscall_wrappers_sched_getparam",
         ":__support_osutil_linux_syscall_wrappers_sched_getscheduler",
         ":__support_osutil_linux_syscall_wrappers_sched_setscheduler",
+        ":__support_osutil_linux_syscall_wrappers_tgkill",
         ":__support_osutil_linux_syscall_wrappers_write",
         ":__support_osutil_syscall",
         ":__support_threads_futex_utils",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_linux_futex_word_type",
         ":__support_threads_mutex",
+        ":__support_threads_thread_attributes",
         ":__support_threads_thread_headers",
         ":config_app_h",
         ":hdr_errno_macros",
         ":hdr_fcntl_macros",
         ":hdr_sched_macros",
+        ":hdr_signal_macros",
         ":hdr_stdint_proxy",
         ":hdr_sys_mman_macros",
     ],
