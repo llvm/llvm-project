@@ -50,6 +50,7 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
 
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i16, Custom);
+  setOperationAction(ISD::FRAMEADDR, MVT::i16, Custom);
 
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
@@ -961,9 +962,34 @@ SDValue AVRTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerDivRem(Op, DAG);
   case ISD::INLINEASM:
     return LowerINLINEASM(Op, DAG);
+  case ISD::FRAMEADDR:
+    return LowerFRAMEADDR(Op, DAG);
   }
 
   return SDValue();
+}
+
+SDValue AVRTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
+  // The frame pointer (Y = r29:r28) is set up to contain the stack pointer
+  // *after* the frame has been allocated, i.e. Y == SP_entry - StackSize,
+  // which means it points to the lowest address of the frame: it is really a
+  // frame *base* rather than the canonical frame address. The slot holding the
+  // caller's Y therefore sits at a function dependent offset (the frame size)
+  // above it. Walking the frame chain is only possible for the current frame.
+  //
+  // This is also what avr-gcc returns for __builtin_frame_address(0).
+  if (Op.getConstantOperandVal(0) > 0)
+    // Use the legalizer's default expansion, which is to return 0 (what this
+    // function is documented to do).
+    return SDValue();
+
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+
+  // Note that AVRRegisterInfo::getFrameRegister returns R28, which is only
+  // the low half of the frame pointer: use the full 16-bit register pair.
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), AVR::R29R28,
+                            Op.getValueType());
 }
 
 /// Replace a node with an illegal result type
