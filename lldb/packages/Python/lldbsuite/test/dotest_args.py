@@ -40,6 +40,15 @@ def create_parser():
         ),
     )
     group.add_argument(
+        "-A",
+        "--arch",
+        metavar="arch",
+        dest="arch",
+        help=textwrap.dedent(
+            """Specify the architecture(s) to test. This option can be specified more than once"""
+        ),
+    )
+    group.add_argument(
         "-C",
         "--compiler",
         metavar="compiler",
