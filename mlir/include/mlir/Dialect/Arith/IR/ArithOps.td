@@ -1477,15 +1477,18 @@ def Arith_ScalingExtFOp
 
     ```mlir
     // Cast scale to result type.
-    %0 = arith.truncf %1 : f32 to f8E8M0FNU
-    %1 = arith.extf %0 : f8E8M0FNU to f16
+    %scale = arith.extf %arg1 : f8E8M0FNU to f16
 
     // Cast input to result type.
-    %2 = arith.extf %3 : f4E2M1FN to f16
+    %in = arith.extf %arg0 : f4E2M1FN to f16
 
     // Perform scaling
-    %3 = arith.mulf %2, %1 : f16
+    %res = arith.mulf %in, %scale : f16
     ```
+    The input is multiplied by the value of the scale. A scale type that has a
+    mantissa, such as `f8E5M3FNU`, therefore contributes it: the scale is not
+    reduced to its exponent.
+
     It propagates NaN values. Therefore, if either scale or the input element
     contains NaN, then the output element value will also be a NaN.
 
@@ -1669,15 +1672,17 @@ def Arith_ScalingTruncFOp
 
     ```mlir
     // Cast scale to input type.
-    %0 = arith.truncf %1 : f32 to f8E8M0FNU
-    %1 = arith.extf %0 : f8E8M0FNU to f16
+    %scale = arith.extf %arg1 : f8E8M0FNU to f16
 
     // Perform scaling.
-    %3 = arith.divf %2, %1 : f16
+    %scaled = arith.divf %arg0, %scale : f16
 
     // Cast to result type.
-    %4 = arith.truncf %3 : f16 to f4E2M1FN
+    %res = arith.truncf %scaled : f16 to f4E2M1FN
     ```
+    The input is divided by the value of the scale. A scale type that has a
+    mantissa, such as `f8E5M3FNU`, therefore contributes it: the scale is not
+    reduced to its exponent.
 
     Example:
 
