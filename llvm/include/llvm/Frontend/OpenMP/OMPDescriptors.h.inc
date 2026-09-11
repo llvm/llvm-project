@@ -11,6 +11,7 @@
   AllDataEnvironments,
   First_ = AllDataEnvironments,
   AllPrivatizing,
+  Compatible,
   Complex,
   Constant,
   DataCopying,
@@ -25,6 +26,7 @@
   DispatchRequirement,
   EndClause,
   Exclusive,
+  Free,
   IcvDefaulted,
   IcvModifying,
   InnermostLeaf,
@@ -124,13 +126,6 @@
   VariableCategory,
   Last_ = VariableCategory,
 #endif // GEN_OMP_MODIFIER_ENUMS
-#ifdef GEN_OMP_MODIFIER_SET_ENUMS
-  DependModifierSet1,
-  First_ = DependModifierSet1,
-  NumTeamsModifierSet1,
-  ReductionModifierSet1,
-  Last_ = ReductionModifierSet1,
-#endif // GEN_OMP_MODIFIER_SET_ENUMS
 #ifdef GEN_OMP_MODIFIER_GROUP_ENUMS
   AdjustOp,
   First_ = AdjustOp,
@@ -141,4 +136,11 @@
   VariableSelector,
   Last_ = VariableSelector,
 #endif // GEN_OMP_MODIFIER_GROUP_ENUMS
+#ifdef GEN_OMP_MODIFIER_SET_ENUMS
+  DependModifierSet1,
+  First_ = DependModifierSet1,
+  NumTeamsModifierSet1,
+  ReductionModifierSet1,
+  Last_ = ReductionModifierSet1,
+#endif // GEN_OMP_MODIFIER_SET_ENUMS
    // clang-format on

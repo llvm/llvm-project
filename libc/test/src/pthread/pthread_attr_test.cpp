@@ -1,20 +1,31 @@
-//===-- Unittests for pthread_attr_t --------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for pthread_attr_t.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/pthread_macros.h"
+#include "hdr/sched_macros.h"
 #include "src/pthread/pthread_attr_destroy.h"
 #include "src/pthread/pthread_attr_getdetachstate.h"
 #include "src/pthread/pthread_attr_getguardsize.h"
+#include "src/pthread/pthread_attr_getschedpolicy.h"
+#include "src/pthread/pthread_attr_getscope.h"
 #include "src/pthread/pthread_attr_getstack.h"
 #include "src/pthread/pthread_attr_getstacksize.h"
 #include "src/pthread/pthread_attr_init.h"
 #include "src/pthread/pthread_attr_setdetachstate.h"
 #include "src/pthread/pthread_attr_setguardsize.h"
+#include "src/pthread/pthread_attr_setschedpolicy.h"
+#include "src/pthread/pthread_attr_setscope.h"
 #include "src/pthread/pthread_attr_setstack.h"
 #include "src/pthread/pthread_attr_setstacksize.h"
 
@@ -114,6 +125,68 @@ TEST(LlvmLibcPThreadattrTest, SetAndGetStack) {
   ASSERT_EQ(
       LIBC_NAMESPACE::pthread_attr_setstack(&attr, 0, PTHREAD_STACK_MIN / 2),
       EINVAL);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
+}
+
+TEST(LlvmLibcPThreadattrTest, SetAndGetSchedPolicy) {
+  pthread_attr_t attr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+
+  int policy;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedpolicy(&attr, &policy), 0);
+  ASSERT_EQ(policy, SCHED_OTHER);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, SCHED_FIFO), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedpolicy(&attr, &policy), 0);
+  ASSERT_EQ(policy, SCHED_FIFO);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, SCHED_RR), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedpolicy(&attr, &policy), 0);
+  ASSERT_EQ(policy, SCHED_RR);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, SCHED_OTHER), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedpolicy(&attr, &policy), 0);
+  ASSERT_EQ(policy, SCHED_OTHER);
+
+  // We do not attempt to validate scheduling policies here. The OS will do that
+  // when starting a thread.
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, 0xBAD), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedpolicy(&attr, &policy), 0);
+  ASSERT_EQ(policy, 0xBAD);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, -1), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedpolicy(&attr, &policy), 0);
+  ASSERT_EQ(policy, -1);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
+}
+
+TEST(LlvmLibcPThreadAttrTest, SetAndGetScope) {
+  pthread_attr_t attr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+
+  int scope;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getscope(&attr, &scope), 0);
+  ASSERT_EQ(scope, PTHREAD_SCOPE_SYSTEM);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getscope(&attr, &scope), 0);
+  ASSERT_EQ(scope, PTHREAD_SCOPE_SYSTEM);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setscope(&attr, PTHREAD_SCOPE_PROCESS),
+            ENOTSUP);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getscope(&attr, &scope), 0);
+  ASSERT_EQ(scope, PTHREAD_SCOPE_SYSTEM);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setscope(&attr, 0xBAD), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getscope(&attr, &scope), 0);
+  ASSERT_EQ(scope, PTHREAD_SCOPE_SYSTEM);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setscope(&attr, -1), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getscope(&attr, &scope), 0);
+  ASSERT_EQ(scope, PTHREAD_SCOPE_SYSTEM);
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
 }
