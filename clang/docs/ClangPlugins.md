@@ -160,11 +160,27 @@ under `-Wplugin`, which in turn nests under `-Wuser-defined-warnings`.
   unsigned getCustomDiagID(Level, StringRef Message, StringRef Group);
 ```
 
-which places a diagnostic in any warning group named by `Group`. `Group` may
-also be an existing built-in group, so a plugin that deliberately wants to
-extend, say, `-Wdeprecated` can do so; the diagnostic is then controlled by that
-group's flag like any other member. Prefer the `<plugin>-plugin` convention
-unless there is a specific reason to join a built-in group.
+which places a diagnostic in any runtime-registered warning group named by
+`Group`. `Group` must not be one of Clang's built-in groups: a plugin
+diagnostic never joins a built-in group directly, so a user can always tell a
+plugin's warning from Clang's own by the `[-W...]` it prints.
+
+A plugin that wants to extend a built-in group instead nests one of its own
+groups under it:
+
+```c++
+  D.registerPluginGroup("print-fns", "deprecation", /*Parent=*/"deprecated");
+  unsigned ID = D.getCustomPluginDiagID(
+      DiagnosticsEngine::Warning, "'%0' is old-fashioned", "print-fns",
+      "deprecation");
+```
+
+The diagnostic prints `[-Wprint-fns-plugin-deprecation]`, and `-Wno-deprecated`
+and `-Werror=deprecated` reach it like any other deprecation warning, as do
+`-Wno-print-fns-plugin` and `-Wno-plugin`; the most specific flag wins. A group
+with a declared parent nests under that parent instead of the
+`-Wuser-defined-warnings` root. Registering with a name that is not a built-in
+group returns false and registers nothing.
 
 A backend (IR-layer) plugin controls its diagnostics the same way. An
 `llvm::DiagnosticInfo` that overrides `getWarningGroup()` to name a group is

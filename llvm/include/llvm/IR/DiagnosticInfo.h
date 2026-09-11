@@ -133,9 +133,12 @@ public:
   /// is not in a user-controllable group. A plugin (its kind obtained from
   /// getNextAvailablePluginDiagnosticKind) can override this so its backend
   /// diagnostic is controlled with -W<group> like a frontend plugin's, instead
-  /// of only through the coarse -Wbackend-plugin umbrella. The frontend resolves
-  /// the name against its own diagnostic-group registry; by convention it is
+  /// of only through the coarse -Wbackend-plugin umbrella. The frontend
+  /// resolves the name against its own diagnostic-group registry; by convention
+  /// it is
   /// "<plugin>-plugin", which nests under -Wplugin and -Wuser-defined-warnings.
+  /// It must be a runtime group of the plugin's own, never the name of one of
+  /// the frontend's built-in groups.
   virtual StringRef getWarningGroup() const { return StringRef(); }
 
   /// Print using the given \p DP a user-friendly message.

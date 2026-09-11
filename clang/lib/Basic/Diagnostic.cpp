@@ -455,6 +455,17 @@ DiagnosticsEngine::getCustomPluginDiagIDs(StringRef PluginName,
   return IDs;
 }
 
+bool DiagnosticsEngine::registerPluginGroup(StringRef PluginName,
+                                            StringRef Subgroup,
+                                            StringRef Parent) {
+  // Same naming as getCustomPluginDiagID, so the group a diagnostic is placed
+  // in and the group given a parent here are the same one.
+  std::string Group = (Twine(PluginName) + "-plugin").str();
+  if (!Subgroup.empty())
+    Group = (Twine(Group) + "-" + Subgroup).str();
+  return Diags->registerPluginGroup(Group, Parent);
+}
+
 bool DiagnosticsEngine::setDiagnosticGroupWarningAsError(StringRef Group,
                                                          bool Enabled) {
   // If we are enabling this feature, just set the diagnostic mappings to map to

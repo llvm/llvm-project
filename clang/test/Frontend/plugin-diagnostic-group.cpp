@@ -47,6 +47,26 @@
 // RUN:   -plugin print-fns -plugin-arg-print-fns -warn-decls %t/pragma.cpp 2>&1 \
 // RUN:   | FileCheck --check-prefix=PRAGMA %s
 
+// A plugin subgroup nested under a built-in group prints its own name, so the
+// plugin's origin is visible, and is reached by the built-in group's flags as
+// well as by the plugin's own; the most specific flag wins.
+// RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
+// RUN:   -plugin print-fns -plugin-arg-print-fns -deprecate-decls %t/simple.cpp 2>&1 \
+// RUN:   | FileCheck --check-prefix=NESTED %s
+// RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
+// RUN:   -plugin print-fns -plugin-arg-print-fns -deprecate-decls \
+// RUN:   -Wno-deprecated %t/simple.cpp 2>&1 | FileCheck --check-prefix=SILENT %s
+// RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
+// RUN:   -plugin print-fns -plugin-arg-print-fns -deprecate-decls \
+// RUN:   -Wno-print-fns-plugin %t/simple.cpp 2>&1 | FileCheck --check-prefix=SILENT %s
+// RUN: not %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
+// RUN:   -plugin print-fns -plugin-arg-print-fns -deprecate-decls \
+// RUN:   -Werror=deprecated %t/simple.cpp 2>&1 | FileCheck --check-prefix=NESTED-WERROR %s
+// RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
+// RUN:   -plugin print-fns -plugin-arg-print-fns -deprecate-decls \
+// RUN:   -Wno-deprecated -Wprint-fns-plugin-deprecation %t/simple.cpp 2>&1 \
+// RUN:   | FileCheck --check-prefix=NESTED %s
+
 // A -Wno-<x>-plugin that no loaded plugin claims is a misspelled option.
 // RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
 // RUN:   -plugin print-fns -Wno-bogus-plugin %t/simple.cpp 2>&1 \
@@ -62,6 +82,8 @@ void f();
 // WERROR: error: suspicious top-level declaration 'f'
 // REMARK: remark: saw top-level declaration 'f' [-Rprint-fns-plugin]
 // ERROR: error: forbidden top-level declaration 'f'
+// NESTED: warning: top-level declaration 'f' is old-fashioned [-Wprint-fns-plugin-deprecation]
+// NESTED-WERROR: error: top-level declaration 'f' is old-fashioned [-Werror,-Wprint-fns-plugin-deprecation]
 // UNKNOWN: unknown warning option
 
 //--- pragma.cpp

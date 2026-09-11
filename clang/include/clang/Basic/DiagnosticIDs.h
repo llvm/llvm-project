@@ -310,6 +310,14 @@ private:
     bool CreatedByFlag = false;   // named by a -W/-R flag
     bool ClaimedByPlugin = false; // declared or used by a loaded plugin
     llvm::SmallVector<unsigned, 4> Members; // custom diag IDs in this group
+    // Built-in (TableGen) group this runtime group nests under, when the plugin
+    // declared one with registerPluginGroup; a flag on that group then reaches
+    // this group's members. Without one the group nests under the
+    // -Wuser-defined-warnings root (see staticParentOf). A plugin extends a
+    // built-in group this way -- through a group that still carries the
+    // plugin's name -- rather than by adding a diagnostic to the built-in group
+    // directly, so a user can always tell a plugin's warning from Clang's own.
+    std::optional<diag::Group> Parent;
 
     diag::Severity severityFor(diag::Flavor F) const {
       return F == diag::Flavor::Remark ? RemarkSeverity : WarnSeverity;
@@ -338,13 +346,23 @@ private:
            G[Ctrl.size()] == '-';
   }
 
+  /// Append to \p Diags the members of runtime group \p Info that are of
+  /// \p Flavor. Errors are excluded, since -W/-R group flags never remap an
+  /// error.
+  void appendDynamicGroupMembers(diag::Flavor Flavor,
+                                 const DynamicGroupInfo &Info,
+                                 SmallVectorImpl<diag::kind> &Diags) const;
+
   /// Append to \p Diags the runtime plugin-group diagnostics of \p Flavor that
-  /// the plugin group named \p Ctrl controls (errors excluded, since -W/-R
-  /// group flags never remap an error). Returns whether \p Ctrl names a
-  /// registered plugin group. Shared by the "plugin" umbrella and the
-  /// -Wuser-defined-warnings root.
+  /// the plugin group named \p Ctrl controls. Returns whether \p Ctrl names a
+  /// registered plugin group.
   bool appendPluginGroupDiags(diag::Flavor Flavor, StringRef Ctrl,
                               SmallVectorImpl<diag::kind> &Diags) const;
+
+  /// The built-in group the runtime group \p Name nests under: the Parent
+  /// declared on it or on the nearest enclosing "<plugin>-plugin..." group,
+  /// else the -Wuser-defined-warnings root.
+  diag::Group staticParentOf(StringRef Name) const;
 
 public:
   DiagnosticIDs();
@@ -397,14 +415,19 @@ public:
     }());
   }
 
-  /// Return an ID for a custom diagnostic placed in the warning group \p Group.
-  /// \p Group may name an existing (TableGen) group, so a caller can put a
-  /// custom diagnostic into a built-in group such as -Wdeprecated; or a
-  /// runtime-registered group whose name is not known at build time (e.g. a
-  /// plugin's). Either way the diagnostic participates in -W<group> /
-  /// -Wno-<group> / -Werror=<group> (and -R<group> for a remark), just like a
-  /// built-in warning. Two callers may share a group name; that simply groups
-  /// their diagnostics together.
+  /// Return an ID for a custom diagnostic placed in the runtime-registered
+  /// warning group \p Group, whose name need not be known at build time (e.g. a
+  /// plugin's). The diagnostic participates in -W<group> / -Wno-<group> /
+  /// -Werror=<group> (and -R<group> for a remark), just like a built-in
+  /// warning. Two callers may share a group name; that simply groups their
+  /// diagnostics together.
+  ///
+  /// \p Group must not name a built-in (TableGen) group: a custom diagnostic
+  /// never joins one directly, so a user can always tell it apart from Clang's
+  /// own. To extend a built-in group, put the diagnostic in a runtime group
+  /// and give that group the built-in one as its parent with
+  /// registerPluginGroup. In-tree callers with a diag::Group in hand use the
+  /// CustomDiagDesc overload.
   ///
   /// \p StableID, when non-empty, is a build-independent identifier for the
   /// diagnostic (see CustomDiagDesc::StableID) used as its SARIF ruleId; leave
@@ -415,9 +438,8 @@ public:
   /// Convenience over getCustomDiagID(Level, Message, Group) that places a
   /// plugin's diagnostic in its own runtime group "<PluginName>-plugin" (or the
   /// subgroup "<PluginName>-plugin-<Subgroup>"), the naming convention that the
-  /// -Wplugin umbrella is built on. A plugin that instead wants to join an
-  /// existing group can call getCustomDiagID(Level, Message, Group) directly.
-  /// \p StableID is forwarded as the diagnostic's SARIF ruleId (see above).
+  /// -Wplugin umbrella is built on. \p StableID is forwarded as the
+  /// diagnostic's SARIF ruleId (see above).
   unsigned getCustomPluginDiagID(Level Level, StringRef Message,
                                  StringRef PluginName, StringRef Subgroup = {},
                                  StringRef StableID = {});
@@ -429,8 +451,12 @@ public:
   bool ensureDynamicPluginGroup(StringRef Name);
 
   /// Record that a loaded plugin owns the group \p Name, so a -W<name> that
-  /// referenced it is not later reported as an unknown warning option.
-  void registerPluginGroup(StringRef Name);
+  /// referenced it is not later reported as an unknown warning option. When
+  /// \p Parent names a built-in group, \p Name nests under it: a flag on the
+  /// parent (say -Wno-deprecated) reaches \p Name's members, and their printed
+  /// "[-W...]" still names \p Name, so the plugin's origin stays visible.
+  /// Returns false, registering nothing, if \p Parent is not a built-in group.
+  bool registerPluginGroup(StringRef Name, StringRef Parent = {});
 
   /// After all plugins have loaded, report every plugin group that was named by
   /// a -W flag but that no plugin ever claimed -- i.e. a misspelled option.

@@ -713,11 +713,30 @@ TEST_F(PluginWarningGroupTest, RemarkFlagDoesNotAffectWarning) {
   EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
 }
 
-// A custom diagnostic may join an existing (built-in) group by naming it, and
-// is then controlled by that group's flag like any other member.
-TEST_F(PluginWarningGroupTest, CustomDiagJoinsBuiltinGroup) {
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                                      "custom deprecation", "deprecated");
+// A plugin extends a built-in group by nesting one of its own groups under it,
+// never by adding a diagnostic to the built-in group directly. A flag on the
+// parent then reaches the plugin's diagnostic. Here the flag is parsed before
+// the plugin loads, so the parent's severity is picked up at registration.
+TEST_F(PluginWarningGroupTest, BuiltinParentFlagReachesPluginGroup) {
+  DiagOpts.Warnings = {"no-deprecated"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+
+  ASSERT_TRUE(
+      Diags.registerPluginGroup("example", "deprecation", "deprecated"));
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "custom deprecation", "example",
+                                            "deprecation");
+  EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// The same when the flag comes after registration (a `#pragma clang
+// diagnostic`, say): the built-in group collects the nested group's members.
+TEST_F(PluginWarningGroupTest, BuiltinParentFlagReachesRegisteredMember) {
+  ASSERT_TRUE(
+      Diags.registerPluginGroup("example", "deprecation", "deprecated"));
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "custom deprecation", "example",
+                                            "deprecation");
   EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
 
   DiagOpts.Warnings = {"no-deprecated"};
@@ -725,14 +744,83 @@ TEST_F(PluginWarningGroupTest, CustomDiagJoinsBuiltinGroup) {
   EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
 }
 
-// -Werror on a built-in group also promotes a custom diagnostic that joined it.
-TEST_F(PluginWarningGroupTest, WerrorPromotesCustomDiagInBuiltinGroup) {
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                                      "custom deprecation", "deprecated");
+// -Werror on the built-in parent promotes the nested plugin diagnostic.
+TEST_F(PluginWarningGroupTest, WerrorOnBuiltinParentPromotesPluginGroup) {
+  ASSERT_TRUE(
+      Diags.registerPluginGroup("example", "deprecation", "deprecated"));
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "custom deprecation", "example",
+                                            "deprecation");
   DiagOpts.Warnings = {"error=deprecated"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
   EXPECT_EQ(Diags.getDiagnosticLevel(ID, SourceLocation()),
             DiagnosticsEngine::Error);
+}
+
+// The printed flag names the plugin's own group, not the parent, so a user can
+// tell the plugin's warning from Clang's.
+TEST_F(PluginWarningGroupTest, NestedGroupPrintsItsOwnName) {
+  ASSERT_TRUE(
+      Diags.registerPluginGroup("example", "deprecation", "deprecated"));
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "custom deprecation", "example",
+                                            "deprecation");
+  EXPECT_EQ(Diags.getDiagnosticIDs()->getWarningOptionForDiag(ID),
+            "example-plugin-deprecation");
+}
+
+// The plugin group's own flag is more specific than the parent's and wins.
+TEST_F(PluginWarningGroupTest, PluginGroupFlagOverridesBuiltinParent) {
+  DiagOpts.Warnings = {"no-deprecated", "example-plugin-deprecation"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+
+  ASSERT_TRUE(
+      Diags.registerPluginGroup("example", "deprecation", "deprecated"));
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "custom deprecation", "example",
+                                            "deprecation");
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// A subgroup inherits the parent declared on the group it lives in.
+TEST_F(PluginWarningGroupTest, SubgroupInheritsBuiltinParent) {
+  ASSERT_TRUE(
+      Diags.registerPluginGroup("example", "deprecation", "deprecated"));
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "custom deprecation", "example",
+                                            "deprecation-old");
+  DiagOpts.Warnings = {"no-deprecated"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// A group with a declared parent nests under that parent instead of the
+// -Wuser-defined-warnings root; the -Wplugin umbrella still covers it.
+TEST_F(PluginWarningGroupTest, BuiltinParentReplacesUserDefinedWarningsRoot) {
+  ASSERT_TRUE(
+      Diags.registerPluginGroup("example", "deprecation", "deprecated"));
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "custom deprecation", "example",
+                                            "deprecation");
+  DiagOpts.Warnings = {"no-user-defined-warnings"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+
+  DiagOpts.Warnings = {"no-plugin"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// A parent that is not a built-in group is refused and nothing is nested.
+TEST_F(PluginWarningGroupTest, UnknownBuiltinParentRefused) {
+  EXPECT_FALSE(
+      Diags.registerPluginGroup("example", "deprecation", "no-such-group"));
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "custom deprecation", "example",
+                                            "deprecation");
+  DiagOpts.Warnings = {"no-deprecated"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
 }
 
 // -Wno-user-defined-warnings is the root over every runtime plugin group, so it

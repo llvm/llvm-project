@@ -30,11 +30,16 @@ namespace {
 // plugin would generate the PRINT_FNS_DIAGS body instead. Each row is one
 // diagnostic: a record name (which becomes both the enumerator below and, with
 // the plugin name, the SARIF ruleId), a level, a message, and an optional
-// subgroup of the plugin's "print-fns-plugin" group.
+// subgroup of the plugin's "print-fns-plugin" group. The "deprecation" subgroup
+// is nested under Clang's -Wdeprecated (see the consumer's constructor), which
+// is how a plugin extends a built-in group: through a group of its own that
+// still names the plugin, never by adding to the built-in group directly.
 #define PRINT_FNS_DIAGS(DIAG)                                                  \
   DIAG(suspicious_decl, Warning, "suspicious top-level declaration '%0'", "")  \
   DIAG(forbidden_decl, Error, "forbidden top-level declaration '%0'", "")      \
-  DIAG(saw_decl, Remark, "saw top-level declaration '%0'", "")
+  DIAG(saw_decl, Remark, "saw top-level declaration '%0'", "")                 \
+  DIAG(old_decl, Warning, "top-level declaration '%0' is old-fashioned",       \
+       "deprecation")
 
 // The stable enumeration, generated from the table's first column, gives the
 // plugin type-safe names for its diagnostics just like clang's diag::warn_*.
@@ -60,6 +65,7 @@ class PrintFunctionsConsumer : public ASTConsumer {
   bool WarnOnDecls;
   bool RemarkOnDecls;
   bool ErrorOnDecls;
+  bool DeprecateDecls;
   // Diagnostic IDs assigned by getCustomPluginDiagIDs, indexed by
   // print_fns::Kind. Registering the whole table up front (rather than lazily
   // on first use) makes every diagnostic a member of the "print-fns-plugin"
@@ -71,16 +77,20 @@ public:
   PrintFunctionsConsumer(CompilerInstance &Instance,
                          std::set<std::string> ParsedTemplates,
                          bool WarnOnDecls, bool RemarkOnDecls,
-                         bool ErrorOnDecls)
+                         bool ErrorOnDecls, bool DeprecateDecls)
       : Instance(Instance), ParsedTemplates(ParsedTemplates),
         WarnOnDecls(WarnOnDecls), RemarkOnDecls(RemarkOnDecls),
-        ErrorOnDecls(ErrorOnDecls) {
+        ErrorOnDecls(ErrorOnDecls), DeprecateDecls(DeprecateDecls) {
+    DiagnosticsEngine &Diags = Instance.getDiagnostics();
+    // Nest the "print-fns-plugin-deprecation" subgroup under -Wdeprecated, so
+    // -Wno-deprecated and -Werror=deprecated reach its diagnostics while they
+    // still print their own [-Wprint-fns-plugin-deprecation].
+    Diags.registerPluginGroup("print-fns", "deprecation", "deprecated");
     // One call registers the whole table. Each diagnostic lands in the plugin's
     // "print-fns-plugin" group (derived from the plugin name) with a stable
     // SARIF ruleId "print_fns_<record>" (likewise derived), so the plugin
     // spells neither the group nor the id.
-    DiagIDs = Instance.getDiagnostics().getCustomPluginDiagIDs("print-fns",
-                                                               PrintFnsDiagTable);
+    DiagIDs = Diags.getCustomPluginDiagIDs("print-fns", PrintFnsDiagTable);
   }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
@@ -102,6 +112,9 @@ public:
             << ND->getNameAsString();
       if (ErrorOnDecls)
         Diags.Report(ND->getLocation(), DiagIDs[print_fns::forbidden_decl])
+            << ND->getNameAsString();
+      if (DeprecateDecls)
+        Diags.Report(ND->getLocation(), DiagIDs[print_fns::old_decl])
             << ND->getNameAsString();
     }
 
@@ -148,12 +161,14 @@ class PrintFunctionNamesAction : public PluginASTAction {
   bool WarnOnDecls = false;
   bool RemarkOnDecls = false;
   bool ErrorOnDecls = false;
+  bool DeprecateDecls = false;
 
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) override {
     return std::make_unique<PrintFunctionsConsumer>(
-        CI, ParsedTemplates, WarnOnDecls, RemarkOnDecls, ErrorOnDecls);
+        CI, ParsedTemplates, WarnOnDecls, RemarkOnDecls, ErrorOnDecls,
+        DeprecateDecls);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
@@ -169,6 +184,8 @@ protected:
         RemarkOnDecls = true;
       } else if (args[i] == "-error-decls") {
         ErrorOnDecls = true;
+      } else if (args[i] == "-deprecate-decls") {
+        DeprecateDecls = true;
       } else if (args[i] == "-an-error") {
         unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
                                             "invalid argument '%0'");

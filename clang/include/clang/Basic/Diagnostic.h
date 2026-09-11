@@ -942,13 +942,13 @@ public:
                                   StringRef(FormatString, N - 1));
   }
 
-  /// Compute the diagnostic ID for a custom diagnostic placed in the warning
-  /// group \p Group. The group may be an existing (TableGen) group, so the
-  /// diagnostic can join a built-in group such as -Wdeprecated, or a
-  /// runtime-registered group whose name is not known at build time. Either way
-  /// it is controllable with -W<group> / -Wno-<group> / -Werror=<group> (and
-  /// -R<group> for a remark), like a built-in warning. \p StableID, when given,
-  /// is a build-independent identifier used as the diagnostic's SARIF ruleId.
+  /// Compute the diagnostic ID for a custom diagnostic placed in the
+  /// runtime-registered warning group \p Group, whose name need not be known at
+  /// build time. It is controllable with -W<group> / -Wno-<group> /
+  /// -Werror=<group> (and -R<group> for a remark), like a built-in warning.
+  /// \p Group must not name a built-in group; to extend one, nest the runtime
+  /// group under it with registerPluginGroup. \p StableID, when given, is a
+  /// build-independent identifier used as the diagnostic's SARIF ruleId.
   template <unsigned N>
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N],
                            StringRef Group, StringRef StableID = {}) {
@@ -960,9 +960,8 @@ public:
   /// Convenience over the group-taking getCustomDiagID that places a plugin's
   /// diagnostic in its own runtime group "<PluginName>-plugin" (or the subgroup
   /// "<PluginName>-plugin-<Subgroup>"), the naming convention behind the
-  /// -Wplugin umbrella. A plugin that instead wants to join an existing group
-  /// can call getCustomDiagID(L, FormatString, Group) directly. \p StableID,
-  /// when given, is used as the diagnostic's SARIF ruleId.
+  /// -Wplugin umbrella. \p StableID, when given, is used as the diagnostic's
+  /// SARIF ruleId.
   template <unsigned N>
   unsigned getCustomPluginDiagID(Level L, const char (&FormatString)[N],
                                  StringRef PluginName, StringRef Subgroup = {},
@@ -998,6 +997,16 @@ public:
   SmallVector<unsigned>
   getCustomPluginDiagIDs(StringRef PluginName,
                          ArrayRef<PluginDiagnostic> Table);
+
+  /// Nest the plugin group "<PluginName>-plugin-<Subgroup>" (or
+  /// "<PluginName>-plugin" when \p Subgroup is empty) under the built-in group
+  /// \p Parent, so a flag on the parent, say -Wno-deprecated, reaches the
+  /// diagnostics in it while their printed "[-W...]" still names the plugin's
+  /// group. This is how a plugin extends a built-in group: its diagnostics
+  /// never join one directly, so a user can tell them from Clang's own. Returns
+  /// false, registering nothing, if \p Parent is not a built-in group.
+  bool registerPluginGroup(StringRef PluginName, StringRef Subgroup,
+                           StringRef Parent);
 
   /// The plugin whose diagnostics are currently being registered, or empty when
   /// none is (see PluginDiagnosticScope).
