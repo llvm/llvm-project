@@ -4,14 +4,8 @@
 define <8 x half> @test_128(<8 x half> %0, <8 x half> %1, <8 x half> %2) {
 ; CHECK-LABEL: test_128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm1[0,0,2,2,4,5,6,7]
-; CHECK-NEXT:    vpshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,4,6,6]
-; CHECK-NEXT:    vprold $16, %xmm0, %xmm4
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
-; CHECK-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,7,7]
-; CHECK-NEXT:    vmulph %xmm1, %xmm4, %xmm1
-; CHECK-NEXT:    vfmsubadd231ph %xmm3, %xmm0, %xmm1
-; CHECK-NEXT:    vaddph %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vfcmaddcph %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %3 = shufflevector <8 x half> %1, <8 x half> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
@@ -29,14 +23,8 @@ entry:
 define <16 x half> @test_256(<16 x half> %0, <16 x half> %1, <16 x half> %2) {
 ; CHECK-LABEL: test_256:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshuflw {{.*#+}} ymm3 = ymm1[0,0,2,2,4,5,6,7,8,8,10,10,12,13,14,15]
-; CHECK-NEXT:    vpshufhw {{.*#+}} ymm3 = ymm3[0,1,2,3,4,4,6,6,8,9,10,11,12,12,14,14]
-; CHECK-NEXT:    vprold $16, %ymm0, %ymm4
-; CHECK-NEXT:    vpshuflw {{.*#+}} ymm1 = ymm1[1,1,3,3,4,5,6,7,9,9,11,11,12,13,14,15]
-; CHECK-NEXT:    vpshufhw {{.*#+}} ymm1 = ymm1[0,1,2,3,5,5,7,7,8,9,10,11,13,13,15,15]
-; CHECK-NEXT:    vmulph %ymm4, %ymm1, %ymm1
-; CHECK-NEXT:    vfmsubadd231ph %ymm3, %ymm0, %ymm1
-; CHECK-NEXT:    vaddph %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    vfcmaddcph %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vmovaps %ymm2, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %3 = shufflevector <16 x half> %1, <16 x half> poison, <16 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>
@@ -54,14 +42,8 @@ entry:
 define <32 x half> @test_512(<32 x half> %0, <32 x half> %1, <32 x half> %2) {
 ; CHECK-LABEL: test_512:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshuflw {{.*#+}} zmm3 = zmm1[0,0,2,2,4,5,6,7,8,8,10,10,12,13,14,15,16,16,18,18,20,21,22,23,24,24,26,26,28,29,30,31]
-; CHECK-NEXT:    vpshufhw {{.*#+}} zmm3 = zmm3[0,1,2,3,4,4,6,6,8,9,10,11,12,12,14,14,16,17,18,19,20,20,22,22,24,25,26,27,28,28,30,30]
-; CHECK-NEXT:    vprold $16, %zmm0, %zmm4
-; CHECK-NEXT:    vpshuflw {{.*#+}} zmm1 = zmm1[1,1,3,3,4,5,6,7,9,9,11,11,12,13,14,15,17,17,19,19,20,21,22,23,25,25,27,27,28,29,30,31]
-; CHECK-NEXT:    vpshufhw {{.*#+}} zmm1 = zmm1[0,1,2,3,5,5,7,7,8,9,10,11,13,13,15,15,16,17,18,19,21,21,23,23,24,25,26,27,29,29,31,31]
-; CHECK-NEXT:    vmulph %zmm1, %zmm4, %zmm1
-; CHECK-NEXT:    vfmsubadd231ph %zmm3, %zmm0, %zmm1
-; CHECK-NEXT:    vaddph %zmm1, %zmm2, %zmm0
+; CHECK-NEXT:    vfcmaddcph %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %3 = shufflevector <32 x half> %1, <32 x half> poison, <32 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14, i32 16, i32 16, i32 18, i32 18, i32 20, i32 20, i32 22, i32 22, i32 24, i32 24, i32 26, i32 26, i32 28, i32 28, i32 30, i32 30>
