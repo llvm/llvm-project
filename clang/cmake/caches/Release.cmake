@@ -172,9 +172,6 @@ set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
 set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)
-if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
-  set_final_stage_var(LLVM_USE_STATIC_LIBXML2 "ON" BOOL)
-endif()
 
 if (LLVM_RELEASE_ENABLE_LTO)
   set_final_stage_var(LLVM_ENABLE_FATLTO "ON" BOOL)
