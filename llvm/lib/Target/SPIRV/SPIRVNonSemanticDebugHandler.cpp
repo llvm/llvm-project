@@ -857,8 +857,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
 
 // NonSemantic.Shader.DebugInfo.100 debug operation encodings
 // (section 4.5, "Debug Operations").
-namespace NonSemanticDebugOp {
-enum : uint32_t {
+enum class NonSemanticDebugOp : uint32_t {
   Deref = 0,
   Plus = 1,
   Minus = 2,
@@ -870,9 +869,9 @@ enum : uint32_t {
   Constu = 8,
   Fragment = 9
 };
-} // namespace NonSemanticDebugOp
 
-static std::optional<uint32_t> mapDwarfOpToNonSemanticOp(uint64_t DwarfOp) {
+static std::optional<NonSemanticDebugOp>
+mapDwarfOpToNonSemanticOp(uint64_t DwarfOp) {
   switch (DwarfOp) {
   case dwarf::DW_OP_deref:
     return NonSemanticDebugOp::Deref;
@@ -903,11 +902,12 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugOperation(
     const DIExpression::ExprOperand &Op, MCRegister VoidTypeReg,
     MCRegister I32TypeReg, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
-  std::optional<uint32_t> NSOp = mapDwarfOpToNonSemanticOp(Op.getOp());
+  std::optional<NonSemanticDebugOp> NSOp =
+      mapDwarfOpToNonSemanticOp(Op.getOp());
   if (!NSOp)
     return std::nullopt;
 
-  SmallVector<uint32_t, 3> Key{*NSOp};
+  SmallVector<uint32_t, 3> Key{static_cast<uint32_t>(*NSOp)};
   for (unsigned I = 0, E = Op.getNumArgs(); I != E; ++I) {
     uint64_t Arg = Op.getArg(I);
     if (!isUInt<32>(Arg))
