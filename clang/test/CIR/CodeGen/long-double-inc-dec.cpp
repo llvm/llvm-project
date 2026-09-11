@@ -85,15 +85,15 @@ extern "C" long double do_pre_dec(long double d) {
 
   return --d;
   // CIR: %[[ARG_LOAD:.*]]  = cir.load {{.*}}%[[ARG_ALLOCA]] : !cir.ptr<!cir.long_double<![[LDTY]]>>, !cir.long_double<![[LDTY]]>
-  // CIR: %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.long_double<![[LDTY]]>
-  // CIR: %[[ARG_DEC:.*]] = cir.fsub %[[ARG_LOAD]], %[[ONE]]
+  // CIR: %[[NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.long_double<![[LDTY]]>
+  // CIR: %[[ARG_DEC:.*]] = cir.fadd %[[ARG_LOAD]], %[[NEGONE]]
   // CIR: cir.store{{.*}} %[[ARG_DEC]], %[[ARG_ALLOCA]] : !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>
   // CIR: cir.store %[[ARG_DEC]], %[[RET_ALLOCA]] : !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>
   // CIR: %[[LOAD_RET:.*]] = cir.load %[[RET_ALLOCA]]
   // CIR: cir.return %[[LOAD_RET]] : !cir.long_double<![[LDTY]]>
   //
   // LLVM: %[[ARG_LOAD:.*]] = load [[LDTY]], ptr %[[ARG_ALLOCA]]
-  // LLVMCIR: %[[ARG_DEC:.*]] = fsub [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
+  // LLVMCIR: %[[ARG_DEC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], -1.000000e+00
   // OGCG: %[[ARG_DEC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], -1.000000e+00
   // LLVM: store [[LDTY]] %[[ARG_DEC]], ptr %[[ARG_ALLOCA]]
   // LLVMCIR: store [[LDTY]] %[[ARG_DEC]], ptr %[[RET_ALLOCA]]
@@ -112,15 +112,15 @@ extern "C" long double do_post_dec(long double d) {
 
   return d--;
   // CIR: %[[ARG_LOAD:.*]]  = cir.load {{.*}}%[[ARG_ALLOCA]] : !cir.ptr<!cir.long_double<![[LDTY]]>>, !cir.long_double<![[LDTY]]>
-  // CIR: %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.long_double<![[LDTY]]>
-  // CIR: %[[ARG_DEC:.*]] = cir.fsub %[[ARG_LOAD]], %[[ONE]]
+  // CIR: %[[NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.long_double<![[LDTY]]>
+  // CIR: %[[ARG_DEC:.*]] = cir.fadd %[[ARG_LOAD]], %[[NEGONE]]
   // CIR: cir.store{{.*}} %[[ARG_DEC]], %[[ARG_ALLOCA]] : !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>
   // CIR: cir.store %[[ARG_LOAD]], %[[RET_ALLOCA]] : !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>
   // CIR: %[[LOAD_RET:.*]] = cir.load %[[RET_ALLOCA]]
   // CIR: cir.return %[[LOAD_RET]] : !cir.long_double<![[LDTY]]>
   //
   // LLVM: %[[ARG_LOAD:.*]] = load [[LDTY]], ptr %[[ARG_ALLOCA]]
-  // LLVMCIR: %[[ARG_DEC:.*]] = fsub [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
+  // LLVMCIR: %[[ARG_DEC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], -1.000000e+00
   // OGCG: %[[ARG_DEC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], -1.000000e+00
   // LLVM: store [[LDTY]] %[[ARG_DEC]], ptr %[[ARG_ALLOCA]]
   // LLVMCIR: store [[LDTY]] %[[ARG_LOAD]], ptr %[[RET_ALLOCA]]

@@ -3557,12 +3557,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     llvm::Value *amt;
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      // Another special case: half FP increment should be done via float. If
-      // the input isn't already half, it may be i16.
-      Value *bitcast = Builder.CreateBitCast(input, CGF.CGM.HalfTy);
-      value = Builder.CreateFPExt(bitcast, CGF.CGM.FloatTy, "incdec.conv");
-    }
+    // Another special case: half FP increment should be done via float.
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
+      value = Builder.CreateFPExt(value, CGF.CGM.FloatTy, "incdec.conv");
 
     if (value->getType()->isFloatTy())
       amt = llvm::ConstantFP::get(VMContext,
@@ -3593,12 +3590,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     }
     value = Builder.CreateFAdd(value, amt, isInc ? "inc" : "dec");
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
       value = Builder.CreateFPTrunc(value, CGF.CGM.HalfTy, "incdec.conv");
-      value = Builder.CreateBitCast(value, input->getType());
-    }
 
-  // Fixed-point types.
+    // Fixed-point types.
   } else if (type->isFixedPointType()) {
     // Fixed-point types are tricky. In some cases, it isn't possible to
     // represent a 1 or a -1 in the type at all. Piggyback off of
