@@ -2847,7 +2847,8 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
   if (!VR)
     return false;
 
-  assert(((int64_t)*VL - (int64_t)*VR) % ElemSize == 0);
+  // We allow (VL - VR) / Elemsize to have non-zero remainder. This happens for
+  // invalid expressions where LHS and RHS are of different types.
   int64_t R64 =
       (static_cast<int64_t>(*VL) - static_cast<int64_t>(*VR)) / ElemSize;
   if (static_cast<int64_t>(T::from(R64)) != R64)
