@@ -738,23 +738,28 @@ This augments DWARF Version 5 section 2.2 and Table 2.2.
 
 The following table provides the additional attributes.
 
-```{eval-rst}
-.. table:: Attribute names
-   :name: amdgpu-dwarf-attribute-names-table
+:::{list-table} Attribute names
+:name: amdgpu-dwarf-attribute-names-table
+:header-rows: 1
 
-   ============================ ====================================
-   Attribute                    Usage
-   ============================ ====================================
-   ``DW_AT_LLVM_active_lane``   SIMT active lanes (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_lane_pc``       SIMT lane program location (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_lanes``         SIMT lane count (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_iterations``    Concurrent iteration count (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_vector_size``   Base type vector size (see :ref:`amdgpu-dwarf-base-type-entries`)
-   ``DW_AT_LLVM_address_space`` Architecture specific address space (see :ref:`amdgpu-dwarf-address-spaces`)
-   ``DW_AT_LLVM_memory_space``  Pointer or reference types (see 5.3 "Type Modifier Entries")
-                                Data objects (see 4.1 "Data Object Entries")
-   ============================ ====================================
-```
+* - Attribute
+  - Usage
+* - `DW_AT_LLVM_active_lane`
+  - SIMT active lanes (see {ref}`amdgpu-dwarf-low-level-information`)
+* - `DW_AT_LLVM_lane_pc`
+  - SIMT lane program location (see {ref}`amdgpu-dwarf-low-level-information`)
+* - `DW_AT_LLVM_lanes`
+  - SIMT lane count (see {ref}`amdgpu-dwarf-low-level-information`)
+* - `DW_AT_LLVM_iterations`
+  - Concurrent iteration count (see {ref}`amdgpu-dwarf-low-level-information`)
+* - `DW_AT_LLVM_vector_size`
+  - Base type vector size (see {ref}`amdgpu-dwarf-base-type-entries`)
+* - `DW_AT_LLVM_address_space`
+  - Architecture specific address space (see {ref}`amdgpu-dwarf-address-spaces`)
+* - `DW_AT_LLVM_memory_space`
+  - Pointer or reference types (see 5.3 "Type Modifier Entries")
+    Data objects (see 4.1 "Data Object Entries")
+:::
 
 (amdgpu-dwarf-expressions)=
 
@@ -1137,7 +1142,7 @@ rules.*
   that specifies an operation expression of arbitrary complexity. In this usage
   they can describe the location of an object as long as its lifetime is either
   static or the same as the lexical block (see
-  \:ref:\`amdgpu-dwarf-lexical-block-entries\`) that owns it, and it does not move
+  {ref}`amdgpu-dwarf-lexical-block-entries`) that owns it, and it does not move
   during its lifetime.*
 - *They can be the result of evaluating a debugger information entry attribute
   that specifies a location list expression. In this usage they can describe the
@@ -1482,7 +1487,7 @@ expression.
 
    *Operand interpretation of* `DW_OP_call2`*,* `DW_OP_call4`*, and*
    `DW_OP_call_ref` *is exactly like that for* `DW_FORM_ref2`*,
-   \`\`DW_FORM_ref4\`\`\*, and* `DW_FORM_ref_addr`*, respectively.*
+   `DW_FORM_ref4`*, and* `DW_FORM_ref_addr`*, respectively.*
 
    The call operation is evaluated by:
 
@@ -1629,9 +1634,12 @@ type specifies the size, encoding, and endianity of the literal value.
 
 The base type of value stack entries can be the distinguished generic type.
 
-(amdgpu-dwarf-literal-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-literal-operations:
 
-####### A.2.5.4.3.1 Literal Operations
+A.2.5.4.3.1 Literal Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section replaces DWARF Version 5 section 2.5.1.1.
@@ -1730,25 +1738,34 @@ size and the low-order bits used.
    `DW_AT_LLVM_iterations` attribute, otherwise the DWARF expression is
    ill-formed. See {ref}`amdgpu-dwarf-low-level-information`.
 
-(amdgpu-dwarf-arithmetic-logical-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-arithmetic-logical-operations:
 
-####### A.2.5.4.3.2 Arithmetic and Logical Operations
+A.2.5.4.3.2 Arithmetic and Logical Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section is the same as DWARF Version 5 section 2.5.1.4.
 :::
 
-(amdgpu-dwarf-type-conversions-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-type-conversions-operations:
 
-####### A.2.5.4.3.3 Type Conversion Operations
+A.2.5.4.3.3 Type Conversion Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section is the same as DWARF Version 5 section 2.5.1.6.
 :::
 
-(amdgpu-dwarf-general-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-general-operations:
 
-####### A.2.5.4.3.4 Special Value Operations
+A.2.5.4.3.4 Special Value Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section replaces parts of DWARF Version 5 sections 2.5.1.2, 2.5.1.3, and
@@ -2003,9 +2020,12 @@ There are these special value operations currently defined:
 This section describes the operations that push location descriptions on the
 stack.
 
-(amdgpu-dwarf-general-location-description-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-general-location-description-operations:
 
-####### A.2.5.4.4.1 General Location Description Operations
+A.2.5.4.4.1 General Location Description Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section replaces part of DWARF Version 5 section 2.5.1.3.
@@ -2114,9 +2134,12 @@ This section replaces part of DWARF Version 5 section 2.5.1.3.
    the undefined location description is pushed. If the register rule is* same
    value*, then a register location description for R is pushed.*
 
-(amdgpu-dwarf-undefined-location-description-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-undefined-location-description-operations:
 
-####### A.2.5.4.4.2 Undefined Location Description Operations
+A.2.5.4.4.2 Undefined Location Description Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section replaces DWARF Version 5 section 2.6.1.1.1.
@@ -2139,9 +2162,12 @@ in a part with all undefined bits.
    `DW_OP_LLVM_undefined` pushes a location description L that comprises one
    undefined location description SL.
 
-(amdgpu-dwarf-memory-location-description-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-memory-location-description-operations:
 
-####### A.2.5.4.4.3 Memory Location Description Operations
+A.2.5.4.4.3 Memory Location Description Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section replaces parts of DWARF Version 5 section 2.5.1.1, 2.5.1.2,
@@ -2417,9 +2443,12 @@ type.
    encoding size.
    :::
 
-(amdgpu-dwarf-register-location-description-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-register-location-description-operations:
 
-####### A.2.5.4.4.4 Register Location Description Operations
+A.2.5.4.4.4 Register Location Description Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section replaces DWARF Version 5 section 2.6.1.1.3.
@@ -2472,9 +2501,12 @@ register, it is necessary to use* `DW_OP_regval_type`*, use one of the*
 `DW_OP_breg*` *register-based addressing operations, or use* `DW_OP_deref*`
 *on a register location description.*
 
-(amdgpu-dwarf-implicit-location-description-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-implicit-location-description-operations:
 
-####### A.2.5.4.4.5 Implicit Location Description Operations
+A.2.5.4.4.5 Implicit Location Description Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section replaces DWARF Version 5 section 2.6.1.1.4.
@@ -2673,9 +2705,12 @@ reconstruct the value of the object when asked to dereference the pointer
 described by E*{sub}`1` *which contains the* `DW_OP_implicit_pointer` *or*
 `DW_OP_LLVM_aspace_implicit_pointer` *operation.*
 
-(amdgpu-dwarf-composite-location-description-operations)=
+```{eval-rst}
+.. _amdgpu-dwarf-composite-location-description-operations:
 
-####### A.2.5.4.4.6 Composite Location Description Operations
+A.2.5.4.4.6 Composite Location Description Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
 
 :::{note}
 This section replaces DWARF Version 5 section 2.6.1.2.
@@ -3149,22 +3184,51 @@ mappings, is given in {ref}`amdgpu-dwarf-source-language-memory-spaces-table`.
 Vendor defined source language memory spaces may be defined using codes in the
 range `DW_MSPACE_LLVM_lo_user` to `DW_MSPACE_LLVM_hi_user`.
 
-```{eval-rst}
-.. table:: Source language memory spaces
-   :name: amdgpu-dwarf-source-language-memory-spaces-table
+:::{list-table} Source language memory spaces
+:name: amdgpu-dwarf-source-language-memory-spaces-table
+:header-rows: 1
 
-   =========================== ============ ============== ============== ==============
-   Memory Space Name           Meaning      C/C++          OpenCL         CUDA/HIP
-   =========================== ============ ============== ============== ==============
-   ``DW_MSPACE_LLVM_none``     generic      *default*      generic        *default*
-   ``DW_MSPACE_LLVM_global``   global                      global
-   ``DW_MSPACE_LLVM_constant`` constant                    constant       constant
-   ``DW_MSPACE_LLVM_group``    thread-group                local          shared
-   ``DW_MSPACE_LLVM_private``  thread                      private
-   ``DW_MSPACE_LLVM_lo_user``
-   ``DW_MSPACE_LLVM_hi_user``
-   =========================== ============ ============== ============== ==============
-```
+* - Memory Space Name
+  - Meaning
+  - C/C++
+  - OpenCL
+  - CUDA/HIP
+* - `DW_MSPACE_LLVM_none`
+  - generic
+  - *default*
+  - generic
+  - *default*
+* - `DW_MSPACE_LLVM_global`
+  - global
+  -
+  - global
+  -
+* - `DW_MSPACE_LLVM_constant`
+  - constant
+  -
+  - constant
+  - constant
+* - `DW_MSPACE_LLVM_group`
+  - thread-group
+  -
+  - local
+  - shared
+* - `DW_MSPACE_LLVM_private`
+  - thread
+  -
+  - private
+  -
+* - `DW_MSPACE_LLVM_lo_user`
+  -
+  -
+  -
+  -
+* - `DW_MSPACE_LLVM_hi_user`
+  -
+  -
+  -
+  -
+:::
 
 :::{note}
 The approach presented in
@@ -3209,16 +3273,15 @@ This augments DWARF Version 5 section 3.1.1 and Table 3.1.
 Additional language codes defined for use with the `DW_AT_language` attribute
 are defined in {ref}`amdgpu-dwarf-language-names-table`.
 
-```{eval-rst}
-.. table:: Language Names
-   :name: amdgpu-dwarf-language-names-table
+:::{list-table} Language Names
+:name: amdgpu-dwarf-language-names-table
+:header-rows: 1
 
-   ==================== =============================
-   Language Name        Meaning
-   ==================== =============================
-   ``DW_LANG_LLVM_HIP`` HIP Language.
-   ==================== =============================
-```
+* - Language Name
+  - Meaning
+* - `DW_LANG_LLVM_HIP`
+  - HIP Language.
+:::
 
 The HIP language \[{ref}`HIP <amdgpu-dwarf-HIP>`\] can be supported by extending
 the C++ language.
@@ -3910,7 +3973,7 @@ This augments DWARF Version 5 section 6.2.4.1.
    *This is particularly useful for programming languages that support runtime
    compilation and runtime generation of source text. In these cases, the
    source text does not reside in any permanent file. For example, the OpenCL
-   language [:ref:\`OpenCL \<amdgpu-dwarf-OpenCL>\`] supports online compilation.*
+   language [{ref}`OpenCL <amdgpu-dwarf-OpenCL>`] supports online compilation.*
 
 2. `DW_LNCT_LLVM_is_MD5`
 
@@ -3939,7 +4002,7 @@ descriptions.
 These changes would be incorporated into the DWARF Version 5 section 6.4.
 :::
 
-(amdgpu-dwarf-structure-of-call-frame-information)=
+(amdgpu-dwarf-structure_of-call-frame-information)=
 
 ##### A.6.4.1 Structure of Call Frame Information
 
@@ -4545,16 +4608,15 @@ chapter 7 sections.
 This augments DWARF Version 5 section 7.4 list item 3's table.
 :::
 
-```{eval-rst}
-.. table:: ``.debug_info`` section attribute form roles
-  :name: amdgpu-dwarf-debug-info-section-attribute-form-roles-table
+:::{list-table} `.debug_info` section attribute form roles
+:name: amdgpu-dwarf-debug-info-section-attribute-form-roles-table
+:header-rows: 1
 
-  ================================== ===================================
-  Form                               Role
-  ================================== ===================================
-  DW_OP_LLVM_aspace_implicit_pointer offset in ``.debug_info``
-  ================================== ===================================
-```
+* - Form
+  - Role
+* - DW_OP_LLVM_aspace_implicit_pointer
+  - offset in `.debug_info`
+:::
 
 #### A.7.5 Format of Debugging Information
 
@@ -4567,22 +4629,35 @@ This augments DWARF Version 5 section 7.5.4 and Table 7.5.
 The following table gives the encoding of the additional debugging information
 entry attributes.
 
-```{eval-rst}
-.. table:: Attribute encodings
-   :name: amdgpu-dwarf-attribute-encodings-table
+:::{list-table} Attribute encodings
+:name: amdgpu-dwarf-attribute-encodings-table
+:header-rows: 1
 
-   ================================== ====== ===================================
-   Attribute Name                     Value  Classes
-   ================================== ====== ===================================
-   ``DW_AT_LLVM_memory_space``        0x3e0f constant
-   ``DW_AT_LLVM_address_space``       0x3e10 constant
-   ``DW_AT_LLVM_lanes``               0x3e11 constant
-   ``DW_AT_LLVM_lane_pc``             0x3e12 exprloc, loclist
-   ``DW_AT_LLVM_vector_size``         0x3e13 constant
-   ``DW_AT_LLVM_iterations``          TBA    constant, exprloc, loclist
-   ``DW_AT_LLVM_active_lane``         TBA    exprloc, loclist
-   ================================== ====== ===================================
-```
+* - Attribute Name
+  - Value
+  - Classes
+* - `DW_AT_LLVM_memory_space`
+  - 0x3e0f
+  - constant
+* - `DW_AT_LLVM_address_space`
+  - 0x3e10
+  - constant
+* - `DW_AT_LLVM_lanes`
+  - 0x3e11
+  - constant
+* - `DW_AT_LLVM_lane_pc`
+  - 0x3e12
+  - exprloc, loclist
+* - `DW_AT_LLVM_vector_size`
+  - 0x3e13
+  - constant
+* - `DW_AT_LLVM_iterations`
+  - TBA
+  - constant, exprloc, loclist
+* - `DW_AT_LLVM_active_lane`
+  - TBA
+  - exprloc, loclist
+:::
 
 (amdgpu-dwarf-classes-and-forms)=
 
@@ -4646,51 +4721,94 @@ for the operation `DW_OP_LLVM_user` is described in
 `DW_OP_LLVM_user` vendor extensions operations are described in
 {ref}`amdgpu-dwarf-dw-op-llvm-user-vendor-extension-operation-encodings-table`.
 
-```{eval-rst}
-.. table:: DWARF Operation Encodings
-   :name: amdgpu-dwarf-operation-encodings-table
+:::{list-table} DWARF Operation Encodings
+:name: amdgpu-dwarf-operation-encodings-table
+:header-rows: 1
 
-   ====================================== ===== ======== =========================================================================================
-   Operation                              Code  Number   Notes
-                                                of
-                                                Operands
-   ====================================== ===== ======== =========================================================================================
-   ``DW_OP_LLVM_user``                    0xe9     1+    ULEB128 vendor extension opcode, followed by vendor extension operands
-                                                         defined in :ref:`amdgpu-dwarf-dw-op-llvm-user-vendor-extension-operation-encodings-table`
-   ====================================== ===== ======== =========================================================================================
-```
+* - Operation
+  - Code
+  - Number of Operands
+  - Notes
+* - `DW_OP_LLVM_user`
+  - 0xe9
+  - 1+
+  - ULEB128 vendor extension opcode, followed by vendor extension operands
+    defined in {ref}`amdgpu-dwarf-dw-op-llvm-user-vendor-extension-operation-encodings-table`
+:::
 
-```{eval-rst}
-.. table:: DWARF DW_OP_LLVM_user Vendor Extension Operation Encodings
-   :name: amdgpu-dwarf-dw-op-llvm-user-vendor-extension-operation-encodings-table
+:::{list-table} DWARF DW_OP_LLVM_user Vendor Extension Operation Encodings
+:name: amdgpu-dwarf-dw-op-llvm-user-vendor-extension-operation-encodings-table
+:header-rows: 1
 
-   ====================================== ========= ========== ===============================
-   Operation                              Vendor    Number     Notes
-                                          Extension of
-                                          Opcode    Additional
-                                                    Operands
-   ====================================== ========= ========== ===============================
-   ``DW_OP_LLVM_form_aspace_address``     0x02          0
-   ``DW_OP_LLVM_push_lane``               0x03          0
-   ``DW_OP_LLVM_offset``                  0x04          0
-   ``DW_OP_LLVM_offset_uconst``           0x05          1      ULEB128 byte displacement
-   ``DW_OP_LLVM_bit_offset``              0x06          0
-   ``DW_OP_LLVM_call_frame_entry_reg``    0x07          1      ULEB128 register number
-   ``DW_OP_LLVM_undefined``               0x08          0
-   ``DW_OP_LLVM_aspace_bregx``            0x09          2      ULEB128 register number,
-                                                               SLEB128 byte displacement
-   ``DW_OP_LLVM_piece_end``               0x0a          0
-   ``DW_OP_LLVM_extend``                  0x0b          2      ULEB128 bit size,
-                                                               ULEB128 count
-   ``DW_OP_LLVM_select_bit_piece``        0x0c          2      ULEB128 bit size,
-                                                               ULEB128 count
-   ``DW_OP_LLVM_aspace_implicit_pointer`` TBA           2      4-byte or 8-byte offset of DIE,
-                                                               SLEB128 byte displacement
-   ``DW_OP_LLVM_push_iteration``          TBA           0
-   ``DW_OP_LLVM_overlay``                 TBA           0
-   ``DW_OP_LLVM_bit_overlay``             TBA           0
-   ====================================== ========= ========== ===============================
-```
+* - Operation
+  - Vendor Extension Opcode
+  - Number of Additional Operands
+  - Notes
+* - `DW_OP_LLVM_form_aspace_address`
+  - 0x02
+  - 0
+  -
+* - `DW_OP_LLVM_push_lane`
+  - 0x03
+  - 0
+  -
+* - `DW_OP_LLVM_offset`
+  - 0x04
+  - 0
+  -
+* - `DW_OP_LLVM_offset_uconst`
+  - 0x05
+  - 1
+  - ULEB128 byte displacement
+* - `DW_OP_LLVM_bit_offset`
+  - 0x06
+  - 0
+  -
+* - `DW_OP_LLVM_call_frame_entry_reg`
+  - 0x07
+  - 1
+  - ULEB128 register number
+* - `DW_OP_LLVM_undefined`
+  - 0x08
+  - 0
+  -
+* - `DW_OP_LLVM_aspace_bregx`
+  - 0x09
+  - 2
+  - ULEB128 register number,
+    SLEB128 byte displacement
+* - `DW_OP_LLVM_piece_end`
+  - 0x0a
+  - 0
+  -
+* - `DW_OP_LLVM_extend`
+  - 0x0b
+  - 2
+  - ULEB128 bit size,
+    ULEB128 count
+* - `DW_OP_LLVM_select_bit_piece`
+  - 0x0c
+  - 2
+  - ULEB128 bit size,
+    ULEB128 count
+* - `DW_OP_LLVM_aspace_implicit_pointer`
+  - TBA
+  - 2
+  - 4-byte or 8-byte offset of DIE,
+    SLEB128 byte displacement
+* - `DW_OP_LLVM_push_iteration`
+  - TBA
+  - 0
+  -
+* - `DW_OP_LLVM_overlay`
+  - TBA
+  - 0
+  -
+* - `DW_OP_LLVM_bit_overlay`
+  - TBA
+  - 0
+  -
+:::
 
 ##### A.7.7.3 Location List Expressions
 
@@ -4707,16 +4825,17 @@ This augments DWARF Version 5 section 7.12 and Table 7.17.
 
 The following table gives the encoding of the additional DWARF languages.
 
-```{eval-rst}
-.. table:: Language encodings
-   :name: amdgpu-dwarf-language-encodings-table
+:::{list-table} Language encodings
+:name: amdgpu-dwarf-language-encodings-table
+:header-rows: 1
 
-   ==================== ====== ===================
-   Language Name        Value  Default Lower Bound
-   ==================== ====== ===================
-   ``DW_LANG_LLVM_HIP`` 0x8100 0
-   ==================== ====== ===================
-```
+* - Language Name
+  - Value
+  - Default Lower Bound
+* - `DW_LANG_LLVM_HIP`
+  - 0x8100
+  - 0
+:::
 
 #### A.7.14 Address Space Encodings
 
@@ -4737,22 +4856,27 @@ Address Space Encodings".
 The encodings of the constants used for the currently defined memory spaces
 are given in {ref}`amdgpu-dwarf-memory-space-encodings-table`.
 
-```{eval-rst}
-.. table:: Memory space encodings
-   :name: amdgpu-dwarf-memory-space-encodings-table
+:::{list-table} Memory space encodings
+:name: amdgpu-dwarf-memory-space-encodings-table
+:header-rows: 1
 
-   =========================== ======
-   Memory Space Name           Value
-   =========================== ======
-   ``DW_MSPACE_LLVM_none``     0x0000
-   ``DW_MSPACE_LLVM_global``   0x0001
-   ``DW_MSPACE_LLVM_constant`` 0x0002
-   ``DW_MSPACE_LLVM_group``    0x0003
-   ``DW_MSPACE_LLVM_private``  0x0004
-   ``DW_MSPACE_LLVM_lo_user``  0x8000
-   ``DW_MSPACE_LLVM_hi_user``  0xffff
-   =========================== ======
-```
+* - Memory Space Name
+  - Value
+* - `DW_MSPACE_LLVM_none`
+  - 0x0000
+* - `DW_MSPACE_LLVM_global`
+  - 0x0001
+* - `DW_MSPACE_LLVM_constant`
+  - 0x0002
+* - `DW_MSPACE_LLVM_group`
+  - 0x0003
+* - `DW_MSPACE_LLVM_private`
+  - 0x0004
+* - `DW_MSPACE_LLVM_lo_user`
+  - 0x8000
+* - `DW_MSPACE_LLVM_hi_user`
+  - 0xffff
+:::
 
 #### A.7.22 Line Number Information
 
@@ -4763,17 +4887,17 @@ This augments DWARF Version 5 section 7.22 and Table 7.27.
 The following table gives the encoding of the additional line number header
 entry formats.
 
-```{eval-rst}
-.. table:: Line number header entry format encodings
-  :name: amdgpu-dwarf-line-number-header-entry-format-encodings-table
+:::{list-table} Line number header entry format encodings
+:name: amdgpu-dwarf-line-number-header-entry-format-encodings-table
+:header-rows: 1
 
-  ====================================  ====================
-  Line number header entry format name  Value
-  ====================================  ====================
-  ``DW_LNCT_LLVM_source``               0x2001
-  ``DW_LNCT_LLVM_is_MD5``               0x2002
-  ====================================  ====================
-```
+* - Line number header entry format name
+  - Value
+* - `DW_LNCT_LLVM_source`
+  - 0x2001
+* - `DW_LNCT_LLVM_is_MD5`
+  - 0x2002
+:::
 
 (amdgpu-dwarf-call-frame-information-encoding)=
 
@@ -4786,18 +4910,29 @@ This augments DWARF Version 5 section 7.24 and Table 7.29.
 The following table gives the encoding of the additional call frame information
 instructions.
 
-```{eval-rst}
-.. table:: Call frame instruction encodings
-   :name: amdgpu-dwarf-call-frame-instruction-encodings-table
+:::{list-table} Call frame instruction encodings
+:name: amdgpu-dwarf-call-frame-instruction-encodings-table
+:header-rows: 1
 
-   ================================= ====== ====== ================ ================ =====================
-   Instruction                       High 2 Low 6  Operand 1        Operand 2        Operand 3
-                                     Bits   Bits
-   ================================= ====== ====== ================ ================ =====================
-   ``DW_CFA_LLVM_def_aspace_cfa``    0      0x30   ULEB128 register ULEB128 offset   ULEB128 address space
-   ``DW_CFA_LLVM_def_aspace_cfa_sf`` 0      0x31   ULEB128 register SLEB128 offset   ULEB128 address space
-   ================================= ====== ====== ================ ================ =====================
-```
+* - Instruction
+  - High 2 Bits
+  - Low 6 Bits
+  - Operand 1
+  - Operand 2
+  - Operand 3
+* - `DW_CFA_LLVM_def_aspace_cfa`
+  - 0
+  - 0x30
+  - ULEB128 register
+  - ULEB128 offset
+  - ULEB128 address space
+* - `DW_CFA_LLVM_def_aspace_cfa_sf`
+  - 0
+  - 0x31
+  - ULEB128 register
+  - SLEB128 offset
+  - ULEB128 address space
+:::
 
 #### A.7.32 Type Signature Computation
 
@@ -4806,16 +4941,16 @@ This augments (in alphabetical order) DWARF Version 5 section 7.32, Table
 7.32.
 :::
 
-```{eval-rst}
-.. table:: Attributes used in type signature computation
-   :name: amdgpu-dwarf-attributes-used-in-type-signature-computation-table
+:::{list-table} Attributes used in type signature computation
+:name: amdgpu-dwarf-attributes-used-in-type-signature-computation-table
 
-   ================================== =======
-   ``DW_AT_LLVM_address_space``
-   ``DW_AT_LLVM_memory_space``
-   ``DW_AT_LLVM_vector_size``
-   ================================== =======
-```
+* - `DW_AT_LLVM_address_space`
+  -
+* - `DW_AT_LLVM_memory_space`
+  -
+* - `DW_AT_LLVM_vector_size`
+  -
+:::
 
 ### A. Attributes by Tag Value (Informative)
 
@@ -4826,37 +4961,45 @@ This augments DWARF Version 5 Appendix A and Table A.1.
 The following table provides the additional attributes that are applicable to
 debugger information entries.
 
-```{eval-rst}
-.. table:: Attributes by tag value
-   :name: amdgpu-dwarf-attributes-by-tag-value-table
+:::{list-table} Attributes by tag value
+:name: amdgpu-dwarf-attributes-by-tag-value-table
+:header-rows: 1
 
-   ================================== =============================
-   Tag Name                           Applicable Attributes
-   ================================== =============================
-   ``DW_TAG_base_type``               * ``DW_AT_LLVM_vector_size``
-   ``DW_TAG_pointer_type``            * ``DW_AT_LLVM_address_space``
-                                      * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_reference_type``          * ``DW_AT_LLVM_address_space``
-                                      * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_rvalue_reference_type``   * ``DW_AT_LLVM_address_space``
-                                      * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_variable``                * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_formal_parameter``        * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_constant``                * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_entry_point``             * ``DW_AT_LLVM_active_lane``
-                                      * ``DW_AT_LLVM_lane_pc``
-                                      * ``DW_AT_LLVM_lanes``
-                                      * ``DW_AT_LLVM_iterations``
-   ``DW_TAG_inlined_subroutine``      * ``DW_AT_LLVM_active_lane``
-                                      * ``DW_AT_LLVM_lane_pc``
-                                      * ``DW_AT_LLVM_lanes``
-                                      * ``DW_AT_LLVM_iterations``
-   ``DW_TAG_subprogram``              * ``DW_AT_LLVM_active_lane``
-                                      * ``DW_AT_LLVM_lane_pc``
-                                      * ``DW_AT_LLVM_lanes``
-                                      * ``DW_AT_LLVM_iterations``
-   ================================== =============================
-```
+* - Tag Name
+  - Applicable Attributes
+* - `DW_TAG_base_type`
+  - - `DW_AT_LLVM_vector_size`
+* - `DW_TAG_pointer_type`
+  - - `DW_AT_LLVM_address_space`
+    - `DW_AT_LLVM_memory_space`
+* - `DW_TAG_reference_type`
+  - - `DW_AT_LLVM_address_space`
+    - `DW_AT_LLVM_memory_space`
+* - `DW_TAG_rvalue_reference_type`
+  - - `DW_AT_LLVM_address_space`
+    - `DW_AT_LLVM_memory_space`
+* - `DW_TAG_variable`
+  - - `DW_AT_LLVM_memory_space`
+* - `DW_TAG_formal_parameter`
+  - - `DW_AT_LLVM_memory_space`
+* - `DW_TAG_constant`
+  - - `DW_AT_LLVM_memory_space`
+* - `DW_TAG_entry_point`
+  - - `DW_AT_LLVM_active_lane`
+    - `DW_AT_LLVM_lane_pc`
+    - `DW_AT_LLVM_lanes`
+    - `DW_AT_LLVM_iterations`
+* - `DW_TAG_inlined_subroutine`
+  - - `DW_AT_LLVM_active_lane`
+    - `DW_AT_LLVM_lane_pc`
+    - `DW_AT_LLVM_lanes`
+    - `DW_AT_LLVM_iterations`
+* - `DW_TAG_subprogram`
+  - - `DW_AT_LLVM_active_lane`
+    - `DW_AT_LLVM_lane_pc`
+    - `DW_AT_LLVM_lanes`
+    - `DW_AT_LLVM_iterations`
+:::
 
 ### D. Examples (Informative)
 
@@ -5179,4 +5322,3 @@ Need to provide examples of new features.
     (amdgpu-dwarf-semver)=
 
 16. [SEMVER] [Semantic Versioning](https://semver.org/)
-
