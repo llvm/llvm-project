@@ -50,12 +50,13 @@
 // COMMON-DAG: @[[VCSTR:.*]] = {{.*}} c"[[VC]]\00"
 // COMMON-DAG: @[[VTSTR:.*]] = {{.*}} c"[[VT]]\00"
 
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KERNSTR]]
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KTXSTR]]
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KTLSTR]]
-// HIP-DAG: call void @__{{.*}}RegisterManagedVar({{.*}}@[[VMSTR]]
-// COMMON-DAG: call void @__{{.*}}RegisterVar({{.*}}@[[VCSTR]]
-// COMMON-DAG: call void @__{{.*}}RegisterVar({{.*}}@[[VTSTR]]
+// The host exports symbols via offloading entries referencing the name strings.
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KERNSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KTXSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KTLSTR]]
+// HIP-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VMSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VCSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VTSTR]]
 
 template <typename T>
 __global__ void kt(T x) {}
