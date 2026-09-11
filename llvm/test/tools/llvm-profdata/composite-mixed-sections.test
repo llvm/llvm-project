@@ -1,0 +1,35 @@
+; Both fixtures were written from sample-composite-empty-lbr.proftext. The
+; first has an empty composite section before its legacy LBR section; the
+; second has an equivalent nonempty composite section before the legacy data.
+
+; Verify that an empty composite section is skipped without preventing the
+; following legacy profile section from being read.
+; RUN: llvm-profdata merge --sample --text \
+; RUN:   %S/Inputs/composite-mixed-empty.profdata -o - \
+; RUN:   | FileCheck %s --check-prefix=PROFILE
+
+; Verify that decoding mode is restored after a nonempty composite section.
+; Both sections contain the same profiles, so every counter is accumulated
+; exactly twice.
+; RUN: llvm-profdata merge --sample --text \
+; RUN:   %S/Inputs/composite-mixed-nonempty.profdata -o - \
+; RUN:   | FileCheck %s --check-prefix=ACCUMULATED
+
+; Verify that the section table reports both physical profile section formats.
+; RUN: llvm-profdata show --sample --show-sec-info-only \
+; RUN:   %S/Inputs/composite-mixed-empty.profdata \
+; RUN:   | FileCheck %s --check-prefix=SECTIONS
+
+; Verify that an empty composite section still makes composite inspection
+; applicable without producing the legacy-profile warning.
+; RUN: llvm-profdata show --sample --show-composite-info-only \
+; RUN:   %S/Inputs/composite-mixed-empty.profdata 2>&1 | count 0
+
+; PROFILE: top:42:7
+; PROFILE-NEXT: caller:21:3
+; PROFILE-NEXT:  1: callee:11
+; ACCUMULATED: top:84:14
+; ACCUMULATED-NEXT: caller:42:6
+; ACCUMULATED-NEXT:  1: callee:22
+; SECTIONS: CompositeProfileSection
+; SECTIONS: LBRProfileSection
