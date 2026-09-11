@@ -123,12 +123,11 @@ private:
     operator bool() const { return Block; }
 
     VPBasicBlock *getBlock() const { return Block; }
+    VPBasicBlock::iterator getInsertPoint() const { return Point; }
 
     operator VPRecipeBase *() const {
       return Point == Block->end() ? nullptr : &*Point;
     }
-
-    template <typename T> void insert(T &R) { return Block->insert(R, Point); }
   };
 
   VPInsertPoint InsertPt;
@@ -136,7 +135,7 @@ private:
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (InsertPt)
-      InsertPt.insert(R);
+      insertHelper(R, InsertPt.getBlock(), InsertPt.getInsertPoint());
     return R;
   }
 
@@ -146,6 +145,12 @@ private:
                                    const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, {}, MD, DL, Name));
+  }
+
+protected:
+  virtual void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                            VPBasicBlock::iterator It) const {
+    VPBB->insert(R, It);
   }
 
 public:
@@ -158,6 +163,8 @@ public:
   VPBuilder(const VPInsertPoint &IP) : InsertPt(IP) {}
   VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
       : InsertPt(TheBB, IP) {}
+
+  virtual ~VPBuilder() = default;
 
   /// Get the recipe at the current insert point or nullptr if the insert point
   /// is the end of the block.
@@ -183,7 +190,7 @@ public:
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    InsertPt.insert(R);
+    insertHelper(R, InsertPt.getBlock(), InsertPt.getInsertPoint());
     return R;
   }
 

@@ -1177,8 +1177,7 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
 static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   // Simplify (X && Y) | (X && !Y) -> X.
   // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
-  // && (Y | Z) and (X | !X) into true. This requires queuing newly created
-  // recipes to be visited during simplification.
+  // && (Y | Z) and (X | !X) into true.
   VPValue *X, *Y;
   if (match(Def,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
@@ -1372,7 +1371,8 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 }
 
 /// Combine \p Def into a simpler recipe. May modify or create new recipes.
-static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
+static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
+                                        VPBuilder &Builder) {
   if (auto *V = simplifyRecipe(Plan, Def)) {
     Def->replaceAllUsesWith(V);
     return Def;
@@ -1390,11 +1390,9 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
         RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
         RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
         RepR->getDebugLoc());
-    Unmasked->insertBefore(RepR);
+    Builder.insert(Unmasked);
     return Unmasked;
   }
-
-  VPBuilder Builder(Def);
 
   // Avoid replacing VPInstructions with underlying values with new
   // VPInstructions, as we would fail to create widen/replicate recpes from the
@@ -1700,6 +1698,25 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   return nullptr;
 }
 
+namespace {
+/// Variant of VPBuilder that inserts newly created recipes to a worklist.
+class VPCombineBuilder : public VPBuilder {
+  SmallVectorImpl<VPSingleDefRecipe *> &Worklist;
+
+public:
+  VPCombineBuilder(SmallVectorImpl<VPSingleDefRecipe *> &Worklist)
+      : VPBuilder(), Worklist(Worklist) {}
+
+protected:
+  virtual void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                            VPBasicBlock::iterator It) const override {
+    VPBuilder::insertHelper(R, VPBB, It);
+    if (auto *Def = dyn_cast<VPSingleDefRecipe>(R))
+      Worklist.push_back(Def);
+  }
+};
+} // namespace
+
 void VPlanTransforms::combineRecipes(VPlan &Plan) {
   SmallVector<VPSingleDefRecipe *, 256> Worklist;
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
@@ -1711,18 +1728,19 @@ void VPlanTransforms::combineRecipes(VPlan &Plan) {
 
   [[maybe_unused]] unsigned InitWorklistSize = Worklist.size();
 
+  VPCombineBuilder Builder(Worklist);
   while (!Worklist.empty()) {
     assert(Worklist.size() < InitWorklistSize * 2 &&
            "Worklist is growing large, possible cycle?");
     VPSingleDefRecipe *Def = Worklist.pop_back_val();
-    VPSingleDefRecipe *New = combineRecipe(Plan, Def);
+    Builder.setInsertPoint(Def);
+    VPSingleDefRecipe *New = combineRecipe(Plan, Def, Builder);
     if (!New)
       continue;
     if (New != Def) {
       // Replace the recipe with a new one.
       Def->replaceAllUsesWith(New);
       Def->eraseFromParent();
-      Worklist.push_back(New);
       // TODO: Append users to the worklist (might need a setvector)
     } else if (vputils::isDeadRecipe(*Def)) {
       // Recipe was modified - it may be dead now.
