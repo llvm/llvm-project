@@ -250,13 +250,20 @@ class MemAllocatorTy {
     /// Remove allocation information for the given memory location.
     bool remove(void *Ptr, MemAllocInfoTy *Removed = nullptr);
 
-    /// Finds allocation information for the given memory location.
+    /// Finds allocation information for the given memory location. Ptr may
+    /// point anywhere inside the allocation.
     const MemAllocInfoTy *find(void *Ptr) const {
-      auto AllocInfo = Map.find(Ptr);
-      if (AllocInfo == Map.end())
+      if (Map.empty())
         return nullptr;
-      else
-        return &AllocInfo->second;
+      auto I = Map.upper_bound(Ptr);
+      if (I == Map.begin())
+        return nullptr;
+      --I;
+      uintptr_t PtrAsInt = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t Base = reinterpret_cast<uintptr_t>(I->first);
+      if (PtrAsInt >= Base + I->second.ReqSize)
+        return nullptr;
+      return &I->second;
     }
 
     /// Check if the map contains the given pointer and offset.

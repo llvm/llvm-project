@@ -177,9 +177,9 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
   }
 
   ol_device_handle_t DestOLDevice =
-      getAllocDevice(MContext.getOLHandleRef(), Dest);
+      getAllocDevice(MContext->getOLHandleRef(), Dest);
   ol_device_handle_t SrcOLDevice =
-      getAllocDevice(MContext.getOLHandleRef(), Src);
+      getAllocDevice(MContext->getOLHandleRef(), Src);
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,

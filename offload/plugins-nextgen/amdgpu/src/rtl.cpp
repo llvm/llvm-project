@@ -4345,17 +4345,8 @@ Error AMDGPUPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
 
 Expected<PluginAllocInfoTy>
 AMDGPUPluginContextTy::getAllocInfo(const void *Ptr) {
-  AllocInfo Info;
-  {
-    std::lock_guard<std::mutex> Lock(AllocationsMutex);
-    auto It = Allocations.find(Ptr);
-    if (It == Allocations.end())
-      return Plugin::error(ErrorCode::NOT_FOUND,
-                           "pointer is not a known allocation in this context");
-    Info = It->second;
-  }
-
-  // HSA gives authoritative base/size for the underlying region.
+  // HSA gives the base of the region containing Ptr, so interior pointers
+  // resolve to the same tracker entry.
   hsa_amd_pointer_info_t HsaInfo{};
   HsaInfo.size = sizeof(hsa_amd_pointer_info_t);
   hsa_status_t Status = hsa_amd_pointer_info(
@@ -4363,6 +4354,16 @@ AMDGPUPluginContextTy::getAllocInfo(const void *Ptr) {
       /*num_agents_accessible=*/nullptr, /*accessible=*/nullptr);
   if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
     return std::move(Err);
+
+  AllocInfo Info;
+  {
+    std::lock_guard<std::mutex> Lock(AllocationsMutex);
+    auto It = Allocations.find(HsaInfo.agentBaseAddress);
+    if (It == Allocations.end())
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    Info = It->second;
+  }
 
   return PluginAllocInfoTy{Info.Device, Info.Kind, HsaInfo.agentBaseAddress,
                            HsaInfo.sizeInBytes};

@@ -331,7 +331,7 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([this](ol_context_handle_t Context, const void *Ptr,
                             ol_mem_info_t PropName, size_t PropSize,
                             void *PropValue) -> ol_result_t {
-        std::ignore = Context;
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Ptr, nullptr);
         // Other properties are not used by the runtime yet
         EXPECT_EQ(PropName, OL_MEM_INFO_DEVICE);
@@ -351,7 +351,7 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
                         ol_alloc_type_t Type, size_t Size,
                         void **AllocationOut) -> ol_result_t {
-        std::ignore = Context;
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(Type, OL_ALLOC_TYPE_HOST);
         EXPECT_GT(Size, 0);
@@ -363,7 +363,7 @@ void mock::MockLiboffload::initDefault() {
   ON_CALL(*this, olMemAllocHost)
       .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
                         size_t Size, void **AllocationOut) -> ol_result_t {
-        std::ignore = Context;
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_GT(Size, 0);
         EXPECT_NE(AllocationOut, nullptr);

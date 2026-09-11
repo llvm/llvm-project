@@ -159,15 +159,17 @@ ol_result_t olDestroyEvent(ol_event_handle_t Event) {
   return mock::getMockLiboffload().olDestroyEvent(Event);
 }
 
-ol_result_t olMemAllocAligned(ol_device_handle_t Device,
+ol_result_t olMemAllocAligned(ol_context_handle_t Context,
+                              ol_device_handle_t Device,
                               ol_alloc_type_t AllocType, size_t Size,
                               size_t Alignment, void **OutPtr) {
-  return mock::getMockLiboffload().olMemAllocAligned(Device, AllocType, Size,
-                                                     Alignment, OutPtr);
+  return mock::getMockLiboffload().olMemAllocAligned(Context, Device, AllocType,
+                                                     Size, Alignment, OutPtr);
 }
 
-ol_result_t olMemAllocAlignedHost(ol_device_handle_t Device, size_t Size,
+ol_result_t olMemAllocAlignedHost(ol_context_handle_t Context,
+                                  ol_device_handle_t Device, size_t Size,
                                   size_t Alignment, void **OutPtr) {
-  return mock::getMockLiboffload().olMemAllocAlignedHost(Device, Size,
+  return mock::getMockLiboffload().olMemAllocAlignedHost(Context, Device, Size,
                                                          Alignment, OutPtr);
 }
