@@ -289,6 +289,13 @@ define void @f(void ()* %fp) {
 but with the added guarantee that `%fp_i`, `%fp_auth`, and `%fp_auth_p`
 are not stored to (and reloaded from) memory.
 
+The bundle is well-formed on any call site, including a direct call to a
+`Function`, `GlobalAlias`, or `GlobalIFunc`. On a direct call there is no
+pointer to authenticate, so the bundle is a no-op and is dropped at
+lowering. This shape can arise when an optimization (for example IPSCCP)
+devirtualizes an indirect call by propagating a `Function` constant via
+`Value::replaceAllUsesWith`, which does not touch operand bundles.
+
 
 ### Function Attributes
 
