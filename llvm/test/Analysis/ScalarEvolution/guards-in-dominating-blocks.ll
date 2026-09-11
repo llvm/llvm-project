@@ -233,9 +233,9 @@ exit:
 define void @guard_before_long_unique_pred_chain(i32 %n, i1 %c) {
 ; CHECK-LABEL: 'guard_before_long_unique_pred_chain'
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_before_long_unique_pred_chain
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
