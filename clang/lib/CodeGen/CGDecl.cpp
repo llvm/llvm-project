@@ -1653,13 +1653,13 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
             LangOptions::TrivialAutoVarInitKind::Uninitialized) {
       if (!Bypasses.isAlwaysBypassed()) {
         // The variable's lifetime restarts on each re-entry into its scope, so
-        // reinitialize at every bypassing jump. Switch cases and backward gotos
-        // are emitted at the jump source, which comes after this alloca;
-        // forward gotos have already been emitted, so patch their init in
-        // before the branch.
+        // reinitialize at every bypassing jump. Backward gotos are emitted at
+        // the jump source, which comes after this alloca; forward gotos and the
+        // switch dispatch have already been emitted, so patch their init in
+        // before the jump.
         BypassedVarInits.insert({&D, address});
-        for (const BypassingForwardGoto &FG : BypassingForwardGotos) {
-          const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Goto);
+        for (const BypassingForwardJump &FG : BypassingForwardJumps) {
+          const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Source);
           if (Vars && Vars->contains(&D))
             if (llvm::Instruction *Term = FG.Block->getTerminator()) {
               llvm::IRBuilderBase::InsertPointGuard IPG(Builder);

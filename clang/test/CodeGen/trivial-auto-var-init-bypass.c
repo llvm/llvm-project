@@ -94,18 +94,17 @@ SKIP:
 // ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
 // ZERO-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // ZERO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
 // ZERO-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // ZERO-NEXT:      i32 1, label %[[SW_BB:.*]]
 // ZERO-NEXT:      i32 2, label %[[SW_BB1:.*]]
 // ZERO-NEXT:    ]
 // ZERO:       [[SW_BB]]:
-// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
 // ZERO-NEXT:    call void @use(ptr noundef [[X]])
 // ZERO-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
 // ZERO-NEXT:    store i32 [[TMP1]], ptr [[RETVAL]], align 4
 // ZERO-NEXT:    br label %[[RETURN:.*]]
 // ZERO:       [[SW_BB1]]:
-// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
 // ZERO-NEXT:    call void @use(ptr noundef [[X]])
 // ZERO-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
 // ZERO-NEXT:    store i32 [[TMP2]], ptr [[RETVAL]], align 4
@@ -125,18 +124,17 @@ SKIP:
 // PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
 // PATTERN-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // PATTERN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
 // PATTERN-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // PATTERN-NEXT:      i32 1, label %[[SW_BB:.*]]
 // PATTERN-NEXT:      i32 2, label %[[SW_BB1:.*]]
 // PATTERN-NEXT:    ]
 // PATTERN:       [[SW_BB]]:
-// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
 // PATTERN-NEXT:    call void @use(ptr noundef [[X]])
 // PATTERN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
 // PATTERN-NEXT:    store i32 [[TMP1]], ptr [[RETVAL]], align 4
 // PATTERN-NEXT:    br label %[[RETURN:.*]]
 // PATTERN:       [[SW_BB1]]:
-// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
 // PATTERN-NEXT:    call void @use(ptr noundef [[X]])
 // PATTERN-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
 // PATTERN-NEXT:    store i32 [[TMP2]], ptr [[RETVAL]], align 4
@@ -170,6 +168,7 @@ int switch_bypass(int c) {
 // ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
 // ZERO-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // ZERO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
 // ZERO-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // ZERO-NEXT:      i32 0, label %[[SW_BB:.*]]
 // ZERO-NEXT:      i32 1, label %[[SW_BB1:.*]]
@@ -178,7 +177,6 @@ int switch_bypass(int c) {
 // ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
 // ZERO-NEXT:    br label %[[SW_BB1]]
 // ZERO:       [[SW_BB1]]:
-// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
 // ZERO-NEXT:    call void @use(ptr noundef [[X]])
 // ZERO-NEXT:    br label %[[SW_EPILOG]]
 // ZERO:       [[SW_EPILOG]]:
@@ -191,6 +189,7 @@ int switch_bypass(int c) {
 // PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
 // PATTERN-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // PATTERN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
 // PATTERN-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // PATTERN-NEXT:      i32 0, label %[[SW_BB:.*]]
 // PATTERN-NEXT:      i32 1, label %[[SW_BB1:.*]]
@@ -199,7 +198,6 @@ int switch_bypass(int c) {
 // PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
 // PATTERN-NEXT:    br label %[[SW_BB1]]
 // PATTERN:       [[SW_BB1]]:
-// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
 // PATTERN-NEXT:    call void @use(ptr noundef [[X]])
 // PATTERN-NEXT:    br label %[[SW_EPILOG]]
 // PATTERN:       [[SW_EPILOG]]:
@@ -269,10 +267,6 @@ void loop_bypass(int n) {
   }
 }
 
-// Eli Friedman's case from the review. Under C 6.2.4p6 x's lifetime would begin
-// at entry to the function body block, so `goto BEGIN` would preserve it and
-// the store through p would be visible. We use the C++ rule instead: `goto
-// CONT` re-enters p's scope and reinitializes it.
 // ZERO-LABEL: define dso_local i32 @backward_goto_around_decl(
 // ZERO-SAME: ) #[[ATTR0]] {
 // ZERO-NEXT:  [[ENTRY:.*:]]
@@ -410,6 +404,177 @@ void computed_goto(int n) {
   int x;
 SKIP:
   use(&x);
+}
+
+// Fallthrough between cases must not re-initialize. `case 1:` is reached two
+// ways: from the switch dispatch, which bypasses the declaration, and by
+// falling out of `case 0:`, which does not. Initializing at the label would
+// fire on both and clobber the 42 written by case 0, so the init goes ahead of
+// the dispatch instead. Expect exactly one annotated store, before the switch.
+// ZERO-LABEL: define dso_local void @switch_fallthrough(
+// ZERO-SAME: i32 noundef [[Y:%.*]]) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[Y_ADDR:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    store i32 [[Y]], ptr [[Y_ADDR]], align 4
+// ZERO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y_ADDR]], align 4
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
+// ZERO-NEXT:      i32 0, label %[[SW_BB:.*]]
+// ZERO-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// ZERO-NEXT:    ]
+// ZERO:       [[SW_BB]]:
+// ZERO-NEXT:    store i32 42, ptr [[X]], align 4
+// ZERO-NEXT:    br label %[[SW_BB1]]
+// ZERO:       [[SW_BB1]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    br label %[[SW_EPILOG]]
+// ZERO:       [[SW_EPILOG]]:
+// ZERO-NEXT:    ret void
+//
+// PATTERN-LABEL: define dso_local void @switch_fallthrough(
+// PATTERN-SAME: i32 noundef [[Y:%.*]]) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[Y_ADDR:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    store i32 [[Y]], ptr [[Y_ADDR]], align 4
+// PATTERN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y_ADDR]], align 4
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
+// PATTERN-NEXT:      i32 0, label %[[SW_BB:.*]]
+// PATTERN-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// PATTERN-NEXT:    ]
+// PATTERN:       [[SW_BB]]:
+// PATTERN-NEXT:    store i32 42, ptr [[X]], align 4
+// PATTERN-NEXT:    br label %[[SW_BB1]]
+// PATTERN:       [[SW_BB1]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    br label %[[SW_EPILOG]]
+// PATTERN:       [[SW_EPILOG]]:
+// PATTERN-NEXT:    ret void
+//
+void switch_fallthrough(int y) {
+  switch (y) {
+    int x;
+  case 0:
+    x = 42;
+    // fallthrough
+  case 1:
+    use(&x);
+    break;
+  }
+}
+
+// ZERO-LABEL: define dso_local void @equivalence_switch_form(
+// ZERO-SAME: i32 noundef [[C:%.*]]) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
+// ZERO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// ZERO-NEXT:      i32 0, label %[[SW_BB:.*]]
+// ZERO-NEXT:    ]
+// ZERO:       [[SW_BB]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    br label %[[SW_DEFAULT]]
+// ZERO:       [[SW_DEFAULT]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    br label %[[SW_EPILOG:.*]]
+// ZERO:       [[SW_EPILOG]]:
+// ZERO-NEXT:    ret void
+//
+// PATTERN-LABEL: define dso_local void @equivalence_switch_form(
+// PATTERN-SAME: i32 noundef [[C:%.*]]) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
+// PATTERN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// PATTERN-NEXT:      i32 0, label %[[SW_BB:.*]]
+// PATTERN-NEXT:    ]
+// PATTERN:       [[SW_BB]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    br label %[[SW_DEFAULT]]
+// PATTERN:       [[SW_DEFAULT]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    br label %[[SW_EPILOG:.*]]
+// PATTERN:       [[SW_EPILOG]]:
+// PATTERN-NEXT:    ret void
+//
+void equivalence_switch_form(int c) {
+  switch (c) {
+    int x;
+  case 0:
+    use(&x);
+  default:
+    use(&x);
+  }
+}
+
+// ZERO-LABEL: define dso_local void @equivalence_goto_form(
+// ZERO-SAME: i32 noundef [[C:%.*]]) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
+// ZERO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
+// ZERO-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// ZERO-NEXT:      i32 0, label %[[SW_BB:.*]]
+// ZERO-NEXT:    ]
+// ZERO:       [[SW_BB]]:
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    br label %[[CASE0:.*]]
+// ZERO:       [[SW_DEFAULT]]:
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    br label %[[DEFAULT:.*]]
+// ZERO:       [[CASE0]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    br label %[[DEFAULT]]
+// ZERO:       [[DEFAULT]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    ret void
+//
+// PATTERN-LABEL: define dso_local void @equivalence_goto_form(
+// PATTERN-SAME: i32 noundef [[C:%.*]]) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
+// PATTERN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
+// PATTERN-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// PATTERN-NEXT:      i32 0, label %[[SW_BB:.*]]
+// PATTERN-NEXT:    ]
+// PATTERN:       [[SW_BB]]:
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    br label %[[CASE0:.*]]
+// PATTERN:       [[SW_DEFAULT]]:
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    br label %[[DEFAULT:.*]]
+// PATTERN:       [[CASE0]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    br label %[[DEFAULT]]
+// PATTERN:       [[DEFAULT]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    ret void
+//
+void equivalence_goto_form(int c) {
+  switch (c) {
+  case 0:
+    goto CASE0;
+  default:
+    goto DEFAULT;
+  }
+  {
+    int x;
+  CASE0:
+    use(&x);
+  DEFAULT:
+    use(&x);
+  }
 }
 //.
 // ZERO: [[META1]] = !{!"auto-init"}

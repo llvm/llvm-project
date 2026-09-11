@@ -862,7 +862,7 @@ void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
   // init.
   if (HaveInsertPoint() && !Bypasses.isAlwaysBypassed()) {
     emitBypassedVarInitsForSource(&S);
-    BypassingForwardGotos.push_back({Builder.GetInsertBlock(), &S});
+    BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
   }
 
   ApplyAtomGroup Grp(getDebugInfo());
@@ -1803,7 +1803,6 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
   // switch machinery to enter this block.
   llvm::BasicBlock *CaseDest = createBasicBlock("sw.bb");
   EmitBlockWithFallThrough(CaseDest, &S);
-  emitBypassedVarInitsForSource(&S);
   EmitStmt(S.getSubStmt());
 
   // If range is empty, do nothing.
@@ -1942,7 +1941,6 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
 
   llvm::BasicBlock *CaseDest = createBasicBlock("sw.bb");
   EmitBlockWithFallThrough(CaseDest, &S);
-  emitBypassedVarInitsForSource(&S);
   if (SwitchWeights)
     SwitchWeights->push_back(getProfileCount(&S));
   SwitchInsn->addCase(CaseVal, CaseDest);
@@ -1975,7 +1973,6 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
       CaseDest = createBasicBlock("sw.bb");
       EmitBlockWithFallThrough(CaseDest, CurCase);
     }
-    emitBypassedVarInitsForSource(CurCase);
     // Since this loop is only executed when the CaseStmt has no attributes
     // use a hard-coded value.
     if (SwitchLikelihood)
@@ -2013,7 +2010,6 @@ void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S,
     SwitchLikelihood->front() = Stmt::getLikelihood(Attrs);
 
   EmitBlockWithFallThrough(DefaultBlock, &S);
-  emitBypassedVarInitsForSource(&S);
 
   EmitStmt(S.getSubStmt());
 }
@@ -2456,6 +2452,17 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // explicit case ranges tests can have a place to jump to on
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
+
+  // The dispatch is the jump that bypasses any declarations sitting between the
+  // switch and its case labels, so the initialization goes here, ahead of the
+  // switch instruction -- not at the case labels. A case label is also reached
+  // by falling through from the case above it, and that edge bypasses nothing;
+  // initializing there would clobber a variable the previous case had written.
+  // The declarations are inside the body and so have no alloca yet, hence the
+  // patch-it-in-later handling in EmitAutoVarAlloca.
+  if (!Bypasses.isAlwaysBypassed())
+    BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
   addInstToNewSourceAtom(SwitchInsn, CondV);
 

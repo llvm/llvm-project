@@ -521,14 +521,23 @@ void test_backward_goto_no_init() {
     goto L;
 }
 
-// Switch with default case bypassing a variable declared in case 0.
+// Switch with default case bypassing a variable declared in case 0. The init
+// goes ahead of the dispatch, not at the bypassing label: a label is also
+// reached by falling through from the case above it, and that edge bypasses
+// nothing. Case 0 reaches the declaration and initializes there as usual.
 // UNINIT-LABEL:  test_switch_default_bypass(
 // ZERO-LABEL:    test_switch_default_bypass(
+// ZERO:      store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT: switch i32
 // ZERO:      sw.default:
-// ZERO-NEXT: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-NOT:  !annotation
+// ZERO:      call void @_Z4usedIiEvRT_
 // PATTERN-LABEL: test_switch_default_bypass(
+// PATTERN:      store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT: switch i32
 // PATTERN:      sw.default:
-// PATTERN-NEXT: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NOT:  !annotation
+// PATTERN:      call void @_Z4usedIiEvRT_
 void test_switch_default_bypass(int c) {
   switch (c) {
   case 0:
@@ -645,19 +654,17 @@ void nested_loops(int n) {
   }
 }
 
-// Nested loops + switch: in C++ the reinit is emitted at each case target, so
-// it runs on every case entry (one store per case).
+// Nested loops + switch: the init sits ahead of the dispatch, inside the inner
+// loop body, so it runs once per iteration rather than once per case.
 // UNINIT-LABEL:  nested_loops_switch(
 // ZERO-LABEL:    nested_loops_switch(
 // ZERO:      while.body3:
-// ZERO:      switch i32
-// ZERO-DAG:  store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
-// ZERO-DAG:  store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT]]
+// ZERO:      store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT: switch i32
 // PATTERN-LABEL: nested_loops_switch(
 // PATTERN:      while.body3:
-// PATTERN:      switch i32
-// PATTERN-DAG:  store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
-// PATTERN-DAG:  store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT]]
+// PATTERN:      store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT: switch i32
 void nested_loops_switch(int n, int c) {
   while (n) {
     while (n) {

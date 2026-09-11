@@ -306,13 +306,14 @@ public:
   // trivial-auto-var-init at a jump that re-enters their scope.
   llvm::SmallDenseMap<const VarDecl *, Address, 4> BypassedVarInits;
 
-  // Forward gotos that may bypass a not-yet-emitted declaration;
-  // EmitAutoVarAlloca patches the init in before the branch.
-  struct BypassingForwardGoto {
+  // Jumps, like gotos or switches, that may bypass a declaration that has not
+  // been emitted yet. EmitAutoVarAlloca patches the init in before the jump
+  // once the alloca exists.
+  struct BypassingForwardJump {
     llvm::AssertingVH<llvm::BasicBlock> Block;
-    const GotoStmt *Goto;
+    const Stmt *Source;
   };
-  llvm::SmallVector<BypassingForwardGoto, 4> BypassingForwardGotos;
+  llvm::SmallVector<BypassingForwardJump, 4> BypassingForwardJumps;
 
   /// List of recently emitted OMPCanonicalLoops.
   ///

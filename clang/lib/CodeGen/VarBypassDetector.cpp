@@ -174,9 +174,11 @@ void VarBypassDetector::Detect() {
       if (const LabelStmt *LS = GS->getLabel()->getStmt())
         Detect(from, ToScopes[LS], GS);
     } else if (const SwitchStmt *SS = dyn_cast<SwitchStmt>(St)) {
+      // Keyed by the switch, not by each case: the dispatch is the jump
+      // source, and that is where the initialization is emitted.
       for (const SwitchCase *SC = SS->getSwitchCaseList(); SC;
            SC = SC->getNextSwitchCase()) {
-        Detect(from, ToScopes[SC], SC);
+        Detect(from, ToScopes[SC], SS);
       }
     } else {
       llvm_unreachable("goto or switch was expected");
