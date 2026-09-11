@@ -425,7 +425,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     // bits to zero.  We can just knock out bits from the 'and' and the 'xor',
     // simplifying both of them.
     if (Instruction *LHSInst = dyn_cast<Instruction>(I->getOperand(0))) {
-      ConstantInt *AndRHS, *XorRHS;
+      ConstantInt *AndRHS = nullptr, *XorRHS = nullptr;
       if (LHSInst->getOpcode() == Instruction::And && LHSInst->hasOneUse() &&
           match(I->getOperand(1), m_ConstantInt(XorRHS)) &&
           match(LHSInst->getOperand(1), m_ConstantInt(AndRHS)) &&
