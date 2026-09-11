@@ -90,6 +90,22 @@ TEST_P(olGetMemInfoAllocTypeTest, SuccessType) {
   ASSERT_EQ(RetrievedType, getTestParam());
 }
 
+TEST_P(olGetMemInfoAllocTypeTest, SuccessInteriorPointer) {
+  // The spec allows Ptr to point anywhere inside the allocation; the query
+  // must still resolve to the allocation's base and full size.
+  void *Interior = reinterpret_cast<char *>(Ptr) + SIZE / 2;
+
+  void *RetrievedBase;
+  ASSERT_SUCCESS(olGetMemInfo(Context, Interior, OL_MEM_INFO_BASE,
+                              sizeof(RetrievedBase), &RetrievedBase));
+  ASSERT_EQ(RetrievedBase, Ptr);
+
+  size_t RetrievedSize;
+  ASSERT_SUCCESS(olGetMemInfo(Context, Interior, OL_MEM_INFO_SIZE,
+                              sizeof(RetrievedSize), &RetrievedSize));
+  ASSERT_EQ(RetrievedSize, SIZE);
+}
+
 TEST_P(olGetMemInfoTest, InvalidNotFound) {
   // Assuming that we aren't unlucky and happen to get 0x1234 as a random
   // pointer
