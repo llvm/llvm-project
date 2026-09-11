@@ -21,7 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_setscope,
-                   ([[maybe_unused]] pthread_attr_t *attr,
+                   ([[maybe_unused]] pthread_attr_t * attr,
                     int contentionscope)) {
   LIBC_CRASH_ON_NULLPTR(attr);
 
@@ -36,4 +36,3 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_setscope,
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-

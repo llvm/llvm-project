@@ -25,4 +25,3 @@ int pthread_attr_getscope(const pthread_attr_t *__restrict attr,
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_GETSCOPE_H
-

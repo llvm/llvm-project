@@ -24,4 +24,3 @@ int pthread_attr_setscope(pthread_attr_t *attr, int contentionscope);
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_SETSCOPE_H
-

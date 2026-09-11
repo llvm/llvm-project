@@ -30,4 +30,3 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_getscope,
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-
