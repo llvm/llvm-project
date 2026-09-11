@@ -1,10 +1,6 @@
 # Clang-Change-Namespace
 
 
-```{toctree}
-:maxdepth: 1
-```
-
 {program}`clang-change-namespace` can be used to change the surrounding
 namespaces of class/function definitions.
 
