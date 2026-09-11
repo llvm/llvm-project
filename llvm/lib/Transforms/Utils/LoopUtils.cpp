@@ -30,6 +30,9 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -2399,6 +2402,13 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
     if (auto *LI = dyn_cast<LoadInst>(I))
       if (LI->isVolatile() || LI->isAtomic())
         return {};
+
+    // TODO: Plumb AssumptionCache and DominatorTree into this function and
+    // pass them to isSafeToSpeculativelyExecute to enable more aggressive
+    // speculation (e.g. for dereferenceable pointers).
+    if (!isSafeToSpeculativelyExecute(I) &&
+        !isGuaranteedToExecuteForEveryIteration(I, &L))
+      return {};
 
     InstToDuplicate.push_back(I);
     if (MemoryAccess *MA = MSSA.getMemoryAccess(I)) {
