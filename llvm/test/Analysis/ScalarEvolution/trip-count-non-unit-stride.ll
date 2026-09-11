@@ -322,3 +322,56 @@ latch:
 exit:
   ret void
 }
+
+; Verify that ScalarEvolution can compute a predicated backedge-taken count
+; for a loop with a non-unit stride (stride = 3) and no 'nsw' flag on the
+; induction variable.
+; Without the predicate, the backedge-taken count is unpredictable.
+
+define void @stride3(ptr noalias %x, i32 %l, i32 %u) {
+; CHECK-LABEL: 'stride3'
+; CHECK-NEXT:  Classifying expressions for: @stride3
+; CHECK-NEXT:    %i = phi i32 [ %l, %entry ], [ %i.next, %loop.body ]
+; CHECK-NEXT:    --> {%l,+,3}<%loop.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Computable }
+; CHECK-NEXT:    %idxprom = sext i32 %i to i64
+; CHECK-NEXT:    --> (sext i32 {%l,+,3}<%loop.body> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %loop.body: Computable }
+; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %x, i64 %idxprom
+; CHECK-NEXT:    --> ((4 * (sext i32 {%l,+,3}<%loop.body> to i64))<nsw> + %x) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Computable }
+; CHECK-NEXT:    %val = load i32, ptr %arrayidx, align 4
+; CHECK-NEXT:    --> %val U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Variant }
+; CHECK-NEXT:    %inc = add nsw i32 %val, 1
+; CHECK-NEXT:    --> (1 + %val) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Variant }
+; CHECK-NEXT:    %i.next = add i32 %i, 3
+; CHECK-NEXT:    --> {(3 + %l),+,3}<%loop.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @stride3
+; CHECK-NEXT:  Loop %loop.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.body: Predicated backedge-taken count is (((-3 + (-1 * (1 umin (-3 + (-1 * %l) + ((3 + %l) smax %u))))<nuw><nsw> + (-1 * %l) + ((3 + %l) smax %u)) /u 3) + (1 umin (-3 + (-1 * %l) + ((3 + %l) smax %u))))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %u sle) 2147483645
+; CHECK-NEXT:  Loop %loop.body: Predicated constant max backedge-taken count is i32 1431655765
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %u sle) 2147483645
+; CHECK-NEXT:  Loop %loop.body: Predicated symbolic max backedge-taken count is (((-3 + (-1 * (1 umin (-3 + (-1 * %l) + ((3 + %l) smax %u))))<nuw><nsw> + (-1 * %l) + ((3 + %l) smax %u)) /u 3) + (1 umin (-3 + (-1 * %l) + ((3 + %l) smax %u))))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %u sle) 2147483645
+;
+entry:
+  %cmp1 = icmp slt i32 %l, %u
+  br i1 %cmp1, label %loop.body, label %exit
+
+loop.body:
+  %i = phi i32 [ %l, %entry ], [ %i.next, %loop.body ]
+  %idxprom = sext i32 %i to i64
+  %arrayidx = getelementptr inbounds i32, ptr %x, i64 %idxprom
+  %val = load i32, ptr %arrayidx, align 4
+  %inc = add nsw i32 %val, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %i.next = add i32 %i, 3
+  %cmp = icmp slt i32 %i.next, %u
+  br i1 %cmp, label %loop.body, label %exit
+
+exit:
+  ret void
+}

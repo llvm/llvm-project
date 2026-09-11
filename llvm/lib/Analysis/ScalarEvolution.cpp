@@ -13522,13 +13522,13 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       }
     }
   } else if (!NoWrap) {
-      // Avoid proven overflow cases: this will ensure that the backedge taken
-      // count will not generate any unsigned overflow.
-      IVcanOverFlowOnLT = canIVOverflowOnLT(RHS, Stride, IsSigned);
-      if (IVcanOverFlowOnLT) {
-        if (!AllowPredicates)
-          return getCouldNotCompute();
-      }
+    // Avoid proven overflow cases: this will ensure that the backedge taken
+    // count will not generate any unsigned overflow.
+    IVcanOverFlowOnLT = canIVOverflowOnLT(RHS, Stride, IsSigned);
+    if (IVcanOverFlowOnLT) {
+      if (!AllowPredicates)
+        return getCouldNotCompute();
+    }
   }
 
   // On all paths just preceeding, we established the following invariant:
@@ -13540,12 +13540,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   //      before any possible exit.
   // Note that we have not yet proved RHS invariant (in general).
 
-  // RHS has been normalized to an integer type above (converted from a
-  // pointer type via getPtrToAddrExpr, if it started out as one), so
-  // RHS->getType() is guaranteed to be an integer type here. Combined with
-  // getConstant(Limit) also producing an integer type of the same BitWidth,
-  // this ensures RHS and getConstant(Limit) have identical LLVM types, as
-  // SCEVComparePredicate requires.
+  // Add a predicate to ensure RHS does not exceed the maximum value
+  // that can be represented without overflow, given the stride.
   if (!NoWrap && IVcanOverFlowOnLT) {
     unsigned BitWidth = getTypeSizeInBits(RHS->getType());
     const SCEV *One = getOne(Stride->getType());
