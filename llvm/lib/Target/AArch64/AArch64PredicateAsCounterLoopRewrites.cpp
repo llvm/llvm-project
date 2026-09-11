@@ -264,10 +264,6 @@ bool AArch64PredicateAsCounterLoopRewrites::runOnLoop(Loop *L,
   auto &TPC = getAnalysis<TargetPassConfig>();
   const AArch64Subtarget *ST =
       TPC.getTM<AArch64TargetMachine>().getSubtargetImpl(F);
-  if (!ST->isSVEorStreamingSVEAvailable()) {
-    logLoopBailout(*L, "SVE or streaming SVE is unavailable");
-    return false;
-  }
   if (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming())) {
     logLoopBailout(*L, "neither SVE2.1 nor SME2 is available");
     return false;
