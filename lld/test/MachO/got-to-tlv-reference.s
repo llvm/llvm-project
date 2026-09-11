@@ -68,7 +68,7 @@
 # RUN: %lld -dylib -o %t/direct-local.dylib %t/direct.o %t/localtlv.o
 # RUN: not %lld -dylib -L%t -ltlv -o /dev/null %t/direct.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=DIRECT
-# DIRECT: SIGNED relocation requires that symbol _foo not be thread-local
+# DIRECT: SIGNED relocation cannot reference imported thread-local symbol _foo; its TLV descriptor has no address at link time
 
 #--- deftlv.s
 .text

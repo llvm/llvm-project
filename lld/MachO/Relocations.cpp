@@ -88,12 +88,17 @@ bool macho::validateSymbolRelocation(const Symbol *sym,
                                     relocAttrs.hasAttr(RelocAttrBits::GOT) ||
                                     relocAttrs.hasAttr(RelocAttrBits::BRANCH) ||
                                     relocAttrs.hasAttr(RelocAttrBits::UNSIGNED);
-  const bool isImportedTlv = isa<DylibSymbol>(sym) && sym->isTlv();
+  const bool isImportedTlv = dysym && sym->isTlv();
 
-  if (tlvKindIsKnown && ((isTlvReloc && !sym->isTlv()) ||
-                         (isImportedTlv && !permitsTlvDescriptor)))
-    error(message(Twine("requires that symbol ") + sym->getName() + " " +
-                  (sym->isTlv() ? "not " : "") + "be thread-local"));
+  if (tlvKindIsKnown) {
+    if (isTlvReloc && !sym->isTlv())
+      error(message(Twine("requires that symbol ") + sym->getName() +
+                    " be thread-local"));
+    else if (isImportedTlv && !permitsTlvDescriptor)
+      error(message(Twine("cannot reference imported thread-local symbol ") +
+                    sym->getName() +
+                    "; its TLV descriptor has no address at link time"));
+  }
 
   return valid;
 }

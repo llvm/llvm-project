@@ -81,7 +81,7 @@
 # RUN:   %t/direct.o %t/libtlv.o
 # RUN: not %lld -arch arm64 -dylib -o /dev/null %t/direct.o \
 # RUN:   %t/libtlv.dylib 2>&1 | FileCheck %s --check-prefix=DIRECT
-# DIRECT: PAGE21 relocation requires that symbol _foo not be thread-local
+# DIRECT: PAGE21 relocation cannot reference imported thread-local symbol _foo; its TLV descriptor has no address at link time
 
 #--- libtlv.s
 .section __DATA,__thread_data,thread_local_regular
