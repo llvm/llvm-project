@@ -2563,92 +2563,54 @@ exit:
   ret void
 }
 
-;; Test 23: A forked pointer: one load's address is a select.
-;; 3 loads from %a at byte offsets {0, cdj, select(2*cdj, 3*cdj)}. Store to
-;; %out.
-;; LAA turns the select load into two members, one per arm, each with its
-;; own Start and End. The merge treats them like any other member. High is
-;; the End of the 3*cdj arm, so both arms are inside the merged bounds.
-;; With merge: 1 group, 1 check, 2 predicates (0 < cdj <= INT64_MAX / 2).
-;; Without merge: 4 groups, 4 checks, no predicates.
-define void @forked_pointer_merge(ptr %a, ptr %out, i64 %n, i64 %cdj, i32 %c) {
-; MERGE-LABEL: 'forked_pointer_merge'
-; MERGE-NEXT:    loop:
-; MERGE-NEXT:      Memory dependences are safe with run-time checks
-; MERGE-NEXT:      Dependences:
-; MERGE-NEXT:      Run-time memory checks:
-; MERGE-NEXT:      Check 0:
-; MERGE-NEXT:        Comparing group GRP0:
-; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; MERGE-NEXT:        Against group GRP1:
-; MERGE-NEXT:          %p2 = getelementptr i8, ptr %base, i64 %off
-; MERGE-NEXT:          %p2 = getelementptr i8, ptr %base, i64 %off
-; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %cdj
-; MERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
-; MERGE-NEXT:      Grouped accesses:
-; MERGE-NEXT:        Group GRP0:
-; MERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
-; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
-; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: %a High: ((3 * %cdj) + (8 * (1 smax %n)) + %a))
-; MERGE-NEXT:            Member: {((2 * %cdj) + %a),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {((3 * %cdj) + %a),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {(%cdj + %a),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {%a,+,8}<nuw><%loop>
-; MERGE-EMPTY:
-; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; MERGE-NEXT:      SCEV assumptions:
-; MERGE-NEXT:      Compare predicate: %cdj sgt) 0
-; MERGE-NEXT:      Compare predicate: %cdj sle) 4611686018427387903
-; MERGE-EMPTY:
-; MERGE-NEXT:      Expressions re-written:
-;
-; NOMERGE-LABEL: 'forked_pointer_merge'
-; NOMERGE-NEXT:    loop:
-; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
-; NOMERGE-NEXT:      Dependences:
-; NOMERGE-NEXT:      Run-time memory checks:
-; NOMERGE-NEXT:      Check 0:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP1:
-; NOMERGE-NEXT:          %p2 = getelementptr i8, ptr %base, i64 %off
-; NOMERGE-NEXT:      Check 1:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP2:
-; NOMERGE-NEXT:          %p2 = getelementptr i8, ptr %base, i64 %off
-; NOMERGE-NEXT:      Check 2:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP3:
-; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %cdj
-; NOMERGE-NEXT:      Check 3:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP4:
-; NOMERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
-; NOMERGE-NEXT:      Grouped accesses:
-; NOMERGE-NEXT:        Group GRP0:
-; NOMERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
-; NOMERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
-; NOMERGE-NEXT:        Group GRP1:
-; NOMERGE-NEXT:          (Low: ((2 * %cdj) + %a) High: ((2 * %cdj) + (8 * (1 smax %n)) + %a))
-; NOMERGE-NEXT:            Member: {((2 * %cdj) + %a),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP2:
-; NOMERGE-NEXT:          (Low: ((3 * %cdj) + %a) High: ((3 * %cdj) + (8 * (1 smax %n)) + %a))
-; NOMERGE-NEXT:            Member: {((3 * %cdj) + %a),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP3:
-; NOMERGE-NEXT:          (Low: (%cdj + %a) High: ((8 * (1 smax %n)) + %cdj + %a))
-; NOMERGE-NEXT:            Member: {(%cdj + %a),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP4:
-; NOMERGE-NEXT:          (Low: %a High: ((8 * (1 smax %n)) + %a))
-; NOMERGE-NEXT:            Member: {%a,+,8}<nuw><%loop>
-; NOMERGE-EMPTY:
-; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; NOMERGE-NEXT:      SCEV assumptions:
-; NOMERGE-EMPTY:
-; NOMERGE-NEXT:      Expressions re-written:
+;; Test 23: Reject forked pointers from stencil merging.
+define void @forked_pointer_rejection(ptr %a, ptr %out, i64 %n, i64 %cdj, i32 %c) {
+; CHECK-LABEL: 'forked_pointer_rejection'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %p2 = getelementptr i8, ptr %base, i64 %off
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %p2 = getelementptr i8, ptr %base, i64 %off
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; CHECK-NEXT:      Check 3:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP4:
+; CHECK-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
+; CHECK-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((2 * %cdj) + %a) High: ((2 * %cdj) + (8 * (1 smax %n)) + %a))
+; CHECK-NEXT:            Member: {((2 * %cdj) + %a),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((3 * %cdj) + %a) High: ((3 * %cdj) + (8 * (1 smax %n)) + %a))
+; CHECK-NEXT:            Member: {((3 * %cdj) + %a),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: (%cdj + %a) High: ((8 * (1 smax %n)) + %cdj + %a))
+; CHECK-NEXT:            Member: {(%cdj + %a),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP4:
+; CHECK-NEXT:          (Low: %a High: ((8 * (1 smax %n)) + %a))
+; CHECK-NEXT:            Member: {%a,+,8}<nuw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
   br label %loop

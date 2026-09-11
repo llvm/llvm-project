@@ -528,7 +528,7 @@ bool RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     Type *AccessTy, bool WritePtr,
                                     unsigned DepSetId, unsigned ASId,
                                     PredicatedScalarEvolution &PSE,
-                                    bool NeedsFreeze) {
+                                    bool NeedsFreeze, bool IsForked) {
   const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
   const SCEV *BTC = PSE.getBackedgeTakenCount();
   const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
@@ -537,7 +537,7 @@ bool RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
   if (isa<SCEVCouldNotCompute>(ScStart) || isa<SCEVCouldNotCompute>(ScEnd))
     return false;
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, PtrExpr,
-                        NeedsFreeze);
+                        NeedsFreeze, IsForked);
   return true;
 }
 
@@ -1208,10 +1208,15 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
   // range also covers the gaps between the members, so the merged check
   // can report a conflict where the per-group checks would not.
   //
+  // We only merge ranges for reads that happen on every loop iteration.
+  // These reads must stay inside the array; otherwise, the original loop
+  // already has undefined behaviour. We choose the merged bounds from
+  // these ranges.
+  //
   // We use the following algorithm to construct a merged stencil group:
   //   - collect checking groups that share both DependencySetId and AliasSetId;
-  //   - reject groups with writes, predicated accesses, different access
-  //     ranges, or different recurrence steps;
+  //   - reject groups with writes, predicated accesses, forked pointers,
+  //     different access ranges, or different recurrence steps;
   //   - use one member as the base and decompose each other member's offset
   //     from that base as C + sum(Coeff[Stride] * Stride), where Stride is
   //     loop-invariant;
@@ -1301,21 +1306,31 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     // merged group complicates the cost model and doesn't match known stencil
     // patterns, so stop and skip the whole DepSet as soon as we see a write.
     SmallVector<unsigned, 8> AllMembers;
-    bool HasWrite = false;
+    bool CanMerge = true;
     for (unsigned GI : GroupIndices) {
       ArrayRef<unsigned> Members = CheckingGroups[GI].Members;
       if (any_of(Members,
                  [&](unsigned Idx) { return Pointers[Idx].IsWritePtr; })) {
-        HasWrite = true;
+        LLVM_DEBUG(dbgs() << "LAA: Skipping DepSet(" << DepId << "," << ASId
+                          << ") with write access\n");
+        CanMerge = false;
+        break;
+      }
+      // For a forked pointer, LAA considers both possible addresses, even if
+      // the loop only uses one of them. The unused address can be outside the
+      // array. Its bounds can underflow or overflow, so merging them can hide
+      // an overlap and allow unsafe vectorization.
+      if (any_of(Members,
+                 [&](unsigned Idx) { return Pointers[Idx].IsForked; })) {
+        LLVM_DEBUG(dbgs() << "LAA: Skipping DepSet(" << DepId << "," << ASId
+                          << ") with forked pointer\n");
+        CanMerge = false;
         break;
       }
       append_range(AllMembers, Members);
     }
-    if (HasWrite) {
-      LLVM_DEBUG(dbgs() << "LAA: Skipping DepSet(" << DepId << "," << ASId
-                        << ") with write access\n");
+    if (!CanMerge)
       continue;
-    }
 
     // We do not allow predicated accesses. They may result in overestimation
     // of the boundaries. Imagine a stencil access where we must skip some first
@@ -2183,7 +2198,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 
     bool IsWrite = Access.getInt();
     if (!RtCheck.insert(TheLoop, Ptr, PtrExpr, AccessTy, IsWrite, DepId, ASId,
-                        PSE, NeedsFreeze)) {
+                        PSE, NeedsFreeze,
+                        /*IsForked=*/RTCheckPtrs.size() == 2)) {
       RtCheck.Pointers.truncate(NumPointers);
       return false;
     }
