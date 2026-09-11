@@ -41,13 +41,16 @@ using namespace llvm;
 
 namespace {
 
-using Tree = ImmutableSet<int>::TreeTy;
+// Non-canonicalizing set (matches the dataflow analyses' usage).
+using IntSet =
+    ImmutableSet<int, ImutContainerInfo<int>, /*Canonicalize=*/false>;
+using Tree = IntSet::TreeTy;
 
 // Holds a factory plus a built set so the (non-trivial) tree construction is
 // kept out of the timed region. The factory must outlive the tree.
 struct Fixture {
-  ImmutableSet<int>::Factory F{/*canonicalize=*/false};
-  ImmutableSet<int> Set = F.getEmptySet();
+  IntSet::Factory F;
+  IntSet Set = F.getEmptySet();
 
   explicit Fixture(size_t N) {
     std::vector<int> Vals(N);
@@ -63,7 +66,7 @@ struct Fixture {
 static void BM_Iterate(benchmark::State &State) {
   const size_t N = State.range(0);
   Fixture Fix(N);
-  const ImmutableSet<int> &S = Fix.Set;
+  const IntSet &S = Fix.Set;
   benchmark::DoNotOptimize(S.getRootWithoutRetain());
 
   for (auto _ : State) {
@@ -128,7 +131,8 @@ static void BM_CompareSamePosition(benchmark::State &State) {
 // matters.
 static void BM_CanonicalizeSharedEqual(benchmark::State &State) {
   const size_t N = State.range(0);
-  ImmutableSet<int>::Factory F(/*canonicalize=*/true);
+  // This case exercises canonicalization, so it uses a canonicalizing factory.
+  ImmutableSet<int>::Factory F;
   ImmutableSet<int> Base = F.getEmptySet();
   std::vector<int> Vals(N);
   std::iota(Vals.begin(), Vals.end(), 0);

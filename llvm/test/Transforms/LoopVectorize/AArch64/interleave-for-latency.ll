@@ -198,7 +198,7 @@ define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY1:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-LATENCY1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY1-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP1]], align 2
 ; CHECK-LATENCY1-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -227,7 +227,7 @@ define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY2:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-LATENCY2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY2-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP1]], align 2
 ; CHECK-LATENCY2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -256,7 +256,7 @@ define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY8:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-LATENCY8-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 16
 ; CHECK-LATENCY8-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 32
 ; CHECK-LATENCY8-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 48
@@ -318,7 +318,7 @@ define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A510-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-A510:       [[VECTOR_BODY]]:
 ; CHECK-A510-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-A510-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-A510-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-A510-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-A510-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP1]], align 2
 ; CHECK-A510-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -347,7 +347,7 @@ define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-A320:       [[VECTOR_BODY]]:
 ; CHECK-A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-A320-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-A320-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-A320-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-A320-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP1]], align 2
 ; CHECK-A320-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -402,7 +402,7 @@ define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY1:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-LATENCY1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY1-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
 ; CHECK-LATENCY1-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i16> [[WIDE_VEC]], <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -437,7 +437,7 @@ define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY2:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-LATENCY2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY2-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
 ; CHECK-LATENCY2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i16> [[WIDE_VEC]], <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -472,7 +472,7 @@ define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY8:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-LATENCY8-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 32
 ; CHECK-LATENCY8-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY8-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP1]]
@@ -524,7 +524,7 @@ define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A510-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-A510:       [[VECTOR_BODY]]:
 ; CHECK-A510-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-A510-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-A510-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-A510-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-A510-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
 ; CHECK-A510-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i16> [[WIDE_VEC]], <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -559,7 +559,7 @@ define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-A320:       [[VECTOR_BODY]]:
 ; CHECK-A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-A320-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-A320-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-A320-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-A320-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
 ; CHECK-A320-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i16> [[WIDE_VEC]], <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -804,7 +804,7 @@ define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY1:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-LATENCY1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY1-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
 ; CHECK-LATENCY1-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -833,7 +833,7 @@ define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY2:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-LATENCY2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY2-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
 ; CHECK-LATENCY2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -862,7 +862,7 @@ define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY8:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-LATENCY8-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 8
 ; CHECK-LATENCY8-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 16
 ; CHECK-LATENCY8-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 24
@@ -924,7 +924,7 @@ define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-A510-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-A510:       [[VECTOR_BODY]]:
 ; CHECK-A510-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-A510-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-A510-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-A510-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-A510-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
 ; CHECK-A510-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -953,7 +953,7 @@ define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-A320:       [[VECTOR_BODY]]:
 ; CHECK-A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-A320-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-A320-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-A320-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-A320-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
 ; CHECK-A320-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -1006,7 +1006,7 @@ define void @i32_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY1:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-LATENCY1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-LATENCY1-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
@@ -1030,7 +1030,7 @@ define void @i32_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY2:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-LATENCY2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 4
 ; CHECK-LATENCY2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-LATENCY2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP1]]
@@ -1060,7 +1060,7 @@ define void @i32_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-LATENCY8:       [[VECTOR_BODY]]:
 ; CHECK-LATENCY8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-LATENCY8-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 4
 ; CHECK-LATENCY8-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 8
 ; CHECK-LATENCY8-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 12
@@ -1102,7 +1102,7 @@ define void @i32_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-A510-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-A510:       [[VECTOR_BODY]]:
 ; CHECK-A510-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-A510-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-A510-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-A510-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 4
 ; CHECK-A510-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-A510-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP1]]
@@ -1132,7 +1132,7 @@ define void @i32_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-A320:       [[VECTOR_BODY]]:
 ; CHECK-A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-A320-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-A320-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-A320-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 4
 ; CHECK-A320-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 8
 ; CHECK-A320-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 12

@@ -2,9 +2,9 @@
 Test that we stop at runtime instrumentation locations (asan).
 """
 
-from lldbsuite.test.decorators import skipUnlessAddressSanitizer
-from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.decorators import *
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_asan(DAPTestCaseBase):
@@ -17,7 +17,9 @@ class TestDAP_asan(DAPTestCaseBase):
         session = self.build_and_create_session()
         process_event = session.launch(LaunchArgs(program))
         stop_event = session.verify_stopped_on_exception(
-            after=process_event, expected_description="Use of deallocated memory"
+            after=process_event,
+            expected_description="Use of deallocated memory",
+            expected_text=r"^AddressSanitizer$",
         )
 
         thread_id = self.expect_not_none(stop_event.body.threadId)

@@ -89,7 +89,6 @@ cc_test(
         "//clang-tools-extra/clang-doc:clang-doc-support",
         "//clang-tools-extra/clang-doc:generators",
         "//clang-tools-extra/clang-doc:lib",
-        "//clang-tools-extra/clang-doc:markdown",
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",

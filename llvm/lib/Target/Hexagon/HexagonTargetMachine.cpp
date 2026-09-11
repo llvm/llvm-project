@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -205,6 +206,7 @@ LLVMInitializeHexagonTarget() {
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonAlignGlobalArraysPass(PR);
   initializeHexagonAsmPrinterPass(PR);
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
@@ -250,6 +252,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonQFPOptimizerPass(PR);
   initializeHexagonXQFloatGeneratorPass(PR);
   initializeHexagonPostRAHandleQFPPass(PR);
+  initializeMachineKCFILegacyPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -293,12 +296,12 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }
@@ -387,6 +390,11 @@ void HexagonPassConfig::addIRPasses() {
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt) {
+    // Raise the alignment of global integer arrays to 8 bytes. At -O1/-O2,
+    // reduce .rodata size by keeping byte/half-word arrays at their natural
+    // alignment; apply full 8-byte alignment at -O3.
+    addPass(createHexagonAlignGlobalArrays(getOptLevel() !=
+                                           CodeGenOptLevel::Aggressive));
     if (EnableInstSimplify)
       addPass(createInstSimplifyLegacyPass());
     addPass(createDeadCodeEliminationPass());

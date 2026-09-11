@@ -72,6 +72,7 @@ static_library("LLVMBPFCodeGen") {
     "BPFAdjustOpt.cpp",
     "BPFAsmPrinter.cpp",
     "BPFCheckAndAdjustIR.cpp",
+    "BPFCodeGenPassBuilder.cpp",
     "BPFFrameLowering.cpp",
     "BPFIRPeephole.cpp",
     "BPFISelDAGToDAG.cpp",

@@ -19,6 +19,7 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
@@ -70,20 +71,19 @@ struct SIInstrWorklist {
 
   void insert(MachineInstr *MI);
 
-  MachineInstr *top() const {
-    const auto *iter = InstrList.begin();
-    return *iter;
-  }
+  MachineInstr *top() const { return InstrList[Front]; }
 
   void erase_top() {
-    const auto *iter = InstrList.begin();
-    InstrList.erase(iter);
+    InSet.erase(InstrList[Front]);
+    ++Front;
   }
 
-  bool empty() const { return InstrList.empty(); }
+  bool empty() const { return Front == InstrList.size(); }
 
   void clear() {
     InstrList.clear();
+    Front = 0;
+    InSet.clear();
     DeferredList.clear();
   }
 
@@ -93,7 +93,9 @@ struct SIInstrWorklist {
 
 private:
   /// InstrList contains the MachineInstrs.
-  SetVector<MachineInstr *> InstrList;
+  SmallVector<MachineInstr *> InstrList;
+  SmallPtrSet<MachineInstr *, 8> InSet;
+  unsigned Front = 0;
   /// Deferred instructions are specific MachineInstr
   /// that will be added by insert method.
   SetVector<MachineInstr *> DeferredList;
@@ -276,7 +278,7 @@ public:
 
   bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
-  bool isIgnorableUse(const MachineOperand &MO) const override;
+  bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const override;
 
   bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
                     MachineCycleInfo *CI) const override;
@@ -323,7 +325,13 @@ public:
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
-  std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
+  std::optional<int64_t>
+  getImmOrMaterializedImm(const MachineRegisterInfo &MRI,
+                          const MachineOperand &Op,
+                          MachineInstr **DefMI = nullptr) const;
+  std::optional<int64_t>
+  getImmOrMaterializedImm(const MachineRegisterInfo &MRI, Register Reg,
+                          MachineInstr **DefMI = nullptr) const;
 
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
@@ -422,6 +430,9 @@ public:
 
   bool reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
+
+  std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
@@ -735,7 +746,7 @@ public:
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access LDS.
-  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessLDSThroughFlat(const MachineInstr &MI, bool TgSplit) const;
 
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {
@@ -874,13 +885,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/true));
+           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/false));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/true));
+           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/false));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
@@ -920,6 +931,17 @@ public:
   static bool isDPP(const MachineInstr &MI) { return SIInstrFlags::isDPP(MI); }
 
   bool isDPP(uint32_t Opcode) const { return SIInstrFlags::isDPP(get(Opcode)); }
+
+  // Some opcodes use Src1 for DPP instead of Src0, because the sequencer
+  // transforms them and reverse the order of their operands at runtime.
+  //
+  // Documentation is incomplete on which instructions are effected, so
+  // the implementation is derived from experimentation.
+  //
+  // Listed as target-independent pseudos; the per-subtarget MC opcodes
+  // (V_SUBREV_NC_U32_e32_gfx11 and friends) are all reached through these.
+  // Defined out of line because GCNSubtarget is incomplete here.
+  static bool isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode);
 
   static bool isTRANS(const MachineInstr &MI) {
     return SIInstrFlags::isTRANS(MI);
@@ -1052,11 +1074,11 @@ public:
   }
 
   static bool usesTENSOR_CNT(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT;
+    return SIInstrFlags::usesTENSOR_CNT(MI);
   }
 
   bool usesTENSOR_CNT(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT;
+    return SIInstrFlags::usesTENSOR_CNT(get(Opcode));
   }
 
   // Most sopk treat the immediate as a signed 16-bit, however some
@@ -1167,14 +1189,6 @@ public:
   static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
     return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
            Opc == AMDGPU::GLOBAL_WBINV;
-  }
-
-  static bool isF16PseudoScalarTrans(unsigned Opcode) {
-    return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
-           Opcode == AMDGPU::V_S_LOG_F16_e64 ||
-           Opcode == AMDGPU::V_S_RCP_F16_e64 ||
-           Opcode == AMDGPU::V_S_RSQ_F16_e64 ||
-           Opcode == AMDGPU::V_S_SQRT_F16_e64;
   }
 
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
@@ -1482,17 +1496,19 @@ public:
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
 
-  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32 or
-  /// 64 instructions. Packed math FP32/FP64/U64 instructions typically accept
-  /// SGPRs or VGPRs as source operands. On gfx12+, if a source operand uses
-  /// SGPRs, the HW can only read the first SGPR and use it for both the low and
-  /// high operations.
-  /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
-  /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
-  /// be used.
-  bool isLegalGFX12PlusPackedMathFP32or64BitOperand(
-      const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
-      const MachineOperand *MO = nullptr) const;
+  /// Check if \p MO would be a legal operand for a single-SGPR-read
+  /// instruction.
+  ///
+  /// Single-SGPR-read instructions typically accept VGPRs, SGPRs, or immediates
+  /// as source operands. On gfx12+, if a source operand uses SGPRs, the HW can
+  /// only read the first SGPR and replicate the value across all lanes. \p SrcN
+  /// can be 0, 1, or 2, representing src0, src1, and src2, respectively. If \p
+  /// MO is nullptr, the operand corresponding to \p SrcN will be used. Non-SGPR
+  /// operands are always considered legal.
+  bool
+  isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
+                                   const MachineInstr &MI, unsigned SrcN,
+                                   const MachineOperand *MO = nullptr) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
@@ -1770,6 +1786,10 @@ public:
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, AMDGPU::OpName OpName) const;
+
+  /// Get the repeat rate for a VALU instruction from the scheduling model.
+  /// Returns 1 for regular VALU, >1 for long-latency VALU (packed, F64, etc.)
+  unsigned getRepeatRate(const MachineInstr &MI) const;
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class
@@ -1863,9 +1883,6 @@ namespace AMDGPU {
   LLVM_READONLY
   int32_t getGlobalVaddrOp(uint32_t Opcode);
 
-  LLVM_READONLY
-  int32_t getVCMPXNoSDstOp(uint32_t Opcode);
-
   /// \returns ST form with only immediate offset of a FLAT Scratch instruction
   /// given an \p Opcode of an SS (SADDR) form.
   LLVM_READONLY
@@ -1890,10 +1907,10 @@ namespace AMDGPU {
   LLVM_READONLY
   int32_t getMFMAEarlyClobberOp(uint32_t Opcode);
 
-  /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
-  /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
+  /// \returns Version of an instruction which uses AGPRs for coupled operands
+  /// given an \p Opcode which uses VGPRs for coupled operands.
   LLVM_READONLY
-  int32_t getMFMASrcCVDstAGPROp(uint32_t Opcode);
+  int32_t getAGPRFormOp(uint32_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY

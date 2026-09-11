@@ -2,13 +2,14 @@ add_custom_target(libc_fcntl_unittests)
 
 add_subdirectory(testdata)
 
-add_libc_unittest(
+add_libc_test(
   creat_test
   SUITE
     libc_fcntl_unittests
   SRCS
     creat_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.fcntl
     libc.src.errno.errno
     libc.src.fcntl.creat
@@ -18,7 +19,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   fcntl_test
   SUITE
     libc_fcntl_unittests
@@ -33,11 +34,13 @@ add_libc_unittest(
     libc.src.unistd.getpid
     libc.hdr.types.struct_flock
     libc.hdr.fcntl_macros
+    libc.hdr.stdio_macros
+    libc.hdr.sys_stat_macros
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   openat_test
   SUITE
     libc_fcntl_unittests
@@ -52,4 +55,24 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  posix_fadvise_test
+  SUITE
+    libc_fcntl_unittests
+  SRCS
+    posix_fadvise_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.errno.errno
+    libc.src.fcntl.creat
+    libc.src.fcntl.posix_fadvise
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.src.unistd.unlink
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
 )

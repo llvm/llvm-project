@@ -447,18 +447,18 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
     }
   }
 
-  // Bufferize callers of the block.
-  for (Operation *op : block->getUsers()) {
+  // Bufferize callers of the block. Iterate BlockOperands so each successor
+  // edge is handled once, including when one branch op targets this block more
+  // than once.
+  for (BlockOperand &blockOperand : block->getUses()) {
+    Operation *op = blockOperand.getOwner();
     auto branchOp = dyn_cast<BranchOpInterface>(op);
     if (!branchOp)
       return op->emitOpError("cannot bufferize ops with block references that "
                              "do not implement BranchOpInterface");
 
-    auto it = llvm::find(op->getSuccessors(), block);
-    assert(it != op->getSuccessors().end() && "could find successor");
-    int64_t successorIdx = std::distance(op->getSuccessors().begin(), it);
-
-    SuccessorOperands operands = branchOp.getSuccessorOperands(successorIdx);
+    SuccessorOperands operands =
+        branchOp.getSuccessorOperands(blockOperand.getOperandNumber());
     SmallVector<Value> newOperands;
     for (auto [operand, type] :
          llvm::zip(operands.getForwardedOperands(), newTypes)) {
@@ -477,8 +477,8 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
       // A cast is needed if the operand and the block argument have different
       // bufferized types.
       if (type != *operandBufferType) {
-        bufferizedOperand = *options.createCast(rewriter, operand.getLoc(),
-                                                type, bufferizedOperand);
+        bufferizedOperand = *options.castFn(rewriter, operand.getLoc(), type,
+                                            bufferizedOperand);
       }
       newOperands.push_back(bufferizedOperand);
     }

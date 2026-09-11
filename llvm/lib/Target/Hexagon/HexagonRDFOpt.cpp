@@ -14,8 +14,10 @@
 #include "RDFCopy.h"
 #include "RDFDeadCode.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -402,7 +404,51 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
     Liveness LV(*MRI, G);
     LV.trace(RDFDump);
     LV.computeLiveIns();
-    LV.resetLiveIns();
+
+    // Set entry-block live-ins from the RDF LiveMap: calling-convention
+    // registers may not have direct uses and cannot be recovered by a
+    // backward walk.
+    MachineBasicBlock &EntryMBB = MF.front();
+    {
+      std::vector<MCRegister> Old;
+      for (const MachineBasicBlock::RegisterMaskPair &LI : EntryMBB.liveins())
+        Old.push_back(LI.PhysReg);
+      for (MCRegister R : Old)
+        EntryMBB.removeLiveIn(R);
+      for (RegisterRef R : LV.getLiveMap()[&EntryMBB].refs())
+        EntryMBB.addLiveIn({R.asMCReg(), R.Mask});
+      EntryMBB.sortUniqueLiveIns();
+    }
+
+    // The RDF-based live-in recomputation can leave stale (over-approximate)
+    // physical register live-ins on some blocks, which later confuses passes
+    // like IfConversion into inserting incorrect implicit-use operands. Run a
+    // conventional backward liveness recomputation to correct the live-in
+    // lists. Skip:
+    //   - the entry block: handled above from the RDF LiveMap;
+    //   - EH pads: exception pointer/selector are runtime-established.
+    //
+    // Recompute live-ins one block at a time, visiting successors before
+    // predecessors (post-order). This way each block already has fresh
+    // live-in info from its successors when it is processed.
+    SmallVector<MachineBasicBlock *, 16> Candidates;
+    for (MachineBasicBlock *MBB : post_order(&MF))
+      if (!MBB->isEntryBlock() && !MBB->isEHPad())
+        Candidates.push_back(MBB);
+
+    // One pass is usually enough. If any block's live-ins changed, repeat
+    // because its predecessors may need updating too. Stop after
+    // MaxLiveInSweeps passes to keep compile time bounded.
+    constexpr unsigned MaxLiveInSweeps = 8;
+    for (unsigned Sweep = 0; Sweep != MaxLiveInSweeps; ++Sweep) {
+      bool AnyChanged = false;
+      for (MachineBasicBlock *MBB : Candidates)
+        AnyChanged |= recomputeLiveIns(*MBB);
+      if (!AnyChanged)
+        break;
+    }
+
+    // Recompute kill flags against the updated live-in lists.
     LV.resetKills();
   }
 

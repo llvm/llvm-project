@@ -254,7 +254,8 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple(),
+                                        HasPAuthLR))
     return false;
 
   // GCS is currently untested with ptrauth-returns, but enabling this could be

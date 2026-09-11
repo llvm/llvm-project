@@ -34,6 +34,10 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 
 FloatType Builder::getF8E8M0Type() { return Float8E8M0FNUType::get(context); }
 
+FloatType Builder::getF8E5M3FNUType() {
+  return Float8E5M3FNUType::get(context);
+}
+
 FloatType Builder::getF8E4M3FNType() { return Float8E4M3FNType::get(context); }
 
 FloatType Builder::getF8E5M2Type() { return Float8E5M2Type::get(context); }
@@ -497,11 +501,21 @@ OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
   if (failed(op->fold(foldResults)))
     return cleanupFailure();
 
+  // Bound the number of in-place fold iterations. Legitimate chains are very
+  // short (e.g. foldCommutative swaps once, then the op folds to a value).
+  // Without a bound, circular SSA uses in graph regions can cause an infinite
+  // loop (e.g. addi(x, 0) where x is the op's own result).
+  constexpr int kMaxInPlaceFolds = 64;
   int count = 0;
   do {
     LDBG() << "Folded in place #" << count
            << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    count++;
+    if (++count >= kMaxInPlaceFolds) {
+      LDBG() << "Aborting after " << kMaxInPlaceFolds
+             << " in-place fold iterations: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
+      return cleanupFailure();
+    }
   } while (foldResults.empty() && succeeded(op->fold(foldResults)));
 
   // An in-place fold does not require generation of any constants.

@@ -27,12 +27,21 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
-#include <cstring>
+#include "llvm/TargetParser/AtomicScope.h"
 #include <queue>
 #include <vector>
 
 namespace llvm {
 namespace SPIRV {
+static MDNode *findNamedMDOperand(NamedMDNode *NMD, StringRef Name) {
+  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
+    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
+      return MDS->getString() == Name;
+    return false;
+  });
+  return It == NMD->op_end() ? nullptr : *It;
+}
+
 // This code restores function args/retvalue types for composite cases
 // because the final types should still be aggregate whereas they're i32
 // during the translation to cope with aggregate flattening etc.
@@ -43,31 +52,18 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
   if (!NMD)
     return FTy;
 
-  constexpr auto getConstInt = [](MDNode *MD, unsigned OpId) -> ConstantInt * {
-    if (MD->getNumOperands() <= OpId)
-      return nullptr;
-    if (auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(OpId)))
-      return dyn_cast<ConstantInt>(CMeta->getValue());
-    return nullptr;
-  };
-
-  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
-    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
-      return MDS->getString() == Name;
-    return false;
-  });
-
-  if (It == NMD->op_end())
+  MDNode *Match = findNamedMDOperand(NMD, Name);
+  if (!Match)
     return FTy;
 
   Type *RetTy = FTy->getReturnType();
   SmallVector<Type *, 4> PTys(FTy->params());
 
-  for (unsigned I = 1; I != (*It)->getNumOperands(); ++I) {
-    MDNode *MD = dyn_cast<MDNode>((*It)->getOperand(I));
+  for (unsigned I = 1; I != Match->getNumOperands(); ++I) {
+    MDNode *MD = dyn_cast<MDNode>(Match->getOperand(I));
     assert(MD && "MDNode operand is expected");
 
-    if (auto *Const = getConstInt(MD, 0)) {
+    if (auto *Const = getMDOperandAsConstInt(MD, 0)) {
       auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
       assert(CMeta && "ConstantAsMetadata operand is expected");
       int64_t Idx = Const->getSExtValue();
@@ -91,21 +87,15 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
 static StringRef extractAsmConstraintsFromMetadata(NamedMDNode *NMD,
                                                    StringRef Constraints,
                                                    StringRef Name) {
-  // TODO: unify the extractors.
   if (!NMD)
     return Constraints;
 
-  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
-    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
-      return MDS->getString() == Name;
-    return false;
-  });
-
-  if (It == NMD->op_end())
+  MDNode *Match = findNamedMDOperand(NMD, Name);
+  if (!Match)
     return Constraints;
 
   // By convention, the constraints string is stored in the final MD operand.
-  MDNode *MD = dyn_cast<MDNode>((*It)->getOperand((*It)->getNumOperands() - 1));
+  MDNode *MD = dyn_cast<MDNode>(Match->getOperand(Match->getNumOperands() - 1));
   assert(MD && "MDNode operand is expected");
 
   if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
@@ -155,9 +145,15 @@ StringRef getOriginalAsmConstraints(const CallBase &CB) {
 // when making string comparisons in compiler passes.
 // SPIR-V requires null-terminated UTF-8 strings padded to 32-bit alignment.
 static uint32_t convertCharsToWord(StringRef Str, unsigned i) {
-  uint32_t Word = 0u; // Padding/null bytes are zero-initialized.
-  unsigned Count = std::min(static_cast<size_t>(4), Str.size() - i);
-  std::memcpy(&Word, Str.data() + i, Count);
+  uint32_t Word = 0u; // Build up this 32-bit word from 4 8-bit chars.
+  for (unsigned WordIndex = 0; WordIndex < 4; ++WordIndex) {
+    unsigned StrIndex = i + WordIndex;
+    uint8_t CharToAdd = 0;       // Initilize char as padding/null.
+    if (StrIndex < Str.size()) { // If it's within the string, get a real char.
+      CharToAdd = Str[StrIndex];
+    }
+    Word |= (CharToAdd << (WordIndex * 8));
+  }
   return Word;
 }
 
@@ -279,18 +275,6 @@ void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
-  MachineBasicBlock &MBB = *I.getParent();
-  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
-                 .addUse(Reg)
-                 .addImm(Member)
-                 .addImm(static_cast<uint32_t>(Dec));
-  finishBuildOpDecorate(MIB, DecArgs, StrImm);
-}
-
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
@@ -318,9 +302,26 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
             static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
       continue; // Ignored.
     }
-    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
-                   .addUse(Reg)
-                   .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
+    uint32_t Dec = static_cast<uint32_t>(DecorationId->getZExtValue());
+    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId)) {
+      ConstantInt *ScopeV =
+          OpMD->getNumOperands() == 2
+              ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
+              : nullptr;
+      assert(ScopeV && isUInt<32>(ScopeV->getZExtValue()) &&
+             "Expect Scope <id> operand of the UniformId decoration");
+      SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+      SPIRVTypeInst SpvTypeInt32 =
+          GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
+      Register ScopeReg = GR->buildConstantInt(
+          ScopeV->getZExtValue(), MIRBuilder, SpvTypeInt32, /*EmitIR=*/false);
+      MIRBuilder.buildInstr(SPIRV::OpDecorateId)
+          .addUse(Reg)
+          .addImm(Dec)
+          .addUse(ScopeReg);
+      continue;
+    }
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(Reg).addImm(Dec);
     for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
       if (ConstantInt *OpV =
               mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
@@ -448,18 +449,27 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
-SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+uint32_t getMemSemanticsWithStorageClass(const Triple &TT, uint32_t OrderSem,
+                                         uint32_t StorageClassSem) {
+  bool DropStorageClass =
+      TT.isVulkanOS() &&
+      OrderSem == static_cast<uint32_t>(SPIRV::MemorySemantics::None);
+  return OrderSem | (DropStorageClass ? 0 : StorageClassSem);
+}
+
+SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
+                                SyncScope::ID Id) {
   // Named by
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
   // We don't need aliases for Invocation and CrossDevice, as we already have
   // them covered by "singlethread" and "" strings respectively (see
   // implementation of LLVMContext::LLVMContext()).
-  static const llvm::SyncScope::ID SubGroup =
-      Ctx.getOrInsertSyncScopeID("subgroup");
-  static const llvm::SyncScope::ID WorkGroup =
-      Ctx.getOrInsertSyncScopeID("workgroup");
-  static const llvm::SyncScope::ID Device =
-      Ctx.getOrInsertSyncScopeID("device");
+  auto ScopeID = [&](AtomicScope Scope) {
+    return Ctx.getOrInsertSyncScopeID(*getAtomicScopeIRString(TT, Scope));
+  };
+  static const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
+  static const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
+  static const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
@@ -520,6 +530,14 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return toTypedPointer(ElementTy);
 }
 
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I) {
+  if (N->getNumOperands() <= I)
+    return nullptr;
+  if (auto *CMeta = dyn_cast<ConstantAsMetadata>(N->getOperand(I)))
+    return dyn_cast<ConstantInt>(CMeta->getValue());
+  return nullptr;
+}
+
 static bool isEnqueueKernelBI(StringRef MangledName) {
   return MangledName == "__enqueue_kernel_basic" ||
          MangledName == "__enqueue_kernel_basic_events" ||
@@ -575,10 +593,10 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  [[maybe_unused]] bool Error =
-      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-          .getAsInteger(10, Len);
-  assert(!Error && "Failed to parse demangled name length");
+  bool Error = Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+                   .getAsInteger(10, Len);
+  if (Error)
+    return std::string();
   return Name.substr(Start, Len).str();
 }
 
@@ -883,7 +901,26 @@ createExitVariable(BasicBlock *BB,
     return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
   }
 
-  // TODO: add support for switch cases.
+  if (auto *SI = dyn_cast<SwitchInst>(T)) {
+    Value *Condition = SI->getCondition();
+    // The default destination acts as the fallback value of the select chain.
+    Value *Result = TargetToValue.lookup(SI->getDefaultDest());
+    for (const auto &Case : SI->cases()) {
+      Value *CaseValue = TargetToValue.lookup(Case.getCaseSuccessor());
+      // Successors that are internal to the region have no exit value.
+      if (CaseValue == nullptr)
+        continue;
+      // The first known exit value becomes the base of the select chain.
+      if (Result == nullptr) {
+        Result = CaseValue;
+        continue;
+      }
+      Value *Cmp = Builder.CreateICmpEQ(Condition, Case.getCaseValue());
+      Result = Builder.CreateSelect(Cmp, CaseValue, Result);
+    }
+    return Result;
+  }
+
   llvm_unreachable("Unhandled terminator type.");
 }
 
@@ -894,7 +931,7 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   return MaybeDef;
 }
 
-bool getVacantFunctionName(Module &M, std::string &Name) {
+static bool getVacantFunctionName(Module &M, std::string &Name) {
   // It's a bit of paranoia, but still we don't want to have even a chance that
   // the loop will work for too long.
   constexpr unsigned MaxIters = 1024;
@@ -961,6 +998,11 @@ Register createVirtualRegister(
   return createVirtualRegister(
       GR->getOrCreateSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR), GR,
       MIRBuilder);
+}
+
+bool isVectorType(SPIRVTypeInst SPVTy) {
+  return SPVTy->getOpcode() == SPIRV::OpTypeVector ||
+         SPVTy->getOpcode() == SPIRV::OpTypeVectorIdEXT;
 }
 
 CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
@@ -1210,13 +1252,12 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
     return Ty;
 
   Type *ResultTy;
-  if (STy->isLiteral())
+  if (STy->isLiteral()) {
     ResultTy =
         StructType::get(STy->getContext(), NewElementTypes, STy->isPacked());
-  else {
-    auto *NewTy = StructType::create(STy->getContext(), STy->getName());
-    NewTy->setBody(NewElementTypes, STy->isPacked());
-    ResultTy = NewTy;
+  } else {
+    ResultTy = StructType::create(STy->getContext(), NewElementTypes,
+                                  STy->getName(), STy->isPacked());
   }
   return ResultTy;
 }
@@ -1227,12 +1268,17 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
     return std::nullopt;
 
   if (GV.isDeclarationForLinker()) {
-    // Interface variables must not get Import linkage.
     if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
       auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
+      // Interface variables must not get Import linkage.
       if (SC == SPIRV::StorageClass::Input ||
           SC == SPIRV::StorageClass::Output ||
           SC == SPIRV::StorageClass::PushConstant)
+        return std::nullopt;
+      // Shaders have no linker, so module-internal storage
+      // (e.g. HLSL groupshared) can't be imported
+      if (ST.isShader() && (SC == SPIRV::StorageClass::Workgroup ||
+                            SC == SPIRV::StorageClass::Private))
         return std::nullopt;
     }
     return SPIRV::LinkageType::Import;

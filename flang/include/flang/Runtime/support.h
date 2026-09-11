@@ -13,7 +13,6 @@
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
-#include <cstdint>
 
 namespace Fortran::runtime {
 

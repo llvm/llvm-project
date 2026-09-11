@@ -62,7 +62,7 @@
 //
 // Check cudaLaunchKernel is called with all 6 arguments:
 // func ptr, gridDim, blockDim, args, sharedMem, stream
-// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>{{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_cudaStream>{{.*}}) -> (!u32i {llvm.noundef})
+// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>{{.*}}, !u64i, !u32i, !u64i, !u32i, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_cudaStream>{{.*}}) -> (!u32i {llvm.noundef})
 // CUDA-PTH: cir.call @cudaLaunchKernel_ptsz
 
 //
@@ -71,7 +71,7 @@
 // HIP-NEW: cir.alloca "stream" {{.*}} : !cir.ptr<!cir.ptr<!rec_hipStream>>
 // HIP-NEW: cir.call @__hipPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_hipStream>>) -> !s32i
 // HIP-NEW: cir.get_global @_Z6kernelif : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.float)>>>
-// HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void> {{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_hipStream>{{.*}}) -> (!u32i {llvm.noundef})
+// HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void> {{.*}}, !u64i, !u32i, !u64i, !u32i, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_hipStream>{{.*}}) -> (!u32i {llvm.noundef})
 // HIP-PTH: cir.call @hipLaunchKernel_spt
 
 __global__ void kernel(int x, float y) {}
@@ -94,10 +94,10 @@ int main(void) {
   // HIP-NEW-DAG: cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<!rec_dim3>
   //
   // Check dim3 constructors are called for grid and block dimensions
-  // CUDA-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()
-  // CUDA-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()
-  // HIP-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()
-  // HIP-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()
+  // CUDA-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) {uniform_work_group_size} : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()
+  // CUDA-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) {uniform_work_group_size} : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()
+  // HIP-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) {uniform_work_group_size} : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()
+  // HIP-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) {uniform_work_group_size} : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()
   //
   // Check default shared memory (0) and null stream are set
   // CUDA-NEW: cir.const #cir.int<0> : !u64i
@@ -106,8 +106,8 @@ int main(void) {
   // HIP-NEW: cir.const #cir.ptr<null> : !cir.ptr<!rec_hipStream>
   //
   // Check Push call configuration is called with grid, block, shared mem, stream
-  // CUDA-NEW: cir.call @__cudaPushCallConfiguration({{.*}}) : (!rec_dim3, !rec_dim3, !u64i {llvm.noundef}, !cir.ptr<!rec_cudaStream> {llvm.noundef}) -> !s32i
-  // HIP-NEW: cir.call @__hipPushCallConfiguration({{.*}}) : (!rec_dim3, !rec_dim3, !u64i {llvm.noundef}, !cir.ptr<!rec_hipStream> {llvm.noundef}) -> !u32i
+  // CUDA-NEW: cir.call @__cudaPushCallConfiguration({{.*}}) {uniform_work_group_size} : (!u64i, !u32i, !u64i, !u32i, !u64i {llvm.noundef}, !cir.ptr<!rec_cudaStream> {llvm.noundef}) -> !s32i
+  // HIP-NEW: cir.call @__hipPushCallConfiguration({{.*}}) {uniform_work_group_size} : (!u64i, !u32i, !u64i, !u32i, !u64i {llvm.noundef}, !cir.ptr<!rec_hipStream> {llvm.noundef}) -> !u32i
   //
   // Check the config result is cast to bool for the conditional
   // CUDA-NEW: cir.cast int_to_bool {{.*}} : !s32i -> !cir.bool
@@ -118,13 +118,13 @@ int main(void) {
   // CUDA-NEW: } else {
   // CUDA-NEW:   cir.const #cir.int<42> : !s32i
   // CUDA-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
+  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">, uniform_work_group_size} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
   // CUDA-NEW: }
   // HIP-NEW: cir.if %{{.*}} {
   // HIP-NEW: } else {
   // HIP-NEW:   cir.const #cir.int<42> : !s32i
   // HIP-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
+  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">, uniform_work_group_size} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
   // HIP-NEW: }
   kernel<<<1, 1>>>(42, 1.0f);
 }

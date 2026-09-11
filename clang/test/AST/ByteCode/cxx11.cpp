@@ -233,6 +233,13 @@ namespace ExternPointer {
   constexpr const int *pua = &pu.a; // Ok.
 }
 
+namespace ExternRedecl {
+  extern const int q; // both-note {{declared here}}
+  constexpr int g() { return q; } // both-note {{outside its lifetime}}
+  constexpr int q = g(); // both-error {{constant expression}} \
+                         // both-note {{in call}}
+}
+
 namespace PseudoDtor {
   typedef int I;
   constexpr int f(int a = 1) { // both-error {{never produces a constant expression}} \
@@ -474,4 +481,31 @@ namespace SubobjectCompare {
   static_assert((void*)(X*)&z < (void*)(Y*)&z, ""); // both-error {{not an integral constant expression}} \
                                                     // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
   static_assert((void*)(X*)&z != (void*)(Y*)&z, "");
+}
+
+namespace SubPtr {
+  struct A {};
+  struct B : A { int n; int m; };
+  B a[3][3];
+
+  constexpr int diff1 = &a[2] - &a[0];
+  constexpr int diff2 = &a[1][3] - &a[1][0];
+  constexpr int diff3 = &a[2][0] - &a[1][0]; // both-error {{constant expression}} \
+                                             // both-note {{subtracted pointers are not elements of the same array}}
+  // static_assert(&a[2][0] == &a[1][3], ""); FIXME
+  constexpr int diff4 = (&b + 1) - &b;
+  constexpr int diff5 = &a[1][2].n - &a[1][0].n; // both-error {{constant expression}} \
+                                                 // both-note {{subtracted pointers are not elements of the same array}}
+  constexpr int diff6 = &a[1][2].n - &a[1][2].n;
+  constexpr int diff7 = (A*)&a[0][1] - (A*)&a[0][0]; // both-error {{constant expression}} \
+                                                     // both-note {{subtracted pointers are not elements of the same array}}
+  constexpr auto diff8 = &a[1][2].n - (&a[1][2].n + 1);
+}
+
+namespace ConstexprForRangeVar {
+  void f() {
+    int arr[] = {1, 2, 3};
+    for (constexpr int a : arr) {} // both-error {{constexpr variable 'a' must be initialized by a constant expression}} \
+                                   // both-note-re {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
 }

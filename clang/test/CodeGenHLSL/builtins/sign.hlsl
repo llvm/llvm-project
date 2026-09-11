@@ -8,12 +8,12 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DTARGET=dx -DFNATTRS="hidden noundef"
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:   -DTARGET=spv -DFNATTRS="hidden spir_func noundef"
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DTARGET=spv -DFNATTRS="hidden spir_func noundef"
 
@@ -69,6 +69,11 @@ int3 test_sign_float3(float3 p0) { return sign(p0); }
 // CHECK: %hlsl.sign = call <4 x i32> @llvm.[[TARGET]].sign.v4f32(
 // CHECK: ret <4 x i32> %hlsl.sign
 int4 test_sign_float4(float4 p0) { return sign(p0); }
+
+// CHECK: define [[FNATTRS]] <5 x i32> @
+// CHECK: %hlsl.sign = call <5 x i32> @llvm.[[TARGET]].sign.v5f32(
+// CHECK: ret <5 x i32> %hlsl.sign
+vector<int, 5> test_sign_float5(vector<float, 5> p0) { return sign(p0); }
 
 
 // CHECK: define [[FNATTRS]] i32 @

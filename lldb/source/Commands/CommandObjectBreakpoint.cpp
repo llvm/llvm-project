@@ -2950,7 +2950,7 @@ protected:
 
     Status error;
     for (auto &entry : command.entries()) {
-      ConstString name(entry.c_str());
+      llvm::StringRef name(entry.ref());
       BreakpointName *bp_name = target->FindBreakpointName(name, true, error);
       if (!bp_name)
         continue;
@@ -3163,7 +3163,7 @@ protected:
         // First print out the options for the name:
         Status error;
         BreakpointName *bp_name =
-            target->FindBreakpointName(ConstString(name), false, error);
+            target->FindBreakpointName(name, false, error);
         if (bp_name) {
           StreamString s;
           result.AppendMessageWithFormatv("Name: {0}", name);

@@ -11,16 +11,25 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getpid.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/tgkill.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
+#include "src/__support/threads/thread_attributes.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include <arm_acle.h>
@@ -28,11 +37,12 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
+#include "hdr/sched_macros.h" // For CLONE_* flags.
+#include "hdr/signal_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
-#include <linux/sched.h> // For CLONE_* flags.
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -174,8 +184,8 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
 [[gnu::noinline]] void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
-  self.attrib = attrib;
-  self.attrib->atexit_callback_mgr = internal::get_thread_atexit_callback_mgr();
+  internal::self.attrib = attrib;
+  attrib->atexit_callback_mgr = internal::get_thread_atexit_callback_mgr();
 
   if (attrib->style == ThreadStyle::POSIX) {
     attrib->retval.posix_retval =
@@ -217,6 +227,10 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
     else
       stack = alloc.value();
     owned_stack = true;
+  } else {
+    // The user is responsible for setting up the stack guard (or not) for the
+    // provided stack.
+    guardsize = 0;
   }
 
   // Validate that stack/stacksize are validly aligned.
@@ -336,21 +350,22 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 }
 
 int Thread::join(ThreadReturnValue &retval) {
-  if (self.attrib) {
+  if (current_thread().attrib) {
     // Reject self join.
-    if (self.attrib == attrib)
+    if (current_thread().attrib == attrib)
       return EDEADLK;
 
     // Do a best-effort check of concurrent/repeated join.
     // This cmpxchg establishes exclusive joiner role by setting the joiner
     // field iff there is no previous joiner
     ThreadAttributes *expected = nullptr;
-    if (!attrib->joiner.compare_exchange_strong(expected, self.attrib,
-                                                cpp::MemoryOrder::ACQ_REL))
+    if (!attrib->joiner.compare_exchange_strong(
+            expected, current_thread().attrib, cpp::MemoryOrder::ACQ_REL))
       return EINVAL;
 
     // Reject mutual join.
-    if (self.attrib->joiner.load(cpp::MemoryOrder::ACQUIRE) == attrib) {
+    if (current_thread().attrib->joiner.load(cpp::MemoryOrder::ACQUIRE) ==
+        attrib) {
       attrib->joiner.store(nullptr, cpp::MemoryOrder::RELEASE);
       return EDEADLK;
     }
@@ -417,7 +432,7 @@ int Thread::set_name(const cpp::string_view &name) {
   if (name.size() >= NAME_SIZE_MAX)
     return ERANGE;
 
-  if (*this == self) {
+  if (*this == current_thread()) {
     // If we are setting the name of the current thread, then we can
     // use the syscall to set the name.
     int retval =
@@ -435,13 +450,13 @@ int Thread::set_name(const cpp::string_view &name) {
   if (!fd)
     return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_write, fd.value(),
-                                                 name.data(), name.size());
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd.value());
+  auto write_result =
+      linux_syscalls::write(fd.value(), name.data(), name.size());
+  linux_syscalls::close(fd.value());
 
-  if (retval < 0)
-    return -retval;
-  else if (retval != int(name.size()))
+  if (!write_result)
+    return write_result.error();
+  else if (write_result.value() != static_cast<ssize_t>(name.size()))
     return EIO;
   else
     return 0;
@@ -453,7 +468,7 @@ int Thread::get_name(cpp::StringStream &name) const {
 
   char name_buffer[NAME_SIZE_MAX];
 
-  if (*this == self) {
+  if (*this == current_thread()) {
     // If we are getting the name of the current thread, then we can
     // use the syscall to get the name.
     int retval =
@@ -471,11 +486,12 @@ int Thread::get_name(cpp::StringStream &name) const {
   if (!fd)
     return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_read, fd.value(),
-                                                 name_buffer, NAME_SIZE_MAX);
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd.value());
-  if (retval < 0)
-    return -retval;
+  auto read_result =
+      linux_syscalls::read(fd.value(), name_buffer, NAME_SIZE_MAX);
+  linux_syscalls::close(fd.value());
+  if (!read_result)
+    return read_result.error();
+  int retval = static_cast<int>(read_result.value());
   if (retval == NAME_SIZE_MAX)
     return ERANGE;
   if (name_buffer[retval - 1] == '\n')
@@ -486,8 +502,65 @@ int Thread::get_name(cpp::StringStream &name) const {
   return 0;
 }
 
+int Thread::setschedparam(SchedParameters params) {
+  auto result = linux_syscalls::sched_setscheduler(attrib->tid, params.policy,
+                                                   &params.param);
+  if (!result.has_value())
+    return result.error();
+  return 0;
+}
+
+ErrorOr<SchedParameters> Thread::getschedparam() const {
+  auto pol_result = linux_syscalls::sched_getscheduler(attrib->tid);
+  if (!pol_result.has_value())
+    return Error(pol_result.error());
+
+  struct sched_param param;
+  auto param_result = linux_syscalls::sched_getparam(attrib->tid, &param);
+  if (!param_result.has_value())
+    return Error(param_result.error());
+
+  return SchedParameters{pol_result.value(), param};
+}
+
+ErrorOr<void> Thread::kill(int sig) {
+  auto state = static_cast<DetachState>(
+      attrib->detach_state.load(cpp::MemoryOrder::RELAXED));
+  switch (state) {
+  case DetachState::EXITING:
+    // The thread is exiting, or has already exited. POSIX.1-2024 requires that
+    // pthread_kill does not return ESRCH because the pthread_t (unlike the OS
+    // TID) is still valid. Calling tgkill would return ESRCH (or target a
+    // recycled TID), so we return success directly. We only need to "request
+    // that a signal be delivered", and not actually make sure it has been
+    // handled. A zombie thread cannot handle signals.
+    return {};
+  case DetachState::JOINABLE:
+  case DetachState::DETACHED:
+    // A thread in these states can handle a signal. Note that a JOINABLE thread
+    // can transition to the EXITING state at any moment (and a DETACHED thread
+    // can disappear), but we're not allowed to take any locks to prevent that
+    // from happening (this function needs to be async-signal-safe).
+    break;
+  }
+
+  pid_t pid = linux_syscalls::getpid();
+  auto result = linux_syscalls::tgkill(pid, attrib->tid, sig);
+
+  if (!result.has_value()) {
+    if (result.error() == ESRCH) {
+      // Either the thread has exited since we've checked its state, or this
+      // object is corrupted. The latter is UB, so we're going to assume the
+      // former.
+      return {};
+    }
+    return Error(result.error());
+  }
+  return {};
+}
+
 void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
-  auto attrib = self.attrib;
+  auto attrib = current_thread().attrib;
 
   // The very first thing we do is to call the thread's atexit callbacks.
   // These callbacks could be the ones registered by the language runtimes,

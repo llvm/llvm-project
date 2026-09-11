@@ -29,4 +29,4 @@
 // RUN:   | FileCheck %s --check-prefix=INVOCATION-SPIRV-BACKEND
 // INVOCATION-SPIRV-BACKEND: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-flto=full" "-flto-unit"{{.*}}"-disable-llvm-optzns" {{.*}} "-o" "[[OUTPUT:.+]]" "-x" "c"
 // INVOCATION-SPIRV-BACKEND: "{{.*}}llvm-link" "-o" "[[LINKED_OUTPUT:.+]]" "[[OUTPUT]]"
-// INVOCATION-SPIRV-BACKEND: "-cc1" "-triple=spirv64-amd-amdhsa" "-emit-obj" {{.*}} "[[LINKED_OUTPUT]]" "-o" "a.out"
+// INVOCATION-SPIRV-BACKEND: "-cc1" "-triple=spirv64-amd-amdhsa" "-emit-obj" {{.*}} "-mllvm" "-spirv-preserve-auxdata" "[[LINKED_OUTPUT]]" "-o" "a.out"

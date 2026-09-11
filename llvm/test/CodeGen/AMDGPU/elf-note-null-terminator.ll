@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=obj < %s | llvm-readelf -n - | FileCheck --check-prefix=NOTE-AMDGPU %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=obj < %s | llvm-readelf -x .note - | FileCheck --check-prefix=HEX-AMDGPU %s
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx90a -filetype=obj < %s | llvm-readelf -n - | FileCheck --check-prefix=NOTE-AMD %s
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx90a -filetype=obj < %s | llvm-readelf -x .note - | FileCheck --check-prefix=HEX-AMD %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -filetype=obj < %s | llvm-readelf -n - | FileCheck --check-prefix=NOTE-AMDGPU %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -filetype=obj < %s | llvm-readelf -x .note - | FileCheck --check-prefix=HEX-AMDGPU %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-unknown -filetype=obj < %s | llvm-readelf -n - | FileCheck --check-prefix=NOTE-AMD %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-unknown -filetype=obj < %s | llvm-readelf -x .note - | FileCheck --check-prefix=HEX-AMD %s
 
 ; Verify ELF notes have explicit null terminators after the name field.
 ; Tests both "AMDGPU" (NoteNameV3, 7 bytes with null) and "AMD" (NoteNameV2, 4 bytes with null).

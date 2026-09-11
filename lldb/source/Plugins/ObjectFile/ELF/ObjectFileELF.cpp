@@ -1052,6 +1052,22 @@ Address ObjectFileELF::GetBaseAddress() {
   return Address();
 }
 
+FileSpecList ObjectFileELF::GetReExportedLibraries() {
+  FileSpecList filtees;
+  if (!ParseDynamicSymbols())
+    return filtees;
+  // Multiple DT_FILTER / DT_AUXILIARY entries are permitted; the dynamic
+  // linker searches the filtees in the order the entries appear in the
+  // dynamic section, so preserve that order here.
+  for (const auto &entry : m_dynamic_symbols) {
+    if (entry.symbol.d_tag != DT_FILTER && entry.symbol.d_tag != DT_AUXILIARY)
+      continue;
+    if (!entry.name.empty())
+      filtees.EmplaceBack(entry.name);
+  }
+  return filtees;
+}
+
 size_t ObjectFileELF::ParseDependentModules() {
   if (m_filespec_up)
     return m_filespec_up->GetSize();
@@ -1736,9 +1752,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         const ELFSectionHeaderInfo &sheader = *I;
         const uint64_t section_size =
             sheader.sh_type == SHT_NOBITS ? 0 : sheader.sh_size;
-        ConstString name(shstr_data.PeekCStr(I->sh_name));
-
-        I->section_name = name;
+        llvm::StringRef name(shstr_data.PeekCStr(I->sh_name));
+        I->section_name = name.str();
 
         if (arch_spec.IsMIPS()) {
           uint32_t arch_flags = arch_spec.GetFlags();
@@ -1896,11 +1911,11 @@ ObjectFileELF::GetSectionHeaderByIndex(lldb::user_id_t id) {
   return nullptr;
 }
 
-lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
-  if (!name || !name[0] || !ParseSectionHeaders())
+lldb::user_id_t ObjectFileELF::GetSectionIndexByName(llvm::StringRef name) {
+  if (name.empty() || !ParseSectionHeaders())
     return 0;
   for (size_t i = 1; i < m_section_headers.size(); ++i)
-    if (m_section_headers[i].section_name == ConstString(name))
+    if (m_section_headers[i].section_name == name)
       return i;
   return 0;
 }
@@ -1944,7 +1959,7 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   case SHT_DYNAMIC:
     return eSectionTypeELFDynamicLinkInfo;
   }
-  return GetSectionTypeFromName(H.section_name.GetStringRef());
+  return GetSectionTypeFromName(H.section_name);
 }
 
 static Permissions GetPermissions(const ELFSectionHeader &H) {
@@ -2086,7 +2101,7 @@ static SectionSP FindMatchingSection(const SectionList &section_list,
   SectionSP sect_sp;
 
   addr_t vm_addr = section->GetFileAddress();
-  ConstString name = section->GetName();
+  llvm::StringRef name = section->GetName();
   offset_t byte_size = section->GetByteSize();
   bool thread_specific = section->IsThreadSpecific();
   uint32_t permissions = section->GetPermissions();
@@ -2150,7 +2165,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
        I != m_section_headers.end(); ++I) {
     const ELFSectionHeaderInfo &header = *I;
 
-    ConstString &name = I->section_name;
+    const std::string &name = I->section_name;
     const uint64_t file_size =
         header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
 
@@ -2165,19 +2180,19 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     elf::elf_xword log2align =
         (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
 
-    SectionSP section_sp(new Section(
+    SectionSP section_sp = std::make_shared<Section>(
         InfoOr->Segment, GetModule(), // Module to which this section belongs.
         this,            // ObjectFile to which this section belongs and should
                          // read section data from.
         SectionIndex(I), // Section ID.
-        name,            // Section name.
-        sect_type,       // Section type.
+        ConstString(name),            // Section name.
+        sect_type,                    // Section type.
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
-        file_size,         // Size of the section as found in the file.
-        log2align,         // Alignment of the section
-        header.sh_flags)); // Flags for this section.
+        file_size,        // Size of the section as found in the file.
+        log2align,        // Alignment of the section
+        header.sh_flags); // Flags for this section.
 
     section_sp->SetPermissions(GetPermissions(header));
     section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
@@ -2435,7 +2450,7 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_type == eSymbolTypeInvalid && symbol.getType() != STT_SECTION) {
       if (symbol_section_sp) {
-        ConstString sect_name = symbol_section_sp->GetName();
+        llvm::StringRef sect_name = symbol_section_sp->GetName();
         if (sect_name == text_section_name || sect_name == init_section_name ||
             sect_name == fini_section_name || sect_name == ctors_section_name ||
             sect_name == dtors_section_name) {
@@ -3371,7 +3386,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
 
 void ObjectFileELF::RelocateSection(lldb_private::Section *section)
 {
-  static const char *debug_prefix = ".debug";
+  static llvm::StringRef debug_prefix(".debug");
 
   // Set relocated bit so we stop getting called, regardless of whether we
   // actually relocate.
@@ -3381,24 +3396,24 @@ void ObjectFileELF::RelocateSection(lldb_private::Section *section)
   if (CalculateType() != eTypeObjectFile)
     return;
 
-  const char *section_name = section->GetName().GetCString();
+  llvm::StringRef section_name = section->GetName();
   // Can't relocate that which can't be named
-  if (section_name == nullptr)
+  if (section_name.empty())
     return;
 
   // We don't relocate non-debug sections at the moment
-  if (strncmp(section_name, debug_prefix, strlen(debug_prefix)))
+  if (!section_name.starts_with(debug_prefix))
     return;
 
   // Relocation section names to look for
-  std::string needle = std::string(".rel") + section_name;
-  std::string needlea = std::string(".rela") + section_name;
+  std::string needle = std::string(".rel") + section_name.str();
+  std::string needlea = std::string(".rela") + section_name.str();
 
   for (SectionHeaderCollIter I = m_section_headers.begin();
        I != m_section_headers.end(); ++I) {
     if (I->sh_type == SHT_RELA || I->sh_type == SHT_REL) {
-      const char *hay_name = I->section_name.GetCString();
-      if (hay_name == nullptr)
+      llvm::StringRef hay_name(I->section_name);
+      if (hay_name.empty())
         continue;
       if (needle == hay_name || needlea == hay_name) {
         const ELFSectionHeader &reloc_header = *I;
@@ -3744,8 +3759,8 @@ void ObjectFileELF::DumpELFSectionHeaders(Stream *s) {
        I != m_section_headers.end(); ++I, ++idx) {
     s->Printf("[%2u] ", idx);
     ObjectFileELF::DumpELFSectionHeader(s, *I);
-    const char *section_name = I->section_name.AsCString("");
-    if (section_name)
+    const std::string &section_name = I->section_name;
+    if (!section_name.empty())
       *s << ' ' << section_name << "\n";
   }
 }
@@ -3826,6 +3841,14 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef SPARC_DYNAMIC_TAG
     }
     break;
+
+  case llvm::ELF::EM_X86_64:
+    switch (Type) {
+#define X86_64_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef X86_64_DYNAMIC_TAG
+    }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -3837,6 +3860,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #define PPC64_DYNAMIC_TAG(name, value)
 #define RISCV_DYNAMIC_TAG(name, value)
 #define SPARC_DYNAMIC_TAG(name, value)
+#define X86_64_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value)                                               \
@@ -3851,6 +3875,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef PPC64_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG
 #undef SPARC_DYNAMIC_TAG
+#undef X86_64_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:
@@ -4017,15 +4042,14 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
     return result;
 
   auto Decompressor = llvm::object::Decompressor::create(
-      section->GetName().GetStringRef(),
+      section->GetName(),
       {reinterpret_cast<const char *>(section_data.GetDataStart()),
        size_t(section_data.GetByteSize())},
       GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
   if (!Decompressor) {
     GetModule()->ReportWarning(
         "unable to initialize decompressor for section '{0}': {1}",
-        section->GetName().GetCString(),
-        llvm::toString(Decompressor.takeError()).c_str());
+        section->GetName(), llvm::toString(Decompressor.takeError()).c_str());
     section_data.Clear();
     return 0;
   }
@@ -4035,7 +4059,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
   if (auto error = Decompressor->decompress(
           {buffer_sp->GetBytes(), size_t(buffer_sp->GetByteSize())})) {
     GetModule()->ReportWarning("decompression of section '{0}' failed: {1}",
-                               section->GetName().GetCString(),
+                               section->GetName(),
                                llvm::toString(std::move(error)).c_str());
     section_data.Clear();
     return 0;

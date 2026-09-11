@@ -9,21 +9,21 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : ve
     %4 = llvm.mlir.constant(25 : i32) : i32
     %5 = llvm.mlir.constant(21 : i32) : i32
     %6 = llvm.mlir.constant(17 : i32) : i32
-    %7 = llvm.mlir.constant(1 : index) : i64
+    %7 = llvm.mlir.constant(1 : i64) : i64
     %8 = llvm.mlir.constant(27 : i32) : i32
     %9 = llvm.mlir.constant(6 : i32) : i32
     %10 = llvm.mlir.constant(1 : i32) : i32
     %11 = llvm.mlir.constant(0 : i32) : i32
-    %12 = llvm.mlir.constant(10 : index) : i64
+    %12 = llvm.mlir.constant(10 : i64) : i64
     %13 = llvm.mlir.addressof @_QQclX91d13f6e74caa2f03965d7a7c6a8fdd5 : !llvm.ptr
     %14 = llvm.call @_FortranACUFMemAlloc(%2, %11, %13, %6) : (i64, i32, !llvm.ptr, i32) -> !llvm.ptr
-    %15 = llvm.mlir.constant(10 : index) : i64
-    %16 = llvm.mlir.constant(1 : index) : i64
+    %15 = llvm.mlir.constant(10 : i64) : i64
+    %16 = llvm.mlir.constant(1 : i64) : i64
     %17 = llvm.alloca %15 x i32 : (i64) -> !llvm.ptr
     %18 = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     %19 = llvm.insertvalue %17, %18[0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
     %20 = llvm.insertvalue %17, %19[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
-    %21 = llvm.mlir.constant(0 : index) : i64
+    %21 = llvm.mlir.constant(0 : i64) : i64
     %22 = llvm.insertvalue %21, %20[2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
     %23 = llvm.insertvalue %15, %22[3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
     %24 = llvm.insertvalue %16, %23[4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
@@ -31,21 +31,21 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : ve
     %26 = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     %27 = llvm.insertvalue %25, %26[0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
     %28 = llvm.insertvalue %25, %27[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
-    %29 = llvm.mlir.constant(0 : index) : i64
+    %29 = llvm.mlir.constant(0 : i64) : i64
     %30 = llvm.insertvalue %29, %28[2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
-    %31 = llvm.mlir.constant(10 : index) : i64
+    %31 = llvm.mlir.constant(10 : i64) : i64
     %32 = llvm.insertvalue %31, %30[3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
-    %33 = llvm.mlir.constant(1 : index) : i64
+    %33 = llvm.mlir.constant(1 : i64) : i64
     %34 = llvm.insertvalue %33, %32[4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
-    %35 = llvm.mlir.constant(1 : index) : i64
-    %36 = llvm.mlir.constant(11 : index) : i64
-    %37 = llvm.mlir.constant(1 : index) : i64
+    %35 = llvm.mlir.constant(1 : i64) : i64
+    %36 = llvm.mlir.constant(11 : i64) : i64
+    %37 = llvm.mlir.constant(1 : i64) : i64
     llvm.br ^bb1(%35 : i64)
   ^bb1(%38: i64):  // 2 preds: ^bb0, ^bb2
     %39 = llvm.icmp "slt" %38, %36 : i64
     llvm.cond_br %39, ^bb2, ^bb3
   ^bb2:  // pred: ^bb1
-    %40 = llvm.mlir.constant(-1 : index) : i64
+    %40 = llvm.mlir.constant(-1 : i64) : i64
     %41 = llvm.add %38, %40 : i64
     %42 = llvm.extractvalue %34[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
     %43 = llvm.getelementptr %42[%41] : (!llvm.ptr, i64) -> !llvm.ptr, i32
@@ -118,10 +118,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
     llvm.return
   }
   llvm.func @_QQmain() attributes {fir.bindc_name = "test"} {
-    %0 = llvm.mlir.constant(1 : index) : i64
-    %1 = llvm.mlir.constant(2 : index) : i64
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.mlir.constant(2 : i64) : i64
     %2 = llvm.mlir.constant(0 : i32) : i32
-    %3 = llvm.mlir.constant(10 : index) : i64
+    %3 = llvm.mlir.constant(10 : i64) : i64
     gpu.launch_func  @cuda_device_mod::@_QMmod1Psub1 clusters in (%1, %1, %0) blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2  {cuf.proc_attr = #cuf.cuda_proc<global>}
     llvm.return
   }
@@ -143,12 +143,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : ve
     %4 = llvm.mlir.constant(25 : i32) : i32
     %5 = llvm.mlir.constant(21 : i32) : i32
     %6 = llvm.mlir.constant(17 : i32) : i32
-    %7 = llvm.mlir.constant(1 : index) : i64
+    %7 = llvm.mlir.constant(1 : i64) : i64
     %8 = llvm.mlir.constant(27 : i32) : i32
     %9 = llvm.mlir.constant(6 : i32) : i32
     %10 = llvm.mlir.constant(1 : i32) : i32
     %11 = llvm.mlir.constant(0 : i32) : i32
-    %12 = llvm.mlir.constant(10 : index) : i64
+    %12 = llvm.mlir.constant(10 : i64) : i64
     %13 = llvm.mlir.addressof @_QQclX91d13f6e74caa2f03965d7a7c6a8fdd5 : !llvm.ptr
     %14 = llvm.call @_FortranACUFMemAlloc(%2, %11, %13, %6) : (i64, i32, !llvm.ptr, i32) -> !llvm.ptr
     gpu.launch_func  @cuda_device_mod::@_QMmod1Psub1 blocks in (%7, %7, %7) threads in (%12, %7, %7) : i64 dynamic_shared_memory_size %11 args(%14 : !llvm.ptr) {cuf.proc_attr = #cuf.cuda_proc<grid_global>}
@@ -174,13 +174,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
     llvm.return
   }
   llvm.func @_QQmain() attributes {fir.bindc_name = "test"} {
-    %0 = llvm.mlir.constant(1 : index) : i64
+    %0 = llvm.mlir.constant(1 : i64) : i64
     %stream = llvm.alloca %0 x i64 : (i64) -> !llvm.ptr
-    %1 = llvm.mlir.constant(2 : index) : i64
+    %1 = llvm.mlir.constant(2 : i64) : i64
     %2 = llvm.mlir.constant(0 : i32) : i32
-    %3 = llvm.mlir.constant(10 : index) : i64
+    %3 = llvm.mlir.constant(10 : i64) : i64
     %token = cuf.stream_cast %stream : !llvm.ptr
-    gpu.launch_func [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2 {cuf.proc_attr = #cuf.cuda_proc<global>}
+    %res_token = gpu.launch_func async [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2 {cuf.proc_attr = #cuf.cuda_proc<global>}
     llvm.return
   }
   gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, "">]
@@ -204,16 +204,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : ve
     %4 = llvm.mlir.constant(25 : i32) : i32
     %5 = llvm.mlir.constant(21 : i32) : i32
     %6 = llvm.mlir.constant(17 : i32) : i32
-    %7 = llvm.mlir.constant(1 : index) : i64
+    %7 = llvm.mlir.constant(1 : i64) : i64
     %8 = llvm.mlir.constant(27 : i32) : i32
     %9 = llvm.mlir.constant(6 : i32) : i32
     %10 = llvm.mlir.constant(1 : i32) : i32
     %11 = llvm.mlir.constant(0 : i32) : i32
-    %12 = llvm.mlir.constant(10 : index) : i64
+    %12 = llvm.mlir.constant(10 : i64) : i64
     %13 = llvm.mlir.addressof @_QQclX91d13f6e74caa2f03965d7a7c6a8fdd5 : !llvm.ptr
     %14 = llvm.call @_FortranACUFMemAlloc(%2, %11, %13, %6) : (i64, i32, !llvm.ptr, i32) -> !llvm.ptr
     %token = cuf.stream_cast %stream : !llvm.ptr
-    gpu.launch_func [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%7, %7, %7) threads in (%12, %7, %7) : i64 dynamic_shared_memory_size %11 args(%14 : !llvm.ptr) {cuf.proc_attr = #cuf.cuda_proc<grid_global>}
+    %res_token = gpu.launch_func async [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%7, %7, %7) threads in (%12, %7, %7) : i64 dynamic_shared_memory_size %11 args(%14 : !llvm.ptr) {cuf.proc_attr = #cuf.cuda_proc<grid_global>}
     llvm.return
   }
   llvm.func @_QMmod1Psub1(!llvm.ptr) -> ()
@@ -238,13 +238,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
     llvm.return
   }
   llvm.func @_QQmain() attributes {fir.bindc_name = "test"} {
-    %0 = llvm.mlir.constant(1 : index) : i64
-    %1 = llvm.mlir.constant(2 : index) : i64
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.mlir.constant(2 : i64) : i64
     %2 = llvm.mlir.constant(0 : i32) : i32
-    %3 = llvm.mlir.constant(10 : index) : i64
+    %3 = llvm.mlir.constant(10 : i64) : i64
     %stream = llvm.alloca %0 x i64 : (i64) -> !llvm.ptr
     %token = cuf.stream_cast %stream : !llvm.ptr
-    %4 = gpu.launch_func async [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2  {cuf.proc_attr = #cuf.cuda_proc<global>}
+    %res_token = gpu.launch_func async [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2  {cuf.proc_attr = #cuf.cuda_proc<global>}
     llvm.return
   }
   gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, "">]

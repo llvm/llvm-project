@@ -189,11 +189,11 @@ TEST_P(ArchSpecAMDGPUTest, SetTriple) {
   const AMDGPUModel &model = GetParam();
   bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
   std::string triple =
-      (is_gcn ? "amdgcn" : "r600") + std::string("-amd-amdhsa--") + model.name;
+      (is_gcn ? "amdgpu" : "r600") + std::string("-amd-amdhsa--") + model.name;
 
   ArchSpec AS;
   EXPECT_TRUE(AS.SetTriple(triple));
-  EXPECT_EQ(is_gcn ? llvm::Triple::amdgcn : llvm::Triple::r600,
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
             AS.GetTriple().getArch());
   EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, AS.GetCore());
   EXPECT_EQ(model.name, AS.GetClangTargetCPU());
@@ -208,7 +208,7 @@ TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
   ArchSpec AS;
   EXPECT_TRUE(AS.SetArchitecture(eArchTypeELF, llvm::ELF::EM_AMDGPU, model.mach,
                                  llvm::ELF::ELFOSABI_AMDGPU_HSA));
-  EXPECT_EQ(is_gcn ? llvm::Triple::amdgcn : llvm::Triple::r600,
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
             AS.GetTriple().getArch());
   EXPECT_EQ(llvm::Triple::AMD, AS.GetTriple().getVendor());
   EXPECT_EQ(llvm::Triple::AMDHSA, AS.GetTriple().getOS());
@@ -479,6 +479,72 @@ TEST(ArchSpecTest, Compatibility) {
     ArchSpec B("x86_64-apple-macosx10.15.0");
     ASSERT_FALSE(A.IsExactMatch(B));
     ASSERT_TRUE(A.IsCompatibleMatch(B));
+  }
+}
+
+TEST(ArchSpecTest, UnrelatedCoresCompatibleMatchTerminates) {
+  {
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("armv7em-apple-none");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("armv7m-apple-none");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+}
+
+TEST(ArchSpecTest, AsymmetricCoreRulesAreCheckedBothWays) {
+  // Some cores' compatibility rules only work one way: core A accepts B,
+  // but B's own rule says nothing about A. A compatible match must check
+  // both directions to find these cases.
+  {
+    // A 32-bit MIPS core has no rule about 64-bit MIPS, but 64-bit MIPS
+    // accepts the 32-bit family with the same endianness.
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("mips64el-unknown-linux");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+  }
+  {
+    // The two Cortex-M cores explicitly accept each other.
+    ArchSpec A("armv7em-apple-none");
+    ArchSpec B("armv7m-apple-none");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+  }
+}
+
+TEST(ArchSpecTest, WasmCompatibility) {
+  // A Wasm module encodes no vendor or OS: those are properties of the runtime
+  // executing it. A bare wasm32 or wasm64 architecture therefore has to stay
+  // compatible with the more specific triple a runtime reports at launch.
+  {
+    ArchSpec A("wasm32");
+    ArchSpec B("wasm32-wamr-wasi-wasm");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+  }
+  {
+    // An explicitly specified "unknown" OS is still a specified OS, and does
+    // not match a runtime that reports a different one.
+    ArchSpec A("wasm32-unknown-unknown-wasm");
+    ArchSpec B("wasm32-wamr-wasi-wasm");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("wasm32");
+    ArchSpec B("wasm64-wamr-wasi-wasm");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
   }
 }
 

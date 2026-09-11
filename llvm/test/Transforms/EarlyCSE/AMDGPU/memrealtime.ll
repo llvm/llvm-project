@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes='early-cse<memssa>' -earlycse-debug-hash < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes='early-cse<memssa>' -earlycse-debug-hash < %s | FileCheck %s
 
 ; CHECK-LABEL: @memrealtime(
 ; CHECK: call i64 @llvm.amdgcn.s.memrealtime()

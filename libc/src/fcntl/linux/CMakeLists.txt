@@ -19,6 +19,7 @@ add_entrypoint_object(
     ../fcntl.h
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -46,4 +47,16 @@ add_entrypoint_object(
     libc.hdr.types.mode_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  posix_fadvise
+  SRCS
+    posix_fadvise.cpp
+  HDRS
+    ../posix_fadvise.h
+  DEPENDS
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.posix_fadvise
+    libc.src.__support.common
 )

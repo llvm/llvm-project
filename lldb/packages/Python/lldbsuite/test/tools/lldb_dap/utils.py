@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pprint import pformat
 from typing import IO, Callable, Optional, Protocol, Tuple, Type, runtime_checkable
 
-from .dap_types import (
+from .types import (
     AnyEvent,
     DAPError,
     Event,
@@ -156,6 +156,7 @@ class DebugAdapter:
             self._process.wait(timeout=2.0)
         except subprocess.TimeoutExpired:
             self._process.kill()
+            self._process.wait()
 
     def _read_listening_uri(self) -> str:
         # lldb-dap will print the listening address once the listener is

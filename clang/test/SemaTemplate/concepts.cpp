@@ -160,6 +160,8 @@ namespace NoConstantFolding {
   int n;
   template <class T> concept C = &n + 3 - 3 == &n; // expected-error {{non-constant expression}} expected-note {{cannot refer to element 3 of non-array object}}
   static_assert(C<void>); // expected-note {{while checking}}
+  // expected-error@-1 {{static assertion failed}}
+  // expected-note@-2 {{because 'void' does not satisfy 'C'}}
 }
 
 namespace PR50337 {
@@ -997,7 +999,7 @@ template<class>
 concept True = true;
 
 template<class>
-concept False = false; // expected-note 9 {{'false' evaluated to false}}
+concept False = false; // expected-note 8 {{'false' evaluated to false}}
 
 template<class>
 concept Irrelevant = false;
@@ -1009,8 +1011,8 @@ concept ErrorRequires = requires(ErrorRequires auto x) { x; }; //#GH54678-ill-fo
 // expected-note@-1 {{declared here}}
 
 template<typename T> concept C1 = C1<T> && []<C1>(C1 auto) -> C1 auto {};
-//expected-error@-1 4{{a concept definition cannot refer to itself}} \
-//expected-note@-1 4{{declared here}}
+//expected-error@-1 {{a concept definition cannot refer to itself}} \
+//expected-note@-1 {{declared here}}
 
 template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}
@@ -1023,15 +1025,15 @@ requires (Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'int' does
 template<class T> void eee(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
 
-template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
-requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{because 'unsigned long' does not satisfy 'False'}}
+template<class T> void fff(T t)
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {}
 void test() {
     aaa(42); // expected-error {{no matching function}}
     bbb(42L); // expected-error{{no matching function}}
     ccc(42UL); // expected-error {{no matching function}}
     ddd(42); // expected-error {{no matching function}}
     eee(42L); // expected-error {{no matching function}}
-    fff(42UL); // expected-error {{no matching function}}
+    fff(42UL);
 }
 }
 
@@ -1545,6 +1547,26 @@ concept C = sizeof(T) == 42;
 
 static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overloaded function could not be resolved;}}
 // expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
+// expected-note@-2 {{because 'void' does not satisfy 'C'}}
+// expected-note@-5 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+
+}
+
+namespace invalid_expression_in_instantiation {
+
+template <class T, class U>
+concept is_same = __is_same(T, U);
+
+template <class T, class U>
+concept is_same_2 = is_same<T&, U&>;
+
+template <class T, class U>
+constexpr bool is_same_value() {
+  return is_same_2<T, U>;
+}
+
+// This should be SFINAE rather than a hard error.
+static_assert(!is_same_value<void, void>());
 
 }
 
@@ -1556,9 +1578,12 @@ struct vector;
 template <typename T, typename U>
 concept C = __is_same_as(T, U);
 
+template <typename T, typename U>
+concept D = false && __is_same_as(T, U);
+
 template<class T, auto Cpt>
 concept generic_range_value = requires {
-    Cpt.template operator()<int>();
+    Cpt.template operator()<int>(); // expected-note {{would be invalid}}
 };
 
 
@@ -1567,8 +1592,14 @@ template<generic_range_value<[]<
    >() {}> T>
 void x() {}
 
+template<generic_range_value<[]< // expected-note {{evaluated to false}}
+   D<int>
+   >() {}> T>
+void y() {} // expected-note {{ignored}}
+
 void foo() {
   x<vector<int>>();
+  y<vector<int>>(); // expected-error {{no matching function}}
 }
 }
 
@@ -1815,6 +1846,7 @@ namespace instantiation_dependent {
   template <class V> requires C<X<V&>> struct Y {};
   Y<void> y;
   // expected-error@-1 {{constraints not satisfied for class template 'Y' [with V = void]}}
+  // expected-note@-3  {{because 'X<V &>' (aka 'int') does not satisfy 'C'}} \
   // expected-note@-3  {{because substituted constraint expression is ill-formed: cannot form a reference to 'void'}}
 } // namespace instantiation_dependent
 
@@ -2060,7 +2092,26 @@ struct quantity {};
 
 auto x = quantity<reference<int>{}, int>{};
 // expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<int>{}, $1 = int]}}
+// expected-note@-5 {{because 'representation_of<type-parameter-0-1, get_spec(V)>' evaluated to false}}
+// expected-note@-7 {{because 'decltype(V)' does not satisfy 'repr_impl'}}
+// expected-note@-7 {{because substituted constraint expression is ill-formed: non-type template argument is not a constant expression}}
 
 } // namespace CannotResolve1
 
 } // namespace GH175831
+
+
+namespace GH206336 {
+class Dim;
+struct S;
+template <class T> concept foo = true;
+template <class T> concept SS = false; // expected-note {{because 'false' evaluated to false}}
+template <class X> concept _Dim = _Dim<X>; // expected-error {{a concept definition cannot refer to itself}} \
+                                           // expected-note {{declared here}}
+template <SS, _Dim Dim, foo<> E> auto bar(Dim, E) {}; // expected-note {{candidate template ignored: constraints not satisfied}} \
+                                                      // expected-note {{because 'GH206336::S' does not satisfy 'SS'}}
+
+void baz() {
+  auto qux = bar<S>(true, [] {}); // expected-error {{no matching function for call to 'bar'}}
+}
+}

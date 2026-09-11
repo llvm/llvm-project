@@ -1,14 +1,15 @@
 # Xqcia - Qualcomm uC Arithmetic Extension
 # RUN: not llvm-mc -triple riscv32 -mattr=+xqcia < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-PLUS %s
 # RUN: not llvm-mc -triple riscv32 -mattr=-xqcia < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.shlsat x10, x3, 17
 
-# CHECK: :[[@LINE+1]]:{{18: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:18: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.shlsat x10, x3
 
 # CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
@@ -31,7 +32,8 @@ qc.shlsat x10, x3, x17
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.shlusat x23, x25, 27
 
-# CHECK: :[[@LINE+1]]:{{20: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:20: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.shlusat x23, x25
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
@@ -54,7 +56,8 @@ qc.shlusat x23, x25, x27
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.addsat x17, x14, 7
 
-# CHECK: :[[@LINE+1]]:{{19: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:19: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.addsat x17, x14
 
 # CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
@@ -77,7 +80,8 @@ qc.addsat x17, x14, x7
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.addusat x8, x18, 28
 
-# CHECK: :[[@LINE+1]]:{{19: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:19: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.addusat x8, x18
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
@@ -100,7 +104,8 @@ qc.addusat x8, x18, x28
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.subsat x22, x2, 12
 
-# CHECK: :[[@LINE+1]]:{{18: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:18: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.subsat x22, x2
 
 # CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
@@ -123,7 +128,8 @@ qc.subsat x22, x2, x12
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.subusat x9, x14, 17
 
-# CHECK: :[[@LINE+1]]:{{19: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:19: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.subusat x9, x14
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
@@ -146,7 +152,8 @@ qc.subusat x9, x14, x17
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.wrap x3, x30, 23
 
-# CHECK: :[[@LINE+1]]:{{16: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:16: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.wrap x3, x30
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
@@ -173,7 +180,8 @@ qc.wrapi x0, x12, 2047
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.wrapi x6, x0, 2047
 
-# CHECK: :[[@LINE+1]]:{{17: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:17: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.wrapi x6, x12
 
 # CHECK-PLUS: :[[@LINE+1]]:19: error: immediate must be an integer in the range [0, 2047]
@@ -187,7 +195,8 @@ qc.wrapi x6, x12, 2047
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.norm x3, 7
 
-# CHECK: :[[@LINE+1]]:{{11: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:11: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.norm x3
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
@@ -206,7 +215,8 @@ qc.norm x3, x7
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.normu x11, 17
 
-# CHECK: :[[@LINE+1]]:{{13: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:13: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.normu x11
 
 # CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
@@ -225,7 +235,8 @@ qc.normu x11, x17
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.normeu x26, 31
 
-# CHECK: :[[@LINE+1]]:{{14: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:14: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.normeu x26
 
 # CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)

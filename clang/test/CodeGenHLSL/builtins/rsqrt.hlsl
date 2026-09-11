@@ -8,12 +8,12 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DFNATTRS="hidden noundef nofpclass(nan inf)" -DTARGET=dx
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 
@@ -62,3 +62,8 @@ float3 test_rsqrt_float3(float3 p0) { return rsqrt(p0); }
 // CHECK: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].rsqrt.v4f32
 // CHECK: ret <4 x float> %hlsl.rsqrt
 float4 test_rsqrt_float4(float4 p0) { return rsqrt(p0); }
+
+// CHECK: define [[FNATTRS]] <5 x float> @
+// CHECK: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.[[TARGET]].rsqrt.v5f32
+// CHECK: ret <5 x float> %hlsl.rsqrt
+vector<float, 5> test_rsqrt_float5(vector<float, 5> p0) { return rsqrt(p0); }

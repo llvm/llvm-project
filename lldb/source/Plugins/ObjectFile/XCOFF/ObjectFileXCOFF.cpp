@@ -206,8 +206,9 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
 
     llvm::Expected<llvm::StringRef> name_or_err = xcoff_sym_ref.getName();
     if (!name_or_err) {
-      LLDB_LOG_ERROR(log, name_or_err.takeError(),
-                     "Unable to extract name from the xcoff symbol ref object");
+      LLDB_LOG_ERROR(
+          log, name_or_err.takeError(),
+          "Unable to extract name from the xcoff symbol ref object: {0}");
       continue;
     }
 
@@ -230,7 +231,7 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
       auto aux_csect_or_err = xcoff_sym_ref.getXCOFFCsectAuxRef();
       if (!aux_csect_or_err) {
         LLDB_LOG_ERROR(log, aux_csect_or_err.takeError(),
-                       "Unable to access xcoff csect aux ref object");
+                       "Unable to access xcoff csect aux ref object: {0}");
         continue;
       }
 
@@ -276,7 +277,7 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
         symbol_ref.getType();
     if (!sym_type_or_err) {
       LLDB_LOG_ERROR(log, sym_type_or_err.takeError(),
-                     "Unable to access xcoff symbol type");
+                     "Unable to access xcoff symbol type: {0}");
       continue;
     }
 
@@ -339,10 +340,10 @@ void ObjectFileXCOFF::CreateSectionsWithBitness(
                          .Default(eSectionTypeInvalid);
     }
 
-    SectionSP section_sp(new Section(
+    SectionSP section_sp = std::make_shared<Section>(
         module_sp, this, ++idx, const_sect_name, section_type,
         section.VirtualAddress, section.SectionSize,
-        section.FileOffsetToRawData, section.SectionSize, 0, section.Flags));
+        section.FileOffsetToRawData, section.SectionSize, 0, section.Flags);
 
     uint32_t permissions = ePermissionsReadable;
     if (section.Flags & (XCOFF::STYP_DATA | XCOFF::STYP_BSS))

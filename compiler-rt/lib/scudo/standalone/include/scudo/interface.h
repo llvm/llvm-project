@@ -171,6 +171,10 @@ void __scudo_get_fault_error_info(uintptr_t fault_addr,
 #define M_TSDS_COUNT_MAX -202
 #endif
 
+#ifndef M_CACHE_RESIDENT_BYTES_MAX
+#define M_CACHE_RESIDENT_BYTES_MAX -206
+#endif
+
 // Tune for buffer overflows.
 #ifndef M_MEMTAG_TUNING_BUFFER_OVERFLOW
 #define M_MEMTAG_TUNING_BUFFER_OVERFLOW 0

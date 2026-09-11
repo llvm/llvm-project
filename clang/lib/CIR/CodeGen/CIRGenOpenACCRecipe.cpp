@@ -155,10 +155,11 @@ mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
   // Collect the 'do we have any allocas needed after this type' list.
   llvm::SmallVector<bool> allocasLeftArr;
   llvm::ArrayRef<QualType> resultTypes = boundTypes.drop_front();
-  std::transform_inclusive_scan(
-      resultTypes.begin(), resultTypes.end(),
-      std::back_inserter(allocasLeftArr), std::plus<bool>{},
-      [](QualType ty) { return !ty->isConstantArrayType(); }, false);
+  bool accumulator = false;
+  for (QualType ty : resultTypes) {
+    accumulator = accumulator || !ty->isConstantArrayType();
+    allocasLeftArr.push_back(accumulator);
+  }
 
   // Keep track of the number of 'elements' that we're allocating. Individual
   // allocas should multiply this by the size of its current allocation.

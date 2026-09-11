@@ -196,8 +196,6 @@ static cl::list<std::string>
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // end namespace llvm
 
 /// With Clang, a pure virtual class's deleting destructor is emitted as a
@@ -870,6 +868,7 @@ void llvm::updateVCallVisibilityInModule(
     function_ref<bool(StringRef)> IsVisibleToRegularObj) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
+
   for (GlobalVariable &GV : M.globals()) {
     // Add linkage unit visibility to any variable with type metadata, which are
     // the vtable definitions. We won't have an existing vcall_visibility
@@ -1146,6 +1145,9 @@ bool DevirtModule::tryFindVirtualCallTargets(
     // target.
     auto *GV = dyn_cast<GlobalValue>(C);
     assert(GV);
+    if (auto *GA = dyn_cast<GlobalAlias>(GV))
+      if (!GA->isInterposable() && !GA->getAliaseeObject()->isInterposable())
+        GV = GA->getAliaseeObject();
     TargetsForSlot.push_back({GV, &TM});
   }
 
@@ -1573,7 +1575,7 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
       llvm::append_range(Args, CB.args());
 
       CallBase *NewCS = nullptr;
-      if (!JT.isDeclaration() && !ProfcheckDisableMetadataFixes) {
+      if (!JT.isDeclaration()) {
         // Accumulate the call frequencies of the original call site, and use
         // that as total entry count for the funnel function.
         auto &F = *CB.getCaller();
@@ -2260,10 +2262,14 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
     assert(!Res.SingleImplName.empty());
     // The type of the function in the declaration is irrelevant because every
     // call site will cast it to the correct type.
-    Constant *SingleImpl =
-        cast<Constant>(M.getOrInsertFunction(Res.SingleImplName,
-                                             Type::getVoidTy(M.getContext()))
-                           .getCallee());
+    Value *SingleImplVal =
+        M.getOrInsertFunction(Res.SingleImplName,
+                              Type::getVoidTy(M.getContext()))
+            .getCallee();
+    if (auto *A = dyn_cast<GlobalAlias>(SingleImplVal->stripPointerCasts()))
+      if (!A->isInterposable() && !A->getAliaseeObject()->isInterposable())
+        SingleImplVal = A->getAliaseeObject();
+    Constant *SingleImpl = cast<Constant>(SingleImplVal);
 
     // This is the import phase so we should not be exporting anything.
     bool IsExported = false;

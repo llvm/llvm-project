@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=lanai < %s -o - | FileCheck %s
-; RUN: llc -enable-new-pm -mtriple=lanai < %s -o - | FileCheck %s
 
 define void @f1() {
 	%c = alloca i8, align 1

@@ -491,7 +491,6 @@ void SelectionDAGISel::initializeAnalysisResults(
   AC = &FAM.getResult<AssumptionAnalysis>(Fn);
   auto *PSI = MAMP.getCachedResult<ProfileSummaryAnalysis>(*Fn.getParent());
   BlockFrequencyInfo *BFI = nullptr;
-  FAM.getResult<BlockFrequencyAnalysis>(Fn);
   if (PSI && PSI->hasProfileSummary() && RegisterPGOPasses)
     BFI = &FAM.getResult<BlockFrequencyAnalysis>(Fn);
 
@@ -503,14 +502,14 @@ void SelectionDAGISel::initializeAnalysisResults(
   MachineModuleInfo &MMI =
       MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMP.getCachedResult<LibcallLoweringModuleAnalysis>(*Fn.getParent());
   if (!LibcallResult) {
     reportFatalUsageError("'" + LibcallLoweringModuleAnalysis::name() +
                           "' analysis required");
   }
 
-  LibcallLowering = &LibcallResult->getLibcallLowering(Subtarget);
+  LibcallLowering = &getLibcallLowering(*LibcallResult, Subtarget);
   CurDAG->init(*MF, *ORE, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
                FnVarLocs);
 
@@ -1456,7 +1455,8 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
       if (hasExceptionPointerOrCodeUser(CPI)) {
         // Get or create the virtual register to hold the pointer or code.  Mark
         // the live in physreg and copy into the vreg.
-        MCRegister EHPhysReg = TLI->getExceptionPointerRegister(PersonalityFn);
+        MCRegister EHPhysReg = TLI->getExceptionPointerRegister(
+            TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
         assert(EHPhysReg && "target lacks exception pointer register");
         MBB->addLiveIn(EHPhysReg);
         Register VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
@@ -1489,10 +1489,12 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
     // Assign the call site to the landing pad's begin label.
     MF->setCallSiteLandingPad(Label, SDB->LPadToCallSiteMap[MBB]);
     // Mark exception register as live in.
-    if (MCRegister Reg = TLI->getExceptionPointerRegister(PersonalityFn))
+    if (MCRegister Reg = TLI->getExceptionPointerRegister(
+            TLI->getTargetMachine().getExceptionModel(), PersonalityFn))
       FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
     // Mark exception selector register as live in.
-    if (MCRegister Reg = TLI->getExceptionSelectorRegister(PersonalityFn))
+    if (MCRegister Reg = TLI->getExceptionSelectorRegister(
+            TLI->getTargetMachine().getExceptionModel(), PersonalityFn))
       FuncInfo->ExceptionSelectorVirtReg = MBB->addLiveIn(Reg, PtrRC);
   }
 
@@ -3965,6 +3967,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     case OPC_CheckImmAllZerosV:
       if (!ISD::isConstantSplatVectorAllZeros(N.getNode()))
+        break;
+      continue;
+    case OPC_CheckUndef:
+      if (!N.isUndef())
         break;
       continue;
 

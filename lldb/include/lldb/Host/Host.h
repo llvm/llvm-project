@@ -309,7 +309,8 @@ public:
 
   static llvm::Error OpenFileInExternalEditor(llvm::StringRef editor,
                                               const FileSpec &file_spec,
-                                              uint32_t line_no);
+                                              uint32_t line_no,
+                                              bool foreground = false);
 
   /// Open a URL with the host's default handler (Launch Services on macOS,
   /// xdg-open on other Unix). Returns an error if opening fails or the platform

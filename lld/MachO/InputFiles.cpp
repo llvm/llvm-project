@@ -643,6 +643,9 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
              relInfo.r_address == minuendInfo.r_address);
       Relocation p;
       p.type = minuendInfo.r_type;
+      p.pcrel = minuendInfo.r_pcrel;
+      p.length = minuendInfo.r_length;
+      p.offset = r.offset;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
         p.addend = totalAddend;
@@ -1051,6 +1054,9 @@ template <class LP> void ObjFile::parse() {
                           c->nsyms);
     const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
     bool subsectionsViaSymbols = hdr->flags & MH_SUBSECTIONS_VIA_SYMBOLS;
+    if (config->warnMissingSubsectionsViaSymbols && !subsectionsViaSymbols &&
+        !sectionHeaders.empty())
+      warn(toString(this) + ": missing MH_SUBSECTIONS_VIA_SYMBOLS");
     parseSymbols<LP>(sectionHeaders, nList, strtab, subsectionsViaSymbols);
   }
 

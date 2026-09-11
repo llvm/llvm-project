@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/sa_family_t.h"
+#include "hdr/types/socklen_t.h"
 #include "hdr/types/struct_sockaddr_un.h"
 #include "src/__support/CPP/scope.h"
 #include "src/stdio/remove.h"
@@ -34,6 +36,7 @@ using LlvmLibcSockNameTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::cpp::scope_exit;
 
 TEST_F(LlvmLibcSockNameTest, GetSockNameAndPeerName) {
+  LIBC_NAMESPACE::testing::TestDirectoryScope dir_scope;
   // 1. Invalid Socket
   struct sockaddr_un addr;
   socklen_t addr_len = sizeof(addr);
@@ -66,15 +69,13 @@ TEST_F(LlvmLibcSockNameTest, GetSockNameAndPeerName) {
               Fails(ENOTCONN));
 
   // 3. Connected Sockets
-  const char *client_file = "getsockname_client.test";
-  const auto client_path = libc_make_test_file_path(client_file);
+  constexpr char CLIENT_PATH[] = "getsockname_client.test";
   struct sockaddr_un client_addr;
-  ASSERT_TRUE(make_sockaddr_un(client_path, client_addr));
+  ASSERT_TRUE(make_sockaddr_un(CLIENT_PATH, client_addr));
 
-  const char *server_file = "getsockname_server.test";
-  const auto server_path = libc_make_test_file_path(server_file);
+  constexpr char SERVER_PATH[] = "getsockname_server.test";
   struct sockaddr_un server_addr;
-  ASSERT_TRUE(make_sockaddr_un(server_path, server_addr));
+  ASSERT_TRUE(make_sockaddr_un(SERVER_PATH, server_addr));
 
   int server_sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
   ASSERT_GE(server_sock, 0);
@@ -88,7 +89,7 @@ TEST_F(LlvmLibcSockNameTest, GetSockNameAndPeerName) {
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
   scope_exit remove_server_path(
-      [&] { ASSERT_THAT(LIBC_NAMESPACE::remove(server_path), Succeeds(0)); });
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::remove(SERVER_PATH), Succeeds(0)); });
 
   ASSERT_THAT(LIBC_NAMESPACE::listen(server_sock, 1), Succeeds(0));
 
@@ -104,7 +105,7 @@ TEST_F(LlvmLibcSockNameTest, GetSockNameAndPeerName) {
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
   scope_exit remove_client_path(
-      [&] { ASSERT_THAT(LIBC_NAMESPACE::remove(client_path), Succeeds(0)); });
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::remove(CLIENT_PATH), Succeeds(0)); });
 
   ASSERT_THAT(LIBC_NAMESPACE::connect(
                   client_sock,
@@ -125,7 +126,7 @@ TEST_F(LlvmLibcSockNameTest, GetSockNameAndPeerName) {
           client_sock, reinterpret_cast<struct sockaddr *>(&addr), &addr_len),
       Succeeds(0));
   ASSERT_THAT((LIBC_NAMESPACE::testing::SocketAddress{addr, addr_len}),
-              LIBC_NAMESPACE::testing::MatchesAddress(client_path));
+              LIBC_NAMESPACE::testing::MatchesAddress(CLIENT_PATH));
 
   // Test getpeername on client_sock (should be server_path)
   addr_len = sizeof(addr);
@@ -134,7 +135,7 @@ TEST_F(LlvmLibcSockNameTest, GetSockNameAndPeerName) {
           client_sock, reinterpret_cast<struct sockaddr *>(&addr), &addr_len),
       Succeeds(0));
   ASSERT_THAT((LIBC_NAMESPACE::testing::SocketAddress{addr, addr_len}),
-              LIBC_NAMESPACE::testing::MatchesAddress(server_path));
+              LIBC_NAMESPACE::testing::MatchesAddress(SERVER_PATH));
 
   // Test getsockname on accepted_sock (should be server_path)
   addr_len = sizeof(addr);
@@ -143,7 +144,7 @@ TEST_F(LlvmLibcSockNameTest, GetSockNameAndPeerName) {
           accepted_sock, reinterpret_cast<struct sockaddr *>(&addr), &addr_len),
       Succeeds(0));
   ASSERT_THAT((LIBC_NAMESPACE::testing::SocketAddress{addr, addr_len}),
-              LIBC_NAMESPACE::testing::MatchesAddress(server_path));
+              LIBC_NAMESPACE::testing::MatchesAddress(SERVER_PATH));
 
   // Test getpeername on accepted_sock (should be client_path)
   addr_len = sizeof(addr);
@@ -152,5 +153,5 @@ TEST_F(LlvmLibcSockNameTest, GetSockNameAndPeerName) {
           accepted_sock, reinterpret_cast<struct sockaddr *>(&addr), &addr_len),
       Succeeds(0));
   ASSERT_THAT((LIBC_NAMESPACE::testing::SocketAddress{addr, addr_len}),
-              LIBC_NAMESPACE::testing::MatchesAddress(client_path));
+              LIBC_NAMESPACE::testing::MatchesAddress(CLIENT_PATH));
 }

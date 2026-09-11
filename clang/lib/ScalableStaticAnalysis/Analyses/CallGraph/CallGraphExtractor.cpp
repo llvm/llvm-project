@@ -35,6 +35,12 @@ private:
 } // namespace
 
 void CallGraphExtractor::HandleTranslationUnit(ASTContext &Ctx) {
+  // FIXME: Depending on the IncludeLocalEntities option, the extractor should
+  // include or exclude calls to function-local defined:
+  //   - lambda functions
+  //   - methods of local classes
+  // Currently, the extractor always includes these callees, even if
+  // IncludeLocalEntities is false.
   CallGraph CG;
   CG.addToCallGraph(
       const_cast<TranslationUnitDecl *>(Ctx.getTranslationUnitDecl()));

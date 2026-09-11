@@ -555,8 +555,8 @@ bool SymbolizerProcess::ReadFromSymbolizer() {
     uptr size_before = buffer_.size();
     buffer_.resize(size_before + max_length);
     buffer_.resize(buffer_.capacity());
-    bool ret = ReadFromFile(input_fd_, &buffer_[size_before],
-                            buffer_.size() - size_before, &just_read);
+    ret = ReadFromFile(input_fd_, &buffer_[size_before],
+                       buffer_.size() - size_before, &just_read);
 
     if (!ret)
       just_read = 0;

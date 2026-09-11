@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -aux-triple \
 // RUN:   x86_64-pc-windows-msvc -fms-compatibility -fcuda-is-device \
 // RUN:   -fsyntax-only -verify -x hip %s
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fms-compatibility \

@@ -214,12 +214,14 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
         op, dstType, adaptor.getOperands());
 
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nsw))
-      newOp->setAttr(getDecorationString(spirv::Decoration::NoSignedWrap),
-                     rewriter.getUnitAttr());
+      newOp->setDiscardableAttr(
+          getDecorationString(spirv::Decoration::NoSignedWrap),
+          rewriter.getUnitAttr());
 
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nuw))
-      newOp->setAttr(getDecorationString(spirv::Decoration::NoUnsignedWrap),
-                     rewriter.getUnitAttr());
+      newOp->setDiscardableAttr(
+          getDecorationString(spirv::Decoration::NoUnsignedWrap),
+          rewriter.getUnitAttr());
 
     return success();
   }
@@ -1059,7 +1061,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
       auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
           op, dstType, adaptor.getOperands());
       if (rm) {
-        newOp->setAttr(
+        newOp->setDiscardableAttr(
             getDecorationString(spirv::Decoration::FPRoundingMode),
             spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
       }
@@ -1403,7 +1405,7 @@ public:
 // MinNumFOp, MaxNumFOp
 //===----------------------------------------------------------------------===//
 
-/// Converts arith.maxnumf/minnumf to spirv.GL.FMax/FMin or
+/// Converts arith.maxnumf/minnumf to spirv.GL.NMax/NMin or
 /// spirv.CL.fmax/fmin.
 template <typename Op, typename SPIRVOp>
 class MinNumMaxNumFOpPattern final : public OpConversionPattern<Op> {
@@ -1425,11 +1427,11 @@ public:
     // arith.maxnumf/minnumf:
     //   "If one of the arguments is NaN, then the result is the other
     //   argument."
-    // spirv.GL.FMax/FMin
-    //   "which operand is the result is undefined if one of the operands
-    //   is a NaN."
+    // spirv.GL.NMax/NMin: NaN is treated as missing, matches arith semantics.
     // spirv.CL.fmax/fmin:
     //   "If one argument is a NaN, Fmin returns the other argument."
+    // spirv.GL.FMax/FMin: undefined when either operand is NaN, requires
+    //   select guards to implement arith.maxnumf semantics.
 
     Location loc = op.getLoc();
     Value spirvOp =
@@ -1519,8 +1521,8 @@ void mlir::arith::populateArithToSPIRVPatterns(
 
     MinimumMaximumFOpPattern<arith::MaximumFOp, spirv::GLFMaxOp>,
     MinimumMaximumFOpPattern<arith::MinimumFOp, spirv::GLFMinOp>,
-    MinNumMaxNumFOpPattern<arith::MaxNumFOp, spirv::GLFMaxOp>,
-    MinNumMaxNumFOpPattern<arith::MinNumFOp, spirv::GLFMinOp>,
+    MinNumMaxNumFOpPattern<arith::MaxNumFOp, spirv::GLNMaxOp>,
+    MinNumMaxNumFOpPattern<arith::MinNumFOp, spirv::GLNMinOp>,
     BoolIOpPattern<arith::MaxSIOp, spirv::LogicalAndOp>, // signed i1: 1=-1, so max=0 unless both are 1
     BoolIOpPattern<arith::MaxUIOp, spirv::LogicalOrOp>,  // unsigned max on i1: 1 when either is 1
     BoolIOpPattern<arith::MinSIOp, spirv::LogicalOrOp>,  // signed i1: -1<0, so min=1 when either is 1

@@ -12,8 +12,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcFwideTest, QueryInitial) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fwide_query.test"));
+  auto FILENAME = libc_make_test_file_path("fwide_query.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -24,7 +23,7 @@ TEST(LlvmLibcFwideTest, QueryInitial) {
 }
 
 TEST(LlvmLibcFwideTest, OrientWide) {
-  auto FILENAME = libc_make_test_file_path(APPEND_LIBC_TEST("fwide_wide.test"));
+  auto FILENAME = libc_make_test_file_path("fwide_wide.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -39,7 +38,7 @@ TEST(LlvmLibcFwideTest, OrientWide) {
 }
 
 TEST(LlvmLibcFwideTest, OrientByte) {
-  auto FILENAME = libc_make_test_file_path(APPEND_LIBC_TEST("fwide_byte.test"));
+  auto FILENAME = libc_make_test_file_path("fwide_byte.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 

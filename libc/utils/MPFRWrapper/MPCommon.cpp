@@ -323,6 +323,13 @@ MPFRNumber MPFRNumber::hypot(const MPFRNumber &b) {
   return result;
 }
 
+MPFRNumber MPFRNumber::lgamma() const {
+  MPFRNumber result(*this);
+  int signp;
+  mpfr_lgamma(result.value, &signp, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::log() const {
   MPFRNumber result(*this);
   mpfr_log(result.value, value, mpfr_rounding);

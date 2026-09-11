@@ -33,7 +33,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -575,7 +574,7 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(SubReg);
 
   // Set the frame-pointer register and its aliases as reserved if needed.
-  if (TFI->hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF)) {
+  if (TFI->hasFP(MF) || MF.framePointerIsReserved()) {
     if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
       MF.getContext().reportError(
           SMLoc(),
@@ -609,6 +608,12 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Mark the floating point stack registers as reserved.
   for (unsigned n = 0; n != 8; ++n)
     Reserved.set(X86::ST0 + n);
+
+  // Without usable x87 (soft float or -mno-x87), reserve the allocatable FPn
+  // pseudos (FP0-FP6; FP7 is already non-allocatable) so they aren't scrubbed.
+  if (ST.useSoftFloat() || !ST.hasX87())
+    for (unsigned n = 0; n != 7; ++n)
+      Reserved.set(X86::FP0 + n);
 
   // Reserve the registers that only exist in 64-bit mode.
   if (!Is64Bit) {
@@ -667,6 +672,16 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
+    for (MCRegAliasIterator AI(X86::R14, this, true); AI.isValid(); ++AI)
+      Reserved.set(*AI);
+    for (MCRegAliasIterator AI(X86::R15, this, true); AI.isValid(); ++AI)
+      Reserved.set(*AI);
+  }
+
+  // Reserve registers for LFI sandboxing.
+  if (MF.getSubtarget<X86Subtarget>().isLFI()) {
+    for (MCRegAliasIterator AI(X86::R11, this, true); AI.isValid(); ++AI)
+      Reserved.set(*AI);
     for (MCRegAliasIterator AI(X86::R14, this, true); AI.isValid(); ++AI)
       Reserved.set(*AI);
     for (MCRegAliasIterator AI(X86::R15, this, true); AI.isValid(); ++AI)
@@ -1009,7 +1024,19 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       BuildMI(MBB, II, DL, TII->get(X86::MOV64ri), ScratchReg).addImm(Offset);
 
       MI.getOperand(FIOperandNum + 3).setImm(0);
-      MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      if (MI.getOperand(FIOperandNum + 2).getReg() == X86::NoRegister) {
+        MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      } else {
+        // The index register slot is already in use, fold the offset into
+        // the base register instead. LEA does not clobber EFLAGS.
+        BuildMI(MBB, II, DL, TII->get(X86::LEA64r), ScratchReg)
+            .addReg(MachineBasePtr)
+            .addImm(1)
+            .addReg(ScratchReg)
+            .addImm(0)
+            .addReg(X86::NoRegister);
+        MI.getOperand(FIOperandNum).setReg(ScratchReg);
+      }
 
       return false;
     }

@@ -8,7 +8,7 @@ define i32 @foo(ptr nocapture %A, i32 %n) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (...) @bar()
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[SHUFFLE]], <i32 5, i32 9, i32 8, i32 10>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], splat (i32 9)

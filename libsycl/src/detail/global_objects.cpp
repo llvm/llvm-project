@@ -9,11 +9,13 @@
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
 #include <detail/program_manager.hpp>
+#include <detail/queue_impl.hpp>
 
 #ifdef _WIN32
 #  include <windows.h>
 #endif
 
+#include <tuple>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -39,6 +41,10 @@ struct StaticVarShutdownHandler {
 };
 
 void registerStaticVarShutdownHandler() {
+  // Touch the program manager singleton first: static objects are destroyed in
+  // reverse order of construction, so this guarantees it is still alive when
+  // ~StaticVarShutdownHandler() calls releaseResources() on it.
+  std::ignore = ProgramAndKernelManager::getInstance();
   static StaticVarShutdownHandler handler{};
 }
 
@@ -52,6 +58,43 @@ getOffloadTopologies() {
 std::vector<PlatformImplUPtr> &getPlatformCache() {
   static std::vector<PlatformImplUPtr> PlatformCache{};
   return PlatformCache;
+}
+
+InstanceWithLock<AsyncExceptionsContainer> &getAsyncExceptionList() {
+  static InstanceWithLock<AsyncExceptionsContainer> AsyncExceptionList;
+  return AsyncExceptionList;
+}
+
+void recordAsyncException(const std::shared_ptr<QueueImpl> &QueuePtr,
+                          const std::exception_ptr &ExceptionPtr) {
+  auto &[AsyncExceptions, AsyncExceptionsMutex] = getAsyncExceptionList();
+  std::lock_guard<SpinLock> Lock(AsyncExceptionsMutex);
+  addAsyncException(AsyncExceptions[QueuePtr], ExceptionPtr);
+}
+
+void flushAsyncExceptions() {
+  auto &[AsyncExceptions, AsyncExceptionsMutex] = getAsyncExceptionList();
+  AsyncExceptionsContainer AsyncExceptionsSwap;
+  {
+    std::lock_guard<SpinLock> Lock(AsyncExceptionsMutex);
+    std::swap(AsyncExceptions, AsyncExceptionsSwap);
+  }
+
+  for (auto &[EntryKey, ExceptionList] : AsyncExceptionsSwap) {
+    exception_list Exceptions = std::move(ExceptionList);
+
+    if (Exceptions.size() == 0)
+      continue;
+
+    if (std::shared_ptr<QueueImpl> Queue = EntryKey.lock();
+        Queue && Queue->getAsyncHandler()) {
+      Queue->getAsyncHandler()(std::move(Exceptions));
+      continue;
+    }
+
+    // If the queue is dead, use the default handler.
+    defaultAsyncHandler(std::move(Exceptions));
+  }
 }
 
 } // namespace detail

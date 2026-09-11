@@ -39,19 +39,19 @@ _start:
 /// and will need a long branch thunk, which in turn needs a BTI landing pad.
 
 // CHECK-LABEL: <_start>:
-// CHECK-NEXT: 10001000: bl  0x10002008 <__AArch64AbsLongThunk_fn1>
-// CHECK-NEXT:           bl  0x10002018 <__AArch64AbsLongThunk_fn2>
-
-// CHECK-LABEL: <__AArch64AbsLongThunk_fn1>:
-// CHECK-NEXT: 10002008: ldr     x16, 0x10002010 <__AArch64AbsLongThunk_fn1+0x8>
-// CHECK-NEXT:           br      x16
-// CHECK-NEXT:           00 30 00 18    .word   0x18003000
-// CHECK-NEXT:           00 00 00 00    .word   0x00000000
+// CHECK-NEXT: 10001000: bl  0x10002018 <__AArch64AbsLongThunk_fn1>
+// CHECK-NEXT:           bl  0x10002008 <__AArch64AbsLongThunk_fn2>
 
 // CHECK-LABEL: <__AArch64AbsLongThunk_fn2>:
-// CHECK-NEXT: 10002018: ldr     x16, 0x10002020 <__AArch64AbsLongThunk_fn2+0x8>
+// CHECK-NEXT: 10002008: ldr     x16, 0x10002010 <__AArch64AbsLongThunk_fn2+0x8>
 // CHECK-NEXT:           br      x16
 // CHECK-NEXT:           04 40 00 18    .word   0x18004004
+// CHECK-NEXT:           00 00 00 00    .word   0x00000000
+
+// CHECK-LABEL: <__AArch64AbsLongThunk_fn1>:
+// CHECK-NEXT: 10002018: ldr     x16, 0x10002020 <__AArch64AbsLongThunk_fn1+0x8>
+// CHECK-NEXT:           br      x16
+// CHECK-NEXT:           00 30 00 18    .word   0x18003000
 // CHECK-NEXT:           00 00 00 00    .word   0x00000000
 
 .section .text.1, "ax", %progbits

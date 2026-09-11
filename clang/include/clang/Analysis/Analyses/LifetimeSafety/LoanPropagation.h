@@ -16,18 +16,17 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOAN_PROPAGATION_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/ImmutableSet.h"
 
 namespace clang::lifetimes::internal {
 
 // Using LLVM's immutable collections is efficient for dataflow analysis
 // as it avoids deep copies during state transitions.
 // TODO(opt): Consider using a bitset to represent the set of loans.
-using LoanSet = llvm::ImmutableSet<LoanID>;
-using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
+using LoanSet = utils::SetTy<LoanID>;
+using OriginLoanMap = utils::MapTy<OriginID, LoanSet>;
 
 class LoanPropagationAnalysis {
 public:

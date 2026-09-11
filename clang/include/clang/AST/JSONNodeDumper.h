@@ -268,6 +268,7 @@ public:
   void VisitLinkageSpecDecl(const LinkageSpecDecl *LSD);
   void VisitAccessSpecDecl(const AccessSpecDecl *ASD);
   void VisitFriendDecl(const FriendDecl *FD);
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *FD);
   void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D);
 
   void VisitObjCIvarDecl(const ObjCIvarDecl *D);
@@ -417,7 +418,6 @@ class JSONDumper : public ASTNodeTraverser<JSONDumper, JSONNodeDumper> {
           Visit(Redecl);
         DumpedAny = true;
         break;
-      case TSK_FriendDeclaration:
       case TSK_ExplicitSpecialization:
         break;
       }

@@ -172,15 +172,15 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     return false;
   }
 
-  const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
   // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
     VPValue *Mask = Op;
     VPValue *HeaderMask;
 
-    // Look through any `and`s with a loop_dependence_war_mask, which is always
-    // a prefix mask. TODO: Verify the full loop.dependence.mask chain.
+    // Look through any `and`s with the incoming alias mask or a
+    // loop_dependence_war_mask, which are always prefix masks.
+    // TODO: Verify the full loop.dependence.mask chain.
     if (match(Op,
               m_c_BinaryAnd(
                   m_VPValue(HeaderMask),
@@ -188,13 +188,15 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
                       m_c_BinaryAnd(
                           m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
                           m_VPValue()),
-                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>()))))
+                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
+                      m_VPInstruction<VPInstruction::IncomingAliasMask>()))))
       Mask = HeaderMask;
 
-    if (vputils::isHeaderMask(Mask, Plan))
-      continue;
-
-    if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
+    // The header mask is a prefix mask. Before being materialized it is the
+    // loop region's abstract header mask; afterwards it is an active lane mask
+    // (an intrinsic or a phi), or the icmp checked below.
+    if (match(Mask, m_HeaderMask()) || isa<VPActiveLaneMaskPHIRecipe>(Mask) ||
+        match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()))
       continue;
 
     CmpPredicate Pred;
@@ -208,7 +210,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
 
     errs() << "LastActiveLane operand ";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    VPSlotTracker Tracker(&Plan);
+    VPSlotTracker Tracker(LastActiveLane.getParent()->getPlan());
     Op->printAsOperand(errs(), Tracker);
 #endif
     errs() << " must be prefix mask (a header mask or an "
@@ -327,6 +329,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         break;
       default:
         break;
+      }
+    }
+    if (const auto *DIV = dyn_cast<VPDerivedIVRecipe>(&R)) {
+      if (!DIV->getStartValue()->isDefinedOutsideLoopRegions()) {
+        errs() << "VPDerivedIVRecipe must have start value defined outside "
+                  "loop regions\n";
+        return false;
       }
     }
     if (const auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
@@ -471,7 +480,19 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
              [this](const VPBlockBase *VPB) { return !verifyBlock(VPB); }))
     return false;
 
+  // Check that the plan has a single loop region reachable from entry, and it
+  // matches the one returned by getVectorLoopRegion.
   const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  if (any_of(VPBlockUtils::blocksOnly<const VPRegionBlock>(
+                 vp_depth_first_shallow(Plan.getEntry())),
+             [TopRegion](const VPRegionBlock *R) {
+               return !R->isReplicator() && R != TopRegion;
+             })) {
+    errs() << "VPlan must have a single top-level loop region, reachable from "
+              "the entry by following the last successor of each block\n";
+    return false;
+  }
+
   // TODO: Verify all blocks using vp_depth_first_deep iterators.
   if (!TopRegion)
     return true;
@@ -513,6 +534,13 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 }
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
+  // The entry must be the root of the plan's top-level CFG: the dominator tree
+  // constructed below and the verifier's block walks all start there.
+  if (Plan.getEntry()->hasPredecessors()) {
+    errs() << "VPlan entry block has predecessors\n";
+    return false;
+  }
+
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
   VPlanVerifier Verifier(VPDT);
   return Verifier.verify(Plan);

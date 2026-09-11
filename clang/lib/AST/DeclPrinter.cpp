@@ -52,6 +52,9 @@ namespace {
     void PrintObjCTypeParams(ObjCTypeParamList *Params);
     void PrintOpenACCRoutineOnLambda(Decl *D);
 
+    void printVarDeclSpecifiers(VarDecl *D);
+    void printVarInitializer(VarDecl *D);
+
   public:
     DeclPrinter(raw_ostream &Out, const PrintingPolicy &Policy,
                 const ASTContext &Context, unsigned Indentation = 0,
@@ -70,8 +73,10 @@ namespace {
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitFunctionDecl(FunctionDecl *D);
     void VisitFriendDecl(FriendDecl *D);
+    void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitFieldDecl(FieldDecl *D);
     void VisitVarDecl(VarDecl *D);
+    void VisitDecompositionDecl(DecompositionDecl *D);
     void VisitLabelDecl(LabelDecl *D);
     void VisitParmVarDecl(ParmVarDecl *D);
     void VisitFileScopeAsmDecl(FileScopeAsmDecl *D);
@@ -115,6 +120,7 @@ namespace {
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
     void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
+    void VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *D);
 
     void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
     void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
@@ -454,9 +460,9 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
   for (DeclContext::decl_iterator D = DC->decls_begin(), DEnd = DC->decls_end();
        D != DEnd; ++D) {
 
-    // Don't print ObjCIvarDecls, as they are printed when visiting the
-    // containing ObjCInterfaceDecl.
-    if (isa<ObjCIvarDecl>(*D))
+    // Don't print ObjCIvarDecls or BindingDecls, as they are printed when
+    // visiting the containing ObjCInterfaceDecl or DecompositionDecl.
+    if (isa<ObjCIvarDecl, BindingDecl>(*D))
       continue;
 
     // Skip over implicit declarations in pretty-printing mode.
@@ -481,9 +487,13 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     // only merges declarations directly referring to the tag, not typedefs.
     //
     // Check whether the current declaration should be grouped with a previous
-    // non-free-standing tag declaration.
+    // non-free-standing tag declaration. A decomposition declaration is always
+    // a declaration of its own -- it can never be one declarator among several
+    // -- but its deduced type can be the tag type owned by the preceding
+    // declaration, so exclude it explicitly.
     QualType CurDeclType = getDeclType(*D);
-    if (!Decls.empty() && !CurDeclType.isNull()) {
+    if (!Decls.empty() && !CurDeclType.isNull() &&
+        !isa<DecompositionDecl>(*D)) {
       QualType BaseType = GetBaseType(CurDeclType);
       if (const auto *TT = dyn_cast_or_null<TagType>(BaseType);
           TT && TT->isTagOwned()) {
@@ -888,30 +898,44 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
 void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
   if (TypeSourceInfo *TSI = D->getFriendType()) {
-    unsigned NumTPLists = D->getFriendTypeNumTemplateParameterLists();
-    for (unsigned i = 0; i < NumTPLists; ++i)
-      printTemplateParameters(D->getFriendTypeTemplateParameterList(i));
     Out << "friend ";
     Out << TSI->getType().getAsString(Policy);
-  }
-  else if (FunctionDecl *FD =
-      dyn_cast<FunctionDecl>(D->getFriendDecl())) {
+  } else if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitFunctionDecl(FD);
-  }
-  else if (FunctionTemplateDecl *FTD =
-           dyn_cast<FunctionTemplateDecl>(D->getFriendDecl())) {
+  } else if (FunctionTemplateDecl *FTD =
+                 dyn_cast<FunctionTemplateDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitFunctionTemplateDecl(FTD);
-  }
-  else if (ClassTemplateDecl *CTD =
-           dyn_cast<ClassTemplateDecl>(D->getFriendDecl())) {
+  } else if (ClassTemplateDecl *CTD =
+                 dyn_cast<ClassTemplateDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitRedeclarableTemplateDecl(CTD);
   }
 
   if (D->isPackExpansion())
     Out << "...";
+}
+
+void DeclPrinter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    printTemplateParameters(TPL);
+
+  TemplateName TN = D->getFriendTemplateName();
+  if (D->getFriendType() || TN.isNull()) {
+    VisitFriendDecl(D);
+  } else {
+    Out << "friend ";
+    if (auto *CTD =
+            dyn_cast_if_present<ClassTemplateDecl>(TN.getAsTemplateDecl()))
+      Out << CTD->getTemplatedDecl()->getKindName() << ' ';
+    TN.print(Out, Policy,
+             Policy.SuppressScope ? TemplateName::Qualified::None
+                                  : TemplateName::Qualified::AsWritten);
+
+    if (D->isPackExpansion())
+      Out << "...";
+  }
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
@@ -947,7 +971,7 @@ void DeclPrinter::VisitLabelDecl(LabelDecl *D) {
   Out << *D << ":";
 }
 
-void DeclPrinter::VisitVarDecl(VarDecl *D) {
+void DeclPrinter::printVarDeclSpecifiers(VarDecl *D) {
   prettyPrintPragmas(D);
 
   if (std::optional<std::string> Attrs =
@@ -990,15 +1014,25 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
     }
   }
 
+  // D->getName() is "" for a DecompositionDecl (it has no name of its own),
+  // which is exactly the declarator we want for one: just the type.
   printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
                     D->getIdentifier())
                        ? D->getIdentifier()->deuglifiedName()
                        : D->getName());
+}
+
+void DeclPrinter::VisitVarDecl(VarDecl *D) {
+  printVarDeclSpecifiers(D);
 
   if (std::optional<std::string> Attrs =
           prettyPrintAttributes(D, AttrPosAsWritten::Right))
     Out << ' ' << *Attrs;
 
+  printVarInitializer(D);
+}
+
+void DeclPrinter::printVarInitializer(VarDecl *D) {
   Expr *Init = D->getInit();
   if (!Policy.SuppressInitializers && Init) {
     bool ImplicitInit = false;
@@ -1026,6 +1060,25 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
         Out << ")";
     }
   }
+}
+
+void DeclPrinter::VisitDecompositionDecl(DecompositionDecl *D) {
+  printVarDeclSpecifiers(D);
+
+  Out << " [";
+  llvm::ListSeparator LS;
+  for (BindingDecl *B : D->bindings()) {
+    Out << LS;
+    if (B->isParameterPack())
+      Out << "...";
+    Out << B->getName();
+    if (std::optional<std::string> Attrs =
+            prettyPrintAttributes(B, AttrPosAsWritten::Right))
+      Out << ' ' << *Attrs;
+  }
+  Out << "]";
+
+  printVarInitializer(D);
 }
 
 void DeclPrinter::VisitParmVarDecl(ParmVarDecl *D) {
@@ -1105,7 +1158,6 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     Out << *Attrs << ' ';
 
   if (D->getIdentifier()) {
-    // FIXME: Missing template parameter lists.
     D->getQualifier().print(Out, Policy);
     Out << *D;
 
@@ -1263,10 +1315,20 @@ void DeclPrinter::VisitTemplateDecl(const TemplateDecl *D) {
 
   if (const TemplateTemplateParmDecl *TTP =
         dyn_cast<TemplateTemplateParmDecl>(D)) {
-    if (TTP->wasDeclaredWithTypename())
-      Out << "typename";
-    else
-      Out << "class";
+    switch (TTP->templateParameterKind()) {
+    case TemplateNameKind::TNK_Concept_template:
+      Out << "concept";
+      break;
+    case TemplateNameKind::TNK_Var_template:
+      Out << "auto";
+      break;
+    default:
+      if (TTP->wasDeclaredWithTypename())
+        Out << "typename";
+      else
+        Out << "class";
+      break;
+    }
 
     if (TTP->isParameterPack())
       Out << " ...";
@@ -1386,6 +1448,11 @@ void DeclPrinter::VisitClassTemplatePartialSpecializationDecl(
                                     ClassTemplatePartialSpecializationDecl *D) {
   printTemplateParameters(D->getTemplateParameters());
   VisitCXXRecordDecl(D);
+}
+
+void DeclPrinter::VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *D) {
+  D->getExpansionPattern()->printPretty(Out, /*PrinterHelper=*/nullptr, Policy,
+                                        Indentation, "\n", &Context);
 }
 
 //----------------------------------------------------------------------------
@@ -1856,7 +1923,8 @@ void DeclPrinter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
     Out << ")";
   }
   if (!D->clauselist_empty()) {
-    OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
+    OMPClausePrinter Printer(Out, Policy,
+                             Context.getLangOpts().getOpenMPVersion());
     for (OMPClause *C : D->clauselists()) {
       Out << " ";
       Printer.Visit(C);
@@ -1867,7 +1935,8 @@ void DeclPrinter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
 void DeclPrinter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
   Out << "#pragma omp requires ";
   if (!D->clauselist_empty()) {
-    OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
+    OMPClausePrinter Printer(Out, Policy,
+                             Context.getLangOpts().getOpenMPVersion());
     for (auto I = D->clauselist_begin(), E = D->clauselist_end(); I != E; ++I)
       Printer.Visit(*I);
   }
@@ -1920,7 +1989,8 @@ void DeclPrinter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
     Out << D->getVarName();
     Out << ")";
     if (!D->clauselist_empty()) {
-      OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
+      OMPClausePrinter Printer(Out, Policy,
+                               Context.getLangOpts().getOpenMPVersion());
       for (auto *C : D->clauselists()) {
         Out << " ";
         Printer.Visit(C);

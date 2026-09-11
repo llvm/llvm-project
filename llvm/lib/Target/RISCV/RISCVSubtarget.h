@@ -87,7 +87,6 @@ public:
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
-    VentanaVeyron,
     MIPSP8700,
     Andes45,
   };
@@ -395,6 +394,9 @@ public:
   // Maximum cost used for building integers, integers will be put into constant
   // pool if exceeded.
   unsigned getMaxBuildIntsCost() const;
+
+  unsigned getMispredictionPenalty() const override;
+  unsigned getLoadLatency() const override;
 
   unsigned getMaxLMULForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;

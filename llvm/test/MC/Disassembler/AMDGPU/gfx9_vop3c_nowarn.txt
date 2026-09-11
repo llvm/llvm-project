@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s 2>&1 | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgpu9.00 -disassemble -show-encoding < %s 2>&1 | FileCheck -strict-whitespace %s
 
 # In GFX10+, v_cmpx_* use EXEC as the implicit dst. The disassembler issues a warning when the dst
 # is not 0x7e (EXEC). In GFX9 and earlier, these instructions have explicit dst. Therefore, such

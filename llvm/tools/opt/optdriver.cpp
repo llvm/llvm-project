@@ -44,7 +44,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
@@ -57,6 +56,7 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include <algorithm>
@@ -400,8 +400,6 @@ static bool shouldForceLegacyPM() {
 extern "C" int
 optMain(int argc, char **argv,
         ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks) {
-  InitLLVM X(argc, argv);
-
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
@@ -624,6 +622,12 @@ optMain(int argc, char **argv,
     return 1;
   }
 
+  // Manually assign GUIDs -- updateVCallVisibilityInModule accesses GUIDs, and
+  // there's no way to specify it in the pass pipeline since this runs before
+  // any pass given on the command line.
+  if (hasWholeProgramVisibility(/*WholeProgramVisibilityEnabledInLTO=*/false))
+    AssignGUIDPass::runOnModule(*M);
+
   // Enable testing of whole program devirtualization on this module by invoking
   // the facility for updating public visibility to linkage unit visibility when
   // specified by an internal option. This is normally done during LTO which is
@@ -727,9 +731,8 @@ optMain(int argc, char **argv,
     TLII.disableAllFunctions();
   else {
     // Disable individual builtin functions in TargetLibraryInfo.
-    LibFunc F;
     for (const std::string &FuncName : DisableBuiltins) {
-      if (TLII.getLibFunc(FuncName, F))
+      if (LibFunc F = TLII.getLibFunc(FuncName))
         TLII.setUnavailable(F);
       else {
         errs() << argv[0] << ": cannot disable nonexistent builtin function "
@@ -739,7 +742,7 @@ optMain(int argc, char **argv,
     }
 
     for (const std::string &FuncName : EnableBuiltins) {
-      if (TLII.getLibFunc(FuncName, F))
+      if (LibFunc F = TLII.getLibFunc(FuncName))
         TLII.setAvailable(F);
       else {
         errs() << argv[0] << ": cannot enable nonexistent builtin function "
@@ -845,8 +848,8 @@ optMain(int argc, char **argv,
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
   Passes.add(new RuntimeLibraryInfoWrapper(
-      ModuleTriple, Options->ExceptionModel, Options->FloatABIType,
-      Options->EABIVersion, Options->MCOptions.ABIName, Options->VecLib));
+      Options->ExceptionModel, Options->EABIVersion, Options->MCOptions.ABIName,
+      Options->VecLib));
 
   // Add internal analysis passes from the target machine.
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()
@@ -924,10 +927,11 @@ optMain(int argc, char **argv,
       BOS = std::make_unique<raw_svector_ostream>(Buffer);
       OS = BOS.get();
     }
-    if (OutputAssembly)
+    if (OutputAssembly) {
       Passes.add(createPrintModulePass(
-          *OS, "", /* ShouldPreserveAssemblyUseListOrder */ false));
-    else
+          *OS, "", /*ShouldPreserveAssemblyUseListOrder=*/false,
+          /*ShouldRenumberMetadata=*/true));
+    } else
       Passes.add(createBitcodeWriterPass(
           *OS, /* ShouldPreserveBitcodeUseListOrder */ true));
   }

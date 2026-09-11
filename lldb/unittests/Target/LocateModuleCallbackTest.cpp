@@ -64,8 +64,8 @@ public:
     return false;
   }
 
-  size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
     return 0;
   }
 

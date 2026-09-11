@@ -353,8 +353,6 @@ struct ValueInfo {
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   LLVM_ABI bool canAutoHide() const;
-
-  LLVM_ABI bool noRenameOnPromotion() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
@@ -1837,12 +1835,19 @@ public:
     return ValueInfo(HaveGVs, VP);
   }
 
-  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
-  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+  /// Return a ValueInfo for \p GV with GUID \p GUID and mark it as belonging to
+  /// GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV,
+                                 GlobalValue::GUID GUID) {
     assert(HaveGVs);
-    auto VP = getOrInsertValuePtr(GV->getGUID());
+    auto VP = getOrInsertValuePtr(GUID);
     VP->second.U.GV = GV;
     return ValueInfo(HaveGVs, VP);
+  }
+
+  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+    return getOrInsertValueInfo(GV, GV->getGUID());
   }
 
   /// Return the GUID for \p OriginalId in the OidGuidMap.

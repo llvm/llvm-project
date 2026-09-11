@@ -30,8 +30,6 @@
 //    the compute_region.
 //
 // 3. Finalization: acc.routine's func_name is updated to the device function.
-//    For nohost routines, all uses of the host symbol are replaced with the
-//    device symbol and the host function is erased.
 //
 //===----------------------------------------------------------------------===//
 
@@ -109,13 +107,15 @@ static func::FuncOp createFunctionForDeviceStaging(func::FuncOp hostFunc,
   FunctionType funcType = hostFunc.getFunctionType();
   func::FuncOp deviceFunc =
       func::FuncOp::create(rewriter, loc, hostFunc.getName(), funcType);
-  deviceFunc->setAttrs(hostFunc->getAttrs());
-  deviceFunc->removeAttr(getRoutineInfoAttrName());
-  deviceFunc->setAttr(getSpecializedRoutineAttrName(),
-                      SpecializedRoutineAttr::get(
-                          ctx, SymbolRefAttr::get(ctx, routineOp.getSymName()),
-                          ParLevelAttr::get(ctx, parLevel),
-                          StringAttr::get(ctx, hostFunc.getName())));
+  deviceFunc->setDiscardableAttrs(
+      hostFunc->getDiscardableAttrDictionary().getValue());
+  deviceFunc->removeDiscardableAttr(getRoutineInfoAttrName());
+  deviceFunc->setDiscardableAttr(
+      getSpecializedRoutineAttrName(),
+      SpecializedRoutineAttr::get(
+          ctx, SymbolRefAttr::get(ctx, routineOp.getSymName()),
+          ParLevelAttr::get(ctx, parLevel),
+          StringAttr::get(ctx, hostFunc.getName())));
 
   Block *sourceBlock = &hostFunc.getBody().front();
   Block *newBlock = rewriter.createBlock(&deviceFunc.getRegion());
@@ -169,26 +169,14 @@ buildRoutineBody(func::FuncOp deviceFunc, func::FuncOp hostFunc,
   return success();
 }
 
-/// Update acc.routine refs and optionally erase host for nohost routines.
-static LogicalResult finalizeRoutines(
-    SmallVectorImpl<std::tuple<func::FuncOp, func::FuncOp, RoutineOp>>
-        &accRoutineInfo,
-    ModuleOp mod, MLIRContext *ctx) {
-  for (auto &[hostFunc, deviceFunc, routineOp] : accRoutineInfo) {
+/// Update acc.routine refs
+static void finalizeRoutines(
+    SmallVectorImpl<std::pair<func::FuncOp, RoutineOp>> &accRoutineInfo,
+    MLIRContext *ctx) {
+  for (auto &[deviceFunc, routineOp] : accRoutineInfo) {
     routineOp.setFuncNameAttr(SymbolRefAttr::get(ctx, deviceFunc.getName()));
     routineOp->moveBefore(deviceFunc);
-
-    if (routineOp.getNohost()) {
-      if (failed(SymbolTable::replaceAllSymbolUses(
-              StringAttr::get(ctx, hostFunc.getName()),
-              StringAttr::get(ctx, deviceFunc.getName()), mod))) {
-        routineOp.emitError("cannot replace symbol uses for acc routine");
-        return failure();
-      }
-      hostFunc->erase();
-    }
   }
-  return success();
 }
 
 class ACCRoutineLowering
@@ -209,9 +197,8 @@ public:
     IRRewriter rewriter(ctx);
     DefaultACCToGPUMappingPolicy policy;
 
-    // Tuple: host function, device function, routine operation
-    SmallVector<std::tuple<func::FuncOp, func::FuncOp, RoutineOp>, 4>
-        accRoutineInfo;
+    // Pair: device function, routine operation
+    SmallVector<std::pair<func::FuncOp, RoutineOp>, 4> accRoutineInfo;
 
     for (RoutineOp routineOp : mod.getOps<RoutineOp>()) {
       if (routineOp.getBindNameValue() ||
@@ -238,12 +225,11 @@ public:
                                   parLevel, policy, rewriter)))
         return signalPassFailure();
 
-      accRoutineInfo.push_back({hostFunc, deviceFunc, routineOp});
+      accRoutineInfo.push_back({deviceFunc, routineOp});
       symTab.insert(deviceFunc);
     }
 
-    if (failed(finalizeRoutines(accRoutineInfo, mod, ctx)))
-      return signalPassFailure();
+    finalizeRoutines(accRoutineInfo, ctx);
   }
 };
 

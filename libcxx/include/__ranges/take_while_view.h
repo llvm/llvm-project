@@ -46,7 +46,7 @@ namespace ranges {
 
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS take_while_view : public view_interface<take_while_view<_View, _Pred>> {
+class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG take_while_view : public view_interface<take_while_view<_View, _Pred>> {
   template <bool>
   class __sentinel;
 
@@ -108,13 +108,15 @@ class take_while_view<_View, _Pred>::__sentinel {
   sentinel_t<_Base> __end_ = sentinel_t<_Base>();
   const _Pred* __pred_     = nullptr;
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end, const _Pred* __pred)
+      : __end_(std::move(__end)), __pred_(__pred) {}
+
+  friend class take_while_view<_View, _Pred>;
+
   friend class __sentinel<!_Const>;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end, const _Pred* __pred)
-      : __end_(std::move(__end)), __pred_(__pred) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __sentinel(__sentinel<!_Const> __s)
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>

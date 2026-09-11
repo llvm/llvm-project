@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
+// RUN: %clang_cc1 -std=c++2c -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -std=c++2c                                         -verify=ref,both %s
 
 typedef __INT64_TYPE__ int64_t;
@@ -60,24 +60,6 @@ consteval auto ok4() {
 }
 static_assert(ok4() == 37);
 
-consteval int ok5() {
-  int i;
-  new (&i) int[1]{1};
-
-  struct S {
-    int a; int b;
-  } s;
-  new (&s) S[1]{{12, 13}};
-
-  /// FIXME: Broken in the current interpreter.
-#if BYTECODE
-  return s.a + s.b;
-#else
-  return 25;
-#endif
-}
-static_assert(ok5() == 25);
-
 consteval int ok6() {
     int i[2];
     new (i) int(100);
@@ -85,23 +67,6 @@ consteval int ok6() {
     return i[0] + i[1];
 }
 static_assert(ok6() == 300);
-
-/// FIXME: Broken in the current interpreter.
-#if BYTECODE
-consteval int ok7() {
-    int i;
-    new (&i) int[1]{1};
-    return i;
-}
-static_assert(ok7() == 1);
-
-consteval int ok8() {
-    int i[2];
-    new (&i) int(100);
-    return i[0];
-}
-static_assert(ok8() == 100);
-#endif
 
 consteval auto fail1() {
   int b;
@@ -118,6 +83,29 @@ consteval int fail2() {
 }
 static_assert(fail2() == 0); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to}}
+consteval int fail3() {
+  int i;
+  new (&i) int[1]{1}; // both-note {{placement new would change type of storage from 'int' to 'int[1]'}}
+  return 0;
+}
+static_assert(fail3() == 0); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+consteval int fail4() {
+  struct S {
+    int a; int b;
+  } s;
+  new (&s) S[1]{{12, 13}}; // both-note {{placement new would change type of storage from 'struct S' to 'S[1]'}}
+  return 0;
+}
+static_assert(fail4() == 0); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+consteval int fail5() {
+    int i[2];
+    new (&i) int[]{12}; // both-note {{placement new would change type of storage from 'int[2]' to 'int[1]'}}
+    return i[0];
+}
+static_assert(fail5() == 12); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
 
 consteval int indeterminate() {
     int * indeterminate; // both-note {{declared here}}
@@ -148,14 +136,24 @@ consteval int array3() {
 }
 static_assert(array3() == 0); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
-
 consteval int array4() {
     int i[2];
-    new (&i) int[]{12};
+    new (i) int[2]{12,13};
     return i[0];
 }
 static_assert(array4() == 12);
-
+consteval int array5() {
+    int i[2][2];
+    new (i) int[2][2]{12,13};
+    return i[0][0];
+}
+static_assert(array5() == 12);
+consteval int array6() {
+    int i[2][2];
+    new (i[1]) int[2]{12,13};
+    return i[1][0];
+}
+static_assert(array6() == 12);
 constexpr int *intptr() {
   return new int;
 }
@@ -236,6 +234,32 @@ namespace records {
     return r.f.f == 42.0 && r.a == 12;
   }
   static_assert(record4());
+
+  constexpr bool record5() {
+    S ss[3][3];
+
+    new (ss) S[3][3]{1,2,3,4,5,6,7,8,9};
+
+    return ss[0][0].f == 1 && ss[0][1].f == 2 && ss[0][2].f == 3;
+  }
+  static_assert(record5());
+
+  constexpr bool record6() {
+    S ss[3][3];
+
+    new (ss[1]) S[3]{1,2,3};
+
+    return ss[1][0].f == 1 && ss[1][1].f == 2 && ss[1][2].f == 3;
+  }
+  static_assert(record6());
+  constexpr bool record7() {
+    S ss[3][3];
+
+    new (&ss[1]) S[3]{1,2,3};
+
+    return ss[1][0].f == 1 && ss[1][1].f == 2 && ss[1][2].f == 3;
+  }
+  static_assert(record7());
 
   /// Destructor is NOT called.
   struct A {
@@ -368,19 +392,16 @@ namespace ExplicitThisOnArrayElement {
   static_assert(foo()); // both-error {{not an integral constant expression}}
 }
 
-#ifdef BYTECODE
-constexpr int N = [] // expected-error {{must be initialized by a constant expression}} \
-                     // expected-note {{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
-                     // expected-note {{in call to}}
+constexpr int N = [] // both-error {{must be initialized by a constant expression}} \
+                     // both-note {{in call to}}
 {
     struct S {
         int a[1];
     };
     S s;
-    ::new (s.a) int[1][2][3][4]();
+    ::new (s.a) int[1][2][3][4](); // both-note {{placement new would change type of storage from 'int' to 'int[1][2][3][4]'}}
     return s.a[0];
 }();
-#endif
 
 namespace MemMove {
   constexpr int foo() {

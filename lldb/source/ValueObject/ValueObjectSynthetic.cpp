@@ -484,3 +484,8 @@ void ValueObjectSynthetic::GetExpressionPath(Stream &stream,
   }
   return ValueObject::GetExpressionPath(stream, epformat);
 }
+
+SyntheticChildrenFrontEnd *
+ValueObjectSynthetic::GetSyntheticChildrenFrontEnd() {
+  return m_synth_filter_up.get();
+}

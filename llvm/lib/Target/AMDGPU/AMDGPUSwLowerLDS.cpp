@@ -86,22 +86,16 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsanInstrumentation.h"
 #include "AMDGPUMemoryUtils.h"
-#include "AMDGPUTargetMachine.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Pass.h"
@@ -587,7 +581,7 @@ void AMDGPUSwLowerLDS::updateMallocSizeForDynamicLDS(
   assert(SwLDS && SwLDSMetadata);
   StructType *MetadataStructType =
       cast<StructType>(SwLDSMetadata->getValueType());
-  unsigned MaxAlignment = SwLDS->getAlignment();
+  unsigned MaxAlignment = SwLDS->getAlign().valueOrOne().value();
   Value *MaxAlignValue = IRB.getInt32(MaxAlignment);
   Value *MaxAlignValueMinusOne = IRB.getInt32(MaxAlignment - 1);
 
@@ -694,9 +688,8 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       Value *LIOperand = LI->getPointerOperand();
       Value *Replacement =
           getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, LIOperand);
-      LoadInst *NewLI = IRB.CreateAlignedLoad(LI->getType(), Replacement,
-                                              LI->getAlign(), LI->isVolatile());
-      NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
+      LoadInst *NewLI =
+          IRB.CreateLoad(LI->getType(), Replacement, LI->getProperties());
       AsanInfo.Instructions.insert(NewLI);
       LI->replaceAllUsesWith(NewLI);
       LI->eraseFromParent();
@@ -704,9 +697,8 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       Value *SIOperand = SI->getPointerOperand();
       Value *Replacement =
           getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, SIOperand);
-      StoreInst *NewSI = IRB.CreateAlignedStore(
-          SI->getValueOperand(), Replacement, SI->getAlign(), SI->isVolatile());
-      NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
+      StoreInst *NewSI = IRB.CreateStore(SI->getValueOperand(), Replacement,
+                                         SI->getProperties());
       AsanInfo.Instructions.insert(NewSI);
       SI->replaceAllUsesWith(NewSI);
       SI->eraseFromParent();

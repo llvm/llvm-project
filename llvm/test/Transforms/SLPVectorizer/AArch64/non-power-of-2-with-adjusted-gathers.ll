@@ -7,10 +7,10 @@ define i1 @test(ptr %arg, ptr %arg1, i1 %arg2, i1 %arg3, i1 %arg4) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr [[ARG1]], i64 3684
 ; CHECK-NEXT:    [[GETELEMENTPTR5:%.*]] = getelementptr i8, ptr [[ARG]], i64 21
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[ARG1]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[ARG1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <8 x ptr> [[TMP1]], <8 x i64> <i64 8484, i64 8484, i64 8484, i64 5284, i64 8484, i64 8484, i64 8484, i64 8484>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x ptr> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x ptr> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult ptr [[TMP3]], null
 ; CHECK-NEXT:    [[ICMP7:%.*]] = icmp ult ptr null, null
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 false, [[ICMP7]]
@@ -19,9 +19,9 @@ define i1 @test(ptr %arg, ptr %arg1, i1 %arg2, i1 %arg3, i1 %arg4) {
 ; CHECK-NEXT:    [[ICMP14:%.*]] = icmp ult ptr null, null
 ; CHECK-NEXT:    [[AND15:%.*]] = and i1 false, [[ICMP14]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <8 x ptr> [[TMP2]], splat (ptr null)
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i1> <i1 false, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, i1 [[ARG2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i1> <i1 false, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, i1 [[ARG2]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x ptr> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x ptr> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[ICMP46:%.*]] = icmp ult ptr [[TMP7]], null
 ; CHECK-NEXT:    [[AND47:%.*]] = and i1 false, [[ICMP46]]
 ; CHECK-NEXT:    [[ICMP49:%.*]] = icmp ult ptr [[ARG]], null
@@ -36,23 +36,23 @@ define i1 @test(ptr %arg, ptr %arg1, i1 %arg2, i1 %arg3, i1 %arg4) {
 ; CHECK-NEXT:    [[AND63:%.*]] = and i1 [[ARG2]], [[ICMP62]]
 ; CHECK-NEXT:    [[ICMP65:%.*]] = icmp ult ptr [[GETELEMENTPTR]], null
 ; CHECK-NEXT:    [[AND66:%.*]] = and i1 [[ICMP65]], false
-; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP6]])
-; CHECK-NEXT:    [[OP_RDX24:%.*]] = or i1 [[TMP8]], [[AND]]
-; CHECK-NEXT:    [[OP_RDX25:%.*]] = or i1 false, [[AND12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP6]])
+; CHECK-NEXT:    [[OP_RDX30:%.*]] = or i1 [[TMP15]], [[AND]]
+; CHECK-NEXT:    [[OP_RDX31:%.*]] = or i1 false, [[AND12]]
 ; CHECK-NEXT:    [[OP_RDX26:%.*]] = or i1 [[AND15]], false
 ; CHECK-NEXT:    [[OP_RDX27:%.*]] = or i1 false, [[AND47]]
 ; CHECK-NEXT:    [[OP_RDX28:%.*]] = or i1 [[AND50]], [[AND53]]
 ; CHECK-NEXT:    [[OP_RDX29:%.*]] = or i1 [[AND56]], [[AND59]]
-; CHECK-NEXT:    [[OP_RDX30:%.*]] = or i1 [[AND63]], [[AND66]]
-; CHECK-NEXT:    [[OP_RDX31:%.*]] = or i1 [[ARG3]], [[ARG2]]
+; CHECK-NEXT:    [[OP_RDX33:%.*]] = or i1 [[AND63]], [[AND66]]
+; CHECK-NEXT:    [[OP_RDX34:%.*]] = or i1 [[ARG3]], [[ARG2]]
 ; CHECK-NEXT:    [[OP_RDX32:%.*]] = or i1 [[ARG4]], false
-; CHECK-NEXT:    [[OP_RDX33:%.*]] = or i1 [[OP_RDX24]], [[OP_RDX25]]
-; CHECK-NEXT:    [[OP_RDX34:%.*]] = or i1 [[OP_RDX26]], [[OP_RDX27]]
-; CHECK-NEXT:    [[OP_RDX35:%.*]] = or i1 [[OP_RDX28]], [[OP_RDX29]]
 ; CHECK-NEXT:    [[OP_RDX36:%.*]] = or i1 [[OP_RDX30]], [[OP_RDX31]]
+; CHECK-NEXT:    [[OP_RDX38:%.*]] = or i1 [[OP_RDX26]], [[OP_RDX27]]
+; CHECK-NEXT:    [[OP_RDX35:%.*]] = or i1 [[OP_RDX28]], [[OP_RDX29]]
 ; CHECK-NEXT:    [[OP_RDX37:%.*]] = or i1 [[OP_RDX33]], [[OP_RDX34]]
-; CHECK-NEXT:    [[OP_RDX38:%.*]] = or i1 [[OP_RDX35]], [[OP_RDX36]]
-; CHECK-NEXT:    [[OP_RDX39:%.*]] = or i1 [[OP_RDX37]], [[OP_RDX38]]
+; CHECK-NEXT:    [[OP_RDX46:%.*]] = or i1 [[OP_RDX36]], [[OP_RDX38]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[OP_RDX35]], [[OP_RDX37]]
+; CHECK-NEXT:    [[OP_RDX39:%.*]] = or i1 [[OP_RDX46]], [[TMP8]]
 ; CHECK-NEXT:    [[OP_RDX40:%.*]] = or i1 [[OP_RDX39]], [[OP_RDX32]]
 ; CHECK-NEXT:    ret i1 [[OP_RDX40]]
 ;

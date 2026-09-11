@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=arm-ti-none-eabihf -mcpu=cortex-a15 -o - %s | FileCheck --check-prefix=CHECK-A %s
-; RUN: llc -mtriple=thumb-ti-none-eabihf -mcpu=cortex-a15 -o - %s | FileCheck --check-prefix=CHECK-A-THUMB %s
-; RUN: llc -mtriple=thumb-ti-none-eabihf -mcpu=cortex-m4 -o - %s | FileCheck --check-prefix=CHECK-M %s
-; RUN: llc -mtriple=thumbv7em-ti-none-eabihf -mcpu=cortex-m4 -o - %s | FileCheck --check-prefix=CHECK-M %s
-; RUN: llc -mtriple=thumbv7r5-ti-none-eabihf -mcpu=cortex-r5 -o - %s | FileCheck --check-prefix=CHECK-R-THUMB %s
-; RUN: llc -mtriple=armv7r5-ti-none-eabihf -mcpu=cortex-r5 -o - %s | FileCheck --check-prefix=CHECK-R %s
+; RUN: llc -mtriple=arm-none-eabihf -mcpu=cortex-a15 -o - %s | FileCheck --check-prefix=CHECK-A %s
+; RUN: llc -mtriple=thumb-none-eabihf -mcpu=cortex-a15 -o - %s | FileCheck --check-prefix=CHECK-A-THUMB %s
+; RUN: llc -mtriple=thumb-none-eabihf -mcpu=cortex-m4 -o - %s | FileCheck --check-prefix=CHECK-M %s
+; RUN: llc -mtriple=thumbv7em-none-eabihf -mcpu=cortex-m4 -o - %s | FileCheck --check-prefix=CHECK-M %s
+; RUN: llc -mtriple=thumbv7r-none-eabihf -mcpu=cortex-r5 -o - %s | FileCheck --check-prefix=CHECK-R-THUMB %s
+; RUN: llc -mtriple=armv7r-none-eabihf -mcpu=cortex-r5 -o - %s | FileCheck --check-prefix=CHECK-R %s
 
 declare arm_aapcscc void @bar()
 

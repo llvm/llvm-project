@@ -105,10 +105,14 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
-    reportNoescapeViolations();
-    reportLifetimeboundViolations();
-    reportMisplacedLifetimebound();
-    reportInapplicableLifetimebound();
+    if (LSOpts.CheckNoescapeViolations)
+      reportNoescapeViolations();
+    if (LSOpts.CheckLifetimeboundViolations)
+      reportLifetimeboundViolations();
+    if (LSOpts.CheckMisplacedLifetimebound)
+      reportMisplacedLifetimebound();
+    if (LSOpts.CheckInapplicableLifetimebound)
+      reportInapplicableLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -166,10 +170,12 @@ public:
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      const AccessPath &AP = L->getAccessPath();
-      if (const auto *PVD = AP.getAsPlaceholderParam())
+      const PlaceholderBase *PB = L->getAccessPath().getAsPlaceholderBase();
+      if (!PB)
+        continue;
+      if (const auto *PVD = PB->getParmVarDecl())
         CheckParam(PVD, /*IsMoved=*/MovedAtEscape.lookup(LID));
-      else if (const auto *MD = AP.getAsPlaceholderThis())
+      else if (const auto *MD = PB->getImplicitThisParent())
         CheckImplicitThis(MD);
     }
   }
@@ -177,41 +183,45 @@ public:
   /// Checks for use-after-free & use-after-return errors when an access path
   /// expires (e.g., a variable goes out of scope).
   ///
-  /// When a path expires, all loans having this path expires.
+  /// When a path expires, all loans prefixed by that path expire. For example,
+  /// if `x` expires, loans to `x`, `x.field`, and `x.field.*` all expire.
   /// This method examines all live origins and reports warnings for loans they
   /// hold that are prefixed by the expired path.
   void checkExpiry(const ExpireFact *EF) {
     const AccessPath &ExpiredPath = EF->getAccessPath();
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
-      for (LoanID HeldLoanID : HeldLoans) {
-        const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
-        if (ExpiredPath != HeldLoan->getAccessPath())
-          continue;
-        // HeldLoan is expired because its AccessPath is expired.
-        PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
-        const Expr *MovedExpr = nullptr;
-        if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
-          MovedExpr = *ME;
-        // Skip if we already have a dominating causing fact.
-        if (CurWarning.CausingFactDominatesExpiry)
-          continue;
-        if (causingFactDominatesExpiry(LiveInfo.Kind))
-          CurWarning.CausingFactDominatesExpiry = true;
-        CurWarning.CausingFact = LiveInfo.CausingFact;
-        CurWarning.ExpiryLoc = EF->getExpiryLoc();
-        CurWarning.MovedExpr = MovedExpr;
-        CurWarning.InvalidatedByExpr = nullptr;
+    LiveOriginSet Origins = LiveOrigins.getLiveOriginsAt(EF);
+    for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
+      for (auto &[OID, LiveInfo] : Live) {
+        LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
+        for (LoanID HeldLoanID : HeldLoans) {
+          const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
+          if (!ExpiredPath.isPrefixOf(HeldLoan->getAccessPath()))
+            continue;
+          // HeldLoan is expired because its base or itself is expired.
+          PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
+          const Expr *MovedExpr = nullptr;
+          if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
+            MovedExpr = *ME;
+          // Skip if we already have a dominating causing fact.
+          if (CurWarning.CausingFactDominatesExpiry)
+            continue;
+          if (causingFactDominatesExpiry(LiveInfo.Kind))
+            CurWarning.CausingFactDominatesExpiry = true;
+          CurWarning.CausingFact = LiveInfo.CausingFact;
+          CurWarning.ExpiryLoc = EF->getExpiryLoc();
+          CurWarning.MovedExpr = MovedExpr;
+          CurWarning.InvalidatedByExpr = nullptr;
+        }
       }
-    }
   }
 
   /// Checks for use-after-invalidation errors when a container is modified.
   ///
-  /// This method identifies origins that are live at the point of invalidation
-  /// and checks if they hold loans that are invalidated by the operation
-  /// (e.g., iterators into a vector that is being pushed to).
+  /// When a container is invalidated, loans pointing into its interior are
+  /// invalidated. For example, if container `v` is invalidated, iterators with
+  /// loans to `v.*` are invalidated. This method finds live origins holding
+  /// such loans and reports warnings. A loan is invalidated if its path extends
+  /// an invalidated container's path (e.g., `v.*` extends `v`).
   void checkInvalidation(const InvalidateOriginFact *IOF) {
     OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
     /// Get loans directly pointing to the invalidated container
@@ -220,61 +230,68 @@ public:
     auto IsInvalidated = [&](const Loan *L) {
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
         const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-        if (InvalidL->getAccessPath() == L->getAccessPath())
+        if (InvalidL->getAccessPath().isPrefixOf(L->getAccessPath()))
           return true;
       }
       return false;
     };
     // For each live origin, check if it holds an invalidated loan and report.
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
-      for (LoanID LiveLoanID : HeldLoans)
-        if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
-          bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
-          bool LastDomination =
-              FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
-          if (!LastDomination) {
-            FinalWarningsMap[LiveLoanID] = {
-                /*ExpiryLoc=*/{},
-                /*CausingFact=*/LiveInfo.CausingFact,
-                /*MovedExpr=*/nullptr,
-                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
-                /*CausingFactDominatesExpiry=*/CurDomination};
+    LiveOriginSet Origins = LiveOrigins.getLiveOriginsAt(IOF);
+    for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
+      for (auto &[OID, LiveInfo] : Live) {
+        LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
+        for (LoanID LiveLoanID : HeldLoans)
+          if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
+            bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
+            bool LastDomination =
+                FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
+            if (!LastDomination) {
+              FinalWarningsMap[LiveLoanID] = {
+                  /*ExpiryLoc=*/{},
+                  /*CausingFact=*/LiveInfo.CausingFact,
+                  /*MovedExpr=*/nullptr,
+                  /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
+                  /*CausingFactDominatesExpiry=*/CurDomination};
+            }
           }
-        }
-    }
+      }
   }
 
   void issuePendingWarnings() {
+    llvm::TimeTraceScope TimeTrace("IssuePendingWarnings");
     if (!SemaHelper)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      const Expr *IssueExpr = L->getIssuingExpr();
+      const Expr *IssueExpr = L->getIssueExpr();
+      const ParmVarDecl *InvalidatedPVD = nullptr;
+      if (const PlaceholderBase *PB = L->getAccessPath().getAsPlaceholderBase())
+        InvalidatedPVD = PB->getParmVarDecl();
+
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
-      const ParmVarDecl *InvalidatedPVD =
-          L->getAccessPath().getAsPlaceholderParam();
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
+        llvm::SmallVector<const Expr *> ExprChain =
+            getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg));
         if (Warning.InvalidatedByExpr) {
           if (IssueExpr)
             // Use-after-invalidation of an object on stack.
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
-                                                   Warning.InvalidatedByExpr);
+                                                   Warning.InvalidatedByExpr,
+                                                   ExprChain);
           else if (InvalidatedPVD)
             // Use-after-invalidation of a parameter.
             SemaHelper->reportUseAfterInvalidation(
-                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
+                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr,
+                ExprChain);
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterScope(
-              IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
-              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg)));
+          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
+                                          MovedExpr, ExpiryLoc, ExprChain);
 
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
@@ -313,15 +330,21 @@ public:
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
               IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
-        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
+        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
           // Dangling field.
+          bool IsCapturedByLambda =
+              FactMgr.isFieldCapturedByLambda(FieldEscape->getFieldDecl());
           SemaHelper->reportDanglingField(
-              IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
-        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+              IssueExpr, FieldEscape->getFieldDecl(), MovedExpr,
+              IsCapturedByLambda, ExpiryLoc);
+        } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
           // Global escape.
+          bool IsMain = false;
+          if (const auto *Func = dyn_cast_if_present<FunctionDecl>(FD))
+            IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, ExpiryLoc);
-        else
+                                           MovedExpr, ExpiryLoc, IsMain);
+        } else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");
@@ -418,6 +441,7 @@ public:
   }
 
   void reportNoescapeViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportNoescapeViolations");
     for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
       if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
         SemaHelper->reportNoescapeViolation(PVD, E);
@@ -431,6 +455,7 @@ public:
   }
 
   void reportLifetimeboundViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportLifetimeboundViolations");
     if (!isa<FunctionDecl>(FD))
       return;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -453,6 +478,7 @@ public:
   // Reports lifetimebound attributes that are placed on a function definition
   // but not on the corresponding declaration.
   void reportMisplacedLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportMisplacedLifetimebound");
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
@@ -483,6 +509,7 @@ public:
   }
 
   void reportInapplicableLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportInapplicableLifetimebound");
     const auto *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;

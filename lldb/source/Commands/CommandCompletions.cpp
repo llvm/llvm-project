@@ -89,6 +89,8 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
        CommandCompletions::TypeCategoryNames},
       {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
       {lldb::eManagedPluginCompletion, CommandCompletions::ManagedPlugins},
+      {lldb::eScriptedExtensionCompletion,
+       CommandCompletions::ScriptedExtensions},
       {lldb::eTerminatorCompletion,
        nullptr} // This one has to be last in the list.
   };
@@ -867,6 +869,13 @@ void CommandCompletions::ManagedPlugins(CommandInterpreter &interpreter,
                                         SearchFilter *searcher) {
   PluginManager::AutoCompletePluginName(request.GetCursorArgumentPrefix(),
                                         request);
+}
+
+void CommandCompletions::ScriptedExtensions(CommandInterpreter &interpreter,
+                                            CompletionRequest &request,
+                                            SearchFilter *searcher) {
+  PluginManager::AutoCompleteScriptedExtension(
+      request.GetCursorArgumentPrefix(), request);
 }
 
 void CommandCompletions::CompleteModifiableCmdPathArgs(

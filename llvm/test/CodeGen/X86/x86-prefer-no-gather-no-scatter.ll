@@ -5,6 +5,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl,+avx512dq,+prefer-no-gather < %s | FileCheck %s --check-prefix=SCATTER-NO-GATHER
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl,+avx512dq,+prefer-no-scatter < %s | FileCheck %s --check-prefix=GATHER-NO-SCATTER
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl,+avx512dq,+prefer-no-gather,+prefer-no-scatter < %s | FileCheck %s --check-prefix=NO-SCATTER-GATHER
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=c86-4g-m7 < %s | FileCheck %s --check-prefix=NO-SCATTER-GATHER
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=c86-4g-m8 < %s | FileCheck %s --check-prefix=NO-SCATTER-GATHER
 
 @A = global [1024 x i8] zeroinitializer, align 128
 @B = global [1024 x i64] zeroinitializer, align 128

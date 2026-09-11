@@ -34,7 +34,7 @@ body:             |
 # CHECK-EMPTY:
 # CHECK-NEXT: # End machine code for function f.
 # CHECK-EMPTY:
-# CHECK-NEXT: ********** MI Scheduling **********
+# CHECK-NEXT: Current Schedule Region
 # CHECK-NEXT: f:%bb.0
 # CHECK-NEXT:   From: $x3 = ADDXrr $x0, $x0
 # CHECK-NEXT:     To: End
@@ -231,7 +231,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P:
 # CHECK-NEXT: Queue BotQ.A: 2 1 0
 # CHECK-NEXT:   Cand SU(2) FIRST
-# CHECK-NEXT: Pick Bot FIRST
+# CHECK-NEXT: Pick Bot Cand SU(2) FIRST
 # CHECK-NEXT: Scheduling SU(2) $x5 = ADDXrr $x2, $x2
 # CHECK-NEXT:   Ready @0c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
@@ -326,7 +326,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.A: 0 1
 # CHECK-NEXT:   Cand SU(0) FIRST
 # CHECK-NEXT:   Cand SU(1) ORDER
-# CHECK-NEXT: Pick Bot ORDER
+# CHECK-NEXT: Pick Bot Cand SU(1) ORDER
 # CHECK-NEXT: Scheduling SU(1) $x4 = ADDXrr $x1, $x1
 # CHECK-NEXT:   Ready @0c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u

@@ -1,6 +1,6 @@
 # RUN: yaml2obj -DMACHINE=IMAGE_FILE_MACHINE_ARM64 %s -o %t-aarch64.o
 # RUN: yaml2obj -DMACHINE=IMAGE_FILE_MACHINE_ARM64EC %s -o %t-arm64ec.o
-# RUN: llvm-objcopy --add-section=.obj.arm64ec=%t-arm64ec.o --set-section-flags=.obj.arm64ec=debug %t-aarch64.o %t.o
+# RUN: llvm-objcopy --add-section=.obj.arm64ec=%t-arm64ec.o --set-section-flags=.obj.arm64ec=exclude %t-aarch64.o %t.o
 # RUN: llvm-lib -machine:arm64x -out:%t.lib %t.o
 # RUN: llvm-nm --print-armap %t.lib | FileCheck %s
 

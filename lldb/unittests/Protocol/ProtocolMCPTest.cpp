@@ -61,6 +61,10 @@ TEST(ProtocolMCPTest, Notification) {
 TEST(ProtocolMCPTest, ServerCapabilities) {
   ServerCapabilities capabilities;
   capabilities.supportsToolsList = true;
+  capabilities.supportsResourcesList = true;
+  capabilities.supportsResourcesSubscribe = true;
+  capabilities.supportsCompletions = true;
+  capabilities.supportsLogging = true;
 
   llvm::Expected<ServerCapabilities> deserialized_capabilities =
       roundtripJSON(capabilities);
@@ -68,6 +72,14 @@ TEST(ProtocolMCPTest, ServerCapabilities) {
 
   EXPECT_EQ(capabilities.supportsToolsList,
             deserialized_capabilities->supportsToolsList);
+  EXPECT_EQ(capabilities.supportsResourcesList,
+            deserialized_capabilities->supportsResourcesList);
+  EXPECT_EQ(capabilities.supportsResourcesSubscribe,
+            deserialized_capabilities->supportsResourcesSubscribe);
+  EXPECT_EQ(capabilities.supportsCompletions,
+            deserialized_capabilities->supportsCompletions);
+  EXPECT_EQ(capabilities.supportsLogging,
+            deserialized_capabilities->supportsLogging);
 }
 
 TEST(ProtocolMCPTest, TextContent) {

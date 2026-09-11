@@ -32,7 +32,7 @@ using namespace lldb_private::process_gdb_remote;
 // GDBRemoteRegisterContext constructor
 GDBRemoteRegisterContext::GDBRemoteRegisterContext(
     ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
-    GDBRemoteDynamicRegisterInfoSP reg_info_sp, bool read_all_at_once,
+    DynamicRegisterInfoSP reg_info_sp, bool read_all_at_once,
     bool write_all_at_once)
     : RegisterContext(thread, concrete_frame_idx),
       m_reg_info_sp(std::move(reg_info_sp)), m_reg_valid(), m_reg_data(),

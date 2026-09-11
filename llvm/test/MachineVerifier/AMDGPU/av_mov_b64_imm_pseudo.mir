@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgpu9.08-amd-amdhsa -verify-machineinstrs -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 
 # FIXME: Value error messages are misleading.
 ---

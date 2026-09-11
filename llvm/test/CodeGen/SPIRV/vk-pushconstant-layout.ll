@@ -1,6 +1,4 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
-; XFAIL: *
-; FIXME(168401): fix the offset of last struct S field.
 
 %struct.T = type { [3 x <2 x float>] }
 %struct.S = type { float, <3 x float>, %struct.T }
@@ -13,7 +11,7 @@
 ; CHECK-DAG: %[[#UINT:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#UINT_3:]] = OpConstant %[[#UINT]] 3
 
-; CHECK-DAG: %[[#S_S]] = OpTypeStruct %[[#F32]] %[[#V3F32]] %[[#S_T:]]
+; CHECK-DAG: %[[#S_S:]] = OpTypeStruct %[[#F32]] %[[#V3F32]] %[[#S_T:]]
 ; CHECK-DAG: %[[#S_T]] = OpTypeStruct %[[#ARR:]]
 ; CHECK-DAG: %[[#ARR]] = OpTypeArray %[[#V2F32]] %[[#UINT_3]]
 
