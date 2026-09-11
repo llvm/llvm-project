@@ -83,6 +83,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cmath>
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "tailcallelim"
@@ -424,26 +425,51 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
   return !is_contained(I->operands(), CI);
 }
 
-// Return true if I is a unary accumulator recurrence: a chain of
-// applications of a unary function `g` composed with itself,
-// `g(g(...g(Base)...))`, which is equivalent to a single application of the
-// N-times-composed function when `g` is pure. Neither associative nor
-// commutative, this differs from the ordinary accumulator recurrence handled
-// below, which requires I to be associative and commutative.
+// If I applies a pure unary function `g` to the result CI of a recursive call,
+// return the index of the operand holding that result.
 //
-// TODO: Generalize this beyond shifts by a constant amount to arbitrary pure
-// unary functions (e.g., `f(x) = x == 0 ? Base : g(f(x - 1))` for any pure
-// unary `g`).
-static bool isUnaryAccumulatorRecurrence(Instruction *I) {
-  if (!I->isShift())
-    return false;
+// Such a recurrence, `f(x) = x == 0 ? Base : g(f(x - 1))`, builds up
+// `g(g(...g(Base)...))`, a chain of applications of `g` composed with itself,
+// which a loop can compute by applying `g` to the accumulator once per
+// iteration. Since `g` is in general neither associative nor commutative --
+// unlike the ordinary accumulator recurrence handled below -- the applications
+// have to keep their original order, so every operand of I other than CI must
+// be loop-invariant. Only constants qualify: the whole body of the original
+// function ends up inside the loop, and its arguments are replaced by PHI
+// nodes.
+//
+// For instance, a chain of shifts by a constant amount C is equivalent to a
+// single shift by the sum of the amounts:
+//     ... (Base << C) << C) ... << C == Base << (C * Iterations)
+static std::optional<unsigned> getUnaryRecurrenceOperand(Instruction *I,
+                                                         CallInst *CI) {
+  // In the recursion the applications of `g` all happen while unwinding, after
+  // the last call; in the loop they are interleaved with the rest of the
+  // function body. Reordering them that way is only valid if `g` is pure, i.e.
+  // it does not access memory, throw, or fail to return.
+  if (I->mayHaveSideEffects() || I->mayReadFromMemory())
+    return std::nullopt;
 
-  // A chain of shifts by a constant amount C is equivalent to a single shift
-  // by the sum of the amounts:
-  //     ... (Base << C) << C) ... << C == Base << (C * Iterations)
-  // This relation applies to left shifts as well as arithmetic/logical right
-  // shifts when the shift amount is a constant.
-  return isa<ConstantInt>(I->getOperand(1));
+  // Likewise, interleaving a convergent operation changes the set of threads
+  // it communicates with.
+  if (auto *CB = dyn_cast<CallBase>(I))
+    if (CB->isConvergent())
+      return std::nullopt;
+
+  std::optional<unsigned> RecurrenceOp;
+  for (const Use &U : I->operands()) {
+    if (U.get() == CI) {
+      // `g` is unary, so the call may not feed more than one operand.
+      if (RecurrenceOp)
+        return std::nullopt;
+      RecurrenceOp = U.getOperandNo();
+      continue;
+    }
+    if (!isa<Constant>(U.get()))
+      return std::nullopt;
+  }
+
+  return RecurrenceOp;
 }
 
 // Find the base-case return value for function F, given the accumulator
@@ -495,47 +521,60 @@ static Constant *findBaseCaseRetConstant(Function &F,
   return BaseCaseVal;
 }
 
+namespace {
+// Describes how the accumulator recursion performed by an instruction can be
+// turned into a loop.
+struct AccumulatorRecursion {
+  // Value the accumulator PHI is seeded with on entry to the loop.
+  Constant *InitVal;
+
+  // Index of the operand holding the result of the recursive call, which is
+  // rewritten to use the accumulator PHI.
+  unsigned OpIdx;
+
+  // Whether this is a unary recurrence (see getUnaryRecurrenceOperand). The
+  // accumulator then already holds the final value when a base case is
+  // reached, whereas an associative and commutative accumulator, seeded with
+  // the identity, still has to be combined with the returned value.
+  bool IsUnary;
+};
+} // namespace
+
 // This function checks whether the instruction I can be used
 // to perform accumulator recursion elimination for the
 // call instruction CI.
-static Constant *canTransformAccumulatorRecursion(Instruction *I,
-                                                  CallInst *CI) {
-  bool IsUnaryAccumulatorRecurrence = isUnaryAccumulatorRecurrence(I);
-  if ((!I->isAssociative() || !I->isCommutative()) &&
-      !IsUnaryAccumulatorRecurrence)
-    return nullptr;
-
-  assert(I->getNumOperands() >= 2 &&
-         "Associative/commutative operations should have at least 2 args!");
-
-  Constant *AccInitVal = nullptr;
-  if (IsUnaryAccumulatorRecurrence) {
-    // For unary accumulator recurrences, we require that the recursive call
-    // is always on the first operand.
-    if (I->getOperand(0) != CI)
-      return nullptr;
-
-    // findTRECandidate guarantees CI is a recursive call to its own
-    // function, so scan the enclosing function for the base-case return.
-    AccInitVal = findBaseCaseRetConstant(*CI->getFunction(), /*AccRecInstr=*/I);
-    if (!AccInitVal)
-      return nullptr;
-  } else {
-    AccInitVal = ConstantExpr::getIdentity(I, I->getType());
-    if (!AccInitVal)
-      return nullptr;
-
-    // Exactly one operand should be the result of the call instruction.
-    if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
-        (I->getOperand(0) != CI && I->getOperand(1) != CI))
-      return nullptr;
-  }
-
+static std::optional<AccumulatorRecursion>
+canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
   // The only user of this instruction we allow is a single return instruction.
   if (!I->hasOneUse() || !isa<ReturnInst>(I->user_back()))
-    return nullptr;
+    return std::nullopt;
 
-  return AccInitVal;
+  // An associative and commutative accumulator can be seeded with the identity
+  // of the operation, so prefer it: unlike the unary form below, it does not
+  // constrain the base cases of the recursion.
+  if (I->isAssociative() && I->isCommutative()) {
+    assert(I->getNumOperands() >= 2 &&
+           "Associative/commutative operations should have at least 2 args!");
+
+    // Exactly one operand should be the result of the call instruction.
+    if ((I->getOperand(0) == CI) != (I->getOperand(1) == CI))
+      if (Constant *Identity = ConstantExpr::getIdentity(I, I->getType()))
+        return AccumulatorRecursion{Identity, I->getOperand(0) == CI ? 0u : 1u,
+                                    /*IsUnary=*/false};
+  }
+
+  std::optional<unsigned> OpIdx = getUnaryRecurrenceOperand(I, CI);
+  if (!OpIdx)
+    return std::nullopt;
+
+  // findTRECandidate guarantees CI is a recursive call to its own function, so
+  // scan the enclosing function for the base-case return.
+  Constant *InitVal =
+      findBaseCaseRetConstant(*CI->getFunction(), /*AccRecInstr=*/I);
+  if (!InitVal)
+    return std::nullopt;
+
+  return AccumulatorRecursion{InitVal, *OpIdx, /*IsUnary=*/true};
 }
 
 namespace {
@@ -577,7 +616,10 @@ class TailRecursionEliminator {
   // The instruction doing the accumulating.
   Instruction *AccumulatorRecursionInstr = nullptr;
 
-  Constant *AccumulatorInitialValue = nullptr;
+  // How that instruction accumulates, as reported by
+  // canTransformAccumulatorRecursion. It cannot be recomputed once the
+  // instruction has been rewritten to use AccPN instead of the call.
+  AccumulatorRecursion AccumulatorKind = {nullptr, 0, false};
 
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
@@ -740,7 +782,7 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   for (pred_iterator PI = PB; PI != PE; ++PI) {
     BasicBlock *P = *PI;
     if (P == &F.getEntryBlock()) {
-      AccPN->addIncoming(AccumulatorInitialValue, P);
+      AccPN->addIncoming(AccumulatorKind.InitVal, P);
     } else {
       AccPN->addIncoming(AccPN, P);
     }
@@ -815,18 +857,17 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // arithmetic operation that could be transformed using accumulator
     // recursion elimination. Check to see if this is the case, and if so,
     // remember which instruction accumulates for later.
-    Constant *AccInitVal = canTransformAccumulatorRecursion(&*BBI, CI);
+    std::optional<AccumulatorRecursion> AccRec =
+        canTransformAccumulatorRecursion(&*BBI, CI);
 
-    if (AccPN || !AccInitVal)
+    if (AccPN || !AccRec)
       return false; // We cannot eliminate the tail recursion!
 
     // Yes, this is accumulator recursion.  Remember which instruction
-    // accumulates.
+    // accumulates, and how it does so (in particular the initial value of the
+    // accumulator).
     AccRecInstr = &*BBI;
-
-    // Keep track of the base case (i.e., initial value) of the accumulator
-    // return value if any.
-    AccumulatorInitialValue = AccInitVal;
+    AccumulatorKind = *AccRec;
   }
 
   BasicBlock *BB = Ret->getParent();
@@ -871,7 +912,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // Rewrite the accumulator recursion instruction so that it does not use
     // the result of the call anymore, instead, use the PHI node we just
     // inserted.
-    AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
+    AccRecInstr->setOperand(AccumulatorKind.OpIdx, AccPN);
 
     // Reassociating into the loop reorders the operands, so flags from the
     // original order (nsw/nuw/exact/...) may no longer hold.
@@ -980,7 +1021,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           if (!RI)
             continue;
 
-          if (isUnaryAccumulatorRecurrence(AccRecInstr)) {
+          if (AccumulatorKind.IsUnary) {
             // Base-case initialization: the accumulator PHI already holds the
             // final result, so return it directly.
             RI->setOperand(0, AccPN);
@@ -1014,7 +1055,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
         // We need to insert a copy of our accumulator instruction before any
         // of the selects we inserted, and select its result instead.
         for (SelectInst *SI : RetSelects) {
-          if (isUnaryAccumulatorRecurrence(AccRecInstr)) {
+          if (AccumulatorKind.IsUnary) {
             SI->setFalseValue(AccPN);
           } else {
             SI->setFalseValue(
