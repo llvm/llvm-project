@@ -822,6 +822,19 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.One.clearLowBits(LogOfAlign);
     break;
   }
+  case TargetOpcode::G_UITOFP: {
+    Known.makeNonNegative();
+    break;
+  }
+  case TargetOpcode::G_SITOFP: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    if (Known2.isNonNegative())
+      Known.makeNonNegative();
+    else if (Known2.isNegative())
+      Known.makeNegative();
+    break;
+  }
   case TargetOpcode::G_MERGE_VALUES: {
     unsigned NumOps = MI.getNumOperands();
     unsigned OpSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
