@@ -920,9 +920,9 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
 /// Create a GenericOp or CategoryOp from the given named operation `linalgOp`
 /// and replace the given `linalgOp`. Return failure if `linalgOp` is a
 /// GenericOp or misses a region builder.
-FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
-                                       LinalgOp linalgOp,
-                                       bool emitCategoryOps = false);
+FailureOr<LinalgOp> generalizeNamedOp(RewriterBase &rewriter,
+                                      LinalgOp linalgOp,
+                                      bool emitCategoryOps = false);
 
 /// Replace the given GenericOp with a namedOp or categoryOp.
 FailureOr<LinalgOp> specializeGenericOp(RewriterBase &rewriter,
@@ -1671,7 +1671,7 @@ struct LinalgGeneralizationPattern
 
   /// `matchAndRewrite` implementation that returns the significant
   /// transformed pieces of IR.
-  FailureOr<GenericOp>
+  FailureOr<LinalgOp>
   returningMatchAndRewrite(LinalgOp op, PatternRewriter &rewriter) const {
     return generalizeNamedOp(rewriter, op);
   }
@@ -1711,9 +1711,10 @@ struct LinalgCategorizationPattern : public OpInterfaceRewritePattern<LinalgOp> 
 
   FailureOr<LinalgOp>
   returningMatchAndRewrite(LinalgOp op, PatternRewriter &rewriter) const {
+    bool emitCategoryOps = true;
     if (GenericOp generic = dyn_cast<GenericOp>(*op))
-      return specializeGenericOp(rewriter, generic, true);
-    return generalizeNamedOp(rewriter, op);
+      return specializeGenericOp(rewriter, generic, emitCategoryOps);
+    return generalizeNamedOp(rewriter, op, emitCategoryOps);
   }
 
   LogicalResult matchAndRewrite(LinalgOp op,
