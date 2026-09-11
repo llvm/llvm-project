@@ -5139,8 +5139,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                       llvm::ConstantInt::get(Int32Ty, Offset)));
   }
   case Builtin::BI__builtin_return_address: {
-    Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
-                                                   getContext().UnsignedIntTy);
+    Value *Depth = ConstantEmitter(*this).emitAbstract(
+        E->getArg(0), getContext().getIntTypeForBitwidth(32, 0));
     Function *F =
         CGM.getIntrinsic(Intrinsic::returnaddress, {CGM.ProgramPtrTy});
     return RValue::get(Builder.CreateCall(F, Depth));
@@ -5151,8 +5151,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateCall(F, Builder.getInt32(0)));
   }
   case Builtin::BI__builtin_frame_address: {
-    Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
-                                                   getContext().UnsignedIntTy);
+    Value *Depth = ConstantEmitter(*this).emitAbstract(
+        E->getArg(0), getContext().getIntTypeForBitwidth(32, 0));
     Function *F = CGM.getIntrinsic(Intrinsic::frameaddress, AllocaInt8PtrTy);
     return RValue::get(Builder.CreateCall(F, Depth));
   }
