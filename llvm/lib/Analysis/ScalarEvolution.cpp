@@ -13538,8 +13538,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       return RHS;
   }
 
-  const SCEV *End = nullptr, *BECount = nullptr,
-             *BECountIfBackedgeTaken = nullptr;
+  const SCEV *End = nullptr, *BECount = getCouldNotCompute(),
+             *BECountIfBackedgeTaken = getCouldNotCompute();
   if (!isLoopInvariant(RHS, L)) {
     const auto *RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS);
     if (PositiveStride && RHSAddRec != nullptr && RHSAddRec->getLoop() == L &&
@@ -13717,7 +13717,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       BECount = getUDivExpr(Numerator, Stride);
     }
 
-    if (!BECount) {
+    if (isa<SCEVCouldNotCompute>(BECount)) {
       auto canProveRHSGreaterThanEqualStart = [&]() {
         auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
         const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
@@ -13780,8 +13780,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   bool MaxOrZero = false;
   if (isa<SCEVConstant>(BECount)) {
     ConstantMaxBECount = BECount;
-  } else if (BECountIfBackedgeTaken &&
-             isa<SCEVConstant>(BECountIfBackedgeTaken)) {
+  } else if (isa<SCEVConstant>(BECountIfBackedgeTaken)) {
     // If we know exactly how many times the backedge will be taken if it's
     // taken at least once, then the backedge count will either be that or
     // zero.
