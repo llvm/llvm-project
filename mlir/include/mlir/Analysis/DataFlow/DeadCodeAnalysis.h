@@ -173,6 +173,11 @@ public:
 /// for region entry blocks and region control-flow operations. For the
 /// callgraph, this analysis determines the callsites and live returns of every
 /// function.
+///
+/// This analysis reads `Lattice<ConstantValue>` state to refine branches on
+/// constant conditions. It requires `SparseConstantPropagation` to initialize
+/// those lattices to either known constants or unknown values; otherwise,
+/// uninitialized branch operands can prevent successors from being marked live.
 class DeadCodeAnalysis : public DataFlowAnalysis {
 public:
   explicit DeadCodeAnalysis(DataFlowSolver &solver);
@@ -184,6 +189,8 @@ public:
   /// Visit an operation with control-flow semantics and deduce which of its
   /// successors are live.
   LogicalResult visit(ProgramPoint *point) override;
+
+  void getDependentAnalyses(AnalysisDependencies &deps) const override;
 
 private:
   /// Find and mark symbol callables with potentially unknown callsites as

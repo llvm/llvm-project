@@ -29,6 +29,58 @@
 
 namespace mlir {
 
+class DataFlowAnalysis;
+
+//===----------------------------------------------------------------------===//
+// AnalysisDependencies
+//===----------------------------------------------------------------------===//
+
+/// Collection of sibling analyses a `DataFlowAnalysis` subclass declares it
+/// requires via `DataFlowAnalysis::getDependentAnalyses`. The solver consults
+/// it at `initializeAndRun` time and errors out if any declared analysis is
+/// missing from the solver.
+///
+/// Declared analyses are *not* auto-loaded by the solver. `DataFlowSolver::
+/// load<T>` can take arbitrary constructor arguments that the framework
+/// cannot synthesize, so the caller retains control of how each analysis is
+/// instantiated; this class only captures the contract. Use hard
+/// dependencies sparingly, and only for analyses that are strictly required
+/// for correctness; analyses that would merely improve precision should be
+/// loaded explicitly by the pipeline author instead.
+///
+/// Dependencies are matched by `TypeID`. Analyses defined inside an
+/// anonymous namespace must therefore provide an explicit TypeID via
+/// `MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID` (see
+/// `mlir/Support/TypeID.h`).
+class AnalysisDependencies {
+public:
+  /// A declared dependency. `typeID` is used for matching; `name` is
+  /// purely informational and is used in diagnostics.
+  struct Dependency {
+    TypeID typeID;
+    StringRef name;
+  };
+
+  /// Declare that the enclosing analysis depends on `AnalysisT`. Repeated
+  /// declarations of the same dependency are deduplicated so validation
+  /// diagnostics do not carry redundant notes.
+  template <typename AnalysisT>
+  void insert() {
+    static_assert(std::is_base_of_v<DataFlowAnalysis, AnalysisT>,
+                  "dependency must derive from DataFlowAnalysis");
+    TypeID id = TypeID::get<AnalysisT>();
+    for (const Dependency &dep : deps)
+      if (dep.typeID == id)
+        return;
+    deps.push_back({id, llvm::getTypeName<AnalysisT>()});
+  }
+
+  ArrayRef<Dependency> getDependencies() const { return deps; }
+
+private:
+  SmallVector<Dependency> deps;
+};
+
 //===----------------------------------------------------------------------===//
 // ChangeResult
 //===----------------------------------------------------------------------===//
@@ -262,9 +314,6 @@ struct LatticeAnchor
   Location getLoc() const;
 };
 
-/// Forward declaration of the data-flow analysis class.
-class DataFlowAnalysis;
-
 } // namespace mlir
 
 template <>
@@ -332,6 +381,12 @@ public:
   template <typename AnalysisT, typename... Args>
   AnalysisT *load(Args &&...args);
 
+  /// Return the loaded analysis of type `AnalysisT`, or nullptr if no such
+  /// analysis is loaded. Matches are by exact TypeID: subclasses of
+  /// `AnalysisT` will not be returned when querying for `AnalysisT`.
+  template <typename AnalysisT>
+  AnalysisT *lookupAnalysis() const;
+
   /// Initialize analyses starting from the provided top-level operation and
   /// run the analysis until fixpoint.
   ///
@@ -339,6 +394,11 @@ public:
   /// initialized.  When no filter is given every loaded analysis is
   /// (re-)initialized.  The fixpoint loop always processes all enqueued work
   /// items regardless of the filter.
+  ///
+  /// Returns failure if any child analysis selected by the filter fails during
+  /// initialization or fixpoint iteration, or if dependency validation fails
+  /// (a selected child analysis declares a dependency via
+  /// `DataFlowAnalysis::getDependentAnalyses` that has not been loaded).
   LogicalResult initializeAndRun(
       Operation *top,
       llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter = nullptr);
@@ -641,14 +701,30 @@ public:
   ///
   /// This function will union lattice anchor to same equivalent class if the
   /// analysis can determine the lattice content of lattice anchor is
-  /// necessarily identical under the corrensponding lattice type.
+  /// necessarily identical under the corresponding lattice type.
   virtual void initializeEquivalentLatticeAnchor(Operation *top) {}
 
-  /// Return the TypeID of the concrete analysis class. Valid only after
-  /// `DataFlowSolver::load<AnalysisT>` has returned; must not be called from
-  /// the analysis constructor body because the TypeID is set by `load` after
-  /// construction.
-  TypeID getTypeID() const { return analysisTypeID; }
+  /// Register the analyses that this analysis depends on. Each declared
+  /// dependency must be loaded into the solver (via `DataFlowSolver::load`)
+  /// before `initializeAndRun`; otherwise `initializeAndRun` fails with a
+  /// diagnostic listing the missing dependencies.
+  ///
+  /// Subclasses that override this method should chain to the parent's
+  /// `getDependentAnalyses` so that dependencies inherited from base classes
+  /// are preserved. Declarations are deduplicated, so the order of calls
+  /// does not matter.
+  virtual void getDependentAnalyses(AnalysisDependencies &deps) const {}
+
+  /// Return the TypeID of this analysis. Valid only after
+  /// `DataFlowSolver::load<AnalysisT>` has returned; must not be read from
+  /// the analysis constructor body. Used by the solver to match declared
+  /// dependencies.
+  TypeID getTypeID() const { return analysisID; }
+
+  /// Return a printable name for the analysis. Valid only after
+  /// `DataFlowSolver::load<AnalysisT>` has returned; must not be read from
+  /// the analysis constructor body. Used for diagnostics and debug logging.
+  StringRef getName() const { return analysisName; }
 
 protected:
   /// Create a dependency between the given analysis state and lattice anchor
@@ -716,19 +792,20 @@ protected:
   /// Return the configuration of the solver used for this analysis.
   const DataFlowConfig &getSolverConfig() const { return solver.getConfig(); }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// When compiling with debugging, keep a name for the analyis.
-  StringRef debugName;
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// Return the parent solver.
+  const DataFlowSolver &getSolver() const { return solver; }
 
 private:
   /// The parent data-flow solver.
   DataFlowSolver &solver;
 
-  /// The TypeID of the concrete analysis class. Set by
-  /// `DataFlowSolver::load` after construction; not available during the
-  /// analysis constructor.
-  TypeID analysisTypeID;
+  /// The TypeID of the concrete analysis type. Set by `DataFlowSolver::load`,
+  /// used to match declared dependencies.
+  TypeID analysisID;
+
+  /// Printable name of the analysis. Set by `DataFlowSolver::load`. Used for
+  /// diagnostics when reporting missing dependencies and for debug logging.
+  StringRef analysisName;
 
   /// Allow the data-flow solver to access the internals of this class.
   friend class DataFlowSolver;
@@ -736,12 +813,24 @@ private:
 
 template <typename AnalysisT, typename... Args>
 AnalysisT *DataFlowSolver::load(Args &&...args) {
+  assert(lookupAnalysis<AnalysisT>() == nullptr &&
+         "analysis of this type already loaded into the solver");
   childAnalyses.emplace_back(new AnalysisT(*this, std::forward<Args>(args)...));
-  childAnalyses.back()->analysisTypeID = TypeID::get<AnalysisT>();
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  childAnalyses.back()->debugName = llvm::getTypeName<AnalysisT>();
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+  DataFlowAnalysis &analysis = *childAnalyses.back();
+  analysis.analysisID = TypeID::get<AnalysisT>();
+  analysis.analysisName = llvm::getTypeName<AnalysisT>();
   return static_cast<AnalysisT *>(childAnalyses.back().get());
+}
+
+template <typename AnalysisT>
+AnalysisT *DataFlowSolver::lookupAnalysis() const {
+  // Linear search over `childAnalyses`. Solvers typically hold a handful of
+  // analyses, so a hash map would cost more than it saves.
+  TypeID id = TypeID::get<AnalysisT>();
+  for (const std::unique_ptr<DataFlowAnalysis> &analysis : childAnalyses)
+    if (analysis->getTypeID() == id)
+      return static_cast<AnalysisT *>(analysis.get());
+  return nullptr;
 }
 
 template <typename StateT>
