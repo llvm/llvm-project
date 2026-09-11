@@ -302,7 +302,7 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 }
 
 bool llvm::isDereferenceableAndAlignedInLoop(
-    LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+    LoadInst *LI, const Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
@@ -323,8 +323,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
 }
 
 bool llvm::isDereferenceableAndAlignedInLoop(
-    const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV, Loop *L,
-    ScalarEvolution &SE, DominatorTree &DT, AssumptionCache *AC,
+    const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV,
+    const Loop *L, ScalarEvolution &SE, DominatorTree &DT, AssumptionCache *AC,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   bool IsInvariant = SE.isLoopInvariant(PtrSCEV, L);
   if (!IsInvariant) {

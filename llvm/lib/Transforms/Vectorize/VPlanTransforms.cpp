@@ -5669,7 +5669,6 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         if (!vputils::isUniformAcrossVFsAndUFs(Addr))
           return false;
         ScalarEvolution &SE = *CostCtx.PSE.getSE();
-        Loop *L = const_cast<Loop *>(CostCtx.L);
         const SCEV *PtrSCEV =
             vputils::getSCEVExprForVPValue(Addr, CostCtx.PSE, CostCtx.L);
         if (isa<SCEVCouldNotCompute>(PtrSCEV))
@@ -5680,8 +5679,16 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                       DL.getTypeStoreSize(ScalarTy).getFixedValue());
         auto &LI = cast<LoadInst>(*VPI->getUnderlyingInstr());
 
-        if (!isDereferenceableAndAlignedInLoop(
-                PtrSCEV, LI.getAlign(), SE.getConstant(EltSize), L, SE, DT))
+        // Suppress speculative loads for sanitizers.
+        const Function &F = *LI.getFunction();
+        if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
+            F.hasFnAttribute(Attribute::SanitizeMemory) ||
+            F.hasFnAttribute(Attribute::SanitizeThread) ||
+            F.hasFnAttribute(Attribute::SanitizeHWAddress))
+          return false;
+        if (!isDereferenceableAndAlignedInLoop(PtrSCEV, LI.getAlign(),
+                                               SE.getConstant(EltSize),
+                                               CostCtx.L, SE, DT))
           return false;
         auto *Recipe = VPBuilder::createSingleScalarOp(
             VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr,
