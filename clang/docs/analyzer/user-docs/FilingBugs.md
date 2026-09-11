@@ -11,6 +11,5 @@ following:
   are seeing, including what you thought should have been the expected behavior
   and why.
 
-Please [file bugs and feature requests](https://llvm.org/docs/HowToSubmitABug.html)
+Please [file bugs and feature requests](inv:llvm:std:doc#HowToSubmitABug)
 in [LLVM's issue tracker](https://github.com/llvm/llvm-project/issues) and label the report with the `clang:static analyzer` label.
-
