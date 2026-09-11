@@ -38,5 +38,3 @@ Here is the code:
 ```{literalinclude} ../../examples/Kaleidoscope/BuildingAJIT/Chapter4/KaleidoscopeJIT.h
 :language: c++
 ```
-
-Next: Remote-JITing -- Process-isolation and laziness-at-a-distance
