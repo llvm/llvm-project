@@ -11538,6 +11538,8 @@ def err_x86_builtin_invalid_scale : Error<
   "scale argument must be 1, 2, 4, or 8">;
 def err_x86_builtin_tile_arg_duplicate : Error<
   "tile arguments must refer to different tiles">;
+def err_x86_builtin_invalid_scale_group : Error<
+  "scale group argument must have bits 2, 5, 6, and 7 clear">;
 
 def err_builtin_target_unsupported : Error<
   "builtin is not supported on this target">;

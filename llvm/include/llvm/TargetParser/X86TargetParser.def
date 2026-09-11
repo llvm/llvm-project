@@ -263,6 +263,7 @@ X86_FEATURE       (NDD,                "ndd")
 X86_FEATURE       (EGPR,               "egpr")
 X86_FEATURE       (ZU,                 "zu")
 X86_FEATURE       (JMPABS,             "jmpabs")
+X86_FEATURE       (ACEV1,              "acev1")
 
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")

@@ -167,6 +167,7 @@ set(webassembly_files
 
 set(x86_files
 # Intrinsics
+  acev1intrin.h
   adcintrin.h
   adxintrin.h
   ammintrin.h

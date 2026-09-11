@@ -711,6 +711,82 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     MI.tieOperands(0, 1);
     return true;
   }
+  case X86::PTOP2BF16PStrrV:
+  case X86::PTOP4BUUDtrrV:
+  case X86::PTOP4BUSDtrrV:
+  case X86::PTOP4BSSDtrrV:
+  case X86::PTOP4BSUDtrrV: {
+    MI.untieRegOperand(4);
+    for (unsigned i = 3; i > 0; --i)
+      MI.removeOperand(i);
+    unsigned Opc = 0;
+    switch (Opcode) {
+    case X86::PTOP2BF16PStrrV:
+      Opc = X86::TOP2BF16PStrr;
+      break;
+    case X86::PTOP4BUUDtrrV:
+      Opc = X86::TOP4BUUDtrr;
+      break;
+    case X86::PTOP4BUSDtrrV:
+      Opc = X86::TOP4BUSDtrr;
+      break;
+    case X86::PTOP4BSSDtrrV:
+      Opc = X86::TOP4BSSDtrr;
+      break;
+    case X86::PTOP4BSUDtrrV:
+      Opc = X86::TOP4BSUDtrr;
+      break;
+    default:
+      llvm_unreachable("Unexpected ACE opcode");
+    }
+    MI.setDesc(TII->get(Opc));
+    MI.tieOperands(0, 1);
+    return true;
+  }
+  case X86::PTOP4MXHF8PStrriV:
+  case X86::PTOP4MXBHF8PStrriV:
+  case X86::PTOP4MXHBF8PStrriV:
+  case X86::PTOP4MXBF8PStrriV:
+  case X86::PTOP4MXBSSPStrriV: {
+    MI.untieRegOperand(5);
+    for (unsigned i = 3; i > 0; --i)
+      MI.removeOperand(i);
+    unsigned ImmVal = MI.getOperand(1).getImm();
+    MI.removeOperand(1);
+    unsigned Opc = 0;
+    switch (Opcode) {
+    case X86::PTOP4MXHF8PStrriV:
+      Opc = X86::TOP4MXHF8PStrri;
+      break;
+    case X86::PTOP4MXBHF8PStrriV:
+      Opc = X86::TOP4MXBHF8PStrri;
+      break;
+    case X86::PTOP4MXHBF8PStrriV:
+      Opc = X86::TOP4MXHBF8PStrri;
+      break;
+    case X86::PTOP4MXBF8PStrriV:
+      Opc = X86::TOP4MXBF8PStrri;
+      break;
+    case X86::PTOP4MXBSSPStrriV:
+      Opc = X86::TOP4MXBSSPStrri;
+      break;
+    default:
+      llvm_unreachable("Unexpected ACE TOP4MX opcode");
+    }
+    MI.setDesc(TII->get(Opc));
+    MI.addOperand(MachineOperand::CreateImm(ImmVal));
+    MI.tieOperands(0, 1);
+    return true;
+  }
+  case X86::PTILEMOVCOLtreV:
+  case X86::PTILEMOVROWtreV: {
+    for (unsigned i = 2; i > 0; --i)
+      MI.removeOperand(i);
+    unsigned Opc = (Opcode == X86::PTILEMOVCOLtreV) ? X86::TILEMOVCOLtre
+                                                    : X86::TILEMOVROWtre;
+    MI.setDesc(TII->get(Opc));
+    return true;
+  }
   case X86::PTILESTOREDV: {
     for (int i = 1; i >= 0; --i)
       MI.removeOperand(i);
