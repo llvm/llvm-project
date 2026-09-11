@@ -17,6 +17,8 @@
 
 // RUN: %clang -target s390x-unknown-linux-gnu %s -mvx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-VX %s
 // RUN: %clang -target s390x-unknown-linux-gnu %s -mno-vx -mvx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-VX %s
+// RUN: %clang -target s390x-ibm-zos %s -mvx -march=arch11 -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-VX %s
+// RUN: %clang -target s390x-ibm-zos %s -mno-vx -mvx -march=arch11 -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-VX %s
 // CHECK-VX: "-target-feature" "+vector"
 // CHECK-VX-NOT: "-target-feature" "-vector"
 //
