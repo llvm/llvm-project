@@ -3354,11 +3354,15 @@ protected:
 
     // Lock every other owner before changing any target. Non-blocking
     // acquisition avoids lock-order deadlocks with other clients.
-    std::vector<std::unique_lock<std::recursive_mutex>> target_api_locks;
-    target_api_locks.reserve(targets_with_module.size() - 1);
-    for (size_t i = 1; i < targets_with_module.size(); ++i) {
-      target_api_locks.emplace_back(targets_with_module[i]->GetAPIMutex(),
-                                    std::try_to_lock);
+    std::vector<TargetAPIMutex> target_api_mutexes;
+    target_api_mutexes.reserve(targets_with_module.size() - 1);
+    for (size_t i = 1; i < targets_with_module.size(); ++i)
+      target_api_mutexes.emplace_back(targets_with_module[i]->GetAPIMutex());
+
+    std::vector<std::unique_lock<TargetAPIMutex>> target_api_locks;
+    target_api_locks.reserve(target_api_mutexes.size());
+    for (TargetAPIMutex &api_mutex : target_api_mutexes) {
+      target_api_locks.emplace_back(api_mutex, std::try_to_lock);
       if (!target_api_locks.back().owns_lock()) {
         result.AppendErrorWithFormatv(
             "another target containing '{0}' is busy; retry the command when "
