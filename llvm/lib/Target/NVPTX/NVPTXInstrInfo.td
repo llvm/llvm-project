@@ -183,7 +183,6 @@ def hasTensormapReplaceSupport : SubtargetPredicate;
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
 //  - conversions involving ue5m3x2
-//  - f16x2/bf16x2 mixed precision support
 def hasRubinFamilySupport : PredOr<[SM107f]>;
 
 // Checks tcgen05.shift instruction support.
@@ -265,6 +264,8 @@ def hasConvertWithStochasticRounding
 def hasConvertWithPZOSupport : PredOr<[hasRubinFamilySupport]>;
 
 def hasMBarrierLayoutSupport : PredAnd<[PTX93, SM90]>;
+
+def hasFP16x2MixedPrecisionSupport : PredOr<[hasRubinFamilySupport]>;
 
 //===----------------------------------------------------------------------===//
 // Some Common Instruction Class Templates
