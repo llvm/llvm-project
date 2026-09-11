@@ -3,18 +3,27 @@
 
 ; CHECK-DAG: OpName %[[#GetScope:]] "_Z8getScopev"
 ; CHECK-DAG: %[[#Long:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#WrkGrpConst2:]] = OpConstant %[[#Long]] 2
+; CHECK-DAG: %[[#ScopeWorkgroup:]] = OpConstant %[[#Long]] 2{{$}}
 ; CHECK-DAG: %[[#ScopeAllSvmDevices:]] = OpConstantNull %[[#Long]]
-; CHECK-DAG: %[[#InvocationConst4:]] = OpConstant %[[#Long]] 4
-; CHECK-DAG: %[[#Const8:]] = OpConstant %[[#Long]] 8
-; CHECK-DAG: %[[#Const16:]] = OpConstant %[[#Long]] 16
-; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Long]] 3
+; CHECK-DAG: %[[#ScopeInvocation:]] = OpConstant %[[#Long]] 4{{$}}
+; CHECK-DAG: %[[#Acquire:]] = OpConstant %[[#Long]] 2818
+; CHECK-DAG: %[[#Release:]] = OpConstant %[[#Long]] 2820
+; CHECK-DAG: %[[#AcqRel:]] = OpConstant %[[#Long]] 2824
+; CHECK-DAG: %[[#SeqCst:]] = OpConstant %[[#Long]] 2832
+; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Long]] 3{{$}}
 ; CHECK-DAG: %[[#Const912:]] = OpConstant %[[#Long]] 912
-; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#WrkGrpConst2]]
-; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#InvocationConst4]]
-; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#Const8]]
-; CHECK: OpMemoryBarrier %[[#InvocationConst4]] %[[#Const16]]
-; CHECK: OpMemoryBarrier %[[#WrkGrpConst2]] %[[#InvocationConst4]]
+; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#Long]] 42
+; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#Long]] 1{{$}}
+; CHECK-DAG: %[[#RelaxedCW:]] = OpConstant %[[#Long]] 512
+; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#Acquire]]
+; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#Release]]
+; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#AcqRel]]
+; CHECK: OpMemoryBarrier %[[#ScopeInvocation]] %[[#SeqCst]]
+; CHECK: OpMemoryBarrier %[[#ScopeWorkgroup]] %[[#Release]]
+; CHECK: OpFunctionEnd
+; CHECK: OpStore %[[#]] %[[#Const42]]
+; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#Release]]
+; CHECK: OpAtomicStore %[[#]] %[[#ScopeAllSvmDevices]] %[[#RelaxedCW]] %[[#Const1]]
 ; CHECK: OpFunctionEnd
 ; CHECK: %[[#ScopeId:]] = OpFunctionCall %[[#Long]] %[[#GetScope]]
 ; CHECK: OpControlBarrier %[[#Const3]] %[[#ScopeId:]] %[[#Const912]]
@@ -41,6 +50,13 @@ define spir_kernel void @fence_test_kernel4(ptr addrspace(1) noalias %s.ascast) 
 
 define spir_kernel void @fence_test_kernel5(ptr addrspace(1) noalias %s.ascast) {
   fence syncscope("workgroup") release
+  ret void
+}
+
+define spir_kernel void @fence_test_publish(ptr addrspace(1) %data, ptr addrspace(1) %flag) {
+  store i32 42, ptr addrspace(1) %data, align 4
+  fence release
+  store atomic i32 1, ptr addrspace(1) %flag monotonic, align 4
   ret void
 }
 
