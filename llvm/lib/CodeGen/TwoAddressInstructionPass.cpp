@@ -32,7 +32,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -42,7 +41,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -224,8 +222,6 @@ public:
     AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -256,8 +252,6 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
 
   PA.preserve<LiveVariablesAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -2124,6 +2118,10 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     MI.setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
     for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
       MI.removeOperand(j);
+    // The dead def of DstReg is left in place, so its live range is still
+    // correct. Drop it from the repaired set.
+    if (LIS)
+      llvm::erase(OrigRegs, DstReg);
   } else {
     if (LIS) {
       // Force live interval recomputation if we moved to a partial definition

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/CommentLexer.h"
+#include "clang/AST/Comment.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticComment.h"
@@ -420,7 +421,10 @@ void Lexer::lexCommentText(Token &T) {
             << FullRange << CommandName << CorrectedName
             << FixItHint::CreateReplacement(CommandRange, CorrectedName);
         } else {
-          formTokenWithChars(T, TokenPtr, tok::unknown_command);
+          formTokenWithChars(T, TokenPtr,
+                             CommandKind == tok::backslash_command
+                                 ? tok::unknown_backslash_command
+                                 : tok::unknown_at_command);
           T.setUnknownCommandName(CommandName);
           Diag(T.getLocation(), diag::warn_unknown_comment_command_name)
               << SourceRange(T.getLocation(), T.getEndLocation());

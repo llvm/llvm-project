@@ -6,12 +6,12 @@ name:            fceil
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fceil
-    ; CHECK: %res:_(s64) = G_FCONSTANT double 3.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 3.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.5
-    %res:_(s64) = G_FCEIL %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.5
+    %res:_(f64) = G_FCEIL %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -21,12 +21,12 @@ name:            fceil_negative
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fceil_negative
-    ; CHECK: %res:_(s64) = G_FCONSTANT double -2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double -2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double -2.5
-    %res:_(s64) = G_FCEIL %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double -2.5
+    %res:_(f64) = G_FCEIL %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -36,12 +36,12 @@ name:            ffloor
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ffloor
-    ; CHECK: %res:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.5
-    %res:_(s64) = G_FFLOOR %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.5
+    %res:_(f64) = G_FFLOOR %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -51,12 +51,12 @@ name:            ffloor_negative
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ffloor_negative
-    ; CHECK: %res:_(s64) = G_FCONSTANT double -3.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double -3.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double -2.5
-    %res:_(s64) = G_FFLOOR %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double -2.5
+    %res:_(f64) = G_FFLOOR %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -66,12 +66,12 @@ name:            intrinsic_trunc
 body:             |
   bb.0:
     ; CHECK-LABEL: name: intrinsic_trunc
-    ; CHECK: %res:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.7
-    %res:_(s64) = G_INTRINSIC_TRUNC %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.7
+    %res:_(f64) = G_INTRINSIC_TRUNC %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -81,12 +81,12 @@ name:            intrinsic_trunc_negative
 body:             |
   bb.0:
     ; CHECK-LABEL: name: intrinsic_trunc_negative
-    ; CHECK: %res:_(s64) = G_FCONSTANT double -2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double -2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double -2.7
-    %res:_(s64) = G_INTRINSIC_TRUNC %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double -2.7
+    %res:_(f64) = G_INTRINSIC_TRUNC %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -96,12 +96,12 @@ name:            intrinsic_round
 body:             |
   bb.0:
     ; CHECK-LABEL: name: intrinsic_round
-    ; CHECK: %res:_(s64) = G_FCONSTANT double 3.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 3.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.5
-    %res:_(s64) = G_INTRINSIC_ROUND %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.5
+    %res:_(f64) = G_INTRINSIC_ROUND %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -111,12 +111,12 @@ name:            intrinsic_roundeven
 body:             |
   bb.0:
     ; CHECK-LABEL: name: intrinsic_roundeven
-    ; CHECK: %res:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.5
-    %res:_(s64) = G_INTRINSIC_ROUNDEVEN %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.5
+    %res:_(f64) = G_INTRINSIC_ROUNDEVEN %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -126,12 +126,12 @@ name:            intrinsic_roundeven_odd
 body:             |
   bb.0:
     ; CHECK-LABEL: name: intrinsic_roundeven_odd
-    ; CHECK: %res:_(s64) = G_FCONSTANT double 4.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 4.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 3.5
-    %res:_(s64) = G_INTRINSIC_ROUNDEVEN %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 3.5
+    %res:_(f64) = G_INTRINSIC_ROUNDEVEN %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -141,12 +141,12 @@ name:            frint
 body:             |
   bb.0:
     ; CHECK-LABEL: name: frint
-    ; CHECK: %res:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.5
-    %res:_(s64) = G_FRINT %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.5
+    %res:_(f64) = G_FRINT %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -156,12 +156,12 @@ name:            fnearbyint
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fnearbyint
-    ; CHECK: %res:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.5
-    %res:_(s64) = G_FNEARBYINT %a
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.5
+    %res:_(f64) = G_FNEARBYINT %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...

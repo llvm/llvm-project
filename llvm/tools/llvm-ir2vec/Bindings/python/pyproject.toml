@@ -1,0 +1,35 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ir2vec"
+dynamic = ["version"]
+description = "Python bindings for IR2Vec, an LLVM IR embedding framework"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = "Apache-2.0 WITH LLVM-exception"
+license-files = ["LICENSE.TXT"]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.23"]
+
+[project.urls]
+Homepage = "https://llvm.org/"
+"Issue Tracker" = "https://github.com/llvm/llvm-project/issues"
+"Source Code" = "https://github.com/llvm/llvm-project/tree/main/llvm/tools/llvm-ir2vec"
+
+[tool.setuptools.dynamic]
+version = {attr = "ir2vec.__version__"}
+
+# TODO: When ir2vec python bindings add support for Windows and MacOS,
+# we should update the expected patterns to include the
+# appropriate file extensions for each platform, e.g.:
+# "*.pyd", "*.dylib",
+[tool.setuptools.package-data]
+ir2vec = ["*.so", "*.json"]
+
+[tool.setuptools.packages.find]
+include = ["ir2vec*"]

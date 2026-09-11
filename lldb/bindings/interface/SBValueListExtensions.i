@@ -29,7 +29,8 @@
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all values in a lldb.SBValueList object.'''
-            return lldb_iter(self, 'GetSize', 'GetValueAtIndex')
+            for i in range(self.GetSize()):
+                yield self.GetValueAtIndex(i)
 
         def __len__(self):
             return int(self.GetSize())

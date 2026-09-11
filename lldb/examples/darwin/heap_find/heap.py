@@ -118,13 +118,24 @@ typedef struct vm_range_t {
 } vm_range_t;
 typedef kern_return_t (*memory_reader_t)(task_t, vm_address_t, vm_size_t, void **);
 typedef void (*vm_range_recorder_t)(task_t, void *, unsigned, vm_range_t *, unsigned);
+
+#if __has_feature(ptrauth_calls)
+#define MALLOC_INTROSPECT_FN_PTR(fn) __ptrauth(/*ptrauth_key_process_independent_code*/ 0, 1, __builtin_ptrauth_string_discriminator("malloc_introspect_fn." #fn)) fn
+#define MALLOC_INTROSPECT_TBL_PTR(ptr) __ptrauth(/* ptrauth_key_process_independent_data*/ 2, 0, __builtin_ptrauth_string_discriminator("malloc_introspect_tbl")) ptr
+#else
+#define MALLOC_INTROSPECT_FN_PTR(fn) fn
+#define MALLOC_INTROSPECT_TBL_PTR(ptr) ptr
+#endif
+
 typedef struct malloc_introspection_t {
-    kern_return_t (*enumerator)(task_t task, void *, unsigned type_mask, vm_address_t zone_address, memory_reader_t reader, vm_range_recorder_t recorder); /* enumerates all the malloc pointers in use */
+    kern_return_t (*MALLOC_INTROSPECT_FN_PTR(enumerator))(task_t task, void *, unsigned type_mask, vm_address_t zone_address, memory_reader_t reader, vm_range_recorder_t recorder); /* enumerates all the malloc pointers in use */
 } malloc_introspection_t;
+
 typedef struct malloc_zone_t {
     void *reserved1[12];
-    struct malloc_introspection_t	*introspect;
+    struct malloc_introspection_t	*MALLOC_INTROSPECT_TBL_PTR(introspect);
 } malloc_zone_t;
+
 kern_return_t malloc_get_all_zones(task_t, memory_reader_t, vm_address_t **, unsigned *);
 memory_reader_t task_peek = [](task_t, vm_address_t remote_address, vm_size_t, void **local_memory) -> kern_return_t {
     *local_memory = (void*) remote_address;

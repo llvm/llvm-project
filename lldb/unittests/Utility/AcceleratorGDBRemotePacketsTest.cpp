@@ -187,3 +187,141 @@ TEST(AcceleratorGDBRemotePacketsTest,
   EXPECT_EQ("exit",
             deserialized->actions->breakpoints[0].by_name->function_name);
 }
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorConnectionInfo) {
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:1234";
+  conn.platform_name = "remote-gdb-server";
+  conn.triple = "amdgcn-amd-amdhsa";
+  conn.exe_path = "/path/to/accel.elf";
+  conn.synchronous = true;
+
+  Expected<AcceleratorConnectionInfo> deserialized = roundtripJSON(conn);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(conn.connect_url, deserialized->connect_url);
+  EXPECT_EQ(conn.platform_name, deserialized->platform_name);
+  EXPECT_EQ(conn.triple, deserialized->triple);
+  EXPECT_EQ(conn.exe_path, deserialized->exe_path);
+  EXPECT_EQ(conn.synchronous, deserialized->synchronous);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorConnectionInfoMinimal) {
+  // Only the required fields; exe_path defaults to nullopt and synchronous to
+  // false.
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:5678";
+  conn.platform_name = "host";
+  conn.triple = "x86_64-unknown-linux-gnu";
+
+  Expected<AcceleratorConnectionInfo> deserialized = roundtripJSON(conn);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(conn.connect_url, deserialized->connect_url);
+  EXPECT_EQ(conn.platform_name, deserialized->platform_name);
+  EXPECT_EQ(conn.triple, deserialized->triple);
+  EXPECT_EQ(std::nullopt, deserialized->exe_path);
+  EXPECT_FALSE(deserialized->synchronous);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsWithConnectInfo) {
+  AcceleratorActions actions("mock", 3);
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:9999";
+  conn.synchronous = true;
+  actions.connect_info = std::move(conn);
+
+  Expected<AcceleratorActions> deserialized = roundtripJSON(actions);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  ASSERT_TRUE(deserialized->connect_info.has_value());
+  EXPECT_EQ("connect://localhost:9999",
+            deserialized->connect_info->connect_url);
+  EXPECT_TRUE(deserialized->connect_info->synchronous);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsWithoutConnectInfo) {
+  AcceleratorActions actions("mock", 4);
+
+  Expected<AcceleratorActions> deserialized = roundtripJSON(actions);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_FALSE(deserialized->connect_info.has_value());
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorSectionInfo) {
+  AcceleratorSectionInfo section;
+  section.names = {"PT_LOAD[0]", ".text"};
+  section.load_address = 0x400000;
+
+  Expected<AcceleratorSectionInfo> deserialized = roundtripJSON(section);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(section.names, deserialized->names);
+  EXPECT_EQ(section.load_address, deserialized->load_address);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorDynamicLoaderLibraryInfo) {
+  AcceleratorDynamicLoaderLibraryInfo lib;
+  lib.pathname = "/usr/lib/libgpu.so";
+  lib.uuid_str = "AABBCCDD";
+  lib.load = true;
+  lib.load_address = 0x7f000000;
+  lib.native_memory_address = 0x1000;
+  lib.native_memory_size = 0x2000;
+  lib.file_offset = 4096;
+  lib.file_size = 8192;
+
+  AcceleratorSectionInfo section;
+  section.names = {".text"};
+  section.load_address = 0x7f001000;
+  lib.loaded_sections.push_back(std::move(section));
+
+  Expected<AcceleratorDynamicLoaderLibraryInfo> deserialized =
+      roundtripJSON(lib);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(lib.pathname, deserialized->pathname);
+  EXPECT_EQ(lib.uuid_str, deserialized->uuid_str);
+  EXPECT_EQ(lib.load, deserialized->load);
+  EXPECT_EQ(lib.load_address, deserialized->load_address);
+  EXPECT_EQ(lib.native_memory_address, deserialized->native_memory_address);
+  EXPECT_EQ(lib.native_memory_size, deserialized->native_memory_size);
+  EXPECT_EQ(lib.file_offset, deserialized->file_offset);
+  EXPECT_EQ(lib.file_size, deserialized->file_size);
+  ASSERT_EQ(1u, deserialized->loaded_sections.size());
+  EXPECT_EQ(0x7f001000u, deserialized->loaded_sections[0].load_address);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorDynamicLoaderArgs) {
+  AcceleratorDynamicLoaderArgs args;
+  args.plugin_name = "mock";
+  args.full = true;
+
+  Expected<AcceleratorDynamicLoaderArgs> deserialized = roundtripJSON(args);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(args.plugin_name, deserialized->plugin_name);
+  EXPECT_EQ(args.full, deserialized->full);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorDynamicLoaderResponse) {
+  AcceleratorDynamicLoaderResponse response;
+  AcceleratorDynamicLoaderLibraryInfo lib;
+  lib.pathname = "/path/to/lib.so";
+  lib.load = true;
+  response.library_infos.push_back(std::move(lib));
+
+  Expected<AcceleratorDynamicLoaderResponse> deserialized =
+      roundtripJSON(response);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  ASSERT_EQ(1u, deserialized->library_infos.size());
+  EXPECT_EQ("/path/to/lib.so", deserialized->library_infos[0].pathname);
+  EXPECT_TRUE(deserialized->library_infos[0].load);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, DynamicLoaderLibraryInfoOptionalFields) {
+  // A server with no per-section addresses can omit "loaded_sections".
+  Expected<AcceleratorDynamicLoaderLibraryInfo> deserialized =
+      json::parse<AcceleratorDynamicLoaderLibraryInfo>(
+          R"({"pathname":"/path/to/lib.so","load":true})",
+          "AcceleratorDynamicLoaderLibraryInfo");
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ("/path/to/lib.so", deserialized->pathname);
+  EXPECT_TRUE(deserialized->load);
+  EXPECT_TRUE(deserialized->loaded_sections.empty());
+  EXPECT_FALSE(deserialized->load_address.has_value());
+}

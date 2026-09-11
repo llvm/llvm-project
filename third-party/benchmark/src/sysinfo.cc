@@ -143,7 +143,7 @@ struct ValueUnion {
   }
 
   template <class T, int N>
-  std::array<T, N> GetAsArray() {
+  BENCHMARK_MAYBE_UNUSED std::array<T, N> GetAsArray() {
     const int arr_size = sizeof(T) * N;
     BM_CHECK_LE(arr_size, size);
     std::array<T, N> arr;
@@ -204,7 +204,8 @@ bool GetSysctl(std::string const& name, Tp* out) {
 }
 
 template <class Tp, size_t N>
-bool GetSysctl(std::string const& name, std::array<Tp, N>* out) {
+BENCHMARK_MAYBE_UNUSED bool GetSysctl(std::string const& name,
+                                      std::array<Tp, N>* out) {
   auto buff = GetSysctlImp(name);
   if (!buff) return false;
   *out = buff.GetAsArray<Tp, N>();

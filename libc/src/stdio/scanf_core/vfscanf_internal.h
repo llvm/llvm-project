@@ -17,7 +17,6 @@
 #include "src/stdio/scanf_core/scanf_main.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
-#include "src/stdio/ferror.h"
 #include "src/stdio/getc.h"
 #include "src/stdio/ungetc.h"
 #endif
@@ -38,8 +37,6 @@ LIBC_INLINE void flockfile(::FILE *) { return; }
 
 LIBC_INLINE void funlockfile(::FILE *) { return; }
 
-LIBC_INLINE int ferror_unlocked(::FILE *f) { return LIBC_NAMESPACE::ferror(f); }
-
 LIBC_INLINE int getc(::FILE *f) { return LIBC_NAMESPACE::getc(f); }
 
 LIBC_INLINE void ungetc(int c, ::FILE *f) { LIBC_NAMESPACE::ungetc(c, f); }
@@ -54,17 +51,13 @@ LIBC_INLINE void funlockfile(FILE *f) {
   reinterpret_cast<LIBC_NAMESPACE::File *>(f)->unlock();
 }
 
-LIBC_INLINE int ferror_unlocked(FILE *f) {
-  return reinterpret_cast<LIBC_NAMESPACE::File *>(f)->error_unlocked();
-}
-
 LIBC_INLINE int getc(FILE *f) {
   unsigned char c;
   auto result =
       reinterpret_cast<LIBC_NAMESPACE::File *>(f)->read_unlocked(&c, 1);
   size_t r = result.value;
   if (result.has_error() || r != 1)
-    return '\0';
+    return EOF;
 
   return c;
 }
@@ -81,8 +74,6 @@ LIBC_INLINE void flockfile(::FILE *) { return; }
 
 LIBC_INLINE void funlockfile(::FILE *) { return; }
 
-LIBC_INLINE int ferror_unlocked(::FILE *f) { return ::ferror(f); }
-
 LIBC_INLINE int getc(::FILE *f) { return ::getc(f); }
 
 LIBC_INLINE void ungetc(int c, ::FILE *f) { ::ungetc(c, f); }
@@ -95,16 +86,25 @@ namespace scanf_core {
 
 class StreamReader : public Reader<StreamReader> {
   ::FILE *stream;
+  bool eof = false;
 
 public:
   LIBC_INLINE StreamReader(::FILE *stream) : stream(stream) {}
 
   LIBC_INLINE char getc() {
-    return static_cast<char>(internal::getc(static_cast<FILE *>(stream)));
+    int c = internal::getc(stream);
+    if (c == EOF) {
+      eof = true;
+      return '\0';
+    }
+    return static_cast<char>(c);
   }
   LIBC_INLINE void ungetc(int c) {
-    internal::ungetc(c, static_cast<FILE *>(stream));
+    // Don't ungetc the EOF to prevent clearing EOF indicator on stream.
+    if (!eof)
+      internal::ungetc(c, stream);
   }
+  LIBC_INLINE bool reached_eof() const { return eof; }
 };
 
 LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
@@ -113,7 +113,7 @@ LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
   internal::flockfile(stream);
   scanf_core::StreamReader reader(stream);
   int retval = scanf_core::scanf_main(&reader, format, args);
-  if (retval == 0 && internal::ferror_unlocked(stream))
+  if (retval == 0 && reader.reached_eof())
     retval = EOF;
   internal::funlockfile(stream);
 

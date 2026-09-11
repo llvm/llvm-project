@@ -133,11 +133,17 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                                               raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   auto Range = RISCVSysReg::lookupSysRegByEncoding(Imm);
+  bool PreferFeatureSpecific = llvm::any_of(Range, [&](const auto &Reg) {
+    return !Reg.IsAltName && !Reg.IsDeprecatedName &&
+           Reg.FeaturesRequired.any() &&
+           Reg.haveRequiredFeatures(STI.getFeatureBits());
+  });
   for (auto &Reg : Range) {
     if (Reg.IsAltName || Reg.IsDeprecatedName)
       continue;
-    if (Reg.haveRequiredFeatures(STI.getFeatureBits())) {
-      markup(O, Markup::Register) << Reg.Name;
+    if (Reg.haveRequiredFeatures(STI.getFeatureBits()) &&
+        (!PreferFeatureSpecific || Reg.FeaturesRequired.any())) {
+      markup(O, Markup::Register) << RISCVSysReg::getSysRegStr(Reg.Name);
       return;
     }
   }
@@ -160,6 +166,16 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
     O << 'w';
   if (FenceArg == 0)
     O << "0";
+}
+
+void RISCVInstPrinter::printSMTVType(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  auto VType =
+      static_cast<XSMTVTypeMode::SMTVTypeMode>(MI->getOperand(OpNo).getImm());
+  assert(XSMTVTypeMode::isValidSMTVTypeMode(VType) &&
+         "SpacemiT's Integer Matrix only supports [i4|i8] mode");
+  O << ", " << XSMTVTypeMode::SMTVTypeModeToString(VType);
 }
 
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,

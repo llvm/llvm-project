@@ -492,10 +492,14 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     address_type = eAddressTypeHost;
     if (exe_ctx) {
       if (Target *target = exe_ctx->GetTargetPtr()) {
-        // Registers are always stored in host endian.
-        data.SetByteOrder(m_context_type == ContextType::RegisterInfo
-                              ? endian::InlHostByteOrder()
-                              : target->GetArchitecture().GetByteOrder());
+        ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
+        // ValueObjectRegister stores typed vectors in target byte order and
+        // all other register buffers in host byte order.
+        if (m_context_type == ContextType::RegisterInfo &&
+            !llvm::isa_and_present<RegisterTypeVector>(
+                GetRegisterInfo()->register_type))
+          byte_order = endian::InlHostByteOrder();
+        data.SetByteOrder(byte_order);
         data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
         break;
       }

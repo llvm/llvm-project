@@ -48,4 +48,3 @@ define float @test_atomicrmw_fsub_f32(ptr %ptr, float %value) {
   %res = atomicrmw fsub ptr %ptr, float %value seq_cst
   ret float %res
 }
-

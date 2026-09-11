@@ -33,6 +33,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
@@ -448,15 +449,17 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::ReadRegions() {
   m_regions.clear();
   if (!InitializeVTableSymbols())
     return false;
-  Status error;
   ProcessSP process_sp = GetProcessSP();
-  if (process_sp) {
-    lldb::addr_t region_addr =
-        process_sp->ReadPointerFromMemory(m_trampoline_header, error);
-    if (error.Success())
-      return ReadRegions(region_addr);
+  if (!process_sp)
+    return false;
+
+  llvm::Expected<lldb::addr_t> region_addr =
+      process_sp->ReadPointerFromMemory(m_trampoline_header);
+  if (!region_addr) {
+    llvm::consumeError(region_addr.takeError());
+    return false;
   }
-  return false;
+  return ReadRegions(*region_addr);
 }
 
 bool AppleObjCTrampolineHandler::AppleObjCVTables::ReadRegions(
@@ -977,6 +980,10 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       ObjCLanguageRuntime *objc_runtime =
           ObjCLanguageRuntime::Get(*thread.GetProcess());
       assert(objc_runtime != nullptr);
+      // We have the address in the ISA pointer of our object, but it might
+      // be a masked value, so we need to get the Pointer ISA:
+      isa_addr = objc_runtime->GetPointerISA(isa_addr);
+
       LLDB_LOG(log, "Resolving call for class - {0} and selector - {1}",
                isa_addr, sel_addr);
       impl_addr = objc_runtime->LookupInMethodCache(isa_addr, sel_addr);

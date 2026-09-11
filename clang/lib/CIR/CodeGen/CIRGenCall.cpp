@@ -26,9 +26,11 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-CIRGenFunctionInfo *CIRGenFunctionInfo::create(
-    FunctionType::ExtInfo info, bool isInstanceMethod, CanQualType resultType,
-    llvm::ArrayRef<CanQualType> argTypes, RequiredArgs required) {
+CIRGenFunctionInfo *
+CIRGenFunctionInfo::create(cir::CallingConv cirCC, FunctionType::ExtInfo info,
+                           bool isInstanceMethod, CanQualType resultType,
+                           llvm::ArrayRef<CanQualType> argTypes,
+                           RequiredArgs required) {
   // The first slot allocated for arg type slot is for the return value.
   void *buffer = operator new(
       totalSizeToAlloc<CanQualType>(argTypes.size() + 1));
@@ -37,11 +39,21 @@ CIRGenFunctionInfo *CIRGenFunctionInfo::create(
 
   CIRGenFunctionInfo *fi = new (buffer) CIRGenFunctionInfo();
 
+  fi->callingConvention = llvm::to_underlying(cirCC);
+  fi->astCallingConvention = info.getCC();
   fi->noReturn = info.getNoReturn();
   fi->instanceMethod = isInstanceMethod;
 
   fi->required = required;
   fi->numArgs = argTypes.size();
+
+  // requiredArguments() reads getNumRequiredArgs() entries out of the
+  // trailing-object array, so a signature that claims more required arguments
+  // than we have types for reads past the end and hands a null QualType to
+  // convertType.
+  assert((!required.allowsOptionalArgs() ||
+          required.getNumRequiredArgs() <= fi->numArgs) &&
+         "more required arguments than argument types");
 
   fi->getArgTypes()[0] = resultType;
   std::copy(argTypes.begin(), argTypes.end(), fi->argTypesBegin());
@@ -311,7 +323,7 @@ void CIRGenModule::constructAttributeList(
     llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
     mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
     cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
-  assert(!cir::MissingFeatures::opCallCallConv());
+  callingConv = info.getCallingConvention();
   sideEffect = cir::SideEffect::All;
 
   auto addUnitAttr = [&](llvm::StringRef name) {
@@ -421,8 +433,12 @@ void CIRGenModule::constructAttributeList(
       }
     }
 
-    // TODO(cir): Quite a few CUDA and OpenCL attributes are added here, like
-    // uniform-work-group-size.
+    // TODO(cir): Quite a few CUDA and OpenCL attributes are added here.
+
+    // -cl-uniform-work-group-size / -foffload-uniform-block: work groups are
+    // uniform (global work-size is a multiple of work-group size).
+    if (langOpts.OffloadUniformBlock)
+      addUnitAttr(cir::CIRDialect::getUniformWorkGroupSizeAttrName());
 
     if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
         targetDecl->hasAttr<CUDAGlobalAttr>()) {
@@ -492,11 +508,18 @@ void CIRGenModule::constructAttributeList(
         "sigsetjmp", "__sigsetjmp", "savectx", "getcontext"};
     if (returnsTwiceFn.contains(name))
       addUnitAttr(cir::CIRDialect::getReturnsTwiceAttrName());
+
+    llvm::StringMap<std::string> cpuAndFeatures;
+    if (getCPUAndFeaturesAttributes(calleeInfo.getCalleeDecl(),
+                                    cpuAndFeatures)) {
+      for (const auto &[key, val] : cpuAndFeatures)
+        attrs.set(key, builder.getStringAttr(val));
+    }
   }
 
   // TODO(cir): A bunch of non-call-site function IR attributes from
   // declaration-specific information, including tail calls,
-  // cmse_nonsecure_entry, CPU-features/overrides, and hotpatch support.
+  // cmse_nonsecure_entry, and hotpatch support.
 
   // TODO(cir): Add loader-replaceable attribute here.
 
@@ -930,9 +953,13 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
   RequiredArgs required = RequiredArgs::All;
 
   if (const auto *proto = dyn_cast<FunctionProtoType>(fnType)) {
-    unsigned numExtraSlots = getNumPassObjectSizeParams(proto);
+    // A free function call has no extra prefix arguments. Note that
+    // getFromProtoWithExtraSlots already accounts for the prototype's
+    // pass_object_size parameters; adding them here too would double-count
+    // them and make the signature claim more required arguments than `args`
+    // actually holds.
     if (proto->isVariadic())
-      required = RequiredArgs::getFromProtoWithExtraSlots(proto, numExtraSlots);
+      required = RequiredArgs::getFromProtoWithExtraSlots(proto, 0);
   } else if (cgm.getTargetCIRGenInfo().isNoProtoCallVariadic(
                  cast<FunctionNoProtoType>(fnType)))
     cgm.errorNYI("call to function without a prototype");
@@ -1016,6 +1043,29 @@ CIRGenTypes::arrangeFreeFunctionCall(const CallArgList &args,
   return arrangeFreeFunctionLikeCall(*this, cgm, args, fnType);
 }
 
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
+                                        const CallArgList &args) {
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  for (const CallArg &arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
+
+  CanQualType retType = resultType->getCanonicalTypeUnqualified();
+  return arrangeCIRFunctionInfo(retType, /*isInstanceMethod=*/false, argTypes,
+                                FunctionType::ExtInfo(), RequiredArgs::All);
+}
+
+/// Set calling convention for CUDA/HIP kernel.
+static void setCUDAKernelCallingConvention(CanQualType &funcTy,
+                                           CIRGenModule &cgm,
+                                           const FunctionDecl *fd) {
+  if (fd->hasAttr<CUDAGlobalAttr>()) {
+    const FunctionType *ft = funcTy->getAs<FunctionType>();
+    cgm.getTargetCIRGenInfo().setCUDAKernelCallingConvention(ft);
+    funcTy = ft->getCanonicalTypeUnqualified();
+  }
+}
+
 /// Arrange the argument and result information for a declaration or definition
 /// of the given C++ non-static member function. The member function must be an
 /// ordinary function, i.e. not a constructor or destructor.
@@ -1024,9 +1074,9 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *md) {
   assert(!isa<CXXConstructorDecl>(md) && "wrong method for constructors!");
   assert(!isa<CXXDestructorDecl>(md) && "wrong method for destructors!");
 
-  auto prototype =
-      md->getType()->getCanonicalTypeUnqualified().getAs<FunctionProtoType>();
-  assert(!cir::MissingFeatures::cudaSupport());
+  CanQualType funcTy = md->getType()->getCanonicalTypeUnqualified();
+  setCUDAKernelCallingConvention(funcTy, cgm, md);
+  auto prototype = funcTy.getAs<FunctionProtoType>();
 
   // Mirrors classic CodeGen's check at CGCall.cpp.  C++23 explicit-object
   // member functions (P0847R7, `void f(this Self&&)`) do not receive an
@@ -1076,8 +1126,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
   CanQualType funcTy = fd->getType()->getCanonicalTypeUnqualified();
 
   assert(isa<FunctionType>(funcTy));
-  // TODO: setCUDAKernelCallingConvention
-  assert(!cir::MissingFeatures::cudaSupport());
+  setCUDAKernelCallingConvention(funcTy, cgm, fd);
 
   // When declaring a function without a prototype, always use a non-variadic
   // type.
@@ -1161,11 +1210,15 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                mlir::Location loc) {
+                                bool isMustTail, mlir::Location loc) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
+
+  const Decl *targetDecl = callee.getAbstractInfo().getCalleeDecl().getDecl();
+  const FunctionDecl *callerDecl = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
+  const FunctionDecl *calleeDecl = dyn_cast_or_null<FunctionDecl>(targetDecl);
 
   assert(!cir::MissingFeatures::emitLifetimeMarkers());
 
@@ -1338,7 +1391,52 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (callOp)
     *callOp = theCall;
 
-  assert(!cir::MissingFeatures::opCallMustTail());
+  // Sema/emitAttributedStmt (see
+  // https://github.com/llvm/llvm-project/issues/214764) should one-day enforce
+  // that only one of these is valid at a time. For now, we have the same 'bug'
+  // as classic codegen where we can end up having BOTH of these.
+  if (inNoInlineAttributedStmt)
+    theCall.setInlineKind(cir::InlineKind::NoInline);
+  if (inAlwaysInlineAttributedStmt &&
+      !cgm.getTargetCIRGenInfo().wouldInliningViolateFunctionCallABI(
+          callerDecl, calleeDecl))
+    theCall.setInlineKind(cir::InlineKind::AlwaysInline);
+
+  if (isMustTail) {
+    // PPC/MIPS have some diagnostics for classic-codegen, but we don't support
+    // them yet.
+    const llvm::Triple &triple = getTarget().getTriple();
+    if (triple.isPPC() || triple.isMIPS()) {
+      cgm.errorNYI(mustTailCall->getBeginLoc(),
+                   "musttail call target legality checks");
+      return getUndefRValue(retTy);
+    }
+
+    // Musttail is required to return immediately. Classic codegen does some
+    // work here to go through the exception handling scopes to put them before
+    // the call (it seems?) since musttail must be the last op before the
+    // return.  For now, skip this so we an do it later.
+    if (ehStack.stable_begin() != prologueCleanupDepth) {
+      cgm.errorNYI(mustTailCall->getBeginLoc(),
+                   "musttail call that skips cleanups");
+      return getUndefRValue(retTy);
+    }
+
+    theCall->setAttr(cir::CIRDialect::getMustTailAttrName(),
+                     builder.getUnitAttr());
+
+    if (isa<cir::VoidType>(convertType(retTy)))
+      cir::ReturnOp::create(builder, loc);
+    else
+      cir::ReturnOp::create(builder, loc, theCall->getResult(0));
+
+    // Musttail must return immediately, so we just do that.  All of the below
+    // stuff is effectively UB if this is a musttail, so just do a return
+    // immediately.
+    builder.createBlock(builder.getBlock()->getParent());
+    return getUndefRValue(retTy);
+  }
+
   assert(!cir::MissingFeatures::opCallReturn());
 
   mlir::Type retCIRTy = convertType(retTy);

@@ -136,11 +136,25 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   return module_filespec;
 }
 
+// CreateToolhelp32Snapshot walks a process list that other processes are
+// concurrently modifying, and fails with ERROR_BAD_LENGTH when it loses that
+// race. The documented remedy is to retry.
+static HANDLE CreateProcessSnapshot() {
+  constexpr int max_attempts = 10;
+  for (int attempt = 0; attempt < max_attempts; ++attempt) {
+    HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot != INVALID_HANDLE_VALUE ||
+        ::GetLastError() != ERROR_BAD_LENGTH)
+      return snapshot;
+  }
+  return INVALID_HANDLE_VALUE;
+}
+
 uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &process_infos) {
   process_infos.clear();
 
-  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  AutoHandle snapshot(CreateProcessSnapshot());
   if (!snapshot.IsValid())
     return 0;
 
@@ -179,22 +193,21 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   process_info.SetProcessID(pid);
   GetProcessExecutableAndTriple(handle, process_info);
 
-  // Need to read the PEB to get parent process and command line arguments.
-
-  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  AutoHandle snapshot(CreateProcessSnapshot());
   if (!snapshot.IsValid())
     return false;
 
   PROCESSENTRY32W pe;
   pe.dwSize = sizeof(PROCESSENTRY32W);
-  if (Process32FirstW(snapshot.get(), &pe)) {
-    do {
-      if (pe.th32ProcessID == pid) {
-        process_info.SetParentProcessID(pe.th32ParentProcessID);
-        return true;
-      }
-    } while (Process32NextW(snapshot.get(), &pe));
-  }
+  if (!Process32FirstW(snapshot.get(), &pe))
+    return false;
+
+  do {
+    if (pe.th32ProcessID == pid) {
+      process_info.SetParentProcessID(pe.th32ParentProcessID);
+      return true;
+    }
+  } while (Process32NextW(snapshot.get(), &pe));
 
   return false;
 }

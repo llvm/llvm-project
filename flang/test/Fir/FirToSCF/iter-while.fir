@@ -20,7 +20,7 @@
 // CHECK:             scf.condition(%[[ANDI_2]]) %[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]] : index, i1, i16, i32
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_4:.*]]: index, %[[VAL_5:.*]]: i1, %[[VAL_6:.*]]: i16, %[[VAL_7:.*]]: i32):
-// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_4]], %[[CONSTANT_2]] : index
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_4]], %[[CONSTANT_2]] overflow<nsw> : index
 // CHECK:             %[[CONSTANT_7:.*]] = arith.constant true
 // CHECK:             %[[CONSTANT_8:.*]] = arith.constant 22 : i16
 // CHECK:             %[[CONSTANT_9:.*]] = arith.constant 33 : i32
@@ -62,7 +62,7 @@ func.func @test_simple_iterate_while_1() -> (index, i1, i16, i32) {
 // CHECK:             scf.condition(%[[ANDI_2]]) %[[VAL_0]], %[[VAL_1]], %[[VAL_2]] : index, i1, i32
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_3:.*]]: index, %[[VAL_4:.*]]: i1, %[[VAL_5:.*]]: i32):
-// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_3]], %[[CONSTANT_0]] : index
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_3]], %[[CONSTANT_0]] overflow<nsw> : index
 // CHECK:             %[[CONSTANT_2:.*]] = arith.constant 123 : i32
 // CHECK:             %[[CONSTANT_3:.*]] = arith.constant true
 // CHECK:             scf.yield %[[ADDI_0]], %[[CONSTANT_3]], %[[CONSTANT_2]] : index, i1, i32
@@ -99,7 +99,7 @@ func.func @test_simple_iterate_while_2(%start: index, %stop: index, %cond: i1, %
 // CHECK:             scf.condition(%[[ANDI_2]]) %[[VAL_0]], %[[VAL_1]] : index, i1
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_2:.*]]: index, %[[VAL_3:.*]]: i1):
-// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_2]], %[[CONSTANT_0]] : index
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_2]], %[[CONSTANT_0]] overflow<nsw> : index
 // CHECK:             %[[VAL_4:.*]] = "test.get_some_value"() : () -> i1
 // CHECK:             scf.yield %[[ADDI_0]], %[[VAL_4]] : index, i1
 // CHECK:           } attributes {finalValue}
@@ -133,7 +133,7 @@ func.func @loop_with_negtive_step(%lo : index, %up : index) -> i1 {
 // CHECK:             scf.condition(%[[ANDI_2]]) %[[VAL_0]], %[[VAL_1]] : index, i1
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_2:.*]]: index, %[[VAL_3:.*]]: i1):
-// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_2]], %[[CONSTANT_0]] : index
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_2]], %[[CONSTANT_0]] overflow<nsw> : index
 // CHECK:             %[[VAL_4:.*]] = "test.get_some_value"() : () -> i1
 // CHECK:             scf.yield %[[ADDI_0]], %[[VAL_4]] : index, i1
 // CHECK:           } attributes {finalValue}
@@ -168,7 +168,7 @@ func.func @loop_with_zero_step(%lo : index, %up : index) -> i1 {
 // CHECK:             scf.condition(%[[ANDI_2]]) %[[VAL_0]], %[[VAL_1]], %[[VAL_2]] : index, i1, i8
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_3:.*]]: index, %[[VAL_4:.*]]: i1, %[[VAL_5:.*]]: i8):
-// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_3]], %[[CONSTANT_2]] : index
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_3]], %[[CONSTANT_2]] overflow<nsw> : index
 // CHECK:             scf.yield %[[ADDI_0]], %[[VAL_4]], %[[VAL_5]] : index, i1, i8
 // CHECK:           } attributes {finalValue}
 // CHECK:           return %[[VAL_6:.*]]#0, %[[VAL_6]]#1, %[[VAL_6]]#2 : index, i1, i8
@@ -205,7 +205,7 @@ func.func @test_zero_iterations() -> (index, i1, i8) {
 // CHECK:             scf.condition(%[[ANDI_2]]) %[[VAL_0]], %[[VAL_1]] : index, i1
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_2:.*]]: index, %[[VAL_3:.*]]: i1):
-// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_2]], %[[CONSTANT_0]] : index
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_2]], %[[CONSTANT_0]] overflow<nsw> : index
 // CHECK:             %[[VAL_4:.*]] = "test.get_some_value"() : () -> i1
 // CHECK:             scf.yield %[[ADDI_0]], %[[VAL_4]] : index, i1
 // CHECK:           }

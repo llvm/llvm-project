@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace fir {
 #define GEN_PASS_DEF_CUFPREDEFINEDVARTOGPU
@@ -19,25 +21,6 @@ namespace fir {
 using namespace mlir;
 
 namespace {
-
-template <typename OpTyX, typename OpTyY, typename OpTyZ>
-static void createForAllDimensions(mlir::OpBuilder &builder, mlir::Location loc,
-                                   mlir::Value c1,
-                                   SmallVectorImpl<mlir::Value> &values,
-                                   bool incrementByOne = false) {
-  if (incrementByOne) {
-    auto baseX = OpTyX::create(builder, loc, builder.getI32Type());
-    values.push_back(mlir::arith::AddIOp::create(builder, loc, baseX, c1));
-    auto baseY = OpTyY::create(builder, loc, builder.getI32Type());
-    values.push_back(mlir::arith::AddIOp::create(builder, loc, baseY, c1));
-    auto baseZ = OpTyZ::create(builder, loc, builder.getI32Type());
-    values.push_back(mlir::arith::AddIOp::create(builder, loc, baseZ, c1));
-  } else {
-    values.push_back(OpTyX::create(builder, loc, builder.getI32Type()));
-    values.push_back(OpTyY::create(builder, loc, builder.getI32Type()));
-    values.push_back(OpTyZ::create(builder, loc, builder.getI32Type()));
-  }
-}
 
 static constexpr llvm::StringRef builtinsModuleName = "__fortran_builtins";
 static constexpr llvm::StringRef builtinVarPrefix = "__builtin_";
@@ -55,55 +38,117 @@ std::string mangleBuiltin(llvm::StringRef varName) {
          varName.str();
 }
 
-static void processCoordinateOp(mlir::OpBuilder &builder, mlir::Location loc,
-                                fir::CoordinateOp coordOp, unsigned fieldIdx,
-                                mlir::Value &gpuValue) {
+template <typename OpTy>
+static void
+processCoordinateOp(mlir::OpBuilder &builder, fir::CoordinateOp coordOp,
+                    unsigned fieldIdx, bool incrementByOne,
+                    llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete) {
   std::optional<llvm::ArrayRef<int32_t>> fieldIndices =
       coordOp.getFieldIndices();
   assert(fieldIndices && fieldIndices->size() == 1 &&
          "expect only one coordinate");
   if (static_cast<unsigned>((*fieldIndices)[0]) == fieldIdx) {
-    llvm::SmallVector<fir::LoadOp> opToErase;
     for (mlir::OpOperand &coordUse : coordOp.getResult().getUses()) {
       assert(mlir::isa<fir::LoadOp>(coordUse.getOwner()) &&
              "only expect load op");
       auto loadOp = mlir::dyn_cast<fir::LoadOp>(coordUse.getOwner());
+      // Use the loadOp's loc as the location info for the register read op.
+      mlir::Location loc = loadOp.getLoc();
+      builder.setInsertionPoint(loadOp);
+      mlir::Value gpuValue = OpTy::create(builder, loc, builder.getI32Type());
+      if (incrementByOne) {
+        auto c1 = mlir::arith::ConstantOp::create(
+            builder, loc, builder.getI32Type(), builder.getI32IntegerAttr(1));
+        gpuValue = mlir::arith::AddIOp::create(builder, loc, gpuValue, c1);
+      }
       loadOp.getResult().replaceAllUsesWith(gpuValue);
-      opToErase.push_back(loadOp);
+      opsToDelete.push_back(loadOp);
     }
-    for (auto op : opToErase)
-      op.erase();
   }
 }
 
+template <typename OpTyX, typename OpTyY, typename OpTyZ>
 static void
-processDeclareOp(mlir::OpBuilder &builder, mlir::Location loc,
-                 fir::DeclareOp declareOp, llvm::StringRef builtinVar,
-                 llvm::SmallVectorImpl<mlir::Value> &gpuValues,
-                 llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete) {
+processDeclareOp(mlir::OpBuilder &builder, fir::DeclareOp declareOp,
+                 llvm::StringRef builtinVar, bool incrementByOne,
+                 llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete,
+                 llvm::SmallPtrSetImpl<mlir::Operation *> &memrefDefiningOps) {
   if (declareOp.getUniqName().str().compare(builtinVar) == 0) {
     for (mlir::OpOperand &use : declareOp.getResult().getUses()) {
       fir::CoordinateOp coordOp =
           mlir::dyn_cast<fir::CoordinateOp>(use.getOwner());
-      processCoordinateOp(builder, loc, coordOp, field_x, gpuValues[0]);
-      processCoordinateOp(builder, loc, coordOp, field_y, gpuValues[1]);
-      processCoordinateOp(builder, loc, coordOp, field_z, gpuValues[2]);
+      processCoordinateOp<OpTyX>(builder, coordOp, field_x, incrementByOne,
+                                 opsToDelete);
+      processCoordinateOp<OpTyY>(builder, coordOp, field_y, incrementByOne,
+                                 opsToDelete);
+      processCoordinateOp<OpTyZ>(builder, coordOp, field_z, incrementByOne,
+                                 opsToDelete);
       opsToDelete.push_back(coordOp);
     }
     opsToDelete.push_back(declareOp.getOperation());
-    if (declareOp.getMemref().getDefiningOp())
-      opsToDelete.push_back(declareOp.getMemref().getDefiningOp());
+    // The backing fir.address_of may be shared by several declares (e.g. after
+    // CSE coalesces them when a device routine is inlined into a kernel).
+    // Collect it de-duplicated and erase it only once all declares are gone.
+    if (mlir::Operation *memrefOp = declareOp.getMemref().getDefiningOp())
+      memrefDefiningOps.insert(memrefOp);
   }
 }
 
 struct CUFPredefinedVarToGPU
     : public fir::impl::CUFPredefinedVarToGPUBase<CUFPredefinedVarToGPU> {
 
+  void rewritePredefinedVars(mlir::Region &region) {
+    if (region.empty())
+      return;
+
+    bool hasPredefinedDeclares = false;
+    region.walk([&](fir::DeclareOp declareOp) {
+      llvm::StringRef uniqName = declareOp.getUniqName();
+      hasPredefinedDeclares |= uniqName == mangleBuiltin(threadidx) ||
+                               uniqName == mangleBuiltin(blockidx) ||
+                               uniqName == mangleBuiltin(blockdim) ||
+                               uniqName == mangleBuiltin(griddim);
+    });
+    if (!hasPredefinedDeclares)
+      return;
+
+    mlir::OpBuilder builder(region.getContext());
+    llvm::SmallVector<mlir::Operation *> opsToDelete;
+    llvm::SmallPtrSet<mlir::Operation *, 4> memrefDefiningOps;
+    region.walk([&](fir::DeclareOp declareOp) {
+      processDeclareOp<mlir::NVVM::ThreadIdXOp, mlir::NVVM::ThreadIdYOp,
+                       mlir::NVVM::ThreadIdZOp>(
+          builder, declareOp, mangleBuiltin(threadidx),
+          /*incrementByOne=*/true, opsToDelete, memrefDefiningOps);
+      processDeclareOp<mlir::NVVM::BlockIdXOp, mlir::NVVM::BlockIdYOp,
+                       mlir::NVVM::BlockIdZOp>(
+          builder, declareOp, mangleBuiltin(blockidx),
+          /*incrementByOne=*/true, opsToDelete, memrefDefiningOps);
+      processDeclareOp<mlir::NVVM::BlockDimXOp, mlir::NVVM::BlockDimYOp,
+                       mlir::NVVM::BlockDimZOp>(
+          builder, declareOp, mangleBuiltin(blockdim),
+          /*incrementByOne=*/false, opsToDelete, memrefDefiningOps);
+      processDeclareOp<mlir::NVVM::GridDimXOp, mlir::NVVM::GridDimYOp,
+                       mlir::NVVM::GridDimZOp>(
+          builder, declareOp, mangleBuiltin(griddim),
+          /*incrementByOne=*/false, opsToDelete, memrefDefiningOps);
+    });
+
+    for (auto *op : opsToDelete)
+      op->erase();
+    // Erase each backing fir.address_of once, and only if no other user (e.g. a
+    // non-predefined declare) still references it.
+    for (auto *op : memrefDefiningOps)
+      if (op->use_empty())
+        op->erase();
+  }
+
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     if (funcOp.getBody().empty())
       return;
 
+    bool rewrittenWholeFunction = false;
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                 cuf::getProcAttrName())) {
@@ -111,42 +156,22 @@ struct CUFPredefinedVarToGPU
           cudaProcAttr.getValue() == cuf::ProcAttribute::Global ||
           cudaProcAttr.getValue() == cuf::ProcAttribute::GridGlobal ||
           cudaProcAttr.getValue() == cuf::ProcAttribute::HostDevice) {
-        mlir::Location loc = funcOp.getLoc();
-        mlir::OpBuilder builder(funcOp.getContext());
-        builder.setInsertionPointToStart(&funcOp.getBody().front());
-        auto c1 = mlir::arith::ConstantOp::create(
-            builder, loc, builder.getI32Type(), builder.getI32IntegerAttr(1));
-        llvm::SmallVector<mlir::Value, 3> threadids, blockids, blockdims,
-            griddims;
-        createForAllDimensions<mlir::NVVM::ThreadIdXOp, mlir::NVVM::ThreadIdYOp,
-                               mlir::NVVM::ThreadIdZOp>(
-            builder, loc, c1, threadids, /*incrementByOne=*/true);
-        createForAllDimensions<mlir::NVVM::BlockIdXOp, mlir::NVVM::BlockIdYOp,
-                               mlir::NVVM::BlockIdZOp>(
-            builder, loc, c1, blockids, /*incrementByOne=*/true);
-        createForAllDimensions<mlir::NVVM::GridDimXOp, mlir::NVVM::GridDimYOp,
-                               mlir::NVVM::GridDimZOp>(builder, loc, c1,
-                                                       griddims);
-        createForAllDimensions<mlir::NVVM::BlockDimXOp, mlir::NVVM::BlockDimYOp,
-                               mlir::NVVM::BlockDimZOp>(builder, loc, c1,
-                                                        blockdims);
-
-        llvm::SmallVector<mlir::Operation *> opsToDelete;
-        funcOp.walk([&](fir::DeclareOp declareOp) {
-          processDeclareOp(builder, loc, declareOp, mangleBuiltin(threadidx),
-                           threadids, opsToDelete);
-          processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockidx),
-                           blockids, opsToDelete);
-          processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockdim),
-                           blockdims, opsToDelete);
-          processDeclareOp(builder, loc, declareOp, mangleBuiltin(griddim),
-                           griddims, opsToDelete);
-        });
-
-        for (auto op : opsToDelete)
-          op->erase();
+        rewritePredefinedVars(funcOp.getRegion());
+        rewrittenWholeFunction = true;
       }
     }
+
+    if (rewrittenWholeFunction)
+      return;
+
+    // Host functions containing cuf.kernel or OpenACC compute regions can
+    // still carry predefined vars in the kernel body. Rewrite them in-place.
+    funcOp.walk([&](cuf::KernelOp kernelOp) {
+      rewritePredefinedVars(kernelOp.getRegion());
+    });
+    funcOp.walk([&](mlir::acc::ComputeRegionOpInterface computeOp) {
+      rewritePredefinedVars(computeOp->getRegion(0));
+    });
   }
 };
 

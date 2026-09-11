@@ -1,5 +1,5 @@
 set(ALPHA alpha)
-set(AMDGPU amdgcn)
+set(AMDGPU amdgcn amdgpu)
 set(ARM64 aarch64)
 set(ARM32 arm armhf)
 set(HEXAGON hexagon)
@@ -125,7 +125,7 @@ set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM32} ${ARM64} ${MIPS32} ${MIPS64}
     powerpc64le ${HEXAGON} ${LOONGARCH64} ${RISCV32} ${RISCV64} ${S390X})
 endif()
 set(ALL_XRAY_DSO_SUPPORTED_ARCH ${X86_64} ${ARM64})
-set(ALL_SHADOWCALLSTACK_SUPPORTED_ARCH ${ARM64})
+set(ALL_SHADOWCALLSTACK_SUPPORTED_ARCH ${ARM64} ${HEXAGON})
 
 if (UNIX)
   if (OS_NAME MATCHES "Linux")

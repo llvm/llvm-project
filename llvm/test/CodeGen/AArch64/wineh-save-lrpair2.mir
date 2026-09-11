@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
-# RUN:   -stop-after=prologepilog | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prolog-epilog \
+# RUN:   -stop-after=prolog-epilog | FileCheck %s
 
 # Check that when LR is paired with a GPR, we don't combine it into a
 # predecrement that can't be described as a SEH opcode.

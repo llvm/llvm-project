@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple amdgpu12.50-unknown-unknown -verify -emit-llvm -o - %s
 
 typedef float  v16f  __attribute__((ext_vector_type(16)));
 typedef float  v8f   __attribute__((ext_vector_type(8)));

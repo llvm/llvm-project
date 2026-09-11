@@ -6,6 +6,8 @@ declare void @g2()
 declare void @g3()
 declare void @g4()
 declare i32 @g5()
+declare void @cold() cold
+declare i1 @opaque()
 
 define void @test1(i32 %a, i32 %b) {
 entry:
@@ -519,7 +521,6 @@ exit:
 }
 
 declare i32 @InvokeCall()
-declare void @cold() cold
 
 ; If loop has single exit and it leads to 'cold' block then edge leading to loop enter
 ; should be considered 'cold' as well.
@@ -721,5 +722,79 @@ exit:
   ret void
 }
 
+define void @test19() {
+; CHECK-LABEL: Printing analysis {{.*}} for function 'test19'
+entry:
+  call void @cold()
+  %c0 = call i1 @opaque()
+  br i1 %c0, label %outer.header, label %exit
+; CHECK: edge %entry -> %outer.header probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %exit probability is 0x40000000 / 0x80000000 = 50.00%
 
+outer.header:
+  call void @cold()
+  br label %outer.body
+; CHECK: edge %outer.header -> %outer.body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
+outer.body:
+  %c2 = call i1 @opaque()
+  br i1 %c2, label %inner.header, label %bypass
+; CHECK: edge %outer.body -> %inner.header probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %outer.body -> %bypass probability is 0x40000000 / 0x80000000 = 50.00%
+
+inner.header:
+  call void @cold()
+  %c3 = call i1 @opaque()
+  br i1 %c3, label %outer.latch, label %inner.latch
+; CHECK: edge %inner.header -> %outer.latch probability is 0x0041edfd / 0x80000000 = 0.20%
+; CHECK: edge %inner.header -> %inner.latch probability is 0x7fbe1203 / 0x80000000 = 99.80% [HOT edge]
+
+outer.latch:
+  br label %outer.header
+; CHECK: edge %outer.latch -> %outer.header probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+bypass:
+  br label %outer.latch
+; CHECK: edge %bypass -> %outer.latch probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+exit:
+  ret void
+
+inner.latch:
+  %c7 = call i1 @opaque()
+  br i1 %c7, label %inner.header, label %outer.latch
+; CHECK: edge %inner.latch -> %inner.header probability is 0x7c0003e0 / 0x80000000 = 96.88% [HOT edge]
+; CHECK: edge %inner.latch -> %outer.latch probability is 0x03fffc20 / 0x80000000 = 3.12%
+}
+
+; Check that a cold irreducible loop propagates its estimated weight through
+; the blocks entering the SCC.
+define void @test20(i1 %arg, i1 %arg2, i1 %arg3, i1 %arg4) {
+; CHECK-LABEL: Printing analysis {{.*}} for function 'test20'
+entry:
+  br i1 %arg, label %dispatch, label %exit
+; CHECK: edge %entry -> %dispatch probability is 0x078780e3 / 0x80000000 = 5.88%
+; CHECK: edge %entry -> %exit probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
+
+dispatch:
+  br i1 %arg2, label %entry1, label %entry2
+
+entry1:
+  br label %loop1
+
+entry2:
+  br label %loop2
+
+loop1:
+  br i1 %arg3, label %loop2, label %cold
+
+loop2:
+  br i1 %arg4, label %loop1, label %cold
+
+cold:
+  call void @cold()
+  br label %exit
+
+exit:
+  ret void
+}

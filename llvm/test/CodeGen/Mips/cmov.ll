@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
 ; RUN: llc -mtriple=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
 ; RUN: llc -mtriple=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
+; RUN: llc -mtriple=mips -mcpu=mips32 -relocation-model=static -mgpopt -mattr=+noabicalls < %s | FileCheck %s -check-prefix=GPREL
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
 @i3 = common global ptr null, align 4
@@ -51,6 +52,11 @@ entry:
 
 ; ALL-LABEL: cmov2:
 
+; GPREL-LABEL: cmov2:
+; GPREL-DAG:   addiu $[[D:[0-9]+]], $gp, %gp_rel(d)
+; GPREL-DAG:   addiu $[[C:[0-9]+]], $gp, %gp_rel(c)
+; GPREL:       movn $[[D]], $[[C]], $4
+
 ; 32-CMOV-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
 ; 32-CMOV-DAG:  addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
 ; 32-CMOV-DAG:  movn  $[[R1]], $[[R0]], $4
@@ -65,7 +71,7 @@ entry:
 
 ; 64-CMOV:      daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(d)
 ; 64-CMOV:      daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got_disp(c)
-; 64-CMOV:      movn  $[[R1]], $[[R0]], $4
+; 64-CMOV:      movn  $[[R1]], $[[R0]], $2
 
 ; 64-CMP-DAG:   daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(d)
 ; 64-CMP-DAG:   daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got_disp(c)

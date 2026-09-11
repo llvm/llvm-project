@@ -192,6 +192,7 @@ FLOAT_TYPE_SEMANTICS(Float8E4M3FNUZType, Float8E4M3FNUZ)
 FLOAT_TYPE_SEMANTICS(Float8E4M3B11FNUZType, Float8E4M3B11FNUZ)
 FLOAT_TYPE_SEMANTICS(Float8E3M4Type, Float8E3M4)
 FLOAT_TYPE_SEMANTICS(Float8E8M0FNUType, Float8E8M0FNU)
+FLOAT_TYPE_SEMANTICS(Float8E5M3FNUType, Float8E5M3FNU)
 FLOAT_TYPE_SEMANTICS(BFloat16Type, BFloat)
 FLOAT_TYPE_SEMANTICS(Float16Type, IEEEhalf)
 FLOAT_TYPE_SEMANTICS(FloatTF32Type, FloatTF32)
@@ -614,6 +615,12 @@ bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
 
   // Supported built-in attributes.
   if (llvm::isa<IntegerAttr, StringAttr, DictionaryAttr>(memorySpace))
+    return true;
+
+  // Allow opaque attributes if unregistered dialects are allowed.
+  // They hold unregistered custom dialect attributes.
+  if (memorySpace.getContext()->allowsUnregisteredDialects() &&
+      isa<OpaqueAttr>(memorySpace))
     return true;
 
   // Allow custom dialect attributes.

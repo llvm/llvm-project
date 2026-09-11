@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -o - %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -stop-after=finalize-isel -o - %s | FileCheck --check-prefix=MIR %s
+; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -stop-after=finalize-isel -o - %s | FileCheck --check-prefix=MIR %s
 
 ; Ensure that the scoped AA is attached on loads/stores lowered from mem ops.
 

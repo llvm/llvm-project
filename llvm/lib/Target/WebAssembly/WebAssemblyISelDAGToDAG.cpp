@@ -24,6 +24,7 @@
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -273,6 +274,27 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
           GlobalGetIns, DL, PtrVT,
           CurDAG->getTargetExternalSymbol("__tls_align", PtrVT));
       ReplaceNode(Node, TLSAlign);
+      return;
+    }
+    case Intrinsic::wasm_ptr_to_funcref: {
+      // Convert a function pointer to a funcref by reading the corresponding
+      // entry from the __indirect_function_table.
+      MachineFunction &MF = CurDAG->getMachineFunction();
+      auto PtrVT = MVT::getIntegerVT(MF.getDataLayout().getPointerSizeInBits());
+      MCSymbol *Table = WebAssembly::getOrCreateFunctionTableSymbol(
+          MF.getContext(), Subtarget);
+      SDValue TableSym = CurDAG->getMCSymbol(Table, PtrVT);
+      SDValue FuncPtr = Node->getOperand(1);
+      if (Subtarget->hasAddr64() && FuncPtr.getValueType() == MVT::i64) {
+        // table.get expects an i32 but on 64 bit platforms the function pointer
+        // is an i64. In that case, i32.wrap_i64 to convert.
+        FuncPtr = SDValue(CurDAG->getMachineNode(WebAssembly::I32_WRAP_I64, DL,
+                                                 MVT::i32, FuncPtr),
+                          0);
+      }
+      MachineSDNode *FuncRef = CurDAG->getMachineNode(
+          WebAssembly::TABLE_GET_FUNCREF, DL, MVT::funcref, TableSym, FuncPtr);
+      ReplaceNode(Node, FuncRef);
       return;
     }
     case Intrinsic::wasm_ref_test_func: {
@@ -637,7 +659,13 @@ bool WebAssemblyDAGToDAGISel::SelectAtomicAddrOperands64(SDNode *Op, SDValue N,
 
 /// This pass converts a legalized DAG into a WebAssembly-specific DAG, ready
 /// for instruction scheduling.
-FunctionPass *llvm::createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
-                                             CodeGenOptLevel OptLevel) {
+WebAssemblyISelDAGToDAGPass::WebAssemblyISelDAGToDAGPass(
+    WebAssemblyTargetMachine &TM, CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(
+          std::make_unique<WebAssemblyDAGToDAGISel>(TM, OptLevel)) {}
+
+FunctionPass *
+llvm::createWebAssemblyISelDagLegacyPass(WebAssemblyTargetMachine &TM,
+                                         CodeGenOptLevel OptLevel) {
   return new WebAssemblyDAGToDAGISelLegacy(TM, OptLevel);
 }

@@ -8,7 +8,13 @@ target_sources(omptarget.rtl.amdgpu PRIVATE src/rtl.cpp)
 target_include_directories(omptarget.rtl.amdgpu PRIVATE
                            ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 
-if(hsa-runtime64_FOUND AND NOT "amdgpu" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
+if (WIN32 AND NOT "amdgpu" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
+  message(WARNING "Direct linking against libhsa is not supported on Windows; "
+                  "falling back to dlopen. Add 'amdgpu' to "
+                  "LIBOMPTARGET_DLOPEN_PLUGINS to silence this warning.")
+endif()
+
+if(hsa-runtime64_FOUND AND NOT "amdgpu" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS AND NOT WIN32)
   message(STATUS "Building AMDGPU plugin linked against libhsa")
   target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64)
 else()
@@ -23,7 +29,7 @@ option(LIBOMPTARGET_FORCE_AMDGPU_TESTS "Build AMDGPU libomptarget tests" OFF)
 if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
   # Report to the parent scope that we are building a plugin for amdgpu
   set(LIBOMPTARGET_SYSTEM_TARGETS
-      "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa" PARENT_SCOPE)
+      "${LIBOMPTARGET_SYSTEM_TARGETS} amdgpu-amd-amdhsa" PARENT_SCOPE)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.amdgpu")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()

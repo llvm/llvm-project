@@ -75,10 +75,10 @@ define float @not_maxnum(float %x) {
 
 define double @t6(float %a) {
 ; CHECK-LABEL: @t6(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], float 0.000000e+00, float [[A]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ult float [[TMP1:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext float [[TMP1]] to double
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP4]], double [[TMP2]], double 0.000000e+00
+; CHECK-NEXT:    ret double [[TMP3]]
 ;
   %1 = fcmp ult float %a, -0.0
   %2 = fpext float %a to double

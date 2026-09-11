@@ -38,7 +38,7 @@
 using namespace llvm;
 
 static cl::opt<bool> UseDerefAtPointSemantics(
-    "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
+    "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(true),
     cl::desc("Deref attributes and metadata infer facts at definition only"));
 
 //===----------------------------------------------------------------------===//
@@ -784,17 +784,21 @@ const Value *Value::stripAndAccumulateConstantOffsets(
         }
       }
       V = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(V) == Instruction::BitCast ||
-               Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
+    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
+      const Value *Src = cast<Operator>(V)->getOperand(0);
+      if (!Src->getType()->isPtrOrPtrVectorTy())
+        return V;
+      V = Src;
+    } else if (Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       V = cast<Operator>(V)->getOperand(0);
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (!GA->isInterposable())
         V = GA->getAliasee();
     } else if (const auto *Call = dyn_cast<CallBase>(V)) {
-        if (const Value *RV = Call->getReturnedArgOperand())
-          V = RV;
-        if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
-          V = Call->getArgOperand(0);
+      if (const Value *RV = Call->getReturnedArgOperand())
+        V = RV;
+      if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
+        V = Call->getArgOperand(0);
     } else if (auto *Int2Ptr = dyn_cast<Operator>(V)) {
       // Try to accumulate across (inttoptr (add (ptrtoint p), off)).
       if (!AllowNonInbounds || !LookThroughIntToPtr || !Int2Ptr ||
@@ -857,11 +861,20 @@ bool Value::canBeFreed() const {
     // another pointer to the same allocation. Readonly implies nofree.
     if ((A->hasNoFreeAttr() || A->onlyReadsMemory()) && A->hasNoAliasAttr())
       return false;
+
+    // nofreeobj means that the underlying object cannot be freed, even
+    // through a different pointer.
+    if (A->hasAttribute(Attribute::NoFreeObj))
+      return false;
   }
 
   if (auto *ITP = dyn_cast<IntToPtrInst>(this);
-      ITP && ITP->hasMetadata(LLVMContext::MD_nofree))
+      ITP && ITP->hasMetadata(LLVMContext::MD_nofreeobj))
     return false;
+
+  if (auto *CB = dyn_cast<CallBase>(this))
+    if (CB->hasRetAttr(Attribute::NoFreeObj))
+      return false;
 
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))

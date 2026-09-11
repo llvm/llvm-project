@@ -14,8 +14,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/mman.h>
-
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcPosixMadviseTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -45,6 +43,12 @@ TEST_F(LlvmLibcPosixMadviseTest, Error_BadPtr) {
 
   // posix_madvise doesn't set errno, but the return value is actually the error
   // code.
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU might stub madvise hints, so posix_madvise might return 0.
+  int ret = LIBC_NAMESPACE::posix_madvise(nullptr, 8, POSIX_MADV_SEQUENTIAL);
+  EXPECT_TRUE(ret == 0 || ret == ENOMEM);
+#else
   EXPECT_EQ(LIBC_NAMESPACE::posix_madvise(nullptr, 8, POSIX_MADV_SEQUENTIAL),
             ENOMEM);
+#endif
 }

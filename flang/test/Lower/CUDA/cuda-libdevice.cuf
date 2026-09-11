@@ -9,7 +9,7 @@ attributes(global) subroutine test_sad()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_sad
-! CHECK: %{{.*}} = fir.call @__nv_sad(%{{.*}}, %{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32, i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_sad(%{{.*}}, %{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32, i32, i32) -> i32
 
 attributes(global) subroutine test_usad()
   integer :: res
@@ -18,7 +18,7 @@ attributes(global) subroutine test_usad()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_usad
-! CHECK: %{{.*}} = fir.call @__nv_usad(%{{.*}}, %{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32, i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_usad(%{{.*}}, %{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32, i32, i32) -> i32
 
 attributes(global) subroutine test_dsqrt_rX()
   double precision :: res
@@ -30,10 +30,10 @@ attributes(global) subroutine test_dsqrt_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_dsqrt_rx
-! CHECK: %{{.*}} = fir.call @__dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__dsqrt_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__dsqrt_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__dsqrt_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__dsqrt_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__dsqrt_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__dsqrt_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f64
 
 attributes(global) subroutine test_uint2float_rX()
   real :: res
@@ -45,10 +45,10 @@ attributes(global) subroutine test_uint2float_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_uint2float_rx
-! CHECK: %{{.*}} = fir.call @__nv_uint2float_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_uint2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_uint2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_uint2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_uint2float_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_uint2float_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_uint2float_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_uint2float_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
 
 attributes(global) subroutine test_uint2double_rn()
   double precision :: res
@@ -57,7 +57,7 @@ attributes(global) subroutine test_uint2double_rn()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_uint2double_rn
-! CHECK: %{{.*}} = fir.call @__nv_uint2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_uint2double_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f64
 
 attributes(global) subroutine test_ull2dloat_rX()
   real :: res
@@ -69,10 +69,10 @@ attributes(global) subroutine test_ull2dloat_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_ull2dloat_rx
-! CHECK: %{{.*}} = fir.call @__nv_ull2float_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ull2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ull2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ull2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ull2float_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ull2float_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ull2float_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ull2float_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f32
 
 attributes(global) subroutine test_log()
   real :: res
@@ -83,9 +83,9 @@ attributes(global) subroutine test_log()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_log
-! CHECK: %{{.*}} = fir.call @__nv_fast_logf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_fast_log2f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_fast_log10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_logf(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_log2f(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_log10f(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
 
 attributes(global) subroutine test_sincosf()
   real :: r, s, c
@@ -93,7 +93,7 @@ attributes(global) subroutine test_sincosf()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_sincosf
-! CHECK: fir.call @__nv_fast_sincosf(%{{.*}}, %{{.*}}#0, %{{.*}}#0) proc_attrs<bind_c> fastmath<contract> : (f32, !fir.ref<f32>, !fir.ref<f32>) -> () 
+! CHECK: fir.call @__nv_fast_sincosf(%{{.*}}, %{{.*}}#0, %{{.*}}#0) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32, !fir.ref<f32>, !fir.ref<f32>) -> ()
 
 attributes(global) subroutine test_sinf()
   real :: res
@@ -102,7 +102,7 @@ attributes(global) subroutine test_sinf()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_sinf
-! CHECK: %{{.*}} = fir.call @__nv_fast_sinf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_sinf(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
 
 attributes(global) subroutine test_tanf()
   real :: res
@@ -111,7 +111,7 @@ attributes(global) subroutine test_tanf()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_tanf
-! CHECK: %{{.*}} = fir.call @__nv_fast_tanf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_tanf(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
 
 attributes(global) subroutine test_exp()
   real :: res
@@ -121,8 +121,8 @@ attributes(global) subroutine test_exp()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_exp
-! CHECK: %{{.*}} = fir.call @__nv_fast_expf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_fast_exp10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_expf(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_exp10f(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
 
 attributes(global) subroutine test_double2ll_rX()
   integer(8) :: res
@@ -134,10 +134,10 @@ attributes(global) subroutine test_double2ll_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_double2ll_rx
-! CHECK: %{{.*}} = fir.call @__nv_double2ll_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_double2ll_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_double2ll_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_double2ll_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ll_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ll_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ll_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ll_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
 
 attributes(global) subroutine test_drcp_rX()
   double precision :: res
@@ -149,10 +149,10 @@ attributes(global) subroutine test_drcp_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_drcp_rx
-! CHECK: %{{.*}} = fir.call @__drcp_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__drcp_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__drcp_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__drcp_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__drcp_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__drcp_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__drcp_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__drcp_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f64
 
 attributes(global) subroutine test_double2ull_rX()
   integer(8) :: res
@@ -164,10 +164,10 @@ attributes(global) subroutine test_double2ull_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_double2ull_rx
-! CHECK: %{{.*}} = fir.call @__nv_double2ull_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_double2ull_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_double2ull_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_double2ull_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ull_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ull_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ull_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ull_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
 
 attributes(global) subroutine test_saturatef()
   real :: res
@@ -176,7 +176,7 @@ attributes(global) subroutine test_saturatef()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_saturatef
-! CHECK: %{{.*}} = fir.call @__nv_saturatef(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_saturatef(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
 
 attributes(global) subroutine test_float2ll_rX()
   integer(8) :: res
@@ -188,10 +188,10 @@ attributes(global) subroutine test_float2ll_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_float2ll_rx
-! CHECK: %{{.*}} = fir.call @__nv_float2ll_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_float2ll_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_float2ll_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_float2ll_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_float2ll_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_float2ll_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_float2ll_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_float2ll_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i64
 
 attributes(global) subroutine test_ll2float_rX()
   real :: res
@@ -203,10 +203,10 @@ attributes(global) subroutine test_ll2float_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_ll2float_rx
-! CHECK: %{{.*}} = fir.call @__nv_ll2float_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ll2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ll2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ll2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ll2float_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ll2float_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ll2float_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ll2float_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f32
 
 attributes(global) subroutine test_int2float_rX()
   real :: res
@@ -218,10 +218,10 @@ attributes(global) subroutine test_int2float_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_int2float_rx
-! CHECK: %{{.*}} = fir.call @__nv_int2float_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_int2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_int2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_int2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_int2float_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_int2float_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_int2float_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_int2float_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
 
 attributes(global) subroutine test_float2int_rX()
   integer :: res
@@ -233,10 +233,10 @@ attributes(global) subroutine test_float2int_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_float2int_rx
-! CHECK: %{{.*}} = fir.call @__nv_float2int_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32    
-! CHECK: %{{.*}} = fir.call @__nv_float2int_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_float2int_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_float2int_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2int_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2int_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2int_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2int_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
 
 attributes(global) subroutine test_float2uint_rX()
   integer :: res
@@ -248,10 +248,10 @@ attributes(global) subroutine test_float2uint_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_float2uint_rx
-! CHECK: %{{.*}} = fir.call @__nv_float2uint_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_float2uint_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_float2uint_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_float2uint_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2uint_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2uint_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2uint_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2uint_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
 
 attributes(global) subroutine test_int2double_rn()
   double precision :: res
@@ -260,7 +260,7 @@ attributes(global) subroutine test_int2double_rn()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_int2double_rn
-! CHECK: %{{.*}} = fir.call @__nv_int2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_int2double_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f64
 
 attributes(global) subroutine test_fdividef()
   real :: res
@@ -269,7 +269,7 @@ attributes(global) subroutine test_fdividef()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_fdividef
-! CHECK: %{{.*}} = fir.call @__nv_fast_fdividef(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_fdividef(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32, f32) -> f32
 
 attributes(global) subroutine test_double_as_longlong()
   integer(8) :: res
@@ -278,7 +278,7 @@ attributes(global) subroutine test_double_as_longlong()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_double_as_longlong
-! CHECK: %{{.*}} = fir.call @__nv_double_as_longlong(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double_as_longlong(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i64
 
 attributes(global) subroutine test_longlong_as_double()
   integer(8) :: i
@@ -287,7 +287,7 @@ attributes(global) subroutine test_longlong_as_double()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_longlong_as_double
-! CHECK: %{{.*}} = fir.call @__nv_longlong_as_double(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_longlong_as_double(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
 
 attributes(global) subroutine test_int_as_float()
   integer :: i
@@ -296,7 +296,7 @@ attributes(global) subroutine test_int_as_float()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_int_as_float
-! CHECK: %{{.*}} = fir.call @__nv_int_as_float(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_int_as_float(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> f32
 
 attributes(global) subroutine test_float_as_int()
   integer :: res
@@ -305,7 +305,7 @@ attributes(global) subroutine test_float_as_int()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_float_as_int
-! CHECK: %{{.*}} = fir.call @__nv_float_as_int(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float_as_int(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> i32
 
 attributes(global) subroutine test_double2loint()
   integer :: res
@@ -314,7 +314,7 @@ attributes(global) subroutine test_double2loint()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_double2loint
-! CHECK: %{{.*}} = fir.call @__nv_double2loint(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2loint(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
 
 attributes(global) subroutine test_double2hiint()
   integer :: res
@@ -323,7 +323,7 @@ attributes(global) subroutine test_double2hiint()
 end subroutine
   
 ! CHECK-LABEL: _QPtest_double2hiint
-! CHECK: %{{.*}} = fir.call @__nv_double2hiint(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2hiint(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
 
 attributes(global) subroutine test_hiloint2double()
   double precision :: res
@@ -332,4 +332,4 @@ attributes(global) subroutine test_hiloint2double()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_hiloint2double
-! CHECK: %{{.*}} = fir.call @__nv_hiloint2double(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_hiloint2double(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32, i32) -> f64

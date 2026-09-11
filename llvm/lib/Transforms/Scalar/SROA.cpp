@@ -121,7 +121,6 @@ namespace llvm {
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // namespace llvm
 
 namespace {
@@ -233,8 +232,6 @@ class SROA {
   /// We can do this to a select if its only uses are loads
   /// and if either the operand to the select can be loaded unconditionally,
   ///        or if we are allowed to perform CFG modifications.
-  /// If found an intervening bitcast with a single use of the load,
-  /// allow the promotion.
   static std::optional<RewriteableMemOps>
   isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
 
@@ -440,10 +437,9 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     DbgVariableRecord *NewAssign;
     if (IsSplit) {
       ::Value *NewValue = Value ? Value : DbgAssign->getValue();
-      NewAssign = cast<DbgVariableRecord>(cast<DbgRecord *>(
-          DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
-                              Dest, DIExpression::get(Expr->getContext(), {}),
-                              DbgAssign->getDebugLoc())));
+      NewAssign = cast<DbgVariableRecord>(DIB.insertDbgAssign(
+          Inst, NewValue, DbgAssign->getVariable(), Expr, Dest,
+          DIExpression::get(Expr->getContext(), {}), DbgAssign->getDebugLoc()));
     } else {
       // The store is not split, simply steal the existing dbg_assign.
       NewAssign = DbgAssign;
@@ -1479,6 +1475,32 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 #endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
+/// Find a common load/store type used through a pointer PHI or select.
+///
+/// Look through a PHI or select to see if all of its users are loads or stores
+/// of one common type. Whether those accesses can be speculated does not affect
+/// the type they use and is checked separately when attempting promotion.
+static Type *findCommonTypeThroughPHIOrSelect(Instruction &I) {
+  assert((isa<PHINode, SelectInst>(I)) && "expected a PHI or select");
+  Type *Ty = nullptr;
+
+  for (User *U : I.users()) {
+    Type *UserTy = nullptr;
+    if (auto *LI = dyn_cast<LoadInst>(U))
+      UserTy = LI->getType();
+    else if (auto *Store = dyn_cast<StoreInst>(U))
+      // Slice building rejects stores of the PHI-or-select-derived pointer, so
+      // it must be the store's pointer operand here.
+      UserTy = Store->getValueOperand()->getType();
+
+    if (!UserTy || (Ty && Ty != UserTy))
+      return nullptr;
+    Ty = UserTy;
+  }
+
+  return Ty;
+}
+
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
 static std::pair<Type *, IntegerType *>
@@ -1502,6 +1524,9 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       UserTy = LI->getType();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
+    } else if (isa<PHINode, SelectInst>(U->getUser())) {
+      UserTy =
+          findCommonTypeThroughPHIOrSelect(*cast<Instruction>(U->getUser()));
     }
 
     if (IntegerType *UserITy = dyn_cast_or_null<IntegerType>(UserTy)) {
@@ -1613,7 +1638,8 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // If this pointer is always safe to load, or if we can prove that there
     // is already a load in the block, then we can move the load to the pred
     // block.
-    if (isSafeToLoadUnconditionally(InVal, MaxAlign, LoadSize, DL, TI))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, LoadSize,
+                                    SimplifyQuery(DL, TI)))
       continue;
 
     return false;
@@ -1709,8 +1735,8 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
 
   const DataLayout &DL = SI.getDataLayout();
   for (Value *Value : {SI.getTrueValue(), SI.getFalseValue()})
-    if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(), DL,
-                                    &LI))
+    if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(),
+                                    SimplifyQuery(DL, &LI)))
       Spec.setAsSpeculatable(/*isTrueVal=*/Value == SI.getTrueValue());
     else if (PreserveCFG)
       return Spec;
@@ -1723,9 +1749,6 @@ SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
-    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse())
-      U = *BC->user_begin();
-
     if (auto *Store = dyn_cast<StoreInst>(U)) {
       // Note that atomic stores can be transformed; atomic semantics do not
       // have any meaning for a local alloca. Stores are not speculatable,
@@ -1796,8 +1819,7 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
   }
 
   Value *V = IRB.CreateSelect(SI.getCondition(), TL, FL,
-                              LI.getName() + ".sroa.speculated",
-                              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+                              LI.getName() + ".sroa.speculated", &SI);
 
   LLVM_DEBUG(dbgs() << "          speculated to: " << *V << "\n");
   LI.replaceAllUsesWith(V);
@@ -2048,6 +2070,11 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
       return false;
     if (!S.isSplittable())
       return false; // Skip any unsplittable intrinsics.
+    if (isa<MemSetInst>(MI)) {
+      Type *SplatTy = Type::getIntNTy(Ty->getContext(), ElementSize * 8);
+      if (!canConvertValue(DL, SplatTy, Ty->getElementType(), VScale))
+        return false;
+    }
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
     if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
       return false;
@@ -2524,8 +2551,7 @@ static Value *extractVector(IRBuilderTy &IRB, Value *V, unsigned BeginIndex,
     return V;
 
   if (NumElements == 1) {
-    V = IRB.CreateExtractElement(V, IRB.getInt32(BeginIndex),
-                                 Name + ".extract");
+    V = IRB.CreateExtractElement(V, BeginIndex, Name + ".extract");
     LLVM_DEBUG(dbgs() << "     extract: " << *V << "\n");
     return V;
   }
@@ -2544,8 +2570,7 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   VectorType *Ty = dyn_cast<VectorType>(V->getType());
   if (!Ty) {
     // Single element to insert.
-    V = IRB.CreateInsertElement(Old, V, IRB.getInt32(BeginIndex),
-                                Name + ".insert");
+    V = IRB.CreateInsertElement(Old, V, BeginIndex, Name + ".insert");
     LLVM_DEBUG(dbgs() << "     insert: " << *V << "\n");
     return V;
   }
@@ -4495,8 +4520,7 @@ private:
       Cond = SI->getCondition();
       True = SI->getTrueValue();
       False = SI->getFalseValue();
-      if (!ProfcheckDisableMetadataFixes)
-        MDFrom = SI;
+      MDFrom = SI;
     } else {
       Cond = Sel->getOperand(0);
       True = ConstantInt::get(Sel->getType(), 1);
@@ -5306,11 +5330,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
 /// Try to canonicalize a homogeneous struct partition to a vector type.
 ///
-/// We can do this if all the elements of the struct are the same and tightly
-/// packed. This can sometimes eliminate allocas because structs cannot get
-/// promoted to LLVM values, but vectors can.
+/// We can do this if all the elements of the struct are the same and the
+/// corresponding vector has the same byte-level layout. This can sometimes
+/// eliminate allocas because structs cannot get promoted to LLVM values, but
+/// vectors can.
 ///
-/// We only apply this transformation when all users of the alloca are memory
+/// We only apply this transformation when all users of the partition are memory
 /// intrinsics. Otherwise, if there is a load or store of some other type to the
 /// partition, SROA would select that type.
 ///
@@ -5341,26 +5366,42 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
       !IsIntegralPointerTy)
     return nullptr;
 
+  // Ensure the struct is tightly packed so that the bit-layout is the same as
+  // the corresponding vector. For example, this prevents a miscompile for
+  // { i5, i5 }, which has padding after each i5 field, whereas <i5, i5> has
+  // tightly packed elements and trailing padding.
+  if (DL.getTypeSizeInBits(EltTy) != DL.getTypeAllocSizeInBits(EltTy))
+    return nullptr;
+
   auto *VTy = FixedVectorType::get(EltTy, NumElts);
   TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
-  TypeSize VectorSize = DL.getTypeAllocSize(VTy);
+  TypeSize VectorSize = DL.getTypeStoreSize(VTy);
+  // After ruling out per-element padding, make sure a vector load/store
+  // covers the same number of bytes as the struct layout.
   if (StructSize != VectorSize)
     return nullptr;
 
-  for (const Slice &S : P) {
+  auto IsIgnorableOrMemIntrinsicSlice = [](const Slice &S) {
     if (S.isDead())
-      continue;
+      return true;
     auto *U = S.getUse();
     if (!U)
-      continue;
+      return true;
 
     User *Usr = U->getUser();
     if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
-      continue;
+      return true;
 
-    if (!isa<MemIntrinsic>(Usr))
+    return isa<MemIntrinsic>(Usr);
+  };
+
+  for (const Slice &S : P)
+    if (!IsIgnorableOrMemIntrinsicSlice(S))
       return nullptr;
-  }
+
+  for (const Slice *S : P.splitSliceTails())
+    if (!IsIgnorableOrMemIntrinsicSlice(*S))
+      return nullptr;
 
   return VTy;
 }
@@ -5704,11 +5745,10 @@ static DIExpression *createOrReplaceFragment(const DIExpression *Expr,
       HasFragment = true;
       continue;
     }
-    if (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_zext ||
-        Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_sext) {
+    if (auto Extract = dyn_cast<DIExpression::ExtractBitsOp>(Op)) {
       HasBitExtract = true;
-      int64_t ExtractOffsetInBits = Op.getArg(0);
-      int64_t ExtractSizeInBits = Op.getArg(1);
+      int64_t ExtractOffsetInBits = Extract.getOffsetInBits();
+      int64_t ExtractSizeInBits = Extract.getSizeInBits();
 
       // DIExpression::createFragmentExpression doesn't know how to handle
       // a fragment that is smaller than the extract. Copy the behaviour
@@ -5926,9 +5966,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     // Offset defined by a DW_OP_LLVM_extract_bits_[sz]ext.
     int64_t ExtractOffsetInBits = 0;
     for (auto Op : getAddressExpression(DbgVariable)->expr_ops()) {
-      if (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_zext ||
-          Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_sext) {
-        ExtractOffsetInBits = Op.getArg(0);
+      if (auto Extract = dyn_cast<DIExpression::ExtractBitsOp>(Op)) {
+        ExtractOffsetInBits = Extract.getOffsetInBits();
         break;
       }
     }

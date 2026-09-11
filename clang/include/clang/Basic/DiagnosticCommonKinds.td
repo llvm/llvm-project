@@ -11,6 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 let Component = "Common" in {
+// C++11 compatibility with C++98.
+defm variadic_templates : CXX11Compat<"variadic templates are">;
+
+// C++23 compatibility with C++20 and earlier.
+defm size_t_suffix : CXX23Compat<"'size_t' suffix for literals is">;
 
 // Substitutions.
 
@@ -91,11 +96,6 @@ def warn_method_param_declaration : Warning<"redeclaration of method parameter %
 def err_invalid_storage_class_in_func_decl : Error<
   "invalid storage class specifier in function declarator">;
 def err_expected_namespace_name : Error<"expected namespace name">;
-def ext_variadic_templates : ExtWarn<
-  "variadic templates are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_variadic_templates :
-  Warning<"variadic templates are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def err_default_special_members : Error<
   "only special member functions %select{|and comparison operators }0"
   "may be defaulted">;
@@ -223,12 +223,6 @@ def ext_cxx11_longlong : Extension<
 def warn_cxx98_compat_longlong : Warning<
   "'long long' is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
-def ext_cxx23_size_t_suffix : ExtWarn<
-  "'size_t' suffix for literals is a C++23 extension">,
-  InGroup<CXX23>;
-def warn_cxx20_compat_size_t_suffix : Warning<
-  "'size_t' suffix for literals is incompatible with C++ standards before "
-  "C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_cxx23_size_t_suffix: Error<
   "'size_t' suffix for literals is a C++23 feature">;
 def err_size_t_literal_too_large: Error<
@@ -237,7 +231,7 @@ def err_size_t_literal_too_large: Error<
 def ext_cxx_bitint_suffix : Extension<
   "'_BitInt' suffix for literals is a Clang extension">,
   InGroup<BitIntExtension>;
-def ext_c23_bitint_suffix : ExtWarn<
+def ext_c23_bitint_suffix : Extension<
   "'_BitInt' suffix for literals is a C23 extension">,
   InGroup<C23>;
 def warn_c23_compat_bitint_suffix : Warning<
@@ -317,7 +311,8 @@ def warn_stack_clash_protection_inline_asm : Warning<
 
 def warn_stack_protection_ignore_attribute : Warning<
   "'stack_protector_ignore' attribute ignored due to "
-  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>;
+  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>,
+  SuppressInSystemMacro;
 
 def warn_slh_does_not_support_asm_goto : Warning<
   "speculative load hardening does not protect functions with asm goto">,
@@ -455,6 +450,8 @@ def warn_omp_gpu_unsupported_clause: Warning<
 def warn_omp_gpu_unsupported_modifier_for_clause: Warning<
   "modifier '%0' is currently not supported on a GPU for the '%1' clause; modifier ignored">,
   InGroup<OpenMPClauses>;
+def err_omp_unified_shared_memory_unsupported : Error<
+  "target architecture '%0' does not support unified addressing">;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<

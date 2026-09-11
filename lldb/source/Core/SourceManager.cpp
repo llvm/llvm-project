@@ -56,8 +56,9 @@ using namespace lldb_private;
 static inline bool is_newline_char(char ch) { return ch == '\n' || ch == '\r'; }
 
 static void resolve_tilde(FileSpec &file_spec) {
-  if (!FileSystem::Instance().Exists(file_spec) && file_spec.GetDirectory() &&
-      file_spec.GetDirectory().GetCString()[0] == '~') {
+  if (!FileSystem::Instance().Exists(file_spec) &&
+      !file_spec.GetDirectory().empty() &&
+      file_spec.GetDirectory().front() == '~') {
     FileSystem::Instance().Resolve(file_spec);
   }
 }
@@ -295,12 +296,12 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
         // Display caret cursor.
         std::string src_line;
         last_file_sp->GetLine(line, src_line);
-        s->Printf("    \t");
+        s->PutCString("    \t");
         // Insert a space for every non-tab character in the source line.
         for (size_t i = 0; i + 1 < column && i < src_line.length(); ++i)
           s->PutChar(src_line[i] == '\t' ? '\t' : ' ');
         // Now add the caret.
-        s->Printf("^\n");
+        s->PutCString("^\n");
       }
       if (this_line_size == 0) {
         m_last_line = UINT32_MAX;
@@ -431,6 +432,12 @@ SourceManager::GetDefaultFileAndLine() {
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
                                       lldb::eFunctionNameTypeFull,
                                       function_options, sc_list);
+        // The linkage name can differ from the source name, so match on the
+        // base name as a fallback.
+        if (sc_list.GetSize() == 0)
+          executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
+                                        lldb::eFunctionNameTypeBase,
+                                        function_options, sc_list);
         for (const SymbolContext &sc : sc_list) {
           if (sc.function) {
             lldb_private::LineEntry line_entry;
@@ -493,8 +500,8 @@ void SourceManager::File::CommonInitializer(SupportFileNSP support_file_nsp,
   if (future.wait_for(g_progress_delay) == std::future_status::timeout) {
     Debugger *debugger = target_sp ? &target_sp->GetDebugger() : nullptr;
     progress.emplace("Loading source file",
-                     support_file_nsp->GetSpecOnly().GetFilename().GetString(),
-                     1, debugger);
+                     support_file_nsp->GetSpecOnly().GetFilename().str(), 1,
+                     debugger);
   }
   future.wait();
 }
@@ -514,12 +521,14 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
       // If this is just a file name, try finding it in the target.
       {
         FileSpec file_spec = support_file_nsp->GetSpecOnly();
-        if (!file_spec.GetDirectory() && file_spec.GetFilename()) {
+        if (file_spec.GetDirectory().empty() &&
+            !file_spec.GetFilename().empty()) {
           bool check_inlines = false;
           SymbolContextList sc_list;
           size_t num_matches =
               target_sp->GetImages().ResolveSymbolContextForFilePath(
-                  file_spec.GetFilename().AsCString(nullptr), 0, check_inlines,
+                  ConstString(file_spec.GetFilename()).AsCString(nullptr), 0,
+                  check_inlines,
                   SymbolContextItem(eSymbolContextModule |
                                     eSymbolContextCompUnit),
                   sc_list);
@@ -602,15 +611,17 @@ uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
     return 0;
 
   if (CalculateLineOffsets(line)) {
-    if (line < m_offsets.size())
-      return m_offsets[line - 1]; // yes we want "line - 1" in the index
+    SharedLocked<const LineOffsets *, std::shared_mutex> offsets =
+        m_offsets.LockShared();
+    if (line < offsets->size())
+      return (*offsets)[line - 1]; // yes we want "line - 1" in the index
   }
   return UINT32_MAX;
 }
 
 uint32_t SourceManager::File::GetNumLines() {
   CalculateLineOffsets();
-  return m_offsets.size();
+  return m_offsets.LockShared()->size();
 }
 
 const char *SourceManager::File::PeekLineData(uint32_t line) {
@@ -660,7 +671,7 @@ bool SourceManager::File::LineIsValid(uint32_t line) {
     return false;
 
   if (CalculateLineOffsets(line))
-    return line < m_offsets.size();
+    return line < m_offsets.LockShared()->size();
   return false;
 }
 
@@ -773,11 +784,22 @@ bool SourceManager::File::CalculateLineOffsets(uint32_t line) {
   line =
       UINT32_MAX; // TODO: take this line out when we support partial indexing
   if (line == UINT32_MAX) {
-    // Already done?
-    if (!m_offsets.empty() && m_offsets[0] == UINT32_MAX)
+    // Already done? Check with just a reader lock first so concurrent reads
+    // of an already-indexed file don't serialize on each other.
+    {
+      SharedLocked<const LineOffsets *, std::shared_mutex> offsets =
+          m_offsets.LockShared();
+      if (!offsets->empty() && (*offsets)[0] == UINT32_MAX)
+        return true;
+    }
+
+    Locked<LineOffsets *, std::shared_mutex> offsets = m_offsets.Lock();
+    // Another thread may have finished indexing while we were waiting for
+    // the writer lock.
+    if (!offsets->empty() && (*offsets)[0] == UINT32_MAX)
       return true;
 
-    if (m_offsets.empty()) {
+    if (offsets->empty()) {
       if (!m_data_sp)
         return false;
 
@@ -789,7 +811,7 @@ bool SourceManager::File::CalculateLineOffsets(uint32_t line) {
 
         // Push a 1 at index zero to indicate the file has been completely
         // indexed.
-        m_offsets.push_back(UINT32_MAX);
+        offsets->push_back(UINT32_MAX);
         const char *s;
         for (s = start; s < end; ++s) {
           char curr_ch = *s;
@@ -801,12 +823,12 @@ bool SourceManager::File::CalculateLineOffsets(uint32_t line) {
                   ++s;
               }
             }
-            m_offsets.push_back(s + 1 - start);
+            offsets->push_back(s + 1 - start);
           }
         }
-        if (!m_offsets.empty()) {
-          if (m_offsets.back() < size_t(end - start))
-            m_offsets.push_back(end - start);
+        if (!offsets->empty()) {
+          if (offsets->back() < size_t(end - start))
+            offsets->push_back(end - start);
         }
         return true;
       }

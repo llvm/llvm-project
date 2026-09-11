@@ -132,6 +132,7 @@ int64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->getOffset(reloc.Addend);
@@ -181,12 +182,14 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_MEMORY_ADDR_I64:
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
-  case R_WASM_MEMORY_ADDR_LOCREL_I32: {
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64: {
     if (isa<UndefinedData>(sym) || sym->isShared() || sym->isUndefWeak())
       return 0;
     auto D = cast<DefinedData>(sym);
     uint64_t value = D->getVA() + reloc.Addend;
-    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32) {
+    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32 ||
+        reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I64) {
       const auto *segment = cast<InputSegment>(chunk);
       uint64_t p = segment->outputSeg->startVA + segment->outputSegmentOffset +
                    reloc.Offset - segment->getInputSectionOffset();
@@ -675,6 +678,12 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
     return symtab->addDefinedFunction(name, flags, this, func);
   }
   case WASM_SYMBOL_TYPE_DATA: {
+    if ((flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_COMMON) {
+      assert(!sym.isBindingLocal());
+      auto size = sym.Info.CommonRef.Size;
+      auto alignment = sym.Info.CommonRef.Alignment;
+      return symtab->addCommon(name, flags, this, size, alignment);
+    }
     InputChunk *seg = segments[sym.Info.DataRef.Segment];
     auto offset = sym.Info.DataRef.Offset;
     auto size = sym.Info.DataRef.Size;

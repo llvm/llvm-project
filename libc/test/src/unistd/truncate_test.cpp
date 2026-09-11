@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_stat_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
@@ -16,8 +17,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/stat.h>
 
 namespace cpp = LIBC_NAMESPACE::cpp;
 

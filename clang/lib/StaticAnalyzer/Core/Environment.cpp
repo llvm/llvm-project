@@ -26,6 +26,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -206,8 +207,8 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
       if (FoundStackFrames.count(CurrentSF) == 0) {
         // This stack frame is fresher than all other stack frames so far.
         SF = CurrentSF;
-        for (const StackFrame *SFI = CurrentSF; SFI; SFI = SFI->getParent())
-          FoundStackFrames.insert(SFI);
+        FoundStackFrames.insert_range(
+            llvm::make_pointer_range(CurrentSF->parentsIncludingSelf()));
       }
     }
   }

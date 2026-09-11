@@ -21,7 +21,14 @@ class Pass;
 
 /// Populate the given list with patterns that convert from Math to XeVM calls.
 void populateMathToXeVMConversionPatterns(RewritePatternSet &patterns,
-                                          bool convertArith);
+                                          bool convertArith,
+                                          PatternBenefit benefit = 1);
+
+/// Populate the given list with patterns that convert from Math to OCL LLVM-SPV
+/// builtin calls.
+void populateMathToScalarOCLExtSetConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit = 1);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOXEVM_MATHTOXEVM_H_

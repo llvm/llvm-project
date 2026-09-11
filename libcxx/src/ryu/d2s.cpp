@@ -41,6 +41,7 @@
 
 #include <__assert>
 #include <__config>
+#include <bit>
 #include <charconv>
 #include <cstddef>
 
@@ -478,19 +479,7 @@ struct __floating_decimal_64 {
           2882303761517u, 576460752303u, 115292150460u, 23058430092u, 4611686018u, 922337203u, 184467440u,
           36893488u, 7378697u, 1475739u, 295147u, 59029u, 11805u, 2361u, 472u, 94u, 18u, 3u };
 
-        unsigned long _Trailing_zero_bits;
-#if _LIBCPP_HAS_BITSCAN64
-        (void) _BitScanForward64(&_Trailing_zero_bits, __v.__mantissa); // __v.__mantissa is guaranteed nonzero
-#else // ^^^ 64-bit ^^^ / vvv 32-bit vvv
-        const uint32_t _Low_mantissa = static_cast<uint32_t>(__v.__mantissa);
-        if (_Low_mantissa != 0) {
-          (void) _BitScanForward(&_Trailing_zero_bits, _Low_mantissa);
-        } else {
-          const uint32_t _High_mantissa = static_cast<uint32_t>(__v.__mantissa >> 32); // nonzero here
-          (void) _BitScanForward(&_Trailing_zero_bits, _High_mantissa);
-          _Trailing_zero_bits += 32;
-        }
-#endif // ^^^ 32-bit ^^^
+        unsigned long _Trailing_zero_bits = std::countr_zero(__v.__mantissa);
         const uint64_t _Shifted_mantissa = __v.__mantissa >> _Trailing_zero_bits;
         _Can_use_ryu = _Shifted_mantissa <= _Max_shifted_mantissa[_Ryu_exponent];
       }

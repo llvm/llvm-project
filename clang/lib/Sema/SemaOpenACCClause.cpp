@@ -1159,7 +1159,7 @@ ExprResult CheckGangDimExpr(SemaOpenACC &S, Expr *E) {
 
   if (!ICE || *ICE <= 0 || ICE > 3) {
     S.Diag(Res.get()->getBeginLoc(), diag::err_acc_gang_dim_value)
-        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        << ICE.has_value() << ICE.value_or(llvm::APSInt{});
     return ExprError();
   }
 
@@ -1846,6 +1846,20 @@ bool areVarsEqual(Expr *VarExpr1, Expr *VarExpr2) {
            Expr2DRE->getDecl()->getMostRecentDecl();
   }
 
+  // References to a member.
+  if (auto *Expr1ME = dyn_cast<MemberExpr>(VarExpr1)) {
+    auto *Expr2ME = dyn_cast<MemberExpr>(VarExpr2);
+    if (!Expr2ME)
+      return false;
+
+    return Expr1ME->getMemberDecl()->getMostRecentDecl() ==
+               Expr2ME->getMemberDecl()->getMostRecentDecl() &&
+           areVarsEqual(Expr1ME->getBase(), Expr2ME->getBase());
+  }
+
+  if (isa<CXXThisExpr>(VarExpr1))
+    return isa<CXXThisExpr>(VarExpr2);
+
   llvm_unreachable("Unknown variable type encountered");
 }
 } // namespace
@@ -2031,7 +2045,7 @@ ExprResult SemaOpenACC::CheckTileSizeExpr(Expr *SizeExpr) {
   // where each tile size is a constant positive integer expression or asterisk.
   if (!ICE || *ICE <= 0) {
     Diag(SizeExpr->getBeginLoc(), diag::err_acc_size_expr_value)
-        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        << ICE.has_value() << ICE.value_or(llvm::APSInt{});
     return ExprError();
   }
 
@@ -2059,7 +2073,7 @@ ExprResult SemaOpenACC::CheckCollapseLoopCount(Expr *LoopCount) {
   // expression.
   if (!ICE || *ICE <= 0) {
     Diag(LoopCount->getBeginLoc(), diag::err_acc_collapse_loop_count)
-        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        << ICE.has_value() << ICE.value_or(llvm::APSInt{});
     return ExprError();
   }
 

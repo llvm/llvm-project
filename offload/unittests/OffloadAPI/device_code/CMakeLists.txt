@@ -1,4 +1,5 @@
 add_offload_test_device_code(foo.cpp foo)
+add_offload_test_device_code(foo.cpp foo_jit -c -flto)
 add_offload_test_device_code(bar.cpp bar)
 # Compile with optimizations to eliminate AMDGPU implicit arguments.
 add_offload_test_device_code(noargs.cpp noargs -O3)
@@ -17,6 +18,7 @@ add_offload_test_device_code(gridsize.cpp gridsize)
 
 add_custom_target(offload_device_binaries DEPENDS
     foo.bin
+    foo_jit.bin
     bar.bin
     noargs.bin
     multiargs.bin

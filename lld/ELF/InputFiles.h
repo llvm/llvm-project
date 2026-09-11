@@ -268,6 +268,9 @@ public:
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
 
+  // Embedded unoptimized dynamic debug input section.
+  std::unique_ptr<InputSection> dynDbgSec;
+
   // SHT_LLVM_CALL_GRAPH_PROFILE section index.
   uint32_t cgProfileSectionIndex = 0;
 
@@ -294,6 +297,7 @@ private:
   void initializeSections(bool ignoreComdats,
                           const llvm::object::ELFFile<ELFT> &obj);
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
+  void initDynDbgSymbols();
   void initializeJustSymbols();
 
   InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);
@@ -315,6 +319,10 @@ private:
   // The following variable contains the contents of .symtab_shndx.
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
+
+  // Section indices of kept SHT_GROUP sections, recorded by parse() in
+  // ascending order, to be used by the parallel initializeSections().
+  SmallVector<uint32_t, 0> keptGroups;
 };
 
 class BitcodeFile : public InputFile {
@@ -385,6 +393,8 @@ std::unique_ptr<ELFFileBase> createObjFile(Ctx &, MemoryBufferRef mb,
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 
+// Name of embedded unoptimized dynamic debug input/output section.
+constexpr StringRef dynDbgSecName = ".debug_llvm_dyndbg";
 } // namespace elf
 } // namespace lld
 

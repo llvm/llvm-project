@@ -5,13 +5,13 @@ define float @test(i8 %0) {
 ; CHECK-LABEL: define float @test(
 ; CHECK-SAME: i8 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> <i8 poison, i8 0>, i8 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> <i8 poison, i8 0>, i8 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i32> [[TMP2]], <i32 2, i32 27>
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP2]], <i32 2, i32 27>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    switch i32 [[TMP8]], label %[[EXIT:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[EXIT]]

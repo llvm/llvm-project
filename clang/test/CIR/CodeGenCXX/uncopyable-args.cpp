@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
@@ -68,7 +70,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN9move_ctor3barEv(
 // OGCG:   call {{.*}} @_ZN9move_ctor1AC1Ev(
-// OGCG:   call void @_ZN9move_ctor3fooENS_1AE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN9move_ctor3fooENS_1AE(
 }
 
 namespace all_deleted {
@@ -92,7 +94,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN11all_deleted3barEv(
 // OGCG:   call {{.*}} @_ZN11all_deleted1AC1Ev(
-// OGCG:   call void @_ZN11all_deleted3fooENS_1AE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN11all_deleted3fooENS_1AE(
 }
 
 namespace implicitly_deleted {
@@ -115,7 +117,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN18implicitly_deleted3barEv(
 // OGCG:   call {{.*}} @_ZN18implicitly_deleted1AC1Ev(
-// OGCG:   call void @_ZN18implicitly_deleted3fooENS_1AE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN18implicitly_deleted3fooENS_1AE(
 }
 
 namespace one_deleted {
@@ -138,7 +140,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN11one_deleted3barEv(
 // OGCG:   call {{.*}} @_ZN11one_deleted1AC1Ev(
-// OGCG:   call void @_ZN11one_deleted3fooENS_1AE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN11one_deleted3fooENS_1AE(
 }
 
 namespace copy_defaulted {
@@ -235,7 +237,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN14two_copy_ctors3barEv(
 // OGCG:   call {{.*}} @{{.*}}C1Ev(
-// OGCG:   call void @_ZN14two_copy_ctors3fooENS_1BE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN14two_copy_ctors3fooENS_1BE(
 }
 
 namespace definition_only {

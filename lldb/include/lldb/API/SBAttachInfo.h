@@ -199,7 +199,7 @@ protected:
   friend class SBTarget;
   friend class SBPlatform;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   lldb_private::ProcessAttachInfo &ref();
 

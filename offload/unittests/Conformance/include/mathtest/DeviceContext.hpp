@@ -56,6 +56,8 @@ public:
 
   explicit DeviceContext(llvm::StringRef Platform, std::size_t DeviceId = 0);
 
+  ~DeviceContext();
+
   template <typename T>
   ManagedBuffer<T> createManagedBuffer(std::size_t Size) const noexcept {
     void *UntypedAddress = nullptr;
@@ -137,6 +139,7 @@ private:
 
   std::size_t GlobalDeviceId;
   ol_device_handle_t DeviceHandle;
+  ol_context_handle_t Context = nullptr;
 };
 } // namespace mathtest
 

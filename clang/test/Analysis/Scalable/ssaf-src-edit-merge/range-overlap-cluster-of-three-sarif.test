@@ -1,0 +1,63 @@
+## Cluster-of-3+ range-overlap regression guard. One input with three
+## replacements: (10, 5, "X"), (12, 8, "Y"), (18, 3, "Z"). Byte ranges
+## are [10, 15), [12, 20), and [18, 21).
+##
+## - (10, 5) and (12, 8) overlap DIRECTLY on bytes 12..14.
+## - (12, 8) and (18, 3) overlap DIRECTLY on bytes 18..19.
+## - (10, 5) and (18, 3) do NOT overlap directly (18 >= 15) but DO
+##   overlap TRANSITIVELY via (12, 8). The cluster algorithm merges
+##   them via lastEnd propagation: after (10, 5) lastEnd is 15;
+##   (12, 8) joins because 12 < 15, lastEnd becomes max(15, 20) = 20;
+##   (18, 3) joins because 18 < 20.
+##
+## This is the regression guard for transitive merging — it cannot be
+## exercised by any pairwise-only fixture.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/range-overlap-cluster-of-three.tpl.yaml %t.dir/a.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml \
+# RUN:     --sarif-conflicts-out=%t.dir/conflicts.sarif \
+# RUN:     %t.dir/a.yaml 2> %t.dir/stderr.txt
+
+## Drop-all: zero replacements survive at offsets 10, 12, OR 18.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml --check-prefix=MERGED %s
+# MERGED-NOT: ReplacementText:
+
+## One report-side result at the cluster's minimum offset (10).
+## relatedLocations sorted by (byteLength, text) ascending so the
+## length-3 "Z" entry comes first, then length-5 "X", then length-8
+## "Y". Within each entry json::Object emits keys in alphabetical
+## order: id, message, physicalLocation; within region: byteLength,
+## byteOffset.
+# RUN: FileCheck --input-file=%t.dir/conflicts.sarif --check-prefix=SARIF %s
+# SARIF:      "results":
+# SARIF:        "level": "error"
+# SARIF:        "byteOffset": 10
+# SARIF:        "relatedLocations":
+# SARIF:          "id": 1
+# SARIF:          "text": "candidate edit: \"Z\""
+# SARIF:          "byteLength": 3
+# SARIF-NEXT:          "byteOffset": 18
+# SARIF:          "id": 2
+# SARIF:          "text": "candidate edit: \"X\""
+# SARIF:          "byteLength": 5
+# SARIF-NEXT:          "byteOffset": 10
+# SARIF:          "id": 3
+# SARIF:          "text": "candidate edit: \"Y\""
+# SARIF:          "byteLength": 8
+# SARIF-NEXT:          "byteOffset": 12
+# SARIF:        "ruleId": "clang-reforge-replacement-conflict"
+
+## Stderr: one cluster line at foo.cpp:10 (cluster min offset),
+## skipped 3 (full cluster size, not size - 1).
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --check-prefix=CONFLICT %s
+# CONFLICT: conflict:
+# CONFLICT-SAME: skipped
+# CONFLICT-SAME: 3
+# CONFLICT-SAME: foo.cpp:10

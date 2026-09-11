@@ -14,19 +14,19 @@ program alloc_test
   ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>
   ! CHECK: mif.alloc_coarray %[[VAL_1]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEa"} : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
   
-  ! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[ADDR_1:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa2"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+  ! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[ADDR_1:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa2"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:2>>)
   
   integer :: a[2, *]
   ! CHECK: %[[VAL_2:.*]] = fir.address_of(@_QFEb) : !fir.ref<f32>
   ! CHECK: mif.alloc_coarray %[[VAL_2]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEb"} : (!fir.ref<f32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
   
-  ! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[ADDR_2:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb2"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  ! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[ADDR_2:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb2"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>) -> (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>, !fir.ref<!fir.box<!fir.heap<f32>, corank:3>>)
   
   real :: b[3:4, 5, *]
   ! CHECK: %[[VAL_3:.*]] = fir.address_of(@_QFEc) : !fir.ref<!fir.char<1,10>>
   ! CHECK: mif.alloc_coarray %[[VAL_3]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEc"} : (!fir.ref<!fir.char<1,10>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
   
-  ! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[ADDR_3:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEc2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)
+  ! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[ADDR_3:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEc2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>)
   character(len=10) :: c[*]
   type(my_type) :: d
 
@@ -35,29 +35,29 @@ program alloc_test
   integer, allocatable :: a2[:,:]
   
   ! CHECK: %[[VAL_7:.*]] = fir.absent !fir.box<none>
-  ! CHECK: mif.alloc_coarray %[[VAL_4]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[VAL_7]] {uniq_name = "_QFEa2"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>, !fir.box<none>) -> ()
+  ! CHECK: mif.alloc_coarray %[[VAL_4]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[VAL_7]] {uniq_name = "_QFEa2"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>, !fir.box<none>) -> ()
   allocate(a2[2,*])
   
   ! CHECK: %[[VAL_8:.*]] = fir.absent !fir.box<none>
-  ! CHECK: mif.alloc_coarray %[[VAL_5]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[VAL_8]] {uniq_name = "_QFEb2"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>, !fir.box<none>) -> ()
+  ! CHECK: mif.alloc_coarray %[[VAL_5]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[VAL_8]] {uniq_name = "_QFEb2"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>, !fir.box<none>) -> ()
   allocate(b2[3:4, 5, *])
   
   ! CHECK: %[[VAL_9:.*]] = fir.absent !fir.box<none>
-  ! CHECK: mif.alloc_coarray %[[VAL_6]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[VAL_9]] {uniq_name = "_QFEc2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
+  ! CHECK: mif.alloc_coarray %[[VAL_6]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[VAL_9]] {uniq_name = "_QFEc2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
   allocate(character(100) :: c2(5)[*])
   
   ! CHECK: %[[VAL_10:.*]] = fir.absent !fir.box<none>
   ! CHECK: %[[VAL_12:.*]] = hlfir.designate %[[VAL_11:.*]]{"co"}
-  ! CHECK:  mif.alloc_coarray %[[VAL_12]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[VAL_10]] {uniq_name = "_QFEd.z.co"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
+  ! CHECK:  mif.alloc_coarray %[[VAL_12]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[VAL_10]] {uniq_name = "_QFEd.z.co"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
   allocate(d%z%co[*])
 
-  ! CHECK: mif.dealloc_coarray %[[VAL_4]]#0 stat %[[STAT:.*]] errmsg %[[ERRMSG:.*]] : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>, !fir.box<none>) -> ()
-  ! CHECK: mif.dealloc_coarray %[[VAL_5]]#0 stat %[[STAT:.*]] errmsg %[[ERRMSG:.*]] : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<i32>, !fir.box<none>) -> ()
-  ! CHECK: mif.dealloc_coarray %[[VAL_6]]#0 stat %[[STAT:.*]] errmsg %[[ERRMSG:.*]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<i32>, !fir.box<none>) -> ()
+  ! CHECK: mif.dealloc_coarray %[[VAL_4]]#0 stat %[[STAT:.*]] errmsg %[[ERRMSG:.*]] : (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>, !fir.ref<i32>, !fir.box<none>) -> ()
+  ! CHECK: mif.dealloc_coarray %[[VAL_5]]#0 stat %[[STAT:.*]] errmsg %[[ERRMSG:.*]] : (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>, !fir.ref<i32>, !fir.box<none>) -> ()
+  ! CHECK: mif.dealloc_coarray %[[VAL_6]]#0 stat %[[STAT:.*]] errmsg %[[ERRMSG:.*]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>, !fir.ref<i32>, !fir.box<none>) -> ()
   deallocate(a2, b2, c2)
   
   ! CHECK: %[[VAL_14:.*]] = hlfir.designate %[[VAL_13:.*]]{"co"} {{.*}}
-  ! CHECK: mif.dealloc_coarray %[[VAL_14]] stat %[[STAT:.*]] errmsg %[[ERRMSG:.*]] : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>, !fir.box<none>) -> ()
+  ! CHECK: mif.dealloc_coarray %[[VAL_14]] stat %[[STAT:.*]] errmsg %[[ERRMSG:.*]] : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<i32>, !fir.box<none>) -> ()
   deallocate(d%z%co)
   
 end program
@@ -68,9 +68,9 @@ subroutine test_alloc2
   class(*),allocatable :: b[:]
   integer :: ierr
 
-  ! CHECK: mif.alloc_coarray %[[VAL_1:.*]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[ERRMSG:.*]] {uniq_name = "_QFtest_alloc2Ea"} : (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
+  ! CHECK: mif.alloc_coarray %[[VAL_1:.*]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[ERRMSG:.*]] {uniq_name = "_QFtest_alloc2Ea"} : (!fir.ref<!fir.class<!fir.heap<none>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
   allocate(real::a[1:*])
   
-  ! CHECK: mif.alloc_coarray %[[VAL_2:.*]]#0 lcobounds %[[LCOBOUNDS2:.*]] ucobounds %[[UCOBOUNDS2:.*]] stat %[[STAT:.*]] errmsg %[[ERRMSG2:.*]] {uniq_name = "_QFtest_alloc2Eb"} : (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.ref<i32>, !fir.box<none>) -> ()
+  ! CHECK: mif.alloc_coarray %[[VAL_2:.*]]#0 lcobounds %[[LCOBOUNDS2:.*]] ucobounds %[[UCOBOUNDS2:.*]] stat %[[STAT:.*]] errmsg %[[ERRMSG2:.*]] {uniq_name = "_QFtest_alloc2Eb"} : (!fir.ref<!fir.class<!fir.heap<none>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.ref<i32>, !fir.box<none>) -> ()
   allocate(real::b[2:*], STAT=ierr)
 end subroutine

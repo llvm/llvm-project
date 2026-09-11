@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -run-pass=machine-scheduler \
+# RUN:   -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# The reported SGPR pressure-set limit is smaller than the weight of the
+# registers reserved from SGPR_32. Check that subtracting the reserved weight
+# does not wrap around.
+
+# CHECK: SReg_32 Limit 6 Actual 13
+# CHECK: Excess PSets: SReg_32
+
+--- |
+  define amdgpu_kernel void @reserved_weight_exceeds_limit() #0 {
+    ret void
+  }
+
+  attributes #0 = { "amdgpu-num-sgpr"="12" }
+...
+---
+name: reserved_weight_exceeds_limit
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    %0:sgpr_32 = S_MOV_B32 0
+    %1:sgpr_32 = S_MOV_B32 1
+    %2:sgpr_32 = S_MOV_B32 2
+    %3:sgpr_32 = S_MOV_B32 3
+    %4:sgpr_32 = S_MOV_B32 4
+    %5:sgpr_32 = S_MOV_B32 5
+    %6:sgpr_32 = S_MOV_B32 6
+    %7:sgpr_32 = S_MOV_B32 7
+    %8:sgpr_32 = S_MOV_B32 8
+    %9:sgpr_32 = S_MOV_B32 9
+    %10:sgpr_32 = S_MOV_B32 10
+    %11:sgpr_32 = S_MOV_B32 11
+    %12:sgpr_32 = S_MOV_B32 12
+    S_NOP 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %5, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12
+    S_ENDPGM 0
+...

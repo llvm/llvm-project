@@ -104,6 +104,9 @@ bool tryToFindPtrOrigin(
         }
       }
 
+      if (isSafePtrType(call->getType()))
+        return callback(E, true);
+
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
@@ -386,6 +389,20 @@ bool isAllocInit(const Expr *E, const Expr **InnerExpr) {
     }
   }
   return false;
+}
+
+ObjCInterfaceDecl *getObjCDeclFromObjCPtr(const Type *TypePtr) {
+  auto *PointeeType = TypePtr->getPointeeType().getTypePtrOrNull();
+  if (!PointeeType)
+    return nullptr;
+  auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
+  if (!Desugared)
+    return nullptr;
+  if (auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared))
+    return ObjCType->getDecl();
+  if (auto *ObjCType = dyn_cast<ObjCObjectType>(Desugared))
+    return ObjCType->getInterface();
+  return nullptr;
 }
 
 class EnsureFunctionVisitor

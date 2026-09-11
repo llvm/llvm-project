@@ -1,8 +1,13 @@
+## LC_ID_DYLIB names the library itself, not a dependency.
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj --needed-libs %t.o | FileCheck %s
 
 # CHECK:      NeededLibraries [
+# CHECK-NEXT:   /usr/lib/libLazy.dylib
+# CHECK-NEXT:   /usr/lib/libReexport.dylib
 # CHECK-NEXT:   /usr/lib/libSystem.B.dylib
+# CHECK-NEXT:   /usr/lib/libUpward.dylib
+# CHECK-NEXT:   /usr/lib/libWeak.dylib
 # CHECK-NEXT: ]
 
 !mach-o
@@ -10,12 +15,20 @@ FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
   cpusubtype:      0x00000003
-  filetype:        0x00000001
-  ncmds:           1
-  sizeofcmds:      56
+  filetype:        0x00000006
+  ncmds:           6
+  sizeofcmds:      336
   flags:           0x00002000
   reserved:        0x00000000
 LoadCommands:
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 81985536
+      compatibility_version: 65536
+    Content:         /usr/lib/libSelf.dylib
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         56
     dylib:
@@ -24,3 +37,35 @@ LoadCommands:
       current_version: 81985536
       compatibility_version: 65536
     Content:         /usr/lib/libSystem.B.dylib
+  - cmd:             LC_LOAD_WEAK_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 81985536
+      compatibility_version: 65536
+    Content:         /usr/lib/libWeak.dylib
+  - cmd:             LC_REEXPORT_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 81985536
+      compatibility_version: 65536
+    Content:         /usr/lib/libReexport.dylib
+  - cmd:             LC_LAZY_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 81985536
+      compatibility_version: 65536
+    Content:         /usr/lib/libLazy.dylib
+  - cmd:             LC_LOAD_UPWARD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 81985536
+      compatibility_version: 65536
+    Content:         /usr/lib/libUpward.dylib

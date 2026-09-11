@@ -18,7 +18,7 @@ struct Frac128 : public UInt<128> {
   using UInt<128>::UInt;
 
   LIBC_INLINE constexpr Frac128 operator~() const {
-    Frac128 r;
+    Frac128 r{};
     r.val[0] = ~val[0];
     r.val[1] = ~val[1];
     return r;

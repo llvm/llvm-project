@@ -16,10 +16,10 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @b, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i1> } [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
 ; CHECK-NEXT:    [[M0:%.*]] = mul i32 [[TMP5]], 7
 ; CHECK-NEXT:    [[M1:%.*]] = mul i32 [[TMP6]], 7
 ; CHECK-NEXT:    [[M2:%.*]] = mul i32 [[TMP7]], 7
@@ -87,10 +87,10 @@ define void @store_two_fields_different_orders() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> [[TMP2]], <4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, <4 x i1> } [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x i32>, <4 x i1> } [[TMP5]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP7]], i32 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP7]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP7]], i64 2
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr @r, align 4
 ; CHECK-NEXT:    store i1 [[TMP8]], ptr @flags, align 1
 ; CHECK-NEXT:    store i1 [[TMP9]], ptr getelementptr inbounds ([4 x i1], ptr @flags, i64 0, i64 1), align 1

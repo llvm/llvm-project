@@ -120,14 +120,13 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 }
 
-const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForOperand(
-    const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
+const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForReg(
+    Register Reg, const MachineRegisterInfo &MRI) const {
   const RISCVSubtarget &STI = MRI.getMF().getSubtarget<RISCVSubtarget>();
 
-  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
+  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(Reg);
   if (const RegisterBank *RB = dyn_cast<const RegisterBank *>(RCOrRB))
-    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB,
-                                    STI.is64Bit());
+    return getRegClassForTypeOnBank(MRI.getType(Reg), *RB, STI.is64Bit());
 
   if (const auto *RC = dyn_cast<const TargetRegisterClass *>(RCOrRB)) {
     return getAllocatableClass(RC);
@@ -437,6 +436,18 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     }
   }
 
+  // Emit a PseudoAddUpperImm instead of LUI+ADD when the offset is a multiple
+  // of 4096 and the source is the frame register. The frame register is
+  // invariant after PEI, so MachineLateInstrsCleanup can CSE identical pseudos.
+  // The pseudo is later expanded back to LUI+ADD.
+  if (Flag == MachineInstr::NoFlags && !KillSrcReg && DestReg != SrcReg &&
+      SrcReg == getFrameRegister(MF) && isShiftedInt<20, 12>(Val)) {
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoAddUpperImm), DestReg)
+        .addReg(SrcReg)
+        .addImm(static_cast<uint32_t>(Val) >> 12);
+    return;
+  }
+
   unsigned Opc = RISCV::ADD;
   if (Val < 0) {
     Val = -Val;
@@ -561,6 +572,29 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
   II->eraseFromParent();
 }
 
+static unsigned getXqciloWideOpcode(unsigned Opc) {
+  switch (Opc) {
+  case RISCV::LW:
+    return RISCV::QC_E_LW;
+  case RISCV::SW:
+    return RISCV::QC_E_SW;
+  case RISCV::LB:
+    return RISCV::QC_E_LB;
+  case RISCV::LBU:
+    return RISCV::QC_E_LBU;
+  case RISCV::LH:
+    return RISCV::QC_E_LH;
+  case RISCV::LHU:
+    return RISCV::QC_E_LHU;
+  case RISCV::SB:
+    return RISCV::QC_E_SB;
+  case RISCV::SH:
+    return RISCV::QC_E_SH;
+  default:
+    return 0;
+  }
+}
+
 bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
@@ -569,7 +603,9 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  bool Is64Bit = MF.getSubtarget<RISCVSubtarget>().is64Bit();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo *TII = ST.getInstrInfo();
+  bool Is64Bit = ST.is64Bit();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -588,6 +624,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!IsRVVSpill) {
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
+    int64_t Lo26 = SignExtend64<26>(Val);
     unsigned Opc = MI.getOpcode();
 
     if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
@@ -614,6 +651,22 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if (unsigned WideOpc = getXqciloWideOpcode(Opc);
+               !isInt<12>(Val) && ST.hasVendorXqcilo() && WideOpc) {
+      // The resolved frame offset exceeds simm12 but the instruction is a
+      // standard load/store (LW/SW/etc). Promote to the wide Xqcilo equivalent
+      // so the full 26-bit offset folds directly, avoiding a separate
+      // base-adjust instruction. This runs post-RA and does not affect
+      // register allocation decisions.
+      MI.setDesc(TII->get(WideOpc));
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+                                Offset.getScalable());
+    } else if (Opc == RISCV::QC_E_ADDI || RISCVInstrInfo::isBaseQCLoad(MI) ||
+               RISCVInstrInfo::isBaseQCStore(MI)) {
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+                                Offset.getScalable());
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
@@ -827,11 +880,18 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
                                            MCRegister Reg) const {
   auto const &STI = MF.getSubtarget<RISCVSubtarget>();
-  if (!STI.getRegisterInfo()->isGeneralPurposeRegister(MF, Reg))
-    llvm::reportFatalInternalError(
-        "isArgumentRegister is not implemented for non-GPR registers");
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
 
-  return llvm::is_contained(RISCV::getArgGPRs(STI.getTargetABI()), Reg);
+  if (TRI->isGeneralPurposeRegister(MF, Reg))
+    return llvm::is_contained(RISCV::getArgGPRs(STI), Reg);
+
+  if (TRI->isFPRegister(Reg))
+    return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);
+
+  if (RISCV::VRRegClass.contains(Reg))
+    return llvm::is_contained(RISCV::getArgVRs(STI), Reg);
+
+  return false;
 }
 
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {

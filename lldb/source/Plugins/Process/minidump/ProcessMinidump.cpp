@@ -77,7 +77,7 @@ void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,
   SectionList *sect_list = module_sp->GetSectionList();
   if (sect_list == nullptr)
     return;
-  SectionSP sect_sp = sect_list->FindSectionByName(ConstString(".text"));
+  SectionSP sect_sp = sect_list->FindSectionByName(".text");
   if (!sect_sp)
     return;
   constexpr size_t kMDGUIDSize = 16;
@@ -314,15 +314,17 @@ bool ProcessMinidump::IsAlive() { return true; }
 
 bool ProcessMinidump::WarnBeforeDetach() const { return false; }
 
-size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                   Status &error) {
+size_t ProcessMinidump::ReadMemory(const ProcessAddress &process_addr,
+                                   void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // we have it all cached in our dump file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
-size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+size_t ProcessMinidump::DoReadMemory(const ProcessAddress &process_addr,
+                                     void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
 
   llvm::Expected<llvm::ArrayRef<uint8_t>> mem_maybe =
       m_minidump_parser->GetMemory(addr, size);

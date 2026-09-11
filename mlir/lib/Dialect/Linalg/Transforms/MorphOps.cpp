@@ -44,8 +44,6 @@ void LinalgMorphOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
 
   // Lowering paths (named -> category -> generic)
-  if (namedToCategory)
-    populateLinalgNamedToElementwisePatterns(patterns);
   if (namedToGeneric || categoryToGeneric)
     populateLinalgNamedOpsGeneralizationPatterns(patterns);
 

@@ -365,8 +365,7 @@ void SBFrame::Clear() {
   m_opaque_sp->Clear();
 }
 
-lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
-                                               lldb::DILMode mode) {
+lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
   LLDB_INSTRUMENT_VA(this, var_path);
 
   SBValue sb_value;
@@ -380,15 +379,63 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
   if (StackFrame *frame = exe_ctx->GetFramePtr()) {
     lldb::DynamicValueType use_dynamic =
         frame->CalculateTarget()->GetPreferDynamicValue();
-    sb_value = GetValueForVariablePath(var_path, use_dynamic, mode);
+    sb_value = GetValueForVariablePath(var_path, use_dynamic);
   }
   return sb_value;
 }
 
 lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
-                                               DynamicValueType use_dynamic,
-                                               lldb::DILMode mode) {
+                                               DynamicValueType use_dynamic) {
   LLDB_INSTRUMENT_VA(this, var_path, use_dynamic);
+
+  SBValue sb_value;
+  if (var_path == nullptr || var_path[0] == '\0') {
+    return sb_value;
+  }
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return sb_value;
+  }
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+    VariableSP var_sp;
+    Status error;
+    ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
+        var_path, eNoDynamicValues,
+        StackFrame::eExpressionPathOptionCheckPtrVsMember |
+            StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
+        var_sp, error, lldb::eDILModeFull));
+    sb_value.SetSP(value_sp, use_dynamic);
+  }
+  return sb_value;
+}
+
+lldb::SBValue SBFrame::GetValueForVariablePathWithMode(const char *var_path,
+                                                       lldb::DILMode mode) {
+  LLDB_INSTRUMENT_VA(this, var_path, mode);
+
+  SBValue sb_value;
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return sb_value;
+  }
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+    lldb::DynamicValueType use_dynamic =
+        frame->CalculateTarget()->GetPreferDynamicValue();
+    sb_value = GetValueForVariablePathWithMode(var_path, mode, use_dynamic);
+  }
+  return sb_value;
+}
+
+lldb::SBValue SBFrame::GetValueForVariablePathWithMode(
+    const char *var_path, lldb::DILMode mode, DynamicValueType use_dynamic) {
+  LLDB_INSTRUMENT_VA(this, var_path, mode, use_dynamic);
 
   SBValue sb_value;
   if (var_path == nullptr || var_path[0] == '\0') {

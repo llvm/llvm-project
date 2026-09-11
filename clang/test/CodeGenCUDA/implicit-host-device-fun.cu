@@ -2,13 +2,13 @@
 // RUN:   -foffload-implicit-host-device-templates \
 // RUN:   -emit-llvm -o - -x hip %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=COMM,HOST %s 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:   -target-cpu gfx1100 \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -fcuda-is-device \
+// RUN: \
 // RUN:   -foffload-implicit-host-device-templates \
 // RUN:   -emit-llvm -o - -x hip %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=COMM,DEV %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:   -target-cpu gfx1100 \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -fcuda-is-device \
+// RUN: \
 // RUN:   -foffload-implicit-host-device-templates \
 // RUN:   -emit-llvm -o - -x hip %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=DEV-NEG %s

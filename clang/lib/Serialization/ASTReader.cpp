@@ -81,6 +81,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -123,6 +124,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -276,6 +278,23 @@ void ChainedASTReaderListener::readModuleFileExtension(
 
 ASTReaderListener::~ASTReaderListener() = default;
 
+static LLVM_ATTRIBUTE_NOINLINE bool diagnoseLanguageOptionFlagMismatch(
+    DiagnosticsEngine *Diags, StringRef Description, bool SerializedValue,
+    bool CurrentValue, StringRef ModuleFilename) {
+  if (!Diags)
+    return true;
+  return Diags->Report(diag::err_ast_file_langopt_mismatch)
+         << Description << SerializedValue << CurrentValue << ModuleFilename;
+}
+
+static LLVM_ATTRIBUTE_NOINLINE bool diagnoseLanguageOptionValueMismatch(
+    DiagnosticsEngine *Diags, StringRef Description, StringRef ModuleFilename) {
+  if (!Diags)
+    return true;
+  return Diags->Report(diag::err_ast_file_langopt_value_mismatch)
+         << Description << ModuleFilename;
+}
+
 /// Compare the given set of language options against an existing set of
 /// language options.
 ///
@@ -298,16 +317,12 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
-        if (Diags) {                                                           \
-          if (Bits == 1)                                                       \
-            Diags->Report(diag::err_ast_file_langopt_mismatch)                 \
-                << Description << LangOpts.Name << ExistingLangOpts.Name       \
-                << ModuleFilename;                                             \
-          else                                                                 \
-            Diags->Report(diag::err_ast_file_langopt_value_mismatch)           \
-                << Description << ModuleFilename;                              \
-        }                                                                      \
-        return true;                                                           \
+        if (Bits == 1)                                                         \
+          return diagnoseLanguageOptionFlagMismatch(                           \
+              Diags, Description, LangOpts.Name, ExistingLangOpts.Name,        \
+              ModuleFilename);                                                 \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -318,10 +333,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
-        if (Diags)                                                             \
-          Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
-              << Description << ModuleFilename;                                \
-        return true;                                                           \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -332,10 +345,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {              \
-        if (Diags)                                                             \
-          Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
-              << Description << ModuleFilename;                                \
-        return true;                                                           \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -343,25 +354,19 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
 #include "clang/Basic/LangOptions.def"
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {
-    if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "module features" << ModuleFilename;
-    return true;
+    return diagnoseLanguageOptionValueMismatch(Diags, "module features",
+                                               ModuleFilename);
   }
 
   if (ExistingLangOpts.ObjCRuntime != LangOpts.ObjCRuntime) {
-    if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "target Objective-C runtime" << ModuleFilename;
-    return true;
+    return diagnoseLanguageOptionValueMismatch(
+        Diags, "target Objective-C runtime", ModuleFilename);
   }
 
   if (ExistingLangOpts.CommentOpts.BlockCommandNames !=
       LangOpts.CommentOpts.BlockCommandNames) {
-    if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "block command names" << ModuleFilename;
-    return true;
+    return diagnoseLanguageOptionValueMismatch(Diags, "block command names",
+                                               ModuleFilename);
   }
 
   // Sanitizer feature mismatches are treated as compatible differences. If
@@ -520,13 +525,18 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
+  auto FeatureLess = [](StringRef A, StringRef B) {
+    return A.substr(1) < B.substr(1);
+  };
+
   SmallVector<StringRef, 4> UnmatchedExistingFeatures, UnmatchedReadFeatures;
-  std::set_difference(
-      ExistingFeatures.begin(), ExistingFeatures.end(), ReadFeatures.begin(),
-      ReadFeatures.end(), std::back_inserter(UnmatchedExistingFeatures));
+  std::set_difference(ExistingFeatures.begin(), ExistingFeatures.end(),
+                      ReadFeatures.begin(), ReadFeatures.end(),
+                      std::back_inserter(UnmatchedExistingFeatures),
+                      FeatureLess);
   std::set_difference(ReadFeatures.begin(), ReadFeatures.end(),
                       ExistingFeatures.begin(), ExistingFeatures.end(),
-                      std::back_inserter(UnmatchedReadFeatures));
+                      std::back_inserter(UnmatchedReadFeatures), FeatureLess);
 
   // If we are allowing compatible differences and the read feature set is
   // a strict subset of the existing feature set, there is nothing to diagnose.
@@ -919,6 +929,16 @@ static bool checkPreprocessorOptions(
   }
 
   // Compute the #include and #include_macros lines we need.
+  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
+    StringRef File = ExistingPPOpts.MacroIncludes[I];
+    if (llvm::is_contained(PPOpts.MacroIncludes, File))
+      continue;
+
+    SuggestedPredefines += "#__include_macros \"";
+    SuggestedPredefines += File;
+    SuggestedPredefines += "\"\n##\n";
+  }
+
   for (unsigned I = 0, N = ExistingPPOpts.Includes.size(); I != N; ++I) {
     StringRef File = ExistingPPOpts.Includes[I];
 
@@ -941,16 +961,6 @@ static bool checkPreprocessorOptions(
     SuggestedPredefines += "#include \"";
     SuggestedPredefines += File;
     SuggestedPredefines += "\"\n";
-  }
-
-  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
-    StringRef File = ExistingPPOpts.MacroIncludes[I];
-    if (llvm::is_contained(PPOpts.MacroIncludes, File))
-      continue;
-
-    SuggestedPredefines += "#__include_macros \"";
-    SuggestedPredefines += File;
-    SuggestedPredefines += "\"\n##\n";
   }
 
   return false;
@@ -3007,6 +3017,11 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
           << FileChange.Kind << (FileChange.Old && FileChange.New)
           << llvm::itostr(FileChange.Old.value_or(0))
           << llvm::itostr(FileChange.New.value_or(0));
+      if (getModuleManager()
+              .getModuleCache()
+              .getInMemoryModuleCache()
+              .isPCMFinal(F.FileName))
+        Diag(diag::note_fe_ast_file_modified_finalized) << F.ModuleName;
 
       // Print the import stack.
       if (ImportStack.size() > 1) {
@@ -3215,10 +3230,13 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // session.
   auto [EnablesBSValidation, WasValidated] =
       wasValidatedInBuildSession(F, HSOpts);
-  if (WasValidated)
-    return {std::nullopt, IgnoreError};
-  if (EnablesBSValidation &&
-      static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+  const bool SkipModuleLookup =
+      !PP.getPreprocessorOpts().ModulesForceRedundantLookup &&
+      (WasValidated ||
+       (EnablesBSValidation &&
+        static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp));
+
+  if (SkipModuleLookup)
     return {std::nullopt, IgnoreError};
 
   Diag(diag::remark_module_check_relocation) << F.ModuleName << F.FileName;
@@ -3228,7 +3246,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // check).
   Module *M = PP.getHeaderSearchInfo().lookupModule(
       F.ModuleName, DirectoryCheck ? SourceLocation() : F.ImportLoc,
-      /*AllowSearch=*/DirectoryCheck,
+      /*AllowSearch=*/true,
       /*AllowExtraModuleMapSearch=*/DirectoryCheck);
 
   return {M, IgnoreError};
@@ -3297,7 +3315,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       // loaded module files, ignore missing inputs.
       if (!DisableValidation && F.Kind != MK_ExplicitModule &&
           F.Kind != MK_PrebuiltModule) {
-        bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
+        bool Complain =
+            !canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities);
 
         // If we are reading a module, we will create a verification timestamp,
         // so we verify all input files.  Otherwise, verify only user input
@@ -4785,7 +4804,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
-      auto SF = FileMgr.getOptionalFileRef(Filename, false, false);
+      auto SF = FileMgr.getOptionalFileRef(Filename);
       if (!SF) {
         if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
           Error("could not find file '" + Filename +"' referenced by AST file");
@@ -6660,6 +6679,7 @@ bool ASTReader::ParseLanguageOptions(const RecordData &Record,
                                      bool AllowCompatibleDifferences) {
   LangOptions LangOpts;
   unsigned Idx = 0;
+  LangOpts.LangStd = static_cast<LangStandard::Kind>(Record[Idx++]);
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   LangOpts.Name = Record[Idx++];
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
@@ -7655,7 +7675,7 @@ ConceptReference *ASTRecordReader::readConceptReference() {
   auto TemplateKWLoc = readSourceLocation();
   auto ConceptNameLoc = readDeclarationNameInfo();
   auto FoundDecl = readDeclAs<NamedDecl>();
-  auto NamedConcept = readDeclAs<ConceptDecl>();
+  auto NamedConcept = readTemplateName();
   auto *CR = ConceptReference::Create(
       getContext(), NNS, TemplateKWLoc, ConceptNameLoc, FoundDecl, NamedConcept,
       (readBool() ? readASTTemplateArgumentListInfo() : nullptr));
@@ -7699,6 +7719,11 @@ void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
 
 void TypeLocReader::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   // Nothing to do
+}
+
+void TypeLocReader::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  llvm_unreachable(
+      "should be replaced with a concrete type before serialization");
 }
 
 void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
@@ -8146,6 +8171,11 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");
@@ -8522,6 +8552,12 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     if (Context.BuiltinMSVaListDecl)
       return Context.BuiltinMSVaListDecl;
     NewLoaded = Context.getBuiltinMSVaListDecl();
+    break;
+
+  case PREDEF_DECL_BUILTIN_ZOS_VA_LIST_ID:
+    if (Context.BuiltinZOSVaListDecl)
+      return Context.BuiltinZOSVaListDecl;
+    NewLoaded = Context.getBuiltinZOSVaListDecl();
     break;
 
   case PREDEF_DECL_BUILTIN_MS_GUID_ID:
@@ -9712,7 +9748,7 @@ void ASTReader::ReadExtVectorDecls(SmallVectorImpl<TypedefNameDecl *> &Decls) {
 }
 
 void ASTReader::ReadUnusedLocalTypedefNameCandidates(
-    llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) {
+    llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) {
   for (unsigned I = 0, N = UnusedLocalTypedefNameCandidates.size(); I != N;
        ++I) {
     TypedefNameDecl *D = dyn_cast_or_null<TypedefNameDecl>(
@@ -9842,29 +9878,6 @@ void ASTReader::ReadLateParsedTemplates(
   }
 
   LateParsedTemplates.clear();
-}
-
-void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
-  if (!Lambda->getLambdaContextDecl())
-    return;
-
-  auto LambdaInfo =
-      std::make_pair(Lambda->getLambdaContextDecl()->getCanonicalDecl(),
-                     Lambda->getLambdaIndexInContext());
-
-  // Handle the import and then include case for lambdas.
-  if (auto Iter = LambdaDeclarationsForMerging.find(LambdaInfo);
-      Iter != LambdaDeclarationsForMerging.end() &&
-      Iter->second->isFromASTFile() && Lambda->getFirstDecl() == Lambda) {
-    CXXRecordDecl *Previous =
-        cast<CXXRecordDecl>(Iter->second)->getMostRecentDecl();
-    Lambda->setPreviousDecl(Previous);
-    return;
-  }
-
-  // Keep track of this lambda so it can be merged with another lambda that
-  // is loaded later.
-  LambdaDeclarationsForMerging.insert({LambdaInfo, Lambda});
 }
 
 void ASTReader::LoadSelector(Selector Sel) {
@@ -11466,7 +11479,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPFinalClause();
     break;
   case llvm::omp::OMPC_num_threads:
-    C = new (Context) OMPNumThreadsClause();
+    C = OMPNumThreadsClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_safelen:
     C = new (Context) OMPSafelenClause();
@@ -11538,7 +11551,10 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPWriteClause();
     break;
   case llvm::omp::OMPC_update:
-    C = OMPUpdateClause::CreateEmpty(Context, Record.readInt());
+    C = new (Context) OMPUpdateClause();
+    break;
+  case llvm::omp::OMPC_update_depend_objects:
+    C = OMPUpdateDependObjectsClause::CreateEmpty(Context);
     break;
   case llvm::omp::OMPC_capture:
     C = new (Context) OMPCaptureClause();
@@ -11878,11 +11894,20 @@ void OMPClauseReader::VisitOMPFinalClause(OMPFinalClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  C->setPrescriptivenessModifier(
+      Record.readEnum<OpenMPNumThreadsClauseModifier>());
+  C->setPrescriptivenessModifierLoc(Record.readSourceLocation());
+  C->setDimsModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
+  C->setDimsModifierLoc(Record.readSourceLocation());
+  C->setDimsModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
-  C->setModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
-  C->setNumThreads(Record.readSubExpr());
-  C->setModifierLoc(Record.readSourceLocation());
   C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPSafelenClause(OMPSafelenClause *C) {
@@ -12016,12 +12041,13 @@ void OMPClauseReader::VisitOMPReadClause(OMPReadClause *) {}
 
 void OMPClauseReader::VisitOMPWriteClause(OMPWriteClause *) {}
 
-void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *C) {
-  if (C->isExtended()) {
-    C->setLParenLoc(Record.readSourceLocation());
-    C->setArgumentLoc(Record.readSourceLocation());
-    C->setDependencyKind(Record.readEnum<OpenMPDependClauseKind>());
-  }
+void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *) {}
+
+void OMPClauseReader::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setArgumentLoc(Record.readSourceLocation());
+  C->setDependencyKind(Record.readEnum<OpenMPDependClauseKind>());
 }
 
 void OMPClauseReader::VisitOMPCaptureClause(OMPCaptureClause *) {}
@@ -12594,6 +12620,9 @@ void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
+  C->setModifier(Record.readEnum<OpenMPNumTeamsClauseModifier>());
+  C->setModifierLoc(Record.readSourceLocation());
+  C->setModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
   C->setLParenLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();
@@ -12605,6 +12634,9 @@ void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
 }
 
 void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  C->setModifier(Record.readEnum<OpenMPThreadLimitClauseModifier>());
+  C->setModifierLoc(Record.readSourceLocation());
+  C->setModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
   C->setLParenLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();

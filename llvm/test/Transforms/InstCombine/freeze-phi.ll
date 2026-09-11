@@ -218,7 +218,7 @@ D:
 define float @pr161524(float noundef %arg) {
 ; CHECK-LABEL: @pr161524(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 144)
+; CHECK-NEXT:    [[COND:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], /* (sub) */ i32 144)
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_EXIT:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[ARG]], 1.000000e+00

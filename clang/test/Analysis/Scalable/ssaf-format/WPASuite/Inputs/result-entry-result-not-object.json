@@ -22,5 +22,6 @@
       "analysis_name": "PairsAnalysisResult",
       "result": "not_an_object"
     }
-  ]
+  ],
+  "type": "WPASuite"
 }

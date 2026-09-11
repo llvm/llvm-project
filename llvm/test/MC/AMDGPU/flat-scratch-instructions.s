@@ -1,9 +1,9 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -filetype=null 2>&1 %s | FileCheck -check-prefix=GFX9-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -filetype=null 2>&1 %s | FileCheck -check-prefix=VI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: not llvm-mc -triple=amdgpu9.00 -filetype=null 2>&1 %s | FileCheck -check-prefix=GFX9-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -filetype=null 2>&1 %s | FileCheck -check-prefix=VI-ERR --implicit-check-not=error: %s
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s -filetype=null 2>&1 | FileCheck --check-prefix=GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu10.10 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgpu10.10 %s -filetype=null 2>&1 | FileCheck --check-prefix=GFX10-ERR --implicit-check-not=error: %s
 
 scratch_load_ubyte v1, v2, off
 // GFX10: encoding: [0x00,0x40,0x20,0xdc,0x02,0x00,0x7d,0x01]

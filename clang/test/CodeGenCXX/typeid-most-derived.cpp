@@ -14,6 +14,8 @@ struct Final final : Base {
     int foo() override { return 84; }
 };
 
+void func();
+
 // Most derived
 void base_by_value(Base b) { typeid(b); }
 // CHECK-LABEL: define {{.*}}void @_Z13base_by_value4Base
@@ -29,6 +31,17 @@ void final_ref(Final &f) { typeid(f); }
 // Most derived
 void final_deref(Final *f) { typeid(*f); }
 // CHECK-LABEL: define {{.*}}void @_Z11final_derefP5Final
+// CHECK-NOT:   %vtable
+// CHECK:       icmp eq {{.*}}, null
+// CHECK-NEXT:  br i1
+// CHECK-NOT:   %vtable
+// CHECK:       ret void
+
+// Most derived
+void should_evaluate(Final &f) { typeid(func(), f); }
+// CHECK-LABEL: define {{.*}}void @_Z15should_evaluateR5Final
+// CHECK-NOT:   %vtable
+// CHECK:       call void @_Z4funcv()
 // CHECK-NOT:   %vtable
 // CHECK:       ret void
 

@@ -915,7 +915,7 @@ namespace FuncTemplateInClass {
     requires C<Ts>
     auto TplClass<0>::buggy() -> void {}
     // expected-error@-1 {{out-of-line definition of 'buggy' does not match any declaration}}
-  } //namespace t1
+  } // namespace t1
   namespace t2 {
     template <int> struct TplClass { // expected-note {{defined here}}
       template <int Ts, int Us>
@@ -928,7 +928,7 @@ namespace FuncTemplateInClass {
     requires C<Us>
     auto TplClass<0>::buggy() -> void {}
     // expected-error@-1 {{out-of-line definition of 'buggy' does not match any declaration}}
-  } //namespace t2
+  } // namespace t2
 } // namespace FuncTemplateInClass
 
 namespace GH139476 {

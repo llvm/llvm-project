@@ -788,12 +788,15 @@ static void finalizeBlockRelax(LinkGraph &G, Block &Block, BlockRelaxAux &Aux) {
   // Remove AlignRelaxable edges: all other relaxable edges got modified and
   // will be used later while linking. Alignment is entirely handled here so we
   // don't need these edges anymore.
-  for (auto IE = Block.edges().begin(); IE != Block.edges().end();) {
-    if (IE->getKind() == AlignRelaxable)
-      IE = Block.removeEdge(IE);
-    else
-      ++IE;
-  }
+  // Compact once: erasing each alignment edge separately repeatedly moves the
+  // remaining edges and is quadratic for large instrumented code blocks.
+  auto End = llvm::remove_if(Block.edges(), [](const Edge &E) {
+    return E.getKind() == AlignRelaxable;
+  });
+  const auto NumRemaining =
+      static_cast<size_t>(std::distance(Block.edges().begin(), End));
+  while (Block.edges_size() > NumRemaining)
+    Block.removeEdge(std::prev(Block.edges().end()));
 }
 
 static void finalizeRelax(LinkGraph &G, RelaxAux &Aux) {

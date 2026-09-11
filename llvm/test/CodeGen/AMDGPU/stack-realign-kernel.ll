@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa < %s | FileCheck -check-prefix=VI %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -check-prefix=GFX9 %s
 
 ; Make sure the stack is never realigned for entry functions.
 

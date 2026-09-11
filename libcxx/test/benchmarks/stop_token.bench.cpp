@@ -15,12 +15,13 @@
 
 #include "benchmark/benchmark.h"
 #include "make_test_thread.h"
+#include "test_macros.h"
 
 using namespace std::chrono_literals;
 
 // We have a single thread created by std::jthread consuming the stop_token:
 // polling for stop_requested.
-void BM_stop_token_single_thread_polling_stop_requested(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_stop_token_single_thread_polling_stop_requested(benchmark::State& state) {
   auto thread_func = [&](std::stop_token st, std::atomic<std::uint64_t>* loop_count) {
     while (!st.stop_requested()) {
       // doing some work
@@ -45,7 +46,7 @@ void BM_stop_token_single_thread_polling_stop_requested(benchmark::State& state)
 BENCHMARK(BM_stop_token_single_thread_polling_stop_requested)->Arg(1024)->Arg(131072)->Arg(16777216);
 
 // We have multiple threads polling for stop_requested of the same stop_token.
-void BM_stop_token_multi_thread_polling_stop_requested(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_stop_token_multi_thread_polling_stop_requested(benchmark::State& state) {
   std::atomic<bool> start{false};
 
   auto thread_func = [&start](std::atomic<std::uint64_t>* loop_count, std::stop_token st) {
@@ -95,7 +96,7 @@ BENCHMARK(BM_stop_token_multi_thread_polling_stop_requested)->Arg(1024)->Arg(131
 
 // We have a single thread created by std::jthread consuming the stop_token:
 // registering/deregistering callbacks, one at a time.
-void BM_stop_token_single_thread_reg_unreg_callback(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_stop_token_single_thread_reg_unreg_callback(benchmark::State& state) {
   auto thread_func = [&](std::stop_token st, std::atomic<std::uint64_t>* reg_count) {
     while (!st.stop_requested()) {
       std::stop_callback cb{st, [&]() noexcept {}};
@@ -128,7 +129,7 @@ BENCHMARK(BM_stop_token_single_thread_reg_unreg_callback)->Arg(1024)->Arg(131072
 //
 // Say something like each thread keeping a circular buffer of N stop-callbacks and destroying the stop-callbacks in
 // FIFO order
-void BM_stop_token_async_reg_unreg_callback(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_stop_token_async_reg_unreg_callback(benchmark::State& state) {
   struct dummy_stop_callback {
     void operator()() const noexcept {}
   };

@@ -643,6 +643,9 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
              relInfo.r_address == minuendInfo.r_address);
       Relocation p;
       p.type = minuendInfo.r_type;
+      p.pcrel = minuendInfo.r_pcrel;
+      p.length = minuendInfo.r_length;
+      p.offset = r.offset;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
         p.addend = totalAddend;
@@ -656,6 +659,17 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       subsec->relocs.push_back(p);
     }
   }
+}
+
+// ld64 never turns these labels into named atoms or symbol table entries.
+static bool shouldIgnoreLabel(const InputSection *isec, StringRef name) {
+  if (isCfStringSection(isec) || isClassRefsSection(isec) ||
+      isSelRefsSection(isec))
+    return true;
+  if ((isa<WordLiteralInputSection>(isec) || isa<CStringInputSection>(isec)) &&
+      isPrivateLabel(name))
+    return true;
+  return false;
 }
 
 template <class NList>
@@ -683,7 +697,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 
   bool isCold = sym.n_desc & N_COLD_FUNC;
 
-  if (sym.n_type & N_EXT) {
+  if ((sym.n_type & N_EXT) && !shouldIgnoreLabel(isec, name)) {
     // -load_hidden makes us treat global symbols as linkage unit scoped.
     // Duplicates are reported but the symbol does not go in the export trie.
     bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
@@ -1040,6 +1054,9 @@ template <class LP> void ObjFile::parse() {
                           c->nsyms);
     const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
     bool subsectionsViaSymbols = hdr->flags & MH_SUBSECTIONS_VIA_SYMBOLS;
+    if (config->warnMissingSubsectionsViaSymbols && !subsectionsViaSymbols &&
+        !sectionHeaders.empty())
+      warn(toString(this) + ": missing MH_SUBSECTIONS_VIA_SYMBOLS");
     parseSymbols<LP>(sectionHeaders, nList, strtab, subsectionsViaSymbols);
   }
 

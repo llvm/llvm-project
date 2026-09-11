@@ -22,7 +22,8 @@
 #include <__ranges/size.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/remove_cvref.h>
+#include <__type_traits/is_array.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -86,11 +87,12 @@ struct __distance {
   }
 
   template <class _Ip, sized_sentinel_for<decay_t<_Ip>> _Sp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip&& __first, _Sp __last) const {
-    if constexpr (sized_sentinel_for<_Sp, __remove_cvref_t<_Ip>>) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<decay_t<_Ip>>
+  operator()(_Ip&& __first, _Sp __last) const {
+    if constexpr (!is_array_v<remove_reference_t<_Ip>>) {
       return __last - __first;
     } else {
-      return __last - decay_t<_Ip>(__first);
+      return __last - static_cast<decay_t<_Ip>>(__first);
     }
   }
 

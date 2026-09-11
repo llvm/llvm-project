@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_JOB_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Driver/InputInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -150,9 +151,12 @@ class Command {
   /// Information on executable run provided by OS.
   mutable std::optional<llvm::sys::ProcessStatistics> ProcStat;
 
-  /// The bound architecture for this command (e.g. "arm64", "x86_64").
-  /// Non-empty only for Darwin multi-arch builds.
-  std::string BoundArch;
+  /// The bound architecture for this command (e.g. "arm64", "gfx90a").
+  std::string BoundArchStr;
+
+  /// Non-empty when this command may run in parallel with adjacent offload
+  /// device commands from the same group.
+  std::string OffloadDeviceParallelJobGroup;
 
   /// When a response file is needed, we try to put most arguments in an
   /// exclusive file, while others remains as regular command line arguments.
@@ -195,8 +199,15 @@ public:
   const Tool &getCreator() const { return Creator; }
 
   /// Return the bound architecture for this command, if any.
-  StringRef getBoundArch() const { return BoundArch; }
-  void setBoundArch(StringRef Arch) { BoundArch = std::string(Arch); }
+  BoundArch getBoundArch() const { return BoundArch(BoundArchStr); }
+  void setBoundArch(BoundArch BA) { BoundArchStr = BA.ArchName.str(); }
+
+  StringRef getOffloadDeviceParallelJobGroup() const {
+    return OffloadDeviceParallelJobGroup;
+  }
+  void setOffloadDeviceParallelJobGroup(StringRef Group) {
+    OffloadDeviceParallelJobGroup = Group.str();
+  }
 
   /// Returns the kind of response file supported by the current invocation.
   const ResponseFileSupport &getResponseFileSupport() {

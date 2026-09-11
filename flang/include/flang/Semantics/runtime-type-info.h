@@ -14,12 +14,10 @@
 #ifndef FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 #define FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 
-#include "flang/Common/reference.h"
 #include "flang/Semantics/symbol.h"
 #include <map>
 #include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
 class raw_ostream;
@@ -41,6 +39,10 @@ constexpr char typeInfoBuiltinModule[]{"__fortran_type_info"};
 /// Name of the builtin derived type in __fortran_type_inf that is used for
 /// derived type descriptors.
 constexpr char typeDescriptorTypeName[]{"derivedtype"};
+
+/// Name of the size-in-bytes component in the DerivedType type of the
+/// __Fortran_type_info module
+constexpr char sizeInBytesCompName[]{"sizeinbytes"};
 
 /// Name of the bindings descriptor component in the DerivedType type of the
 /// __Fortran_type_info module

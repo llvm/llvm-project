@@ -1,0 +1,40 @@
+## Show that a proper error message is printed when decompressing sections
+## using an unsupported format (zlib). Since both --decompress-debug-sections
+## and --compress-sections with format set to 'none' perform decompression,
+## here we test them both.
+
+# UNSUPPORTED: zlib
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-objcopy --decompress-debug-sections %t /dev/null 2>&1 | FileCheck %s -DFILE=%t
+# RUN: not llvm-objcopy --compress-sections '.debug_info=none' %t /dev/null 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK: error: '[[FILE]]': failed to decompress section '.debug_info': LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Type:         SHT_PROGBITS
+    Name:         .debug_info
+    Flags:        [ SHF_COMPRESSED ]
+    Content:      "010000000000000001000000000000000100000000000000789c63040000020002"
+
+## The compressed ELF above was generated from the following uncompressed input:
+## --- !ELF
+## FileHeader:
+##   Class:   ELFCLASS64
+##   Data:    ELFDATA2LSB
+##   Type:    ET_REL
+##   Machine: EM_X86_64
+## Sections:
+##   - Type:         SHT_PROGBITS
+##     Name:         .debug_info
+##     Content:      '01'
+##
+## Regenerate via:
+##   yaml2obj uncompressed.yaml -o uncompressed.o
+##   llvm-objcopy --compress-sections .debug_info=zlib uncompressed.o compressed.o
+##   obj2yaml compressed.o
