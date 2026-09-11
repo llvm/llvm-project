@@ -16,12 +16,12 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
-#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/OffloadBundler.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -31,8 +31,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/Transforms/IPO/Internalize.h"
 
 namespace clang {
 
@@ -54,7 +54,7 @@ getOrCreateTargetMachine(std::unique_ptr<llvm::TargetMachine> &Cache,
   return Cache.get();
 }
 
-IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
+IncrementalDeviceParser::IncrementalDeviceParser(
     CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
     IncrementalAction *DeviceAct,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
@@ -62,8 +62,17 @@ IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
     : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs),
       DeviceCI(DeviceInstance), VFS(FS),
       CodeGenOpts(HostInstance.getCodeGenOpts()),
-      DeviceCodeGenOpts(DeviceInstance.getCodeGenOpts()),
-      TargetOpts(DeviceInstance.getTargetOpts()) {
+      TargetOpts(DeviceInstance.getTargetOpts()) {}
+
+IncrementalDeviceParser::~IncrementalDeviceParser() {}
+
+IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
   if (Err)
     return;
   StringRef Arch = TargetOpts.CPU;
@@ -87,12 +96,15 @@ IncrementalHIPDeviceParser::Parse(llvm::StringRef Input) {
 llvm::Expected<llvm::StringRef> IncrementalHIPDeviceParser::GenerateHSACO() {
   auto &PTU = PTUs.back();
 
+  CodeGenOptions CodeGenOptsForObj = DeviceCI.getCodeGenOpts();
+  CodeGenOptsForObj.DisableLLVMPasses = true;
+
   llvm::SmallVector<char, 0> Object;
   auto ObjOS = std::make_unique<llvm::raw_svector_ostream>(Object);
   clang::emitBackendOutput(
-      DeviceCI, DeviceCI.getCodeGenOpts(),
-      DeviceCI.getTarget().getDataLayoutString(), PTU.TheModule.get(),
-      Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(), std::move(ObjOS));
+      DeviceCI, CodeGenOptsForObj, DeviceCI.getTarget().getDataLayoutString(),
+      PTU.TheModule.get(), Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(),
+      std::move(ObjOS));
 
   std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
   llvm::StringRef ExeDir = llvm::sys::path::parent_path(Exe);
@@ -172,12 +184,14 @@ llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBundle() {
         llvm::inconvertibleErrorCode());
   llvm::FileRemover BundleRemover(BundleFile);
 
-  // Triples use the normalized 4-field form ending in a dash; the device entry
-  // additionally appends the offload arch, e.g.
-  // "hip-amdgcn-amd-amdhsa--gfx90a".
+  std::string TargetID = llvm::AMDGPU::TargetID::createFromSubtargetFeatures(
+                             DeviceCI.getTarget().getTriple(), TargetOpts.CPU,
+                             llvm::join(TargetOpts.Features, ","))
+                             .getCanonicalTargetIDString();
+
   std::string HostTriple = "host-" + llvm::sys::getProcessTriple() + "-";
   std::string DeviceTriple =
-      "hip-" + PTU.TheModule->getTargetTriple().str() + "--" + TargetOpts.CPU;
+      "hip-" + PTU.TheModule->getTargetTriple().str() + "--" + TargetID;
 
   OffloadBundlerConfig Config;
   Config.FilesType = "o";
@@ -203,6 +217,13 @@ llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBundle() {
   return llvm::Error::success();
 }
 
+llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
+  llvm::Expected<llvm::StringRef> HSACO = GenerateHSACO();
+  if (!HSACO)
+    return HSACO.takeError();
+  return GenerateOffloadBundle();
+}
+
 IncrementalHIPDeviceParser::~IncrementalHIPDeviceParser() {}
 
 IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
@@ -210,9 +231,8 @@ IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
     IncrementalAction *DeviceAct,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
     llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
-    : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs), VFS(FS),
-      CodeGenOpts(HostInstance.getCodeGenOpts()),
-      TargetOpts(DeviceInstance.getTargetOpts()) {
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
   if (Err)
     return;
   StringRef Arch = TargetOpts.CPU;
@@ -330,6 +350,13 @@ llvm::Error IncrementalCUDADeviceParser::GenerateFatbinary() {
   FatbinContent.clear();
 
   return llvm::Error::success();
+}
+
+llvm::Error IncrementalCUDADeviceParser::GenerateOffloadBinary() {
+  llvm::Expected<llvm::StringRef> PTX = GeneratePTX();
+  if (!PTX)
+    return PTX.takeError();
+  return GenerateFatbinary();
 }
 
 IncrementalCUDADeviceParser::~IncrementalCUDADeviceParser() {}

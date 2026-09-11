@@ -30,7 +30,27 @@ class CodeGenOptions;
 class TargetOptions;
 class IncrementalAction;
 
-class IncrementalHIPDeviceParser : public IncrementalParser {
+class IncrementalDeviceParser : public IncrementalParser {
+
+public:
+  IncrementalDeviceParser(
+      CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+      IncrementalAction *DeviceAct,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
+      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
+
+  virtual llvm::Error GenerateOffloadBinary() = 0;
+
+  ~IncrementalDeviceParser() override;
+
+protected:
+  CompilerInstance &DeviceCI;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
+  CodeGenOptions &CodeGenOpts;
+  const TargetOptions &TargetOpts;
+};
+
+class IncrementalHIPDeviceParser : public IncrementalDeviceParser {
 
 public:
   IncrementalHIPDeviceParser(
@@ -41,23 +61,21 @@ public:
 
   llvm::Expected<TranslationUnitDecl *> Parse(llvm::StringRef Input) override;
 
-  llvm::Expected<llvm::StringRef> GenerateHSACO();
-
-  llvm::Error GenerateOffloadBundle();
+  llvm::Error GenerateOffloadBinary() override;
 
   ~IncrementalHIPDeviceParser();
 
 protected:
-  CompilerInstance &DeviceCI;
+  // Generate the HSACO code object for the last PTU.
+  llvm::Expected<llvm::StringRef> GenerateHSACO();
+
+  // Bundle the HSACO into a HIP offload bundle in memory.
+  llvm::Error GenerateOffloadBundle();
+
   llvm::SmallVector<char, 1024> HSACOContent;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
-  CodeGenOptions &CodeGenOpts; // Host opts, intentionally a reference.
-  const CodeGenOptions &DeviceCodeGenOpts;
-  const TargetOptions &TargetOpts;
-  std::unique_ptr<llvm::TargetMachine> TM;
 };
 
-class IncrementalCUDADeviceParser : public IncrementalParser {
+class IncrementalCUDADeviceParser : public IncrementalDeviceParser {
 
 public:
   IncrementalCUDADeviceParser(
@@ -66,21 +84,20 @@ public:
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
       llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
 
+  llvm::Error GenerateOffloadBinary() override;
+
+  ~IncrementalCUDADeviceParser();
+
+protected:
   // Generate PTX for the last PTU.
   llvm::Expected<llvm::StringRef> GeneratePTX();
 
   // Generate fatbinary contents in memory
   llvm::Error GenerateFatbinary();
 
-  ~IncrementalCUDADeviceParser();
-
-protected:
   int SMVersion;
   llvm::SmallString<1024> PTXCode;
   llvm::SmallVector<char, 1024> FatbinContent;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
-  CodeGenOptions &CodeGenOpts; // Intentionally a reference.
-  const TargetOptions &TargetOpts;
   std::unique_ptr<llvm::TargetMachine> TM;
 };
 
