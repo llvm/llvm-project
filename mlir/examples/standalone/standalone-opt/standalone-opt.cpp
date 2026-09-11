@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/ArithDialect.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"

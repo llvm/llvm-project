@@ -127,6 +127,12 @@ func.func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "specia
 // CHECK: func private @memrefs_map_dictspace(memref<5x6x7xf32, #map{{[0-9]*}}, {memSpace = "special", subIndex = 3 : i64}>)
 func.func private @memrefs_map_dictspace(memref<5x6x7xf32, #map3, {memSpace = "special", subIndex = 3}>)
 
+// CHECK: func private @memrefs_nomap_opaquespace(memref<5x6x7xf32, #unknown_dialect.unknown_attr>)
+func.func private @memrefs_nomap_opaquespace(memref<5x6x7xf32, #unknown_dialect.unknown_attr>)
+
+// CHECK: func private @memrefs_map_opaquespace(memref<5x6x7xf32, #map{{[0-9]*}}, #unknown_dialect.unknown_attr>)
+func.func private @memrefs_map_opaquespace(memref<5x6x7xf32, #map3, #unknown_dialect.unknown_attr>)
+
 // CHECK: func private @complex_types(complex<i1>) -> complex<f32>
 func.func private @complex_types(complex<i1>) -> complex<f32>
 
@@ -1136,6 +1142,37 @@ func.func @f80_special_values() {
   // F80 negative infinity.
   // CHECK: arith.constant 0xFFFF8000000000000000 : f80
   %5 = arith.constant 0xFFFF8000000000000000 : f80
+
+  return
+}
+
+// Literals are parsed with the semantics of the target type, so f80 and f128
+// keep the range and precision that would be lost by going through a double.
+// CHECK-LABEL: @wide_float_literals
+func.func @wide_float_literals() {
+  // CHECK: arith.constant 9.99999999999999999986E+308 : f80
+  %0 = arith.constant 1.0E+309 : f80
+  // CHECK: arith.constant -9.99999999999999999986E+308 : f80
+  %1 = arith.constant -1.0E+309 : f80
+  // CHECK: arith.constant 1.000000e+400 : f128
+  %2 = arith.constant 1.0E+400 : f128
+
+  // CHECK: arith.constant 1.100000e+00 : f80
+  %3 = arith.constant 1.1 : f80
+  // CHECK: arith.constant 1.000000e-01 : f128
+  %4 = arith.constant 0.1 : f128
+
+  // CHECK: arith.constant 1.000000e-320 : f80
+  %5 = arith.constant 1.0E-320 : f80
+
+  // Out of range for the target type: still infinity.
+  // CHECK: arith.constant 0x7FFF8000000000000000 : f80
+  %6 = arith.constant 1.0E+5000 : f80
+  // CHECK: arith.constant 0x7FF0000000000000 : f64
+  %7 = arith.constant 1.0E+400 : f64
+
+  // CHECK: arith.constant dense<[1.100000e+00, 9.99999999999999999986E+308]> : tensor<2xf80>
+  %8 = arith.constant dense<[1.1, 1.0E+309]> : tensor<2xf80>
 
   return
 }
