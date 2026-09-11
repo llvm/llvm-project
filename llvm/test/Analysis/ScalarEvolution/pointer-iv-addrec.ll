@@ -212,11 +212,11 @@ define void @gep_iv_zero_step(ptr %p, i64 %n) {
 ; CHECK-LABEL: 'gep_iv_zero_step'
 ; CHECK-NEXT:  Classifying expressions for: @gep_iv_zero_step
 ; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> %iv U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %p U: full-set S: full-set Exits: %p LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, ptr %iv, i64 0
-; CHECK-NEXT:    --> %iv U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %p U: full-set S: full-set Exits: %p LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %i.next = add nuw nsw i64 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-9223372036854775808) S: [1,-9223372036854775808) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @gep_iv_zero_step
