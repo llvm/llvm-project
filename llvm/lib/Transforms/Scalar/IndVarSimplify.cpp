@@ -663,6 +663,115 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
   WI.IsSigned |= IsSigned;
 }
 
+/// Widen a select-controlled recurrence so it runs in the wider type used by
+/// its sole wide use, sinking a truncation onto the narrow uses.
+///
+/// %wide.next is any loop-defined iM value (typically the next-value of a
+/// wider companion IV); %c is the i1 select condition. The matcher only
+/// requires the trunc to be one-use so dropping it is safe.
+///
+/// Before:
+///   loop:
+///     %iv     = phi iN [ %init, ph ], [ %sel, latch ]
+///     %ext    = sext iN %iv to iM                  ; %iv's only wide-cast use
+///     %narrow = trunc nsw iM %wide.next to iN      ; one-use
+///     %sel    = select i1 %c, iN %iv, iN %narrow   ; %iv's other use;
+///                                                  ;   arms in any order
+///
+/// After:
+///   preheader:
+///     %init.wide = sext iN %init to iM             ; one-time widen of init
+///   loop:
+///     %iv.wide   = phi iM [ %init.wide, ph ], [ %sel.wide, latch ]
+///     %sel.wide  = select i1 %c, iM %iv.wide, iM %wide.next  ; now in iM
+///     %sel.trunc = trunc nsw iM %sel.wide to iN    ; for narrow consumers
+///
+/// What changed and why:
+///   - The recurrence runs in iM instead of iN. %ext's uses are rewired to
+///     %iv.wide, eliminating the per-iteration sign-extend on the wide use.
+///   - %narrow (trunc feeding the select) is gone; the select consumes
+///     %wide.next directly. %sel.trunc replaces it on the output side, so
+///     any narrow consumer of the recurrence still gets an iN value. Net
+///     trunc count per iteration is unchanged, but the recurrence itself
+///     is now wide.
+///   - %init is sign-extended once in the preheader, never inside the loop.
+///
+/// SCEV does not classify select-controlled phis as induction variables, so
+/// simplifyUsersOfIV's IV walker never visits them and createWideIV never
+/// runs. The structural preconditions are therefore checked here directly.
+static PHINode *
+widenSelectRecurrence(PHINode *PN, LoopInfo *LI,
+                      SmallVectorImpl<WeakTrackingVH> &DeadInsts,
+                      unsigned &NumWidened) {
+  Type *SrcTy = PN->getType();
+  if (!SrcTy->isIntegerTy() || PN->getNumIncomingValues() != 2 ||
+      !PN->hasNUses(2))
+    return nullptr;
+
+  Loop *L = LI->getLoopFor(PN->getParent());
+  if (!L || PN->getParent() != L->getHeader())
+    return nullptr;
+  BasicBlock *PH = L->getLoopPreheader();
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!PH || !Latch)
+    return nullptr;
+
+  auto *Sel = dyn_cast<SelectInst>(PN->getIncomingValueForBlock(Latch));
+  if (!Sel)
+    return nullptr;
+
+  Value *V;
+  if (!match(Sel, m_c_Select(m_Specific(PN), m_OneUse(m_NSWTrunc(m_Value(V))))))
+    return nullptr;
+
+  // Widen to the truncated arm's source type, which must be a strictly wider
+  // legal integer.
+  Type *DestTy = V->getType();
+  if (!DestTy->isIntegerTy() ||
+      DestTy->getIntegerBitWidth() <= SrcTy->getIntegerBitWidth() ||
+      !PN->getDataLayout().isLegalInteger(DestTy->getIntegerBitWidth()))
+    return nullptr;
+
+  // The non-select use must be a sign-extend to DestTy.
+  SExtInst *Ext = nullptr;
+  for (User *U : PN->users()) {
+    if (U == Sel)
+      continue;
+    Ext = dyn_cast<SExtInst>(U);
+    if (!Ext || Ext->getType() != DestTy)
+      return nullptr;
+  }
+  if (!Ext)
+    return nullptr;
+
+  auto *WidePN =
+      PHINode::Create(DestTy, 2, PN->getName() + ".wide", PN->getIterator());
+  auto *WideInit =
+      CastInst::CreateSExtOrBitCast(PN->getIncomingValueForBlock(PH), DestTy,
+                                    "", PH->getTerminator()->getIterator());
+  WidePN->addIncoming(WideInit, PH);
+
+  Value *TVal = WidePN, *FVal = V;
+  if (Sel->getTrueValue() != PN)
+    std::swap(TVal, FVal);
+  auto *WideSel =
+      SelectInst::Create(Sel->getCondition(), TVal, FVal,
+                         Sel->getName() + ".wide", Sel->getIterator());
+  WidePN->addIncoming(WideSel, Latch);
+
+  auto *Trunc =
+      CastInst::CreateTruncOrBitCast(WideSel, SrcTy, "", Sel->getIterator());
+  Trunc->setHasNoSignedWrap(true);
+
+  Ext->replaceAllUsesWith(WidePN);
+  Sel->replaceAllUsesWith(Trunc);
+  DeadInsts.emplace_back(Ext);
+  DeadInsts.emplace_back(Sel);
+  DeadInsts.emplace_back(PN);
+  ++NumWidened;
+  return WidePN;
+}
+
 //===----------------------------------------------------------------------===//
 //  Live IV Reduction - Minimize IVs live across the loop.
 //===----------------------------------------------------------------------===//
@@ -751,6 +860,13 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
                                           DT, DeadInsts, ElimExt, Widened,
                                           HasGuards, UsePostIncrementRanges)) {
         NumElimExt += ElimExt;
+        NumWidened += Widened;
+        Changed = true;
+        LoopPhis.push_back(WidePhi);
+      } else if (PHINode *WidePhi = widenSelectRecurrence(
+                     WideIVs.back().NarrowIV, LI, DeadInsts, Widened)) {
+        // createWideIV did not fire (the phi is not an AddRec). Try the
+        // structural select-recurrence widener.
         NumWidened += Widened;
         Changed = true;
         LoopPhis.push_back(WidePhi);
