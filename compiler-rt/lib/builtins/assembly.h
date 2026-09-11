@@ -208,7 +208,7 @@
 #if __ARM_ARCH >= 5
 #define POP_PC() pop {pc}
 #define POP_PC_WITH_REGS(...) pop {__VA_ARGS__, pc}
-#define POP_PC_WITH_REGS_NO_CLOBBER(...) pop {__VA_ARGS__, pc}
+#define POP_PC_WITH_REGS_NO_CLOBBER(...) POP_PC_WITH_REGS(__VA_ARGS__)
 #elif defined(USE_THUMB_1)
 #define POP_PC()                                                               \
   pop {r3};                                                                    \
