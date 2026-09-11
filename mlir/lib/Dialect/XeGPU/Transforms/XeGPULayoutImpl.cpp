@@ -70,6 +70,13 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
   return out;
 }
 
+void xegpu::dropInstDataOnInherentAttrs(Operation *op) {
+  op->getName().walkInherentAttrs(op, [](StringRef, Attribute &attr) {
+    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr))
+      attr = dist.dropInstData();
+  });
+}
+
 // Sets the layout on a TensorDesc value by updating its type to include
 // the given layout, if the type does not already have a layout attached.
 static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {
@@ -273,6 +280,20 @@ LogicalResult xegpu::propagateYieldOperandsToRegionResults(
       // Assign the yield operand's layout to the region op result it feeds.
       if (auto result = dyn_cast<OpResult>(successorInput))
         xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
+      // Restrict the input IR: a successor argument that is not tied to an init
+      // operand (scf.while's "after" arguments) must be fed by a pass-through,
+      // because nothing else identifies which value the region carries. Its
+      // layout is then that of the forwarded argument's init operand.
+      if (auto arg = dyn_cast<BlockArgument>(successorInput)) {
+        auto loop =
+            dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
+        bool tiedToInit = loop && loop.getTiedLoopInit(arg);
+        if (!tiedToInit && !isa<BlockArgument>(successorOperand->get()))
+          return terminator->emitError(
+              "unsupported region structure: the successor argument it feeds "
+              "is not tied to an init operand, so its value must be passed "
+              "through from predecessor region argument.");
+      }
     }
   }
   return success();
@@ -377,8 +398,8 @@ template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
-    owner->removeAttr(name);
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name))
+    owner->removeDiscardableAttr(name);
 }
 
 // Explicit instantiation for OpResult
@@ -393,19 +414,19 @@ void xegpu::removeLayoutAttrs(Operation *op) {
   op->walk([&](Operation *nestOp) {
     // Remove all attributes of DistributeLayoutAttr type
     SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : nestOp->getAttrs()) {
+    for (auto namedAttr : nestOp->getDiscardableAttrDictionary().getValue()) {
       if (isa<DistributeLayoutAttr>(namedAttr.getValue()))
         attrsToRemove.push_back(namedAttr.getName());
     }
     for (auto attrName : attrsToRemove)
-      nestOp->removeAttr(attrName);
+      nestOp->removeDiscardableAttr(attrName);
   });
 }
 
 void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
   op->walk([&](Operation *nestOp) {
     SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : nestOp->getDiscardableAttrs()) {
+    for (auto namedAttr : nestOp->getDiscardableAttrDictionary().getValue()) {
       if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
         attrsToRemove.push_back(namedAttr.getName());
     }
@@ -2912,9 +2933,10 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
     return xegpu::getDistributeLayoutAttr(operand);
   // Region ops with forwarded operands (scf.for's and scf.while's inits) carry
   // the required operand layout as the layout_operand_N that
-  // propagateRegionArgsToInits back-propagated from the region argument.
-  // TODO: derive that layout from the region argument here instead, so this
-  // function is the only place an operand's required layout comes from.
+  // propagateRegionArgsToInits back-propagated from the region argument. Do not
+  // re-derive it from that argument here: conflict resolution inserts
+  // convert_layout ops as it walks, rewriting the argument's uses, so what
+  // those uses require depends on how far the walk has progressed.
   if (isa<RegionBranchOpInterface>(op))
     return xegpu::getDistributeLayoutAttr(operand);
   // A region terminator requires the layout of the successor input its operand

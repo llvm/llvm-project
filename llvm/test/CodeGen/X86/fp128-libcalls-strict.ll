@@ -932,7 +932,7 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-NEXT:    pushq %rsi
 ; WIN-NEXT:    pushq %rdi
 ; WIN-NEXT:    pushq %rbx
-; WIN-NEXT:    subq $128, %rsp
+; WIN-NEXT:    addq $-128, %rsp
 ; WIN-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movq %rdx, %rsi
@@ -1156,7 +1156,7 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-NEXT:    pushq %rsi
 ; WIN-NEXT:    pushq %rdi
 ; WIN-NEXT:    pushq %rbx
-; WIN-NEXT:    subq $128, %rsp
+; WIN-NEXT:    addq $-128, %rsp
 ; WIN-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movq %rdx, %rsi

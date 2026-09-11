@@ -1272,6 +1272,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE:
+    Action = TLI.getVectorInterleaveAction(
+        Node->getOpcode(), Node->getNumOperands(), Node->getValueType(0));
+    break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Action = TLI.getOperationAction(
         Node->getOpcode(),
@@ -1842,10 +1847,6 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
   Results.push_back(Tmp2);
 }
 
-/// Emit a store/load combination to the stack.  This stores
-/// SrcOp to a stack slot of type SlotVT, truncating it if needed.  It then does
-/// a load from the stack slot to DestVT, extending it if needed.
-/// The resultant code need not be legal.
 SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                                EVT DestVT, const SDLoc &dl) {
   return EmitStackConvert(SrcOp, SlotVT, DestVT, dl, DAG.getEntryNode());
@@ -1857,10 +1858,9 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   EVT SrcVT = SrcOp.getValueType();
   Type *DestType = DestVT.getTypeForEVT(*DAG.getContext());
   Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
-
   // Don't convert with stack if the load/store is expensive.
   if ((SrcVT.bitsGT(SlotVT) && !TLI.isTruncStoreLegalOrCustom(
-                                   SrcOp.getValueType(), SlotVT, DestAlign,
+                                   SrcVT, SlotVT, DestAlign,
                                    DAG.getDataLayout().getAllocaAddrSpace())) ||
       (SlotVT.bitsLT(DestVT) &&
        !TLI.isLoadLegalOrCustom(DestVT, SlotVT, DestAlign,
@@ -1868,35 +1868,7 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                 ISD::EXTLOAD, false)))
     return SDValue();
 
-  // Create the stack frame object.
-  Align SrcAlign = DAG.getDataLayout().getPrefTypeAlign(
-      SrcOp.getValueType().getTypeForEVT(*DAG.getContext()));
-  SDValue FIPtr = DAG.CreateStackTemporary(SlotVT.getStoreSize(), SrcAlign);
-
-  FrameIndexSDNode *StackPtrFI = cast<FrameIndexSDNode>(FIPtr);
-  int SPFI = StackPtrFI->getIndex();
-  MachinePointerInfo PtrInfo =
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
-
-  // Emit a store to the stack slot.  Use a truncstore if the input value is
-  // later than DestVT.
-  SDValue Store;
-
-  if (SrcVT.bitsGT(SlotVT))
-    Store = DAG.getTruncStore(Chain, dl, SrcOp, FIPtr, PtrInfo,
-                              SlotVT, SrcAlign);
-  else {
-    assert(SrcVT.bitsEq(SlotVT) && "Invalid store");
-    Store = DAG.getStore(Chain, dl, SrcOp, FIPtr, PtrInfo, SrcAlign);
-  }
-
-  // Result is a load from the stack slot.
-  if (SlotVT.bitsEq(DestVT))
-    return DAG.getLoad(DestVT, dl, Store, FIPtr, PtrInfo, DestAlign);
-
-  assert(SlotVT.bitsLT(DestVT) && "Unknown extension!");
-  return DAG.getExtLoad(ISD::EXTLOAD, dl, DestVT, Store, FIPtr, PtrInfo, SlotVT,
-                        DestAlign);
+  return DAG.emitStackConvert(SrcOp, SlotVT, DestVT, dl, Chain);
 }
 
 SDValue SelectionDAGLegalize::ExpandSCALAR_TO_VECTOR(SDNode *Node) {
@@ -3413,6 +3385,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue NewRHS =
         DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
     SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_LOAD_FSUB: {
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    SDValue NewRHS = DAG.getNode(ISD::FNEG, DL, VT, Node->getOperand(2));
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, AN->getMemoryVT(),
                                 Node->getOperand(0), Node->getOperand(1),
                                 NewRHS, AN->getMemOperand());
     Results.push_back(Res);

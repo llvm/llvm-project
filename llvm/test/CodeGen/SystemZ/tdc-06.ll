@@ -26,7 +26,7 @@ nonzeroord:
 ; CHECK-DAG: tcdb %f0, 48
 ; CHECK: jl [[RET]]
   %abs = tail call double @llvm.fabs.f64(double %x)
-  %testinf = fcmp oeq double %abs, 0x7FF0000000000000
+  %testinf = fcmp oeq double %abs, +inf
   br i1 %testinf, label %ret, label %finite, !prof !1
 
 finite:

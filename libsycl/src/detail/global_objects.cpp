@@ -15,6 +15,7 @@
 #  include <windows.h>
 #endif
 
+#include <tuple>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -40,6 +41,10 @@ struct StaticVarShutdownHandler {
 };
 
 void registerStaticVarShutdownHandler() {
+  // Touch the program manager singleton first: static objects are destroyed in
+  // reverse order of construction, so this guarantees it is still alive when
+  // ~StaticVarShutdownHandler() calls releaseResources() on it.
+  std::ignore = ProgramAndKernelManager::getInstance();
   static StaticVarShutdownHandler handler{};
 }
 

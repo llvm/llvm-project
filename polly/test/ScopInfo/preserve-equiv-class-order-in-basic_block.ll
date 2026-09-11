@@ -77,7 +77,7 @@ for.end13:                                        ; preds = %for.inc11
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                { Stmt_for_end_a[] -> MemRef_conv[] };
 ; CHECK-NEXT:            Instructions {
-; CHECK-NEXT:                  %1 = load i32, ptr @e, align 4, !tbaa !0
+; CHECK-NEXT:                  %1 = load i32, ptr @e, align 4, !tbaa !4
 ; CHECK-NEXT:                  %2 = trunc i32 %1 to i16
 ; CHECK-NEXT:                  %conv = and i16 %2, 1
 ; CHECK-NEXT:                  %tobool = icmp eq i16 %conv, 0
@@ -90,5 +90,5 @@ for.end13:                                        ; preds = %for.inc11
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                { Stmt_for_end[] -> MemRef_e[0] };
 ; CHECK-NEXT:            Instructions {
-; CHECK-NEXT:                  store i32 2, ptr @e, align 4, !tbaa !0
+; CHECK-NEXT:                  store i32 2, ptr @e, align 4, !tbaa !4
 ; CHECK-NEXT:            }

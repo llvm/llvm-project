@@ -945,6 +945,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "fork-events",
         "vfork-events",
         "memory-tagging",
+        "address-spaces",
         "qSaveCore",
         "native-signals",
         "QNonStop",
