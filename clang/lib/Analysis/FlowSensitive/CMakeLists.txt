@@ -3,8 +3,10 @@ add_clang_library(clangAnalysisFlowSensitive
   Arena.cpp
   ASTOps.cpp
   CNFFormula.cpp
+  DataflowAnalysis.cpp
   DataflowAnalysisContext.cpp
   DataflowEnvironment.cpp
+  DebugSupport.cpp
   Formula.cpp
   FormulaSerialization.cpp
   HTMLLogger.cpp
@@ -16,7 +18,7 @@ add_clang_library(clangAnalysisFlowSensitive
   TypeErasedDataflowAnalysis.cpp
   Value.cpp
   WatchedLiteralsSolver.cpp
-  DebugSupport.cpp
+  Z3Solver.cpp
 
   DEPENDS
   clangAnalysisFlowSensitiveResources
