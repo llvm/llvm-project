@@ -3693,6 +3693,10 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
         }
       },
       *LIS->getSlotIndexes(), *TRI, ComposeSubRegIdx);
+
+  // Merging may leave subranges empty; drop them so the interval is left in a
+  // valid state.
+  LI.removeEmptySubRanges();
 }
 
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
@@ -3782,8 +3786,6 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
     LHSVals.pruneSubRegValues(LHS, ShrinkMask);
     RHSVals.pruneSubRegValues(LHS, ShrinkMask);
-
-    LHS.removeEmptySubRanges();
   } else if (TrackSubRegLiveness && !CP.getDstIdx() && CP.getSrcIdx()) {
     LHS.createSubRangeFrom(LIS->getVNInfoAllocator(),
                            CP.getNewRC()->getLaneMask(), LHS);
@@ -3791,7 +3793,6 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
                       CP.getDstIdx());
     LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
     LHSVals.pruneSubRegValues(LHS, ShrinkMask);
-    LHS.removeEmptySubRanges();
   }
 
   // The merging algorithm in LiveInterval::join() can't handle conflicting
