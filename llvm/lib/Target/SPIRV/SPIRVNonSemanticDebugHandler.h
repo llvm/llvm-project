@@ -162,6 +162,11 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // ids (flags, return type, parameters).
   DenseMap<SmallVector<MCRegister, 8>, MCRegister> DebugTypeFunctionCache;
 
+  // Cache of already-emitted DebugOperation instructions, keyed by NonSemantic
+  // opcode followed by the 32-bit operation arguments. Inline size 3 is the
+  // spec maximum (opcode plus at most two operands: BitPiece, Fragment).
+  DenseMap<SmallVector<uint32_t, 3>, MCRegister> DebugOperationCache;
+
   // True once emitNonSemanticGlobalDebugInfo() has run. Both
   // SPIRVAsmPrinter::emitFunctionHeader() and emitEndOfAsmFile() may call
   // outputModuleSections(), each guarded by ModuleSectionsEmitted, so only
@@ -419,6 +424,15 @@ private:
   /// no change here. The cost is a \c DebugExpression that nothing references
   /// yet, for a debug value no instruction is emitted for.
   void collectDebugExpressions(SetVector<const DIExpression *> &Out) const;
+
+  /// Emit one \c DebugOperation for \p Op, reusing a cached result id when the
+  /// same opcode and arguments were already emitted. \p Op must already have
+  /// been checked: it maps to a NonSemantic operation, and every argument fits
+  /// in 32 bits.
+  MCRegister emitDebugOperation(const DIExpression::ExprOperand &Op,
+                                MCRegister VoidTypeReg, MCRegister I32TypeReg,
+                                MCRegister ExtInstSetReg,
+                                SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit one \c DebugOperation per element of \p Expr followed by the
   /// \c DebugExpression that lists them. An empty \p Expr yields a

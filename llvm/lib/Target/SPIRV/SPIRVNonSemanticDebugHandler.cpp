@@ -339,6 +339,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   OpStringContentCache.clear();
   I32ConstantCache.clear();
   DebugTypeFunctionCache.clear();
+  DebugOperationCache.clear();
   GlobalDIEmitted = false;
   GlobalNSDIEnabled = false;
   CurrentMAI = nullptr;
@@ -897,6 +898,32 @@ static std::optional<uint32_t> mapDwarfOpToNonSemanticOp(uint64_t DwarfOp) {
   }
 }
 
+MCRegister SPIRVNonSemanticDebugHandler::emitDebugOperation(
+    const DIExpression::ExprOperand &Op, MCRegister VoidTypeReg,
+    MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  std::optional<uint32_t> NSOp = mapDwarfOpToNonSemanticOp(Op.getOp());
+  assert(NSOp && "unsupported DWARF op");
+
+  SmallVector<uint32_t, 3> Key{*NSOp};
+  for (unsigned I = 0, E = Op.getNumArgs(); I != E; ++I)
+    // Operands are truncated to 32 bits but we already checked that they are
+    // in range.
+    Key.push_back(static_cast<uint32_t>(Op.getArg(I)));
+
+  auto [It, Inserted] = DebugOperationCache.try_emplace(std::move(Key));
+  if (!Inserted)
+    return It->second;
+
+  SmallVector<MCRegister, 3> Operands;
+  for (uint32_t V : It->first)
+    Operands.push_back(emitOpConstantI32(V, I32TypeReg, MAI));
+  MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugOperation,
+                               VoidTypeReg, ExtInstSetReg, Operands, MAI);
+  It->second = Reg;
+  return Reg;
+}
+
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugExpression(
     const DIExpression *Expr, MCRegister VoidTypeReg, MCRegister I32TypeReg,
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
@@ -914,18 +941,9 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugExpression(
   }
 
   SmallVector<MCRegister, 4> OperationRegs;
-  for (const DIExpression::ExprOperand &Op : Expr->expr_ops()) {
-    SmallVector<MCRegister, 3> Operands{emitOpConstantI32(
-        *mapDwarfOpToNonSemanticOp(Op.getOp()), I32TypeReg, MAI)};
-    for (unsigned I = 0, E = Op.getNumArgs(); I != E; ++I)
-      // Operands are truncated to 32 bits but we already checked that they are
-      // in range.
-      Operands.push_back(emitOpConstantI32(static_cast<uint32_t>(Op.getArg(I)),
-                                           I32TypeReg, MAI));
+  for (const DIExpression::ExprOperand &Op : Expr->expr_ops())
     OperationRegs.push_back(
-        emitExtInst(SPIRV::NonSemanticExtInst::DebugOperation, VoidTypeReg,
-                    ExtInstSetReg, Operands, MAI));
-  }
+        emitDebugOperation(Op, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI));
 
   return emitExtInst(SPIRV::NonSemanticExtInst::DebugExpression, VoidTypeReg,
                      ExtInstSetReg, OperationRegs, MAI);
