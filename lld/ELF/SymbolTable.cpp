@@ -48,6 +48,15 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
     // keep sym if it was defined, otherwise it's unused and can be dropped.
     sym->isUsedInRegularObj = false;
 
+  if (ctx.hasDynDbg) {
+    if (sym->isDynDbgRef)
+      wrap->isDynDbgRef = true;
+    if (real->isDynDbgRef)
+      sym->isDynDbgRef = true;
+    else if (!sym->isDefined())
+      sym->isDynDbgRef = false;
+  }
+
   // Now renaming is complete, and no one refers to real. We drop real from
   // .symtab and .dynsym. If real is undefined, it is important that we don't
   // leave it in .dynsym, because otherwise it might lead to an undefined symbol
