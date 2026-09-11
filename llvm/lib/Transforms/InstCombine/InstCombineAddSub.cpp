@@ -1603,36 +1603,27 @@ Instruction *InstCombinerImpl::foldDivCeil(BinaryOperator &I) {
 
 /// Fold: add (select (icmp slt (srem X, N), 0), N, 0), (srem X, N)
 /// to: and X, (N - 1)
+/// when N is a power of 2 (checked per-element for vectors).
 static Instruction *foldAddwithSRemSelect(BinaryOperator &Add,
                                           InstCombiner::BuilderTy &Builder,
                                           const SimplifyQuery &SQ) {
-  Value *Sel, *Rem;
-  if (!match(&Add, m_c_Add(m_Value(Sel), m_Value(Rem))))
-    return nullptr;
-
-  Value *X, *Modulus;
-  if (!match(Rem, m_SRem(m_Value(X), m_Value(Modulus))))
-    return nullptr;
-
-  Value *Cmp, *TrueVal, *FalseVal;
-  if (!match(Sel, m_Select(m_Value(Cmp), m_Value(TrueVal), m_Value(FalseVal))))
-    return nullptr;
-
+  Value *Sel, *Rem, *X, *Modulus, *Cmp, *TrueVal, *FalseVal, *CmpLHS;
   CmpPredicate Pred;
-  Value *CmpLHS;
-  if (!match(Cmp, m_ICmp(Pred, m_Value(CmpLHS), m_Zero())) ||
-      Pred != ICmpInst::ICMP_SLT || CmpLHS != Rem)
-    return nullptr;
-
-  if (TrueVal != Modulus || !match(FalseVal, m_Zero()))
-    return nullptr;
-
-  if (!isKnownToBeAPowerOfTwo(Modulus, false, SQ))
-    return nullptr;
-
-  Value *ModulusMinusOne =
-      Builder.CreateAdd(Modulus, Constant::getAllOnesValue(Modulus->getType()));
-  return BinaryOperator::CreateAnd(X, ModulusMinusOne);
+  
+  if (match(&Add, m_c_Add(m_Value(Sel), m_Value(Rem))) &&
+      match(Rem, m_SRem(m_Value(X), m_Value(Modulus))) &&
+      match(Sel, m_Select(m_Value(Cmp), m_Value(TrueVal), m_Value(FalseVal))) &&
+      match(Cmp, m_ICmp(Pred, m_Value(CmpLHS), m_Zero())) &&
+      Pred == ICmpInst::ICMP_SLT && CmpLHS == Rem &&
+      TrueVal == Modulus && match(FalseVal, m_Zero()) &&
+      isKnownToBeAPowerOfTwo(Modulus, false, SQ)) {
+    
+    Value *ModulusMinusOne =
+        Builder.CreateAdd(Modulus, Constant::getAllOnesValue(Modulus->getType()));
+    return BinaryOperator::CreateAnd(X, ModulusMinusOne);
+  }
+  
+  return nullptr;
 }
 
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
