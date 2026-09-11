@@ -100,7 +100,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
       // Since most private -> public mappings happen in a verbatim way, we
       // check textually here. This might go wrong in presence of symlinks or
       // header mappings. But that's not different than rest of the places.
-      if (AST.tuPath().ends_with(PHeader))
+      if (AST.tuPath().raw().ends_with(PHeader))
         return false;
     }
   }
@@ -124,9 +124,9 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
   const SourceManager &SM = AST.getSourceManager();
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
 
-  auto FileStyle = getFormatStyleForFile(AST.tuPath(), Code, TFS, false);
+  auto FileStyle = getFormatStyleForFile(AST.tuPath().raw(), Code, TFS, false);
 
-  tooling::HeaderIncludes HeaderIncludes(AST.tuPath(), Code,
+  tooling::HeaderIncludes HeaderIncludes(AST.tuPath().raw(), Code,
                                          FileStyle.IncludeStyle);
   for (const auto &SymbolWithMissingInclude : MissingIncludes) {
     llvm::StringRef ResolvedPath =
@@ -175,7 +175,7 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
                       SymbolWithMissingInclude.Symbol.name());
     D.Name = "missing-includes";
     D.Source = Diag::DiagSource::Clangd;
-    D.File = AST.tuPath();
+    D.File = AST.tuPath().raw();
     D.InsideMainFile = true;
     // We avoid the "warning" severity here in favor of LSP's "information".
     //
@@ -212,7 +212,7 @@ std::vector<Diag> generateUnusedIncludeDiagnostics(
     llvm::StringRef Code, HeaderFilter IgnoreHeaders) {
   std::vector<Diag> Result;
   for (const auto *Inc : UnusedIncludes) {
-    if (isIgnored(Inc->Resolved, IgnoreHeaders))
+    if (isIgnored(Inc->Resolved.raw(), IgnoreHeaders))
       continue;
     Diag &D = Result.emplace_back();
     D.Message =
@@ -222,7 +222,7 @@ std::vector<Diag> generateUnusedIncludeDiagnostics(
                           llvm::sys::path::Style::posix));
     D.Name = "unused-includes";
     D.Source = Diag::DiagSource::Clangd;
-    D.File = FileName;
+    D.File = FileName.raw();
     D.InsideMainFile = true;
     D.Severity = DiagnosticsEngine::Warning;
     D.Tags.push_back(Unnecessary);
@@ -361,7 +361,7 @@ include_cleaner::Includes convertIncludes(const ParsedAST &AST) {
     TransformedInc.Angled = WrittenRef.starts_with("<");
     // Inc.Resolved is canonicalized with clangd::getCanonicalPath(),
     // which is based on FileManager::getCanonicalName(ParentDir).
-    auto FE = SM.getFileManager().getFileRef(Inc.Resolved);
+    auto FE = SM.getFileManager().getFileRef(Inc.Resolved.raw());
     if (!FE) {
       elog("IncludeCleaner: Failed to get an entry for resolved path '{0}' "
            "from include {1} : {2}",
@@ -382,7 +382,7 @@ computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeAngledIncludes) {
   const auto &SM = AST.getSourceManager();
   include_cleaner::Includes ConvertedIncludes = convertIncludes(AST);
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
-  auto PreamblePatch = PreamblePatch::getPatchEntry(AST.tuPath(), SM);
+  auto PreamblePatch = PreamblePatch::getPatchEntry(AST.tuPath().raw(), SM);
 
   std::vector<include_cleaner::SymbolReference> Macros =
       collectMacroReferences(AST);
