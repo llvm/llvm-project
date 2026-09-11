@@ -5,13 +5,16 @@
 ;
 ; The first load's alignment does not describe every group. Widening each
 ; adjacent pair to i64 would leave the group at byte offset 28 misaligned.
-; FIXME: Do not form an i64 strided load in the RV64 strict-alignment case.
 
 define void @gather_fields(ptr %base, ptr %out) {
 ; RV64-LABEL: define void @gather_fields(
 ; RV64-SAME: ptr [[BASE:%.*]], ptr [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; RV64-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr align 4 [[BASE]], i64 28, <2 x i1> splat (i1 true), i32 2)
-; RV64-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP1]] to <4 x i32>
+; RV64-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 7
+; RV64-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BASE]], align 16
+; RV64-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P2]], align 4
+; RV64-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; RV64-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; RV64-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; RV64-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], splat (i32 3)
 ; RV64-NEXT:    store <4 x i32> [[TMP6]], ptr [[OUT]], align 4
 ; RV64-NEXT:    ret void
@@ -19,13 +22,13 @@ define void @gather_fields(ptr %base, ptr %out) {
 ; RV32-LABEL: define void @gather_fields(
 ; RV32-SAME: ptr [[BASE:%.*]], ptr [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; RV32-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 7
-; RV32-NEXT:    [[Q2:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 2
 ; RV32-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BASE]], align 16
-; RV32-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], splat (i32 3)
 ; RV32-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; RV32-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP2]], splat (i32 3)
-; RV32-NEXT:    store <2 x i32> [[TMP3]], ptr [[OUT]], align 4
-; RV32-NEXT:    store <2 x i32> [[TMP4]], ptr [[Q2]], align 4
+; RV32-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; RV32-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; RV32-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; RV32-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], splat (i32 3)
+; RV32-NEXT:    store <4 x i32> [[TMP6]], ptr [[OUT]], align 4
 ; RV32-NEXT:    ret void
 ;
 ; UNALIGNED-LABEL: define void @gather_fields(
