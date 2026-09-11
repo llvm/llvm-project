@@ -410,3 +410,39 @@ struct __attribute__((packed)) PragmaPackInPacked {
 void g21(struct PragmaPackInPacked *p) {
   f3((short *)&p->inner.x); // expected-warning {{packed member 'x' of class or structure 'PragmaPack2'}}
 }
+
+// #pragma pack(4) does not reduce x, so the outer packed record takes the
+// blame.
+struct __attribute__((packed)) PragmaPack4InPacked {
+  char c0;
+  struct PragmaPack4 inner;
+};
+
+void g22(struct PragmaPack4InPacked *p) {
+  f1(&p->inner.x); // expected-warning {{packed member 'inner' of class or structure 'PragmaPack4InPacked'}}
+}
+
+// The typedef, not the packing, lowers inner to one, so no link is reduced
+// below the alignment of its type. Blame the packed link anyway.
+struct Natural {
+  char c0;
+  int x;
+};
+typedef struct Natural __attribute__((aligned(1))) UnalignedNatural;
+
+struct __attribute__((packed)) PackedHoldsUnaligned {
+  char c0;
+  UnalignedNatural inner;
+};
+
+#pragma pack(push, 1)
+struct PragmaPackHoldsUnaligned {
+  char c0;
+  UnalignedNatural inner;
+};
+#pragma pack(pop)
+
+void g23(struct PackedHoldsUnaligned *p, struct PragmaPackHoldsUnaligned *q) {
+  f1(&p->inner.x); // expected-warning {{packed member 'inner' of class or structure 'PackedHoldsUnaligned'}}
+  f1(&q->inner.x); // expected-warning {{packed member 'inner' of class or structure 'PragmaPackHoldsUnaligned'}}
+}

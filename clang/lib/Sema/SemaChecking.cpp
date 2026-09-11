@@ -16983,24 +16983,17 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
   }
 }
 
-/// If packing reduces \p FD below the alignment required by its type, return
-/// the alignment it is reduced to. __attribute__((packed)) reduces every
-/// field; #pragma pack(N) only reduces fields that require more than N.
-static std::optional<CharUnits> getPackedFieldAlignment(const ASTContext &Ctx,
-                                                        const FieldDecl *FD) {
+/// Return the alignment that packing caps \p FD at, or std::nullopt if it is
+/// not packed: __attribute__((packed)) on the field or its record packs it to
+/// a byte, and #pragma pack(N) caps it at N.
+static std::optional<CharUnits> getFieldPackingLimit(const ASTContext &Ctx,
+                                                     const FieldDecl *FD) {
   const RecordDecl *RD = FD->getParent();
-  bool IsPacked = FD->hasAttr<PackedAttr>() || RD->hasAttr<PackedAttr>();
-  const auto *MFAA = RD->getAttr<MaxFieldAlignmentAttr>();
-  if (!IsPacked && !MFAA)
-    return std::nullopt;
-
-  CharUnits TypeAlignment = Ctx.getTypeAlignInChars(FD->getType());
-  if (!IsPacked &&
-      Ctx.toCharUnitsFromBits(MFAA->getAlignment()) >= TypeAlignment)
-    return std::nullopt;
-
-  return std::min(TypeAlignment,
-                  Ctx.getTypeAlignInChars(Ctx.getCanonicalTagType(RD)));
+  if (FD->hasAttr<PackedAttr>() || RD->hasAttr<PackedAttr>())
+    return CharUnits::One();
+  if (const auto *MFAA = RD->getAttr<MaxFieldAlignmentAttr>())
+    return Ctx.toCharUnitsFromBits(MFAA->getAlignment());
+  return std::nullopt;
 }
 
 void Sema::RefersToMemberWithReducedAlignment(
@@ -17036,8 +17029,7 @@ void Sema::RefersToMemberWithReducedAlignment(
     if (!FD || FD->isInvalidDecl())
       return;
 
-    AnyIsPacked =
-        AnyIsPacked || getPackedFieldAlignment(Context, FD).has_value();
+    AnyIsPacked = AnyIsPacked || getFieldPackingLimit(Context, FD).has_value();
     ReverseMemberChain.push_back(FD);
 
     TopME = ME;
@@ -17093,21 +17085,31 @@ void Sema::RefersToMemberWithReducedAlignment(
     // type) but some packed attribute in that chain has reduced the alignment.
     // It may happen that another packed structure increases it again. But if
     // we are here such increase has not been enough. So pointing the first
-    // FieldDecl that either is packed or else its RecordDecl is,
-    // seems reasonable.
+    // FieldDecl that packing reduced below the alignment of its type seems
+    // reasonable. Failing that, blame the first packed one: the alignment of
+    // its type may have been lowered by a typedef instead.
     FieldDecl *FD = nullptr;
+    FieldDecl *FirstPacked = nullptr;
     // Take the least alignment left by any link of the chain, not the one
     // left by the first link that reduced it: an outer packed record can
     // reduce a field further than the #pragma pack on its own record did.
     CharUnits Alignment = ExpectedAlignment;
     for (FieldDecl *FDI : ReverseMemberChain) {
-      std::optional<CharUnits> Packed = getPackedFieldAlignment(Context, FDI);
-      if (!FD && Packed)
-        FD = FDI;
-      Alignment = std::min(
-          Alignment,
-          Packed.value_or(Context.getTypeAlignInChars(FDI->getType())));
+      CharUnits FieldAlignment = Context.getTypeAlignInChars(FDI->getType());
+      std::optional<CharUnits> Limit = getFieldPackingLimit(Context, FDI);
+      if (Limit && !FirstPacked)
+        FirstPacked = FDI;
+      if (Limit && *Limit < FieldAlignment) {
+        if (!FD)
+          FD = FDI;
+        FieldAlignment = std::min(
+            FieldAlignment, Context.getTypeAlignInChars(
+                                Context.getCanonicalTagType(FDI->getParent())));
+      }
+      Alignment = std::min(Alignment, FieldAlignment);
     }
+    if (!FD)
+      FD = FirstPacked;
     assert(FD && "We did not find a packed FieldDecl!");
     Action(E, FD->getParent(), FD, Alignment);
   }
