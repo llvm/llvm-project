@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define GET_GICOMBINER_DEPS
 #include "SPIRVGenPreLegalizeGICombiner.inc"
