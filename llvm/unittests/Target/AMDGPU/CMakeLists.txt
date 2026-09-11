@@ -35,4 +35,5 @@ add_llvm_target_unittest(AMDGPUTests
   RCIUpdateReservedRegsTest.cpp
   UniformityAnalysisTest.cpp
   MFMACoExecRules.cpp
+  VGPRAsMemory.cpp
   )

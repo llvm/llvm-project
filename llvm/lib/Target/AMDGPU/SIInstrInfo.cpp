@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -298,6 +299,13 @@ bool SIInstrInfo::isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode) {
 // Returns true if the result of a VALU instruction depends on exec.
 bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   assert(isVALU(MI, /*AllowLDSDMA=*/true));
+
+  // A VGPR "as memory" indexed access reads or writes the per-lane vector
+  // registers of the active lanes, so which lanes are active is part of what it
+  // does. Its implicit use of EXEC must not be treated as ignorable, or the
+  // access could be moved across a write to EXEC.
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
+    return true;
 
   // If it is convergent it depends on EXEC.
   if (MI.isConvergent())
@@ -652,6 +660,28 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     if (DataOpIdx == -1) // LDS DMA
       return false;
     Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
+    return true;
+  }
+
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    BaseOp = &LdStIdx->getIdxOp();
+    OffsetOp = &LdStIdx->getOffsetOp();
+
+    // Callers compare two accesses by base operand and constant offset, and
+    // treat identical bases as the same address. That only holds while the base
+    // names a value. On a movrel subtarget every one of these reads M0, so two
+    // accesses with unrelated indices compare as the same base and would be
+    // declared disjoint on their offsets alone; M0 can also be redefined
+    // between them, which the comparison does not look for. Report such an
+    // access as opaque instead.
+    if (!BaseOp->isReg() || !BaseOp->getReg().isVirtual())
+      return false;
+
+    BaseOps.push_back(BaseOp);
+    Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
+
+    // Get appropriate operand, and compute width accordingly.
+    Width = LocationSize::precise(LdStIdx->getBitWidth() / 8);
     return true;
   }
 
@@ -4271,10 +4301,20 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
-  if (isLDSDMA(MIa) || isLDSDMA(MIb))
+  if (MIa.isBundle() || MIb.isBundle())
     return false;
 
-  if (MIa.isBundle() || MIb.isBundle())
+  // VGPR "as memory" indexed accesses only alias each other, and then only
+  // when their [idx+offset, idx+offset+width) dword ranges overlap.
+  const bool IsLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
+  const bool IsLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
+  if (IsLdStIdxA || IsLdStIdxB) {
+    if (IsLdStIdxA && IsLdStIdxB)
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    return true;
+  }
+
+  if (isLDSDMA(MIa) || isLDSDMA(MIb))
     return false;
 
   // TODO: Should we check the address space from the MachineMemOperand? That
@@ -5890,7 +5930,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64) {
     const bool IsDst = Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e32 ||
                        Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64;
-
     const unsigned StaticNumOps =
         Desc.getNumOperands() + Desc.implicit_uses().size();
     const unsigned NumImplicitOps = IsDst ? 2 : 1;
@@ -5920,8 +5959,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
 
     const MachineOperand &Src0 = MI.getOperand(Src0Idx);
-    const MachineOperand &ImpUse
-      = MI.getOperand(StaticNumOps + NumImplicitOps - 1);
+    const MachineOperand &ImpUse =
+        MI.getOperand(StaticNumOps + NumImplicitOps - 1);
     if (!ImpUse.isReg() || !ImpUse.isUse() ||
         !isSubRegOf(RI, ImpUse, IsDst ? *Dst : Src0)) {
       ErrInfo = "src0 should be subreg of implicit vector use";
@@ -7751,6 +7790,19 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   // Legalize FLAT
   if (isFLAT(MI)) {
     legalizeOperandsFLAT(MRI, MI);
+    return CreatedBB;
+  }
+
+  // A VGPR "as memory" indexed load/store needs its dword index in an SGPR (it
+  // becomes M0). A divergent (VGPR) index is made uniform with a waterfall
+  // loop that executes the access once per unique index across the wave.
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    MachineOperand *Idx = &LdStIdx->getIdxOp();
+    // Waterfall any non-SGPR index. isSGPRReg handles both virtual and physical
+    // registers, so a physical (non-SGPR) index - not expected here, but still
+    // possible - is made uniform rather than silently skipped.
+    if (Idx->isReg() && !RI.isSGPRReg(MRI, Idx->getReg()))
+      CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
     return CreatedBB;
   }
 
@@ -11232,9 +11284,16 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
     return ValueUniformity::Default;
   }
 
+  // A VGPR ("as memory") indexed load is always divergent: it reads the wave's
+  // per-lane view of its vector registers, so even a uniform index yields a
+  // per-lane (divergent) value.
+  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
+    return ValueUniformity::NeverUniform;
+
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // different results. The VGPR address space is likewise divergent (see
+  // above; this covers a G_LOAD not yet legalized to G_AMDGPU_REG_LOAD).
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
@@ -11245,7 +11304,8 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
 
     if (llvm::any_of(MI.memoperands(), [](const MachineMemOperand *mmo) {
           return mmo->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS ||
+                 mmo->getAddrSpace() == AMDGPUAS::VGPR;
         })) {
       // At least one MMO in a non-global address space.
       return ValueUniformity::NeverUniform;
@@ -11340,6 +11400,12 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
 
     return ValueUniformity::Default;
   }
+
+  // As above for the generic opcodes, but after instruction selection: an
+  // indexed load reads the wave's per-lane view of its vector registers, so
+  // even a uniform index yields a divergent value.
+  if (isa<AMDGPUMI::VLoadIdxInst>(MI))
+    return ValueUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();

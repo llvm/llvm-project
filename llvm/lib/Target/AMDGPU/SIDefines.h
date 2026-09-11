@@ -1370,10 +1370,14 @@ namespace SyntheticAperture {
 /// bits of the LDS aperture pointer.
 ///
 /// NOTE: This is also documented in AMDGPUUsage.
+///
+/// The addition of new apertures must be coordinated with the architecture
+/// team.
 enum SyntheticAperture {
   None = 0x00000000,
 
   BARRIER = 0x00000001,
+  VGPR = 0x00000003,
 };
 } // namespace SyntheticAperture
 

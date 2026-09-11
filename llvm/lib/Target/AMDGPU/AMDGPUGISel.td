@@ -290,6 +290,9 @@ def : GINodeEquiv<G_AMDGPU_FMINIMUM3, AMDGPUfminimum3>;
 
 def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
+def : GINodeEquiv<G_AMDGPU_REG_LOAD,  SIreg_load>;
+def : GINodeEquiv<G_AMDGPU_REG_STORE, SIreg_store>;
+
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD, SIbuffer_load>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_USHORT, SIbuffer_load_ushort>;
