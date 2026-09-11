@@ -1241,7 +1241,9 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   if (!uArch)
     return;
   VectorType resVecTy = load.getValueType();
-  int chunkSize = load.getChunkSize().value_or(1);
+  // The contiguity analysis reports how many neighbouring elements one lane may
+  // take in a single access. Absent, only one element per lane is safe.
+  int contigChunkSize = load.getContiguity().value_or(1);
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
   if (!resLayoutInfo.isAssigned())
@@ -1275,14 +1277,12 @@ void LayoutInfoPropagation::visitLoadGatherOp(
       return;
     }
     requiredAnchorLayoutAttr = xegpu::setupLoadGatherAnchorLayout(
-        layoutKind, resVecTy, chunkSize, consumerLayoutAttr, uArch);
+        layoutKind, resVecTy, contigChunkSize, consumerLayoutAttr, uArch);
     load.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  assert((chunkSize <= 1) || (layoutKind != xegpu::LayoutKind::Subgroup));
-  auto maskLayoutAttr = xegpu::inferMaskOffsetLayoutForScatterIO(
-      requiredAnchorLayoutAttr, chunkSize);
-  LayoutInfo maskLayoutInfo = makeLayoutInfo(maskLayoutAttr);
+  // The mask and offset operands share the value's anchor layout.
+  LayoutInfo maskLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
   auto loadLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
 
   // Propagate the new layout to the tensor descriptor operand.
@@ -1306,7 +1306,9 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   if (!uArch)
     return;
   VectorType srcVecTy = storeScatter.getValueType();
-  int chunkSize = storeScatter.getChunkSize().value_or(1);
+  // The contiguity analysis reports how many neighbouring elements one lane may
+  // write in a single access. Absent, only one element per lane is safe.
+  int contigChunkSize = storeScatter.getContiguity().value_or(1);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
@@ -1338,7 +1340,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     if (failed(numSgOrErr))
       return;
     requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, numSgOrErr.value_or(0), uArch);
+        layoutKind, srcVecTy, contigChunkSize, numSgOrErr.value_or(0), uArch);
     if (!requiredAnchorLayoutAttr) {
       markFailure(storeScatter,
                   "Failed to determine required layout for store scatter.");
@@ -1348,10 +1350,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   }
 
   LayoutInfo srcLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
-  assert((chunkSize <= 1) || (layoutKind != xegpu::LayoutKind::Subgroup));
-  auto maskLayoutAttr = xegpu::inferMaskOffsetLayoutForScatterIO(
-      requiredAnchorLayoutAttr, chunkSize);
-  LayoutInfo maskLayoutInfo = makeLayoutInfo(maskLayoutAttr);
+  // The mask and offset operands share the value's anchor layout.
+  LayoutInfo maskLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
 
   // Propagate the payload operand layout
   propagateIfChanged(operands[0], operands[0]->meet(srcLayoutInfo));

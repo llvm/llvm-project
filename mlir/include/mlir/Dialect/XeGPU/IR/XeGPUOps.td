@@ -706,16 +706,12 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
 def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayoutInterface]> {
   let summary = "load a set of scattered data points from memory.";
 
-  let description = [{ It (aka. load) load data per each lane. The output
-    describes the data being loaded at the subgroup level, so its size is
-    consistent with the number of lanes in a subgroup. When the chunk size
-    is larger than 2, the output vector is a 2D vector, with dim-0 correspoding
-    to lanes, and dim-1 corresponding to the chunk size loaded by each lane.
+  let description = [{ It (aka. load) load data per each lane.
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. Each mask element applies to one lane.
 
-    In lane level, the result is a 1D vector that represents the data to be loaded by
-    each lane. If size is not 1, size should be equal to the chunk size.
+    At every level the mask, offsets, and result may be nD vectors, and all three
+    must have the same shape.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
@@ -726,16 +722,18 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
         1D memref or pointer (ui64, ui32, i64 or i32).
 
     - `offsets`: represents offsets from source.
-        offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 at lane level. scalar offset is also valid for lane level.
+        offsets is a vector of `index` type with the same shape as the result.
+        A scalar offset is also valid: one lane then reads only one element.
 
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
-        mask is a vector of size equal to the subgroup size, or 1 at lane level.
-        scalar mask is also valid for lane level.
-
-    - `chunk_size`: [optional] represents contiguous number of elements to load from per work item.
+        mask has the same shape as the offsets and the result. Each element applies
+        to one lane. A scalar mask is also valid, and gates that one element.
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `contiguity`: [optional] the number of neighbouring elements each lane may
+      access in one instruction, as established by the contiguity analysis. It
+      must be at least 2 and must divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result
       of load. Only valid at workgroup and subgroup levels.
@@ -750,28 +748,36 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     %a = memref.alloc() : memref<1024xf32>
     %offsets = vector.step : vector<16xindex>
     %mask = vector.constant_mask [16]: vector<16xi1>
-    %val = xegpu.load %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
+    %val = xegpu.load %a[%offsets], %mask <{l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>,
-                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
+                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}>
+      : memref<1024xf32>, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   ```
 
   Example 2 (lane level):
-  lane level only accepts the offsets variant. chunk_size can be inferred from result
-  type. In this example, chunk_size is 8.
+  lane level only accepts the offsets variant. The mask, offsets, and result all
+  have the same shape; here each lane reads 8 elements.
   ```mlir
-    %2 = xegpu.load %1[%2], %0 <{l1_hint = #xegpu.cache_hint<cached>,
+    %val = xegpu.load %src[%offsets], %mask <{l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<uncached>,
                              l3_hint = #xegpu.cache_hint<uncached>}>
-          : memref<128xf32>, vector<1xindex>, vector<1xi1> -> vector<8xf32>
+          : memref<128xf32>, vector<8xindex>, vector<8xi1> -> vector<8xf32>
+  ```
+
+  Example 3 (subgroup level, contiguous runs):
+  `contiguity` says each lane may take 4 neighbouring elements in one access.
+  The shapes stay the same.
+  ```mlir
+    %val = xegpu.load %src[%offsets], %mask <{contiguity = 4 : i64}>
+          : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   ```
 
   }];
 
   let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
-      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
@@ -817,13 +823,11 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   let builders = [
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
@@ -836,15 +840,10 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorLayoutInterface]> {
   let summary = "store data to scattered memory locations.";
   let description =
-      [{ It (aka. store) stores data to scattered memory locations. The value is
-  typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
-  a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
-  and the dim-0 of the value corresponds to the chunk size stored per lane. So `store_scatter`
-  has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
-  introduced on purpose, making sure users are aware of this implicit transformation.
+      [{ It (aka. store) stores data to scattered memory locations.
 
-  In lane level, the result is a 1D vector that represents the data to be stored by
-  each lane. If size is not 1, size should be equal to the chunk size.
+  At every level the mask, offsets, and value may be nD vectors, and all three
+  must have the same shape.
 
   This operation serves as an anchor through which users assign a layout attribute
   to govern computation distribution.
@@ -857,16 +856,18 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
         1D memref or pointer (ui64, ui32, i64 or i32).
 
     - `offsets`: represents offsets from dest.
-        offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 at lane level. scalar offset is also valid for lane level.
+        offsets is a vector of `index` type with the same shape as the value.
+        A scalar offset is also valid: one lane then writes only one element.
 
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
-        mask is a vector of size equal to the subgroup size, or 1 at lane level.
-        scalar mask is also valid for lane level.
-
-    - `chunk_size`: [optional] represents contiguous number of elements to store to per work item.
+        mask has the same shape as the offsets and the value. Each element applies
+        to one lane. A scalar mask is also valid, and gates that one element.
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `contiguity`: [optional] the number of neighbouring elements each lane may
+      access in one instruction, as established by the contiguity analysis. It
+      must be at least 2 and must divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
       to be stored. Only valid at workgroup and subgroup levels.
@@ -880,21 +881,29 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
     %val = arith.constant dense<0.0> : vector<16xf32>
     %offsets = vector.step : vector<16xindex>
     %mask = vector.constant_mask [16]: vector<16xi1>
-    xegpu.store %val, %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
+    xegpu.store %val, %a[%offsets], %mask <{l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>,
-                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      : vector<16xf32>, memref<1024xf32>, vector<16xi1>, vector<16xindex>
+                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}>
+      : vector<16xf32>, memref<1024xf32>, vector<16xindex>, vector<16xi1>
   ```
 
   Example 2 (Lane level):
-  Lane level IR only accepts the offsets variant. chunk_size can be inferred from value
-  type. In this example, chunk_size is 8.
+  Lane level IR only accepts the offsets variant. The mask, offsets, and value all
+  have the same shape; here each lane writes 8 elements.
   ```mlir
-    xegpu.store %0, %1[%2], %3 <{l1_hint = #xegpu.cache_hint<uncached>,
+    xegpu.store %val, %dest[%offsets], %mask <{l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>}>
-          : vector<8xf32>, memref<256xf32>, vector<1xindex>, vector<1xi1>
+          : vector<8xf32>, memref<256xf32>, vector<8xindex>, vector<8xi1>
+  ```
+
+  Example 3 (Subgroup level, contiguous runs):
+  `contiguity` says each lane may take 4 neighbouring elements in one access.
+  The shapes stay the same.
+  ```mlir
+    xegpu.store %val, %dest[%offsets], %mask <{contiguity = 4 : i64}>
+          : vector<16xf32>, i64, vector<16xindex>, vector<16xi1>
   ```
 
   }];
@@ -902,7 +911,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let arguments = (ins XeGPU_ValueOrScalarType:$value,
       XeGPU_GatherScatterBaseAddrType:$dest,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
-      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
@@ -947,13 +956,11 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let builders = [
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
