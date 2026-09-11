@@ -1,9 +1,9 @@
 ## Relax direct calls using thunks across function fragment clusters. A/B/C/D
 ## contain 42MiB islands. With --split-functions, BOLT places the cold blocks
 ## of A/B/C/D in .text.cold. The test exercises direct adjacent-cluster calls,
-## forward and backward short thunks, and long thunk reuse across remote
-## clusters. With the default 124MiB function-fragment cluster size, call
-## relaxation sees:
+## one-hop short thunks, and long thunk reuse across remote clusters. With the
+## default maximum thunk chain length and default 124MiB function-fragment
+## cluster size, call relaxation sees:
 ##
 ##   A -> B        direct same cluster
 ##   B -> C        direct forward
@@ -40,14 +40,15 @@
 # RUN:   --compact-code-model --relax-exp \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-bolt %t -o %t.hfe.bolt --data %t.fdata --split-functions \
-# RUN:   --compact-code-model --relax-exp --hot-functions-at-end \
+# RUN:   --compact-code-model --relax-exp \
+# RUN:   --hot-functions-at-end \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HFE
 # RUN: llvm-readelf -S %t.bolt | FileCheck %s --check-prefix=CHECK-SECTIONS
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_short_call_D_0,__AArch64_backward_short_call_A_1,__AArch64_backward_long_call_A_0,__AArch64_backward_long_call_D_1 \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_Thunk_D_0,__AArch64_backward_Thunk_A_1,__AArch64_backward_ADRPThunk_A_0,__AArch64_backward_ADRPThunk_D_1 \
 # RUN:   %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_short_call_D_0,__AArch64_forward_short_call_A_1,__AArch64_backward_short_call_A_2,__AArch64_forward_long_call_D_0 \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_Thunk_A_0,__AArch64_forward_Thunk_D_1,__AArch64_backward_Thunk_A_2,__AArch64_forward_ADRPThunk_D_0 \
 # RUN:   %t.hfe.bolt | FileCheck %s --check-prefix=CHECK-HFE-OUTPUT
 
 # CHECK-BOLT: BOLT-INFO: built 4 function fragment cluster(s)
@@ -63,12 +64,12 @@
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 3
 # CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
 # CHECK-BOLT-NEXT: BOLT-INFO:   88080448 estimated bytes
-# CHECK-BOLT: BOLT-INFO: relaxed 2 short cluster calls with thunks
-# CHECK-BOLT: BOLT-INFO: relaxed 4 long cluster calls with thunks
+# CHECK-BOLT: BOLT-INFO: relaxed 2 calls with short thunks
+# CHECK-BOLT: BOLT-INFO: relaxed 4 calls with long thunks
 # CHECK-BOLT: BOLT-INFO: 2 short thunks created
 # CHECK-BOLT: BOLT-INFO: 2 long thunks created
 # CHECK-BOLT: BOLT-INFO: 2 long thunks reused
-# CHECK-BOLT: BOLT-INFO: relaxed 8 cross-cluster branches
+# CHECK-BOLT: BOLT-INFO: relaxed 8 unconditional branches
 # CHECK-BOLT: BOLT-INFO: 12 branch thunks created
 
 # CHECK-BOLT-HFE: BOLT-INFO: built 4 function fragment cluster(s)
@@ -84,12 +85,12 @@
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 3
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080448 estimated bytes
-# CHECK-BOLT-HFE: BOLT-INFO: relaxed 3 short cluster calls with thunks
-# CHECK-BOLT-HFE: BOLT-INFO: relaxed 2 long cluster calls with thunks
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 3 calls with short thunks
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 2 calls with long thunks
 # CHECK-BOLT-HFE: BOLT-INFO: 3 short thunks created
 # CHECK-BOLT-HFE: BOLT-INFO: 1 long thunks created
 # CHECK-BOLT-HFE: BOLT-INFO: 1 long thunks reused
-# CHECK-BOLT-HFE: BOLT-INFO: relaxed 8 cross-cluster branches
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 8 unconditional branches
 # CHECK-BOLT-HFE: BOLT-INFO: 12 branch thunks created
 
 # CHECK-SECTIONS: .text
@@ -175,63 +176,63 @@ D:
 
 # CHECK-OUTPUT:      <A>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <B>
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_D_0>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_D_0>
 
 # CHECK-OUTPUT:      <B>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <C>
 
-# CHECK-OUTPUT:      <__AArch64_forward_short_call_D_0>:
+# CHECK-OUTPUT:      <__AArch64_forward_Thunk_D_0>:
 # CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <D>
 
-# CHECK-OUTPUT:      <__AArch64_backward_short_call_A_1>:
+# CHECK-OUTPUT:      <__AArch64_backward_Thunk_A_1>:
 # CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
 
 # CHECK-OUTPUT:      <C>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
 
 # CHECK-OUTPUT:      <D>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_short_call_A_1>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_Thunk_A_1>
 
 # CHECK-OUTPUT:      <A.cold.0>:
 
 # CHECK-OUTPUT:      <B.cold.0>:
 # CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x2
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_0>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_0>
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <D>
 
-# CHECK-OUTPUT:      <__AArch64_backward_long_call_A_0>:
+# CHECK-OUTPUT:      <__AArch64_backward_ADRPThunk_A_0>:
 # CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} br x16
 
-# CHECK-OUTPUT:      <__AArch64_backward_long_call_D_1>:
+# CHECK-OUTPUT:      <__AArch64_backward_ADRPThunk_D_1>:
 # CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} br x16
 
 # CHECK-OUTPUT:      <C.cold.0>:
 # CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x3
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_0>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_0>
 
 # CHECK-OUTPUT:      <D.cold.0>:
 # CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x4
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_0>
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_D_1>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_0>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_D_1>
 
 # CHECK-HFE-OUTPUT:      <A.cold.0>:
 
 # CHECK-HFE-OUTPUT:      <B.cold.0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x2
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_A_1>
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_long_call_D_0>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_A_0>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_ADRPThunk_D_0>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_short_call_A_1>:
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
-
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_long_call_D_0>:
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_ADRPThunk_D_0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} br x16
+
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_Thunk_A_0>:
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
 
 # CHECK-HFE-OUTPUT:      <C.cold.0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x3
@@ -240,23 +241,23 @@ D:
 # CHECK-HFE-OUTPUT:      <D.cold.0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x4
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_long_call_D_0>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_ADRPThunk_D_0>
 
 # CHECK-HFE-OUTPUT:      <A>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <B>
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_short_call_D_0>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_D_1>
 
 # CHECK-HFE-OUTPUT:      <B>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <C>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_short_call_D_0>:
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_Thunk_D_1>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <D>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_backward_short_call_A_2>:
+# CHECK-HFE-OUTPUT:      <__AArch64_backward_Thunk_A_2>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
 
 # CHECK-HFE-OUTPUT:      <C>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
 
 # CHECK-HFE-OUTPUT:      <D>:
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_short_call_A_2>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_Thunk_A_2>

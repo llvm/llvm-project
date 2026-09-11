@@ -30,10 +30,10 @@
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HFE
 # RUN: llvm-readelf -S %t.bolt | FileCheck %s --check-prefix=CHECK-SECTIONS
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_branch_chain_0,__AArch64_forward_branch_chain_2,__AArch64_forward_branch_chain_3,__AArch64_forward_branch_chain_6,__AArch64_backward_branch_chain_1,__AArch64_backward_branch_chain_4,__AArch64_backward_branch_chain_5,__AArch64_backward_branch_chain_7 \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_Thunk_0,__AArch64_forward_Thunk_2,__AArch64_forward_Thunk_3,__AArch64_forward_Thunk_6,__AArch64_backward_Thunk_1,__AArch64_backward_Thunk_4,__AArch64_backward_Thunk_5,__AArch64_backward_Thunk_7 \
 # RUN:   %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_branch_chain_1,__AArch64_forward_branch_chain_4,__AArch64_forward_branch_chain_5,__AArch64_backward_branch_chain_0,__AArch64_backward_branch_chain_2,__AArch64_backward_branch_chain_3 \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64_forward_Thunk_1,__AArch64_forward_Thunk_4,__AArch64_forward_Thunk_5,__AArch64_backward_Thunk_0,__AArch64_backward_Thunk_2,__AArch64_backward_Thunk_3 \
 # RUN:   %t.hfe.bolt | FileCheck %s --check-prefix=CHECK-HFE-OUTPUT
 
 # CHECK-BOLT: BOLT-INFO: built 3 function fragment cluster(s)
@@ -46,7 +46,7 @@
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
 # CHECK-BOLT-NEXT: BOLT-INFO:   67108944 estimated bytes
-# CHECK-BOLT: BOLT-INFO: relaxed 7 cross-cluster branches
+# CHECK-BOLT: BOLT-INFO: relaxed 7 unconditional branches
 # CHECK-BOLT: BOLT-INFO: 8 branch thunks created
 # CHECK-BOLT: BOLT-INFO: 2 branch thunks reused
 
@@ -60,7 +60,7 @@
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440584 estimated bytes
-# CHECK-BOLT-HFE: BOLT-INFO: relaxed 4 cross-cluster branches
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 4 unconditional branches
 # CHECK-BOLT-HFE: BOLT-INFO: 6 branch thunks created
 
 # CHECK-SECTIONS: .text
@@ -179,62 +179,62 @@ pad_hot_3:
 # CHECK-OUTPUT:      <A>:
 # CHECK-OUTPUT-NEXT:                      {{.*}} cbnz x0, 0x[[A_BR:[0-9a-f]+]] <{{.*}}>
 # CHECK-OUTPUT-NEXT: [[A_RET:[0-9a-f]+]]: {{.*}} ret
-# CHECK-OUTPUT-NEXT: [[A_BR]]:            {{.*}} b        0x[[A_FW0:[0-9a-f]+]] <__AArch64_forward_branch_chain_0>
+# CHECK-OUTPUT-NEXT: [[A_BR]]:            {{.*}} b        0x[[A_FW0:[0-9a-f]+]] <__AArch64_forward_Thunk_0>
 
 # CHECK-OUTPUT:      <B>:
 # CHECK-OUTPUT-NEXT:                      {{.*}} tbz w0, #0x0, 0x[[B_ALT:[0-9a-f]+]] <{{.*}}>
 # CHECK-OUTPUT-NEXT:                      {{.*}} cbz x0,       0x[[B_RET:[0-9a-f]+]] <{{.*}}>
-# CHECK-OUTPUT-NEXT:                      {{.*}} b             0x[[B_FW0:[0-9a-f]+]] <__AArch64_forward_branch_chain_3>
-# CHECK-OUTPUT-NEXT: [[B_ALT]]:           {{.*}} b             0x[[B_FW0]] <__AArch64_forward_branch_chain_3>
+# CHECK-OUTPUT-NEXT:                      {{.*}} b             0x[[B_FW0:[0-9a-f]+]] <__AArch64_forward_Thunk_3>
+# CHECK-OUTPUT-NEXT: [[B_ALT]]:           {{.*}} b             0x[[B_FW0]] <__AArch64_forward_Thunk_3>
 # CHECK-OUTPUT-NEXT: [[B_RET]]:           {{.*}} ret
 
-# CHECK-OUTPUT:      <__AArch64_forward_branch_chain_0>:
+# CHECK-OUTPUT:      <__AArch64_forward_Thunk_0>:
 # CHECK-OUTPUT-NEXT: [[A_FW0]]:           {{.*}} b    0x[[A_COLD:[0-9a-f]+]] <A.cold.0>
 
-# CHECK-OUTPUT:      <__AArch64_forward_branch_chain_3>:
-# CHECK-OUTPUT-NEXT: [[B_FW0]]:           {{.*}} b    0x[[B_FW1:[0-9a-f]+]] <__AArch64_forward_branch_chain_2>
+# CHECK-OUTPUT:      <__AArch64_forward_Thunk_3>:
+# CHECK-OUTPUT-NEXT: [[B_FW0]]:           {{.*}} b    0x[[B_FW1:[0-9a-f]+]] <__AArch64_forward_Thunk_2>
 
-# CHECK-OUTPUT:      <__AArch64_backward_branch_chain_1>:
+# CHECK-OUTPUT:      <__AArch64_backward_Thunk_1>:
 # CHECK-OUTPUT-NEXT: [[A_BW0:[0-9a-f]+]]: {{.*}} b    0x[[A_RET]] <A+0x4>
 
-# CHECK-OUTPUT:      <__AArch64_backward_branch_chain_4>:
+# CHECK-OUTPUT:      <__AArch64_backward_Thunk_4>:
 # CHECK-OUTPUT-NEXT: [[B_BW1:[0-9a-f]+]]: {{.*}} b    0x[[B_RET]] <B+0x10>
 
 # CHECK-OUTPUT:      <C>:
 # CHECK-OUTPUT-NEXT:                      {{.*}} cbnz x0, 0x[[C_BR:[0-9a-f]+]] <{{.*}}>
 # CHECK-OUTPUT-NEXT: [[C_RET:[0-9a-f]+]]: {{.*}} ret
-# CHECK-OUTPUT-NEXT: [[C_BR]]:            {{.*}} b        0x[[C_FW0:[0-9a-f]+]] <__AArch64_forward_branch_chain_6>
+# CHECK-OUTPUT-NEXT: [[C_BR]]:            {{.*}} b        0x[[C_FW0:[0-9a-f]+]] <__AArch64_forward_Thunk_6>
 
 # CHECK-OUTPUT:      <D>:
 # CHECK-OUTPUT-NEXT:                      {{.*}} cbnz x0, 0x[[D_BR:[0-9a-f]+]] <{{.*}}>
 # CHECK-OUTPUT-NEXT: [[D_RET:[0-9a-f]+]]: {{.*}} ret
 # CHECK-OUTPUT-NEXT: [[D_BR]]:            {{.*}} b        0x[[D_COLD:[0-9a-f]+]] <D.cold.0>
 
-# CHECK-OUTPUT:      <__AArch64_forward_branch_chain_2>:
+# CHECK-OUTPUT:      <__AArch64_forward_Thunk_2>:
 # CHECK-OUTPUT-NEXT: [[B_FW1]]:           {{.*}} b  0x[[B_COLD:[0-9a-f]+]] <B.cold.0>
 
-# CHECK-OUTPUT:      <__AArch64_forward_branch_chain_6>:
+# CHECK-OUTPUT:      <__AArch64_forward_Thunk_6>:
 # CHECK-OUTPUT-NEXT: [[C_FW0]]:           {{.*}} b  0x[[C_COLD:[0-9a-f]+]] <C.cold.0>
 
 # CHECK-OUTPUT: Disassembly of section .text.cold:
 
-# CHECK-OUTPUT:      <__AArch64_backward_branch_chain_5>:
-# CHECK-OUTPUT-NEXT: [[B_BW0:[0-9a-f]+]]: {{.*}} b   0x[[B_BW1]] <__AArch64_backward_branch_chain_4>
+# CHECK-OUTPUT:      <__AArch64_backward_Thunk_5>:
+# CHECK-OUTPUT-NEXT: [[B_BW0:[0-9a-f]+]]: {{.*}} b   0x[[B_BW1]] <__AArch64_backward_Thunk_4>
 
-# CHECK-OUTPUT:      <__AArch64_backward_branch_chain_7>:
+# CHECK-OUTPUT:      <__AArch64_backward_Thunk_7>:
 # CHECK-OUTPUT-NEXT: [[C_BW0:[0-9a-f]+]]: {{.*}} b   0x[[C_RET]] <C+0x4>
 
 # CHECK-OUTPUT:      <A.cold.0>:
 # CHECK-OUTPUT-NEXT: [[A_COLD]]: {{.*}} mov x0, #0x1
-# CHECK-OUTPUT-NEXT:             {{.*}} b   0x[[A_BW0]] <__AArch64_backward_branch_chain_1>
+# CHECK-OUTPUT-NEXT:             {{.*}} b   0x[[A_BW0]] <__AArch64_backward_Thunk_1>
 
 # CHECK-OUTPUT:      <B.cold.0>:
 # CHECK-OUTPUT-NEXT: [[B_COLD]]: {{.*}} mov x0, #0x2
-# CHECK-OUTPUT-NEXT:             {{.*}} b   0x[[B_BW0]] <__AArch64_backward_branch_chain_5>
+# CHECK-OUTPUT-NEXT:             {{.*}} b   0x[[B_BW0]] <__AArch64_backward_Thunk_5>
 
 # CHECK-OUTPUT:      <C.cold.0>:
 # CHECK-OUTPUT-NEXT: [[C_COLD]]: {{.*}} mov x0, #0x3
-# CHECK-OUTPUT-NEXT:             {{.*}} b   0x[[C_BW0]] <__AArch64_backward_branch_chain_7>
+# CHECK-OUTPUT-NEXT:             {{.*}} b   0x[[C_BW0]] <__AArch64_backward_Thunk_7>
 
 # CHECK-OUTPUT:      <D.cold.0>:
 # CHECK-OUTPUT-NEXT: [[D_COLD]]: {{.*}} mov x0, #0x4
@@ -253,24 +253,24 @@ pad_hot_3:
 
 # CHECK-HFE-OUTPUT:      <C.cold.0>:
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_C_COLD:[0-9a-f]+]]: {{.*}} mov x0, #0x3
-# CHECK-HFE-OUTPUT-NEXT:                           {{.*}} b   0x[[HFE_C_FW0:[0-9a-f]+]] <__AArch64_forward_branch_chain_1>
+# CHECK-HFE-OUTPUT-NEXT:                           {{.*}} b   0x[[HFE_C_FW0:[0-9a-f]+]] <__AArch64_forward_Thunk_1>
 
 # CHECK-HFE-OUTPUT:      <D.cold.0>:
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_D_COLD:[0-9a-f]+]]: {{.*}} mov x0, #0x4
-# CHECK-HFE-OUTPUT-NEXT:                           {{.*}} b   0x[[HFE_D_FW0:[0-9a-f]+]] <__AArch64_forward_branch_chain_5>
+# CHECK-HFE-OUTPUT-NEXT:                           {{.*}} b   0x[[HFE_D_FW0:[0-9a-f]+]] <__AArch64_forward_Thunk_5>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_branch_chain_1>:
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_Thunk_1>:
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_C_FW0]]:            {{.*}} b    0x[[HFE_C_RET:[0-9a-f]+]] <C+0x4>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_branch_chain_5>:
-# CHECK-HFE-OUTPUT-NEXT: [[HFE_D_FW0]]:            {{.*}} b    0x[[HFE_D_FW1:[0-9a-f]+]] <__AArch64_forward_branch_chain_4>
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_Thunk_5>:
+# CHECK-HFE-OUTPUT-NEXT: [[HFE_D_FW0]]:            {{.*}} b    0x[[HFE_D_FW1:[0-9a-f]+]] <__AArch64_forward_Thunk_4>
 
 # CHECK-HFE-OUTPUT: Disassembly of section .text:
 
-# CHECK-HFE-OUTPUT:      <__AArch64_backward_branch_chain_0>:
+# CHECK-HFE-OUTPUT:      <__AArch64_backward_Thunk_0>:
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_C_BW1:[0-9a-f]+]]:  {{.*}} b    0x[[HFE_C_COLD]] <C.cold.0>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_backward_branch_chain_2>:
+# CHECK-HFE-OUTPUT:      <__AArch64_backward_Thunk_2>:
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_D_BW1:[0-9a-f]+]]:  {{.*}} b    0x[[HFE_D_COLD]] <D.cold.0>
 
 # CHECK-HFE-OUTPUT:      <A>:
@@ -285,18 +285,18 @@ pad_hot_3:
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_B_ALT]]:            {{.*}} b             0x[[HFE_B_COLD]] <B.cold.0>
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_B_RET]]:            {{.*}} ret
 
-# CHECK-HFE-OUTPUT:      <__AArch64_forward_branch_chain_4>:
+# CHECK-HFE-OUTPUT:      <__AArch64_forward_Thunk_4>:
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_D_FW1]]:            {{.*}} b    0x[[HFE_D_RET:[0-9a-f]+]] <D+0x4>
 
-# CHECK-HFE-OUTPUT:      <__AArch64_backward_branch_chain_3>:
-# CHECK-HFE-OUTPUT-NEXT: [[HFE_D_BW0:[0-9a-f]+]]:  {{.*}} b    0x[[HFE_D_BW1]] <__AArch64_backward_branch_chain_2>
+# CHECK-HFE-OUTPUT:      <__AArch64_backward_Thunk_3>:
+# CHECK-HFE-OUTPUT-NEXT: [[HFE_D_BW0:[0-9a-f]+]]:  {{.*}} b    0x[[HFE_D_BW1]] <__AArch64_backward_Thunk_2>
 
 # CHECK-HFE-OUTPUT:      <C>:
 # CHECK-HFE-OUTPUT-NEXT:                           {{.*}} cbnz x0, 0x[[HFE_C_BR:[0-9a-f]+]] <{{.*}}>
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_C_RET]]:            {{.*}} ret
-# CHECK-HFE-OUTPUT-NEXT: [[HFE_C_BR]]:             {{.*}} b        0x[[HFE_C_BW1]] <__AArch64_backward_branch_chain_0>
+# CHECK-HFE-OUTPUT-NEXT: [[HFE_C_BR]]:             {{.*}} b        0x[[HFE_C_BW1]] <__AArch64_backward_Thunk_0>
 
 # CHECK-HFE-OUTPUT:      <D>:
 # CHECK-HFE-OUTPUT-NEXT:                           {{.*}} cbnz x0, 0x[[HFE_D_BR:[0-9a-f]+]] <{{.*}}>
 # CHECK-HFE-OUTPUT-NEXT: [[HFE_D_RET]]:            {{.*}} ret
-# CHECK-HFE-OUTPUT-NEXT: [[HFE_D_BR]]:             {{.*}} b        0x[[HFE_D_BW0]] <__AArch64_backward_branch_chain_3>
+# CHECK-HFE-OUTPUT-NEXT: [[HFE_D_BR]]:             {{.*}} b        0x[[HFE_D_BW0]] <__AArch64_backward_Thunk_3>

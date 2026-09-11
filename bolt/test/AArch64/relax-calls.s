@@ -6,12 +6,15 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -nostdlib -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp --lite=1 --data %t.fdata \
+# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp \
+# RUN:   --lite=1 --data %t.fdata \
 # RUN:   --print-normalized 2>&1 | FileCheck %s --check-prefix=CHECK-BOLT-LITE
-# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp --lite=0 --data %t.fdata \
+# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp \
+# RUN:   --lite=0 --data %t.fdata \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
-# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp --hot-functions-at-end --lite=0 \
-# RUN:   --data %t.fdata | FileCheck %s --check-prefix=CHECK-BOLT-HOT-END
+# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp \
+# RUN:   --hot-functions-at-end --lite=0 --data %t.fdata \
+# RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HOT-END
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 
 ## Constant islands at the end of functions foo(), bar(), and _start() make each
@@ -55,22 +58,19 @@ hot:
 # CHECK-BOLT-LITE:     BOLT-INFO: 3 long thunks created
 
 ## Check the number of thunks created in other modes.
-# CHECK-BOLT: BOLT-INFO: relaxed 2 short cluster calls with thunks
-# CHECK-BOLT: BOLT-INFO: relaxed 2 long cluster calls with thunks
-# CHECK-BOLT: BOLT-INFO: 1 short thunks created
-# CHECK-BOLT: BOLT-INFO: 2 long thunks created
+# CHECK-BOLT: BOLT-INFO: relaxed 4 calls with short thunks
+# CHECK-BOLT: BOLT-INFO: 3 short thunks created
 # CHECK-BOLT: BOLT-INFO: 1 short thunks reused
 
-# CHECK-BOLT-HOT-END: BOLT-INFO: relaxed 2 short cluster calls with thunks
-# CHECK-BOLT-HOT-END: BOLT-INFO: relaxed 2 long cluster calls with thunks
-# CHECK-BOLT-HOT-END: BOLT-INFO: 2 short thunks created
+# CHECK-BOLT-HOT-END: BOLT-INFO: relaxed 3 calls with short thunks
+# CHECK-BOLT-HOT-END: BOLT-INFO: relaxed 1 calls with long thunks
+# CHECK-BOLT-HOT-END: BOLT-INFO: 3 short thunks created
 # CHECK-BOLT-HOT-END: BOLT-INFO: 1 long thunks created
-# CHECK-BOLT-HOT-END: BOLT-INFO: 1 long thunks reused
 
 ## Check that correct veneers are used depending on the target proximity.
 # CHECK-OUTPUT-LABEL: <hot>:
-# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64_backward_long_call_foo_{{[0-9]+}}>
-# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64_backward_short_call_bar_{{[0-9]+}}>
+# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64_backward_ADRPThunk_foo_{{[0-9]+}}>
+# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64_backward_Thunk_bar_{{[0-9]+}}>
 # CHECK-OUTPUT-NEXT: bl {{.*}} <_start>
 
   .global _start

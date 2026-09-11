@@ -16,7 +16,7 @@
 # RUN:   --skip-funcs='^bar$' \
 # RUN:   | FileCheck %s --check-prefix=TAILCALL-BOLT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=foo,bar,bar_body,padding,__AArch64_forward_long_call_bar_0 \
+# RUN:   --disassemble-symbols=foo,bar,bar_body,padding,__AArch64_forward_ADRPThunk_bar_0 \
 # RUN:   %t.tailcall.bolt | FileCheck %s --check-prefix=TAILCALL
 
 # RUN: %clang %cflags -DBRANCH -Wl,-q -Wl,-e,foo %s -o %t.branch \
@@ -27,17 +27,17 @@
 # RUN:   --lite=0 --relax-exp --reorder-functions=exec-count \
 # RUN:   | FileCheck %s --check-prefix=BRANCH-BOLT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=foo,bar,bar_body,.bar_ret,padding,__AArch64_forward_branch_chain_0 \
+# RUN:   --disassemble-symbols=foo,bar,bar_body,.bar_ret,padding,__AArch64_forward_Thunk_0 \
 # RUN:   %t.branch.bolt | FileCheck %s --check-prefix=BRANCH
 
 # TAILCALL-BOLT: BOLT-INFO: relaxing branches for compact code model (<128MB)
 # TAILCALL-BOLT: BOLT-INFO: starting experimental relaxation pass
-# TAILCALL-BOLT: BOLT-INFO: relaxed 1 long cluster calls with thunks
+# TAILCALL-BOLT: BOLT-INFO: relaxed 1 calls with long thunks
 # TAILCALL-BOLT: BOLT-INFO: 1 long thunks created
 
 # BRANCH-BOLT: BOLT-INFO: relaxing branches for compact code model (<128MB)
 # BRANCH-BOLT: BOLT-INFO: starting experimental relaxation pass
-# BRANCH-BOLT: BOLT-INFO: relaxed 1 cross-cluster branches
+# BRANCH-BOLT: BOLT-INFO: relaxed 1 unconditional branches
 # BRANCH-BOLT: BOLT-INFO: 1 branch thunks created
 
   .text
@@ -94,9 +94,9 @@ padding:
 #
 # TAILCALL:      <foo>:
 # TAILCALL-NEXT:   {{.*}} mov x16, #0x2a
-# TAILCALL-NEXT:   {{.*}} b   {{.*}} <__AArch64_forward_long_call_bar_0>
+# TAILCALL-NEXT:   {{.*}} b   {{.*}} <__AArch64_forward_ADRPThunk_bar_0>
 #
-# TAILCALL:      <__AArch64_forward_long_call_bar_0>:
+# TAILCALL:      <__AArch64_forward_ADRPThunk_bar_0>:
 # TAILCALL-NEXT:   {{.*}} adrp x16,
 # TAILCALL-NEXT:   {{.*}} add x16, x16,
 # TAILCALL-NEXT:   {{.*}} br x16
@@ -116,9 +116,9 @@ padding:
 #
 # BRANCH:      <foo>:
 # BRANCH-NEXT:   {{.*}} mov x16, #0x2a
-# BRANCH-NEXT:   {{.*}} b   0x[[CHAIN:[0-9a-f]+]] <__AArch64_forward_branch_chain_0>
+# BRANCH-NEXT:   {{.*}} b   0x[[CHAIN:[0-9a-f]+]] <__AArch64_forward_Thunk_0>
 #
-# BRANCH:      <__AArch64_forward_branch_chain_0>:
+# BRANCH:      <__AArch64_forward_Thunk_0>:
 # BRANCH-NEXT: [[CHAIN]]: {{.*}} b   0x[[BODY:[0-9a-f]+]] <bar+0x4>
 #
 # BRANCH:      <padding>:

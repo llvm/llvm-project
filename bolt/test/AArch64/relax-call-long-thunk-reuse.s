@@ -21,13 +21,14 @@
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata \
 # RUN:   --compact-code-model --relax-exp --max-cluster-size=64 \
+# RUN:   --max-thunk-chain-length=0 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,E,__AArch64_backward_long_call_A_0,__AArch64_backward_long_call_A_1 \
+# RUN:   --disassemble-symbols=A,B,C,D,E,__AArch64_backward_ADRPThunk_A_0,__AArch64_backward_ADRPThunk_A_1 \
 # RUN:   %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 
 # CHECK-BOLT: BOLT-INFO: built 5 function fragment cluster(s)
-# CHECK-BOLT: BOLT-INFO: relaxed 3 long cluster calls with thunks
+# CHECK-BOLT: BOLT-INFO: relaxed 3 calls with long thunks
 # CHECK-BOLT: BOLT-INFO: 2 long thunks created
 # CHECK-BOLT: BOLT-INFO: 1 long thunks reused
 
@@ -89,21 +90,21 @@ E:
 # CHECK-OUTPUT:      <B>:
 # CHECK-OUTPUT-NEXT: {{.*}} ret
 
-# CHECK-OUTPUT:      <__AArch64_backward_long_call_A_1>:
+# CHECK-OUTPUT:      <__AArch64_backward_ADRPThunk_A_1>:
 # CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} br x16
 
 # CHECK-OUTPUT:      <C>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_1>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_1>
 
 # CHECK-OUTPUT:      <D>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_0>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_0>
 
-# CHECK-OUTPUT:      <__AArch64_backward_long_call_A_0>:
+# CHECK-OUTPUT:      <__AArch64_backward_ADRPThunk_A_0>:
 # CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} br x16
 
 # CHECK-OUTPUT:      <E>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_long_call_A_0>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_0>
