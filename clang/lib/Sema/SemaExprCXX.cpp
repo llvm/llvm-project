@@ -8175,6 +8175,15 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))
     return nullptr;
+
+  if (!Satisfaction.IsSatisfied) {
+    SmallString<128> Entity;
+    llvm::raw_svector_ostream OS(Entity);
+    Constraint->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
+    return new (Context) concepts::NestedRequirement(
+        Context, Context.backupStr(Entity), std::move(Satisfaction));
+  }
+
   return new (Context) concepts::NestedRequirement(Context, Constraint,
                                                    Satisfaction);
 }

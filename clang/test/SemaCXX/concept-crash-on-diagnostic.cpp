@@ -73,3 +73,16 @@ namespace GH138823 {
 
   void test() { bar(1); }
 }
+
+namespace GH222954 {
+
+template <typename T> struct foo {};
+template <typename T>
+concept bar = foo<T>::baz;
+
+static_assert(requires { requires bar<int>; });
+// expected-error@-1 {{static assertion failed}}
+// expected-note@-2 {{because 'int' does not satisfy 'bar'}}
+// expected-note@-4 {{because 'bar<int>' would be invalid}}
+
+}
