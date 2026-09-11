@@ -106,8 +106,7 @@ PointerFlowEdgeBuilder::addEdges(const DeclPointerLevelVec &LHS,
   return llvm::Error::success();
 }
 
-llvm::Error
-PointerFlowEdgeBuilder::handleRHSAndAddEdges(
+llvm::Error PointerFlowEdgeBuilder::handleRHSAndAddEdges(
     const DeclPointerLevelVec &LHS, const Expr *RHS,
     unsigned ArrayElementIndirectLevel) {
   const auto *ILE = dyn_cast<InitListExpr>(RHS);
