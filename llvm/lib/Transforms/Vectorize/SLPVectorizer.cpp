@@ -22,6 +22,7 @@
 #include "SLPVectorizer/SLPMemoryUtils.h"
 #include "SLPVectorizer/SLPReductionUtils.h"
 #include "SLPVectorizer/SLPShuffleAnalysis.h"
+#include "SLPVectorizer/SLPTree.h"
 #include "SLPVectorizer/SLPTypeUtils.h"
 #include "SLPVectorizer/SLPUtils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -341,33 +342,8 @@ static const unsigned AliasedCheckLimit = 10;
 // This limit is useful for very large basic blocks.
 static const unsigned MaxMemDepDistance = 160;
 
-/// If the ScheduleRegionSizeBudget is exhausted, we allow small scheduling
-/// regions to be handled.
-static const int MinScheduleRegionSize = 16;
-
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
-
-namespace {
-/// A vectorized part of a split reduction, combined into the final reduction
-/// result by the horizontal reduction emitter.
-struct ReductionVectorPart {
-  /// The vectorized value, tracked in case it is replaced while other parts
-  /// are vectorized.
-  WeakTrackingVH Vec;
-  /// The number of times each lane is repeated in the reduction (emitted as a
-  /// multiplication by the scale for add/fadd reductions).
-  unsigned Scale = 1;
-  /// Signedness of \p Vec for reductions, operating on truncated types.
-  bool IsSigned = false;
-  /// True if the value was already reduced in-tree.
-  bool ReducedInTree = false;
-  /// True if the part contribution is subtracted from (rather than added to)
-  /// the final reduction result. Used for reassociated fadd reductions,
-  /// flattened through fsub/fneg operations.
-  bool Negated = false;
-};
-} // namespace
 
 /// Bottom Up SLP Vectorizer.
 class slpvectorizer::BoUpSLP {
