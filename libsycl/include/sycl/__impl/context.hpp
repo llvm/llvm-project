@@ -16,7 +16,9 @@
 #ifndef _LIBSYCL___IMPL_CONTEXT_HPP
 #define _LIBSYCL___IMPL_CONTEXT_HPP
 
+#include <sycl/__impl/async_handler.hpp>
 #include <sycl/__impl/backend.hpp>
+#include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/info/desc_base.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
@@ -83,6 +85,34 @@ private:
 
   friend sycl::detail::ImplUtils;
 }; // class context
+
+// To avoid cross-dependency issues between sycl::context and sycl::exception,
+// definition of ctors that require a context parameter are moved to
+// context.hpp.
+inline exception::exception(context ctx, std::error_code ec,
+                            const std::string &what_arg)
+    : exception(ec, std::make_shared<context>(ctx), what_arg.c_str()) {}
+
+inline exception::exception(context ctx, std::error_code ec,
+                            const char *what_arg)
+    : exception(ctx, ec, std::string(what_arg)) {}
+
+inline exception::exception(context ctx, std::error_code ec)
+    : exception(ctx, ec, "") {}
+
+inline exception::exception(context ctx, int ev,
+                            const std::error_category &ecat,
+                            const char *what_arg)
+    : exception(ctx, {ev, ecat}, std::string(what_arg)) {}
+
+inline exception::exception(context ctx, int ev,
+                            const std::error_category &ecat,
+                            const std::string &what_arg)
+    : exception(ctx, {ev, ecat}, what_arg) {}
+
+inline exception::exception(context ctx, int ev,
+                            const std::error_category &ecat)
+    : exception(ctx, ev, ecat, "") {}
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
