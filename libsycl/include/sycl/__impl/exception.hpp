@@ -132,7 +132,7 @@ public:
   /// \overload
   exception(context ctx, int ev, const std::error_category &ecat);
 
-  virtual ~exception() = default;
+  virtual ~exception();
 
   /// Returns the error code stored inside the exception.
   ///

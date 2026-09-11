@@ -36,6 +36,8 @@ exception::exception(std::error_code EC, std::shared_ptr<context> SharedPtrCtx,
     : MMessage(std::make_shared<std::string>(WhatArg)), MContext(SharedPtrCtx),
       MErrC(EC) {}
 
+exception::~exception() = default;
+
 const std::error_code &exception::code() const noexcept { return MErrC; }
 
 const std::error_category &exception::category() const noexcept {
