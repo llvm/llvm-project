@@ -53,6 +53,15 @@ RS rs = (RS){gv, __builtin_constant_p(n)};
 
 // CHECK-DAG: @rs = {{.*}}global { ptr, i32 } { ptr @gv, i32 0 }
 
+// A string literal initializing an array is an lvalue that is not a
+// reference binding.
+const char *ps = (const char[4]){"abc"};
+struct CS { int a; const char (*s)[4]; };
+CS cs = { g(), (const char[2][4]){"abc", "def"} };
+
+// CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal constant [4 x i8] c"abc\00"
+// CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal constant [2 x [4 x i8]] {{\[}}[4 x i8] c"abc\00", [4 x i8] c"def\00"]
+
 // An immediate invocation is already a ConstantExpr.
 consteval int cf() { return 3; }
 const int *cp = (const int[1]){cf()};

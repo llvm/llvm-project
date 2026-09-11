@@ -7449,31 +7449,6 @@ Sema::ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
   return BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, InitExpr);
 }
 
-/// Whether the \p Index-th element of the semantic form of \p ILE initializes
-/// a reference member, so that its initializer is a glvalue that binds.
-static bool initializesReferenceMember(const InitListExpr *ILE,
-                                       unsigned Index) {
-  const RecordDecl *RD = ILE->getType()->getAsRecordDecl();
-  if (!RD || ILE->isTransparent())
-    return false;
-  if (RD->isUnion()) {
-    const FieldDecl *FD = ILE->getInitializedFieldInUnion();
-    return FD && FD->getType()->isReferenceType();
-  }
-  unsigned ElementNo = 0;
-  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
-    ElementNo = CXXRD->getNumBases();
-  if (Index < ElementNo)
-    return false;
-  for (const FieldDecl *FD : RD->fields()) {
-    if (FD->isUnnamedBitField())
-      continue;
-    if (ElementNo++ == Index)
-      return FD->getType()->isReferenceType();
-  }
-  return false;
-}
-
 ExprResult
 Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                                SourceLocation RParenLoc, Expr *LiteralExpr) {
@@ -7583,7 +7558,10 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
           continue;
         }
-        bool IsRef = initializesReferenceMember(ILE, i);
+        // Only a reference member is initialized by a glvalue, apart from a
+        // string literal initializing an array.
+        bool IsRef = Init->isGLValue() &&
+                     !isa<StringLiteral, ObjCEncodeExpr>(Init->IgnoreParens());
         if (!Init->isConstantInitializer(Context, IsRef)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
