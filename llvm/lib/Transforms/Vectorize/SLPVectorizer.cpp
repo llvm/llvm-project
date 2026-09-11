@@ -14503,7 +14503,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                          /*Args=*/*It, ContextHint);
     }
     assert(ContextHint != TTI::VectorInstrContext::SplatOpFolded &&
-           "Expected SplatOpFolder to be a splat");
+           "Expected SplatOpFolded to be a splat");
     return GatherCost + (all_of(VL, IsaPred<UndefValue>)
                              ? TTI::TCC_Free
                              : R.getGatherCost(VL, !Root, ScalarTy));
@@ -21713,8 +21713,7 @@ public:
       ArrayRef<int> SubVectorsMask, unsigned VF = 0,
       function_ref<void(Value *&, SmallVectorImpl<int> &,
                         function_ref<Value *(Value *, Value *, ArrayRef<int>)>)>
-          Action = {},
-      TTI::VectorInstrContext = TTI::VectorInstrContext::None) {
+          Action = {}) {
     IsFinalized = true;
     if (Action) {
       Value *Vec = InVectors.front();
@@ -22386,6 +22385,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
     auto GatherUserOps = [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
       UserOps.clear();
+      if (NeedFreeze)
+        return false;
       for (const auto &TE : VectorizableTree) {
         if (DeletedNodes.contains(TE.get()))
           continue;
