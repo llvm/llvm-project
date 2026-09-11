@@ -4152,7 +4152,7 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
 }
 
 /// The `dest` types an interlocked operation accepts. Float is 32-bit only.
-enum class InterlockedDest { Int, IntOrFloat };
+enum class InterlockedDest { Int, IntOrFloat, Float };
 
 /// Check a call to an HLSL interlocked builtin. The builtins are variadic, so
 /// this is the only check a direct call gets. Overload resolution checks the
@@ -4175,13 +4175,17 @@ static bool CheckInterlockedBuiltin(Sema &S, CallExpr *TheCall,
   }
 
   QualType DestTy = TheCall->getArg(0)->getType().getUnqualifiedType();
-  const bool AllowsFloat = Dest == InterlockedDest::IntOrFloat;
-  if (!DestTy->isIntegerType() &&
-      !(AllowsFloat && DestTy->isSpecificBuiltinType(BuiltinType::Float))) {
+  const bool DestIsOK =
+      DestTy->isSpecificBuiltinType(BuiltinType::Float)
+          ? Dest != InterlockedDest::Int
+          : Dest != InterlockedDest::Float && DestTy->isIntegerType();
+  if (!DestIsOK) {
     S.Diag(TheCall->getArg(0)->getBeginLoc(),
            diag::err_builtin_invalid_arg_type)
-        << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1
-        << /*32 bit floating-point*/ (AllowsFloat ? 3 : 0) << DestTy;
+        << /*ordinal=*/1 << /*scalar*/ 1
+        << /*integer*/ (Dest == InterlockedDest::Float ? 0 : 1)
+        << /*32 bit floating-point*/ (Dest == InterlockedDest::Int ? 0 : 3)
+        << DestTy;
     return true;
   }
 
@@ -4732,6 +4736,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_interlocked_compare_store:
     if (CheckInterlockedBuiltin(SemaRef, TheCall, /*MinArgs=*/3, /*MaxArgs=*/3,
                                 InterlockedDest::Int,
+                                /*ReportsOriginalValue=*/false))
+      return true;
+    break;
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store_float_bitwise:
+    if (CheckInterlockedBuiltin(SemaRef, TheCall, /*MinArgs=*/3, /*MaxArgs=*/3,
+                                InterlockedDest::Float,
                                 /*ReportsOriginalValue=*/false))
       return true;
     break;
