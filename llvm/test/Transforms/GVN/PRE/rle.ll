@@ -980,33 +980,16 @@ entry:
 
 ; Cross block partial alias case.
 define i32 @load_load_partial_alias_cross_block(ptr %P) nounwind ssp {
-; LE-LABEL: define i32 @load_load_partial_alias_cross_block(
-; LE-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; LE-NEXT:  [[ENTRY:.*:]]
-; LE-NEXT:    [[X1:%.*]] = load i32, ptr [[P]], align 4
-; LE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X1]], 127
-; LE-NEXT:    [[TMP0:%.*]] = lshr i32 [[X1]], 8
-; LE-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
-; LE-NEXT:    br i1 [[CMP]], label %[[LAND_LHS_TRUE:.*]], label %[[IF_END:.*]]
-; LE:       [[LAND_LHS_TRUE]]:
-; LE-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP1]] to i32
-; LE-NEXT:    ret i32 [[CONV6]]
-; LE:       [[IF_END]]:
-; LE-NEXT:    ret i32 52
-;
-; BE-LABEL: define i32 @load_load_partial_alias_cross_block(
-; BE-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; BE-NEXT:  [[ENTRY:.*:]]
-; BE-NEXT:    [[X1:%.*]] = load i32, ptr [[P]], align 4
-; BE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X1]], 127
-; BE-NEXT:    [[TMP0:%.*]] = lshr i32 [[X1]], 16
-; BE-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
-; BE-NEXT:    br i1 [[CMP]], label %[[LAND_LHS_TRUE:.*]], label %[[IF_END:.*]]
-; BE:       [[LAND_LHS_TRUE]]:
-; BE-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP1]] to i32
-; BE-NEXT:    ret i32 [[CONV6]]
-; BE:       [[IF_END]]:
-; BE-NEXT:    ret i32 52
+; CHECK-LABEL: define i32 @load_load_partial_alias_cross_block(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X1]], 127
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LAND_LHS_TRUE:.*]], label %[[IF_END:.*]]
+; CHECK:       [[LAND_LHS_TRUE]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret i32 52
 ;
 entry:
   %x1 = load i32, ptr %P, align 4

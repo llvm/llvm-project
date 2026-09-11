@@ -67,8 +67,7 @@ define i32 @noalias_dropped_nonlocal(ptr %p) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[T:.*]], label %[[F:.*]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    ret i32 [[CONV]]
+; CHECK-NEXT:    ret i32 0
 ; CHECK:       [[F]]:
 ; CHECK-NEXT:    ret i32 52
 ;
