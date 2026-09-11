@@ -77,11 +77,10 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               return true;
             })
             .Case([&](fir::AddrOfOp op) {
-              // Only use address_of symbol if mangled name is preferred
-              if (!preferDemangledName) {
-                auto symRef = op.getSymbol();
-                srcName = symRef.getLeafReference().getValue().str();
-              }
+              // A global is reached through the symbol it is emitted under,
+              // which is uniqued and thus deconstructed below when the name
+              // the source spells is asked for.
+              srcName = op.getSymbol().getLeafReference().getValue().str();
               return false;
             })
             .Case([&](fir::ArrayCoorOp op) {
@@ -148,7 +147,19 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               v = op.getViewSource();
               return true;
             })
-            .Default([](mlir::Operation *) { return false; });
+            .Default([&](mlir::Operation *op) {
+              // A data clause records the name the source spells. The name the
+              // object is emitted under is only held by the variable the
+              // clause states, so it is walked to when that name is asked for.
+              // A variable that has no name to recover leaves the name empty,
+              // which falls back to the one the clause records below.
+              if (preferDemangledName ||
+                  !isa<ACC_DATA_ENTRY_OPS, mlir::acc::MapInfoOp>(op))
+                return false;
+              if (Value var = mlir::acc::getVar(op))
+                srcName = getVariableName(var, preferDemangledName);
+              return false;
+            });
   }
 
   // Fallback to the default implementation.
