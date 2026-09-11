@@ -2584,8 +2584,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   }
 
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
-           (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) ||
-            TII->isSALU(MI) || TII->isTRANS(MI)))
+           (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
+            TII->isTRANS(MI)))
     Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&

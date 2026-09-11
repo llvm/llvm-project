@@ -320,8 +320,8 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
 bool SIInstrInfo::isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
   const MachineOperand &MO = MI.getOperand(OpIdx);
   // Any implicit use of exec by VALU is not a real register read.
-  return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
-         isVALU(MI) && !resultDependsOnExec(MI);
+  return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() && isVALU(MI) &&
+         !resultDependsOnExec(MI);
 }
 
 bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
