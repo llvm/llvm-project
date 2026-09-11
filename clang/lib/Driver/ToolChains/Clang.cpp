@@ -4024,13 +4024,13 @@ static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
   bool Freestanding =
       Args.hasFlag(options::OPT_ffreestanding, options::OPT_fhosted, false) ||
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
-  const Arg *BuiltinArg = Args.getLastArg(
-      options::OPT_fbuiltin, options::OPT_fno_builtin,
-      options::OPT_ffreestanding, options::OPT_fhosted, options::OPT_mkernel,
-      options::OPT_fapple_kext);
-  bool UseBuiltins =
-      !BuiltinArg || BuiltinArg->getOption().matches(options::OPT_fbuiltin) ||
-      BuiltinArg->getOption().matches(options::OPT_fhosted);
+  const Arg *BuiltinArg =
+      Args.getLastArg(options::OPT_fbuiltin, options::OPT_fno_builtin,
+                      options::OPT_ffreestanding, options::OPT_fhosted,
+                      options::OPT_mkernel, options::OPT_fapple_kext);
+  bool UseBuiltins = !BuiltinArg ||
+                     BuiltinArg->getOption().matches(options::OPT_fbuiltin) ||
+                     BuiltinArg->getOption().matches(options::OPT_fhosted);
 
   if (!UseBuiltins)
     CmdArgs.push_back("-fno-builtin");

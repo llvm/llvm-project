@@ -4296,8 +4296,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Args.hasFlag(OPT_fconvergent_functions, OPT_fno_convergent_functions,
                    HasConvergentOperations);
 
-  Opts.NoBuiltin = Args.hasFlag(OPT_fno_builtin, OPT_ffreestanding,
-                                OPT_fbuiltin, false);
+  Opts.NoBuiltin =
+      Args.hasFlag(OPT_fno_builtin, OPT_ffreestanding, OPT_fbuiltin, false);
   if (!Opts.NoBuiltin)
     getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
   if (Arg *A = Args.getLastArg(options::OPT_LongDouble_Group)) {
