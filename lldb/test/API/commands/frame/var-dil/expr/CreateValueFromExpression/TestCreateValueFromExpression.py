@@ -33,11 +33,17 @@ class TestCreateValueFromExpression(TestBase):
         self.assertEqual(v1.GetValue(), "1")
         v2 = i.CreateValueFromExpression("v2", "static_cast<double>(i) + 2.5")
         self.assertEqual(v2.GetValue(), "2.5")
+        expr_options = lldb.SBExpressionOptions()
+        v3 = i.CreateValueFromExpression("v3", "i + 3", expr_options)
+        self.assertEqual(v3.GetValue(), "3")
         self.runCmd(
             "settings set target.experimental.use-DIL-for-creating-values false"
         )
-        v3 = i.CreateValueFromExpression("v3", "i + 3")
-        self.assertEqual(v3.GetValue(), "3")
+        v4 = i.CreateValueFromExpression("v4", "i + 4")
+        self.assertEqual(v4.GetValue(), "4")
+        expr_options.SetTryDILFirst(True)
+        v5 = i.CreateValueFromExpression("v5", "i + 5", expr_options)
+        self.assertEqual(v5.GetValue(), "5")
 
         with open(log_file, "r") as f:
             log = f.read()
@@ -47,5 +53,9 @@ class TestCreateValueFromExpression(TestBase):
         # Check that if DIL cannot evaluate the expression, it falls back to
         # full expression evaluation
         self.assertGreater(log.find("v2 = 2.5 (evaluated by: UserExpression)"), 0)
-        # Check that creating values using DIL was disabled for the 3rd expression
+        # Check that trying DIL can be disabled through expression options parameter
         self.assertGreater(log.find("v3 = 3 (evaluated by: UserExpression)"), 0)
+        # Check that using DIL was disabled after disabling the lldb setting
+        self.assertGreater(log.find("v4 = 4 (evaluated by: UserExpression)"), 0)
+        # Check that trying DIL can be enabled through expression options parameter
+        self.assertGreater(log.find("v5 = 5 (evaluated by: DIL)"), 0)

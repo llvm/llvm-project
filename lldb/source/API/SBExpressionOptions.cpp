@@ -301,6 +301,18 @@ SBError SBExpressionOptions::SetBooleanLanguageOption(const char *option_name,
   return error;
 }
 
+bool SBExpressionOptions::GetTryDILFirst() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetTryDILFirst();
+}
+
+void SBExpressionOptions::SetTryDILFirst(bool b) {
+  LLDB_INSTRUMENT_VA(this, b);
+
+  return m_opaque_up->SetTryDILFirst(b);
+}
+
 EvaluateExpressionOptions *SBExpressionOptions::get() const {
   return m_opaque_up.get();
 }

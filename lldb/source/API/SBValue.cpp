@@ -465,6 +465,9 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
 
   SBExpressionOptions options;
   options.ref().SetKeepInMemory(true);
+  TargetSP target_sp(GetTarget().GetSP());
+  if (target_sp)
+    options.SetTryDILFirst(target_sp->GetUseDILForCreatingValues());
   return CreateValueFromExpression(name, expression, options);
 }
 
@@ -479,8 +482,7 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
   // If enabled, attempt to use DIL to evaluate the expression.
   bool DIL_success = false;
   if (frame_sp && target_sp) {
-    bool use_DIL = target_sp->GetUseDILForCreatingValues();
-    if (use_DIL) {
+    if (options.GetTryDILFirst()) {
       Status error;
       uint32_t expr_path_options =
           StackFrame::eExpressionPathOptionCheckPtrVsMember |
