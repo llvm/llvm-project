@@ -248,23 +248,25 @@ private:
   DenseMap<Section *, orc::ExecutorAddr> SectionStartCache;
 };
 
-// Synthesize COFF __imp_ Import Address Table (IAT) entries.
+// Prepare fallback COFF __imp_ Import Address Table (IAT) entries.
 //
 // For a dllimport reference, codegen emits an indirect access through a named
 // __imp_X symbol, e.g.
 //
 //     callq *__imp_bar(%rip)        ; or, for data: movq __imp_g(%rip), %rax
 //
-// where __imp_X is an undefined external. This pass supplies the missing IAT
-// entry by defining __imp_X over an 8-byte pointer slot that holds X's address:
+// where __imp_X is an undefined external. A COFF import-library definition
+// generator may provide that symbol directly. If it does not, these passes
+// supply a fallback 8-byte pointer slot that holds X's address:
 //
 //     __imp_bar:
 //         .quad bar                 ; X is resolved as an ordinary external
 //
-// X is left external, so its address is provided by whatever resolves the
-// JITDylib's externals (an import library, a DynamicLibrarySearchGenerator,
-// COFFAutoImportGenerator, ...). If X is unresolvable the link fails, exactly
-// as a static link against the corresponding import library would.
+// Both __imp_X and X are looked up weakly. After lookup, a resolved __imp_X is
+// used as-is. Otherwise __imp_X is assigned the address of the fallback slot,
+// whose target must have resolved through the JITDylib's link order. This lets
+// import-library metadata (including EXPORTAS) take precedence while retaining
+// import-library-free lookup by the ordinary symbol name.
 //
 // This is the COFF analog of the ELF/Mach-O GOT builder, but deliberately NOT
 // written as a TableManager/visitEdge pass like x86_64::GOTTableManager. ELF's
@@ -280,7 +282,16 @@ private:
 // Direct (non-dllimport) references such as `callq foo` are intentionally not
 // handled here: those are either kept in range by the slab allocator or thunked
 // by the opt-in COFFAutoImportGenerator -- both outside this pass.
-Error synthesizeIATEntries_COFF_x86_64(LinkGraph &G) {
+struct PendingIATEntry {
+  Symbol *Import;
+  Symbol *Target;
+  Symbol *FallbackSlot;
+};
+
+using PendingIATEntries = SmallVector<PendingIATEntry, 8>;
+
+Error prepareIATEntries_COFF_x86_64(LinkGraph &G,
+                                    PendingIATEntries &PendingEntries) {
   static constexpr StringRef ImpPrefix = "__imp_";
 
   // Collect the external __imp_ symbols up front: we mutate the symbol lists
@@ -306,16 +317,40 @@ Error synthesizeIATEntries_COFF_x86_64(LinkGraph &G) {
     orc::SymbolStringPtr Base =
         G.intern((*Imp->getName()).drop_front(ImpPrefix.size()));
 
-    // Find the real target X, or add it as an external to be resolved normally.
+    // Find the real target X, or add a weak external for fallback lookup.
     Symbol *Target = FindByName(std::move(Base));
-    if (!Target)
+    if (!Target) {
       Target = &G.addExternalSymbol(std::move(Base), 0,
-                                    /*IsWeaklyReferenced=*/false);
+                                    /*IsWeaklyReferenced=*/true);
+    }
 
-    // 8-byte slot holding &X, with __imp_X defined over it.
+    // Give an import-library generator the first opportunity to provide the
+    // authoritative __imp_X definition. Failure is diagnosed after lookup if
+    // neither __imp_X nor X can be resolved.
+    Imp->setWeaklyReferenced(true);
+
+    // Reserve an 8-byte fallback slot holding &X. It remains local to this
+    // graph and is used only if external lookup does not provide __imp_X.
     Symbol &Slot = x86_64::createAnonymousPointer(G, IATSec, Target);
-    G.makeDefined(*Imp, Slot.getBlock(), 0, G.getPointerSize(), Linkage::Strong,
-                  Scope::Local, /*IsLive=*/true);
+    Slot.setLive(true);
+    PendingEntries.push_back({Imp, Target, &Slot});
+  }
+
+  return Error::success();
+}
+
+Error applyIATFallbacks_COFF_x86_64(PendingIATEntries &PendingEntries) {
+  for (auto &Entry : PendingEntries) {
+    if (Entry.Import->getAddress())
+      continue;
+
+    if (!Entry.Target->getAddress())
+      return make_error<JITLinkError>(
+          "COFF import " + *Entry.Import->getName() +
+          " could not be resolved through either its import address table "
+          "symbol or its ordinary symbol name");
+
+    Entry.Import->getAddressable().setAddress(Entry.FallbackSlot->getAddress());
   }
 
   return Error::success();
@@ -376,10 +411,17 @@ void link_COFF_x86_64(std::unique_ptr<LinkGraph> G,
     } else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
-    // Synthesize __imp_X IAT entries for dllimport references, like the GOT/PLT
-    // builders for ELF/Mach-O. Runs in PostPrune (before external-symbol
-    // lookup) so the X targets it introduces are resolved normally.
-    Config.PostPrunePasses.push_back(synthesizeIATEntries_COFF_x86_64);
+    // Prepare fallback __imp_X IAT entries before allocation, but leave
+    // __imp_X external until lookup gives import-library generators an
+    // opportunity to provide an authoritative definition.
+    auto PendingIATs = std::make_shared<PendingIATEntries>();
+    Config.PostPrunePasses.push_back([PendingIATs](LinkGraph &G) {
+      return prepareIATEntries_COFF_x86_64(G, *PendingIATs);
+    });
+
+    Config.PreFixupPasses.push_back([PendingIATs](LinkGraph &) {
+      return applyIATFallbacks_COFF_x86_64(*PendingIATs);
+    });
 
     // Add COFF edge lowering passes.
     Config.PreFixupPasses.push_back(COFFLinkGraphLowering_x86_64());

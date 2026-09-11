@@ -85,9 +85,8 @@ Error COFFVCRuntimeBootstrapper::loadVCRuntime(
     sys::path::append(LibPath, LibName);
 
     std::set<std::string> NewImportedLibraries;
-    auto G = StaticLibraryDefinitionGenerator::Load(
-        ObjLinkingLayer, LibPath.c_str(),
-        COFFImportFileScanner(NewImportedLibraries));
+    auto G = COFFStaticLibraryDefinitionGenerator::Load(
+        ObjLinkingLayer, LibPath.c_str(), NewImportedLibraries);
     if (!G)
       return G.takeError();
 
