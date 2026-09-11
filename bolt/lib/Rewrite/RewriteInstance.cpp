@@ -1083,6 +1083,7 @@ void RewriteInstance::discoverFileObjects() {
       continue;
 
     FileSymRefs.emplace(SymbolAddress, Symbol);
+    const bool IsEHFrameBegin = SymName == getEHFrameBeginSymbolName();
 
     // Skip symbols in PLT sections that will be registered by disassemblePLT().
     // ST_Debug covers section markers (lld/GNU ld), ST_Function covers
@@ -1199,6 +1200,12 @@ void RewriteInstance::discoverFileObjects() {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: rejecting as symbol is not in code or "
                            "is in nobits section\n");
       registerName(SymbolSize);
+      if (IsEHFrameBegin &&
+          cantFail(Section->getName()) == getEHFrameSectionName()) {
+        EHFrameBegin = BC->getBinaryDataAtAddress(SymbolAddress);
+        assert(EHFrameBegin &&
+               "__EH_FRAME_BEGIN__ should have registered BinaryData");
+      }
       continue;
     }
 
@@ -4426,9 +4433,9 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   // If no new .eh_frame was written, remove relocated original .eh_frame.
   BinarySection *RelocatedEHFrameSection =
       getSection(".relocated" + getEHFrameSectionName());
+  BinarySection *NewEHFrameSection =
+      getSection(getNewSecPrefix() + getEHFrameSectionName());
   if (RelocatedEHFrameSection && RelocatedEHFrameSection->hasValidSectionID()) {
-    BinarySection *NewEHFrameSection =
-        getSection(getNewSecPrefix() + getEHFrameSectionName());
     if (!NewEHFrameSection || !NewEHFrameSection->isFinalized()) {
       // JITLink will still have to process relocations for the section, hence
       // we need to assign it the address that wouldn't result in relocation
@@ -4442,6 +4449,11 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
 
   // Map the rest of the sections.
   mapAllocatableSections(MapSection);
+
+  // Make the GNU frame-registration anchor follow the regenerated .eh_frame.
+  // Record the move after mapping so the output address is available.
+  if (EHFrameBegin && NewEHFrameSection && NewEHFrameSection->isFinalized())
+    EHFrameBegin->setOutputLocation(*NewEHFrameSection, 0);
 
   if (!BC->BOLTReserved.empty()) {
     const uint64_t AllocatedSize =
@@ -5929,9 +5941,7 @@ void RewriteInstance::updateELFSymbolTable(
             Function->getCodeSection(FF->getFragmentNum())->getIndex();
       } else {
         // Check if the symbol belongs to moved data object and update it.
-        BinaryData *BD = opts::ReorderData.empty()
-                             ? nullptr
-                             : BC->getBinaryDataAtAddress(Symbol.st_value);
+        BinaryData *BD = BC->getBinaryDataAtAddress(Symbol.st_value);
         if (BD && BD->isMoved() && !BD->isJumpTable()) {
           assert((!BD->getSize() || !Symbol.st_size ||
                   Symbol.st_size == BD->getSize()) &&
@@ -7046,7 +7056,8 @@ uint64_t RewriteInstance::getNewValueForSymbol(const StringRef Name) {
   if (!BD)
     return 0;
 
-  return BD->getAddress();
+  return BD->isMoved() && !BD->isJumpTable() ? BD->getOutputAddress()
+                                             : BD->getAddress();
 }
 
 uint64_t RewriteInstance::getFileOffsetForAddress(uint64_t Address) const {
