@@ -51,6 +51,15 @@ enum AMDGPUFeature : unsigned {
 
 using AMDGPUFeatureBitset = Bitset<NUM_FEATURES>;
 
+/// One enumerator per frontend-visible R600 feature bit; R600_NUM_FEATURES is
+/// the count.
+enum R600Feature : unsigned {
+#define GET_R600_FEATURE_ENUM
+#include "llvm/TargetParser/R600TargetParserDef.inc"
+};
+
+using R600FeatureBitset = Bitset<R600_NUM_FEATURES>;
+
 /// Instruction set architecture version.
 struct IsaVersion {
   uint8_t Major;
@@ -62,43 +71,6 @@ struct IsaVersion {
            Stepping == Other.Stepping;
   }
   bool operator!=(const IsaVersion &Other) const { return !(*this == Other); }
-};
-
-// This isn't comprehensive for now, just things that are needed from the
-// frontend driver.
-enum R600FeatureKind : uint32_t {
-  R600_FEATURE_NONE = 0,
-
-  // Has fma instructions.
-  R600_FEATURE_FMA = 1 << 0,
-};
-
-// GFX6+ features. This isn't comprehensive for now, just things that are needed
-// from the frontend driver.
-enum ArchFeatureKind : uint32_t {
-  FEATURE_NONE = 0,
-
-  // Common features.
-  FEATURE_FAST_FMA_F32 = 1 << 0,
-  FEATURE_FAST_DENORMAL_F32 = 1 << 1,
-
-  // Wavefront 32 is available.
-  FEATURE_WAVE32 = 1 << 2,
-
-  // Xnack is available.
-  FEATURE_XNACK = 1 << 3,
-
-  // Sram-ecc is available.
-  FEATURE_SRAMECC = 1 << 4,
-
-  // WGP mode is supported.
-  FEATURE_WGP = 1 << 5,
-
-  // Xnack on/off modes are supported.
-  FEATURE_XNACK_ON_OFF_MODES = 1 << 6,
-
-  // VI SGPR initialization bug requiring a fixed SGPR allocation size.
-  FEATURE_SGPR_INIT_BUG = 1 << 7
 };
 
 enum FeatureError : uint32_t {
@@ -167,16 +139,12 @@ LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);
 LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
-/// \deprecated Use getFeatureBitset and test the relevant FEAT_* bits instead.
-/// The legacy ArchFeatureKind bitfield is being removed.
-LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
-LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
-LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
-LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
-LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
 
 /// Returns \p AK's feature bitset, or an empty bitset if unknown.
 LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
+
+/// Returns R600 GPU \p AK's feature bitset, or an empty bitset if unknown.
+LLVM_ABI const R600FeatureBitset &getFeatureBitsetR600(GPUKind AK);
 
 /// Appends the feature name of each bit set in \p Features to \p Names.
 LLVM_ABI void getFeatureNames(const AMDGPUFeatureBitset &Features,
@@ -356,6 +324,14 @@ public:
   /// "<triple>-<processor>:<features>" directive string.
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
+
+  /// Construct a TargetID for triple \p TT and processor \p CPU, taking the
+  /// xnack/sramecc modes from the subtarget \p FeatureString (a comma-separated
+  /// "+xnack,-sramecc" list). Unspecified modes keep the processor's default.
+  /// The assembler uses this because it has no target directive to carry the
+  /// mode.
+  static TargetID createFromSubtargetFeatures(const Triple &TT, StringRef CPU,
+                                              StringRef FeatureString);
 
   /// Returns true if \p Other denotes the same target as *this, i.e. the same
   /// processor and xnack/sramecc settings on a compatible triple. This is a

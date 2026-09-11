@@ -1155,13 +1155,26 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Returns true if Dst and Src are in Opc's HwMode-resolved destination and
+  // source operand classes.
+  auto CanCopyWith = [&](unsigned Opc, MCRegister Dst, MCRegister Src,
+                         unsigned SrcOp = 1) {
+    const MCInstrDesc &Desc = get(Opc);
+    const TargetRegisterClass *DstOpRC = getRegClass(Desc, 0);
+    const TargetRegisterClass *SrcOpRC = getRegClass(Desc, SrcOp);
+    return DstOpRC && SrcOpRC && DstOpRC->contains(Dst) &&
+           SrcOpRC->contains(Src);
+  };
+
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
-    if (ST.hasVMovB64Inst()) {
+    if (ST.hasVMovB64Inst() &&
+        CanCopyWith(AMDGPU::V_MOV_B64_e32, DestReg, SrcReg)) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
       return;
     }
-    if (ST.hasPkMovB32()) {
+    if (ST.hasPkMovB32() &&
+        CanCopyWith(AMDGPU::V_PK_MOV_B32, DestReg, SrcReg, /*SrcOp=*/2)) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
         .addImm(SISrcMods::OP_SEL_1)
         .addReg(SrcReg)
@@ -1208,10 +1221,12 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       WideOpcode = AMDGPU::V_PK_MOV_B32;
   }
 
-  const TargetRegisterClass *WideRC{};
+  const TargetRegisterClass *WideDstRC{}, *WideSrcRC{};
   if (WideOpcode != AMDGPU::INSTRUCTION_LIST_END) {
+    const MCInstrDesc &Desc = get(WideOpcode);
     unsigned SrcOp = WideOpcode == AMDGPU::V_PK_MOV_B32 ? 2 : 1;
-    WideRC = getRegClass(get(WideOpcode), SrcOp);
+    WideDstRC = getRegClass(Desc, 0);
+    WideSrcRC = getRegClass(Desc, SrcOp);
   }
 
   // If there is an overlap, we can't kill the super-register on the last
@@ -1236,7 +1251,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     unsigned SubIdx =
         Forward ? SubIndices[Idx] : SubIndices[SubIndices.size() - Idx - 1];
 
-    if (WideRC && Idx + 1 < SubIndices.size()) {
+    if (WideDstRC && WideSrcRC && Idx + 1 < SubIndices.size()) {
       unsigned Channel = RI.getChannelFromSubReg(SubIdx);
       if (!Forward)
         --Channel;
@@ -1245,8 +1260,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Register WideDst = RI.getSubReg(DestReg, WideSubIdx);
       Register WideSrc = RI.getSubReg(SrcReg, WideSubIdx);
 
-      if (WideDst && WideSrc && WideRC->contains(WideDst) &&
-          WideRC->contains(WideSrc)) {
+      if (WideDst && WideSrc && WideDstRC->contains(WideDst) &&
+          WideSrcRC->contains(WideSrc)) {
         SubIdx = WideSubIdx;
         NumRegs = 2;
         ThisOpcode = WideOpcode;
@@ -8173,7 +8188,7 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
            "Deferred MachineInstr are not supposed to re-populate worklist");
   }
 
-  for (std::pair<MachineInstr *, V2PhysSCopyInfo> &Entry : WaterFalls) {
+  for (auto &Entry : WaterFalls) {
     if (Entry.first->getOpcode() == AMDGPU::SI_CALL_ISEL)
       createWaterFallForSiCall(Entry.first, MDT, Entry.second.MOs,
                                Entry.second.SGPRs);
@@ -11539,9 +11554,7 @@ static bool foldableSelect(const MachineInstr &Def) {
       Def.getOperand(1).isImm() && Def.getOperand(1).getImm() != 0;
   bool Op2IsZeroImm =
       Def.getOperand(2).isImm() && Def.getOperand(2).getImm() == 0;
-  if (!Op1IsNonZeroImm || !Op2IsZeroImm)
-    return false;
-  return true;
+  return Op1IsNonZeroImm && Op2IsZeroImm;
 }
 
 static bool setsSCCIfResultIsZero(const MachineInstr &Def, bool &NeedInversion,

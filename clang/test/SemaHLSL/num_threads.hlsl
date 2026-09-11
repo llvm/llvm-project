@@ -130,7 +130,12 @@ int largeZ();
 #endif
 // expected-error-re@+1 {{attribute 'numthreads' is unsupported in '{{[A-Za-z]+}}' shaders, requires one of the following: compute, amplification, mesh}}
 [numthreads(1,1,1)]
-int main() : A {
+#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL
+float main() : SV_Target
+#else
+int main() : A
+#endif
+{
  return 1;
 }
 

@@ -36,6 +36,7 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
@@ -49,10 +50,6 @@ class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
-
-extern cl::opt<bool> EnableVPlanNativePath;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<bool> PreferInLoopReductions;
 
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
@@ -416,12 +413,6 @@ public:
                                      const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
-  }
-
-  VPInstruction *createScalarLoad(Type *ResultTy, VPValue *Addr, DebugLoc DL,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstruction(Instruction::Load, Addr, {},
-                                                  Metadata, DL, "", ResultTy));
   }
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -892,6 +883,9 @@ class LoopVectorizationPlanner {
 
   OptimizationRemarkEmitter *ORE;
 
+  /// Lazily fetch BranchProbabilityInfo, independent of BlockFrequencyInfo.
+  std::function<const BranchProbabilityInfo &()> GetBPI;
+
   SmallVector<VPlanPtr, 4> VPlans;
 
   /// Profitable vector factors.
@@ -922,7 +916,8 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       std::unique_ptr<LoopVectorizationCostModel> CM,
       VFSelectionContext &Config, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE);
+      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
+      std::function<const BranchProbabilityInfo &()> GetBPI);
 
   ~LoopVectorizationPlanner();
 

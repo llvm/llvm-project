@@ -1177,6 +1177,17 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
                                              VPCostContext &Ctx) const;
 };
 
+/// The frequency with which a recipe executes, relative to the entry of the
+/// loop region. IsEstimated is set if any branch weight it was composed from
+/// was estimated from static heuristics.
+struct VPExecutionFrequency {
+  const BlockFrequency Freq;
+  const bool IsEstimated;
+
+  VPExecutionFrequency(BlockFrequency Freq, bool IsEstimated)
+      : Freq(Freq), IsEstimated(IsEstimated) {}
+};
+
 /// Helper to manage IR metadata for recipes. It filters out metadata that
 /// cannot be propagated.
 class LLVM_ABI_FOR_TEST VPIRMetadata {
@@ -1186,11 +1197,21 @@ class LLVM_ABI_FOR_TEST VPIRMetadata {
   static constexpr StringLiteral ExecutionFrequencyMDName =
       "vplan.execution.frequency";
 
+  /// Name of the VPlan-internal metadata kind holding estimated branch weights.
+  static constexpr StringLiteral EstimatedProfileMDName =
+      "vplan.prof.estimated";
+
   /// Returns the ID of the metadata kind named \p Kind, taking the context from
   /// any attached node; all belong to the context of the VPlan's function.
   unsigned getMDKindID(StringRef Kind) const {
     assert(!Metadata.empty() && "no node to take the context from");
     return Metadata.front().second->getContext().getMDKindID(Kind);
+  }
+
+  /// Returns the node attached under the VPlan-internal metadata kind named
+  /// \p Kind, or nullptr if there is none.
+  MDNode *getInternalMetadata(StringRef Kind) const {
+    return Metadata.empty() ? nullptr : getMetadata(getMDKindID(Kind));
   }
 
 public:
@@ -1240,15 +1261,34 @@ public:
   }
 
   /// Record that the recipe executes with frequency \p Freq, relative to the
-  /// entry of the loop region; see vputils::AlwaysExecutesFreq.
-  void setExecutionFrequency(std::optional<BlockFrequency> Freq,
+  /// entry of the loop region.
+  void setExecutionFrequency(std::optional<VPExecutionFrequency> Freq,
                              LLVMContext &Ctx);
 
   /// Returns the frequency recorded by setExecutionFrequency, if any.
-  std::optional<BlockFrequency> getExecutionFrequency() const;
+  std::optional<VPExecutionFrequency> getExecutionFrequency() const;
 
   /// Drop the frequency recorded by setExecutionFrequency, if any.
   void clearExecutionFrequency();
+
+  /// Returns the branch weights recorded for this terminator, preferring real
+  /// profile data over an estimate, or nullptr if there are none.
+  MDNode *getBranchWeights() const {
+    MDNode *Node = getMetadata(LLVMContext::MD_prof);
+    return Node ? Node : getInternalMetadata(EstimatedProfileMDName);
+  }
+
+  /// Returns true if the weights returned by getBranchWeights are estimated.
+  bool hasEstimatedBranchWeights() const {
+    return getInternalMetadata(EstimatedProfileMDName);
+  }
+
+  /// Set estimated branch weights to \p Node.
+  void setEstimatedBranchWeights(MDNode *Node) {
+    assert(!getMetadata(LLVMContext::MD_prof) &&
+           "real profile data takes precedence over an estimate");
+    setMetadata(Node->getContext().getMDKindID(EstimatedProfileMDName), Node);
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print metadata with node IDs.
