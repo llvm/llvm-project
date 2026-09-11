@@ -40,8 +40,10 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
+#include <memory>
 #include <random>
 
+#include "mlir/Analysis/CFGLoopInfo.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
@@ -54,8 +56,10 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/DebugLog.h"
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::OneShotAnalysisState)
@@ -267,17 +271,77 @@ static bool isInplaceMemoryWrite(OpOperand &opOperand,
   return state.isInPlace(opOperand);
 }
 
-/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
-/// properly dominates `b` and `b` is not inside `a`.
-static bool happensBefore(Operation *a, Operation *b,
-                          const DominanceInfo &domInfo) {
+using CFGLoopInfoCache = DenseMap<Region *, std::unique_ptr<CFGLoopInfo>>;
+
+/// Return cached CFG loop info for `region`, or nullptr for single-block
+/// regions (no unstructured loop nest).
+static CFGLoopInfo *getCFGLoopInfo(Region *region, const DominanceInfo &domInfo,
+                                   CFGLoopInfoCache &cache) {
+  if (region->hasOneBlock())
+    return nullptr;
+  std::unique_ptr<CFGLoopInfo> &entry = cache[region];
+  if (!entry)
+    entry = std::make_unique<CFGLoopInfo>(domInfo.getDomTree(region));
+  return entry.get();
+}
+
+/// Headers of loops that contain both blocks but are not the innermost loop
+/// containing either. Paths through these headers are outer-loop backedges and
+/// should not count as "can happen after" for ops in sibling inner loops.
+/// Returns an empty set if `loopInfo` is null.
+static SmallPtrSet<Block *, 16>
+collectParentLoopHeaders(Block *aBlock, Block *bBlock, CFGLoopInfo *loopInfo) {
+  SmallPtrSet<Block *, 16> barriers;
+  if (!loopInfo)
+    return barriers;
+  CFGLoop *loopA = loopInfo->getLoopFor(aBlock);
+  CFGLoop *loopB = loopInfo->getLoopFor(bBlock);
+  if (loopA == loopB)
+    return barriers;
+  for (CFGLoop *common = loopInfo->getSmallestCommonLoop(loopA, loopB); common;
+       common = common->getParentLoop()) {
+    if (common == loopA || common == loopB)
+      continue;
+    Block *header = common->getHeader();
+    if (header != aBlock && header != bBlock)
+      barriers.insert(header);
+  }
+  return barriers;
+}
+
+/// Return true if `a` cannot happen after `b`.
+/// This is true if `a` or one of its ancestors properly dominates `b` and `b`
+/// is not inside `a`. It is also true when `a` and `b` are in the same region
+/// and there is no CFG path from `b`'s block to `a`'s block (including when
+/// the two blocks are mutually exclusive).
+/// If `useCFGLoops` is set, paths through the header of a parent CFG loop
+/// that contains both blocks (but is not the innermost loop containing either
+/// block) are ignored. That is only sound when op dominance is already known to
+/// be applicable (i.e., DEF lies on every READ-WRITE cycle).
+static bool cannotHappenAfter(Operation *a, Operation *b,
+                              const DominanceInfo &domInfo,
+                              CFGLoopInfoCache &loopInfoCache,
+                              bool useCFGLoops) {
   do {
     // TODO: Instead of isProperAncestor + properlyDominates, we should use
     // properlyDominatesImpl(a, b, /*enclosingOpOk=*/false)
     if (a->isProperAncestor(b))
       return false;
+    // Dominance is a stronger condition than reachability. Prefer using it
+    // since it is cached.
     if (domInfo.properlyDominates(a, b))
       return true;
+    Block *aBlock = a->getBlock();
+    Block *bBlock = b->getBlock();
+    if (aBlock != bBlock && aBlock->getParent() == bBlock->getParent()) {
+      CFGLoopInfo *loopInfo =
+          useCFGLoops
+              ? getCFGLoopInfo(aBlock->getParent(), domInfo, loopInfoCache)
+              : nullptr;
+      if (!bBlock->isReachable(
+              aBlock, collectParentLoopHeaders(aBlock, bBlock, loopInfo)))
+        return true;
+    }
   } while ((a = a->getParentOp()));
   return false;
 }
@@ -296,7 +360,7 @@ static bool happensBefore(Operation *a, Operation *b,
 /// %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>  // WRITE
 ///
 /// This is no longer true inside loops (or repetitive regions). In such cases,
-/// there may not be a meaningful `happensBefore` relationship because ops
+/// there may not be a meaningful `cannotHappenAfter` relationship because ops
 /// could be executed multiple times. E.g.:
 ///
 /// Example 2:
@@ -354,8 +418,9 @@ static bool happensBefore(Operation *a, Operation *b,
 ///    out RaW conflict due to the ordering of ops.
 /// 2. Otherwise: There are no loops that interfere with our analysis; for
 ///    analysis purposes, we can assume that there are no loops/repetitive
-///    regions. I.e., we can rule out a RaW conflict if READ happensBefore WRITE
-///    or WRITE happensBefore DEF. (Checked in `hasReadAfterWriteInterference`.)
+///    regions. I.e., we can rule out a RaW conflict if READ cannot happen after
+///    WRITE or WRITE cannot happen after DEF. (Checked in
+///    `hasReadAfterWriteInterference`.)
 ///
 static bool canUseOpDominanceDueToRegions(OpOperand *uRead, OpOperand *uWrite,
                                           const SetVector<Value> &definitions,
@@ -366,8 +431,8 @@ static bool canUseOpDominanceDueToRegions(OpOperand *uRead, OpOperand *uWrite,
         state.getEnclosingRepetitiveRegion(uRead->getOwner(), options);
     Region *rDef = state.getEnclosingRepetitiveRegion(def, options);
 
-    // READ and DEF are in the same repetitive region. `happensBefore` can be
-    // used to rule out RaW conflicts due to op ordering.
+    // READ and DEF are in the same repetitive region. `cannotHappenAfter` can
+    // be used to rule out RaW conflicts due to op ordering.
     if (rRead == rDef)
       continue;
 
@@ -593,11 +658,10 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
 /// A conflict is: According to SSA use-def chains, a read R is supposed to read
 /// the result of a definition W1. But because of bufferization decisions, R
 /// actually reads another definition W2.
-static bool
-hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
-                              const DenseSet<OpOperand *> &usesWrite,
-                              const DominanceInfo &domInfo,
-                              OneShotAnalysisState &state) {
+static bool hasReadAfterWriteInterference(
+    const DenseSet<OpOperand *> &usesRead,
+    const DenseSet<OpOperand *> &usesWrite, const DominanceInfo &domInfo,
+    CFGLoopInfoCache &loopInfoCache, OneShotAnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
 
   // Before going through the main RaW analysis, find cases where a buffer must
@@ -679,14 +743,16 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
       // Inside of repetitive regions, ops may be executed multiple times and op
       // dominance cannot be used to rule out conflicts.
       if (useDominance) {
-        // No conflict if the readingOp dominates conflictingWritingOp, i.e.,
-        // the write is not visible when reading.
+        // No conflict if the readingOp cannot happen after
+        // conflictingWritingOp, i.e., the write is not visible when reading.
         //
         // Note: If ops are executed multiple times (e.g., because they are
-        //       inside a loop), there may be no meaningful `happensBefore`
+        //       inside a loop), there may be no meaningful `cannotHappenAfter`
         //       relationship.
-        if (happensBefore(readingOp, conflictingWritingOp, domInfo)) {
-          LDBG() << "  no conflict: read happens before write";
+        if (cannotHappenAfter(readingOp, conflictingWritingOp, domInfo,
+                              loopInfoCache,
+                              /*useCFGLoops=*/true)) {
+          LDBG() << "  no conflict: read cannot happen after write";
           continue;
         }
 
@@ -762,11 +828,12 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
       for (Value definition : definitions) {
         LDBG() << "  * definition = " << definition;
 
-        // No conflict if the conflicting write happens before the definition.
+        // No conflict if the conflicting write cannot happen after the
+        // definition.
         if (Operation *defOp = definition.getDefiningOp()) {
-          if (happensBefore(conflictingWritingOp, defOp, domInfo)) {
-            // conflictingWritingOp happens before defOp. No conflict.
-            LDBG() << "    no conflict: write happens before definition";
+          if (cannotHappenAfter(conflictingWritingOp, defOp, domInfo,
+                                loopInfoCache, useDominance)) {
+            LDBG() << "    no conflict: write cannot happen after definition";
             continue;
           }
           // No conflict if conflictingWritingOp is contained in defOp.
@@ -887,7 +954,8 @@ static void getAliasingReads(DenseSet<OpOperand *> &res, Value root,
 /// involving aliases of the given OpOperand are checked.
 static bool wouldCreateReadAfterWriteInterference(
     OpOperand &operand, const DominanceInfo &domInfo,
-    OneShotAnalysisState &state, bool checkConsistencyOnly = false) {
+    CFGLoopInfoCache &loopInfoCache, OneShotAnalysisState &state,
+    bool checkConsistencyOnly = false) {
   // Collect reads and writes of all aliases of OpOperand and OpResult.
   DenseSet<OpOperand *> usesRead, usesWrite;
   getAliasingReads(usesRead, operand.get(), state);
@@ -899,7 +967,8 @@ static bool wouldCreateReadAfterWriteInterference(
   if (!checkConsistencyOnly && state.bufferizesToMemoryWrite(operand))
     usesWrite.insert(&operand);
 
-  return hasReadAfterWriteInterference(usesRead, usesWrite, domInfo, state);
+  return hasReadAfterWriteInterference(usesRead, usesWrite, domInfo,
+                                       loopInfoCache, state);
 }
 
 /// Annotate IR with details about the detected non-writability conflict.
@@ -989,16 +1058,17 @@ void OneShotAnalysisState::resetCache() {
 }
 
 /// Determine if `operand` can be bufferized in-place.
-static LogicalResult
-bufferizableInPlaceAnalysisImpl(OpOperand &operand, OneShotAnalysisState &state,
-                                const DominanceInfo &domInfo) {
+static LogicalResult bufferizableInPlaceAnalysisImpl(
+    OpOperand &operand, const DominanceInfo &domInfo,
+    CFGLoopInfoCache &loopInfoCache, OneShotAnalysisState &state) {
   LDBG() << "//===-------------------------------------------===//\n"
          << "Analyzing operand #" << operand.getOperandNumber() << " of "
          << OpWithFlags(operand.getOwner(), OpPrintingFlags().skipRegions());
 
   bool foundInterference =
       wouldCreateWriteToNonWritableBuffer(operand, state) ||
-      wouldCreateReadAfterWriteInterference(operand, domInfo, state);
+      wouldCreateReadAfterWriteInterference(operand, domInfo, loopInfoCache,
+                                            state);
 
   if (foundInterference)
     state.bufferizeOutOfPlace(operand);
@@ -1009,14 +1079,23 @@ bufferizableInPlaceAnalysisImpl(OpOperand &operand, OneShotAnalysisState &state,
   return success();
 }
 
+static LogicalResult analyzeSingleOpImpl(Operation *op,
+                                         const DominanceInfo &domInfo,
+                                         CFGLoopInfoCache &loopInfoCache,
+                                         OneShotAnalysisState &state) {
+  for (OpOperand &opOperand : op->getOpOperands())
+    if (isa<TensorLikeType>(opOperand.get().getType()))
+      if (failed(bufferizableInPlaceAnalysisImpl(opOperand, domInfo,
+                                                 loopInfoCache, state)))
+        return failure();
+  return success();
+}
+
 LogicalResult
 OneShotAnalysisState::analyzeSingleOp(Operation *op,
                                       const DominanceInfo &domInfo) {
-  for (OpOperand &opOperand : op->getOpOperands())
-    if (isa<TensorLikeType>(opOperand.get().getType()))
-      if (failed(bufferizableInPlaceAnalysisImpl(opOperand, *this, domInfo)))
-        return failure();
-  return success();
+  CFGLoopInfoCache loopInfoCache;
+  return analyzeSingleOpImpl(op, domInfo, loopInfoCache, *this);
 }
 
 /// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.
@@ -1177,8 +1256,9 @@ LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
   }
 
   // Analyze ops in the computed order.
+  CFGLoopInfoCache loopInfoCache;
   for (Operation *op : orderedOps)
-    if (failed(analyzeSingleOp(op, domInfo)))
+    if (failed(analyzeSingleOpImpl(op, domInfo, loopInfoCache, *this)))
       return failure();
 
   equivalenceAnalysis(op, *this);
@@ -1214,6 +1294,7 @@ LogicalResult bufferization::checkPreBufferizationAssumptions(
   if (walkResult.wasInterrupted())
     return failure();
 
+  CFGLoopInfoCache loopInfoCache;
   walkResult = op->walk([&](BufferizableOpInterface op) {
     // Skip ops that are not in the filter.
     if (!options.isOpAllowed(op.getOperation()))
@@ -1233,7 +1314,7 @@ LogicalResult bufferization::checkPreBufferizationAssumptions(
     for (OpOperand &opOperand : op->getOpOperands()) {
       if (isa<TensorLikeType>(opOperand.get().getType())) {
         if (wouldCreateReadAfterWriteInterference(
-                opOperand, domInfo, state,
+                opOperand, domInfo, loopInfoCache, state,
                 /*checkConsistencyOnly=*/true)) {
           // This error can happen if certain "mustBufferizeInPlace" interface
           // methods are implemented incorrectly, such that the IR already has
