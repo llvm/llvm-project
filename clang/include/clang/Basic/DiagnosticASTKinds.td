@@ -222,6 +222,9 @@ def note_constexpr_ltor_non_integral : Note<
   "is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
   "read of non-constexpr variable %0 is not allowed in a constant expression">;
+def note_constexpr_ltor_for_range_var : Note<
+  "read of implicit variable %0 of range-based 'for' loop is not allowed in a "
+  "constant expression">;
 def note_constexpr_ltor_incomplete_type : Note<
   "read of incomplete type %0 is not allowed in a constant expression">;
 def note_constexpr_access_null : Note<

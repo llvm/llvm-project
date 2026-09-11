@@ -87,6 +87,7 @@
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/Passes.h"
@@ -691,7 +692,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(*PR);
   initializeAMDGPURegBankSelectLegacyPass(*PR);
-  initializeAMDGPURegBankLegalizePass(*PR);
+  initializeAMDGPURegBankLegalizeLegacyPass(*PR);
   initializeSILowerWWMCopiesLegacyPass(*PR);
   initializeAMDGPUMarkLastScratchLoadLegacyPass(*PR);
   initializeSILowerSGPRSpillsLegacyPass(*PR);
@@ -715,9 +716,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
-  initializeAMDGPUPostLegalizerCombinerPass(*PR);
+  initializeAMDGPUPostLegalizerCombinerLegacyPass(*PR);
   initializeAMDGPUPreLegalizerCombinerLegacyPass(*PR);
-  initializeAMDGPURegBankCombinerPass(*PR);
+  initializeAMDGPURegBankCombinerLegacyPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
@@ -1801,19 +1802,19 @@ bool GCNPassConfig::addLegalizeMachineIR() {
 
 void GCNPassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createAMDGPUPostLegalizeCombiner(IsOptNone));
+  addPass(createAMDGPUPostLegalizeCombinerLegacy(IsOptNone));
   addPass(createAMDGPUGlobalISelDivergenceLoweringPass());
 }
 
 bool GCNPassConfig::addRegBankSelect() {
   addPass(createAMDGPURegBankSelectLegacyPass());
-  addPass(createAMDGPURegBankLegalizePass());
+  addPass(createAMDGPURegBankLegalizeLegacyPass());
   return false;
 }
 
 void GCNPassConfig::addPreGlobalInstructionSelect() {
-  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createAMDGPURegBankCombiner(IsOptNone));
+  bool IsOptLevelNone = getOptLevel() == CodeGenOptLevel::None;
+  addPass(createAMDGPURegBankCombinerLegacy(IsOptLevelNone));
 }
 
 bool GCNPassConfig::addGlobalInstructionSelect() {
@@ -2648,6 +2649,8 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
+  if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
+    addMachineFunctionPass(MachinePipelinerPass(), PMW);
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(

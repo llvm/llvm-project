@@ -3761,6 +3761,8 @@ bool X86TargetLowering::isCtlzFast() const {
   return Subtarget.hasFastLZCNT();
 }
 
+bool X86TargetLowering::preferZeroCompareBranch() const { return true; }
+
 bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
   return true;
@@ -23328,20 +23330,19 @@ static SDValue getBT(SDValue Src, SDValue BitNo, const SDLoc &DL, SelectionDAG &
       DAG.MaskedValueIsZero(BitNo, APInt(BitNo.getValueSizeInBits(), 32)))
     Src = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Src);
 
-  // If the operand types disagree, extend the shift amount to match.  Since
+  // If the operand types disagree, adjust the shift amount to match.  Since
   // BT ignores high bits (like shifts) we can use anyextend.
   if (Src.getValueType() != BitNo.getValueType()) {
     // Peek through a mask/modulo operation.
     // TODO: DAGCombine fails to do this as it just checks isTruncateFree, but
     // we probably need a better IsDesirableToPromoteOp to handle this as well.
     if (BitNo.getOpcode() == ISD::AND && BitNo->hasOneUse())
-      BitNo = DAG.getNode(ISD::AND, DL, Src.getValueType(),
-                          DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(),
-                                      BitNo.getOperand(0)),
-                          DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(),
-                                      BitNo.getOperand(1)));
+      BitNo = DAG.getNode(
+          ISD::AND, DL, Src.getValueType(),
+          DAG.getAnyExtOrTrunc(BitNo.getOperand(0), DL, Src.getValueType()),
+          DAG.getAnyExtOrTrunc(BitNo.getOperand(1), DL, Src.getValueType()));
     else
-      BitNo = DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(), BitNo);
+      BitNo = DAG.getAnyExtOrTrunc(BitNo, DL, Src.getValueType());
   }
 
   return DAG.getNode(X86ISD::BT, DL, MVT::i32, Src, BitNo);
@@ -24046,6 +24047,18 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
 
   assert((CmpVT == MVT::i8 || CmpVT == MVT::i16 ||
           CmpVT == MVT::i32 || CmpVT == MVT::i64) && "Unexpected VT!");
+
+  // If one operand is a non-extending atomic load, compare with CMP so the
+  // load folds into the compare's memory operand during isel. The SUB form
+  // chosen below for CSE would leave the load in a register: the peephole that
+  // folds a load into a following compare cannot move an ordered access, and
+  // an atomic load has no non-atomic sibling to be CSE'd with anyway.
+  auto IsFoldableAtomicLoad = [](SDValue Op) {
+    return Op.getOpcode() == ISD::ATOMIC_LOAD && Op.hasOneUse() &&
+           cast<AtomicSDNode>(Op)->getExtensionType() == ISD::NON_EXTLOAD;
+  };
+  if (IsFoldableAtomicLoad(Op0) || IsFoldableAtomicLoad(Op1))
+    return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op0, Op1);
 
   // Only promote the compare up to I32 if it is a 16 bit operation
   // with an immediate. 16 bit immediates are to be avoided unless the target
@@ -25384,11 +25397,11 @@ getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
     break;
   case ISD::SMULO:
     BaseOp = X86ISD::SMUL;
-    Cond = X86::COND_O;
+    Cond = X86::COND_B;
     break;
   case ISD::UMULO:
     BaseOp = X86ISD::UMUL;
-    Cond = X86::COND_O;
+    Cond = X86::COND_B;
     break;
   }
 
@@ -33842,8 +33855,8 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
                                DAG.getTargetConstant(0x11, DL, MVT::i8));
     // Pack together lowest elements.
     SDValue Res02 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res0),
-                               DAG.getBitcast(VT, Res1));
-    SDValue Res13 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res2),
+                               DAG.getBitcast(VT, Res2));
+    SDValue Res13 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res1),
                                DAG.getBitcast(VT, Res3));
     return getUnpack(DAG, DL, VT, Res02, Res13, IsHigh);
   }
@@ -48773,8 +48786,7 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
     return SDValue();
 
   // For multi-use setcc, check that all users are vselects that benefit.
-  bool CondHasOneUse = Cond.hasOneUse();
-  if (!CondHasOneUse) {
+  if (!Cond.hasOneUse()) {
     if (!llvm::all_of(Cond->users(), [&](SDNode *User) {
           SDValue UserLHS, UserRHS;
           return sd_match(User, m_VSelect(m_Specific(Cond), m_Value(UserLHS),
@@ -48789,18 +48801,7 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   // (vselect M, L, R) -> (vselect ~M, R, L)
   ISD::CondCode NewCC = ISD::getSetCCInverse(CC, X.getValueType());
   SDValue NewCond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
-  if (CondHasOneUse)
-    return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
-
-  // Invert the setcc for all users and commute all vselects.
-  for (SDNode *User : llvm::make_early_inc_range(Cond->users())) {
-    SDValue UserLHS = User->getOperand(1);
-    SDValue UserRHS = User->getOperand(2);
-    [[maybe_unused]] SDNode *Updated =
-        DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
-    assert(Updated == User && "Unexpected CSE in commuteSelect");
-  }
-  return SDValue(N, 0);
+  return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
 }
 
 /// Do target-specific dag combines on SELECT and VSELECT nodes.

@@ -101,12 +101,19 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
     const DIExpression *Expr = nullptr;
     const GlobalVariable *LLVMGV = nullptr;
   };
-  DenseMap<const DIGlobalVariable *, GlobalVariableDebugInfo>
+  MapVector<const DIGlobalVariable *, GlobalVariableDebugInfo>
       GlobalVariableDebugInfoMap;
+
+  // Distinct DILocalVariable nodes collected in beginModule() from dbg records
+  // and from DISubprogram retained nodes.
+  SetVector<const DILocalVariable *> LocalVariables;
 
   // Distinct DILexicalBlock and DINamespace scopes, parent-before-child
   // order, collected in beginModule() for DebugLexicalBlock emission.
   SetVector<const DIScope *> LexicalBlocks;
+
+  // DebugInlinedAt result id per DILocation used as an inlined-at chain link.
+  DenseMap<const DILocation *, MCRegister> DebugInlinedAtRegs;
 
   // Path \c OpString result id per \c DIScope (CU, \c DIFile, declaration
   // \c DISubprogram, …). Filled during \c emitNonSemanticDebugStrings() using
@@ -164,7 +171,12 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   bool DebugFunctionDefinitionEmitted = false;
 
+  // Instruction that opened the DebugLine / DebugScope region currently in
+  // effect, or nullptr when no region is open. The two are tracked separately
+  // because a DebugScope region usually spans several DebugLine regions, and
+  // either one can skip emission on a cache miss.
   const MachineInstr *LastLineMI = nullptr;
+  const MachineInstr *LastScopeMI = nullptr;
 
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
@@ -231,6 +243,16 @@ private:
 
   void resetPerFunctionDebugState();
 
+  /// Resolve the instruction that a per-instruction DebugLine/DebugScope
+  /// update should attach to: \p MI adjusted forward past a merge
+  /// instruction to its terminator, or \c std::nullopt if \p MI is not a
+  /// valid attachment point (skip-emission, or one of the structural opcodes
+  /// that can never carry DebugLine/DebugScope: OpFunction,
+  /// OpFunctionParameter, OpFunctionEnd, OpLabel, OpPhi).
+  std::optional<const MachineInstr *>
+  resolveDebugLocTarget(const MachineInstr *MI);
+
+  void emitDebugScopeForInstruction(const MachineInstr *MI);
   void emitDebugLineForInstruction(const MachineInstr *MI);
   void preparePerFunctionDebug(const MachineFunction *MF);
   void tryEmitDebugFunctionDefinition(SPIRV::ModuleAnalysisInfo &MAI);
@@ -332,6 +354,23 @@ private:
                                               MCRegister I32TypeReg,
                                               MCRegister ExtInstSetReg,
                                               SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugLocalVariable for the source local variable \p LV:
+  /// Name, Type, Source, Line, Column, Parent, Flags, and an optional Arg
+  /// Number. Line, Column, Flags, and Arg Number are emitted as \c OpConstant
+  /// ids as required for non-semantic debug info. Column is always 0:
+  /// \c DILocalVariable has no column field.
+  ///
+  /// Arg Number is appended when \p LV is a parameter.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p LV's scope is not an emitted local scope,
+  /// if a non-null type was not emitted in \c DebugScopeRegs, or if
+  /// \c resolveScope returns no id for the Parent operand.
+  std::optional<MCRegister>
+  emitDebugLocalVariable(const DILocalVariable *LV, MCRegister VoidTypeReg,
+                         MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+                         SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugGlobalVariable for the source global variable \p GV.
   ///
@@ -485,6 +524,23 @@ private:
   emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
                         MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                         SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Return a cached \c DebugInlinedAt id for \p IA, or emit one (recursing
+  /// into \c IA->getInlinedAt() first for the optional Inlined operand, so
+  /// outer frames are always emitted before the inner frame that references
+  /// them). Must run after \c DebugScopeRegs is populated, since the Scope
+  /// operand is resolved through \c resolveScope. \c DebugInlinedAt is not in
+  /// the spec's in-block instruction list, so this is only ever called from
+  /// module-scope emission (\c emitNonSemanticGlobalDebugInfo), never from
+  /// per-instruction emission.
+  ///
+  /// \returns An invalid (default-constructed) \c MCRegister, and emits
+  /// nothing, if \p IA's Scope does not resolve.
+  MCRegister getOrEmitDebugInlinedAt(const DILocation *IA,
+                                     MCRegister VoidTypeReg,
+                                     MCRegister I32TypeReg,
+                                     MCRegister ExtInstSetReg,
+                                     SPIRV::ModuleAnalysisInfo &MAI);
 };
 
 } // namespace llvm
