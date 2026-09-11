@@ -626,6 +626,13 @@ private:
   // load/store is enabled.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
+  // Peak ArchVGPR pressure of the function (the "actual demand"), recorded by
+  // the machine scheduler (GCNScheduleDAGMILive) from the per-region pressure
+  // it already computes. Used by the WMMA bank hint to anchor its reserved bank
+  // regions to the top of the real footprint instead of the top of the whole
+  // VGPR file, so it does not inflate the VGPR count of small kernels.
+  unsigned PeakVGPRPressure = 0;
+
 private:
   Register VGPRForAGPRCopy;
 
@@ -658,6 +665,9 @@ public:
   bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
     return MaskForVGPRBlockOps.inBounds(RegisterBlock);
   }
+
+  unsigned getPeakVGPRPressure() const { return PeakVGPRPressure; }
+  void setPeakVGPRPressure(unsigned P) { PeakVGPRPressure = P; }
 
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
