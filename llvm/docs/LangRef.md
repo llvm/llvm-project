@@ -27071,6 +27071,55 @@ None.
 This intrinsic actually does nothing, but optimizers must assume that it
 has externally observable side effects.
 
+(llvm_pseudoprobe)=
+
+#### '`llvm.pseudoprobe`' Intrinsic
+
+##### Syntax:
+
+```
+declare void @llvm.pseudoprobe(i64 <guid>, i64 <index>, i32 <attributes>, i64 <factor>) nounwind willreturn memory(inaccessiblemem: readwrite)
+```
+
+##### Overview:
+
+The `llvm.pseudoprobe` intrinsic is a placeholder for the block that
+contains it. It is emitted for sample-based profile-guided optimization, so
+that samples collected from an optimized binary can be attributed back to a
+point in the original program. It performs no operation.
+
+Like `llvm.sideeffect`, optimizers treat it as having opaque side effects, so
+that it is neither deleted nor moved out of the block it probes. A probe that
+disappears or moves breaks the correspondence between the collected profile
+and the code it describes.
+
+##### Arguments:
+
+The first argument is the GUID of the function containing the probe. It
+identifies an entry in the module-level `!llvm.pseudo_probe_desc` metadata,
+which records the same GUID together with the function's CFG hash and name.
+
+The second argument is the index of the probe, unique within its function.
+
+The third argument is a bit mask of probe attributes.
+
+The fourth argument is a distribution factor, expressed as a fraction of
+`UINT64_MAX`, where `UINT64_MAX` means 100%. A pass that duplicates the block
+containing a probe, such as loop unrolling or jump threading, scales the
+factor on each copy so that the copies sum to the original, leaving the total
+sample attribution of that probe unchanged.
+
+All four arguments must be constant integers.
+
+##### Semantics:
+
+This intrinsic does nothing, but optimizers must assume that it has
+externally observable side effects.
+
+Only block probes are represented by this intrinsic. A probe for a call site
+is encoded in the DWARF discriminator of the call instruction instead, so a
+call probe never appears as a call to `llvm.pseudoprobe`.
+
 #### '`llvm.is.constant.*`' Intrinsic
 
 ##### Syntax:
