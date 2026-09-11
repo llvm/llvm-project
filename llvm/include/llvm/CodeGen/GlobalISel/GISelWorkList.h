@@ -33,8 +33,6 @@ class GISelWorkList {
 #endif
 
 public:
-  GISelWorkList() : WorklistMap(N) {}
-
   bool empty() const { return WorklistMap.empty(); }
 
   unsigned size() const { return WorklistMap.size(); }
@@ -60,8 +58,8 @@ public:
   // It also asserts if there are any duplicate elements found.
   void finalize() {
     assert(WorklistMap.empty() && "Expecting empty worklistmap");
-    if (Worklist.size() > N)
-      WorklistMap.reserve(Worklist.size());
+    if (!Worklist.empty())
+      WorklistMap.reserve(Worklist.size() > N ? Worklist.size() : N);
     for (unsigned i = 0; i < Worklist.size(); ++i)
       if (!WorklistMap.try_emplace(Worklist[i], i).second)
         llvm_unreachable("Duplicate elements in the list");

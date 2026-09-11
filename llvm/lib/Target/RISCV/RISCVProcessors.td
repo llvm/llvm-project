@@ -448,9 +448,7 @@ def SIFIVE_X180 : RISCVProcessorModel<"sifive-x180",
                                        FeatureStdExtZicfilp,
                                        FeatureStdExtZvdot4a8i,
                                        FeatureStdExtZvfbfa],
-                                       SiFiveIntelligenceTuneFeatures> {
-  let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
-}
+                                       SiFiveIntelligenceTuneFeatures>;
 
 defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneConditionalCompressedMoveFusion,
