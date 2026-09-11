@@ -99,6 +99,10 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   // result against zero, but only if the 'nsw' flag is set.
   bit CCIfNoSignedWrap = 0;
 
+  // Indicates that the instruction is a helper for an .insn directive
+  // instead of an actual instruction
+  bit IsInsnDirective = 0;
+
   let TSFlags{0}     = SimpleBDXLoad;
   let TSFlags{1}     = SimpleBDXStore;
   let TSFlags{2}     = Has20BitOffset;
@@ -1832,18 +1836,6 @@ class InstVSI<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11-9}  = 0;
   let Inst{8}     = V1{4};
   let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
-}
-
-//===----------------------------------------------------------------------===//
-// Base class for all .insn directive instructions
-//===----------------------------------------------------------------------===//
-// This marker class is used to identify .insn directive instructions
-// for the SystemZInsnDirectiveEmitter. It must be the rightmost parent
-// in the inheritance list to ensure these properties take precedence over
-// the ones set by the InstFoo base classes.
-class InsnDirectiveBase {
-  bit isCodeGenOnly = 1;
-  bit hasSideEffects = 1;
 }
 
 //===----------------------------------------------------------------------===//

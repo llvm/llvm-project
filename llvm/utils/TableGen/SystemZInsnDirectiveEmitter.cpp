@@ -84,9 +84,10 @@ static void emitInsnDirectiveMatchTable(const RecordKeeper &RK,
                        OS);
   // This will hold all .insn directive definitions (~100 plus margin).
   SmallVector<InsnMatchEntry, 128> Entries;
-  // All .insn directive instructions inherit from InsnDirectiveBase.
-  for (const Record *Def : RK.getAllDerivedDefinitions("InsnDirectiveBase"))
-    Entries.push_back(buildInsnMatchEntry(*Def));
+  // Collect all InstSystemZ records that have IsInsnDirective set to 1.
+  for (const Record *Def : RK.getAllDerivedDefinitions("InstSystemZ"))
+    if (Def->getValueAsBit("IsInsnDirective"))
+      Entries.push_back(buildInsnMatchEntry(*Def));
 
   llvm::sort(Entries, [](const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
     return LHS.Format < RHS.Format;
