@@ -65,13 +65,8 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
     if (!BinariesOrErr)
       return BinariesOrErr.takeError();
 
-    for (auto &Binary : *BinariesOrErr) {
-      std::unique_ptr<MemoryBuffer> View = MemoryBuffer::getMemBuffer(
-          Binary->getMemoryBufferRef().getBuffer(),
-          Binary->getMemoryBufferRef().getBufferIdentifier(),
-          /*RequiresNullTerminator=*/false);
-      Binaries.emplace_back(std::move(Binary), std::move(View));
-    }
+    for (auto &Binary : *BinariesOrErr)
+      Binaries.emplace_back(std::move(Binary));
 
     Offset = alignTo(Offset + Header->Size, OffloadBinary::getAlignment());
   }
@@ -189,7 +184,8 @@ Expected<std::unique_ptr<MemoryBuffer>>
 decompressOffloadBinary(MemoryBufferRef Buf) {
   const auto *Header =
       reinterpret_cast<const OffloadBinary::Header *>(Buf.getBufferStart());
-  if (Header->EntriesOffset > Header->Size ||
+  if (Header->EntriesOffset != sizeof(OffloadBinary::Header) ||
+      Header->EntriesOffset > Header->Size ||
       Header->InflatedSize < Header->EntriesOffset)
     return errorCodeToError(object_error::unexpected_eof);
 
@@ -220,7 +216,7 @@ decompressOffloadBinary(MemoryBufferRef Buf) {
   SmallString<0> Out;
   Out.reserve(Restored.Size);
   Out.append(StringRef(reinterpret_cast<const char *>(&Restored),
-                       Restored.EntriesOffset));
+                       sizeof(OffloadBinary::Header)));
   Out.append(toStringRef(Body));
   return MemoryBuffer::getMemBufferCopy(Out, Buf.getBufferIdentifier());
 }

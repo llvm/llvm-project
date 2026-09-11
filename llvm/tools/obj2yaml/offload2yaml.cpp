@@ -82,7 +82,8 @@ Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
         *BinariesOrErr;
     populateYAML(*YAMLBinary, Binaries, Saver);
 
-    Offset += Size;
+    Offset =
+        alignTo(Offset + Size, Align(object::OffloadBinary::getAlignment()));
   }
 
   return YAMLBinary.release();

@@ -209,30 +209,26 @@ private:
   const uint64_t Index;
 };
 
-/// A class to contain the binary information for a single OffloadBinary.
-/// Memory is shared between multiple OffloadBinary instances read from
-/// the single serialized offload binary.
-class OffloadFile : public OwningBinary<OffloadBinary> {
+/// A handle to a single OffloadBinary.
+class OffloadFile {
 public:
   using TargetID = std::pair<StringRef, StringRef>;
 
-  OffloadFile(std::unique_ptr<OffloadBinary> Binary,
-              std::unique_ptr<MemoryBuffer> Buffer)
-      : OwningBinary<OffloadBinary>(std::move(Binary), std::move(Buffer)) {}
+  OffloadFile() = default;
+  OffloadFile(std::unique_ptr<OffloadBinary> Binary)
+      : Binary(std::move(Binary)) {}
+
+  OffloadBinary *getBinary() { return Binary.get(); }
+  const OffloadBinary *getBinary() const { return Binary.get(); }
 
   /// Make a deep copy of this offloading file.
   OffloadFile copy() const {
-    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBufferCopy(
-        getBinary()->getMemoryBufferRef().getBuffer(),
-        getBinary()->getMemoryBufferRef().getBufferIdentifier());
-
-    // This parsing should never fail because it has already been parsed.
-    auto NewBinaryOrErr =
-        OffloadBinary::create(*Buffer, getBinary()->getIndex());
+    auto NewBinaryOrErr = OffloadBinary::create(
+        getBinary()->getMemoryBufferRef(), getBinary()->getIndex());
     assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
     if (!NewBinaryOrErr)
       llvm::consumeError(NewBinaryOrErr.takeError());
-    return OffloadFile(std::move((*NewBinaryOrErr)[0]), std::move(Buffer));
+    return OffloadFile(std::move((*NewBinaryOrErr)[0]));
   }
 
   /// We use the Triple and Architecture pair to group linker inputs together.
@@ -240,6 +236,9 @@ public:
   operator TargetID() const {
     return std::make_pair(getBinary()->getTriple(), getBinary()->getArch());
   }
+
+private:
+  std::unique_ptr<OffloadBinary> Binary;
 };
 
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
