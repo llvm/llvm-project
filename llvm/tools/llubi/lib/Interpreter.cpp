@@ -2488,6 +2488,9 @@ public:
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
                            Ctx.getCurrentRoundingMode());
 
+      if (I.hasNoSignedZeros() && IOperand.isZero() && Ctx.getRandomBool())
+        Res.changeSign();
+
       return AnyValue(Res);
     });
   }
