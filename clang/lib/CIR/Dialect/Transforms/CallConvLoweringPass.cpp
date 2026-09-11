@@ -183,8 +183,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     // an element is only usable where that width is the one clang gives it.
     // It is not for bool (a bit to clang, a byte here), for a _BitInt narrower
     // than a byte (clang rounds to the storage container), or for x87 long
-    // double (80 bits here against clang's 128).  A pointer is excluded for a
-    // different reason, its pointee being what abiTypeToCIR drops.
+    // double (80 bits here against clang's 128).
     mlir::Type elemTy = vecTy.getElementType();
     if (auto elemInt = dyn_cast<cir::IntType>(elemTy)) {
       if (elemInt.getWidth() % 8)
