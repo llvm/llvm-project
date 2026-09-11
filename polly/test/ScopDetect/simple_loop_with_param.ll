@@ -2,14 +2,14 @@
 
 ; void f(long A[], long N, long *init_ptr) {
 ;   long i, j;
-;   long i_non_canonical;
+;   long j_non_canonical;
 ;
 ;   for (i = 0; i < N; ++i) {
 ;     init = *init_ptr;
-;     i_non_canonical = init;
-;     for (i = 0; i < N; ++i) {
-;       A[i] = i_non_canonical;
-;       i_non_canonical += 1;
+;     j_non_canonical = init;
+;     for (j = 0; j < N; ++j) {
+;       A[j] = j_non_canonical;
+;       j_non_canonical += 1;
 ;     }
 ;   }
 ; }
