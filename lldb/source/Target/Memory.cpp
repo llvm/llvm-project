@@ -46,7 +46,6 @@ void LineCache::Insert(addr_t addr, llvm::ArrayRef<uint8_t> src) {
 void LineCache::EraseRange(addr_t addr, addr_t size) {
   if (size == 0)
     return;
-  // Clamp a range running past the end of the address space to it.
   const addr_t end_addr = llvm::SaturatingAdd(addr, size - 1);
   const uint64_t first_idx = IndexOf(addr);
   const uint64_t last_idx = IndexOf(end_addr);
@@ -57,18 +56,17 @@ void LineCache::EraseRange(addr_t addr, addr_t size) {
 
 ChunkCache::Collection::const_iterator
 ChunkCache::FindChunkContaining(addr_t addr) const {
-  if (m_chunks.empty())
-    return m_chunks.end();
-  Collection::const_iterator pos = m_chunks.upper_bound(addr);
+  auto pos = m_chunks.upper_bound(addr);
   if (pos == m_chunks.begin())
     return m_chunks.end();
   --pos;
-  // Sum pos->first + size wraps at the top of the address space.
+  // pos->first + size would overflow for a chunk at the top of the address
+  // space, do subtraction instead.
   return addr - pos->first < pos->second.size() ? pos : m_chunks.end();
 }
 
 llvm::ArrayRef<uint8_t> ChunkCache::Lookup(addr_t addr) const {
-  const Collection::const_iterator pos = FindChunkContaining(addr);
+  auto pos = FindChunkContaining(addr);
   if (pos == m_chunks.end())
     return {};
   return llvm::ArrayRef(pos->second).drop_front(addr - pos->first);
@@ -77,8 +75,6 @@ llvm::ArrayRef<uint8_t> ChunkCache::Lookup(addr_t addr) const {
 void ChunkCache::InsertMissing(addr_t addr, llvm::ArrayRef<uint8_t> src) {
   if (src.empty())
     return;
-  // The last addressable byte of the range, clamped if it runs past the end of
-  // the address space.
   const addr_t last_addr = llvm::SaturatingAdd<addr_t>(addr, src.size() - 1);
   const uint64_t len = last_addr - addr + 1;
 
@@ -89,7 +85,7 @@ void ChunkCache::InsertMissing(addr_t addr, llvm::ArrayRef<uint8_t> src) {
       continue;
     }
     // Nothing holds curr_addr, so the gap runs to the next chunk or to the end.
-    const Collection::const_iterator next = m_chunks.lower_bound(curr_addr);
+    auto next = m_chunks.lower_bound(curr_addr);
     const uint64_t gap_len =
         next == m_chunks.end()
             ? len - offset
@@ -103,7 +99,6 @@ void ChunkCache::InsertMissing(addr_t addr, llvm::ArrayRef<uint8_t> src) {
 void ChunkCache::EraseRange(addr_t addr, addr_t size) {
   if (size == 0)
     return;
-  // Clamp a range running past the end of the address space to it.
   const addr_t end_addr = llvm::SaturatingAdd(addr, size - 1);
 
   Collection::iterator pos = m_chunks.lower_bound(addr);
@@ -157,13 +152,11 @@ void MemoryCache::InsertPartialLine(addr_t addr, llvm::ArrayRef<uint8_t> src) {
   m_L1_cache.InsertMissing(addr, src);
 }
 
-void MemoryCache::InsertData(lldb::addr_t addr, llvm::ArrayRef<uint8_t> src) {
+void MemoryCache::InsertData(addr_t addr, llvm::ArrayRef<uint8_t> src) {
   if (src.empty())
     return;
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  // The last addressable byte of the range, clamped if it runs past the end of
-  // the address space, so no offset added to addr can wrap to 0.
   const addr_t last_addr = llvm::SaturatingAdd<addr_t>(addr, src.size() - 1);
   const uint64_t len = last_addr - addr + 1;
   const uint32_t line_size = m_L2_cache.GetLineByteSize();

@@ -21,10 +21,10 @@
 
 namespace lldb_private {
 
-/// A set of whole, aligned cache lines, keyed by line index.  A key names a
-/// whole line, so no entry can be partial or unaligned and no length is
-/// stored per entry.
+/// A set of cache entries, all of which are aligned and have the same size.
+/// Entries cannot be partially filled.
 class LineCache {
+  /// Keyed by line index, so a key names a whole line.
   using Collection = llvm::DenseMap<uint64_t, std::unique_ptr<uint8_t[]>>;
 
 public:
@@ -119,7 +119,7 @@ public:
   size_t Read(lldb::addr_t addr, void *dst, size_t dst_len, Status &error);
 
   /// Reads memory ranges, serving hits from the cache and batching misses
-  /// through Process::DoReadMemoryRanges.  Matches Process::ReadMemoryRanges.
+  /// through Process::DoReadMemoryRanges. Matches Process::ReadMemoryRanges.
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
   ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
              llvm::MutableArrayRef<uint8_t> buffer);
@@ -148,7 +148,7 @@ protected:
   typedef Range<lldb::addr_t, lldb::addr_t> AddrRange;
   // Classes that inherit from MemoryCache can see and modify these
   std::recursive_mutex m_mutex;
-  // L1 and L2 partition the cache.  An address is held by at most one.  L2
+  // L1 and L2 partition the cache. An address is held by at most one. L2
   // holds whole, aligned lines; L1 holds smaller, non-overlapping pieces.
   ChunkCache m_L1_cache; // Chunks smaller than a cache line.
   LineCache m_L2_cache;  // Whole cache lines.
@@ -176,10 +176,9 @@ private:
   // and return the count.  Never reads from the inferior; caller holds m_mutex.
   size_t ReadFromCaches(lldb::addr_t addr, void *dst, size_t len) const;
 
-  // The range to fetch for a read that ends at caller_end and whose first
-  // bytes_filled bytes the caches supplied, so read_addr is the first byte
-  // none of them holds.  Grown to whole cache lines where that costs nothing,
-  // and clipped at an invalid range.  Caller must hold m_mutex.
+  // Returns the range to fetch from the inferior for a read of
+  // [read_addr, caller_end), where the caches already supplied bytes_filled
+  // bytes immediately below read_addr. Caller must hold m_mutex.
   AddrRange GrowReadRange(lldb::addr_t read_addr, lldb::addr_t caller_end,
                           size_t bytes_filled) const;
 };
