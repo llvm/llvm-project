@@ -51,10 +51,6 @@ class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
 
-extern cl::opt<bool> EnableVPlanNativePath;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<bool> PreferInLoopReductions;
-
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
 std::optional<unsigned> getMaxVScale(const Function &F);
@@ -417,12 +413,6 @@ public:
                                      const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
-  }
-
-  VPInstruction *createScalarLoad(Type *ResultTy, VPValue *Addr, DebugLoc DL,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstruction(Instruction::Load, Addr, {},
-                                                  Metadata, DL, "", ResultTy));
   }
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
