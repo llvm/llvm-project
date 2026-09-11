@@ -668,6 +668,7 @@ ALIAS("_w64"             , __w64        , KEYMSCOMPAT)
 ALIAS("_pascal"      , __pascal   , KEYBORLAND)
 
 // Clang Extensions.
+KEYWORD(__builtin_splatvector            , KEYALL)
 KEYWORD(__builtin_convertvector          , KEYALL)
 ALIAS("__char16_t"   , char16_t          , KEYCXX)
 ALIAS("__char32_t"   , char32_t          , KEYCXX)

@@ -5078,6 +5078,7 @@ recurse:
   case Expr::OffsetOfExprClass:
   case Expr::PredefinedExprClass:
   case Expr::ShuffleVectorExprClass:
+  case Expr::SplatVectorExprClass:
   case Expr::ConvertVectorExprClass:
   case Expr::StmtExprClass:
   case Expr::ArrayTypeTraitExprClass:

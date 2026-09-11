@@ -1475,6 +1475,12 @@ def ShuffleVector : Builtin {
   let Prototype = "void(...)";
 }
 
+def SplatVector : Builtin {
+  let Spellings = ["__builtin_splatvector"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ConvertVector : Builtin {
   let Spellings = ["__builtin_convertvector"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
