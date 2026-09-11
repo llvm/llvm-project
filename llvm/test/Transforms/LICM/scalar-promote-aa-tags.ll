@@ -8,22 +8,24 @@ define i32 @promotable.store_dominates_exit_block(i64 %idx, i1 %c, i1 %c2) {
 ; CHECK-SAME: i64 [[IDX:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[V]], 1
-; CHECK-NEXT:    store i32 [[V_INC]], ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[PTR_PROMOTED]], %[[ENTRY]] ], [ [[TMP1:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr float, ptr [[PTR]], i64 [[IV]]
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FPTR]], align 4, !tbaa [[FLOAT_TBAA4:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[TMP1]] = phi i32 [ 0, %[[IF]] ], [ [[V_INC]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP1]], %[[LATCH]] ]
+; CHECK-NEXT:    store i32 [[DOTLCSSA]], ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -166,15 +168,15 @@ define i32 @promotable.stores_jointly_dominate_exit_blocks(i64 %idx, i1 %c, i1 %
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FPTR]], align 4, !tbaa [[FLOAT_TBAA4]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    store i32 1, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    store i32 2, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    br i1 [[C3]], label %[[EXIT]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 2, %[[ELSE]] ], [ 1, %[[IF]] ]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -266,15 +268,16 @@ define i32 @promotable.dominating_store_with_unwind(i64 %idx, i1 %c, i1 %c2) {
 ; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr float, ptr [[PTR]], i64 [[IV]]
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FPTR]], align 4, !tbaa [[FLOAT_TBAA4]]
 ; CHECK-NEXT:    [[T:%.*]] = call i32 @opaque(i32 1)
-; CHECK-NEXT:    store i32 [[T]], ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[IF]] ], [ [[T]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP0]], %[[LATCH]] ]
+; CHECK-NEXT:    store i32 [[DOTLCSSA]], ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -308,22 +311,24 @@ define i32 @promotable.noalias_store_dominates_exit_block(i64 %idx, i1 %c, i1 %c
 ; CHECK-SAME: i64 [[IDX:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, ptr [[PTR]], align 4, !noalias [[META8:![0-9]+]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[PTR_PROMOTED]], %[[ENTRY]] ], [ [[TMP1:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[IV]]
-; CHECK-NEXT:    store i32 42, ptr [[FPTR]], align 4, !alias.scope [[META8:![0-9]+]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PTR]], align 4, !noalias [[META8]]
-; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[V]], 1
-; CHECK-NEXT:    store i32 [[V_INC]], ptr [[PTR]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    store i32 42, ptr [[FPTR]], align 4, !alias.scope [[META8]]
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4, !noalias [[META8]]
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[TMP1]] = phi i32 [ 0, %[[IF]] ], [ [[V_INC]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP1]], %[[LATCH]] ]
+; CHECK-NEXT:    store i32 [[DOTLCSSA]], ptr [[PTR]], align 4, !noalias [[META8]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -357,22 +362,24 @@ define i32 @promotable.store_dominates_exit_block_non_thread_local_ptr(ptr %ptr,
 ; CHECK-LABEL: define i32 @promotable.store_dominates_exit_block_non_thread_local_ptr(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[PTR_PROMOTED]], %[[ENTRY]] ], [ [[TMP1:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr float, ptr [[PTR]], i64 [[IV]]
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FPTR]], align 4, !tbaa [[FLOAT_TBAA4]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
-; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[V]], 1
-; CHECK-NEXT:    store i32 [[V_INC]], ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[TMP1]] = phi i32 [ 0, %[[IF]] ], [ [[V_INC]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP1]], %[[LATCH]] ]
+; CHECK-NEXT:    store i32 [[DOTLCSSA]], ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
