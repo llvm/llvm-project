@@ -2859,7 +2859,7 @@ void TaskContextStructManager::generateTaskContextStruct() {
   llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(structTy);
 
   // Heap allocate the structure
-  structPtr = builder.CreateMalloc(intPtrTy, structTy, allocSize,
+  structPtr = builder.CreateMalloc(intPtrTy, allocSize,
                                    /*ArraySize=*/nullptr, /*MallocF=*/nullptr,
                                    "omp.task.context_ptr");
 }
@@ -3178,8 +3178,8 @@ buildDependData(OperandRange dependVars, std::optional<ArrayAttr> dependKinds,
   // dynamic-sized alloca outside the entry block (e.g. inside loops).
   llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(dependInfoTy);
   llvm::Value *depArray =
-      builder.CreateMalloc(ompBuilder.SizeTy, dependInfoTy, allocSize,
-                           totalCount, /*MallocF=*/nullptr, ".dep.arr.addr");
+      builder.CreateMalloc(ompBuilder.SizeTy, allocSize, totalCount,
+                           /*MallocF=*/nullptr, ".dep.arr.addr");
 
   // Fill non-iterated entries at indices [0, numLocator).
   if (numLocator > 0) {
@@ -3521,7 +3521,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dependencies, ad,
           taskOp.getMergeable(),
           moduleTranslation.lookupValue(taskOp.getEventHandle()),
-          moduleTranslation.lookupValue(taskOp.getPriority()));
+          moduleTranslation.lookupValue(taskOp.getPriority()),
+          taskOp.getThreadset() == omp::ThreadsetPolicy::omp_pool);
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
@@ -4158,7 +4159,8 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
           contextOp.getMergeable(),
           moduleTranslation.lookupValue(contextOp.getPriority()),
           loopOp.getCollapseNumLoops(), taskDupOrNull,
-          taskStructMgr.getStructPtr());
+          taskStructMgr.getStructPtr(),
+          contextOp.getThreadset() == omp::ThreadsetPolicy::omp_pool);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -7895,8 +7897,10 @@ static void mapParentWithMembers(
     baseFlag |= (parentFlags & preserve);
   } else {
     MapFlags parentFlags = mapData.Types[mapDataIndex];
-    MapFlags preserve =
-        MapFlags::OMP_MAP_PRESENT | MapFlags::OMP_MAP_RETURN_PARAM;
+    MapFlags preserve = MapFlags::OMP_MAP_TO | MapFlags::OMP_MAP_FROM |
+                        MapFlags::OMP_MAP_PRESENT |
+                        MapFlags::OMP_MAP_RETURN_PARAM |
+                        MapFlags::OMP_MAP_IMPLICIT;
     baseFlag |= (parentFlags & preserve);
   }
 

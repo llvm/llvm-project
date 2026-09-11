@@ -6,16 +6,16 @@ set(LIBS
   clangCIR
   CIRRegisterAllDialects
   clangCIRLoweringDirectToLLVM
-  MLIRAffineAnalysis
   MLIRAnalysis
   MLIRCIR
   MLIRDialect
   MLIRIR
+  MLIRLLVMDialect
   MLIRLspServerLib
+  MLIRFuncDialect
+  MLIRMemRefDialect
   MLIRParser
   MLIRPass
-  MLIRRegisterAllDialects
-  MLIRRegisterAllPasses
   MLIRSupport
   MLIRTransformUtils
   MLIRTransforms
