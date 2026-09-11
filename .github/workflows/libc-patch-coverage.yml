@@ -8,32 +8,22 @@ on:
   push:
     branches:
       - main
-      - libc-coverage-bots
     paths:
-      - 'libc/src/**'
-      - 'libc/include/**'
-      - 'libc/test/**'
-      - 'libc/CMakeLists.txt'
+      - 'libc/**'
       - '.github/workflows/libc-patch-coverage.yml'
       - '!libc/docs/**'
       - '!libc/benchmarks/**'
       - '!libc/fuzzing/**'
-      - '!libc/utils/**'
       - '!**.md'
   pull_request:
     branches:
       - main
-      - libc-coverage-bots
     paths:
-      - 'libc/src/**'
-      - 'libc/include/**'
-      - 'libc/test/**'
-      - 'libc/CMakeLists.txt'
+      - 'libc/**'
       - '.github/workflows/libc-patch-coverage.yml'
       - '!libc/docs/**'
       - '!libc/benchmarks/**'
       - '!libc/fuzzing/**'
-      - '!libc/utils/**'
       - '!**.md'
 
 concurrency:
@@ -42,6 +32,7 @@ concurrency:
 
 jobs:
   pre-commit-coverage:
+    if: github.repository_owner == 'llvm'
     timeout-minutes: 60
     name: libc-patch-coverage (${{ matrix.name }})
     runs-on: ubuntu-24.04
@@ -56,12 +47,12 @@ jobs:
         include:
           - name: Line Coverage
             enable_mcdc: "OFF"
-            sccache_key: libc_coverage_unified_v2_x86_64
+            sccache_key: libc_patch_coverage_x86_64
             artifact_name: libc-patch-coverage-report
             report_title: "LLVM-libc Patch Coverage Report"
           - name: MC/DC Coverage
             enable_mcdc: "ON"
-            sccache_key: libc_mcdc_coverage_unified_x86_64
+            sccache_key: libc_patch_mcdc_coverage_x86_64
             artifact_name: libc-patch-mcdc-coverage-report
             report_title: "LLVM-libc Patch MC/DC Coverage Report"
     steps:
@@ -186,6 +177,11 @@ jobs:
         echo "[LOG] Modified files in libc/src/:"
         echo "$MODIFIED_FILES"
 
+        # Persist modified files for downstream steps
+        echo "MODIFIED_FILES<<EOF" >> $GITHUB_ENV
+        echo "$MODIFIED_FILES" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
         if [ -z "$MODIFIED_FILES" ]; then
           echo "[LOG] No source files modified in libc/src/. Exiting successfully."
           echo "TARGETS=" >> $GITHUB_ENV
@@ -234,7 +230,7 @@ jobs:
         echo "[LOG] Executing Ninja targets: $TARGETS"
 
         if [ -n "$TARGETS" ]; then
-          export LLVM_PROFILE_FILE="${PWD}/build-cov/libc_cov_%p.profraw"
+          export LLVM_PROFILE_FILE="${PWD}/build-cov/libc_cov_%c%p.profraw"
           ninja -C build-cov $TARGETS
           echo "TARGETS=$TARGETS" >> $GITHUB_ENV
         else
@@ -301,9 +297,20 @@ jobs:
         echo "[LOG] Generated patch.diff size: $(wc -l < patch.diff 2>/dev/null || echo 0) lines"
         echo "[LOG] Generated coverage.json size: $(wc -c < coverage.json 2>/dev/null || echo 0) bytes"
 
-        # 3. Generate interactive source HTML report via llvm-cov
-        llvm-cov-23 show -format=html -output-dir=coverage_html -instr-profile=libc_full.profdata "${EXECUTABLES[0]}" "${OBJECTS[@]}" $MODIFIED_FILES || true
-        echo "[LOG] Generated interactive coverage_html directory."
+        # 3. Generate interactive source HTML report via llvm-cov for modified files
+        if [ -z "$MODIFIED_FILES" ]; then
+          MODIFIED_FILES=$(git diff --name-only "$DIFF_BASE" HEAD -- libc/src/ || true)
+        fi
+        EXISTING_MODIFIED_FILES=()
+        for f in $MODIFIED_FILES; do
+          if [ -f "$f" ]; then
+            EXISTING_MODIFIED_FILES+=("$f")
+          fi
+        done
+        if [ ${#EXISTING_MODIFIED_FILES[@]} -gt 0 ]; then
+          llvm-cov-23 show -format=html -output-dir=coverage_html -instr-profile=libc_full.profdata "${EXECUTABLES[0]}" "${OBJECTS[@]}" "${EXISTING_MODIFIED_FILES[@]}" || true
+          echo "[LOG] Generated interactive coverage_html directory for ${#EXISTING_MODIFIED_FILES[@]} modified file(s)."
+        fi
 
         # 4. Run Patch Coverage Python Script using persisted commit metadata
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md

@@ -14,9 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, isascii, (int c)) {
-  if (c >= 0 && c <= 127)
-    return 1;
-  return 0;
+  return static_cast<int>((c & (~0x7f)) == 0);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

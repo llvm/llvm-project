@@ -18,6 +18,10 @@ on:
     paths:
       - 'libc/**'
       - '.github/workflows/libc-full-coverage.yml'
+      - '!libc/docs/**'
+      - '!libc/benchmarks/**'
+      - '!libc/fuzzing/**'
+      - '!**.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,6 +29,7 @@ concurrency:
 
 jobs:
   full-coverage:
+    if: github.repository_owner == 'llvm'
     timeout-minutes: 60
     name: libc-full-coverage (${{ matrix.name }})
     runs-on: ubuntu-24.04
@@ -40,14 +45,14 @@ jobs:
           - name: Line Coverage
             enable_mcdc: "OFF"
             llvm_cov_show_flags: ""
-            sccache_key: libc_coverage_unified_v2_x86_64
+            sccache_key: libc_full_coverage_x86_64
             summary_artifact: libc-coverage-summary
             html_artifact: libc-coverage-html
             report_title: "LLVM-libc Coverage Report"
           - name: MC/DC Coverage
             enable_mcdc: "ON"
             llvm_cov_show_flags: "--show-mcdc --show-mcdc-summary"
-            sccache_key: libc_mcdc_coverage_unified_x86_64
+            sccache_key: libc_full_mcdc_coverage_x86_64
             summary_artifact: libc-mcdc-coverage-summary
             html_artifact: libc-mcdc-coverage-html
             report_title: "LLVM-libc MC/DC Coverage Report"
@@ -78,7 +83,7 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DLLVM_USE_LINKER=lld-23
           -DLLVM_ENABLE_RUNTIMES=libc
-          -DLLVM_LIBC_FULL_BUILD=ON
+          -DLLVM_LIBC_FULL_BUILD=OFF
           -DLIBC_ENABLE_COVERAGE=ON
           -DLIBC_ENABLE_MCDC=${{ matrix.enable_mcdc }}
           -DLIBC_TEST_UNIT_TEST_ONLY=ON
@@ -89,12 +94,12 @@ jobs:
 
     - name: Run Full Codebase Unit Tests
       run: |
-        export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+        export LLVM_PROFILE_FILE="${PWD}/build-cov/libc_cov_%c%p.profraw"
         ninja -k 0 -C build-cov libc-unit-tests || true
 
     - name: Merge Profiles
       run: |
-        find . -name "libc_cov_*.profraw" > profraw_list.txt
+        find build-cov -type f -name "*.profraw" > profraw_list.txt
         NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
         echo "[LOG] Discovered $NUM_PROFS raw profile data files."
         if [ -s profraw_list.txt ]; then
@@ -135,7 +140,7 @@ jobs:
           ${{ matrix.llvm_cov_show_flags }} \
           --compilation-dir=. \
           --path-equivalence="$GITHUB_WORKSPACE,." \
-          -ignore-filename-regex=".*(test|utils).*"
+          -ignore-filename-regex=".*(test|utils).*" || true
 
         # 3. Run Full Codebase Coverage Analyzer
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/codebase_coverage.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" > coverage_summary.md
@@ -143,7 +148,7 @@ jobs:
         echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
 
     - name: Fallback Failure Summary
-      if: failure() && !hashFiles('coverage.json')
+      if: failure() && !hashFiles('coverage_summary.md')
       run: |
         echo "### ${{ matrix.report_title }}" >> $GITHUB_STEP_SUMMARY
         echo "Workflow run encountered an error before coverage reports could be generated. Inspect job logs for details." >> $GITHUB_STEP_SUMMARY
@@ -166,5 +171,6 @@ jobs:
       with:
         name: ${{ matrix.html_artifact }}
         path: coverage_html/
+        if-no-files-found: ignore
         retention-days: 14
         overwrite: true

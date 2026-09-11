@@ -91,31 +91,28 @@ endif()
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
 
+# Enable source-based code coverage using Clang's continuous profiling mode.
 option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 option(LLVM_LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 option(LIBC_ENABLE_MCDC "Build libc with MC/DC coverage instrumentation" OFF)
 if(LIBC_ENABLE_COVERAGE OR LLVM_LIBC_ENABLE_COVERAGE)
-  list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
-  list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
-  list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT
+         "-fprofile-instr-generate=libc_cov_%c%p.profraw"
+         "-fcoverage-mapping"
+         "-fprofile-continuous")
+    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT
+         "-fprofile-instr-generate=libc_cov_%c%p.profraw"
+         "-fprofile-continuous")
 
-  if(LIBC_ENABLE_MCDC)
-    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
-    list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
-    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fcoverage-mcdc")
-  endif()
-
-  execute_process(
-    COMMAND ${CMAKE_CXX_COMPILER} --print-libgcc-file-name --rtlib=compiler-rt
-    OUTPUT_VARIABLE COMPILER_RT_BUILTINS
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE COMPILER_RT_RETURN_CODE
-  )
-  if(COMPILER_RT_RETURN_CODE EQUAL 0)
-    string(REPLACE "builtins" "profile" COMPILER_RT_PROFILE "${COMPILER_RT_BUILTINS}")
-    if(EXISTS "${COMPILER_RT_PROFILE}")
-      list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "${COMPILER_RT_PROFILE}")
+    if(LIBC_ENABLE_MCDC)
+      list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
+      list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
+      list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fcoverage-mcdc")
     endif()
+  else()
+    message(FATAL_ERROR
+            "Coverage instrumentation is currently only supported with Clang")
   endif()
 endif()
 
@@ -186,7 +183,7 @@ else()
   set(LLVM_LIBC_OVERLAY ON)
 endif()
 
-if(LIBC_ENABLE_COVERAGE)
+if(LIBC_ENABLE_COVERAGE OR LLVM_LIBC_ENABLE_COVERAGE)
   if(LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_BAREMETAL)
     message(FATAL_ERROR
       "LIBC_ENABLE_COVERAGE is not supported on GPU or baremetal targets.")

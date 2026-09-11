@@ -16,9 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, isdigit, (int c)) {
-  const int min_val = 0;
-  const int max_val = cpp::numeric_limits<unsigned char>::max();
-  if (c < min_val || c > max_val)
+  if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
     return 0;
   return static_cast<int>(internal::isdigit(static_cast<char>(c)));
 }
