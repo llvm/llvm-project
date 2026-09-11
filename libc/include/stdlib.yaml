@@ -178,6 +178,12 @@ functions:
     return_type: size_t
     arguments:
       - type: const void *
+  - name: mkdtemp
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: char *
   - name: mkstemp
     standards:
       - posix
