@@ -12,8 +12,6 @@
 ;  F16x2
 ;
 
-; multiple uses of the extension
-
 define <2 x float> @sub_f32x2_f16x2_extra_use(<2 x half> %a, <2 x float> %b, ptr %p) {
 ; CHECK-NOFTZ-LABEL: sub_f32x2_f16x2_extra_use(
 ; CHECK-NOFTZ:       {
@@ -51,6 +49,7 @@ define <2 x float> @sub_f32x2_f16x2_extra_use(<2 x half> %a, <2 x float> %b, ptr
 ; CHECK-FTZ-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-FTZ-NEXT:    ret;
   %e = fpext <2 x half> %a to <2 x float>
+  ; extra use
   store <2 x float> %e, ptr %p
   %nb = fneg <2 x float> %b
   %r = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %e, <2 x float> %nb, i32 1)
@@ -93,6 +92,7 @@ define <2 x float> @sub_f32x2_f16x2_generic_lanes_multiuse(<2 x half> %a, <2 x f
 ; CHECK-FTZ-NEXT:    ret;
   %e = fpext <2 x half> %a to <2 x float>
   %r1 = fsub <2 x float> %e, %b
+  ; extra use
   %r2 = fsub <2 x float> %e, %r1
   ret <2 x float> %r2
 }
@@ -138,6 +138,7 @@ define <2 x float> @sub_f32x2_f16x2_generic_packed_multiuse(<2 x half> %a, <2 x 
   %x = fmul <2 x half> %a, %a
   %e = fpext <2 x half> %x to <2 x float>
   %r1 = fsub <2 x float> %e, %b
+  ; extra use
   %r2 = fsub <2 x float> %e, %r1
   ret <2 x float> %r2
 }
@@ -188,6 +189,7 @@ define <2 x float> @sub_f32x2_f16x2_generic_both_lanes_extra_use(<2 x half> %a, 
   %e1 = fpext half %a1 to float
   %v0 = insertelement <2 x float> poison, float %e0, i32 0
   %v1 = insertelement <2 x float> %v0, float %e1, i32 1
+  ; extra uses
   store float %e0, ptr %p
   store float %e1, ptr %q
   %r = fsub <2 x float> %v1, %b
@@ -275,8 +277,6 @@ define <2 x float> @sub_f32x2_f16x2_generic_reversed(<2 x half> %a, <2 x float> 
 ;  BF16x2
 ;
 
-; multiple uses of the extension
-
 define <2 x float> @sub_f32x2_bf16x2_extra_use(<2 x bfloat> %a, <2 x float> %b, ptr %p) {
 ; CHECK-NOFTZ-LABEL: sub_f32x2_bf16x2_extra_use(
 ; CHECK-NOFTZ:       {
@@ -314,6 +314,7 @@ define <2 x float> @sub_f32x2_bf16x2_extra_use(<2 x bfloat> %a, <2 x float> %b, 
 ; CHECK-FTZ-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-FTZ-NEXT:    ret;
   %e = fpext <2 x bfloat> %a to <2 x float>
+  ; extra use
   store <2 x float> %e, ptr %p
   %nb = fneg <2 x float> %b
   %r = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %e, <2 x float> %nb, i32 1)
@@ -356,6 +357,7 @@ define <2 x float> @sub_f32x2_bf16x2_generic_lanes_multiuse(<2 x bfloat> %a, <2 
 ; CHECK-FTZ-NEXT:    ret;
   %e = fpext <2 x bfloat> %a to <2 x float>
   %r1 = fsub <2 x float> %e, %b
+  ; extra use
   %r2 = fsub <2 x float> %e, %r1
   ret <2 x float> %r2
 }
@@ -401,6 +403,7 @@ define <2 x float> @sub_f32x2_bf16x2_generic_packed_multiuse(<2 x bfloat> %a, <2
   %x = fmul <2 x bfloat> %a, %a
   %e = fpext <2 x bfloat> %x to <2 x float>
   %r1 = fsub <2 x float> %e, %b
+  ; extra use
   %r2 = fsub <2 x float> %e, %r1
   ret <2 x float> %r2
 }
@@ -451,6 +454,7 @@ define <2 x float> @sub_f32x2_bf16x2_generic_both_lanes_extra_use(<2 x bfloat> %
   %e1 = fpext bfloat %a1 to float
   %v0 = insertelement <2 x float> poison, float %e0, i32 0
   %v1 = insertelement <2 x float> %v0, float %e1, i32 1
+  ; extra uses
   store float %e0, ptr %p
   store float %e1, ptr %q
   %r = fsub <2 x float> %v1, %b
