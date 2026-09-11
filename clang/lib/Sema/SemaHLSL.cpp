@@ -4751,6 +4751,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                 /*ReportsOriginalValue=*/true))
       return true;
     break;
+  case Builtin::BI__builtin_hlsl_interlocked_compare_exchange_float_bitwise:
+    if (CheckInterlockedBuiltin(SemaRef, TheCall, /*MinArgs=*/4, /*MaxArgs=*/4,
+                                InterlockedDest::Float,
+                                /*ReportsOriginalValue=*/true))
+      return true;
+    break;
   // Note these are llvm builtins that we want to catch invalid intrinsic
   // generation. Normal handling of these builtins will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {

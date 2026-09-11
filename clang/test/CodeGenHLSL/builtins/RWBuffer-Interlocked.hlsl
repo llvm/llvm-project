@@ -46,6 +46,10 @@ RWBuffer<float> FOut : register(u2);
 // DXCHECK:  cmpxchg ptr %[[PTR11]], i32 1, i32 2 syncscope("device") monotonic monotonic
 // DXCHECK:  %[[PTR12:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_f32_1_0_0t.i32(target("dx.TypedBuffer", float, 1, 0, 0) %{{.*}}, i32 %{{.*}})
 // DXCHECK:  cmpxchg ptr %[[PTR12]], i32 1065353216, i32 1073741824 syncscope("device") monotonic monotonic
+// DXCHECK:  %[[PTR13:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_f32_1_0_0t.i32(target("dx.TypedBuffer", float, 1, 0, 0) %{{.*}}, i32 %{{.*}})
+// DXCHECK:  %[[PAIR13:.*]] = cmpxchg ptr %[[PTR13]], i32 1065353216, i32 1073741824 syncscope("device") monotonic monotonic
+// DXCHECK:  %[[RES13:.*]] = extractvalue { i32, i1 } %[[PAIR13]], 0
+// DXCHECK:  bitcast i32 %[[RES13]] to float
 // SPVCHECK: %[[PTR1:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: atomicrmw add ptr addrspace(11) %[[PTR1]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR2:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
@@ -70,6 +74,10 @@ RWBuffer<float> FOut : register(u2);
 // SPVCHECK: cmpxchg ptr addrspace(11) %[[PTR11]], i32 1, i32 2 syncscope("device") monotonic monotonic
 // SPVCHECK: %[[PTR12:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.Image", float, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: cmpxchg ptr addrspace(11) %[[PTR12]], i32 1065353216, i32 1073741824 syncscope("device") monotonic monotonic
+// SPVCHECK: %[[PTR13:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.Image", float, {{.*}}) %{{.*}}, i32 %{{.*}})
+// SPVCHECK: %[[PAIR13:.*]] = cmpxchg ptr addrspace(11) %[[PTR13]], i32 1065353216, i32 1073741824 syncscope("device") monotonic monotonic
+// SPVCHECK: %[[RES13:.*]] = extractvalue { i32, i1 } %[[PAIR13]], 0
+// SPVCHECK: bitcast i32 %[[RES13]] to float
 [shader("compute")]
 [numthreads(1,1,1)]
 void main(uint3 id : SV_DispatchThreadID) {
@@ -86,4 +94,6 @@ void main(uint3 id : SV_DispatchThreadID) {
   InterlockedCompareStore(Out[id.x], 1, 2);
   InterlockedCompareExchange(Out[id.x], 1, 2, orig);
   InterlockedCompareStoreFloatBitwise(FOut[id.x], 1.0f, 2.0f);
+  float forig;
+  InterlockedCompareExchangeFloatBitwise(FOut[id.x], 1.0f, 2.0f, forig);
 }
