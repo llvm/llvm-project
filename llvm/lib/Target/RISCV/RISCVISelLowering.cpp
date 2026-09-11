@@ -14641,7 +14641,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
   SDValue Interleaved;
 
-  if (Subtarget.hasStdExtZvzip() && (Factor == 4 || Factor == 8)) {
+  if (Subtarget.hasStdExtZvzip() && (Factor == 4 || Factor == 8) &&
+      VecVT.changeVectorElementCount(VecVT.getVectorElementCount() * Factor)
+          .isValid()) {
     // Interleave by a tree of vzip.vv instructions.
     SmallVector<SDValue, 8> Operands(Op->op_values());
     // First, reorder the operands.
