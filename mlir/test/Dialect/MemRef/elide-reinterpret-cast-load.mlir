@@ -54,6 +54,25 @@ func.func private @expand_1D(
   return
 }
 
+/// Same as @expand_1D, with attributes on the load.
+// CHECK-LABEL: func.func private @expand_1D_load_attrs(
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x999xf32>) {
+func.func private @expand_1D_load_attrs(
+    %src : memref<1x999xf32>) {
+  // CHECK-DAG:   %[[IDX_1:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[IDX_2:.*]] = arith.constant 13 : index
+  %idx_1 = arith.constant 0 : index
+  %idx_2 = arith.constant 13 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [1, 1, 999], strides: [999, 999, 1]
+    : memref<1x999xf32> to memref<1x1x999xf32>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[IDX_1]], %[[IDX_2]]] alignment(16) nontemporal(true) invariant(true) : memref<1x999xf32>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_1, %idx_2]
+    alignment(16) nontemporal(true) invariant(true) : memref<1x1x999xf32>
+  return
+}
+
 // CHECK-LABEL: func.func private @collapse_1D(
 // CHECK-SAME:    %[[SRC:.*]]: memref<1x1x999xf32>) {
 func.func private @collapse_1D(
@@ -249,21 +268,6 @@ func.func private @collapse_3d_moved_unit_dims(%i : index, %j : index,
   // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[IDX]], %[[I]], %[[IDX]], %[[IDX]], %[[J]], %[[IDX]], %[[K]]] : memref<1x3x1x1x22x1x3xf32>
   %0 = memref.load %reinterpret_cast[%i, %idx_1, %j, %k, %idx_1, %idx_1]
     : memref<3x1x22x3x1x1xf32, strided<[66, 66, 3, 1, 1, 1]>>
-  return
-}
-
-// CHECK-LABEL: func.func private @expand_keeps_load_attrs(
-// CHECK-SAME:    %[[SRC:.*]]: memref<1x8xf32>, %[[I:.*]]: index) {
-func.func private @expand_keeps_load_attrs(%src : memref<1x8xf32>, %i : index) {
-  // CHECK:       %[[C0:.*]] = arith.constant 0 : index
-  %c0 = arith.constant 0 : index
-  // CHECK-NOT:   memref.reinterpret_cast
-  %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [0], sizes: [1, 1, 8], strides: [8, 8, 1]
-    : memref<1x8xf32> to memref<1x1x8xf32>
-  // CHECK:       memref.load %[[SRC]][%[[C0]], %[[I]]] alignment(16) nontemporal(true) invariant(true) : memref<1x8xf32>
-  %0 = memref.load %reinterpret_cast[%c0, %c0, %i]
-    alignment(16) nontemporal(true) invariant(true) : memref<1x1x8xf32>
   return
 }
 
