@@ -118,15 +118,15 @@ define amdgpu_kernel void @load_v3i16_tfe(ptr addrspace(8) inreg %rsrc, ptr addr
 ; GFX8-UNPACKED-SDAG-NEXT:    buffer_load_format_d16_xyz v[0:3], v0, s[0:3], 0 idxen tfe
 ; GFX8-UNPACKED-SDAG-NEXT:    s_add_u32 s0, s4, 4
 ; GFX8-UNPACKED-SDAG-NEXT:    s_addc_u32 s1, s5, 0
-; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v7, s5
-; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v6, s4
+; GFX8-UNPACKED-SDAG-NEXT:    s_mov_b32 s2, 0x1000504
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v9, s1
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v8, s0
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v5, s7
+; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v7, s5
+; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v6, s4
 ; GFX8-UNPACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-UNPACKED-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-UNPACKED-SDAG-NEXT:    v_perm_b32 v0, v0, v1, s2
 ; GFX8-UNPACKED-SDAG-NEXT:    flat_store_short v[8:9], v2
 ; GFX8-UNPACKED-SDAG-NEXT:    flat_store_dword v[6:7], v0
 ; GFX8-UNPACKED-SDAG-NEXT:    flat_store_dword v[4:5], v3
@@ -266,13 +266,13 @@ define amdgpu_kernel void @load_v2f16_tfe(ptr addrspace(8) inreg %rsrc, ptr addr
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX8-UNPACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-UNPACKED-SDAG-NEXT:    buffer_load_format_d16_xy v[0:2], v0, s[0:3], 0 idxen tfe
+; GFX8-UNPACKED-SDAG-NEXT:    s_mov_b32 s0, 0x1000504
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v5, s6
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-UNPACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-UNPACKED-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-UNPACKED-SDAG-NEXT:    v_perm_b32 v0, v0, v1, s0
 ; GFX8-UNPACKED-SDAG-NEXT:    flat_store_dword v[3:4], v0
 ; GFX8-UNPACKED-SDAG-NEXT:    flat_store_dword v[5:6], v2
 ; GFX8-UNPACKED-SDAG-NEXT:    s_endpgm
@@ -377,13 +377,13 @@ define amdgpu_kernel void @load_v2i16_tfe(ptr addrspace(8) inreg %rsrc, ptr addr
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX8-UNPACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-UNPACKED-SDAG-NEXT:    buffer_load_format_d16_xy v[0:2], v0, s[0:3], 0 idxen tfe
+; GFX8-UNPACKED-SDAG-NEXT:    s_mov_b32 s0, 0x1000504
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v5, s6
 ; GFX8-UNPACKED-SDAG-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-UNPACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-UNPACKED-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-UNPACKED-SDAG-NEXT:    v_perm_b32 v0, v0, v1, s0
 ; GFX8-UNPACKED-SDAG-NEXT:    flat_store_dword v[3:4], v0
 ; GFX8-UNPACKED-SDAG-NEXT:    flat_store_dword v[5:6], v2
 ; GFX8-UNPACKED-SDAG-NEXT:    s_endpgm
