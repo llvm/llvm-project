@@ -578,12 +578,23 @@ ProgramStateRef CallAndMessageChecker::checkArgInitializedness(
   const BugType &BT = isa<ObjCMethodCall>(Call) ? MsgArgBug : CallArgBug;
 
   ArrayRef<ParmVarDecl *> Params = Call.parameters();
-  for (unsigned i = 0, e = Call.getNumArgs(); i != e; ++i) {
+  // CallEvent uses three index spaces. ASTArgIdx indexes the AST argument list
+  // (CallExpr::getArg()). DeclParamIdx indexes the callee's declared parameters
+  // (FunctionDecl::getParamDecl()). NativeIdx indexes the arguments exposed by
+  // CallEvent through getArgExpr() and is bounded by getNumArgs().
+  //
+  // FIXME: CallEvent does not yet treat an explicit object parameter as an
+  // object the way it does for implicit `this`, so it stays a regular argument.
+  // Indexing still lines up today only by coincidence, because parameters()
+  // includes it too.
+  for (unsigned NativeIdx = 0, e = Call.getNumArgs(); NativeIdx != e; ++NativeIdx) {
     // For variadic functions a corresponding parameter decl might not exist.
-    const ParmVarDecl *PVD = i < Params.size() ? Params[i] : nullptr;
-    if (PreVisitProcessArg(C, Call.getArgSVal(i), Call.getArgSourceRange(i),
-                           Call.getArgExpr(i), i, checkUninitFields, Call, BT,
-                           PVD))
+    const ParmVarDecl *PVD =
+        NativeIdx < Params.size() ? Params[NativeIdx] : nullptr;
+    if (PreVisitProcessArg(C, Call.getArgSVal(NativeIdx),
+                           Call.getArgSourceRange(NativeIdx),
+                           Call.getArgExpr(NativeIdx), NativeIdx,
+                           checkUninitFields, Call, BT, PVD))
       return nullptr;
   }
   return State;
