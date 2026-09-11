@@ -25,6 +25,7 @@
 
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/freestanding-tools.h"
+#include <cstdint>
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -68,6 +69,32 @@ void RTDECL(CopyInAssign)(Descriptor &temp, const Descriptor &var,
 // When "var" is provided, copy "temp" to it assuming "var" is already
 // initialized. Destroy and deallocate "temp" in all cases.
 void RTDECL(CopyOutAssign)(Descriptor *var, Descriptor &temp,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+
+// Support for skipping copy-out into read-only memory
+// (FLANG_RT_COPYOUT_READONLY_MODE; see flang/docs/RuntimeEnvironment.md).
+// These entry points let the compiler apply the same policy in inlined
+// copy-out code that CopyOutAssign applies internally. On device
+// compilations they are stubs (mode 0 / false / no-op).
+//
+// Returns the mode: 0 = off (default), 1 = trust a one-time snapshot of the
+// process memory map (no system calls), 2 = additionally re-confirm each
+// snapshot hit against the current map. Parsed lazily from the environment;
+// invalid values read as 0.
+std::int32_t RTDECL(CopyOutReadOnlyMode)();
+// True iff the whole data span of the descriptor lies within the snapshot's
+// read-only regions. No system calls after the one-time lazy snapshot.
+// Meaningful only when the mode is nonzero; fail-closed (false) on any
+// uncertainty.
+bool RTDECL(CopyOutReadOnlyCandidate)(const Descriptor &);
+// True iff the whole data span of the descriptor is mapped read-only in the
+// *current* process memory map. Performs system calls; intended as the mode-2
+// re-confirmation of a candidate hit before skipping a copy-out.
+bool RTDECL(CopyOutReadOnlyConfirm)(const Descriptor &);
+// Diagnostics hook: count a skipped copy-out and, when
+// FLANG_RT_COPYOUT_READONLY_DIAG=1, report the first few on stderr. Call it
+// whenever inlined code skips a copy-out because of the checks above.
+void RTDECL(NoteSkippedCopyOut)(
     const char *sourceFile = nullptr, int sourceLine = 0);
 // This variant is for assignments to explicit-length CHARACTER left-hand
 // sides that might need to handle truncation or blank-fill, and

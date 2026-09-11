@@ -419,3 +419,84 @@ TEST(MemoryMapCopyOut, Mode1WritableDestUnaffected) {
 }
 
 #endif // __linux__
+
+#if defined(__linux__)
+
+// The compiler-visible entry points (used by inlined copy-out code) apply the
+// same policy as CopyOutAssign: mode off => everything answers "not
+// read-only"; mode 1 => candidate hits on the snapshot; confirm reflects the
+// *current* protection.
+TEST(MemoryMapEntryPoints, ModeOffModeZeroQueriesHonest) {
+  testing::FLAGS_gtest_death_test_style = "threadsafe";
+  EXPECT_EXIT(
+      {
+        ::unsetenv("FLANG_RT_COPYOUT_READONLY_MODE");
+        RoFileMapping m;
+        if (!m.Map(/*readOnlyNow=*/true)) {
+          _exit(2);
+        }
+        SubscriptValue extent[1]{RoFileMapping::count};
+        StaticDescriptor<1> staticVar;
+        Descriptor &var{staticVar.descriptor()};
+        var.Establish(
+            TypeCategory::Integer, sizeof(std::int32_t), m.data, 1, extent);
+        if (RTNAME(CopyOutReadOnlyMode)() != 0) {
+          _exit(3);
+        }
+        // The mode gate is the caller's job; the candidate/confirm queries
+        // themselves still answer honestly about the mapping.
+        _exit(RTNAME(CopyOutReadOnlyConfirm)(var) ? 0 : 4);
+      },
+      testing::ExitedWithCode(0), "");
+}
+
+TEST(MemoryMapEntryPoints, Mode1CandidateAndConfirm) {
+  testing::FLAGS_gtest_death_test_style = "threadsafe";
+  EXPECT_EXIT(
+      {
+        ::setenv("FLANG_RT_COPYOUT_READONLY_MODE", "1", 1);
+        RoFileMapping m;
+        if (!m.Map(/*readOnlyNow=*/true)) {
+          _exit(2);
+        }
+        SubscriptValue extent[1]{RoFileMapping::count};
+        StaticDescriptor<1> staticVar;
+        Descriptor &var{staticVar.descriptor()};
+        var.Establish(
+            TypeCategory::Integer, sizeof(std::int32_t), m.data, 1, extent);
+        if (RTNAME(CopyOutReadOnlyMode)() != 1) {
+          _exit(3);
+        }
+        if (!RTNAME(CopyOutReadOnlyCandidate)(var)) {
+          _exit(4); // file-backed private read-only: must be in the snapshot
+        }
+        if (!RTNAME(CopyOutReadOnlyConfirm)(var)) {
+          _exit(5);
+        }
+        // A writable heap destination is never a candidate.
+        std::int32_t heap[RoFileMapping::count]{};
+        StaticDescriptor<1> staticHeap;
+        Descriptor &heapVar{staticHeap.descriptor()};
+        heapVar.Establish(
+            TypeCategory::Integer, sizeof(std::int32_t), heap, 1, extent);
+        if (RTNAME(CopyOutReadOnlyCandidate)(heapVar)) {
+          _exit(6);
+        }
+        // After mprotect RW, the stale snapshot still says candidate, but
+        // confirm sees the current protection.
+        if (::mprotect(m.data, m.pageSize, PROT_READ | PROT_WRITE) != 0) {
+          _exit(2);
+        }
+        if (!RTNAME(CopyOutReadOnlyCandidate)(var)) {
+          _exit(7);
+        }
+        if (RTNAME(CopyOutReadOnlyConfirm)(var)) {
+          _exit(8);
+        }
+        RTNAME(NoteSkippedCopyOut)(__FILE__, __LINE__); // must not crash
+        _exit(0);
+      },
+      testing::ExitedWithCode(0), "");
+}
+
+#endif // __linux__

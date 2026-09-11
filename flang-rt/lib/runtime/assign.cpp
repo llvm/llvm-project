@@ -883,6 +883,40 @@ void RTDEF(CopyOutAssign)(
   temp.Deallocate();
 }
 
+// Compiler-visible entry points for the read-only copy-out checks, so that
+// inlined copy-out code can apply the same policy as CopyOutAssign above.
+// Device compilations get inert stubs (mode 0 / false / no-op), keeping the
+// symbols available to link while leaving device behavior unchanged.
+std::int32_t RTDEF(CopyOutReadOnlyMode)() {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  return static_cast<std::int32_t>(GetCopyOutReadOnlyMode());
+#else
+  return 0;
+#endif
+}
+
+bool RTDEF(CopyOutReadOnlyCandidate)(const Descriptor &var) {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  return CopyOutReadOnlyCandidate(var);
+#else
+  return false;
+#endif
+}
+
+bool RTDEF(CopyOutReadOnlyConfirm)(const Descriptor &var) {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  return CopyOutReadOnlyConfirm(var);
+#else
+  return false;
+#endif
+}
+
+void RTDEF(NoteSkippedCopyOut)(const char *sourceFile, int sourceLine) {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  NoteSkippedCopyOut(sourceFile, sourceLine);
+#endif
+}
+
 void RTDEF(AssignExplicitLengthCharacter)(Descriptor &to,
     const Descriptor &from, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
