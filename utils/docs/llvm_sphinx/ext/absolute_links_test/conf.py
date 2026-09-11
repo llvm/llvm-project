@@ -1,6 +1,7 @@
 extensions = ["llvm_sphinx.ext.absolute_links", "myst_parser"]
 master_doc = "index"
 project = "absolute links test"
+exclude_patterns = ["external"]
 source_suffix = {
     ".rst": "restructuredtext",
     ".md": "markdown",
