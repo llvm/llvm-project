@@ -10040,8 +10040,7 @@ Error OpenMPIRBuilder::emitOffloadingArraysAndArgs(
 }
 
 static void emitTargetCall(
-    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-    const OpenMPIRBuilder::LocationDescription &Loc, Value *RTLocOverride,
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, Value *RTLocOverride,
     OpenMPIRBuilder::InsertPointTy AllocaIP,
     ArrayRef<BasicBlock *> DeallocBlocks, OpenMPIRBuilder::TargetDataInfo &Info,
     const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
@@ -10184,7 +10183,8 @@ static void emitTargetCall(
     Value *RTLoc = RTLocOverride;
     if (!RTLoc) {
       uint32_t SrcLocStrSize;
-      Constant *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+      Constant *SrcLocStr =
+          OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
       RTLoc = OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize,
                                           llvm::omp::IdentFlag(0), 0);
     }
@@ -10274,10 +10274,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
   // to make a remote call (offload) to the previously outlined function
   // that represents the target region. Do that now.
   if (!Config.isTargetDevice())
-    emitTargetCall(*this, Builder, Loc, RTLocOverride, AllocaIP, DeallocBlocks,
-                   Info, DefaultAttrs, RuntimeAttrs, IfCond, OutlinedFn,
-                   OutlinedFnID, Inputs, GenMapInfoCB, CustomMapperCB,
-                   Dependencies, HasNowait, DynCGroupMem, DynCGroupMemFallback);
+    emitTargetCall(*this, Builder, RTLocOverride, AllocaIP, DeallocBlocks, Info,
+                   DefaultAttrs, RuntimeAttrs, IfCond, OutlinedFn, OutlinedFnID,
+                   Inputs, GenMapInfoCB, CustomMapperCB, Dependencies,
+                   HasNowait, DynCGroupMem, DynCGroupMemFallback);
   return Builder.saveIP();
 }
 
