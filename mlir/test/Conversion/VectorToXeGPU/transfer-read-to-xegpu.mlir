@@ -463,14 +463,17 @@ gpu.func @load_unit_1D_vector(%source: memref<8x16x32xf32>,
   gpu.return %1 : f32
 }
 
-// A single-element transfer whose result is only extracted to a scalar
-// addresses one location, which the transfer's own indices already name, so it
-// is a scalar load - no descriptor, no gather.
+// A single-element transfer whose result is only extracted to a scalar touches
+// one location, which the transfer's own indices name, so the load takes a
+// scalar offset and mask - no descriptor, no lane vectors.
 // CHECK-LABEL:  @load_unit_1D_vector(
 // CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[OFFSET:.+]]: index
-// CHECK:        %[[RES:.+]] = memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]] : memref<8x16x32xf32>
-// CHECK-NOT:    xegpu.load
+// CHECK-NOT:    vector.step
+// CHECK-DAG:    %[[MASK:.+]] = arith.constant true
+// CHECK:        %[[PTR:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
+// CHECK:        %[[BASE:.+]] = arith.index_cast %[[PTR]] : index to i64
+// CHECK:        %[[RES:.+]] = xegpu.load %[[BASE]][%{{.+}}], %[[MASK]] : i64, index, i1 -> f32
 // CHECK:        return %[[RES]]
 }
 
@@ -485,21 +488,16 @@ gpu.func @load_out_of_bounds_unit_1D_vector(%source: memref<8x16x32xf32>,
   gpu.return %1 : f32
 }
 
-// An out-of-bounds transfer must not touch memory, so the scalar load is
-// guarded and the padding is yielded on the out-of-bounds side.
+// The mask keeps an out-of-bounds transfer from touching memory. A masked-off
+// load is unspecified, so the padding is applied with a select.
 // CHECK-LABEL:  @load_out_of_bounds_unit_1D_vector(
 // CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[OFFSET:.+]]: index
 // CHECK-DAG:    %[[PAD:.+]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:    %[[C32:.+]] = arith.constant 32 : index
-// CHECK:        %[[INB:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C32]] : index
-// CHECK:        %[[RES:.+]] = scf.if %[[INB]] -> (f32) {
-// CHECK:          %[[LOAD:.+]] = memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]] : memref<8x16x32xf32>
-// CHECK:          scf.yield %[[LOAD]] : f32
-// CHECK:        } else {
-// CHECK:          scf.yield %[[PAD]] : f32
-// CHECK:        }
-// CHECK-NOT:    xegpu.load
+// CHECK:        %[[MASK:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C32]] : index
+// CHECK:        %[[VAL:.+]] = xegpu.load %{{.+}}[%{{.+}}], %[[MASK]] : i64, index, i1 -> f32
+// CHECK:        %[[RES:.+]] = arith.select %[[MASK]], %[[VAL]], %[[PAD]] : f32
 // CHECK:        return %[[RES]]
 }
 
@@ -513,12 +511,11 @@ gpu.func @no_scalar_load_unit_1D_vector_used_as_vector(
   gpu.return %0 : vector<1xf32>
 }
 
-// A unit-size vector that is genuinely used as a vector keeps the vector
-// paths - only a read that its consumers unwrap to a scalar becomes a scalar
-// load.
+// A unit-size vector genuinely used as a vector keeps the lane-vector paths -
+// only a read its consumers unwrap to a scalar becomes a scalar load.
 // CHECK-LABEL:  @no_scalar_load_unit_1D_vector_used_as_vector(
-// CHECK-NOT:    memref.load
-// CHECK:        xegpu.load
+// CHECK:        vector.step : vector<1xindex>
+// CHECK:        xegpu.load {{.*}} : i64, vector<1xindex>, vector<1xi1> -> vector<1xf32>
 }
 
 // -----
@@ -532,21 +529,17 @@ gpu.func @load_out_of_bounds_unit_1D_vector_dynamic(
   gpu.return %1 : i32
 }
 
-// The extract of the broadcast folds away, leaving just the guarded scalar
-// load - the form a lookup like this one had before it was vectorized.
+// A poison padding leaves the masked-off value "don't care", so no select is
+// needed. The extract of the broadcast folds away, leaving just the load - the
+// form a lookup like this one had before it was vectorized.
 // CHECK-LABEL:  @load_out_of_bounds_unit_1D_vector_dynamic(
 // CHECK-SAME:   %[[SRC:.+]]: memref<?xi32, strided<[1], offset: ?>>,
 // CHECK-SAME:   %[[OFFSET:.+]]: index
-// CHECK-DAG:    %[[PAD:.+]] = ub.poison : i32
 // CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
 // CHECK:        %[[DIM:.+]] = memref.dim %[[SRC]], %[[C0]] : memref<?xi32, strided<[1], offset: ?>>
-// CHECK:        %[[INB:.+]] = arith.cmpi slt, %[[OFFSET]], %[[DIM]] : index
-// CHECK:        %[[RES:.+]] = scf.if %[[INB]] -> (i32) {
-// CHECK:          %[[LOAD:.+]] = memref.load %[[SRC]][%[[OFFSET]]] : memref<?xi32, strided<[1], offset: ?>>
-// CHECK:          scf.yield %[[LOAD]] : i32
-// CHECK:        } else {
-// CHECK:          scf.yield %[[PAD]] : i32
-// CHECK:        }
+// CHECK:        %[[MASK:.+]] = arith.cmpi slt, %[[OFFSET]], %[[DIM]] : index
+// CHECK:        %[[RES:.+]] = xegpu.load %{{.+}}[%{{.+}}], %[[MASK]] : i64, index, i1 -> i32
+// CHECK-NOT:    arith.select
 // CHECK-NOT:    vector.broadcast
 // CHECK:        return %[[RES]]
 }
@@ -563,18 +556,19 @@ gpu.func @load_out_of_bounds_unit_2D_vector(%source: memref<8x16xf32>,
 }
 
 // A single element is a scalar load at any rank - a 1x1 block descriptor buys
-// nothing. Each not-in-bounds dimension contributes a term to the guard.
+// nothing. Each not-in-bounds dimension contributes a term to the mask.
 // CHECK-LABEL:  @load_out_of_bounds_unit_2D_vector(
 // CHECK-SAME:   %[[SRC:.+]]: memref<8x16xf32>,
 // CHECK-SAME:   %[[OFFSET:.+]]: index
+// CHECK-NOT:    xegpu.load_nd
+// CHECK-DAG:    %[[PAD:.+]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:    %[[C8:.+]] = arith.constant 8 : index
 // CHECK-DAG:    %[[C16:.+]] = arith.constant 16 : index
-// CHECK:        %[[INB0:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C8]] : index
-// CHECK:        %[[INB1:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C16]] : index
-// CHECK:        %[[INB:.+]] = arith.andi %[[INB0]], %[[INB1]] : i1
-// CHECK:        %[[RES:.+]] = scf.if %[[INB]] -> (f32) {
-// CHECK:          memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]]] : memref<8x16xf32>
-// CHECK-NOT:    xegpu.load_nd
+// CHECK:        %[[M0:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C8]] : index
+// CHECK:        %[[M1:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C16]] : index
+// CHECK:        %[[MASK:.+]] = arith.andi %[[M0]], %[[M1]] : i1
+// CHECK:        %[[VAL:.+]] = xegpu.load %{{.+}}[%{{.+}}], %[[MASK]] : i64, index, i1 -> f32
+// CHECK:        %[[RES:.+]] = arith.select %[[MASK]], %[[VAL]], %[[PAD]] : f32
 // CHECK:        return %[[RES]]
 }
 
