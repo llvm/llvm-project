@@ -153,33 +153,39 @@ extern "C" const char *__gwp_asan_default_options() {
 
 The following options are available:
 
-```{eval-rst}
-+----------------------------+---------+--------------------------------------------------------------------------------+
-| Option                     | Default | Description                                                                    |
-+----------------------------+---------+--------------------------------------------------------------------------------+
-| Enabled                    | true    | Is GWP-ASan enabled?                                                           |
-+----------------------------+---------+--------------------------------------------------------------------------------+
-| PerfectlyRightAlign        | false   | When allocations are right-aligned, should we perfectly align them up to the   |
-|                            |         | page boundary? By default (false), we round up allocation size to the nearest  |
-|                            |         | power of two (2, 4, 8, 16) up to a maximum of 16-byte alignment for            |
-|                            |         | performance reasons. Setting this to true can find single byte                 |
-|                            |         | buffer-overflows at the cost of performance, and may be incompatible with      |
-|                            |         | some architectures.                                                            |
-+----------------------------+---------+--------------------------------------------------------------------------------+
-| MaxSimultaneousAllocations | 16      | Number of simultaneously-guarded allocations available in the pool.            |
-+----------------------------+---------+--------------------------------------------------------------------------------+
-| SampleRate                 | 5000    | The probability (1 / SampleRate) that a page is selected for GWP-ASan          |
-|                            |         | sampling. Sample rates up to (2^31 - 1) are supported.                         |
-+----------------------------+---------+--------------------------------------------------------------------------------+
-| InstallSignalHandlers      | true    | Install GWP-ASan signal handlers for SIGSEGV during dynamic loading. This      |
-|                            |         | allows better error reports by providing stack traces for allocation and       |
-|                            |         | deallocation when reporting a memory error. GWP-ASan's signal handler will     |
-|                            |         | forward the signal to any previously-installed handler, and user programs      |
-|                            |         | that install further signal handlers should make sure they do the same. Note,  |
-|                            |         | if the previously installed SIGSEGV handler is SIG_IGN, we terminate the       |
-|                            |         | process after dumping the error report.                                        |
-+----------------------------+---------+--------------------------------------------------------------------------------+
-```
+:::{list-table}
+
+* - Option
+  - Default
+  - Description
+* - Enabled
+  - true
+  - Is GWP-ASan enabled?
+* - PerfectlyRightAlign
+  - false
+  - When allocations are right-aligned, should we perfectly align them up to the
+    page boundary? By default (false), we round up allocation size to the nearest
+    power of two (2, 4, 8, 16) up to a maximum of 16-byte alignment for
+    performance reasons. Setting this to true can find single byte
+    buffer-overflows at the cost of performance, and may be incompatible with
+    some architectures.
+* - MaxSimultaneousAllocations
+  - 16
+  - Number of simultaneously-guarded allocations available in the pool.
+* - SampleRate
+  - 5000
+  - The probability (1 / SampleRate) that a page is selected for GWP-ASan
+    sampling. Sample rates up to (2^31 - 1) are supported.
+* - InstallSignalHandlers
+  - true
+  - Install GWP-ASan signal handlers for SIGSEGV during dynamic loading. This
+    allows better error reports by providing stack traces for allocation and
+    deallocation when reporting a memory error. GWP-ASan's signal handler will
+    forward the signal to any previously-installed handler, and user programs
+    that install further signal handlers should make sure they do the same. Note,
+    if the previously installed SIGSEGV handler is SIG_IGN, we terminate the
+    process after dumping the error report.
+:::
 
 ### Example
 

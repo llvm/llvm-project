@@ -120,19 +120,47 @@ groups in order to share resources when possible.
 :name: convergence-natural-loop
 :::
 
-```{eval-rst}
-.. table::
-   :name: convergence-thread-example
-   :align: left
+:::{list-table}
+:name: convergence-thread-example
+:align: left
 
-   +----------+--------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-   |          |        | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   |      |
-   +----------+--------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-   | Thread 1 | Entry1 | H1  | B1  | L1  | H3  |     | L3  |     |     |     | Exit |
-   +----------+--------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-   | Thread 2 | Entry1 | H2  |     | L2  | H4  | B2  | L4  | H5  | B3  | L5  | Exit |
-   +----------+--------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-```
+* -
+  -
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  -
+* - Thread 1
+  - Entry1
+  - H1
+  - B1
+  - L1
+  - H3
+  -
+  - L3
+  -
+  -
+  -
+  - Exit
+* - Thread 2
+  - Entry1
+  - H2
+  -
+  - L2
+  - H4
+  - B2
+  - L4
+  - H5
+  - B3
+  - L5
+  - Exit
+:::
 
 In the above table, each row is a different thread, listing the
 dynamic instances produced by that thread from left to right. Each
@@ -158,21 +186,51 @@ that is defined as the transitive closure of:
    is executed strictly before `Q` in the same thread, then `P1`
    is *convergence-before* `Q`.
 
-```{eval-rst}
-.. table::
-   :name: convergence-order-example
-   :align: left
+:::{list-table}
+:name: convergence-order-example
+:align: left
 
-   +----------+-------+-----+-----+-----+-----+-----+-----+-----+------+
-   |          | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9    |
-   +----------+-------+-----+-----+-----+-----+-----+-----+-----+------+
-   | Thread 1 | Entry | ... |     |     |     | S2  | T   | ... | Exit |
-   +----------+-------+-----+-----+-----+-----+-----+-----+-----+------+
-   | Thread 2 | Entry | ... |     | Q2  | R   | S1  |     | ... | Exit |
-   +----------+-------+-----+-----+-----+-----+-----+-----+-----+------+
-   | Thread 3 | Entry | ... | P   | Q1  |     |     |     | ... |      |
-   +----------+-------+-----+-----+-----+-----+-----+-----+-----+------+
-```
+* -
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+* - Thread 1
+  - Entry
+  - ...
+  -
+  -
+  -
+  - S2
+  - T
+  - ...
+  - Exit
+* - Thread 2
+  - Entry
+  - ...
+  -
+  - Q2
+  - R
+  - S1
+  -
+  - ...
+  - Exit
+* - Thread 3
+  - Entry
+  - ...
+  - P
+  - Q1
+  -
+  -
+  -
+  - ...
+  -
+:::
 
 The above table shows partial sequences of dynamic instances from
 different threads. Dynamic instances in the same column are assumed
@@ -253,18 +311,46 @@ relation for the given cycle hierarchy".
 
 Maximal convergence can now be demonstrated in the earlier example as follows:
 
-```{eval-rst}
-.. table::
-   :align: left
+:::{list-table}
+:align: left
 
-   +----------+--------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-   |          |        | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   |      |
-   +----------+--------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-   | Thread 1 | Entry1 | H1  | B1  | L1  | H3  |     | L3  |     |     |     | Exit |
-   +----------+--------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-   | Thread 2 | Entry2 | H2  |     | L2  | H4  | B2  | L4  | H5  | B3  | L5  | Exit |
-   +----------+--------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-```
+* -
+  -
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  -
+* - Thread 1
+  - Entry1
+  - H1
+  - B1
+  - L1
+  - H3
+  -
+  - L3
+  -
+  -
+  -
+  - Exit
+* - Thread 2
+  - Entry2
+  - H2
+  -
+  - L2
+  - H4
+  - B2
+  - L4
+  - H5
+  - B3
+  - L5
+  - Exit
+:::
 
 - `Entry1` and `Entry2` are converged.
 - `H1` and `H2` are converged.
@@ -355,20 +441,50 @@ branches. The table below shows the convergence between three threads
 taking different paths through the CFG. Dynamic instances listed in
 the same column are converged.
 
-> ```{eval-rst}
-> .. table::
->    :align: left
+> :::{list-table}
+> :align: left
 >
->    +---------+-------+-----+-----+-----+-----+-----+-----+-----+------+
->    |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 10   |
->    +---------+-------+-----+-----+-----+-----+-----+-----+-----+------+
->    | Thread1 | Entry | P1  | Q1  | S1  | P3  | Q3  | R1  | S2  | Exit |
->    +---------+-------+-----+-----+-----+-----+-----+-----+-----+------+
->    | Thread2 | Entry | P2  | Q2  |     |     |     | R2  | S3  | Exit |
->    +---------+-------+-----+-----+-----+-----+-----+-----+-----+------+
->    | Thread3 | Entry |     |     |     |     |     | R3  | S4  | Exit |
->    +---------+-------+-----+-----+-----+-----+-----+-----+-----+------+
-> ```
+> * -
+>   - 1
+>   - 2
+>   - 3
+>   - 4
+>   - 5
+>   - 6
+>   - 7
+>   - 8
+>   - 10
+> * - Thread1
+>   - Entry
+>   - P1
+>   - Q1
+>   - S1
+>   - P3
+>   - Q3
+>   - R1
+>   - S2
+>   - Exit
+> * - Thread2
+>   - Entry
+>   - P2
+>   - Q2
+>   -
+>   -
+>   -
+>   - R2
+>   - S3
+>   - Exit
+> * - Thread3
+>   - Entry
+>   -
+>   -
+>   -
+>   -
+>   -
+>   - R3
+>   - S4
+>   - Exit
+> :::
 
 - `P2` and `P3` are not converged due to `S1`
 - `Q2` and `Q3` are not converged due to `S1`
@@ -563,18 +679,46 @@ S`.
   reconverge in the same iteration of the outer cycle `C`, but they
   may have executed the inner cycle `C'` differently.
 
-  ```{eval-rst}
-  .. table::
-     :align: left
+  :::{list-table}
+  :align: left
 
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11   |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     | Thread1 | Entry | P1  | Q1  |     |     |     | R1  | S1  | P3  | ... | Exit |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     | Thread2 | Entry | P2  | Q2  | S2  | P4  | Q4  | R2  | S4  |     |     | Exit |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-  ```
+  * -
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+  * - Thread1
+    - Entry
+    - P1
+    - Q1
+    -
+    -
+    -
+    - R1
+    - S1
+    - P3
+    - ...
+    - Exit
+  * - Thread2
+    - Entry
+    - P2
+    - Q2
+    - S2
+    - P4
+    - Q4
+    - R2
+    - S4
+    -
+    -
+    - Exit
+  :::
 
   In the table above, `S2` is not converged with `S1` due to `R1`.
 
@@ -585,18 +729,43 @@ S`.
   `Q` to `S`. Informally, threads that diverge at `Q`
   reconverge at `S` in the same iteration of `C`.
 
-  ```{eval-rst}
-  .. table::
-     :align: left
+  :::{list-table}
+  :align: left
 
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     | Thread1 | Entry | P1  | Q1  | R1  | S1  | P3  | Q3  | R3  | S3  | Exit |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     | Thread2 | Entry | P2  | Q2  |     | S2  | P4  | Q4  | R2  | S4  | Exit |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+------+
-  ```
+  * -
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+  * - Thread1
+    - Entry
+    - P1
+    - Q1
+    - R1
+    - S1
+    - P3
+    - Q3
+    - R3
+    - S3
+    - Exit
+  * - Thread2
+    - Entry
+    - P2
+    - Q2
+    -
+    - S2
+    - P4
+    - Q4
+    - R2
+    - S4
+    - Exit
+  :::
 
 > :::{note}
 > In general, the cycle `C` in the above statements is not
@@ -651,33 +820,98 @@ or `R` is the header.
 
 - Convergence when `P` is the header.
 
-  ```{eval-rst}
-  .. table::
-     :align: left
+  :::{list-table}
+  :align: left
 
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11  | 12  | 13   |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     | Thread1 | Entry |     |     |     | P1  | Q1  | R1  | S1  | P3  | Q3  |     | S3  | Exit |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     | Thread2 | Entry |     | R2  | S2  | P2  | Q2  |     | S2  | P4  | Q4  | R3  | S4  | Exit |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-  ```
+  * -
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+  * - Thread1
+    - Entry
+    -
+    -
+    -
+    - P1
+    - Q1
+    - R1
+    - S1
+    - P3
+    - Q3
+    -
+    - S3
+    - Exit
+  * - Thread2
+    - Entry
+    -
+    - R2
+    - S2
+    - P2
+    - Q2
+    -
+    - S2
+    - P4
+    - Q4
+    - R3
+    - S4
+    - Exit
+  :::
 
 - Convergence when `R` is the header.
 
-  ```{eval-rst}
-  .. table::
-     :align: left
+  :::{list-table}
+  :align: left
 
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11  | 12   |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     | Thread1 | Entry |     | P1  | Q1  | R1  | S1  | P3  | Q3  | S3  |     |     | Exit |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-     | Thread2 | Entry |     |     |     | R2  | S2  | P2  | Q2  | S2  | P4  | ... | Exit |
-     +---------+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+------+
-  ```
+  * -
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+  * - Thread1
+    - Entry
+    -
+    - P1
+    - Q1
+    - R1
+    - S1
+    - P3
+    - Q3
+    - S3
+    -
+    -
+    - Exit
+  * - Thread2
+    - Entry
+    -
+    -
+    -
+    - R2
+    - S2
+    - P2
+    - Q2
+    - S2
+    - P4
+    - ...
+    - Exit
+  :::
 
 Thus, when diverged paths reach different entries of an irreducible
 cycle from outside the cycle, the static analysis conservatively
