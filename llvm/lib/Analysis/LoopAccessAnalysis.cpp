@@ -325,6 +325,69 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
 }
 
+/// Return true if \p S is known to be monotonically non-decreasing
+/// (in the unsigned sense, without unsigned wrap) across iterations of \p L.
+static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
+                                       ScalarEvolution &SE) {
+  if (SE.isLoopInvariant(S, L))
+    return true;
+
+  switch (S->getSCEVType()) {
+  case scUDivExpr: {
+    // Non-decreasing in the numerator when the divisor is loop-invariant.
+    const auto *UDiv = cast<SCEVUDivExpr>(S);
+    return SE.isLoopInvariant(UDiv->getRHS(), L) &&
+           isKnownNonDecreasingInLoop(UDiv->getLHS(), L, SE);
+  }
+  case scAddRecExpr: {
+    auto *AR = cast<SCEVAddRecExpr>(S);
+    assert(AR->getLoop() == L &&
+           "trying to check for AddRec in different loop");
+    return SE.getMonotonicPredicateType(AR, ICmpInst::ICMP_UGE) ==
+           ScalarEvolution::MonotonicPredicateType::MonotonicallyIncreasing;
+  }
+  default:
+    return false;
+  }
+}
+
+/// Try to bound a loop-variant pointer that is not an affine AddRec.
+///
+/// If the offset is provably monotonically non-decreasing the accessed range is
+/// bounded by the offset's value at the first iteration (via
+/// SplitIntoInitAndPostInc) and last iteration (via getSCEVAtScope). The
+/// returned range is half-open: \p EltSizeSCEV is added to the address of the
+/// last accessed element to form the end.
+///
+/// Returns {nullptr, nullptr} if no such bound can be formed.
+static std::pair<const SCEV *, const SCEV *>
+getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
+                            const SCEV *EltSizeSCEV, ScalarEvolution *SE) {
+  const auto *PtrAdd = dyn_cast<SCEVAddExpr>(PtrExpr);
+  if (!PtrAdd || !PtrAdd->hasNoUnsignedWrap())
+    return {nullptr, nullptr};
+
+  const SCEV *Base = *find_if(PtrAdd->operands(), [](const auto &Op) {
+    return Op->getType()->isPointerTy();
+  });
+  if (isa<SCEVCouldNotCompute>(Base) || !SE->isLoopInvariant(Base, Lp))
+    return {nullptr, nullptr};
+
+  const SCEV *Offset = SE->getMinusSCEV(PtrExpr, Base);
+  if (isa<SCEVCouldNotCompute>(Offset) ||
+      !isKnownNonDecreasingInLoop(Offset, Lp, *SE))
+    return {nullptr, nullptr};
+
+  const SCEV *OffStart = SE->SplitIntoInitAndPostInc(Lp, Offset).first;
+  const SCEV *OffEnd = SE->getSCEVAtScope(Offset, Lp->getParentLoop());
+  if (isa<SCEVCouldNotCompute>(OffStart) || isa<SCEVCouldNotCompute>(OffEnd) ||
+      !SE->isLoopInvariant(OffStart, Lp) || !SE->isLoopInvariant(OffEnd, Lp))
+    return {nullptr, nullptr};
+
+  return {SE->getAddExpr(Base, OffStart),
+          SE->getAddExpr(Base, OffEnd, EltSizeSCEV)};
+}
+
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
@@ -358,61 +421,68 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     PtrBoundsPair = &Iter->second;
   }
 
+  // ScStart is the lowest accessed address; ScEnd is the highest one plus the
+  // size of the accessed element.
   const SCEV *ScStart;
   const SCEV *ScEnd;
 
   auto &DL = Lp->getHeader()->getDataLayout();
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
-    ScStart = ScEnd = PtrExpr;
+    ScStart = PtrExpr;
+    ScEnd = SE->getAddExpr(PtrExpr, EltSizeSCEV);
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
-    ScStart = AR->getStart();
-    if (!isa<SCEVCouldNotCompute>(BTC))
+    const SCEV *Step = AR->getStepRecurrence(*SE);
+    // The address of the last accessed element, if it can be computed
+    // precisely.
+    const SCEV *LastAddr = nullptr;
+    if (!isa<SCEVCouldNotCompute>(BTC)) {
       // Evaluating AR at an exact BTC is safe: LAA separately checks that
       // accesses cannot wrap in the loop. If evaluating AR at BTC wraps, then
       // the loop either triggers UB when executing a memory access with a
       // poison pointer or the wrapping/poisoned pointer is not used.
-      ScEnd = AR->evaluateAtIteration(BTC, *SE);
-    else {
-      // Evaluating AR at MaxBTC may wrap and create an expression that is less
-      // than the start of the AddRec due to wrapping (for example consider
-      // MaxBTC = -2). If that's the case, set ScEnd to -(EltSize + 1). ScEnd
-      // will get incremented by EltSize before returning, so this effectively
-      // sets ScEnd to the maximum unsigned value for the type. Note that LAA
-      // separately checks that accesses cannot not wrap, so unsigned max
-      // represents an upper bound.
-      if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE, DL,
-                                               DT, AC, LoopGuards)) {
-        ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
-      } else {
-        ScEnd = SE->getAddExpr(
-            SE->getNegativeSCEV(EltSizeSCEV),
-            SE->getSCEV(ConstantExpr::getIntToPtr(
-                ConstantInt::getAllOnesValue(EltSizeSCEV->getType()),
-                AR->getType())));
-      }
+      LastAddr = AR->evaluateAtIteration(BTC, *SE);
+    } else if (evaluatePtrAddRecAtMaxBTCWillNotWrap(
+                   AR, MaxBTC, EltSizeSCEV, *SE, DL, DT, AC, LoopGuards)) {
+      LastAddr = AR->evaluateAtIteration(MaxBTC, *SE);
     }
-    const SCEV *Step = AR->getStepRecurrence(*SE);
-
-    // For expressions with negative step, the upper bound is ScStart and the
-    // lower bound is ScEnd.
-    if (const auto *CStep = dyn_cast<SCEVConstant>(Step)) {
-      if (CStep->getValue()->isNegative())
-        std::swap(ScStart, ScEnd);
+    const SCEV *Start = AR->getStart();
+    Type *PtrTy = AR->getType();
+    if (SE->isKnownNegative(Step)) {
+      ScStart =
+          LastAddr
+              ? LastAddr
+              : SE->getSCEV(ConstantExpr::getIntToPtr(
+                    Constant::getNullValue(DL.getIndexType(PtrTy)), PtrTy));
+      ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
+    } else if (SE->isKnownNonNegative(Step)) {
+      ScStart = Start;
+      // The highest address for the type saturates; adding EltSize to it would
+      // wrap to the start of the address space.
+      ScEnd =
+          LastAddr
+              ? SE->getAddExpr(LastAddr, EltSizeSCEV)
+              : SE->getSCEV(ConstantExpr::getIntToPtr(
+                    Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
     } else {
+      if (!LastAddr)
+        return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
       // Fallback case: the step is not constant, but we can still
       // get the upper and lower bounds of the interval by using min/max
       // expressions.
-      ScStart = SE->getUMinExpr(ScStart, ScEnd);
-      ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
+      ScStart = SE->getUMinExpr(Start, LastAddr);
+      ScEnd = SE->getAddExpr(SE->getUMaxExpr(Start, LastAddr), EltSizeSCEV);
     }
-  } else
-    return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+  } else {
+    // The pointer is loop-variant but not an affine AddRec. Try to form a
+    // tight bound for a monotonic offset (see getNonAffineMonotonicBounds).
+    std::tie(ScStart, ScEnd) =
+        getNonAffineMonotonicBounds(Lp, PtrExpr, EltSizeSCEV, SE);
+    if (!ScStart)
+      return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+  }
 
   assert(SE->isLoopInvariant(ScStart, Lp) && "ScStart needs to be invariant");
   assert(SE->isLoopInvariant(ScEnd, Lp) && "ScEnd needs to be invariant");
-
-  // Add the size of the pointed element to ScEnd.
-  ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
   std::pair<const SCEV *, const SCEV *> Res = {ScStart, ScEnd};
   if (PointerBounds)
@@ -422,7 +492,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
 
 /// Calculate Start and End points of memory access using
 /// getStartAndEndForAccess.
-void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
+bool RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     Type *AccessTy, bool WritePtr,
                                     unsigned DepSetId, unsigned ASId,
                                     PredicatedScalarEvolution &PSE,
@@ -432,11 +502,11 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
   const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
       Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC, PSE.getSE(),
       &DC.getPointerBounds(), DC.getDT(), DC.getAC(), LoopGuards);
-  assert(!isa<SCEVCouldNotCompute>(ScStart) &&
-         !isa<SCEVCouldNotCompute>(ScEnd) &&
-         "must be able to compute both start and end expressions");
+  if (isa<SCEVCouldNotCompute>(ScStart) || isa<SCEVCouldNotCompute>(ScEnd))
+    return false;
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, PtrExpr,
                         NeedsFreeze);
+  return true;
 }
 
 bool RuntimePointerChecking::tryToCreateDiffCheck(
@@ -1284,6 +1354,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                                           unsigned ASId, bool Assume) {
   Value *Ptr = Access.getPointer();
   ScalarEvolution *SE = PSE.getSE();
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
 
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> RTCheckPtrs;
@@ -1317,8 +1388,16 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
     if (!AR && Assume)
       AR = PSE.getAsAddRec(Ptr, &Predicates);
-    if (!AR || !AR->isAffine())
-      return false;
+    if (!AR || !AR->isAffine()) {
+      // Check if bounds for non-affine monotonic expressions can be formed.
+      const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(
+          DL.getIndexType(P.getPointer()->getType()), AccessTy);
+      if (!Assume ||
+          !getNonAffineMonotonicBounds(TheLoop, P.getPointer(), EltSizeSCEV, SE)
+               .first)
+        return false;
+      continue;
+    }
 
     // If there's only one option for Ptr, commit the predicates collected by
     // getAsAddRec and look Ptr up again afterwards: the lookup below reads the
@@ -1339,6 +1418,10 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   }
   PSE.addPredicates(Predicates);
 
+  // Remember the number of pointers inserted so far, to remove the pointers of
+  // this access again if the bounds of any of them cannot be computed, to avoid
+  // partial inserts.
+  unsigned NumPointers = RtCheck.Pointers.size();
   for (const auto &[PtrExpr, NeedsFreeze] : RTCheckPtrs) {
     // The id of the dependence set.
     unsigned DepId;
@@ -1354,8 +1437,11 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       DepId = RunningDepId++;
 
     bool IsWrite = Access.getInt();
-    RtCheck.insert(TheLoop, Ptr, PtrExpr, AccessTy, IsWrite, DepId, ASId, PSE,
-                   NeedsFreeze);
+    if (!RtCheck.insert(TheLoop, Ptr, PtrExpr, AccessTy, IsWrite, DepId, ASId,
+                        PSE, NeedsFreeze)) {
+      RtCheck.Pointers.truncate(NumPointers);
+      return false;
+    }
     LLVM_DEBUG(dbgs() << "LAA: Found a runtime check ptr:" << *Ptr << '\n');
   }
 

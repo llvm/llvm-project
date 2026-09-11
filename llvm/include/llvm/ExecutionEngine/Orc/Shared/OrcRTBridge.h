@@ -28,14 +28,6 @@ LLVM_ABI extern const char *SimpleExecutorMemoryManagerInitializeWrapperName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerDeinitializeWrapperName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerReleaseWrapperName;
 
-LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceInstanceName;
-LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceReserveWrapperName;
-LLVM_ABI extern const char
-    *ExecutorSharedMemoryMapperServiceInitializeWrapperName;
-LLVM_ABI extern const char
-    *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName;
-LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName;
-
 LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
@@ -66,21 +58,6 @@ using SPSSimpleExecutorMemoryManagerInitializeSignature =
 using SPSSimpleExecutorMemoryManagerDeinitializeSignature = shared::SPSError(
     shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 using SPSSimpleExecutorMemoryManagerReleaseSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-
-// ExecutorSharedMemoryMapperService
-using SPSExecutorSharedMemoryMapperServiceReserveSignature =
-    shared::SPSExpected<
-        shared::SPSTuple<shared::SPSExecutorAddr, shared::SPSString>>(
-        shared::SPSExecutorAddr, uint64_t);
-using SPSExecutorSharedMemoryMapperServiceInitializeSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(
-        shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-        shared::SPSSharedMemoryFinalizeRequest);
-using SPSExecutorSharedMemoryMapperServiceDeinitializeSignature =
-    shared::SPSError(shared::SPSExecutorAddr,
-                     shared::SPSSequence<shared::SPSExecutorAddr>);
-using SPSExecutorSharedMemoryMapperServiceReleaseSignature = shared::SPSError(
     shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 
 } // end namespace rt

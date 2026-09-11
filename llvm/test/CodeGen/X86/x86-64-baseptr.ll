@@ -116,7 +116,7 @@ define void @clobber_base() #0 {
 ; X32ABI-NEXT:    .cfi_def_cfa_register %rbp
 ; X32ABI-NEXT:    pushq %rbx
 ; X32ABI-NEXT:    andl $-128, %esp
-; X32ABI-NEXT:    subl $128, %esp
+; X32ABI-NEXT:    addl $-128, %esp
 ; X32ABI-NEXT:    movl %esp, %ebx
 ; X32ABI-NEXT:    .cfi_offset %rbx, -24
 ; X32ABI-NEXT:    callq helper@PLT

@@ -31,13 +31,15 @@ namespace unittests {
 struct UnittestsHelper {
   UnittestsHelper() { detail::PlatformImpl::rediscoverIfEmpty = true; }
 
-  ~UnittestsHelper() {
-    if (!detail::getPlatformCache().empty()) {
-      detail::getPlatformCache().clear();
-      detail::getOffloadTopologies() = {};
-    }
+  ~UnittestsHelper() { resetPlatformState(); }
+
+private:
+  static void resetPlatformState() {
+    detail::getPlatformCache().clear();
+    detail::getOffloadTopologies() = {};
   }
 
+public:
   mock::MockWrapper Mock;
 };
 
