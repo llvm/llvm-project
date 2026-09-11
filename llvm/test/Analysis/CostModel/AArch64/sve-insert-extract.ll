@@ -3,6 +3,7 @@
 ; RUN: opt -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -S < %s | FileCheck --check-prefix=CHECK-DEFAULT %s
 ; RUN: opt -aarch64-insert-extract-base-cost=0 -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -S < %s | FileCheck --check-prefix=CHECK-LOW %s
 ; RUN: opt -aarch64-insert-extract-base-cost=100000 -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -S < %s | FileCheck --check-prefix=CHECK-HIGH %s
+; RUN: opt -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -aarch64-sve-vls-bfloat-support -S < %s | FileCheck --check-prefix=CHECK-VLS %s
 
 target triple = "aarch64-unknown-linux-gnu"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -37,6 +38,16 @@ define void @ins_el0() #0 {
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %v4 = insertelement <vscale x 4 x float> zeroinitializer, float 0.000000e+00, i64 0
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %v5 = insertelement <vscale x 2 x double> zeroinitializer, double 0.000000e+00, i64 0
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VLS-LABEL: 'ins_el0'
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %vi1 = insertelement <vscale x 16 x i1> zeroinitializer, i1 false, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v0 = insertelement <vscale x 16 x i8> zeroinitializer, i8 0, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1 = insertelement <vscale x 8 x i16> zeroinitializer, i16 0, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2 = insertelement <vscale x 4 x i32> zeroinitializer, i32 0, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v3 = insertelement <vscale x 2 x i64> zeroinitializer, i64 0, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %v4 = insertelement <vscale x 4 x float> zeroinitializer, float 0.000000e+00, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %v5 = insertelement <vscale x 2 x double> zeroinitializer, double 0.000000e+00, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %vi1 = insertelement <vscale x 16 x i1> zeroinitializer, i1 0, i64 0
   %v0 = insertelement <vscale x 16 x i8> zeroinitializer, i8 0, i64 0
@@ -78,6 +89,16 @@ define void @ins_el1() #0 {
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %v4 = insertelement <vscale x 4 x float> zeroinitializer, float 0.000000e+00, i64 1
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %v5 = insertelement <vscale x 2 x double> zeroinitializer, double 0.000000e+00, i64 1
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VLS-LABEL: 'ins_el1'
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %vi1 = insertelement <vscale x 16 x i1> zeroinitializer, i1 false, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v0 = insertelement <vscale x 16 x i8> zeroinitializer, i8 0, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1 = insertelement <vscale x 8 x i16> zeroinitializer, i16 0, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2 = insertelement <vscale x 4 x i32> zeroinitializer, i32 0, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v3 = insertelement <vscale x 2 x i64> zeroinitializer, i64 0, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4 = insertelement <vscale x 4 x float> zeroinitializer, float 0.000000e+00, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v5 = insertelement <vscale x 2 x double> zeroinitializer, double 0.000000e+00, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %vi1 = insertelement <vscale x 16 x i1> zeroinitializer, i1 0, i64 1
   %v0 = insertelement <vscale x 16 x i8> zeroinitializer, i8 0, i64 1
@@ -121,6 +142,16 @@ define void @ext_el0() #0 {
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 0
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+; CHECK-VLS-LABEL: 'ext_el0'
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2 = extractelement <vscale x 4 x i32> zeroinitializer, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v3 = extractelement <vscale x 2 x i64> zeroinitializer, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %v4 = extractelement <vscale x 4 x float> zeroinitializer, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
   %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 0
   %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 0
   %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 0
@@ -161,6 +192,16 @@ define void @ext_el1() #0 {
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %v4 = extractelement <vscale x 4 x float> zeroinitializer, i64 1
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 1
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VLS-LABEL: 'ext_el1'
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2 = extractelement <vscale x 4 x i32> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v3 = extractelement <vscale x 2 x i64> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4 = extractelement <vscale x 4 x float> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 1
   %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 1
@@ -205,6 +246,16 @@ define void @test_override_cpu_given() #1 {
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 1
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+; CHECK-VLS-LABEL: 'test_override_cpu_given'
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2 = extractelement <vscale x 4 x i32> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v3 = extractelement <vscale x 2 x i64> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4 = extractelement <vscale x 4 x float> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 1
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
   %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 1
   %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 1
   %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 1
@@ -218,6 +269,238 @@ define void @test_override_cpu_given() #1 {
 
 
 
+define void @fixed_sve_extract() #2 {
+; CHECK-DEFAULT-LABEL: 'fixed_sve_extract'
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_elt0 = extractelement <8 x i32> poison, i32 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_low = extractelement <8 x i32> poison, i32 3
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_high = extractelement <8 x i32> poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_elt7 = extractelement <16 x i32> poison, i32 15
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0 = extractelement <8 x float> poison, i32 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_low = extractelement <8 x float> poison, i32 3
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_high = extractelement <8 x float> poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ebf16_elt0 = extractelement <16 x bfloat> poison, i32 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ebf16_low = extractelement <16 x bfloat> poison, i32 7
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ebf16_high = extractelement <16 x bfloat> poison, i32 8
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_elt0_sv = extractelement <vscale x 4 x i32> poison, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_low_sv = extractelement <vscale x 4 x i32> poison, i32 3
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_high_sv = extractelement <vscale x 4 x i32> poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %ei32_512b_sv = extractelement <vscale x 4 x i32> poison, i32 16
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0_sv = extractelement <vscale x 4 x float> poison, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_low_sv = extractelement <vscale x 4 x float> poison, i32 3
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_high_sv = extractelement <vscale x 4 x float> poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %ef32_512b_sv = extractelement <vscale x 4 x float> poison, i32 16
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ebf16_elt0_sv = extractelement <vscale x 8 x bfloat> poison, i32 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ebf16_low_sv = extractelement <vscale x 8 x bfloat> poison, i32 7
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ebf16_high_sv = extractelement <vscale x 8 x bfloat> poison, i32 8
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %ebf16_512b_sv = extractelement <vscale x 8 x bfloat> poison, i32 32
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-LOW-LABEL: 'fixed_sve_extract'
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ei32_elt0 = extractelement <8 x i32> poison, i32 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ei32_low = extractelement <8 x i32> poison, i32 3
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:1 for: %ei32_high = extractelement <8 x i32> poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:1 for: %ei32_elt7 = extractelement <16 x i32> poison, i32 15
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0 = extractelement <8 x float> poison, i32 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ef32_low = extractelement <8 x float> poison, i32 3
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ef32_high = extractelement <8 x float> poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ebf16_elt0 = extractelement <16 x bfloat> poison, i32 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ebf16_low = extractelement <16 x bfloat> poison, i32 7
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ebf16_high = extractelement <16 x bfloat> poison, i32 8
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ei32_elt0_sv = extractelement <vscale x 4 x i32> poison, i64 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ei32_low_sv = extractelement <vscale x 4 x i32> poison, i32 3
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:1 for: %ei32_high_sv = extractelement <vscale x 4 x i32> poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:2 for: %ei32_512b_sv = extractelement <vscale x 4 x i32> poison, i32 16
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0_sv = extractelement <vscale x 4 x float> poison, i64 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ef32_low_sv = extractelement <vscale x 4 x float> poison, i32 3
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ef32_high_sv = extractelement <vscale x 4 x float> poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:2 for: %ef32_512b_sv = extractelement <vscale x 4 x float> poison, i32 16
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ebf16_elt0_sv = extractelement <vscale x 8 x bfloat> poison, i32 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ebf16_low_sv = extractelement <vscale x 8 x bfloat> poison, i32 7
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ebf16_high_sv = extractelement <vscale x 8 x bfloat> poison, i32 8
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:2 for: %ebf16_512b_sv = extractelement <vscale x 8 x bfloat> poison, i32 32
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-HIGH-LABEL: 'fixed_sve_extract'
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ei32_elt0 = extractelement <8 x i32> poison, i32 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ei32_low = extractelement <8 x i32> poison, i32 3
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100001 CodeSize:2 Lat:100001 SizeLat:100001 for: %ei32_high = extractelement <8 x i32> poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100001 CodeSize:2 Lat:100001 SizeLat:100001 for: %ei32_elt7 = extractelement <16 x i32> poison, i32 15
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0 = extractelement <8 x float> poison, i32 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ef32_low = extractelement <8 x float> poison, i32 3
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ef32_high = extractelement <8 x float> poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ebf16_elt0 = extractelement <16 x bfloat> poison, i32 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ebf16_low = extractelement <16 x bfloat> poison, i32 7
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ebf16_high = extractelement <16 x bfloat> poison, i32 8
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ei32_elt0_sv = extractelement <vscale x 4 x i32> poison, i64 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ei32_low_sv = extractelement <vscale x 4 x i32> poison, i32 3
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100001 CodeSize:2 Lat:100001 SizeLat:100001 for: %ei32_high_sv = extractelement <vscale x 4 x i32> poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100002 CodeSize:3 Lat:100002 SizeLat:100002 for: %ei32_512b_sv = extractelement <vscale x 4 x i32> poison, i32 16
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0_sv = extractelement <vscale x 4 x float> poison, i64 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ef32_low_sv = extractelement <vscale x 4 x float> poison, i32 3
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ef32_high_sv = extractelement <vscale x 4 x float> poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100002 CodeSize:3 Lat:100002 SizeLat:100002 for: %ef32_512b_sv = extractelement <vscale x 4 x float> poison, i32 16
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ebf16_elt0_sv = extractelement <vscale x 8 x bfloat> poison, i32 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ebf16_low_sv = extractelement <vscale x 8 x bfloat> poison, i32 7
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ebf16_high_sv = extractelement <vscale x 8 x bfloat> poison, i32 8
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100002 CodeSize:3 Lat:100002 SizeLat:100002 for: %ebf16_512b_sv = extractelement <vscale x 8 x bfloat> poison, i32 32
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VLS-LABEL: 'fixed_sve_extract'
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_elt0 = extractelement <8 x i32> poison, i32 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_low = extractelement <8 x i32> poison, i32 3
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_high = extractelement <8 x i32> poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_elt7 = extractelement <16 x i32> poison, i32 15
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0 = extractelement <8 x float> poison, i32 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_low = extractelement <8 x float> poison, i32 3
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_high = extractelement <8 x float> poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %ebf16_elt0 = extractelement <16 x bfloat> poison, i32 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ebf16_low = extractelement <16 x bfloat> poison, i32 7
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ebf16_high = extractelement <16 x bfloat> poison, i32 8
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_elt0_sv = extractelement <vscale x 4 x i32> poison, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_low_sv = extractelement <vscale x 4 x i32> poison, i32 3
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_high_sv = extractelement <vscale x 4 x i32> poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %ei32_512b_sv = extractelement <vscale x 4 x i32> poison, i32 16
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %ef32_elt0_sv = extractelement <vscale x 4 x float> poison, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_low_sv = extractelement <vscale x 4 x float> poison, i32 3
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_high_sv = extractelement <vscale x 4 x float> poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %ef32_512b_sv = extractelement <vscale x 4 x float> poison, i32 16
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %ebf16_elt0_sv = extractelement <vscale x 8 x bfloat> poison, i32 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ebf16_low_sv = extractelement <vscale x 8 x bfloat> poison, i32 7
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ebf16_high_sv = extractelement <vscale x 8 x bfloat> poison, i32 8
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %ebf16_512b_sv = extractelement <vscale x 8 x bfloat> poison, i32 32
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %ei32_elt0 = extractelement <8 x i32> poison, i32 0
+  %ei32_low = extractelement <8 x i32> poison, i32 3
+  %ei32_high = extractelement <8 x i32> poison, i32 4
+  %ei32_elt7 = extractelement <16 x i32> poison, i32 15
+  %ef32_elt0 = extractelement <8 x float> poison, i32 0
+  %ef32_low = extractelement <8 x float> poison, i32 3
+  %ef32_high = extractelement <8 x float> poison, i32 4
+  %ebf16_elt0 = extractelement <16 x bfloat> poison, i32 0
+  %ebf16_low = extractelement <16 x bfloat> poison, i32 7
+  %ebf16_high = extractelement <16 x bfloat> poison, i32 8
+  %ei32_elt0_sv = extractelement <vscale x 4 x i32> poison, i64 0
+  %ei32_low_sv = extractelement <vscale x 4 x i32> poison, i32 3
+  %ei32_high_sv = extractelement <vscale x 4 x i32> poison, i32 4
+  %ei32_512b_sv = extractelement <vscale x 4 x i32> poison, i32 16
+  %ef32_elt0_sv = extractelement <vscale x 4 x float> poison, i64 0
+  %ef32_low_sv = extractelement <vscale x 4 x float> poison, i32 3
+  %ef32_high_sv = extractelement <vscale x 4 x float> poison, i32 4
+  %ef32_512b_sv = extractelement <vscale x 4 x float> poison, i32 16
+  %ebf16_elt0_sv = extractelement <vscale x 8 x bfloat> poison, i32 0
+  %ebf16_low_sv = extractelement <vscale x 8 x bfloat> poison, i32 7
+  %ebf16_high_sv = extractelement <vscale x 8 x bfloat> poison, i32 8
+  %ebf16_512b_sv = extractelement <vscale x 8 x bfloat> poison, i32 32
+  ret void
+}
+
+define void @fixed_sve_insert() #2 {
+; CHECK-DEFAULT-LABEL: 'fixed_sve_insert'
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_elt0 = insertelement <8 x i32> poison, i32 poison, i32 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_low = insertelement <8 x i32> poison, i32 poison, i32 3
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %ii32_high = insertelement <8 x i32> poison, i32 poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %if32_elt0 = insertelement <8 x float> poison, float poison, i32 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %if32_low = insertelement <8 x float> poison, float poison, i32 3
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %if32_high = insertelement <8 x float> poison, float poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ibf16_elt0 = insertelement <16 x bfloat> poison, bfloat poison, i32 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ibf16_low = insertelement <16 x bfloat> poison, bfloat poison, i32 7
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ibf16_high = insertelement <16 x bfloat> poison, bfloat poison, i32 8
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_elt0_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_low_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 3
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %ii32_high_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %if32_elt0_sv = insertelement <vscale x 4 x float> poison, float poison, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %if32_low_sv = insertelement <vscale x 4 x float> poison, float poison, i32 3
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %if32_high_sv = insertelement <vscale x 4 x float> poison, float poison, i32 4
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of 0 for: %ibf16_elt0_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ibf16_low_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 7
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %ibf16_high_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 8
+; CHECK-DEFAULT-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-LOW-LABEL: 'fixed_sve_insert'
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ii32_elt0 = insertelement <8 x i32> poison, i32 poison, i32 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ii32_low = insertelement <8 x i32> poison, i32 poison, i32 3
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %ii32_high = insertelement <8 x i32> poison, i32 poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %if32_elt0 = insertelement <8 x float> poison, float poison, i32 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %if32_low = insertelement <8 x float> poison, float poison, i32 3
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %if32_high = insertelement <8 x float> poison, float poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ibf16_elt0 = insertelement <16 x bfloat> poison, bfloat poison, i32 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ibf16_low = insertelement <16 x bfloat> poison, bfloat poison, i32 7
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ibf16_high = insertelement <16 x bfloat> poison, bfloat poison, i32 8
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ii32_elt0_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i64 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ii32_low_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 3
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %ii32_high_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %if32_elt0_sv = insertelement <vscale x 4 x float> poison, float poison, i64 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %if32_low_sv = insertelement <vscale x 4 x float> poison, float poison, i32 3
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %if32_high_sv = insertelement <vscale x 4 x float> poison, float poison, i32 4
+; CHECK-LOW-NEXT:  Cost Model: Found costs of 0 for: %ibf16_elt0_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 0
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:0 for: %ibf16_low_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 7
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %ibf16_high_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 8
+; CHECK-LOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-HIGH-LABEL: 'fixed_sve_insert'
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ii32_elt0 = insertelement <8 x i32> poison, i32 poison, i32 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ii32_low = insertelement <8 x i32> poison, i32 poison, i32 3
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100003 CodeSize:4 Lat:100003 SizeLat:100003 for: %ii32_high = insertelement <8 x i32> poison, i32 poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %if32_elt0 = insertelement <8 x float> poison, float poison, i32 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %if32_low = insertelement <8 x float> poison, float poison, i32 3
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100003 CodeSize:4 Lat:100003 SizeLat:100003 for: %if32_high = insertelement <8 x float> poison, float poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ibf16_elt0 = insertelement <16 x bfloat> poison, bfloat poison, i32 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ibf16_low = insertelement <16 x bfloat> poison, bfloat poison, i32 7
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ibf16_high = insertelement <16 x bfloat> poison, bfloat poison, i32 8
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ii32_elt0_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i64 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ii32_low_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 3
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100003 CodeSize:4 Lat:100003 SizeLat:100003 for: %ii32_high_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %if32_elt0_sv = insertelement <vscale x 4 x float> poison, float poison, i64 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %if32_low_sv = insertelement <vscale x 4 x float> poison, float poison, i32 3
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100003 CodeSize:4 Lat:100003 SizeLat:100003 for: %if32_high_sv = insertelement <vscale x 4 x float> poison, float poison, i32 4
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 0 for: %ibf16_elt0_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 0
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100000 CodeSize:1 Lat:100000 SizeLat:100000 for: %ibf16_low_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 7
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:100003 CodeSize:4 Lat:100003 SizeLat:100003 for: %ibf16_high_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 8
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VLS-LABEL: 'fixed_sve_insert'
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_elt0 = insertelement <8 x i32> poison, i32 poison, i32 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_low = insertelement <8 x i32> poison, i32 poison, i32 3
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %ii32_high = insertelement <8 x i32> poison, i32 poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %if32_elt0 = insertelement <8 x float> poison, float poison, i32 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %if32_low = insertelement <8 x float> poison, float poison, i32 3
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %if32_high = insertelement <8 x float> poison, float poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %ibf16_elt0 = insertelement <16 x bfloat> poison, bfloat poison, i32 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ibf16_low = insertelement <16 x bfloat> poison, bfloat poison, i32 7
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %ibf16_high = insertelement <16 x bfloat> poison, bfloat poison, i32 8
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_elt0_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_low_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 3
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %ii32_high_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %if32_elt0_sv = insertelement <vscale x 4 x float> poison, float poison, i64 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %if32_low_sv = insertelement <vscale x 4 x float> poison, float poison, i32 3
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %if32_high_sv = insertelement <vscale x 4 x float> poison, float poison, i32 4
+; CHECK-VLS-NEXT:  Cost Model: Found costs of 0 for: %ibf16_elt0_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 0
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ibf16_low_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 7
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %ibf16_high_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 8
+; CHECK-VLS-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %ii32_elt0 = insertelement <8 x i32> poison, i32 poison, i32 0
+  %ii32_low = insertelement <8 x i32> poison, i32 poison, i32 3
+  %ii32_high = insertelement <8 x i32> poison, i32 poison, i32 4
+  %if32_elt0 = insertelement <8 x float> poison, float poison, i32 0
+  %if32_low = insertelement <8 x float> poison, float poison, i32 3
+  %if32_high = insertelement <8 x float> poison, float poison, i32 4
+  %ibf16_elt0 = insertelement <16 x bfloat> poison, bfloat poison, i32 0
+  %ibf16_low = insertelement <16 x bfloat> poison, bfloat poison, i32 7
+  %ibf16_high = insertelement <16 x bfloat> poison, bfloat poison, i32 8
+  %ii32_elt0_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i64 0
+  %ii32_low_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 3
+  %ii32_high_sv = insertelement <vscale x 4 x i32> poison, i32 poison, i32 4
+  %if32_elt0_sv = insertelement <vscale x 4 x float> poison, float poison, i64 0
+  %if32_low_sv = insertelement <vscale x 4 x float> poison, float poison, i32 3
+  %if32_high_sv = insertelement <vscale x 4 x float> poison, float poison, i32 4
+  %ibf16_elt0_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 0
+  %ibf16_low_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 7
+  %ibf16_high_sv = insertelement <vscale x 8 x bfloat> poison, bfloat poison, i32 8
+  ret void
+}
 
 attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
 attributes #1 = { "target-features"="+sve" vscale_range(1, 16) "target-cpu"="kryo" }
+attributes #2 = { "target-features"="+sve" vscale_range(2, 0) }
