@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <vector>
 
-#undef DEBUG_TYPE
+#undef  DEBUG_TYPE
 #define DEBUG_TYPE "mcf"
 
 using namespace llvm;
