@@ -1071,7 +1071,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   // Pass to reset the MachineFunction if the ISel failed. Outside of the above
   // if so that the verifier is not added to it.
   if (Selector == SelectorType::GlobalISel)
-    addPass(createResetMachineFunctionPass(
+    addPass(createResetMachineFunctionLegacyPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
 
   // Run the SDAG InstSelector, providing a fallback path when we do not want to
