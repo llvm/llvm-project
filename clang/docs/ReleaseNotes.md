@@ -514,7 +514,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
 
-- Fixed some bugs related to concepts. (#GH198052), (#GH209632)
+- Fixed concept evaluation bugs where some declarations were not added to
+  the current instantiation scope. (#GH198052), (#GH209632)
 
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.

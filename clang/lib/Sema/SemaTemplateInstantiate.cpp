@@ -1327,7 +1327,7 @@ namespace {
     llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
         *CurrentCachedTemplateArgs = nullptr;
 
-    bool instantiateMissingDeclsToScopeForConcepts(Decl *OldParm);
+    bool instantiateMissingDeclsToScopeForConcepts(Decl *D);
 
   public:
     typedef TreeTransform<TemplateInstantiator> inherited;
@@ -1989,41 +1989,41 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
 }
 
-bool TemplateInstantiator::instantiateMissingDeclsToScopeForConcepts(Decl *PD) {
-  if (!(PD && (SemaRef.inConstraintSubstitution() ||
-               SemaRef.inParameterMappingSubstitution())))
+bool TemplateInstantiator::instantiateMissingDeclsToScopeForConcepts(Decl *D) {
+  if (!(D && (SemaRef.inConstraintSubstitution() ||
+              SemaRef.inParameterMappingSubstitution())))
     return false;
 
   auto *Current = SemaRef.CurrentInstantiationScope;
   if (!Current)
     return false;
-  if (Current->getInstantiationOfIfExists(PD))
+  if (Current->getInstantiationOfIfExists(D))
     return false;
 
   for (auto *Outer = Current->getOuterScope(); Outer;
        Outer = Outer->getOuterScope()) {
-    auto *Pair = Outer->getInstantiationOfIfExists(PD);
+    auto *Pair = Outer->getInstantiationOfIfExists(D);
     if (!Pair)
       continue;
 
     if (auto *InstD = dyn_cast<Decl *>(*Pair)) {
-      Current->InstantiatedLocal(PD, InstD);
+      Current->InstantiatedLocal(D, InstD);
     } else {
-      Current->MakeInstantiatedLocalArgPack(PD);
+      Current->MakeInstantiatedLocalArgPack(D);
       auto *Pack = cast<LocalInstantiationScope::DeclArgumentPack *>(*Pair);
       for (auto *VD : *Pack)
-        Current->InstantiatedLocal(PD, VD);
+        Current->InstantiatedLocal(D, VD);
     }
     return false;
   }
 
-  auto *OldParm = dyn_cast<ParmVarDecl>(PD);
-  if (!OldParm)
-    return false;
-
   // CWG2770: Function parameters should be instantiated when they are
   // needed by a satisfaction check of an atomic constraint or
   // (recursively) by another function parameter.
+  auto *OldParm = dyn_cast<ParmVarDecl>(D);
+  if (!OldParm)
+    return false;
+
   if (!OldParm->isParameterPack())
     return !TransformFunctionTypeParam(OldParm, /*indexAdjustment=*/0,
                                        /*NumExpansions=*/std::nullopt,
