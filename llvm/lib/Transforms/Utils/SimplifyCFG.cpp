@@ -3719,6 +3719,9 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
     EdgeBB->setName(RealDest->getName() + ".critedge");
     EdgeBB->moveBefore(RealDest);
 
+    if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
+      EdgeBB->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopMD);
+
     // Update PHI nodes.
     addPredecessorToBlock(RealDest, EdgeBB, BB);
 
