@@ -657,7 +657,8 @@ void AArch64PassConfig::addIRPasses() {
   // ourselves.
   addPass(createAtomicExpandLegacyPass());
 
-  if (EnablePredicateAsCounterLoopRewrites)
+  if (getOptLevel() >= CodeGenOptLevel::Default &&
+      EnablePredicateAsCounterLoopRewrites)
     addPass(createAArch64PredicateAsCounterLoopRewritesPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
