@@ -106,6 +106,25 @@ body:             |
 
 ...
 
+# GCN-LABEL: name: ds_read_smem_load_mark_global_load_lds
+# GCN:      DS_READ_B32_gfx9
+# GCN-NEXT: S_LOAD_DWORD_IMM
+# GCN-NEXT: S_WAITCNT .Lgkmcnt_0
+#                     lgkmcnt(0)
+# GCN-NEXT: GLOBAL_LOAD_LDS_DWORD
+---
+name: ds_read_smem_load_mark_global_load_lds
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
+    $sgpr5 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
+    WAIT_LDS_RELEASE_MARK
+    GLOBAL_LOAD_LDS_DWORD $vgpr2_vgpr3, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
+    S_ENDPGM 0
+
+...
+
 # GCN-LABEL: name: scratch_load_lds_dword_ds_read
 # GCN:      SCRATCH_LOAD_LDS_DWORD
 # GCN-NEXT: S_WAITCNT .Vmcnt_0

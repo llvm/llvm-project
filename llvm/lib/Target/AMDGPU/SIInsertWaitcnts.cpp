@@ -586,6 +586,7 @@ public:
                                       MCPhysReg Reg) const;
   void determineWaitForLDSDMA(AMDGPU::InstCounterType T, VMEMID TID,
                               AMDGPU::Waitcnt &Wait) const;
+  void determineWaitForLDSMemAtReleaseMark(AMDGPU::Waitcnt &Wait) const;
   AMDGPU::Waitcnt determineAsyncWait(unsigned N);
   void tryClearSCCWriteEvent(MachineInstr *Inst);
 
@@ -642,19 +643,9 @@ public:
 
   void setPendingLDSMem() { LastLDSMem = ScoreUBs[AMDGPU::DS_CNT]; }
 
-  bool hasPendingLDSMemAtReleaseMark() const {
-    return LastLDSMemAtReleaseMark > ScoreLBs[AMDGPU::DS_CNT] &&
-           LastLDSMemAtReleaseMark <= ScoreUBs[AMDGPU::DS_CNT];
-  }
-
   void setPendingLDSMemAtReleaseMark() { LastLDSMemAtReleaseMark = LastLDSMem; }
 
   void clearPendingLDSMemAtReleaseMark() { LastLDSMemAtReleaseMark = 0; }
-
-  unsigned getPendingLDSMemAtReleaseMarkWait() const {
-    return std::min(getScoreUB(AMDGPU::DS_CNT) - LastLDSMemAtReleaseMark,
-                    getLimit(AMDGPU::DS_CNT) - 1);
-  }
 
   // Return true if there might be pending writes to the vgpr-interval by VMEM
   // instructions where the HWEvents in VGPRContext are not contained in E.
@@ -1527,6 +1518,11 @@ void WaitcntBrackets::determineWaitForLDSDMA(AMDGPU::InstCounterType T,
                                              AMDGPU::Waitcnt &Wait) const {
   assert(TID >= LDSDMA_BEGIN && TID < LDSDMA_END);
   determineWaitForScore(T, getVMemScore(TID, T), Wait);
+}
+
+void WaitcntBrackets::determineWaitForLDSMemAtReleaseMark(
+    AMDGPU::Waitcnt &Wait) const {
+  determineWaitForScore(AMDGPU::DS_CNT, LastLDSMemAtReleaseMark, Wait);
 }
 
 void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
@@ -2481,10 +2477,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       // 2) If a destination operand that was used by a recent export/store ins,
       // add s_waitcnt on exp_cnt to guarantee the WAR order.
 
-      if (TII.mayWriteLDSThroughDMA(MI) &&
-          ScoreBrackets.hasPendingLDSMemAtReleaseMark()) {
-        Wait.add(AMDGPU::DS_CNT,
-                 ScoreBrackets.getPendingLDSMemAtReleaseMarkWait());
+      if (TII.mayWriteLDSThroughDMA(MI)) {
+        ScoreBrackets.determineWaitForLDSMemAtReleaseMark(Wait);
         ScoreBrackets.clearPendingLDSMemAtReleaseMark();
       }
 
