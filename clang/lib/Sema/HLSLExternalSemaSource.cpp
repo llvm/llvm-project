@@ -641,8 +641,10 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .completeDefinition();
   });
 
+  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Buffer")
-             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
@@ -789,13 +791,17 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
     setupSamplerType(Decl, *SemaPtr).completeDefinition();
   });
 
-  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
   for (const TextureTypeInfo &T : TextureTypes) {
     BuiltinTypeDeclBuilder TexBuilder(*SemaPtr, HLSLNamespace, T.Name);
     switch (T.Shape) {
     case TemplateShape::ElementType:
-      TexBuilder.addSimpleTemplateParams({"element_type"}, {Float4Ty},
-                                         TypedBufferConcept);
+      // Only SRV textures have default template params.
+      if (T.RC == llvm::dxil::ResourceClass::SRV)
+        TexBuilder.addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                           TypedBufferConcept);
+      else
+        TexBuilder.addSimpleTemplateParams({"element_type"},
+                                           TypedBufferConcept);
       break;
     case TemplateShape::ElementTypeAndSampleCount:
       TexBuilder.addMSTextureTemplateParams("element_type", "sample_count",
