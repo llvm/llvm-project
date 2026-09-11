@@ -8,6 +8,7 @@
 # RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -lite=0 2>&1 | FileCheck %s --check-prefix=CHECK-TARGETS
 
 # CHECK-TARGETS: BOLT-WARNING: corrupted control flow detected in function external_corrupt: an external branch/call targets an invalid instruction in function external_func at address 0x{{[0-9a-f]+}}; ignoring both functions
+# CHECK-TARGETS: BOLT-WARNING: corrupted control flow detected in function external_corrupt: an external branch/call targets an invalid instruction in function external_func_2 at address 0x{{[0-9a-f]+}}; ignoring both functions
 # CHECK-TARGETS: BOLT-WARNING: corrupted control flow detected in function internal_corrupt: an internal branch/call targets an invalid instruction at address 0x{{[0-9a-f]+}}; ignoring this function
 
 
@@ -24,6 +25,7 @@ constant_island_0:
 .type   external_corrupt,@function
 external_corrupt:
     b   constant_island_1  // targeting the data in code externally
+    b   constant_island_2  // targeting another invalid target from the same source
 .size   external_corrupt,.-external_corrupt
 
 .globl  external_func
@@ -34,3 +36,12 @@ constant_island_1:
     .word 0xffffffff // data in code
     ret
 .size   external_func,.-external_func
+
+.globl  external_func_2
+.type   external_func_2,@function
+external_func_2:
+    sub x0, x0, x1
+constant_island_2:
+    .word 0xffffffff // data in code
+    ret
+.size   external_func_2,.-external_func_2

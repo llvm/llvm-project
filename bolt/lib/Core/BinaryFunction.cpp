@@ -21,6 +21,7 @@
 #include "bolt/Utils/NameShortener.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1575,6 +1576,7 @@ void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
+  SmallPtrSet<BinaryFunction *, 4> InvalidTargets;
 
   // Ignore pseudo functions.
   if (isPseudo())
@@ -1683,8 +1685,10 @@ bool BinaryFunction::scanExternalRefs() {
       // reference.
       BranchTargetSymbol =
           BC.handleExternalBranchTarget(TargetAddress, *this, *TargetFunction);
-      if (!BranchTargetSymbol)
+      if (!BranchTargetSymbol) {
+        InvalidTargets.insert(TargetFunction);
         continue;
+      }
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1886,6 +1890,12 @@ bool BinaryFunction::scanExternalRefs() {
 
   if (opts::Verbosity >= 1 && !Success)
     BC.outs() << "BOLT-INFO: failed to scan refs for  " << *this << '\n';
+
+  // Apply target state only after the complete source has been scanned. The
+  // source is either already ignored or is marked ignored by the caller.
+  for (BinaryFunction *Target : InvalidTargets)
+    if (!Target->isIgnored())
+      Target->setIgnored();
 
   return Success;
 }
