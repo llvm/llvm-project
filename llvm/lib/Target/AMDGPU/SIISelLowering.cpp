@@ -21123,8 +21123,11 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   if (RC == &AMDGPU::VReg_1RegClass && !isDivergent)
     return Subtarget->isWave64() ? &AMDGPU::SReg_64RegClass
                                  : &AMDGPU::SReg_32RegClass;
-  if (!TRI->isSGPRClass(RC) && !isDivergent)
+  if (!TRI->isSGPRClass(RC) && !isDivergent) {
+    if (VT.getSizeInBits() == 16 && Subtarget->useRealTrue16Insts())
+      return RC;
     return TRI->getEquivalentSGPRClass(RC);
+  }
   if (TRI->isSGPRClass(RC) && isDivergent) {
     if (Subtarget->hasGFX90AInsts())
       return TRI->getEquivalentAVClass(RC);
