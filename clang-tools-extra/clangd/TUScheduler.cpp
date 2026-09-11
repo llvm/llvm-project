@@ -918,7 +918,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     if (!CC1Args.empty())
       vlog("Driver produced command: cc1 {0}", printArgv(CC1Args));
     std::vector<Diag> CompilerInvocationDiags =
-        CompilerInvocationDiagConsumer.take();
+        CompilerInvocationDiagConsumer.take(Inputs.Contents);
     if (!Invocation) {
       elog("Could not build CompilerInvocation for file {0}", FileName);
       // Remove the old AST if it's still in cache.
@@ -995,9 +995,10 @@ void ASTWorker::runWithAST(
       // return a compatible preamble as ASTWorker::update blocks.
       std::optional<ParsedAST> NewAST;
       if (Invocation) {
-        NewAST = ParsedAST::build(FileName, FileInputs, std::move(Invocation),
-                                  CompilerInvocationDiagConsumer.take(),
-                                  getPossiblyStalePreamble());
+        NewAST = ParsedAST::build(
+            FileName, FileInputs, std::move(Invocation),
+            CompilerInvocationDiagConsumer.take(FileInputs.Contents),
+            getPossiblyStalePreamble());
         ++ASTBuildCount;
       }
       AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
