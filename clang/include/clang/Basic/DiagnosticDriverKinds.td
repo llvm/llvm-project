@@ -203,6 +203,9 @@ def err_drv_unsupported_unwind_for_platform : Error<
   "unsupported unwind library '%0' for platform '%1'">;
 def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
+def err_drv_incompatible_arch : Error<
+  "'%0' option requires at least '%1', current '%2' is too low">;
+
 def err_drv_incompatible_options : Error<
   "the combination of '%0' and '%1' is incompatible">;
 def err_drv_invalid_cstdlib_name : Error<

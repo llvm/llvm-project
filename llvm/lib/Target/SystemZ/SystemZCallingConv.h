@@ -96,6 +96,14 @@ inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
+inline bool CC_XPLINK_Int128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                             CCValAssign::LocInfo &LocInfo,
+                                             ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  LocVT = MVT::v16i8;
+  LocInfo = CCValAssign::BCvt;
+  return false;
+}
+
 inline bool CC_XPLINK64_Shadow_Reg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                    CCValAssign::LocInfo &LocInfo,
                                    ISD::ArgFlagsTy &ArgFlags, CCState &State) {
