@@ -2377,17 +2377,20 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize || CommonStride) {
-        // Equal-sized accesses to the same location are forward.
-        //
-        // Invariant from getDependenceDistanceStrideAndSize: both accesses have
-        // non-zero strides in the same direction, each a multiple of its type's
-        // allocation size in bytes.
-        //
-        // When CommonStride is present, its value is therefore at least as
-        // large as either access size. With equal starting addresses, different
-        // iterations cannot overlap, leaving only a loop-independent forward
-        // dependence, even for mixed sizes.
+      // Equal-sized accesses to the same location are forward.
+      if (HasSameSize)
+        return Dependence::Forward;
+
+      if (CommonStride) {
+        // For mixed sizes, CommonStride is asserted to cover both accesses when
+        // computed in getDependenceDistanceStrideAndSize, so different
+        // iterations cannot overlap.
+        [[maybe_unused]] uint64_t ASz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[AIdx]));
+        [[maybe_unused]] uint64_t BSz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[BIdx]));
+        assert(*CommonStride >= std::max(ASz, BSz) &&
+               "Invariant from getDependenceDistanceStrideAndSize broken!");
         return Dependence::Forward;
       }
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "

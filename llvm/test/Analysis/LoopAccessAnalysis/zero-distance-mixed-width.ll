@@ -377,7 +377,7 @@ exit:
 
 ; Let the trip count be a runtime value; keep the common byte stride at 8.
 ; Independence does not require a constant trip count --> Forward.
-define void @load32_store64_dynamic_trip_count(ptr %base, i64 %n,
+define void @load32_store64_dynamic_trip_count(ptr %base, i64 %n, i32 %before, i64 %after) {
 ; CHECK-LABEL: 'load32_store64_dynamic_trip_count'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
@@ -394,7 +394,6 @@ define void @load32_store64_dynamic_trip_count(ptr %base, i64 %n,
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
-                                              i32 %before, i64 %after) {
 entry:
   %empty = icmp eq i64 %n, 0
   br i1 %empty, label %exit, label %loop
