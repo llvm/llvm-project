@@ -21,11 +21,8 @@ define bfloat @test_canonicalize_amdgcn_tanh_bf16(bfloat %a) {
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    v_tanh_bf16_e32 v0, v0
 ; FAKE16-NEXT:    v_nop
-; FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FAKE16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: test_canonicalize_amdgcn_tanh_bf16:
@@ -34,11 +31,8 @@ define bfloat @test_canonicalize_amdgcn_tanh_bf16(bfloat %a) {
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    v_tanh_bf16_e32 v0.l, v0.l
 ; REAL16-NEXT:    v_nop
-; REAL16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; REAL16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; REAL16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %a)
   %canonicalized = call bfloat @llvm.canonicalize.bf16(bfloat %tanh)

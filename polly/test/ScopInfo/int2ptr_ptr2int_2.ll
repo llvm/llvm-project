@@ -22,8 +22,8 @@
 ; IR-NEXT:   %tmp4_p_scalar_ = load i64, ptr %scevgep, align 8, !alias.scope !5, !noalias !2
 ; IR-NEXT:   %p_add4 = add nsw i64 %tmp4_p_scalar_, %polly.preload.tmp3.merge
 ; IR-NEXT:   store i64 %p_add4, ptr %scevgep, align 8, !alias.scope !5, !noalias !2
-; IR-NEXT:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
-; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar_next, 99
+; IR-NEXT:   %polly.indvar_next = add nsw i16 %polly.indvar, 1
+; IR-NEXT:   %polly.loop_cond = icmp sle i16 %polly.indvar_next, 99
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
 ; IR:      polly.loop_preheader:

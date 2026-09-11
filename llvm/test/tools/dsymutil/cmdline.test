@@ -1,5 +1,5 @@
 RUN: dsymutil -help 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=HELP %s
-RUN: cat %S/../../../docs/CommandGuide/dsymutil.rst  | FileCheck %s
+RUN: cat %S/../../../docs/CommandGuide/dsymutil.md  | FileCheck %s
 
 HELP: OVERVIEW: manipulate archived DWARF debug symbol files.
 HELP: USAGE: {{.*}}dsymutil{{[^ ]*}} [options] <input files>

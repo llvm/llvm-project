@@ -303,9 +303,9 @@ define void @test3(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_BODY:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[IV]]
-; CHECK-NEXT:    [[CMP_IV_START:%.*]] = icmp ult ptr [[SRC_IV]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_IV_END:%.*]] = icmp uge ptr [[SRC_IV]], [[UPPER]]
-; CHECK-NEXT:    br i1 [[CMP_IV_END]], label [[TRAP_BB]], label [[LOOP_BODY_1:%.*]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, [[CMP_IV_END]]
+; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP_BB]], label [[LOOP_BODY_1:%.*]]
 ; CHECK:       loop.body.1:
 ; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[NEXT]]
 ; CHECK-NEXT:    [[CMP_IV_1_END:%.*]] = icmp uge ptr [[SRC_IV_1]], [[UPPER]]

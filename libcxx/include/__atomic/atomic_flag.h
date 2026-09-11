@@ -46,20 +46,20 @@ struct atomic_flag {
   }
 
 #if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const volatile noexcept {
     std::__atomic_wait(*this, __v, __m);
   }
-  _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const noexcept {
     std::__atomic_wait(*this, __v, __m);
   }
-  _LIBCPP_HIDE_FROM_ABI void notify_one() volatile _NOEXCEPT { std::__atomic_notify_one(*this); }
-  _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT { std::__atomic_notify_one(*this); }
-  _LIBCPP_HIDE_FROM_ABI void notify_all() volatile _NOEXCEPT { std::__atomic_notify_all(*this); }
-  _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_notify_all(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() volatile noexcept { std::__atomic_notify_one(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() noexcept { std::__atomic_notify_one(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() volatile noexcept { std::__atomic_notify_all(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() noexcept { std::__atomic_notify_all(*this); }
 #endif
 
 #if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr atomic_flag() _NOEXCEPT : __a_(false) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr atomic_flag() noexcept : __a_(false) {}
 #else
   atomic_flag() _NOEXCEPT = default;
 #endif
@@ -136,26 +136,26 @@ inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_clear_explicit(atomic_flag* __o, m
 }
 
 #if _LIBCPP_STD_VER >= 20
-inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_wait(const volatile atomic_flag* __o, bool __v) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_wait(const volatile atomic_flag* __o, bool __v) noexcept {
   __o->wait(__v);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_wait(const atomic_flag* __o, bool __v) _NOEXCEPT { __o->wait(__v); }
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_wait(const atomic_flag* __o, bool __v) noexcept { __o->wait(__v); }
 
 inline _LIBCPP_HIDE_FROM_ABI void
-atomic_flag_wait_explicit(const volatile atomic_flag* __o, bool __v, memory_order __m) _NOEXCEPT {
+atomic_flag_wait_explicit(const volatile atomic_flag* __o, bool __v, memory_order __m) noexcept {
   __o->wait(__v, __m);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI void
-atomic_flag_wait_explicit(const atomic_flag* __o, bool __v, memory_order __m) _NOEXCEPT {
+atomic_flag_wait_explicit(const atomic_flag* __o, bool __v, memory_order __m) noexcept {
   __o->wait(__v, __m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_one(volatile atomic_flag* __o) _NOEXCEPT { __o->notify_one(); }
-inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_one(atomic_flag* __o) _NOEXCEPT { __o->notify_one(); }
-inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_all(volatile atomic_flag* __o) _NOEXCEPT { __o->notify_all(); }
-inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT { __o->notify_all(); }
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_one(volatile atomic_flag* __o) noexcept { __o->notify_one(); }
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_one(atomic_flag* __o) noexcept { __o->notify_one(); }
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_all(volatile atomic_flag* __o) noexcept { __o->notify_all(); }
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_all(atomic_flag* __o) noexcept { __o->notify_all(); }
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD

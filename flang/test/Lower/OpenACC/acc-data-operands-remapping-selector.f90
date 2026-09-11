@@ -18,7 +18,7 @@ end subroutine
 end module
 ! CHECK-LABEL:  func.func @_QMcopyin_selectorPfoo(
 ! CHECK:    fir.select_type
-! CHECK:    %[[COPYIN:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.type<_QMcopyin_selectorTt{i:i32}>>) -> !fir.ref<!fir.type<_QMcopyin_selectorTt{i:i32}>> {name = "x"}
+! CHECK:    %[[COPYIN:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.type<_QMcopyin_selectorTt{i:i32}>>) name("x") -> !fir.ref<!fir.type<_QMcopyin_selectorTt{i:i32}>>
 ! CHECK:    acc.parallel dataOperands(%[[COPYIN]] : !fir.ref<!fir.type<_QMcopyin_selectorTt{i:i32}>>) {
 ! CHECK:      %[[DECL:.*]]:2 = hlfir.declare %[[COPYIN]] {uniq_name = "_QMcopyin_selectorFfooEx"} : (!fir.ref<!fir.type<_QMcopyin_selectorTt{i:i32}>>) -> (!fir.ref<!fir.type<_QMcopyin_selectorTt{i:i32}>>, !fir.ref<!fir.type<_QMcopyin_selectorTt{i:i32}>>)
 ! CHECK:      fir.call @_QPbar(%[[DECL]]#0)

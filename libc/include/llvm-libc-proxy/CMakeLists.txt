@@ -55,5 +55,4 @@ add_gen_header(
     libc.include.llvm-libc-types.Elf64_Word
     libc.include.llvm-libc-types.Elf64_Xword
     libc.include.llvm-libc-types.Elf64_auxv_t
-  PROXY
 )

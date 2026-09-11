@@ -44,6 +44,8 @@ getAttrKindToNameMapping() {
       {llvm::Attribute::AttrKind::Captures,
        LLVMDialect::getNoCaptureAttrName()},
       {llvm::Attribute::AttrKind::NoFree, LLVMDialect::getNoFreeAttrName()},
+      {llvm::Attribute::AttrKind::NoFreeObj,
+       LLVMDialect::getNoFreeObjAttrName()},
       {llvm::Attribute::AttrKind::NonNull, LLVMDialect::getNonNullAttrName()},
       {llvm::Attribute::AttrKind::Preallocated,
        LLVMDialect::getPreallocatedAttrName()},

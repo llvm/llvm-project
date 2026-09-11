@@ -328,9 +328,8 @@ public:
 
   unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
-  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> analyzeLoopForPipelining(
-      MachineBasicBlock *LoopBB,
-      MachineOptimizationRemarkEmitter *ORE = nullptr) const override;
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   bool isHighLatencyDef(int Opc) const override;
 
@@ -411,7 +410,8 @@ unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
 static constexpr int64_t VLMaxSentinel = -1LL;
 
 /// Given two VL operands, do we know that LHS <= RHS?
-bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS);
+bool isVLKnownLE(const MachineRegisterInfo &MRI, const MachineOperand &LHS,
+                 const MachineOperand &RHS);
 
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;

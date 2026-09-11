@@ -9,8 +9,11 @@
 #ifndef liblldb_IntelPTPerThreadTraceCollection_H_
 #define liblldb_IntelPTPerThreadTraceCollection_H_
 
-#include "IntelPTSingleBufferTrace.h"
+#include "Plugins/Process/Linux/IntelPTSingleBufferTrace.h"
+
+#include <cstdint>
 #include <optional>
+#include <vector>
 
 namespace lldb_private {
 namespace process_linux {

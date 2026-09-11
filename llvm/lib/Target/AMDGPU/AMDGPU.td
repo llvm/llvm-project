@@ -1,3 +1,4 @@
+
 //===-- AMDGPU.td - AMDGPU Tablegen files --------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -18,6 +19,7 @@ def p3 : PtrValueType<i32, 3>;
 def p4 : PtrValueType<i64, 4>;
 def p5 : PtrValueType<i32, 5>;
 def p6 : PtrValueType<i32, 6>;
+def p15 : PtrValueType<i32, 15>;
 
 //===-----------------------------------------------------------------------===//
 // AMDGPU Subtarget Feature (device properties)
@@ -167,6 +169,16 @@ defm ApertureRegs : AMDGPUSubtargetFeature<"aperture-regs",
   /*GenPredicate=*/0
 >;
 
+defm GetDoorbellID : AMDGPUSubtargetFeature<"get-doorbell-id",
+  "Supports reading the doorbell ID through S_GETREG",
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/false, [], InlineIgnore
+>;
+
+defm AGPRAlloc : AMDGPUSubtargetFeature<"agpr-alloc",
+  "Supports allocation of AGPRs",
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/false, [], InlineIgnore
+>;
+
 defm MadMixInsts : AMDGPUSubtargetFeature<"mad-mix-insts",
   "Has v_mad_mix_f32, v_mad_mixlo_f16, v_mad_mixhi_f16 instructions"
 >;
@@ -184,8 +196,9 @@ defm FmaLegacy32Insts : AMDGPUSubtargetFeature<"fma-legacy32-insts",
 >;
 
 defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-insts",
-  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32 and"
-  "v_pk_minimum/maximum_f16 instructions"
+  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32,"
+  "v_pk_minmax/maxmin_num_f16, v_min/max_num_f16/f32/f64 and"
+  "v_pk_min/max_num_f16 instructions"
 >;
 
 defm SALUMinimumMaximumInsts : AMDGPUSubtargetFeature<"salu-minimum-maximum-insts",
@@ -223,21 +236,6 @@ defm XNACKOnOffModes : AMDGPUSubtargetFeature<"xnack-on-off-modes",
   InlineIgnore
 >;
 
-// XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
-// XNACK. The current default kernel driver setting is:
-// - graphics ring: XNACK disabled
-// - compute ring: XNACK enabled
-//
-// If XNACK is enabled, the VMEM latency can be worse.
-// If XNACK is disabled, the 2 SGPRs can be used for general purposes.
-def FeatureXNACK : SubtargetFeature<"xnack",
-  "EnableXNACK",
-  "true",
-  "Enable XNACK support",
-  [FeatureSupportsXNACK],
-  InlineIgnore
->;
-
 // Whether the hardware supports WGP (work-group processor) execution
 // mode, as opposed to the per-kernel CU-mode selection
 // (FeatureCuMode).
@@ -269,6 +267,14 @@ defm UserSGPRInit16Bug : AMDGPUSubtargetFeature<"user-sgpr-init16-bug",
 
 defm LDSMisalignedBug : AMDGPUSubtargetFeature<"lds-misaligned-bug",
   "Some GFX10 bug with multi-dword LDS and flat access that is not naturally aligned in WGP mode",
+  /*GenPredicate=*/0
+>;
+
+// Set for gfx10/11/12 where a work-group can address only half of the physical
+// LDS block. So the physical block is twice the addressable size, for example
+// 128k physical and 64k addressable.
+defm HalfAddressablePhysicalLocalMemory : AMDGPUSubtargetFeature<"half-addressable-physical-local-memory",
+  "A work-group can address only half of the physical LDS block",
   /*GenPredicate=*/0
 >;
 
@@ -405,6 +411,19 @@ class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
 
 def FeatureLDSBankCount16 : SubtargetFeatureLDSBankCount<16>;
 def FeatureLDSBankCount32 : SubtargetFeatureLDSBankCount<32>;
+def FeatureLDSBankCount64 : SubtargetFeatureLDSBankCount<64>;
+
+class SubtargetFeatureMaxWavesPerEU <int Value> : SubtargetFeature <
+  "max-waves-per-eu-"#Value,
+  "MaxWavesPerEU",
+  !cast<string>(Value),
+  "Maximum number of waves an execution unit can hold."
+>;
+
+def FeatureMaxWavesPerEU8  : SubtargetFeatureMaxWavesPerEU<8>;
+def FeatureMaxWavesPerEU10 : SubtargetFeatureMaxWavesPerEU<10>;
+def FeatureMaxWavesPerEU16 : SubtargetFeatureMaxWavesPerEU<16>;
+def FeatureMaxWavesPerEU20 : SubtargetFeatureMaxWavesPerEU<20>;
 
 class SubtargetFeatureInstCacheLineSize <int Value> : SubtargetFeature <
   "instcachelinesize"#Value,
@@ -503,6 +522,14 @@ defm F32ToFP6BF6ConversionScaleInsts : AMDGPUSubtargetFeature<"f32-to-fp6bf6-cvt
 
 defm F32ToF16BF16ConversionSRInsts : AMDGPUSubtargetFeature<"f32-to-f16bf16-cvt-sr-insts",
   "Has f32 to f16bf16 conversion scale instructions"
+>;
+
+defm FP6BF6ToF16BF16F32ConversionScaleInsts : AMDGPUSubtargetFeature<"fp6bf6-to-f16bf16f32-cvt-scale-insts",
+  "Has fp6bf6 to f16bf16f32 conversion scale instructions"
+>;
+
+defm Block16ConversionScaleInsts : AMDGPUSubtargetFeature<"block16-cvt-scale-insts",
+  "Has block16 conversion scale instructions"
 >;
 
 defm AshrPkInsts : AMDGPUSubtargetFeature<"ashr-pk-insts",
@@ -898,6 +925,11 @@ defm FP8F16ConversionInsts : AMDGPUSubtargetFeature<"fp8-f16-conversion-insts",
   "Has fp8 and bf8 conversion to f16 instructions"
 >;
 
+// The opposite direction of FP8F16ConversionInsts above.
+defm F16FP8ConversionInsts : AMDGPUSubtargetFeature<"f16-fp8-conversion-insts",
+  "Has f16 conversion to fp8 and bf8 instructions"
+>;
+
 defm FP8E5M3Insts : AMDGPUSubtargetFeature<"fp8e5m3-insts",
   "Has fp8 e5m3 format support"
 >;
@@ -909,17 +941,17 @@ defm CvtFP8VOP1Bug : AMDGPUSubtargetFeature<"cvt-fp8-vop1-bug",
   [FeatureFP8ConversionInsts]
 >;
 
-// The fp8/bf8 to f32 conversions select which byte of the source to convert in
-// one of two ways.
+// The fp8/bf8 conversions take the byte index in one of two ways, and a
+// subtarget uses the same one in both directions.
 defm CvtFP8SDWASrcSel : AMDGPUSubtargetFeature<"cvt-fp8-sdwa-src-sel",
-  "FP8/BF8 conversions to F32 take the source byte from the SDWA src0_sel field",
+  "FP8/BF8 conversions take the byte index from the SDWA src0_sel or op_sel field",
   /*GenPredicate=*/1,
   /*GenAssemblerPredicate=*/1,
   [FeatureFP8ConversionInsts]
 >;
 
 defm CvtFP8ByteSel : AMDGPUSubtargetFeature<"cvt-fp8-byte-sel",
-  "FP8/BF8 conversions to F32 take the source byte from a byte_sel operand",
+  "FP8/BF8 conversions take the byte index from a byte_sel operand",
   /*GenPredicate=*/1,
   /*GenAssemblerPredicate=*/1,
   [FeatureFP8ConversionInsts]
@@ -931,6 +963,14 @@ defm WMMA256bInsts : AMDGPUSubtargetFeature<"wmma-256b-insts",
 
 defm WMMA128bInsts : AMDGPUSubtargetFeature<"wmma-128b-insts",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
+>;
+
+defm WMMAN16Insts : AMDGPUSubtargetFeature<"wmma-n16-insts",
+  "Has WMMA instructions with N = 16"
+>;
+
+defm WMMAF4Insts : AMDGPUSubtargetFeature<"wmma-f4-insts",
+  "Has WMMA_*_F4 instructions"
 >;
 
 defm SWMMACGfx1200Insts : AMDGPUSubtargetFeature<"swmmac-gfx1200-insts",
@@ -947,6 +987,10 @@ defm PkFmacF16Inst : AMDGPUSubtargetFeature<"pk-fmac-f16-inst",
 
 defm CubeInsts : AMDGPUSubtargetFeature<"cube-insts",
   "Has v_cube* instructions"
+>;
+
+defm IndexedResources : AMDGPUSubtargetFeature<"indexed-resources",
+  "Has indexed resources"
 >;
 
 defm LerpInst : AMDGPUSubtargetFeature<"lerp-inst",
@@ -1130,12 +1174,6 @@ def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   [], InlineIgnore
 >;
 
-def FeatureSRAMECC : SubtargetFeature<"sramecc",
-  "EnableSRAMECC",
-  "true",
-  "Enable SRAMECC"
->;
-
 defm NoSdstCMPX : AMDGPUSubtargetFeature<"no-sdst-cmpx",
   "V_CMPX does not write VCC/SGPR in addition to EXEC"
 >;
@@ -1226,8 +1264,7 @@ defm PseudoScalarTrans : AMDGPUSubtargetFeature<"pseudo-scalar-trans",
 >;
 
 defm NoF16PseudoScalarTransInlineConstants : AMDGPUSubtargetFeature<"no-f16-pseudo-scalar-trans-inline-constants",
-  "Inline constants are not supported for F16 pseudo scalar transcendentals",
-  /*GenPredicate=*/0
+  "Inline constants are not supported for F16 pseudo scalar transcendentals"
 >;
 
 defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",
@@ -1304,6 +1341,11 @@ defm FlatSignedOffset : AMDGPUSubtargetFeature<"flat-signed-offset",
 
 defm RequiresInitialUnclausedVmem : AMDGPUSubtargetFeature<"requires-initial-unclause-vmem",
   "Hardware entrypoints require first VMEM instruction to be unclaused",
+  GenPredicate=false
+>;
+
+defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts",
+  "64-bit integer max/min/mul VALU instructions are slower than expanding to an equivalent code sequence",
   GenPredicate=false
 >;
 
@@ -1515,10 +1557,16 @@ defm LdsBarrierArriveAtomic : AMDGPUSubtargetFeature<"lds-barrier-arrive-atomic"
   "Has LDS barrier-arrive atomic instructions"
 >;
 
-defm 45BitNumRecordsBufferResource : AMDGPUSubtargetFeature<"45-bit-num-records-buffer-resource",
-  "The buffer resource (V#) supports 45-bit num_records",
-  /*GenPredicate=*/0
+// The width of the num_records field of the buffer resource (V#).
+class FeatureNumRecordsBufferResource<int width> : SubtargetFeature<
+  !cast<string>(width)#"-bit-num-records-buffer-resource",
+  "BufferResourceNumRecordsWidth",
+  !cast<string>(width),
+  "The buffer resource (V#) has "#width#"-bit num_records"
 >;
+
+def Feature32BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<32>;
+def Feature45BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<45>;
 
 defm Clusters : AMDGPUSubtargetFeature<"clusters",
   "Has clusters of workgroups support",
@@ -1538,8 +1586,28 @@ def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
   "Use s_add_pc_i64 instruction."
 >;
 
+defm GFX1250_STRICT : AMDGPUSubtargetFeature<"gfx1250-strict",
+  "gfx1250 strict mode",
+  /*GenPredicate=*/0
+>;
+
 defm VOP3PX2IncrementsVaVdstTwice : AMDGPUSubtargetFeature<"vop3px2-increments-va-vdst-twice",
   "VOP3PX2 encoded instructions increment the VaVdst counter twice", GenPredicate=false
+>;
+
+defm NeedsTDMDrain : AMDGPUSubtargetFeature<"needs-tdm-drain",
+  "Needs to keep tensor count low",
+  /*GenPredicate=*/0
+>;
+
+defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
+  "Needs 2addr LDS instructions to be aligned to payload size",
+  /*GenPredicate=*/1
+>;
+
+defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
+  "s_monitor_sleep should not use sleep_forever",
+  /*GenPredicate=*/1
 >;
 
 //===----------------------------------------------------------------------===//
@@ -1562,7 +1630,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
   FeatureSadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
   FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode, FeatureMTBUFInsts,
-  FeatureFormattedMUBUFInsts
+  FeatureFormattedMUBUFInsts, Feature32BitNumRecordsBufferResource,
+  FeatureMaxWavesPerEU10
   ]
 >;
 
@@ -1580,7 +1649,9 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
   FeatureMqsadInsts, FeatureCvtPkNormVOP2Insts,
   FeatureDX10ClampAndIEEEMode, FeatureInstCacheLineSize64,
-  FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+  FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+  Feature32BitNumRecordsBufferResource,
+  FeatureMaxWavesPerEU10
   ]
 >;
 
@@ -1601,7 +1672,9 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts,
    FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode,
-   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature32BitNumRecordsBufferResource,
+   FeatureMaxWavesPerEU10
   ]
 >;
 
@@ -1611,7 +1684,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureWavefrontSize64, FeatureSupportsWave64, FeatureFlatAddressSpace,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
-   FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3PInsts, FeatureVGPRIndexMode,
+   FeatureApertureRegs, FeatureGetDoorbellID,
+   FeatureGFX9Insts, FeatureVOP3PInsts, FeatureVGPRIndexMode,
    FeatureFastFMAF32, FeatureDPP, FeatureDPPWavefrontShifts, FeatureDPPBroadcasts,
    FeatureIntClamp, FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
@@ -1621,22 +1695,25 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
    FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureVMemToLDSLoad,
-   FeatureCubeInsts, FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
    FeatureMsadInsts, FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode,
-   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature32BitNumRecordsBufferResource
   ]
 >;
 
 def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
   "gfx10",
-  [FeatureFP64, FeatureAddressableLocalMemorySize65536, FeatureMIMG_R128,
+  [FeatureFP64, FeatureAddressableLocalMemorySize65536,
+   FeatureHalfAddressablePhysicalLocalMemory, FeatureMIMG_R128,
    FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace,
    FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureInv2PiInlineImm,
-   FeatureApertureRegs, FeatureGFX9Insts, FeatureGFX10Insts, FeatureVOP3PInsts,
+   FeatureApertureRegs, FeatureGetDoorbellID,
+   FeatureGFX9Insts, FeatureGFX10Insts, FeatureVOP3PInsts,
    FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
@@ -1656,16 +1733,18 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode, FeatureFlatOffsetBits12,
-   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature32BitNumRecordsBufferResource
   ]
 >;
 
 def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
   "gfx11",
-  [FeatureFP64, FeatureAddressableLocalMemorySize65536, FeatureMIMG_R128,
+  [FeatureFP64, FeatureAddressableLocalMemorySize65536,
+   FeatureHalfAddressablePhysicalLocalMemory, FeatureMIMG_R128,
    FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace, Feature16BitInsts,
-   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureInv2PiInlineImm, FeatureApertureRegs, FeatureGetDoorbellID,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureBVHRayTracingInsts, FeatureMSAALoadInsts,
    FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
@@ -1686,7 +1765,9 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
    FeatureMqsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
-   FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature32BitNumRecordsBufferResource,
+   FeatureMaxWavesPerEU16
   ]
 >;
 
@@ -1695,7 +1776,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   [FeatureFP64, FeatureMIMG_R128,
    FeatureSupportsWave32,
    FeatureFlatAddressSpace, Feature16BitInsts,
-   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureInv2PiInlineImm, FeatureApertureRegs, FeatureGetDoorbellID,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureGFX12Insts, FeatureVOP3PInsts, FeatureVOPDInsts,
@@ -1714,7 +1795,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
-   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
+   FeatureMaxWavesPerEU16
   ]
 >;
 
@@ -1723,7 +1805,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
   [FeatureFP64, FeatureMIMG_R128,
    FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace, Feature16BitInsts,
-   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureInv2PiInlineImm, FeatureApertureRegs, FeatureGetDoorbellID,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureMSAALoadInsts, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureGFX12Insts, FeatureGFX13Insts, FeatureVOP3PInsts,
@@ -1744,7 +1826,9 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature45BitNumRecordsBufferResource,
+   FeatureMaxWavesPerEU16
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -1836,7 +1920,9 @@ def FeatureISAVersion9_0_Consumer_Common : FeatureSet<
      FeatureDsSrc2Insts,
      FeatureExtendedImageInsts,
      FeatureGDS,
-     FeaturePopsExitingWaveID])>;
+     FeatureCubeInsts,
+     FeaturePopsExitingWaveID,
+     FeatureMaxWavesPerEU10])>;
 
 def FeatureISAVersion9_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
@@ -1844,7 +1930,8 @@ def FeatureISAVersion9_Generic : FeatureSet<
 
 def FeatureISAVersion9_0_MI_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureFmaMixInsts,
+    [FeatureCubeInsts,
+     FeatureFmaMixInsts,
      FeatureDLInsts,
      FeatureDot1Insts,
      FeatureDot2Insts,
@@ -1890,7 +1977,8 @@ def FeatureISAVersion9_0_8 : FeatureSet<
      FeatureExtendedImageInsts,
      FeatureAtomicBufferGlobalPkAddF16NoRtnInsts,
      FeatureMFMAInlineLiteralBug,
-     FeatureImageGather4D16Bug])>;
+     FeatureImageGather4D16Bug,
+     FeatureMaxWavesPerEU10])>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
@@ -1899,6 +1987,7 @@ def FeatureISAVersion9_0_9 : FeatureSet<
 def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
     [FeatureGFX90AInsts,
+     FeatureAGPRAlloc,
      FeatureTgSplitSupport,
      FeatureRequiresAlignedVGPRs,
      FeatureFmacF64Inst,
@@ -1913,7 +2002,8 @@ def FeatureISAVersion9_0_A : FeatureSet<
      FeatureAtomicFMinFMaxF64GlobalInsts,
      FeatureAtomicFMinFMaxF64FlatInsts,
      FeatureFlatBufferGlobalAtomicFaddF64Inst,
-     FeatureLdsAtomicAddF64
+     FeatureLdsAtomicAddF64,
+     FeatureMaxWavesPerEU8
      ])>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
@@ -1923,11 +2013,11 @@ def FeatureISAVersion9_0_C : FeatureSet<
 def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
    FeatureGFX90AInsts,
+   FeatureAGPRAlloc,
    FeatureTgSplitSupport,
    FeatureGFX940Insts,
    FeatureRequiresAlignedVGPRs,
    FeatureFmaMixInsts,
-   FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeatureDot1Insts,
@@ -1963,11 +2053,13 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureLdsAtomicAddF64,
    FeatureLshlAddU64Inst,
    FeatureVMovB64Inst,
+   FeatureMaxWavesPerEU8
    ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
   [FeatureAddressableLocalMemorySize163840,
+   FeatureLDSBankCount64,
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8SDWASrcSel,
@@ -1989,6 +2081,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
       FeatureAddressableLocalMemorySize65536,
+      FeatureLDSBankCount32,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
       FeatureCvtFP8SDWASrcSel,
@@ -1999,6 +2092,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureAddressableLocalMemorySize65536,
+     FeatureLDSBankCount32,
      FeatureRequiresCOV6])>;
 
 def FeatureISAVersion9_5_0 : FeatureSet<FeatureISAVersion9_5_Common.Features>;
@@ -2035,7 +2129,8 @@ def FeatureISAVersion10_1_Common : FeatureSet<
      FeatureNSAClauseBug,
      FeatureOffset3fBug,
      FeatureFlatSegmentOffsetBug,
-     FeatureNegativeUnalignedScratchOffsetBug])>;
+     FeatureNegativeUnalignedScratchOffsetBug,
+     FeatureMaxWavesPerEU20])>;
 
 def FeatureISAVersion10_1_Generic : FeatureSet<
   !listconcat(FeatureISAVersion10_1_Common.Features,
@@ -2080,7 +2175,8 @@ def FeatureISAVersion10_3_0 : FeatureSet<
      FeatureDot6Insts,
      FeatureDot7Insts,
      FeatureDot10Insts,
-     FeatureShaderCyclesRegister])>;
+     FeatureShaderCyclesRegister,
+     FeatureMaxWavesPerEU16])>;
 
 def FeatureISAVersion10_3_Generic: FeatureSet<
   !listconcat(FeatureISAVersion10_3_0.Features,
@@ -2201,9 +2297,11 @@ def FeatureISAVersion11_7_Generic: FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+   Feature32BitNumRecordsBufferResource,
    FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
+   FeatureHalfAddressablePhysicalLocalMemory,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot7Insts,
@@ -2274,7 +2372,6 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
-   FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeaturePackedFP32SingleSGPROps,
@@ -2297,6 +2394,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureCvtFP8ByteSel,
    FeatureOCPFP8ConversionInsts,
    FeatureFP8F16ConversionInsts,
+   FeatureF16FP8ConversionInsts,
    FeatureFP8E5M3Insts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -2345,7 +2443,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
-   FeatureXNACK,
+   FeatureSupportsXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
@@ -2358,9 +2456,12 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureVMulU64Inst,
 ]>;
 
-def FeatureISAVersion12_50 : FeatureSet<
+def FeatureISAVersion12_50_STRICT : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureAddressableLocalMemorySize327680,
+  [FeatureGFX1250_STRICT,
+   FeatureAddressableLocalMemorySize327680,
+   FeatureLDSBankCount64,
+   FeatureWMMAN16Insts,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureSetregVGPRMSBFixup,
    FeatureCubeInsts,
@@ -2379,11 +2480,48 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
+   FeatureNeedsAligned2addrDS,
+   FeatureNoSleepForever,
+   FeatureSlowMaxMinMulI64Insts,
+   ])>;
+
+def FeatureISAVersion12_50 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+  [FeatureAddressableLocalMemorySize327680,
+   FeatureLDSBankCount64,
+   FeatureWMMAN16Insts,
+   FeatureWMMAF4Insts,
+   FeatureVOP3PX2IncrementsVaVdstTwice,
+   FeatureSetregVGPRMSBFixup,
+   FeatureCubeInsts,
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
+   FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
+   FeatureSWMMACGfx1200Insts,
+   FeatureSWMMACGfx1250Insts,
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards,
+   FeatureDataCacheLineSize128,
+   FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
+   FeatureNoSleepForever,
+   FeatureSlowMaxMinMulI64Insts,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureLDSBankCount64,
+   FeatureWMMAN16Insts,
+   FeatureWMMAF4Insts,
    FeatureFullRate64Ops,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
@@ -2401,6 +2539,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureUseAddPC64Inst,
@@ -2408,6 +2547,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2417,20 +2557,22 @@ def FeatureISAVersion12_Generic: FeatureSet<
 def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureLDSBankCount64,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
-   FeatureSupportsXNACK,
    FeatureGFX125xLowestRateWMMA,
    FeatureTransCoexecutionHazard,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
-   FeatureAddressableLocalMemorySize65536,
+   FeatureAddressableLocalMemorySize196608,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -2455,6 +2597,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtFP8ByteSel,
    FeatureOCPFP8ConversionInsts,
    FeatureFP8F16ConversionInsts,
+   FeatureF16FP8ConversionInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2465,7 +2608,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
-   Feature1536VGPRs,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
@@ -2481,6 +2623,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtSrPkBF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToFP6BF6ConversionScaleInsts,
+   FeatureFP6BF6ToF16BF16F32ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,
    FeatureSWakeupBarrier,
    FeatureClusters,
@@ -2494,8 +2637,10 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
+   FeatureIndexedResources
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<
@@ -2875,7 +3020,7 @@ def HasUnrestrictedSOffset : Predicate<"!Subtarget->hasRestrictedSOffset()">,
 
 def D16PreservesUnusedBits :
   Predicate<"Subtarget->d16PreservesUnusedBits()">,
-  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSRAMECC))>;
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSupportsSRAMECC))>;
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
@@ -3032,6 +3177,8 @@ def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
 def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
 
+def NotNeedsAligned2addrDS : Predicate<"!Subtarget->hasNeedsAligned2addrDS()">;
+
 def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(any_of FeatureWavefrontSize32,
                               FeatureAssemblerPermissiveWavesize)>;
@@ -3070,6 +3217,51 @@ def WaveSizeVT : ValueTypeByHwMode<[
   DefaultMode_Wave32,
   AlignedVGPRNoAGPRMode_Wave32], [i64, i64, i64, i32, i32]>;
 
+
+// The subset of SubtargetFeatures which should be exposed outside of
+// the backend.
+def AMDGPUFrontendVisibleFeatures {
+  list<SubtargetFeature> Features = [
+  Feature16BitInsts, FeatureAddMinMaxInsts, FeatureAshrPkInsts,
+  FeatureAsyncLoadToLDSInsts, FeatureAsyncStoreFromLDSInsts, FeatureAsynccnt,
+  FeatureAtomicBufferGlobalPkAddF16Insts, FeatureAtomicBufferPkAddBF16Inst, FeatureAtomicDsPkAdd16Insts,
+  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts, FeatureAtomicFaddRtnInsts,
+  FeatureAtomicFlatPkAdd16Insts, FeatureAtomicGlobalPkAddBF16Inst, FeatureBF16ConversionInsts,
+  FeatureBF16PackedInsts, FeatureBF16TransInsts, FeatureBF8ConversionScaleInsts,
+  FeatureBVHRayTracingInsts, FeatureBitOp3Insts, FeatureCIInsts,
+  FeatureClusters, FeatureCubeInsts, FeatureCvtPkNormVOP2Insts,
+  FeatureCvtSrPkBF16F32Inst, FeatureDLInsts, FeatureDPP,
+  FeatureDot10Insts, FeatureDot11Insts, FeatureDot12Insts,
+  FeatureDot13Insts, FeatureDot1Insts, FeatureDot2Insts,
+  FeatureDot3Insts, FeatureDot4Insts, FeatureDot5Insts,
+  FeatureDot6Insts, FeatureDot7Insts, FeatureDot8Insts,
+  FeatureDot9Insts, FeatureExtendedImageInsts, FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+  FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
+  FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
+  FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
+  FeatureFlatBufferGlobalAtomicFaddF64Inst, FeatureFlatGlobalInsts,
+  FeatureGFX10Insts, FeatureGFX10_3Insts, FeatureGFX11Insts,
+  FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,
+  FeatureGFX13Insts, FeatureGFX8Insts, FeatureGFX90AInsts,
+  FeatureGFX940Insts, FeatureGFX950Insts, FeatureGFX9Insts,
+  FeatureGWS, FeatureImageInsts, FeatureLerpInst,
+  FeatureMAIInsts, FeatureMcastLoadInsts, FeatureMqsadInsts,
+  FeatureMqsadPkInsts, FeatureMsadInsts, FeaturePermlane16Swap,
+  FeaturePermlane32Swap, FeaturePkAddMinMaxInsts, FeaturePrngInst,
+  FeatureQsadInsts, FeatureSMemRealTime, FeatureSMemTimeInst,
+  FeatureSWMMACGfx1200Insts, FeatureSWMMACGfx1250Insts, FeatureSWakeupBarrier,
+  FeatureSadInsts, FeatureSetPrioIncWgInst, FeatureSmemPrefetchInsts,
+  FeatureTanhInsts, FeatureTensorCvtLutInsts, FeatureTransposeLoadF4F6Insts,
+  FeatureVMemToLDSLoad, FeatureVmemPrefInsts, FeatureWMMA128bInsts,
+  FeatureWMMA256bInsts, FeatureWMMAN16Insts, FeatureWMMAF4Insts, FeatureXF32Insts,
+  FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
+  FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
+  FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
+  FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
+  FeatureAGPRAlloc, Feature1536VGPRs, Feature1024AddressableVGPRs,
+  FeatureHalfAddressablePhysicalLocalMemory,
+  ];
+}
 
 // Include AMDGPU TD files
 include "SISchedule.td"

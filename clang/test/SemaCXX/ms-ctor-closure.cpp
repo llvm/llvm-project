@@ -8,3 +8,18 @@ struct ExportedDefaultArgClosure {
                             = bad(0)) { // expected-error{{call to consteval function 'bad' is not a constant expression}} expected-note{{in call to 'bad(0)'}}
   }
 };
+
+namespace GH67685 {
+class Test1 {
+public:
+  int a;
+};
+
+consteval int f1() {
+  Test1 var;
+  var.Test1::Test1(var); // expected-warning {{explicit constructor calls are a Microsoft extension}}
+  return 1;
+}
+
+static_assert(f1());
+}

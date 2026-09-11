@@ -76,8 +76,8 @@ void line_column() {
 // CIR: %[[CONST_20:.*]] = cir.const #cir.int<20> : !u32i
 // CIR: cir.store {{.*}} %[[CONST_20]], %[[B_ADDR]] : !u32i, !cir.ptr<!u32i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
 // LLVM: store i32 68, ptr %[[A_ADDR]], align 4
 // LLVM: store i32 20, ptr %[[B_ADDR]], align 4
 
@@ -102,9 +102,9 @@ void function_file() {
 // CIR: %[[FILE_GV:.*]] = cir.const #cir.global_view<@".str.4"> : !cir.ptr<!s8i>
 // CIR: cir.store {{.*}} %[[FILE_GV]], %[[C_ADDR]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM: %[[C_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca ptr, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca ptr, align 8
+// LLVM: %[[C_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store ptr @.str.3, ptr %[[A_ADDR]], align 8
 // LLVM: store ptr @.str, ptr %[[B_ADDR]], align 8
 // LLVM: store ptr @.str.4, ptr %[[C_ADDR]], align 8

@@ -62,7 +62,7 @@ func.func @fusion_inner_simple_scf(%A : memref<10xf32>) {
 
 // CHECK-LABEL: func @fusion_inner_multiple_nests
 func.func @fusion_inner_multiple_nests() {
-  %alloc_5 = memref.alloc() {alignment = 64 : i64} : memref<4x4xi8>
+  %alloc_5 = memref.alloc() alignment = 64 : memref<4x4xi8>
   %alloc_10 = memref.alloc() : memref<8x4xi32>
   affine.for %arg8 = 0 to 4 {
     %alloc_14 = memref.alloc() : memref<4xi8>
@@ -153,7 +153,7 @@ func.func @fusion_inner_long(%arg0: memref<10x2xf32>, %arg1: memref<10x10xf32>, 
   %c0_i32 = arith.constant 0 : i32
   %0 = memref.get_global @__constant_10x2xf32 : memref<10x2xf32>
   %1 = scf.for %arg3 = %c0_i32 to %c100_i32 step %c1_i32 iter_args(%arg4 = %arg0) -> (memref<10x2xf32>)  : i32 {
-    %alloc = memref.alloc() {alignment = 64 : i64} : memref<10xi32>
+    %alloc = memref.alloc() alignment = 64 : memref<10xi32>
     affine.for %arg5 = 0 to 10 {
       %3 = arith.index_cast %arg5 : index to i32
       affine.store %3, %alloc[%arg5] : memref<10xi32>
@@ -164,19 +164,19 @@ func.func @fusion_inner_long(%arg0: memref<10x2xf32>, %arg1: memref<10x10xf32>, 
         %16 = affine.load %arg4[%s, %arg7] : memref<10x2xf32>
         affine.store %16, %alloc_5[%arg7] : memref<2xf32>
       }
-      %alloc_6 = memref.alloc() {alignment = 64 : i64} : memref<1x2xf32>
+      %alloc_6 = memref.alloc() alignment = 64 : memref<1x2xf32>
       affine.for %arg7 = 0 to 2 {
         %16 = affine.load %alloc_5[%arg7] : memref<2xf32>
         affine.store %16, %alloc_6[0, %arg7] : memref<1x2xf32>
       }
-      %alloc_7 = memref.alloc() {alignment = 64 : i64} : memref<10x2xf32>
+      %alloc_7 = memref.alloc() alignment = 64 : memref<10x2xf32>
       affine.for %arg7 = 0 to 10 {
         affine.for %arg8 = 0 to 2 {
           %16 = affine.load %alloc_6[0, %arg8] : memref<1x2xf32>
           affine.store %16, %alloc_7[%arg7, %arg8] : memref<10x2xf32>
         }
       }
-      %alloc_8 = memref.alloc() {alignment = 64 : i64} : memref<10x2xf32>
+      %alloc_8 = memref.alloc() alignment = 64 : memref<10x2xf32>
       affine.for %arg7 = 0 to 10 {
         affine.for %arg8 = 0 to 2 {
           %16 = affine.load %alloc_7[%arg7, %arg8] : memref<10x2xf32>
@@ -193,13 +193,13 @@ func.func @fusion_inner_long(%arg0: memref<10x2xf32>, %arg1: memref<10x10xf32>, 
       // CHECK-NOT:      affine.for
       // CHECK:          scf.yield
     }
-    %alloc_2 = memref.alloc() {alignment = 64 : i64} : memref<10x2xf32>
+    %alloc_2 = memref.alloc() alignment = 64 : memref<10x2xf32>
     affine.for %arg5 = 0 to 10 {
       affine.for %arg6 = 0 to 2 {
         affine.store %cst_0, %alloc_2[%arg5, %arg6] : memref<10x2xf32>
       }
     }
-    %alloc_3 = memref.alloc() {alignment = 64 : i64} : memref<10x2xf32>
+    %alloc_3 = memref.alloc() alignment = 64 : memref<10x2xf32>
     affine.for %arg5 = 0 to 10 {
       affine.for %arg6 = 0 to 2 {
         %3 = affine.load %alloc_2[%arg5, %arg6] : memref<10x2xf32>

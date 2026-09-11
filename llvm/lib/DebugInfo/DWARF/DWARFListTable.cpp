@@ -11,7 +11,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"

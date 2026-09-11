@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYTargetStreamer.h"
+#include "CSKYMCTargetDesc.h"
 #include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CSKYAttributes.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/TargetParser/CSKYTargetParser.h"
 
 using namespace llvm;
 
@@ -125,7 +129,173 @@ void CSKYTargetStreamer::finish() {
 }
 
 void CSKYTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
-                                              bool HardFloatABI) {}
+                                              bool HardFloatABI) {
+  // AsmPrinter emits the attributes once for the module. Ignore the repeated
+  // requests from the parser instantiated for each inline asm block, which
+  // knows neither the CPU nor the float ABI selected for the module.
+  if (EmittedTargetAttributes)
+    return;
+  EmittedTargetAttributes = true;
+
+  StringRef CPU = STI.getCPU();
+  CSKY::ArchKind ArchID = CSKY::parseCPUArch(CPU);
+
+  if (ArchID == CSKY::ArchKind::CK804)
+    ArchID = CSKY::ArchKind::CK803;
+
+  StringRef CPU_ARCH = CSKY::getArchName(ArchID);
+
+  if (ArchID == CSKY::ArchKind::INVALID) {
+    CPU = "ck810";
+    CPU_ARCH = "ck810";
+  }
+  emitTextAttribute(CSKYAttrs::CSKY_ARCH_NAME, CPU_ARCH);
+  emitTextAttribute(CSKYAttrs::CSKY_CPU_NAME, CPU);
+
+  unsigned ISAFlag = 0;
+  if (STI.hasFeature(CSKY::HasE1))
+    ISAFlag |= CSKYAttrs::V2_ISA_E1;
+
+  if (STI.hasFeature(CSKY::HasE2))
+    ISAFlag |= CSKYAttrs::V2_ISA_1E2;
+
+  if (STI.hasFeature(CSKY::Has2E3))
+    ISAFlag |= CSKYAttrs::V2_ISA_2E3;
+
+  if (STI.hasFeature(CSKY::HasMP))
+    ISAFlag |= CSKYAttrs::ISA_MP;
+
+  if (STI.hasFeature(CSKY::Has3E3r1))
+    ISAFlag |= CSKYAttrs::V2_ISA_3E3R1;
+
+  if (STI.hasFeature(CSKY::Has3r1E3r2))
+    ISAFlag |= CSKYAttrs::V2_ISA_3E3R2;
+
+  if (STI.hasFeature(CSKY::Has3r2E3r3))
+    ISAFlag |= CSKYAttrs::V2_ISA_3E3R3;
+
+  if (STI.hasFeature(CSKY::Has3E7))
+    ISAFlag |= CSKYAttrs::V2_ISA_3E7;
+
+  if (STI.hasFeature(CSKY::HasMP1E2))
+    ISAFlag |= CSKYAttrs::ISA_MP_1E2;
+
+  if (STI.hasFeature(CSKY::Has7E10))
+    ISAFlag |= CSKYAttrs::V2_ISA_7E10;
+
+  if (STI.hasFeature(CSKY::Has10E60))
+    ISAFlag |= CSKYAttrs::V2_ISA_10E60;
+
+  if (STI.hasFeature(CSKY::FeatureTrust))
+    ISAFlag |= CSKYAttrs::ISA_TRUST;
+
+  if (STI.hasFeature(CSKY::FeatureJAVA))
+    ISAFlag |= CSKYAttrs::ISA_JAVA;
+
+  if (STI.hasFeature(CSKY::FeatureCache))
+    ISAFlag |= CSKYAttrs::ISA_CACHE;
+
+  if (STI.hasFeature(CSKY::FeatureNVIC))
+    ISAFlag |= CSKYAttrs::ISA_NVIC;
+
+  if (STI.hasFeature(CSKY::FeatureDSP))
+    ISAFlag |= CSKYAttrs::ISA_DSP;
+
+  if (STI.hasFeature(CSKY::HasDSP1E2))
+    ISAFlag |= CSKYAttrs::ISA_DSP_1E2;
+
+  if (STI.hasFeature(CSKY::HasDSPE60))
+    ISAFlag |= CSKYAttrs::V2_ISA_DSPE60;
+
+  if (STI.hasFeature(CSKY::FeatureDSPV2))
+    ISAFlag |= CSKYAttrs::ISA_DSP_ENHANCE;
+
+  if (STI.hasFeature(CSKY::FeatureDSP_Silan))
+    ISAFlag |= CSKYAttrs::ISA_DSP_SILAN;
+
+  if (STI.hasFeature(CSKY::FeatureVDSPV1_128))
+    ISAFlag |= CSKYAttrs::ISA_VDSP;
+
+  if (STI.hasFeature(CSKY::FeatureVDSPV2))
+    ISAFlag |= CSKYAttrs::ISA_VDSP_2;
+
+  if (STI.hasFeature(CSKY::HasVDSP2E3))
+    ISAFlag |= CSKYAttrs::ISA_VDSP_2E3;
+
+  if (STI.hasFeature(CSKY::HasVDSP2E60F))
+    ISAFlag |= CSKYAttrs::ISA_VDSP_2E60F;
+
+  emitAttribute(CSKYAttrs::CSKY_ISA_FLAGS, ISAFlag);
+
+  unsigned ISAExtFlag = 0;
+  if (STI.hasFeature(CSKY::HasFLOATE1))
+    ISAExtFlag |= CSKYAttrs::ISA_FLOAT_E1;
+
+  if (STI.hasFeature(CSKY::HasFLOAT1E2))
+    ISAExtFlag |= CSKYAttrs::ISA_FLOAT_1E2;
+
+  if (STI.hasFeature(CSKY::HasFLOAT1E3))
+    ISAExtFlag |= CSKYAttrs::ISA_FLOAT_1E3;
+
+  if (STI.hasFeature(CSKY::HasFLOAT3E4))
+    ISAExtFlag |= CSKYAttrs::ISA_FLOAT_3E4;
+
+  if (STI.hasFeature(CSKY::HasFLOAT7E60))
+    ISAExtFlag |= CSKYAttrs::ISA_FLOAT_7E60;
+
+  emitAttribute(CSKYAttrs::CSKY_ISA_EXT_FLAGS, ISAExtFlag);
+
+  if (STI.hasFeature(CSKY::FeatureDSP))
+    emitAttribute(CSKYAttrs::CSKY_DSP_VERSION,
+                  CSKYAttrs::DSP_VERSION_EXTENSION);
+  if (STI.hasFeature(CSKY::FeatureDSPV2))
+    emitAttribute(CSKYAttrs::CSKY_DSP_VERSION, CSKYAttrs::DSP_VERSION_2);
+
+  if (STI.hasFeature(CSKY::FeatureVDSPV2))
+    emitAttribute(CSKYAttrs::CSKY_VDSP_VERSION, CSKYAttrs::VDSP_VERSION_2);
+
+  if (STI.hasFeature(CSKY::FeatureFPUV2_SF) ||
+      STI.hasFeature(CSKY::FeatureFPUV2_DF))
+    emitAttribute(CSKYAttrs::CSKY_FPU_VERSION, CSKYAttrs::FPU_VERSION_2);
+  else if (STI.hasFeature(CSKY::FeatureFPUV3_HF) ||
+           STI.hasFeature(CSKY::FeatureFPUV3_SF) ||
+           STI.hasFeature(CSKY::FeatureFPUV3_DF))
+    emitAttribute(CSKYAttrs::CSKY_FPU_VERSION, CSKYAttrs::FPU_VERSION_3);
+
+  bool hasAnyFloatExt = STI.hasFeature(CSKY::FeatureFPUV2_SF) ||
+                        STI.hasFeature(CSKY::FeatureFPUV2_DF) ||
+                        STI.hasFeature(CSKY::FeatureFPUV3_HF) ||
+                        STI.hasFeature(CSKY::FeatureFPUV3_SF) ||
+                        STI.hasFeature(CSKY::FeatureFPUV3_DF);
+
+  // The hard-float *ABI* (FP values in FP registers at call boundaries) is
+  // selected by the "float-abi" module flag, resolved by the caller; it does
+  // not depend on ModeHardFloat, which only distinguishes the soft-float ABI
+  // that still uses hard-float instructions (SOFTFP) from pure soft float.
+  if (hasAnyFloatExt && HardFloatABI)
+    emitAttribute(CSKYAttrs::CSKY_FPU_ABI, CSKYAttrs::FPU_ABI_HARD);
+  else if (hasAnyFloatExt && STI.hasFeature(CSKY::ModeHardFloat))
+    emitAttribute(CSKYAttrs::CSKY_FPU_ABI, CSKYAttrs::FPU_ABI_SOFTFP);
+  else
+    emitAttribute(CSKYAttrs::CSKY_FPU_ABI, CSKYAttrs::FPU_ABI_SOFT);
+
+  unsigned HardFPFlag = 0;
+  if (STI.hasFeature(CSKY::FeatureFPUV3_HF))
+    HardFPFlag |= CSKYAttrs::FPU_HARDFP_HALF;
+  if (STI.hasFeature(CSKY::FeatureFPUV2_SF) ||
+      STI.hasFeature(CSKY::FeatureFPUV3_SF))
+    HardFPFlag |= CSKYAttrs::FPU_HARDFP_SINGLE;
+  if (STI.hasFeature(CSKY::FeatureFPUV2_DF) ||
+      STI.hasFeature(CSKY::FeatureFPUV3_DF))
+    HardFPFlag |= CSKYAttrs::FPU_HARDFP_DOUBLE;
+
+  if (HardFPFlag != 0) {
+    emitAttribute(CSKYAttrs::CSKY_FPU_DENORMAL, CSKYAttrs::NEEDED);
+    emitAttribute(CSKYAttrs::CSKY_FPU_EXCEPTION, CSKYAttrs::NEEDED);
+    emitTextAttribute(CSKYAttrs::CSKY_FPU_NUMBER_MODULE, "IEEE 754");
+    emitAttribute(CSKYAttrs::CSKY_FPU_HARDFP, HardFPFlag);
+  }
+}
 
 void CSKYTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void CSKYTargetStreamer::emitTextAttribute(unsigned Attribute,

@@ -1,0 +1,9 @@
+# --help smoke test for clang-ssaf-src-edit-merge.
+
+# RUN: clang-ssaf-src-edit-merge --help 2>&1 | FileCheck %s
+
+# CHECK: clang-ssaf-src-edit-merge
+# CHECK: USAGE
+# CHECK-SAME: input.yaml
+# CHECK: -o
+# CHECK-SAME: Output path for the merged YAML

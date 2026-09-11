@@ -11,7 +11,7 @@ add_entrypoint_object(
     -fomit-frame-pointer
 )
 
-if (TARGET libc.src.setjmp.sigsetjmp_epilogue)
+if(TARGET libc.src.setjmp.sigsetjmp_epilogue)
   add_entrypoint_object(
     sigsetjmp
     SRCS

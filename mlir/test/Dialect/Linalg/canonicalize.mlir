@@ -1,5 +1,114 @@
 // RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file | FileCheck %s
 
+// CHECK-LABEL: func.func @reduce_broadcast_maxsi(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_maxsi(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<-2147483648> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %max = arith.maxsi %in, %out : i32
+      linalg.yield %max : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_minui(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi8>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi8>
+func.func @reduce_broadcast_minui(%input: tensor<3xi8>,
+    %broadcast_init: tensor<2x3x4xi8>)
+    -> tensor<3xi8> {
+  %reduce_init = arith.constant dense<255> : tensor<3xi8>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi8>)
+      outs(%broadcast_init : tensor<2x3x4xi8>) dimensions = [0, 2]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<2x3x4xi8>)
+      outs(%reduce_init : tensor<3xi8>) dimensions = [0, 2]
+      (%in: i8, %out: i8) {
+      %min = arith.minui %in, %out : i8
+      linalg.yield %min : i8
+  }
+  return %result : tensor<3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_wrong_dimension
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_wrong_dimension(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>, %reduce_init: tensor<4xi32>)
+    -> tensor<4xi32> {
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<4xi32>) dimensions = [0]
+      (%in: i32, %out: i32) {
+      %max = arith.maxsi %in, %out : i32
+      linalg.yield %max : i32
+  }
+  return %result : tensor<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_non_identity_init(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<0> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %max = arith.maxsi %in, %out : i32
+      linalg.yield %max : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_empty_dimension
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_empty_dimension(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x0xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<-2147483648> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x0xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x0xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %max = arith.maxsi %in, %out : i32
+      linalg.yield %max : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_cast(
 func.func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
   %c0 = arith.constant 0 : index
@@ -1219,6 +1328,23 @@ func.func @broadcast_non_splat_constant(%init: tensor<2x3xf32>) -> tensor<2x3xf3
   return %0 : tensor<2x3xf32>
 }
 
+
+// -----
+
+// A splat of a complex element type yields an ArrayAttr, which is not a
+// TypedAttr, so the fold must decline instead of asserting in the cast.
+// CHECK-LABEL: @broadcast_splat_constant_complex
+//       CHECK:   %[[BROADCAST:.+]] = linalg.broadcast
+//       CHECK:   return %[[BROADCAST]] : tensor<2x3xcomplex<f32>>
+func.func @broadcast_splat_constant_complex(%init: tensor<2x3xcomplex<f32>>)
+    -> tensor<2x3xcomplex<f32>> {
+  %cst = arith.constant dense<(1.000000e+00,2.000000e+00)> : tensor<3xcomplex<f32>>
+  %0 = linalg.broadcast
+      ins(%cst: tensor<3xcomplex<f32>>)
+      outs(%init: tensor<2x3xcomplex<f32>>)
+      dimensions = [0]
+  return %0 : tensor<2x3xcomplex<f32>>
+}
 // -----
 
 // CHECK-LABEL: @broadcast_broadcast_fold
@@ -1350,6 +1476,23 @@ func.func @transpose_non_splat_constant(%init: tensor<3x2xf32>) -> tensor<3x2xf3
   func.return %transpose : tensor<3x2xf32>
 }
 
+
+// -----
+
+// A splat of a complex element type yields an ArrayAttr, which is not a
+// TypedAttr, so the fold must decline instead of asserting in the cast.
+// CHECK-LABEL: @transpose_splat_constant_complex
+//       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose
+//       CHECK:   return %[[TRANSPOSE]] : tensor<3x2xcomplex<f32>>
+func.func @transpose_splat_constant_complex(%init: tensor<3x2xcomplex<f32>>)
+    -> tensor<3x2xcomplex<f32>> {
+  %cst = arith.constant dense<(1.000000e+00,2.000000e+00)> : tensor<2x3xcomplex<f32>>
+  %transpose = linalg.transpose
+      ins(%cst: tensor<2x3xcomplex<f32>>)
+      outs(%init: tensor<3x2xcomplex<f32>>)
+      permutation = [1, 0]
+  func.return %transpose : tensor<3x2xcomplex<f32>>
+}
 // -----
 
 func.func @transpose_transpose_cancel(%input: tensor<5x4x3xf32>,

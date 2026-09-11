@@ -61,8 +61,9 @@ HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
   switch (Inst.getOpcode()) {
   // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
   case AMDGPU::GLOBAL_INV:
-    return HWEvents::GLOBAL_INV_ACCESS; // tracked using loadcnt, but doesn't
-                                        // write VGPRs
+  case AMDGPU::BUFFER_INV:
+    return HWEvents::VMEM_INV_ACCESS; // tracked using loadcnt/vmcnt, but
+                                      // doesn't write VGPRs
   case AMDGPU::GLOBAL_WB:
   case AMDGPU::GLOBAL_WBINV:
     return HWEvents::VMEM_WRITE_ACCESS; // tracked using storecnt
@@ -141,10 +142,10 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
 
   if (SIInstrInfo::isVMEM(Inst) &&
       (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
+       Inst.getOpcode() == AMDGPU::BUFFER_INV ||
        Inst.getOpcode() == AMDGPU::BUFFER_WBL2)) {
-    // BUFFER_WBL2 is included here because unlike invalidates, has to be
-    // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
-    // completed.
+    // BUFFER_INV increments VM_CNT. BUFFER_WBL2 also needs tracking because an
+    // S_WAITCNT vmcnt(0) must follow it to ensure the writeback has completed.
     HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
     if (ST.hasWaitXcnt())
       E |= HWEvents::VMEM_GROUP;

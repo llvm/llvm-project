@@ -1,7 +1,7 @@
 ; RUN: opt %s -safepoint-ir-verifier-print-only -verify-safepoint-ir -S 2>&1 | FileCheck %s
 
 ; CHECK:      Illegal use of unrelocated value found!
-; CHECK-NEXT: Def:   %base_phi4 = phi ptr addrspace(1) [ %addr98.relocated, %not_zero146 ], [ %base_phi2, %bci_37-aload ], !is_base_value !0
+; CHECK-NEXT: Def:   %base_phi4 = phi ptr addrspace(1) [ %addr98.relocated, %not_zero146 ], [ %base_phi2, %bci_37-aload ], !is_base_value !{{[0-9]+}}
 ; CHECK-NEXT: Use:   %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i32 ()) undef, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %base_phi1, ptr addrspace(1) %base_phi4, ptr addrspace(1) %relocated4, ptr addrspace(1) %relocated7) ]
 
 

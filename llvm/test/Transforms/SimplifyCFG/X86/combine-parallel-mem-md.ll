@@ -52,5 +52,5 @@ for.end:                                          ; preds = %cond.end
 attributes #0 = { norecurse nounwind uwtable }
 
 !0 = distinct !{!0, !1, !{!"llvm.loop.parallel_accesses", !10}}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.enable"}
 !10 = distinct !{}

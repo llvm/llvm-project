@@ -351,7 +351,6 @@ CODEGENOPT(TimeTrace         , 1, 0, Benign) ///< Set when -ftime-trace is enabl
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500, Benign) ///< Minimum time granularity (in microseconds),
                                                         ///< traced by time profiler
 CODEGENOPT(InterchangeLoops  , 1, 0, Benign) ///< Run loop-interchange.
-CODEGENOPT(EnableNewPMCodeGen, 1, 0, Benign) ///< Use NewPM for the CodeGen pipeline.
 CODEGENOPT(FuseLoops         , 1, 0, Benign) ///< Run loop-fusion.
 CODEGENOPT(UnrollLoops       , 1, 0, Benign) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0, Benign) ///< Control whether loops are rerolled.
@@ -469,6 +468,9 @@ CODEGENOPT(KeepStaticConsts, 1, 0, Benign)
 /// Whether to emit all variables that have a persistent storage duration,
 /// including global, static and thread local variables.
 CODEGENOPT(KeepPersistentStorageVariables, 1, 0, Benign)
+
+/// Whether to emit inline functions into the object file, even if inlined into all callers.
+CODEGENOPT(KeepInlineFunctions, 1, 0, Benign)
 
 /// Whether to follow the AAPCS enforcing at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0, Benign)

@@ -106,8 +106,8 @@ define void @ld_div3_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <2 x i64> [[TMP8]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP10]], align 8
@@ -157,8 +157,8 @@ define void @ld_div1_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <2 x i64> [[TMP10]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
@@ -259,8 +259,8 @@ define void @ld_div3_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <2 x i64> [[TMP10]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
@@ -314,8 +314,8 @@ define void @ld_div1_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <2 x i64> [[TMP10]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
@@ -368,8 +368,8 @@ define void @ld_div2_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <2 x i64> [[TMP10]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
@@ -508,8 +508,8 @@ define void @ld_div2_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP8]], i64 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP8]], i64 [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <2 x i64> [[TMP9]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP11]], align 8
@@ -557,8 +557,8 @@ define void @ld_div3_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP8]], i64 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP8]], i64 [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <2 x i64> [[TMP9]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP11]], align 8
@@ -608,8 +608,8 @@ define void @ld_div1_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <2 x i64> [[TMP11]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
@@ -710,8 +710,8 @@ define void @ld_div3_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <2 x i64> [[TMP11]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
@@ -765,8 +765,8 @@ define void @ld_div1_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <2 x i64> [[TMP11]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
@@ -820,8 +820,8 @@ define void @ld_div2_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <2 x i64> [[TMP11]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]

@@ -1,0 +1,54 @@
+; RUN: %if spirv-tools %{ spirv-as --target-env spv1.6 %s -o - | mlir-translate --deserialize-spirv - -o - | FileCheck %s %}
+
+; CHECK:      spirv.Tosa.Conv2D
+; CHECK-SAME: pad = [0, 0, 0, 0]
+; CHECK-SAME: stride = [1, 1]
+; CHECK-SAME: dilation = [1, 1]
+
+               OpCapability Shader
+               OpCapability TensorsARM
+               OpCapability GraphARM
+               OpCapability ReplicatedCompositesEXT
+               OpExtension "SPV_ARM_tensors"
+               OpExtension "SPV_ARM_graph"
+               OpExtension "SPV_EXT_replicated_composites"
+       %tosa = OpExtInstImport "TOSA.001000.1"
+               OpMemoryModel Logical GLSL450
+
+       %bool = OpTypeBool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %uint_4 = OpConstant %uint 4
+      %float = OpTypeFloat 32
+    %float_0 = OpConstant %float 0
+
+    %array_1 = OpTypeArray %uint %uint_1
+    %array_2 = OpTypeArray %uint %uint_2
+    %array_4 = OpTypeArray %uint %uint_4
+    %shape_1 = OpConstantComposite %array_1 %uint_1
+    %shape_2 = OpConstantComposite %array_1 %uint_2
+    %shape_4 = OpConstantComposite %array_1 %uint_4
+%shape_1x1x1x1 = OpConstantComposite %array_4 %uint_1 %uint_1 %uint_1 %uint_1
+
+    %uint_s2 = OpTypeTensorARM %uint %uint_1 %shape_2
+    %uint_s4 = OpTypeTensorARM %uint %uint_1 %shape_4
+   %float_s1 = OpTypeTensorARM %float %uint_1 %shape_1
+%float_s1x1x1x1 = OpTypeTensorARM %float %uint_4 %shape_1x1x1x1
+
+       %pad = OpConstantComposite %uint_s4 %uint_0 %uint_0 %uint_0 %uint_0
+    %stride = OpConstantCompositeReplicateEXT %uint_s2 %uint_1
+  %dilation = OpConstantComposite %uint_s2 %uint_1 %uint_1
+ %zero_point = OpConstantComposite %float_s1 %float_0
+   %weights = OpGraphConstantARM %float_s1x1x1x1 0
+      %bias = OpGraphConstantARM %float_s1 1
+
+ %graph_type = OpTypeGraphARM 1 %float_s1x1x1x1 %float_s1x1x1x1
+      %graph = OpGraphARM %graph_type
+      %input = OpGraphInputARM %float_s1x1x1x1 %uint_0
+     %output = OpExtInst %float_s1x1x1x1 %tosa CONV2D %pad %stride %dilation %uint_3 %false %input %weights %bias %zero_point %zero_point
+               OpGraphSetOutputARM %output %uint_0
+               OpGraphEndARM

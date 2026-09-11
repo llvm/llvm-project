@@ -50,7 +50,6 @@ class MachineLoop;
 class MachineLoopInfo;
 class MachineMemOperand;
 class MachineModuleInfo;
-class MachineOptimizationRemarkEmitter;
 class MachineRegisterInfo;
 class MCAsmInfo;
 class MCInst;
@@ -193,9 +192,9 @@ public:
            (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
-  /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
-  /// of instruction rematerialization or sinking.
-  virtual bool isIgnorableUse(const MachineOperand &MO) const {
+  /// Given operand \p OpIdx of \p MI is a PhysReg use, return if it can be
+  /// ignored for the purpose of instruction rematerialization or sinking.
+  virtual bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
     return false;
   }
 
@@ -744,6 +743,19 @@ public:
     return true;
   }
 
+  bool analyzeBranch(const MachineBasicBlock &MBB,
+                     const MachineBasicBlock *&TBB,
+                     const MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond) const {
+    MachineBasicBlock *TempTBB = nullptr, *TempFBB = nullptr;
+    bool NotUnderstandable = analyzeBranch(const_cast<MachineBasicBlock &>(MBB),
+                                           TempTBB, TempFBB, Cond,
+                                           /*AllowModify=*/false);
+    TBB = TempTBB;
+    FBB = TempFBB;
+    return NotUnderstandable;
+  }
+
   /// Represents a predicate at the MachineFunction level.  The control flow a
   /// MachineBranchPredicate represents is:
   ///
@@ -898,11 +910,8 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  /// \p ORE, if non-null, may be used by targets to emit optimization remarks
-  /// explaining why the loop was rejected for pipelining.
-  virtual std::unique_ptr<PipelinerLoopInfo> analyzeLoopForPipelining(
-      MachineBasicBlock *LoopBB,
-      MachineOptimizationRemarkEmitter *ORE = nullptr) const {
+  virtual std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
     return nullptr;
   }
 
@@ -2261,8 +2270,9 @@ public:
   ///
   /// If an entire block is mappable, then its range is [MBB.begin(), MBB.end())
   ///
-  /// All instructions not present in an outlinable range are considered
-  /// illegal.
+  /// All non-debug instructions not present in an outlinable range are
+  /// considered illegal. Debug instructions are ignored wherever they appear,
+  /// so each gap between ranges must contain a non-debug instruction.
   virtual SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const {

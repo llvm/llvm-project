@@ -11,7 +11,8 @@
 #define _LIBCPP_STD_STREAM_H
 
 #include <__config>
-#include <__locale>
+#include <__locale_dir/codecvt.h>
+#include <__locale_dir/locale.h>
 #include <cstdio>
 #include <istream>
 #include <ostream>

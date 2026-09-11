@@ -178,9 +178,10 @@ bool MagicNumbersCheck::isConstant(const MatchFinder::MatchResult &Result,
 
         // Don't warn on string user defined literals:
         // std::string s = "Hello World"s;
-        if (const auto *UDL = Parent.get<UserDefinedLiteral>())
-          if (UDL->getLiteralOperatorKind() == UserDefinedLiteral::LOK_String)
-            return true;
+        if (const auto *UDL = Parent.get<UserDefinedLiteral>();
+            UDL &&
+            UDL->getLiteralOperatorKind() == UserDefinedLiteral::LOK_String)
+          return true;
 
         return false;
       });

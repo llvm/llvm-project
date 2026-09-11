@@ -77,7 +77,7 @@ vectorized, for instance being unrolled.
       br i1 %exitcond, label %for.exit, label %for.header, !llvm.loop !0
     ...
     !0 = distinct !{!0, !1, !2}
-    !1 = !{!"llvm.loop.vectorize.enable", i1 true}
+    !1 = !{!"llvm.loop.vectorize.enable"}
     !2 = !{!"llvm.loop.disable_nonforced"}
 
 After a transformation is applied, follow-up attributes are set on the
@@ -95,7 +95,7 @@ then unrolled.
 .. code-block:: llvm
 
     !0 = distinct !{!0, !1, !2, !3}
-    !1 = !{!"llvm.loop.vectorize.enable", i1 true}
+    !1 = !{!"llvm.loop.vectorize.enable"}
     !2 = !{!"llvm.loop.disable_nonforced"}
     !3 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.unroll.enable"}}
 
@@ -128,7 +128,7 @@ Loop Vectorization and Interleaving
 
 Loop vectorization and interleaving is interpreted as a single
 transformation. It is interpreted as forced if
-``!{"llvm.loop.vectorize.enable", i1 true}`` is set.
+``!{"llvm.loop.vectorize.enable"}`` is set.
 
 Assuming the pre-vectorization loop is
 

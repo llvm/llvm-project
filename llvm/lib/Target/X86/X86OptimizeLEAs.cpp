@@ -326,8 +326,8 @@ bool X86OptimizeLEAsImpl::chooseBestLEA(
     const SmallVectorImpl<MachineInstr *> &List, const MachineInstr &MI,
     MachineInstr *&BestLEA, int64_t &AddrDispShift, int &Dist) {
   const MCInstrDesc &Desc = MI.getDesc();
-  int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags) +
-                X86II::getOperandBias(Desc);
+  int MemOpNo = X86II::getMemoryOperandIdx(Desc);
+  assert(MemOpNo >= 0 && "Expected a memory operand");
 
   BestLEA = nullptr;
 
@@ -428,15 +428,12 @@ bool X86OptimizeLEAsImpl::isReplaceable(const MachineInstr &First,
     MachineInstr &MI = *MO.getParent();
 
     // Get the number of the first memory operand.
-    const MCInstrDesc &Desc = MI.getDesc();
-    int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags);
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
 
     // If the use instruction has no memory operand - the LEA is not
     // replaceable.
     if (MemOpNo < 0)
       return false;
-
-    MemOpNo += X86II::getOperandBias(Desc);
 
     // If the address base of the use instruction is not the LEA def register -
     // the LEA is not replaceable.
@@ -492,14 +489,11 @@ bool X86OptimizeLEAsImpl::removeRedundantAddrCalc(MemOpMap &LEAs) {
       continue;
 
     // Get the number of the first memory operand.
-    const MCInstrDesc &Desc = MI.getDesc();
-    int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags);
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
 
     // If instruction has no memory operand - skip it.
     if (MemOpNo < 0)
       continue;
-
-    MemOpNo += X86II::getOperandBias(Desc);
 
     // Do not call chooseBestLEA if there was no matching LEA
     auto Insns = LEAs.find(getMemOpKey(MI, MemOpNo));
@@ -653,10 +647,8 @@ bool X86OptimizeLEAsImpl::removeRedundantLEAs(MemOpMap &LEAs) {
           }
 
           // Get the number of the first memory operand.
-          const MCInstrDesc &Desc = MI.getDesc();
-          int MemOpNo =
-              X86II::getMemoryOperandNo(Desc.TSFlags) +
-              X86II::getOperandBias(Desc);
+          int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+          assert(MemOpNo >= 0 && "Expected a memory operand");
 
           // Update address base.
           MO.setReg(FirstVReg);

@@ -53,7 +53,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -806,8 +805,7 @@ public:
 } // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-HexagonInstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+HexagonInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // We really "analyze" only hardware loops right now.
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
 

@@ -16,7 +16,6 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -29,7 +28,6 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -742,9 +740,14 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
 
   // TODO: Handle other numerator values with arcp.
   if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
-    // Add in the sqrt flags.
+    // Add sqrt flags, but require both ninf and nsz from the div and the
+    // sqrt: sqrt's ninf/nsz don't say anything about the quotient.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(DivFMF | SqrtFMF);
+    FastMathFlags NewFMF = DivFMF | SqrtFMF;
+    FastMathFlags ValueFMF = FastMathFlags::intersectValue(DivFMF, SqrtFMF);
+    NewFMF.setNoInfs(ValueFMF.noInfs());
+    NewFMF.setNoSignedZeros(ValueFMF.noSignedZeros());
+    Builder.setFastMathFlags(NewFMF);
 
     if (Den->getType()->isFloatTy()) {
       if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) ||
@@ -1996,14 +1999,23 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
-  // Intrinsic doesn't support vectors, also it seems that it's often difficult
-  // to prove that a vector cannot have any nulls in it so it's unclear if it's
-  // worth supporting.
+  // TODO: This is target-independent reasoning about the source pointer being
+  // non-null, and would fit better in a generic pass such as
+  // AggressiveInstCombine. It lives here for now because proving the source is
+  // not the null value requires knowing the numeric null pointer value of the
+  // source address space, which is not yet a first-class IR concept.
+
+  // If the flag is already set there is nothing to do.
+  if (I.hasNonNull())
+    return false;
+
+  // It is often difficult to prove that a vector of pointers cannot have any
+  // nulls in it, so it's unclear if it's worth supporting.
   if (I.getType()->isVectorTy())
     return false;
 
-  // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
-  // This is only worthwhile for casts from/to priv/local to flat.
+  // The nonnull flag only affects the lowering of casts from/to priv/local to
+  // flat, so only bother proving non-null for those.
   const unsigned SrcAS = I.getSrcAddressSpace();
   const unsigned DstAS = I.getDestAddressSpace();
 
@@ -2024,11 +2036,7 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
       }))
     return false;
 
-  IRBuilder<> B(&I);
-  auto *Intrin = B.CreateIntrinsic(
-      I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
-  I.replaceAllUsesWith(Intrin);
-  DeadVals.push_back(&I);
+  I.setNonNull();
   return true;
 }
 
@@ -2166,7 +2174,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
 // Expand llvm.sqrt.f32 calls with !fpmath metadata in a semi-fast way.
 bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   Type *Ty = Sqrt.getType()->getScalarType();
-  if (!Ty->isFloatTy() && (!Ty->isHalfTy() || ST.has16BitInsts()))
+  if (!Ty->isFloatTy())
     return false;
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&Sqrt);

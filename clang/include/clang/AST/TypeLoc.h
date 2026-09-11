@@ -2463,10 +2463,10 @@ public:
     return nullptr;
   }
 
-  TemplateDecl *getNamedConcept() const {
+  TemplateName getNamedConcept() const {
     if (const auto *CR = getConceptReference())
       return CR->getNamedConcept();
-    return nullptr;
+    return TemplateName();
   }
 
   DeclarationNameInfo getConceptNameInfo() const {

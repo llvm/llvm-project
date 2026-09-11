@@ -44,7 +44,6 @@ public:
     HII = HST->getInstrInfo();
     HRI = HST->getRegisterInfo();
     SelectionDAGISel::runOnMachineFunction(MF);
-    updateAligna();
     return true;
   }
 
@@ -149,9 +148,6 @@ private:
   void SelectHvxShuffle(SDNode *N);
   void SelectHvxRor(SDNode *N);
   void SelectHvxVAlign(SDNode *N);
-
-  // Function postprocessing.
-  void updateAligna();
 
   SmallDenseMap<SDNode *,int> RootWeights;
   SmallDenseMap<SDNode *,int> RootHeights;

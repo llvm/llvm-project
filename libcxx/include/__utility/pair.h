@@ -31,8 +31,8 @@
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>
@@ -96,9 +96,7 @@ struct pair
   _T2 second;
 
   using __trivially_relocatable _LIBCPP_NODEBUG =
-      __conditional_t<__libcpp_is_trivially_relocatable<_T1>::value && __libcpp_is_trivially_relocatable<_T2>::value,
-                      pair,
-                      void>;
+      __conditional_t<__is_trivially_relocatable_v<_T1> && __is_trivially_relocatable_v<_T2>, pair, void>;
 
   pair(pair const&) = default;
   pair(pair&&)      = default;

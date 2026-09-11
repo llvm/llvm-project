@@ -633,20 +633,18 @@ public:
         Ptr, Val, getInt64(Size), Align(Alignment), ElementSize, AAInfo);
   }
 
-  LLVM_ABI CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                  Value *AllocSize, Value *ArraySize,
+  LLVM_ABI CallInst *CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                  Value *ArraySize,
                                   ArrayRef<OperandBundleDef> OpB,
                                   Function *MallocF = nullptr,
                                   const Twine &Name = "");
 
   /// CreateMalloc - Generate the IR for a call to malloc:
-  /// 1. Compute the malloc call's argument as the specified type's size,
-  ///    possibly multiplied by the array size if the array size is not
-  ///    constant 1.
+  /// 1. Compute the malloc call's argument as AllocSize, possibly multiplied
+  ///    by the array size if the array size is not constant 1.
   /// 2. Call malloc with that argument.
-  LLVM_ABI CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                  Value *AllocSize, Value *ArraySize,
-                                  Function *MallocF = nullptr,
+  LLVM_ABI CallInst *CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                  Value *ArraySize, Function *MallocF = nullptr,
                                   const Twine &Name = "");
   /// Generate the IR for a call to the builtin free function.
   LLVM_ABI CallInst *CreateFree(Value *Source,
@@ -788,6 +786,16 @@ public:
   /// vector. This variant follows the NaN and signed zero semantic of
   /// llvm.minimum intrinsic.
   LLVM_ABI Value *CreateFPMinimumReduce(Value *Src);
+
+  /// Create a vector float maximum reduction intrinsic of the source
+  /// vector. This variant follows the NaN and signed zero semantic of
+  /// llvm.maximumnum intrinsic.
+  LLVM_ABI Value *CreateFPMaximumNumReduce(Value *Src);
+
+  /// Create a vector float minimum reduction intrinsic of the source
+  /// vector. This variant follows the NaN and signed zero semantic of
+  /// llvm.minimumnum intrinsic.
+  LLVM_ABI Value *CreateFPMinimumNumReduce(Value *Src);
 
   /// Create a lifetime.start intrinsic.
   LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr);
@@ -2245,9 +2253,16 @@ public:
     return CreateCast(Instruction::BitCast, V, DestTy, Name);
   }
 
-  Value *CreateAddrSpaceCast(Value *V, Type *DestTy,
-                             const Twine &Name = "") {
-    return CreateCast(Instruction::AddrSpaceCast, V, DestTy, Name);
+  Value *CreateAddrSpaceCast(Value *V, Type *DestTy, const Twine &Name = "",
+                             bool IsNonNull = false) {
+    if (V->getType() == DestTy)
+      return V;
+    if (Value *Folded = Folder.FoldCast(Instruction::AddrSpaceCast, V, DestTy))
+      return Folded;
+    Instruction *I = Insert(new AddrSpaceCastInst(V, DestTy), Name);
+    if (IsNonNull)
+      cast<AddrSpaceCastInst>(I)->setNonNull();
+    return I;
   }
 
   Value *CreateZExtOrBitCast(Value *V, Type *DestTy, const Twine &Name = "") {

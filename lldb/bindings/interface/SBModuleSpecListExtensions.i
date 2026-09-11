@@ -9,7 +9,8 @@ STRING_EXTENSION_OUTSIDE(SBModuleSpecList)
 
     def __iter__(self):
       '''Iterate over all ModuleSpecs in a lldb.SBModuleSpecList object.'''
-      return lldb_iter(self, 'GetSize', 'GetSpecAtIndex')
+      for i in range(self.GetSize()):
+          yield self.GetSpecAtIndex(i)
 
     def __getitem__(self, key):
       '''Access module specs by index or by file path.

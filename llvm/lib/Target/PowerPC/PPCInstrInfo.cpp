@@ -461,7 +461,7 @@ bool PPCInstrInfo::getFMAPatterns(MachineInstr &Root,
 
       MULInstrL = MRI->getVRegDef(MULRegL);
       MULInstrR = MRI->getVRegDef(MULRegR);
-      return true;
+      return MULInstrL && MULInstrR;
     }
     return false;
   };
@@ -3501,6 +3501,8 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       Register TrueReg = RI.lookThruCopyLike(Reg, MRI);
       if (TrueReg.isVirtual()) {
         MachineInstr *DefMIForTrueReg = MRI->getVRegDef(TrueReg);
+        if (!DefMIForTrueReg)
+          continue;
         if (DefMIForTrueReg->getOpcode() == PPC::LI ||
             DefMIForTrueReg->getOpcode() == PPC::LI8 ||
             DefMIForTrueReg->getOpcode() == PPC::ADDI ||
@@ -3890,6 +3892,8 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   if (!FoldingReg.isVirtual())
     return false;
   MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);
+  if (!SrcMI)
+    return false;
   if (SrcMI->getOpcode() != PPC::RLWINM &&
       SrcMI->getOpcode() != PPC::RLWINM_rec &&
       SrcMI->getOpcode() != PPC::RLWINM8 &&
@@ -5790,8 +5794,7 @@ public:
 } // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-PPCInstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+PPCInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // We really "analyze" only hardware loops right now.
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
   MachineBasicBlock *Preheader = *LoopBB->pred_begin();

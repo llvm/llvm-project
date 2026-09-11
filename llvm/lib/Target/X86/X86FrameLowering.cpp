@@ -123,9 +123,9 @@ bool X86FrameLowering::needsFrameIndexResolution(
 /// allocas or if frame pointer elimination is disabled.
 bool X86FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          TRI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-          MFI.isFrameAddressTaken() || MFI.hasOpaqueSPAdjustment() ||
+  return (MF.disableFramePointerElim() || TRI->hasStackRealignment(MF) ||
+          MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+          MFI.hasOpaqueSPAdjustment() ||
           MF.getInfo<X86MachineFunctionInfo>()->getForceFramePointer() ||
           MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall() ||
           MF.callsUnwindInit() || MF.hasEHFunclets() || MF.callsEHReturn() ||
@@ -414,11 +414,29 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
                               StackPtr),
                       StackPtr, false, Offset);
   } else {
-    const unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr)
-                               : getADDriOpcode(Uses64BitFramePtr);
+    unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr)
+                         : getADDriOpcode(Uses64BitFramePtr);
+    int64_t Imm = AbsOffset;
+    // Prefer `add rsp, -128` over `sub rsp, 128` (and vice versa in the
+    // epilogue): 128 is the one magnitude whose negation fits the
+    // sign-extended 8-bit immediate while the value itself does not, so the
+    // flipped operation is three bytes shorter. EFLAGS is dead here (this
+    // branch clobbers it anyway). Windows CFI epilogues keep the canonical
+    // ADD: v1 unwind info describes no epilogues, so the unwinder detects
+    // one by disassembling forward for `add rsp, imm` (prologues are
+    // delimited by SizeOfProlog and never disassembled). Unwind v2/v3 do
+    // describe epilogues, but X86WinEHUnwindV2 expects the ADD spelling
+    // too.
+    if (AbsOffset == 128 &&
+        !(InEpilogue &&
+          MBB.getParent()->getTarget().getMCAsmInfo().usesWindowsCFI())) {
+      Opc = IsSub ? getADDriOpcode(Uses64BitFramePtr)
+                  : getSUBriOpcode(Uses64BitFramePtr);
+      Imm = -128;
+    }
     MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
              .addReg(StackPtr)
-             .addImm(AbsOffset);
+             .addImm(Imm);
     MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
   }
   return MI;
@@ -1918,6 +1936,15 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
               .addImm(0)
               .setMIFlag(MachineInstr::FrameSetup);
         }
+
+        // Update CFA offset for the async-context push.
+        if (NeedsDwarfCFI && !ArgBaseReg.isValid()) {
+          BuildCFI(
+              MBB, MBBI, DL,
+              MCCFIInstruction::createAdjustCfaOffset(nullptr, -stackGrowth),
+              MachineInstr::FrameSetup);
+        }
+
         EmitSEHAfter(EmitSEHPushR14);
 
         BuildMI(MBB, MBBI, DL, TII.get(X86::LEA64r), FramePtr)
@@ -1927,6 +1954,17 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(8)
             .addUse(X86::NoRegister)
             .setMIFlag(MachineInstr::FrameSetup);
+
+        // Switch to an FP-relative CFA before adjusting RSP below.
+        if (NeedsDwarfCFI && !ArgBaseReg.isValid()) {
+          unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
+          BuildCFI(MBB, MBBI, DL,
+                   MCCFIInstruction::cfiDefCfa(nullptr, DwarfFramePtr,
+                                               -2 * stackGrowth +
+                                                   (int)TailCallArgReserveSize),
+                   MachineInstr::FrameSetup);
+        }
+
         BuildMI(MBB, MBBI, DL, TII.get(X86::SUB64ri32), X86::RSP)
             .addUse(X86::RSP)
             .addImm(8)
@@ -1956,7 +1994,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             BuildCFI(MBB, MBBI, DL,
                      MCCFIInstruction::createEscape(nullptr, CfaExpr.str()),
                      MachineInstr::FrameSetup);
-          } else {
+          } else if (!X86FI->hasSwiftAsyncContext()) {
             // Mark effective beginning of when frame pointer becomes valid.
             // Define the current CFA to use the EBP/RBP register.
             unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);

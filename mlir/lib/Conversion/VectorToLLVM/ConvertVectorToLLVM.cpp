@@ -45,10 +45,9 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
                        int64_t pos) {
   assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::InsertElementOp::create(rewriter, loc, llvmType, val1, val2,
                                          constant);
   }
@@ -60,10 +59,9 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
                         const LLVMTypeConverter &typeConverter, Location loc,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
   if (rank <= 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::ExtractElementOp::create(rewriter, loc, llvmType, val,
                                           constant);
   }
@@ -347,7 +345,7 @@ public:
     // Replace with the gather intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
         gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
-        adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
+        adaptor.getPassThru(), align);
     return success();
   }
 
@@ -405,8 +403,7 @@ public:
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
-        scatter, adaptor.getValueToStore(), ptrs, adaptor.getMask(),
-        rewriter.getI32IntegerAttr(align));
+        scatter, adaptor.getValueToStore(), ptrs, adaptor.getMask(), align);
     return success();
   }
 
@@ -483,8 +480,12 @@ class ReductionNeutralSIntMin {};
 class ReductionNeutralUIntMin {};
 class ReductionNeutralSIntMax {};
 class ReductionNeutralUIntMax {};
-class ReductionNeutralFPMin {};
-class ReductionNeutralFPMax {};
+class ReductionNeutralFPQNaN {};
+class ReductionNeutralFPNegQNaN {};
+class ReductionNeutralFPNegInf {};
+class ReductionNeutralFPPosInf {};
+class ReductionNeutralFPLowestFinite {};
+class ReductionNeutralFPLargestFinite {};
 
 /// Create the reduction neutral zero value.
 static Value createReductionNeutralValue(ReductionNeutralZero neutral,
@@ -560,8 +561,8 @@ static Value createReductionNeutralValue(ReductionNeutralUIntMax neutral,
                                             llvmType.getIntOrFloatBitWidth())));
 }
 
-/// Create the reduction neutral fp minimum value.
-static Value createReductionNeutralValue(ReductionNeutralFPMin neutral,
+/// Create the reduction neutral quiet NaN value.
+static Value createReductionNeutralValue(ReductionNeutralFPQNaN neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
   auto floatType = cast<FloatType>(llvmType);
@@ -572,8 +573,8 @@ static Value createReductionNeutralValue(ReductionNeutralFPMin neutral,
                                            /*Negative=*/false)));
 }
 
-/// Create the reduction neutral fp maximum value.
-static Value createReductionNeutralValue(ReductionNeutralFPMax neutral,
+/// Create the reduction neutral negative quiet NaN value.
+static Value createReductionNeutralValue(ReductionNeutralFPNegQNaN neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
   auto floatType = cast<FloatType>(llvmType);
@@ -582,6 +583,55 @@ static Value createReductionNeutralValue(ReductionNeutralFPMax neutral,
       rewriter.getFloatAttr(
           llvmType, llvm::APFloat::getQNaN(floatType.getFloatSemantics(),
                                            /*Negative=*/true)));
+}
+
+/// Create the reduction neutral negative infinity value.
+static Value createReductionNeutralValue(ReductionNeutralFPNegInf neutral,
+                                         ConversionPatternRewriter &rewriter,
+                                         Location loc, Type llvmType) {
+  auto floatType = cast<FloatType>(llvmType);
+  return LLVM::ConstantOp::create(
+      rewriter, loc, llvmType,
+      rewriter.getFloatAttr(llvmType,
+                            llvm::APFloat::getInf(floatType.getFloatSemantics(),
+                                                  /*Negative=*/true)));
+}
+
+/// Create the reduction neutral positive infinity value.
+static Value createReductionNeutralValue(ReductionNeutralFPPosInf neutral,
+                                         ConversionPatternRewriter &rewriter,
+                                         Location loc, Type llvmType) {
+  auto floatType = cast<FloatType>(llvmType);
+  return LLVM::ConstantOp::create(
+      rewriter, loc, llvmType,
+      rewriter.getFloatAttr(llvmType,
+                            llvm::APFloat::getInf(floatType.getFloatSemantics(),
+                                                  /*Negative=*/false)));
+}
+
+/// Create the reduction neutral lowest finite value.
+static Value createReductionNeutralValue(ReductionNeutralFPLowestFinite neutral,
+                                         ConversionPatternRewriter &rewriter,
+                                         Location loc, Type llvmType) {
+  auto floatType = cast<FloatType>(llvmType);
+  return LLVM::ConstantOp::create(
+      rewriter, loc, llvmType,
+      rewriter.getFloatAttr(
+          llvmType, llvm::APFloat::getLargest(floatType.getFloatSemantics(),
+                                              /*Negative=*/true)));
+}
+
+/// Create the reduction neutral largest finite value.
+static Value
+createReductionNeutralValue(ReductionNeutralFPLargestFinite neutral,
+                            ConversionPatternRewriter &rewriter, Location loc,
+                            Type llvmType) {
+  auto floatType = cast<FloatType>(llvmType);
+  return LLVM::ConstantOp::create(
+      rewriter, loc, llvmType,
+      rewriter.getFloatAttr(
+          llvmType, llvm::APFloat::getLargest(floatType.getFloatSemantics(),
+                                              /*Negative=*/false)));
 }
 
 /// Returns `accumulator` if it has a valid value. Otherwise, creates and
@@ -691,52 +741,6 @@ static Value createFPReductionComparisonOpLowering(
   }
 
   return result;
-}
-
-/// Reduction neutral classes for overloading
-class MaskNeutralFMaximum {};
-class MaskNeutralFMinimum {};
-
-/// Get the mask neutral floating point maximum value
-static llvm::APFloat
-getMaskNeutralValue(MaskNeutralFMaximum,
-                    const llvm::fltSemantics &floatSemantics) {
-  return llvm::APFloat::getSmallest(floatSemantics, /*Negative=*/true);
-}
-/// Get the mask neutral floating point minimum value
-static llvm::APFloat
-getMaskNeutralValue(MaskNeutralFMinimum,
-                    const llvm::fltSemantics &floatSemantics) {
-  return llvm::APFloat::getLargest(floatSemantics, /*Negative=*/false);
-}
-
-/// Create the mask neutral floating point MLIR vector constant
-template <typename MaskNeutral>
-static Value createMaskNeutralValue(ConversionPatternRewriter &rewriter,
-                                    Location loc, Type llvmType,
-                                    Type vectorType) {
-  const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
-  auto value = getMaskNeutralValue(MaskNeutral{}, floatSemantics);
-  auto denseValue = DenseElementsAttr::get(cast<ShapedType>(vectorType), value);
-  return LLVM::ConstantOp::create(rewriter, loc, vectorType, denseValue);
-}
-
-/// Lowers masked `fmaximum` and `fminimum` reductions using the non-masked
-/// intrinsics. It is a workaround to overcome the lack of masked intrinsics for
-/// `fmaximum`/`fminimum`.
-/// More information: https://github.com/llvm/llvm-project/issues/64940
-template <class LLVMRedIntrinOp, class MaskNeutral>
-static Value
-lowerMaskedReductionWithRegular(ConversionPatternRewriter &rewriter,
-                                Location loc, Type llvmType,
-                                Value vectorOperand, Value accumulator,
-                                Value mask, LLVM::FastmathFlagsAttr fmf) {
-  const Value vectorMaskNeutral = createMaskNeutralValue<MaskNeutral>(
-      rewriter, loc, llvmType, vectorOperand.getType());
-  const Value selectedVectorByMask = LLVM::SelectOp::create(
-      rewriter, loc, mask, vectorOperand, vectorMaskNeutral);
-  return createFPReductionComparisonOpLowering<LLVMRedIntrinOp>(
-      rewriter, loc, llvmType, selectedVectorByMask, accumulator, fmf);
 }
 
 template <class LLVMRedIntrinOp, class ReductionNeutral>
@@ -976,6 +980,8 @@ public:
     LLVM::FastmathFlagsAttr fmf = LLVM::FastmathFlagsAttr::get(
         reductionOp.getContext(),
         convertArithFastMathFlagsToLLVM(fMFAttr.getValue()));
+    const bool noInfs =
+        LLVM::bitEnumContainsAny(fmf.getValue(), LLVM::FastmathFlags::ninf);
 
     Value result;
     switch (kind) {
@@ -1027,24 +1033,37 @@ public:
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MINNUMF:
-      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMinOp,
-                                                      ReductionNeutralFPMax>(
-          rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+      result =
+          lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMinOp,
+                                                 ReductionNeutralFPNegQNaN>(
+              rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MAXNUMF:
       result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMaxOp,
-                                                      ReductionNeutralFPMin>(
+                                                      ReductionNeutralFPQNaN>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case CombiningKind::MAXIMUMF:
-      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fmaximum,
-                                               MaskNeutralFMaximum>(
-          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
+      // `ninf` promises no infinity reaches the reduction, so the neutral start
+      // value must stay finite.
+      result =
+          noInfs
+              ? lowerPredicatedReductionWithStartValue<
+                    LLVM::VPReduceFMaximumOp, ReductionNeutralFPLowestFinite>(
+                    rewriter, loc, llvmType, operand, acc, maskOp.getMask())
+              : lowerPredicatedReductionWithStartValue<
+                    LLVM::VPReduceFMaximumOp, ReductionNeutralFPNegInf>(
+                    rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case CombiningKind::MINIMUMF:
-      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fminimum,
-                                               MaskNeutralFMinimum>(
-          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
+      result =
+          noInfs
+              ? lowerPredicatedReductionWithStartValue<
+                    LLVM::VPReduceFMinimumOp, ReductionNeutralFPLargestFinite>(
+                    rewriter, loc, llvmType, operand, acc, maskOp.getMask())
+              : lowerPredicatedReductionWithStartValue<
+                    LLVM::VPReduceFMinimumOp, ReductionNeutralFPPosInf>(
+                    rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     }
 
@@ -1479,7 +1498,9 @@ public:
     if (llvm::any_of(*targetStrides, ShapedType::isDynamic))
       return failure();
 
-    auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
+    // The offset, size and stride fields of a memref descriptor use the
+    // converted index type.
+    Type indexTy = getTypeConverter()->getIndexType();
 
     // Create descriptor.
     auto desc = MemRefDescriptor::poison(rewriter, loc, llvmTargetDescriptorTy);
@@ -1491,23 +1512,19 @@ public:
     Value ptr = sourceMemRef.alignedPtr(rewriter, loc);
     desc.setAlignedPtr(rewriter, loc, ptr);
     // Fill offset 0.
-    auto attr = rewriter.getIntegerAttr(rewriter.getIndexType(), 0);
-    auto zero = LLVM::ConstantOp::create(rewriter, loc, int64Ty, attr);
-    desc.setOffset(rewriter, loc, zero);
+    desc.setOffset(rewriter, loc,
+                   LLVM::createIndexAttrConstant(rewriter, loc, indexTy, 0));
 
     // Fill size and stride descriptors in memref.
     for (const auto &indexedSize :
          llvm::enumerate(targetMemRefType.getShape())) {
       int64_t index = indexedSize.index();
-      auto sizeAttr =
-          rewriter.getIntegerAttr(rewriter.getIndexType(), indexedSize.value());
-      auto size = LLVM::ConstantOp::create(rewriter, loc, int64Ty, sizeAttr);
-      desc.setSize(rewriter, loc, index, size);
-      auto strideAttr = rewriter.getIntegerAttr(rewriter.getIndexType(),
-                                                (*targetStrides)[index]);
-      auto stride =
-          LLVM::ConstantOp::create(rewriter, loc, int64Ty, strideAttr);
-      desc.setStride(rewriter, loc, index, stride);
+      desc.setSize(rewriter, loc, index,
+                   LLVM::createIndexAttrConstant(rewriter, loc, indexTy,
+                                                 indexedSize.value()));
+      desc.setStride(rewriter, loc, index,
+                     LLVM::createIndexAttrConstant(rewriter, loc, indexTy,
+                                                   (*targetStrides)[index]));
     }
 
     rewriter.replaceOp(castOp, {desc});

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
@@ -51,7 +50,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
