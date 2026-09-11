@@ -68,6 +68,37 @@ TEST_F(RegexTest, EmptyPattern) {
   EXPECT_FALSE(r.match(""));
 }
 
+TEST_F(RegexTest, Escapes) {
+  Regex r1("\\n");
+  EXPECT_TRUE(r1.match("\n"));
+  EXPECT_FALSE(r1.match("n"));
+  EXPECT_FALSE(r1.match("\\n"));
+
+  Regex r2("\\t");
+  EXPECT_TRUE(r2.match("\t"));
+  EXPECT_FALSE(r2.match("t"));
+  EXPECT_FALSE(r2.match("\\t"));
+
+  Regex r3("\\x40");
+  EXPECT_TRUE(r3.match("\x40"));
+  EXPECT_FALSE(r3.match("x40"));
+  EXPECT_FALSE(r3.match("\\x40"));
+
+  Regex r4("A\\x41", Regex::IgnoreCase);
+  EXPECT_TRUE(r4.match("AA"));
+  EXPECT_FALSE(r4.match("Aa"));
+  EXPECT_TRUE(r4.match("aA"));
+  EXPECT_FALSE(r4.match("aa"));
+
+  Regex r5("\\q");
+  EXPECT_TRUE(r5.match("q"));
+  EXPECT_FALSE(r5.match("\\q"));
+
+  Regex r6("\\xjq");
+  EXPECT_TRUE(r6.match("xjq"));
+  EXPECT_FALSE(r6.match("\\xjq"));
+}
+
 TEST_F(RegexTest, Backreferences) {
   Regex r1("([a-z]+)_\\1");
   SmallVector<StringRef, 4> Matches;
@@ -138,6 +169,10 @@ TEST_F(RegexTest, Substitution) {
   EXPECT_EQ("a\nber", Regex("[0-9]+").sub("\\n", "a1234ber", &Error));
   EXPECT_EQ("", Error);
   EXPECT_EQ("a\tber", Regex("[0-9]+").sub("\\t", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+  EXPECT_EQ("a\100ber", Regex("[0-9]+").sub("\\x40", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+  EXPECT_EQ("axjqber", Regex("[0-9]+").sub("\\xjq", "a1234ber", &Error));
   EXPECT_EQ("", Error);
   EXPECT_EQ("ajber", Regex("[0-9]+").sub("\\j", "a1234ber", &Error));
   EXPECT_EQ("", Error);

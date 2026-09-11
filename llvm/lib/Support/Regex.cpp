@@ -12,6 +12,7 @@
 
 #include "llvm/Support/Regex.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "regex_impl.h"
@@ -200,6 +201,17 @@ std::string Regex::sub(StringRef Repl, StringRef String,
     case 'n':
       Res += '\n';
       Repl = Repl.substr(1);
+      break;
+
+      // Hex character escapes.
+    case 'x':
+      if (Repl.size() >= 3 && isHexDigit(Repl[1]) && isHexDigit(Repl[2])) {
+        Res += char(hexDigitValue(Repl[1]) * 16 + hexDigitValue(Repl[2]));
+        Repl = Repl.substr(3);
+      } else {
+        Res += Repl[0];
+        Repl = Repl.substr(1);
+      }
       break;
 
       // Decimal escapes are backreferences.

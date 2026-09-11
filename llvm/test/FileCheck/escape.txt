@@ -1,0 +1,5 @@
+; RUN: printf '\t\n\xC2\xA1\n' > %t.1
+; RUN: FileCheck --strict-whitespace --match-full-lines %s < %t.1
+
+CHECK:{{\t}}
+CHECK:{{\xC2\xA1}}
