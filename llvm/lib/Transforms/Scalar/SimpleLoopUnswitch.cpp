@@ -259,9 +259,8 @@ static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
 /// Check that all the LCSSA PHI nodes in the loop exit block have trivial
 /// incoming values along this edge.
 ///
-/// If \p UsedHeaderPHI is non-null, a header PHI incoming is accepted too and
-/// *UsedHeaderPHI is set; the caller then substitutes the header PHI's
-/// preheader (entry) value after unswitching.
+/// If \p UsedHeaderPHI is non-null, an incoming value that is a PHI in the
+/// loop header is accepted too. *UsedHeaderPHI is set to true if that happens.
 static bool areLoopExitPHIsLoopInvariant(const Loop &L,
                                          const BasicBlock &ExitingBB,
                                          const BasicBlock &ExitBB,
