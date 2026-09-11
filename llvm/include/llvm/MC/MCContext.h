@@ -494,6 +494,12 @@ public:
 
   LLVM_ABI MCSymbol *getOrCreateParentFrameOffsetSymbol(const Twine &FuncName);
 
+  /// Gets a symbol that will be defined to the mask that outlined helpers have
+  /// to apply to the establisher frame to undo the parent's dynamic stack
+  /// realignment.
+  LLVM_ABI MCSymbol *
+  getOrCreateParentFrameAlignMaskSymbol(const Twine &FuncName);
+
   LLVM_ABI MCSymbol *getOrCreateLSDASymbol(const Twine &FuncName);
 
   /// Get the symbol for \p Name, or null.

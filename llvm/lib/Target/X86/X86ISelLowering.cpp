@@ -26969,8 +26969,28 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   // Return EntryEBP + ParentFrameOffset for x64. This adjusts from RSP after
   // prologue to RBP in the parent function.
   const X86Subtarget &Subtarget = DAG.getSubtarget<X86Subtarget>();
-  if (Subtarget.is64Bit())
-    return DAG.getNode(ISD::ADD, dl, PtrVT, EntryEBP, ParentFrameOffset);
+  if (Subtarget.is64Bit()) {
+    SDValue ParentFP =
+        DAG.getNode(ISD::ADD, dl, PtrVT, EntryEBP, ParentFrameOffset);
+
+    MCSymbol *AlignMaskSym =
+        MF.getContext().getOrCreateParentFrameAlignMaskSymbol(
+            GlobalValue::dropLLVMManglingEscape(Fn->getName()));
+
+    SDValue AlignMask;
+    if (AlignMaskSym->isVariable())
+      if (const auto *CE =
+              dyn_cast<MCConstantExpr>(AlignMaskSym->getVariableValue())) {
+        if (CE->getValue() == -1)
+          return ParentFP;
+        AlignMask = DAG.getSignedConstant(CE->getValue(), dl, PtrVT);
+      }
+
+    if (!AlignMask)
+      AlignMask = DAG.getNode(ISD::LOCAL_RECOVER, dl, PtrVT,
+                              DAG.getMCSymbol(AlignMaskSym, PtrVT));
+    return DAG.getNode(ISD::AND, dl, PtrVT, ParentFP, AlignMask);
+  }
 
   int RegNodeSize = getSEHRegistrationNodeSize(Fn);
   // RegNodeBase = EntryEBP - RegNodeSize

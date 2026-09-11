@@ -45,6 +45,7 @@ return:                                           ; preds = %catch, %entry
 
 ; CHECK: .seh_handlerdata
 ; CHECK-NEXT: .Lfoo$parent_frame_offset = 32
+; CHECK-NEXT: .Lfoo$parent_frame_align_mask = -1
 ; CHECK-NEXT: .long   (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
 ; CHECK-NEXT: .long   .Ltmp0@IMGREL

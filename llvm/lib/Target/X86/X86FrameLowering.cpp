@@ -2348,6 +2348,12 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   if (IsWin64Prologue && TRI->hasStackRealignment(MF)) {
     assert(HasFP && "There should be a frame pointer if stack is realigned.");
     BuildStackAlignAND(MBB, MBBI, DL, SPOrEstablisher, MaxAlign);
+
+    if (!IsFunclet &&
+        (isAsynchronousEHPersonality(Personality) || MF.hasEHFunclets())) {
+      MF.getWinEHFuncInfo()->SEHFrameAlignMask = -(int64_t)MaxAlign;
+      MF.getWinEHFuncInfo()->SEHSetFrameOffset = 0;
+    }
   }
 
   // We already dealt with stack realignment and funclets above.
