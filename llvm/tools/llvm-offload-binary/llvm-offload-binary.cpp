@@ -105,9 +105,9 @@ static Error writeFile(StringRef Filename, StringRef Data) {
 
 static Error bundleImages() {
   SmallVector<OffloadBinary::OffloadingImage> AllImages;
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
   for (StringRef Image : DeviceImages) {
-    BumpPtrAllocator Alloc;
-    StringSaver Saver(Alloc);
     DenseMap<StringRef, StringRef> Args = getImageArguments(Image, Saver);
 
     if (!Args.count("file"))

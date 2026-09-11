@@ -300,10 +300,16 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);
 
   auto validateEntry = [&](const Entry *TheEntry) -> Error {
-    if (TheEntry->ImageOffset > Owned.getBufferSize() ||
-        TheEntry->StringOffset > Owned.getBufferSize() ||
-        TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
-            Owned.getBufferSize())
+    const uint64_t BufSize = Owned.getBufferSize();
+    if (TheEntry->ImageOffset > BufSize ||
+        TheEntry->ImageSize > BufSize - TheEntry->ImageOffset)
+      return errorCodeToError(object_error::unexpected_eof);
+
+    const size_t StringEntrySize =
+        TheHeader->Version == 1 ? sizeof(StringEntryV1) : sizeof(StringEntry);
+    if (TheEntry->StringOffset > BufSize ||
+        TheEntry->NumStrings >
+            (BufSize - TheEntry->StringOffset) / StringEntrySize)
       return errorCodeToError(object_error::unexpected_eof);
     return Error::success();
   };
