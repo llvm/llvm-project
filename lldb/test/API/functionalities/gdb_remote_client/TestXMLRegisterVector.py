@@ -422,11 +422,10 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
 
         self.expect(
             "register read v0",
-            patterns=[
-                r"v0 = \{0x00 0x00 0xc0 0x3f 0x00 0x00 0x20 0x40 "
-                r"0x00 0x00 0x60 0x40 0x00 0x00 0x90 0x40\}\r?\n"
-                r"     = \(\[0\] = 1\.5, \[1\] = 2\.5, \[2\] = 3\.5, "
-                r"\[3\] = 4\.5\)"
+            substrs=[
+                "v0 = {0x00 0x00 0xc0 0x3f 0x00 0x00 0x20 0x40 "
+                "0x00 0x00 0x60 0x40 0x00 0x00 0x90 0x40}\n"
+                "     = ([0] = 1.5, [1] = 2.5, [2] = 3.5, [3] = 4.5)"
             ],
         )
 
