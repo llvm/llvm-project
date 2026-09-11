@@ -1454,17 +1454,17 @@ void VPlanTransforms::modelGeneratedMainLoopBlocks(
   // now-disconnected entry and its scalar PH to EnteredFrom.
   VPBlockBase *MainEntry = MainPlan.getEntry();
   VPBlockBase *MainScalarPH = MainPlan.getScalarPreheader();
-  SmallMapVector<VPBlockBase *, VPBlockBase *, 8> Old2NewVPBB;
-  Old2NewVPBB[MainEntry] = EpiPlan.getEntry();
+  SmallMapVector<VPBlockBase *, VPBlockBase *, 8> MainToEpiVPBB;
+  MainToEpiVPBB[MainEntry] = EpiPlan.getEntry();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       MainEntry);
   for (VPIRBasicBlock *VPBB : VPBlockUtils::blocksAs<VPIRBasicBlock>(RPOT))
     // Skip entry block and exit blocks/scalar loop header; they are already
-    // modeling in the epilogue plan.
+    // modeled in the epilogue plan.
     if (VPBB != MainEntry && VPBB != MainScalarPH && VPBB->hasSuccessors())
-      Old2NewVPBB[VPBB] =
+      MainToEpiVPBB[VPBB] =
           EpiPlan.createEmptyVPIRBasicBlock(VPBB->getIRBasicBlock());
-  Old2NewVPBB[MainScalarPH] = EnteredFrom;
+  MainToEpiVPBB[MainScalarPH] = EnteredFrom;
 
   // First, connect the edges from the bypass blocks (minimum iteration checks,
   // runtime checks) to the scalar preheader, in reverse order, to preserve the
@@ -1472,17 +1472,17 @@ void VPlanTransforms::modelGeneratedMainLoopBlocks(
   VPBasicBlock *EpiScalarPH = EpiPlan.getScalarPreheader();
   for (VPBlockBase *MainVPBB :
        reverse(drop_end(drop_begin(MainScalarPH->predecessors())))) {
-    VPBlockUtils::connectBlocks(Old2NewVPBB.lookup(MainVPBB), EpiScalarPH);
+    VPBlockUtils::connectBlocks(MainToEpiVPBB.lookup(MainVPBB), EpiScalarPH);
     addIncomingForLastPredecessor(EpiScalarPH);
   }
 
   // Mirror MainPlan's CFG, skipping the bypass edges connected above, which
   // come first, and edges to blocks not modeled in EpiPlan.
-  for (auto &[MainVPBB, VPBB] : drop_end(Old2NewVPBB))
+  for (auto &[MainVPBB, EpiVPBB] : drop_end(MainToEpiVPBB))
     for (VPBlockBase *Succ :
-         drop_begin(MainVPBB->getSuccessors(), VPBB->getNumSuccessors()))
-      if (auto *SuccVPBB = Old2NewVPBB.lookup(Succ))
-        VPBlockUtils::connectBlocks(VPBB, SuccVPBB);
+         drop_begin(MainVPBB->getSuccessors(), EpiVPBB->getNumSuccessors()))
+      if (auto *SuccVPBB = MainToEpiVPBB.lookup(Succ))
+        VPBlockUtils::connectBlocks(EpiVPBB, SuccVPBB);
 
   // EnteredFrom is the only modeled block with phis; re-use the incoming values
   // its IR phis already have for the new predecessors.

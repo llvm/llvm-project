@@ -691,7 +691,7 @@ class EpilogueVectorizerEpilogueLoop : public InnerLoopAndEpilogueVectorizer {
   VPlan &MainPlan;
 
 public:
-  BasicBlock *VecEpilogueIterationCountCheck = nullptr;
+  VPIRBasicBlock *VecEpilogueIterationCountCheck = nullptr;
 
   EpilogueVectorizerEpilogueLoop(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
                                  LoopInfo *LI, DominatorTree *DT,
@@ -5994,7 +5994,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
 
   VPBlockUtils::reassociateBlocks(OldEntry, NewEntry);
 
-  VecEpilogueIterationCountCheck = OriginalScalarPH;
+  VecEpilogueIterationCountCheck = NewEntry;
 
   // Model the skeleton from the main vector loop in the epilogue plan.
   RUN_VPLAN_PASS(VPlanTransforms::modelGeneratedMainLoopBlocks, Plan, MainPlan,
@@ -7652,18 +7652,15 @@ fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, VPlan &BestEpiPlan,
 /// count check of the main loop, as well as updating various phis. \p
 /// InstsToMove contains instructions that need to be moved to the preheader of
 /// the epilogue vector loop.
-static void
-connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
-                          BasicBlock *VecEpilogueIterationCountCheck,
-                          ArrayRef<Instruction *> InstsToMove,
-                          ArrayRef<VPInstruction *> ResumeValues) {
-  // The main loop's iteration count check is the predecessor bypassing the main
-  // vector loop, i.e. branching here as its first successor.
-  BasicBlock *MainLoopIterationCountCheck = *find_if(
-      predecessors(VecEpilogueIterationCountCheck), [&](BasicBlock *P) {
-        auto *BI = dyn_cast<CondBrInst>(P->getTerminator());
-        return BI && BI->getSuccessor(0) == VecEpilogueIterationCountCheck;
-      });
+static void connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
+                                      VPIRBasicBlock *VecEpilogueIterCheckVPBB,
+                                      ArrayRef<Instruction *> InstsToMove,
+                                      ArrayRef<VPInstruction *> ResumeValues) {
+  ArrayRef<VPBlockBase *> Preds = VecEpilogueIterCheckVPBB->getPredecessors();
+  BasicBlock *MainLoopIterationCountCheck =
+      cast<VPIRBasicBlock>(Preds.front())->getIRBasicBlock();
+  BasicBlock *VecEpilogueIterationCountCheck =
+      VecEpilogueIterCheckVPBB->getIRBasicBlock();
   BasicBlock *VecEpiloguePreHeader =
       cast<CondBrInst>(VecEpilogueIterationCountCheck->getTerminator())
           ->getSuccessor(1);
