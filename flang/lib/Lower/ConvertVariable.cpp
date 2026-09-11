@@ -1445,10 +1445,11 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   //   - non-byte-multiple (e.g. l4:12): makeIntCst(12) builds an i12 splat of
   //     0xAA -> 0xAAA, which occupies bytes AA 0A rather than AA AA -- the
   //     high nibble of the second byte is not filled by the byte pattern.
-  // Padded mappings (e.g. l4:24, where allocSize=4 > storeSize=3) are
-  // intercepted upfront in genInitLocalStore via emitByteLoop before this
-  // function is called; the allocSize > storeSize branch below is a defensive
-  // guard in case this function is ever called directly for such a type.
+  // Padded mappings (e.g. l4:24 where allocSize=4 > storeSize=3, or
+  // l4:20 where allocSize=4 > storeSize=3 on x86-64) are intercepted upfront
+  // in genInitLocalStore via emitByteLoop before this function is called;
+  // the allocSize > storeSize branch below is a defensive guard in case this
+  // function is ever called directly for such a type.
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
     unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
     const mlir::DataLayout &dl = builder.getDataLayout();
@@ -1544,24 +1545,24 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     }
   }
 
-  // LOGICAL(k): when the allocation size exceeds the store size (e.g.
-  // --kind-mapping=l4:24 maps LOGICAL(4) to i24 with 3-byte store size but
-  // 4-byte allocation size on most targets), use the allocation-derived byte
-  // loop to cover the tail padding byte.  This guard fires before
-  // genByteSplatInit is called, so both zero and hex modes use the byte loop
-  // and the padded case never reaches the TODO in genByteSplatInit.
+  // LOGICAL(k): when the allocation size exceeds the store size, use the
+  // allocation-derived byte loop to cover the tail padding bytes.  This
+  // applies to any mapped width, including non-byte-multiples (e.g.
+  // --kind-mapping=l4:20 maps LOGICAL(4) to i20; storeSize=3, allocSize=4
+  // on x86-64) and padded byte-multiple widths (e.g. l4:24: storeSize=3,
+  // allocSize=4).  This guard fires before genByteSplatInit is called, so
+  // both zero and hex modes use the byte loop; the padded/non-byte-multiple
+  // case never reaches the TODO in genByteSplatInit.
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(ty)) {
     unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
-    if (bits % 8 == 0 && bits >= 8) {
-      const mlir::DataLayout &logDL = builder.getDataLayout();
-      mlir::Type intTy = builder.getIntegerType(bits);
-      uint64_t logStoreSize = logDL.getTypeSize(intTy);
-      uint64_t logAllocSize =
-          llvm::alignTo(logStoreSize, logDL.getTypeABIAlignment(intTy));
-      if (logAllocSize > logStoreSize) {
-        emitByteLoop(builder, loc, addr, logAllocSize, mode, hexByte);
-        return;
-      }
+    const mlir::DataLayout &logDL = builder.getDataLayout();
+    mlir::Type intTy = builder.getIntegerType(bits);
+    uint64_t logStoreSize = logDL.getTypeSize(intTy);
+    uint64_t logAllocSize =
+        llvm::alignTo(logStoreSize, logDL.getTypeABIAlignment(intTy));
+    if (logAllocSize > logStoreSize) {
+      emitByteLoop(builder, loc, addr, logAllocSize, mode, hexByte);
+      return;
     }
   }
 
