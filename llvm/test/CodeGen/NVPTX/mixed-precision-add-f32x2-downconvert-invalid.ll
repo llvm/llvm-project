@@ -10,8 +10,6 @@
 ;  F16x2
 ;
 
-; multiple uses
-
 define <2 x half> @add_rz_f16x2_f32x2_extra_use(<2 x float> %a, <2 x float> %b, ptr %p) {
 ; CHECK-LABEL: add_rz_f16x2_f32x2_extra_use(
 ; CHECK:       {
@@ -29,6 +27,7 @@ define <2 x half> @add_rz_f16x2_f32x2_extra_use(<2 x float> %a, <2 x float> %b, 
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %sum = call <2 x float> @llvm.nvvm.fadd.ftz.v2f32(<2 x float> %a, <2 x float> %b, i32 0)
+  ; extra use
   store <2 x float> %sum, ptr %p
   %lo = extractelement <2 x float> %sum, i32 0
   %hi = extractelement <2 x float> %sum, i32 1
@@ -172,8 +171,6 @@ define <2 x half> @add_rz_f16x2_f32x2_distinct_adds(<2 x float> %a, <2 x float> 
 ;  BF16x2
 ;
 
-; multiple uses
-
 define <2 x bfloat> @add_rz_bf16x2_f32x2_extra_use(<2 x float> %a, <2 x float> %b, ptr %p) {
 ; CHECK-LABEL: add_rz_bf16x2_f32x2_extra_use(
 ; CHECK:       {
@@ -191,6 +188,7 @@ define <2 x bfloat> @add_rz_bf16x2_f32x2_extra_use(<2 x float> %a, <2 x float> %
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %sum = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %a, <2 x float> %b, i32 0)
+  ; extra use
   store <2 x float> %sum, ptr %p
   %lo = extractelement <2 x float> %sum, i32 0
   %hi = extractelement <2 x float> %sum, i32 1
