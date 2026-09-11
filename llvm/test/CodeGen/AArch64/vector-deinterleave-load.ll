@@ -131,3 +131,126 @@ entry:
   store <4 x float> %m12_15, ptr %gep4, align 16
   ret void
 }
+
+define void @aarch64_vector_deinterleave_v8f64_load(ptr %src, ptr %dst0, ptr %dst1) {
+; CHECK-IAENABLED-LABEL: aarch64_vector_deinterleave_v8f64_load:
+; CHECK-IAENABLED:       // %bb.0: // %entry
+; CHECK-IAENABLED-NEXT:    ld2 { v0.2d, v1.2d }, [x0], #32
+; CHECK-IAENABLED-NEXT:    ld2 { v2.2d, v3.2d }, [x0]
+; CHECK-IAENABLED-NEXT:    stp q0, q2, [x1]
+; CHECK-IAENABLED-NEXT:    stp q1, q3, [x2]
+; CHECK-IAENABLED-NEXT:    ret
+;
+; CHECK-IADISABLED-LABEL: aarch64_vector_deinterleave_v8f64_load:
+; CHECK-IADISABLED:       // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x0]
+; CHECK-IADISABLED-NEXT:    zip1 v4.2d, v1.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    zip2 v0.2d, v1.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    zip1 v5.2d, v3.2d, v2.2d
+; CHECK-IADISABLED-NEXT:    zip2 v1.2d, v3.2d, v2.2d
+; CHECK-IADISABLED-NEXT:    stp q5, q4, [x1]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x2]
+; CHECK-IADISABLED-NEXT:    ret
+entry:
+  %wide.vec = load <8 x double>, ptr %src, align 8
+  %strided.vec = tail call { <4 x double>, <4 x double> } @llvm.vector.deinterleave2.v8f64(<8 x double> %wide.vec)
+  %even = extractvalue { <4 x double>, <4 x double> } %strided.vec, 0
+  %odd = extractvalue { <4 x double>, <4 x double> } %strided.vec, 1
+  store <4 x double> %even, ptr %dst0, align 8
+  store <4 x double> %odd, ptr %dst1, align 8
+  ret void
+}
+
+define void @aarch64_vector_deinterleave_v12f64_load(ptr %src, ptr %dst0, ptr %dst1, ptr %dst2) {
+; CHECK-IAENABLED-LABEL: aarch64_vector_deinterleave_v12f64_load:
+; CHECK-IAENABLED:       // %bb.0: // %entry
+; CHECK-IAENABLED-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x0], #48
+; CHECK-IAENABLED-NEXT:    ld3 { v3.2d, v4.2d, v5.2d }, [x0]
+; CHECK-IAENABLED-NEXT:    stp q0, q3, [x1]
+; CHECK-IAENABLED-NEXT:    stp q1, q4, [x2]
+; CHECK-IAENABLED-NEXT:    stp q2, q5, [x3]
+; CHECK-IAENABLED-NEXT:    ret
+;
+; CHECK-IADISABLED-LABEL: aarch64_vector_deinterleave_v12f64_load:
+; CHECK-IADISABLED:       // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    sub sp, sp, #96
+; CHECK-IADISABLED-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-IADISABLED-NEXT:    mov x8, sp
+; CHECK-IADISABLED-NEXT:    ldp q2, q3, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-IADISABLED-NEXT:    stp q3, q0, [sp, #64]
+; CHECK-IADISABLED-NEXT:    stp q1, q4, [sp]
+; CHECK-IADISABLED-NEXT:    stp q5, q2, [sp, #32]
+; CHECK-IADISABLED-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x8]
+; CHECK-IADISABLED-NEXT:    add x8, sp, #48
+; CHECK-IADISABLED-NEXT:    ld3 { v3.2d, v4.2d, v5.2d }, [x8]
+; CHECK-IADISABLED-NEXT:    stp q3, q0, [x1]
+; CHECK-IADISABLED-NEXT:    stp q4, q1, [x2]
+; CHECK-IADISABLED-NEXT:    stp q5, q2, [x3]
+; CHECK-IADISABLED-NEXT:    add sp, sp, #96
+; CHECK-IADISABLED-NEXT:    ret
+entry:
+  %wide.vec = load <12 x double>, ptr %src, align 8
+  %strided.vec = tail call { <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave3.v12f64(<12 x double> %wide.vec)
+  %stream0 = extractvalue { <4 x double>, <4 x double>, <4 x double> } %strided.vec, 0
+  %stream1 = extractvalue { <4 x double>, <4 x double>, <4 x double> } %strided.vec, 1
+  %stream2 = extractvalue { <4 x double>, <4 x double>, <4 x double> } %strided.vec, 2
+  store <4 x double> %stream0, ptr %dst0, align 8
+  store <4 x double> %stream1, ptr %dst1, align 8
+  store <4 x double> %stream2, ptr %dst2, align 8
+  ret void
+}
+
+define void @aarch64_vector_deinterleave_v16f64_load(ptr %src, ptr %dst0, ptr %dst1, ptr %dst2, ptr %dst3) {
+; CHECK-IAENABLED-LABEL: aarch64_vector_deinterleave_v16f64_load:
+; CHECK-IAENABLED:       // %bb.0: // %entry
+; CHECK-IAENABLED-NEXT:    ld4 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0], #64
+; CHECK-IAENABLED-NEXT:    ld4 { v4.2d, v5.2d, v6.2d, v7.2d }, [x0]
+; CHECK-IAENABLED-NEXT:    stp q0, q4, [x1]
+; CHECK-IAENABLED-NEXT:    stp q1, q5, [x2]
+; CHECK-IAENABLED-NEXT:    stp q2, q6, [x3]
+; CHECK-IAENABLED-NEXT:    stp q3, q7, [x4]
+; CHECK-IAENABLED-NEXT:    ret
+;
+; CHECK-IADISABLED-LABEL: aarch64_vector_deinterleave_v16f64_load:
+; CHECK-IADISABLED:       // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0, #64]
+; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x0, #96]
+; CHECK-IADISABLED-NEXT:    ldp q5, q4, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q7, q6, [x0, #32]
+; CHECK-IADISABLED-NEXT:    uzp1 v17.2d, v1.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    uzp1 v16.2d, v3.2d, v2.2d
+; CHECK-IADISABLED-NEXT:    uzp2 v2.2d, v3.2d, v2.2d
+; CHECK-IADISABLED-NEXT:    uzp2 v0.2d, v1.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    uzp1 v19.2d, v5.2d, v4.2d
+; CHECK-IADISABLED-NEXT:    uzp2 v3.2d, v5.2d, v4.2d
+; CHECK-IADISABLED-NEXT:    uzp1 v18.2d, v7.2d, v6.2d
+; CHECK-IADISABLED-NEXT:    uzp2 v1.2d, v7.2d, v6.2d
+; CHECK-IADISABLED-NEXT:    uzp1 v4.2d, v17.2d, v16.2d
+; CHECK-IADISABLED-NEXT:    uzp1 v6.2d, v0.2d, v2.2d
+; CHECK-IADISABLED-NEXT:    uzp2 v16.2d, v17.2d, v16.2d
+; CHECK-IADISABLED-NEXT:    uzp2 v0.2d, v0.2d, v2.2d
+; CHECK-IADISABLED-NEXT:    uzp1 v5.2d, v19.2d, v18.2d
+; CHECK-IADISABLED-NEXT:    uzp1 v7.2d, v3.2d, v1.2d
+; CHECK-IADISABLED-NEXT:    uzp2 v1.2d, v3.2d, v1.2d
+; CHECK-IADISABLED-NEXT:    stp q5, q4, [x1]
+; CHECK-IADISABLED-NEXT:    uzp2 v4.2d, v19.2d, v18.2d
+; CHECK-IADISABLED-NEXT:    stp q7, q6, [x2]
+; CHECK-IADISABLED-NEXT:    stp q4, q16, [x3]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x4]
+; CHECK-IADISABLED-NEXT:    ret
+entry:
+  %wide.vec = load <16 x double>, ptr %src, align 8
+  %strided.vec = tail call { <4 x double>, <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave4.v16f64(<16 x double> %wide.vec)
+  %stream0 = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } %strided.vec, 0
+  %stream1 = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } %strided.vec, 1
+  %stream2 = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } %strided.vec, 2
+  %stream3 = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } %strided.vec, 3
+  store <4 x double> %stream0, ptr %dst0, align 8
+  store <4 x double> %stream1, ptr %dst1, align 8
+  store <4 x double> %stream2, ptr %dst2, align 8
+  store <4 x double> %stream3, ptr %dst3, align 8
+  ret void
+}
