@@ -303,10 +303,26 @@ Error randomizeUnsetVariables(const LLVMState &State,
                               InstructionTemplate &IT) {
   for (const Variable &Var : IT.getInstr().Variables) {
     MCOperand &AssignedValue = IT.getValueFor(Var);
-    if (!AssignedValue.isValid())
-      if (auto Err = randomizeMCOperand(State, IT.getInstr(), Var,
-                                        AssignedValue, ForbiddenRegs))
+    if (!AssignedValue.isValid()) {
+      auto ExtraForbiddenRegs = ForbiddenRegs;
+      // Add alias restrictions
+      const auto &AliasConstraint =
+          IT.getAliasConstraintForVariable(Var.getIndex());
+      if (!AliasConstraint.empty()) {
+        // Iterate over VarIdxs for this variable to gather forbidden regs from
+        // them (if any).
+        for (const auto &AliasVarIdx : AliasConstraint.set_bits()) {
+          if (IT.getValueFor(IT.getInstr().Variables[AliasVarIdx]).isReg()) {
+            ExtraForbiddenRegs.set(
+                IT.getValueFor(IT.getInstr().Variables[AliasVarIdx]).getReg());
+          }
+        }
+      }
+      if (auto Err =
+              randomizeMCOperand(State, IT.getInstr(), Var, AssignedValue,
+                                 ExtraForbiddenRegs, ImmValue))
         return Err;
+    }
   }
   return Error::success();
 }

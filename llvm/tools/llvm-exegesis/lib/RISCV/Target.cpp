@@ -296,6 +296,8 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
           if (isVectorReduction(BaseOpcode) &&
               // vs1's operand index is always 3.
               Op->getIndex() == 3) {
+            // First variable is shared between tied vd and vs2.
+            IT.setAliasConstraintForVariable(Op->getVariableIndex(), 0);
             ROA = Uses.erase(ROA);
             continue;
           }
