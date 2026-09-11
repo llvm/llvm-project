@@ -277,33 +277,50 @@ static bool isReducedOperand(linalg::LinalgOp linalgOp, OpOperand *operand,
   });
 }
 
-/// Set `paddingValues` with the padding value of every input of `contractOp`
-/// that is indexed along a reduction dimension. Fails if the pair admits no
-/// padding value.
-static LogicalResult
-setContractionPaddingValues(OpBuilder &builder, linalg::LinalgOp contractOp,
-                            Operation *mul, Operation *add,
-                            ArrayRef<utils::IteratorType> iterTypes,
-                            MutableArrayRef<Attribute> paddingValues) {
-  // Identify the padding value, `p`, for which `mul(p, x)` is the neutral
-  // element of `add` for every `x`.
-  // Not every contraction can be zero-padded: a body with `mul` = `addf` and
-  // `add` = `maximumf` (a max-plus contraction) pads with `-inf` instead.
+/// Returns `defaults` with the entry of every input of `linalgOp` that is
+/// indexed along a reduction dimension replaced by its padding value. Fails if
+/// the body of `linalgOp` is not contraction-like, or if its
+/// `elemwise`/`reduce` pair admits no padding value.
+static FailureOr<SmallVector<Attribute>>
+inferContractionPaddingValues(OpBuilder &builder, linalg::LinalgOp linalgOp,
+                              ArrayRef<utils::IteratorType> iterTypes,
+                              ArrayRef<Attribute> defaults) {
+  // NOTE: For contraction-like Ops, we infer the padding value by looking at
+  // both elemwise and reduce Ops, where (see isContractionBody for details):
+  //   %0 = <elemwise>(permutation-of(cu(block-argument-0),
+  //                                  cu(block-argument-1)))
+  //   %1 = <reduce>(permutation-of(cu(%0), cu(block-argument-2)))
+  //   return-like cu(%1)
+  Operation *elemwise = nullptr, *reduce = nullptr;
+  auto captureBodyOps = [&](Operation *e, Operation *r) {
+    elemwise = e;
+    reduce = r;
+    return true;
+  };
+  if (!linalg::detail::isContractionBody(*linalgOp.getBlock(), captureBodyOps))
+    return failure();
+
+  // Identify the padding value, `p`, for which `elemwise(p, x)` is the neutral
+  // element of `reduce` for every `x`.
+  // Not every contraction can be zero-padded: a body with `elemwise` =
+  // `arith.addf` and `reduce` = `arith.maximumf` (a max-plus contraction) pads
+  // with `-inf` instead.
   auto getPadValue = [&](Type elementType) -> Attribute {
     // `0 * x = 0` and `0 + acc = acc`.
-    if ((isa<arith::MulFOp>(mul) && isa<arith::AddFOp>(add)) ||
-        (isa<arith::MulIOp>(mul) && isa<arith::AddIOp>(add)) ||
-        (isa<complex::MulOp>(mul) && isa<complex::AddOp>(add)))
+    if ((isa<arith::MulFOp>(elemwise) && isa<arith::AddFOp>(reduce)) ||
+        (isa<arith::MulIOp>(elemwise) && isa<arith::AddIOp>(reduce)) ||
+        (isa<complex::MulOp>(elemwise) && isa<complex::AddOp>(reduce)))
       return builder.getZeroAttr(elementType);
     // `false & x = false` and `false | acc = acc`.
-    if (isa<arith::AndIOp>(mul) && isa<arith::OrIOp>(add) &&
-        mul->getResult(0).getType().isInteger(1))
+    if (isa<arith::AndIOp>(elemwise) && isa<arith::OrIOp>(reduce) &&
+        elemwise->getResult(0).getType().isInteger(1))
       return builder.getZeroAttr(elementType);
     return {};
   };
 
-  for (OpOperand *input : contractOp.getDpsInputOperands()) {
-    if (!isReducedOperand(contractOp, input, iterTypes))
+  SmallVector<Attribute> paddingValues(defaults.begin(), defaults.end());
+  for (OpOperand *input : linalgOp.getDpsInputOperands()) {
+    if (!isReducedOperand(linalgOp, input, iterTypes))
       continue;
     Attribute padValue =
         getPadValue(getElementTypeOrSelf(input->get().getType()));
@@ -311,7 +328,7 @@ setContractionPaddingValues(OpBuilder &builder, linalg::LinalgOp contractOp,
       return failure();
     paddingValues[input->getOperandNumber()] = padValue;
   }
-  return success();
+  return paddingValues;
 }
 
 /// Infers a semantics-preserving padding value for every operand of `toPad`
@@ -344,21 +361,13 @@ inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
   if (!linalgOp)
     return failure();
 
-  // A contraction-like body accumulates as `acc = add(mul(a, b), acc)`. Use
-  // `isContractionBody` as an extractor: it hands back these two ops, from
-  // which the padding value is derived.
-  Operation *mulOp = nullptr, *addOp = nullptr;
-  auto captureBodyOps = [&](Operation *mul, Operation *add) {
-    mulOp = mul;
-    addOp = add;
-    return true;
-  };
-  if (linalg::detail::isContractionBody(*linalgOp.getBlock(), captureBodyOps)) {
-    if (failed(setContractionPaddingValues(builder, linalgOp, mulOp, addOp,
-                                           iterTypes, paddingValues)))
-      return failure();
-    return paddingValues;
-  }
+  // A contraction-like body accumulates as `acc = reduce(elemwise(a, b), acc)`
+  // and pads with a value derived from that pair.
+  FailureOr<SmallVector<Attribute>> contractionValues =
+      inferContractionPaddingValues(builder, linalgOp, iterTypes,
+                                    paddingValues);
+  if (succeeded(contractionValues))
+    return *contractionValues;
 
   // Only a single reduction has an unambiguous per-operand neutral.
   if (linalgOp.getNumDpsInits() != 1)
