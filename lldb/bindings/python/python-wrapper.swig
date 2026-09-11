@@ -536,14 +536,14 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObjec
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBAddress(PyObject * data) {
   lldb::SBAddress *sb_ptr = nullptr;
 
-//   int valid_cast =
-//       SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBAddress, 0);
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBAddress, 0);
 
-//   if (valid_cast == -1)
-//     return NULL;
+  if (valid_cast == -1)
+    return NULL;
 
-//   return sb_ptr;
-// }
+  return sb_ptr;
+}
 
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject * data) {
   lldb::SBValue *sb_ptr = NULL;
