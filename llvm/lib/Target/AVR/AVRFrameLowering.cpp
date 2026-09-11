@@ -247,6 +247,7 @@ StackOffset AVRFrameLowering::getFrameIndexReference(const MachineFunction &MF,
 //  - input arguments are passed using the stack
 //  - has variable sized objects
 //  - the frame address is taken (llvm.frameaddress)
+//  - the return address is taken (llvm.returnaddress)
 //
 // Notice that strictly this is not a frame pointer because it contains SP after
 // frame allocation instead of having the original SP in function entry.
@@ -254,9 +255,12 @@ bool AVRFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const AVRMachineFunctionInfo *FuncInfo = MF.getInfo<AVRMachineFunctionInfo>();
 
+  // Note that reading the return address requires a frame index, and that frame
+  // indexes are always referenced through Y (see
+  // AVRRegisterInfo::eliminateFrameIndex).
   return (FuncInfo->getHasSpills() || FuncInfo->getHasAllocas() ||
           FuncInfo->getHasStackArgs() || MFI.hasVarSizedObjects() ||
-          MFI.isFrameAddressTaken());
+          MFI.isFrameAddressTaken() || MFI.isReturnAddressTaken());
 }
 
 bool AVRFrameLowering::spillCalleeSavedRegisters(
