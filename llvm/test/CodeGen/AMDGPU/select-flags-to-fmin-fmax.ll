@@ -3128,8 +3128,6 @@ define float @v_test_fmin_legacy_ole_f32_const_rhs(float %a) {
 ; GFX1170-LABEL: v_test_fmin_legacy_ole_f32_const_rhs:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-NEXT:    v_min_num_f32_e32 v0, 2.0, v0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3140,8 +3138,6 @@ define float @v_test_fmin_legacy_ole_f32_const_rhs(float %a) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f32_e32 v0, 2.0, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ole float %a, 2.0
@@ -3241,8 +3237,6 @@ define float @v_test_fmax_legacy_ogt_f32_const_rhs(float %a) {
 ; GFX1170-LABEL: v_test_fmax_legacy_ogt_f32_const_rhs:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-NEXT:    v_max_num_f32_e32 v0, 2.0, v0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3253,8 +3247,6 @@ define float @v_test_fmax_legacy_ogt_f32_const_rhs(float %a) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f32_e32 v0, 2.0, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ogt float %a, 2.0
