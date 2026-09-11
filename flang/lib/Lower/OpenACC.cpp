@@ -4183,6 +4183,11 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
     }
 
     addDeclareAttr(builder, globalOp.getOperation(), clause);
+    // Named constants are emitted as initialized device globals. Do not
+    // emit a host ctor/dtor: that would register a symbol that already has
+    // a device definition.
+    if (Fortran::semantics::IsNamedConstant(symbol.GetUltimate()))
+      return;
     auto crtPos = builder.saveInsertionPoint();
     modBuilder.setInsertionPointAfter(globalOp);
     if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType()))) {
@@ -5545,10 +5550,16 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   // privatizing the induction variable, the loop may not execute correctly.
   // Only do this for `acc kernels` because in `acc parallel`, scalars end
   // up as implicitly firstprivate.
+  //
+  // Unstructured constructs that are safe to wrap should not emit the TODO. A
+  // wrappable loop that reaches this condition is a loop that is NOT attached
+  // to any OpenACC directives (e.g. `kernels` ops), it is just nested inside
+  // the kernels region.
   if (eval.lowerAsUnstructured()) {
     if (mlir::isa_and_present<mlir::acc::KernelsOp>(
             mlir::acc::getEnclosingComputeOp(
-                converter.getFirOpBuilder().getRegion())))
+                converter.getFirOpBuilder().getRegion())) &&
+        !Fortran::lower::pft::isWrappableConstruct(eval, semanticsContext))
       TODO(converter.getCurrentLocation(),
            "unstructured do loop in acc kernels");
     return nullptr;

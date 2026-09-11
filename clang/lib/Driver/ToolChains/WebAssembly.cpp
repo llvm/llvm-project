@@ -166,7 +166,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // crt1-command.o. And once LLVM no longer needs to support WASI libc
     // versions before that, it can switch to using crt1-command.o.
     Crt1 = "crt1.o";
-    if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
+    if (ToolChain.GetFilePathIfExists("crt1-command.o"))
       Crt1 = "crt1-command.o";
   } else {
     Crt1 = "crt1-reactor.o";

@@ -647,7 +647,7 @@ public:
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
     // Gather information from the clauses.
-    llvm::omp::ClauseSet reqs;
+    llvm::omp::Clauses reqs;
     std::optional<common::OmpMemoryOrderType> memOrder;
     for (const parser::OmpClause &clause : x.v.Clauses().v) {
       using OmpClause = parser::OmpClause;
@@ -655,7 +655,7 @@ public:
           common::visitors{
               [&](const OmpClause::AtomicDefaultMemOrder &admo) {
                 memOrder = admo.v.v;
-                return llvm::omp::ClauseSet{clause.Id()};
+                return llvm::omp::Clauses{clause.Id()};
               },
               [&](auto &&s) {
                 using TypeS = llvm::remove_cvref_t<decltype(s)>;
@@ -667,10 +667,10 @@ public:
                     std::is_same_v<TypeS, OmpClause::UnifiedAddress> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedSharedMemory>) {
                   if (omp::GetLogicalArgument(s.v, context_).value_or(true)) {
-                    return llvm::omp::ClauseSet{clause.Id()};
+                    return llvm::omp::Clauses{clause.Id()};
                   }
                 }
-                return llvm::omp::ClauseSet{};
+                return llvm::omp::Clauses{};
               },
           },
           clause.u);
@@ -1043,7 +1043,7 @@ private:
   void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
 
-  void AddOmpRequiresToScope(Scope &, const llvm::omp::ClauseSet &,
+  void AddOmpRequiresToScope(Scope &, const llvm::omp::Clauses &,
       const std::optional<common::OmpMemoryOrderType> &);
 
   void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
@@ -2308,7 +2308,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
   }
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-  llvm::omp::ClauseSet clauses{llvm::omp::Clause::OMPC_device_type};
+  llvm::omp::Clauses clauses{llvm::omp::Clause::OMPC_device_type};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
       if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
@@ -2374,7 +2374,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
       [&](const parser::OmpObject &object, llvm::omp::Clause clauseId) {
         if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
           auto &clauseSet{
-              const_cast<llvm::omp::ClauseSet &>(details[sym].ompDeclTarget())};
+              const_cast<llvm::omp::Clauses &>(details[sym].ompDeclTarget())};
           clauseSet.set(clauseId);
         }
       }};
@@ -2403,7 +2403,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
     if (auto *proc{const_cast<Symbol *>(scope.symbol())}) {
       proc->flags().set(Symbol::Flag::OmpDeclareTarget);
       auto &clauseSet{
-          const_cast<llvm::omp::ClauseSet &>(details[proc].ompDeclTarget())};
+          const_cast<llvm::omp::Clauses &>(details[proc].ompDeclTarget())};
       clauseSet.set(llvm::omp::Clause::OMPC_enter);
     }
   }
@@ -2417,7 +2417,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
           if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
             d.set_version(version);
             auto &clauseSet{
-                const_cast<llvm::omp::ClauseSet &>(d.ompDeclTarget())};
+                const_cast<llvm::omp::Clauses &>(d.ompDeclTarget())};
             clauseSet |= decl.ompDeclTarget();
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
@@ -3501,7 +3501,7 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
-    const llvm::omp::ClauseSet &reqs,
+    const llvm::omp::Clauses &reqs,
     const std::optional<common::OmpMemoryOrderType> &memOrder) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   const Scope &programUnit{omp::GetProgramUnit(scope)};
