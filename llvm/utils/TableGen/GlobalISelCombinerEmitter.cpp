@@ -2130,16 +2130,26 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
     RuleMatcher &M, BuildMIAction &DstMI, const CodeGenInstructionPattern &P,
     const InstructionOperand &O) {
   // If we have a type, we implicitly emit a G_CONSTANT, except for G_CONSTANT
-  // itself where we emit a CImm.
+  // itself (which needs a CImm) and G_FCONSTANT (which needs an FP immediate).
+  // The pattern grammar has no fp literals, so a G_FCONSTANT immediate is an
+  // IEEE bit pattern of the immediate's type (0 is +0.0 for every FP width).
   //
   // No type means we emit a simple imm.
-  // G_CONSTANT is a special case and needs a CImm though so this is likely a
-  // mistake.
+  // G_CONSTANT/G_FCONSTANT are special cases and need a typed immediate
+  // though so this is likely a mistake.
   const bool isGConstant = P.is("G_CONSTANT");
+  const bool isGFConstant = P.is("G_FCONSTANT");
   const auto Ty = O.getType();
   if (!Ty) {
     if (isGConstant) {
       PrintError("'G_CONSTANT' immediate must be typed!");
+      PrintNote("while emitting pattern '" + P.getName() + "' (" +
+                P.getInstName() + ")");
+      return false;
+    }
+
+    if (isGFConstant) {
+      PrintError("'G_FCONSTANT' immediate must be typed!");
       PrintNote("while emitting pattern '" + P.getName() + "' (" +
                 P.getInstName() + ")");
       return false;
@@ -2155,6 +2165,11 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
 
   if (isGConstant) {
     DstMI.addRenderer<ImmRenderer>(O.getImmValue(), *ImmTy);
+    return true;
+  }
+
+  if (isGFConstant) {
+    DstMI.addRenderer<ImmRenderer>(O.getImmValue(), *ImmTy, /*IsFP=*/true);
     return true;
   }
 

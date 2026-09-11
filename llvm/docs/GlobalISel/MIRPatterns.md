@@ -449,6 +449,12 @@ There is of course a special case for `G_CONSTANT`. Immediates for
 `G_CONSTANT` must always be typed, and a CImm is added
 (`MachineInstrBuilder::addCImm`).
 
+`G_FCONSTANT` is handled the same way: immediates for `G_FCONSTANT` must
+always be typed, and an FP immediate is added (`MachineInstrBuilder::addFPImm`).
+Since the pattern grammar has no fp literals, the integer is the IEEE bit
+pattern of that type (`0` is `+0.0` for every FP width; `0x3f800000` is `1.0`
+as `f32`).
+
 ```{code-block} text
 :caption: 'Constant Emission Examples:'
 
@@ -475,6 +481,23 @@ def Bux : GICombineRule<
   (defs root:$dst),
   (match (G_FOO $dst, $src)),
   (apply (G_CONSTANT $dst, (i32 0)))>;
+
+// Example output:
+//    %dst = G_FCONSTANT float 1.000000e+00
+def Baz : GICombineRule<
+  (defs root:$dst),
+  (match (G_FOO $dst, $src)),
+  (apply (G_FCONSTANT $dst, (f32 0x3f800000)))>;
+
+// GITypeOf can be combined with this to reuse an already-matched register's
+// type instead of hardcoding one, which is handy when replacing the root:
+//
+// Example output:
+//    %dst = G_FCONSTANT float 0.0
+def Qux : GICombineRule<
+  (defs root:$dst),
+  (match (G_FOO $dst, $src)),
+  (apply (G_FCONSTANT $dst, (GITypeOf<"$dst"> 0)))>;
 ```
 
 ### GICombinePatFrag
