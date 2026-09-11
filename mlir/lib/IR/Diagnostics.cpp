@@ -161,20 +161,23 @@ Diagnostic &Diagnostic::operator<<(Value val) {
   return *this << str;
 }
 
-/// Outputs this diagnostic to a stream. `ChunkIdx` specifies which chunk to
-/// print to `os`. If empty, all arguments are printed to `os`.
-void Diagnostic::print(raw_ostream &os, std::optional<int64_t> chunkIdx) const {
-  if (!chunkIdx.has_value()) {
+/// Outputs this diagnostic to a stream.
+void Diagnostic::print(raw_ostream &os,
+                       std::optional<int64_t> messagePartIndex) const {
+  if (!messagePartIndex.has_value()) {
     for (auto &arg : getArguments())
       arg.print(os);
     return;
   }
 
-  assert(0 <= chunkIdx && chunkIdx <= chunkSizes.size());
-  size_t argumentStart = *chunkIdx - 1 >= 0 ? chunkSizes[*chunkIdx - 1] : 0;
-  size_t argumentEnd = *chunkIdx == static_cast<int64_t>(chunkSizes.size())
-                           ? arguments.size()
-                           : chunkSizes[*chunkIdx];
+  assert(0 <= *messagePartIndex &&
+         *messagePartIndex <= static_cast<int64_t>(messagePartEnds.size()));
+  size_t argumentStart =
+      *messagePartIndex == 0 ? 0 : messagePartEnds[*messagePartIndex - 1];
+  size_t argumentEnd =
+      *messagePartIndex == static_cast<int64_t>(messagePartEnds.size())
+          ? arguments.size()
+          : messagePartEnds[*messagePartIndex];
   for (auto &arg :
        getArguments().slice(argumentStart, argumentEnd - argumentStart))
     arg.print(os);
@@ -188,11 +191,16 @@ std::string Diagnostic::str() const {
   return str;
 }
 
-/// Converts the diagnostic to a vector of strings, where each element
-/// represents a chunk.
+/// Converts each message part to a separate string.
 SmallVector<std::string> Diagnostic::strs() const {
   SmallVector<std::string, 2> strs;
-  for (size_t i = 0, e = chunkSizes.size(); i <= e; ++i) {
+  size_t numMessageParts = messagePartEnds.size();
+
+  // Include the current message part if there are no completed parts or if it
+  // contains arguments after the last completed part.
+  if (messagePartEnds.empty() || messagePartEnds.back() != arguments.size())
+    ++numMessageParts;
+  for (size_t i = 0; i < numMessageParts; ++i) {
     std::string str;
     llvm::raw_string_ostream os(str);
     print(os, i);
@@ -222,14 +230,13 @@ Diagnostic &Diagnostic::attachNote(std::optional<Location> noteLoc) {
 /// Allow a diagnostic to be converted to 'failure'.
 Diagnostic::operator LogicalResult() const { return failure(); }
 
-/// Finalizes the current group of arguments and starts a new chunk.
-void Diagnostic::checkpointArguments() {
-  size_t size = arguments.size();
-  if (size == 0)
+/// Starts a new message part.
+void Diagnostic::startNewMessagePart() {
+  if (arguments.empty())
     return;
-  if (!chunkSizes.empty() && chunkSizes.back() == arguments.size())
+  if (!messagePartEnds.empty() && messagePartEnds.back() == arguments.size())
     return;
-  chunkSizes.push_back(arguments.size());
+  messagePartEnds.push_back(arguments.size());
 }
 
 //===----------------------------------------------------------------------===//

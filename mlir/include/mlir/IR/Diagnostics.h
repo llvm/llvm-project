@@ -153,6 +153,9 @@ inline raw_ostream &operator<<(raw_ostream &os, const DiagnosticArgument &arg) {
 /// This class contains all of the information necessary to report a diagnostic
 /// to the DiagnosticEngine. It should generally not be constructed directly,
 /// and instead used transitively via InFlightDiagnostic.
+///
+/// A diagnostic may contain multiple message parts that share its location,
+/// severity, metadata, and attached notes. Empty message parts are ignored.
 class Diagnostic {
   using NoteVector = std::vector<std::unique_ptr<Diagnostic>>;
 
@@ -249,16 +252,17 @@ public:
     return *this;
   }
 
-  /// Outputs this diagnostic to a stream. `ChunkIdx` specifies which chunk to
-  /// print to `os`. If empty, all arguments are printed to `os`.
+  /// Outputs this diagnostic to a stream. If `messagePartIndex` is provided,
+  /// only that message part is printed; otherwise, all arguments are printed
+  /// without separators between message parts.
   void print(raw_ostream &os,
-             std::optional<int64_t> chunkIdx = std::nullopt) const;
+             std::optional<int64_t> messagePartIndex = std::nullopt) const;
 
   /// Converts the diagnostic to a string.
   std::string str() const;
 
-  /// Converts the diagnostic to a vector of strings, where each element
-  /// represents a chunk.
+  /// Converts each message part to a separate string. Returns a single string
+  /// if the diagnostic has not been divided into multiple parts.
   SmallVector<std::string> strs() const;
 
   /// Attaches a note to this diagnostic. A new location may be optionally
@@ -294,8 +298,9 @@ public:
   /// Returns the current list of diagnostic metadata.
   SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
 
-  /// Finalizes the current group of arguments and starts a new chunk.
-  void checkpointArguments();
+  /// Starts a new message part. This has no effect if the current message part
+  /// is empty.
+  void startNewMessagePart();
 
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
@@ -314,8 +319,8 @@ private:
   /// liveness of non-constant strings used in diagnostics.
   std::vector<std::unique_ptr<char[]>> strings;
 
-  /// Boundary indices in `arguments` that separate different chunks.
-  SmallVector<size_t, 2> chunkSizes;
+  /// The exclusive end indices in `arguments` of completed message parts.
+  SmallVector<size_t, 2> messagePartEnds;
 
   /// A list of attached notes.
   NoteVector notes;
@@ -440,10 +445,10 @@ private:
   std::optional<Diagnostic> impl;
 };
 
-/// A stream manipulator that checkpoints the current messages, and allowing a
-/// single InFlightDiagnostic to output multiple lines.
+/// Starts a new message part in an in-flight diagnostic. Leading, trailing, and
+/// consecutive uses of `next` do not create empty message parts.
 inline InFlightDiagnostic &next(InFlightDiagnostic &diag) {
-  diag.impl->checkpointArguments();
+  diag.impl->startNewMessagePart();
   return diag;
 }
 
