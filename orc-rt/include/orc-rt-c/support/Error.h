@@ -7,7 +7,7 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This file defines the C interface to LLVM's Error class.                   *|
+|* This file defines the C interface to the ORC runtime's Error class.        *|
 |*                                                                            *|
 |* TODO: Explain ownership model.                                             *|
 |*                                                                            *|

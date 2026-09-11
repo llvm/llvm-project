@@ -247,7 +247,7 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
 // (mostly related to WWM CSR handling) that differentiate it from using
 // a plain `amdgcn.init.exec -1`.
 def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
-    IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
+    IntrHasSideEffects, IntrNoMem, IntrConvergent, IntrNoCallback, IntrNoFree, IntrWillReturn]>;
 
 def int_amdgcn_wavefrontsize
     : ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
