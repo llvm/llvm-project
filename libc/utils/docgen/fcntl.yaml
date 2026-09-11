@@ -12,7 +12,7 @@ functions:
   posix_fallocate:
     in-latest-posix: ''
   fallocate:
-    in-latest-posix: ''
+    c-definition: ''
 
 macros:
   AT_EACCESS:

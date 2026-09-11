@@ -14,13 +14,12 @@
 #ifndef LLVM_LIBC_SRC_FCNTL_FALLOCATE_H
 #define LLVM_LIBC_SRC_FCNTL_FALLOCATE_H
 
-#include "src/__support/macros/config.h"
 #include "hdr/types/off_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-  int fallocate(int fd, int mode, off_t offset, off_t size);
-
+int fallocate(int fd, int mode, off_t offset, off_t size);
 }
 
 #endif
