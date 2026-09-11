@@ -6,6 +6,10 @@
 # RUN: llvm-offload-binary %t --image=file=%t2,arch=abc,triple=x-y-z
 # RUN: diff %s %t2
 
+# RUN: llvm-offload-binary -o %t.neg --compress --compression-format=zstd --compression-level=-5 --image=file=%s,arch=abc,triple=x-y-z
+# RUN: llvm-offload-binary %t.neg --image=file=%t.neg.out,arch=abc,triple=x-y-z
+# RUN: diff %s %t.neg.out
+
 # RUN: llvm-offload-binary -o %t.u --image=file=%s,arch=abc,triple=x-y-z
 # RUN: cat %t %t.u > %t.concat
 # RUN: llvm-objdump --offloading %t.concat | FileCheck %s --check-prefixes=CHECK,CONCAT

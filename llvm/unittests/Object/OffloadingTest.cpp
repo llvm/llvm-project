@@ -4,6 +4,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -311,7 +312,8 @@ TEST(OffloadingTest, checkCompressedRoundTrip) {
   auto HeaderOrErr = OffloadBinary::extractHeader(MemoryBufferRef(
       StringRef(Compressed.data(), Compressed.size()), "compressed"));
   ASSERT_THAT_EXPECTED(HeaderOrErr, Succeeded());
-  EXPECT_EQ((*HeaderOrErr)->Size, Compressed.size());
+  EXPECT_EQ(Compressed.size(),
+            alignTo((*HeaderOrErr)->Size, OffloadBinary::getAlignment()));
   EXPECT_EQ((*HeaderOrErr)->InflatedSize, Uncompressed.size());
 
   auto BinaryBuffer = MemoryBuffer::getMemBufferCopy(Compressed);

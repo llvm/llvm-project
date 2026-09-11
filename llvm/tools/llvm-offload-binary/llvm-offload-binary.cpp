@@ -149,7 +149,7 @@ static Error bundleImages() {
             compression::getReasonIfUnsupported(CompressionFormat))
       return createStringError(inconvertibleErrorCode(), Reason);
     compression::Params Params(CompressionFormat);
-    if (CompressionLevel >= 0)
+    if (CompressionLevel.getNumOccurrences())
       Params.level = CompressionLevel;
     Expected<SmallString<0>> CompressedOrErr =
         OffloadBinary::write(AllImages, Params);
