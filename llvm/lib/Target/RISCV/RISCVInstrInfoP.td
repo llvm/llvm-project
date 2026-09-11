@@ -1791,6 +1791,11 @@ class PatMulParts<SDPatternOperator OpNode, RVInst Inst, ValueType ResultVT,
                   ValueType SourceVT>
     : Pat<(ResultVT (OpNode (SourceVT GPR:$rs1), (SourceVT GPR:$rs2))),
           (Inst GPR:$rs1, GPR:$rs2)>;
+class PatMulPartsAcc<SDPatternOperator OpNode, RVInst Inst, ValueType ResultVT,
+                     ValueType SourceVT>
+    : Pat<(ResultVT (OpNode (ResultVT GPR:$rd), (SourceVT GPR:$rs1),
+                            (SourceVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
 class PatGprGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VT>
     : Pat<(VT (OpNode (VT GPR:$rd), (VT GPR:$rs1), (VT GPR:$rs2))),
@@ -1852,6 +1857,11 @@ def riscv_wadd  : RVSDNode<"WADD",  SDTIntBinHiLoOp, [SDNPCommutative]>;
 def riscv_wsub  : RVSDNode<"WSUB",  SDTIntBinHiLoOp>;
 
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
+
+// Widening multiply-accumulate into a GPR pair: rd_p = rd_p + rs1 * rs2.
+def riscv_wmacc   : RVSDNode<"WMACC",   SDT_RISCVWideningAddSubAccumulate>;
+def riscv_wmaccu  : RVSDNode<"WMACCU",  SDT_RISCVWideningAddSubAccumulate>;
+def riscv_wmaccsu : RVSDNode<"WMACCSU", SDT_RISCVWideningAddSubAccumulate>;
 
 def SDT_RISCVPackedWideningMul : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                       SDTCisSameAs<1, 2>,
@@ -1916,6 +1926,29 @@ def riscv_pm2add_h
 def riscv_pm2addu_h
     : RVSDNode<"PM2ADDU_H", SDT_RISCVPM2Halfword, [SDNPCommutative]>;
 def riscv_pm2sub_h : RVSDNode<"PM2SUB_H", SDT_RISCVPM2Halfword>;
+
+def SDT_RISCVWideningMulAccByHalves
+    : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                           SDTCisSameAs<2, 3>,
+                           SDTCisSameSizeAs<0, 2>]>;
+def riscv_pmacc_halves_00
+    : RVSDNode<"PMACC_HALVES_00", SDT_RISCVWideningMulAccByHalves>;
+def riscv_pmacc_halves_01
+    : RVSDNode<"PMACC_HALVES_01", SDT_RISCVWideningMulAccByHalves>;
+def riscv_pmacc_halves_11
+    : RVSDNode<"PMACC_HALVES_11", SDT_RISCVWideningMulAccByHalves>;
+
+def riscv_pmaccu_halves_00
+    : RVSDNode<"PMACCU_HALVES_00", SDT_RISCVWideningMulAccByHalves>;
+def riscv_pmaccu_halves_01
+    : RVSDNode<"PMACCU_HALVES_01", SDT_RISCVWideningMulAccByHalves>;
+def riscv_pmaccu_halves_11
+    : RVSDNode<"PMACCU_HALVES_11", SDT_RISCVWideningMulAccByHalves>;
+
+def riscv_pmaccsu_halves_00
+    : RVSDNode<"PMACCSU_HALVES_00", SDT_RISCVWideningMulAccByHalves>;
+def riscv_pmaccsu_halves_11
+    : RVSDNode<"PMACCSU_HALVES_11", SDT_RISCVWideningMulAccByHalves>;
 
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
                                                       SDTCisSameAs<0, 1>,
@@ -2382,6 +2415,16 @@ let Predicates = [HasStdExtP] in {
             (PMULSU_H_B11 GPR:$rs1, GPR:$rs2)>;
 
 let append Predicates = [IsRV32] in {
+  // Scalar halfword multiply-parts accumulate patterns.
+  def : PatMulPartsAcc<riscv_pmacc_halves_00, MACC_H00, i32, v2i16>;
+  def : PatMulPartsAcc<riscv_pmacc_halves_01, MACC_H01, i32, v2i16>;
+  def : PatMulPartsAcc<riscv_pmacc_halves_11, MACC_H11, i32, v2i16>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_00, MACCU_H00, i32, v2i16>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_01, MACCU_H01, i32, v2i16>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_11, MACCU_H11, i32, v2i16>;
+  def : PatMulPartsAcc<riscv_pmaccsu_halves_00, MACCSU_H00, i32, v2i16>;
+  def : PatMulPartsAcc<riscv_pmaccsu_halves_11, MACCSU_H11, i32, v2i16>;
+
   // Scalar halfword multiply-parts patterns.
   def : PatMulParts<int_riscv_mul_00, MUL_H00, i32, v2i16>;
   def : PatMulParts<int_riscv_mul_01, MUL_H01, i32, v2i16>;
@@ -3074,6 +3117,26 @@ let append Predicates = [IsRV64] in {
   // 32-bit averaging-sub patterns
   def : PatGprGpr<riscv_asub, PASUB_W, v2i32>;
   def : PatGprGpr<riscv_asubu, PASUBU_W, v2i32>;
+
+  // Packed halfword multiply-parts accumulate patterns.
+  def : PatMulPartsAcc<riscv_pmacc_halves_00, PMACC_W_H00, v2i32, v4i16>;
+  def : PatMulPartsAcc<riscv_pmacc_halves_01, PMACC_W_H01, v2i32, v4i16>;
+  def : PatMulPartsAcc<riscv_pmacc_halves_11, PMACC_W_H11, v2i32, v4i16>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_00, PMACCU_W_H00, v2i32, v4i16>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_01, PMACCU_W_H01, v2i32, v4i16>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_11, PMACCU_W_H11, v2i32, v4i16>;
+  def : PatMulPartsAcc<riscv_pmaccsu_halves_00, PMACCSU_W_H00, v2i32, v4i16>;
+  def : PatMulPartsAcc<riscv_pmaccsu_halves_11, PMACCSU_W_H11, v2i32, v4i16>;
+
+  // Scalar word multiply-parts accumulate patterns.
+  def : PatMulPartsAcc<riscv_pmacc_halves_00, MACC_W00, i64, v2i32>;
+  def : PatMulPartsAcc<riscv_pmacc_halves_01, MACC_W01, i64, v2i32>;
+  def : PatMulPartsAcc<riscv_pmacc_halves_11, MACC_W11, i64, v2i32>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_00, MACCU_W00, i64, v2i32>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_01, MACCU_W01, i64, v2i32>;
+  def : PatMulPartsAcc<riscv_pmaccu_halves_11, MACCU_W11, i64, v2i32>;
+  def : PatMulPartsAcc<riscv_pmaccsu_halves_00, MACCSU_W00, i64, v2i32>;
+  def : PatMulPartsAcc<riscv_pmaccsu_halves_11, MACCSU_W11, i64, v2i32>;
 
   // Scalar word multiply-parts patterns.
   def : PatMulParts<int_riscv_mul_00, MUL_W00, i64, v2i32>;

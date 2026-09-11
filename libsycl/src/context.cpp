@@ -6,14 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
+#include <sycl/__impl/exception.hpp>
 
 #include <detail/context_impl.hpp>
 #include <detail/platform_impl.hpp>
 
+#include <algorithm>
 #include <cassert>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
+
+context::context(const std::vector<device> &deviceList,
+                 async_handler asyncHandler, const property_list &propList) {
+  auto deviceImpls = detail::getSyclObjImpls(deviceList);
+
+  impl = detail::ContextImpl::create(std::move(deviceImpls), asyncHandler,
+                                     propList);
+}
 
 backend context::get_backend() const noexcept { return impl->getBackend(); }
 

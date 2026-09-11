@@ -1458,15 +1458,12 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOptLevel OL)
 }
 
 void SelectionDAG::init(MachineFunction &NewMF,
-                        OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
                         const LibcallLoweringInfo *LibcallsInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
-                        BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
+                        BlockFrequencyInfo *BFIin,
                         FunctionVarLocs const *VarLocs) {
   MF = &NewMF;
-  SDAGISelPass = PassPtr;
-  ORE = &NewORE;
   TLI = getSubtarget().getTargetLowering();
   TSI = getSubtarget().getSelectionDAGInfo();
   LibInfo = LibraryInfo;
@@ -1475,7 +1472,6 @@ void SelectionDAG::init(MachineFunction &NewMF,
   UA = NewUA;
   PSI = PSIin;
   BFI = BFIin;
-  MMI = &MMIin;
   FnVarLocs = VarLocs;
 }
 
@@ -4969,6 +4965,32 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(SrcOp)) {
         APInt T = C->getAPIntValue().trunc(VTBits);
         Tmp2 = T.getNumSignBits();
+      } else if (SrcOp.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+                 SrcOp.getOperand(0).getScalarValueSizeInBits() >= VTBits) {
+        // EXTRACT_VECTOR_ELT can extend the value with high bits undefined. If
+        // this BUILD_VECTOR truncates those undefined bits we can just look
+        // through the SrcOp and query the vector directly.
+        SDValue InVec = SrcOp.getOperand(0);
+        EVT InVecVT = InVec.getValueType();
+
+        APInt DemandedSrcElts;
+        if (InVecVT.isScalableVector())
+          // Demand all elements.
+          DemandedSrcElts = APInt(1, 1);
+        else {
+          unsigned NumSrcElts = InVecVT.getVectorNumElements();
+          auto *ConstEltNo = dyn_cast<ConstantSDNode>(SrcOp.getOperand(1));
+          if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
+            DemandedSrcElts =
+                APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+          else
+            DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+        }
+
+        Tmp2 = ComputeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
+        unsigned ExtraBits = InVec.getScalarValueSizeInBits() - VTBits;
+        if (ExtraBits)
+          Tmp2 = (Tmp2 > ExtraBits ? Tmp2 - ExtraBits : 1);
       } else {
         Tmp2 = ComputeNumSignBits(SrcOp, Depth + 1);
 
@@ -6156,7 +6178,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case ISD::POISON: {
-    Known.KnownFPClasses = fcNone;
+    Known.setKnownFPClasses(fcNone);
     Known.setSignBit(false);
     break;
   }
@@ -6199,7 +6221,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                     Depth + 1);
       } else {
         // Out of bounds index is poison.
-        Known.KnownFPClasses = fcNone;
+        Known.setKnownFPClasses(fcNone);
       }
     } else {
       Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
@@ -6247,7 +6269,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                 InterestedClasses, Depth + 1);
     FPClassTest AssertedClasses =
         static_cast<FPClassTest>(Op->getConstantOperandVal(1));
-    Known.KnownFPClasses &= ~AssertedClasses;
+    Known.setKnownFPClasses(Known.getKnownFPClasses() & ~AssertedClasses);
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {

@@ -65,8 +65,8 @@ public:
 
   bool VisitCallExpr(const CallExpr *CE) {
     const Decl *D = CE->getCalleeDecl();
-    if (D && D->hasBody())
-      return VisitBody(D->getBody());
+    if (Stmt *Body; D && (Body = D->getBody()))
+      return VisitBody(Body);
     else {
       auto name = safeGetName(D);
       if (name == "ensureOnMainThread" || name == "ensureOnMainRunLoop") {

@@ -153,6 +153,9 @@ struct timespec {
 };
 
 #if defined(__aarch64__) || defined(__arm64__)
+#if defined(__ANDROID__)
+#define ANDROID_AARCH64
+#endif
 #include "sys_aarch64.h"
 #elif defined(__riscv)
 #include "sys_riscv64.h"
@@ -233,7 +236,7 @@ void *strStr(const char *const Haystack, const char *const Needle) {
 }
 
 void reportNumber(const char *Msg, uint64_t Num, uint32_t Base) {
-#if !defined(__ANDROID__)
+#if !defined(ANDROID_AARCH64)
   char Buf[BufSize];
   char *Ptr = Buf;
   Ptr = strCopy(Ptr, Msg, BufSize - 23);
@@ -244,7 +247,7 @@ void reportNumber(const char *Msg, uint64_t Num, uint32_t Base) {
 }
 
 void report(const char *Msg) {
-#if !defined(__ANDROID__)
+#if !defined(ANDROID_AARCH64)
   __write(2, Msg, strLen(Msg));
 #endif
 }
@@ -284,18 +287,44 @@ static bool scanUInt32(const char *&Buf, const char *End, uint32_t &Ret) {
   return false;
 }
 
-void reportError(const char *Msg, uint64_t Size) {
-#if !defined(__ANDROID__)
-  __write(2, Msg, Size);
-#endif
+#if defined(ANDROID_AARCH64)
+// On Android the BOLT instrumentation runtime is embedded in a shipping app
+// process. Any failure in runtime should not terminate the host process with
+// __exit(1), which would turn a profiling-tool defect into a foreground app
+// crash. Instead, __bolt_instr_data_dump() installs a setjmp() recovery point
+// and any failed assert() or reportError() will record the failure and then
+// longjmp() back reporting failure to the caller.
+alignas(16) void *__bolt_instr_longjmp_buf[16];
+bool __bolt_instr_recovery_active = false;
+bool __bolt_instr_dump_failed = false;
+
+void boltHandleFatalAndRecover() {
+  __atomic_store_n(&__bolt_instr_dump_failed, true, __ATOMIC_RELAXED);
+  if (__bolt_instr_recovery_active) {
+    __bolt_instr_recovery_active = false;
+    __bolt_longjmp(__bolt_instr_longjmp_buf, 1);
+  }
   __exit(1);
+}
+#endif // defined(ANDROID_AARCH64)
+
+void reportError(const char *Msg, uint64_t Size) {
+#if defined(ANDROID_AARCH64)
+  (void)Msg;
+  (void)Size;
+  boltHandleFatalAndRecover();
+#else
+  __write(2, Msg, Size);
+  __exit(1);
+#endif
 }
 
 void assert(bool Assertion, const char *Msg) {
   if (Assertion)
     return;
-#if defined(__ANDROID__)
-  __exit(1);
+#if defined(ANDROID_AARCH64)
+  (void)Msg;
+  boltHandleFatalAndRecover();
 #else
   char Buf[BufSize];
   char *Ptr = Buf;

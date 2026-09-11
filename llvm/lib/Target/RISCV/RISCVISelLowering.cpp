@@ -10580,7 +10580,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getBitcast(VT, ResultInt);
   }
 
-  // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
+  // When Zicond is present, emit CZERO_EQZ and CZERO_NEZ
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
@@ -12548,6 +12548,79 @@ static Intrinsic::ID getRVPScalarMulPartsIntrinsic(unsigned IntNo) {
   }
 }
 
+/// Return the accumulate form of multiply-parts intrinsic \p IntNo, or
+/// Intrinsic::not_intrinsic if there is none.
+static Intrinsic::ID getRVPMulPartsAccIntrinsic(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    return Intrinsic::not_intrinsic;
+  case Intrinsic::riscv_mul_00:
+    return Intrinsic::riscv_macc_00;
+  case Intrinsic::riscv_pmul_00:
+    return Intrinsic::riscv_pmacc_00;
+  case Intrinsic::riscv_mul_01:
+    return Intrinsic::riscv_macc_01;
+  case Intrinsic::riscv_pmul_01:
+    return Intrinsic::riscv_pmacc_01;
+  case Intrinsic::riscv_mul_11:
+    return Intrinsic::riscv_macc_11;
+  case Intrinsic::riscv_pmul_11:
+    return Intrinsic::riscv_pmacc_11;
+  case Intrinsic::riscv_mulu_00:
+    return Intrinsic::riscv_maccu_00;
+  case Intrinsic::riscv_pmulu_00:
+    return Intrinsic::riscv_pmaccu_00;
+  case Intrinsic::riscv_mulu_01:
+    return Intrinsic::riscv_maccu_01;
+  case Intrinsic::riscv_pmulu_01:
+    return Intrinsic::riscv_pmaccu_01;
+  case Intrinsic::riscv_mulu_11:
+    return Intrinsic::riscv_maccu_11;
+  case Intrinsic::riscv_pmulu_11:
+    return Intrinsic::riscv_pmaccu_11;
+  case Intrinsic::riscv_mulsu_00:
+    return Intrinsic::riscv_maccsu_00;
+  case Intrinsic::riscv_pmulsu_00:
+    return Intrinsic::riscv_pmaccsu_00;
+  case Intrinsic::riscv_mulsu_11:
+    return Intrinsic::riscv_maccsu_11;
+  case Intrinsic::riscv_pmulsu_11:
+    return Intrinsic::riscv_pmaccsu_11;
+  }
+}
+
+/// Return the multiply-parts accumulate node for \p IntNo.
+static unsigned getRVPMulAccHalvesOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V multiply-parts accumulate intrinsic");
+  case Intrinsic::riscv_pmacc_00:
+  case Intrinsic::riscv_macc_00:
+    return RISCVISD::PMACC_HALVES_00;
+  case Intrinsic::riscv_pmacc_01:
+  case Intrinsic::riscv_macc_01:
+    return RISCVISD::PMACC_HALVES_01;
+  case Intrinsic::riscv_pmacc_11:
+  case Intrinsic::riscv_macc_11:
+    return RISCVISD::PMACC_HALVES_11;
+  case Intrinsic::riscv_pmaccu_00:
+  case Intrinsic::riscv_maccu_00:
+    return RISCVISD::PMACCU_HALVES_00;
+  case Intrinsic::riscv_pmaccu_01:
+  case Intrinsic::riscv_maccu_01:
+    return RISCVISD::PMACCU_HALVES_01;
+  case Intrinsic::riscv_pmaccu_11:
+  case Intrinsic::riscv_maccu_11:
+    return RISCVISD::PMACCU_HALVES_11;
+  case Intrinsic::riscv_pmaccsu_00:
+  case Intrinsic::riscv_maccsu_00:
+    return RISCVISD::PMACCSU_HALVES_00;
+  case Intrinsic::riscv_pmaccsu_11:
+  case Intrinsic::riscv_maccsu_11:
+    return RISCVISD::PMACCSU_HALVES_11;
+  }
+}
+
 /// Return {opcode, rs1 lane, rs2 lane} for the word form of \p IntNo.
 static std::tuple<unsigned, unsigned, unsigned>
 getRVPWordMulPartsOpcodeAndLanes(unsigned IntNo) {
@@ -12570,6 +12643,32 @@ getRVPWordMulPartsOpcodeAndLanes(unsigned IntNo) {
     return {RISCVISD::WMULSU, 0, 0};
   case Intrinsic::riscv_mulsu_11:
     return {RISCVISD::WMULSU, 1, 1};
+  }
+}
+
+/// Return {opcode, rs1 lane, rs2 lane} for the word form of accumulate
+/// intrinsic \p IntNo.
+static std::tuple<unsigned, unsigned, unsigned>
+getRVPWordMulPartsAccOpcodeAndLanes(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V multiply-parts accumulate intrinsic");
+  case Intrinsic::riscv_macc_00:
+    return {RISCVISD::WMACC, 0, 0};
+  case Intrinsic::riscv_macc_01:
+    return {RISCVISD::WMACC, 0, 1};
+  case Intrinsic::riscv_macc_11:
+    return {RISCVISD::WMACC, 1, 1};
+  case Intrinsic::riscv_maccu_00:
+    return {RISCVISD::WMACCU, 0, 0};
+  case Intrinsic::riscv_maccu_01:
+    return {RISCVISD::WMACCU, 0, 1};
+  case Intrinsic::riscv_maccu_11:
+    return {RISCVISD::WMACCU, 1, 1};
+  case Intrinsic::riscv_maccsu_00:
+    return {RISCVISD::WMACCSU, 0, 0};
+  case Intrinsic::riscv_maccsu_11:
+    return {RISCVISD::WMACCSU, 1, 1};
   }
 }
 
@@ -12634,6 +12733,42 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Lo = DAG.getNode(Opc, DL, HalfVT, Rs1Lo, Rs2Lo);
     SDValue Hi = DAG.getNode(Opc, DL, HalfVT, Rs1Hi, Rs2Hi);
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  }
+  case Intrinsic::riscv_pmacc_00:
+  case Intrinsic::riscv_pmacc_01:
+  case Intrinsic::riscv_pmacc_11:
+  case Intrinsic::riscv_pmaccu_00:
+  case Intrinsic::riscv_pmaccu_01:
+  case Intrinsic::riscv_pmaccu_11:
+  case Intrinsic::riscv_pmaccsu_00:
+  case Intrinsic::riscv_pmaccsu_11:
+  case Intrinsic::riscv_macc_00:
+  case Intrinsic::riscv_macc_01:
+  case Intrinsic::riscv_macc_11:
+  case Intrinsic::riscv_maccu_00:
+  case Intrinsic::riscv_maccu_01:
+  case Intrinsic::riscv_maccu_11:
+  case Intrinsic::riscv_maccsu_00:
+  case Intrinsic::riscv_maccsu_11: {
+    MVT VT = Op.getSimpleValueType();
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+    unsigned Opc = getRVPMulAccHalvesOpcode(IntNo);
+    if (VT != MVT::v2i32 || !Subtarget.isPExtPackedDoubleType(VT))
+      return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
+
+    // On RV32 a 64-bit result lives in a GPR pair; accumulate each half with
+    // the 32-bit form of the same product.
+    auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+    auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+    SDValue Lo =
+        DAG.getNode(Opc, DL, MVT::i32,
+                    DAG.getExtractVectorElt(DL, MVT::i32, Rd, 0), Rs1Lo, Rs2Lo);
+    SDValue Hi =
+        DAG.getNode(Opc, DL, MVT::i32,
+                    DAG.getExtractVectorElt(DL, MVT::i32, Rd, 1), Rs1Hi, Rs2Hi);
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
   }
   case Intrinsic::riscv_pas:
   case Intrinsic::riscv_psa:
@@ -17263,6 +17398,51 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       reportFatalUsageError("unsupported llvm.riscv multiply-parts intrinsic");
     }
+    case Intrinsic::riscv_macc_00:
+    case Intrinsic::riscv_macc_01:
+    case Intrinsic::riscv_macc_11:
+    case Intrinsic::riscv_maccu_00:
+    case Intrinsic::riscv_maccu_01:
+    case Intrinsic::riscv_maccu_11:
+    case Intrinsic::riscv_maccsu_00:
+    case Intrinsic::riscv_maccsu_11: {
+      // macc.hXX exists only on RV32 and macc.wXX only on RV64; the other XLEN
+      // has to build the product here.
+      MVT VT = N->getSimpleValueType(0);
+      MVT SrcVT = N->getOperand(2).getSimpleValueType();
+      if (Subtarget.hasStdExtP() && Subtarget.is64Bit() && VT == MVT::i32 &&
+          SrcVT == MVT::v2i16) {
+        // Accumulate into the first element of the packed product.
+        SDValue Undef = DAG.getUNDEF(SrcVT);
+        SDValue Rd = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+                                 N->getOperand(1));
+        SDValue Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                                  N->getOperand(2), Undef);
+        SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                                  N->getOperand(3), Undef);
+        SDValue Res = DAG.getNode(getRVPMulAccHalvesOpcode(IntNo), DL,
+                                  MVT::v2i32, Rd, Rs1, Rs2);
+        Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+        return;
+      }
+      if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() && VT == MVT::i64 &&
+          SrcVT == MVT::v2i32) {
+        auto [Opc, Rs1Lane, Rs2Lane] =
+            getRVPWordMulPartsAccOpcodeAndLanes(IntNo);
+        auto [RdLo, RdHi] =
+            DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+        SDValue Rs1 =
+            DAG.getExtractVectorElt(DL, MVT::i32, N->getOperand(2), Rs1Lane);
+        SDValue Rs2 =
+            DAG.getExtractVectorElt(DL, MVT::i32, N->getOperand(3), Rs2Lane);
+        SDValue Res = DAG.getNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                                  RdLo, RdHi, Rs1, Rs2);
+        Results.push_back(
+            DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Res, Res.getValue(1)));
+        return;
+      }
+      reportFatalUsageError("unsupported llvm.riscv multiply-parts intrinsic");
+    }
     case Intrinsic::riscv_paadd:
     case Intrinsic::riscv_paaddu:
     case Intrinsic::riscv_pasub:
@@ -18371,6 +18551,30 @@ static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::MULHSU, DL, VT, X, Mulh.getOperand(1));
 }
 
+// Fold an add of a multiply-parts product into the accumulating form.
+static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  for (unsigned I = 0; I != 2; ++I) {
+    SDValue Mul = N->getOperand(I);
+    if (Mul.getOpcode() != ISD::INTRINSIC_WO_CHAIN || !Mul.hasOneUse())
+      continue;
+    Intrinsic::ID AccId =
+        getRVPMulPartsAccIntrinsic(Mul.getConstantOperandVal(0));
+    if (AccId == Intrinsic::not_intrinsic)
+      continue;
+
+    SDLoc DL(N);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+                       DAG.getTargetConstant(AccId, DL, Subtarget.getXLenVT()),
+                       N->getOperand(1 - I), Mul.getOperand(1),
+                       Mul.getOperand(2));
+  }
+  return SDValue();
+}
+
 static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
                                          const RISCVSubtarget &Subtarget) {
   // Recognize the RV64 decompositions listed for the 32-bit packed widening
@@ -18455,6 +18659,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
+  if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddMulh(N, DAG, Subtarget))
     return V;
