@@ -2222,10 +2222,11 @@ multiclass VPseudoBinaryV_VX_RM<LMULInfo m, string Constraint = ""> {
   defm "_VX" : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, GPR, m, Constraint>;
 }
 
-multiclass VPseudoVSLD1_VX<string Constraint = ""> {
+multiclass VPseudoVSLD1_VX<bit slidesUp = false, string Constraint = ""> {
+  defvar WriteSlide1X = !if(slidesUp, "WriteVISlide1Up", "WriteVISlide1Down");
   foreach m = MxList in {
     defm "_VX" : VPseudoBinary<m.vrclass, m.vrclass, GPR, m, Constraint>,
-                 SchedBinary<"WriteVISlide1X", "ReadVISlideV", "ReadVISlideX",
+                 SchedBinary<WriteSlide1X, "ReadVISlideV", "ReadVISlideX",
                              m.MX, forcePassthruRead=true>;
   }
 }
@@ -2241,12 +2242,13 @@ multiclass VPseudoBinaryV_VF_RM<LMULInfo m, FPR_Info f, int sew> {
                                                UsesVXRM=0>;
 }
 
-multiclass VPseudoVSLD1_VF<string Constraint = ""> {
+multiclass VPseudoVSLD1_VF<bit slidesUp = false, string Constraint = ""> {
+  defvar WriteSlide1F = !if(slidesUp, "WriteVFSlide1Up", "WriteVFSlide1Down");
   foreach f = FPList in {
     foreach m = f.MxList in {
       defm "_V" #f.FX
           : VPseudoBinary<m.vrclass, m.vrclass, f.fprclass, m, Constraint>,
-            SchedBinary<"WriteVFSlide1F", "ReadVFSlideV", "ReadVFSlideF", m.MX,
+            SchedBinary<WriteSlide1F, "ReadVFSlideV", "ReadVFSlideF", m.MX,
                       forcePassthruRead=true>;
     }
   }
@@ -3317,13 +3319,14 @@ multiclass VPseudoVMAC_VV_VF_AAXA_RM {
 
 multiclass VPseudoVSLD_VX_VI<bit slidesUp = false, string Constraint = ""> {
   defvar WriteSlideX = !if(slidesUp, "WriteVSlideUpX", "WriteVSlideDownX");
+  defvar WriteSlideI = !if(slidesUp, "WriteVSlideUpI", "WriteVSlideDownI");
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoVSLDV_VX<m, Constraint>,
               SchedTernary<WriteSlideX, "ReadVISlideV", "ReadVISlideV",
                            "ReadVISlideX", mx>;
     defm "" : VPseudoVSLDV_VI<m, Constraint>,
-              SchedBinary<"WriteVSlideI", "ReadVISlideV", "ReadVISlideV", mx>;
+              SchedBinary<WriteSlideI, "ReadVISlideV", "ReadVISlideV", mx>;
   }
 }
 
@@ -6751,13 +6754,13 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 let Predicates = [HasVInstructions] in {
   defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI</*slidesUp=*/true, "@earlyclobber $rd">;
   defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI</*slidesUp=*/false>;
-  defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX<"@earlyclobber $rd">;
-  defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
+  defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX</*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX</*slidesUp=*/false>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
-  defm PseudoVFSLIDE1UP  : VPseudoVSLD1_VF<"@earlyclobber $rd">;
-  defm PseudoVFSLIDE1DOWN : VPseudoVSLD1_VF;
+  defm PseudoVFSLIDE1UP  : VPseudoVSLD1_VF</*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVFSLIDE1DOWN : VPseudoVSLD1_VF</*slidesUp=*/false>;
 } // Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT
 
 //===----------------------------------------------------------------------===//

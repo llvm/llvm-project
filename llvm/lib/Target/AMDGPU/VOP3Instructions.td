@@ -813,19 +813,19 @@ let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
                                                         VOP3_CVT_PK_F8_F32_Profile_t16<>,
                                                         VOP3_CVT_PK_F8_F32_Profile_fake16<>>;
 
-    let SubtargetPredicate = isGFX11Plus in {
+    let SubtargetPredicate = HasCvtFP8ByteSel in {
       let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
         defm V_CVT_SR_FP8_F32_gfx12 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
       let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in
         defm V_CVT_SR_FP8_F32_gfx1250 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx1250", VOP3_CVT_SR_F8_ByteSel_Profile<f32, true>>;
       defm V_CVT_SR_BF8_F32_gfx12 : VOP3Inst<"v_cvt_sr_bf8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
-    } // End SubtargetPredicate = isGFX11Plus
+    } // End SubtargetPredicate = HasCvtFP8ByteSel
   }
 
   // These instructions have non-standard use of op_sel. In particular they are
   // using op_sel bits 2 and 3 while only having two sources. Therefore dummy
   // src2 is used to hold the op_sel value.
-  let Constraints = "$vdst = $src2", SubtargetPredicate = isGFX940Plus in {
+  let Constraints = "$vdst = $src2", SubtargetPredicate = HasCvtFP8SDWASrcSel in {
     defm V_CVT_SR_FP8_F32 : VOP3Inst<"v_cvt_sr_fp8_f32", VOP3_CVT_SR_F8_F32_Profile>;
     defm V_CVT_SR_BF8_F32 : VOP3Inst<"v_cvt_sr_bf8_f32", VOP3_CVT_SR_F8_F32_Profile>;
   }
@@ -898,36 +898,36 @@ let OtherPredicates = [HasFP8ConversionInsts] in {
 foreach Index = [0, -1] in {
 let True16Predicate = NotHasTrue16BitInsts in {
   let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
-    def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_fp8_f32, Index, V_CVT_PK_FP8_F32_e64>;
-  def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_e64>;
+    def : Cvt_PK_F8_F32_Pat<cvt_pk_fp8_f32, Index, V_CVT_PK_FP8_F32_e64>;
+  def : Cvt_PK_F8_F32_Pat<cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_e64>;
 }
 let True16Predicate = UseFakeTrue16Insts in {
-  def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_fp8_f32, Index, V_CVT_PK_FP8_F32_fake16_e64>;
-  def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_fake16_e64>;
+  def : Cvt_PK_F8_F32_Pat<cvt_pk_fp8_f32, Index, V_CVT_PK_FP8_F32_fake16_e64>;
+  def : Cvt_PK_F8_F32_Pat<cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_fake16_e64>;
   let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in {
-    def : Cvt_PK_F8_F32_E5M3_Pat<int_amdgcn_cvt_pk_fp8_f32,      Index, V_CVT_PK_FP8_F32_gfx1250_fake16_e64, DSTCLAMP.NONE>;
-    def : Cvt_PK_F8_F32_E5M3_Pat<int_amdgcn_cvt_pk_fp8_f32_e5m3, Index, V_CVT_PK_FP8_F32_gfx1250_fake16_e64, DSTCLAMP.ENABLE>;
+    def : Cvt_PK_F8_F32_E5M3_Pat<cvt_pk_fp8_f32,                 Index, V_CVT_PK_FP8_F32_gfx1250_fake16_e64, DSTCLAMP.NONE>;
+    def : Cvt_PK_F8_F32_E5M3_Pat<cvt_pk_fp8_f32_e5m3,            Index, V_CVT_PK_FP8_F32_gfx1250_fake16_e64, DSTCLAMP.ENABLE>;
   }
 }
 }
 
 let True16Predicate = UseRealTrue16Insts in {
-defm : Cvt_PK_F8_F32_t16_Pat<int_amdgcn_cvt_pk_fp8_f32, V_CVT_PK_FP8_F32_t16_e64>;
-defm : Cvt_PK_F8_F32_t16_Pat<int_amdgcn_cvt_pk_bf8_f32, V_CVT_PK_BF8_F32_t16_e64>;
+defm : Cvt_PK_F8_F32_t16_Pat<cvt_pk_fp8_f32, V_CVT_PK_FP8_F32_t16_e64>;
+defm : Cvt_PK_F8_F32_t16_Pat<cvt_pk_bf8_f32, V_CVT_PK_BF8_F32_t16_e64>;
   let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in {
-    defm : Cvt_PK_F8_F32_E5M3_t16_Pat<int_amdgcn_cvt_pk_fp8_f32,      V_CVT_PK_FP8_F32_gfx1250_t16_e64, DSTCLAMP.NONE>;
-    defm : Cvt_PK_F8_F32_E5M3_t16_Pat<int_amdgcn_cvt_pk_fp8_f32_e5m3, V_CVT_PK_FP8_F32_gfx1250_t16_e64, DSTCLAMP.ENABLE>;
+    defm : Cvt_PK_F8_F32_E5M3_t16_Pat<cvt_pk_fp8_f32,                 V_CVT_PK_FP8_F32_gfx1250_t16_e64, DSTCLAMP.NONE>;
+    defm : Cvt_PK_F8_F32_E5M3_t16_Pat<cvt_pk_fp8_f32_e5m3,            V_CVT_PK_FP8_F32_gfx1250_t16_e64, DSTCLAMP.ENABLE>;
   }
 }
 
-let SubtargetPredicate = isGFX940Plus in {
+let SubtargetPredicate = HasCvtFP8SDWASrcSel in {
   foreach Index = [0, 1, 2, 3] in {
     def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_fp8_f32, Index, V_CVT_SR_FP8_F32_e64>;
     def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_bf8_f32, Index, V_CVT_SR_BF8_F32_e64>;
   }
 }
 
-let SubtargetPredicate = isGFX11Plus in {
+let SubtargetPredicate = HasCvtFP8ByteSel in {
   let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
     def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f32, V_CVT_SR_FP8_F32_gfx12_e64, f32>;
   let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in {
@@ -935,7 +935,7 @@ let SubtargetPredicate = isGFX11Plus in {
     def : Cvt_SR_F8_ByteSel_E5M3_Pat<int_amdgcn_cvt_sr_fp8_f32_e5m3, V_CVT_SR_FP8_F32_gfx1250_e64, f32, DSTCLAMP.ENABLE>;
   }
   def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f32, V_CVT_SR_BF8_F32_gfx12_e64, f32>;
-} // End SubtargetPredicate = isGFX11Plus
+} // End SubtargetPredicate = HasCvtFP8ByteSel
 }
 
 class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
@@ -1801,7 +1801,6 @@ def bf16_fpround : PatFrag <(ops node:$src0),  (any_fpround $src0), [{ return tr
 let SubtargetPredicate = HasBF16ConversionInsts in {
   let ReadsModeReg = 0 in {
     defm V_CVT_PK_BF16_F32    : VOP3Inst<"v_cvt_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32>>;
-    defm V_CVT_SR_PK_BF16_F32 : VOP3Inst<"v_cvt_sr_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_bf16_f32>;
   }
   def : GCNPat<(v2bf16 (bf16_fpround v2f32:$src)),
                (V_CVT_PK_BF16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
@@ -1810,6 +1809,10 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
   def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
+}
+
+let SubtargetPredicate = HasCvtSrPkBF16F32Inst, ReadsModeReg = 0 in {
+  defm V_CVT_SR_PK_BF16_F32 : VOP3Inst<"v_cvt_sr_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_bf16_f32>;
 }
 
 class VOP3_CVT_SCALE_PK_F16_F864_Profile<VOPProfile P> : VOP3_CVT_SCALEF32_PK_F864_Profile<P> {
@@ -1846,36 +1849,39 @@ let SubtargetPredicate = isGFX1250Plus in {
     defm V_CVT_SR_PK_F16_F32 : VOP3Inst<"v_cvt_sr_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_f16_f32>;
 
     // These instructions have non-standard use of op_sel. They are using bits 2 and 3 of opsel
-    // to select a byte in the vdst. Bits 0 and 1 are unused.
-    let Constraints = "$vdst = $vdst_in" in {
+    // to select a byte in the vdst. Bit 1 must be zero, and bit 0 can be non-zero to select
+    // the high 16-bits of src0.
+    let Constraints = "$vdst = $vdst_in", SubtargetPredicate = HasF16FP8ConversionInsts in {
       defm V_CVT_SR_FP8_F16 : VOP3Inst_t16_with_profiles<"v_cvt_sr_fp8_f16", VOP3_CVT_SR_F8_F16_Profile,
                                                           VOP3_CVT_SR_F8_F16_True16_Profile, VOP3_CVT_SR_F8_F16_Fake16_Profile>;
       defm V_CVT_SR_BF8_F16 : VOP3Inst_t16_with_profiles<"v_cvt_sr_bf8_f16", VOP3_CVT_SR_F8_F16_Profile,
                                                           VOP3_CVT_SR_F8_F16_True16_Profile, VOP3_CVT_SR_F8_F16_Fake16_Profile>;
     }
 
-    let Constraints = "@earlyclobber $vdst" in {
-      let WaveSizePredicate = isWave32 in {
-        defm V_CVT_SCALE_PK8_F16_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp8",   VOP_V8F16_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f16_fp8>;
-        defm V_CVT_SCALE_PK8_BF16_FP8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_fp8>;
-        defm V_CVT_SCALE_PK8_F16_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_bf8",   VOP_V8F16_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f16_bf8>;
-        defm V_CVT_SCALE_PK8_BF16_BF8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_bf8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_bf8>;
-        defm V_CVT_SCALE_PK8_F32_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_fp8>;
-        defm V_CVT_SCALE_PK8_F32_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_bf8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_bf8>;
-      }
-      defm V_CVT_SCALE_PK16_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f16_fp6",  VOP_V16F16_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f16_fp6>;
-      defm V_CVT_SCALE_PK16_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_bf16_fp6", VOP_V16BF16_V3I32_I32, int_amdgcn_cvt_scale_pk16_bf16_fp6>;
-      defm V_CVT_SCALE_PK16_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f16_bf6",  VOP_V16F16_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f16_bf6>;
-      defm V_CVT_SCALE_PK16_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_bf16_bf6", VOP_V16BF16_V3I32_I32, int_amdgcn_cvt_scale_pk16_bf16_bf6>;
-      defm V_CVT_SCALE_PK16_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f32_fp6",  VOP_V16F32_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f32_fp6>;
-      defm V_CVT_SCALE_PK16_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f32_bf6",  VOP_V16F32_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f32_bf6>;
-    } // End Constraints = "@earlyclobber $vdst"
+    let SubtargetPredicate = HasBlock16ConversionScaleInsts in {
+      let Constraints = "@earlyclobber $vdst" in {
+        let WaveSizePredicate = isWave32 in {
+          defm V_CVT_SCALE_PK8_F16_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp8",   VOP_V8F16_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f16_fp8>;
+          defm V_CVT_SCALE_PK8_BF16_FP8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_fp8>;
+          defm V_CVT_SCALE_PK8_F16_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_bf8",   VOP_V8F16_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f16_bf8>;
+          defm V_CVT_SCALE_PK8_BF16_BF8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_bf8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_bf8>;
+          defm V_CVT_SCALE_PK8_F32_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_fp8>;
+          defm V_CVT_SCALE_PK8_F32_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_bf8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_bf8>;
+        }
+        defm V_CVT_SCALE_PK16_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f16_fp6",  VOP_V16F16_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f16_fp6>;
+        defm V_CVT_SCALE_PK16_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_bf16_fp6", VOP_V16BF16_V3I32_I32, int_amdgcn_cvt_scale_pk16_bf16_fp6>;
+        defm V_CVT_SCALE_PK16_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f16_bf6",  VOP_V16F16_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f16_bf6>;
+        defm V_CVT_SCALE_PK16_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_bf16_bf6", VOP_V16BF16_V3I32_I32, int_amdgcn_cvt_scale_pk16_bf16_bf6>;
+        defm V_CVT_SCALE_PK16_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f32_fp6",  VOP_V16F32_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f32_fp6>;
+        defm V_CVT_SCALE_PK16_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f32_bf6",  VOP_V16F32_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f32_bf6>;
+      } // End Constraints = "@earlyclobber $vdst"
 
-    let WaveSizePredicate = isWave32 in {
-      defm V_CVT_SCALE_PK8_F16_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp4",   VOP_V8F16_I32_I32,     int_amdgcn_cvt_scale_pk8_f16_fp4>;
-      defm V_CVT_SCALE_PK8_BF16_FP4  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp4",  VOP_V8BF16_I32_I32,    int_amdgcn_cvt_scale_pk8_bf16_fp4>;
-      defm V_CVT_SCALE_PK8_F32_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp4",   VOP_V8F32_I32_I32,     int_amdgcn_cvt_scale_pk8_f32_fp4>;
-    }
+      let WaveSizePredicate = isWave32 in {
+        defm V_CVT_SCALE_PK8_F16_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp4",   VOP_V8F16_I32_I32,     int_amdgcn_cvt_scale_pk8_f16_fp4>;
+        defm V_CVT_SCALE_PK8_BF16_FP4  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp4",  VOP_V8BF16_I32_I32,    int_amdgcn_cvt_scale_pk8_bf16_fp4>;
+        defm V_CVT_SCALE_PK8_F32_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp4",   VOP_V8F32_I32_I32,     int_amdgcn_cvt_scale_pk8_f32_fp4>;
+      }
+    } // End SubtargetPredicate = HasBlock16ConversionScaleInsts
   } // End ReadsModeReg = 0
 
   let Constraints = "@earlyclobber $vdst" in {
@@ -1916,15 +1922,29 @@ let SubtargetPredicate = isGFX1250Plus in {
     defm V_CVT_SCALEF32_SR_PK16_FP6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_fp6_f32>;
   } // End Constraints = "@earlyclobber $vdst"
 
-  let True16Predicate = UseRealTrue16Insts in {
-    def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_t16_e64, f16>;
-    def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_t16_e64, f16>;
-  }
-  let True16Predicate = UseFakeTrue16Insts in {
-    def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_fake16_e64, f16>;
-    def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_fake16_e64, f16>;
+  let SubtargetPredicate = HasF16FP8ConversionInsts in {
+    let True16Predicate = UseRealTrue16Insts in {
+      def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_t16_e64, f16>;
+      def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_t16_e64, f16>;
+    }
+    let True16Predicate = UseFakeTrue16Insts in {
+      def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_fake16_e64, f16>;
+      def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_fake16_e64, f16>;
+    }
   }
 } // End SubtargetPredicate = isGFX1250Plus
+
+let SubtargetPredicate = HasFP6BF6ToF16BF16F32ConversionScaleInsts,
+    ReadsModeReg = 0, Constraints = "@earlyclobber $vdst" in {
+  let WaveSizePredicate = isWave32 in {
+    defm V_CVT_SCALE_PK32_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_bf6", VOP_V32BF16_V6I32_I32, null_frag>;
+    defm V_CVT_SCALE_PK32_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_fp6", VOP_V32BF16_V6I32_I32, null_frag>;
+    defm V_CVT_SCALE_PK32_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_bf6",  VOP_V32F16_V6I32_I32,  null_frag>;
+    defm V_CVT_SCALE_PK32_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_fp6",  VOP_V32F16_V6I32_I32,  null_frag>;
+    defm V_CVT_SCALE_PK32_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_bf6",  VOP_V32F32_V6I32_I32,  null_frag>;
+    defm V_CVT_SCALE_PK32_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_fp6",  VOP_V32F32_V6I32_I32,  null_frag>;
+  } // End WaveSizePredicate = isWave32
+} // End SubtargetPredicate = HasFP6BF6ToF16BF16F32ConversionScaleInsts
 
 let SubtargetPredicate = HasTensorCvtLutInsts in {
   defm V_PERM_PK16_B4_U4 : VOP3Inst<"v_perm_pk16_b4_u4", VOP3_V2I32_I32_I32_V2I32, int_amdgcn_perm_pk16_b4_u4>;
@@ -1976,19 +1996,34 @@ class VOP_Pseudo_Scalar<RegisterClass Dst, RegisterOperand SrcOp,
 
 def VOP_Pseudo_Scalar_F32 : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_f32, f32>;
 def VOP_Pseudo_Scalar_F16 : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_f16, f32, f16>;
+def VOP_Pseudo_Scalar_F16_NoInline : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_NoInline_f16, f32, f16>;
+
+// Define regular and "no inline constant" variant of a F16 pseudo
+// scalar transcendental instruction.
+multiclass VOP3PseudoScalarInst_F16<string opName> {
+  let TRANS = 1, isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
+    let SubtargetPredicate = Predicate<"Subtarget->hasPseudoScalarTrans() && !Subtarget->hasNoF16PseudoScalarTransInlineConstants()"> in {
+      defm NAME : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16>;
+    }
+
+    let SubtargetPredicate = HasNoF16PseudoScalarTransInlineConstants in {
+      defm !strconcat(NAME, "_noinline") : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16_NoInline>;
+    }
+  }
+}
 
 let SubtargetPredicate = HasPseudoScalarTrans, TRANS = 1,
     isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
   defm V_S_EXP_F32  : VOP3PseudoScalarInst<"v_s_exp_f32", VOP_Pseudo_Scalar_F32, AMDGPUexp>;
-  defm V_S_EXP_F16  : VOP3PseudoScalarInst<"v_s_exp_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_EXP_F16  : VOP3PseudoScalarInst_F16<"v_s_exp_f16">;
   defm V_S_LOG_F32  : VOP3PseudoScalarInst<"v_s_log_f32", VOP_Pseudo_Scalar_F32, AMDGPUlog>;
-  defm V_S_LOG_F16  : VOP3PseudoScalarInst<"v_s_log_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_LOG_F16  : VOP3PseudoScalarInst_F16<"v_s_log_f16">;
   defm V_S_RCP_F32  : VOP3PseudoScalarInst<"v_s_rcp_f32", VOP_Pseudo_Scalar_F32, AMDGPUrcp>;
-  defm V_S_RCP_F16  : VOP3PseudoScalarInst<"v_s_rcp_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_RCP_F16  : VOP3PseudoScalarInst_F16<"v_s_rcp_f16">;
   defm V_S_RSQ_F32  : VOP3PseudoScalarInst<"v_s_rsq_f32", VOP_Pseudo_Scalar_F32, AMDGPUrsq>;
-  defm V_S_RSQ_F16  : VOP3PseudoScalarInst<"v_s_rsq_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_RSQ_F16  : VOP3PseudoScalarInst_F16<"v_s_rsq_f16">;
   defm V_S_SQRT_F32 : VOP3PseudoScalarInst<"v_s_sqrt_f32", VOP_Pseudo_Scalar_F32, any_amdgcn_sqrt>;
-  defm V_S_SQRT_F16 : VOP3PseudoScalarInst<"v_s_sqrt_f16", VOP_Pseudo_Scalar_F16>;
+  defm V_S_SQRT_F16 : VOP3PseudoScalarInst_F16<"v_s_sqrt_f16">;
 }
 
 class PseudoScalarPatF16<SDPatternOperator node, VOP3_Pseudo inst> : GCNPat <
@@ -2133,16 +2168,24 @@ defm V_MINMAX_NUM_F32     : VOP3_Realtriple_with_name_gfx12_gfx13<0x268,0x268, "
 defm V_MAXMIN_NUM_F32     : VOP3_Realtriple_with_name_gfx12_gfx13<0x269, 0x269, "V_MAXMIN_F32", "v_maxmin_num_f32">;
 defm V_MINMAX_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26a, 0x26a, "v_minmax_num_f16", "V_MINMAX_F16", "v_minmax_f16">;
 defm V_MAXMIN_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26b, 0x26b, "v_maxmin_num_f16", "V_MAXMIN_F16", "v_maxmin_f16">;
+
+// Define regular and "no inline constant" variant (for gfx12) of a
+// F16 pseudo-scalar transcendental instruction.
+multiclass VOP3Only_Real_F16_PseudoScalarTrans<bits<10> op> {
+  defm NAME : VOP3_Real_Base<GFX13Gen, op, NAME, 1>;
+  defm !strconcat(NAME, "_noinline") : VOP3_Real_Base<GFX12Gen, op, !strconcat(NAME, "_noinline"), 1>;
+}
+
 defm V_S_EXP_F32          : VOP3Only_Real_Base_gfx12_gfx13<0x280>;
-defm V_S_EXP_F16          : VOP3Only_Real_Base_gfx12_gfx13<0x281>;
+defm V_S_EXP_F16          : VOP3Only_Real_F16_PseudoScalarTrans<0x281>;
 defm V_S_LOG_F32          : VOP3Only_Real_Base_gfx12_gfx13<0x282>;
-defm V_S_LOG_F16          : VOP3Only_Real_Base_gfx12_gfx13<0x283>;
+defm V_S_LOG_F16          : VOP3Only_Real_F16_PseudoScalarTrans<0x283>;
 defm V_S_RCP_F32          : VOP3Only_Real_Base_gfx12_gfx13<0x284>;
-defm V_S_RCP_F16          : VOP3Only_Real_Base_gfx12_gfx13<0x285>;
+defm V_S_RCP_F16          : VOP3Only_Real_F16_PseudoScalarTrans<0x285>;
 defm V_S_RSQ_F32          : VOP3Only_Real_Base_gfx12_gfx13<0x286>;
-defm V_S_RSQ_F16          : VOP3Only_Real_Base_gfx12_gfx13<0x287>;
+defm V_S_RSQ_F16          : VOP3Only_Real_F16_PseudoScalarTrans<0x287>;
 defm V_S_SQRT_F32         : VOP3Only_Real_Base_gfx12_gfx13<0x288>;
-defm V_S_SQRT_F16         : VOP3Only_Real_Base_gfx12_gfx13<0x289>;
+defm V_S_SQRT_F16         : VOP3Only_Real_F16_PseudoScalarTrans<0x289>;
 defm V_MAD_CO_U64_U32     : VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<0x2fe, 0x2f8, "V_MAD_U64_U32", "v_mad_co_u64_u32">;
 defm V_MAD_CO_I64_I32     : VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<0x2ff, 0x2f9, "V_MAD_I64_I32", "v_mad_co_i64_i32">;
 
@@ -2481,6 +2524,12 @@ let WaveSizePredicate = isWave32 in {
   defm V_CVT_SCALEF32_SR_PK32_FP6_BF16 : VOP3Only_Real_Base_gfx13<0x2a7>;
   defm V_CVT_SCALEF32_SR_PK32_FP6_F16  : VOP3Only_Real_Base_gfx13<0x2a8>;
   defm V_CVT_SCALEF32_SR_PK32_FP6_F32  : VOP3Only_Real_Base_gfx13<0x2a9>;
+  defm V_CVT_SCALE_PK32_BF16_BF6       : VOP3Only_ScaleSel_Real_gfx13<0x2b3>;
+  defm V_CVT_SCALE_PK32_BF16_FP6       : VOP3Only_ScaleSel_Real_gfx13<0x2b4>;
+  defm V_CVT_SCALE_PK32_F16_BF6        : VOP3Only_ScaleSel_Real_gfx13<0x2b5>;
+  defm V_CVT_SCALE_PK32_F16_FP6        : VOP3Only_ScaleSel_Real_gfx13<0x2b6>;
+  defm V_CVT_SCALE_PK32_F32_BF6        : VOP3Only_ScaleSel_Real_gfx13<0x2b7>;
+  defm V_CVT_SCALE_PK32_F32_FP6        : VOP3Only_ScaleSel_Real_gfx13<0x2b8>;
 } // End WaveSizePredicate = isWave32
 
 //===----------------------------------------------------------------------===//

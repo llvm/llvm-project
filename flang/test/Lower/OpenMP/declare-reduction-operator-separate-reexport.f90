@@ -45,7 +45,7 @@ module rx_wrap
 end module
 
 !--- rx.use.f90
-! CHECK: omp.declare_reduction @[[RED:_QQMrx_baseop\.remote\._byref_rec__QMrx_baseTt]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQMrx_baseop\.remote\._byref_rec__QMrx_baseTt]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]
 ! CHECK-NOT: not yet implemented
@@ -76,7 +76,7 @@ module nm_wrap
 end module
 
 !--- nm.use.f90
-! CHECK: omp.declare_reduction @[[RED:_QQMnm_basemyred_byref_rec__QMnm_baseTt]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQMnm_basemyred_byref_rec__QMnm_baseTt]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]
 ! CHECK-NOT: not yet implemented

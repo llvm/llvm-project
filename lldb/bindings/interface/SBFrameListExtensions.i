@@ -21,7 +21,8 @@
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all frames in a lldb.SBFrameList object.'''
-            return lldb_iter(self, 'GetSize', 'GetFrameAtIndex')
+            for i in range(self.GetSize()):
+                yield self.GetFrameAtIndex(i)
 
         def __len__(self):
             return int(self.GetSize())

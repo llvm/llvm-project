@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 
@@ -158,6 +157,7 @@ void SystemZTargetzOSStreamer::emitPPA1(PPA1Info &Info) {
   assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
   MCStreamer &OutStreamer = getStreamer();
   MCContext &OutContext = OutStreamer.getContext();
+  getStreamer().emitValueToAlignment(Align(2));
 
   // Optional Argument Area Length.
   // Note: This represents the length of the argument area that we reserve
@@ -284,6 +284,7 @@ void SystemZTargetzOSStreamer::emitPPA1(PPA1Info &Info) {
 
 void SystemZTargetzOSStreamer::emitConstantPools() {
   // Emit EXRL target instructions (base class prolog).
+  getStreamer().emitValueToAlignment(Align(2));
   SystemZTargetStreamer::emitConstantPools();
 
   // Emit deferred PPA1 blocks into the text section.

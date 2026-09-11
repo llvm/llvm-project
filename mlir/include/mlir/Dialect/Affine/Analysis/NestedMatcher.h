@@ -187,8 +187,6 @@ NestedPattern For(ArrayRef<NestedPattern> nested = {});
 NestedPattern For(const FilterFunctionType &filter,
                   ArrayRef<NestedPattern> nested = {});
 
-bool isParallelLoop(Operation &op);
-bool isReductionLoop(Operation &op);
 bool isLoadOrStore(Operation &op);
 
 } // namespace matcher

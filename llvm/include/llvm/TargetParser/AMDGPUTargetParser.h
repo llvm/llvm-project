@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGETPARSER_AMDGPUTARGETPARSER_H
 #define LLVM_TARGETPARSER_AMDGPUTARGETPARSER_H
 
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -31,18 +32,33 @@ class Triple;
 namespace AMDGPU {
 
 /// GPU kinds supported by the AMDGPU target.
-enum GPUKind : uint32_t {
+enum GPUKind : uint8_t {
   // Not specified processor.
   GK_NONE = 0,
 
-#define R600_GPU(NAME, ENUM, FEATURES) ENUM,
+#define GET_R600_GPU_ENUM
 #include "llvm/TargetParser/R600TargetParserDef.inc"
-#define AMDGPU_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES) ENUM,
-#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 
-  GK_AMDGPU_GENERIC_FIRST = GK_GFX9_GENERIC,
-  GK_AMDGPU_GENERIC_LAST = GK_GFX13_GENERIC,
+#define GET_AMDGPU_GPU_ENUM
+#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 };
+
+/// One enumerator per frontend-visible feature bit; NUM_FEATURES is the count.
+enum AMDGPUFeature : unsigned {
+#define GET_AMDGPU_FEATURE_ENUM
+#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
+};
+
+using AMDGPUFeatureBitset = Bitset<NUM_FEATURES>;
+
+/// One enumerator per frontend-visible R600 feature bit; R600_NUM_FEATURES is
+/// the count.
+enum R600Feature : unsigned {
+#define GET_R600_FEATURE_ENUM
+#include "llvm/TargetParser/R600TargetParserDef.inc"
+};
+
+using R600FeatureBitset = Bitset<R600_NUM_FEATURES>;
 
 /// Instruction set architecture version.
 struct IsaVersion {
@@ -57,43 +73,6 @@ struct IsaVersion {
   bool operator!=(const IsaVersion &Other) const { return !(*this == Other); }
 };
 
-// This isn't comprehensive for now, just things that are needed from the
-// frontend driver.
-enum R600FeatureKind : uint32_t {
-  R600_FEATURE_NONE = 0,
-
-  // Has fma instructions.
-  R600_FEATURE_FMA = 1 << 0,
-};
-
-// GFX6+ features. This isn't comprehensive for now, just things that are needed
-// from the frontend driver.
-enum ArchFeatureKind : uint32_t {
-  FEATURE_NONE = 0,
-
-  // Common features.
-  FEATURE_FAST_FMA_F32 = 1 << 0,
-  FEATURE_FAST_DENORMAL_F32 = 1 << 1,
-
-  // Wavefront 32 is available.
-  FEATURE_WAVE32 = 1 << 2,
-
-  // Xnack is available.
-  FEATURE_XNACK = 1 << 3,
-
-  // Sram-ecc is available.
-  FEATURE_SRAMECC = 1 << 4,
-
-  // WGP mode is supported.
-  FEATURE_WGP = 1 << 5,
-
-  // Xnack on/off modes are supported.
-  FEATURE_XNACK_ON_OFF_MODES = 1 << 6,
-
-  // VI SGPR initialization bug requiring a fixed SGPR allocation size.
-  FEATURE_SGPR_INIT_BUG = 1 << 7
-};
-
 enum FeatureError : uint32_t {
   NO_ERROR = 0,
   INVALID_FEATURE_COMBINATION,
@@ -101,7 +80,13 @@ enum FeatureError : uint32_t {
 };
 
 LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
+
 LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
+
+/// Returns the preferred subarch for a GPU name \p CPU, or NoSubArch if
+/// unrecognized.
+LLVM_ABI Triple::SubArchType getSubArchFromGPUName(StringRef CPU);
+
 LLVM_ABI Triple::SubArchType getMajorSubArch(Triple::SubArchType SubArch);
 
 /// Return true if subarch \p A is compatible with subarch \p B, i.e. they are
@@ -120,6 +105,16 @@ LLVM_ABI bool isCPUValidForSubArch(Triple::SubArchType SubArch, GPUKind AK);
 /// is parsed via parseArchAMDGCN. An unrecognized name is never valid.
 LLVM_ABI bool isCPUValidForSubArch(Triple::SubArchType SubArch, StringRef CPU);
 
+/// Return true if \p AK is a pseudo target (e.g. "generic"/"generic-hsa"): a
+/// recognized AMDGCN GPU that represents no concrete hardware and has no
+/// subarch of its own. Such targets are resolved by the backend as a default
+/// device but are not valid as an explicit -mcpu.
+LLVM_ABI bool isPseudoTarget(GPUKind AK);
+
+/// Convenience overload of isPseudoTarget taking a GPU name \p CPU, which is
+/// parsed via parseArchAMDGCN.
+LLVM_ABI bool isPseudoTarget(StringRef CPU);
+
 /// Returns the effective triple appropriate to use when linking \p B into \p A
 /// by merging the subarches in case of inexact match.
 ///
@@ -136,13 +131,24 @@ LLVM_ABI StringRef getArchNameR600(GPUKind AK);
 /// subarch. The major-only subarches map to their generic/lowest
 /// representative, matching the default subtarget for an unspecified -mcpu.
 LLVM_ABI StringRef getArchNameFromSubArch(Triple::SubArchType SubArch);
+
+/// Returns the triple subarch name for an AMDGPU subarch, e.g.
+/// AMDGPUSubArch900 -> "amdgpu9.00". Returns "amdgpu" for NoSubArch.
+LLVM_ABI StringRef getSubArchName(Triple::SubArchType SubArch);
 LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);
 LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
-LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
-LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
-LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
+
+/// Returns \p AK's feature bitset, or an empty bitset if unknown.
+LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
+
+/// Returns R600 GPU \p AK's feature bitset, or an empty bitset if unknown.
+LLVM_ABI const R600FeatureBitset &getFeatureBitsetR600(GPUKind AK);
+
+/// Appends the feature name of each bit set in \p Features to \p Names.
+LLVM_ABI void getFeatureNames(const AMDGPUFeatureBitset &Features,
+                              SmallVectorImpl<StringRef> &Names);
 
 /// Append the valid AMDGCN GPU names to \p Values. If \p SubArch is not
 /// NoSubArch, only GPUs compatible with that subarch (see isCPUValidForSubArch)
@@ -165,6 +171,60 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
+
+/// \returns VGPR allocation granularity for \p AK, in registers. \p IsWave32
+/// selects the wavefront size, which is a per-kernel mode rather than a
+/// property of the GPU. This does not account for dynamic VGPR mode, where the
+/// block size chosen by the caller is the granule.
+LLVM_ABI unsigned getVGPRAllocGranule(GPUKind AK, bool IsWave32);
+LLVM_ABI unsigned getVGPRAllocGranule(Triple::SubArchType SubArch,
+                                      bool IsWave32);
+
+/// \returns Number of physical VGPRs, i.e. the size of the register file a
+/// work-group's waves share. \p IsWave32 selects the wavefront size.
+LLVM_ABI unsigned getTotalNumVGPRs(GPUKind AK, bool IsWave32);
+LLVM_ABI unsigned getTotalNumVGPRs(Triple::SubArchType SubArch, bool IsWave32);
+
+/// \returns Number of VGPRs a single wave can address. On a target with a
+/// unified register file this covers the AGPRs as well. This does not account
+/// for dynamic VGPR mode, which caps allocation at a fixed number of blocks.
+LLVM_ABI unsigned getAddressableNumVGPRs(GPUKind AK, bool IsWave32);
+LLVM_ABI unsigned getAddressableNumVGPRs(Triple::SubArchType SubArch,
+                                         bool IsWave32);
+
+/// \returns Maximum LDS in bytes a single work-group can address. This is a
+/// fixed hardware cap and does not depend on how many SIMDs a work-group runs
+/// on.
+LLVM_ABI unsigned getMaxHWAddressableLocalMemorySize(GPUKind AK);
+LLVM_ABI unsigned
+getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
+
+/// \returns Number of LDS banks per compute unit.
+LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
+LLVM_ABI unsigned getLDSBankCount(Triple::SubArchType SubArch);
+
+/// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
+/// functional block in full-SIMD mode, half of them otherwise.
+constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {
+  return FullSIMDMode ? 4 : 2;
+}
+
+/// \returns Minimum number of waves per execution unit.
+constexpr unsigned getMinWavesPerEU() { return 1; }
+
+/// \returns Maximum number of waves per execution unit without any kind of
+/// limitation.
+LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
+LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
+
+/// \returns Minimum flat work group size.
+constexpr unsigned getMinFlatWorkGroupSize() { return 1; }
+
+/// \returns Maximum flat work group size.
+constexpr unsigned getMaxFlatWorkGroupSize() {
+  // Some subtargets allow encoding 2048, but this isn't tested or supported.
+  return 1024;
+}
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns
@@ -264,6 +324,14 @@ public:
   /// "<triple>-<processor>:<features>" directive string.
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
+
+  /// Construct a TargetID for triple \p TT and processor \p CPU, taking the
+  /// xnack/sramecc modes from the subtarget \p FeatureString (a comma-separated
+  /// "+xnack,-sramecc" list). Unspecified modes keep the processor's default.
+  /// The assembler uses this because it has no target directive to carry the
+  /// mode.
+  static TargetID createFromSubtargetFeatures(const Triple &TT, StringRef CPU,
+                                              StringRef FeatureString);
 
   /// Returns true if \p Other denotes the same target as *this, i.e. the same
   /// processor and xnack/sramecc settings on a compatible triple. This is a

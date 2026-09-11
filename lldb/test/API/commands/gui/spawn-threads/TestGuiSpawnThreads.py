@@ -11,7 +11,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 import sys
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class TestGuiSpawnThreadsTest(PExpectTest):
     # This tests spawns threads, so low resources on the host may
     # lead to the test program being stalled for a long time.

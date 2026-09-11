@@ -102,6 +102,7 @@ int main (int argc, char const *argv[])
 
     typedef int myint;
     myint myint_arr[] = {1, 2, 3};
+    int &first_ref = myint_arr[0];
 
     EnumType enum_type;
     ScopedEnumType scoped_enum_type;

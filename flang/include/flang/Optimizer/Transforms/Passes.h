@@ -9,7 +9,7 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
-#include "flang/Optimizer/Transforms/AllocationPlacementPolicy.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -50,8 +50,6 @@ createAllocationPlacement(const AllocationPlacementOptions &options,
                           AllocationPlacementHook placementHook);
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
-std::unique_ptr<mlir::Pass>
-createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass>

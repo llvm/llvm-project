@@ -63,10 +63,10 @@ void associative_container_benchmarks(std::string container) {
   auto get_key = [](Value const& v) { return adapt_operations<Container>::key_from_value(v); };
 
   auto bench = [&](std::string operation, auto f) {
-    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(1024)->Arg(8192);
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(8192);
   };
   auto bench_non_empty = [&](std::string operation, auto f) {
-    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(1024)->Arg(8192);
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(8192);
   };
 
   static constexpr bool is_multi_key_container =
@@ -89,7 +89,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Constructors
   /////////////////////////
-  bench("ctor(const Self&)", [=](auto& st) {
+  bench("ctor(const Self&)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -110,7 +110,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("ctor(const Self&, const allocator_type&)", [=](auto& st) {
+  bench("ctor(const Self&, const allocator_type&)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -131,7 +131,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("ctor(Self&&, const allocator_type&) (different allocs)", [=](auto& st) {
+  bench_non_empty("ctor(Self&&, const allocator_type&) (different allocs)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     using PMRContainer = adapt_operations<Container>::template rebind_alloc<
         std::pmr::polymorphic_allocator<typename Container::value_type>>;
 
@@ -165,7 +165,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("ctor(iterator, iterator) (unsorted sequence)", [=](auto& st) {
+  bench("ctor(iterator, iterator) (unsorted sequence)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::mt19937 randomness;
     std::vector<Key> keys = generate_unique_keys(size);
@@ -188,7 +188,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("ctor(iterator, iterator) (sorted sequence)", [=](auto& st) {
+  bench("ctor(iterator, iterator) (sorted sequence)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Key> keys  = generate_unique_keys(size);
     std::sort(keys.begin(), keys.end());
@@ -213,7 +213,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Assignment
   /////////////////////////
-  bench("operator=(const Self&) (into cleared Container)", [=](auto& st) {
+  bench("operator=(const Self&) (into cleared Container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -234,11 +234,16 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("operator=(const Self&) (into partially populated Container)", [=](auto& st) {
+  bench("operator=(const Self&) (into partially populated Container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
+    Container half(std::next(in.begin(), in.size() / 2), in.end());
+
     Container c[BatchSize];
+    for (std::size_t i = 0; i != BatchSize; ++i) {
+      c[i] = half;
+    }
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
@@ -249,13 +254,13 @@ void associative_container_benchmarks(std::string container) {
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].clear();
+        c[i] = half;
       }
       st.ResumeTiming();
     }
   });
 
-  bench("operator=(const Self&) (into populated Container)", [=](auto& st) {
+  bench("operator=(const Self&) (into populated Container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -273,7 +278,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Insertion
   /////////////////////////
-  bench_non_empty("insert(const value_type&) (already present)", [=](auto& st) {
+  bench_non_empty("insert(const value_type&) (already present)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value to_insert        = in[in.size() / 2]; // pick any existing value
@@ -329,11 +334,13 @@ void associative_container_benchmarks(std::string container) {
       st.ResumeTiming();
     }
   };
-  bench("insert(value) (new value, end)", [=](auto& state) { insert_new_value_bench(true, state); });
-  bench("insert(value) (new value, middle)", [=](auto& state) { insert_new_value_bench(false, state); });
+  bench("insert(value) (new value, end)",
+        [=](auto& state) TEST_ALIGN_BENCHMARK { insert_new_value_bench(true, state); });
+  bench("insert(value) (new value, middle)",
+        [=](auto& state) TEST_ALIGN_BENCHMARK { insert_new_value_bench(false, state); });
 
   if constexpr (is_map_like && !is_multi_key_container) {
-    bench_non_empty("insert_or_assign(key, value) (already present)", [=](auto& st) {
+    bench_non_empty("insert_or_assign(key, value) (already present)", [=](auto& st) TEST_ALIGN_BENCHMARK {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size));
       Value to_insert        = in[in.size() / 2]; // pick any existing value
@@ -382,9 +389,10 @@ void associative_container_benchmarks(std::string container) {
         st.ResumeTiming();
       }
     };
-    bench("insert_or_assign(key, value) (new value, end)", [=](auto& state) { insert_or_assign_bench(true, state); });
+    bench("insert_or_assign(key, value) (new value, end)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_or_assign_bench(true, state); });
     bench("insert_or_assign(key, value) (new value, middle)",
-          [=](auto& state) { insert_or_assign_bench(false, state); });
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_or_assign_bench(false, state); });
   }
 
   // The insert(hint, ...) methods are only relevant for ordered containers, and we lack
@@ -426,8 +434,10 @@ void associative_container_benchmarks(std::string container) {
         st.ResumeTiming();
       }
     };
-    bench("insert(hint, value) (good hint, end)", [=](auto& state) { insert_good_hint_bench(true, state); });
-    bench("insert(hint, value) (good hint, middle)", [=](auto& state) { insert_good_hint_bench(false, state); });
+    bench("insert(hint, value) (good hint, end)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_good_hint_bench(true, state); });
+    bench("insert(hint, value) (good hint, middle)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_good_hint_bench(false, state); });
 
     auto insert_bad_hint_bench = [=](bool bench_end_iter, auto& st) {
       const std::size_t size = st.range(0);
@@ -460,8 +470,10 @@ void associative_container_benchmarks(std::string container) {
       }
     };
 
-    bench("insert(hint, value) (bad hint, end)", [=](auto& state) { insert_bad_hint_bench(true, state); });
-    bench("insert(hint, value) (bad hint, middle)", [=](auto& state) { insert_bad_hint_bench(false, state); });
+    bench("insert(hint, value) (bad hint, end)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_bad_hint_bench(true, state); });
+    bench("insert(hint, value) (bad hint, middle)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_bad_hint_bench(false, state); });
   }
 
   auto insert_iter_iter_bench = [=](bool bench_end_iter, auto& st) {
@@ -493,11 +505,14 @@ void associative_container_benchmarks(std::string container) {
       st.ResumeTiming();
     }
   };
-  bench("insert(iterator, iterator) (all new keys, end)", [&](auto& state) { insert_iter_iter_bench(true, state); });
-  bench("insert(iterator, iterator) (all new keys, middle)",
-        [&](auto& state) { insert_iter_iter_bench(false, state); });
+  bench_non_empty("insert(iterator, iterator) (all new keys, end)", [=](auto& state) TEST_ALIGN_BENCHMARK {
+    insert_iter_iter_bench(true, state);
+  });
+  bench_non_empty("insert(iterator, iterator) (all new keys, middle)", [=](auto& state) TEST_ALIGN_BENCHMARK {
+    insert_iter_iter_bench(false, state);
+  });
 
-  bench("insert(iterator, iterator) (half new keys)", [=](auto& st) {
+  bench_non_empty("insert(iterator, iterator) (half new keys)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
 
@@ -521,7 +536,7 @@ void associative_container_benchmarks(std::string container) {
   });
 
   if constexpr (is_map_like) {
-    bench("insert(iterator, iterator) (product_iterator from same type)", [=](auto& st) {
+    bench_non_empty("insert(iterator, iterator) (product_iterator from same type)", [=](auto& st) TEST_ALIGN_BENCHMARK {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
       Container source(in.begin(), in.end());
@@ -539,8 +554,8 @@ void associative_container_benchmarks(std::string container) {
       }
     });
 
-#if TEST_STD_VER >= 23
-    bench("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) {
+#if defined(__cpp_lib_ranges_zip) && __cpp_lib_ranges_zip >= 202110L
+    bench_non_empty("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) TEST_ALIGN_BENCHMARK {
       const std::size_t size = st.range(0);
       std::vector<Key> keys  = generate_unique_keys(size + (size / 10));
       std::sort(keys.begin(), keys.end());
@@ -565,7 +580,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Erasure
   /////////////////////////
-  bench_non_empty("erase(key) (existent)", [=](auto& st) {
+  bench_non_empty("erase(key) (existent)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value element          = in[in.size() / 2]; // pick any element
@@ -616,10 +631,12 @@ void associative_container_benchmarks(std::string container) {
       // no cleanup required because we erased a non-existent element
     }
   };
-  bench("erase(key) (non-existent, end)", [=](auto& state) { erase_key_non_existent_bench(true, state); });
-  bench("erase(key) (non-existent, middle)", [=](auto& state) { erase_key_non_existent_bench(false, state); });
+  bench("erase(key) (non-existent, end)",
+        [=](auto& state) TEST_ALIGN_BENCHMARK { erase_key_non_existent_bench(true, state); });
+  bench("erase(key) (non-existent, middle)",
+        [=](auto& state) TEST_ALIGN_BENCHMARK { erase_key_non_existent_bench(false, state); });
 
-  bench_non_empty("erase(iterator)", [=](auto& st) {
+  bench_non_empty("erase(iterator)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value element          = in[in.size() / 2]; // pick any element
@@ -647,7 +664,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("erase(iterator, iterator) (erase half the container)", [=](auto& st) {
+  bench_non_empty("erase(iterator, iterator) (erase half the container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container c(in.begin(), in.end());
@@ -668,7 +685,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("clear()", [=](auto& st) {
+  bench("clear()", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container c(in.begin(), in.end());
@@ -688,7 +705,7 @@ void associative_container_benchmarks(std::string container) {
   // Query
   /////////////////////////
   auto query_bench = [=](auto func) {
-    return [=](auto& st) {
+    return [=](auto& st) TEST_ALIGN_BENCHMARK {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size));
       Container c(in.begin(), in.end());

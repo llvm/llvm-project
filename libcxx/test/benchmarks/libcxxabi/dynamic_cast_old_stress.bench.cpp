@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 template <std::size_t Indx, std::size_t Depth>
 struct C : public virtual C<Indx, Depth - 1>, public virtual C<Indx + 1, Depth - 1> {
@@ -40,7 +41,7 @@ constexpr std::size_t Width = 10;
 constexpr std::size_t Depth = 5;
 
 template <typename Destination>
-void CastTo(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void CastTo(benchmark::State& state) {
   A<Width, Depth> a;
   auto base = static_cast<C<Width / 2, 0>*>(&a);
 

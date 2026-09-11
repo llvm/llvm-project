@@ -1,9 +1,7 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
-// RUN:   -fsyntax-only -verify
+// RUN:   -fsyntax-only -verify=expected,both
 // RUN: %clang_cc1 -triple x86_64 -x hip %s \
-// RUN:   -fsyntax-only -verify=host
-
-// host-no-diagnostics
+// RUN:   -fsyntax-only -verify=host,both
 
 #include "Inputs/cuda.h"
 
@@ -96,7 +94,8 @@ struct B {
     __device__ static constexpr int *const p2 = &b;
     // expected-error@-1{{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
     __device__ static constexpr int *const p3 = &c;
-    // expected-error@-1{{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+    // both-error@-1{{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+    // both-error@-2{{constexpr variable 'p3' must be initialized by a constant expression}}
     __device__ static constexpr int *const p4 = &d;
     __device__ static constexpr int *const p5 = &e;
     __device__ static constexpr texture<float, 2, ElementType> *const p6 = &tex;

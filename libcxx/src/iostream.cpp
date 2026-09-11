@@ -129,7 +129,7 @@ STREAM(basic_ostream, __stdoutbuf, unsync_buffer, wchar_t, wclog);
 // the standard streams, otherwise it may not be alive during program termination
 // when we flush the streams.
 static void force_locale_initialization() {
-#if defined(_LIBCPP_MSVCRT_LIKE)
+#ifdef _WIN32
   static bool once = []() {
     auto loc = __locale::__newlocale(_LIBCPP_ALL_MASK, "C", 0);
     {

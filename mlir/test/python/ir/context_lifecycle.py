@@ -70,3 +70,69 @@ c5 = None
 c6 = None
 c7 = None
 gc.collect()
+assert mlir.ir.Context._get_live_count() == 0
+
+# Test begin_transient_scope and end_transient_scope APIs
+print("TEST TRANSIENT SCOPE")
+ctx = mlir.ir.Context()
+assert not ctx.is_in_transient_scope
+
+with ctx, mlir.ir.Location.unknown(ctx):
+    i32 = mlir.ir.IntegerType.get_signless(32)
+
+    ctx.begin_transient_scope()
+    assert ctx.is_in_transient_scope
+
+    # Verify exception when attempting to enter again while already active
+    try:
+        ctx.begin_transient_scope()
+    except ValueError as e:
+        assert "Context is already in a transient scope" in str(e)
+    else:
+        assert False, "Expected ValueError when entering transient scope twice"
+
+    # Create transient types and attributes
+    vec_type = mlir.ir.VectorType.get([4], i32)
+    str_attr = mlir.ir.StringAttr.get("transient_ident")
+    assert str_attr.value == "transient_ident"
+
+    # End transient scope back to base
+    ctx.end_transient_scope()
+    assert not ctx.is_in_transient_scope
+
+    # Base type is intact
+    post_i32 = mlir.ir.IntegerType.get_signless(32)
+    assert post_i32 == i32
+
+    # Re-creating types post reset succeeds
+    new_vec_type = mlir.ir.VectorType.get([4], i32)
+    assert new_vec_type is not None
+
+    # Test transient_scope context manager
+    with ctx.transient_scope():
+        assert ctx.is_in_transient_scope
+        transient_f32 = mlir.ir.F32Type.get()
+        transient_vec = mlir.ir.VectorType.get([2, 2], transient_f32)
+        assert transient_vec is not None
+
+        # Verify exception on nested transient_scope
+        try:
+            with ctx.transient_scope():
+                pass
+        except ValueError as e:
+            assert "Context is already in a transient scope" in str(e)
+        else:
+            assert False, "Expected ValueError on nested transient_scope"
+
+    assert not ctx.is_in_transient_scope
+
+ctx = None
+i32 = None
+post_i32 = None
+vec_type = None
+new_vec_type = None
+str_attr = None
+transient_f32 = None
+transient_vec = None
+gc.collect()
+assert mlir.ir.Context._get_live_count() == 0
