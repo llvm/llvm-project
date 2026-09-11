@@ -2,14 +2,56 @@
 # RUN:   -enable-early-ifcvt-data-dependent \
 # RUN:   -pass-remarks-analysis='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s
 
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-cascade -enable-early-ifcvt-data-dependent \
+# RUN:   -pass-remarks='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=CASCADE-SUCCESS \
+# RUN:     --implicit-check-not="performing cascade if-conversion"
+
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-cascade -enable-early-ifcvt-data-dependent \
+# RUN:   -pass-remarks-missed='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=CASCADE-MISSED
+
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-cascade \
+# RUN:   -pass-remarks='early-ifcvt' -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CASCADE-NO-DD --implicit-check-not="cascade if-conversion"
+
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-cascade -enable-early-ifcvt-data-dependent \
+# RUN:   -early-ifcvt-limit=3 -pass-remarks='early-ifcvt' \
+# RUN:   -pass-remarks-missed='early-ifcvt' -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CASCADE-OVER-LIMIT \
+# RUN:     --implicit-check-not="performing cascade if-conversion"
+
 # Test that we emit an analysis remark when the branch condition is data-dependent
 # (derived from a memory load).
 
 # CHECK: remark: <unknown>:0:0: branch condition is data-dependent (from memory load), using higher CritLimit of {{[0-9]+}} cycles
 
+# Test cascade conversion success remark.
+# CASCADE-SUCCESS: remark: <unknown>:0:0: performing cascade if-conversion on 3 blocks: critical path extension is {{[0-9]+}} cycle
+
+# CASCADE-MISSED: remark: <unknown>:0:0: did not if-convert cascade with 5 blocks: critical path extension of 21 cycles exceeds the threshold of 20 cycles.
+# CASCADE-MISSED: remark: <unknown>:0:0: did not if-convert cascade with 3 blocks: critical path extension of 30 cycles exceeds the threshold of 12 cycles.
+
+# CASCADE-NO-DD: remark: <unknown>:0:0: performing if-conversion on branch: {{.*}} staying under the threshold of 8 cycles.
+
+# CASCADE-OVER-LIMIT: remark: <unknown>:0:0: did not if-convert cascade with 3 blocks: the speculated blocks would hold 10 instructions, exceeding the limit of 3.
+# CASCADE-OVER-LIMIT: remark: <unknown>:0:0: did not if-convert cascade with 5 blocks: the speculated blocks would hold 14 instructions, exceeding the limit of 3.
+# CASCADE-OVER-LIMIT: remark: <unknown>:0:0: did not if-convert cascade with 3 blocks: the speculated blocks would hold 11 instructions, exceeding the limit of 3.
+
 --- |
   define i32 @data_dependent_branch(ptr %p, i32 %x, i32 %y) {
     ret i32 0
+  }
+  define i64 @cascade_success(ptr %p, ptr %q, i32 %n) {
+    ret i64 0
+  }
+  define i64 @cascade_increasing_cond_depth(ptr %p) {
+    ret i64 0
+  }
+  define i64 @cascade_mixed_reg_classes(ptr %p) {
+    ret i64 0
   }
 ...
 ---
@@ -42,4 +84,218 @@ body:             |
     %100:gpr32 = PHI %1, %bb.0, %20, %bb.1
     $w0 = COPY %100
     RET_ReallyLR implicit $w0
+...
+---
+name:            cascade_success
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+  - { reg: '$w2', virtual-reg: '%2' }
+body:             |
+  ; Entry - check loop count
+  bb.0:
+    successors: %bb.6(0x30000000), %bb.1(0x50000000)
+    liveins: $x0, $x1, $w2
+
+    %0:gpr64common = COPY $x0
+    %1:gpr64common = COPY $x1
+    %2:gpr32 = COPY $w2
+    %50:gpr64all = COPY $xzr
+    %51:gpr64all = COPY %50
+    CBZW %2, %bb.6
+    B %bb.1
+
+  ; Loop header / cascade head - ALL loads here, branches to bb.2 or bb.5
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.5(0x40000000)
+
+    %60:gpr64 = PHI %51, %bb.0, %81, %bb.5
+    %61:gpr32 = PHI %2, %bb.0, %80, %bb.5
+    ; Load ALL data in head - makes branch data-dependent
+    %62:gpr32 = LDRWui %0, 0 :: (load (s32))
+    %63:gpr32 = LDRWui %1, 0 :: (load (s32))
+    %66:gpr32 = LDRWui %1, 1 :: (load (s32))
+    %69:gpr32 = LDRWui %1, 2 :: (load (s32))
+    %90:gpr32 = LDRWui %1, 3 :: (load (s32))
+    %64:gpr64 = MOVi64imm 4
+    %65:gpr32 = SUBSWrr %62, %63, implicit-def $nzcv
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.2
+
+  ; First cascade block (branches to bb.3 or bb.5)
+  bb.2:
+    successors: %bb.3(0x40000000), %bb.5(0x40000000)
+
+    %67:gpr32 = SUBSWrr %62, %66, implicit-def $nzcv
+    %68:gpr64 = MOVi64imm 3
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.3
+
+  ; Second cascade block (branches to bb.4 or bb.5)
+  bb.3:
+    successors: %bb.4(0x40000000), %bb.5(0x40000000)
+
+    %70:gpr32 = SUBSWrr %62, %69, implicit-def $nzcv
+    %91:gpr64 = MOVi64imm 2
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.4
+
+  ; Third cascade block (only branches to bb.5)
+  bb.4:
+    successors: %bb.5(0x80000000)
+
+    %92:gpr32 = SUBSWrr %62, %90, implicit-def $nzcv
+    %71:gpr32 = CSINCWr $wzr, $wzr, 11, implicit $nzcv
+    %72:gpr64 = SUBREG_TO_REG %71, %subreg.sub_32
+
+  ; Loop latch / cascade tail - PHI merge and back edge
+  bb.5:
+    successors: %bb.6(0x04000000), %bb.1(0x7c000000)
+
+    %73:gpr64 = PHI %64, %bb.1, %68, %bb.2, %91, %bb.3, %72, %bb.4
+    %74:gpr64 = ADDXrr %60, %73
+    %75:gpr32 = MOVi32imm 1
+    %80:gpr32 = SUBSWrr %61, %75, implicit-def $nzcv
+    %81:gpr64all = COPY %74
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.6
+
+  ; Exit
+  bb.6:
+    %82:gpr64 = PHI %51, %bb.0, %81, %bb.5
+    $x0 = COPY %82
+    RET_ReallyLR implicit $x0
+...
+---
+name:            cascade_increasing_cond_depth
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $x0
+
+    %0:gpr64common = COPY $x0
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.7(0x40000000)
+
+    %10:gpr32 = LDRWui %0, 0 :: (load (s32))
+    %11:gpr32 = MADDWrrr %10, %10, $wzr
+    %12:gpr32 = MADDWrrr %11, %11, $wzr
+    %20:gpr32 = ADDWrr %12, %12
+    %21:gpr32 = ADDWrr %20, %20
+    %22:gpr32 = ADDWrr %21, %21
+    %23:gpr32 = ADDWrr %22, %22
+    %40:gpr64 = MOVi64imm 100
+    %30:gpr32 = SUBSWrr %12, %12, implicit-def $nzcv
+    Bcc 10, %bb.7, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    successors: %bb.3(0x40000000), %bb.7(0x40000000)
+
+    %41:gpr64 = MOVi64imm 200
+    %31:gpr32 = SUBSWrr %20, %20, implicit-def $nzcv
+    Bcc 10, %bb.7, implicit $nzcv
+    B %bb.3
+
+  bb.3:
+    successors: %bb.4(0x40000000), %bb.7(0x40000000)
+
+    %42:gpr64 = MOVi64imm 300
+    %32:gpr32 = SUBSWrr %21, %21, implicit-def $nzcv
+    Bcc 10, %bb.7, implicit $nzcv
+    B %bb.4
+
+  bb.4:
+    successors: %bb.5(0x40000000), %bb.7(0x40000000)
+
+    %43:gpr64 = MOVi64imm 400
+    %33:gpr32 = SUBSWrr %22, %22, implicit-def $nzcv
+    Bcc 10, %bb.7, implicit $nzcv
+    B %bb.5
+
+  bb.5:
+    successors: %bb.6(0x40000000), %bb.7(0x40000000)
+
+    %44:gpr64 = MOVi64imm 500
+    %34:gpr32 = SUBSWrr %23, %23, implicit-def $nzcv
+    Bcc 10, %bb.7, implicit $nzcv
+    B %bb.6
+
+  bb.6:
+    successors: %bb.7(0x80000000)
+
+    %45:gpr64 = MOVi64imm 600
+
+  bb.7:
+    %90:gpr64 = PHI %40, %bb.1, %41, %bb.2, %42, %bb.3, %43, %bb.4, %44, %bb.5, %45, %bb.6
+    $x0 = COPY %90
+    RET_ReallyLR implicit $x0
+...
+---
+name:            cascade_mixed_reg_classes
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $d0, $d1, $d2, $d3
+
+    %0:gpr64common = COPY $x0
+    %5:fpr64 = COPY $d0
+    %6:fpr64 = COPY $d1
+    %7:fpr64 = COPY $d2
+    %8:fpr64 = COPY $d3
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.5(0x40000000)
+
+    %10:gpr32 = LDRWui %0, 0 :: (load (s32))
+    %11:gpr32 = MADDWrrr %10, %10, $wzr
+    %12:gpr32 = MADDWrrr %11, %11, $wzr
+    %20:gpr32 = ADDWrr %12, %12
+    %21:gpr32 = ADDWrr %20, %20
+    %40:gpr64 = MOVi64imm 100
+    %30:gpr32 = SUBSWrr %12, %12, implicit-def $nzcv
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    successors: %bb.3(0x40000000), %bb.5(0x40000000)
+
+    %41:gpr64 = MOVi64imm 200
+    %31:gpr32 = SUBSWrr %20, %20, implicit-def $nzcv
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.3
+
+  bb.3:
+    successors: %bb.4(0x40000000), %bb.5(0x40000000)
+
+    %42:gpr64 = MOVi64imm 300
+    %32:gpr32 = SUBSWrr %21, %21, implicit-def $nzcv
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.4
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+
+    %43:gpr64 = MOVi64imm 400
+
+  bb.5:
+    %90:gpr64 = PHI %40, %bb.1, %41, %bb.2, %42, %bb.3, %43, %bb.4
+    %91:fpr64 = PHI %5, %bb.1, %6, %bb.2, %7, %bb.3, %8, %bb.4
+    %60:fpr64 = FMULDrr %91, %91, implicit $fpcr
+    %61:fpr64 = FMULDrr %60, %60, implicit $fpcr
+    %62:fpr64 = FMULDrr %61, %61, implicit $fpcr
+    %63:fpr64 = FMULDrr %62, %62, implicit $fpcr
+    %64:fpr64 = FMULDrr %63, %63, implicit $fpcr
+    $x0 = COPY %90
+    $d0 = COPY %64
+    RET_ReallyLR implicit $x0, implicit $d0
 ...
