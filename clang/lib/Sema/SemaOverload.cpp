@@ -8163,7 +8163,8 @@ static void AddMethodTemplateCandidateImmediately(
   //   functions. In such a case, the candidate functions generated from each
   //   function template are combined with the set of non-template candidate
   //   functions.
-  TemplateDeductionInfo Info(CandidateSet.getLocation());
+  TemplateDeductionInfo Info(CandidateSet.getLocation(),
+                             MethodTmpl->getTemplateParameters()->getDepth());
   auto *Method = cast<CXXMethodDecl>(MethodTmpl->getTemplatedDecl());
   FunctionDecl *Specialization = nullptr;
   ConversionSequenceList Conversions;
@@ -8762,7 +8763,9 @@ static void AddTemplateConversionCandidateImmediately(
   QualType ObjectType = From->getType();
   Expr::Classification ObjectClassification = From->Classify(S.Context);
 
-  TemplateDeductionInfo Info(CandidateSet.getLocation());
+  TemplateDeductionInfo Info(
+      CandidateSet.getLocation(),
+      FunctionTemplate->getTemplateParameters()->getDepth());
   CXXConversionDecl *Specialization = nullptr;
   if (TemplateDeductionResult Result = S.DeduceTemplateArguments(
           FunctionTemplate, ObjectType, ObjectClassification, ToType,

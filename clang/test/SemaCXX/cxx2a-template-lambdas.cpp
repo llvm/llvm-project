@@ -154,6 +154,34 @@ template <int N> constexpr auto g() {
   return l();
 }
 static_assert(g<1>() == 0);
+
+namespace valid {
+template <int> struct bad {
+  template <auto = []<typename... U>(U...) { return 42; }()>
+  struct X {};
+};
+
+bad<1> b;
+bad<1>::X x;
+static_assert(__is_same(decltype(x), bad<1>::X<42>));
+}
+
+namespace invalid {
+template <class>
+concept C = false; // expected-note 2{{because 'false' evaluated to false}}
+
+template <int> struct bad {
+  template <auto = []<C... U>(U...) { return 42; }(1, 2)> // expected-error {{no matching function for call to object of type}} \
+                                                        // expected-note {{candidate template ignored: constraints not satisfied [with U = <int, int>]}} \
+                                                        // expected-note 2{{'int' does not satisfy 'C'}}
+  struct X {}; // expected-note {{couldn't infer template argument ''}} \
+               // expected-note 2{{implicit deduction guide declared as}} \
+               // expected-note {{candidate function template not viable: requires 1 argument, but 0 were provided}}
+};
+
+bad<1>::X x; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of}} \
+             // expected-note {{in instantiation of template class 'GH176405::invalid::bad<1>' requested here}}
+}
 }
 #endif
 

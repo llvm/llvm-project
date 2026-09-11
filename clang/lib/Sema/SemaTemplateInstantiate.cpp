@@ -303,10 +303,19 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
         Function->getPrimaryTemplate()->isMemberSpecialization())
       return Response::Done();
 
-    // If this function is a generic lambda specialization, we are done.
-    if (!ForConstraintInstantiation &&
-        isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function))
-      return Response::Done();
+    if (isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function)) {
+      // The lambda may be nested in template parameter lists that are not
+      // substituted, e.g. a default template argument of a member template.
+      unsigned Depth =
+          Function->getPrimaryTemplate()->getTemplateParameters()->getDepth();
+      // If this function is a generic lambda specialization, we are done.
+      if (!ForConstraintInstantiation) {
+        Result.addOuterRetainedLevels(Depth);
+        return Response::Done();
+      }
+      for (unsigned I = 0; I != Depth; ++I)
+        Result.addOuterTemplateArguments(std::nullopt);
+    }
 
   } else if (auto *Template = Function->getDescribedFunctionTemplate()) {
     assert(
@@ -1317,9 +1326,6 @@ namespace {
     // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
     bool EvaluateLambdaConstraint = false;
-    // Whether we are substituting into the default argument of a template
-    // parameter whose template parameter list is being instantiated.
-    bool InTemplateParameterDefaultArgument = false;
     // Whether Substitution was Incomplete, that is, we tried to substitute in
     // any user provided template arguments which were null.
     bool IsIncomplete = false;
@@ -1353,10 +1359,6 @@ namespace {
     }
     bool getEvaluateConstraints() {
       return EvaluateConstraints;
-    }
-
-    void setInTemplateParameterDefaultArgument(bool B) {
-      InTemplateParameterDefaultArgument = B;
     }
 
     inline static struct ForParameterMappingSubstitution_t {
@@ -1764,14 +1766,6 @@ namespace {
     QualType
     TransformSubstBuiltinTemplatePackType(TypeLocBuilder &TLB,
                                           SubstBuiltinTemplatePackTypeLoc TL);
-
-    // A lambda in the default argument of a template parameter is dependent
-    // when parsed (it is within a template parameter list) and remains so
-    // while that parameter list is instantiated without being substituted
-    // itself, e.g. for a member template of a class being instantiated.
-    bool IsLambdaAlwaysDependent() {
-      return InTemplateParameterDefaultArgument;
-    }
 
     CXXRecordDecl::LambdaDependencyKind
     ComputeLambdaDependency(LambdaScopeInfo *LSI) {
@@ -4483,16 +4477,6 @@ bool Sema::SubstTemplateArgument(
     TemplateArgumentLoc &Output, SourceLocation Loc,
     const DeclarationName &Entity) {
   TemplateInstantiator Instantiator(*this, TemplateArgs, Loc, Entity);
-  return Instantiator.TransformTemplateArgument(Input, Output);
-}
-
-bool Sema::SubstTemplateParameterDefaultArgument(
-    const TemplateArgumentLoc &Input,
-    const MultiLevelTemplateArgumentList &TemplateArgs,
-    TemplateArgumentLoc &Output) {
-  TemplateInstantiator Instantiator(*this, TemplateArgs, SourceLocation(),
-                                    DeclarationName());
-  Instantiator.setInTemplateParameterDefaultArgument(true);
   return Instantiator.TransformTemplateArgument(Input, Output);
 }
 

@@ -13576,14 +13576,6 @@ public:
                              TemplateArgumentLoc &Output,
                              SourceLocation Loc = {},
                              const DeclarationName &Entity = {});
-
-  /// Substitute into the default argument of a template parameter as part of
-  /// instantiating its template parameter list. Lambdas within the default
-  /// argument stay dependent, as they were when parsed.
-  bool SubstTemplateParameterDefaultArgument(
-      const TemplateArgumentLoc &Input,
-      const MultiLevelTemplateArgumentList &TemplateArgs,
-      TemplateArgumentLoc &Output);
   bool
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
