@@ -2694,8 +2694,7 @@ struct ExpeditedMemory {
   std::vector<uint8_t> bytes;
 };
 
-// Read one range and append it as an expedited chunk.  A chunk is appended
-// only when the whole range was read, so its bytes always cover its address.
+// Read one range and append it as an expedited chunk.
 static void AppendExpeditedMemory(nub_process_t pid, nub_addr_t addr,
                                   nub_size_t size,
                                   std::vector<ExpeditedMemory> &chunks) {
