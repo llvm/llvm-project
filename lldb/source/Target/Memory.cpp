@@ -158,21 +158,28 @@ void MemoryCache::InsertData(addr_t addr, llvm::ArrayRef<uint8_t> src) {
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   const addr_t last_addr = llvm::SaturatingAdd<addr_t>(addr, src.size() - 1);
-  const uint64_t len = last_addr - addr + 1;
+  src = src.take_front(last_addr - addr + 1);
   const uint32_t line_size = m_L2_cache.GetLineByteSize();
 
-  for (uint64_t offset = 0; offset < len;) {
-    const addr_t curr_addr = addr + offset;
-    const uint64_t line_offset = curr_addr % line_size;
-    const uint64_t piece_len =
-        std::min<uint64_t>(line_size - line_offset, len - offset);
-    const llvm::ArrayRef<uint8_t> piece_bytes = src.slice(offset, piece_len);
-    if (line_offset == 0 && piece_len == line_size)
-      InsertWholeLine(curr_addr, piece_bytes);
-    else
-      InsertPartialLine(curr_addr, piece_bytes);
-    offset += piece_len;
+  // A leading piece, up to the first line boundary.
+  if (const uint64_t line_offset = addr % line_size) {
+    const uint64_t head_len =
+        std::min<uint64_t>(line_size - line_offset, src.size());
+    InsertPartialLine(addr, src.take_front(head_len));
+    addr += head_len;
+    src = src.drop_front(head_len);
   }
+
+  // Whole, aligned lines.
+  while (src.size() >= line_size) {
+    InsertWholeLine(addr, src.take_front(line_size));
+    addr += line_size;
+    src = src.drop_front(line_size);
+  }
+
+  // A trailing piece, shorter than a line.
+  if (!src.empty())
+    InsertPartialLine(addr, src);
 }
 
 void MemoryCache::AddCacheData(lldb::addr_t addr,
