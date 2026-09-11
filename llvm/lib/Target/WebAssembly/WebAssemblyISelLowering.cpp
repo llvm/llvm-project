@@ -2955,6 +2955,9 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
 }
 
 static bool HasNoSignedZerosOrNaNs(SDValue Op, SelectionDAG &DAG) {
+  if (!Op->getOperand(0).getValueType().isFloatingPoint() ||
+      !Op->getOperand(1).getValueType().isFloatingPoint())
+    return false;
   return (Op->getFlags().hasNoNaNs() ||
           (DAG.isKnownNeverNaN(Op->getOperand(0)) &&
            DAG.isKnownNeverNaN(Op->getOperand(1)))) &&
