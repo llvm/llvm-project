@@ -46,6 +46,18 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
                                   dataLayout.getTypeSizeInBits(type));
   }
 
+  if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
+    if (mlir::isa<cir::BoolType>(matrixTy.getElementType())) {
+      assert(!cir::MissingFeatures::hlsl());
+      llvm_unreachable(
+          "convertTypeForMemory: Matrix with bool as element type");
+    }
+
+    uint64_t size = matrixTy.getRowNum() * matrixTy.getColumnNum();
+    mlir::Type elementType = converter.convertType(matrixTy.getElementType());
+    return mlir::LLVM::LLVMArrayType::get(elementType, size);
+  }
+
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(type)) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
       assert(!cir::MissingFeatures::hlsl());
