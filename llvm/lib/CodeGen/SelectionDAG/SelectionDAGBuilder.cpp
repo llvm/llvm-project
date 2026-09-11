@@ -12539,8 +12539,8 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
   for (CaseClusterIt I = W.FirstCluster; I <= W.LastCluster; ++I) {
     if (I->Kind != CC_BitTests)
       continue;
-    BitTestBlock *BTB = &SL->BitTestCases[I->BTCasesIndex];
-    for (BitTestCase &BTC : BTB->Cases)
+    BitTestBlock &BTB = SL->BitTestCases[I->BTCasesIndex];
+    for (BitTestCase &BTC : BTB.Cases)
       CurMF->insert(BBI, BTC.ThisBB);
   }
 
