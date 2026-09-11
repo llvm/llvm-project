@@ -14,6 +14,8 @@
 #include <vector>
 #include <utility>
 
+#include "test_macros.h"
+
 void test() {
   std::vector<int> range;
 
@@ -57,6 +59,13 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::as_const(v).size();
 
+#if TEST_STD_VER >= 26
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    v.reserve_hint();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(v).reserve_hint();
+#endif
+
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     v.data();
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -76,6 +85,11 @@ void test() {
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     v.size();
+
+#if TEST_STD_VER >= 26
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    v.reserve_hint();
+#endif
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     v.data();

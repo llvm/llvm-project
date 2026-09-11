@@ -156,6 +156,20 @@ struct MaybeSizedRange {
 static_assert(std::ranges::sized_range<MaybeSizedRange<true>>);
 static_assert(!std::ranges::sized_range<MaybeSizedRange<false>>);
 
+#if TEST_STD_VER >= 26
+
+struct ApproxSizedRange {
+  int x = 0;
+  constexpr forward_iterator<int*> begin() { return forward_iterator<int*>(&x); }
+  constexpr forward_iterator<int*> end() { return begin(); }
+
+  constexpr std::size_t reserve_hint() const { return 0; }
+};
+static_assert(!std::ranges::sized_range<ApproxSizedRange>);
+static_assert(std::ranges::approximately_sized_range<ApproxSizedRange>);
+
+#endif
+
 template <bool HasCapacity = true, bool CapacityReturnsSizeT = true,
           bool HasMaxSize = true, bool MaxSizeReturnsSizeT = true>
 struct Reservable : Fallback {
@@ -274,6 +288,14 @@ constexpr void test_constraints() {
       auto result = std::ranges::to<C>(MaybeSizedRange<true>());
       assert(result.reserve_called);
     }
+
+#if TEST_STD_VER >= 26
+    { // approximately_sized_range
+      using C     = Reservable<>;
+      auto result = std::ranges::to<C>(ApproxSizedRange());
+      assert(result.reserve_called);
+    }
+#endif
 
     { // !sized_range
       using C = Reservable<>;
