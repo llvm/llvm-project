@@ -781,6 +781,20 @@ protected:
     UpdateAlignment(NewAlignment, NewAlignment, NewAlignment);
   }
 
+  /// Check if a type contains vector or x86_fp80 types.
+  bool TypeContainsVectorsOrFp80(QualType Ty);
+
+  /// Helper for TypeContainsVectorsOrFp80 that tracks array context.
+  bool TypeContainsVectorsOrFp80Impl(QualType Ty, bool InArray);
+
+  /// Get the natural alignment of vectors or x86_fp80 contained in a type,
+  /// bypassing any pragma pack that may have been applied to enclosing
+  /// structs.
+  CharUnits GetNaturalAlignment(QualType Ty);
+
+  /// Helper for GetNaturalAlignment that tracks array context.
+  CharUnits GetNaturalAlignmentImpl(QualType Ty, bool InArray);
+
   /// Retrieve the externally-supplied field offset for the given
   /// field.
   ///
@@ -1688,13 +1702,23 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
 
   // But, if there's a #pragma pack in play, that takes precedent over
   // even the 'aligned' attribute, for non-zero-width bitfields.
+  // However, pragma pack should not reduce the natural alignment of vector
+  // array elements.
   unsigned MaxFieldAlignmentInBits = Context.toBits(MaxFieldAlignment);
   if (!MaxFieldAlignment.isZero() && FieldSize) {
-    UnpackedFieldAlign = std::min(UnpackedFieldAlign, MaxFieldAlignmentInBits);
-    if (FieldPacked)
-      FieldAlign = UnpackedFieldAlign;
-    else
-      FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
+    QualType FieldType = D->getType();
+    // Only exempt arrays of vectors from pragma pack, not direct vector
+    // fields.
+    bool IsVectorArray = !FieldType->isVectorType() &&
+                         FieldType->getBaseElementTypeUnsafe()->isVectorType();
+    if (!IsVectorArray) {
+      UnpackedFieldAlign =
+          std::min(UnpackedFieldAlign, MaxFieldAlignmentInBits);
+      if (FieldPacked)
+        FieldAlign = UnpackedFieldAlign;
+      else
+        FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
+    }
   }
 
   // But, ms_struct just ignores all of that in unions, even explicit
@@ -1910,6 +1934,17 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   } else {
     setDeclInfo(false /* IsIncompleteArrayType */);
 
+    // If this is an array containing vectors (directly or in nested
+    // structs), we need to use the natural alignment of the vectors, not the
+    // potentially pragma-pack-clamped alignment from the struct layout.
+    QualType FieldType = D->getType();
+    if (!FieldType->isVectorType() && TypeContainsVectorsOrFp80(FieldType)) {
+      // Get the natural vector alignment, bypassing any pragma pack on
+      // structs.
+      CharUnits VecAlign = GetNaturalAlignment(FieldType);
+      FieldAlign = std::max(FieldAlign, VecAlign);
+    }
+
     // A potentially-overlapping field occupies its dsize or nvsize, whichever
     // is larger.
     if (D->isPotentiallyOverlapping()) {
@@ -2012,6 +2047,16 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
       const RecordDecl *RD = RT->getDecl();
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
       PreferredAlign = FieldRecord.getPreferredAlignment();
+      // If this is an array of records containing vectors, use the
+      // unadjusted alignment to avoid inheriting pragma pack from the nested
+      // struct.
+      QualType BaseQualTy = QualType(BaseTy, 0);
+      if (D->getType() != BaseQualTy &&
+          TypeContainsVectorsOrFp80(D->getType())) {
+        FieldAlign = std::max(FieldAlign, FieldRecord.getUnadjustedAlignment());
+        PreferredAlign =
+            std::max(PreferredAlign, FieldRecord.getUnadjustedAlignment());
+      }
     }
   }
 
@@ -2029,10 +2074,20 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   UnpackedFieldAlign = std::max(UnpackedFieldAlign, MaxAlignmentInChars);
 
   // The maximum field alignment overrides the aligned attribute.
+  // However, pragma pack should not reduce the natural alignment of array
+  // elements that contain vectors (either arrays of vectors, or arrays of
+  // structs containing vectors). Direct vector fields ARE affected by pragma
+  // pack.
   if (!MaxFieldAlignment.isZero()) {
-    PackedFieldAlign = std::min(PackedFieldAlign, MaxFieldAlignment);
-    PreferredAlign = std::min(PreferredAlign, MaxFieldAlignment);
-    UnpackedFieldAlign = std::min(UnpackedFieldAlign, MaxFieldAlignment);
+    QualType FieldType = D->getType();
+    // Only exempt arrays containing vectors, not direct vector fields.
+    bool IsArrayContainingVectors =
+        !FieldType->isVectorType() && TypeContainsVectorsOrFp80(FieldType);
+    if (!IsArrayContainingVectors) {
+      PackedFieldAlign = std::min(PackedFieldAlign, MaxFieldAlignment);
+      PreferredAlign = std::min(PreferredAlign, MaxFieldAlignment);
+      UnpackedFieldAlign = std::min(UnpackedFieldAlign, MaxFieldAlignment);
+    }
   }
 
 
@@ -2208,6 +2263,89 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
       Diag(D->getLocation(), diag::warn_unnecessary_packed)
           << Context.getCanonicalTagType(RD);
   }
+}
+
+bool ItaniumRecordLayoutBuilder::TypeContainsVectorsOrFp80(QualType Ty) {
+  QualType OrigTy = Ty;
+
+  // Strip through arrays.
+  while (const ArrayType *AT = Context.getAsArrayType(Ty))
+    Ty = AT->getElementType();
+
+  bool InArray = (Ty != OrigTy);
+  return TypeContainsVectorsOrFp80Impl(Ty, InArray);
+}
+
+bool ItaniumRecordLayoutBuilder::TypeContainsVectorsOrFp80Impl(QualType Ty,
+                                                               bool InArray) {
+  // Direct vector type.
+  if (Ty->isVectorType())
+    return true;
+
+  // x86_fp80 only matters if it's in an array, not a direct field.
+  if (InArray) {
+    if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::LongDouble &&
+          &Context.getTargetInfo().getLongDoubleFormat() ==
+              &llvm::APFloat::x87DoubleExtended())
+        return true;
+    }
+  }
+
+  // Check if it's a record type with vector or x86_fp80 fields.
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    for (const FieldDecl *Field : RD->fields()) {
+      if (TypeContainsVectorsOrFp80Impl(Field->getType(), InArray))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+CharUnits ItaniumRecordLayoutBuilder::GetNaturalAlignment(QualType Ty) {
+  QualType OrigTy = Ty;
+
+  // Strip through arrays.
+  while (const ArrayType *AT = Context.getAsArrayType(Ty))
+    Ty = AT->getElementType();
+
+  bool InArray = (Ty != OrigTy);
+  return GetNaturalAlignmentImpl(Ty, InArray);
+}
+
+CharUnits ItaniumRecordLayoutBuilder::GetNaturalAlignmentImpl(QualType Ty,
+                                                              bool InArray) {
+  // Direct vector type - get its natural alignment.
+  if (Ty->isVectorType())
+    return Context.getTypeAlignInChars(Ty);
+
+  // x86_fp80 only matters if it's in an array, not a direct field.
+  if (InArray) {
+    if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::LongDouble &&
+          &Context.getTargetInfo().getLongDoubleFormat() ==
+              &llvm::APFloat::x87DoubleExtended())
+        return Context.getTypeAlignInChars(Ty);
+    }
+  }
+
+  // Record type - find the maximum alignment inside.
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    CharUnits MaxAlign = CharUnits::One();
+    for (const FieldDecl *Field : RD->fields()) {
+      if (TypeContainsVectorsOrFp80Impl(Field->getType(), InArray)) {
+        CharUnits FieldAlign =
+            GetNaturalAlignmentImpl(Field->getType(), InArray);
+        MaxAlign = std::max(MaxAlign, FieldAlign);
+      }
+    }
+    return MaxAlign;
+  }
+
+  return CharUnits::One();
 }
 
 void ItaniumRecordLayoutBuilder::UpdateAlignment(
@@ -2614,6 +2752,16 @@ public:
   void computeVtorDispSet(
       llvm::SmallPtrSetImpl<const CXXRecordDecl *> &HasVtorDispSet,
       const CXXRecordDecl *RD) const;
+  /// Check if a type (recursively) contains vector or x86_fp80 types.
+  bool TypeContainsVectorsOrFp80(QualType Ty);
+  /// Helper for TypeContainsVectorsOrFp80 that tracks array context.
+  bool TypeContainsVectorsOrFp80Impl(QualType Ty, bool InArray);
+  /// Get the natural alignment of vectors or x86_fp80 contained in a type,
+  /// bypassing any pragma pack that may have been applied to enclosing
+  /// structs.
+  CharUnits GetNaturalAlignment(QualType Ty);
+  /// Helper for GetNaturalAlignment that tracks array context.
+  CharUnits GetNaturalAlignmentImpl(QualType Ty, bool InArray);
   const ASTContext &Context;
   EmptySubobjectMap *EmptySubobjects;
 
@@ -2680,6 +2828,89 @@ public:
 };
 } // namespace
 
+bool MicrosoftRecordLayoutBuilder::TypeContainsVectorsOrFp80(QualType Ty) {
+  QualType OrigTy = Ty;
+
+  // Strip through arrays.
+  while (const ArrayType *AT = Context.getAsArrayType(Ty))
+    Ty = AT->getElementType();
+
+  bool InArray = (Ty != OrigTy);
+  return TypeContainsVectorsOrFp80Impl(Ty, InArray);
+}
+
+bool MicrosoftRecordLayoutBuilder::TypeContainsVectorsOrFp80Impl(QualType Ty,
+                                                                 bool InArray) {
+  // Direct vector type.
+  if (Ty->isVectorType())
+    return true;
+
+  // x86_fp80 only matters if it's in an array, not a direct field.
+  if (InArray) {
+    if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::LongDouble &&
+          &Context.getTargetInfo().getLongDoubleFormat() ==
+              &llvm::APFloat::x87DoubleExtended())
+        return true;
+    }
+  }
+
+  // Check if it's a record type with vector or x86_fp80 fields.
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    for (const FieldDecl *Field : RD->fields()) {
+      if (TypeContainsVectorsOrFp80Impl(Field->getType(), InArray))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+CharUnits MicrosoftRecordLayoutBuilder::GetNaturalAlignment(QualType Ty) {
+  QualType OrigTy = Ty;
+
+  // Strip through arrays.
+  while (const ArrayType *AT = Context.getAsArrayType(Ty))
+    Ty = AT->getElementType();
+
+  bool InArray = (Ty != OrigTy);
+  return GetNaturalAlignmentImpl(Ty, InArray);
+}
+
+CharUnits MicrosoftRecordLayoutBuilder::GetNaturalAlignmentImpl(QualType Ty,
+                                                                bool InArray) {
+  // Direct vector type - get its natural alignment.
+  if (Ty->isVectorType())
+    return Context.getTypeAlignInChars(Ty);
+
+  // x86_fp80 only matters if it's in an array, not a direct field.
+  if (InArray) {
+    if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::LongDouble &&
+          &Context.getTargetInfo().getLongDoubleFormat() ==
+              &llvm::APFloat::x87DoubleExtended())
+        return Context.getTypeAlignInChars(Ty);
+    }
+  }
+
+  // Record type - find the maximum alignment inside.
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    CharUnits MaxAlign = CharUnits::One();
+    for (const FieldDecl *Field : RD->fields()) {
+      if (TypeContainsVectorsOrFp80Impl(Field->getType(), InArray)) {
+        CharUnits FieldAlign =
+            GetNaturalAlignmentImpl(Field->getType(), InArray);
+        MaxAlign = std::max(MaxAlign, FieldAlign);
+      }
+    }
+    return MaxAlign;
+  }
+
+  return CharUnits::One();
+}
+
 MicrosoftRecordLayoutBuilder::ElementInfo
 MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     const ASTRecordLayout &Layout) {
@@ -2718,6 +2949,18 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   auto TInfo =
       Context.getTypeInfoInChars(FD->getType()->getUnqualifiedDesugaredType());
   ElementInfo Info{TInfo.Width, TInfo.Align, CharUnits::Zero()};
+
+  // If this is an array containing vectors (directly or in nested
+  // structs), we need to use the natural alignment of the vectors, not the
+  // potentially pragma-pack-clamped alignment from the struct layout.
+  QualType FieldType = FD->getType();
+  if (!FieldType->isVectorType() && TypeContainsVectorsOrFp80(FieldType)) {
+    // Get the natural vector alignment, bypassing any pragma pack on
+    // structs.
+    CharUnits VecAlign = GetNaturalAlignment(FieldType);
+    Info.Alignment = std::max(Info.Alignment, VecAlign);
+  }
+
   // Respect align attributes on the field.
   CharUnits DirectFieldAlignment =
       Context.toCharUnitsFromBits(FD->getMaxAlignment());
@@ -2742,6 +2985,14 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldTypeRequiredAlignment =
           std::max(FieldTypeRequiredAlignment, Layout.getRequiredAlignment());
+      // If this is an array of records containing vectors, use the
+      // unadjusted alignment to avoid inheriting pragma pack from the nested
+      // struct.
+      QualType BaseTy = QualType(FD->getType()->getBaseElementTypeUnsafe(), 0);
+      if (FD->getType() != BaseTy && TypeContainsVectorsOrFp80(FD->getType())) {
+        Info.Alignment =
+            std::max(Info.Alignment, Layout.getUnadjustedAlignment());
+      }
     }
     // Capture required alignment as a side-effect.
     RequiredAlignment =
@@ -2749,8 +3000,18 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
                  std::max(DirectFieldAlignment, FieldTypeRequiredAlignment));
   }
   // Respect pragma pack, attribute pack and declspec align
-  if (!MaxFieldAlignment.isZero())
-    Info.Alignment = std::min(Info.Alignment, MaxFieldAlignment);
+  // However, pragma pack should not reduce the natural alignment of array
+  // elements that contain vectors (either arrays of vectors, or arrays of
+  // structs containing vectors). Direct vector fields ARE affected by pragma
+  // pack.
+  if (!MaxFieldAlignment.isZero()) {
+    QualType FieldType = FD->getType();
+    // Only exempt arrays containing vectors, not direct vector fields.
+    bool IsArrayContainingVectors =
+        !FieldType->isVectorType() && TypeContainsVectorsOrFp80(FieldType);
+    if (!IsArrayContainingVectors)
+      Info.Alignment = std::min(Info.Alignment, MaxFieldAlignment);
+  }
   if (FD->hasAttr<PackedAttr>())
     Info.Alignment = CharUnits::One();
   // The alignment used to update the record's alignment excludes over-alignment
