@@ -657,7 +657,7 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
                  << FeatureName;
         // All target_clones feature names must be valid target feature names.
         assert(TargetInfo.isValidFeatureName(FeatureName));
-        
+
         if (llvm::PPC::canDisableFeatureOnAIX(FeatureName)) {
           if (IsNegated) {
             // Only one negative target-feature that can be disabled.

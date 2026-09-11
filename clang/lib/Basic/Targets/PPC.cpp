@@ -748,8 +748,7 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   // from this category on a target_clones.
   if (!ParsedAttr.CPU.empty()) {
     int Priority = llvm::StringSwitch<int>(ParsedAttr.CPU)
-#define PPC_AIX_CLONES_CPU(CPU_NAME, _, PRIORITY)                      \
-  .Case(CPU_NAME, PRIORITY)
+#define PPC_AIX_CLONES_CPU(CPU_NAME, _, PRIORITY) .Case(CPU_NAME, PRIORITY)
 #include "llvm/TargetParser/PPCTargetParser.def"
                        .Default(0);
     return llvm::APInt(32, Priority);

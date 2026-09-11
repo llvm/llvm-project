@@ -3157,7 +3157,7 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
       // CPU specification - map to ISA level
       StringRef CPU = FeatureStr.split("=").second.trim();
       BuiltinCpuSupportsArg = llvm::StringSwitch<StringRef>(CPU)
-#define PPC_AIX_CLONES_CPU(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _) \
+#define PPC_AIX_CLONES_CPU(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _)         \
   .Case(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
 #include "llvm/TargetParser/PPCTargetParser.def"
                                   .Default("error");
