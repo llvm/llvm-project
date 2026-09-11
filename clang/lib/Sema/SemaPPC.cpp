@@ -145,6 +145,16 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   //  - IsIntType: enforces any integer type
   // Lambdas centralize type checks for BCD builtin handlers
 
+  // reject calls with more args than the builtin's declared prototype
+  auto CheckArgCountAtMost = [&](unsigned BuiltinID) -> bool {
+    ASTContext::GetBuiltinTypeError Error;
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(
+            Context.GetBuiltinType(BuiltinID, Error).getTypePtr()))
+      if (!FPT->isVariadic())
+        return SemaRef.checkArgCountAtMost(TheCall, FPT->getNumParams());
+    return false;
+  };
+
   // Lambda 1: verify vector unsigned char type
   auto IsTypeVecUChar = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
     QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
@@ -173,6 +183,8 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   default:
     return false;
   case PPC::BI__builtin_ppc_bcdsetsign: {
+    if (CheckArgCountAtMost(BuiltinID))
+      return true;
     // Arg0 must be vector unsigned char
     if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
       return false;
@@ -183,10 +195,14 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_ppc_national2packed:
   case PPC::BI__builtin_ppc_packed2zoned:
   case PPC::BI__builtin_ppc_zoned2packed:
+    if (CheckArgCountAtMost(BuiltinID))
+      return true;
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_ppc_bcdshift:
   case PPC::BI__builtin_ppc_bcdshiftround:
   case PPC::BI__builtin_ppc_bcdtruncate: {
+    if (CheckArgCountAtMost(BuiltinID))
+      return true;
 
     // Arg0 must be vector unsigned char
     if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
