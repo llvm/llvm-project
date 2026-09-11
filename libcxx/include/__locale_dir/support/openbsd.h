@@ -228,4 +228,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
 
+#include <__locale_dir/support/get_c_locale.h>
+
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_OPENBSD_H

@@ -300,4 +300,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
 
+#include <__locale_dir/support/get_c_locale.h>
+
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_AIX_H
