@@ -14453,9 +14453,21 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
     HiOps.push_back(Hi);
   }
 
-  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVT, LoOps, Node->getFlags());
-  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVT, HiOps, Node->getFlags());
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
+  bool IsStrict = Node->isStrictFPOpcode();
+  SDVTList LoVTs =
+      IsStrict ? DAG.getVTList(LoVT, MVT::Other) : DAG.getVTList(LoVT);
+  SDVTList HiVTs =
+      IsStrict ? DAG.getVTList(HiVT, MVT::Other) : DAG.getVTList(HiVT);
+  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVTs, LoOps, Node->getFlags());
+  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVTs, HiOps, Node->getFlags());
+  SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
+
+  if (!IsStrict)
+    return Res;
+
+  SDValue Chain =
+      DAG.getMergeValues({SplitOpLo.getValue(1), SplitOpHi.getValue(1)}, DL);
+  return DAG.getMergeValues({Res, Chain}, DL);
 }
 
 SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
