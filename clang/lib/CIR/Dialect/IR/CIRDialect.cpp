@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -108,6 +109,86 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
                                                 mlir::Location loc) {
   return cir::ConstantOp::create(builder, loc, type,
                                  mlir::cast<mlir::TypedAttr>(value));
+}
+
+//===----------------------------------------------------------------------===//
+// Dialect attribute verification
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyOffloadKind(mlir::ModuleOp module,
+                                       cir::OffloadKind expected) {
+  auto attr = module->getAttrOfType<cir::OffloadKindAttr>(
+      cir::CIRDialect::getOffloadKindAttrName());
+  if (!attr)
+    return module.emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadKindAttrName()
+           << "' offload kind attribute";
+  if (attr.getValue() != expected)
+    return module.emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadKindAttrName()
+           << "' value '" << cir::stringifyOffloadKind(expected) << "'";
+  return success();
+}
+
+// A module marked with `cir.offload.container` holds the host module followed
+// by one or more device modules, each tagged with `cir.offload.kind`. Keeping
+// the host module first gives later offload passes a simple convention for
+// finding the host side while iterating the remaining device modules.
+static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
+  auto container = mlir::dyn_cast<mlir::ModuleOp>(op);
+  if (!container)
+    return op->emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadContainerAttrName()
+           << "' attribute to be attached to '"
+           << mlir::ModuleOp::getOperationName() << "'";
+
+  mlir::Block &body = *container.getBody();
+  if (body.empty())
+    return container.emitOpError()
+           << "expects host module as the first nested op";
+
+  auto host = mlir::dyn_cast<mlir::ModuleOp>(body.front());
+  if (!host)
+    return container.emitOpError()
+           << "expects host module as the first nested op";
+  if (failed(verifyOffloadKind(host, cir::OffloadKind::Host)))
+    return failure();
+
+  // At least one device module is required after the host module.
+  if (std::next(body.begin()) == body.end())
+    return container.emitOpError() << "expects at least one device module";
+
+  for (auto &op : llvm::drop_begin(body)) {
+    auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
+    if (!module)
+      return container.emitOpError()
+             << "expects only nested builtin.module ops";
+    if (failed(verifyOffloadKind(module, cir::OffloadKind::Device)))
+      return failure();
+  }
+  return success();
+}
+
+LogicalResult
+cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
+                                          mlir::NamedAttribute attr) {
+  if (attr.getName() == getOffloadContainerAttrName()) {
+    if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
+      return op->emitOpError() << "expects '" << getOffloadContainerAttrName()
+                               << "' to be a unit attribute";
+    return verifyOffloadContainer(op);
+  }
+
+  // The container verifier owns the structural contract between a container
+  // and the modules it holds. All this can add is that the kind attribute
+  // never lands on something that is not a module.
+  if (attr.getName() == getOffloadKindAttrName() &&
+      !mlir::isa<mlir::ModuleOp>(op))
+    return op->emitOpError() << "expects '" << getOffloadKindAttrName()
+                             << "' attribute to be attached to '"
+                             << mlir::ModuleOp::getOperationName() << "'";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -282,11 +363,11 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
 }
 
 mlir::OptionalParseResult
-parseGlobalAddressSpaceValue(mlir::AsmParser &p,
-                             mlir::ptr::MemorySpaceAttrInterface &attr);
+parseGlobalMemorySpace(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr);
 
-void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp op,
-                                  mlir::ptr::MemorySpaceAttrInterface attr);
+void printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp op,
+                            mlir::ptr::MemorySpaceAttrInterface attr);
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
@@ -301,6 +382,16 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
     odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
   }
   odsState.addTypes(addr);
+}
+
+cir::AllocaOp cir::getUnderlyingAlloca(mlir::Value addr) {
+  mlir::Value ptr = addr;
+  while (cir::CastOp castOp = ptr.getDefiningOp<cir::CastOp>()) {
+    if (!castOp.isAllocaPreservingCast())
+      break;
+    ptr = castOp.getSrc();
+  }
+  return ptr.getDefiningOp<cir::AllocaOp>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -620,8 +711,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   if (mlir::isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
                 cir::ConstArrayAttr, cir::ConstVectorAttr,
                 cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
-                cir::VTableAttr>(attrType))
+                cir::GlobalOffsetAttr, cir::GlobalViewAttr, cir::PoisonAttr,
+                cir::TypeInfoAttr, cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -1574,11 +1665,6 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
     regions.emplace_back(getOperation());
 }
 
-mlir::ValueRange cir::IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
-}
-
 void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
                       bool withElseRegion, BuilderCallbackRef thenBuilder,
                       BuilderCallbackRef elseBuilder) {
@@ -1617,11 +1703,6 @@ void cir::ScopeOp::getSuccessorRegions(
 
   // If the condition isn't constant, both regions may be executed.
   regions.push_back(RegionSuccessor(&getScopeRegion()));
-}
-
-mlir::ValueRange cir::ScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
 }
 
 void cir::ScopeOp::build(
@@ -1700,11 +1781,6 @@ void cir::CleanupScopeOp::getSuccessorRegions(
   // Execution always proceeds from the body region to the cleanup region.
   regions.push_back(RegionSuccessor(&getBodyRegion()));
   regions.push_back(RegionSuccessor(&getCleanupRegion()));
-}
-
-mlir::ValueRange
-cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return ValueRange();
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
@@ -1898,11 +1974,6 @@ void cir::CaseOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&getCaseRegion()));
 }
 
-mlir::ValueRange cir::CaseOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
-}
-
 void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
                         ArrayAttr value, CaseOpKind kind,
                         OpBuilder::InsertPoint &insertPoint) {
@@ -1928,11 +1999,6 @@ void cir::SwitchOp::getSuccessorRegions(
   }
 
   region.push_back(RegionSuccessor(&getBody()));
-}
-
-mlir::ValueRange cir::SwitchOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
 }
 
 void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
@@ -2188,11 +2254,6 @@ void cir::GlobalOp::getSuccessorRegions(
     regions.push_back(RegionSuccessor(ctorRegion));
   if (dtorRegion)
     regions.push_back(RegionSuccessor(dtorRegion));
-}
-
-mlir::ValueRange cir::GlobalOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -2982,11 +3043,6 @@ void cir::TernaryOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&getFalseRegion()));
 }
 
-mlir::ValueRange cir::TernaryOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
-}
-
 void cir::TernaryOp::build(
     OpBuilder &builder, OperationState &result, Value cond,
     function_ref<void(OpBuilder &, Location)> trueBuilder,
@@ -3262,31 +3318,32 @@ void cir::AwaitOp::build(OpBuilder &builder, OperationState &result,
 
 void cir::AwaitOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // If any index all the underlying regions branch back to the parent
-  // operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
+  assert(point.isParent() || point.getTerminatorPredecessorOrNull());
+
+  // Execution always starts in the ready region.
+  if (point.isParent()) {
+    regions.emplace_back(&getReady());
     return;
   }
 
+  mlir::Region *parentRegion =
+      point.getTerminatorPredecessorOrNull()->getParentRegion();
+
+  // Branching from ready: the cir.condition terminating it selects between
+  // suspending and resuming. Keep in sync with
+  // ConditionOp::getSuccessorRegions.
+  //
   // TODO: retrieve information from the promise and only push the
   // necessary ones. Example: `std::suspend_never` on initial or final
   // await's might allow suspend region to be skipped.
-  regions.push_back(RegionSuccessor(&this->getReady()));
-  regions.push_back(RegionSuccessor(&this->getSuspend()));
-  regions.push_back(RegionSuccessor(&this->getResume()));
-}
+  if (&getReady() == parentRegion) {
+    regions.emplace_back(&getResume());
+    regions.emplace_back(&getSuspend());
+    return;
+  }
 
-mlir::ValueRange cir::AwaitOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isOperation())
-    return getOperation()->getResults();
-  if (successor == &getReady())
-    return getReady().getArguments();
-  if (successor == &getSuspend())
-    return getSuspend().getArguments();
-  if (successor == &getResume())
-    return getResume().getArguments();
-  llvm_unreachable("invalid region successor");
+  // Branching from suspend or resume: exit to the parent operation.
+  regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::AwaitOp::verify() {
@@ -3307,11 +3364,6 @@ void cir::CoroBodyOp::getSuccessorRegions(
   }
 
   regions.push_back(RegionSuccessor(&getBody()));
-}
-
-mlir::ValueRange
-cir::CoroBodyOp::getSuccessorInputs(RegionSuccessor successor) {
-  return ValueRange();
 }
 
 LogicalResult cir::CoroBodyOp::verify() {
@@ -3446,6 +3498,10 @@ LogicalResult cir::GetMethodOp::verify() {
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
+static mlir::Type memberPointeeType(cir::RecordType recordTy, unsigned idx) {
+  return cir::memberStorageType(recordTy.getMembers()[idx]);
+}
+
 LogicalResult cir::GetMemberOp::verify() {
   const auto recordTy = dyn_cast<RecordType>(getAddrTy().getPointee());
   if (!recordTy)
@@ -3454,7 +3510,11 @@ LogicalResult cir::GetMemberOp::verify() {
   if (recordTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
 
-  if (recordTy.getMembers()[getIndex()] != getType().getPointee())
+  mlir::Type pointeeTy = memberPointeeType(recordTy, getIndex());
+  if (!pointeeTy)
+    return emitError() << "member owns no storage to point at";
+
+  if (pointeeTy != getType().getPointee())
     return emitError() << "member type mismatch";
 
   return mlir::success();
@@ -3471,7 +3531,10 @@ LogicalResult cir::ExtractMemberOp::verify() {
   auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
   if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (structTy.getMembers()[getIndex()] != getType())
+  mlir::Type memberTy = structTy.getMembers()[getIndex()];
+  if (mlir::isa<cir::BitFieldType>(memberTy))
+    return emitError() << "cir.extract_member does not support bit-fields";
+  if (memberTy != getType())
     return emitError() << "member type mismatch";
   return mlir::success();
 }
@@ -3486,7 +3549,10 @@ LogicalResult cir::InsertMemberOp::verify() {
   auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
   if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (structTy.getMembers()[getIndex()] != getValue().getType())
+  mlir::Type memberTy = structTy.getMembers()[getIndex()];
+  if (mlir::isa<cir::BitFieldType>(memberTy))
+    return emitError() << "cir.insert_member does not support bit-fields";
+  if (memberTy != getValue().getType())
     return emitError() << "member type mismatch";
   // The op trait already checks that the types of $result and $record match.
   return mlir::success();
@@ -4416,11 +4482,6 @@ void cir::TryOp::getSuccessorRegions(
   // can remove the catch handler.
   for (mlir::Region &handlerRegion : this->getHandlerRegions())
     regions.push_back(mlir::RegionSuccessor(&handlerRegion));
-}
-
-mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
 }
 
 LogicalResult cir::TryOp::verify() {

@@ -114,9 +114,7 @@ def OpenACC_ReductionOperator
 }
 def OpenACC_ReductionOperatorAttr : EnumAttr<OpenACC_Dialect,
                                              OpenACC_ReductionOperator,
-                                             "reduction_operator"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+                                             "reduction_operator">;
 
 // OpenACC variable type categorization. This is needed because OpenACC
 // dialect is used with other dialects, and each dialect defines its own
@@ -226,9 +224,7 @@ def OpenACC_ParLevel : I32EnumAttr<"ParLevel",
 
 def OpenACC_ParLevelAttr : EnumAttr<OpenACC_Dialect,
                                     OpenACC_ParLevel,
-                                    "par_level"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+                                    "par_level">;
 
 def OpenACC_PrivateRecipe : I32EnumAttrCase<"private_recipe", 0>;
 def OpenACC_FirstprivateRecipe : I32EnumAttrCase<"firstprivate_recipe", 1>;
@@ -246,9 +242,7 @@ def OpenACC_RecipeKind : I32EnumAttr<
 
 def OpenACC_RecipeKindAttr : EnumAttr<OpenACC_Dialect,
                                              OpenACC_RecipeKind,
-                                             "recipe_kind"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+                                             "recipe_kind">;
 
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
@@ -365,7 +359,7 @@ class OpenACC_Attr<string name, string attrMnemonic,
 // easier to find out whether the variable is in a declare clause and what kind
 // of clause it is.
 def DeclareAttr : OpenACC_Attr<"Declare", "declare"> {
-  let parameters = (ins "DataClauseAttr":$dataClause,
+  let parameters = (ins EnumAttrParameter<OpenACC_DataClauseAttr>:$dataClause,
                         DefaultValuedParameter<"bool", "false">:$implicit);
   let assemblyFormat = "`<` struct(params) `>`";
   let builders = [AttrBuilder<(ins "DataClauseAttr":$dataClause), [{
@@ -425,9 +419,7 @@ def OpenACC_DeviceType : I32EnumAttr<"DeviceType",
 //
 def OpenACC_DeviceTypeAttr : EnumAttr<OpenACC_Dialect,
                                       OpenACC_DeviceType,
-                                      "device_type"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+                                      "device_type">;
 
 def DeviceTypeArrayAttr :
   TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "device type array attribute"> {
@@ -447,9 +439,7 @@ def OpenACC_GangArgType : I32EnumAttr<"GangArgType",
 }
 def OpenACC_GangArgTypeAttr : EnumAttr<OpenACC_Dialect,
                                        OpenACC_GangArgType,
-                                       "gang_arg_type"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+                                       "gang_arg_type">;
 def GangArgTypeArrayAttr :
   TypedArrayAttrBase<OpenACC_GangArgTypeAttr, "gang arg type array attribute"> {
   let constBuilderCall = ?;
@@ -469,9 +459,7 @@ def OpenACC_CombinedConstructsType : I32EnumAttr<"CombinedConstructsType",
 
 def OpenACC_CombinedConstructsAttr : EnumAttr<OpenACC_Dialect,
                                        OpenACC_CombinedConstructsType,
-                                       "combined_constructs"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+                                       "combined_constructs">;
 
 def OpenACC_ParallelConstruct : I64EnumAttrCase<"acc_construct_parallel", 0>;
 def OpenACC_KernelsConstruct : I64EnumAttrCase<"acc_construct_kernels", 1>;
@@ -546,6 +534,10 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     but not checked for consistency). When the source language's arrays are
     not zero-based, the `startIdx` must specify the zero-position index.
 
+    `sourceExtent` is the extent of the corresponding dimension in the
+    original array. It may differ from `extent`, which describes the selected
+    section. When absent, the source extent is the same as `extent`.
+
     The `stride` represents the distance between consecutive elements. For
     multi-dimensional arrays, the `stride` for each outer dimension must account
     for the complete size of all inner dimensions.
@@ -582,6 +574,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
   let arguments = (ins Optional<IntOrIndex>:$lowerbound,
                        Optional<IntOrIndex>:$upperbound,
                        Optional<IntOrIndex>:$extent,
+                       Optional<IntOrIndex>:$sourceExtent,
                        Optional<IntOrIndex>:$stride,
                        DefaultValuedAttr<BoolAttr, "false">:$strideInBytes,
                        Optional<IntOrIndex>:$startIdx);
@@ -592,6 +585,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         `lowerbound` `(` $lowerbound `:` type($lowerbound) `)`
       | `upperbound` `(` $upperbound `:` type($upperbound) `)`
       | `extent` `(` $extent `:` type($extent) `)`
+      | `sourceExtent` `(` $sourceExtent `:` type($sourceExtent) `)`
       | `stride` `(` $stride `:` type($stride) `)`
       | `startIdx` `(` $startIdx `:` type($startIdx) `)`
     ) (`strideInBytes` `(` $strideInBytes^ `)`)? attr-dict
@@ -604,7 +598,8 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         build($_builder, $_state,
           ::mlir::acc::DataBoundsType::get($_builder.getContext()),
           /*lowerbound=*/{}, /*upperbound=*/{}, extent,
-          /*stride=*/{}, /*strideInBytes=*/$_builder.getBoolAttr(false),
+          /*sourceExtent=*/{}, /*stride=*/{},
+          /*strideInBytes=*/$_builder.getBoolAttr(false),
           /*startIdx=*/{});
       }]
     >,
@@ -613,10 +608,21 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         build($_builder, $_state,
           ::mlir::acc::DataBoundsType::get($_builder.getContext()),
           lowerbound, upperbound, /*extent=*/{},
-          /*stride=*/{}, /*strideInBytes=*/$_builder.getBoolAttr(false),
+          /*sourceExtent=*/{}, /*stride=*/{},
+          /*strideInBytes=*/$_builder.getBoolAttr(false),
           /*startIdx=*/{});
       }]
-    >
+    >,
+    OpBuilder<(ins "::mlir::Type":$resultType,
+                   "::mlir::Value":$lowerbound,
+                   "::mlir::Value":$upperbound,
+                   "::mlir::Value":$extent,
+                   "::mlir::Value":$stride,
+                   "bool":$strideInBytes,
+                   "::mlir::Value":$startIdx), [{
+        build($_builder, $_state, resultType, lowerbound, upperbound, extent,
+              /*sourceExtent=*/{}, stride, strideInBytes, startIdx);
+      }]>
   ];
 }
 
@@ -817,7 +823,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `recipe` `(` custom<RecipeSym>($recipe) `)`
-      | `dataClause` `(` qualified($dataClause) `)`
+      | `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
       | `name` `(` $name `)`
@@ -1211,7 +1217,7 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     `to` custom<Var>($var) `:` custom<VarPtrType>(type($var), $varType)
     oilist(
-        `dataClause` `(` qualified($dataClause) `)`
+        `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
       | `name` `(` $name `)`
@@ -1289,7 +1295,7 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
     (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     oilist(
-        `dataClause` `(` qualified($dataClause) `)`
+        `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
       | `name` `(` $name `)`
@@ -1953,7 +1959,7 @@ def OpenACC_ParallelOp
     )
     $region
     oilist(
-        `defaultAttr` `(` qualified($defaultAttr) `)`
+        `defaultAttr` `(` enum($defaultAttr) `)`
       | `selfAttr` $selfAttr
     )
     attr-dict-with-keyword
@@ -2100,7 +2106,7 @@ def OpenACC_SerialOp
     )
     $region
     oilist(
-        `defaultAttr` `(` qualified($defaultAttr) `)`
+        `defaultAttr` `(` enum($defaultAttr) `)`
       | `selfAttr` $selfAttr
     )
     attr-dict-with-keyword
@@ -2296,7 +2302,7 @@ def OpenACC_KernelsOp
     )
     $region
     oilist(
-        `defaultAttr` `(` qualified($defaultAttr) `)`
+        `defaultAttr` `(` enum($defaultAttr) `)`
       | `selfAttr` $selfAttr
     )
     attr-dict-with-keyword
@@ -2416,7 +2422,7 @@ def OpenACC_DataOp
           $waitOnly)
     )
     $region
-    (`defaultAttr` `(` qualified($defaultAttr)^ `)`)?
+    (`defaultAttr` `(` enum($defaultAttr)^ `)`)?
     attr-dict-with-keyword
   }];
   let hasVerifier = 1;
@@ -3214,9 +3220,9 @@ def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit",
     Example showing `acc declare device_resident(a)`:
 
     ```mlir
-    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause declare_device_resident>}
+    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr {dataClause = #acc.data_clause<declare_device_resident>}
     acc.declare_exit dataOperands(%0 : !llvm.ptr)
-    acc.delete accPtr(%0 : !llvm.ptr) {dataClause = #acc<data_clause declare_device_resident>}
+    acc.delete accPtr(%0 : !llvm.ptr) {dataClause = #acc.data_clause<declare_device_resident>}
     ```
   }];
 
@@ -3290,9 +3296,9 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
     }
     acc.global_dtor @acc_destructor {
       %0 = llvm.mlir.addressof @globalvar : !llvm.ptr
-      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause create>}
+      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) -> !llvm.ptr {dataClause = #acc.data_clause<create>}
       acc.declare_exit dataOperands(%1 : !llvm.ptr)
-      acc.delete accPtr(%1 : !llvm.ptr) {dataClause = #acc<data_clause create>}
+      acc.delete accPtr(%1 : !llvm.ptr) {dataClause = #acc.data_clause<create>}
     }
     ```
   }];
@@ -3820,6 +3826,7 @@ def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
   }];
 }
 
+include "mlir/Dialect/OpenACC/OpenACCCGEnums.td"
 include "mlir/Dialect/OpenACC/OpenACCCGAttributes.td"
 include "mlir/Dialect/OpenACC/OpenACCCGOps.td"
 

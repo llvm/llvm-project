@@ -284,11 +284,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION 0
 #  endif
 
-#  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
-      _LIBCPP_HAS_MUSL_LIBC || defined(__OpenBSD__) || _LIBCPP_LIBC_LLVM_LIBC
-#    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
-#  endif
-
 // We often repeat things just for handling wide characters in the library.
 // When wide characters are disabled, it can be useful to have a quick way of
 // disabling it without having to resort to #if-#endif, which has a larger

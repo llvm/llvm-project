@@ -56,6 +56,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -637,6 +638,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
     config.EnableOpenMPIsTargetDevice = true;
+  // Parser options, not frontend options: they are seeded from the frontend
+  // ones and additionally get CUDA enabled for a .cuf/.CUF input.
+  if (ci.getInvocation().getFortranOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA))
+    config.EnableCUDA = true;
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -910,21 +916,6 @@ static void generateMachineCodeOrAssemblyImpl(
     if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
       return;
 
-  // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
-  // Currently only the legacy pass manager is supported.
-  // TODO: Switch to the new PM once it's available in the backend.
-  llvm::legacy::PassManager codeGenPasses;
-  codeGenPasses.add(
-      createTargetTransformInfoWrapperPass(tm.getTargetIRAnalysis()));
-
-  llvm::Triple triple(llvmModule.getTargetTriple());
-  llvm::TargetLibraryInfoImpl *tlii =
-      llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
-  codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
-  codeGenPasses.add(new llvm::RuntimeLibraryInfoWrapper(
-      tm.Options.ExceptionModel, tm.Options.EABIVersion,
-      tm.Options.MCOptions.ABIName, tm.Options.VecLib));
-
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -936,8 +927,9 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
-  if (tm.addPassesToEmitFile(codeGenPasses, os, dwoOS ? &dwoOS->os() : nullptr,
-                             cgft)) {
+  llvm::Error codeGenError =
+      runCodeGenPipeline(tm, llvmModule, os, dwoOS, cgft);
+  if (codeGenError) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");
@@ -945,14 +937,8 @@ static void generateMachineCodeOrAssemblyImpl(
     return;
   }
 
-  // Run the passes
-  codeGenPasses.run(llvmModule);
-
   if (dwoOS)
     dwoOS->keep();
-
-  // Cleanup
-  delete tlii;
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {

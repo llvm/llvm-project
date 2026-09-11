@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_IR_LINALG_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -18,7 +19,6 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -91,12 +91,6 @@ OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
 
 } // namespace linalg
 } // namespace mlir
-
-//===----------------------------------------------------------------------===//
-// Linalg Dialect
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Linalg/IR/LinalgOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Linalg Enums

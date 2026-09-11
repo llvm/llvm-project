@@ -298,6 +298,7 @@ def fir_FreeMemOp : fir_Op<"freemem", []> {
 
 def fir_LoadOp : fir_OneResultOp<"load", [
   FirAliasTagOpInterface,
+  fir_FortranObjectLoadOpInterface,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   DeclareOpInterfaceMethods<PromotableMemOpInterface>
 ]> {
@@ -332,6 +333,9 @@ def fir_LoadOp : fir_OneResultOp<"load", [
 
   let extraClassDeclaration = [{
     static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
+
+    // FortranObjectLoadOpInterface methods:
+    mlir::Value getLoadSource(mlir::OpResult) { return getMemref(); }
   }];
 }
 
@@ -3769,7 +3773,8 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove,
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
-    $locality_specifier_type ($sym_visibility^)? $sym_name `:` $type
+    ` ` `{` `type` `=` enum($locality_specifier_type) `}`
+      ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
       (`dealloc` $dealloc_region^)?

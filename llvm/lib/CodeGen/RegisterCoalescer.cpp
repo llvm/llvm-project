@@ -904,17 +904,18 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   if (hasOtherReachingDefs(IntA, IntB, AValNo, BValNo))
     return {false, false};
 
-  // If some of the uses of IntA.reg is already coalesced away, return false.
-  // It's not possible to determine whether it's safe to perform the coalescing.
-  for (MachineOperand &MO : MRI->use_nodbg_operands(IntA.reg())) {
+  // Make sure all reads of AValNo can be rewritten to the new register.
+  for (MachineOperand &MO : MRI->reg_nodbg_operands(IntA.reg())) {
+    if (!MO.readsReg())
+      continue;
     MachineInstr *UseMI = MO.getParent();
     unsigned OpNo = &MO - &UseMI->getOperand(0);
     SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI);
     LiveInterval::iterator US = IntA.FindSegmentContaining(UseIdx);
     if (US == IntA.end() || US->valno != AValNo)
       continue;
-    // If this use is tied to a def, we can't rewrite the register.
-    if (UseMI->isRegTiedToDefOperand(OpNo))
+    // Partial defs and tied uses can't be rewritten independently.
+    if (MO.isDef() || UseMI->isRegTiedToDefOperand(OpNo))
       return {false, false};
   }
 

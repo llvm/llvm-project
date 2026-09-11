@@ -531,7 +531,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    %i4 = ptrtoint ptr %arg to i64
 ; X64-NEXT:    --> %i4 U: full-set S: full-set
 ; X64-NEXT:    %i7 = phi ptr [ %arg, %bb3 ], [ %i15, %bb6 ]
-; X64-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) /u 4))<nuw> + %arg)<u nuw> LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i8 = load i32, ptr %i7, align 4
 ; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i9 = ptrtoint ptr %i7 to i64
@@ -559,7 +559,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i4 = ptrtoint ptr %arg to i64
 ; X32-NEXT:    --> %i4 U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:    %i7 = phi ptr [ %arg, %bb3 ], [ %i15, %bb6 ]
-; X32-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) /u 4))<nuw> + %arg)<u nuw> LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i8 = load i32, ptr %i7, align 4
 ; X32-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i9 = ptrtoint ptr %i7 to i64

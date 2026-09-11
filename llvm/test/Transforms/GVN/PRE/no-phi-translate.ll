@@ -4,48 +4,43 @@
 ; NOTE: A test to confirm GVN doesn't introduce phis for token like types.
 ; NOTE: This implies the CHECKS should exactly match the IR.
 
-%"$Globals" = type { i32 }
-@CBV = external constant %"$Globals"
-@Out.str = private unnamed_addr constant [4 x i8] c"Out\00", align 1
-
-define i32 @CSMain() local_unnamed_addr {
-; CHECK-LABEL: define i32 @CSMain() local_unnamed_addr {
+define i32 @func(i32 %x) local_unnamed_addr {
+; CHECK-LABEL: define i32 @func(
+; CHECK-SAME: i32 [[X:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[LOADGLOBAL:%.*]] = load i32, ptr @CBV, align 4
-; CHECK-NEXT:    [[CMP_I1_NOT:%.*]] = icmp eq i32 [[LOADGLOBAL]], 0
-; CHECK-NEXT:    br i1 [[CMP_I1_NOT]], label %[[CSMAIN_EXIT:.*]], label %[[FOR_BODY_I_LR_PH:.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[FOR_BODY_I_LR_PH:.*]]
 ; CHECK:       [[FOR_BODY_I_LR_PH]]:
-; CHECK-NEXT:    [[BUF:%.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 0, i32 4, i32 [[LOADGLOBAL]], ptr nonnull @Out.str)
+; CHECK-NEXT:    [[TOKEN:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") poison)
 ; CHECK-NEXT:    br label %[[FOR_BODY_I:.*]]
 ; CHECK:       [[FOR_BODY_I]]:
 ; CHECK-NEXT:    [[LOOPPHI:%.*]] = phi i32 [ 0, %[[FOR_BODY_I_LR_PH]] ], [ [[INC_I:%.*]], %[[FOR_BODY_I]] ]
-; CHECK-NEXT:    [[UPDATECNT:%.*]] = tail call noundef i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) [[BUF]], i8 1)
+; CHECK-NEXT:    [[USE1:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") [[TOKEN]])
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[LOOPPHI]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC_I]], [[LOADGLOBAL]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY_I]], label %[[CSMAIN_EXIT]]
-; CHECK:       [[CSMAIN_EXIT]]:
-; CHECK-NEXT:    [[BUFEXIT:%.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 0, i32 4, i32 [[LOADGLOBAL]], ptr nonnull @Out.str)
-; CHECK-NEXT:    [[UPDATECNTEXIT:%.*]] = tail call noundef i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) [[BUFEXIT]], i8 1)
-; CHECK-NEXT:    ret i32 [[UPDATECNTEXIT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC_I]], [[X]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY_I]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TOKENEXIT:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") poison)
+; CHECK-NEXT:    [[USE2:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") [[TOKENEXIT]])
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %loadGlobal = load i32, ptr @CBV, align 4
-  %cmp.i1.not = icmp eq i32 %loadGlobal, 0
-  br i1 %cmp.i1.not, label %CSMain.exit, label %for.body.i.lr.ph
+  %cmp = icmp eq i32 %x, 0
+  br i1 %cmp, label %exit, label %for.body.i.lr.ph
 
 for.body.i.lr.ph:
-  %buf = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 4, i32 %loadGlobal, ptr nonnull @Out.str)
+  %token = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") poison)
   br label %for.body.i
 
 for.body.i:
   %loopPhi = phi i32 [ 0, %for.body.i.lr.ph ], [ %inc.i, %for.body.i ]
-  %updateCnt = tail call noundef i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", i32, 1, 0) %buf, i8 1)
+  %use1 = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") %token)
   %inc.i = add nuw nsw i32 %loopPhi, 1
-  %exitcond = icmp ne i32 %inc.i, %loadGlobal
-  br i1 %exitcond, label %for.body.i, label %CSMain.exit
+  %exitcond = icmp ne i32 %inc.i, %x
+  br i1 %exitcond, label %for.body.i, label %exit
 
-CSMain.exit:
-  %bufExit = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 4, i32 %loadGlobal, ptr nonnull @Out.str)
-  %updateCntExit = tail call noundef i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", i32, 1, 0) %bufExit, i8 1)
-  ret i32 %updateCntExit
+exit:
+  %tokenExit = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") poison)
+  %use2 = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") %tokenExit)
+  ret i32 0
 }

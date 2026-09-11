@@ -61,10 +61,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
   track();
@@ -1287,7 +1283,7 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
       BCall->getCalledFunction())
     return mergeDirectCallProfMetadata(A, B, AInstr, BInstr);
 
-  if (A == B && !ProfcheckDisableMetadataFixes)
+  if (A == B)
     return A;
 
   // The rest of the cases are not implemented but could be added

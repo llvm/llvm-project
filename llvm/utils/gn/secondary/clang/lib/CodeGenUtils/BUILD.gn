@@ -1,0 +1,10 @@
+static_library("CodeGenUtils") {
+  output_name = "clangCodeGenUtils"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "CodeGenUtils.cpp" ]
+}

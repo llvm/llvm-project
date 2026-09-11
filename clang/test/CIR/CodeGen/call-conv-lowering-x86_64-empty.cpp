@@ -3,9 +3,9 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir \
 // RUN:   -fclangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct Empty {};
 struct EmptyMem { Empty e; };
@@ -16,6 +16,8 @@ struct NoUnique { [[no_unique_address]] Empty a, b, c; };
 struct NoUniqueOne { [[no_unique_address]] Empty e; };
 struct UnnamedBits { int : 3; };
 struct Reserved { unsigned : 32; };
+struct ReservedBase : Reserved { int i; };
+struct ReservedMem { [[no_unique_address]] Reserved r; int i; };
 struct OneByte { unsigned char c; };
 struct ArrOfEmpty { Empty a[2]; };
 struct HasEmpty { int x; Empty e; };
@@ -24,7 +26,10 @@ struct EmptySecond { long a; Empty e; };
 struct EmptySSE { double a; Empty e; };
 struct FloatEmpty { float a; Empty e; };
 struct FloatEmptyFirst { Empty e; float a; };
+struct HiWord { Empty e; long hi; };
 struct alignas(32) Big32 {};
+struct EBits { int : 0; };
+struct HoldsEmptyBits { EBits e; int i; };
 union UBits { unsigned : 3; };
 union UNone {};
 union UEmptyInt { Empty e; int i; };
@@ -82,19 +87,34 @@ int takeNoUniqueOne(NoUniqueOne v, int k) { return k; }
 // CIR: cir.func {{.*}}@_Z15takeNoUniqueOne11NoUniqueOnei(%arg0: !s32i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z15takeNoUniqueOne11NoUniqueOnei(i32 noundef %{{[^,]+}})
 
-// Unnamed bit-field storage is marked empty rather than pad, so a record of
-// nothing but unnamed bit-fields carries no data either.
+// Unnamed bit-field storage is marked empty because no field of the source
+// reads it, but the classifier gives it the eightbyte classes of a named
+// bit-field's, so a record of nothing but unnamed bit-fields is still passed.
 int takeUnnamedBits(UnnamedBits v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z15takeUnnamedBits11UnnamedBitsi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z15takeUnnamedBits11UnnamedBitsi(%arg0: !u8i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
+// The eightbyte is coerced from the access unit, so a wider reservation is
+// passed in a wider register.
 int takeReserved(Reserved v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z12takeReserved8Reservedi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z12takeReserved8Reservedi(%arg0: !u32i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// A record reaches that storage through a base the same way it reaches a data
+// member, so the eightbyte covering both is an integer one.
+int takeReservedBase(ReservedBase v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z16takeReservedBase12ReservedBasei(%arg0: !u64i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z16takeReservedBase12ReservedBasei(i64 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// And through a [[no_unique_address]] member, which does not make a record
+// holding an unnamed bit-field empty.
+int takeReservedMem(ReservedMem v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z15takeReservedMem11ReservedMemi(%arg0: !u64i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z15takeReservedMem11ReservedMemi(i64 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // A byte of real data keeps its register.
 int takeOneByte(OneByte v, int k) { return k; }
@@ -147,13 +167,65 @@ float takeFloatEmptyFirst(FloatEmptyFirst v) { return v.a; }
 // CIR: cir.func {{.*}}@_Z19takeFloatEmptyFirst15FloatEmptyFirst(%arg0: !cir.double {{.*}}) -> (!cir.float
 // LLVM: define dso_local noundef float @_Z19takeFloatEmptyFirst15FloatEmptyFirst(double %{{[^,]+}})
 
+// Here the empty member owns eightbyte 0 rather than eightbyte 1, so NoClass
+// cannot just be dropped: the coercion has to start at byte 8.
+long takeHiWord(HiWord v) { return v.hi; }
+
+// CIR: cir.func {{.*}}@_Z10takeHiWord6HiWord(%arg0: !s64i {{.*}}) -> (!s64i
+// CIR:   %[[SLOT:.+]] = cir.alloca "coerce"
+// CIR:   %[[U8:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_HiWord> -> !cir.ptr<!u8i>
+// CIR:   %[[OFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[GEP:.+]] = cir.ptr_stride %[[U8]], %[[OFF]]
+// CIR:   %[[HI:.+]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   cir.store %arg0, %[[HI]] : !s64i, !cir.ptr<!s64i>
+// LLVM: define dso_local noundef i64 @_Z10takeHiWord6HiWord(i64 %[[ARG:[^)]+]])
+// LLVM:   %[[SLOT:.+]] = alloca %struct.HiWord, align 8
+// LLVM:   %[[HI:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
+// LLVM:   store i64 %[[ARG]], ptr %[[HI]], align 8
+
+// The same offset on the return side.
+HiWord giveHiWord(long hi) {
+  HiWord w;
+  w.hi = hi;
+  return w;
+}
+
+// CIR: cir.func {{.*}}@_Z10giveHiWordl(%arg0: !s64i {llvm.noundef} {{.*}}) -> !s64i
+// LLVM: define dso_local i64 @_Z10giveHiWordl(i64 noundef %{{[^,]+}})
+// LLVM:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
+// LLVM:   ret i64 %[[RVAL]]
+
+// Caller-side coercion, on the return received and the argument passed.
+long callerHiWord(long hi) {
+  return takeHiWord(giveHiWord(hi));
+}
+
+// CIR: cir.func {{.*}}@_Z12callerHiWordl(%arg0: !s64i {{.*}}) -> (!s64i
+// CIR:   %[[RET:.+]] = cir.call @_Z10giveHiWordl(
+// CIR:   %[[ROFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[RGEP:.+]] = cir.ptr_stride %{{.+}}, %[[ROFF]]
+// CIR:   %[[RPTR:.+]] = cir.cast bitcast %[[RGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   cir.store %[[RET]], %[[RPTR]] : !s64i, !cir.ptr<!s64i>
+// CIR:   %[[AOFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[AGEP:.+]] = cir.ptr_stride %{{.+}}, %[[AOFF]]
+// CIR:   %[[APTR:.+]] = cir.cast bitcast %[[AGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   %[[AVAL:.+]] = cir.load %[[APTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:   %{{.+}} = cir.call @_Z10takeHiWord6HiWord(%[[AVAL]])
+// LLVM: define dso_local noundef i64 @_Z12callerHiWordl(i64 noundef %{{[^,)]+}})
+// LLVM:   %[[RET:.+]] = call i64 @_Z10giveHiWordl(i64 noundef %{{.+}})
+// LLVM:   %[[RSLOT:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   store i64 %[[RET]], ptr %[[RSLOT]], align 8
+// LLVM:   %[[ASLOT:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   %[[AVAL:.+]] = load i64, ptr %[[ASLOT]], align 8
+// LLVM:   %{{.+}} = call noundef i64 @_Z10takeHiWord6HiWord(i64 %[[AVAL]])
+
 // Past two eightbytes SysV says memory whatever the content, so an empty class
 // this size is passed indirectly at its declared alignment.
 int takeBig32(Big32 v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z9takeBig325Big32i(%arg0: !cir.ptr<!rec_Big32> {llvm.align = 32 : i64, llvm.byval = !rec_Big32, llvm.noalias, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z9takeBig325Big32i(ptr noalias noundef byval(%struct.Big32) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z9takeBig325Big32i(ptr noundef byval(%struct.Big32) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z9takeBig325Big32i(%arg0: !cir.ptr<!rec_Big32> {llvm.align = 32 : i64, llvm.byval = !rec_Big32, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z9takeBig325Big32i(ptr noundef byval(%struct.Big32) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // The same class returned uses sret at that alignment.
 Big32 retBig32() { return Big32{}; }
@@ -161,13 +233,26 @@ Big32 retBig32() { return Big32{}; }
 // CIR: cir.func {{.*}}@_Z8retBig32v(%arg0: !cir.ptr<!rec_Big32> {llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big32, llvm.writable}
 // LLVM: define dso_local void @_Z8retBig32v(ptr dead_on_unwind noalias writable sret(%struct.Big32) align 32 %{{[^,]+}})
 
-// A union of only unnamed bit-fields holds no data, and neither does one with
-// no members at all.
+// A zero-width unnamed bit-field reserves no storage for the classifier to
+// coerce from, so unlike a wider reservation this record is dropped.
+int takeEmptyEBits(EBits v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z14takeEmptyEBits5EBitsi(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z14takeEmptyEBits5EBitsi(i32 noundef %{{[^,]+}})
+
+// It still takes layout space as a member, so the int sits at offset 4 and the
+// eightbyte covering both coerces to i64.
+int takeHoldsEmptyBits(HoldsEmptyBits v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z18takeHoldsEmptyBits14HoldsEmptyBitsi(%arg0: !u64i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z18takeHoldsEmptyBits14HoldsEmptyBitsi(i64 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// A union variant that is an unnamed bit-field holds data the same way a
+// struct member does, so only a union with no members at all holds none.
 int takeUBits(UBits v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z9takeUBits5UBitsi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z9takeUBits5UBitsi(%arg0: !u8i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 int takeUNone(UNone v, int k) { return k; }
 
@@ -220,9 +305,8 @@ int takeUEmptyBytes(UEmptyBytes v) { return v.c[0]; }
 // member changes nothing here.
 int takeUBigEmpty(UBigEmpty v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z13takeUBigEmpty9UBigEmptyi(%arg0: !cir.ptr<!rec_UBigEmpty> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmpty, llvm.noalias, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noalias noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z13takeUBigEmpty9UBigEmptyi(%arg0: !cir.ptr<!rec_UBigEmpty> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmpty, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // The same union returned uses sret at that alignment.
 UBigEmpty retUBigEmpty() { return UBigEmpty{}; }
