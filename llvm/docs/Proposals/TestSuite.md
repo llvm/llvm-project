@@ -1,10 +1,6 @@
-=====================
-Test-Suite Extensions
-=====================
+# Test-Suite Extensions
 
-
-Abstract
-========
+## Abstract
 
 These are ideas for additional programs, benchmarks, applications and
 algorithms that could be added to the LLVM Test-Suite.
@@ -15,6 +11,7 @@ Most probably, the reason why the programs below have not been added to
 the test-suite yet is that nobody has found time to do it. But there
 might be other issues as well, such as
 
+```{eval-rst}
  * Licensing (Support can still be added as external module,
               like for the SPEC benchmarks)
 
@@ -23,13 +20,13 @@ might be other issues as well, such as
 
  * Parallelism (currently, all programs in test-suite use
                 one thread only)
+```
 
-Benchmarks
-==========
+## Benchmarks
 
-SPEC CPU 2017
--------------
-https://www.spec.org/cpu2017/
+### SPEC CPU 2017
+
+<https://www.spec.org/cpu2017/>
 
 The following have not been included yet because they contain Fortran
 code.
@@ -38,9 +35,10 @@ In case of cactuBSSN only a small portion is Fortran. The hosts's
 Fortran compiler could be used for these parts.
 
 Note that CMake's Ninja generator has difficulties with Fortran. See the
-`CMake documentation <https://cmake.org/cmake/help/v3.13/generator/Ninja.html#fortran-support>`_
+[CMake documentation](https://cmake.org/cmake/help/v3.13/generator/Ninja.html#fortran-support)
 for details.
 
+```{eval-rst}
  * 503.bwaves_r/603.bwaves_s
  * 507.cactuBSSN_r
  * 521.wrf_r/621.wrf_s
@@ -49,11 +47,13 @@ for details.
  * 548.exchange2_r/648.exchange2_s
  * 549.fotonik3d_r/649.fotonik3d_s
  * 554.roms_r/654.roms_s
+```
 
-SPEC OMP2012
-------------
-https://www.spec.org/omp2012/
+### SPEC OMP2012
 
+<https://www.spec.org/omp2012/>
+
+```{eval-rst}
  * 350.md
  * 351.bwaves
  * 352.nab
@@ -68,54 +68,56 @@ https://www.spec.org/omp2012/
  * 371.applu331
  * 372.smithwa
  * 376.kdtree
+```
 
-OpenCV
-------
-https://opencv.org/
+### OpenCV
 
-OpenMP 4.x SIMD Benchmarks
---------------------------
-https://github.com/flwende/simd_benchmarks
+<https://opencv.org/>
 
-PWM-benchmarking
-----------------
-https://github.com/tbepler/PWM-benchmarking
+### OpenMP 4.x SIMD Benchmarks
 
-SLAMBench
----------
-https://github.com/pamela-project/slambench
+<https://github.com/flwende/simd_benchmarks>
 
-FireHose
---------
-http://firehose.sandia.gov/
+### PWM-benchmarking
 
-A Benchmark for the C/C++ Standard Library
-------------------------------------------
-https://github.com/hiraditya/std-benchmark
+<https://github.com/tbepler/PWM-benchmarking>
 
-OpenBenchmarking.org CPU / Processor Suite
-------------------------------------------
-https://openbenchmarking.org/suite/pts/cpu
+### SLAMBench
+
+<https://github.com/pamela-project/slambench>
+
+### FireHose
+
+<http://firehose.sandia.gov/>
+
+### A Benchmark for the C/C++ Standard Library
+
+<https://github.com/hiraditya/std-benchmark>
+
+### OpenBenchmarking.org CPU / Processor Suite
+
+<https://openbenchmarking.org/suite/pts/cpu>
 
 This is a subset of the
-`Phoronix Test Suite <https://github.com/phoronix-test-suite/phoronix-test-suite/>`_
+[Phoronix Test Suite](https://github.com/phoronix-test-suite/phoronix-test-suite/)
 and is itself a collection of benchmark suites
 
-Parboil Benchmarks
-------------------
-http://impact.crhc.illinois.edu/parboil/parboil.aspx
+### Parboil Benchmarks
 
-MachSuite
----------
-https://breagen.github.io/MachSuite/
+<http://impact.crhc.illinois.edu/parboil/parboil.aspx>
 
-Rodinia
--------
-http://lava.cs.virginia.edu/Rodinia/download_links.htm
+### MachSuite
+
+<https://breagen.github.io/MachSuite/>
+
+### Rodinia
+
+<http://lava.cs.virginia.edu/Rodinia/download_links.htm>
 
 Rodinia has already been partially included in
 MultiSource/Benchmarks/Rodinia. Benchmarks still missing are:
 
+```{eval-rst}
  * streamcluster
  * particlefilter
  * nw
@@ -131,67 +133,69 @@ MultiSource/Benchmarks/Rodinia. Benchmarks still missing are:
  * cfd
  * bfs
  * b+tree
+```
 
-vecmathlib tests harness
-------------------------
-https://bitbucket.org/eschnett/vecmathlib/wiki/Home
+### vecmathlib tests harness
 
-PARSEC
-------
-http://parsec.cs.princeton.edu/
+<https://bitbucket.org/eschnett/vecmathlib/wiki/Home>
 
-Graph500 reference implementations
-----------------------------------
-https://github.com/graph500/graph500/tree/v2-spec
+### PARSEC
 
-NAS Parallel Benchmarks
------------------------
-https://www.nas.nasa.gov/publications/npb.html
+<http://parsec.cs.princeton.edu/>
+
+### Graph500 reference implementations
+
+<https://github.com/graph500/graph500/tree/v2-spec>
+
+### NAS Parallel Benchmarks
+
+<https://www.nas.nasa.gov/publications/npb.html>
 
 The official benchmark is written in Fortran, but an unofficial
 C-translation is available as well:
-https://github.com/benchmark-subsetting/NPB3.0-omp-C
+<https://github.com/benchmark-subsetting/NPB3.0-omp-C>
 
-DARPA HPCS SSCA#2 C/OpenMP reference implementation
----------------------------------------------------
-http://www.highproductivity.org/SSCABmks.htm
+### DARPA HPCS SSCA#2 C/OpenMP reference implementation
+
+<http://www.highproductivity.org/SSCABmks.htm>
 
 This web site does not exist any more, but there seems to be a copy of
 some of the benchmarks
-https://github.com/gtcasl/hpc-benchmarks/tree/master/SSCA2v2.2
+<https://github.com/gtcasl/hpc-benchmarks/tree/master/SSCA2v2.2>
 
-Kokkos
-------
-https://github.com/kokkos/kokkos-kernels/tree/master/perf_test
-https://github.com/kokkos/kokkos/tree/master/benchmarks
+### Kokkos
 
-PolyMage
---------
-https://github.com/bondhugula/polymage-benchmarks
+<https://github.com/kokkos/kokkos-kernels/tree/master/perf_test>
+<https://github.com/kokkos/kokkos/tree/master/benchmarks>
 
-PolyBench
----------
-https://sourceforge.net/projects/polybench/
+### PolyMage
+
+<https://github.com/bondhugula/polymage-benchmarks>
+
+### PolyBench
+
+<https://sourceforge.net/projects/polybench/>
 
 A modified version of Polybench 3.2 is already presented in
 SingleSource/Benchmarks/Polybench. A newer version 4.2.1 is available.
 
-High Performance Geometric Multigrid
-------------------------------------
-https://crd.lbl.gov/departments/computer-science/PAR/research/hpgmg/
+### High Performance Geometric Multigrid
 
-RAJA Performance Suite
-----------------------
-https://github.com/LLNL/RAJAPerf
+<https://crd.lbl.gov/departments/computer-science/PAR/research/hpgmg/>
 
-CORAL-2 Benchmarks
-------------------
-https://asc.llnl.gov/coral-2-benchmarks/
+### RAJA Performance Suite
+
+<https://github.com/LLNL/RAJAPerf>
+
+### CORAL-2 Benchmarks
+
+<https://asc.llnl.gov/coral-2-benchmarks/>
 
 Many of its programs have already been integrated in
 MultiSource/Benchmarks/DOE-ProxyApps-C and
 MultiSource/Benchmarks/DOE-ProxyApps-C++.
 
+```{eval-rst}
  * Nekbone
  * QMCPack
  * LAMMPS
@@ -209,73 +213,72 @@ MultiSource/Benchmarks/DOE-ProxyApps-C++.
  * Laghos
  * Parallel Integer Sort
  * Havoq
+```
 
-NWChem
-------
-http://www.nwchem-sw.org/index.php/Benchmarks
+### NWChem
 
-TVM
-----
-https://github.com/dmlc/tvm/tree/main/apps/benchmark
+<http://www.nwchem-sw.org/index.php/Benchmarks>
 
-HydroBench
-----------
-https://github.com/HydroBench/Hydro
+### TVM
 
-ParRes
-------
-https://github.com/ParRes/Kernels/tree/default/Cxx11
+<https://github.com/dmlc/tvm/tree/main/apps/benchmark>
 
-Applications/Libraries
-======================
+### HydroBench
 
-GnuPG
------
-https://gnupg.org/
+<https://github.com/HydroBench/Hydro>
 
-Blitz++
--------
-https://sourceforge.net/projects/blitz/
+### ParRes
 
-FFmpeg
-------
-https://ffmpeg.org/
+<https://github.com/ParRes/Kernels/tree/default/Cxx11>
 
-FreePOOMA
----------
-http://www.nongnu.org/freepooma/
+## Applications/Libraries
 
-FTensors
---------
-http://www.wlandry.net/Projects/FTensor
+### GnuPG
 
-rawspeed
---------
-https://github.com/darktable-org/rawspeed
+<https://gnupg.org/>
+
+### Blitz++
+
+<https://sourceforge.net/projects/blitz/>
+
+### FFmpeg
+
+<https://ffmpeg.org/>
+
+### FreePOOMA
+
+<http://www.nongnu.org/freepooma/>
+
+### FTensors
+
+<http://www.wlandry.net/Projects/FTensor>
+
+### rawspeed
+
+<https://github.com/darktable-org/rawspeed>
 
 Its test dataset is 756 MB in size, which is too large to be included
 into the test-suite repository.
 
-C++ Performance Benchmarks
---------------------------
-https://gitlab.com/chriscox/CppPerformanceBenchmarks
+### C++ Performance Benchmarks
 
-Generic Algorithms
-==================
+<https://gitlab.com/chriscox/CppPerformanceBenchmarks>
 
-Image processing
-----------------
+## Generic Algorithms
 
-Resampling
-``````````
+### Image processing
 
+#### Resampling
+
+```{eval-rst}
  * Bilinear
  * Bicubic
  * Lanczos
+```
 
-Dither
-``````
+#### Dither
 
+```{eval-rst}
  * Threshold
  * Random
  * Halftone
@@ -287,32 +290,36 @@ Dither
  * Sierra
  * Atkinson
  * Gradient-based
+```
 
-Feature detection
-`````````````````
+#### Feature detection
 
+```{eval-rst}
  * Harris
  * Histogram of Oriented Gradients
+```
 
-Color conversion
-````````````````
+#### Color conversion
 
+```{eval-rst}
  * RGB to grayscale
  * HSL to RGB
+```
 
-Graph
------
+### Graph
 
-Search Algorithms
-`````````````````
+#### Search Algorithms
 
+```{eval-rst}
  * Breadth-First-Search
  * Depth-First-Search
  * Dijkstra's algorithm
  * A-Star
+```
 
-Spanning Tree
-`````````````
+#### Spanning Tree
 
+```{eval-rst}
  * Kruskal's algorithm
  * Prim's algorithm
+```
