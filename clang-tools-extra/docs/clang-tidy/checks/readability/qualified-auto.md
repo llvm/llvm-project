@@ -52,11 +52,10 @@ auto *BarFoo = cast<int **>(Baz4);
 
 ## Options
 
-```{option} AddConstToQualified
+````{option} AddConstToQualified
 When `true`, the check will add const qualifiers to variables defined as
 `auto *` or `auto &` when applicable.
 Default is `true`.
-```
 
 ```c++
 auto Foo1 = cast<const int *>(Bar1);
@@ -81,6 +80,7 @@ const auto &Foo3 = cast<const int &>(Bar3);
 ```
 
 For the `llvm-qualified-auto` alias, default is `false`.
+````
 
 ```{option} AllowedTypes
 A semicolon-separated list of names of types to ignore when `auto` is
