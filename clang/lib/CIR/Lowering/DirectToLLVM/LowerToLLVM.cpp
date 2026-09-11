@@ -469,19 +469,19 @@ convertCIRFastMathFlags(cir::FastMathFlagsAttr fmfAttr) {
   cir::FastMathFlags src = fmfAttr.getValue();
   mlir::LLVM::FastmathFlags result = {};
   if (bitEnumContainsAll(src, cir::FastMathFlags::nsz))
-    result = result | mlir::LLVM::nsz;
+    result = result | mlir::LLVM::FastmathFlags::nsz;
   if (bitEnumContainsAll(src, cir::FastMathFlags::nnan))
-    result = result | mlir::LLVM::nnan;
+    result = result | mlir::LLVM::FastmathFlags::nnan;
   if (bitEnumContainsAll(src, cir::FastMathFlags::ninf))
-    result = result | mlir::LLVM::ninf;
+    result = result | mlir::LLVM::FastmathFlags::ninf;
   if (bitEnumContainsAll(src, cir::FastMathFlags::arcp))
-    result = result | mlir::LLVM::arcp;
+    result = result | mlir::LLVM::FastmathFlags::arcp;
   if (bitEnumContainsAll(src, cir::FastMathFlags::contract))
-    result = result | mlir::LLVM::contract;
+    result = result | mlir::LLVM::FastmathFlags::contract;
   if (bitEnumContainsAll(src, cir::FastMathFlags::afn))
-    result = result | mlir::LLVM::afn;
+    result = result | mlir::LLVM::FastmathFlags::afn;
   if (bitEnumContainsAll(src, cir::FastMathFlags::reassoc))
-    result = result | mlir::LLVM::reassoc;
+    result = result | mlir::LLVM::FastmathFlags::reassoc;
   return result;
 }
 
