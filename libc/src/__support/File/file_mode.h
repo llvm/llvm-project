@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// file_mode.h
+/// \file
 /// This file contains the implementation of FileMode class. This is the class
 /// that handles everything related to a file's mode.
 ///
