@@ -31,6 +31,37 @@ gpu.module @test_kernel {
 
 // -----
 
+// Vector offsets are only coalesced into one block access when they form a
+// contiguous run. A gather of unrelated offsets has no block form.
+
+gpu.module @test_kernel {
+  gpu.func @load_gather_non_contiguous_offsets(%src: i64, %a: index, %b: index) -> vector<2xf32> {
+    %offsets = vector.from_elements %a, %b : vector<2xindex>
+    %mask = arith.constant dense<true> : vector<2xi1>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load' that was explicitly marked illegal}}
+    %0 = xegpu.load %src[%offsets], %mask : i64, vector<2xindex>, vector<2xi1> -> vector<2xf32>
+    gpu.return %0 : vector<2xf32>
+  }
+}
+
+// -----
+
+// A contiguous run still needs a uniform mask: one block access can only be
+// gated on a single bit.
+
+gpu.module @test_kernel {
+  gpu.func @load_gather_non_uniform_mask(%src: i64, %base: index, %mask: vector<2xi1>) -> vector<2xf32> {
+    %c1 = arith.constant 1 : index
+    %o1 = arith.addi %base, %c1 : index
+    %offsets = vector.from_elements %base, %o1 : vector<2xindex>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load' that was explicitly marked illegal}}
+    %0 = xegpu.load %src[%offsets], %mask : i64, vector<2xindex>, vector<2xi1> -> vector<2xf32>
+    gpu.return %0 : vector<2xf32>
+  }
+}
+
+// -----
+
 // Verify that xegpu.lane_shuffle of a sub-byte element type is rejected: the
 // shuffle redistributes whole bytes between the lanes, so fp4 fragments cannot
 // be shuffled.

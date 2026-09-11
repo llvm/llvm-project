@@ -705,6 +705,72 @@ static Value addOffsetToBaseAddr(ConversionPatternRewriter &rewriter,
   return newAddr;
 }
 
+// If `v` is `base + cst`, returns {base, cst}. A bare value counts as
+// `{v, 0}`. Only an `index`/integer add by a constant is matched, on either
+// operand.
+static std::pair<Value, int64_t> splitConstantAddend(Value v) {
+  auto add = v.getDefiningOp<arith::AddIOp>();
+  if (!add)
+    return {v, 0};
+  APInt cst;
+  if (matchPattern(add.getRhs(), m_ConstantInt(&cst)))
+    return {add.getLhs(), cst.getSExtValue()};
+  if (matchPattern(add.getLhs(), m_ConstantInt(&cst)))
+    return {add.getRhs(), cst.getSExtValue()};
+  return {v, 0};
+}
+
+// Returns true when `offsets` is one ascending run of consecutive elements,
+// i.e. `{base, base + 1, ..., base + n - 1}`. Element 0 is then the base of the
+// run.
+//
+// A lane that owns such a run reads or writes a contiguous block, which the
+// chunked XeVM access expects as a single base offset. Two forms are matched,
+// both of which the XeGPU distribution emits:
+//   - `vector.from_elements %b, %b + 1, ...`
+//   - `vector.step`
+// Elements are compared in row-major order, which is the order
+// `vector.from_elements` uses, so nD offsets work too.
+static bool isContiguousRun(Value offsets) {
+  auto vecTy = dyn_cast<VectorType>(offsets.getType());
+  if (!vecTy || vecTy.getNumElements() < 1)
+    return false;
+
+  if (offsets.getDefiningOp<vector::StepOp>())
+    return true;
+
+  auto fromElements = offsets.getDefiningOp<vector::FromElementsOp>();
+  if (!fromElements)
+    return false;
+  ValueRange elements = fromElements.getElements();
+
+  // Every element must be the same base value plus its own index.
+  auto [base, firstAddend] = splitConstantAddend(elements.front());
+  for (int64_t i = 1, e = elements.size(); i < e; ++i) {
+    auto [elemBase, addend] = splitConstantAddend(elements[i]);
+    if (elemBase != base || addend != firstAddend + i)
+      return false;
+  }
+  return true;
+}
+
+// Returns true when every element of `mask` carries the same bit, so gating a
+// whole contiguous block on element 0 is equivalent. Splat constants,
+// broadcasts of a scalar, and a `vector.from_elements` of one repeated value
+// qualify.
+static bool isUniformMask(Value mask) {
+  if (!isa<VectorType>(mask.getType()))
+    return true;
+  DenseElementsAttr splat;
+  if (matchPattern(mask, m_Constant(&splat)) && splat.isSplat())
+    return true;
+  if (auto broadcast = mask.getDefiningOp<vector::BroadcastOp>())
+    return !isa<VectorType>(broadcast.getSource().getType());
+  if (auto fromElements = mask.getDefiningOp<vector::FromElementsOp>())
+    return llvm::all_equal(fromElements.getElements());
+  return false;
+}
+
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, xegpu::LoadGatherOp, xegpu::StoreScatterOp>::value>>
@@ -770,6 +836,27 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
                                           basePtrI64);
     }
     Value mask = adaptor.getMask();
+
+    // Coalesce a chunked access. Distribution gives every element its own
+    // offset and mask bit, so a lane that owns a contiguous run arrives here
+    // with `vector<D>` offsets and mask beside a `vector<D>` value. One
+    // contiguous block access needs a single base offset and a single mask bit,
+    // so take them from lane 0. The offsets are proven consecutive and the mask
+    // uniform on the original operands, whose defining ops are still intact;
+    // the values come from the converted operands, so no casts are needed. When
+    // the proof fails the access stays a gather and the match fails below, as
+    // before.
+    auto origOffsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
+    if (isa<VectorType>(offset.getType()) && origOffsetsTy && valOrResVecTy &&
+        origOffsetsTy.getNumElements() == valOrResVecTy.getNumElements() &&
+        isContiguousRun(op.getOffsets()) && isUniformMask(op.getMask())) {
+      offset =
+          vector::ExtractOp::create(rewriter, loc, offset, ArrayRef<int64_t>{0});
+      if (isa<VectorType>(mask.getType()))
+        mask =
+            vector::ExtractOp::create(rewriter, loc, mask, ArrayRef<int64_t>{0});
+    }
+
     if (dyn_cast<VectorType>(offset.getType())) {
       // Offset needs be scalar. Single element vector is converted to scalar
       // by type converter.
