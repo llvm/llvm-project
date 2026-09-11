@@ -303,6 +303,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/file.h entrypoints
+    libc.src.sys.file.flock
+
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
@@ -1313,11 +1316,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_getdetachstate
     libc.src.pthread.pthread_attr_getguardsize
+    libc.src.pthread.pthread_attr_getschedpolicy
     libc.src.pthread.pthread_attr_getstack
     libc.src.pthread.pthread_attr_getstacksize
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_setdetachstate
     libc.src.pthread.pthread_attr_setguardsize
+    libc.src.pthread.pthread_attr_setschedpolicy
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_condattr_destroy
@@ -1493,6 +1498,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # signal.h entrypoints
     libc.src.signal.kill
+    libc.src.signal.pthread_kill
     libc.src.signal.pthread_sigmask
     libc.src.signal.raise
     libc.src.signal.sigaction
