@@ -520,6 +520,9 @@ public:
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const { return HasGFX90AInsts; }
 
+  // Has a hardware encoding for TFE D16 format buffer loads.
+  bool hasBufferTFEFormatD16() const { return !HasGFX90AInsts; }
+
   bool hasFmaakFmamkF32Insts() const {
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }

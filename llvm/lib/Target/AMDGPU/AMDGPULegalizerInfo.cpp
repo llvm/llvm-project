@@ -6838,7 +6838,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     return true;
   }
 
-  if (IsFormat && !IsTyped && IsD16 && IsTFE && ST.hasGFX90AInsts()) {
+  if (IsFormat && !IsTyped && IsD16 && IsTFE && !ST.hasBufferTFEFormatD16()) {
     const Function &Fn = B.getMF().getFunction();
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
         Fn, "TFE D16 format buffer load is not supported on this GPU",

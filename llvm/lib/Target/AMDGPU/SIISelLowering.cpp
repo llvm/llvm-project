@@ -7903,7 +7903,7 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
   assert(M->getNumValues() == 2 || M->getNumValues() == 3);
   bool IsTFE = M->getNumValues() == 3;
 
-  if (IsD16 && IsTFE && Subtarget->hasGFX90AInsts()) {
+  if (IsD16 && IsTFE && !Subtarget->hasBufferTFEFormatD16()) {
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
         "TFE D16 format buffer load is not supported on this GPU",
