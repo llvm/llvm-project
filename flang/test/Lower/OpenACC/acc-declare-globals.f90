@@ -117,3 +117,17 @@ end module
 ! CHECK:         acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<5000xi32>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
+
+! PARAMETER arrays keep acc.declare so they are copied into the GPU module
+! with their initializer, but they are not registered via a host ctor/dtor.
+module acc_declare_parameter_test
+  real, parameter :: vals(2) = (/ 1.0, 2.0 /)
+  !$acc declare create(vals)
+end module
+
+! CHECK-LABEL: fir.global @_QMacc_declare_parameter_testECvals
+! CHECK-SAME: dense<
+! CHECK-SAME: acc.declare = #acc.declare<dataClause = acc_create>
+! CHECK-SAME: constant
+! CHECK-NOT: acc.global_ctor @_QMacc_declare_parameter_testECvals_acc_ctor
+! CHECK-NOT: acc.global_dtor @_QMacc_declare_parameter_testECvals_acc_dtor
