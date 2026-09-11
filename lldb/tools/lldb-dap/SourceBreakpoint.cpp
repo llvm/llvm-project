@@ -281,6 +281,11 @@ lldb::SBError SourceBreakpoint::FormatLogText(llvm::StringRef text,
 void SourceBreakpoint::SetLogMessage() {
   m_log_message_parts.clear();
 
+  if (m_log_message.empty()) {
+    m_bp.SetCallback(nullptr, nullptr);
+    return;
+  }
+
   // Contains unmatched open curly braces indices.
   std::vector<int> unmatched_curly_braces;
 

@@ -78,6 +78,69 @@ class TestDAP_logpoints(DAPTestCaseBase):
             )
         session.continue_to_exit()
 
+    def check_logpoint_to_breakpoint_conversion(self, log_message):
+        session = self.build_and_create_session()
+        initial_stop = self.stop_at_before_loop_line(session)
+        loop_line = line_number("main.cpp", "// break loop")
+        after_loop_line = line_number("main.cpp", "// after loop")
+        log_prefix = "This is log message for "
+
+        [logpoint_id, post_loop_breakpoint_id] = session.resolve_source_breakpoints(
+            self.main_path,
+            [
+                SourceBreakpoint(loop_line, logMessage=log_prefix + "{i}"),
+                SourceBreakpoint(after_loop_line),
+            ],
+        )
+
+        # Change logpoint to usual breakpoint and check that id preserved.
+        [breakpoint_id, _] = session.resolve_source_breakpoints(
+            self.main_path,
+            [
+                SourceBreakpoint(loop_line, logMessage=log_message),
+                SourceBreakpoint(after_loop_line),
+            ],
+        )
+        self.assertEqual(breakpoint_id, logpoint_id)
+
+        # Check that stop works as expected for updated logpoint.
+        loop_stop = session.continue_to_breakpoint(breakpoint_id)
+        frame = session.top_frame_from(loop_stop)
+        self.assertEqual(frame.locals["i"].value_as_int, 0)
+        captured = session.collect_console(after=initial_stop, until=loop_stop)
+        self.assertNotIn(log_prefix, captured.seen_texts)
+
+        # Change breakpoint to logpoint back.
+        [restored_id, _] = session.resolve_source_breakpoints(
+            self.main_path,
+            [
+                SourceBreakpoint(loop_line, logMessage=log_prefix + "{i}"),
+                SourceBreakpoint(after_loop_line),
+            ],
+        )
+        self.assertEqual(restored_id, logpoint_id)
+
+        # Check that logpoint prints messages.
+        post_loop_stop = session.continue_to_breakpoint(post_loop_breakpoint_id)
+        captured = session.collect_console(after=loop_stop, until=post_loop_stop)
+        messages = [
+            line
+            for line in captured.seen_texts.splitlines()
+            if line.startswith(log_prefix)
+        ]
+        self.assertEqual(messages, [log_prefix + str(i) for i in range(1, 10)])
+        session.continue_to_exit()
+
+    @skipIfWindows
+    def test_logmessage_none(self):
+        """Tests removing logMessage restores a stopping breakpoint."""
+        self.check_logpoint_to_breakpoint_conversion(None)
+
+    @skipIfWindows
+    def test_logmessage_empty(self):
+        """Tests clearing logMessage restores a stopping breakpoint."""
+        self.check_logpoint_to_breakpoint_conversion("")
+
     @skipIfWindows
     def test_logmessage_advanced(self):
         """Tests breakpoint logmessage functionality for complex expression."""
