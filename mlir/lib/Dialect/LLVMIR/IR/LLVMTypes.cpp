@@ -419,8 +419,8 @@ bool LLVMPointerType::areCompatible(
       });
     }
     if (it != oldLayout.end()) {
-      size = *extractPointerSpecValue(*it, PtrDLEntryPos::Size);
-      abi = *extractPointerSpecValue(*it, PtrDLEntryPos::Abi);
+      size = *extractPointerSpecValue(it->getValue(), PtrDLEntryPos::Size);
+      abi = *extractPointerSpecValue(it->getValue(), PtrDLEntryPos::Abi);
     }
 
     Attribute newSpec = llvm::cast<DenseIntElementsAttr>(newEntry.getValue());
