@@ -15,6 +15,42 @@ using namespace llvm;
 
 namespace {
 
+/// A fake stream that lets the test control has_colors()/is_displayed()
+/// independently, mimicking a tty that doesn't support color: is_displayed()
+/// is true but has_colors() is false.
+class FakeColorStream : public raw_ostream {
+public:
+  uint64_t current_pos() const override { return Buffer.size(); }
+  void write_impl(const char *Ptr, size_t Size) override {
+    Buffer.append(Ptr, Ptr + Size);
+  }
+
+  bool is_displayed() const override { return IsDisplayed; }
+  bool has_colors() const override { return HasColors; }
+
+  ~FakeColorStream() override { flush(); }
+
+  std::string Buffer;
+  bool IsDisplayed = false;
+  bool HasColors = false;
+};
+
+TEST(formatted_raw_ostreamTest, Test_HasColorsDelegates) {
+  // formatted_raw_ostream should forward has_colors() to the wrapped stream
+  // rather than falling back to raw_ostream's default (which just returns
+  // is_displayed()).
+  FakeColorStream Inner;
+  Inner.IsDisplayed = true;
+  Inner.HasColors = false;
+  formatted_raw_ostream Outer(Inner);
+
+  EXPECT_TRUE(Outer.is_displayed());
+  EXPECT_FALSE(Outer.has_colors());
+
+  Inner.HasColors = true;
+  EXPECT_TRUE(Outer.has_colors());
+}
+
 TEST(formatted_raw_ostreamTest, Test_Tell) {
   // Check offset when underlying stream has buffer contents.
   SmallString<128> A;
