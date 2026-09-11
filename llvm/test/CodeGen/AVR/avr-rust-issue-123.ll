@@ -42,13 +42,13 @@ bb:                                               ; preds = %entry
   %tmp2 = icmp ult i8 %arg1, 5
   %. = select i1 %tmp2, i8 5, i8 %arg1
   %tmp3 = select i1 %tmp, i8 90, i8 %.
-  ; CHECK: sts delayFactor, r{{[0-9]+}}
+  ; CHECK:      sts  delay+3, r{{[0-9]+}}
+  ; CHECK-NEXT: sts  delay+2, r{{[0-9]+}}
+  ; CHECK:      sts  delayFactor, r{{[0-9]+}}
   store i8 %tmp3, ptr @delayFactor, align 1
   %tmp4 = zext i8 %tmp3 to i32
   %tmp5 = mul nuw nsw i32 %tmp4, 100
-  ; CHECK:      sts  delay+3, r{{[0-9]+}}
-  ; CHECK-NEXT: sts  delay+2, r{{[0-9]+}}
-  ; CHECK-NEXT: sts  delay+1, r{{[0-9]+}}
+  ; CHECK:      sts  delay+1, r{{[0-9]+}}
   ; CHECK-NEXT: sts  delay, r{{[0-9]+}}
   store i32 %tmp5, ptr @delay, align 4
   tail call void @eeprom_write(i16 34, i8 %tmp3)
