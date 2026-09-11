@@ -74,17 +74,18 @@ void systemz::getSystemZTargetFeatures(const Driver &D, const llvm::Triple &T,
   // -m(no-)vx overrides use of the vector facility.
   if (Arg *A = Args.getLastArg(options::OPT_mvx, options::OPT_mno_vx)) {
 
-    // The -mvx requires at least -march=arch11/z13 when -mhard-float is in affect.
+    // The -mvx requires at least -march=arch11/z13 when -mhard-float is in
+    // affect.
     if (A->getOption().matches(options::OPT_mvx)) {
       auto Arch = getSystemZTargetCPU(Args, T);
       if (HardFloatABI && llvm::StringSwitch<bool>(Arch)
-              .Case("arch8", true)
-              .Case("z10", true)
-              .Case("arch9", true)
-              .Case("z196", true)
-              .Case("arch10", true)
-              .Case("zEC12", true)
-              .Default(false)) {
+                              .Case("arch8", true)
+                              .Case("z10", true)
+                              .Case("arch9", true)
+                              .Case("z196", true)
+                              .Case("arch10", true)
+                              .Case("zEC12", true)
+                              .Default(false)) {
         D.Diag(diag::err_drv_incompatible_arch)
             << "-mvx" << "-march=arch11" << Arch;
       }

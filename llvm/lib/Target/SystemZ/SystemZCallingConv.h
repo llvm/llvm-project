@@ -97,8 +97,8 @@ inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 }
 
 inline bool CC_XPLINK_Int128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
-                                             CCValAssign::LocInfo &LocInfo,
-                                             ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+                             CCValAssign::LocInfo &LocInfo,
+                             ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   LocVT = MVT::v16i8;
   LocInfo = CCValAssign::BCvt;
   return false;
