@@ -45,16 +45,13 @@ bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
 
 bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID,
                                                const FunctionType *FTy) const {
-  StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
-      static_cast<Intrinsic::ID>(IntrinsicID));
-  if (RequiredFeatures != Intrinsic::CustomTargetFeatures)
-    return isIntrinsicSupported(IntrinsicID);
+  if (isIntrinsicSupported(IntrinsicID))
+    return true;
 
-  std::optional<StringRef> CustomRequiredFeatures =
+  std::optional<StringRef> RequiredFeatures =
       getRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
-  return CustomRequiredFeatures &&
-         (CustomRequiredFeatures->empty() ||
-          checkFeatureExpression(*CustomRequiredFeatures));
+  return RequiredFeatures && (RequiredFeatures->empty() ||
+                              checkFeatureExpression(*RequiredFeatures));
 }
 
 std::optional<StringRef>
