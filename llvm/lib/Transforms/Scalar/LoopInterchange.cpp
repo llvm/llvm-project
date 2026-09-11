@@ -37,6 +37,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -262,12 +263,18 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         // dependency vector with '*'.
         if (D->isConfused()) {
           assert(Dep.empty() && "Expected empty dependency vector");
-          Dep.assign(Level, '*');
+          Dep.assign(L->getLoopDepth() + Level - 1, '*');
         }
 
-        while (Dep.size() != Level) {
+        while (Dep.size() < L->getLoopDepth() + Level - 1) {
           Dep.push_back('I');
         }
+
+        // Dependence analysis reports levels for the full enclosing loop nest.
+        // Keep only the suffix that corresponds to the selected perfect
+        // subnest.
+        if (Dep.size() > Level)
+          Dep.erase(Dep.begin(), Dep.end() - Level);
 
         // If all the elements of any direction vector have only '*', legality
         // can't be proven. Exit early to save compile time.
@@ -636,7 +643,6 @@ public:
   void removeChildLoop(Loop *OuterLoop, Loop *InnerLoop);
 
 private:
-  void adjustLoopLinks();
   void adjustLoopBranches();
 
   Loop *OuterLoop;
@@ -674,12 +680,64 @@ struct LoopInterchange {
     return processLoopList(LoopList);
   }
 
+  /// Consider below kernel:
+  /// for(int i=0; i<n; i++){  // Loop 1
+  ///     for(int j=0; j<m; j++){  // Loop 2
+  ///         for(int r=0; r<m; r++){  // Loop 3
+  ///         // Do something
+  ///         }
+  ///     }
+  ///     for(int k=0; k<p; k++){  // Loop 4
+  ///         for(int l=0; l<p; l++){  // Loop 5
+  ///             // Do something
+  ///         }
+  ///     }
+  /// }
+  /// Then collectPerfectNests() will return:
+  /// - [Loop2, Loop3]
+  /// - [Loop4, Loop5]
+  static SmallVector<SmallVector<Loop *, 8>, 4>
+  collectPerfectNests(LoopNest &LN) {
+    SmallVector<SmallVector<Loop *, 8>, 4> LoopLists;
+    for (Loop *L : LN.getLoops()) {
+      if (!L->isInnermost())
+        continue;
+
+      SmallVector<Loop *, 8> LoopList;
+      Loop *Current = L;
+      while (true) {
+        LoopList.push_back(Current);
+        Loop *Parent = Current->getParentLoop();
+        if (!Parent || Parent->getSubLoops().size() != 1)
+          break;
+        Current = Parent;
+      }
+      std::reverse(LoopList.begin(), LoopList.end());
+      if (LoopList.size() >= 2)
+        LoopLists.push_back(std::move(LoopList));
+    }
+    return LoopLists;
+  }
+
   bool run(LoopNest &LN) {
-    SmallVector<Loop *, 8> LoopList(LN.getLoops());
-    for (unsigned I = 1; I < LoopList.size(); ++I)
-      if (LoopList[I]->getParentLoop() != LoopList[I - 1])
-        return false;
-    return processLoopList(LoopList);
+    SmallVector<SmallVector<Loop *, 8>, 4> LoopLists = collectPerfectNests(LN);
+    if (LoopLists.empty()) {
+      LLVM_DEBUG(dbgs() << "No Valid candidates for loop interchange.\n");
+      return false;
+    }
+    bool Changed = false;
+    for (SmallVector<Loop *, 8> &LoopList : LoopLists) {
+      // Ensure minimum depth of the loop nest to do the interchange.
+      if (!hasSupportedLoopDepth(LoopList, *ORE))
+        continue;
+      // Ensure computable loop nest.
+      if (!isComputableLoopNest(&AR->SE, LoopList)) {
+        LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
+        continue;
+      }
+      Changed |= processLoopList(LoopList);
+    }
+    return Changed;
   }
 
   unsigned selectLoopForInterchange(ArrayRef<Loop *> LoopList) {
@@ -815,7 +873,7 @@ bool LoopInterchangeLegality::containsUnsafeInstructions(BasicBlock *BB,
 
 static FreezeInst *findFreezeInReNestedBlocks(Loop *OuterLoop,
                                               Loop *InnerLoop) {
-  // adjustLoopLinks swaps the preheader bodies after changing their loop
+  // adjustLoopBranches swaps the preheader bodies after changing their loop
   // roles, so the original outer-preheader body remains outside the new outer
   // loop and retains its execution count.
   BasicBlock *Blocks[] = {
@@ -1059,6 +1117,11 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
   if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD)) {
     // Detect floating point reduction only when it can be reordered.
     if (RD.getExactFPMathInst() != nullptr)
+      return false;
+
+    // The extra uses of a reduction phi outside of its reduction chain make
+    // the order in which the elements are visited observable.
+    if (RD.hasUsesOutsideReductionChain())
       return false;
 
     RecurKind RK = RD.getRecurrenceKind();
@@ -2067,15 +2130,10 @@ void LoopInterchangeTransform::restructureLoops(
   LI->changeLoopFor(OrigInnerPreHeader, OuterLoopParent);
 
   // Switch the loop levels.
-  if (OuterLoopParent) {
-    // Remove the loop from its parent loop.
-    removeChildLoop(OuterLoopParent, NewInner);
-    removeChildLoop(NewInner, NewOuter);
-    OuterLoopParent->addChildLoop(NewOuter);
-  } else {
-    removeChildLoop(NewInner, NewOuter);
-    LI->changeTopLevelLoop(NewInner, NewOuter);
-  }
+  removeChildLoop(NewInner, NewOuter);
+  // Replace NewInner with NewOuter in place, preserving sibling order.
+  LI->replaceLoop(NewInner, NewOuter);
+
   while (!NewOuter->isInnermost())
     NewInner->addChildLoop(NewOuter->removeChildLoop(NewOuter->begin()));
   NewOuter->addChildLoop(NewInner);
@@ -2281,7 +2339,7 @@ void LoopInterchangeTransform::transform(
       I.moveBeforePreserving(OuterLoopHeader->getTerminator()->getIterator());
   }
 
-  adjustLoopLinks();
+  adjustLoopBranches();
 
   // Finally, drop the nsw/nuw/ninf flags from the instructions for reduction
   // calculations.
@@ -2639,6 +2697,12 @@ void LoopInterchangeTransform::adjustLoopBranches() {
   InnerLoopHeader->replacePhiUsesWith(OuterLoopPreHeader, InnerLoopPreHeader);
   InnerLoopHeader->replacePhiUsesWith(OuterLoopLatch, InnerLoopLatch);
 
+  // Swap the preheader contents so each definition sits in the preheader of the
+  // loop it now belongs to. This runs before the LCSSA rebuild below so that
+  // any definition referenced across the interchanged levels dominates its uses
+  // when formLCSSAForInstructions runs.
+  swapBBContents(OuterLoop->getLoopPreheader(), InnerLoop->getLoopPreheader());
+
   // Values defined in the outer loop header could be used in the inner loop
   // latch. In that case, we need to create LCSSA phis for them, because after
   // interchanging they will be defined in the new inner loop and used in the
@@ -2647,19 +2711,13 @@ void LoopInterchangeTransform::adjustLoopBranches() {
   for (Instruction &I :
        make_range(OuterLoopHeader->begin(), std::prev(OuterLoopHeader->end())))
     MayNeedLCSSAPhis.push_back(&I);
+
+#ifndef NDEBUG
+  assert(!verifyFunction(*OuterLoopHeader->getParent(), &errs()) &&
+         "LoopInterchange handed dominance-broken IR to LCSSA rebuild");
+#endif
+
   formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE);
-}
-
-void LoopInterchangeTransform::adjustLoopLinks() {
-  // Adjust all branches in the inner and outer loop.
-  adjustLoopBranches();
-
-  // We have interchanged the preheaders so we need to interchange the data in
-  // the preheaders as well. This is because the content of the inner
-  // preheader was previously executed inside the outer loop.
-  BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
-  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-  swapBBContents(OuterLoopPreHeader, InnerLoopPreHeader);
 }
 
 PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
@@ -2667,18 +2725,8 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &U) {
   Function &F = *LN.getParent();
-  SmallVector<Loop *, 8> LoopList(LN.getLoops());
 
   OptimizationRemarkEmitter ORE(&F);
-
-  // Ensure minimum depth of the loop nest to do the interchange.
-  if (!hasSupportedLoopDepth(LoopList, ORE))
-    return PreservedAnalyses::all();
-  // Ensure computable loop nest.
-  if (!isComputableLoopNest(&AR.SE, LoopList)) {
-    LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
-    return PreservedAnalyses::all();
-  }
 
   ORE.emit([&]() {
     return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",

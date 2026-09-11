@@ -1937,10 +1937,14 @@ private:
     return detail::InterfaceMap::template get<Traits<ConcreteType>...>();
   }
 
-  /// Return the internal implementations of each of the OperationName
-  /// hooks.
-  /// Implementation of `FoldHookFn` OperationName hook.
-  static OperationName::FoldHookFn getFoldHookFn() {
+  using FoldHookFn = LogicalResult (*)(Operation *, ArrayRef<Attribute>,
+                                       SmallVectorImpl<OpFoldResult> &);
+  using HasTraitFn = bool (*)(TypeID);
+  using PrintAssemblyFn = void (*)(Operation *, OpAsmPrinter &, StringRef);
+  using VerifyInvariantsFn = LogicalResult (*)(Operation *);
+
+  /// Return the internal implementations of each of the OperationName hooks.
+  static FoldHookFn getFoldHookFn() {
     // If the operation is single result and defines a `fold` method.
     if constexpr (llvm::is_one_of<OpTrait::OneResult<ConcreteType>,
                                   Traits<ConcreteType>...>::value &&
@@ -2013,13 +2017,11 @@ private:
     return result;
   }
 
-  /// Implementation of `GetHasTraitFn`
-  static OperationName::HasTraitFn getHasTraitFn() {
+  static HasTraitFn getHasTraitFn() {
     return
         [](TypeID id) { return op_definition_impl::hasTrait<Traits...>(id); };
   }
-  /// Implementation of `PrintAssemblyFn` OperationName hook.
-  static OperationName::PrintAssemblyFn getPrintAssemblyFn() {
+  static PrintAssemblyFn getPrintAssemblyFn() {
     if constexpr (detect_has_print<ConcreteType>::value)
       return [](Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
         OpState::printOpName(op, p, defaultDialect);
@@ -2120,8 +2122,8 @@ private:
         failed(op_definition_impl::verifyTraits<Traits<ConcreteType>...>(op)) ||
         failed(cast<ConcreteType>(op).verify()));
   }
-  static OperationName::VerifyInvariantsFn getVerifyInvariantsFn() {
-    return static_cast<LogicalResult (*)(Operation *)>(&verifyInvariants);
+  static VerifyInvariantsFn getVerifyInvariantsFn() {
+    return &verifyInvariants;
   }
   /// Implementation of `VerifyRegionInvariantsFn` OperationName hook.
   static LogicalResult verifyRegionInvariants(Operation *op) {
@@ -2132,8 +2134,8 @@ private:
             op)) ||
         failed(cast<ConcreteType>(op).verifyRegions()));
   }
-  static OperationName::VerifyRegionInvariantsFn getVerifyRegionInvariantsFn() {
-    return static_cast<LogicalResult (*)(Operation *)>(&verifyRegionInvariants);
+  static VerifyInvariantsFn getVerifyRegionInvariantsFn() {
+    return &verifyRegionInvariants;
   }
 
   static constexpr bool hasNoDataMembers() {

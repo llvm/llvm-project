@@ -60,6 +60,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
       MAI(Ctx.getAsmInfo()),
       HwModeRegClass(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+      TargetID(AMDGPU::createAMDGPUTargetID(STI, "")),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
@@ -103,27 +104,40 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
     unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
     switch (SrameccSetting) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
+      break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Any);
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Off);
       OS << ":sramecc-";
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::On);
       OS << ":sramecc+";
       break;
     }
 
+    // Targets that hardwire xnack on (e.g. gfx1250) don't expose it as a
+    // selectable modifier, so don't print it.
+    bool XnackHardwiredOn = TargetID.isXnackSupported() &&
+                            !STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes);
     unsigned XnackSetting = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
     switch (XnackSetting) {
     case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+      break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::Any);
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
-      OS << ":xnack-";
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::Off);
+      if (!XnackHardwiredOn)
+        OS << ":xnack-";
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
-      OS << ":xnack+";
-      XnackOnFromEFlags = true;
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::On);
+      if (!XnackHardwiredOn)
+        OS << ":xnack+";
       break;
     }
   }
@@ -233,6 +247,28 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
   return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));
 }
 
+// Decode an indexed-resource (rsrcidx) 9-bit srsrc field into a 32-bit index
+// register. SGPRs are encoded as 128-251, VGPRs have bit 8 set.
+static DecodeStatus decodeRsrcRegOp(MCInst &Inst, unsigned Imm,
+                                    uint64_t /* Addr */,
+                                    const MCDisassembler *Decoder,
+                                    unsigned OpWidth) {
+  // Uniform-indexed resource. SGPR[0..123] encoded as 128-251.
+  if (Imm >= 128 && Imm < 256)
+    Imm -= 128;
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, Decoder);
+}
+
+static DecodeStatus decodeRsrcReg128(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  unsigned OpWidth = 32;
+  // 0-127: Uniform-direct resource in SGPRs (SReg_128).
+  if (Imm < 128)
+    OpWidth = 128;
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
+}
+
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
 // get register class. Used by SGPR only operands.
 #define DECODE_OPERAND_SREG_7(RegClass, OpWidth)                               \
@@ -240,6 +276,9 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
 
 #define DECODE_OPERAND_SREG_8(RegClass, OpWidth)                               \
   DECODE_SrcOp(Decode##RegClass##RegisterClass, 8, OpWidth, Imm)
+
+#define DECODE_OPERAND_SREG_9(RegClass, OpWidth)                               \
+  DECODE_SrcOp(Decode##RegClass##RegisterClass, 9, OpWidth, Imm)
 
 // Decoder for registers. Imm(10-bit): Imm{7-0} is number of register,
 // Imm{9} is acc(agpr or vgpr) Imm{8} should be 0 (see VOP3Pe_SMFMAC).
@@ -334,12 +373,15 @@ DECODE_OPERAND_SREG_7(SReg_64_XEXEC, 64)
 DECODE_OPERAND_SREG_7(SReg_64_XEXEC_XNULL, 64)
 DECODE_OPERAND_SREG_7(SReg_96, 96)
 DECODE_OPERAND_SREG_7(SReg_128, 128)
-DECODE_OPERAND_SREG_7(SReg_128_XNULL, 128)
 DECODE_OPERAND_SREG_7(SReg_256, 256)
 DECODE_OPERAND_SREG_7(SReg_256_XNULL, 256)
 DECODE_OPERAND_SREG_7(SReg_512, 512)
 
 DECODE_OPERAND_SREG_8(SReg_64, 64)
+
+// GFX13 VBUFFER instructions use a 9-bit srsrc field. For the non-indexed form
+// the two extra MSBs are always 0, so the value still decodes to an SReg_128.
+DECODE_OPERAND_SREG_9(SReg_128_XNULL, 128)
 
 DECODE_OPERAND_REG_8(AGPR_32)
 DECODE_OPERAND_REG_8(AReg_64)
@@ -604,6 +646,11 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
     if (AMDGPU::EncValues::INLINE_FLOATING_C_MIN <= Imm &&
         Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX) {
       switch (OpDesc.OperandType) {
+      case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
+      case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+        // Inline constant encodings are not allowed for NOINLINE operand types.
+        // Keep the raw encoding value.
+        continue;
       case AMDGPU::OPERAND_REG_IMM_BF16:
       case AMDGPU::OPERAND_REG_IMM_V2BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_BF16:
@@ -1750,6 +1797,7 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
     UseLit = AMDGPU::isPKFMACF16InlineConstant(Val, isGFX11Plus());
     break;
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -2576,8 +2624,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // Only print the directive on xnack-supporting targets (matching the
   // asmprinter), unless the binary erronously set xnack on an unsupported
   // target
-  bool ReservedXnackMask =
-      STI.hasFeature(AMDGPU::FeatureXNACK) || XnackOnFromEFlags;
+  bool ReservedXnackMask = TargetID.isXnackOnOrAny();
   if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK) || ReservedXnackMask) {
     KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
              << '\n';
