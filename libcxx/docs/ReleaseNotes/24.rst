@@ -52,6 +52,8 @@ Implemented Papers
 - P2830R10: Standardized Constexpr Type Ordering (`Github <https://llvm.org/PR216616>`__)
 - P3778R0: Fix for ``type_order`` template definition (`Github <https://llvm.org/PR216616>`__)
 - P4140R0: Proposed resolution for US70-126: allow incomplete types in type_order (`Github <https://llvm.org/PR216616>`__)
+- P2502R2: ``std::generator``: Synchronous Coroutine Generator for Ranges (`Github <https://llvm.org/PR105226>`__)
+- P2787R1: ``pmr::generator`` - Promise Types are not Values (`Github <https://llvm.org/PR105263>`__)
 
 Improvements and New Features
 -----------------------------
