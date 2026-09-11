@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 
 namespace llvm {
 class MCContext;
@@ -159,6 +160,38 @@ void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 void MCWasmStreamer::emitIdent(StringRef IdentString) {
   // TODO(sbc): Add the ident section once we support mergeable strings
   // sections in the object format
+}
+
+void MCWasmStreamer::emitULEB128Value(const MCExpr *Value) {
+  int64_t IntValue;
+  if ((Value->getKind() != MCExpr::SymbolRef &&
+       Value->getKind() != MCExpr::Target) ||
+      Value->evaluateAsAbsolute(IntValue, getAssembler())) {
+    // e.g. binary expression or absolute value -> handover to superclass impl
+    return MCObjectStreamer::emitULEB128Value(Value);
+  }
+  assert((Value->getKind() == MCExpr::SymbolRef ||
+          Value->getKind() == MCExpr::Target) &&
+         "Non-absolute leb values can only be symbol refs or target exprs");
+
+  // append leb symbol ref to current fragment and generate fixup
+  // for uleb128 i32 (a wasm symbol ref)
+  MCFragment *F = getCurrentFragment();
+  size_t CodeOffset = getCurFragSize();
+
+  constexpr unsigned MaxULEB128Size = 5;
+  SmallString<MaxULEB128Size> Content;
+  raw_svector_ostream OS(Content);
+  encodeULEB128(0, OS, MaxULEB128Size);
+  appendContents(Content);
+
+  if (CurFrag != F) {
+    F = CurFrag;
+    CodeOffset = 0;
+  }
+  // emit fixup for reloc / deferred resolution
+  MCFixup Fixup = MCFixup::create(CodeOffset, Value, FK_Data_leb128);
+  F->appendFixups({Fixup});
 }
 
 void MCWasmStreamer::finishImpl() {

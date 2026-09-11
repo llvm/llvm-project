@@ -95,6 +95,8 @@ private:
   void addSections();
 
   void createCustomSections();
+  // Code metadata custom sections must be placed before code section
+  void createCodeMetaDataSections();
   void createSyntheticSections();
   void createSyntheticSectionsPostLayout();
   void finalizeSections();
@@ -175,9 +177,30 @@ void Writer::createCustomSections() {
   log("createCustomSections");
   for (auto &pair : customSectionMapping) {
     StringRef name = pair.first;
+    if (name.starts_with("metadata.code.")) {
+      // Code metadata sections are created separately before the code section.
+      continue;
+    }
     LLVM_DEBUG(dbgs() << "createCustomSection: " << name << "\n");
-
     OutputSection *sec = make<CustomSection>(std::string(name), pair.second);
+    if (ctx.arg.relocatable || ctx.arg.emitRelocs) {
+      auto *sym = make<OutputSectionSymbol>(sec);
+      out.linkingSec->addToSymtab(sym);
+      sec->sectionSym = sym;
+    }
+    addSection(sec);
+  }
+}
+
+void Writer::createCodeMetaDataSections() {
+  log("createCodeMetaDataSections");
+  for (auto &pair : customSectionMapping) {
+    StringRef name = pair.first;
+    if (!name.starts_with("metadata.code."))
+      continue;
+    LLVM_DEBUG(dbgs() << "createCodeMetaDataSection: " << name << "\n");
+    OutputSection *sec =
+        make<CodeMetaDataOutputSection>(std::string(name), pair.second);
     if (ctx.arg.relocatable || ctx.arg.emitRelocs) {
       auto *sym = make<OutputSectionSymbol>(sec);
       out.linkingSec->addToSymtab(sym);
@@ -568,6 +591,8 @@ void Writer::addSections() {
   addSection(out.startSec);
   addSection(out.elemSec);
   addSection(out.dataCountSec);
+
+  createCodeMetaDataSections();
 
   addSection(make<CodeSection>(out.functionSec->inputFunctions));
   addSection(make<DataSection>(segments));
