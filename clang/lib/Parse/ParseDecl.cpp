@@ -3379,6 +3379,135 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
   return false;
 }
 
+void Parser::ParseStorageClassSpecifier(DeclSpec &DS,
+                                        StorageClassSpecifierContext Context) {
+  SourceLocation Loc = Tok.getLocation();
+  const char *PrevSpec = nullptr;
+  unsigned DiagID = 0;
+  bool IsInvalid = false;
+  PrintingPolicy Policy = Actions.getPrintingPolicy();
+
+  switch (Tok.getKind()) {
+  case tok::kw_typedef:
+    IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_typedef, Loc,
+                                       PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw_extern:
+    if (DS.getThreadStorageClassSpec() == DeclSpec::TSCS___thread)
+      Diag(Tok, diag::ext_thread_before) << "extern";
+    IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_extern, Loc,
+                                       PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw___private_extern__:
+    IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_private_extern,
+                                       Loc, PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw_static:
+    if (DS.getThreadStorageClassSpec() == DeclSpec::TSCS___thread)
+      Diag(Tok, diag::ext_thread_before) << "static";
+    IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_static, Loc,
+                                       PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw_auto:
+    if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+      auto MayBeTypeSpecifier = [&]() {
+        // In pre-C23 C, auto can be used as a storage-class specifier.
+        // C23 removes auto from the storage-class specifiers and repurposes
+        // it for type inference (6.7.10).
+        if (getLangOpts().C23 && DS.hasTypeSpecifier() &&
+            DS.getTypeSpecType() != DeclSpec::TST_auto)
+          return true;
+
+        unsigned I = 1;
+        while (true) {
+          const Token &T = GetLookAheadToken(I);
+          if (isKnownToBeTypeSpecifier(T))
+            return true;
+
+          if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
+            ++I;
+          else
+            return false;
+        }
+      };
+
+      if (MayBeTypeSpecifier()) {
+        IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
+                                           PrevSpec, DiagID, Policy);
+        if (!IsInvalid && !getLangOpts().C23)
+          Diag(Tok, diag::ext_auto_storage_class)
+              << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
+      } else
+        IsInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
+                                       DiagID, Policy);
+    } else {
+      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
+                                         PrevSpec, DiagID, Policy);
+    }
+    break;
+  case tok::kw_register:
+    IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_register, Loc,
+                                       PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw_mutable:
+    IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_mutable, Loc,
+                                       PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw___thread:
+    IsInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS___thread, Loc,
+                                             PrevSpec, DiagID);
+    break;
+  case tok::kw_thread_local:
+    if (Context == StorageClassSpecifierContext::Declaration &&
+        getLangOpts().C23)
+      Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
+    // We map thread_local to _Thread_local in C23 mode so it retains the C
+    // semantics rather than getting the C++ semantics.
+    // FIXME: diagnostics will show _Thread_local when the user wrote
+    // thread_local in source in C23 mode; we need some general way to
+    // identify which way the user spelled the keyword in source.
+    IsInvalid = DS.SetStorageClassSpecThread(getLangOpts().C23
+                                                 ? DeclSpec::TSCS__Thread_local
+                                                 : DeclSpec::TSCS_thread_local,
+                                             Loc, PrevSpec, DiagID);
+    break;
+  case tok::kw__Thread_local:
+    diagnoseUseOfC11Keyword(Tok);
+    IsInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS__Thread_local, Loc,
+                                             PrevSpec, DiagID);
+    break;
+  case tok::kw_constexpr:
+    if (Context == StorageClassSpecifierContext::Declaration &&
+        getLangOpts().C23)
+      Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
+    IsInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, Loc, PrevSpec,
+                                    DiagID);
+    break;
+  default:
+    llvm_unreachable("not a storage class specifier");
+  }
+
+  DS.SetRangeEnd(Loc);
+  if (IsInvalid) {
+    assert(PrevSpec && "Method did not return previous specifier!");
+    assert(DiagID);
+
+    if (DiagID == diag::ext_duplicate_declspec ||
+        DiagID == diag::ext_warn_duplicate_declspec ||
+        DiagID == diag::err_duplicate_declspec)
+      Diag(Loc, DiagID) << PrevSpec
+                        << FixItHint::CreateRemoval(
+                               SourceRange(Loc, DS.getEndLoc()));
+    else if (DiagID == diag::err_opencl_unknown_type_specifier)
+      Diag(Loc, DiagID) << getLangOpts().getOpenCLVersionString() << PrevSpec
+                        << /*IsStorageClass=*/true;
+    else
+      Diag(Loc, DiagID) << PrevSpec;
+  }
+
+  ConsumeToken();
+}
+
 void Parser::ParseDeclarationSpecifiers(
     DeclSpec &DS, ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
     DeclSpecContext DSContext, LateParsedAttrList *LateAttrs,
@@ -4094,105 +4223,24 @@ void Parser::ParseDeclarationSpecifiers(
 
     // storage-class-specifier
     case tok::kw_typedef:
-      isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_typedef, Loc,
-                                         PrevSpec, DiagID, Policy);
-      isStorageClass = true;
-      break;
     case tok::kw_extern:
-      if (DS.getThreadStorageClassSpec() == DeclSpec::TSCS___thread)
-        Diag(Tok, diag::ext_thread_before) << "extern";
-      isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_extern, Loc,
-                                         PrevSpec, DiagID, Policy);
-      isStorageClass = true;
-      break;
     case tok::kw___private_extern__:
-      isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_private_extern,
-                                         Loc, PrevSpec, DiagID, Policy);
-      isStorageClass = true;
-      break;
     case tok::kw_static:
-      if (DS.getThreadStorageClassSpec() == DeclSpec::TSCS___thread)
-        Diag(Tok, diag::ext_thread_before) << "static";
-      isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_static, Loc,
-                                         PrevSpec, DiagID, Policy);
-      isStorageClass = true;
-      break;
     case tok::kw_auto:
-      if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
-        auto MayBeTypeSpecifier = [&]() {
-          // In pre-C23 C, auto can be used as a storage-class specifier.
-          // C23 removes auto from the storage-class specifiers and repurposes
-          // it for type inference (6.7.10).
-          if (getLangOpts().C23 && DS.hasTypeSpecifier() &&
-              DS.getTypeSpecType() != DeclSpec::TST_auto)
-            return true;
+    case tok::kw_register:
+    case tok::kw_mutable:
+    case tok::kw___thread:
+    case tok::kw_thread_local:
+    case tok::kw__Thread_local:
+    case tok::kw_constexpr:
+      ParseStorageClassSpecifier(DS, StorageClassSpecifierContext::Declaration);
+      AttrsLastTime = false;
+      continue;
 
-          unsigned I = 1;
-          while (true) {
-            const Token &T = GetLookAheadToken(I);
-            if (isKnownToBeTypeSpecifier(T))
-              return true;
-
-            if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
-              ++I;
-            else
-              return false;
-          }
-        };
-
-        if (MayBeTypeSpecifier()) {
-          isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
-                                             PrevSpec, DiagID, Policy);
-          if (!isInvalid && !getLangOpts().C23)
-            Diag(Tok, diag::ext_auto_storage_class)
-              << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
-        } else
-          isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
-                                         DiagID, Policy);
-      } else
-        isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
-                                           PrevSpec, DiagID, Policy);
-      isStorageClass = true;
-      break;
     case tok::kw___auto_type:
       Diag(Tok, diag::ext_auto_type);
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto_type, Loc, PrevSpec,
                                      DiagID, Policy);
-      break;
-    case tok::kw_register:
-      isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_register, Loc,
-                                         PrevSpec, DiagID, Policy);
-      isStorageClass = true;
-      break;
-    case tok::kw_mutable:
-      isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_mutable, Loc,
-                                         PrevSpec, DiagID, Policy);
-      isStorageClass = true;
-      break;
-    case tok::kw___thread:
-      isInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS___thread, Loc,
-                                               PrevSpec, DiagID);
-      isStorageClass = true;
-      break;
-    case tok::kw_thread_local:
-      if (getLangOpts().C23)
-        Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-      // We map thread_local to _Thread_local in C23 mode so it retains the C
-      // semantics rather than getting the C++ semantics.
-      // FIXME: diagnostics will show _Thread_local when the user wrote
-      // thread_local in source in C23 mode; we need some general way to
-      // identify which way the user spelled the keyword in source.
-      isInvalid = DS.SetStorageClassSpecThread(
-          getLangOpts().C23 ? DeclSpec::TSCS__Thread_local
-                            : DeclSpec::TSCS_thread_local,
-          Loc, PrevSpec, DiagID);
-      isStorageClass = true;
-      break;
-    case tok::kw__Thread_local:
-      diagnoseUseOfC11Keyword(Tok);
-      isInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS__Thread_local,
-                                               Loc, PrevSpec, DiagID);
-      isStorageClass = true;
       break;
 
     // function-specifier
@@ -4274,13 +4322,7 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.setModulePrivateSpec(Loc, PrevSpec, DiagID);
       break;
 
-    // constexpr, consteval, constinit specifiers
-    case tok::kw_constexpr:
-      if (getLangOpts().C23)
-        Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-      isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, Loc,
-                                      PrevSpec, DiagID);
-      break;
+    // consteval and constinit specifiers
     case tok::kw_consteval:
       isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Consteval, Loc,
                                       PrevSpec, DiagID);
@@ -7925,6 +7967,8 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
       NumElements = ParseAssignmentExpression();
+      if (NumElements.isUsable())
+        NumElements = Actions.MaybeCreateExprWithCleanups(NumElements);
     }
   } else {
     if (StaticLoc.isValid()) {

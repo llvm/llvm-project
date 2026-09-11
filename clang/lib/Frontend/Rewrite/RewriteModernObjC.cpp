@@ -3298,9 +3298,9 @@ Stmt *RewriteModernObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
                                      SourceLocation(), /*isExplicit=*/true);
       TypeSourceInfo *superTInfo
         = Context->getTrivialTypeSourceInfo(superType);
-      SuperRep = new (Context) CompoundLiteralExpr(SourceLocation(), superTInfo,
-                                                   superType, VK_LValue,
-                                                   ILE, false);
+      SuperRep = new (Context) CompoundLiteralExpr(
+          SourceLocation(), superTInfo, superType, VK_LValue, ILE,
+          CompoundLiteralExpr::ScopeKind::Block);
       // struct __rw_objc_super *
       SuperRep = UnaryOperator::Create(
           const_cast<ASTContext &>(*Context), SuperRep, UO_AddrOf,
@@ -3391,7 +3391,8 @@ Stmt *RewriteModernObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       TypeSourceInfo *superTInfo
         = Context->getTrivialTypeSourceInfo(superType);
       SuperRep = new (Context) CompoundLiteralExpr(
-          SourceLocation(), superTInfo, superType, VK_PRValue, ILE, false);
+          SourceLocation(), superTInfo, superType, VK_PRValue, ILE,
+          CompoundLiteralExpr::ScopeKind::Block);
     }
     MsgExprs.push_back(SuperRep);
     break;

@@ -125,7 +125,12 @@ private:
 /// the complete parsing of the current declaration.
 class DelayedDiagnostic {
 public:
-  enum DDKind : unsigned char { Availability, Access, ForbiddenType };
+  enum DDKind : unsigned char {
+    Availability,
+    Access,
+    ForbiddenType,
+    ForbiddenStatic
+  };
 
   DDKind Kind;
   bool Triggered;
@@ -164,6 +169,14 @@ public:
     DD.ForbiddenTypeData.Diagnostic = diagnostic;
     DD.ForbiddenTypeData.OperandType = type.getAsOpaquePtr();
     DD.ForbiddenTypeData.Argument = argument;
+    return DD;
+  }
+
+  static DelayedDiagnostic makeForbiddenStatic(SourceLocation Loc) {
+    DelayedDiagnostic DD;
+    DD.Kind = ForbiddenStatic;
+    DD.Triggered = false;
+    DD.Loc = Loc;
     return DD;
   }
 
