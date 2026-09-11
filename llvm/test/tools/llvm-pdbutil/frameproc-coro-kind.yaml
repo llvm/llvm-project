@@ -1,0 +1,156 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --symbols %t.pdb | FileCheck --check-prefix=YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --module-syms --minimal %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=PDB2YAML %s
+
+# YAML2PDB:            4 | S_FRAMEPROC [size = 32]
+# YAML2PDB-NEXT:           size = 1, padding size = 0, offset to padding = 0
+# YAML2PDB-NEXT:           bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# YAML2PDB-NEXT:           local fp reg = RSP, param fp reg = RSP
+# YAML2PDB-NEXT:           flags = has async eh | opt speed
+# YAML2PDB-NEXT:      36 | S_FRAMEPROC [size = 32]
+# YAML2PDB-NEXT:           size = 2, padding size = 0, offset to padding = 0
+# YAML2PDB-NEXT:           bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# YAML2PDB-NEXT:           local fp reg = RSP, param fp reg = RSP
+# YAML2PDB-NEXT:           flags = has async eh | opt speed
+# YAML2PDB-NEXT:      68 | S_FRAMEPROC [size = 32]
+# YAML2PDB-NEXT:           size = 3, padding size = 0, offset to padding = 0
+# YAML2PDB-NEXT:           bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# YAML2PDB-NEXT:           local fp reg = RSP, param fp reg = RSP
+# YAML2PDB-NEXT:           flags = has async eh | opt speed, coroutine kind = primary
+# YAML2PDB-NEXT:     100 | S_FRAMEPROC [size = 32]
+# YAML2PDB-NEXT:           size = 4, padding size = 0, offset to padding = 0
+# YAML2PDB-NEXT:           bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# YAML2PDB-NEXT:           local fp reg = RSP, param fp reg = RSP
+# YAML2PDB-NEXT:           flags = has async eh | opt speed, coroutine kind = init
+# YAML2PDB-NEXT:     132 | S_FRAMEPROC [size = 32]
+# YAML2PDB-NEXT:           size = 5, padding size = 0, offset to padding = 0
+# YAML2PDB-NEXT:           bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# YAML2PDB-NEXT:           local fp reg = RSP, param fp reg = RSP
+# YAML2PDB-NEXT:           flags = has async eh | opt speed, coroutine kind = resume
+# YAML2PDB-NEXT:     164 | S_FRAMEPROC [size = 32]
+# YAML2PDB-NEXT:           size = 6, padding size = 0, offset to padding = 0
+# YAML2PDB-NEXT:           bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# YAML2PDB-NEXT:           local fp reg = RSP, param fp reg = RSP
+# YAML2PDB-NEXT:           flags = has async eh | opt speed, coroutine kind = destroy
+
+# PDB2YAML:          - Kind:            S_FRAMEPROC
+# PDB2YAML:            FrameProcSym:
+# PDB2YAML:              TotalFrameBytes: 1
+# Created with --minimal and None is the default.
+# PDB2YAML-NOT: CoroutineKind:   None
+
+# PDB2YAML:          - Kind:            S_FRAMEPROC
+# PDB2YAML:            FrameProcSym:
+# PDB2YAML:              TotalFrameBytes: 2
+# Created with --minimal and None is the default.
+# PDB2YAML-NOT: CoroutineKind:   None
+
+# PDB2YAML:          - Kind:            S_FRAMEPROC
+# PDB2YAML:            FrameProcSym:
+# PDB2YAML:              TotalFrameBytes: 3
+# PDB2YAML:              CoroutineKind:   Primary
+
+# PDB2YAML:          - Kind:            S_FRAMEPROC
+# PDB2YAML:            FrameProcSym:
+# PDB2YAML:              TotalFrameBytes: 4
+# PDB2YAML:              CoroutineKind:   Init
+
+# PDB2YAML:          - Kind:            S_FRAMEPROC
+# PDB2YAML:            FrameProcSym:
+# PDB2YAML:              TotalFrameBytes: 5
+# PDB2YAML:              CoroutineKind:   Resume
+
+# PDB2YAML:          - Kind:            S_FRAMEPROC
+# PDB2YAML:            FrameProcSym:
+# PDB2YAML:              TotalFrameBytes: 6
+# PDB2YAML:              CoroutineKind:   Destroy
+
+---
+DbiStream:
+  VerHeader:       V70
+  Age:             1
+  BuildNumber:     36403
+  PdbDllVersion:   36257
+  PdbDllRbld:      0
+  Flags:           1
+  MachineType:     Amd64
+  Modules:
+    - Module:          '/tmp/test.obj'
+      ObjFile:         '/tmp/test.obj'
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 1
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 2
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+              CoroutineKind:   None
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 3
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+              CoroutineKind:   Primary
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 4
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+              CoroutineKind:   Init
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 5
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+              CoroutineKind:   Resume
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 6
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+              CoroutineKind:   Destroy
+...
