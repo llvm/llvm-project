@@ -1396,12 +1396,10 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
         return failure();
     }
 
-    OperationState state(truncOp.getLoc(), ExtremumOp::getOperationName(),
-                         ValueRange{lhs, rhs}, TypeRange{narrowType},
-                         extremumOp->getDiscardableAttrDictionary().getValue());
-    state.propertiesAttr = extremumOp->getPropertiesAsAttribute();
-    Operation *newExtremum = rewriter.create(state);
-    rewriter.replaceOp(truncOp, newExtremum->getResults());
+    rewriter.replaceOpWithNewOp<ExtremumOp>(
+        truncOp, TypeRange{narrowType}, ValueRange{lhs, rhs},
+        extremumOp.getProperties(),
+        extremumOp->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
