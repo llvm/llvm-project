@@ -328,29 +328,30 @@ void UnrollState::unrollMemOpWithVFMultiple(VPInstruction *VPI) {
           Store->addOperand(UnrollPart);
       }
     }
-  } else {
-    assert(VPI->getOpcode() == VPInstruction::VFMultipleLoad &&
-           "Expected a load recipe");
-    // We need to extract each unroll part as a subvector.
-    auto ExtractPart0 = Builder.createNaryOp(
-        VPInstruction::ExtractVectorForPart,
-        {Groups[0]->getVPSingleValue(), getConstantInt(0)});
-    // First VPI with an extract of the first unroll part (ExtractPart0).
-    VPI->getVPSingleValue()->replaceUsesWithIf(
-        ExtractPart0, [&](VPUser &U, unsigned) { return &U != ExtractPart0; });
-    ToSkip.insert(ExtractPart0);
+    return;
+  }
 
-    // Create extracts for the remaining unroll parts and remap later uses of
-    // ExtractPart0 to the correct unrolled part.
-    for (unsigned Part = 1; Part != UF; ++Part) {
-      VPInstruction *Group = Groups[Part / VFMultiple];
-      unsigned IndexInGroup = Part % VFMultiple;
-      auto *Extract = Builder.createNaryOp(
-          VPInstruction::ExtractVectorForPart,
-          {Group->getVPSingleValue(), getConstantInt(IndexInGroup)});
-      addRecipeForPart(ExtractPart0, Extract, Part);
-      ToSkip.insert(Extract);
-    }
+  assert(VPI->getOpcode() == VPInstruction::VFMultipleLoad &&
+         "Expected a VFMultipleLoad instruction");
+  // We need to extract each unroll part as a subvector.
+  auto *ExtractPart0 =
+      Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                           {Groups[0]->getVPSingleValue(), getConstantInt(0)});
+  // First VPI with an extract of the first unroll part (ExtractPart0).
+  VPI->getVPSingleValue()->replaceUsesWithIf(
+      ExtractPart0, [&](VPUser &U, unsigned) { return &U != ExtractPart0; });
+  ToSkip.insert(ExtractPart0);
+
+  // Create extracts for the remaining unroll parts and remap later uses of
+  // ExtractPart0 to the correct unrolled part.
+  for (unsigned Part = 1; Part != UF; ++Part) {
+    VPInstruction *Group = Groups[Part / VFMultiple];
+    unsigned IndexInGroup = Part % VFMultiple;
+    auto *Extract = Builder.createNaryOp(
+        VPInstruction::ExtractVectorForPart,
+        {Group->getVPSingleValue(), getConstantInt(IndexInGroup)});
+    addRecipeForPart(ExtractPart0, Extract, Part);
+    ToSkip.insert(Extract);
   }
 }
 
