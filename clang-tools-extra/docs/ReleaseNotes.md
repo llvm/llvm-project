@@ -98,6 +98,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {program}`clang-tidy` by fixing its use as a Clang plugin, allowing checks to
   run during normal compilation when Clang and LLVM are built as shared libraries.
+  This feature is not supported on Windows.
 
 - Improved {program}`check_clang_tidy.py` by adding support of
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.

@@ -1,4 +1,5 @@
 // REQUIRES: clang-plugin, static-analyzer
+// UNSUPPORTED: system-windows
 // RUN: %clang_cc1 -load %llvmshlibdir/clangTidyPlugin%pluginext -add-plugin clang-tidy -plugin-arg-clang-tidy -checks=-*,clang-analyzer-core.DivideZero %s -verify
 
 int divide() {
