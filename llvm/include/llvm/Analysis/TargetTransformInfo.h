@@ -547,6 +547,13 @@ public:
   /// Return false if a \p AS0 address cannot possibly alias a \p AS1 address.
   LLVM_ABI bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const;
 
+  /// Returns every address space the target gives a meaning to, sorted by
+  /// address space number and free of duplicates.
+  ///
+  /// \returns an empty list for targets that do not describe their address
+  /// spaces.
+  LLVM_ABI SmallVector<unsigned, 8> getAddressSpaces() const;
+
   /// Returns the address space ID for a target's 'flat' address space. Note
   /// this is not necessarily the same as addrspace(0), which LLVM sometimes
   /// refers to as the generic address space. The flat address space is a
