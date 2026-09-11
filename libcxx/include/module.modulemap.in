@@ -1628,6 +1628,7 @@ module std {
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/default/get_c_locale.h"
+      textual header "__locale_dir/support/default/rune_table.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
