@@ -140,6 +140,12 @@ def FastMathFlags : I32BitEnumAttr<
   let cppNamespace = "::mlir::arith";
   let genSpecializedAttr = 0;
   let printBitEnumPrimaryGroups = 1;
+  let description = [{
+    For the `reassoc`, `nnan`, `ninf`, `nsz`, `arcp`, `contract`, `afn`, `fast`
+    flags, the arith dialect follows the same semantics as LLVM IR. Refer to the
+    [LLVM Language Reference](https://llvm.org/docs/LangRef.html#fast-math-flags)
+    for their meaning.
+  }];
 }
 
 def Arith_FastMathAttr :
