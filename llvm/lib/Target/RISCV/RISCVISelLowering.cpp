@@ -16387,9 +16387,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         return;
       SDValue Cvt;
       if (IsStrict) {
-        Cvt = DAG.getNode(
-            IsSigned ? ISD::STRICT_FP_TO_SINT : ISD::STRICT_FP_TO_UINT, DL,
-            {MVT::i32, MVT::Other}, {N->getOperand(0), Op0});
+        Cvt = DAG.getNode(IsSigned ? ISD::STRICT_FP_TO_SINT
+                                   : ISD::STRICT_FP_TO_UINT,
+                          DL, {MVT::i32, MVT::Other}, {N->getOperand(0), Op0});
       } else {
         Cvt = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT, DL,
                           MVT::i32, Op0);
