@@ -79,6 +79,18 @@ def int_dx_resource_atomic_binop
           [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
            LLVMMatchType<0>],
           [IntrArgMemOnly]>;
+
+// Atomic compare-exchange on a UAV resource element. Emitted by
+// DXILResourceAccess from a `cmpxchg` on a `dx.resource.getpointer` result,
+// and lowered by DXILOpLowering to the DXIL `AtomicCompareExchange` op (79).
+// Args: handle, coord0 (index), coord1 (offset or poison), compare value,
+//       new value. Returns the original value.
+def int_dx_resource_atomic_compare_exchange
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, LLVMMatchType<0>,
+           LLVMMatchType<0>],
+          [IntrArgMemOnly]>;
 // dx.resource.load.cbufferrow encodes the number of elements returned in the
 // function name. The total size of the return should always be 128 bits.
 def int_dx_resource_load_cbufferrow_8
