@@ -75,6 +75,25 @@ static Instruction *getContextInstForUse(Use &U) {
   return UserI;
 }
 
+/// Returns the closest program point dominating all uses of \p I.
+static Instruction *findCommonDominatorOfUses(Instruction &I,
+                                              DominatorTree &DT) {
+  Instruction *CommonDom = nullptr;
+  unsigned NumUses = 0;
+  for (Use &U : I.uses()) {
+    // Conservatively use original instruction, if there are too many uses.
+    if (++NumUses == 16)
+      return &I;
+    Instruction *UserI = getContextInstForUse(U);
+    CommonDom =
+        CommonDom ? DT.findNearestCommonDominator(CommonDom, UserI) : UserI;
+  }
+  if (!CommonDom)
+    return &I;
+  // Uses in unreachable blocks are not in the dominator tree.
+  return DT.getNode(CommonDom->getParent()) ? CommonDom : &I;
+}
+
 namespace {
 using Entry = ConstraintSystem::Entry;
 using RowTy = ConstraintSystem::RowTy;
@@ -111,21 +130,28 @@ struct FactOrCheck {
     ConditionTy Cond;
   };
 
-  /// A pre-condition that must hold for the current fact to be added to the
-  /// system.
-  ConditionTy DoesHold;
+  union {
+    /// A pre-condition that must hold for the current fact to be added to the
+    /// system. Only used by condition facts.
+    ConditionTy DoesHold;
+
+    /// Context instruction for the point where conditions are checked for
+    /// InstCheck simplifications.
+    Instruction *ContextInst;
+  };
 
   unsigned NumIn;
   unsigned NumOut;
   EntryTy Ty;
 
-  FactOrCheck(EntryTy Ty, DomTreeNode *DTN, Instruction *Inst)
-      : Inst(Inst), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        Ty(Ty) {}
+  FactOrCheck(EntryTy Ty, DomTreeNode *DTN, Instruction *Inst,
+              Instruction *ContextInst = nullptr)
+      : Inst(Inst), ContextInst(ContextInst ? ContextInst : Inst),
+        NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()), Ty(Ty) {}
 
   FactOrCheck(DomTreeNode *DTN, Use *U)
-      : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        Ty(EntryTy::UseCheck) {}
+      : U(U), ContextInst(nullptr), NumIn(DTN->getDFSNumIn()),
+        NumOut(DTN->getDFSNumOut()), Ty(EntryTy::UseCheck) {}
 
   FactOrCheck(DomTreeNode *DTN, CmpPredicate Pred, Value *Op0, Value *Op1,
               ConditionTy Precond = {})
@@ -146,8 +172,11 @@ struct FactOrCheck {
     return FactOrCheck(DTN, U);
   }
 
-  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I) {
-    return FactOrCheck(EntryTy::InstCheck, DTN, I);
+  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I,
+                              Instruction *ContextInst = nullptr) {
+    assert((ContextInst ? ContextInst : I)->getParent() == DTN->getBlock() &&
+           "anchoring instruction must be in DTN's block");
+    return FactOrCheck(EntryTy::InstCheck, DTN, I, ContextInst);
   }
 
   bool isCheck() const {
@@ -158,7 +187,7 @@ struct FactOrCheck {
     assert(!isConditionFact());
     if (Ty == EntryTy::UseCheck)
       return getContextInstForUse(*U);
-    return Inst;
+    return ContextInst;
   }
 
   Instruction *getInstructionToSimplify() const {
@@ -991,14 +1020,26 @@ getStartAndBackedgeValue(const PHINode &PN, const BasicBlock *LoopPred) {
   return {PN.getIncomingValue(StartIdx), PN.getIncomingValue(1 - StartIdx)};
 }
 
+/// Matches an increment of \p PhiM by a constant offset, captured in \p Off.
+/// The increment must be a plain IR add or [u|s]add.with.overflow.
+template <typename PhiMatchTy>
+static auto m_IncrementOf(const PhiMatchTy &PhiM, const APInt *&Off) {
+  return m_CombineOr(
+      m_c_Add(PhiM, m_APInt(Off)),
+      m_ExtractValue<0>(m_CombineOr(
+          m_c_Intrinsic<Intrinsic::uadd_with_overflow>(PhiM, m_APInt(Off)),
+          m_c_Intrinsic<Intrinsic::sadd_with_overflow>(PhiM, m_APInt(Off)))));
+}
+
 MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
   MonotonicInfo Info;
   const APInt *StepOffset = nullptr;
-  if (match(Step, m_c_Add(m_Specific(&PN), m_APInt(StepOffset)))) {
+  if (match(Step, m_IncrementOf(m_Specific(&PN), StepOffset))) {
     Info.Decreasing = StepOffset->isNegative();
-    const auto *Add = cast<OverflowingBinaryOperator>(Step);
-    Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
-    Info.Signed = Add->hasNoSignedWrap();
+    if (const auto *Add = dyn_cast<OverflowingBinaryOperator>(Step)) {
+      Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
+      Info.Signed = Add->hasNoSignedWrap();
+    }
   } else if (const auto *GEP = dyn_cast<GEPOperator>(Step)) {
     // TODO: Handle the non-increasing direction, which needs a nusw GEP with a
     // negative constant offset.
@@ -1084,11 +1125,25 @@ void State::addInfoForInductions(BasicBlock &BB) {
   const APInt *IncStep = nullptr;
   CmpPredicate Pred;
   auto IndValue =
-      m_Value(A, m_CombineOr(m_Phi(PN), m_c_Add(m_Phi(PN), m_APInt(IncStep))));
+      m_Value(A, m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep)));
 
-  if (!match(BB.getTerminator(),
-             m_Br(m_c_ICmp(Pred, IndValue, m_Value(B)), m_Value(), m_Value())))
+  auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
+  if (!Br)
     return;
+
+  auto CountingCmp = m_c_ICmp(Pred, IndValue, m_Value(B));
+  std::optional<bool> PeeledOnEdge;
+  if (!match(Br->getCondition(), CountingCmp)) {
+    // Look through AND/OR, and remember which edge requires all operands to be
+    // true.
+    if (match(Br->getCondition(), m_c_LogicalAnd(CountingCmp, m_Value())))
+      PeeledOnEdge = true;
+    else if (match(Br->getCondition(), m_c_LogicalOr(CountingCmp, m_Value())))
+      PeeledOnEdge = false;
+    else
+      return;
+  }
+
   if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
       !SE.isSCEVable(PN->getType()))
     return;
@@ -1106,10 +1161,14 @@ void State::addInfoForInductions(BasicBlock &BB) {
       Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
   CmpInst::Predicate ContinuePred =
       ContinueOnTrue ? Pred.dropSameSign() : CmpInst::getInversePredicate(Pred);
-  BasicBlock *InLoopSucc = cast<CondBrInst>(BB.getTerminator())
-                               ->getSuccessor(ContinueOnTrue ? 0 : 1);
+  BasicBlock *InLoopSucc = Br->getSuccessor(ContinueOnTrue ? 0 : 1);
 
-  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+  // The peeled condition only implies the compare on the edge where the
+  // combined condition forces its operands, which must be the in-loop edge.
+  if (PeeledOnEdge && *PeeledOnEdge != ContinueOnTrue)
+    return;
+
+  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
     return;
 
   BasicBlock *LoopPred = L->getLoopPredecessor();
@@ -1297,6 +1356,10 @@ static bool canStrengthenFlags(Instruction *I) {
     // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
     // canonicalized to Add.
     return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+  case Instruction::Add:
+    // NSW/NUW can be refined using constant ranges.
+    return (!BO->hasNoUnsignedWrap() || !BO->hasNoSignedWrap()) &&
+           isa<Constant>(BO->getOperand(1));
   case Instruction::Mul:
   case Instruction::Shl:
     if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
@@ -1327,6 +1390,10 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
                         : APInt::getMinValue(BitWidth);
   APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
                         : APInt::getMaxValue(BitWidth);
+  // Replace bound too large to be decomposed by the largest usable one.
+  if (!Signed && Max.uge(MaxConstraintValue))
+    Max = APInt(BitWidth, MaxConstraintValue - 1);
+
   Type *Ty = Op->getType();
   if (Min != MinVal &&
       !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
@@ -1339,13 +1406,45 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+static bool tryToStrengthenBinOpFlags(Instruction *I, Value *Op0, Value *Op1,
+                                      ConstraintInfo &Info) {
+  auto *C = dyn_cast<ConstantInt>(Op1);
+  if (!C)
+    return false;
+
+  // For a constant Op1, the ranges of Op0 for which the operation does not
+  // wrap are known exactly; check if the systems imply one of them.
+  bool Changed = false;
+  auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
+  using OBO = OverflowingBinaryOperator;
+  ConstantRange Other(C->getValue());
+  if (!I->hasNoUnsignedWrap() &&
+      doesHoldInRange(Info, Op0,
+                      ConstantRange::makeGuaranteedNoWrapRegion(
+                          Opcode, Other, OBO::NoUnsignedWrap),
+                      /*Signed=*/false)) {
+    LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+    I->setHasNoUnsignedWrap();
+    Changed = true;
+  }
+  if (!I->hasNoSignedWrap() &&
+      doesHoldInRange(Info, Op0,
+                      ConstantRange::makeGuaranteedNoWrapRegion(
+                          Opcode, Other, OBO::NoSignedWrap),
+                      /*Signed=*/true)) {
+    LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+    I->setHasNoSignedWrap();
+    Changed = true;
+  }
+  return Changed;
+}
+
 /// Try to strengthen \p I's poison generating flags using \p Info. Returns
 /// true if \p I was modified.
 static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
                                  SmallVectorImpl<Instruction *> &ToRemove) {
   assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
 
-  using OBO = OverflowingBinaryOperator;
   Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
   switch (I->getOpcode()) {
   case Instruction::Sub: {
@@ -1356,33 +1455,12 @@ static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
     I->setHasNoUnsignedWrap();
     return true;
   }
+  case Instruction::Add:
+    return tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
   case Instruction::Mul:
   case Instruction::Shl: {
     auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
-    bool Changed = false;
-    // For a constant Op1, the ranges of Op0 for which the operation does not
-    // wrap are known exactly; check if the systems imply one of them.
-    if (auto *C = dyn_cast<ConstantInt>(Op1)) {
-      ConstantRange Other(C->getValue());
-      if (!I->hasNoUnsignedWrap() &&
-          doesHoldInRange(Info, Op0,
-                          ConstantRange::makeGuaranteedNoWrapRegion(
-                              Opcode, Other, OBO::NoUnsignedWrap),
-                          /*Signed=*/false)) {
-        LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
-        I->setHasNoUnsignedWrap();
-        Changed = true;
-      }
-      if (!I->hasNoSignedWrap() &&
-          doesHoldInRange(Info, Op0,
-                          ConstantRange::makeGuaranteedNoWrapRegion(
-                              Opcode, Other, OBO::NoSignedWrap),
-                          /*Signed=*/true)) {
-        LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
-        I->setHasNoSignedWrap();
-        Changed = true;
-      }
-    }
+    bool Changed = tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
     if (!I->hasNoUnsignedWrap() && I->hasNoSignedWrap() &&
         Info.isKnownNonNegative(Op0) &&
         (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1))) {
@@ -1510,10 +1588,13 @@ void State::addInfoFor(BasicBlock &BB) {
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
 
-    // Queue instructions whose flags may be strengthened based on the facts
-    // that hold on entry to BB.
-    if (canStrengthenFlags(&I))
-      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), &I));
+    // Queue instructions whose flags may be strengthened, checked at the
+    // closest point dominating all uses.
+    if (canStrengthenFlags(&I)) {
+      Instruction *CommonDom = findCommonDominatorOfUses(I, DT);
+      WorkList.push_back(FactOrCheck::getCheck(
+          DT.getNode(CommonDom->getParent()), &I, CommonDom));
+    }
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }

@@ -259,7 +259,9 @@ public:
       // cuf.register_variable_static so the CUDA
       // runtime maps the device extern to the host pointer at module-load
       // time, and HMM/ATS handles migration.
-      if (cudaUnified && !globalOp.getConstant() &&
+      bool isCompilerGenerated =
+          fir::NameUniquer::isCompilerGenerated(globalOp.getSymName());
+      if (cudaUnified && (!globalOp.getConstant() || isCompilerGenerated) &&
           !globalOp.getDataAttrAttr()) {
         clonedGlobal.getRegion().getBlocks().clear();
         clonedGlobal.removeInitValAttr();

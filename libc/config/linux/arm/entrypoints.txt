@@ -176,6 +176,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.atoll
     libc.src.stdlib.bsearch
     libc.src.stdlib.div
+    libc.src.stdlib.getloadavg
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
@@ -262,6 +263,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.nice
     libc.src.unistd.pipe
     libc.src.unistd.pipe2
     libc.src.unistd.read

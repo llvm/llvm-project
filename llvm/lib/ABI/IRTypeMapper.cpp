@@ -30,6 +30,9 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
   case abi::TypeKind::Void:
     Result = llvm::Type::getVoidTy(Context);
     break;
+  case abi::TypeKind::Atomic:
+    Result = convertAtomicType(cast<abi::AtomicType>(ABIType));
+    break;
   case abi::TypeKind::Integer: {
     const auto *IT = cast<abi::IntegerType>(ABIType);
     Result =
@@ -52,6 +55,9 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
   case abi::TypeKind::Vector:
     Result = convertVectorType(cast<abi::VectorType>(ABIType));
     break;
+  case abi::TypeKind::Tuple:
+    Result = convertTupleType(cast<abi::TupleType>(ABIType));
+    break;
   case abi::TypeKind::Record:
     Result = convertRecordType(cast<abi::RecordType>(ABIType));
     break;
@@ -67,6 +73,20 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
   return Result;
 }
 
+llvm::Type *IRTypeMapper::convertAtomicType(const abi::AtomicType *AT) {
+  llvm::Type *ValueType = convertType(AT->getValueType());
+  uint64_t ValueSize = AT->getValueType()->getSizeInBits().getFixedValue();
+  uint64_t AtomicSize = AT->getSizeInBits().getFixedValue();
+  if (ValueSize == AtomicSize)
+    return ValueType;
+
+  assert(ValueSize < AtomicSize && "atomic type cannot shrink its value type");
+  llvm::Type *Fields[] = {ValueType,
+                          llvm::ArrayType::get(llvm::Type::getInt8Ty(Context),
+                                               (AtomicSize - ValueSize) / 8)};
+  return llvm::StructType::get(Context, Fields, /*isPacked=*/false);
+}
+
 llvm::Type *IRTypeMapper::convertArrayType(const abi::ArrayType *AT) {
   llvm::Type *ElementType = convertType(AT->getElementType());
   uint64_t NumElements = AT->getNumElements();
@@ -77,8 +97,17 @@ llvm::Type *IRTypeMapper::convertArrayType(const abi::ArrayType *AT) {
 }
 
 llvm::Type *IRTypeMapper::convertVectorType(const abi::VectorType *VT) {
+  if (VT->isSVECount())
+    return llvm::TargetExtType::get(Context, "aarch64.svcount");
+
   llvm::Type *ElementType = convertType(VT->getElementType());
   return llvm::VectorType::get(ElementType, VT->getNumElements());
+}
+
+llvm::Type *IRTypeMapper::convertTupleType(const abi::TupleType *TT) {
+  llvm::Type *VecTy = convertType(TT->getVectorType());
+  SmallVector<llvm::Type *, 4> Elements(TT->getNumVectors(), VecTy);
+  return llvm::StructType::get(Context, Elements);
 }
 
 llvm::Type *IRTypeMapper::convertRecordType(const abi::RecordType *RT) {

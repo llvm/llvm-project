@@ -70,6 +70,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Diagnostics
 
+- Query-based custom clang-tidy checks can now be enabled with the
+  `Diagnostics.ClangTidy.ExperimentalCustomChecks` clangd configuration option.
+  Custom checks are subject to `FastCheckFilter`, and therefore require
+  `FastCheckFilter: Loose` or `None` to run.
+
 #### Semantic Highlighting
 
 #### Compile flags
@@ -90,6 +95,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Miscellaneous
 
+- Fixed `clangd-indexer --format=yaml` emitting invalid YAML when indexing
+  C++20 concepts.
+  ([#206875](https://github.com/llvm/llvm-project/issues/206875))
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
@@ -99,6 +108,11 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {program}`check_clang_tidy.py` by adding support of
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.
+
+- On Windows, {program}`clang-tidy` will now better match mixes of forwards and
+  backwards slashes when using the `--line-filter` option. This also improves
+  piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
+  will now be automatically normalized.
 
 #### New checks
 
@@ -140,6 +154,10 @@ infrastructure are described first, followed by tool-specific sections.
   by suggesting a wider type of the same signedness as the original operands,
   instead of forcing a signed type, when a multiplication of two unsigned
   operands narrower than `int` is only signed due to integer promotion.
+
+- Improved {doc}`bugprone-macro-parentheses
+  <clang-tidy/checks/bugprone/macro-parentheses>` by fixing invalid fixes for
+  macro arguments used as names in alias declarations.
 
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
@@ -227,6 +245,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.
+
+  - Added the {option}`AllowTrailingUnderscore`, which permits a
+    single trailing underscore on any identifier.
 
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring

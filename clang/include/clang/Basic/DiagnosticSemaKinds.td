@@ -6345,6 +6345,8 @@ def err_fold_expression_limit_exceeded: Error<
   "instantiating fold expression with %0 arguments exceeded expression nesting "
   "limit of %1">, DefaultFatal, NoSFINAE;
 
+def note_function_like_macro_requires_parens
+    : Note<"'%0' defined here as a function-like macro">;
 def err_unexpected_typedef : Error<
   "unexpected type name %0: expected expression">;
 def err_unexpected_namespace : Error<
@@ -11689,6 +11691,8 @@ def err_undeclared_use_suggest : Error<
   "use of undeclared %0; did you mean %1?">;
 def err_undeclared_var_use_suggest : Error<
   "use of undeclared identifier %0; did you mean %1?">;
+def err_undeclared_var_use_suggest_func_like_macro : Error<
+  "'%0' is defined as a function-like macro; did you mean '%0(...)'?">;
 def err_no_template : Error<"no template named %0">;
 def err_no_template_suggest : Error<"no template named %0; did you mean %1?">;
 def err_no_member_template : Error<"no template named %0 in %1">;
@@ -13429,11 +13433,11 @@ def err_builtin_matrix_invalid_member
     : Error<"invalid matrix member '%0' expected %1">;
 
 def warn_mismatched_import : Warning<
-  "import %select{module|name}0 (%1) does not match the import %select{module|name}0 (%2) of the "
+  "%select{import module|import name|export name}0 (%1) does not match the %select{import module|import name|export name}0 (%2) of the "
   "previous declaration">,
   InGroup<IgnoredAttributes>;
 def warn_import_on_definition : Warning<
-  "import %select{module|name}0 cannot be applied to a function with a definition">,
+  "import %select{module|name}0 cannot be applied to a %select{function|variable}1 with a definition">,
   InGroup<IgnoredAttributes>;
 
 def err_preserve_field_info_not_field : Error<
@@ -13674,16 +13678,13 @@ def err_hlsl_missing_semantic_annotation : Error<
   "function or patch constant function">;
 def note_hlsl_semantic_used_here : Note<"%0 used here">;
 def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
-def err_hlsl_semantic_output_not_supported
-    : Error<"semantic %0 does not support output">;
 def err_hlsl_semantic_indexing_not_supported
     : Error<"semantic %0 does not allow indexing">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
 def err_hlsl_semantic_unsupported_iotype_for_stage
-    : Error<"semantic %0 is unsupported in %2 shaders as %1, requires one of "
-            "the following: %3">;
+    : Error<"semantic %0 is not supported in %1 shader %2">;
 def err_hlsl_semantic_partial_explicit_indexing
     : Error<"partial explicit stage input location assignment via "
             "vk::location(X) unsupported">;
