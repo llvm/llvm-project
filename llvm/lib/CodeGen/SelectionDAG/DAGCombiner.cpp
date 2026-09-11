@@ -25577,17 +25577,28 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   SDValue Index = ExtElt->getOperand(1);
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
   unsigned Opc = Vec.getOpcode();
-  if (!IndexC || !Vec.hasOneUse() || (!TLI.isBinOp(Opc) && Opc != ISD::SETCC) ||
+  bool IsBinOp = TLI.isBinOp(Opc);
+  if (!IndexC || !Vec.hasOneUse() || (!IsBinOp && Opc != ISD::SETCC) ||
       Vec->getNumValues() != 1)
+    return SDValue();
+
+  EVT ResVT = ExtElt->getValueType(0);
+  EVT EltVT = Vec.getValueType().getVectorElementType();
+
+  if (Opc == ISD::SETCC && (ResVT != EltVT || LegalTypes))
+    return SDValue();
+
+  // If EXTRACT_VECTOR_ELT was promoted, rebuilding the binop in the promoted
+  // type can change operations whose semantics depend on type width. Keep the
+  // scalar binop in the vector element type when it is valid to introduce that
+  // type here.
+  bool UseEltVT = IsBinOp && ResVT != EltVT;
+  if (UseEltVT && (!ResVT.isInteger() || !EltVT.isInteger() ||
+                   (LegalTypes && !TLI.isTypeLegal(EltVT))))
     return SDValue();
 
   // Targets may want to avoid this to prevent an expensive register transfer.
   if (!TLI.shouldScalarizeBinop(Vec))
-    return SDValue();
-
-  EVT ResVT = ExtElt->getValueType(0);
-  if (Opc == ISD::SETCC &&
-      (ResVT != Vec.getValueType().getVectorElementType() || LegalTypes))
     return SDValue();
 
   // Extracting an element of a vector constant is constant-folded, so this
@@ -25626,9 +25637,14 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
     }
     return NewVal;
   }
-  Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Op0, Index);
-  Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Op1, Index);
-  return DAG.getNode(Opc, DL, ResVT, Op0, Op1);
+
+  EVT ScalarVT = UseEltVT ? EltVT : ResVT;
+  Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Op0, Index);
+  Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Op1, Index);
+  SDValue BinOp = DAG.getNode(Opc, DL, ScalarVT, Op0, Op1);
+  if (ScalarVT == ResVT)
+    return BinOp;
+  return DAG.getAnyExtOrTrunc(BinOp, DL, ResVT);
 }
 
 // Given a ISD::EXTRACT_VECTOR_ELT, which is a glorified bit sequence extract,
