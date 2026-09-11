@@ -3721,10 +3721,10 @@ public:
     else
       dstType = dstElementType;
 
-    return rewriter
-        .create(loc, castOp->getName().getIdentifier(), val, dstType,
-                castOp->getAttrs())
-        ->getResult(0);
+    OperationState state(loc, castOp->getName().getIdentifier(), val, dstType,
+                         castOp->getDiscardableAttrDictionary().getValue());
+    state.propertiesAttr = castOp->getPropertiesAsAttribute();
+    return rewriter.create(state)->getResult(0);
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}

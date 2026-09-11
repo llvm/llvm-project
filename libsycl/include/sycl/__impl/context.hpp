@@ -16,8 +16,13 @@
 #ifndef _LIBSYCL___IMPL_CONTEXT_HPP
 #define _LIBSYCL___IMPL_CONTEXT_HPP
 
+#include <sycl/__impl/async_handler.hpp>
 #include <sycl/__impl/backend.hpp>
+#include <sycl/__impl/device.hpp>
+#include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/info/desc_base.hpp>
+#include <sycl/__impl/platform.hpp>
+#include <sycl/__impl/property_list.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
@@ -28,8 +33,6 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 class context;
-class device;
-class platform;
 
 namespace detail {
 class ContextImpl;
@@ -40,6 +43,55 @@ using is_context_info_desc_t = typename is_info_desc<T, context>::return_type;
 // SYCL 2020 4.6.3. Context class
 class _LIBSYCL_EXPORT context {
 public:
+  /// Constructs a SYCL context using the device selected by
+  /// default_selector_v.
+  explicit context(const property_list &propList = {})
+      : context(device{}, propList) {}
+
+  /// Constructs a SYCL context using the device selected by
+  /// default_selector_v.
+  explicit context(async_handler asyncHandler,
+                   const property_list &propList = {})
+      : context(device{}, asyncHandler, propList) {}
+
+  /// Constructs a SYCL context associated with the platform of \p dev.
+  explicit context(const device &dev, const property_list &propList = {})
+      : context(std::vector<device>{dev}, propList) {}
+
+  /// Constructs a SYCL context associated with the platform of \p dev.
+  explicit context(const device &dev, async_handler asyncHandler,
+                   const property_list &propList = {})
+      : context(std::vector<device>{dev}, asyncHandler, propList) {}
+
+  /// Constructs a SYCL context containing all devices in \p plt.
+  ///
+  /// \throws an exception with code errc::invalid if \p plt has no devices.
+  explicit context(const platform &plt, const property_list &propList = {})
+      : context(plt.get_devices(), propList) {}
+
+  /// Constructs a SYCL context containing all devices in \p plt.
+  ///
+  /// \throws an exception with code errc::invalid if \p plt has no devices.
+  explicit context(const platform &plt, async_handler asyncHandler,
+                   const property_list &propList = {})
+      : context(plt.get_devices(), asyncHandler, propList) {}
+
+  /// Constructs a SYCL context associated with each device in \p deviceList.
+  /// All devices in \p deviceList must belong to the same platform.
+  ///
+  /// \throws an exception with code errc::invalid if \p deviceList is empty.
+  explicit context(const std::vector<device> &deviceList,
+                   const property_list &propList = {})
+      : context(deviceList, detail::defaultAsyncHandler, propList) {}
+
+  /// Constructs a SYCL context associated with each device in \p deviceList.
+  /// All devices in \p deviceList must belong to the same platform.
+  ///
+  /// \throws an exception with code errc::invalid if \p deviceList is empty.
+  explicit context(const std::vector<device> &deviceList,
+                   async_handler asyncHandler,
+                   const property_list &propList = {});
+
   context(const context &rhs) = default;
 
   context(context &&rhs) = default;
@@ -47,6 +99,8 @@ public:
   context &operator=(const context &rhs) = default;
 
   context &operator=(context &&rhs) = default;
+
+  ~context() = default;
 
   friend bool operator==(const context &lhs, const context &rhs) {
     return lhs.impl == rhs.impl;
@@ -83,6 +137,34 @@ private:
 
   friend sycl::detail::ImplUtils;
 }; // class context
+
+// To avoid cross-dependency issues between sycl::context and sycl::exception,
+// definition of ctors that require a context parameter are moved to
+// context.hpp.
+inline exception::exception(context ctx, std::error_code ec,
+                            const std::string &what_arg)
+    : exception(ec, std::make_shared<context>(ctx), what_arg.c_str()) {}
+
+inline exception::exception(context ctx, std::error_code ec,
+                            const char *what_arg)
+    : exception(ctx, ec, std::string(what_arg)) {}
+
+inline exception::exception(context ctx, std::error_code ec)
+    : exception(ctx, ec, "") {}
+
+inline exception::exception(context ctx, int ev,
+                            const std::error_category &ecat,
+                            const char *what_arg)
+    : exception(ctx, {ev, ecat}, std::string(what_arg)) {}
+
+inline exception::exception(context ctx, int ev,
+                            const std::error_category &ecat,
+                            const std::string &what_arg)
+    : exception(ctx, {ev, ecat}, what_arg) {}
+
+inline exception::exception(context ctx, int ev,
+                            const std::error_category &ecat)
+    : exception(ctx, ev, ecat, "") {}
 
 _LIBSYCL_END_NAMESPACE_SYCL
 

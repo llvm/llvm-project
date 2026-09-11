@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s -fexperimental-new-constant-interpreter
 
 template<typename T, T val> struct A {}; // expected-note 3{{template parameter is declared here}}
 

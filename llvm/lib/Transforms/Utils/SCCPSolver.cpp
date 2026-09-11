@@ -1806,11 +1806,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
       V2State.asConstantRange(I.getType(), /*UndefAllowed=*/false);
 
   auto *BO = cast<BinaryOperator>(&I);
-  ConstantRange R = ConstantRange::getEmpty(I.getType()->getScalarSizeInBits());
-  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO))
-    R = A.overflowingBinaryOp(BO->getOpcode(), B, OBO->getNoWrapKind());
-  else
-    R = A.binaryOp(BO->getOpcode(), B);
+  ConstantRange R = A.binaryOp(*BO, B);
   mergeInValue(ValueState[&I], &I, ValueLatticeElement::getRange(R));
 
   // TODO: Currently we do not exploit special values that produce something
