@@ -221,7 +221,7 @@ from TableGen records. The ARM and AArch64 targets use this backend to generate
 tables of system registers; the AMDGPU target uses it to generate meta-data
 about complex image and memory buffer instructions.
 
-See [SearchableTables Reference] for a detailed description.
+See [SearchableTables Reference](#searchabletables-reference) for a detailed description.
 
 ### CTags
 
@@ -1068,7 +1068,7 @@ function. This class provides three fields.
 - `GenericTable Table`. The name of the table that is to receive another
   lookup function.
 - `list<string> Key`. The list of fields that make up the secondary key.
-- `bit EarlyOut`. See the third example in [Generic Tables].
+- `bit EarlyOut`. See the third example in [Generic Tables](#generic-tables).
 
 Here is an example of a secondary key added to the `CTable` above. The
 generated function looks up entries based on the `Name` and `Kind` fields.
@@ -1124,4 +1124,3 @@ const CEntry *lookupCEntryByName(StringRef Name, unsigned Kind) {
   return &CTable[Idx->_index];
 }
 ```
-

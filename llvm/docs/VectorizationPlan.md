@@ -1,9 +1,14 @@
+---
+myst:
+  footnote_transition: false
+---
+
 # Vectorization Plan
 
 ## Abstract
 
 The vectorization transformation can be rather complicated, involving several
-potential alternatives, especially for outer-loops [^footnote-1] but also possibly for
+potential alternatives, especially for outer-loops [^1] but also possibly for
 innermost loops. These alternatives may have significant performance impact,
 both positive and negative. A cost model is therefore employed to identify the
 best alternative, including the alternative of avoiding any transformation
@@ -20,7 +25,7 @@ VPlan is currently used to drive code-generation in LoopVectorize. VPlans are
 constructed after all cost-based and most legality-related decisions have been
 taken. As def-use chains between recipes are now fully modeled in VPlan,
 VPlan-based analyses and transformations are used to simplify and modularize
-the vectorization process [^footnote-10]. Those include transformations to
+the vectorization process [^10]. Those include transformations to
 
 1. Legalize the initial VPlan, e.g. by introducing specialized recipes for
    reductions and interleave groups.
@@ -104,8 +109,8 @@ The design of VPlan follows several high-level guidelines:
    3. Combinations of the above, including nested vectorization: vectorizing
       both an inner loop and an outer-loop at the same time (each with its own
       VF and UF), mixed vectorization: vectorizing a loop with SLP patterns
-      inside [^footnote-4], (re)vectorizing input IR containing vector code.
-   4. Function vectorization [^footnote-2].
+      inside [^4], (re)vectorizing input IR containing vector code.
+   4. Function vectorization [^2].
 
 4. Support multiple candidates efficiently. In particular, similar candidates
    related to a range of possible VF's and UF's must be represented efficiently.
@@ -131,39 +136,44 @@ The design of VPlan follows several high-level guidelines:
 
 The low-level design of VPlan comprises of the following classes.
 
-```{eval-rst}
+LoopVectorizationPlanner
+: A LoopVectorizationPlanner is designed to handle the vectorization of a loop
+  or a loop nest. It can construct, optimize and discard one or more VPlans,
+  each VPlan modelling a distinct way to vectorize the loop or the loop nest.
+  Once the best VPlan is determined, including the best VF and UF, this VPlan
+  drives the generation of output IR.
 
-:VPlan:
-  A model of a vectorized candidate for a given input IR loop or loop nest. This
+VPlan
+: A model of a vectorized candidate for a given input IR loop or loop nest. This
   candidate is represented using a Hierarchical CFG. VPlan supports estimating
   the cost and driving the generation of the output IR code it represents.
 
-:Hierarchical CFG:
-  A control-flow graph whose nodes are basic-blocks or Hierarchical CFG's. The
-  Hierarchical CFG data structure is similar to the Tile Tree [5]_, where
+Hierarchical CFG
+: A control-flow graph whose nodes are basic-blocks or Hierarchical CFG's. The
+  Hierarchical CFG data structure is similar to the Tile Tree [^5], where
   cross-Tile edges are lifted to connect Tiles instead of the original
-  basic-blocks as in Sharir [6]_, promoting the Tile encapsulation. The terms
-  Region and Block are used rather than Tile [5]_ to avoid confusion with loop
+  basic-blocks as in Sharir [^6], promoting the Tile encapsulation. The terms
+  Region and Block are used rather than Tile [^5] to avoid confusion with loop
   tiling.
 
-:VPBlockBase:
-  The building block of the Hierarchical CFG. A pure-virtual base-class of
+VPBlockBase
+: The building block of the Hierarchical CFG. A pure-virtual base-class of
   VPBasicBlock and VPRegionBlock, see below. VPBlockBase models the hierarchical
   control-flow relations with other VPBlocks. Note that in contrast to the IR
   BasicBlock, a VPBlockBase models its control-flow successors and predecessors
   directly, rather than through a Terminator branch or through predecessor
   branches that "use" the VPBlockBase.
 
-:VPBasicBlock:
-  VPBasicBlock is a subclass of VPBlockBase, and serves as the leaves of the
+VPBasicBlock
+: VPBasicBlock is a subclass of VPBlockBase, and serves as the leaves of the
   Hierarchical CFG. It represents a sequence of output IR instructions that will
   appear consecutively in an output IR basic-block. The instructions of this
   basic-block originate from one or more VPBasicBlocks. VPBasicBlock holds a
   sequence of zero or more VPRecipes that model the cost and generation of the
   output IR instructions.
 
-:VPRegionBlock:
-  VPRegionBlock is a subclass of VPBlockBase. It models a collection of
+VPRegionBlock
+: VPRegionBlock is a subclass of VPBlockBase. It models a collection of
   VPBasicBlocks and VPRegionBlocks which form a SESE subgraph of the output IR
   CFG. A VPRegionBlock may indicate that its contents are to be replicated a
   constant number of times when output IR is generated, effectively representing
@@ -171,45 +181,38 @@ The low-level design of VPlan comprises of the following classes.
   to support scalarized and predicated instructions with a single model for
   multiple candidate VF's and UF's.
 
-:VPRecipeBase:
-  A pure-virtual base class modeling a sequence of one or more output IR
+VPRecipeBase
+: A pure-virtual base class modeling a sequence of one or more output IR
   instructions, possibly based on one or more input IR instructions. These
   input IR instructions are referred to as "Ingredients" of the Recipe. A Recipe
   may specify how its ingredients are to be transformed to produce the output IR
   instructions; e.g., cloned once, replicated multiple times or widened
   according to selected VF.
 
-:VPValue:
-  The base of VPlan's def-use relations class hierarchy. When instantiated, it
+VPValue
+: The base of VPlan's def-use relations class hierarchy. When instantiated, it
   models a constant or a live-in Value in VPlan. It has users, which are of type
   VPUser, but no operands.
 
-:VPUser:
-  A VPUser represents an entity that uses a number of VPValues as operands.
+VPUser
+: A VPUser represents an entity that uses a number of VPValues as operands.
   VPUser is similar in some aspects to LLVM's User class.
 
-:VPDef:
-  A VPDef represents an entity that defines zero, one or multiple VPValues.
+VPDef
+: A VPDef represents an entity that defines zero, one or multiple VPValues.
   It is used to model the fact that recipes in VPlan can define multiple
   VPValues.
 
-:VPInstruction:
-  A VPInstruction is a recipe characterized by a single opcode and optional
+VPInstruction
+: A VPInstruction is a recipe characterized by a single opcode and optional
   flags, free of ingredients or other meta-data. VPInstructions also extend
   LLVM IR's opcodes with idiomatic operations that enrich the Vectorizer's
   semantics.
 
-:VPTransformState:
-  Stores information used for generating output IR, passed from
+VPTransformState
+: Stores information used for generating output IR, passed from
   LoopVectorizationPlanner to its selected VPlan for execution, and used to pass
   additional information down to VPBlocks and VPRecipes.
-
-The Planning Process and VPlan Roadmap
-======================================
-
-Transforming the Loop Vectorizer to use VPlan follows a staged approach. First,
-VPlan was only used to record the final vectorization decisions, and to execute
-```
 
 ## The Planning Process and VPlan Roadmap
 
@@ -246,43 +249,42 @@ idiom groups having synergistic cost.
 ### Related LLVM components
 
 1. SLP Vectorizer: one can compare the VPlan model with LLVM's existing SLP
-   tree, where TSLP [^footnote-3] adds Plan Step 2.b.
+   tree, where TSLP [^3] adds Plan Step 2.b.
 2. RegionInfo: one can compare VPlan's H-CFG with the Region Analysis as used by
-   Polly [^footnote-7].
+   Polly [^7].
 3. Loop Vectorizer: the Vectorization Plan aims to upgrade the infrastructure of
-   the Loop Vectorizer and extend it to handle outer loops [^footnote-8], [^footnote-9].
+   the Loop Vectorizer and extend it to handle outer loops [^8], [^9].
 
 ### References
 
-[^footnote-1]: "Outer-loop vectorization: revisited for short SIMD architectures", Dorit
+[^1]: "Outer-loop vectorization: revisited for short SIMD architectures", Dorit
     Nuzman and Ayal Zaks, PACT 2008.
 
-[^footnote-2]: "Proposal for function vectorization and loop vectorization with function
+[^2]: "Proposal for function vectorization and loop vectorization with function
     calls", Xinmin Tian, \[[cfe-dev](http://lists.llvm.org/pipermail/cfe-dev/2016-March/047732.html)\].,
     March 2, 2016.
     See also [review](https://reviews.llvm.org/D22792).
 
-[^footnote-3]: "Throttling Automatic Vectorization: When Less is More", Vasileios
+[^3]: "Throttling Automatic Vectorization: When Less is More", Vasileios
     Porpodas and Tim Jones, PACT 2015 and LLVM Developers' Meeting 2015.
 
-[^footnote-4]: "Exploiting mixed SIMD parallelism by reducing data reorganization
+[^4]: "Exploiting mixed SIMD parallelism by reducing data reorganization
     overhead", Hao Zhou and Jingling Xue, CGO 2016.
 
-[^footnote-5]: "Register Allocation via Hierarchical Graph Coloring", David Callahan and
+[^5]: "Register Allocation via Hierarchical Graph Coloring", David Callahan and
     Brian Koblenz, PLDI 1991
 
-[^footnote-6]: "Structural analysis: A new approach to flow analysis in optimizing
+[^6]: "Structural analysis: A new approach to flow analysis in optimizing
     compilers", M. Sharir, Journal of Computer Languages, Jan. 1980
 
-[^footnote-7]: "Enabling Polyhedral Optimizations in LLVM", Tobias Grosser, Diploma
+[^7]: "Enabling Polyhedral Optimizations in LLVM", Tobias Grosser, Diploma
     thesis, 2011.
 
-[^footnote-8]: "Introducing VPlan to the Loop Vectorizer", Gil Rapaport and Ayal Zaks,
+[^8]: "Introducing VPlan to the Loop Vectorizer", Gil Rapaport and Ayal Zaks,
     European LLVM Developers' Meeting 2017.
 
-[^footnote-9]: "Extending LoopVectorizer: OpenMP4.5 SIMD and Outer Loop
+[^9]: "Extending LoopVectorizer: OpenMP4.5 SIMD and Outer Loop
     Auto-Vectorization", Intel Vectorizer Team, LLVM Developers' Meeting 2016.
 
-[^footnote-10]: "VPlan: Status Update and Future Roadmap", Ayal Zaks and Florian Hahn,
+[^10]: "VPlan: Status Update and Future Roadmap", Ayal Zaks and Florian Hahn,
     LLVM Developers' Meeting 2023, <https://www.youtube.com/watch?v=SzGP4PgMuLE>
-

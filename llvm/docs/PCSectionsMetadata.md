@@ -56,8 +56,8 @@ the entry size is just 32 bits.
 Optional encoding options can be passed in the first `MDString` operator:
 `<section>!<options>`. The following options are available:
 
-> - `C` -- Compress constant integers of size 2-8 bytes as ULEB128; this
->   includes the function size (but excludes the PC entry).
+- `C` -- Compress constant integers of size 2-8 bytes as ULEB128; this
+  includes the function size (but excludes the PC entry).
 
 For example, `foo!C` will emit into section `foo` with all constants
 encoded as ULEB128.
@@ -84,21 +84,24 @@ As with other LLVM IR metadata, there are no requirements for LLVM IR
 transformation passes to preserve `!pcsections` metadata, with the following
 exceptions:
 
-> - The `AtomicExpandPass` shall preserve `!pcsections` metadata
->   according to the below rules 1-4.
+- The `AtomicExpandPass` shall preserve `!pcsections` metadata
+  according to the below rules 1-4.
 
 When translating LLVM IR to MIR, the `!pcsections` metadata shall be copied
 from the source `Instruction` to the target `MachineInstr` (set with
 `MachineInstr::setPCSections()`). The instruction selectors and MIR
 optimization passes shall preserve PC sections metadata as follows:
 
-> 1. Replacements will preserve PC sections metadata of the replaced
->    instruction.
-> 2. Duplications will preserve PC sections metadata of the copied
->    instruction.
-> 3. Merging will preserve PC sections metadata of one of the two
->    instructions (no guarantee on which instruction's metadata is used).
-> 4. Deletions will lose PC sections metadata.
+1. Replacements will preserve PC sections metadata of the replaced
+   instruction.
+
+2. Duplications will preserve PC sections metadata of the copied
+   instruction.
+
+3. Merging will preserve PC sections metadata of one of the two
+   instructions (no guarantee on which instruction's metadata is used).
+
+4. Deletions will lose PC sections metadata.
 
 This is similar to debug info, and the `BuildMI()` helper provides a
 convenient way to propagate debug info and `!pcsections` metadata in the
@@ -110,4 +113,3 @@ Use cases for `!pcsections` metadata should either be fully tolerant to
 missing metadata, or the passes inserting `!pcsections` metadata should run
 *after* all LLVM IR optimization passes to preserve the metadata until being
 translated to MIR.
-

@@ -321,7 +321,7 @@ lowering both the base and derived pointer operands are required to be live
 over the associated call safepoint even if the base is otherwise unused
 afterwards.
 
-(gc-transition-args)=
+(gc_transition_args)=
 
 ### GC Transitions
 
@@ -419,7 +419,7 @@ This special section is encoded per the
 The general expectation is that a JIT compiler will parse and discard this
 format; it is not particularly memory efficient. If you need an alternate
 format (e.g. for an ahead of time compiler), see discussion under
-\:ref: `open work items <OpenWork>` below.
+{ref}`open work items <OpenWork>` below.
 
 Each statepoint generates the following Locations:
 
@@ -510,7 +510,7 @@ experimenting with the current version.
 
 ## Utility Passes for Safepoint Insertion
 
-(rewritestatepointsforgc)=
+(RewriteStatepointsForGC)=
 
 ### RewriteStatepointsForGC
 
@@ -587,7 +587,7 @@ In practice, RewriteStatepointsForGC should be run much later in the pass
 pipeline, after most optimization is already done. This helps to improve
 the quality of the generated code when compiled with garbage collection support.
 
-(rewritestatepointsforgc-intrinsic-lowering)=
+(RewriteStatepointsForGC_intrinsic_lowering)=
 
 ### RewriteStatepointsForGC intrinsic lowering
 
@@ -633,7 +633,7 @@ declare void @__llvm_memcpy_element_unordered_atomic_safepoint_1(
   i64 %length)
 ```
 
-(placesafepoints)=
+(PlaceSafepoints)=
 
 ### PlaceSafepoints
 
@@ -701,7 +701,7 @@ here.
 Support for statepoint generation requires some code for each backend.
 Today, only Aarch64 and X86_64 are supported.
 
-(openwork)=
+(OpenWork)=
 
 ## Limitations and Half Baked Ideas
 
@@ -757,4 +757,3 @@ for [Statepoint] in the summary field. When filing new bugs, please
 use this tag so that interested parties see the newly filed bug. As
 with most LLVM features, design discussions take place on the [Discourse forums](https://discourse.llvm.org) and patches
 should be sent to [llvm-commits](http://lists.llvm.org/mailman/listinfo/llvm-commits) for review.
-

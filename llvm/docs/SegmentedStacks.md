@@ -14,7 +14,7 @@ The runtime functionality is [already there in libgcc](http://gcc.gnu.org/wiki/S
 
 ## Implementation Details
 
-(allocating-stacklets)=
+(allocating stacklets)=
 
 ### Allocating Stacklets
 
@@ -53,7 +53,7 @@ second return, which returns control to the correct caller.
 
 ### Variable Sized Allocas
 
-The section on [allocating stacklets] automatically assumes that every stack
+The section on {ref}`allocating stacklets <allocating stacklets>` automatically assumes that every stack
 frame will be of fixed size. However, LLVM allows the use of the `llvm.alloca`
 intrinsic to allocate dynamically sized blocks of memory on the stack. When
 faced with such a variable-sized alloca, code is generated to:
@@ -65,4 +65,3 @@ faced with such a variable-sized alloca, code is generated to:
 
 The memory allocated from the heap is linked into a list in the current
 stacklet, and freed along with the same. This prevents a memory leak.
-

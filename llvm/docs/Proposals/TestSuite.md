@@ -11,12 +11,14 @@ Most probably, the reason why the programs below have not been added to
 the test-suite yet is that nobody has found time to do it. But there
 might be other issues as well, such as
 
-> - Licensing (Support can still be added as external module,
->   : like for the SPEC benchmarks)
-> - Language (in particular, there is no official LLVM frontend
->   : for FORTRAN yet)
-> - Parallelism (currently, all programs in test-suite use
->   : one thread only)
+- Licensing (Support can still be added as external module,
+  like for the SPEC benchmarks)
+
+- Language (in particular, there is no official LLVM frontend
+  for FORTRAN yet)
+
+- Parallelism (currently, all programs in test-suite use
+  one thread only)
 
 ## Benchmarks
 
@@ -34,33 +36,33 @@ Note that CMake's Ninja generator has difficulties with Fortran. See the
 [CMake documentation](https://cmake.org/cmake/help/v3.13/generator/Ninja.html#fortran-support)
 for details.
 
-> - 503.bwaves_r/603.bwaves_s
-> - 507.cactuBSSN_r
-> - 521.wrf_r/621.wrf_s
-> - 527.cam4_r/627.cam4_s
-> - 628.pop2_s
-> - 548.exchange2_r/648.exchange2_s
-> - 549.fotonik3d_r/649.fotonik3d_s
-> - 554.roms_r/654.roms_s
+- 503.bwaves_r/603.bwaves_s
+- 507.cactuBSSN_r
+- 521.wrf_r/621.wrf_s
+- 527.cam4_r/627.cam4_s
+- 628.pop2_s
+- 548.exchange2_r/648.exchange2_s
+- 549.fotonik3d_r/649.fotonik3d_s
+- 554.roms_r/654.roms_s
 
 ### SPEC OMP2012
 
 <https://www.spec.org/omp2012/>
 
-> - 350.md
-> - 351.bwaves
-> - 352.nab
-> - 357.bt331
-> - 358.botsalgn
-> - 359.botsspar
-> - 360.ilbdc
-> - 362.fma3d
-> - 363.swim
-> - 367.imagick
-> - 370.mgrid331
-> - 371.applu331
-> - 372.smithwa
-> - 376.kdtree
+- 350.md
+- 351.bwaves
+- 352.nab
+- 357.bt331
+- 358.botsalgn
+- 359.botsspar
+- 360.ilbdc
+- 362.fma3d
+- 363.swim
+- 367.imagick
+- 370.mgrid331
+- 371.applu331
+- 372.smithwa
+- 376.kdtree
 
 ### OpenCV
 
@@ -109,21 +111,21 @@ and is itself a collection of benchmark suites
 Rodinia has already been partially included in
 MultiSource/Benchmarks/Rodinia. Benchmarks still missing are:
 
-> - streamcluster
-> - particlefilter
-> - nw
-> - nn
-> - myocyte
-> - mummergpu
-> - lud
-> - leukocyte
-> - lavaMD
-> - kmeans
-> - hotspot3D
-> - heartwall
-> - cfd
-> - bfs
-> - b+tree
+- streamcluster
+- particlefilter
+- nw
+- nn
+- myocyte
+- mummergpu
+- lud
+- leukocyte
+- lavaMD
+- kmeans
+- hotspot3D
+- heartwall
+- cfd
+- bfs
+- b+tree
 
 ### vecmathlib tests harness
 
@@ -185,23 +187,23 @@ Many of its programs have already been integrated in
 MultiSource/Benchmarks/DOE-ProxyApps-C and
 MultiSource/Benchmarks/DOE-ProxyApps-C++.
 
-> - Nekbone
-> - QMCPack
-> - LAMMPS
-> - Kripke
-> - Quicksilver
-> - PENNANT
-> - Big Data Analytic Suite
-> - Deep Learning Suite
-> - Stream
-> - Stride
-> - ML/DL micro-benchmark
-> - Pynamic
-> - ACME
-> - VPIC
-> - Laghos
-> - Parallel Integer Sort
-> - Havoq
+- Nekbone
+- QMCPack
+- LAMMPS
+- Kripke
+- Quicksilver
+- PENNANT
+- Big Data Analytic Suite
+- Deep Learning Suite
+- Stream
+- Stride
+- ML/DL micro-benchmark
+- Pynamic
+- ACME
+- VPIC
+- Laghos
+- Parallel Integer Sort
+- Havoq
 
 ### NWChem
 
@@ -258,45 +260,44 @@ into the test-suite repository.
 
 #### Resampling
 
-> - Bilinear
-> - Bicubic
-> - Lanczos
+- Bilinear
+- Bicubic
+- Lanczos
 
 #### Dither
 
-> - Threshold
-> - Random
-> - Halftone
-> - Bayer
-> - Floyd-Steinberg
-> - Jarvis
-> - Stucki
-> - Burkes
-> - Sierra
-> - Atkinson
-> - Gradient-based
+- Threshold
+- Random
+- Halftone
+- Bayer
+- Floyd-Steinberg
+- Jarvis
+- Stucki
+- Burkes
+- Sierra
+- Atkinson
+- Gradient-based
 
 #### Feature detection
 
-> - Harris
-> - Histogram of Oriented Gradients
+- Harris
+- Histogram of Oriented Gradients
 
 #### Color conversion
 
-> - RGB to grayscale
-> - HSL to RGB
+- RGB to grayscale
+- HSL to RGB
 
 ### Graph
 
 #### Search Algorithms
 
-> - Breadth-First-Search
-> - Depth-First-Search
-> - Dijkstra's algorithm
-> - A-Star
+- Breadth-First-Search
+- Depth-First-Search
+- Dijkstra's algorithm
+- A-Star
 
 #### Spanning Tree
 
-> - Kruskal's algorithm
-> - Prim's algorithm
-
+- Kruskal's algorithm
+- Prim's algorithm

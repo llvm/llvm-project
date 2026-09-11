@@ -390,7 +390,7 @@ if (rtc) {
 ```
 
 The runtime condition (`rtc`) checks that the array `A` and the
-element `B[0]` do not alias.
+element {title-reference}`B[0]` do not alias.
 
 Currently, this transformation does not support followup-attributes.
 
@@ -407,28 +407,28 @@ to change. The default optimization pipeline (anything higher than
 
 When using the legacy pass manager:
 
-> - LoopInterchange (if enabled)
-> - SimpleLoopUnroll/LoopFullUnroll (only performs full unrolling)
-> - VersioningLICM (if enabled)
-> - LoopDistribute
-> - LoopVectorizer
-> - LoopUnrollAndJam (if enabled)
-> - LoopUnroll (partial and runtime unrolling)
+- LoopInterchange (if enabled)
+- SimpleLoopUnroll/LoopFullUnroll (only performs full unrolling)
+- VersioningLICM (if enabled)
+- LoopDistribute
+- LoopVectorizer
+- LoopUnrollAndJam (if enabled)
+- LoopUnroll (partial and runtime unrolling)
 
 When using the legacy pass manager with LTO:
 
-> - LoopInterchange (if enabled)
-> - SimpleLoopUnroll/LoopFullUnroll (only performs full unrolling)
-> - LoopVectorizer
-> - LoopUnroll (partial and runtime unrolling)
+- LoopInterchange (if enabled)
+- SimpleLoopUnroll/LoopFullUnroll (only performs full unrolling)
+- LoopVectorizer
+- LoopUnroll (partial and runtime unrolling)
 
 When using the new pass manager:
 
-> - SimpleLoopUnroll/LoopFullUnroll (only performs full unrolling)
-> - LoopDistribute
-> - LoopVectorizer
-> - LoopUnrollAndJam (if enabled)
-> - LoopUnroll (partial and runtime unrolling)
+- SimpleLoopUnroll/LoopFullUnroll (only performs full unrolling)
+- LoopDistribute
+- LoopVectorizer
+- LoopUnrollAndJam (if enabled)
+- LoopUnroll (partial and runtime unrolling)
 
 ## Leftover Transformations
 
@@ -455,4 +455,3 @@ case.
 
 Future versions of LLVM may fix this by executing transformations using
 a dynamic ordering.
-

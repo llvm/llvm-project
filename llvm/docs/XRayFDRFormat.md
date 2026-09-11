@@ -1,8 +1,8 @@
----
-Version: 1 as of 2017-07-20
----
-
 # XRay Flight Data Recorder Trace Format
+
+```{eval-rst}
+:Version: 1 as of 2017-07-20
+```
 
 ## Introduction
 
@@ -268,4 +268,3 @@ Function records.
 - Not every entry must have a traced Exit or Tail Exit. The buffer may run out
   of space or the program may request for the tracer to finalize toreturn the
   buffer before an instrumented function exits.
-

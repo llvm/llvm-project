@@ -26,7 +26,7 @@ We aim to acknowledge your report within two business days since you first reach
 
 The members of the group represent a wide cross-section of the community, and
 meet the criteria for inclusion below. The list is in the format
-`* ${full_name} (${affiliation}) [${github_username}]`. If a github
+{title-reference}`* ${full_name} (${affiliation}) [${github_username}]`. If a github
 username for an individual isn't available, the brackets will be empty.
 
 - Abhay Kanhere (Apple) [@AbhayKanhere]
@@ -94,7 +94,7 @@ If a nomination for LLVM Security Response Group membership is supported by a ma
 
 ### Accepting membership
 
-Before new LLVM Security Response Group membership is finalized, the successful nominee should accept membership and agree to abide by this security policy, particularly [Privileges and Responsibilities of LLVM Security Response Group Members] below.
+Before new LLVM Security Response Group membership is finalized, the successful nominee should accept membership and agree to abide by this security policy, particularly [Privileges and Responsibilities of LLVM Security Response Group Members](#privileges-and-responsibilities-of-llvm-security-response-group-members) below.
 
 ### Keeping Membership Current
 
@@ -114,7 +114,7 @@ The transparency reports are published at {doc}`SecurityTransparencyReports`.
 
 ### Access
 
-LLVM Security Response Group members will be subscribed to a private [Discussion Medium]. It will be used for technical discussions of security issues, as well as process discussions about matters such as disclosure timelines and group membership. Members have access to all security issues.
+LLVM Security Response Group members will be subscribed to a private [Discussion Medium](#discussion-medium). It will be used for technical discussions of security issues, as well as process discussions about matters such as disclosure timelines and group membership. Members have access to all security issues.
 
 ### Confidentiality
 
@@ -199,7 +199,7 @@ as security-sensitive but need significant work to get to the stage where that's
 manageable. The LLVM community will need to decide whether it wants to invest in
 making these parts of the code securable, and maintain these security properties
 over time. In all cases the LLVM Security Response Group
-[should be consulted][security-group-discussion-medium], since they'll be
+{ref}`should be consulted <security-group-discussion-medium>`, since they'll be
 responding to security issues filed against these parts of the codebase.
 
 The security-sensitive parts of the LLVM Project currently are the following:
@@ -253,4 +253,3 @@ in the report, as well as update this document through the above process.
 [llvm/llvm-security-repo]: https://github.com/llvm/llvm-security-repo/security
 [mitre]: https://cve.mitre.org
 [report a vulnerability]: https://github.com/llvm/llvm-security-repo/security/advisories/new
-

@@ -1,9 +1,7 @@
 # TableGen Programmer's Reference
 
-```{eval-rst}
-.. sectnum::
-
-```
+:::{sectnum}
+:::
 
 ## Introduction
 
@@ -103,23 +101,23 @@ multiple concrete records all at once. A multiclass can inherit from other
 multiclasses, which means that the multiclass inherits all the definitions
 from its parent multiclasses.
 
-[Appendix C: Sample Record] illustrates a complex record in the Intel X86
+[Appendix C: Sample Record](#appendix-c-sample-record) illustrates a complex record in the Intel X86
 target and the simple way in which it is defined.
 
 ## Source Files
 
 TableGen source files are plain ASCII text files. The files can contain
-statements, comments, and blank lines (see [Lexical Analysis]). The standard file
+statements, comments, and blank lines (see [Lexical Analysis](#lexical-analysis)). The standard file
 extension for TableGen files is `.td`.
 
 TableGen files can grow quite large, so there is an include mechanism that
 allows one file to include the content of another file (see [Include
-Files][include files]). This allows large files to be broken up into smaller ones, and
+Files](#include-files)). This allows large files to be broken up into smaller ones, and
 also provides a simple library mechanism where multiple source files can
 include the same library file.
 
 TableGen supports a simple preprocessor that can be used to conditionalize
-portions of `.td` files. See [Preprocessing Facilities] for more
+portions of `.td` files. See [Preprocessing Facilities](#preprocessing-facilities) for more
 information.
 
 ## Lexical Analysis
@@ -132,7 +130,7 @@ implied whitespace between tokens.
 
 TableGen supports BCPL-style comments (`// ...`) and nestable C-style
 comments (`/* ... */`).
-TableGen also provides simple [Preprocessing Facilities].
+TableGen also provides simple [Preprocessing Facilities](#preprocessing-facilities).
 
 Formfeed characters may be used freely in files to produce page breaks when
 the file is printed for review.
@@ -237,7 +235,7 @@ syntax compared to other bang operators, so it is defined separately:
    CondOperator: !cond
 ```
 
-See [Appendix A: Bang Operators] for a description of each bang operator.
+See [Appendix A: Bang Operators](#appendix-a-bang-operators) for a description of each bang operator.
 
 ### Include files
 
@@ -321,7 +319,7 @@ wide range of records conveniently and compactly.
   another `dag` object, allowing an arbitrary tree of nodes and edges.
   As an example, DAGs are used to represent code patterns for use by
   the code generator instruction selection algorithms. See [Directed
-  acyclic graphs (DAGs)][directed acyclic graphs (dags)] for more details;
+  acyclic graphs (DAGs)](#directed-acyclic-graphs-dags) for more details;
 
 {token}`ClassID`
 
@@ -451,7 +449,7 @@ sometimes not when the value is the empty list (`[]`).
 
 This represents a DAG initializer (note the parentheses). The first
 {token}`DagArg` is called the "operator" of the DAG and must be a record.
-See [Directed acyclic graphs (DAGs)] for more details.
+See [Directed acyclic graphs (DAGs)](#directed-acyclic-graphs-dags) for more details.
 
 ```{eval-rst}
 .. productionlist::
@@ -474,7 +472,7 @@ sense after reading the remainder of this guide.
   ```
 
 - The implicit template argument `NAME` in a `class` or `multiclass`
-  definition (see [NAME]).
+  definition (see [NAME](#name)).
 
 - A field local to a `class`, such as the use of `Bar` in:
 
@@ -533,11 +531,11 @@ sense after reading the remainder of this guide.
 
 This form creates a new anonymous record definition (as would be created by an
 unnamed `def` inheriting from the given class with the given template
-arguments; see [def]) and the value is that record. A field of the record can be
-obtained using a suffix; see [Suffixed Values].
+arguments; see [def](#def)) and the value is that record. A field of the record can be
+obtained using a suffix; see [Suffixed Values](#suffixed-values).
 
 Invoking a class in this manner can provide a simple subroutine facility.
-See [Using Classes as Subroutines] for more information.
+See [Using Classes as Subroutines](#using-classes-as-subroutines) for more information.
 
 ```{eval-rst}
 .. productionlist::
@@ -551,9 +549,9 @@ simple values. Except in the case of `!cond`, a bang operator takes a list
 of arguments enclosed in parentheses and performs some function on those
 arguments, producing a value for that bang operator. The `!cond` operator
 takes a list of pairs of arguments separated by colons. See [Appendix A:
-Bang Operators][appendix a: bang operators] for a description of each bang operator.
+Bang Operators](#appendix-a-bang-operators) for a description of each bang operator.
 
-The `Type` is only accepted for certain bang operators, and must not be
+The *Type* is only accepted for certain bang operators, and must not be
 `code`.
 
 ### Suffixed values
@@ -573,13 +571,13 @@ primary value. Here are the possible suffixes for some primary *value*.
 
 *value*`[i]`
 
-: The final value is element `i` of the list *value* (note the brackets).
+: The final value is element *i* of the list *value* (note the brackets).
   In other words, the brackets act as a subscripting operator on the list.
   This is the case only when a single element is specified.
 
 *value*`[i,]`
 
-: The final value is a list that contains a single element `i` of the list.
+: The final value is a list that contains a single element *i* of the list.
   In short, a list slice with a single element.
 
 *value*`[4...7,17,2...3,4]`
@@ -592,8 +590,8 @@ primary value. Here are the possible suffixes for some primary *value*.
   *value*`[i,m...n,j,ls]`
 
   : Each element may be an expression (variables, bang operators).
-    The type of `m` and `n` should be `int`.
-    The type of `i`, `j`, and `ls` should be either `int` or `list<int>`.
+    The type of *m* and *n* should be *int*.
+    The type of *i*, *j*, and *ls* should be either *int* or *list\<int>*.
 
 *value*`.`*field*
 
@@ -621,7 +619,7 @@ left-hand-side operand is treated normally.
 Values can have a trailing paste operator, in which case the left-hand-side
 operand is concatenated to an empty string.
 
-[Appendix B: Paste Operator Examples] presents examples of the behavior of
+[Appendix B: Paste Operator Examples](#appendix-b-paste-operator-examples) presents examples of the behavior of
 the paste operator.
 
 ## Statements
@@ -683,14 +681,14 @@ forward declaration. Note that records derived from a forward-declared
 class will inherit no fields from it, because those records are built when
 their declarations are parsed, and thus before the class is finally defined.
 
-(name)=
+(NAME)=
 
 Every class has an implicit template argument named `NAME` (uppercase),
 which is bound to the name of the {token}`Def` or {token}`Defm` inheriting
 from the class. If the class is inherited by an anonymous record, the name
 is unspecified but globally unique.
 
-See [Examples: classes and records] for examples.
+See [Examples: classes and records](#examples-classes-and-records) for examples.
 
 #### Record Bodies
 
@@ -788,7 +786,7 @@ The `defvar` form defines a variable whose value can be used in other
 value expressions within the body. The variable is not a field: it does not
 become a field of the class or record being defined. Variables are provided
 to hold temporary values while processing the body. See [Defvar in a Record
-Body][defvar in a record body] for more details.
+Body](#defvar-in-a-record-body) for more details.
 
 When class `C2` inherits from class `C1`, it acquires all the field
 definitions of `C1`. As those definitions are merged into class `C2`, any
@@ -841,9 +839,9 @@ The DAG `(ops rec1)` is passed as a template argument to class `A`. Notice
 that the DAG includes `rec1`, the record being defined.
 
 The steps taken to create a new record are somewhat complex. See [How
-records are built][how records are built].
+records are built](#how-records-are-built).
 
-See [Examples: classes and records] for examples.
+See [Examples: classes and records](#examples-classes-and-records) for examples.
 
 ### Examples: classes and records
 
@@ -1051,7 +1049,7 @@ contains a series of statements that define records, using {token}`Def` and
 The {token}`If` and {token}`Assert` statements can also be used.
 
 Also as with regular classes, the multiclass has the implicit template
-argument `NAME` (see [NAME]). When a named (non-anonymous) record is
+argument `NAME` (see [NAME](#name)). When a named (non-anonymous) record is
 defined in a multiclass and the record's name does not include a use of the
 template argument `NAME`, such a use is automatically *prepended*
 to the name. That is, the following are equivalent inside a multiclass:
@@ -1067,7 +1065,7 @@ definition. Each `def` statement in the multiclass produces a record. As
 with top-level `def` statements, these definitions can inherit from
 multiple parent classes.
 
-See [Examples: multiclasses and defms] for examples.
+See [Examples: multiclasses and defms](#examples-multiclasses-and-defms) for examples.
 
 ### `defm` --- invoke multiclasses to define multiple records
 
@@ -1119,7 +1117,7 @@ defm Foo        : SomeMultiClass<...>;
 defm NAME # Foo : SomeMultiClass<...>;
 ```
 
-See [Examples: multiclasses and defms] for examples.
+See [Examples: multiclasses and defms](#examples-multiclasses-and-defms) for examples.
 
 ### Examples: multiclasses and defms
 
@@ -1348,7 +1346,7 @@ The identifier on the left of the `=` is defined to be a type name
 whose actual type is given by the type expression on the right of the `=`.
 
 Currently, only primitive types and type aliases are supported to be the source
-type and `deftype` statements can only appear at the top level.
+type and *deftype* statements can only appear at the top level.
 
 ### `defvar` --- define a variable
 
@@ -1375,7 +1373,7 @@ defvar i = !add(i, 1);
 ```
 
 Variables can also be defined with `defvar` in a record body. See
-[Defvar in a Record Body] for more details.
+[Defvar in a Record Body](#defvar-in-a-record-body) for more details.
 
 ### `foreach` --- iterate over a sequence of statements
 
@@ -1419,7 +1417,7 @@ A `dump` statement prints the input string to standard error
 output. It is intended for debugging purposes.
 
 - At top level, the message is printed immediately.
-- Within a record/class/multiclass, `dump` gets evaluated at each
+- Within a record/class/multiclass, *dump* gets evaluated at each
   instantiation point of the containing record.
 
 ```{eval-rst}
@@ -1428,7 +1426,7 @@ output. It is intended for debugging purposes.
 ```
 
 The {token}`Value` is an arbitrary string expression.
-For example, it can be used in combination with `!repr` to investigate
+For example, it can be used in combination with *!repr* to investigate
 the values passed to a multiclass:
 
 ```text
@@ -1462,7 +1460,7 @@ the usual way: in a case like `if v1 then if v2 then {...} else {...}`, the
 
 The {token}`IfBody` of the then and else arms of the `if` establish an
 inner scope. Any `defvar` variables defined in the bodies go out of scope
-when the bodies are finished (see [Defvar in a Record Body] for more details).
+when the bodies are finished (see [Defvar in a Record Body](#defvar-in-a-record-body) for more details).
 
 The `if` statement can also be used in a record {token}`Body`.
 
@@ -1579,24 +1577,29 @@ defvar i = !add(i, 1)
 The following steps are taken by TableGen when a record is built. Classes are simply
 abstract records and so go through the same steps.
 
-1. Build the record name ({token}`NameValue`) and create an empty record.
-2. Parse the parent classes in the {token}`ParentClassList` from left to
+```{eval-rst}
+1. Build the record name (:token:`NameValue`) and create an empty record.
+
+2. Parse the parent classes in the :token:`ParentClassList` from left to
    right, visiting each parent class's ancestor classes from top to bottom.
 
-> 1. Add the fields from the parent class to the record.
-> 2. Substitute the template arguments into those fields.
-> 3. Add the parent class to the record's list of inherited classes.
+  a. Add the fields from the parent class to the record.
+  b. Substitute the template arguments into those fields.
+  c. Add the parent class to the record's list of inherited classes.
 
-3. Apply any top-level `let` bindings to the record. Recall that top-level
+3. Apply any top-level ``let`` bindings to the record. Recall that top-level
    bindings only apply to inherited fields.
+
 4. Parse the body of the record.
 
-> - Add any fields to the record.
-> - Modify the values of fields according to local `let` statements.
-> - Define any `defvar` variables.
+  * Add any fields to the record.
+  * Modify the values of fields according to local ``let`` statements.
+  * Define any ``defvar`` variables.
 
 5. Make a pass over all the fields to resolve any inter-field references.
+
 6. Add the record to the final record list.
+```
 
 Because references between fields are resolved (step 5) after `let` bindings are
 applied (step 3), the `let` statement has unusual power. For example:
@@ -1639,7 +1642,7 @@ def rec2 {      // C
 
 ## Using Classes as Subroutines
 
-As described in [Simple values], a class can be invoked in an expression
+As described in [Simple values](#simple-values), a class can be invoked in an expression
 and passed template arguments. This causes TableGen to create a new anonymous
 record inheriting from that class. As usual, the record receives all the
 fields defined in the class.
@@ -1850,14 +1853,14 @@ and non-0 as true.
 
 `!filter(`*var*`,` *list*`,` *predicate*`)`
 
-> This operator creates a new `list` by filtering the elements in
-> *list*. To perform the filtering, TableGen binds the variable *var* to each
-> element and then evaluates the *predicate* expression, which presumably
-> refers to *var*. The predicate must
-> produce a boolean value (`bit`, `bits`, or `int`). The value is
-> interpreted as with `!if`:
-> if the value is 0, the element is not included in the new list. If the value
-> is anything else, the element is included.
+: This operator creates a new `list` by filtering the elements in
+  *list*. To perform the filtering, TableGen binds the variable *var* to each
+  element and then evaluates the *predicate* expression, which presumably
+  refers to *var*. The predicate must
+  produce a boolean value (`bit`, `bits`, or `int`). The value is
+  interpreted as with `!if`:
+  if the value is 0, the element is not included in the new list. If the value
+  is anything else, the element is included.
 
 `!find(`*string1*`,` *string2*\[`,` *start*\]`)`
 
@@ -2067,10 +2070,10 @@ and non-0 as true.
   For example:
 
   - `!range(4)` is equivalent to `!range(0, 4, 1)` and the result is
-    `[0, 1, 2, 3]`.
+    *[0, 1, 2, 3]*.
   - `!range(1, 4)` is equivalent to `!range(1, 4, 1)` and the result is
-    `[1, 2, 3]`.
-  - The result of `!range(0, 4, 2)` is `[0, 2]`.
+    *[1, 2, 3]*.
+  - The result of `!range(0, 4, 2)` is *[0, 2]*.
   - The results of `!range(0, 4, -1)` and `!range(4, 0, 1)` are empty.
 
 `!range(`*list*`)`
@@ -2129,11 +2132,9 @@ and non-0 as true.
 
   For example, to sort a list of records by their `Name` field:
 
+  ```text
+  list<Thing> sorted = !sort(t, Things, t.Name);
   ```
-  .. code-block:: text
-  ```
-
-  > list\<Thing> sorted = !sort(t, Things, t.Name);
 
 `!sra(`*a*`,` *count*`)`
 
@@ -2407,4 +2408,3 @@ from all the parent classes; for example, `IsIndirectBranch` is inherited
 from the `Instruction` class.
 
 [python's]: http://docs.python.org/py3k/reference/introduction.html#notation
-
