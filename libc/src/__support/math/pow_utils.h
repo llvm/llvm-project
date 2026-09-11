@@ -242,9 +242,9 @@ LIBC_INLINE double set_underflow(bool is_neg) {
   volatile double x = is_neg ? -0x1.0p-1022 : 0x1.0p-1022;
   return x * 0x1.0p-100;
 #else
-  using FPBits = fputil::FPBits<double>;
   fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  using FPBits = fputil::FPBits<double>;
   int rounding = fputil::quick_get_round();
   if (rounding == FE_UPWARD && !is_neg)
     return FPBits::min_subnormal().get_val();
