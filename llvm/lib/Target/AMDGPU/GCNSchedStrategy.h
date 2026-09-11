@@ -741,6 +741,13 @@ private:
   /// TargetRegions. Returns whether there is any target region.
   bool setObjective();
 
+  /// Determines whether users of rematerialization candidate \p CandIdx are
+  /// compatible with the stage's rematerialization constraints/limitations.
+  /// Registers in \p MarkedRegs have already been deemed rematerializable by
+  /// the stage.s
+  bool candidateHasValidUsers(RegisterIdx CandIdx,
+                              const SmallSet<Register, 4> &MarkedRegs) const;
+
   /// In all regions set in \p Regions, saves pressure \p RPSave and clear it as
   /// a target if its RP target has been reached.
   void updateRPTargets(const BitVector &Regions, const GCNRegPressure &RPSave);

@@ -1590,9 +1590,6 @@ bool PreRARematStage::initGCNSchedStage() {
                [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
       continue;
 
-    SlotIndex RefIdx =
-        DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
-
     // We further filter the registers that we can rematerialize based on our
     // current tracking capabilities in the stage. This ensures that we are not
     // extending any live range while rematerializing, and that rematerializing
@@ -1605,42 +1602,7 @@ bool PreRARematStage::initGCNSchedStage() {
         }))
       continue;
 
-    auto IsInvalidUsingRegion =
-        [&](const std::pair<unsigned, Rematerializer::Reg::RegionUsers>
-                &RegionUsers) -> bool {
-      const auto &[UseRegion, Users] = RegionUsers;
-      // Users cannot be rematerializable.
-      if (llvm::any_of(Users, [&MarkedRegs](const MachineInstr *UserMI) {
-            assert(UserMI->getNumOperands() > 0 &&
-                   "user must have at least one operand");
-            const MachineOperand &UseMO = UserMI->getOperand(0);
-            return UseMO.isReg() && MarkedRegs.contains(UseMO.getReg());
-          }))
-        return true;
-
-      MachineInstr *FirstUseMI =
-          CandReg.getRegionUseBounds(UseRegion, *DAG.LIS).first;
-      assert(FirstUseMI && "there must be a user in the region");
-      SlotIndex FirstUseIdx =
-          DAG.LIS->getInstructionIndex(*FirstUseMI).getRegSlot(true);
-
-      // All dependencies must be available at the first use in the region.
-      if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
-            const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
-            Register DepDefReg = DepReg.getDefReg();
-            return !Remater.isRegIdenticalAtUses(DepDefReg, DepReg.Mask, RefIdx,
-                                                 {FirstUseIdx});
-          }))
-        return true;
-      return llvm::any_of(
-          Remater.getUnrematableDeps(RegIdx),
-          [&](const std::pair<Register, LaneBitmask> &RegAndMask) {
-            const auto &[Reg, Mask] = RegAndMask;
-            return !Remater.isRegIdenticalAtUses(Reg, Mask, RefIdx,
-                                                 {FirstUseIdx});
-          });
-    };
-    if (any_of(CandReg.Uses, IsInvalidUsingRegion))
+    if (!candidateHasValidUsers(RegIdx, MarkedRegs))
       continue;
 
     MarkedRegs.insert(CandReg.getDefReg());
@@ -3061,6 +3023,66 @@ bool PreRARematStage::setObjective() {
   }
 
   return TargetRegions.any();
+}
+
+bool PreRARematStage::candidateHasValidUsers(
+    RegisterIdx CandIdx, const SmallSet<Register, 4> &MarkedRegs) const {
+  const SIRegisterInfo &TRI = *ST.getRegisterInfo();
+  const RegisterBankInfo &RBI = *ST.getRegBankInfo();
+
+  const Rematerializer::Reg &CandReg = Remater.getReg(CandIdx);
+  SlotIndex RefIdx =
+      DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
+  const MachineBasicBlock *DefMBB =
+      DAG.Regions[CandReg.DefRegion].first->getParent();
+
+  for (const auto &[UseRegion, Users] : CandReg.Uses) {
+    // A convergent user (e.g., V_READLANE*) of a vector register may observe
+    // lanes of the definition that are active in the definition's region but
+    // inactive at the user's region. Rematerialization could therefore change
+    // what the user reads, which is invalid. EXEC doesn't change within a block
+    // so a rematerialization across regions belonging to the same block is
+    // safe.
+    Register DefReg = CandReg.getDefReg();
+    const bool ConvergentUserForbidden =
+        !TRI.isUniformReg(DAG.MRI, RBI, DefReg) &&
+        DefMBB != DAG.Regions[UseRegion].first->getParent();
+
+    // Users cannot be rematerializable or, conditionally, convergent.
+    if (llvm::any_of(Users, [&](const MachineInstr *UserMI) {
+          assert(UserMI->getNumOperands() > 0 &&
+                 "user must have at least one operand");
+          const MachineOperand &UseMO = UserMI->getOperand(0);
+          if (!UseMO.isReg())
+            return false;
+          return MarkedRegs.contains(UseMO.getReg()) ||
+                 (ConvergentUserForbidden && UserMI->isConvergent());
+        }))
+      return false;
+
+    MachineInstr *FirstUseMI =
+        CandReg.getRegionUseBounds(UseRegion, *DAG.LIS).first;
+    assert(FirstUseMI && "there must be a user in the region");
+    SlotIndex FirstUseIdx =
+        DAG.LIS->getInstructionIndex(*FirstUseMI).getRegSlot(true);
+
+    // All dependencies must be available at the first use in the region.
+    if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
+          const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+          Register DepDefReg = DepReg.getDefReg();
+          return !Remater.isRegIdenticalAtUses(DepDefReg, DepReg.Mask, RefIdx,
+                                               {FirstUseIdx});
+        }))
+      return false;
+    if (llvm::any_of(Remater.getUnrematableDeps(CandIdx),
+                     [&](const std::pair<Register, LaneBitmask> &RegAndMask) {
+                       const auto &[Reg, Mask] = RegAndMask;
+                       return !Remater.isRegIdenticalAtUses(Reg, Mask, RefIdx,
+                                                            {FirstUseIdx});
+                     }))
+      return false;
+  }
+  return true;
 }
 
 bool PreRARematStage::ScoredRemat::maybeBeneficial(
