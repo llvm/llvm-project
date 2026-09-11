@@ -171,3 +171,64 @@ body:             |
     RET64
 
 ...
+---
+name:            clobber_regmask
+tracksRegLiveness: true
+noPhis:          true
+noVRegs:         true
+hasFakeUses:     true
+tracksDebugUserValues: true
+debugInstrRef: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true }
+body:             |
+  bb.0:
+    liveins: $rdi, $r12
+
+    ; CHECK-LABEL: name: clobber_regmask
+    ; CHECK: liveins: $rdi, $r12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $rax = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: $rdi = MOV64rr $rax
+    ; CHECK-NEXT: CALL64r renamable $r12, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ; CHECK-NEXT: RET64
+
+    ;; Verify that a reload before a call whose regmask clobbers the register is
+    ;; not removed due to a fake use after the call.
+    renamable $rax = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    $rdi = MOV64rr $rax
+    CALL64r renamable $r12, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    renamable $rax = MOV64rm $rsp, 1, $noreg, -16, $noreg :: (load (s64) from %stack.1)
+    FAKE_USE killed renamable $rax
+    RET64
+
+...
+---
+name:            vzeroupper_return
+tracksRegLiveness: true
+noPhis:          true
+noVRegs:         true
+hasFakeUses:     true
+tracksDebugUserValues: true
+debugInstrRef: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vzeroupper_return
+    ; CHECK: renamable $xmm0 = VMOVSDrm_alt $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: FAKE_USE renamable $xmm0
+    ; CHECK-NEXT: VZEROUPPER implicit-def $ymm0, implicit-def $ymm1, implicit-def $ymm2, implicit-def $ymm3, implicit-def $ymm4, implicit-def $ymm5, implicit-def $ymm6, implicit-def $ymm7, implicit-def $ymm8, implicit-def $ymm9, implicit-def $ymm10, implicit-def $ymm11, implicit-def $ymm12, implicit-def $ymm13, implicit-def $ymm14, implicit-def $ymm15, implicit $xmm0
+    ; CHECK-NEXT: RET64 $xmm0
+
+    ;; Verify that a reload of a return value is preserved across VZEROUPPER with implicit XMM use.
+    renamable $xmm0 = VMOVSDrm_alt $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    FAKE_USE renamable $xmm0
+    VZEROUPPER implicit-def $ymm0, implicit-def $ymm1, implicit-def $ymm2, implicit-def $ymm3, implicit-def $ymm4, implicit-def $ymm5, implicit-def $ymm6, implicit-def $ymm7, implicit-def $ymm8, implicit-def $ymm9, implicit-def $ymm10, implicit-def $ymm11, implicit-def $ymm12, implicit-def $ymm13, implicit-def $ymm14, implicit-def $ymm15, implicit $xmm0
+    RET64 $xmm0
+
+...

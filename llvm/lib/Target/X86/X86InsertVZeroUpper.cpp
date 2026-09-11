@@ -170,9 +170,21 @@ static bool callHasRegMask(MachineInstr &MI) {
 
 /// Insert a vzeroupper instruction before I.
 static bool insertVZeroUpper(MachineBasicBlock::iterator I,
-                             MachineBasicBlock &MBB,
-                             const TargetInstrInfo *TII) {
-  BuildMI(MBB, I, I->getDebugLoc(), TII->get(X86::VZEROUPPER));
+                             MachineBasicBlock &MBB, const TargetInstrInfo *TII,
+                             const TargetRegisterInfo *TRI) {
+  MachineInstrBuilder MIB =
+      BuildMI(MBB, I, I->getDebugLoc(), TII->get(X86::VZEROUPPER));
+  if (I != MBB.end()) {
+    for (const MachineOperand &MO : I->operands()) {
+      if (MO.isReg() && MO.readsReg() && MO.getReg().isPhysical()) {
+        Register Reg = MO.getReg();
+        for (MCPhysReg XMM : X86::FR32RegClass) {
+          if (TRI->regsOverlap(Reg, XMM))
+            MIB.addReg(XMM, RegState::Implicit);
+        }
+      }
+    }
+  }
   ++NumVZU;
   return true;
 }
@@ -192,7 +204,8 @@ static void addDirtySuccessor(MachineBasicBlock &MBB,
 static bool processBasicBlock(MachineBasicBlock &MBB,
                               BlockStateMap &BlockStates,
                               DirtySuccessorsWorkList &DirtySuccessors,
-                              bool IsX86INTR, const TargetInstrInfo *TII) {
+                              bool IsX86INTR, const TargetInstrInfo *TII,
+                              const TargetRegisterInfo *TRI) {
   // Start by assuming that the block is PASS_THROUGH which implies no unguarded
   // calls.
   BlockExitState CurState = PASS_THROUGH;
@@ -250,7 +263,7 @@ static bool processBasicBlock(MachineBasicBlock &MBB,
       // After the inserted VZEROUPPER the state becomes clean again, but
       // other YMM/ZMM may appear before other subsequent calls or even before
       // the end of the BB.
-      MadeChange |= insertVZeroUpper(MI, MBB, TII);
+      MadeChange |= insertVZeroUpper(MI, MBB, TII, TRI);
       CurState = EXITS_CLEAN;
     } else if (CurState == PASS_THROUGH) {
       // If this block is currently in pass-through state and we encounter a
@@ -306,6 +319,7 @@ static bool insertVZeroUpper(MachineFunction &MF) {
     return false;
 
   const TargetInstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   bool IsX86INTR = MF.getFunction().getCallingConv() == CallingConv::X86_INTR;
   bool EverMadeChange = false;
   BlockStateMap BlockStates(MF.getNumBlockIDs());
@@ -318,8 +332,8 @@ static bool insertVZeroUpper(MachineFunction &MF) {
   // unguarded call in each block, and add successors of dirty blocks to the
   // DirtySuccessors list.
   for (MachineBasicBlock &MBB : MF)
-    EverMadeChange |=
-        processBasicBlock(MBB, BlockStates, DirtySuccessors, IsX86INTR, TII);
+    EverMadeChange |= processBasicBlock(MBB, BlockStates, DirtySuccessors,
+                                        IsX86INTR, TII, TRI);
 
   // If any YMM/ZMM regs are live-in to this function, add the entry block to
   // the DirtySuccessors list
@@ -337,7 +351,8 @@ static bool insertVZeroUpper(MachineFunction &MF) {
     // MBB is a successor of a dirty block, so its first call needs to be
     // guarded.
     if (BBState.FirstUnguardedCall != MBB.end())
-      EverMadeChange |= insertVZeroUpper(BBState.FirstUnguardedCall, MBB, TII);
+      EverMadeChange |=
+          insertVZeroUpper(BBState.FirstUnguardedCall, MBB, TII, TRI);
 
     // If this successor was a pass-through block, then it is now dirty. Its
     // successors need to be added to the worklist (if they haven't been
