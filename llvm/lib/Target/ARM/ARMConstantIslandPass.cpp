@@ -1908,10 +1908,14 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     ImmCmp.MI = nullptr;
     ImmCmp.NewOpc = 0;
 
-    // If the conditional branch doesn't kill CPSR, then CPSR can be liveout
-    // so this transformation is not safe.
-    if (!Br.MI->killsRegister(ARM::CPSR, /*TRI=*/nullptr))
-      return false;
+    // Folding the compare into a CBZ/CBNZ clobbers the comparison, so it is not
+    // safe if CPSR is live past the branch.
+    //
+    // TODO: This could be safe if it's only live into this branch's target.
+    for (const MachineBasicBlock *Succ : Br.MI->getParent()->successors()) {
+      if (Succ->isLiveIn(ARM::CPSR))
+        return false;
+    }
 
     Register PredReg;
     unsigned NewOpc = 0;
