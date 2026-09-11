@@ -14,6 +14,7 @@
 #if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__configuration/platform.h>
+#  include <__locale_dir/locale_base_api.h>
 #  include <__type_traits/make_unsigned.h>
 #  include <cctype>
 #  include <cstdint>
@@ -27,7 +28,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI ctype_base {
 public:
-#  if defined(_LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE)
+#  if _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
   typedef unsigned long mask;
   static const mask space  = 1 << 0;
   static const mask print  = 1 << 1;
