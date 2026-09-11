@@ -27,3 +27,27 @@ func.func @collapse_to_single() {
 // CHECK:           scf.reduce
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return
+
+// CHECK-LABEL: func @collapse_with_reduction
+// CHECK-SAME:  (%[[INIT:.*]]: index)
+// CHECK:         %[[RESULT:.*]] = scf.parallel (%[[IV:.*]]) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) init (%[[INIT]]) -> index {
+// CHECK:           %[[REM:.*]] = arith.remsi %[[IV]], %{{.*}} : index
+// CHECK:           %[[DIV:.*]] = arith.divsi %[[IV]], %{{.*}} : index
+// CHECK:           %[[SUM:.*]] = arith.addi %[[DIV]], %[[REM]] : index
+// CHECK:           scf.reduce(%[[SUM]] : index)
+// CHECK:         return %[[RESULT]] : index
+func.func @collapse_with_reduction(%init: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %result = scf.parallel (%i, %j) = (%c0, %c0) to (%c10, %c10)
+      step (%c1, %c1) init (%init) -> index {
+    %sum = arith.addi %i, %j : index
+    scf.reduce(%sum : index) {
+    ^bb0(%lhs: index, %rhs: index):
+      %reduced = arith.addi %lhs, %rhs : index
+      scf.reduce.return %reduced : index
+    }
+  }
+  return %result : index
+}
