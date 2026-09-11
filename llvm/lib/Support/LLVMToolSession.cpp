@@ -13,6 +13,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 
+#include <cassert>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -56,48 +57,60 @@ struct LLVMToolSession::Impl {
 LLVMToolSession::LLVMToolSession(int &Argc, char **&Argv,
                                  ArrayRef<CallableTool> Tools,
                                  bool InstallPipeSignalExitHandler,
-                                 bool NeedsPOSIXUtilitySignalHandling)
-    : PImpl(std::make_unique<Impl>(Argc, Argv, Tools,
-                                   InstallPipeSignalExitHandler,
-                                   NeedsPOSIXUtilitySignalHandling)) {}
+                                 bool NeedsPOSIXUtilitySignalHandling) {
+  assert(Argc > 0 && Argv && Argv[0] &&
+         "LLVMToolSession requires a valid argv[0]");
+  PImpl = std::make_unique<Impl>(Argc, Argv, Tools,
+                                 InstallPipeSignalExitHandler,
+                                 NeedsPOSIXUtilitySignalHandling);
+}
 
 LLVMToolSession::~LLVMToolSession() = default;
 
 ErrorOr<CallableTool> LLVMToolSession::findTool(StringRef Name) const {
+  StringRef Stem = sys::path::stem(Name);
+  StringRef Filename = sys::path::filename(Name);
+  for (const auto &[RegisteredName, Main] : PImpl->Tools)
+    if (Stem.equals_insensitive(RegisteredName) ||
+        Filename.equals_insensitive(RegisteredName))
+      return CallableTool{RegisteredName, Main};
+
   for (const auto &[RegisteredName, Main] : PImpl->Tools)
     if (matchesToolName(RegisteredName, Name))
       return CallableTool{RegisteredName, Main};
   return make_error_code(std::errc::no_such_file_or_directory);
 }
 
-ToolContext LLVMToolSession::makeContext(StringRef InvokedName) {
+ToolContext LLVMToolSession::makeContext(StringRef InvokedName,
+                                         const char *PrependArg) {
   bool NeedsPrependArg = !matchesToolName(InvokedName, PImpl->ExecutablePath);
-  ToolContext Context(PImpl->ExecutablePath.c_str(), InvokedName.data(),
+  ToolContext Context(PImpl->ExecutablePath.c_str(), PrependArg,
                       NeedsPrependArg);
   Context.Session = this;
   return Context;
 }
 
-int LLVMToolSession::callTool(ArrayRef<const char *> Args) {
+ErrorOr<int> LLVMToolSession::callTool(ArrayRef<const char *> Args) {
   if (Args.empty())
-    return -1;
+    return make_error_code(std::errc::invalid_argument);
 
   StringRef InvokedName = Args.front();
   ErrorOr<CallableTool> Tool = findTool(InvokedName);
   if (!Tool) {
     if (InvokedName != PImpl->ExecutablePath && !isMulticallName(InvokedName))
-      return -1;
+      return make_error_code(std::errc::no_such_file_or_directory);
     Args = Args.drop_front();
     if (Args.empty())
-      return -1;
+      return make_error_code(std::errc::invalid_argument);
     InvokedName = Args.front();
     Tool = findTool(InvokedName);
   }
 
   if (!Tool)
-    return -1;
+    return Tool.getError();
 
-  ToolContext Context = makeContext(InvokedName);
+  std::string PrependArg = sys::path::stem(InvokedName).str();
+  ToolContext Context = makeContext(InvokedName, PrependArg.c_str());
   SmallVector<char *, 16> MutableArgs;
   MutableArgs.reserve(Args.size() + 1);
   for (const char *Arg : Args)
@@ -112,8 +125,8 @@ ErrorOr<CallableTool> ToolContext::getCallableTool(StringRef Name) const {
   return Session->findTool(Name);
 }
 
-int ToolContext::callTool(ArrayRef<const char *> Args) const {
+ErrorOr<int> ToolContext::callTool(ArrayRef<const char *> Args) const {
   if (!Session)
-    return -1;
+    return make_error_code(std::errc::operation_not_permitted);
   return Session->callTool(Args);
 }

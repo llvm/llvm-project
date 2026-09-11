@@ -14,6 +14,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 
+#include <functional>
 #include <memory>
 
 namespace llvm {
@@ -21,14 +22,14 @@ namespace llvm {
 class LLVMToolSession;
 class ToolContext;
 
-using ToolMainFn = int (*)(int, char **, const ToolContext &);
+using ToolMainFn = std::function<int(int, char **, const ToolContext &)>;
 
 /// An LLVM command-line tool that can be invoked without creating a process.
 struct CallableTool {
   StringRef Name;
   ToolMainFn Main;
 
-  explicit operator bool() const { return Main != nullptr; }
+  explicit operator bool() const { return static_cast<bool>(Main); }
 };
 
 /// Describes how a tool was invoked and provides access to its host session.
@@ -54,7 +55,7 @@ public:
   LLVM_ABI ErrorOr<CallableTool> getCallableTool(StringRef Name) const;
 
   /// Invokes another tool registered with the same host session.
-  LLVM_ABI int callTool(ArrayRef<const char *> Args) const;
+  LLVM_ABI ErrorOr<int> callTool(ArrayRef<const char *> Args) const;
 };
 
 /// Owns LLVM process initialization and an in-process tool registry.
@@ -62,6 +63,9 @@ public:
 /// A long-lived host constructs one session and uses it for every embedded
 /// tool invocation. The individual tools borrow a ToolContext and therefore do
 /// not initialize or shut down LLVM themselves.
+///
+/// LLVM tools may use process-global state. Tool invocations must be externally
+/// serialized; concurrent calls are not supported.
 class LLVM_ABI LLVMToolSession {
 public:
   LLVMToolSession(int &Argc, char **&Argv, ArrayRef<CallableTool> Tools,
@@ -75,14 +79,14 @@ public:
   /// Invokes the tool named by Args[0]. Args may instead contain a
   /// process-style argv beginning with the session executable or an LLVM
   /// multicall name.
-  int callTool(ArrayRef<const char *> Args);
+  ErrorOr<int> callTool(ArrayRef<const char *> Args);
 
 private:
   struct Impl;
   std::unique_ptr<Impl> PImpl;
 
   ErrorOr<CallableTool> findTool(StringRef Name) const;
-  ToolContext makeContext(StringRef InvokedName);
+  ToolContext makeContext(StringRef InvokedName, const char *PrependArg);
 
   friend class ToolContext;
 };

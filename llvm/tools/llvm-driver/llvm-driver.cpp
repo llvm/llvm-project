@@ -49,10 +49,10 @@ int main(int Argc, char **Argv) {
   }
 
   SmallVector<const char *, 16> Args(Argv, Argv + Argc);
-  int Result = Session.callTool(Args);
-  if (Result == -1) {
+  ErrorOr<int> Result = Session.callTool(Args);
+  if (!Result) {
     printHelpMessage();
     return 1;
   }
-  return Result;
+  return *Result;
 }
