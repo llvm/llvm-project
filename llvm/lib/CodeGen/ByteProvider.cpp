@@ -7,25 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ByteProvider.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
 
 using namespace llvm;
-
-ByteProvider ByteProvider::getSrc(SDValue Val, int64_t ByteOffset,
-                                  int64_t VectorOffset) {
-  return ByteProvider(Val.getNode(), Val.getResNo(), ByteOffset, VectorOffset);
-}
-
-SDValue ByteProvider::getSrc() const { return SDValue(Node, ResNo); }
 
 std::optional<ByteProvider>
 llvm::calculateByteProviderForOr(SDValue Op, unsigned Index,
                                  SDByteProviderRecurseFn Recurse) {
-  std::optional<ByteProvider> LHS = Recurse(Op.getOperand(0), Index);
-  if (!LHS)
-    return std::nullopt;
   std::optional<ByteProvider> RHS = Recurse(Op.getOperand(1), Index);
   if (!RHS)
+    return std::nullopt;
+  std::optional<ByteProvider> LHS = Recurse(Op.getOperand(0), Index);
+  if (!LHS)
     return std::nullopt;
 
   // A well formed or has two ByteProviders for each byte, one of which is

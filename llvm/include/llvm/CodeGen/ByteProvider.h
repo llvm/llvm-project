@@ -16,12 +16,10 @@
 #define LLVM_CODEGEN_BYTEPROVIDER_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include <optional>
 
 namespace llvm {
-
-class SDNode;
-class SDValue;
 
 /// Represents known origin of an individual byte in combine pattern. The
 /// value of the byte is either constant zero, or comes from memory /
@@ -30,16 +28,13 @@ class SDValue;
 /// are used to extract Bytes.
 class ByteProvider {
 private:
-  ByteProvider(SDNode *Node, unsigned ResNo, int64_t DestOffset,
-               int64_t SrcOffset)
-      : Node(Node), ResNo(ResNo), DestOffset(DestOffset), SrcOffset(SrcOffset) {
-  }
+  ByteProvider(SDValue Src, int64_t DestOffset, int64_t SrcOffset)
+      : Src(Src), DestOffset(DestOffset), SrcOffset(SrcOffset) {}
 
 public:
-  // For constant zero providers Node is null. For actual providers Node and
-  // ResNo represent the SDValue which originally produced the relevant bits.
-  SDNode *Node = nullptr;
-  unsigned ResNo = 0;
+  // For constant zero providers Src is null. For actual providers Src is the
+  // value which originally produced the relevant bits.
+  SDValue Src;
   // DestOffset and SrcOffset are producer defined, see DAGCombiner.cpp.
   int64_t DestOffset = 0;
   int64_t SrcOffset = 0;
@@ -47,19 +42,16 @@ public:
   ByteProvider() = default;
 
   static ByteProvider getSrc(SDValue Val, int64_t ByteOffset,
-                             int64_t VectorOffset);
+                             int64_t VectorOffset) {
+    return ByteProvider(Val, ByteOffset, VectorOffset);
+  }
 
   static ByteProvider getConstantZero() { return ByteProvider(); }
-  bool isConstantZero() const { return !Node; }
+  bool isConstantZero() const { return !Src; }
 
-  bool hasSrc() const { return Node != nullptr; }
+  bool hasSrc() const { return static_cast<bool>(Src); }
 
-  /// Returns the SDValue this byte comes from. Only valid if hasSrc().
-  SDValue getSrc() const;
-
-  bool hasSameSrc(const ByteProvider &Other) const {
-    return Other.Node == Node && Other.ResNo == ResNo;
-  }
+  bool hasSameSrc(const ByteProvider &Other) const { return Other.Src == Src; }
 
   bool operator==(const ByteProvider &Other) const {
     return hasSameSrc(Other) && Other.DestOffset == DestOffset &&

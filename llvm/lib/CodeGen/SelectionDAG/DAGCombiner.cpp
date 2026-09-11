@@ -10152,7 +10152,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
   auto MemoryByteOffset = [&](ByteProvider P) {
     assert(P.hasSrc() && "Must be a memory byte provider");
-    auto *Load = cast<LoadSDNode>(P.getSrc());
+    auto *Load = cast<LoadSDNode>(P.Src);
 
     unsigned LoadBitWidth = Load->getMemoryVT().getScalarSizeInBits();
 
@@ -10190,7 +10190,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
       continue;
     }
     assert(P->hasSrc() && "provenance should either be memory or zero");
-    auto *L = cast<LoadSDNode>(P->getSrc());
+    auto *L = cast<LoadSDNode>(P->Src);
 
     // All loads must share the same chain
     SDValue LChain = L->getChain();
@@ -10263,7 +10263,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // So the combined value can be loaded from the first load address.
   if (MemoryByteOffset(*FirstByteProvider) != 0)
     return SDValue();
-  auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->getSrc());
+  auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src);
 
   // Before legalization we allow introducing loads that are wider than legal,
   // which will later be split into legally sized loads. This enables us to
