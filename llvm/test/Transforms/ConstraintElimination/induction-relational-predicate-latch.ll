@@ -128,8 +128,7 @@ define void @stride2_slt_header_is_latch(i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]

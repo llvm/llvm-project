@@ -713,7 +713,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %consumer = transform.structured.match ops{["linalg.generic"]} in %arg0
         : (!transform.any_op) -> !transform.any_op
-    %tiled, %loop = transform.structured.fuse %consumer tile_sizes [0, 32] {apply_cleanup}
+    %tiled, %loop = transform.structured.fuse %consumer tile_sizes [0, 32] apply_cleanup
         : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
     transform.yield
   }

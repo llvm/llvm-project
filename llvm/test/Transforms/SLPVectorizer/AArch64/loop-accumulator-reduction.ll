@@ -1132,7 +1132,7 @@ define double @acc_used_twice(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 1.000000e+00, %[[ENTRY]] ], [ [[OP_RDX:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast double [[ACC]], 2.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[ACC]], 2.000000e+00
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
 ; CHECK-NEXT:    [[OP_RDX]] = fadd fast double [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1

@@ -57,6 +57,7 @@
 namespace llvm {
 
 class AAResults;
+class LiveIntervals;
 class NodeSet;
 class SMSchedule;
 
@@ -71,52 +72,22 @@ struct MachinePipelinerPolicy {
   bool ShouldLimitRegPressure = false;
 };
 
-/// The main class in the implementation of the target independent
-/// software pipeliner pass.
-class LLVM_ABI MachinePipeliner : public MachineFunctionPass {
+class LLVM_ABI MachinePipelinerLegacy : public MachineFunctionPass {
 public:
-  MachineFunction *MF = nullptr;
-  MachineOptimizationRemarkEmitter *ORE = nullptr;
-  const MachineLoopInfo *MLI = nullptr;
-  const InstrItineraryData *InstrItins = nullptr;
-  const TargetInstrInfo *TII = nullptr;
-  const RegisterClassInfo *RegClassInfo = nullptr;
-  bool disabledByPragma = false;
-  unsigned II_setByPragma = 0;
-
-#ifndef NDEBUG
-  static int NumTries;
-#endif
-
-  /// Cache the target analysis information about the loop.
-  struct LoopInfo {
-    MachineBasicBlock *TBB = nullptr;
-    MachineBasicBlock *FBB = nullptr;
-    SmallVector<MachineOperand, 4> BrCond;
-    MachineInstr *LoopInductionVar = nullptr;
-    MachineInstr *LoopCompare = nullptr;
-    std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopPipelinerInfo =
-        nullptr;
-  };
-  LoopInfo LI;
-
   static char ID;
 
-  MachinePipeliner() : MachineFunctionPass(ID) {}
+  MachinePipelinerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
 
-private:
-  void preprocessPhiNodes(MachineBasicBlock &B);
-  bool canPipelineLoop(MachineLoop &L);
-  bool scheduleLoop(MachineLoop &L);
-  bool swingModuloScheduler(MachineLoop &L);
-  void setPragmaPipelineOptions(MachineLoop &L);
-  bool runWindowScheduler(MachineLoop &L);
-  bool useSwingModuloScheduler();
-  bool useWindowScheduler(bool Changed);
+class LLVM_ABI MachinePipelinerPass
+    : public OptionalPassInfoMixin<MachinePipelinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Represents a dependence between two instruction.
@@ -287,7 +258,7 @@ public:
 /// This class builds the dependence graph for the instructions in a loop,
 /// and attempts to schedule the instructions using the SMS algorithm.
 class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
-  MachinePipeliner &Pass;
+  MachineOptimizationRemarkEmitter *ORE;
 
   std::unique_ptr<SwingSchedulerDDG> DDG;
 
@@ -391,14 +362,16 @@ class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
   };
 
 public:
-  SwingSchedulerDAG(MachinePipeliner &P, MachineLoop &L, LiveIntervals &lis,
-                    const RegisterClassInfo &rci, unsigned II,
-                    TargetInstrInfo::PipelinerLoopInfo *PLI, AliasAnalysis *AA)
-      : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
+  SwingSchedulerDAG(MachineFunction &MF, const MachineLoopInfo *MLI,
+                    MachineOptimizationRemarkEmitter *ORE, MachineLoop &L,
+                    LiveIntervals &lis, const RegisterClassInfo &rci,
+                    unsigned II, TargetInstrInfo::PipelinerLoopInfo *PLI,
+                    AliasAnalysis *AA)
+      : ScheduleDAGInstrs(MF, MLI, false), ORE(ORE), Loop(L), LIS(lis),
         RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
         Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
     initPolicy();
-    P.MF->getSubtarget().getSMSMutations(Mutations);
+    MF.getSubtarget().getSMSMutations(Mutations);
     if (SwpEnableCopyToPhi)
       Mutations.push_back(std::make_unique<CopyToPhiMutation>());
     BAA.enableCrossIterationMode();

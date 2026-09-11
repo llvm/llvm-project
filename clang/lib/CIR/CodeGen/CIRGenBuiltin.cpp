@@ -566,8 +566,7 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
 template <class Operation>
 static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
-  auto call =
-      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  auto call = Operation::create(cgf.getBuilder(), arg.getLoc(), arg);
   return RValue::get(call->getResult(0));
 }
 
@@ -1176,6 +1175,27 @@ static mlir::Type correctIntegerSignedness(mlir::Type iitType, QualType astType,
   return iitType;
 }
 
+/// Helper function to correct the return type for intrinsic calls. This is
+/// needed because the AST FunctionDecl may have a different return type than
+/// the intrinsic's IIT descriptor. For example, builtins may need their
+/// signedness corrected, or a builtin may return a bool while the intrinsic
+/// returns an i1.
+static mlir::Type correctReturnType(mlir::Type iitType,
+                                    const FunctionDecl *funcDecl,
+                                    mlir::MLIRContext *context) {
+  if (!funcDecl)
+    return iitType;
+  QualType astType = funcDecl->getReturnType();
+
+  // Relabel the return type to cir.bool if the builtin returns a bool and
+  // the intrinsic returns an i1.
+  auto intTy = mlir::dyn_cast<cir::IntType>(iitType);
+  if (intTy && intTy.getWidth() == 1 && astType->isBooleanType())
+    return cir::BoolType::get(context);
+
+  return correctIntegerSignedness(iitType, astType, context);
+}
+
 static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
                                    CIRGenBuilderTy &builder) {
   auto ptrType = mlir::cast<cir::PointerType>(argValue.getType());
@@ -1714,18 +1734,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(emitCoroEndBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_promise:
     return RValue::get(emitCoroPromiseBuiltinCall(e).getResult());
-  case Builtin::BI__builtin_coro_resume:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_resume NYI");
-    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_resume: {
+    emitCoroResumeBuiltinCall(e);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_coro_noop:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
     return getUndefRValue(e->getType());
-  case Builtin::BI__builtin_coro_destroy:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_destroy NYI");
-    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_destroy: {
+    emitCoroDestroyBuiltinCall(e);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_coro_done:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_done NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroDoneBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_suspend:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
     return getUndefRValue(e->getType());
@@ -3051,14 +3072,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       args.push_back(argValue);
     }
 
-    // Correct return type signedness based on AST return type before creating
-    // the call, avoiding unnecessary casts in the IR.
-    mlir::Type correctedReturnType = intrinsicType.getReturnType();
-    if (fd) {
-      correctedReturnType =
-          correctIntegerSignedness(intrinsicType.getReturnType(),
-                                   fd->getReturnType(), &getMLIRContext());
-    }
+    // Correct the builtin type based on the AST function declaration's return
+    // type, if available.
+    mlir::Type correctedReturnType =
+        correctReturnType(intrinsicType.getReturnType(), fd, &getMLIRContext());
 
     cir::LLVMIntrinsicCallOp intrinsicCall = cir::LLVMIntrinsicCallOp::create(
         builder, getLoc(e->getExprLoc()), builder.getStringAttr(name),

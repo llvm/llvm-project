@@ -452,6 +452,46 @@ llvm.func private @mbarrier_init_shared(%barrier: !llvm.ptr<3>) {
 }
 
 
+// The `layout` attribute and the optional `predicate` operand are independent,
+// so all four combinations must round-trip.
+llvm.func private @mbarrier_init_layout_predicate(%barrier: !llvm.ptr<3>,
+                                                  %count: i32, %pred: i1) {
+  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} : !llvm.ptr<3>, i32
+  nvvm.mbarrier.init %barrier, %count : !llvm.ptr<3>, i32
+  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} layout = 1 : !llvm.ptr<3>, i32
+  nvvm.mbarrier.init %barrier, %count layout = 1 : !llvm.ptr<3>, i32
+  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}}, predicate = %{{.*}} : !llvm.ptr<3>, i32, i1
+  nvvm.mbarrier.init %barrier, %count, predicate = %pred : !llvm.ptr<3>, i32, i1
+  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} layout = 1, predicate = %{{.*}} : !llvm.ptr<3>, i32, i1
+  nvvm.mbarrier.init %barrier, %count layout = 1, predicate = %pred : !llvm.ptr<3>, i32, i1
+  llvm.return
+}
+
+
+llvm.func private @mbarrier_check_layout_generic(%barrier: !llvm.ptr) {
+  // CHECK:   nvvm.mbarrier.check_layout %{{.*}} layout = 1 : !llvm.ptr -> i1
+  %0 = nvvm.mbarrier.check_layout %barrier layout = 1 : !llvm.ptr -> i1
+  llvm.return
+}
+
+
+llvm.func private @mbarrier_check_layout_shared(%barrier: !llvm.ptr<3>) {
+  // CHECK:   nvvm.mbarrier.check_layout %{{.*}} layout = 1 : !llvm.ptr<3> -> i1
+  %0 = nvvm.mbarrier.check_layout %barrier layout = 1 : !llvm.ptr<3> -> i1
+  llvm.return
+}
+
+
+// `layout` defaults to 0, so it is elided when absent and when written out.
+llvm.func private @mbarrier_check_layout_default(%barrier: !llvm.ptr<3>) {
+  // CHECK:   nvvm.mbarrier.check_layout %{{.*}} : !llvm.ptr<3> -> i1
+  %0 = nvvm.mbarrier.check_layout %barrier : !llvm.ptr<3> -> i1
+  // CHECK:   nvvm.mbarrier.check_layout %{{.*}} : !llvm.ptr<3> -> i1
+  %1 = nvvm.mbarrier.check_layout %barrier layout = 0 : !llvm.ptr<3> -> i1
+  llvm.return
+}
+
+
 llvm.func private @mbarrier_inval_generic(%barrier: !llvm.ptr) {
   // CHECK:   nvvm.mbarrier.inval %{{.*}} : !llvm.ptr
   nvvm.mbarrier.inval %barrier : !llvm.ptr
@@ -660,4 +700,19 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {nvvm.grid_constant}) attributes {nvvm.k
 // expected-error @below {{'"nvvm.grid_constant"' must be a unit attribute}}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant = true}) attributes {nvvm.kernel} {
   llvm.return
+}
+
+// -----
+
+func.func @wgmma_f16_bf16_bf16(%descA : i64, %descB : i64) {
+  %result = llvm.mlir.undef : !llvm.struct<(f16, f16, f16, f16)>
+  // expected-error @+1 {{op f16 += bf16 * bf16, it is not supported}}
+  %res = nvvm.wgmma.mma_async %descA, %descB, %result,
+      #nvvm.shape<m = 64, n = 16, k = 16>,
+      D [<f16>, <zero>],
+      A [<bf16>, #nvvm.wgmma_scale_in<neg>, <col>],
+      B [<bf16>, #nvvm.wgmma_scale_in<neg>, <col>]
+      : !llvm.struct<(f16, f16, f16, f16)>
+      -> !llvm.struct<(f16, f16, f16, f16)>
+  return
 }

@@ -1,8 +1,5 @@
 # TypeSanitizer
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
