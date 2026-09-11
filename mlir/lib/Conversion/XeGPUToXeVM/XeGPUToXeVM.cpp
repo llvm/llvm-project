@@ -705,6 +705,23 @@ static Value addOffsetToBaseAddr(ConversionPatternRewriter &rewriter,
   return newAddr;
 }
 
+// Returns true when every element of `mask` carries the same bit, so gating a
+// whole contiguous block on element 0 is equivalent. Splat constants,
+// broadcasts of a scalar, and a `vector.from_elements` of one repeated value
+// qualify.
+static bool isUniformMask(Value mask) {
+  if (!isa<VectorType>(mask.getType()))
+    return true;
+  DenseElementsAttr splat;
+  if (matchPattern(mask, m_Constant(&splat)) && splat.isSplat())
+    return true;
+  if (auto broadcast = mask.getDefiningOp<vector::BroadcastOp>())
+    return !isa<VectorType>(broadcast.getSource().getType());
+  if (auto fromElements = mask.getDefiningOp<vector::FromElementsOp>())
+    return llvm::all_equal(fromElements.getElements());
+  return false;
+}
+
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, xegpu::LoadGatherOp, xegpu::StoreScatterOp>::value>>
@@ -770,6 +787,33 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
                                           basePtrI64);
     }
     Value mask = adaptor.getMask();
+
+    // Coalesce a chunked access into one contiguous block access.
+    //
+    // Distribution gives every element its own offset and mask bit. A lane
+    // whose `lane_data` is wider than one element therefore arrives here with
+    // `vector<D>` offsets and mask beside a `vector<D>` value, and those D
+    // offsets are one ascending run: `lane_data` is by definition the number of
+    // neighbouring elements the lane takes, and `inst_data` blocks the op so
+    // that no lane is given more. A single element converts to a scalar offset
+    // instead, so a surviving vector offset always means a contiguous run.
+    //
+    // A block access needs one base offset and one mask bit, so take both from
+    // element 0. The values come from the converted operands, so no casts are
+    // needed. The mask is still checked: a tail mask can leave a lane with a
+    // partial run, and one bit cannot stand for D different bits. That case
+    // fails to match below, as before.
+    auto origOffsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
+    if (isa<VectorType>(offset.getType()) && origOffsetsTy && valOrResVecTy &&
+        origOffsetsTy.getNumElements() == valOrResVecTy.getNumElements() &&
+        isUniformMask(op.getMask())) {
+      offset = vector::ExtractOp::create(rewriter, loc, offset,
+                                         ArrayRef<int64_t>{0});
+      if (isa<VectorType>(mask.getType()))
+        mask = vector::ExtractOp::create(rewriter, loc, mask,
+                                         ArrayRef<int64_t>{0});
+    }
+
     if (dyn_cast<VectorType>(offset.getType())) {
       // Offset needs be scalar. Single element vector is converted to scalar
       // by type converter.
