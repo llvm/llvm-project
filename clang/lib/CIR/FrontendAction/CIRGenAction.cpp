@@ -193,7 +193,8 @@ public:
               MlirModule, MlirCtx, *LowerMod, &CI.getVirtualFileSystem(),
               !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
-              EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
+              EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering,
+              FEOptions.ClangIRStopBeforeLowering)
               .failed()) {
         // Pass-side errors already routed through ClangIRDiagnosticHandler.
         // Skip the generic catch-all if a specific diagnostic was emitted.
