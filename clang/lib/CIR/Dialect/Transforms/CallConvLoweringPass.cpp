@@ -48,6 +48,7 @@
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/CallingConv.h"
@@ -874,6 +875,12 @@ void CallConvLoweringPass::runOnOperation() {
 
   DataLayout dl(moduleOp);
   CIRABIRewriteContext rewriteCtx(moduleOp, dl);
+  // A non-byval indirect parameter's slot outlives the rewrite that retypes
+  // the parameter, so that a call forwarding the parameter can still recognise
+  // it.  Draining on scope exit collapses those slots whichever way this
+  // function returns.
+  llvm::scope_exit drainParamSlots(
+      [&] { rewriteCtx.finalizeParameterSlots(); });
   SymbolTable symbolTable(moduleOp);
 
   // A per-function target attribute can raise the AVX level, so one classifier
@@ -1011,6 +1018,15 @@ void CallConvLoweringPass::runOnOperation() {
     auto callee = cast<cir::FuncOp>(symbolTable.lookup(getGlobal.getName()));
     addressTakers[callee].push_back(getGlobal);
   });
+
+  // Restate every non-byval indirect parameter's slot alignment as the one the
+  // ABI promises for that parameter, before anything reads a slot.  A call is
+  // rewritten together with its callee rather than with the function
+  // containing it, so a call forwarding such a parameter can be reached before
+  // the parameter's own function is rewritten.  Doing this up front makes the
+  // forwarding decision independent of the order the two were declared in.
+  for (auto &kv : classifications)
+    rewriteCtx.normalizeParameterSlotAlignments(kv.first, kv.second);
 
   // Rewrite each function together with every direct call to it and every op
   // holding its address.  By the time we move on to function F+1, F's
