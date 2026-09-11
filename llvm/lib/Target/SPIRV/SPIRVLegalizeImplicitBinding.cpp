@@ -41,8 +41,8 @@ private:
   std::vector<BitVector> UsedBindings;
 
   // Set to true by collectBindingInfo() if there are any implicit binding
-  // calls in the module.
-  bool HasImplicitBinding = false;
+  // declarations in the module.
+  bool MayHaveImplicitBindings = false;
 };
 
 class SPIRVLegalizeImplicitBindingLegacy : public ModulePass {
@@ -114,7 +114,7 @@ void SPIRVLegalizeImplicitBindingImpl::collectBindingInfo(Module &M) {
       break;
     case Intrinsic::spv_resource_handlefromimplicitbinding:
     case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
-      HasImplicitBinding = true;
+      MayHaveImplicitBindings = true;
       break;
     default:
       break;
@@ -251,7 +251,7 @@ bool SPIRVLegalizeImplicitBindingImpl::runOnModule(Module &M) {
   collectBindingInfo(M);
 
   bool Changed = false;
-  if (HasImplicitBinding)
+  if (MayHaveImplicitBindings)
     Changed |= replaceImplicitBindingCalls(M);
 
   return Changed;
