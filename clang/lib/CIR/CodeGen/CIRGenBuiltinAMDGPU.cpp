@@ -441,12 +441,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                                                convertType(expr->getType()))
         .getValue();
   case AMDGPU::BI__builtin_amdgcn_fmed3f:
-  case AMDGPU::BI__builtin_amdgcn_fmed3h: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_fmed3h:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.fmed3").getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_append:
   case AMDGPU::BI__builtin_amdgcn_ds_consume: {
     cgm.errorNYI(expr->getSourceRange(),

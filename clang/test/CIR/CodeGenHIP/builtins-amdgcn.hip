@@ -331,3 +331,11 @@ __device__ void test_class_f32(bool* out, float a, int b) {
 __device__ void test_class_f64(bool* out, double a, int b) {
   *out = __builtin_amdgcn_class(a, b);
 }
+
+// CIR-LABEL: @_Z14test_fmed3_f32Pffff
+// CIR: cir.call_llvm_intrinsic "amdgcn.fmed3" {{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z14test_fmed3_f32Pffff
+// LLVM: call{{.*}} float @llvm.amdgcn.fmed3.f32(float %{{.+}}, float %{{.+}}, float %{{.+}})
+__device__ void test_fmed3_f32(float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_fmed3f(a, b, c);
+}
