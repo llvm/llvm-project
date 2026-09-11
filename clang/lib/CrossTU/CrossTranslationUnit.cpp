@@ -20,6 +20,7 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Option/ArgList.h"

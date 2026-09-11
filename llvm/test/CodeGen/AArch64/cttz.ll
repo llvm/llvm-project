@@ -103,16 +103,12 @@ define void @v4i8(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #255 // =0xff
 ; CHECK-GI-NEXT:    ldr s1, [x0]
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    movi d0, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    zip1 v2.8b, v1.8b, v1.8b
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    eor v2.8b, v2.8b, v0.8b
-; CHECK-GI-NEXT:    uaddw v0.8h, v0.8h, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    uaddw v1.8h, v0.8h, v1.8b
+; CHECK-GI-NEXT:    eor v0.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    str s0, [x0]
@@ -202,16 +198,14 @@ define void @v2i16(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-GI-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-GI-NEXT:    ldr h1, [x0, #2]
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v2.s[1], w8
+; CHECK-GI-NEXT:    ld1 { v1.h }[0], [x0]
+; CHECK-GI-NEXT:    ldr h2, [x0, #2]
+; CHECK-GI-NEXT:    movi d0, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    add x8, x0, #2
-; CHECK-GI-NEXT:    eor v1.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    add v0.2s, v0.2s, v2.2s
-; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uaddlp v0.4h, v0.8b

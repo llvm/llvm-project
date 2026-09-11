@@ -15,14 +15,14 @@
 namespace clang::tidy::utils::type_traits {
 
 static bool classHasTrivialCopyAndDestroy(QualType Type) {
-  auto *Record = Type->getAsCXXRecordDecl();
+  const auto *Record = Type->getAsCXXRecordDecl();
   return Record && Record->hasDefinition() &&
          !Record->hasNonTrivialCopyConstructor() &&
          !Record->hasNonTrivialDestructor();
 }
 
 static bool hasDeletedCopyConstructor(QualType Type) {
-  auto *Record = Type->getAsCXXRecordDecl();
+  const auto *Record = Type->getAsCXXRecordDecl();
   if (!Record || !Record->hasDefinition())
     return false;
   return llvm::any_of(Record->ctors(), [](const auto *Constructor) {
@@ -136,13 +136,13 @@ bool isTriviallyDestructible(QualType Type) {
 }
 
 bool hasNonTrivialMoveConstructor(QualType Type) {
-  auto *Record = Type->getAsCXXRecordDecl();
+  const auto *Record = Type->getAsCXXRecordDecl();
   return Record && Record->hasDefinition() &&
          Record->hasNonTrivialMoveConstructor();
 }
 
 bool hasNonTrivialMoveAssignment(QualType Type) {
-  auto *Record = Type->getAsCXXRecordDecl();
+  const auto *Record = Type->getAsCXXRecordDecl();
   return Record && Record->hasDefinition() &&
          Record->hasNonTrivialMoveAssignment();
 }

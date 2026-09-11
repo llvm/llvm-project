@@ -173,3 +173,29 @@ body:             |
     %val:_(i142) = G_IMPLICIT_DEF
     G_STORE %val(i142), %ptr(p0) :: (store (i142), align 8)
     RET_ReallyLR
+
+...
+---
+name:            store_i1_zext_i8
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_i1_zext_i8
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(i8) = G_ASSERT_ZEXT [[LOAD]], 1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[ASSERT_ZEXT]](i8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK-NEXT: G_STORE [[AND]](i32), [[COPY]](p0) :: (store seq_cst (i8))
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(p0) = COPY $x0
+    %1:_(i1) = G_LOAD %0(p0) :: (load (i1))
+    %2:_(i8) = G_ZEXT %1(i1)
+    G_STORE %2(i8), %0(p0) :: (store seq_cst (i8))
+    RET_ReallyLR
+...

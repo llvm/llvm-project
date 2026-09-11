@@ -1,0 +1,52 @@
+# RUN: llc -verify-machineinstrs -mtriple arm64-apple-macosx -run-pass=legalizer %s -o - | FileCheck %s
+
+# Folding G_TRUNC results in G_CONSTANT i8 0, which is already in the CSE map,
+# so the combiner emits a COPY.
+#
+# CHECK-LABEL: name: f
+# CHECK: [[ZERO:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
+#
+# Test that the COPY does not inherit the location left in the shared builder by
+# the G_ANYEXT folded just before it.
+#
+# This should have no location:
+# CHECK: [[BYTE:%[0-9]+]]:_(i8) = COPY [[ZERO]](i8){{$}}
+# CHECK: G_STORE [[BYTE]](i8), %{{[0-9]+}}(p0)
+#
+# The instruction that does own a location keeps it.
+# CHECK: G_STORE %{{[0-9]+}}(i32), %{{[0-9]+}}(p0), debug-location
+
+--- |
+  define void @f() !dbg !4 {
+  entry:
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 13, type: !6, scopeLine: 13, spFlags: DISPFlagDefinition, unit: !0)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{}
+  !8 = !DILocation(line: 20, column: 11, scope: !4)
+
+...
+---
+name:            f
+body:             |
+  bb.1.entry:
+    %0:_(p0) = G_IMPLICIT_DEF
+    %1:_(i8) = G_CONSTANT i8 0
+    G_STORE %1(i8), %0(p0) :: (store (i8))
+    %2:_(i64) = G_CONSTANT i64 0
+    %3:_(i8) = G_TRUNC %2(i64)
+    G_STORE %3(i8), %0(p0) :: (store (i8))
+    %4:_(i1) = G_CONSTANT i1 false, debug-location !8
+    %5:_(i32) = G_ANYEXT %4(i1), debug-location !8
+    G_STORE %5(i32), %0(p0), debug-location !8 :: (store (i32))
+    RET_ReallyLR
+
+...

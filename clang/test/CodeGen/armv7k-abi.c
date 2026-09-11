@@ -39,7 +39,7 @@ typedef struct {
   double z;
 } BigStruct;
 
-// CHECK: define{{.*}} void @big_struct_indirect(ptr noundef align 8 dead_on_return %b)
+// CHECK: define{{.*}} void @big_struct_indirect(ptr nofreeobj noundef align 8 dead_on_return dereferenceable(24) %b)
 void big_struct_indirect(BigStruct b) {}
 
 // CHECK: define{{.*}} void @return_big_struct_indirect(ptr dead_on_unwind noalias writable sret

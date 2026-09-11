@@ -13,31 +13,25 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[X_I64:%.*]] = sext i16 [[X]] to i64
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 -8
 ; CHECK-NEXT:    [[SMAX20:%.*]] = call i64 @llvm.smax.i64(i64 [[X_I64]], i64 99)
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[SMAX20]], [[X_I64]]
-; CHECK-NEXT:    [[UMIN21:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[SMAX20]], [[UMIN21]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX20]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[X_I64]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UMIN21]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = shl nsw i64 [[X_I64]], 1
 ; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP31]]
 ; CHECK-NEXT:    [[SMAX10:%.*]] = call i64 @llvm.smax.i64(i64 [[X_I64]], i64 99)
-; CHECK-NEXT:    [[TMP32:%.*]] = sub i64 [[SMAX10]], [[X_I64]]
-; CHECK-NEXT:    [[UMIN11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP32]], i64 1)
-; CHECK-NEXT:    [[TMP33:%.*]] = sub i64 [[SMAX10]], [[UMIN11]]
+; CHECK-NEXT:    [[TMP33:%.*]] = add i64 [[SMAX10]], 2
 ; CHECK-NEXT:    [[TMP34:%.*]] = sub i64 [[TMP33]], [[X_I64]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = udiv i64 [[TMP34]], 3
-; CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[UMIN11]], [[TMP35]]
-; CHECK-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP36]], 6
+; CHECK-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP35]], 6
 ; CHECK-NEXT:    [[TMP38:%.*]] = add i64 [[TMP37]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = add i64 [[TMP38]], 2
 ; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP39]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = shl nsw i64 [[X_I64]], 3
 ; CHECK-NEXT:    [[SCEVGEP13:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP40]]
-; CHECK-NEXT:    [[TMP41:%.*]] = mul i64 [[TMP36]], 24
+; CHECK-NEXT:    [[TMP41:%.*]] = mul i64 [[TMP35]], 24
 ; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[TMP41]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = add i64 [[TMP42]], 8
 ; CHECK-NEXT:    [[SCEVGEP14:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP43]]
@@ -53,24 +47,19 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT19]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP53:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[X_I64]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP55:%.*]] = mul <vscale x 8 x i64> [[TMP53]], splat (i64 3)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> [[DOTSPLAT]], [[TMP55]]
+; CHECK-NEXT:    [[TMP24:%.*]] = shl nsw i64 [[X_I64]], 1
+; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP24]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP5]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP4]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[INDEX]], 6
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[SCEVGEP10]], i64 [[TMP22]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i16.p0.i64(<vscale x 8 x i16> zeroinitializer, ptr align 2 [[TMP23]], i64 6, <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]]), !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = zext i32 [[TMP27]] to i64
-; CHECK-NEXT:    [[TMP58:%.*]] = mul i64 3, [[TMP28]]
-; CHECK-NEXT:    [[DOTSPLATINSERT24:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP58]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT25:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT24]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP59:%.*]] = getelementptr i16, ptr [[A]], <vscale x 8 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x ptr> align 2 [[TMP59]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]]), !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP28]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP28]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[DOTSPLAT25]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -244,8 +233,8 @@ exit:
 
 
 
-attributes #0 = { "target-features"="+64bit,+v,+zvl256b" }
-attributes #1 = { "target-cpu"="sifive-p670" }
+attributes #0 = { "target-features"="+64bit,+v,+zvl256b" vscale_range(4, 1024) }
+attributes #1 = { "target-cpu"="sifive-p670" vscale_range(2, 1024) }
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

@@ -66,3 +66,35 @@ class TestFrameVarDILBitFieldExtraction(TestBase):
             error=True,
             substrs=["bit index is not an integer"],
         )
+
+        # A negative bit index must be rejected instead of wrapping to a huge
+        # uint32_t at the GetSyntheticBitFieldChild call site.
+        self.expect(
+            "frame var 'value[-1:0]'",
+            error=True,
+            substrs=["bitfield range -1:0 is not valid (negative index)"],
+        )
+        self.expect(
+            "frame var 'value[0:-1]'",
+            error=True,
+            substrs=["bitfield range 0:-1 is not valid (negative index)"],
+        )
+
+        # A range wider than 64 bits must be rejected: DataExtractor's
+        # GetMaxU64Bitfield only supports up to 64 bits (it asserts and
+        # otherwise shifts out of bounds).
+        self.expect(
+            "frame var 'value[0:64]'",
+            error=True,
+            substrs=["bitfield range 0:64 is not valid (more than 64 bits)"],
+        )
+
+        # A high index past the base object's storage must be rejected;
+        # otherwise reading the synthetic child shifts out of bounds in
+        # GetMaxU64Bitfield. 'value' is a 32-bit int, so bit 50 is out of range.
+        # The range is normalized (high:low swapped) before the message.
+        self.expect(
+            "frame var 'value[100:50]'",
+            error=True,
+            substrs=["bitfield range 50:100 is not valid"],
+        )

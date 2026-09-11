@@ -125,3 +125,21 @@ class LoopUnrollOp(LoopUnrollOp):
             ip=ip,
             loc=loc,
         )
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class LoopUnrollFullOp(LoopUnrollFullOp):
+    """Extension for LoopUnrollFullOp."""
+
+    def __init__(
+        self,
+        target: Union[Operation, Value],
+        *,
+        ip=None,
+        loc=None,
+    ):
+        super().__init__(
+            _get_op_result_or_value(target),
+            ip=ip,
+            loc=loc,
+        )

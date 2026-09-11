@@ -1,0 +1,181 @@
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=pipeliner -pipeliner-max-mii=256 -debug-only=pipeliner %s -filetype=null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa -run-pass=pipeliner -pipeliner-max-mii=256 -debug-only=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GFX908
+# REQUIRES: asserts
+
+# Reduced from the Triton _batched_gemm_a8w8_kernel, where pipelining a
+# too-high-pressure schedule regressed gfx942 performance by ~80%.
+#
+# Check that the generic register-pressure detector rejects a schedule needing
+# more VGPRs than the target-provided pressure-set limit and the II search
+# retries.
+
+# CHECK: Rejected the schedule because of too high register pressure
+# CHECK: Schedule Found? 1
+
+# The gfx908 pressure-set limit is lower, and the II search does not find a
+# schedule within the search range.
+# GFX908: Rejected the schedule because of too high register pressure
+# GFX908: Schedule Found? 0
+
+---
+name:            swp_amdgpu_pipeline_regpressure_retry
+tracksRegLiveness: true
+isSSA:           true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  bb.0:
+    %0:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %1:sreg_32 = S_MOV_B32 0
+    %2:vreg_64_align2 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+    %3:vreg_64_align2 = AV_MOV_B64_IMM_PSEUDO 1, implicit $exec
+
+  bb.1:
+    successors: %bb.2, %bb.1
+
+    %4:sreg_32 = PHI %1, %bb.0, %5, %bb.1
+    %6:av_32 = PHI %0, %bb.0, %7, %bb.1
+    %8:av_32 = PHI %0, %bb.0, %9, %bb.1
+    %10:av_32 = PHI %0, %bb.0, %11, %bb.1
+    %12:av_32 = PHI %0, %bb.0, %13, %bb.1
+    %14:av_32 = PHI %0, %bb.0, %15, %bb.1
+    %16:av_32 = PHI %0, %bb.0, %17, %bb.1
+    %18:av_32 = PHI %0, %bb.0, %19, %bb.1
+    %20:av_32 = PHI %0, %bb.0, %21, %bb.1
+    %22:av_32 = PHI %0, %bb.0, %23, %bb.1
+    %24:av_32 = PHI %0, %bb.0, %25, %bb.1
+    %26:av_32 = PHI %0, %bb.0, %27, %bb.1
+    %28:av_32 = PHI %0, %bb.0, %29, %bb.1
+    %30:av_32 = PHI %0, %bb.0, %31, %bb.1
+    %32:av_32 = PHI %0, %bb.0, %33, %bb.1
+    %34:av_32 = PHI %0, %bb.0, %35, %bb.1
+    %36:av_32 = PHI %0, %bb.0, %37, %bb.1
+    %38:av_32 = PHI %0, %bb.0, %39, %bb.1
+    %40:av_32 = PHI %0, %bb.0, %41, %bb.1
+    %42:av_32 = PHI %0, %bb.0, %43, %bb.1
+    %44:av_32 = PHI %0, %bb.0, %45, %bb.1
+    %46:vgpr_32 = PHI %0, %bb.0, %47, %bb.1
+    %48:vgpr_32 = PHI %0, %bb.0, %49, %bb.1
+    %50:vgpr_32 = PHI %0, %bb.0, %51, %bb.1
+    %52:vgpr_32 = PHI %0, %bb.0, %53, %bb.1
+    %54:av_32 = PHI %0, %bb.0, %55, %bb.1
+    %56:av_32 = PHI %0, %bb.0, %57, %bb.1
+    %58:av_32 = PHI %0, %bb.0, %59, %bb.1
+    %60:av_32 = PHI %0, %bb.0, %61, %bb.1
+    %62:av_32 = PHI %0, %bb.0, %63, %bb.1
+    %64:av_32 = PHI %0, %bb.0, %65, %bb.1
+    %66:av_32 = PHI %0, %bb.0, %67, %bb.1
+    %68:av_32 = PHI %0, %bb.0, %69, %bb.1
+    %70:av_32 = PHI %0, %bb.0, %71, %bb.1
+    %72:av_32 = PHI %0, %bb.0, %73, %bb.1
+    %74:vreg_64_align2 = REG_SEQUENCE %70, %subreg.sub0, %72, %subreg.sub1
+    %75:vreg_64_align2 = REG_SEQUENCE %66, %subreg.sub0, %68, %subreg.sub1
+    %76:vreg_64_align2 = REG_SEQUENCE %62, %subreg.sub0, %64, %subreg.sub1
+    %77:vreg_64_align2 = REG_SEQUENCE %58, %subreg.sub0, %60, %subreg.sub1
+    %78:vreg_64_align2 = REG_SEQUENCE %54, %subreg.sub0, %56, %subreg.sub1
+    %79:vreg_64_align2 = REG_SEQUENCE %50, %subreg.sub0, %52, %subreg.sub1
+    %80:vreg_64_align2 = REG_SEQUENCE %46, %subreg.sub0, %48, %subreg.sub1
+    %81:vreg_64_align2 = REG_SEQUENCE %42, %subreg.sub0, %44, %subreg.sub1
+    %82:vreg_64_align2 = REG_SEQUENCE %38, %subreg.sub0, %40, %subreg.sub1
+    %83:vreg_64_align2 = REG_SEQUENCE %34, %subreg.sub0, %36, %subreg.sub1
+    %84:vreg_64_align2 = REG_SEQUENCE %30, %subreg.sub0, %32, %subreg.sub1
+    %85:vreg_64_align2 = REG_SEQUENCE %26, %subreg.sub0, %28, %subreg.sub1
+    %86:vreg_64_align2 = REG_SEQUENCE %22, %subreg.sub0, %24, %subreg.sub1
+    %87:vreg_64_align2 = REG_SEQUENCE %18, %subreg.sub0, %20, %subreg.sub1
+    %88:vreg_64_align2 = REG_SEQUENCE %14, %subreg.sub0, %16, %subreg.sub1
+    %89:vreg_64_align2 = REG_SEQUENCE %10, %subreg.sub0, %12, %subreg.sub1
+    %90:vreg_64_align2 = REG_SEQUENCE %6, %subreg.sub0, %8, %subreg.sub1
+    S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+    %91:vreg_128_align2 = DS_READ2ST64_B64_gfx9 %0, 0, 4, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) inttoptr (i32 2048 to ptr addrspace(3))`, addrspace 3), (load (s64) from `ptr addrspace(3) null`, addrspace 3)
+    %92:vreg_128_align2 = DS_READ2ST64_B64_gfx9 %0, 8, 24, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) inttoptr (i32 12288 to ptr addrspace(3))`, addrspace 3), (load (s64) from `ptr addrspace(3) inttoptr (i32 4096 to ptr addrspace(3))`, addrspace 3)
+    %93:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %2, %91.sub2_sub3, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %94:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %2, %2, killed %93, 0, 0, 0, implicit $mode, implicit $exec
+    %95:vgpr_32 = V_CVT_F32_I32_e32 %94.sub1, implicit $mode, implicit $exec
+    %96:vgpr_32 = V_CVT_F32_I32_e32 %94.sub0, implicit $mode, implicit $exec
+    %97:vreg_64_align2 = REG_SEQUENCE killed %96, %subreg.sub0, killed %95, %subreg.sub1
+    %98:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %74, 8, %97, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %99:vgpr_32 = V_CVT_F32_I32_e32 %94.sub3, implicit $mode, implicit $exec
+    %100:vgpr_32 = V_CVT_F32_I32_e32 %94.sub2, implicit $mode, implicit $exec
+    %101:vreg_64_align2 = REG_SEQUENCE killed %100, %subreg.sub0, killed %99, %subreg.sub1
+    %102:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %75, 8, %101, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %103:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %92.sub2_sub3, %2, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %104:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %2, %2, killed %103, 0, 0, 0, implicit $mode, implicit $exec
+    %105:vgpr_32 = V_CVT_F32_I32_e32 %104.sub1, implicit $mode, implicit $exec
+    %106:vgpr_32 = V_CVT_F32_I32_e32 %104.sub0, implicit $mode, implicit $exec
+    %107:vreg_64_align2 = REG_SEQUENCE killed %106, %subreg.sub0, killed %105, %subreg.sub1
+    %108:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %76, 8, %107, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %109:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %91.sub0_sub1, %2, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %110:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %2, %2, killed %109, 0, 0, 0, implicit $mode, implicit $exec
+    %111:vgpr_32 = V_CVT_F32_I32_e32 %110.sub1, implicit $mode, implicit $exec
+    %112:vgpr_32 = V_CVT_F32_I32_e32 %110.sub0, implicit $mode, implicit $exec
+    %113:vreg_64_align2 = REG_SEQUENCE killed %112, %subreg.sub0, killed %111, %subreg.sub1
+    %114:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %77, 8, %113, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %115:vgpr_32 = V_CVT_F32_I32_e32 %110.sub3, implicit $mode, implicit $exec
+    %116:vgpr_32 = V_CVT_F32_I32_e32 %110.sub2, implicit $mode, implicit $exec
+    %117:vreg_64_align2 = REG_SEQUENCE killed %116, %subreg.sub0, killed %115, %subreg.sub1
+    %118:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %78, 8, %117, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %119:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %79, 0, 1065353216, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %120:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %80, 0, 1065353216, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %121:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %3, %92.sub0_sub1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %122:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %2, %2, killed %121, 0, 0, 0, implicit $mode, implicit $exec
+    %123:vgpr_32 = V_CVT_F32_I32_e32 %122.sub3, implicit $mode, implicit $exec
+    %124:vgpr_32 = V_CVT_F32_I32_e32 %122.sub2, implicit $mode, implicit $exec
+    %125:vreg_64_align2 = REG_SEQUENCE killed %124, %subreg.sub0, killed %123, %subreg.sub1
+    %126:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %81, 8, %125, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %127:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %2, %92.sub0_sub1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %128:vreg_128_align2 = V_MFMA_I32_16X16X32I8_vgprcd_e64 %2, %2, killed %127, 0, 0, 0, implicit $mode, implicit $exec
+    %129:vgpr_32 = V_CVT_F32_I32_e32 %128.sub1, implicit $mode, implicit $exec
+    %130:vgpr_32 = V_CVT_F32_I32_e32 %128.sub0, implicit $mode, implicit $exec
+    %131:vreg_64_align2 = REG_SEQUENCE killed %130, %subreg.sub0, killed %129, %subreg.sub1
+    %132:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %82, 8, %131, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %133:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %83, 8, %97, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %134:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %84, 8, %101, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %135:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %85, 8, %107, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %136:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %86, 8, %113, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %137:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %87, 8, %117, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %138:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %88, 8, %125, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %139:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %89, 8, %131, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %140:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %90, 8, %97, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_CMP_LG_U32 %4, 0, implicit-def $scc
+    %7:av_32 = COPY %140.sub0
+    %9:av_32 = COPY %140.sub1
+    %11:av_32 = COPY %139.sub0
+    %13:av_32 = COPY %139.sub1
+    %15:av_32 = COPY %138.sub0
+    %17:av_32 = COPY %138.sub1
+    %19:av_32 = COPY %137.sub0
+    %21:av_32 = COPY %137.sub1
+    %23:av_32 = COPY %136.sub0
+    %25:av_32 = COPY %136.sub1
+    %27:av_32 = COPY %135.sub0
+    %29:av_32 = COPY %135.sub1
+    %31:av_32 = COPY %134.sub0
+    %33:av_32 = COPY %134.sub1
+    %35:av_32 = COPY %133.sub0
+    %37:av_32 = COPY %133.sub1
+    %39:av_32 = COPY %132.sub0
+    %41:av_32 = COPY %132.sub1
+    %43:av_32 = COPY %126.sub0
+    %45:av_32 = COPY %126.sub1
+    %47:vgpr_32 = COPY %120.sub0
+    %49:vgpr_32 = COPY %120.sub1
+    %51:vgpr_32 = COPY %119.sub0
+    %53:vgpr_32 = COPY %119.sub1
+    %55:av_32 = COPY %118.sub0
+    %57:av_32 = COPY %118.sub1
+    %59:av_32 = COPY %114.sub0
+    %61:av_32 = COPY %114.sub1
+    %63:av_32 = COPY %108.sub0
+    %65:av_32 = COPY %108.sub1
+    %67:av_32 = COPY %102.sub0
+    %69:av_32 = COPY %102.sub1
+    %71:av_32 = COPY %98.sub0
+    %73:av_32 = COPY %98.sub1
+    %5:sreg_32 = S_MOV_B32 1
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...

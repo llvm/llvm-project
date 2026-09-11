@@ -802,10 +802,10 @@ void parallel_simd(float *a) {
 }
 // TERM_DEBUG: !{{[0-9]+}} = !DILocation(line: [[@LINE-11]],
 // TERM_DEBUG-NOT: line: 0,
-// OMP45-NOT: !"llvm.loop.vectorize.enable", i1 false
+// OMP45-NOT: !"llvm.loop.vectorize.disable"
 // CHECK-DAG: ![[SIMD_LOOP]] = distinct !{![[SIMD_LOOP]], {{.*}}![[VECT_LOOP:[^,]+]]}
-// CHECK-DAG: ![[VECT_LOOP]] = !{!"llvm.loop.vectorize.enable", i1 true}
-// OMP45-NOT: !"llvm.loop.vectorize.enable", i1 false
+// CHECK-DAG: ![[VECT_LOOP]] = !{!"llvm.loop.vectorize.enable"}
+// OMP45-NOT: !"llvm.loop.vectorize.disable"
 // OMP50-DAG: ![[NOSIMD_LOOP]] = distinct !{![[NOSIMD_LOOP]], {{.*}}![[NOVECT_LOOP:[^,]+]]}
-// OMP50-DAG: ![[NOVECT_LOOP]] = !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP50-DAG: ![[NOVECT_LOOP]] = !{!"llvm.loop.vectorize.disable"}
 #endif // HEADER

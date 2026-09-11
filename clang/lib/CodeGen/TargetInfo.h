@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 namespace llvm {
 class Constant;
@@ -34,6 +35,35 @@ class Value;
 namespace clang {
 class CXXRecordDecl;
 class Decl;
+
+/// Collapses a clang sync scope onto the target-neutral llvm::AtomicScope.
+inline llvm::AtomicScope getAtomicScope(SyncScope S) {
+  switch (S) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return llvm::AtomicScope::Single;
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return llvm::AtomicScope::Wavefront;
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return llvm::AtomicScope::Workgroup;
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    return llvm::AtomicScope::Cluster;
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return llvm::AtomicScope::Device;
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return llvm::AtomicScope::System;
+  }
+  llvm_unreachable("Invalid sync scope");
+}
 
 namespace CodeGen {
 class ABIInfo;

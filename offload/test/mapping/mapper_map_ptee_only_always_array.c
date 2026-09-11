@@ -49,18 +49,10 @@ int main() {
 
   printf("\n");
   printf("After map(always,from)\n");
-  printf("s[0].x = %d\n", s1[0].x); // CHECK: s[0].x = 111
-  // FIXME: modifier-bits are not propagated to mapper entries yet.
-  //                                   EXPECTED: s[0].x = 222
-  printf("s[1].x = %d\n", s1[1].x); // CHECK: s[1].x = 111
-  // FIXME: modifier-bits are not propagated to mapper entries yet.
-  //                                   EXPECTED: s[1].x = 222
-  printf("s[0].p[0] = %d\n", s1[0].p[0]); // CHECK: s[0].p[0] = 111
-  // FIXME: modifier-bits are not propagated to mapper entries yet.
-  //                                         EXPECTED: s[0].p[0] = 222
-  printf("s[1].p[0] = %d\n", s1[1].p[0]); // CHECK: s[1].p[0] = 0
-  // FIXME: modifier-bits are not propagated to mapper entries yet.
-  //                                         EXPECTED: s[1].p[0] = 222
+  printf("s[0].x = %d\n", s1[0].x);       // CHECK: s[0].x = 222
+  printf("s[1].x = %d\n", s1[1].x);       // CHECK: s[1].x = 222
+  printf("s[0].p[0] = %d\n", s1[0].p[0]); // CHECK: s[0].p[0] = 222
+  printf("s[1].p[0] = %d\n", s1[1].p[0]); // CHECK: s[1].p[0] = 222
   printf("\n");
 
 #pragma omp target exit data map(delete : s1)

@@ -4783,34 +4783,36 @@ def : Pat<(v2i64 (ssubsat (v2i64 QPR:$src1),
 }
 
 // Fused Vector Multiply-Accumulate and Fused Multiply-Subtract Operations.
+let AddedComplexity = 1 in {
 def  VFMAfd   : N3VDMulOp<0, 0, 0b00, 0b1100, 1, IIC_VFMACD, "vfma", "f32",
-                          v2f32, fmul_su, fadd_mlx>,
+                          v2f32, fmul_su_contract, fadd_mlx_contract>,
                 Requires<[HasNEON,HasVFP4,UseFusedMAC]>;
 
 def  VFMAfq   : N3VQMulOp<0, 0, 0b00, 0b1100, 1, IIC_VFMACQ, "vfma", "f32",
-                          v4f32, fmul_su, fadd_mlx>,
+                          v4f32, fmul_su_contract, fadd_mlx_contract>,
                 Requires<[HasNEON,HasVFP4,UseFusedMAC]>;
 def  VFMAhd   : N3VDMulOp<0, 0, 0b01, 0b1100, 1, IIC_VFMACD, "vfma", "f16",
-                          v4f16, fmul, fadd>,
+                          v4f16, fmul_contract, fadd_contract>,
                 Requires<[HasNEON,HasFullFP16,UseFusedMAC]>;
 
 def  VFMAhq   : N3VQMulOp<0, 0, 0b01, 0b1100, 1, IIC_VFMACQ, "vfma", "f16",
-                          v8f16, fmul, fadd>,
+                          v8f16, fmul_contract, fadd_contract>,
                 Requires<[HasNEON,HasFullFP16,UseFusedMAC]>;
 
 //   Fused Vector Multiply Subtract (floating-point)
 def  VFMSfd   : N3VDMulOp<0, 0, 0b10, 0b1100, 1, IIC_VFMACD, "vfms", "f32",
-                          v2f32, fmul_su, fsub_mlx>,
+                          v2f32, fmul_su_contract, fsub_mlx_contract>,
                 Requires<[HasNEON,HasVFP4,UseFusedMAC]>;
 def  VFMSfq   : N3VQMulOp<0, 0, 0b10, 0b1100, 1, IIC_VFMACQ, "vfms", "f32",
-                          v4f32, fmul_su, fsub_mlx>,
+                          v4f32, fmul_su_contract, fsub_mlx_contract>,
                 Requires<[HasNEON,HasVFP4,UseFusedMAC]>;
 def  VFMShd   : N3VDMulOp<0, 0, 0b11, 0b1100, 1, IIC_VFMACD, "vfms", "f16",
-                          v4f16, fmul, fsub>,
+                          v4f16, fmul_contract, fsub_contract>,
                 Requires<[HasNEON,HasFullFP16,UseFusedMAC]>;
 def  VFMShq   : N3VQMulOp<0, 0, 0b11, 0b1100, 1, IIC_VFMACQ, "vfms", "f16",
-                          v8f16, fmul, fsub>,
+                          v8f16, fmul_contract, fsub_contract>,
                 Requires<[HasNEON,HasFullFP16,UseFusedMAC]>;
+}
 
 // Match @llvm.fma.* intrinsics
 def : Pat<(v4f16 (fma DPR:$Vn, DPR:$Vm, DPR:$src1)),
@@ -7473,7 +7475,7 @@ class N3VSPatFP16<SDNode OpNode, NeonI Inst>
                  (v4f16 (COPY_TO_REGCLASS (v4f16 (IMPLICIT_DEF)), DPR_VFP2)),
                  HPR:$b, ssub_0)), DPR_VFP2)), ssub_0)>;
 
-class N3VSMulOpPat<SDNode MulNode, SDNode OpNode, NeonI Inst>
+class N3VSMulOpPat<SDPatternOperator MulNode, SDPatternOperator OpNode, NeonI Inst>
   : NEONFPPat<(f32 (OpNode SPR:$acc, (f32 (MulNode SPR:$a, SPR:$b)))),
               (EXTRACT_SUBREG
                (v2f32 (COPY_TO_REGCLASS (Inst
@@ -7509,9 +7511,9 @@ def : N3VSMulOpPat<fmul, fadd, VMLAfd>,
       Requires<[HasNEON, UseNEONForFP, UseFPVMLx]>;
 def : N3VSMulOpPat<fmul, fsub, VMLSfd>,
       Requires<[HasNEON, UseNEONForFP, UseFPVMLx]>;
-def : N3VSMulOpPat<fmul, fadd, VFMAfd>,
+def : N3VSMulOpPat<fmul_contract, fadd_contract, VFMAfd>,
       Requires<[HasVFP4, UseNEONForFP, UseFusedMAC]>;
-def : N3VSMulOpPat<fmul, fsub, VFMSfd>,
+def : N3VSMulOpPat<fmul_contract, fsub_contract, VFMSfd>,
       Requires<[HasVFP4, UseNEONForFP, UseFusedMAC]>;
 def : N2VSPat<fabs, VABSfd>;
 def : N2VSPat<fneg, VNEGfd>;

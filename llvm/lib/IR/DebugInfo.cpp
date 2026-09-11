@@ -273,6 +273,8 @@ void DebugInfoFinder::processType(DIType *DT) {
         processType(T);
       else if (auto *SP = dyn_cast<DISubprogram>(D))
         processSubprogram(SP);
+      else if (auto *P = dyn_cast<DIProperty>(D))
+        processType(P->getType());
       else if (auto *SR = dyn_cast_or_null<DISubrange>(D)) {
         auto VisitBound = [&](DISubrange::BoundType Bound) {
           if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
@@ -781,7 +783,6 @@ private:
   // Create a new DISubprogram, to replace the one given.
   DISubprogram *getReplacementSubprogram(DISubprogram *MDS) {
     auto *FileAndScope = cast_or_null<DIFile>(map(MDS->getFile()));
-    StringRef LinkageName = MDS->getName().empty() ? MDS->getLinkageName() : "";
     DISubprogram *Declaration = nullptr;
     auto *Type = cast_or_null<DISubroutineType>(map(MDS->getType()));
     DIType *ContainingType =
@@ -789,6 +790,10 @@ private:
     auto *Unit = cast_or_null<DICompileUnit>(map(MDS->getUnit()));
     auto Variables = nullptr;
     auto TemplateParams = nullptr;
+    // Keep linkage names for profiling CUs, as -gline-tables-only does.
+    StringRef LinkageName;
+    if (MDS->getName().empty() || (Unit && Unit->getDebugInfoForProfiling()))
+      LinkageName = MDS->getLinkageName();
 
     // Make a distinct DISubprogram, for situations that warrant it.
     auto distinctMDSubprogram = [&]() {
@@ -2132,7 +2137,7 @@ getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
   if (OffsetInBytes == UINT64_MAX)
     return std::nullopt;
   if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
-    if (!DL.getTypeSizeInBits(Alloca->getAllocatedType()).isScalable())
+    if (!Alloca->isScalable())
       return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
   return std::nullopt;
 }

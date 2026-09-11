@@ -20,7 +20,6 @@
 #include "RISCVTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -124,7 +123,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   if (auto ABIOrErr = RISCVABI::computeTargetABI(*this, ABIName)) {
     TargetABI = *ABIOrErr;
   } else {
-    errs() << toString(ABIOrErr.takeError()) << " (ignoring target-abi)\n";
+    errs() << "note: " << toString(ABIOrErr.takeError())
+           << " (ignoring target-abi)\n";
     TargetABI = cantFail(RISCVABI::computeTargetABI(*this, ""));
   }
   RISCVFeatures::validate(TT, getFeatureBits());

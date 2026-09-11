@@ -11,13 +11,20 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCRuntimeUtils.h"
 
+#include <functional>
 #include <memory>
 
 namespace mlir {
 class ConversionTarget;
 class LLVMTypeConverter;
+class Operation;
 class Pass;
 class RewritePatternSet;
+class Value;
+
+namespace acc {
+class OpenACCSupport;
+} // namespace acc
 
 #define GEN_PASS_DECL_CONVERTACCTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -32,6 +39,21 @@ void configureACCExecutableDirectiveConversionLegality(
 void populateACCExecutableDirectivePatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns,
     const acc::ACCRuntimeCallConfig &config = {});
+
+/// Returns the address operand of a dialect-specific load operation. Used when
+/// moving capture/update dependencies into a cmpxchg loop. Patterns already
+/// recognize `llvm.load` and `memref.load`; this callback covers other dialect
+/// specific loads.
+using ACCAtomicLoadAddressCallback = std::function<Value(Operation *)>;
+
+/// Configure conversion legality for OpenACC atomic operations.
+void configureACCAtomicConversionLegality(ConversionTarget &target);
+
+/// Populate patterns that lower OpenACC atomic operations to LLVM dialect.
+void populateACCAtomicPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    acc::OpenACCSupport &accSupport,
+    ACCAtomicLoadAddressCallback getLoadAddress = {});
 
 } // namespace mlir
 

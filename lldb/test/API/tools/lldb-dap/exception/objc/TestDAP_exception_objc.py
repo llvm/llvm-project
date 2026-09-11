@@ -2,13 +2,13 @@
 Test exception behavior in DAP with obj-c throw.
 """
 
-from lldbsuite.test.decorators import skipUnlessDarwin
-from lldbsuite.test.tools.lldb_dap.types import ExceptionFilterOptions, LaunchArgs
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import ExceptionFilterOptions, LaunchArgs
 
 
 class TestDAP_exception_objc(DAPTestCaseBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_stopped_description(self):
         """
         Test that exception description is shown correctly in stopped event.
@@ -17,7 +17,9 @@ class TestDAP_exception_objc(DAPTestCaseBase):
         session = self.build_and_create_session()
         process_event = session.launch(LaunchArgs(program))
         stop_event = session.verify_stopped_on_exception(
-            after=process_event, expected_description="signal SIGABRT"
+            after=process_event,
+            expected_description="signal SIGABRT",
+            expected_text=r"^SIGABRT$",
         )
 
         thread_id = self.expect_not_none(stop_event.body.threadId)
@@ -34,7 +36,7 @@ class TestDAP_exception_objc(DAPTestCaseBase):
         stack_trace = self.expect_not_none(exception_details.stackTrace)
         self.assertRegex(stack_trace, "main.m")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_break_on_throw_and_catch(self):
         """
         Test that breakpoints on exceptions work as expected.
@@ -66,7 +68,7 @@ class TestDAP_exception_objc(DAPTestCaseBase):
         # self.continue_to_exception_breakpoint("Objective-C Catch")
 
         stop_event = session.continue_to_exception_breakpoint(
-            expected_description="signal SIGABRT"
+            expected_description="signal SIGABRT", expected_text=r"^SIGABRT$"
         )
 
         thread_id = self.expect_not_none(stop_event.body.threadId)

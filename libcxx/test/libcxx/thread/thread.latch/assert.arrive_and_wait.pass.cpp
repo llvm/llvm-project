@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: no-threads
+// REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <latch>
@@ -16,11 +17,8 @@
 
 // Make sure that calling arrive_and_wait with a negative value triggers an assertion.
 
-// REQUIRES: has-unix-headers
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
 // Without the assertion, the test will most likely time out.
 // UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <latch>
 

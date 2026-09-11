@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class MultipleSlidesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWasm  # a Wasm section sits at a fixed address in its address space, so it cannot be slid
     def test_mulitple_slides(self):
         """Test that a binary can be slid multiple times correctly."""
         self.build()

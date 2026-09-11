@@ -84,21 +84,20 @@ namespace {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// spirv.AccessChainOp
+// spirv.AccessChainOp / spirv.InBoundsAccessChainOp
 //===----------------------------------------------------------------------===//
 
 namespace {
 
-/// Combines chained `spirv::AccessChainOp` operations into one
-/// `spirv::AccessChainOp` operation.
-struct CombineChainedAccessChain final
-    : OpRewritePattern<spirv::AccessChainOp> {
-  using Base::Base;
+/// Combines chained SPIR-V access chain operations of the same kind into one.
+template <typename AccessChainOp>
+struct CombineChainedAccessChain final : OpRewritePattern<AccessChainOp> {
+  using OpRewritePattern<AccessChainOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
+  LogicalResult matchAndRewrite(AccessChainOp accessChainOp,
                                 PatternRewriter &rewriter) const override {
     auto parentAccessChainOp =
-        accessChainOp.getBasePtr().getDefiningOp<spirv::AccessChainOp>();
+        accessChainOp.getBasePtr().template getDefiningOp<AccessChainOp>();
 
     if (!parentAccessChainOp) {
       return failure();
@@ -108,7 +107,7 @@ struct CombineChainedAccessChain final
     SmallVector<Value, 4> indices(parentAccessChainOp.getIndices());
     llvm::append_range(indices, accessChainOp.getIndices());
 
-    rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
+    rewriter.replaceOpWithNewOp<AccessChainOp>(
         accessChainOp, parentAccessChainOp.getBasePtr(), indices);
 
     return success();
@@ -118,7 +117,12 @@ struct CombineChainedAccessChain final
 
 void spirv::AccessChainOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<CombineChainedAccessChain>(context);
+  results.add<CombineChainedAccessChain<spirv::AccessChainOp>>(context);
+}
+
+void spirv::InBoundsAccessChainOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<CombineChainedAccessChain<spirv::InBoundsAccessChainOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -530,9 +534,11 @@ OpFoldResult spirv::SModOp::fold(FoldAdaptor adaptor) {
           return c;
         if (b.isNegative()) {
           APInt zero = APInt::getZero(c.getBitWidth());
-          return a.isNegative() ? (zero - c) : (b + c);
+          return a.isNegative() ? (std::move(zero) - c) : (b + std::move(c));
         }
-        return a.isNegative() ? (b - c) : c;
+        if (a.isNegative())
+          return b - std::move(c);
+        return c;
       });
   return div0OrOverflow ? Attribute() : res;
 }
@@ -638,7 +644,7 @@ OpFoldResult spirv::SNegateOp::fold(FoldAdaptor adaptor) {
   return constFoldUnaryOp<IntegerAttr>(
       adaptor.getOperands(), [](const APInt &a) {
         APInt zero = APInt::getZero(a.getBitWidth());
-        return zero - a;
+        return std::move(zero) - a;
       });
 }
 
@@ -741,11 +747,10 @@ OpFoldResult spirv::LogicalNotOp::fold(FoldAdaptor adaptor) {
   // According to the SPIR-V spec:
   //
   // Complement the bits of Operand.
-  return constFoldUnaryOp<IntegerAttr>(adaptor.getOperands(),
-                                       [](const APInt &a) {
-                                         APInt zero = APInt::getZero(1);
-                                         return a == 1 ? zero : (zero + 1);
-                                       });
+  return constFoldUnaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a) {
+        return a == 1 ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
 }
 
 void spirv::LogicalNotOp::getCanonicalizationPatterns(
@@ -1280,14 +1285,15 @@ struct ConvertSelectionOpToSelect final : OpRewritePattern<spirv::SelectionOp> {
     Value trueValue = getSrcValue(trueBlock);
     Value falseValue = getSrcValue(falseBlock);
     Value ptrValue = getDstPtr(trueBlock);
-    auto storeOpAttributes =
-        cast<spirv::StoreOp>(trueBlock->front())->getAttrs();
+    auto storeOp = cast<spirv::StoreOp>(trueBlock->front());
 
     auto selectOp = spirv::SelectOp::create(
         rewriter, selectionOp.getLoc(), trueValue.getType(),
         brConditionalOp.getCondition(), trueValue, falseValue);
-    spirv::StoreOp::create(rewriter, selectOp.getLoc(), ptrValue,
-                           selectOp.getResult(), storeOpAttributes);
+    auto newStore = spirv::StoreOp::create(
+        rewriter, selectOp.getLoc(), ptrValue, selectOp.getResult(),
+        storeOp.getMemoryAccessAttr(), storeOp.getAlignmentAttr());
+    newStore->setDiscardableAttrs(storeOp->getDiscardableAttrDictionary());
 
     // `spirv.mlir.selection` is not needed anymore.
     rewriter.eraseOp(op);

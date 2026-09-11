@@ -9,7 +9,7 @@
 // This pass decides, for each array allocation in a function, whether it should
 // live on the stack (fir.alloca) or on the heap (fir.allocmem), and rewrites it
 // accordingly. The decision is delegated to the policy in
-// AllocationPlacementPolicy.h. Two rewrite engines are reused:
+// flang/Optimizer/Support/AllocationPolicy.h. Two rewrite engines are reused:
 //   - stack-to-heap uses fir::replaceAllocas (MemoryUtils);
 //   - heap-to-stack reuses the StackArrays analysis and rewrite, which only
 //     stackifies fir.allocmem that are provably freed on all paths.
@@ -23,8 +23,8 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/DataLayout.h"
-#include "flang/Optimizer/Transforms/AllocationPlacementPolicy.h"
 #include "flang/Optimizer/Transforms/MemoryUtils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -45,52 +45,6 @@ namespace fir {
 } // namespace fir
 
 #define DEBUG_TYPE "allocation-placement"
-
-//===----------------------------------------------------------------------===//
-// Default placement policy
-//===----------------------------------------------------------------------===//
-
-fir::AllocationPlacement
-fir::decideAllocationPlacement(const AllocationInfo &info,
-                               const AllocationPlacementThresholds &thresholds,
-                               std::size_t stackBytesUsed) {
-  using P = fir::AllocationPlacement;
-
-  // Translate a "should this be on the stack" decision into a placement,
-  // accounting for where the allocation currently lives.
-  auto place = [&](bool wantStack) -> P {
-    if (wantStack)
-      return info.isCurrentlyOnStack ? P::Leave : P::Stack;
-    return info.isCurrentlyOnStack ? P::Heap : P::Leave;
-  };
-
-  // -fstack-arrays: put everything on the stack (best effort). The
-  // heap-to-stack conversion still only happens where it is provably safe.
-  if (thresholds.stackArrays)
-    return place(/*wantStack=*/true);
-
-  // Runtime-sized arrays (automatic arrays, dynamic temporaries) go on the
-  // heap.
-  if (info.isDynamic)
-    return place(/*wantStack=*/false);
-
-  // Without a known constant size we cannot reason about thresholds.
-  if (!info.byteSize)
-    return P::Leave;
-
-  // Constant-size user variables always go on the stack.
-  if (!info.isTemporary)
-    return place(/*wantStack=*/true);
-
-  auto size = static_cast<std::size_t>(*info.byteSize);
-  if (size <= thresholds.smallArrayThresholdBytes)
-    // Small arrays go on the stack while the per-function budget allows it.
-    return place(/*wantStack=*/stackBytesUsed + size <=
-                 thresholds.totalStackLimitBytes);
-
-  // Big array temporaries go on the heap.
-  return place(/*wantStack=*/false);
-}
 
 namespace {
 
@@ -126,20 +80,10 @@ getConstantByteSize(mlir::Operation *op,
 }
 
 /// Replacement generator used for stack-to-heap conversions (fir.alloca ->
-/// fir.allocmem). Mirrors the MemoryAllocation pass.
+/// fir.allocmem).
 static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
                                bool /*deallocPointsDominateAlloc*/) {
-  mlir::Type varTy = alloca.getInType();
-  auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
-    if (opt)
-      return *opt;
-    return {};
-  };
-  llvm::StringRef uniqName = unpackName(alloca.getUniqName());
-  llvm::StringRef bindcName = unpackName(alloca.getBindcName());
-  auto heap = fir::AllocMemOp::create(builder, alloca.getLoc(), varTy, uniqName,
-                                      bindcName, alloca.getTypeparams(),
-                                      alloca.getShape());
+  fir::AllocMemOp heap = fir::createAllocMemFromAlloca(builder, alloca);
   LLVM_DEBUG(llvm::dbgs() << "allocation placement: replaced " << alloca
                           << " with " << heap << '\n');
   return heap;
@@ -199,10 +143,14 @@ void AllocationPlacementPass::runOnOperation() {
   if (func.empty())
     return;
 
-  fir::AllocationPlacementThresholds baseThresholds;
-  baseThresholds.stackArrays = stackArrays;
-  baseThresholds.smallArrayThresholdBytes = smallArrayThresholdBytes;
-  baseThresholds.totalStackLimitBytes = totalStackLimitBytes;
+  // Start from the policy recorded on the module. A pass option overrides it
+  // only where it was set explicitly.
+  fir::AllocationPolicy basePolicy = fir::getAllocationPolicy(func);
+  fir::overrideIfExplicitlySet(basePolicy.stackArrays, stackArrays);
+  fir::overrideIfExplicitlySet(basePolicy.smallArrayThresholdBytes,
+                               smallArrayThresholdBytes);
+  fir::overrideIfExplicitlySet(basePolicy.totalStackLimitBytes,
+                               totalStackLimitBytes);
 
   auto module = func->getParentOfType<mlir::ModuleOp>();
   std::optional<mlir::DataLayout> dl =
@@ -259,11 +207,11 @@ void AllocationPlacementPass::runOnOperation() {
     info.byteSize = getConstantByteSize(op, dl, kindMap);
 
     // A hook, if provided, fully overrides the default policy; it may delegate
-    // back to decideAllocationPlacement after adjusting the thresholds.
+    // back to decideAllocationPlacement after adjusting the policy.
     fir::AllocationPlacement placement =
-        placementHook ? placementHook(info, baseThresholds, stackBytesUsed)
-                      : fir::decideAllocationPlacement(info, baseThresholds,
-                                                       stackBytesUsed);
+        placementHook
+            ? placementHook(info, basePolicy, stackBytesUsed)
+            : fir::decideAllocationPlacement(info, basePolicy, stackBytesUsed);
 
     // Account for the decision in the running stack budget.
     if (endsUpOnStack(placement, info.isCurrentlyOnStack) && info.byteSize)

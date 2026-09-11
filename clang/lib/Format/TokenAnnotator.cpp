@@ -450,7 +450,7 @@ private:
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
                                          tok::kw__Atomic)) {
         OpeningParen.setType(TT_TypeDeclarationParen);
         // decltype() and typeof() usually contain expressions.
@@ -6722,6 +6722,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Left.is(tok::r_square) && Right.is(TT_AttributeRSquare)) {
     assert(Left.isNot(TT_AttributeRSquare));
     return false;
+  }
+
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Right.is(TT_RequiresExpressionLBrace)) {
+    return true;
   }
 
   auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;

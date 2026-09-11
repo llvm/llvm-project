@@ -897,3 +897,311 @@ entry:
   %c = icmp ult i32 %sub, %a
   ret i1 %c
 }
+
+; Tests below need to materialize the nsw flag first.
+
+define i1 @add_neg_1_slt(i64 %x, i64 %b) {
+; CHECK-LABEL: @add_neg_1_slt(
+; CHECK-NEXT:    [[X_NON_NEG:%.*]] = icmp sge i64 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], -1
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %x.non.neg = icmp sge i64 %x, 0
+  call void @llvm.assume(i1 %x.non.neg)
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %x, -1
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+define i1 @add_neg_20_slt(i64 %x, i64 %b) {
+; CHECK-LABEL: @add_neg_20_slt(
+; CHECK-NEXT:    [[X_NON_NEG:%.*]] = icmp sge i64 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[X]], -20
+; CHECK-NEXT:    ret i1 true
+;
+  %x.non.neg = icmp sge i64 %x, 0
+  call void @llvm.assume(i1 %x.non.neg)
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %x, -20
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+define i1 @add_neg_1_nonneg_from_ult(i64 %x, i64 %c) {
+; CHECK-LABEL: @add_neg_1_nonneg_from_ult(
+; CHECK-NEXT:    [[X_NON_NEG:%.*]] = icmp sge i64 [[C:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
+; CHECK-NEXT:    [[B:%.*]] = icmp ult i64 [[X:%.*]], [[C]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], -1
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[C]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %x.non.neg = icmp sge i64 %c, 0
+  call void @llvm.assume(i1 %x.non.neg)
+  %b = icmp ult i64 %x, %c
+  call void @llvm.assume(i1 %b)
+  %sub = add i64 %x, -1
+  %t = icmp slt i64 %sub, %c
+  ret i1 %t
+}
+
+define i1 @add_neg_1_no_nonneg(i64 %x, i64 %b) {
+; CHECK-LABEL: @add_neg_1_no_nonneg(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], -1
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %x, -1
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+define i1 @add_non_positive_slt(i64 %x, i64 %y, i64 %b) {
+; CHECK-LABEL: @add_non_positive_slt(
+; CHECK-NEXT:    [[X_NON_NEG:%.*]] = icmp sge i64 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
+; CHECK-NEXT:    [[Y_NON_POS:%.*]] = icmp sle i64 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NON_POS]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %x.non.neg = icmp sge i64 %x, 0
+  call void @llvm.assume(i1 %x.non.neg)
+  %y.non.pos = icmp sle i64 %y, 0
+  call void @llvm.assume(i1 %y.non.pos)
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %x, %y
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+define i1 @add_non_positive_slt_commuted(i64 %x, i64 %y, i64 %b) {
+; CHECK-LABEL: @add_non_positive_slt_commuted(
+; CHECK-NEXT:    [[X_NON_NEG:%.*]] = icmp sge i64 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
+; CHECK-NEXT:    [[Y_NON_POS:%.*]] = icmp sle i64 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NON_POS]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[Y]], [[X]]
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %x.non.neg = icmp sge i64 %x, 0
+  call void @llvm.assume(i1 %x.non.neg)
+  %y.non.pos = icmp sle i64 %y, 0
+  call void @llvm.assume(i1 %y.non.pos)
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %y, %x
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+define i1 @add_non_positive_slt_hoisted(i64 %x, i64 %y, i64 %b) {
+; CHECK-LABEL: @add_non_positive_slt_hoisted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_NON_NEG:%.*]] = icmp sge i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[Y_NON_POS:%.*]] = icmp sle i64 [[Y:%.*]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[X_NON_NEG]], [[Y_NON_POS]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[AND_1]], [[C]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[AND_2]], label [[IF_END:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %x.non.neg = icmp sge i64 %x, 0
+  %y.non.pos = icmp sle i64 %y, 0
+  %c = icmp slt i64 %x, %b
+  %and.1 = and i1 %x.non.neg, %y.non.pos
+  %and.2 = and i1 %and.1, %c
+  %sub = add i64 %x, %y
+  br i1 %and.2, label %if.end, label %exit
+
+if.end:
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+
+exit:
+  ret i1 false
+}
+
+; %y is not known to be non-positive.
+define i1 @add_unknown_sign_slt(i64 %x, i64 %y, i64 %b) {
+; CHECK-LABEL: @add_unknown_sign_slt(
+; CHECK-NEXT:    [[X_NON_NEG:%.*]] = icmp sge i64 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %x.non.neg = icmp sge i64 %x, 0
+  call void @llvm.assume(i1 %x.non.neg)
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %x, %y
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+; %x is not known to be non-negative.
+define i1 @add_non_positive_no_nonneg(i64 %x, i64 %y, i64 %b) {
+; CHECK-LABEL: @add_non_positive_no_nonneg(
+; CHECK-NEXT:    [[Y_NON_POS:%.*]] = icmp sle i64 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NON_POS]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %y.non.pos = icmp sle i64 %y, 0
+  call void @llvm.assume(i1 %y.non.pos)
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %x, %y
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+; Both operands are non-negative, so the add can wrap.
+define i1 @add_both_non_negative_slt(i64 %x, i64 %y, i64 %b) {
+; CHECK-LABEL: @add_both_non_negative_slt(
+; CHECK-NEXT:    [[X_NON_NEG:%.*]] = icmp sge i64 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
+; CHECK-NEXT:    [[Y_NON_NEG:%.*]] = icmp sge i64 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NON_NEG]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %x.non.neg = icmp sge i64 %x, 0
+  call void @llvm.assume(i1 %x.non.neg)
+  %y.non.neg = icmp sge i64 %y, 0
+  call void @llvm.assume(i1 %y.non.neg)
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %x, %y
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+; Both operands are non-positive, so the add can wrap.
+define i1 @add_both_non_positive_slt(i64 %x, i64 %y, i64 %b) {
+; CHECK-LABEL: @add_both_non_positive_slt(
+; CHECK-NEXT:    [[X_NON_POS:%.*]] = icmp sle i64 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_POS]])
+; CHECK-NEXT:    [[Y_NON_POS:%.*]] = icmp sle i64 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NON_POS]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %x.non.pos = icmp sle i64 %x, 0
+  call void @llvm.assume(i1 %x.non.pos)
+  %y.non.pos = icmp sle i64 %y, 0
+  call void @llvm.assume(i1 %y.non.pos)
+  %c = icmp slt i64 %x, %b
+  call void @llvm.assume(i1 %c)
+  %sub = add i64 %x, %y
+  %t = icmp slt i64 %sub, %b
+  ret i1 %t
+}
+
+; %x <=u 100 implies %x + 20 does not wrap unsigned, so nuw can be added to an
+; add that already has nsw.
+define i8 @add_nsw_gains_nuw(i8 %x) {
+; CHECK-LABEL: @add_nsw_gains_nuw(
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i8 [[X:%.*]], 100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[X]], 20
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %c = icmp ule i8 %x, 100
+  call void @llvm.assume(i1 %c)
+  %add = add nsw i8 %x, 20
+  ret i8 %add
+}
+
+; %x <=u 250 does not imply %x + 20 does not wrap unsigned, so no nuw.
+define i8 @add_nsw_no_nuw(i8 %x) {
+; CHECK-LABEL: @add_nsw_no_nuw(
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i8 [[X:%.*]], -6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], 20
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %c = icmp ule i8 %x, 250
+  call void @llvm.assume(i1 %c)
+  %add = add nsw i8 %x, 20
+  ret i8 %add
+}
+
+; %x <=u 100 implies %x + 3 does not wrap unsigned.
+define i64 @add_i64_gains_nuw_with_large_bound(i64 %x) {
+; CHECK-LABEL: @add_i64_gains_nuw_with_large_bound(
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[X:%.*]], 100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[X]], 3
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %c = icmp ule i64 %x, 100
+  call void @llvm.assume(i1 %c)
+  %add = add i64 %x, 3
+  ret i64 %add
+}
+
+; No bound on %x, so no flags can be added.
+define i64 @add_i64_no_bound(i64 %x) {
+; CHECK-LABEL: @add_i64_no_bound(
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[X:%.*]], 3
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %add = add i64 %x, 3
+  ret i64 %add
+}
+
+; %x <=u 2^63 also implies %x + 3 does not wrap unsigned, but the assumed bound
+; is too large to represent as constant in the constraint system.
+define i64 @add_i64_bound_above_max_constraint_value(i64 %x) {
+; CHECK-LABEL: @add_i64_bound_above_max_constraint_value(
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[X:%.*]], -9223372036854775808
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[X]], 3
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %c = icmp ule i64 %x, -9223372036854775808
+  call void @llvm.assume(i1 %c)
+  %add = add i64 %x, 3
+  ret i64 %add
+}

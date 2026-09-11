@@ -203,7 +203,8 @@ public:
         int64_t Offset = 0;
         auto *Load = dyn_cast<LoadInst>(U); // Load from ImplicitArgPtr?
         if (!Load) {
-          if (GetPointerBaseWithConstantOffset(U, Offset, DL) != CI)
+          if (U->user_empty() ||
+              GetPointerBaseWithConstantOffset(U, Offset, DL) != CI)
             continue;
 
           Load = dyn_cast<LoadInst>(*U->user_begin()); // Load from GEP?

@@ -537,16 +537,19 @@ template <class ELFT>
 static void
 handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
                                 const AArch64BuildAttrSubsections &baInfo) {
+  // Missing subsections have zero-initialized data fields, so we must check
+  // presence before comparing against GNU properties.
+  bool baPauthInfoPresent = baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema;
+
   if (file->aarch64PauthAbiCoreInfo) {
     // Check for data mismatch.
-    if (file->aarch64PauthAbiCoreInfo) {
-      if (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
-          baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
-        Err(ctx) << file
-                 << " GNU properties and build attributes have conflicting "
-                    "AArch64 PAuth data";
-    }
-    if (baInfo.AndFeatures != file->andFeatures)
+    if (baPauthInfoPresent &&
+        (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
+         baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version))
+      Err(ctx) << file
+               << " GNU properties and build attributes have conflicting "
+                  "AArch64 PAuth data";
+    if (baInfo.AndFeatures && baInfo.AndFeatures != file->andFeatures)
       Err(ctx) << file
                << " GNU properties and build attributes have conflicting "
                   "AArch64 PAuth data";
@@ -557,14 +560,14 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
     // PAuthAbiCoreInfo when there is at least one non-zero value. The
     // specification reserves TagPlatform = 0, TagSchema = 1 values to match the
     // 'Invalid' GNU property section with platform = 0, version = 0.
-    if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
+    if (baPauthInfoPresent) {
       if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1)
         file->aarch64PauthAbiCoreInfo = {0, 0};
       else
         file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
                                          baInfo.Pauth.TagSchema};
     }
-    file->andFeatures = baInfo.AndFeatures;
+    file->andFeatures |= baInfo.AndFeatures;
   }
 }
 
@@ -637,6 +640,15 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         }
       }
       sections[i] = &InputSection::discarded;
+      continue;
+    }
+
+    if (sec.sh_type == SHT_LLVM_DYNDBG_ELF) {
+      if (check(obj.getSectionName(sec, shstrtab)) == dynDbgSecName) {
+        sections[i] = &InputSection::discarded;
+        dynDbgSec = std::make_unique<InputSection>(*this, sec, dynDbgSecName);
+        ctx.hasDynDbg = true;
+      }
       continue;
     }
 
@@ -1245,6 +1257,71 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
                                 eSym.st_other, eSym.getType()});
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
+  }
+
+  if (dynDbgSec)
+    initDynDbgSymbols();
+}
+
+// Add the undefined symbols of the embedded unoptimized dynamic debugging
+// object so that the outer link resolves the inner link's dependencies. Tag
+// those reached by an inner relocation against a SHF_ALLOC section with
+// `isDynDbgRef`; the rest are only needed by debug sections.
+template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
+  MemoryBufferRef dbgMb(toStringRef(dynDbgSec->contentMaybeDecompress()),
+                        mb.getBufferIdentifier());
+  std::unique_ptr<ELFFileBase> efb = createObjFile(ctx, dbgMb);
+  // Compare ekind (note ObjFile<ELFT>::classof only tests InputFile::kind()).
+  if (efb->ekind != ekind) {
+    Err(ctx) << this << ": " << dynDbgSecName
+             << " contains an incompatible ELF type";
+    return;
+  }
+  auto &dbgObj = cast<ObjFile<ELFT>>(*efb);
+  const object::ELFFile<ELFT> obj = dbgObj.getObj();
+
+  ArrayRef<Elf_Sym> dbgSyms = dbgObj.template getGlobalELFSyms<ELFT>();
+  SmallVector<bool, 0> globalUsed(dbgSyms.size());
+  auto setSymUsed = [&, firstGlobal = dbgObj.firstGlobal](uint32_t symIdx) {
+    if (symIdx >= firstGlobal)
+      globalUsed[symIdx - firstGlobal] = true;
+  };
+
+  for (const Elf_Shdr &sh : dbgObj.template getELFShdrs<ELFT>()) {
+    if (!isStaticRelSecType(sh.sh_type))
+      continue;
+    const Elf_Shdr &target = *CHECK2(obj.getSection(sh.sh_info), &dbgObj);
+    if (!(target.sh_flags & SHF_ALLOC))
+      continue;
+    if (sh.sh_type == SHT_CREL) {
+      auto [rels, relas] = CHECK2(obj.crels(sh), &dbgObj);
+      for (const Elf_Rel &r : rels)
+        setSymUsed(r.getSymbol(false));
+      for (const Elf_Rela &r : relas)
+        setSymUsed(r.getSymbol(false));
+    } else if (sh.sh_type == SHT_RELA) {
+      for (const Elf_Rela &r : CHECK2(obj.relas(sh), &dbgObj))
+        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+    } else {
+      for (const Elf_Rel &r : CHECK2(obj.rels(sh), &dbgObj))
+        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+    }
+  }
+
+  for (size_t i = 0, end = dbgSyms.size(); i != end; ++i) {
+    const Elf_Sym &s = dbgSyms[i];
+    if (s.st_shndx != SHN_UNDEF)
+      continue;
+    StringRef name = CHECK2(s.getName(dbgObj.stringTable), this);
+    Symbol *sym = ctx.symtab->addSymbol(
+        Undefined{this, name, s.getBinding(), s.st_other, s.getType()});
+    sym->isUsedInRegularObj = true;
+    sym->referenced = true;
+    if (globalUsed[i]) {
+      sym->isDynDbgRef = true;
+      if (sym->traced)
+        Msg(ctx) << this << ": dynamic debugging reference to " << name;
+    }
   }
 }
 

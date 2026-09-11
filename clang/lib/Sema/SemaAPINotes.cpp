@@ -247,6 +247,15 @@ static void handleAPINotedRetainCountConvention(
   }
 }
 
+/// Add a 'swift_attr' unless \p D already carries that exact annotation.
+static void addSwiftAttrIfAbsent(Sema &S, Decl *D, StringRef Attribute) {
+  for (const auto *A : D->specific_attrs<SwiftAttrAttr>())
+    if (A->getAttribute() == Attribute)
+      return;
+
+  D->addAttr(SwiftAttrAttr::Create(S.Context, Attribute));
+}
+
 static void ProcessAPINotes(Sema &S, Decl *D,
                             const api_notes::CommonEntityInfo &Info,
                             VersionedInfoMetadata Metadata) {
@@ -362,8 +371,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   }
 
   if (auto ConformsTo = Info.getSwiftConformance())
-    D->addAttr(
-        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
+    addSwiftAttrIfAbsent(S, D, "conforms_to:" + ConformsTo.value());
 
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info),
                   Metadata);
@@ -607,8 +615,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
 
   // returns_(un)retained
   if (!Info.SwiftReturnOwnership.empty())
-    D->addAttr(SwiftAttrAttr::Create(S.Context,
-                                     "returns_" + Info.SwiftReturnOwnership));
+    addSwiftAttrIfAbsent(S, D, "returns_" + Info.SwiftReturnOwnership);
 
   // Result type override.
   QualType OverriddenResultType;
@@ -729,29 +736,26 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
 static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (auto ImportAs = Info.SwiftImportAs)
-    D->addAttr(SwiftAttrAttr::Create(S.Context, "import_" + ImportAs.value()));
+    addSwiftAttrIfAbsent(S, D, "import_" + ImportAs.value());
 
   if (auto RetainOp = Info.SwiftRetainOp)
-    D->addAttr(SwiftAttrAttr::Create(S.Context, "retain:" + RetainOp.value()));
+    addSwiftAttrIfAbsent(S, D, "retain:" + RetainOp.value());
 
   if (auto ReleaseOp = Info.SwiftReleaseOp)
-    D->addAttr(
-        SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+    addSwiftAttrIfAbsent(S, D, "release:" + ReleaseOp.value());
   if (auto DestroyOp = Info.SwiftDestroyOp)
-    D->addAttr(
-        SwiftAttrAttr::Create(S.Context, "destroy:" + DestroyOp.value()));
+    addSwiftAttrIfAbsent(S, D, "destroy:" + DestroyOp.value());
   if (auto DefaultOwnership = Info.SwiftDefaultOwnership)
-    D->addAttr(SwiftAttrAttr::Create(
-        S.Context, "returned_as_" + DefaultOwnership.value() + "_by_default"));
+    addSwiftAttrIfAbsent(
+        S, D, "returned_as_" + DefaultOwnership.value() + "_by_default");
 
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
-      D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));
+      addSwiftAttrIfAbsent(S, D, "~Copyable");
   }
 
   if (auto Escapable = Info.isSwiftEscapable()) {
-    D->addAttr(SwiftAttrAttr::Create(S.Context,
-                                     *Escapable ? "Escapable" : "~Escapable"));
+    addSwiftAttrIfAbsent(S, D, *Escapable ? "Escapable" : "~Escapable");
   }
 
   if (auto Extensibility = Info.EnumExtensibility) {
@@ -994,13 +998,6 @@ UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
   return std::nullopt;
 }
 
-static void stripAPINotesParameterNullability(QualType &ParamType) {
-  while (true) {
-    if (!AttributedType::stripOuterNullability(ParamType))
-      return;
-  }
-}
-
 namespace clang {
 struct APINotesParameterSelector {
   SmallVector<std::string, 4> Parameters;
@@ -1043,7 +1040,8 @@ static std::string getAPINotesParameterSelectorSpelling(
     ParamType = ParamType.getDesugaredType(Context);
 
   ParamType.removeLocalConst();
-  stripAPINotesParameterNullability(ParamType);
+  ParamType.removeLocalVolatile();
+  ParamType = ParamType.stripNullability(Context);
 
   return ParamType.getAsString(Policy);
 }

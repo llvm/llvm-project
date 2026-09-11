@@ -12,7 +12,7 @@ define i32 @test_float_f16x2_eq(i32 %arg) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_float_f16x2_eq_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_float_f16x2_eq_param_0];
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    setp.eq.f16x2 %p2|%p3, %r1, %r2;
 ; CHECK-NEXT:    and.pred %p1, %p2, %p3;
@@ -25,7 +25,7 @@ define i32 @test_float_f16x2_eq(i32 %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
 entry:
   %a = bitcast i32 %arg to <2 x half>
@@ -58,7 +58,7 @@ define i32 @test_float_bf16x2_eq(i32 %arg) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_float_bf16x2_eq_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_float_bf16x2_eq_param_0];
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    setp.eq.bf16x2 %p2|%p3, %r1, %r2;
 ; CHECK-NEXT:    and.pred %p1, %p2, %p3;
@@ -71,7 +71,7 @@ define i32 @test_float_bf16x2_eq(i32 %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:  $L__BB1_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
 entry:
   %a = bitcast i32 %arg to <2 x bfloat>

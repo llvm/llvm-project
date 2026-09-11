@@ -129,9 +129,15 @@ void HybridMutex::lockSlow() {
             nullptr, nullptr, 0);
     V = atomic_exchange(&M, Sleeping, memory_order_acquire);
   }
+
+  if (SCUDO_DEBUG)
+    assertHeldImpl();
 }
 
 void HybridMutex::unlock() {
+  if (SCUDO_DEBUG)
+    assertHeldImpl();
+
   if (atomic_fetch_sub(&M, 1U, memory_order_release) != Locked) {
     atomic_store(&M, Unlocked, memory_order_release);
     syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAKE_PRIVATE, 1,

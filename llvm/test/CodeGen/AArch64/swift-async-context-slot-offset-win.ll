@@ -5,13 +5,16 @@
 ; saving it won't overwrite the saved value of the callee-saved
 ; register.
 ;
-; CHECK:        sub     sp, sp, #64
-; CHECK:        str     x19, [sp, #16]
-; CHECK:        str     x21, [sp, #24]
-; CHECK-NOT:    stp     x29, x30, [sp, #32]
-; CHECK:        stp     x29, x30, [sp, #40]
-; CHECK-NOT:    str     x22, [sp, #24]
-; CHECK:        str     x22, [sp, #32]
+; The async context slot sits directly below the frame record, so the callee
+; saves below it stay clear of both.
+;
+; CHECK:        str     x19, [sp, #-48]!
+; CHECK:        str     x21, [sp, #8]
+; CHECK-NOT:    stp     x29, x30, [sp, #16]
+; CHECK:        stp     x29, x30, [sp, #24]
+; CHECK-NOT:    str     x22, [sp, #8]
+; CHECK:        str     x22, [sp, #16]
+; CHECK:        add     x29, sp, #24
 
 declare ptr @llvm.swift.async.context.addr()
 declare swiftcc i64 @foo(i64 %0, i64 %1)

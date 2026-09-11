@@ -143,7 +143,7 @@ bool llvm::isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
         // then this use is safe to hoist.
         if (!MRI->isConstantPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
-            !TII->isIgnorableUse(MO))
+            !TII->isIgnorableUse(I, I.getOperandNo(&MO)))
           return false;
         // Otherwise it's safe to move.
         continue;
@@ -167,7 +167,7 @@ bool llvm::isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
 
     // If the cycle contains the definition of an operand, then the instruction
     // isn't cycle invariant.
-    if (CI.contains(Cycle, MRI->getVRegDef(Reg)->getParent()))
+    if (CI.contains(Cycle, MRI->getDefBlock(Reg)))
       return false;
   }
 

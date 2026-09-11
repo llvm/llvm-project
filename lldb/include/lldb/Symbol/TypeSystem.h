@@ -227,6 +227,8 @@ public:
 
   virtual CompilerType GetPointerDiffType(bool is_signed) = 0;
 
+  virtual CompilerType GetSizeType() = 0;
+
   virtual unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) = 0;
 
   virtual unsigned

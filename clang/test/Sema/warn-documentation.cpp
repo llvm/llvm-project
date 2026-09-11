@@ -834,6 +834,12 @@ unsigned test_function(Base64Flags inFlags);
 typedef unsigned int BaseFlags;
 unsigned (*test_callback)(BaseFlags inFlags);
 
+// @callback should not warn when the comment is directly attached to a
+// pointer to function declaration.
+/*! @callback test_callback_attached
+*/
+unsigned (*test_callback_attached)(BaseFlags inFlags);
+
 // expected-warning@+1 {{'\endverbatim' command does not terminate a verbatim text block}}
 /// \endverbatim
 int test_verbatim_1();

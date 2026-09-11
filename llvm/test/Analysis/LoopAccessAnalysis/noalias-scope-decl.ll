@@ -11,12 +11,12 @@ define void @test_scope_in_loop(ptr %arg, i64 %num) {
 ; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Backward:
-; CHECK-NEXT:            %load.prev = load i8, ptr %prev.ptr, align 1, !alias.scope !0, !noalias !3 ->
-; CHECK-NEXT:            store i8 %add, ptr %cur.ptr, align 1, !alias.scope !3
+; CHECK-NEXT:            %load.prev = load i8, ptr %prev.ptr, align 1, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}} ->
+; CHECK-NEXT:            store i8 %add, ptr %cur.ptr, align 1, !alias.scope !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %load.cur = load i8, ptr %cur.ptr, align 1, !alias.scope !3 ->
-; CHECK-NEXT:            store i8 %add, ptr %cur.ptr, align 1, !alias.scope !3
+; CHECK-NEXT:            %load.cur = load i8, ptr %cur.ptr, align 1, !alias.scope !{{[0-9]+}} ->
+; CHECK-NEXT:            store i8 %add, ptr %cur.ptr, align 1, !alias.scope !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:

@@ -34,7 +34,7 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-64, %esp
-; WIN32-NEXT:    subl $128, %esp
+; WIN32-NEXT:    addl $-128, %esp
 ; WIN32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; WIN32-NEXT:    movl %esp, %eax
 ; WIN32-NEXT:    pushl %eax
@@ -67,7 +67,7 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    pushq %r13
 ; X64-NEXT:    pushq %r12
 ; X64-NEXT:    andq $-64, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    pushq %rbp
@@ -150,7 +150,7 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    pushq %r13
 ; X64-NEXT:    pushq %r12
 ; X64-NEXT:    andq $-64, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    vmovaps %zmm1, %zmm16
 ; X64-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    movq %rsp, %rdi

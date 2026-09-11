@@ -10,7 +10,6 @@
 #include "CodeViewRegisterMapping.h"
 
 #include "lldb/Symbol/PostfixExpression.h"
-#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/DenseMap.h"
 

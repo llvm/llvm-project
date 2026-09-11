@@ -426,13 +426,14 @@ class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
 
 class ShapedContainerType<list<Type> allowedTypes,
                           Pred containerPred, string descr,
-                          string cppType = "::mlir::Type"> :
+                          string cppType = "::mlir::Type",
+                          string summary = ""> :
     Type<And<[containerPred,
               Concat<"[](::mlir::Type elementType) { return ",
                 SubstLeaves<"$_self", "elementType",
                 AnyTypeOf<allowedTypes>.predicate>,
                 "; }(::llvm::cast<::mlir::ShapedType>($_self).getElementType())">]>,
-         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values", cppType>;
+         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values" # summary, cppType>;
 
 // Whether a shaped type is ranked.
 def HasRankPred : CPred<"::llvm::cast<::mlir::ShapedType>($_self).hasRank()">;

@@ -6,5 +6,5 @@
 // RUN:   -nogpuinc -nogpulib -save-temps \
 // RUN:   %s 2>&1 | FileCheck %s
 
-// CHECK: "-o" "hip-windows-filename-hip-amdgcn-amd-amdhsa-gfx908@xnack+.hipi"
-// CHECK-NOT: "-o" "hip-windows-filename-hip-amdgcn-amd-amdhsa-gfx908:xnack+.hipi"
+// CHECK: "-o" "hip-windows-filename-hip-amdgpu9.08-amd-amdhsa-gfx908@xnack+.hipi"
+// CHECK-NOT: "-o" "hip-windows-filename-hip-amdgpu9.08-amd-amdhsa-gfx908:xnack+.hipi"
