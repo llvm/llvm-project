@@ -978,7 +978,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
 
   // Variable: @g OpVariable id when !dbg matches; else a DebugExpression for
   // the GVE init value when no @g exists and the expression is non-empty; else
-  // DebugInfoNone. As per spec, the DebugExpression must contains the constant
+  // DebugInfoNone. As per spec, the DebugExpression must contain the constant
   // value of the variable that was optimized out. An empty expression contains
   // no value, so we emit DebugInfoNone instead.
   MCRegister VariableReg = CachedDebugInfoNoneReg;
@@ -1904,7 +1904,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
       DebugLocalVariableRegs[LV] = *LVReg;
 
   // Opcodes like DebugDeclare are part of the function body, but
-  // DebugExpression cannot. For such opcodes, we collect the expressions
+  // DebugExpression is not. For such opcodes, we collect the expressions
   // directly from the MIR to avoid inconsistencies with those in the LLVM IR
   // module.
   SetVector<const DIExpression *> Expressions;
