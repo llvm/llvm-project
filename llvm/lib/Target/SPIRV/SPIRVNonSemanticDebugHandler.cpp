@@ -340,6 +340,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   I32ConstantCache.clear();
   DebugTypeFunctionCache.clear();
   DebugOperationCache.clear();
+  DebugExpressionCache.clear();
   GlobalDIEmitted = false;
   GlobalNSDIEnabled = false;
   CurrentMAI = nullptr;
@@ -940,13 +941,20 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugExpression(
         return std::nullopt;
   }
 
-  SmallVector<MCRegister, 4> OperationRegs;
+  SmallVector<MCRegister> OperationRegs;
   for (const DIExpression::ExprOperand &Op : Expr->expr_ops())
     OperationRegs.push_back(
         emitDebugOperation(Op, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI));
 
-  return emitExtInst(SPIRV::NonSemanticExtInst::DebugExpression, VoidTypeReg,
-                     ExtInstSetReg, OperationRegs, MAI);
+  auto [It, Inserted] =
+      DebugExpressionCache.try_emplace(std::move(OperationRegs));
+  if (!Inserted)
+    return It->second;
+
+  MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugExpression,
+                               VoidTypeReg, ExtInstSetReg, It->first, MAI);
+  It->second = Reg;
+  return Reg;
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(

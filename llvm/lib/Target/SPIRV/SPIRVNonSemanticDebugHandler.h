@@ -167,6 +167,11 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // spec maximum (opcode plus at most two operands: BitPiece, Fragment).
   DenseMap<SmallVector<uint32_t, 3>, MCRegister> DebugOperationCache;
 
+  // Cache of already-emitted DebugExpression instructions, keyed by the
+  // DebugOperation result ids in operand order. Useful for debug values
+  // and global-variable init expressions.
+  DenseMap<SmallVector<MCRegister>, MCRegister> DebugExpressionCache;
+
   // True once emitNonSemanticGlobalDebugInfo() has run. Both
   // SPIRVAsmPrinter::emitFunctionHeader() and emitEndOfAsmFile() may call
   // outputModuleSections(), each guarded by ModuleSectionsEmitted, so only
@@ -435,9 +440,10 @@ private:
                                 SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit one \c DebugOperation per element of \p Expr followed by the
-  /// \c DebugExpression that lists them. An empty \p Expr yields a
-  /// \c DebugExpression with no operands, which is what a plain
-  /// \c !DIExpression() means.
+  /// \c DebugExpression that lists them. Reuses a cached \c DebugExpression
+  /// when that sequence of \c DebugOperation ids was already emitted. An
+  /// empty \p Expr yields a \c DebugExpression with no operands, which is
+  /// what a plain \c !DIExpression() means.
   ///
   /// Must be called from module-scope emission only: \c DebugExpression and
   /// \c DebugOperation are not in the spec's list of instructions allowed
