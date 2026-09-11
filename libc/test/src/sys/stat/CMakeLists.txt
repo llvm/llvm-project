@@ -176,3 +176,17 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_test(
+  umask_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    umask_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
+    libc.src.errno.errno
+    libc.src.sys.stat.umask
+    libc.test.UnitTest.ErrnoCheckingTest
+)

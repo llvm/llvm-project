@@ -71,12 +71,6 @@
 #    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
 #  endif
 
-#  ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
-#    define _LIBCPP_DEFAULT_NEW_ALIGNMENT __STDCPP_DEFAULT_NEW_ALIGNMENT__
-#  else
-#    define _LIBCPP_DEFAULT_NEW_ALIGNMENT __BIGGEST_ALIGNMENT__
-#  endif
-
 #endif
 
 #endif // _LIBCPP___CONFIGURATION_COMPILER_H
