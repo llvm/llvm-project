@@ -10,22 +10,22 @@ define i32 @widenpointerinduction_evl_cse(ptr noalias %p0, ptr noalias %p1) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[P0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[P1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x ptr> poison, ptr [[P0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 16 x ptr> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x ptr> poison, ptr [[P1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x ptr> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x ptr> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P0]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI3:%.*]] = phi ptr [ [[P1]], %[[VECTOR_PH]] ], [ [[PTR_IND5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <vscale x 4 x i32> [[TMP0]], splat (i32 1)
-; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI3]], <vscale x 4 x i32> [[TMP1]]
-; CHECK-NEXT:    [[VECTOR_GEP4:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 4 x i32> [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4p0.nxv4p0(<vscale x 4 x ptr> [[VECTOR_GEP4]], <vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4p0.nxv4p0(<vscale x 4 x ptr> [[VECTOR_GEP]], <vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <vscale x 16 x i32> [[TMP0]], splat (i32 1)
+; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI3]], <vscale x 16 x i32> [[TMP1]]
+; CHECK-NEXT:    [[VECTOR_GEP4:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 16 x i32> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv16p0.nxv16p0(<vscale x 16 x ptr> [[VECTOR_GEP4]], <vscale x 16 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv16p0.nxv16p0(<vscale x 16 x ptr> [[VECTOR_GEP]], <vscale x 16 x ptr> align 4 [[BROADCAST_SPLAT2]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 [[TMP3]]

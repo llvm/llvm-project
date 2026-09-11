@@ -16,14 +16,14 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = phi i64 [ [[N:%.*]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP9]], i32 4, i1 true)
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP9]], i32 16, i1 true)
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
-; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp ne <vscale x 4 x i32> [[VP_OP_LOAD]], zeroinitializer
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i32> @llvm.vp.load.nxv16i32.p0(ptr align 4 [[TMP15]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 16 x i32> [[VP_OP_LOAD]], zeroinitializer
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[VP_OP_LOAD3:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP19]], <vscale x 4 x i1> [[TMP17]], i32 [[TMP10]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = add <vscale x 4 x i32> [[VP_OP_LOAD]], [[VP_OP_LOAD3]]
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP]], ptr align 4 [[TMP19]], <vscale x 4 x i1> [[TMP17]], i32 [[TMP10]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 16 x i32> @llvm.vp.load.nxv16i32.p0(ptr align 4 [[TMP19]], <vscale x 16 x i1> [[TMP2]], i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add <vscale x 16 x i32> [[VP_OP_LOAD]], [[VP_OP_LOAD1]]
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i32.p0(<vscale x 16 x i32> [[TMP4]], ptr align 4 [[TMP19]], <vscale x 16 x i1> [[TMP2]], i32 [[TMP10]])
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP10]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP21]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[TMP9]], [[TMP21]]
@@ -37,8 +37,8 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-VP-LABEL: @masked_loadstore(
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 2
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP12]], i64 8)
+; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 4
+; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP12]], i64 32)
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
@@ -48,12 +48,12 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
-; NO-VP-NEXT:    [[TMP7:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_LOAD]], zeroinitializer
+; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i32>, ptr [[TMP6]], align 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = icmp ne <vscale x 16 x i32> [[WIDE_LOAD]], zeroinitializer
 ; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> poison)
-; NO-VP-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_LOAD]]
-; NO-VP-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP9]], ptr align 4 [[TMP8]], <vscale x 4 x i1> [[TMP7]])
+; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i32> @llvm.masked.load.nxv16i32.p0(ptr align 4 [[TMP8]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i32> poison)
+; NO-VP-NEXT:    [[TMP7:%.*]] = add <vscale x 16 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_LOAD]]
+; NO-VP-NEXT:    call void @llvm.masked.store.nxv16i32.p0(<vscale x 16 x i32> [[TMP7]], ptr align 4 [[TMP8]], <vscale x 16 x i1> [[TMP4]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP12]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[INC]]
 ; NO-VP-NEXT:    br i1 [[TMP10]], label [[FOR_INC:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

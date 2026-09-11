@@ -159,13 +159,7 @@ define <8 x i64> @lrint_v8i64f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[A]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[VECINS_71:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[VECINS_71:%.*]] = call <8 x i64> @llvm.lrint.v8i64.v8f32(<8 x float> [[TMP0]])
 ; CHECK-NEXT:    ret <8 x i64> [[VECINS_71]]
 ;
 entry:
@@ -246,13 +240,7 @@ define <8 x i64> @llrint_v8i64f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[A]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[VECINS_71:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[VECINS_71:%.*]] = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> [[TMP0]])
 ; CHECK-NEXT:    ret <8 x i64> [[VECINS_71]]
 ;
 entry:

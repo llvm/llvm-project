@@ -5,7 +5,7 @@
 ; The pointer add (%a + 4) has NUW, make sure it is preserved during SCEV expansion.
 define void @scev_ptradd_strided(ptr noalias %a, ptr noalias %dst, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'scev_ptradd_strided'
-; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
+; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4,vscale x 8,vscale x 16},UF={1}' {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
@@ -57,7 +57,7 @@ exit:
 
 define void @scev_ptradd_strided_var_offset(ptr noalias %a, ptr noalias %dst, i64 %n, i64 %m) {
 ; CHECK-LABEL: VPlan for loop in 'scev_ptradd_strided_var_offset'
-; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
+; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4,vscale x 8,vscale x 16},UF={1}' {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:

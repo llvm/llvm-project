@@ -8,21 +8,19 @@ define void @load_store_interleave_group(ptr noalias %data) vscale_range(2, 1024
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[DATA]], i64 8
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 100, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[EVL_BASED_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP1]]
-; CHECK-NEXT:    [[INTERLEAVE_EVL:%.*]] = mul nuw nsw i32 [[TMP0]], 2
-; CHECK-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 4 x i64> @llvm.vp.load.nxv4i64.p0(ptr align 8 [[TMP2]], <vscale x 4 x i1> splat (i1 true), i32 [[INTERLEAVE_EVL]])
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> [[WIDE_VP_LOAD]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 1
-; CHECK-NEXT:    [[INTERLEAVE_EVL1:%.*]] = mul nuw nsw i32 [[TMP0]], 2
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]])
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i64.p0(<vscale x 4 x i64> [[INTERLEAVED_VEC]], ptr align 8 [[TMP2]], <vscale x 4 x i1> splat (i1 true), i32 [[INTERLEAVE_EVL1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[EVL_BASED_IV]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr nuw i8, ptr [[DATA]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.p0.i64(ptr align 8 [[TMP3]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> [[TMP4]], ptr align 8 [[TMP3]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.p0.i64(ptr align 8 [[TMP7]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> [[TMP8]], ptr align 8 [[TMP7]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP5]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
@@ -37,20 +35,25 @@ define void @load_store_interleave_group(ptr noalias %data) vscale_range(2, 1024
 ; EPILOGUE-SAME: ptr noalias [[DATA:%.*]]) #[[ATTR0:[0-9]+]] {
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[UMAX:%.*]] = shl nuw nsw i64 [[TMP0]], 1
+; EPILOGUE-NEXT:    [[UMAX:%.*]] = shl nuw i64 [[TMP0]], 3
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
-; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP0]]
+; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
+; EPILOGUE-NEXT:    [[TMP2:%.*]] = trunc i64 [[UMAX]] to i32
+; EPILOGUE-NEXT:    [[TMP3:%.*]] = getelementptr nuw i8, ptr [[DATA]], i64 8
 ; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; EPILOGUE:       [[VECTOR_BODY]]:
 ; EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; EPILOGUE-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[INDEX]], 1
-; EPILOGUE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
-; EPILOGUE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
-; EPILOGUE-NEXT:    store <vscale x 2 x i64> [[WIDE_LOAD]], ptr [[TMP5]], align 8
-; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
+; EPILOGUE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[INDEX]], 4
+; EPILOGUE-NEXT:    [[TMP5:%.*]] = getelementptr nuw i8, ptr [[DATA]], i64 [[TMP4]]
+; EPILOGUE-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.p0.i64(ptr align 8 [[TMP5]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> [[TMP6]], ptr align 8 [[TMP5]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    [[TMP7:%.*]] = getelementptr nuw i8, ptr [[TMP3]], i64 [[TMP4]]
+; EPILOGUE-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.p0.i64(ptr align 8 [[TMP7]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> [[TMP9]], ptr align 8 [[TMP7]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[UMAX]]
 ; EPILOGUE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; EPILOGUE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; EPILOGUE:       [[MIDDLE_BLOCK]]:
@@ -102,7 +105,7 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) vscale
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 26)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -120,16 +123,21 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) vscale
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP1]], i64 [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP2]], i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP13]]
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST]], i64 8
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr { i64, i64 }, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP14]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP19]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> zeroinitializer, ptr align 8 [[TMP16]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP18]])
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP19]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> zeroinitializer, ptr align 8 [[TMP17]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP18]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -159,8 +167,8 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) vscale
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; EPILOGUE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 1
-; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 28)
+; EPILOGUE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
+; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 32)
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; EPILOGUE:       [[VECTOR_SCEVCHECK]]:
@@ -177,16 +185,21 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) vscale
 ; EPILOGUE-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP8]]
 ; EPILOGUE-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
-; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP1]]
+; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; EPILOGUE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; EPILOGUE-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP1]], i64 [[N_MOD_VF]]
+; EPILOGUE-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP2]], i64 [[N_MOD_VF]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP13]]
+; EPILOGUE-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP2]] to i32
+; EPILOGUE-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST]], i64 8
 ; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; EPILOGUE:       [[VECTOR_BODY]]:
 ; EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; EPILOGUE-NEXT:    [[TMP14:%.*]] = getelementptr { i64, i64 }, ptr [[DST]], i64 [[INDEX]]
-; EPILOGUE-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP14]], align 8
-; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; EPILOGUE-NEXT:    [[TMP19:%.*]] = shl i64 [[INDEX]], 4
+; EPILOGUE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP19]]
+; EPILOGUE-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> zeroinitializer, ptr align 8 [[TMP16]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP18]])
+; EPILOGUE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP19]]
+; EPILOGUE-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> zeroinitializer, ptr align 8 [[TMP17]], i64 16, <vscale x 8 x i1> splat (i1 true), i32 [[TMP18]])
+; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; EPILOGUE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; EPILOGUE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; EPILOGUE:       [[MIDDLE_BLOCK]]:
@@ -272,20 +285,33 @@ define void @load_store_interleave_group_i32(ptr noalias %data) vscale_range(2, 
 ; EPILOGUE-SAME: ptr noalias [[DATA:%.*]]) #[[ATTR0]] {
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[UMAX:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+; EPILOGUE-NEXT:    [[UMAX:%.*]] = shl nuw i64 [[TMP0]], 4
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
-; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP0]]
+; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
+; EPILOGUE-NEXT:    [[TMP2:%.*]] = trunc i64 [[UMAX]] to i32
+; EPILOGUE-NEXT:    [[TMP3:%.*]] = getelementptr nuw i8, ptr [[DATA]], i64 4
+; EPILOGUE-NEXT:    [[TMP4:%.*]] = getelementptr nuw i8, ptr [[DATA]], i64 8
+; EPILOGUE-NEXT:    [[TMP5:%.*]] = getelementptr nuw i8, ptr [[DATA]], i64 12
 ; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; EPILOGUE:       [[VECTOR_BODY]]:
 ; EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; EPILOGUE-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[INDEX]], 2
-; EPILOGUE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[TMP4]]
-; EPILOGUE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 8
-; EPILOGUE-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP5]], align 8
-; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
+; EPILOGUE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[INDEX]], 4
+; EPILOGUE-NEXT:    [[TMP7:%.*]] = getelementptr nuw i8, ptr [[DATA]], i64 [[TMP6]]
+; EPILOGUE-NEXT:    [[TMP15:%.*]] = call <vscale x 16 x i32> @llvm.experimental.vp.strided.load.nxv16i32.p0.i64(ptr align 8 [[TMP7]], i64 16, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i32.p0.i64(<vscale x 16 x i32> [[TMP15]], ptr align 8 [[TMP7]], i64 16, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    [[TMP9:%.*]] = getelementptr nuw i8, ptr [[TMP3]], i64 [[TMP6]]
+; EPILOGUE-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i32> @llvm.experimental.vp.strided.load.nxv16i32.p0.i64(ptr align 8 [[TMP9]], i64 16, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i32.p0.i64(<vscale x 16 x i32> [[TMP10]], ptr align 8 [[TMP9]], i64 16, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    [[TMP11:%.*]] = getelementptr nuw i8, ptr [[TMP4]], i64 [[TMP6]]
+; EPILOGUE-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i32> @llvm.experimental.vp.strided.load.nxv16i32.p0.i64(ptr align 8 [[TMP11]], i64 16, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i32.p0.i64(<vscale x 16 x i32> [[TMP12]], ptr align 8 [[TMP11]], i64 16, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    [[TMP13:%.*]] = getelementptr nuw i8, ptr [[TMP5]], i64 [[TMP6]]
+; EPILOGUE-NEXT:    [[TMP14:%.*]] = call <vscale x 16 x i32> @llvm.experimental.vp.strided.load.nxv16i32.p0.i64(ptr align 8 [[TMP13]], i64 16, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i32.p0.i64(<vscale x 16 x i32> [[TMP14]], ptr align 8 [[TMP13]], i64 16, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[UMAX]]
 ; EPILOGUE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; EPILOGUE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; EPILOGUE:       [[MIDDLE_BLOCK]]:

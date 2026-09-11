@@ -6,9 +6,9 @@ define void @loads() {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x fp128>, ptr null, align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp une <2 x fp128> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x fp128> [[TMP1]], <2 x fp128> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    call void null(i32 0, ptr null, i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une <2 x fp128> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une <4 x fp128> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    ret void
 ;
 entry:

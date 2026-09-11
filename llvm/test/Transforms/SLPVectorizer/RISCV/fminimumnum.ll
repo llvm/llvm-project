@@ -128,14 +128,10 @@ define void @fmin64()  {
 ; CHECK-LABEL: define void @fmin64(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr @input1_f64, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr @input2_f64, align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> [[TMP0]], <4 x double> [[TMP1]])
-; CHECK-NEXT:    store <4 x double> [[TMP2]], ptr @output_f64, align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr getelementptr inbounds nuw (i8, ptr @input1_f64, i64 32), align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr getelementptr inbounds nuw (i8, ptr @input2_f64, i64 32), align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> [[TMP3]], <4 x double> [[TMP4]])
-; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr getelementptr inbounds nuw (i8, ptr @output_f64, i64 32), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr @input1_f64, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @input2_f64, align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.minimumnum.v8f64(<8 x double> [[TMP0]], <8 x double> [[TMP1]])
+; CHECK-NEXT:    store <8 x double> [[TMP2]], ptr @output_f64, align 16
 ; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @input1_f64, i64 64), align 16
 ; CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @input2_f64, i64 64), align 16
 ; CHECK-NEXT:    [[TMP26:%.*]] = tail call double @llvm.minimumnum.f64(double [[TMP24]], double [[TMP25]])
@@ -188,14 +184,10 @@ define void @fmax64()  {
 ; CHECK-LABEL: define void @fmax64(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr @input1_f64, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr @input2_f64, align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> [[TMP0]], <4 x double> [[TMP1]])
-; CHECK-NEXT:    store <4 x double> [[TMP2]], ptr @output_f64, align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr getelementptr inbounds nuw (i8, ptr @input1_f64, i64 32), align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr getelementptr inbounds nuw (i8, ptr @input2_f64, i64 32), align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> [[TMP3]], <4 x double> [[TMP4]])
-; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr getelementptr inbounds nuw (i8, ptr @output_f64, i64 32), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr @input1_f64, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @input2_f64, align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.maximumnum.v8f64(<8 x double> [[TMP0]], <8 x double> [[TMP1]])
+; CHECK-NEXT:    store <8 x double> [[TMP2]], ptr @output_f64, align 16
 ; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @input1_f64, i64 64), align 16
 ; CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @input2_f64, i64 64), align 16
 ; CHECK-NEXT:    [[TMP26:%.*]] = tail call double @llvm.maximumnum.f64(double [[TMP24]], double [[TMP25]])

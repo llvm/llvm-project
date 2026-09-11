@@ -11,7 +11,7 @@
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-LABEL: VPlan for loop in 'foo'
-; IF-EVL:  VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
+; IF-EVL:  VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4,vscale x 8,vscale x 16},UF={1}' {
 ; IF-EVL-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = vector-trip-count
 ; IF-EVL-NEXT:  Live-in ir<%N> = original trip-count
@@ -51,7 +51,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:  Successor(s): middle.block
 ;
 ; NO-VP-LABEL: VPlan for loop in 'foo'
-; NO-VP:  VPlan 'Initial VPlan for VF={2,4,8},UF>=1' {
+; NO-VP:  VPlan 'Initial VPlan for VF={2,4,8,16,32},UF>=1' {
 ; NO-VP-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; NO-VP-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; NO-VP-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
