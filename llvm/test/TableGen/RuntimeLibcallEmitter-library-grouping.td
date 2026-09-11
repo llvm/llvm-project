@@ -31,14 +31,14 @@ def Libm : LibcallLibrary<"libm", (add sqrt,
 
 // One standalone implementation function is emitted per LibcallLibrary.
 
-// CHECK: static void setAvailableLibFuncs_libc(llvm::RTLIB::RuntimeLibcallsInfo &Info, const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-NEXT:   {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_memcpy, // memcpy
 // CHECK-NEXT:     };
 // CHECK-EMPTY:
 // CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
-// CHECK-NEXT:       Info.setAvailable(Impl);
+// CHECK-NEXT:       setAvailable(Impl);
 // CHECK-NEXT:     }
 // CHECK-EMPTY:
 // CHECK-NEXT:     if (TT.isOSDarwin()) {
@@ -47,7 +47,7 @@ def Libm : LibcallLibrary<"libm", (add sqrt,
 // CHECK-NEXT:       };
 // CHECK-EMPTY:
 // CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_isDarwin) {
-// CHECK-NEXT:         Info.setAvailable(Impl);
+// CHECK-NEXT:         setAvailable(Impl);
 // CHECK-NEXT:       }
 // CHECK-EMPTY:
 // CHECK-NEXT:     }
@@ -55,14 +55,14 @@ def Libm : LibcallLibrary<"libm", (add sqrt,
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
-// CHECK: static void setAvailableLibFuncs_libm(llvm::RTLIB::RuntimeLibcallsInfo &Info, const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libm(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-NEXT:   {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_sqrt, // sqrt
 // CHECK-NEXT:     };
 // CHECK-EMPTY:
 // CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
-// CHECK-NEXT:       Info.setAvailable(Impl);
+// CHECK-NEXT:       setAvailable(Impl);
 // CHECK-NEXT:     }
 // CHECK-EMPTY:
 // CHECK-NEXT:     if (TT.isX86()) {
@@ -71,7 +71,7 @@ def Libm : LibcallLibrary<"libm", (add sqrt,
 // CHECK-NEXT:       };
 // CHECK-EMPTY:
 // CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_isX86) {
-// CHECK-NEXT:         Info.setAvailable(Impl);
+// CHECK-NEXT:         setAvailable(Impl);
 // CHECK-NEXT:       }
 // CHECK-EMPTY:
 // CHECK-NEXT:     }

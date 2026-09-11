@@ -300,9 +300,9 @@ struct TransposeOpToArmSMELowering
       // Fold transpose into transfer_read to enable in-flight transpose when
       // converting to arm_sme.tile_load.
       rewriter.modifyOpInPlace(xferOp, [&]() {
-        xferOp->setAttr(xferOp.getPermutationMapAttrName(),
-                        AffineMapAttr::get(AffineMap::getPermutationMap(
-                            permutation, transposeOp.getContext())));
+        xferOp.setPermutationMapAttr(
+            AffineMapAttr::get(AffineMap::getPermutationMap(
+                permutation, transposeOp.getContext())));
       });
       rewriter.replaceOp(transposeOp, xferOp);
       return success();

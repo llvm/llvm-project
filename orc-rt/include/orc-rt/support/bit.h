@@ -15,6 +15,8 @@
 #ifndef ORC_RT_SUPPORT_BIT_H
 #define ORC_RT_SUPPORT_BIT_H
 
+#include "orc-rt/support/Compiler.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -78,7 +80,7 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 #endif
   } else if constexpr (sizeof(T) == 4) {
     uint32_t UV = V;
-#if __has_builtin(__builtin_bswap32)
+#if ORC_RT_HAS_BUILTIN(__builtin_bswap32)
     return __builtin_bswap32(UV);
 #elif defined(_MSC_VER) && !defined(_DEBUG)
     return _byteswap_ulong(UV);
@@ -91,7 +93,7 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 #endif
   } else if constexpr (sizeof(T) == 8) {
     uint64_t UV = V;
-#if __has_builtin(__builtin_bswap64)
+#if ORC_RT_HAS_BUILTIN(__builtin_bswap64)
     return __builtin_bswap64(UV);
 #elif defined(_MSC_VER) && !defined(_DEBUG)
     return _byteswap_uint64(UV);

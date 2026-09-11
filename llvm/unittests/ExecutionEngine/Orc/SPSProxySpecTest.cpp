@@ -15,6 +15,8 @@
 
 #include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -205,6 +207,33 @@ TEST(SPSProxySpecTest, Int32VoidSync) {
   Expected<int32_t> R = Call(ES, ExecutorAddr::fromPtr(int32VoidTarget));
   ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(*R, 42);
+
+  cantFail(ES.endSession());
+}
+
+TEST(SPSProxySpecTest, SelfEPCBootstrapRunAsFunctionProxies) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  CallInt32VoidProxy CallInt32Void;
+  CallInt32Int32Proxy CallInt32Int32;
+  if (auto Err = lookupAndApply(
+          ES.getBootstrapJITDylib(),
+          {recordProxy<sps::CallInt32VoidProxySpec>(&CallInt32Void),
+           recordProxy<sps::CallInt32Int32ProxySpec>(&CallInt32Int32)})) {
+    ADD_FAILURE() << toString(std::move(Err));
+    cantFail(ES.endSession());
+    return;
+  }
+
+  Expected<int32_t> VoidResult =
+      CallInt32Void(ES, ExecutorAddr::fromPtr(int32VoidTarget));
+  ASSERT_THAT_EXPECTED(VoidResult, Succeeded());
+  EXPECT_EQ(*VoidResult, 42);
+
+  Expected<int32_t> IntResult =
+      CallInt32Int32(ES, ExecutorAddr::fromPtr(int32Int32Target), 21);
+  ASSERT_THAT_EXPECTED(IntResult, Succeeded());
+  EXPECT_EQ(*IntResult, 42);
 
   cantFail(ES.endSession());
 }

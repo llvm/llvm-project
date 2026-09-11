@@ -83,6 +83,10 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "bool", "isDeviceData", (ins), [{
         return false;
       }]>,
+    InterfaceMethod<"Check if the global variable is compiler generated", "bool",
+      "isCompilerGenerated", (ins), [{
+        return false;
+      }]>,
   ];
 }
 

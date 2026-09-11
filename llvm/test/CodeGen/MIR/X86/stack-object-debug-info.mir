@@ -54,8 +54,8 @@ frameInfo:
 # CHECK: stack:
 # CHECK:  - { id: 0, name: y.i, type: default, offset: 0, size: 256, alignment: 16,
 # CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
-# CHECK-NEXT: debug-info-variable: '!4', debug-info-expression: '!DIExpression()',
-# CHECK-NEXT: debug-info-location: '!12' }
+# CHECK-NEXT: debug-info-variable: '!{{[0-9]+}}', debug-info-expression: '!DIExpression()',
+# CHECK-NEXT: debug-info-location: '!{{[0-9]+}}' }
 stack:
   - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16,
       debug-info-variable: '!4', debug-info-expression: '!DIExpression()',

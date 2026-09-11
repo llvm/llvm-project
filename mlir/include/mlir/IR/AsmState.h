@@ -179,7 +179,7 @@ private:
   DeleterFn deleter;
 
   /// Whether the data is mutable.
-  bool dataIsMutable;
+  bool dataIsMutable = false;
 
   friend class HeapAsmResourceBlob;
 };

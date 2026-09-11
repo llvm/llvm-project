@@ -18,6 +18,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
 #include "DYLDRendezvous.h"
@@ -64,7 +65,6 @@ addr_t DYLDRendezvous::ResolveRendezvousAddress() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   addr_t info_location;
   addr_t info_addr;
-  Status error;
 
   if (!m_process) {
     LLDB_LOGF(log, "%s null process provided", __FUNCTION__);
@@ -120,12 +120,15 @@ addr_t DYLDRendezvous::ResolveRendezvousAddress() {
   LLDB_LOGF(log, "%s reading pointer (%" PRIu32 " bytes) from 0x%" PRIx64,
             __FUNCTION__, m_process->GetAddressByteSize(), info_location);
 
-  info_addr = m_process->ReadPointerFromMemory(info_location, error);
-  if (error.Fail()) {
-    LLDB_LOGF(log, "%s FAILED - could not read from the info location: %s",
-              __FUNCTION__, error.AsCString());
+  llvm::Expected<lldb::addr_t> info_addr_or_err =
+      m_process->ReadPointerFromMemory(info_location);
+  if (!info_addr_or_err) {
+    LLDB_LOG_ERROR(log, info_addr_or_err.takeError(),
+                   "{1} FAILED - could not read from the info location: {0}",
+                   __FUNCTION__);
     return LLDB_INVALID_ADDRESS;
   }
+  info_addr = *info_addr_or_err;
 
   if (info_addr == 0) {
     LLDB_LOGF(log,
@@ -598,11 +601,13 @@ addr_t DYLDRendezvous::ReadWord(addr_t addr, uint64_t *dst, size_t size) {
 }
 
 addr_t DYLDRendezvous::ReadPointer(addr_t addr, addr_t *dst) {
-  Status error;
-
-  *dst = m_process->ReadPointerFromMemory(addr, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> dst_or_err =
+      m_process->ReadPointerFromMemory(addr);
+  if (!dst_or_err) {
+    llvm::consumeError(dst_or_err.takeError());
     return 0;
+  }
+  *dst = *dst_or_err;
 
   return addr + m_process->GetAddressByteSize();
 }

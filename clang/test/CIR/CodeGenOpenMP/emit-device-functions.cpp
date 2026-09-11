@@ -33,7 +33,7 @@ void caller() {
 
 #pragma omp end declare target
 
-// CIR-DAG: cir.func {{.*}} @_Z12regular_funcv() {{.*}}omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)
+// CIR-DAG: cir.func {{.*}} @_Z12regular_funcv() {{.*}}omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to
 // CIR-DAG: cir.func {{.*}} @_Z6callerv() {{.*}}omp.declare_target
 // CIR-DAG: cir.func {{.*}} @_ZN1SC2Ev({{.*}})
 // CIR-DAG: cir.func {{.*}} @_ZN1SC1Ev({{.*}})
