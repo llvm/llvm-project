@@ -52,6 +52,26 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* LLVM now assigns persistent print IDs to metadata nodes. Reusing these IDs
+  avoids repeated module-wide scans to rebuild metadata numbering, which can
+  significantly speed up debug and pass printing on large modules. Keeping
+  the IDs stable also makes repeated output easier to compare: unchanged
+  metadata keeps the same number as passes modify the module. The numbering
+  and definition order can differ from earlier releases, so tests of
+  intermediate output may need updated expectations.
+
+  LLVM's standard final-output paths renumber metadata in canonical order.
+  This gives consecutive IDs with no gaps and makes the final IR easier to
+  read. C++ clients that call `Module::print()` directly do not renumber
+  automatically. For final IR output, these clients should call
+  `Module::renumberMetadataForAssembly()` immediately before printing. Keep
+  persistent IDs for intermediate dumps so their numbering remains stable.
+
+  Standalone metadata printing now uses numbered definitions such as
+  `!1 = !DIFile(...)` instead of pointer-based forms such as
+  `<0x...> = !DIFile(...)`. Tools and tests that compare such output may need
+  updating.
+
 * Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
   intrinsics, the reduction variants of `llvm.maximumnum` and
   `llvm.minimumnum`. 
@@ -150,6 +170,12 @@ Makes programs 10x faster by doing Special New Thing.
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
   default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
 
+* Clang and MLIR projects enabled implicitly as Flang dependencies now omit
+  unrelated build and test targets. Installation retains the dependency
+  libraries, headers, resources, and CMake targets needed by Flang. Explicitly
+  enabling Clang or MLIR retains the project's complete build, test, and
+  install behavior.
+
 ### Changes to TableGen
 
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
@@ -217,6 +243,8 @@ Makes programs 10x faster by doing Special New Thing.
   push/pop extensions.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
+* Added support for `Sspmp`, `Sspmpen` and `Smpmpdeleg` extensions.
+* Removed veyron-v1 processor definition and tuning model.
 
 ### Changes to the WebAssembly Backend
 
@@ -237,6 +265,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* Fixed a crash
+  ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
+  compiling a function containing a static alloca of `(size_t)-1` bytes, whose
+  size collided with the sentinel value MachineFrameInfo used to mark dead
+  stack objects.
+
 ### Changes to the Metadata Info
 
 ### Changes to the Debug Info
@@ -245,7 +279,15 @@ Makes programs 10x faster by doing Special New Thing.
 
 * llvm-mca no longer defaults -mcpu to "native"
 
+* llvm-rc now supports `/showIncludes` to report header and resource-file
+  dependencies in a format compatible with Ninja's `deps = msvc` mode.
+
 ### Changes to LLDB
+
+* `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
+  runtime's command line instead of following it. A runtime that dispatches on a
+  leading subcommand can therefore name that subcommand through this setting,
+  rather than needing a wrapper script.
 
 #### SBAPI
 

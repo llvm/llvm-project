@@ -1460,11 +1460,26 @@ TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
 
 TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
 
-TYPE_PARSER(construct<OmpDoacross>(
-    // Don't parse the modifier list as "maybe", or otherwise the parser will
-    // always succeed (never allowing TaskDep in OmpDependClause).
-    nonemptyList(Parser<OmpDoacross::Modifier>{}),
-    maybe(":"_tok >> Parser<OmpIterationVector>{})))
+struct OmpDoacrossParser {
+  using resultType = OmpDoacross;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto modifier{nonemptyList(Parser<OmpDoacross::Modifier>{})};
+    if (auto &&modList{modifier.Parse(state)}) {
+      if (attempt(":"_tok).Parse(state)) {
+        auto vector{Parser<OmpIterationVector>{}};
+        if (auto &&iterVec{attempt(vector).Parse(state)}) {
+          return OmpDoacross{std::move(*modList), std::move(*iterVec)};
+        }
+      }
+      return OmpDoacross{
+          std::move(*modList), std::optional<OmpIterationVector>{}};
+    }
+    return std::nullopt;
+  }
+};
+
+TYPE_PARSER(construct<OmpDoacross>(OmpDoacrossParser{}))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(
@@ -1934,7 +1949,7 @@ static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
   return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
 }
 
-static inline constexpr auto IsMemberOf(const llvm::omp::DirectiveSet &dirs) {
+static inline constexpr auto IsMemberOf(const llvm::omp::Directives &dirs) {
   return [&dirs](const OmpDirectiveName &name) -> bool {
     return dirs.test(name.v);
   };
@@ -2160,7 +2175,7 @@ TYPE_PARSER(construct<OmpMetadirectiveDirective>(
 struct OmpDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpDirectiveParser(llvm::omp::DirectiveSet dirs) : dirs_(dirs) {}
+  constexpr OmpDirectiveParser(llvm::omp::Directives dirs) : dirs_(dirs) {}
   constexpr OmpDirectiveParser(llvm::omp::Directive dir) : dirs_({dir}) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
@@ -2170,7 +2185,7 @@ struct OmpDirectiveParser {
   }
 
 private:
-  llvm::omp::DirectiveSet dirs_;
+  llvm::omp::Directives dirs_;
 };
 
 // Parse the directive that begins a construct. In some cases the directive
@@ -2183,7 +2198,7 @@ struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
   constexpr OmpBeginDirectiveParser(
-      llvm::omp::DirectiveSet dirs, bool implicit = true)
+      llvm::omp::Directives dirs, bool implicit = true)
       : dparser_(dirs), implicit_(implicit) {}
   constexpr OmpBeginDirectiveParser(
       llvm::omp::Directive dir, bool implicit = true)
@@ -2222,7 +2237,7 @@ private:
 struct OmpEndDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpEndDirectiveParser(llvm::omp::DirectiveSet dirs)
+  constexpr OmpEndDirectiveParser(llvm::omp::Directives dirs)
       : dparser_(dirs) {}
   constexpr OmpEndDirectiveParser(llvm::omp::Directive dir) : dparser_(dir) {}
 
@@ -2336,7 +2351,7 @@ struct OmpLoopConstructParser {
   using resultType = OpenMPLoopConstruct;
 
   constexpr OmpLoopConstructParser(
-      llvm::omp::DirectiveSet dirs, bool implicit = true)
+      llvm::omp::Directives dirs, bool implicit = true)
       : dirs_(dirs), implicit_(implicit) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
@@ -2379,7 +2394,7 @@ struct OmpLoopConstructParser {
   }
 
 private:
-  llvm::omp::DirectiveSet dirs_;
+  llvm::omp::Directives dirs_;
   bool implicit_;
 };
 
@@ -2765,8 +2780,8 @@ TYPE_PARSER(sourced(
         llvm::omp::Directive::OMPD_metadirective, /*implicit=*/false})))
 
 // OMP SECTIONS Directive
-static constexpr llvm::omp::DirectiveSet GetSectionsDirectives() {
-  constexpr llvm::omp::DirectiveSet sectionsDirectives{
+static constexpr llvm::omp::Directives GetSectionsDirectives() {
+  constexpr llvm::omp::Directives sectionsDirectives{
       llvm::omp::Directive::OMPD_sections,
       llvm::omp::Directive::OMPD_parallel_sections,
   };
@@ -2826,9 +2841,9 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(
                     Parser<OmpDelimitedMetadirectiveDirective>{}))))
 
-static constexpr llvm::omp::DirectiveSet GetLoopDirectives() {
+static constexpr llvm::omp::Directives GetLoopDirectives() {
   using SourceLanguage = llvm::omp::SourceLanguage;
-  llvm::omp::DirectiveSet loopDirectives;
+  llvm::omp::Directives loopDirectives;
 
   for (auto dirId : llvm::omp::directives()) {
     auto assoc{getDirectiveAssociation(dirId)};
@@ -2846,8 +2861,8 @@ static constexpr llvm::omp::DirectiveSet GetLoopDirectives() {
 TYPE_PARSER(sourced(construct<OpenMPLoopConstruct>(
     OmpLoopConstructParser(GetLoopDirectives()))))
 
-static constexpr llvm::omp::DirectiveSet GetAllDirectives() {
-  return ~llvm::omp::DirectiveSet();
+static constexpr llvm::omp::Directives GetAllDirectives() {
+  return ~llvm::omp::Directives();
 }
 
 TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(

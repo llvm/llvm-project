@@ -349,9 +349,7 @@ public:
     return HasUnalignedScratchAccess && HasUnalignedAccessMode;
   }
 
-  bool isXNACKEnabled() const {
-    return enableXNACK() || TargetID.isXnackOnOrAny();
-  }
+  bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
@@ -858,7 +856,7 @@ public:
 
   /// \returns Total number of VGPRs supported by the subtarget.
   unsigned getTotalNumVGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumVGPRs(*this);
+    return AMDGPU::getTotalNumVGPRs(getTargetID().getGPUKind(), isWave32());
   }
 
   /// \returns Addressable number of architectural VGPRs supported by the
@@ -869,7 +867,14 @@ public:
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this, DynamicVGPRBlockSize);
+    // Dynamic VGPR mode is a per-kernel mode, so it is not covered by the
+    // TargetParser query.
+    if (DynamicVGPRBlockSize != 0) {
+      return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this,
+                                                     DynamicVGPRBlockSize);
+    }
+    return AMDGPU::getAddressableNumVGPRs(getTargetID().getGPUKind(),
+                                          isWave32());
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
@@ -1053,6 +1058,18 @@ public:
   bool useDFAforSMS() const override { return false; }
 
   bool enableWindowScheduler() const override { return false; }
+
+  // \returns true if ISel should select the native i64 min/max instructions
+  // (V_MIN/MAX_{I|U}64).
+  bool useMinMaxI64Insts() const {
+    return hasMinMaxI64Insts() && !hasSlowMaxMinMulI64Insts();
+  }
+
+  // \returns true if ISel should select the native i64 mul instruction
+  // V_MUL_U64.
+  bool useVMulU64Inst() const {
+    return hasVMulU64Inst() && !hasSlowMaxMinMulI64Insts();
+  }
 };
 
 class GCNUserSGPRUsageInfo {

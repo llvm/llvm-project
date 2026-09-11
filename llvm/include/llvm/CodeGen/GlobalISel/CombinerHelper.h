@@ -245,7 +245,6 @@ public:
                                IndexedLoadStoreMatchInfo &MatchInfo) const;
 
   LLVM_ABI bool matchSextTruncSextLoad(MachineInstr &MI) const;
-  LLVM_ABI void applySextTruncSextLoad(MachineInstr &MI) const;
 
   /// Match sext_inreg(load p), imm -> sextload p
   LLVM_ABI bool
@@ -379,7 +378,9 @@ public:
   LLVM_ABI void applyShiftOfShiftedLogic(MachineInstr &MI,
                                          ShiftOfShiftedLogic &MatchInfo) const;
 
-  LLVM_ABI bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  /// \return true if the target's TargetLowering::isDesirableToCommuteWithShift
+  /// hook approves of commuting \p MI (a G_SHL) with the binop feeding it.
+  LLVM_ABI bool isDesirableToCommuteWithShift(const MachineInstr &MI) const;
 
   /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
   LLVM_ABI bool matchLshrOfTruncOfLshr(MachineInstr &MI,
@@ -454,10 +455,6 @@ public:
   LLVM_ABI bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
                                             BuildFnTy &MatchInfo) const;
 
-  /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
-  LLVM_ABI bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
-  LLVM_ABI void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
-
   /// Transform PtrToInt(IntToPtr(x)) to x.
   LLVM_ABI void applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) const;
 
@@ -495,10 +492,6 @@ public:
   LLVM_ABI void
   applyCombineTruncOfShift(MachineInstr &MI,
                            std::pair<MachineInstr *, LLT> &MatchInfo) const;
-
-  /// Return true if any explicit use operand on \p MI is defined by a
-  /// G_IMPLICIT_DEF.
-  LLVM_ABI bool matchAnyExplicitUseIsUndef(MachineInstr &MI) const;
 
   /// Return true if all register explicit use operands on \p MI are defined by
   /// a G_IMPLICIT_DEF.
@@ -571,9 +564,6 @@ public:
 
   /// Optimize (x op x) -> x
   LLVM_ABI bool matchBinOpSameVal(MachineInstr &MI) const;
-
-  /// Check if operand \p OpIdx is undef.
-  LLVM_ABI bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
   /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
   /// is true, also match operands whose negation is a power of 2 (i.e. whose
@@ -656,7 +646,6 @@ public:
 
   /// Combine G_PTR_ADD with nullptr to G_INTTOPTR
   LLVM_ABI bool matchPtrAddZero(MachineInstr &MI) const;
-  LLVM_ABI void applyPtrAddZero(MachineInstr &MI) const;
 
   /// Combine G_UREM x, (known power of 2) to an add and bitmasking.
   LLVM_ABI void applySimplifyURemByPow2(MachineInstr &MI) const;
@@ -856,10 +845,6 @@ public:
   // Combine truncusat_u(fptoui(x)) -> fptoui_sat(x)
   LLVM_ABI bool matchTruncUSatUToFPTOUISat(MachineInstr &MI,
                                            MachineInstr &SrcMI) const;
-
-  /// Try to transform \p MI by using all of the above
-  /// combine functions. Returns true if changed.
-  LLVM_ABI bool tryCombine(MachineInstr &MI) const;
 
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)

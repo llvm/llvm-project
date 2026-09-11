@@ -28,21 +28,21 @@ entry:
   %hexf = alloca float, align 4
   store float 0x37D5C73200000000, ptr %hexf, align 4
   %inf = alloca float, align 4
-  store float 0x7FF0000000000000, ptr %inf, align 4
+  store float +inf, ptr %inf, align 4
   %ninf = alloca float, align 4
-  store float 0xFFF0000000000000, ptr %ninf, align 4
+  store float -inf, ptr %ninf, align 4
   %nan = alloca float, align 4
-  store float 0x7FF8000000000000, ptr %nan, align 4
+  store float +qnan, ptr %nan, align 4
   %nnan = alloca float, align 4
-  store float 0xFFF8000000000000, ptr %nnan, align 4
+  store float -qnan, ptr %nnan, align 4
   %snan = alloca float, align 4
   store float 0x7FF4000000000000, ptr %snan, align 4
   %dinf = alloca double, align 8
-  store double 0x7FF0000000000000, ptr %dinf, align 8
+  store double +inf, ptr %dinf, align 8
   %dninf = alloca double, align 8
-  store double 0xFFF0000000000000, ptr %dninf, align 8
+  store double -inf, ptr %dninf, align 8
   %dnan = alloca double, align 8
-  store double 0x7FF8000000000000, ptr %dnan, align 8
+  store double +qnan, ptr %dnan, align 8
   %dsnan = alloca double, align 8
   store double 0x7FF0000000000001, ptr %dsnan, align 8
   ret void

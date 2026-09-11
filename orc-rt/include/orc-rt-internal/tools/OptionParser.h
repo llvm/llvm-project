@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <charconv>
-#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -24,6 +23,7 @@
 
 #include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/support/Error.h"
+#include "orc-rt/support/move_only_function.h"
 
 namespace orc_rt {
 namespace detail {
@@ -224,8 +224,8 @@ private:
     std::optional<char> ShortName;
     std::string Desc;
     OptionKind Kind{};
-    std::function<void()> Default;
-    std::function<Error(std::string_view)> FromString;
+    move_only_function<void() const> Default;
+    move_only_function<Error(std::string_view) const> FromString;
   };
 
   std::vector<std::string> Positionals;
