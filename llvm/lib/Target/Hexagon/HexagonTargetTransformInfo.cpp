@@ -455,3 +455,20 @@ HexagonTTIImpl::getInstructionCost(const User *U,
 bool HexagonTTIImpl::shouldBuildLookupTables() const {
   return EmitLookupTables;
 }
+
+bool HexagonTTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  // A function that hand-writes HVX is only safe to merge into one that is
+  // itself declared for HVX. Vector code moved into a caller that is not
+  // becomes reachable on hardware threads that must not take an HVX context,
+  // and the absence of the attribute means we cannot tell.
+  //
+  // Checked ahead of `BaseT`, which also runs before the inliner's
+  // `alwaysinline` shortcut, so an explicit `always_inline` cannot override
+  // this.
+  if (Callee->hasFnAttribute("hexagon_hvx") &&
+      !Caller->hasFnAttribute("hexagon_hvx")) {
+    return false;
+  }
+  return BaseT::areInlineCompatible(Caller, Callee);
+}
