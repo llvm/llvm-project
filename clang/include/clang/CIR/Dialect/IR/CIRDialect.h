@@ -96,4 +96,14 @@ RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 #define GET_OP_CLASSES
 #include "clang/CIR/Dialect/IR/CIROps.h.inc"
 
+namespace cir {
+/// The alloca that defines \p addr, looking through casts that preserve the
+/// underlying storage.  Null when the chain does not end at an alloca.
+///
+/// Use the result only to inspect the allocation, such as its alignment or
+/// its allocated type.  Addressing has to keep using \p addr, whose type and
+/// address space may differ from the alloca's own result.
+AllocaOp getUnderlyingAlloca(mlir::Value addr);
+} // namespace cir
+
 #endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_H
