@@ -3033,14 +3033,13 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   //   EMIT ir<%uncountable.addr> = getelementptr inbounds nuw ir<%pred>,ir<%iv>
   //   EMIT ir<%uncountable.val> = load ir<%uncountable.addr>
   //   EMIT ir<%uncountable.cond> = icmp sgt ir<%uncountable.val>, ir<500>
-  //   EMIT vp<%3> = masked-cond ir<%uncountable.cond>
   // Successor(s): for.inc
   //
   // for.inc:
   //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
   //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
   //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-  //   EMIT vp<%4> = any-of ir<%3>
+  //   EMIT vp<%4> = any-of ir<%uncountable.cond>
   //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
   //   EMIT branch-on-two-conds vp<%4>, vp<%5>
   // Successor(s): middle.block, middle.block, for.body
@@ -3093,10 +3092,6 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
-                            m_VPValue(Op1)))) {
-      Worklist.push_back(Op1);
-      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
       return nullptr;
   }
@@ -3127,7 +3122,6 @@ struct EarlyExitInfo {
 ///   EMIT ir<%arrayidx> = getelementptr inbounds nuw ir<@c>, ir<%indvars.iv>
 ///   EMIT-SCALAR ir<%0> = load ir<%arrayidx>
 ///   EMIT ir<%cmp1> = icmp sgt ir<%0>, ir<5>
-///   EMIT vp<%1> = masked-cond ir<%cmp1>
 /// Successor(s): if.end
 ///
 /// if.end:
@@ -3326,20 +3320,20 @@ bool VPlanTransforms::handleUncountableEarlyExits(
               m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
     assert(Matched && "Terminator must be BranchOnCond");
 
-    // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
-    // the correct block mask.
     VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
-    auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
-        VPInstruction::MaskedCond,
+    auto *CondToEarlyExit =
         TrueSucc == ExitBlock
             ? CondOfEarlyExitingVPBB
-            : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
-    assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
-            !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
-            VPDT.properlyDominates(
-                CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
-                LatchVPBB)) &&
-           "exit condition must dominate the latch");
+            : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB);
+
+    // Add phis so there's a def of CondToEarlyExit on every path leading to the
+    // latch. The condition is false on paths that didn't go through
+    // EarlyExitingVPBB. EarlyExitingVPBB may be the same as HeaderVPBB, so
+    // assign in order.
+    DenseMap<VPBasicBlock *, VPValue *> Defs = {{HeaderVPBB, Plan.getFalse()}};
+    Defs[EarlyExitingVPBB] = CondToEarlyExit;
+    CondToEarlyExit = vputils::reconstructSSA(LatchVPBB, Defs);
+
     Exits.push_back({
         EarlyExitingVPBB,
         ExitBlock,
@@ -3471,6 +3465,15 @@ bool VPlanTransforms::handleUncountableEarlyExits(
           ExitIRI->getIncomingValueForBlock(EarlyExitingVPBB);
       VPValue *NewIncoming = IncomingVal;
       if (!isa<VPIRValue>(IncomingVal)) {
+        // Add phis so IncomingVal is defined on all paths to the latch.
+        DenseMap<VPBasicBlock *, VPValue *> Defs = {
+            {HeaderVPBB, Plan.getPoison(IncomingVal->getScalarType())}};
+        VPBasicBlock *DefVPBB = IncomingVal->getDefiningRecipe()->getParent();
+        assert(VPDT.dominates(HeaderVPBB, DefVPBB) &&
+               "IncomingVal defined outside of vector body?");
+        Defs[DefVPBB] = IncomingVal;
+        IncomingVal = vputils::reconstructSSA(LatchVPBB, Defs);
+
         VPBuilder EarlyExitBuilder(VectorEarlyExitVPBB);
         NewIncoming = EarlyExitBuilder.createNaryOp(
             VPInstruction::ExtractLane, {FirstActiveLane, IncomingVal},
