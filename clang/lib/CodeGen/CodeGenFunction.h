@@ -4131,7 +4131,8 @@ public:
   JumpDest getOMPCancelDestination(OpenMPDirectiveKind Kind);
   /// Emit initial code for loop counters of loop-based directives.
   void EmitOMPPrivateLoopCounters(const OMPLoopDirective &S,
-                                  OMPPrivateScope &LoopScope);
+                                  OMPPrivateScope &LoopScope,
+                                  bool OnlyUnresolved = false);
 
   /// Helper for the OpenMP loop directives.
   void EmitOMPLoopBody(const OMPLoopDirective &D, JumpDest LoopExit);
