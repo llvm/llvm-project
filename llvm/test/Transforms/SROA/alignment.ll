@@ -250,12 +250,16 @@ define void @test7(ptr %out) {
 ;
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load double, ptr [[OUT:%.*]], align 1
+; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[OUT:%.*]], align 1
 ; CHECK-NEXT:    [[A_SROA_4_0_OUT_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 8
-; CHECK-NEXT:    [[A_SROA_4_0_COPYLOAD:%.*]] = load double, ptr [[A_SROA_4_0_OUT_SROA_IDX]], align 1
-; CHECK-NEXT:    store double [[A_SROA_4_0_COPYLOAD]], ptr [[OUT]], align 1
+; CHECK-NEXT:    [[A_SROA_4_0_COPYLOAD:%.*]] = load i64, ptr [[A_SROA_4_0_OUT_SROA_IDX]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_SROA_4_0_COPYLOAD]] to double
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[A_SROA_0_0_COPYLOAD]] to double
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP1]] to i64
+; CHECK-NEXT:    store i64 [[TMP2]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[A_SROA_4_0_OUT_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 8
-; CHECK-NEXT:    store double [[A_SROA_0_0_COPYLOAD]], ptr [[A_SROA_4_0_OUT_SROA_IDX2]], align 1
+; CHECK-NEXT:    store i64 [[TMP3]], ptr [[A_SROA_4_0_OUT_SROA_IDX2]], align 1
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DEBUGLOC-LABEL: @test7(
@@ -263,15 +267,19 @@ define void @test7(ptr %out) {
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META86:![0-9]+]], !DIExpression(), [[META90:![0-9]+]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META86]], !DIExpression(), [[META90]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META87:![0-9]+]], !DIExpression(), [[META91:![0-9]+]])
-; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load double, ptr [[OUT:%.*]], align 1, !dbg [[DBG92:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[OUT:%.*]], align 1, !dbg [[DBG92:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:    [[A_SROA_4_0_OUT_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 8, !dbg [[DBG92]]
-; CHECK-DEBUGLOC-NEXT:    [[A_SROA_4_0_COPYLOAD:%.*]] = load double, ptr [[A_SROA_4_0_OUT_SROA_IDX]], align 1, !dbg [[DBG92]]
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(double [[A_SROA_4_0_COPYLOAD]], [[META88:![0-9]+]], !DIExpression(), [[META93:![0-9]+]])
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(double [[A_SROA_0_0_COPYLOAD]], [[META89:![0-9]+]], !DIExpression(), [[META94:![0-9]+]])
-; CHECK-DEBUGLOC-NEXT:    store double [[A_SROA_4_0_COPYLOAD]], ptr [[OUT]], align 1, !dbg [[DBG95:![0-9]+]]
-; CHECK-DEBUGLOC-NEXT:    [[A_SROA_4_0_OUT_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 8, !dbg [[DBG95]]
-; CHECK-DEBUGLOC-NEXT:    store double [[A_SROA_0_0_COPYLOAD]], ptr [[A_SROA_4_0_OUT_SROA_IDX2]], align 1, !dbg [[DBG95]]
-; CHECK-DEBUGLOC-NEXT:    ret void, !dbg [[DBG96:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    [[A_SROA_4_0_COPYLOAD:%.*]] = load i64, ptr [[A_SROA_4_0_OUT_SROA_IDX]], align 1, !dbg [[DBG92]]
+; CHECK-DEBUGLOC-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_SROA_4_0_COPYLOAD]] to double, !dbg [[DBG93:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(double [[TMP0]], [[META88:![0-9]+]], !DIExpression(), [[DBG93]])
+; CHECK-DEBUGLOC-NEXT:    [[TMP1:%.*]] = bitcast i64 [[A_SROA_0_0_COPYLOAD]] to double, !dbg [[DBG94:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(double [[TMP1]], [[META89:![0-9]+]], !DIExpression(), [[DBG94]])
+; CHECK-DEBUGLOC-NEXT:    [[TMP2:%.*]] = bitcast double [[TMP0]] to i64, !dbg [[DBG95:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP1]] to i64, !dbg [[DBG96:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    store i64 [[TMP2]], ptr [[OUT]], align 1, !dbg [[DBG97:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    [[A_SROA_4_0_OUT_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 8, !dbg [[DBG97]]
+; CHECK-DEBUGLOC-NEXT:    store i64 [[TMP3]], ptr [[A_SROA_4_0_OUT_SROA_IDX2]], align 1, !dbg [[DBG97]]
+; CHECK-DEBUGLOC-NEXT:    ret void, !dbg [[DBG98:![0-9]+]]
 ;
 entry:
   %a = alloca [16 x i8]
