@@ -30,29 +30,19 @@ namespace {
 // Return true if the operation is a constant dense element
 // attribute.
 static bool isZeroVectorConstant(Operation *op) {
-  auto constantOp = llvm::dyn_cast<arith::ConstantOp>(op);
+  auto constantOp = dyn_cast<arith::ConstantOp>(op);
   if (!constantOp)
     return false;
 
-  auto vectorType = llvm::dyn_cast<VectorType>(constantOp.getType());
+  auto vectorType = dyn_cast<VectorType>(constantOp.getType());
   if (!vectorType)
     return false;
 
-  auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(constantOp.getValue());
+  auto denseAttr = dyn_cast<DenseElementsAttr>(constantOp.getValue());
   if (!denseAttr || !denseAttr.isSplat())
     return false;
 
-  mlir::Type elementType = vectorType.getElementType();
-
-  if (llvm::isa<FloatType>(elementType)) {
-    return denseAttr.getSplatValue<llvm::APFloat>().isZero();
-  }
-
-  if (llvm::isa<IntegerType>(elementType)) {
-    return denseAttr.getSplatValue<llvm::APInt>().isZero();
-  }
-
-  return false;
+  return isZeroIntegerOrFloat(denseAttr.getSplatValue<Attribute>());
 }
 
 // Recursively follows single-use values through scf.yield operations
@@ -76,8 +66,7 @@ static Value contractionUsersAfterYield(Value v) {
 
 // Function to collapse the last two dimension (vnni and k) to help the
 // amx.tile_load to correctly load the packed element type.
-static Value collapseInnerDims(OpBuilder &builder, mlir::Location loc,
-                               Value input) {
+static Value collapseInnerDims(OpBuilder &builder, Location loc, Value input) {
   ShapedType inputType = cast<ShapedType>(input.getType());
   int64_t firstDimToCollapse = inputType.getRank() - 2;
 
@@ -202,7 +191,7 @@ static LogicalResult validateContractOps(OpBuilder &rewriter,
 
   // The Accumulator dims should be 16 or 1. Like <1x16x16> or <16x16>.
   ArrayRef<int64_t> accShape = accTy.getShape();
-  llvm::SmallVector<int64_t> nonUnitDimAcc;
+  SmallVector<int64_t> nonUnitDimAcc;
   llvm::copy_if(accShape, std::back_inserter(nonUnitDimAcc),
                 [](int64_t dim) { return (dim != 16 && dim != 1); });
 
@@ -213,7 +202,7 @@ static LogicalResult validateContractOps(OpBuilder &rewriter,
   // <16x16x4>. The vnni dims should be 2 or 4.
   VectorType lhsTy = contractOp.getLhsType();
   ArrayRef<int64_t> lhsShape = lhsTy.getShape();
-  llvm::SmallVector<int64_t> nonUnitDimLhs;
+  SmallVector<int64_t> nonUnitDimLhs;
   llvm::copy_if(lhsShape, std::back_inserter(nonUnitDimLhs),
                 [](int64_t dim) { return (dim != 16 && dim != 1); });
 
@@ -832,6 +821,9 @@ struct VectorContractToAMXDotProduct
 
     bool isAccZeroVectorConstant = isZeroVectorConstant(accReadOp);
 
+    Operation *accWrite =
+        traceToVectorWriteLikeUserOperation(contractOp.getResult());
+
     // Only the contract result's first consumer is needed, not the final
     // store. This keeps the lowering independent of the epilogue ops (truncf,
     // bias add, ReLU, ...) that sit between the contraction and the write.
@@ -1055,7 +1047,7 @@ struct VectorContractToAMXDotProduct
       amx::TileStoreOp::create(rewriter, loc, resultBuffer, ValueRange{c0, c0},
                                dp);
 
-      auto vectorType = mlir::VectorType::get({16, 16}, opType);
+      auto vectorType = VectorType::get({16, 16}, opType);
       int64_t srcRank =
           (dyn_cast<ShapedType>(resultBuffer.getType())).getRank();
       Value padding = ub::PoisonOp::create(rewriter, loc, opType);
@@ -1068,7 +1060,7 @@ struct VectorContractToAMXDotProduct
           map, inBounds);
 
       Value resultOp = contractionUsersAfterYield(contractOp.getResult());
-      if (auto vecType = llvm::dyn_cast<VectorType>(resultOp.getType()))
+      if (auto vecType = dyn_cast<VectorType>(resultOp.getType()))
         vecRow = vector::ShapeCastOp::create(rewriter, loc, vecType, vecRow);
 
       rewriter.replaceAllUsesWith(resultOp, vecRow);
@@ -1141,9 +1133,9 @@ struct VectorContractToAMXDotProduct
 
     // Retrive all the contaction operation within the loop.
     SmallVector<vector::ContractionOp> ops;
-    for (mlir::Operation &op : loopLists[0].getBody()->getOperations()) {
+    for (Operation &op : loopLists[0].getBody()->getOperations()) {
 
-      if (auto contract = llvm::dyn_cast<mlir::vector::ContractionOp>(op)) {
+      if (auto contract = dyn_cast<vector::ContractionOp>(op)) {
         LogicalResult validate = validateContractOps(
             rewriter, contract, dimValue, srcBuffLhs, srcBuffRhs, true);
 
@@ -1157,9 +1149,7 @@ struct VectorContractToAMXDotProduct
         Operation *contractReadOp =
             traceToVectorReadLikeParentOperation(contract.getAcc());
 
-        if ((isAccZeroVectorConstant &&
-             !isZeroVectorConstant(contractReadOp)) ||
-            (!isAccZeroVectorConstant && isZeroVectorConstant(contractReadOp)))
+        if (isAccZeroVectorConstant != isZeroVectorConstant(contractReadOp))
           return rewriter.notifyMatchFailure(
               contractOp, "The input acc should be a zero constant or "
                           "transfer_read for all contracts");
@@ -1232,10 +1222,9 @@ struct VectorContractToAMXDotProduct
         bool isInnerLoopUBHasOddQuot = false;
 
         int64_t ubVal = 16 * blockingFactor;
-        mlir::Value ub = innerLoop.getUpperBound();
-        if (auto constOp = ub.getDefiningOp<mlir::arith::ConstantOp>()) {
-          if (auto intAttr =
-                  llvm::dyn_cast<mlir::IntegerAttr>(constOp.getValue())) {
+        Value ub = innerLoop.getUpperBound();
+        if (auto constOp = ub.getDefiningOp<arith::ConstantOp>()) {
+          if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue())) {
             ubVal = intAttr.getInt();
           }
         }
@@ -1380,10 +1369,9 @@ struct VectorContractToAMXDotProduct
         bool isInnerLoopUBHasOddQuot = false;
 
         int64_t ubVal = 16 * blockingFactor;
-        mlir::Value ub = innerLoop.getUpperBound();
-        if (auto constOp = ub.getDefiningOp<mlir::arith::ConstantOp>()) {
-          if (auto intAttr =
-                  llvm::dyn_cast<mlir::IntegerAttr>(constOp.getValue())) {
+        Value ub = innerLoop.getUpperBound();
+        if (auto constOp = ub.getDefiningOp<arith::ConstantOp>()) {
+          if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue())) {
             ubVal = intAttr.getInt();
           }
         }
@@ -1458,9 +1446,6 @@ struct VectorContractToAMXDotProduct
     Value srcBuffAcc;
     SmallVector<Value> indicesAcc;
 
-    Operation *accWrite =
-        traceToVectorWriteLikeUserOperation(contractOp.getResult());
-
     llvm::TypeSwitch<Operation *>(accWrite)
         .Case<vector::TransferWriteOp, vector::StoreOp>([&](auto writeOp) {
           srcBuffAcc = writeOp->getOperand(1);
@@ -1468,15 +1453,13 @@ struct VectorContractToAMXDotProduct
           auto indices = writeOp.getIndices();
           indicesAcc.reserve(indices.size());
 
-          llvm::transform(indices, std::back_inserter(indicesAcc),
-                          [&](OpFoldResult ofr) {
-                            return mlir::getValueOrCreateConstantIndexOp(
-                                rewriter, loc, ofr);
-                          });
+          llvm::transform(
+              indices, std::back_inserter(indicesAcc), [&](OpFoldResult ofr) {
+                return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
+              });
         });
 
-    auto outputShapes =
-        mlir::cast<mlir::MemRefType>(srcBuffAcc.getType()).getShape();
+    auto outputShapes = cast<MemRefType>(srcBuffAcc.getType()).getShape();
     unsigned int M = outputShapes[outputShapes.size() - 2];
     unsigned int N = outputShapes[outputShapes.size() - 1];
 
@@ -1499,72 +1482,75 @@ struct VectorContractToAMXDotProduct
     auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
     auto nBound = arith::ConstantIndexOp::create(rewriter, loc, N);
 
-    // Create a loop that iterates over the MxN memerf, retrives two rows +
-    // shuffle them, add up the C element values and stores them to temp buffer.
-    scf::ForOp::create(
-        rewriter, loc, c0, nBound, one, ValueRange{},
-        [&](OpBuilder &nestedBuilder, Location loc, Value iv,
-            ValueRange iterArgs) {
-          auto row =
-              vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
-                                     resultBuffer, ValueRange{iv, c0});
+    if (!isVnni || !isAccZeroVectorConstant) {
+      // Create a loop that iterates over the MxN memerf, retrives two rows +
+      // shuffle them, add up the C element values and stores them to temp
+      // buffer.
+      scf::ForOp::create(
+          rewriter, loc, c0, nBound, one, ValueRange{},
+          [&](OpBuilder &nestedBuilder, Location loc, Value iv,
+              ValueRange iterArgs) {
+            auto row = vector::LoadOp::create(rewriter, loc,
+                                              VectorType::get(16, opType),
+                                              resultBuffer, ValueRange{iv, c0});
 
-          auto row2 =
-              vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
-                                     resultBuffer, ValueRange{iv, c16});
+            auto row2 = vector::LoadOp::create(
+                rewriter, loc, VectorType::get(16, opType), resultBuffer,
+                ValueRange{iv, c16});
 
-          Value writeVal1 = row;
-          Value writeVal2 = row2;
+            Value writeVal1 = row;
+            Value writeVal2 = row2;
 
-          if (!isVnni) {
-            writeVal1 = vector::ShuffleOp::create(
-                rewriter, loc, VectorType::get(16, opType), row, row2,
-                ArrayRef<int64_t>{0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20,
-                                  21, 22, 23});
+            if (!isVnni) {
+              writeVal1 = vector::ShuffleOp::create(
+                  rewriter, loc, VectorType::get(16, opType), row, row2,
+                  ArrayRef<int64_t>{0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20,
+                                    21, 22, 23});
 
-            writeVal2 = vector::ShuffleOp::create(
-                rewriter, loc, VectorType::get(16, opType), row, row2,
-                ArrayRef<int64_t>{8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15,
-                                  28, 29, 30, 31});
-          }
-
-          if (!isAccZeroVectorConstant) {
-            indicesAcc[indicesAcc.size() - 2] = iv;
-            indicesAcc[indicesAcc.size() - 1] = c0;
-
-            Value valueCRow1 = vector::LoadOp::create(
-                rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
-                indicesAcc);
-            indicesAcc[indicesAcc.size() - 1] = c16;
-
-            Value valueCRow2 = vector::LoadOp::create(
-                rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
-                indicesAcc);
-
-            if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
-              writeVal1 =
-                  arith::AddFOp::create(rewriter, loc, writeVal1, valueCRow1);
-
-              writeVal2 =
-                  arith::AddFOp::create(rewriter, loc, writeVal2, valueCRow2);
+              writeVal2 = vector::ShuffleOp::create(
+                  rewriter, loc, VectorType::get(16, opType), row, row2,
+                  ArrayRef<int64_t>{8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14,
+                                    15, 28, 29, 30, 31});
             }
 
-            if (ipType.isSignlessInteger(8)) {
-              writeVal1 =
-                  arith::AddIOp::create(rewriter, loc, writeVal1, valueCRow1);
+            if (!isAccZeroVectorConstant) {
+              indicesAcc[indicesAcc.size() - 2] = iv;
+              indicesAcc[indicesAcc.size() - 1] = c0;
 
-              writeVal2 =
-                  arith::AddIOp::create(rewriter, loc, writeVal2, valueCRow2);
+              Value valueCRow1 = vector::LoadOp::create(
+                  rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
+                  indicesAcc);
+              indicesAcc[indicesAcc.size() - 1] = c16;
+
+              Value valueCRow2 = vector::LoadOp::create(
+                  rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
+                  indicesAcc);
+
+              if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
+                writeVal1 =
+                    arith::AddFOp::create(rewriter, loc, writeVal1, valueCRow1);
+
+                writeVal2 =
+                    arith::AddFOp::create(rewriter, loc, writeVal2, valueCRow2);
+              }
+
+              if (ipType.isSignlessInteger(8)) {
+                writeVal1 =
+                    arith::AddIOp::create(rewriter, loc, writeVal1, valueCRow1);
+
+                writeVal2 =
+                    arith::AddIOp::create(rewriter, loc, writeVal2, valueCRow2);
+              }
             }
-          }
 
-          vector::StoreOp::create(rewriter, loc, writeVal1, resultBuffer,
-                                  ValueRange{iv, c0});
-          vector::StoreOp::create(rewriter, loc, writeVal2, resultBuffer,
-                                  ValueRange{iv, c16});
+            vector::StoreOp::create(rewriter, loc, writeVal1, resultBuffer,
+                                    ValueRange{iv, c0});
+            vector::StoreOp::create(rewriter, loc, writeVal2, resultBuffer,
+                                    ValueRange{iv, c16});
 
-          scf::YieldOp::create(nestedBuilder, loc);
-        });
+            scf::YieldOp::create(nestedBuilder, loc);
+          });
+    }
 
     SmallVector<Value> writeResults;
     for (unsigned int i = 0; i < M; i = i + 16) {
@@ -1572,7 +1558,7 @@ struct VectorContractToAMXDotProduct
         Value indexOp_i = arith::ConstantIndexOp::create(rewriter, loc, i);
         Value indexOp_j = arith::ConstantIndexOp::create(rewriter, loc, j);
 
-        auto vectorType = mlir::VectorType::get({16, 16}, opType);
+        auto vectorType = VectorType::get({16, 16}, opType);
 
         int64_t srcRank =
             (dyn_cast<ShapedType>(resultBuffer.getType())).getRank();
@@ -1594,9 +1580,9 @@ struct VectorContractToAMXDotProduct
       Value vecRow = writeResults[i];
 
       Value resultWriteOp = contractionUsersAfterYield(contOp.getResult());
-      if (auto vecType = llvm::dyn_cast<VectorType>(resultWriteOp.getType()))
-        vecRow = mlir::vector::ShapeCastOp::create(rewriter, loc, vecType,
-                                                   writeResults[i]);
+      if (auto vecType = dyn_cast<VectorType>(resultWriteOp.getType()))
+        vecRow = vector::ShapeCastOp::create(rewriter, loc, vecType,
+                                             writeResults[i]);
 
       rewriter.replaceAllUsesWith(resultWriteOp, vecRow);
     }
