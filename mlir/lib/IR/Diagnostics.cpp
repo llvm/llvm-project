@@ -162,8 +162,24 @@ Diagnostic &Diagnostic::operator<<(Value val) {
 }
 
 /// Outputs this diagnostic to a stream.
-void Diagnostic::print(raw_ostream &os) const {
-  for (auto &arg : getArguments())
+void Diagnostic::print(raw_ostream &os,
+                       std::optional<int64_t> messagePartIndex) const {
+  if (!messagePartIndex.has_value()) {
+    for (auto &arg : getArguments())
+      arg.print(os);
+    return;
+  }
+
+  assert(0 <= *messagePartIndex &&
+         *messagePartIndex <= static_cast<int64_t>(messagePartEnds.size()));
+  size_t argumentStart =
+      *messagePartIndex == 0 ? 0 : messagePartEnds[*messagePartIndex - 1];
+  size_t argumentEnd =
+      *messagePartIndex == static_cast<int64_t>(messagePartEnds.size())
+          ? arguments.size()
+          : messagePartEnds[*messagePartIndex];
+  for (auto &arg :
+       getArguments().slice(argumentStart, argumentEnd - argumentStart))
     arg.print(os);
 }
 
@@ -173,6 +189,24 @@ std::string Diagnostic::str() const {
   llvm::raw_string_ostream os(str);
   print(os);
   return str;
+}
+
+/// Converts each message part to a separate string.
+SmallVector<std::string> Diagnostic::strs() const {
+  SmallVector<std::string, 2> strs;
+  size_t numMessageParts = messagePartEnds.size();
+
+  // Include the current message part if there are no completed parts or if it
+  // contains arguments after the last completed part.
+  if (messagePartEnds.empty() || messagePartEnds.back() != arguments.size())
+    ++numMessageParts;
+  for (size_t i = 0; i < numMessageParts; ++i) {
+    std::string str;
+    llvm::raw_string_ostream os(str);
+    print(os, i);
+    strs.push_back(str);
+  }
+  return strs;
 }
 
 /// Attaches a note to this diagnostic. A new location may be optionally
@@ -195,6 +229,15 @@ Diagnostic &Diagnostic::attachNote(std::optional<Location> noteLoc) {
 
 /// Allow a diagnostic to be converted to 'failure'.
 Diagnostic::operator LogicalResult() const { return failure(); }
+
+/// Starts a new message part.
+void Diagnostic::startNewMessagePart() {
+  if (arguments.empty())
+    return;
+  if (!messagePartEnds.empty() && messagePartEnds.back() == arguments.size())
+    return;
+  messagePartEnds.push_back(arguments.size());
+}
 
 //===----------------------------------------------------------------------===//
 // InFlightDiagnostic
@@ -505,11 +548,13 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
 
   // If the location stack is empty, use the initial location.
   if (locationStack.empty()) {
-    emitDiagnostic(diag.getLocation(), diag.str(), diag.getSeverity());
+    for (const std::string &str : diag.strs())
+      emitDiagnostic(diag.getLocation(), str, diag.getSeverity());
 
     // Otherwise, use the location stack.
   } else {
-    emitDiagnostic(locationStack.front().first, diag.str(), diag.getSeverity());
+    for (const std::string &str : diag.strs())
+      emitDiagnostic(locationStack.front().first, str, diag.getSeverity());
     for (auto &it : llvm::drop_begin(locationStack))
       emitDiagnostic(it.first, it.second, DiagnosticSeverity::Note);
   }
@@ -879,7 +924,8 @@ void SourceMgrDiagnosticVerifierHandler::registerInContext(MLIRContext *ctx) {
 
 /// Process a single diagnostic.
 void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
-  return process(diag.getLocation(), diag.str(), diag.getSeverity());
+  for (const std::string &str : diag.strs())
+    process(diag.getLocation(), str, diag.getSeverity());
 }
 
 /// Process a diagnostic at a certain location.

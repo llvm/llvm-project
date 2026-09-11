@@ -153,6 +153,9 @@ inline raw_ostream &operator<<(raw_ostream &os, const DiagnosticArgument &arg) {
 /// This class contains all of the information necessary to report a diagnostic
 /// to the DiagnosticEngine. It should generally not be constructed directly,
 /// and instead used transitively via InFlightDiagnostic.
+///
+/// A diagnostic may contain multiple message parts that share its location,
+/// severity, metadata, and attached notes. Empty message parts are ignored.
 class Diagnostic {
   using NoteVector = std::vector<std::unique_ptr<Diagnostic>>;
 
@@ -249,11 +252,18 @@ public:
     return *this;
   }
 
-  /// Outputs this diagnostic to a stream.
-  void print(raw_ostream &os) const;
+  /// Outputs this diagnostic to a stream. If `messagePartIndex` is provided,
+  /// only that message part is printed; otherwise, all arguments are printed
+  /// without separators between message parts.
+  void print(raw_ostream &os,
+             std::optional<int64_t> messagePartIndex = std::nullopt) const;
 
   /// Converts the diagnostic to a string.
   std::string str() const;
+
+  /// Converts each message part to a separate string. Returns a single string
+  /// if the diagnostic has not been divided into multiple parts.
+  SmallVector<std::string> strs() const;
 
   /// Attaches a note to this diagnostic. A new location may be optionally
   /// provided, if not, then the location defaults to the one specified for this
@@ -288,6 +298,10 @@ public:
   /// Returns the current list of diagnostic metadata.
   SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
 
+  /// Starts a new message part. This has no effect if the current message part
+  /// is empty.
+  void startNewMessagePart();
+
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
   Diagnostic &operator=(const Diagnostic &rhs) = delete;
@@ -304,6 +318,9 @@ private:
   /// A list of string values used as arguments. This is used to guarantee the
   /// liveness of non-constant strings used in diagnostics.
   std::vector<std::unique_ptr<char[]>> strings;
+
+  /// The exclusive end indices in `arguments` of completed message parts.
+  SmallVector<size_t, 2> messagePartEnds;
 
   /// A list of attached notes.
   NoteVector notes;
@@ -346,6 +363,17 @@ public:
   template <typename Arg>
   InFlightDiagnostic &&operator<<(Arg &&arg) && {
     return std::move(append(std::forward<Arg>(arg)));
+  }
+
+  /// Enables stream-style manipulators to be chained into the diagnostic.
+  InFlightDiagnostic &
+  operator<<(InFlightDiagnostic &(*manip)(InFlightDiagnostic &)) & {
+    return manip(*this);
+  }
+
+  InFlightDiagnostic &&
+  operator<<(InFlightDiagnostic &(*manip)(InFlightDiagnostic &)) && {
+    return std::move(manip(*this));
   }
 
   /// Append arguments to the diagnostic.
@@ -408,6 +436,7 @@ private:
 
   // Allow access to the constructor.
   friend DiagnosticEngine;
+  friend inline InFlightDiagnostic &next(InFlightDiagnostic &diag);
 
   /// The engine that this diagnostic is to report to.
   DiagnosticEngine *owner = nullptr;
@@ -415,6 +444,13 @@ private:
   /// The raw diagnostic that is inflight to be reported.
   std::optional<Diagnostic> impl;
 };
+
+/// Starts a new message part in an in-flight diagnostic. Leading, trailing, and
+/// consecutive uses of `next` do not create empty message parts.
+inline InFlightDiagnostic &next(InFlightDiagnostic &diag) {
+  diag.impl->startNewMessagePart();
+  return diag;
+}
 
 //===----------------------------------------------------------------------===//
 // DiagnosticEngine
