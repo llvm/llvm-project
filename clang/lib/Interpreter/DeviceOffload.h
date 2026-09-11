@@ -52,9 +52,7 @@ protected:
   llvm::SmallVector<char, 1024> HSACOContent;
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
   CodeGenOptions &CodeGenOpts; // Host opts, intentionally a reference.
-  const CodeGenOptions &DeviceCodeGenOpts;
   const TargetOptions &TargetOpts;
-  std::unique_ptr<llvm::TargetMachine> TM;
 };
 
 class IncrementalCUDADeviceParser : public IncrementalParser {

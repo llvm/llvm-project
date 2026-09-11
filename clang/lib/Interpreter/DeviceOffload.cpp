@@ -13,10 +13,10 @@
 #include "DeviceOffload.h"
 #include "IncrementalAction.h"
 
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
-#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/OffloadBundler.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -32,7 +32,6 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/Transforms/IPO/Internalize.h"
 
 namespace clang {
 
@@ -62,7 +61,6 @@ IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
     : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs),
       DeviceCI(DeviceInstance), VFS(FS),
       CodeGenOpts(HostInstance.getCodeGenOpts()),
-      DeviceCodeGenOpts(DeviceInstance.getCodeGenOpts()),
       TargetOpts(DeviceInstance.getTargetOpts()) {
   if (Err)
     return;
@@ -87,12 +85,15 @@ IncrementalHIPDeviceParser::Parse(llvm::StringRef Input) {
 llvm::Expected<llvm::StringRef> IncrementalHIPDeviceParser::GenerateHSACO() {
   auto &PTU = PTUs.back();
 
+  CodeGenOptions CodeGenOptsForObj = DeviceCI.getCodeGenOpts();
+  CodeGenOptsForObj.DisableLLVMPasses = true;
+
   llvm::SmallVector<char, 0> Object;
   auto ObjOS = std::make_unique<llvm::raw_svector_ostream>(Object);
   clang::emitBackendOutput(
-      DeviceCI, DeviceCI.getCodeGenOpts(),
-      DeviceCI.getTarget().getDataLayoutString(), PTU.TheModule.get(),
-      Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(), std::move(ObjOS));
+      DeviceCI, CodeGenOptsForObj, DeviceCI.getTarget().getDataLayoutString(),
+      PTU.TheModule.get(), Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(),
+      std::move(ObjOS));
 
   std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
   llvm::StringRef ExeDir = llvm::sys::path::parent_path(Exe);
@@ -172,12 +173,19 @@ llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBundle() {
         llvm::inconvertibleErrorCode());
   llvm::FileRemover BundleRemover(BundleFile);
 
-  // Triples use the normalized 4-field form ending in a dash; the device entry
-  // additionally appends the offload arch, e.g.
-  // "hip-amdgcn-amd-amdhsa--gfx90a".
+  const llvm::StringMap<bool> &FeatureMap = TargetOpts.FeatureMap;
+  llvm::StringMap<bool> TargetIDFeatures;
+  for (llvm::StringRef Feature : getAllPossibleTargetIDFeatures(
+           DeviceCI.getTarget().getTriple(), TargetOpts.CPU)) {
+    auto It = FeatureMap.find(Feature);
+    if (It != FeatureMap.end())
+      TargetIDFeatures[Feature] = It->second;
+  }
+
   std::string HostTriple = "host-" + llvm::sys::getProcessTriple() + "-";
+  std::string TargetID = getCanonicalTargetID(TargetOpts.CPU, TargetIDFeatures);
   std::string DeviceTriple =
-      "hip-" + PTU.TheModule->getTargetTriple().str() + "--" + TargetOpts.CPU;
+      "hip-" + PTU.TheModule->getTargetTriple().str() + "--" + TargetID;
 
   OffloadBundlerConfig Config;
   Config.FilesType = "o";
