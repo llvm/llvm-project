@@ -16,11 +16,11 @@ define void @gep_offset_nowrap_flags(i1 %c) {
 ; CHECK-NEXT:    %base = load ptr, ptr @g, align 8
 ; CHECK-NEXT:    --> %base U: full-set S: full-set
 ; CHECK-NEXT:    %gep = getelementptr inbounds nuw i16, ptr %base, i64 %idx
-; CHECK-NEXT:    --> ((2 * %idx)<nuw><nsw> + %base)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    --> ((2 * %idx) + %base)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:    %val = load i16, ptr %gep, align 2
 ; CHECK-NEXT:    --> %val U: full-set S: full-set
 ; CHECK-NEXT:    %res = add i64 %idx, %idx
-; CHECK-NEXT:    --> (2 * %idx)<nuw><nsw> U: [0,-1) S: [-9223372036854775808,9223372036854775807)
+; CHECK-NEXT:    --> (2 * %idx) U: [0,-1) S: [-9223372036854775808,9223372036854775807)
 ;
 entry:
   %idx = call i64 @opaque()
