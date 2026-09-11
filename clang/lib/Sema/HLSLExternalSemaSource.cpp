@@ -322,6 +322,13 @@ static const TextureTypeInfo TextureTypes[] = {
      /*IsArray=*/false, /*IsROV=*/false,
      TemplateShape::ElementTypeAndSampleCount,
      TexCap::LoadMS | TexCap::Subscript},
+    {"Texture3D", ResourceClass::SRV, ResourceDimension::Dim3D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
+         TexCap::CalcLOD | TexCap::GetDims},
+    {"RWTexture3D", ResourceClass::UAV, ResourceDimension::Dim3D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::LoadRW | TexCap::Subscript | TexCap::GetDims},
     {"TextureCube", ResourceClass::SRV, ResourceDimension::Cube,
      /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
      TexCap::Sample | TexCap::SampleCmp | TexCap::CalcLOD | TexCap::Gather |

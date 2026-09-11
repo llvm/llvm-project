@@ -252,6 +252,8 @@ cc_test(
         "//clang:lex",
         "//clang:parse",
         "//clang:sema",
+        "//clang:testing",
+        "//llvm:ABI",
         "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
