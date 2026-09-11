@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -std=c++2a | FileCheck %s --implicit-check-not=cxx_global_var_init --implicit-check-not=cxa_atexit
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -std=c++2a                                         | FileCheck %s --implicit-check-not=cxx_global_var_init --implicit-check-not=cxa_atexit
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -std=c++2a -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=cxx_global_var_init --implicit-check-not=cxa_atexit
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-pch -o %t.pch %s -std=c++2a
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -include-pch %t.pch -x c++ /dev/null -emit-llvm -o - -std=c++2a | FileCheck %s --implicit-check-not=cxx_global_var_init --implicit-check-not=cxa_atexit

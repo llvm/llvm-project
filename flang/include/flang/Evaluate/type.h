@@ -32,7 +32,6 @@
 #include <optional>
 #include <string>
 #include <type_traits>
-#include <variant>
 
 namespace Fortran::semantics {
 class DeclTypeSpec;
@@ -170,6 +169,7 @@ public:
 
   bool RequiresDescriptor() const;
   bool HasDeferredTypeParameter() const;
+  bool HasDeferredOrAssumedTypeParameter() const;
 
   // 7.3.2.3 & 15.5.2.4 type compatibility.
   // x.IsTkCompatibleWith(y) is true if "x => y" or passing actual y to
@@ -506,6 +506,10 @@ bool IsCUDAIntrinsicType(const DynamicType &);
 bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringTypeParameters(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+// Like AreSameDerivedType, but length type parameters may differ; kind type
+// parameters must still match.
+bool AreSameDerivedTypeIgnoringLengthParameters(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringSequence(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);

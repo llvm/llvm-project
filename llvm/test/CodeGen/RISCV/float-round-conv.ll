@@ -114,9 +114,9 @@ define i64 @test_floor_si64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_floor_si64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB3_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rdn
@@ -249,9 +249,9 @@ define i64 @test_floor_ui64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_floor_ui64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB7_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rdn
@@ -384,9 +384,9 @@ define i64 @test_ceil_si64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_ceil_si64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB11_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rup
@@ -519,9 +519,9 @@ define i64 @test_ceil_ui64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_ceil_ui64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB15_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rup
@@ -654,9 +654,9 @@ define i64 @test_trunc_si64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_trunc_si64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB19_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rtz
@@ -789,9 +789,9 @@ define i64 @test_trunc_ui64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_trunc_ui64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB23_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rtz
@@ -924,9 +924,9 @@ define i64 @test_round_si64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_round_si64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB27_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rmm
@@ -1059,9 +1059,9 @@ define i64 @test_round_ui64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_round_ui64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB31_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rmm
@@ -1194,9 +1194,9 @@ define i64 @test_roundeven_si64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_roundeven_si64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB35_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rne
@@ -1329,9 +1329,9 @@ define i64 @test_roundeven_ui64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_roundeven_ui64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB39_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rne
@@ -1410,9 +1410,9 @@ define float @test_floor_float(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_floor_float:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB40_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rdn
@@ -1423,9 +1423,9 @@ define float @test_floor_float(float %x) {
 ;
 ; RV64IZFINX-LABEL: test_floor_float:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB40_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rdn
@@ -1489,9 +1489,9 @@ define float @test_ceil_float(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_ceil_float:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB41_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rup
@@ -1502,9 +1502,9 @@ define float @test_ceil_float(float %x) {
 ;
 ; RV64IZFINX-LABEL: test_ceil_float:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB41_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rup
@@ -1568,9 +1568,9 @@ define float @test_trunc_float(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_trunc_float:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB42_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rtz
@@ -1581,9 +1581,9 @@ define float @test_trunc_float(float %x) {
 ;
 ; RV64IZFINX-LABEL: test_trunc_float:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB42_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rtz
@@ -1647,9 +1647,9 @@ define float @test_round_float(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_round_float:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB43_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rmm
@@ -1660,9 +1660,9 @@ define float @test_round_float(float %x) {
 ;
 ; RV64IZFINX-LABEL: test_round_float:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB43_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rmm
@@ -1726,9 +1726,9 @@ define float @test_roundeven_float(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_roundeven_float:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB44_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rne
@@ -1739,9 +1739,9 @@ define float @test_roundeven_float(float %x) {
 ;
 ; RV64IZFINX-LABEL: test_roundeven_float:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB44_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rne

@@ -2,9 +2,9 @@
 ; RUN: not llc -mtriple=csky < %s 2>&1 | FileCheck %s
 
 define void @constraint_f() nounwind {
-; CHECK: error: couldn't allocate input reg for constraint 'v'
+; CHECK: error: could not allocate input reg for constraint 'v'
   tail call void asm "fadds fa0, fa0, $0", "v"(float 0.0)
-; CHECK: error: couldn't allocate input reg for constraint 'v'
+; CHECK: error: could not allocate input reg for constraint 'v'
   tail call void asm "faddd fa0, fa0, $0", "v"(double 0.0)
   ret void
 }

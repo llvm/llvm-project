@@ -33,6 +33,77 @@ llvm.func @fold_icmp_alloca() -> i1 {
 
 // -----
 
+// CHECK-LABEL: @canonicalize_constant_array_alloca
+llvm.func @canonicalize_constant_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca inalloca %[[ONE]] x !llvm.array<4 x i32> {tag = "preserved", alignment = 16 : i64} : (i32) -> !llvm.ptr
+  %c4 = arith.constant 4 : i64
+  %alloca = llvm.alloca inalloca %c4 x i32 {alignment = 16 : i64, tag = "preserved"} : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @canonicalize_nested_array_alloca
+llvm.func @canonicalize_nested_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x !llvm.array<4 x array<2 x i32>> : (i32) -> !llvm.ptr
+  %c4 = arith.constant 4 : i64
+  %alloca = llvm.alloca %c4 x !llvm.array<2 x i32> : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @canonicalize_zero_array_alloca
+llvm.func @canonicalize_zero_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x !llvm.array<0 x i8> : (i32) -> !llvm.ptr
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  %alloca = llvm.alloca %c0 x i8 : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_scalar_alloca
+llvm.func @do_not_canonicalize_scalar_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x i32 : (i64) -> !llvm.ptr
+  %c1 = arith.constant 1 : i64
+  %alloca = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_dynamic_array_alloca
+// CHECK-SAME: (%[[SIZE:.*]]: i64)
+llvm.func @do_not_canonicalize_dynamic_array_alloca(%size : i64) -> !llvm.ptr {
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x i32 : (i64) -> !llvm.ptr
+  %alloca = llvm.alloca %size x i32 : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_large_array_size
+llvm.func @do_not_canonicalize_large_array_size() -> !llvm.ptr {
+  // CHECK-NEXT: %[[SIZE:.*]] = llvm.mlir.constant(18446744073709551616 : i128) : i128
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x i8 : (i128) -> !llvm.ptr
+  %size = llvm.mlir.constant(18446744073709551616 : i128) : i128
+  %alloca = llvm.alloca %size x i8 : (i128) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
 // CHECK-LABEL: fold_extractvalue
 llvm.func @fold_extractvalue() -> i32 {
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
@@ -181,6 +252,30 @@ llvm.func @fold_extract_sparse() -> f32 {
   // CHECK: llvm.fadd %[[C42]], %[[C0]]
   %3 = llvm.fadd %1, %2 : f32
   llvm.return %3 : f32
+}
+
+// -----
+
+// CHECK-LABEL: no_fold_extract_splat_rank_mismatch
+llvm.func @no_fold_extract_splat_rank_mismatch() -> vector<2xi32> {
+  %0 = llvm.mlir.constant(dense<12> : vector<2xi32>) : vector<2xi32>
+  %1 = llvm.mlir.constant(dense<23> : vector<4x2xi32>) : !llvm.array<4 x vector<2xi32>>
+  // CHECK: extractvalue
+  %2 = llvm.extractvalue %1[0] : !llvm.array<4 x vector<2xi32>>
+  %3 = llvm.shl %0, %2 : vector<2xi32>
+  llvm.return %3 : vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: no_fold_extract_sparse_rank_mismatch
+llvm.func @no_fold_extract_sparse_rank_mismatch() -> vector<2xi32> {
+  %0 = llvm.mlir.constant(dense<12> : vector<2xi32>) : vector<2xi32>
+  %1 = llvm.mlir.constant(sparse<[[0, 0]], [23]> : vector<4x2xi32>) : !llvm.array<4 x vector<2xi32>>
+  // CHECK: extractvalue
+  %2 = llvm.extractvalue %1[0] : !llvm.array<4 x vector<2xi32>>
+  %3 = llvm.shl %0, %2 : vector<2xi32>
+  llvm.return %3 : vector<2xi32>
 }
 
 // -----
@@ -410,10 +505,10 @@ llvm.func @volatile_load(%x : !llvm.ptr) {
   %0 = llvm.load volatile %x : !llvm.ptr -> i8
   // Same with monotonic atomics and any stricter modes.
   // CHECK: llvm.load %{{.*}} atomic monotonic
-  %2 = llvm.load %x atomic monotonic { alignment = 1 } : !llvm.ptr -> i8
+  %2 = llvm.load %x atomic monotonic <alignment = 1> : !llvm.ptr -> i8
   // But not unordered!
   // CHECK-NOT: llvm.load %{{.*}} atomic unordered
-  %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
+  %3 = llvm.load %x  atomic unordered <alignment = 1> : !llvm.ptr -> i8
   llvm.return
 }
 
@@ -426,4 +521,20 @@ llvm.func @inline_asm_side_effects(%x : i32) {
   // CHECK: llvm.inline_asm has_side_effects "inline asm with side effects"
   llvm.inline_asm has_side_effects "inline asm with side effects", "r" %x : (i32) -> ()
   llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: func @metadata_as_value_dedup
+llvm.func @metadata_as_value_dedup() -> i32 {
+  // CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK-NOT: llvm.mlir.metadata_as_value
+  %0 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  %1 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]])
+  %2 = llvm.call_intrinsic "llvm.read_register.i32"(%0) : (!llvm.metadata) -> i32
+  // CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]])
+  %3 = llvm.call_intrinsic "llvm.read_register.i32"(%1) : (!llvm.metadata) -> i32
+  %4 = llvm.add %2, %3 : i32
+  llvm.return %4 : i32
 }

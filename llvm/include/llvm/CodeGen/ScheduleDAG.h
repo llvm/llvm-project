@@ -43,7 +43,8 @@ class SDNode;
 class SUnit;
 class ScheduleDAG;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
   /// Scheduling dependency. This represents one direction of an edge in the
@@ -481,9 +482,7 @@ class TargetRegisterInfo;
     /// edge occurs first.
     LLVM_ABI void biasCriticalPath();
 
-    LLVM_ABI bool isClustered() const {
-      return ParentClusterIdx != InvalidClusterId;
-    }
+    bool isClustered() const { return ParentClusterIdx != InvalidClusterId; }
 
     LLVM_ABI void dumpAttributes() const;
 

@@ -45,9 +45,17 @@ struct PfmCountersInfo {
   // cycles.
   const char *CycleCounter;
 
+  // Optional raw PMU encoding for Cycle counter.
+  int CycleCounterEventSelect;
+  int CycleCounterUMask;
+
   // An optional name of a performance counter that can be used to measure
   // uops.
   const char *UopsCounter;
+
+  // Optional raw PMU encoding for Uops counter.
+  int UopsCounterEventSelect;
+  int UopsCounterUMask;
 
   // An IssueCounter specifies how to measure uops issued to specific proc
   // resources.

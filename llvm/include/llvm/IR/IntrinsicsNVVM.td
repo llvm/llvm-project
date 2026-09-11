@@ -97,8 +97,8 @@
 //   * llvm.nvvm.clz.ll              --> trunc i64 llvm.ctlz.i64(x) to i32
 //   * llvm.nvvm.popc.i              --> llvm.ctpop.i32
 //   * llvm.nvvm.popc.ll             --> trunc i64 llvm.ctpop.i64 to i32
-//   * llvm.nvvm.abs.i               --> select(x >= -x, x, -x)
-//   * llvm.nvvm.abs.ll              --> ibid.
+//   * llvm.nvvm.abs.i               --> llvm.abs.i32(x, true)
+//   * llvm.nvvm.abs.ll              --> llvm.abs.i64(x, true)
 //   * llvm.nvvm.max.i               --> select(x sge y, x, y)
 //   * llvm.nvvm.max.ll              --> ibid.
 //   * llvm.nvvm.max.ui              --> select(x uge y, x, y)
@@ -161,6 +161,19 @@ defvar MAX_GRID_SIZE_Z = 0xffff;
 defvar MAX_BLOCK_SIZE_X = 1024;
 defvar MAX_BLOCK_SIZE_Y = 1024;
 defvar MAX_BLOCK_SIZE_Z = 64;
+
+class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
+                list<LLVMType> param_types,
+                list<LLVMType> flags,
+                list<IntrinsicProperty> intr_properties,
+                string name = "">
+  : DefaultAttrsIntrinsic<
+        ret_types,
+        !listconcat(param_types, flags),
+        !listconcat(intr_properties,
+                    !foreach(i, !range(flags),
+                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
+        name>;
 
 // Helper class that concatenates list elements with
 // a given separator 'sep' and returns the result.
@@ -1145,7 +1158,8 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
-class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num, string ElemType = "i32"> {
+class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num,
+                                    string ElemType = "i32"> {
   int shift = !cond(!eq(Shape, "16x128b"): 1,
                     !eq(Shape, "16x256b"): 2,
                     true : 0);
@@ -1153,15 +1167,13 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num, string ElemType = "i3
   int veclen = !shl(1, !add(Num, shift));
 
   int valid = !le(veclen, 128);
-  LLVMType type = !cond(!eq(veclen,   1): LLVMType<!cast<ValueType>(ElemType)>,
-                        !eq(veclen,   2): LLVMType<!cast<ValueType>("v"#2#ElemType)>,
-                        !eq(veclen,   4): LLVMType<!cast<ValueType>("v"#4#ElemType)>,
-                        !eq(veclen,   8): LLVMType<!cast<ValueType>("v"#8#ElemType)>,
-                        !eq(veclen,  16): LLVMType<!cast<ValueType>("v"#16#ElemType)>,
-                        !eq(veclen,  32): LLVMType<!cast<ValueType>("v"#32#ElemType)>,
-                        !eq(veclen,  64): LLVMType<!cast<ValueType>("v"#64#ElemType)>,
-                        !eq(veclen, 128): LLVMType<!cast<ValueType>("v"#128#ElemType)>,
-                        true : llvm_void_ty);
+  LLVMType type = LLVMType<!cast<ValueType>("v"#veclen#ElemType)>;
+}
+
+class NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<ArgIndex ColIdx, string Buffer> {
+  IntrinsicProperty Prop =
+      ArgInfo<ColIdx, [ArgName<"collector_" # Buffer>,
+                       ImmArgPrinter<"printTcgen05CollectorUsageOp">]>;
 }
 
 class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
@@ -1240,6 +1252,32 @@ class NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<string Kind, string ScaleVecSize> {
   );
 }
 
+//
+// tcgen05.mma intrinsics with decompress_b extension
+//
+
+class NVVM_TCGEN05_MMA_DECOMPRESS_BASE<string Space, string Kind,
+                                       string Modifier = "">:
+    NVVM_TCGEN05_MMA_BASE<Space, /* IsSparse= */ 0, Kind> {
+  string name = Prefix # SpSpaceKindStr # Modifier # ".decompress_b";
+  string intr_name = IntrinsicName<name>.intr_name;
+  string record_name = IntrinsicName<name>.record_name;
+}
+
+class NVVM_TCGEN05_MMA_DECOMPRESS<string Space, string Kind>:
+    NVVM_TCGEN05_MMA_DECOMPRESS_BASE<Space, Kind>;
+
+class NVVM_TCGEN05_MMA_DECOMPRESS_DISABLE_OUTPUT_LANE<string Space,
+                                                      string Kind,
+                                                      int CtaGroup>:
+    NVVM_TCGEN05_MMA_DECOMPRESS_BASE<Space, Kind,
+                                     ".disable_output_lane.cg" # CtaGroup>;
+
+class NVVM_TCGEN05_MMA_DECOMPRESS_BLOCKSCALE<string Space, string Kind,
+                                             string ScaleVecSize>:
+    NVVM_TCGEN05_MMA_DECOMPRESS_BASE<Space, Kind,
+                                     ".block_scale" # ScaleVecSize>;
+
 class TexVector<string name, list<LLVMType> types> {
   string Name = name;
   list<LLVMType> Types = types;
@@ -1274,6 +1312,260 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
                     string name = ""> :
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
+
+// For im2col mode the number of offsets is (dim - 2).
+// For im2col_w / im2col_w_128 modes it is always 2 (wHalo and wOffset),
+// irrespective of dim.
+// For all other modes (e.g. tile) there are no offsets.
+class TMA_IM2COL_OFFSETS_UTIL<int dim, string mode> {
+  int num = !cond(
+    !eq(mode, "im2col")      : !sub(dim, 2),
+    !eq(mode, "im2col_w")    : 2,
+    !eq(mode, "im2col_w_128"): 2,
+    true                     : 0);
+}
+
+// Tile::gather4/scatter4 operate on a 2D tensor (5 co-ordinates), so they
+// always use a "2d" suffix regardless of dim.
+class TMA_DIMS_UTIL<int dim, string mode> {
+  int num_dims = !cond(
+    !eq(mode, "tile_gather4")  : 2,
+    !eq(mode, "tile_scatter4") : 2,
+    true                       : dim);
+}
+
+// Modes applicable for a given tensor dimensionality. The im2col modes are
+// only defined for 3D and higher tensors; for dim < 3 only "tile" is
+// supported. `includeW128` selects whether "im2col_w_128" mode is included
+// in the mode list.
+class TMA_MODES_UTIL<int dim, bit includeW128 = 0> {
+  defvar all_modes = !listconcat(["tile", "im2col", "im2col_w"],
+                                 !if(includeW128, ["im2col_w_128"], []));
+  list<string> modes = !if(!ge(dim, 3), all_modes, ["tile"]);
+}
+
+// Class to handle TMA Copy Override Support
+class TMAOverrideHandler<int dim, string mode> {
+  // TMA Override Support:
+  // +----------------+------------------+-------------------------+
+  // | Mode           | Dimensions       | Supported Overrides     |
+  // +----------------+------------------+-------------------------+
+  // | Tile           | 1D               | override_addr           |
+  // |                |                  | override_addr_dim       |
+  // +----------------+------------------+-------------------------+
+  // | Tile           | 2D and higher    | override_addr           |
+  // |                |                  | override_addr_dim_stride|
+  // +----------------+------------------+-------------------------+
+  // | Im2col         | 3D and higher    | override_addr           |
+  // +----------------+------------------+-------------------------+
+  list<string> common_overrides = ["override_addr"];
+  list<string> tile_overrides_1d = !listconcat(common_overrides, ["override_addr_dim"]);
+  list<string> tile_overrides_nd = !listconcat(common_overrides, ["override_addr_dim_stride"]);
+
+  // Return the applicable overrides based on mode and dimension
+  list<string> applicable_overrides = !if(!eq(mode, "tile"),
+                                !if(!eq(dim, 1), tile_overrides_1d, tile_overrides_nd),
+                                common_overrides);
+}
+
+class CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<int dim, string mode, string override> {
+  list<LLVMType> AddrTy = [llvm_global_ptr_ty];
+  list<LLVMType> TensorSizeTy = !listsplat(llvm_i16_ty, dim);
+  list<LLVMType> LowerStrideTy = !listsplat(llvm_i32_ty, !add(dim, -1));
+  list<LLVMType> UpperStrideTy = [llvm_i16_ty];
+  list<LLVMType> AddrDimTy = !listconcat(AddrTy, TensorSizeTy);
+  list<LLVMType> AddrDimStrideTy = !listconcat(AddrTy, TensorSizeTy, LowerStrideTy, UpperStrideTy);
+  list<LLVMType> OverrideTypes = !cond(!eq(override, "override_addr"): AddrTy,
+                                       !eq(override, "override_addr_dim"): AddrDimTy,
+                                       !eq(override, "override_addr_dim_stride"): AddrDimStrideTy);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+
+  int NumIm2ColOffsets = TMA_IM2COL_OFFSETS_UTIL<dim, mode>.num;
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+
+  string Prefix = "int_nvvm_cp_async_bulk_tensor_";
+  string Suffix = "_" # mode # "_" # override # "_" # dim # "d";
+}
+
+// Helper that emits an ArgInfo intrinsic-property providing a name for the
+// given flag/immarg argument.
+class NVVM_ARG_NAME_PROP<int argNo, string name> {
+  IntrinsicProperty Prop =
+      ArgInfo<ArgIndex<argNo>, [ArgName<name>]>;
+}
+
+class CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<int dim, string mode, string override>
+      : CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<dim, mode, override> {
+  string Name = Prefix # "s2g" # Suffix;
+
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           OverrideTypes,       // override_addr (dst)
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty]         // cache_hint
+                          );
+  list<LLVMType> FlagsTy = [llvm_i1_ty];
+  defvar FlagCacheHintIdx = !size(ArgsTy);
+  list<IntrinsicProperty> IntrProp = [
+        IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>, WriteOnly<ArgIndex<2>>,
+        NVVM_ARG_NAME_PROP<FlagCacheHintIdx, "flag_cache_hint">.Prop
+  ];
+}
+
+class CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<int dim, string mode, string override>
+      : CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<dim, mode, override> {
+  string Name = Prefix # "reduce" # Suffix;
+
+  defvar RedOpIdx = !size(ArgsTy);
+  list<LLVMType> FlagsTy = [llvm_i32_ty,  // reduction operation
+                            llvm_i1_ty];  // Flag for cache_hint
+  list<IntrinsicProperty> IntrProp = [
+        IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        // Allowed values for red_op are {0..7} i.e. [0, 8).
+        Range<ArgIndex<RedOpIdx>, 0, 8>,
+        ArgInfo<ArgIndex<RedOpIdx>, [ArgName<"red_op">,
+                                     ImmArgPrinter<"printTMAReductionOp">]>,
+        NVVM_ARG_NAME_PROP<!add(RedOpIdx, 1), "flag_cache_hint">.Prop
+  ];
+}
+
+// Helper that emits the intrinsic-property set for the evict_policy argument.
+// `upperBound` is the exclusive upper bound of the allowed policy value range.
+// Prefetch accepts both EVICT_NORMAL and EVICT_LAST (default 2).
+// Applypriority only accepts EVICT_NORMAL (upperBound = 1).
+class NVVM_EVICT_POLICY_RANGED_ARGPROP<int argNo, int upperBound = 2> {
+  list<IntrinsicProperty> Prop = [
+    ImmArg<ArgIndex<argNo>>,
+    Range<ArgIndex<argNo>, 0, upperBound>,
+    ArgInfo<ArgIndex<argNo>, [ArgName<"evict_policy">,
+                              ImmArgPrinter<"printEvictPolicyType">]>
+  ];
+}
+
+// Helper that emits the intrinsic-property set for the `validate_pattern`
+// immediate argument used by the TMA g2s (global-to-shared copy) intrinsics.
+// The allowed values correspond to `TMAValidateDataPattern`, i.e. [0, 6).
+class NVVM_TMA_VALIDATE_PATTERN_ARGPROP<int argNo> {
+  list<IntrinsicProperty> Prop = [
+    Range<ArgIndex<argNo>, 0, 6>,
+    ArgInfo<ArgIndex<argNo>, [ArgName<"validate_pattern">,
+                              ImmArgPrinter<"printTMAValidateDataPattern">]>
+  ];
+}
+
+class CP_ASYNC_BULK_TENSOR_PREFETCH_OVERRIDE_INTR<int dim, string mode,
+                                                  string override,
+                                                  bit IsEvict = 0>
+    : CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<dim, mode, override> {
+  string Name = Prefix # "prefetch" # !if(IsEvict, "_evict_priority", "") # Suffix;
+
+  list<LLVMType> ArgsTy = !listconcat(
+      [llvm_ptr_ty],       // tensormap_ptr
+      OverrideTypes,       // override_addr (src)
+      TensorDimsTy,        // actual tensor dims
+      Im2ColOffsetsTy,     // im2col offsets
+      !if(IsEvict, [llvm_i32_ty], [llvm_i64_ty]));
+
+  list<LLVMType> FlagsTy = !if(IsEvict, [], [llvm_i1_ty]);
+
+  defvar PolicyIdx = !sub(!size(ArgsTy), 1);
+  list<IntrinsicProperty> IntrProp = !listconcat(
+      [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
+      !if(IsEvict,
+          NVVM_EVICT_POLICY_RANGED_ARGPROP<PolicyIdx>.Prop,
+         [NVVM_ARG_NAME_PROP<!size(ArgsTy), "flag_cache_hint">.Prop]));
+}
+
+class CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<int dim, string mode, string override>
+    : CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<dim, mode, override> {
+  string Name = Prefix # "g2s" # Suffix;
+  // The override_addr_dim/dim_stride variants support only 32-bit multicast masks.
+  LLVMType MulticastTy = !if(!eq(override, "override_addr"), llvm_anyint_ty,
+                             llvm_i32_ty);
+  list<LLVMType> ArgsTy = !listconcat(
+      [llvm_shared_cluster_ptr_ty, // dst_dsmem_ptr
+       llvm_shared_ptr_ty,         // mbarrier_smem_ptr
+       llvm_ptr_ty],               // tensormap_ptr
+      OverrideTypes,               // override_addr
+      TensorDimsTy,                // actual tensor dims
+      Im2ColOffsetsTy,             // im2col offsets
+      [MulticastTy,                // cta_mask
+       llvm_i64_ty]);              // cache_hint
+  list<LLVMType> FlagsTy = [llvm_i1_ty,   // Flag for cta_mask
+                            llvm_i1_ty,   // Flag for cache_hint
+                            llvm_i32_ty,  // cta_group
+                            llvm_i32_ty]; // validate_pattern
+  defvar CtaGroupIdx = !add(!size(ArgsTy), 2);
+  defvar ValidateIdx = !add(!size(ArgsTy), 3);
+  list<IntrinsicProperty> IntrProp = !listconcat(
+      [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       ReadOnly<ArgIndex<3>>,
+       Range<ArgIndex<CtaGroupIdx>, 0, 3>],
+      NVVM_TMA_VALIDATE_PATTERN_ARGPROP<ValidateIdx>.Prop);
+}
+
+class CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<int dim, string mode, string override>
+    : CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<dim, mode, override> {
+  string Name = Prefix # "g2s_cta" # Suffix;
+  list<LLVMType> ArgsTy = !listconcat(
+      [llvm_shared_ptr_ty,  // dst_smem_ptr
+       llvm_shared_ptr_ty,  // mbarrier_smem_ptr
+       llvm_ptr_ty],        // tensormap_ptr
+      OverrideTypes,        // override_addr
+      TensorDimsTy,         // actual tensor dims
+      Im2ColOffsetsTy,      // im2col offsets
+      [llvm_i64_ty]);       // cache_hint
+  list<LLVMType> FlagsTy = [llvm_i1_ty,   // Flag for cache_hint
+                            llvm_i32_ty]; // validate_pattern
+  defvar ValidateIdx = !add(!size(ArgsTy), 1);
+  list<IntrinsicProperty> IntrProp = !listconcat(
+      [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       ReadOnly<ArgIndex<3>>],
+      NVVM_TMA_VALIDATE_PATTERN_ARGPROP<ValidateIdx>.Prop);
+}
+
+// Applypriority TMA variants.
+class APPLYPRIORITY_BULK_TENSOR_INTR<int dim, string mode> {
+  defvar num_dims = TMA_DIMS_UTIL<dim, mode>.num_dims;
+  string Name = "int_nvvm_applypriority_async_bulk_tensor_evict_priority_" #
+                mode # "_" # num_dims # "d";
+
+  int NumIm2ColOffsets = TMA_IM2COL_OFFSETS_UTIL<dim, mode>.num;
+  list<LLVMType> ArgsTy = !listconcat(
+      [llvm_ptr_ty],                               // tensormap_ptr
+      !listsplat(llvm_i32_ty, dim),                // actual tensor dims
+      !listsplat(llvm_i16_ty, NumIm2ColOffsets),   // im2col offsets
+      [llvm_i32_ty]);                              // flag_evict_policy
+
+  defvar PolicyIdx = !sub(!size(ArgsTy), 1);
+  list<IntrinsicProperty> IntrProp = !listconcat(
+      [IntrConvergent, ReadOnly<ArgIndex<0>>],
+      NVVM_EVICT_POLICY_RANGED_ARGPROP<PolicyIdx, 1>.Prop);
+}
+
+// Applypriority TMA variants with override global address.
+class APPLYPRIORITY_BULK_TENSOR_OVERRIDE_INTR<int dim, string mode,
+                                              string override>
+    : CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<dim, mode, override> {
+  defvar num_dims = TMA_DIMS_UTIL<dim, mode>.num_dims;
+  string Name = "int_nvvm_applypriority_async_bulk_tensor_evict_priority_" #
+                mode # "_" # override # "_" # num_dims # "d";
+
+  list<LLVMType> ArgsTy = !listconcat(
+      [llvm_ptr_ty],       // tensormap_ptr
+      OverrideTypes,       // override_addr (src)
+      TensorDimsTy,        // actual tensor dims
+      Im2ColOffsetsTy,     // im2col offsets
+      [llvm_i32_ty]);      // flag_evict_policy
+
+  defvar PolicyIdx = !sub(!size(ArgsTy), 1);
+  list<IntrinsicProperty> IntrProp = !listconcat(
+      [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
+      NVVM_EVICT_POLICY_RANGED_ARGPROP<PolicyIdx, 1>.Prop);
+}
 
 let TargetPrefix = "nvvm" in {
 
@@ -1590,31 +1882,21 @@ let TargetPrefix = "nvvm" in {
   }
 
   //
-  // Add
+  // FAdd
   //
 
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
-                        IntrNoCreateUndefOrPoison] in {
-    foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-      foreach ftz = ["", "_ftz"] in {
-        foreach sat = ["", "_sat"] in {
-          def int_nvvm_add # rnd # ftz # sat # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-        } // sat
-      } // ftz
-      def int_nvvm_add # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
-    
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_add_rn # ftz # _sat_f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-      def int_nvvm_add_rn # ftz # _sat_v2f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-        
-    } // ftz
-  }
+                        IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<2>>,
+                        Range<ArgIndex<2>, 0, 4>,
+                        ArgInfo<ArgIndex<2>,
+                                [ArgName<"rnd">,
+                                 ImmArgPrinter<"printFPRoundingMode">]>] in
+    foreach ftz = ["", "_ftz"] in
+      foreach sat = ["", "_sat"] in
+        def int_nvvm_fadd # ftz # sat :
+          DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                                [LLVMMatchType<0>, LLVMMatchType<0>,
+                                 llvm_i32_ty]>;
 
   //
   // Dot Product
@@ -1731,16 +2013,20 @@ let TargetPrefix = "nvvm" in {
     foreach relu = ["", "_relu"] in {
       foreach satfinite = ["", "_satfinite"] in {
         def int_nvvm_ff2bf16x2_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
+            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
         def int_nvvm_ff2f16x2_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
+            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
         def int_nvvm_f2bf16_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty, llvm_i1_ty], 
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
 
         def int_nvvm_f2f16_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_half_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_half_ty], [llvm_float_ty, llvm_i1_ty], 
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
       }
     }
   }
@@ -1750,10 +2036,10 @@ let TargetPrefix = "nvvm" in {
   foreach relu = ["", "_relu"] in {
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_ff2f16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
 
       def int_nvvm_ff2bf16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
     }
   }
 
@@ -1886,40 +2172,45 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_ue8m0x2_to_bf16x2 : NVVMBuiltin,
       PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
 
-  //
-  // Atomic operations
-  //
-  class SCOPED_ATOMIC2_impl<LLVMType elty>
-        : Intrinsic<[elty],
-          [llvm_anyptr_ty, LLVMMatchType<0>],
-          [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
-  class SCOPED_ATOMIC3_impl<LLVMType elty>
-        : Intrinsic<[elty],
-          [llvm_anyptr_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-          [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
+  // UE5M3x2 conversions.
+  def int_nvvm_ue5m3x2_to_f16x2_rn
+      : PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
 
-  multiclass PTXAtomicWithScope2<LLVMType elty> {
-    def _cta : SCOPED_ATOMIC2_impl<elty>;
-    def _sys : SCOPED_ATOMIC2_impl<elty>;
+  foreach satfinite = ["", "_satfinite"] in {
+    def int_nvvm_ue5m3x2_to_bf16x2_rn # satfinite
+        : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
+
+    def int_nvvm_ue5m3x2_to_bf16x2_rn # satfinite # _scale_n2_ue8m0
+        : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
   }
-  multiclass PTXAtomicWithScope3<LLVMType elty> {
-    def _cta : SCOPED_ATOMIC3_impl<elty>;
-    def _sys : SCOPED_ATOMIC3_impl<elty>;
+
+  foreach satfinite = ["", "_satfinite"] in {
+    foreach rnd = ["rn", "rz"] in {
+      def int_nvvm_ff_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+      def int_nvvm_ff_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty, llvm_i16_ty]>;
+
+      def int_nvvm_f16x2_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+      def int_nvvm_f16x2_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i16_ty]>;
+
+      def int_nvvm_bf16x2_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+      def int_nvvm_bf16x2_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i16_ty]>;
+    }
+
+    def int_nvvm_ff_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+
+    def int_nvvm_f16x2_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+
+    def int_nvvm_bf16x2_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
   }
-  multiclass PTXAtomicWithScope2_fi {
-    defm _f : PTXAtomicWithScope2<llvm_anyfloat_ty>;
-    defm _i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  }
-  defm int_nvvm_atomic_add_gen    : PTXAtomicWithScope2_fi;
-  defm int_nvvm_atomic_inc_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_dec_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_exch_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_xor_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_max_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_min_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_or_gen_i   : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_and_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_cas_gen_i  : PTXAtomicWithScope3<llvm_anyint_ty>;
 
   //
   // Bar.Sync
@@ -2068,13 +2359,19 @@ def int_nvvm_cp_async_bulk_wait_group_read :
     Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 // mbarrier
+
+def int_nvvm_mbarrier_init :
+    DefaultAttrsIntrinsicFlags<[],
+                               [llvm_anyptr_ty,  // mbar (generic or shared AS)
+                                llvm_i32_ty],    // count
+                               [llvm_i32_ty],    // layout
+              [IntrConvergent, Range<ArgIndex<2>, 0, 2>,
+               ArgInfo<ArgIndex<2>, [ArgName<"layout">,
+                                     ImmArgPrinter<"printMBarrierLayout">]>]>;
+
 foreach is_shared = [true, false] in {
   defvar mbarrier_ptr_ty = !if(is_shared, llvm_shared_ptr_ty, llvm_ptr_ty);
   defvar shared = !if(is_shared, "_shared", "");
-
-  def int_nvvm_mbarrier_init # shared : NVVMBuiltin,
-      Intrinsic<[], [mbarrier_ptr_ty, llvm_i32_ty],
-                [IntrConvergent, IntrNoCallback]>;
 
   def int_nvvm_mbarrier_inval # shared : NVVMBuiltin,
       Intrinsic<[], [mbarrier_ptr_ty],
@@ -2096,6 +2393,17 @@ foreach is_shared = [true, false] in {
 
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
     NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i64_ty]>;
+
+def int_nvvm_mbarrier_check_layout :
+    DefaultAttrsIntrinsicFlags<[llvm_i1_ty],
+                               [llvm_anyptr_ty], // mbar
+                               [llvm_i32_ty],   // layout
+                          [IntrReadMem,
+                           Range<ArgIndex<1>, 0, 2>,
+                           ArgInfo<ArgIndex<1>,
+                                   [ArgName<"layout">,
+                                    ImmArgPrinter<"printMBarrierLayout">]>],
+                          "llvm.nvvm.mbarrier.check_layout">;
 
 // mbarrier.{expect_tx/complete_tx}
 foreach op = ["expect_tx", "complete_tx"] in {
@@ -2171,21 +2479,6 @@ let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillRetur
   def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
   def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
 }
-
-// Represents an explicit hole in the LLVM IR type system. It may be inserted by
-// the compiler in cases where a pointer is of the wrong type. In the backend
-// this intrinsic will be folded away and not equate to any instruction. It
-// should not be used by any frontend and should only be considered well defined
-// when added in the following cases:
-//
-//  - NVPTXLowerArgs: When wrapping a byval pointer argument to a kernel
-//    function to convert the address space from generic (0) to param (101).
-//    This accounts for the fact that the parameter symbols will occupy this
-//    space when lowered during ISel.
-//
-def int_nvvm_internal_addrspace_wrap :
-  NVVMPureIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
-                [NoUndef<ArgIndex<0>>, NoUndef<RetIndex>]>;
 
 // Move intrinsics, used in nvvm internally
 
@@ -2864,23 +3157,10 @@ foreach op = ["dec", "inc"] in
 def int_nvvm_exit : NVVMBuiltin,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
 
-class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
-                list<LLVMType> param_types,
-                list<LLVMType> flags,
-                list<IntrinsicProperty> intr_properties,
-                string name = "">
-  : DefaultAttrsIntrinsic<
-        ret_types,
-        !listconcat(param_types, flags),
-        !listconcat(intr_properties,
-                    !foreach(i, !range(flags),
-                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
-        name>;
-
 // TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
 foreach dim = 1...5 in {
   defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
-  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+  foreach mode = TMA_MODES_UTIL<dim>.modes in {
     def int_nvvm_cp_async_bulk_tensor_s2g_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],
           !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
@@ -2890,16 +3170,22 @@ foreach dim = 1...5 in {
           [llvm_i1_ty],                     // Flag for cache_hint
           [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
-    // Intrinsics for TMA Copy with reduction
-    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in
-      def int_nvvm_cp_async_bulk_tensor_reduce_ # red_op # _ # mode # _ # dim # d :
-        DefaultAttrsIntrinsicFlags<[],
-            !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
-                         llvm_ptr_ty],        // tensormap_ptr
-                         tensor_dim_args,     // actual tensor dims
-                        [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                       // Flag for cache_hint
-          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
+    defvar reduce_params =
+        !listconcat([llvm_shared_ptr_ty, // src_smem_ptr
+                     llvm_ptr_ty],       // tensormap_ptr
+                    tensor_dim_args,     // actual tensor dims
+                    [llvm_i64_ty]);      // cache_hint
+    defvar red_op_idx = !size(reduce_params);
+    def int_nvvm_cp_async_bulk_tensor_reduce_ # mode # _ # dim # d :
+      DefaultAttrsIntrinsicFlags<[],
+        reduce_params,
+        [llvm_i32_ty,    // reduction operation
+         llvm_i1_ty],    // Flag for cache_hint
+        [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        // Allowed values for red_op are {0..7} i.e. [0, 8).
+        Range<ArgIndex<red_op_idx>, 0, 8>,
+        ArgInfo<ArgIndex<red_op_idx>, [ArgName<"red_op">,
+        ImmArgPrinter<"printTMAReductionOp">]>]>;
   }
 }
 
@@ -2913,17 +3199,51 @@ def int_nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d
       [llvm_i1_ty],                           // Flag for cache_hint
       [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
+// TMA Tensor Copy/Reduction Intrinsics: S2G -> From shared to global memory
+//   with override address variants
+foreach dim = 1...5 in {
+  foreach mode = TMA_MODES_UTIL<dim>.modes in {
+    foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
+      // Reduce + Override
+      foreach reduce_override =
+          [CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<dim, mode, override>] in
+        def reduce_override.Name
+            : DefaultAttrsIntrinsicFlags<[], reduce_override.ArgsTy,
+                                    reduce_override.FlagsTy,
+                                    reduce_override.IntrProp>;
+
+      // S2G + Override
+      foreach s2g_override =
+          [CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<dim, mode, override>] in
+        def s2g_override.Name
+            : DefaultAttrsIntrinsicFlags<[], s2g_override.ArgsTy,
+                                    s2g_override.FlagsTy,
+                                    s2g_override.IntrProp>;
+    }
+  }
+}
+
+// S2G + Override + tile::scatter4
+def int_nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_override_addr_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat([llvm_shared_ptr_ty,        // src_smem_ptr
+                   llvm_ptr_ty,               // tensormap_ptr
+                   llvm_global_ptr_ty],       // override_addr
+                  !listsplat(llvm_i32_ty, 5), // dims
+                  [llvm_i64_ty]),             // cache_hint
+      [llvm_i1_ty],                           // Flag for cache_hint
+      [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+       WriteOnly<ArgIndex<2>>, NVVM_ARG_NAME_PROP<9, "flag_cache_hint">.Prop]>;
+
 // TMA Tensor Copy Intrinsics: G2S -> From Global to Shared memory variants
 foreach dim = 1...5 in {
   defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
 
-  foreach mode = !if(!ge(dim, 3), ["tile", "im2col", "im2col_w", "im2col_w_128"], ["tile"]) in {
+  foreach mode = TMA_MODES_UTIL<dim, /*includeW128=*/1>.modes in {
     defvar is_im2col = !eq(mode, "im2col");
     defvar is_im2colw = !or(!eq(mode, "im2col_w"), !eq(mode, "im2col_w_128"));
 
-    // For im2col_w/w128 modes, the num_offsets is always 2.
-    // For im2col mode, the num_offsets is (dim - 2).
-    defvar num_im2col_offsets = !if(is_im2colw, 2, !if(is_im2col, !add(dim, -2), 0));
+    defvar num_im2col_offsets = TMA_IM2COL_OFFSETS_UTIL<dim, mode>.num;
     defvar im2col_offsets_args = !listsplat(llvm_i16_ty, num_im2col_offsets);
 
     defvar g2s_params = !listconcat(
@@ -2932,18 +3252,22 @@ foreach dim = 1...5 in {
                            llvm_ptr_ty],        // tensormap_ptr
                           tensor_dim_args,      // actual tensor dims
                           im2col_offsets_args,  // im2col offsets
-                          [llvm_i16_ty,         // cta_mask
+                          [llvm_anyint_ty,      // cta_mask
                            llvm_i64_ty]);       // cache_hint
     defvar g2s_flags = [llvm_i1_ty,             // Flag for cta_mask
                         llvm_i1_ty,             // Flag for cache_hint
-                        llvm_i32_ty];           // Flag for cta_group
+                        llvm_i32_ty,            // cta_group
+                        llvm_i32_ty];           // validate_pattern
     defvar cta_group_idx = !add(
                              !size(g2s_params),
-                             !sub(!size(g2s_flags), 1));
-    defvar g2s_props = [IntrConvergent,
-                        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-                        // Allowed values for cta_group are {0,1,2} i.e [0, 3).
-                        Range<ArgIndex<cta_group_idx>, 0, 3>];
+                             !sub(!size(g2s_flags), 2));
+    defvar validate_idx = !add(cta_group_idx, 1);
+    defvar g2s_props = !listconcat(
+        [IntrConvergent,
+         WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+         // Allowed values for cta_group are [0, 3).
+         Range<ArgIndex<cta_group_idx>, 0, 3>],
+        NVVM_TMA_VALIDATE_PATTERN_ARGPROP<validate_idx>.Prop);
     def int_nvvm_cp_async_bulk_tensor_g2s_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[], g2s_params, g2s_flags, g2s_props>;
 
@@ -2956,6 +3280,50 @@ foreach dim = 1...5 in {
           [llvm_i1_ty],                     // Flag for cache_hint
           [IntrConvergent, ReadOnly<ArgIndex<0>>]>;
 
+    defvar evict_policy_idx = !add(!add(1, !size(tensor_dim_args)),
+                                   !size(im2col_offsets_args));
+    def int_nvvm_cp_async_bulk_tensor_prefetch_evict_priority_ # mode # _ # dim # d :
+      DefaultAttrsIntrinsic<[],
+          !listconcat([llvm_ptr_ty],        // tensormap_ptr
+                       tensor_dim_args,     // actual tensor dims
+                       im2col_offsets_args, // im2col offsets
+                      [llvm_i32_ty]),       // flag_evict_policy
+          !listconcat([IntrConvergent, ReadOnly<ArgIndex<0>>],
+                       NVVM_EVICT_POLICY_RANGED_ARGPROP<evict_policy_idx>.Prop)>;
+
+    // Prefetch + Override
+    foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
+      foreach prefetch_override =
+          [CP_ASYNC_BULK_TENSOR_PREFETCH_OVERRIDE_INTR<dim, mode, override>] in
+        def prefetch_override.Name
+            : DefaultAttrsIntrinsicFlags<[], prefetch_override.ArgsTy,
+                                          prefetch_override.FlagsTy,
+                                          prefetch_override.IntrProp>;
+      // Prefetch + Evict priority + Override
+      foreach prefetch_evict_override =
+          [CP_ASYNC_BULK_TENSOR_PREFETCH_OVERRIDE_INTR<dim, mode, override, /*IsEvict=*/1>] in
+        def prefetch_evict_override.Name
+            : DefaultAttrsIntrinsicFlags<[], prefetch_evict_override.ArgsTy,
+                                          prefetch_evict_override.FlagsTy,
+                                          prefetch_evict_override.IntrProp>;
+      // G2S + Override
+      foreach g2s_override =
+          [CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<dim, mode, override>] in
+        def g2s_override.Name
+            : DefaultAttrsIntrinsicFlags<[], g2s_override.ArgsTy,
+                                         g2s_override.FlagsTy,
+                                         g2s_override.IntrProp>;
+      // G2S CTA + Override
+      foreach g2s_cta_override =
+          [CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<dim, mode, override>] in
+        def g2s_cta_override.Name
+            : DefaultAttrsIntrinsicFlags<[], g2s_cta_override.ArgsTy,
+                                         g2s_cta_override.FlagsTy,
+                                         g2s_cta_override.IntrProp>;
+    }
+
+    defvar g2s_cta_validate_idx = !add(!size(tensor_dim_args),
+                                       !add(!size(im2col_offsets_args), 5));
     def int_nvvm_cp_async_bulk_tensor_g2s_cta_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],
           !listconcat([llvm_shared_ptr_ty,  // dst_ptr
@@ -2964,8 +3332,11 @@ foreach dim = 1...5 in {
                        tensor_dim_args,     // actual tensor dims
                        im2col_offsets_args, // im2col offsets
                        [llvm_i64_ty]),      // cache_hint
-          [llvm_i1_ty],                     // Flag for cache_hint
-          [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+          [llvm_i1_ty,                      // Flag for cache_hint
+           llvm_i32_ty],                    // validate_pattern
+          !listconcat([IntrConvergent, WriteOnly<ArgIndex<0>>,
+                       ReadOnly<ArgIndex<2>>],
+                      NVVM_TMA_VALIDATE_PATTERN_ARGPROP<g2s_cta_validate_idx>.Prop)>;
   }
 }
 
@@ -2977,15 +3348,17 @@ def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_2d
        llvm_shared_ptr_ty,         // mbarrier_ptr
        llvm_ptr_ty],               // tensormap_ptr
        !listsplat(llvm_i32_ty, 5), // co-ordinates
-      [llvm_i16_ty,                // cta_mask
+      [llvm_anyint_ty,             // cta_mask
        llvm_i64_ty]),              // cache_hint
       [llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty,                 // Flag for cache_hint
-       llvm_i32_ty],               // Flag for cta_group
-      [IntrConvergent,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-       // Allowed values for cta_group are {0,1,2} i.e [0, 3).
-       Range<ArgIndex<12>, 0, 3>]>;
+       llvm_i32_ty,                // cta_group
+       llvm_i32_ty],               // validate_pattern
+      !listconcat([IntrConvergent,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+                   // Allowed values for cta_group are [0, 3).
+                   Range<ArgIndex<12>, 0, 3>],
+                  NVVM_TMA_VALIDATE_PATTERN_ARGPROP<13>.Prop)>;
 
 def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d
   : DefaultAttrsIntrinsicFlags<[],
@@ -2995,9 +3368,50 @@ def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d
        llvm_ptr_ty],               // tensormap_ptr
        !listsplat(llvm_i32_ty, 5), // co-ordinates
       [llvm_i64_ty]),              // cache_hint
-      [llvm_i1_ty],                // Flag for cache_hint
-      [IntrConvergent,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+      [llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty],               // validate_pattern
+      !listconcat([IntrConvergent,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                  NVVM_TMA_VALIDATE_PATTERN_ARGPROP<10>.Prop)>;
+
+// G2S + Gather4 + Override
+def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_override_addr_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat(
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_ptr_ty,                // tensormap_ptr
+       llvm_global_ptr_ty],        // override_addr
+       !listsplat(llvm_i32_ty, 5), // co-ordinates
+      [llvm_anyint_ty,             // cta_mask
+       llvm_i64_ty]),              // cache_hint
+      [llvm_i1_ty,                 // Flag for cta_mask
+       llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty,                // cta_group
+       llvm_i32_ty],               // validate_pattern
+      !listconcat([IntrConvergent,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+                   ReadOnly<ArgIndex<3>>,
+                   // Allowed values for cta_group are [0, 3).
+                   Range<ArgIndex<13>, 0, 3>],
+                  NVVM_TMA_VALIDATE_PATTERN_ARGPROP<14>.Prop)>;
+
+// G2S CTA + Gather4 + Override
+def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_override_addr_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat(
+      [llvm_shared_ptr_ty,         // dst_shared_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_ptr_ty,                // tensormap_ptr
+       llvm_global_ptr_ty],        // override_addr
+       !listsplat(llvm_i32_ty, 5), // co-ordinates
+      [llvm_i64_ty]),              // cache_hint
+      [llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty],               // validate_pattern
+      !listconcat([IntrConvergent,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+                   ReadOnly<ArgIndex<3>>],
+                  NVVM_TMA_VALIDATE_PATTERN_ARGPROP<11>.Prop)>;
 
 // TMA prefetch for tile::gather4
 def int_nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d
@@ -3007,6 +3421,36 @@ def int_nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d
                   [llvm_i64_ty]),              // cache_hint
       [llvm_i1_ty],                            // Flag for cache_hint
       [IntrConvergent, ReadOnly<ArgIndex<0>>]>;
+
+// TMA prefetch for tile::gather4 with eviction priority
+def int_nvvm_cp_async_bulk_tensor_prefetch_evict_priority_tile_gather4_2d
+  : DefaultAttrsIntrinsic<[],
+      !listconcat([llvm_ptr_ty],               // tensormap_ptr
+                  !listsplat(llvm_i32_ty, 5),  // co-ordinates
+                  [llvm_i32_ty]),              // flag_evict_policy
+      !listconcat([IntrConvergent, ReadOnly<ArgIndex<0>>],
+                   NVVM_EVICT_POLICY_RANGED_ARGPROP<6>.Prop)>;
+
+// TMA prefetch for tile::gather4 with override address
+def int_nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_override_addr_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat([llvm_ptr_ty,               // tensormap_ptr
+                   llvm_global_ptr_ty],       // override_addr (src)
+                  !listsplat(llvm_i32_ty, 5), // co-ordinates
+                  [llvm_i64_ty]),             // cache_hint
+      [llvm_i1_ty],                           // Flag for cache_hint
+      [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+       NVVM_ARG_NAME_PROP<8, "flag_cache_hint">.Prop]>;
+
+// TMA prefetch for tile::gather4 with override address and eviction priority
+def int_nvvm_cp_async_bulk_tensor_prefetch_evict_priority_tile_gather4_override_addr_2d
+  : DefaultAttrsIntrinsic<[],
+      !listconcat([llvm_ptr_ty,               // tensormap_ptr
+                   llvm_global_ptr_ty],       // override_addr (src)
+                  !listsplat(llvm_i32_ty, 5), // co-ordinates
+                  [llvm_i32_ty]),             // flag_evict_policy
+      !listconcat([IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
+                   NVVM_EVICT_POLICY_RANGED_ARGPROP<7>.Prop)>;
 
 // Intrinsics for Prefetch and Prefetchu
 let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>] in {
@@ -3033,6 +3477,57 @@ let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<
   def int_nvvm_applypriority_L2_evict_normal
     : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty]>;
 }
+
+// Aapplypriority bulk variants.
+def int_nvvm_applypriority_async_bulk_evict_priority
+  : DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, // global_ptr
+       llvm_i32_ty,        // size (byte length; must be a multiple of 16)
+       llvm_i32_ty],       // flag_evict_policy
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
+                   NVVM_EVICT_POLICY_RANGED_ARGPROP<2, 1>.Prop)>;
+
+// Applypriority TMA variants.
+foreach dim = 1...5 in {
+  foreach mode = TMA_MODES_UTIL<dim, /*includeW128=*/1>.modes in {
+    foreach apply_prio =
+        [APPLYPRIORITY_BULK_TENSOR_INTR<dim, mode>] in
+      def apply_prio.Name : DefaultAttrsIntrinsic<[], apply_prio.ArgsTy,
+                                                 apply_prio.IntrProp>;
+  }
+}
+// Applypriority TMA variants for tile::gather4.
+def int_nvvm_applypriority_async_bulk_tensor_evict_priority_tile_gather4_2d
+  : DefaultAttrsIntrinsic<[],
+      !listconcat([llvm_ptr_ty],              // tensormap_ptr
+                  !listsplat(llvm_i32_ty, 5), // co-ordinates (d0..d4)
+                  [llvm_i32_ty]),             // flag_evict_policy
+      !listconcat([IntrConvergent, ReadOnly<ArgIndex<0>>],
+                   NVVM_EVICT_POLICY_RANGED_ARGPROP<6, 1>.Prop)>;
+
+// Applypriority TMA variants with override global address.
+foreach dim = 1...5 in {
+  foreach mode = TMA_MODES_UTIL<dim, /*includeW128=*/1>.modes in {
+    foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
+      foreach apply_prio_override =
+          [APPLYPRIORITY_BULK_TENSOR_OVERRIDE_INTR<dim, mode, override>] in
+        def apply_prio_override.Name
+            : DefaultAttrsIntrinsic<[], apply_prio_override.ArgsTy,
+                                    apply_prio_override.IntrProp>;
+    }
+  }
+}
+// Applypriority TMA variants for tile::gather4 with override global address.
+def int_nvvm_applypriority_async_bulk_tensor_evict_priority_tile_gather4_override_addr_2d
+  : DefaultAttrsIntrinsic<[],
+      !listconcat([llvm_ptr_ty],              // tensormap_ptr
+                  [llvm_global_ptr_ty],       // override_addr (src)
+                  !listsplat(llvm_i32_ty, 5), // co-ordinates (d0..d4)
+                  [llvm_i32_ty]),             // flag_evict_policy
+      !listconcat([IntrConvergent, ReadOnly<ArgIndex<0>>,
+                   ReadOnly<ArgIndex<1>>],
+                   NVVM_EVICT_POLICY_RANGED_ARGPROP<7, 1>.Prop)>;
 
 // discard
 let IntrProperties = [NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrHasSideEffects] in {
@@ -3111,6 +3606,16 @@ def int_nvvm_cp_async_bulk_prefetch_L2
       [IntrConvergent, IntrArgMemOnly,
        NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>]>;
 
+// Intrinsics for Bulk Copy Prefetch with Eviction Priority
+def int_nvvm_cp_async_bulk_prefetch_evict_priority
+  : DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i32_ty],       // flag_evict_policy
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>],
+                   NVVM_EVICT_POLICY_RANGED_ARGPROP<2>.Prop)>;
+
 def int_nvvm_griddepcontrol_launch_dependents : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 def int_nvvm_griddepcontrol_wait : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
@@ -3119,48 +3624,38 @@ def int_nvvm_griddepcontrol_wait : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffe
 //
 
 // Tcgen05 alloc/dealloc related intrinsics
-
 foreach cta_group = ["cg1", "cg2"] in {
   def int_nvvm_tcgen05_alloc_ # cta_group : Intrinsic<[],
-    [llvm_ptr_ty,        // dst_ptr
-     llvm_i32_ty] ,      // num_columns
+    [llvm_anyptr_ty,     // dst_ptr
+     llvm_i32_ty,       // num_columns
+     llvm_i1_ty],       // is_exclusive
     [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-
-  def int_nvvm_tcgen05_alloc_shared_ # cta_group : Intrinsic<[],
-    [llvm_shared_ptr_ty, // dst_ptr
-     llvm_i32_ty],       // num_columns
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>>,
+     ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_dealloc_ # cta_group : Intrinsic<[],
     [llvm_tmem_ptr_ty,   // tmem_addr
-     llvm_i32_ty],       // num_columns
-    [IntrConvergent, IntrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
+     llvm_i32_ty,       // num_columns
+     llvm_i1_ty],       // is_exclusive
+    [IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>>,
+     ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_relinq_alloc_permit_ # cta_group : Intrinsic<[], [],
     [IntrConvergent, IntrInaccessibleMemOnly]>;
 
-  def int_nvvm_tcgen05_commit_ # cta_group : Intrinsic<[],
-    [llvm_ptr_ty],        // mbar_ptr
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
+  foreach smem_a_read = ["", "smem_a_read_"] in {
+    def int_nvvm_tcgen05_commit_ # smem_a_read # cta_group : Intrinsic<[],
+      [llvm_anyptr_ty],        // mbar_ptr
+      [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+       NoCapture<ArgIndex<0>>]>;
 
-  def int_nvvm_tcgen05_commit_shared_ # cta_group : Intrinsic<[],
-    [llvm_shared_ptr_ty], // mbar_ptr
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
-
-  def int_nvvm_tcgen05_commit_mc_ # cta_group : Intrinsic<[],
-    [llvm_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
-
-  def int_nvvm_tcgen05_commit_mc_shared_ # cta_group : Intrinsic<[],
-    [llvm_shared_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
+    def int_nvvm_tcgen05_commit_ # smem_a_read # mc_ # cta_group : Intrinsic<[],
+      [llvm_anyptr_ty, llvm_anyint_ty], // mbar_ptr, cta_mask[16 or 32 bits]
+      [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+       NoCapture<ArgIndex<0>>]>;
+  }
 
   def int_nvvm_tcgen05_shift_down_ # cta_group : Intrinsic<[],
     [llvm_tmem_ptr_ty],   // tmem_addr
@@ -3273,6 +3768,27 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
 }
 
 //
+// Asynchronous store intrinsics
+//
+
+def int_nvvm_st_async :
+  DefaultAttrsIntrinsic<[],
+    [llvm_shared_cluster_ptr_ty, llvm_anyint_ty, llvm_shared_cluster_ptr_ty],
+    [WriteOnly<ArgIndex<0>>, IntrArgMemOnly]>;
+
+foreach scope = ["_sys", "_gpu"] in {
+  def int_nvvm_st_async # scope :
+    DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, llvm_anyint_ty, llvm_i1_ty],
+      [WriteOnly<ArgIndex<0>>, ImmArg<ArgIndex<2>>,
+       ArgInfo<ArgIndex<2>, [ArgName<"isMultimem">]>]>;
+}
+
+def int_nvvm_st_async_mmio_sys :
+  DefaultAttrsIntrinsic<[],
+    [llvm_global_ptr_ty, llvm_anyint_ty], [WriteOnly<ArgIndex<0>>]>;
+
+//
 // clusterlaunchcontorl Intrinsics
 //
 
@@ -3314,33 +3830,28 @@ foreach sparse = [0, 1] in {
         );
         defvar flags = [llvm_i32_ty,   // kind
                         llvm_i32_ty,   // cta_group
-                        llvm_i32_ty];  // collector_usage_a
+                        llvm_i32_ty,   // collector_usage_a
+                        llvm_i32_ty];  // collector_usage_b
         defvar nargs = !size(args);
         defvar scale_d_imm = ArgIndex<!sub(nargs, 1)>;
         defvar scale_d_imm_range = [ImmArg<scale_d_imm>, Range<scale_d_imm, 0, 16>];
+        defvar kind_idx        = ArgIndex<nargs>;
+        defvar cta_group_idx   = ArgIndex<!add(nargs, 1)>;
+        defvar collector_a_idx = ArgIndex<!add(nargs, 2)>;
+        defvar collector_b_idx = ArgIndex<!add(nargs, 3)>;
 
-        // Check if this is the specific llvm.nvvm.tcgen05.mma.tensor intrinsic.
-        defvar is_target_intrinsic = !and(!eq(sparse, 0),
-                                          !eq(space, "tensor"),
-                                          !eq(scale_d, 0),
-                                          !eq(ashift, 0));
-
-        defvar base_properties = !listconcat(
+        defvar intrinsic_properties = !listconcat(
           mma.common_intr_props,
           !if(!eq(scale_d, 1), scale_d_imm_range, []),
-          [Range<ArgIndex<nargs>, 0, !if(!eq(scale_d, 1), 2, 4)>, // kind
-           Range<ArgIndex<!add(nargs, 1)>, 1, 3>,                 // cta_group
-           Range<ArgIndex<!add(nargs, 2)>, 0,
-                          !if(!eq(ashift, 1), 2, 4)>              // collector_usage
-          ]
+          [Range<kind_idx,        0, !if(!eq(scale_d, 1), 2, 5)>,
+           Range<cta_group_idx,   1, 3>,
+           Range<collector_a_idx, 0, !if(!eq(ashift, 1), 2, 4)>,
+           Range<collector_b_idx, 0, 4>,
+           ArgInfo<kind_idx, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
+           ArgInfo<cta_group_idx, [ArgName<"cta_group">]>,
+           NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_a_idx, "a">.Prop,
+           NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_b_idx, "b">.Prop]
         );
-
-        defvar intrinsic_properties = !if(is_target_intrinsic,
-          !listconcat(base_properties,
-            [ArgInfo<ArgIndex<nargs>, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
-             ArgInfo<ArgIndex<!add(nargs, 1)>, [ArgName<"cta_group">]>,
-             ArgInfo<ArgIndex<!add(nargs, 2)>, [ArgName<"collector">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]),
-          base_properties);
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,
@@ -3368,15 +3879,23 @@ foreach sparse = [0, 1] in {
                           [disable_output_lane_type]
                         );
           defvar flags = [llvm_i32_ty,  // kind_flag
-                          llvm_i32_ty]; // collector_usage_a_flag
+                          llvm_i32_ty,  // collector_usage_a_flag
+                          llvm_i32_ty]; // collector_usage_b_flag
           defvar nargs = !size(args);
           defvar scale_d_imm = ArgIndex<!sub(nargs, 2)>;
           defvar scale_d_imm_range = [ImmArg<scale_d_imm>, Range<scale_d_imm, 0, 16>];
+          defvar kind_idx        = ArgIndex<nargs>;
+          defvar collector_a_idx = ArgIndex<!add(nargs, 1)>;
+          defvar collector_b_idx = ArgIndex<!add(nargs, 2)>;
           defvar intrinsic_properties = !listconcat(
                     mma.common_intr_props,
                     !if(!eq(scale_d, 1), scale_d_imm_range, []),
-                    [Range<ArgIndex<nargs>, 0, !if(!eq(scale_d, 1), 2, 4)>,
-                     Range<ArgIndex<!add(nargs, 1)>, 0, !if(!eq(ashift, 1), 2, 4)>]
+                    [Range<kind_idx,        0, !if(!eq(scale_d, 1), 2, 5)>,
+                     Range<collector_a_idx, 0, !if(!eq(ashift, 1), 2, 4)>,
+                     Range<collector_b_idx, 0, 4>,
+                     ArgInfo<kind_idx, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
+                     NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_a_idx, "a">.Prop,
+                     NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_b_idx, "b">.Prop]
                   );
 
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
@@ -3399,16 +3918,22 @@ foreach sparse = [0, 1] in {
                                   [llvm_tmem_ptr_ty,   // scale_a
                                    llvm_tmem_ptr_ty]); // scale_b
         defvar flags = [llvm_i32_ty,  // cta_group
-                        llvm_i32_ty]; // collector_usage_a
+                        llvm_i32_ty,  // collector_usage_a
+                        llvm_i32_ty]; // collector_usage_b
         defvar nargs = !size(args);
         defvar cta_group = ArgIndex<nargs>;
-        defvar collector_usage = ArgIndex<!add(nargs, 1)>;
+        defvar collector_usage_a = ArgIndex<!add(nargs, 1)>;
+        defvar collector_usage_b = ArgIndex<!add(nargs, 2)>;
 
         if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
             !listconcat(mma.common_intr_props,
                         [Range<cta_group, 1, 3>,
-                         Range<collector_usage, 0, 4>]),
+                         Range<collector_usage_a, 0, 4>,
+                         Range<collector_usage_b, 0, 4>,
+                         ArgInfo<cta_group, [ArgName<"cta_group">]>,
+                         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
+                         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]),
             mma.intr_name>;
         }
       } // scale_vec_size
@@ -3431,11 +3956,19 @@ foreach sparse = [0, 1] in {
                       llvm_i32_ty,        // collector_buffer_b
                       llvm_i32_ty];       // collector_usage_b_op
       defvar nargs = !size(args);
+      defvar kind_idx = ArgIndex<nargs>;
+      defvar collector_buffer_b_idx = ArgIndex<!add(nargs, 1)>;
+      defvar collector_usage_b_op_idx = ArgIndex<!add(nargs, 2)>;
       defvar intrinsic_properties = !listconcat(
         mma.common_intr_props,
-        [Range<ArgIndex<nargs>, 0, 4>,
-         Range<ArgIndex<!add(nargs, 1)>, 0, 4>,
-         Range<ArgIndex<!add(nargs, 2)>, 0, 4>]
+        [Range<kind_idx, 0, 5>,
+         Range<collector_buffer_b_idx, 0, 4>,
+         Range<collector_usage_b_op_idx, 0, 4>,
+         ArgInfo<kind_idx, [ArgName<"kind">,
+                            ImmArgPrinter<"printTcgen05MMAKind">]>,
+         ArgInfo<collector_buffer_b_idx, [ArgName<"collector_b_buffer">,
+                                          ImmArgPrinter<"printTcgen05MMACollectorBBuffer">]>,
+         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b_op_idx, "b">.Prop]
       );
 
       def mma.record_name:
@@ -3444,6 +3977,101 @@ foreach sparse = [0, 1] in {
     } // zero_col_mask
   } // space
 } // sparse
+
+//
+// tcgen05.mma decompress intrinsics
+//
+foreach space = ["tensor", "shared"] in {
+  defvar mma = NVVM_TCGEN05_MMA_DECOMPRESS<space, "f8f6f4">;
+  defvar args = !listconcat(
+                  mma.common_args,
+                  [llvm_tmem_ptr_ty] // decompress_b
+                );
+  defvar flags = [llvm_i32_ty,  // cta_group
+                  llvm_i32_ty,  // collector_usage_a
+                  llvm_i32_ty]; // collector_usage_b
+  defvar nargs = !size(args);
+  defvar cta_group = ArgIndex<nargs>;
+  defvar collector_usage_a = ArgIndex<!add(nargs, 1)>;
+  defvar collector_usage_b = ArgIndex<!add(nargs, 2)>;
+
+  defvar intrinsic_properties = !listconcat(
+      mma.common_intr_props,
+      [Range<cta_group, 1, 3>,
+       Range<collector_usage_a, 0, 4>,
+       Range<collector_usage_b, 0, 4>,
+       ArgInfo<cta_group, [ArgName<"cta_group">]>,
+       NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
+       NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]);
+
+  def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
+                          intrinsic_properties, mma.intr_name>;
+} // space
+
+//
+// tcgen05.mma decompress disable_output_lane intrinsics
+//
+foreach space = ["tensor", "shared"] in {
+  foreach cta_group = [1, 2] in {
+    defvar mma = NVVM_TCGEN05_MMA_DECOMPRESS_DISABLE_OUTPUT_LANE<
+                  space, "f8f6f4", cta_group>;
+    defvar disable_output_lane_type =
+              !if(!eq(cta_group, 1), llvm_v4i32_ty, llvm_v8i32_ty);
+    defvar args = !listconcat(
+                    mma.common_args,
+                    [llvm_tmem_ptr_ty],        // decompress_b
+                    [disable_output_lane_type] // disable_output_lane
+                  );
+    defvar flags = [llvm_i32_ty,  // collector_usage_a
+                    llvm_i32_ty]; // collector_usage_b
+    defvar nargs = !size(args);
+    defvar collector_usage_a = ArgIndex<nargs>;
+    defvar collector_usage_b = ArgIndex<!add(nargs, 1)>;
+
+    defvar intrinsic_properties = !listconcat(
+        mma.common_intr_props,
+        [Range<collector_usage_a, 0, 4>,
+         Range<collector_usage_b, 0, 4>,
+         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
+         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]);
+
+    def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
+                            intrinsic_properties, mma.intr_name>;
+  } // cta_group
+} // space
+
+//
+// tcgen05.mma decompress block_scale intrinsics
+//
+foreach space = ["tensor", "shared"] in {
+  defvar mma = NVVM_TCGEN05_MMA_DECOMPRESS_BLOCKSCALE<space, "mxf8f6f4",
+                                                      ".block32">;
+  defvar args = !listconcat(
+                  mma.common_args,
+                  [llvm_tmem_ptr_ty,  // scale_a
+                   llvm_tmem_ptr_ty,  // scale_b
+                   llvm_tmem_ptr_ty]  // decompress_b
+                );
+  defvar flags = [llvm_i32_ty,  // cta_group
+                  llvm_i32_ty,  // collector_usage_a
+                  llvm_i32_ty]; // collector_usage_b
+  defvar nargs = !size(args);
+  defvar cta_group = ArgIndex<nargs>;
+  defvar collector_usage_a = ArgIndex<!add(nargs, 1)>;
+  defvar collector_usage_b = ArgIndex<!add(nargs, 2)>;
+
+  defvar intrinsic_properties = !listconcat(
+      mma.common_intr_props,
+      [Range<cta_group, 1, 3>,
+       Range<collector_usage_a, 0, 4>,
+       Range<collector_usage_b, 0, 4>,
+       ArgInfo<cta_group, [ArgName<"cta_group">]>,
+       NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
+       NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]);
+
+  def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
+                          intrinsic_properties, mma.intr_name>;
+} // space
 
 //
 // tensormap.replace intrinsics
@@ -3457,7 +4085,7 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>] in {
 }
 
 let IntrProperties = [IntrArgMemOnly, ImmArg<ArgIndex<1>>, IntrWriteMem,
-                      NoCapture<ArgIndex<0>>] in {
+                      NoCapture<ArgIndex<0>>, Range<ArgIndex<1>, 0, 5>] in {
   def int_nvvm_tensormap_replace_global_stride :
     DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty, llvm_i64_ty], []>;
   foreach tmap_field = ["box_dim", "global_dim", "element_stride"] in {

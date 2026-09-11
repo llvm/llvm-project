@@ -3,7 +3,7 @@
 
 ; CHECK: LV: Loop hints: force=enabled
 ; CHECK: LV: Scalar loop costs: 4.
-; ChosenFactor.Cost is 9, but the real cost will be divided by the width, which is 2.2.
+; ChosenFactor.Cost is 11, but the real cost will be divided by the width, which is 2.8
 ; CHECK: Cost for VF vscale x 2: 9
 ; Regardless of force vectorization or not, this loop will eventually be vectorized because of the cost model.
 ; Therefore, the following message does not need to be printed even if vectorization is explicitly forced in the metadata.
@@ -31,4 +31,4 @@ for.end:
 }
 
 !0 = !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.enable"}

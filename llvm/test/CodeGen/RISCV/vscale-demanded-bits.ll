@@ -4,9 +4,9 @@
 define <vscale x 8 x i8> @f() #0 {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:

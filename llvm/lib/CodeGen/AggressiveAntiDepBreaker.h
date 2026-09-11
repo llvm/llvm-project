@@ -33,7 +33,8 @@ class MachineOperand;
 class MachineRegisterInfo;
 class RegisterClassInfo;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
   /// Contains all the state necessary for anti-dep breaking.

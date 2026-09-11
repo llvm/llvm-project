@@ -2,6 +2,10 @@
 // RUN:   -mcpu=gfx908xnack -nostdlib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOPLUS %s
 
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -march=gfx908xnack -nostdlib -### \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=NOPLUS %s
+
 // NOPLUS: error: invalid target ID 'gfx908xnack'
 
 // RUN: not %clang -target amdgcn-amd-amdpal \
@@ -39,3 +43,24 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOCOLON %s
 
 // NOCOLON: error: invalid target ID 'gfx900+xnack'
+
+// gfx1250 and gfx12-5-generic do not support xnack on/off modes
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=gfx1250:xnack+ -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=XNACK-MODE-GFX1250 %s
+
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=gfx1250:xnack- -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=XNACK-MODE-GFX1250 %s
+
+// XNACK-MODE-GFX1250: error: invalid target ID 'gfx1250:xnack{{[+-]}}'
+
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=gfx12-5-generic:xnack+ -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=XNACK-MODE-GFX125 %s
+
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=gfx12-5-generic:xnack- -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=XNACK-MODE-GFX125 %s
+
+// XNACK-MODE-GFX125: error: invalid target ID 'gfx12-5-generic:xnack{{[+-]}}'

@@ -102,6 +102,7 @@ private:
     auto routineOp = acc::RoutineOp::create(
         builder, loc,
         /* sym_name=*/builder.getStringAttr(routineName),
+        /* sym_visibility=*/nullptr,
         /* func_name=*/
         mlir::SymbolRefAttr::get(builder.getContext(),
                                  builder.getStringAttr(callee.getName())),
@@ -119,10 +120,10 @@ private:
         /* gangDimDeviceType=*/nullptr);
 
     // Assert that the callee does not already have routine info attribute
-    assert(!callee->hasAttr(acc::getRoutineInfoAttrName()) &&
+    assert(!callee->hasDiscardableAttr(acc::getRoutineInfoAttrName()) &&
            "function is already associated with a routine");
 
-    callee->setAttr(
+    callee->setDiscardableAttr(
         acc::getRoutineInfoAttrName(),
         mlir::acc::RoutineInfoAttr::get(
             builder.getContext(),
@@ -151,8 +152,8 @@ private:
           calleeSymbolRef.getLeafReference().str());
       // If the callee does not exist or is already a valid symbol for GPU
       // regions, skip it
-
-      assert(callee && "callee function must be found in symbol table");
+      if (!callee)
+        return;
       if (accSupport.isValidSymbolUse(callOp.getOperation(), calleeSymbolRef))
         return;
       builder.setInsertionPoint(callee);
@@ -195,7 +196,8 @@ private:
             calleeSymbolRef.getLeafReference().str());
         // If the callee does not exist or is already a valid symbol for GPU
         // regions, skip it
-        assert(callee && "callee function must be found in symbol table");
+        if (!callee)
+          return;
         if (accSupport.isValidSymbolUse(callOp.getOperation(), calleeSymbolRef))
           return;
         builder.setInsertionPoint(callee);

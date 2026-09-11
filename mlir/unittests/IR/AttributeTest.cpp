@@ -263,6 +263,17 @@ TEST(DenseSplatMapValuesTest, I32ToFalse) {
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// AsmResourceBlob
+//===----------------------------------------------------------------------===//
+
+namespace {
+TEST(AsmResourceBlobTest, DefaultBlobIsImmutable) {
+  AsmResourceBlob blob;
+  EXPECT_FALSE(blob.isMutable());
+}
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // DenseResourceElementsAttr
 //===----------------------------------------------------------------------===//
 
@@ -544,6 +555,20 @@ TEST(IntegerAttrTest, CorrectBitWidths) {
   EXPECT_EQ(attrIdx.getType(), indexTy);
   EXPECT_EQ(attrIdx.getValue().getBitWidth(),
             (unsigned)IndexType::kInternalStorageBitWidth);
+}
+
+TEST(IntegerAttrTest, SignedOverflow) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  IntegerAttr attr8Neg = builder.getI8IntegerAttr(-1);
+  EXPECT_EQ(attr8Neg.getInt(), -1);
+
+  IntegerAttr attr16Neg = builder.getI16IntegerAttr(-1);
+  EXPECT_EQ(attr16Neg.getInt(), -1);
+
+  IntegerAttr attr32Neg = builder.getI32IntegerAttr(-1);
+  EXPECT_EQ(attr32Neg.getInt(), -1);
 }
 
 #ifndef NDEBUG

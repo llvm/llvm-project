@@ -41,10 +41,6 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 /// The specific integer value is used in a context where it is known to be
 /// non-zero.  If this allows us to simplify the computation, do so and return
 /// the new operand, otherwise return null.
@@ -330,6 +326,41 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
   if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
     return replaceInstUsesWith(I, FoldedMul);
+
+  // (shl X, C1)*(select cond, C2, C3)--> X * (select cond, C2<<C1, C3<<C1)
+  // (mul X, C1)*(select cond, C2, C3)--> X * (select cond, C2*C1, C3*C1)
+  // (Includes commuted forms)
+
+  {
+    Value *NewOp, *Cond, *OtherValue;
+    Constant *C1, *C2, *C3;
+
+    if (match(&I, m_c_Mul(m_OneUse(m_Value(OtherValue)),
+                          m_OneUse(m_Select(m_Value(Cond), m_ImmConstant(C2),
+                                            m_ImmConstant(C3))))) &&
+        (match(OtherValue, m_Mul(m_Value(NewOp), m_ImmConstant(C1))) ||
+         match(OtherValue, m_Shl(m_Value(NewOp), m_ImmConstant(C1))))) {
+
+      auto *OtherInst = cast<OverflowingBinaryOperator>(OtherValue);
+      auto Opc = OtherInst->getOpcode();
+
+      Constant *NewTV = ConstantFoldBinaryOpOperands(Opc, C2, C1, DL);
+      Constant *NewFV = ConstantFoldBinaryOpOperands(Opc, C3, C1, DL);
+
+      if (NewTV && NewFV) {
+        Value *NewSel = Builder.CreateSelect(Cond, NewTV, NewFV);
+        BinaryOperator *BO = BinaryOperator::CreateMul(NewOp, NewSel);
+
+        if (HasNUW && OtherInst->hasNoUnsignedWrap())
+          BO->setHasNoUnsignedWrap();
+        if (HasNSW && OtherInst->hasNoSignedWrap() &&
+            NewTV->isNotMinSignedValue() && NewFV->isNotMinSignedValue())
+          BO->setHasNoSignedWrap();
+
+        return BO;
+      }
+    }
+  }
 
   // Simplify mul instructions with a constant RHS.
   Constant *MulC;
@@ -636,7 +667,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                            Value *Y, Value *Z) {
     InstCombiner::BuilderTy &Builder = IC.Builder;
     Value *YZ = Builder.CreateNSWAdd(Y, Z);
-    Instruction *NewPow = Builder.CreateIntrinsic(
+    Value *NewPow = Builder.CreateIntrinsic(
         Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
 
     return NewPow;
@@ -654,7 +685,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                          m_Deferred(X)))) {
     Constant *One = ConstantInt::get(Y->getType(), 1);
     if (willNotOverflowSignedAdd(Y, One, I)) {
-      Instruction *NewPow = createPowiExpr(I, *this, X, Y, One);
+      Value *NewPow = createPowiExpr(I, *this, X, Y, One);
       return replaceInstUsesWith(I, NewPow);
     }
   }
@@ -668,7 +699,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
       match(Op1, m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(m_Specific(X),
                                                              m_Value(Z)))) &&
       Y->getType() == Z->getType() && willNotOverflowSignedAdd(Y, Z, I)) {
-    Instruction *NewPow = createPowiExpr(I, *this, X, Y, Z);
+    Value *NewPow = createPowiExpr(I, *this, X, Y, Z);
     return replaceInstUsesWith(I, NewPow);
   }
 
@@ -681,7 +712,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                        m_Specific(Op1), m_Value(Y))))) &&
         willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
       Constant *NegOne = ConstantInt::getAllOnesValue(Y->getType());
-      Instruction *NewPow = createPowiExpr(I, *this, Op1, Y, NegOne);
+      Value *NewPow = createPowiExpr(I, *this, Op1, Y, NegOne);
       return replaceInstUsesWith(I, NewPow);
     }
 
@@ -1082,10 +1113,10 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
       match(&I,
             m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
                      m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Deferred(X)))))) {
-    auto *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
-    if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath)) {
-      Sin->setMetadata(LLVMContext::MD_fpmath, Metadata);
-    }
+    Value *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
+    if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath))
+      if (auto *SinI = dyn_cast<Instruction>(Sin))
+        SinI->setMetadata(LLVMContext::MD_fpmath, Metadata);
     return replaceInstUsesWith(I, Sin);
   }
 
@@ -1290,16 +1321,9 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
 
   // If any element of a constant divisor fixed width vector is zero or undef
   // the behavior is undefined and we can fold the whole op to poison.
-  auto *Op1C = dyn_cast<Constant>(Op1);
-  Type *Ty = I.getType();
-  auto *VTy = dyn_cast<FixedVectorType>(Ty);
-  if (Op1C && VTy) {
-    unsigned NumElts = VTy->getNumElements();
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = Op1C->getAggregateElement(i);
-      if (Elt && (Elt->isNullValue() || isa<UndefValue>(Elt)))
-        return replaceInstUsesWith(I, PoisonValue::get(Ty));
-    }
+  if (match(Op1, m_ContainsMatchingVectorElement(
+                     m_CombineOr(m_Zero(), m_UndefValue())))) {
+    return replaceInstUsesWith(I, PoisonValue::get(I.getType()));
   }
 
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
@@ -1374,6 +1398,27 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
         return Mul;
       }
+
+      // (X * C1) / C2 -> (X * (C1/D)) / (C2/D) if D = gcd(C1, C2) > 1.
+      if (Op0->hasOneUse()) {
+        APInt GCD = APIntOps::GreatestCommonDivisor(*C1, *C2, IsSigned);
+        if (GCD.ugt(1)) {
+          APInt NewC1 = IsSigned ? C1->sdiv(GCD) : C1->udiv(GCD);
+          APInt NewC2 = IsSigned ? C2->sdiv(GCD) : C2->udiv(GCD);
+
+          auto *OldMul = cast<OverflowingBinaryOperator>(Op0);
+          Value *NewMul = Builder.CreateMul(X, ConstantInt::get(Ty, NewC1), "",
+                                            OldMul->hasNoUnsignedWrap(),
+                                            OldMul->hasNoSignedWrap());
+          NewMul->takeName(OldMul);
+
+          Constant *NewDivisor = ConstantInt::get(Ty, NewC2);
+          auto *NewDiv =
+              BinaryOperator::Create(I.getOpcode(), NewMul, NewDivisor);
+          NewDiv->setIsExact(I.isExact());
+          return NewDiv;
+        }
+      }
     }
 
     if ((IsSigned && match(Op0, m_NSWShl(m_Value(X), m_APInt(C1))) &&
@@ -1399,6 +1444,29 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         Mul->setHasNoUnsignedWrap(!IsSigned && OBO->hasNoUnsignedWrap());
         Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
         return Mul;
+      }
+
+      // (X << C1) / C2 -> (X << (C1 - K)) / (C2 / (1 << K))
+      // Where K = min(C1, countr_zero(C2)), the shared power of 2.
+      if (Op0->hasOneUse()) {
+        unsigned ShiftAmt = static_cast<unsigned>(C1->getZExtValue());
+        unsigned K = std::min(C2->countr_zero(), ShiftAmt);
+        if (K > 0) {
+          unsigned NewShiftAmt = ShiftAmt - K;
+          APInt NewC2 = IsSigned ? C2->ashr(K) : C2->lshr(K);
+
+          auto *OldShift = cast<OverflowingBinaryOperator>(Op0);
+          Value *NewShift = Builder.CreateShl(
+              X, ConstantInt::get(Ty, NewShiftAmt), "",
+              OldShift->hasNoUnsignedWrap(), OldShift->hasNoSignedWrap());
+          NewShift->takeName(OldShift);
+
+          Constant *NewDivisor = ConstantInt::get(Ty, NewC2);
+          auto *NewDiv =
+              BinaryOperator::Create(I.getOpcode(), NewShift, NewDivisor);
+          NewDiv->setIsExact(I.isExact());
+          return NewDiv;
+        }
       }
     }
 
@@ -1505,6 +1573,35 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     if (NewDiv) {
       NewDiv->setIsExact(I.isExact() && InnerDiv->isExact());
       return NewDiv;
+    }
+  }
+
+  // X / (select Cond, 1, Y) --> select Cond, X, (X / Y)
+  // X / (select Cond, Y, 1) --> select Cond, (X / Y), X
+  // Division by 1 is a no-op, so we sink the division into the non-1 arm.
+  // For sdiv, limit Y to constant to avoid signed overflow concern.
+  {
+    Value *Cond, *DivY;
+    const APInt *C;
+    auto IsSafeDivisor = [&](Value *V) {
+      if (IsSigned)
+        return match(V, m_APInt(C)) && !C->isZero() && !C->isAllOnes();
+      return isKnownNonZero(V, SQ.getWithInstruction(&I)) &&
+             isGuaranteedNotToBePoison(V, SQ.AC, &I, SQ.DT);
+    };
+    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_One(), m_Value(DivY)))) &&
+        IsSafeDivisor(DivY)) {
+      Value *NewDiv =
+          Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+      return SelectInst::Create(Cond, Op0, NewDiv, "", nullptr,
+                                cast<SelectInst>(Op1));
+    }
+    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_Value(DivY), m_One()))) &&
+        IsSafeDivisor(DivY)) {
+      Value *NewDiv =
+          Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+      return SelectInst::Create(Cond, NewDiv, Op0, "", nullptr,
+                                cast<SelectInst>(Op1));
     }
   }
 
@@ -1620,9 +1717,7 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
       if (Value *LogY =
               takeLog2(SI->getOperand(2), Depth, AssumeNonZero, DoFold))
         return IfFold([&]() {
-          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "",
-                                      ProfcheckDisableMetadataFixes ? nullptr
-                                                                    : SI);
+          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "", SI);
         });
 
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))
@@ -1640,6 +1735,12 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
                                                LogY);
         });
   }
+
+  // log2(X + 1) IIF X[0,1] -> X
+  if (Op->getType()->getScalarSizeInBits() != 1 &&
+      match(Op, m_Add(m_Value(X), m_One())) &&
+      computeKnownBits(X, cast<Instruction>(Op)).countMaxActiveBits() == 1)
+    return IfFold([&]() { return X; });
 
   return nullptr;
 }
@@ -1718,10 +1819,25 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
     }
   }
 
+  // (X udiv Y) udiv Z --> X udiv (Y * Z), if Y * Z does not overflow.
+  // This is the variable-operand version of the (X / C1) / C2 fold in
+  // commonIDivTransforms().
+  Value *Y;
+  if (match(Op0, m_OneUse(m_UDiv(m_Value(X), m_Value(Y)))) &&
+      willNotOverflowUnsignedMul(Y, Op1, I)) {
+    Value *YZ = Builder.CreateNUWMul(Y, Op1);
+    auto *NewDiv = BinaryOperator::CreateUDiv(X, YZ);
+    // The result is exact only if both of the original divides are exact.
+    if (I.isExact() && cast<PossiblyExactOperator>(Op0)->isExact())
+      NewDiv->setIsExact();
+    return NewDiv;
+  }
+
   // Op0 / C where C is large (negative) --> zext (Op0 >= C)
-  // TODO: Could use isKnownNegative() to handle non-constant values.
+  // This also handles non-constant values where the sign bit is known to be
+  // set.
   Type *Ty = I.getType();
-  if (match(Op1, m_Negative())) {
+  if (isKnownNegative(Op1, SQ.getWithInstruction(&I))) {
     Value *Cmp = Builder.CreateICmpUGE(Op0, Op1);
     return CastInst::CreateZExtOrBitCast(Cmp, Ty);
   }
@@ -1927,7 +2043,7 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
       (match(I.getOperand(1), m_PosZeroFP()) ||
        (I.hasNoSignedZeros() && match(I.getOperand(1), m_AnyZeroFP())))) {
     IRBuilder<> B(&I);
-    CallInst *CopySign = B.CreateIntrinsic(
+    Value *CopySign = B.CreateIntrinsic(
         Intrinsic::copysign, {C->getType()},
         {ConstantFP::getInfinity(I.getType()), I.getOperand(0)}, &I);
     CopySign->takeName(&I);

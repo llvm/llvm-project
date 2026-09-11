@@ -18,22 +18,28 @@ using namespace llvm;
 namespace {
 struct Format : public FormatAdapter<int> {
   Format(int N) : FormatAdapter<int>(std::move(N)) {}
-  void format(raw_ostream &OS, StringRef Opt) override { OS << "Format"; }
+  void format(raw_ostream &OS, StringRef Opt) { OS << "Format"; }
 };
 
-using support::detail::uses_format_member;
-using support::detail::uses_missing_provider;
+using support::detail::FormatFunctor;
 
-static_assert(uses_format_member<Format>::value, "");
-static_assert(uses_format_member<Format &>::value, "");
-static_assert(uses_format_member<Format &&>::value, "");
-static_assert(uses_format_member<const Format>::value, "");
-static_assert(uses_format_member<const Format &>::value, "");
-static_assert(uses_format_member<const volatile Format>::value, "");
-static_assert(uses_format_member<const volatile Format &>::value, "");
+static_assert(FormatFunctor<Format>::HasMemberProvider, "");
+static_assert(FormatFunctor<Format &>::HasMemberProvider, "");
+static_assert(FormatFunctor<Format &&>::HasMemberProvider, "");
+static_assert(FormatFunctor<const Format>::HasMemberProvider, "");
+static_assert(FormatFunctor<const Format &>::HasMemberProvider, "");
+static_assert(FormatFunctor<const volatile Format>::HasMemberProvider, "");
+static_assert(FormatFunctor<const volatile Format &>::HasMemberProvider, "");
 
-struct NoFormat {};
-static_assert(uses_missing_provider<NoFormat>::value, "");
+struct StreamFormat {};
+// Silence warning about never-called function.
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &, const StreamFormat &);
+static_assert(!FormatFunctor<StreamFormat>::HasMemberProvider, "");
+static_assert(!FormatFunctor<StreamFormat>::HasFormatProvider, "");
+static_assert(FormatFunctor<StreamFormat>::HasStreamProvider, "");
+static_assert(!FormatFunctor<int>::HasMemberProvider, "");
+static_assert(FormatFunctor<int>::HasFormatProvider, "");
+static_assert(FormatFunctor<int>::HasStreamProvider, "");
 }
 
 // Helper to parse format string with no validation.
@@ -780,7 +786,7 @@ TEST(FormatVariadicTest, Adapter) {
   class Negative : public FormatAdapter<int> {
   public:
     explicit Negative(int N) : FormatAdapter<int>(std::move(N)) {}
-    void format(raw_ostream &S, StringRef Options) override { S << -Item; }
+    void format(raw_ostream &S, StringRef Options) { S << -Item; }
   };
 
   EXPECT_EQ("-7", formatv("{0}", Negative(7)).str());

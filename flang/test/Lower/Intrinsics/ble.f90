@@ -197,3 +197,41 @@ subroutine ble_test11(c)
   ! CHECK: %[[V:.*]] = fir.convert %[[R]] : (i1) -> !fir.logical<4>
   ! CHECK: hlfir.assign %[[V]] to %[[C_DECL]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 end subroutine ble_test11
+
+! Test BOZ literal as second argument
+! CHECK-LABEL: func.func @_QPble_boz_second(
+subroutine ble_boz_second(a, c)
+  integer :: a
+  logical :: c
+  c = ble(a, z'FF')
+  ! CHECK: %[[BOZ:.*]] = arith.constant 255 : i128
+  ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: %[[EXT:.*]] = arith.extui %[[A]] : i32 to i128
+  ! CHECK: %[[CMP:.*]] = arith.cmpi ule, %[[EXT]], %[[BOZ]] : i128
+  ! CHECK: %[[RES:.*]] = fir.convert %[[CMP]] : (i1) -> !fir.logical<4>
+  ! CHECK: hlfir.assign %[[RES]] to %{{.*}}
+end subroutine ble_boz_second
+
+! Test BOZ literal as first argument
+! CHECK-LABEL: func.func @_QPble_boz_first(
+subroutine ble_boz_first(a, c)
+  integer :: a
+  logical :: c
+  c = ble(z'FF', a)
+  ! CHECK: %[[BOZ:.*]] = arith.constant 255 : i128
+  ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: %[[EXT:.*]] = arith.extui %[[A]] : i32 to i128
+  ! CHECK: %[[CMP:.*]] = arith.cmpi ule, %[[BOZ]], %[[EXT]] : i128
+  ! CHECK: %[[RES:.*]] = fir.convert %[[CMP]] : (i1) -> !fir.logical<4>
+  ! CHECK: hlfir.assign %[[RES]] to %{{.*}}
+end subroutine ble_boz_first
+
+! Test BOZ literal for both arguments (folded at compile time)
+! CHECK-LABEL: func.func @_QPble_boz_both(
+subroutine ble_boz_both(c)
+  logical :: c
+  c = ble(z'FF', z'FE')
+  ! CHECK: %[[R:.*]] = arith.constant false
+  ! CHECK: %[[V:.*]] = fir.convert %[[R]] : (i1) -> !fir.logical<4>
+  ! CHECK: hlfir.assign %[[V]] to %{{.*}}
+end subroutine ble_boz_both

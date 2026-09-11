@@ -111,6 +111,7 @@ struct Config {
       std::string Checks;
       llvm::StringMap<std::string> CheckOptions;
       FastCheckPolicy FastCheckFilter = FastCheckPolicy::Strict;
+      bool ExperimentalCustomChecks = false;
     } ClangTidy;
 
     IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;
@@ -229,12 +230,6 @@ struct Config {
 namespace llvm {
 template <> struct DenseMapInfo<clang::clangd::Config::ExternalIndexSpec> {
   using ExternalIndexSpec = clang::clangd::Config::ExternalIndexSpec;
-  static inline ExternalIndexSpec getEmptyKey() {
-    return {ExternalIndexSpec::File, "", ""};
-  }
-  static inline ExternalIndexSpec getTombstoneKey() {
-    return {ExternalIndexSpec::File, "TOMB", "STONE"};
-  }
   static unsigned getHashValue(const ExternalIndexSpec &Val) {
     return llvm::hash_combine(Val.Kind, Val.Location, Val.MountPoint);
   }

@@ -6,29 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Lower LDS global variables with target extension type "amdgpu.named.barrier"
+// Lower global variables with target extension type "amdgpu.named.barrier"
 // that require specialized address assignment. It assigns a unique
-// barrier identifier to each named-barrier LDS variable and encodes
+// barrier identifier to each named-barrier variable and encodes
 // this identifier within the !absolute_symbol metadata of that global.
-// This encoding ensures that subsequent LDS lowering passes can process these
-// barriers correctly without conflicts.
 //
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-
-#include <algorithm>
 
 #define DEBUG_TYPE "amdgpu-lower-exec-sync"
 
@@ -37,43 +31,14 @@ using namespace AMDGPU;
 
 namespace {
 
-// If GV is also used directly by other kernels, create a new GV
-// used only by this kernel and its function.
-static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
-                                           Function *KF) {
-  bool NeedsReplacement = false;
-  for (Use &U : GV->uses()) {
-    if (auto *I = dyn_cast<Instruction>(U.getUser())) {
-      Function *F = I->getFunction();
-      if (isKernel(*F) && F != KF) {
-        NeedsReplacement = true;
-        break;
-      }
-    }
-  }
-  if (!NeedsReplacement)
-    return GV;
-  // Create a new GV used only by this kernel and its function
-  GlobalVariable *NewGV = new GlobalVariable(
-      M, GV->getValueType(), GV->isConstant(), GV->getLinkage(),
-      GV->getInitializer(), GV->getName() + "." + KF->getName(), nullptr,
-      GV->getThreadLocalMode(), GV->getType()->getAddressSpace());
-  NewGV->copyAttributesFrom(GV);
-  for (Use &U : make_early_inc_range(GV->uses())) {
-    if (auto *I = dyn_cast<Instruction>(U.getUser())) {
-      Function *F = I->getFunction();
-      if (!isKernel(*F) || F == KF) {
-        U.getUser()->replaceUsesOfWith(GV, NewGV);
-      }
-    }
-  }
-  return NewGV;
+static bool isNamedBarrierToLower(const GlobalVariable &GV) {
+  return isNamedBarrier(GV) && !GV.isAbsoluteSymbolRef();
 }
 
 // Write the specified address into metadata where it can be retrieved by
 // the assembler. Format is a half open range, [Address Address+1)
-static void recordLDSAbsoluteAddress(Module *M, GlobalVariable *GV,
-                                     uint32_t Address) {
+static void recordAbsoluteAddress(Module *M, GlobalVariable *GV,
+                                  uint32_t Address) {
   LLVMContext &Ctx = M->getContext();
   auto *IntTy = M->getDataLayout().getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
   auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address));
@@ -82,101 +47,120 @@ static void recordLDSAbsoluteAddress(Module *M, GlobalVariable *GV,
                   MDNode::get(Ctx, {MinC, MaxC}));
 }
 
-template <typename T> SmallVector<T> sortByName(SmallVector<T> &&V) {
-  sort(V, [](const auto *L, const auto *R) {
-    return L->getName() < R->getName();
-  });
-  return {std::move(V)};
+/// Get next available ID for sync object. The ID allocation is tracked in \p
+/// MaxNumGroup groups by \p NextAvailableIDTracker. Each call of the function
+/// will ask for \p IDCnt against all the \p Kernels, it will return the
+/// maximum of the available ones and update the ID tracker.
+template <typename T>
+unsigned allocateExecSyncID(T &NextAvailableIDTracker,
+                            ArrayRef<Function *> Kernels, unsigned GroupID,
+                            unsigned MaxNumGroup, unsigned IDCnt) {
+  constexpr unsigned InitialVal = 1;
+  unsigned NextID = InitialVal;
+  for (Function *F : Kernels) {
+    const SmallVectorImpl<unsigned> &NextAvailableID =
+        NextAvailableIDTracker.lookup(F);
+    unsigned ID = InitialVal;
+    if (!NextAvailableID.empty())
+      ID = NextAvailableID[GroupID];
+
+    if (ID > NextID)
+      NextID = ID;
+  }
+
+  // Bump the next available id for the kernels.
+  for (Function *F : Kernels) {
+    auto Inserted = NextAvailableIDTracker.try_emplace(F);
+    // Initialize on first insertion.
+    if (Inserted.second)
+      Inserted.first->second.assign(MaxNumGroup, InitialVal);
+    // Update the available ID.
+    Inserted.first->second[GroupID] = NextID + IDCnt;
+  }
+  return NextID;
 }
 
 // Main utility function for special LDS variables lowering.
-static bool lowerExecSyncGlobalVariables(
-    Module &M, LDSUsesInfoTy &LDSUsesInfo,
-    VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
+static bool lowerExecSyncGlobalVariables(Module &M, GVUsesInfoTy &GVUsesInfo) {
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
-  // The 1st round: give module-absolute assignments
-  int NumAbsolutes = 0;
-  SmallVector<GlobalVariable *> OrderedGVs;
-  for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
-    GlobalVariable *GV = K.first;
-    if (!isNamedBarrier(*GV))
-      continue;
-    // give a module-absolute assignment if it is indirectly accessed by
-    // multiple kernels. This is not precise, but we don't want to duplicate
-    // a function when it is called by multiple kernels.
-    if (LDSToKernelsThatNeedToAccessItIndirectly[GV].size() > 1) {
-      OrderedGVs.push_back(GV);
-    } else {
-      // leave it to the 2nd round, which will give a kernel-relative
-      // assignment if it is only indirectly accessed by one kernel
-      LDSUsesInfo.direct_access[*K.second.begin()].insert(GV);
-    }
-    LDSToKernelsThatNeedToAccessItIndirectly.erase(GV);
-  }
-  OrderedGVs = sortByName(std::move(OrderedGVs));
-  for (GlobalVariable *GV : OrderedGVs) {
-    unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
-    unsigned BarId = NumAbsolutes + 1;
-    unsigned BarCnt = GV->getGlobalSize(DL) / 16;
-    NumAbsolutes += BarCnt;
 
-    // 4 bits for alignment, 5 bits for the barrier num,
-    // 3 bits for the barrier scope
-    unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
-    recordLDSAbsoluteAddress(&M, GV, Offset);
-  }
-  OrderedGVs.clear();
+  constexpr unsigned NumBarScopes = 1;
+  MapVector<GlobalVariable *, SmallVector<Function *>> AllocationQ;
+  DenseMap<Function *, SmallVector<unsigned, NumBarScopes>> KernelBarrierIDs;
 
-  // The 2nd round: give a kernel-relative assignment for GV that
-  // either only indirectly accessed by single kernel or only directly
-  // accessed by multiple kernels.
-  SmallVector<Function *> OrderedKernels;
-  for (auto &K : LDSUsesInfo.direct_access) {
-    Function *F = K.first;
-    assert(isKernel(*F));
-    OrderedKernels.push_back(F);
-  }
-  OrderedKernels = sortByName(std::move(OrderedKernels));
-
-  DenseMap<Function *, uint32_t> Kernel2BarId;
-  for (Function *F : OrderedKernels) {
-    for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
-      if (!isNamedBarrier(*GV))
+  for (auto &[F, GVs] : GVUsesInfo.IndirectAccess) {
+    for (auto *GV : GVs) {
+      if (!isNamedBarrier(*GV) || GV->isAbsoluteSymbolRef())
         continue;
-
-      LDSUsesInfo.direct_access[F].erase(GV);
-      if (GV->isAbsoluteSymbolRef()) {
-        // already assigned
-        continue;
-      }
-      OrderedGVs.push_back(GV);
+      auto Iter = AllocationQ.find(GV);
+      if (Iter == AllocationQ.end())
+        AllocationQ.insert({GV, {F}});
+      else
+        Iter->second.push_back(F);
     }
-    OrderedGVs = sortByName(std::move(OrderedGVs));
-    for (GlobalVariable *GV : OrderedGVs) {
-      // GV could also be used directly by other kernels. If so, we need to
-      // create a new GV used only by this kernel and its function.
-      auto NewGV = uniquifyGVPerKernel(M, GV, F);
-      Changed |= (NewGV != GV);
-      unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
-      unsigned BarId = Kernel2BarId[F];
-      BarId += NumAbsolutes + 1;
+  }
+
+  for (auto &[F, GVs] : GVUsesInfo.DirectAccess) {
+    for (auto *GV : GVs) {
+      if (!isNamedBarrier(*GV) || GV->isAbsoluteSymbolRef())
+        continue;
+      auto Iter = AllocationQ.find(GV);
+      if (Iter == AllocationQ.end())
+        AllocationQ.insert({GV, {F}});
+      else
+        Iter->second.push_back(F);
+    }
+  }
+
+  sort(AllocationQ, [](std::pair<GlobalVariable *, SmallVector<Function *>> A,
+                       std::pair<GlobalVariable *, SmallVector<Function *>> B) {
+    // First order by number of kernels that access the GlobalVariable.
+    if (A.second.size() != B.second.size())
+      return A.second.size() > B.second.size();
+
+    // Then order by their names so we always get a deterministic order.
+    return A.first->getName() < B.first->getName();
+  });
+
+  for (auto &[GV, Kernels] : AllocationQ) {
+    unsigned Offset;
+    if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
+      unsigned BarrierScope = ExtTy->getIntParameter(0);
       unsigned BarCnt = GV->getGlobalSize(DL) / 16;
-      Kernel2BarId[F] += BarCnt;
-      unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
-      recordLDSAbsoluteAddress(&M, NewGV, Offset);
+
+      unsigned BarID = allocateExecSyncID(KernelBarrierIDs, Kernels,
+                                          BarrierScope, NumBarScopes, BarCnt);
+
+      LLVM_DEBUG(GV->printAsOperand(dbgs(), false);
+                 dbgs() << " was assigned barrier id: " << BarID
+                        << " id-count: " << BarCnt << "\n");
+      Offset = BarID;
+    } else {
+      llvm_unreachable("Unhandled special variable type.");
     }
-    OrderedGVs.clear();
+
+    recordAbsoluteAddress(&M, GV, Offset);
   }
+
   // Also erase those special LDS variables from indirect_access.
-  for (auto &K : LDSUsesInfo.indirect_access) {
+  for (auto &K : GVUsesInfo.IndirectAccess) {
     assert(isKernel(*K.first));
-    for (GlobalVariable *GV : K.second) {
-      if (isNamedBarrier(*GV))
-        K.second.erase(GV);
-    }
+    K.second.remove_if([](GlobalVariable *GV) { return isNamedBarrier(*GV); });
   }
   return Changed;
+}
+
+static bool hasBarrierToLower(const GVUsesInfoTy &GVUsesInfo) {
+  for (auto &Map : {GVUsesInfo.DirectAccess, GVUsesInfo.IndirectAccess}) {
+    for (auto &[Fn, GVs] : Map) {
+      for (auto &GV : GVs) {
+        if (AMDGPU::isNamedBarrier(*GV))
+          return true;
+      }
+    }
+  }
+  return false;
 }
 
 // With object linking, barrier ID assignment is deferred to the linker.
@@ -225,27 +209,19 @@ static bool runLowerExecSyncGlobals(Module &M) {
 
   CallGraph CG = CallGraph(M);
   bool Changed = false;
-  Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+  Changed |=
+      eliminateGVConstantExprUsesFromAllInstructions(M, isNamedBarrierToLower);
 
   // For each kernel, what variables does it access directly or through
   // callees
-  LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
+  GVUsesInfoTy BarrierUsesInfo =
+      getTransitiveUsesOfGV(CG, M, isNamedBarrierToLower);
 
-  // For each variable accessed through callees, which kernels access it
-  VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
-  for (auto &K : LDSUsesInfo.indirect_access) {
-    Function *F = K.first;
-    assert(isKernel(*F));
-    for (GlobalVariable *GV : K.second) {
-      LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
-    }
-  }
-
-  if (LDSUsesInfo.HasSpecialGVs) {
+  if (hasBarrierToLower(BarrierUsesInfo)) {
     // Special LDS variables need special address assignment
-    Changed |= lowerExecSyncGlobalVariables(
-        M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly);
+    Changed |= lowerExecSyncGlobalVariables(M, BarrierUsesInfo);
   }
+
   return Changed;
 }
 

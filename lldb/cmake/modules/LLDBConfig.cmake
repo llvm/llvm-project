@@ -68,7 +68,6 @@ add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highli
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
-option(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS "Build the script interpreter plugins as shared libraries" OFF)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
@@ -79,6 +78,11 @@ option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
 set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
   directory containing the LLDB library.")
+
+set(LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded." CACHE STRING
+  "Text appended to diagnostics when LLDB cannot locate DWO debug information files. Clients can
+  customize this message with a URL or additional information to help users know how to fix or
+  troubleshoot the issue.")
 
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
   # The custom target for the system debugserver has no install target, so we
@@ -131,12 +135,8 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-set(LLDB_EXPORT_ALL_SYMBOLS ${LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS} CACHE BOOL
-  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
-
-if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS AND NOT LLDB_EXPORT_ALL_SYMBOLS)
-  message(FATAL_ERROR "LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS requires LLDB_EXPORT_ALL_SYMBOLS")
-endif()
+set(LLDB_EXPORT_ALL_SYMBOLS OFF CACHE BOOL
+  "Causes lldb to export all private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
 
 set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
   "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
@@ -195,6 +195,13 @@ else()
   set(LLDB_ENABLE_MTE OFF)
 endif()
 
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD" AND NOT CMAKE_GENERATOR MATCHES "Xcode")
+  set(default_enable_dynamic_scriptinterpreters ON)
+else()
+  set(default_enable_dynamic_scriptinterpreters OFF)
+endif()
+option(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS "Build the script interpreter plugins as shared libraries" ${default_enable_dynamic_scriptinterpreters})
+
 if (LLDB_ENABLE_PYTHON)
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)
@@ -209,6 +216,18 @@ if (LLDB_ENABLE_PYTHON)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
+  endif()
+
+  # Expose the build-time libpython through Config.h (its R"(...)"
+  # substitution avoids the per-platform path-escaping hazards of
+  # target_compile_definitions) so the loader has a runtime fallback.
+  # Skip Windows: FindPython3 returns the .lib import library, which is
+  # a different file from the .dll the loader actually needs.
+  if(TARGET Python3::Python AND NOT WIN32)
+    get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LOCATION)
+    if(_Python3_LIB_PATH)
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH "${_Python3_LIB_PATH}")
+    endif()
   endif()
 
   # Enable targeting the Python Limited C API.
@@ -299,6 +318,7 @@ if( MSVC )
     -wd4068 # Suppress 'warning C4068: unknown pragma'
     -wd4150 # Suppress 'warning C4150: deletion of pointer to incomplete type'
     -wd4201 # Suppress 'warning C4201: nonstandard extension used: nameless struct/union'
+    -wd4250 # Suppress 'warning C4250: 'class1' : inherits 'class2::member' via dominance
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
@@ -396,32 +416,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(LLDB_CAN_USE_DEBUGSERVER ON)
 else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
-endif()
-
-# In a cross-compile build, we need to skip building the generated
-# lldb-rpc sources in the first phase of host build so that they can
-# get built using the just-built Clang toolchain in the second phase.
-if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
-  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
-else()
-  if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
-      CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
-    set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
-  else()
-    set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
-  endif()
-endif()
-
-
-if (NOT DEFINED LLDB_BUILD_LLDBRPC)
-  set(LLDB_BUILD_LLDBRPC OFF)
-else()
-  if (CMAKE_CROSSCOMPILING)
-    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
-    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
-  else()
-    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
-  endif()
 endif()
 
 include(LLDBGenerateConfig)

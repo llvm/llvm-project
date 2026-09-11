@@ -1,4 +1,11 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libclc VERSION 0.2.0 LANGUAGES CXX C)
@@ -83,9 +90,9 @@ else()
   include(GetClangResourceDir)
   get_clang_resource_dir( LIBCLC_INSTALL_DIR )
   cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" )
-
-  cmake_path( GET LLVM_LIBRARY_OUTPUT_INTDIR PARENT_PATH LIBCLC_OUTPUT_LIBRARY_DIR )
-  cmake_path( APPEND LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_INSTALL_DIR} )
+  cmake_path( APPEND LLVM_BINARY_DIR ${LIBCLC_INSTALL_DIR}
+    OUTPUT_VARIABLE LIBCLC_OUTPUT_LIBRARY_DIR
+  )
 endif()
 
 if( NOT LIBCLC_USE_SPIRV_BACKEND )
@@ -123,18 +130,8 @@ foreach( tool IN ITEMS opt llvm-link )
   endif()
 endforeach()
 
-# Determine the clang target triple. Vulkan and SPIR-V backend targets use the
-# triple directly; other SPIR-V targets fall back to the legacy SPIR target.
+# Determine the clang target triple.
 set(clang_triple ${LIBCLC_TARGET})
-if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
-  if(NOT LIBCLC_TARGET_OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND)
-    if(LIBCLC_TARGET_ARCH STREQUAL spirv)
-      set(clang_triple spir--)
-    else()
-      set(clang_triple spir64--)
-    endif()
-  endif()
-endif()
 
 # Address space values.
 set(private_addrspace_val 0)

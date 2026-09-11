@@ -1,0 +1,6 @@
+# Check that ORC_RT_LOG=off silences all output.
+#
+# REQUIRES: orc-rt-log-level-error
+# RUN: env ORC_RT_LOG=off orc-rt-log-check 2>&1 | FileCheck %s --allow-empty
+
+# CHECK-NOT: orc-rt

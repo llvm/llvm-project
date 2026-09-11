@@ -6,7 +6,7 @@
 
   define i32 @main() local_unnamed_addr !dbg !14 {
   entry:
-    %shl = shl i32 undef, undef, !dbg !19
+    %shl = shl i32 undef, undef, !dbg !20
     tail call void @llvm.dbg.value(metadata i32 %shl, metadata !18, metadata !DIExpression()), !dbg !20
     ret i32 %shl, !dbg !21
   }

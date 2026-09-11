@@ -17,8 +17,11 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -106,6 +109,86 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
                                                 mlir::Location loc) {
   return cir::ConstantOp::create(builder, loc, type,
                                  mlir::cast<mlir::TypedAttr>(value));
+}
+
+//===----------------------------------------------------------------------===//
+// Dialect attribute verification
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyOffloadKind(mlir::ModuleOp module,
+                                       cir::OffloadKind expected) {
+  auto attr = module->getAttrOfType<cir::OffloadKindAttr>(
+      cir::CIRDialect::getOffloadKindAttrName());
+  if (!attr)
+    return module.emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadKindAttrName()
+           << "' offload kind attribute";
+  if (attr.getValue() != expected)
+    return module.emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadKindAttrName()
+           << "' value '" << cir::stringifyOffloadKind(expected) << "'";
+  return success();
+}
+
+// A module marked with `cir.offload.container` holds the host module followed
+// by one or more device modules, each tagged with `cir.offload.kind`. Keeping
+// the host module first gives later offload passes a simple convention for
+// finding the host side while iterating the remaining device modules.
+static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
+  auto container = mlir::dyn_cast<mlir::ModuleOp>(op);
+  if (!container)
+    return op->emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadContainerAttrName()
+           << "' attribute to be attached to '"
+           << mlir::ModuleOp::getOperationName() << "'";
+
+  mlir::Block &body = *container.getBody();
+  if (body.empty())
+    return container.emitOpError()
+           << "expects host module as the first nested op";
+
+  auto host = mlir::dyn_cast<mlir::ModuleOp>(body.front());
+  if (!host)
+    return container.emitOpError()
+           << "expects host module as the first nested op";
+  if (failed(verifyOffloadKind(host, cir::OffloadKind::Host)))
+    return failure();
+
+  // At least one device module is required after the host module.
+  if (std::next(body.begin()) == body.end())
+    return container.emitOpError() << "expects at least one device module";
+
+  for (auto &op : llvm::drop_begin(body)) {
+    auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
+    if (!module)
+      return container.emitOpError()
+             << "expects only nested builtin.module ops";
+    if (failed(verifyOffloadKind(module, cir::OffloadKind::Device)))
+      return failure();
+  }
+  return success();
+}
+
+LogicalResult
+cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
+                                          mlir::NamedAttribute attr) {
+  if (attr.getName() == getOffloadContainerAttrName()) {
+    if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
+      return op->emitOpError() << "expects '" << getOffloadContainerAttrName()
+                               << "' to be a unit attribute";
+    return verifyOffloadContainer(op);
+  }
+
+  // The container verifier owns the structural contract between a container
+  // and the modules it holds. All this can add is that the kind attribute
+  // never lands on something that is not a module.
+  if (attr.getName() == getOffloadKindAttrName() &&
+      !mlir::isa<mlir::ModuleOp>(op))
+    return op->emitOpError() << "expects '" << getOffloadKindAttrName()
+                             << "' attribute to be attached to '"
+                             << mlir::ModuleOp::getOperationName() << "'";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -208,6 +291,19 @@ static bool omitRegionTerm(mlir::Region &r) {
   return singleNonEmptyBlock && yieldsNothing();
 }
 
+// Verifies that the given operand is produced by an operation of type
+// ExpectedProducerOp.
+template <typename ExpectedProducerOp>
+static LogicalResult verifyProducedBy(Operation *op, Value operand,
+                                      StringRef operandName) {
+  Operation *producer = operand.getDefiningOp();
+  if (!producer || !isa<ExpectedProducerOp>(producer))
+    return op->emitOpError()
+           << "operand '" << operandName << "' must be produced by '"
+           << ExpectedProducerOp::getOperationName() << "'";
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // InlineKindAttr (FIXME: remove once FuncOp uses assembly format)
 //===----------------------------------------------------------------------===//
@@ -243,6 +339,7 @@ void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
     p << " " << stringifyInlineKind(inlineKindAttr.getValue());
   }
 }
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
@@ -266,11 +363,11 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
 }
 
 mlir::OptionalParseResult
-parseGlobalAddressSpaceValue(mlir::AsmParser &p,
-                             mlir::ptr::MemorySpaceAttrInterface &attr);
+parseGlobalMemorySpace(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr);
 
-void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp op,
-                                  mlir::ptr::MemorySpaceAttrInterface attr);
+void printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp op,
+                            mlir::ptr::MemorySpaceAttrInterface attr);
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
@@ -278,16 +375,23 @@ void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp op,
 
 void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
                           mlir::OperationState &odsState, mlir::Type addr,
-                          mlir::Type allocaType, llvm::StringRef name,
-                          mlir::IntegerAttr alignment) {
-  odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
-                        mlir::TypeAttr::get(allocaType));
+                          llvm::StringRef name, mlir::IntegerAttr alignment) {
   odsState.addAttribute(getNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(name));
   if (alignment) {
     odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
   }
   odsState.addTypes(addr);
+}
+
+cir::AllocaOp cir::getUnderlyingAlloca(mlir::Value addr) {
+  mlir::Value ptr = addr;
+  while (cir::CastOp castOp = ptr.getDefiningOp<cir::CastOp>()) {
+    if (!castOp.isAllocaPreservingCast())
+      break;
+    ptr = castOp.getSrc();
+  }
+  return ptr.getDefiningOp<cir::AllocaOp>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -312,7 +416,7 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
     if (!recTy)
       return op.emitOpError(
           "when 'num_elements' is present, 'addr' must be a pointer to a "
-          "!cir.record type");
+          "!cir.struct or !cir.union type");
 
     if (expectedEltPtrTy != ptrTy)
       return op.emitOpError("when 'num_elements' is present, 'addr' type must "
@@ -330,8 +434,8 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
 
     auto recTy = mlir::dyn_cast<cir::RecordType>(innerEltTy);
     if (!recTy)
-      return op.emitOpError(
-          "the block argument type must be a pointer to a !cir.record type");
+      return op.emitOpError("the block argument type must be a pointer to a "
+                            "!cir.struct or !cir.union type");
 
     if (expectedEltPtrTy.getPointee() != innerEltTy)
       return op.emitOpError(
@@ -373,6 +477,91 @@ LogicalResult cir::DeleteArrayOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AssumeOp
+//===----------------------------------------------------------------------===//
+
+static void printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
+                              cir::AssumeBundleKindAttr kindAttr,
+                              OperandRange bundleArgs,
+                              TypeRange bundleArgTypes) {
+  cir::AssumeBundleKind kind = kindAttr.getValue();
+  if (kind == cir::AssumeBundleKind::None)
+    return;
+
+  p << " " << cir::stringifyAssumeBundleKind(kind);
+  if (bundleArgs.empty())
+    return;
+
+  p << "(";
+  p.printOperands(bundleArgs);
+  p << " : ";
+  llvm::interleaveComma(bundleArgTypes, p);
+  p << ")";
+}
+
+static ParseResult parseAssumeBundle(
+    OpAsmParser &p, cir::AssumeBundleKindAttr &bundleKindAttr,
+    llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> &bundleArgs,
+    llvm::SmallVector<mlir::Type, 1> &bundleArgTypes) {
+  StringRef keyword;
+  auto loc = p.getCurrentLocation();
+  if (failed(p.parseOptionalKeyword(&keyword))) {
+    bundleKindAttr = cir::AssumeBundleKindAttr::get(
+        p.getContext(), cir::AssumeBundleKind::None);
+    return success();
+  }
+
+  std::optional<cir::AssumeBundleKind> parsedKind =
+      cir::symbolizeAssumeBundleKind(keyword);
+  if (!parsedKind)
+    return p.emitError(loc, "unknown assume bundle kind '") << keyword << "'";
+
+  bundleKindAttr = cir::AssumeBundleKindAttr::get(p.getContext(), *parsedKind);
+
+  if (p.parseOptionalLParen())
+    return success();
+
+  if (p.parseOperandList(bundleArgs) || p.parseColon() ||
+      p.parseTypeList(bundleArgTypes) || p.parseRParen())
+    return failure();
+
+  return success();
+}
+
+LogicalResult cir::AssumeOp::verify() {
+  cir::AssumeBundleKind kind = getBundleKind();
+  size_t numArgs = getBundleArgs().size();
+
+  if (kind == cir::AssumeBundleKind::None) {
+    if (numArgs != 0)
+      return emitOpError("unexpected bundle operands for kind 'none'");
+    return success();
+  }
+
+  if (numArgs == 0)
+    return emitOpError("expected bundle operands for kind '")
+           << cir::stringifyAssumeBundleKind(kind) << "'";
+
+  switch (kind) {
+  case cir::AssumeBundleKind::Align:
+    if (numArgs != 2 && numArgs != 3)
+      return emitOpError("align bundle expects 2 or 3 operands");
+    break;
+  case cir::AssumeBundleKind::SeparateStorage:
+    if (numArgs != 2)
+      return emitOpError("separate_storage bundle expects 2 operands");
+    break;
+  case cir::AssumeBundleKind::Dereferenceable:
+    if (numArgs != 2)
+      return emitOpError("dereferenceable bundle expects 2 operands");
+    break;
+  default:
+    break;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // LocalInitOp
 //===----------------------------------------------------------------------===//
 
@@ -405,10 +594,14 @@ void cir::ConditionOp::getSuccessorRegions(
   // TODO(cir): The condition value may be folded to a constant, narrowing
   // down its list of possible successors.
 
-  // Parent is a loop: condition may branch to the body or to the parent op.
+  // Parent is a loop: condition may branch to the body, or on the false edge
+  // to the per-iteration cleanup region if present, otherwise to the parent op.
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     regions.emplace_back(&loopOp.getBody());
-    regions.push_back(RegionSuccessor::parent());
+    if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
+      regions.emplace_back(cleanup);
+    else
+      regions.emplace_back(getOperation());
     return;
   }
 
@@ -437,6 +630,34 @@ LogicalResult cir::ConditionOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// WhileOp & ForOp
+//===----------------------------------------------------------------------===//
+
+template <typename LoopOpTy>
+static LogicalResult verifyLoopCleanup(LoopOpTy op) {
+  std::optional<cir::CleanupKind> cleanupKind = op.getCleanupKind();
+
+  // The cleanup kind attribute must be present exactly when a (non-empty)
+  // cleanup region is present.
+  if (cleanupKind.has_value() == op.getCleanup().empty())
+    return op.emitOpError("cleanup kind must be present if and only if the "
+                          "cleanup region is non-empty");
+
+  // A loop's per-iteration cleanup runs on every normal exit edge (loop exit,
+  // end of iteration, break/continue), so an EH-only cleanup is meaningless.
+  // Only 'normal' (exceptions disabled) and 'all' (normal + EH unwind) apply.
+  if (cleanupKind == cir::CleanupKind::EH)
+    return op.emitOpError("loop cleanup kind must be 'normal' or 'all', "
+                          "not 'eh'");
+
+  return success();
+}
+
+LogicalResult cir::WhileOp::verify() { return verifyLoopCleanup(*this); }
+
+LogicalResult cir::ForOp::verify() { return verifyLoopCleanup(*this); }
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -449,7 +670,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attrType)) {
+  if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
+          attrType)) {
     // More detailed type verifications are already done in
     // DataMemberAttr::verify or MethodAttr::verify. Don't need to repeat here.
     return success();
@@ -486,10 +708,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
+  if (mlir::isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
+                cir::ConstArrayAttr, cir::ConstVectorAttr,
                 cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
-                cir::VTableAttr>(attrType))
+                cir::GlobalOffsetAttr, cir::GlobalViewAttr, cir::PoisonAttr,
+                cir::TypeInfoAttr, cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -512,29 +735,62 @@ OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
 // CastOp
 //===----------------------------------------------------------------------===//
 
+static bool isFloatingPointCastKind(cir::CastKind kind) {
+  switch (kind) {
+  case cir::CastKind::floating:
+  case cir::CastKind::int_to_float:
+  case cir::CastKind::float_to_int:
+  case cir::CastKind::float_to_bool:
+  case cir::CastKind::bool_to_float:
+  case cir::CastKind::float_to_complex:
+  case cir::CastKind::float_complex_to_real:
+  case cir::CastKind::float_complex_to_bool:
+  case cir::CastKind::float_complex:
+  case cir::CastKind::float_complex_to_int_complex:
+  case cir::CastKind::int_complex_to_float_complex:
+    return true;
+  default:
+    return false;
+  }
+}
+
 LogicalResult cir::CastOp::verify() {
   mlir::Type resType = getType();
   mlir::Type srcType = getSrc().getType();
+  cir::CastKind kind = getKind();
+
+  if (getFenvAttr() && !isFloatingPointCastKind(kind))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point cast kinds";
 
   // Verify address space casts for pointer types. given that
   // casts for within a different address space are illegal.
   auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
   auto resPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
-  if (srcPtrTy && resPtrTy && (getKind() != cir::CastKind::address_space))
+  if (srcPtrTy && resPtrTy && (kind != cir::CastKind::address_space))
     if (srcPtrTy.getAddrSpace() != resPtrTy.getAddrSpace()) {
       return emitOpError() << "result type address space does not match the "
                               "address space of the operand";
     }
 
-  if (mlir::isa<cir::VectorType>(srcType) &&
-      mlir::isa<cir::VectorType>(resType)) {
+  auto srcVTy = mlir::dyn_cast<cir::VectorType>(srcType);
+  auto resVTy = mlir::dyn_cast<cir::VectorType>(resType);
+  if (srcVTy && resVTy) {
+    if ((kind == cir::CastKind::int_to_float ||
+         kind == cir::CastKind::float_to_int) &&
+        srcVTy.getSize() != resVTy.getSize()) {
+      return emitOpError()
+             << "vector float-to-int and int-to-float casts require "
+                "source and destination vectors to have the same number of "
+                "elements";
+    }
     // Use the element type of the vector to verify the cast kind. (Except for
     // bitcast, see below.)
-    srcType = mlir::dyn_cast<cir::VectorType>(srcType).getElementType();
-    resType = mlir::dyn_cast<cir::VectorType>(resType).getElementType();
+    srcType = srcVTy.getElementType();
+    resType = resVTy.getElementType();
   }
 
-  switch (getKind()) {
+  switch (kind) {
   case cir::CastKind::int_to_bool: {
     if (!mlir::isa<cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
@@ -812,6 +1068,10 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
     return cir::PoisonAttr::get(getContext(), getType());
   }
 
+  // Propagate Undef value
+  if (mlir::isa_and_present<cir::UndefAttr>(adaptor.getSrc()))
+    return cir::UndefAttr::get(getType());
+
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
@@ -850,16 +1110,65 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
       auto srcIntTy = mlir::cast<cir::IntType>(srcTy);
       auto dstIntTy = mlir::cast<cir::IntType>(getType());
-      APInt newVal =
-          srcIntTy.isSigned()
-              ? srcConst.getIntValue().sextOrTrunc(dstIntTy.getWidth())
-              : srcConst.getIntValue().zextOrTrunc(dstIntTy.getWidth());
+      auto constIntAttr = srcConst.getValueAttr<cir::IntAttr>();
+      if (!constIntAttr)
+        return {};
+
+      APInt srcValue = constIntAttr.getValue();
+      APInt newVal = srcIntTy.isSigned()
+                         ? srcValue.sextOrTrunc(dstIntTy.getWidth())
+                         : srcValue.zextOrTrunc(dstIntTy.getWidth());
       return cir::IntAttr::get(dstIntTy, newVal);
     }
     default:
       break;
     }
   }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// BuiltinIntCastOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BuiltinIntCastOp::verify() {
+  mlir::Type srcType = getSrc().getType();
+  mlir::Type resType = getType();
+
+  auto srcCirInt = mlir::dyn_cast<cir::IntType>(srcType);
+  auto resCirInt = mlir::dyn_cast<cir::IntType>(resType);
+
+  // One side must be a CIR integer the other must be a builtin
+  // integer or index type.
+  if (static_cast<bool>(srcCirInt) == static_cast<bool>(resCirInt))
+    return emitOpError()
+           << "requires exactly one '!cir.int' operand or result; the other "
+              "must be a builtin integer or 'index' type";
+
+  mlir::Type builtinType = srcCirInt ? resType : srcType;
+  if (!mlir::isa<mlir::IntegerType, mlir::IndexType>(builtinType))
+    return emitOpError() << "requires a builtin integer or 'index' type on the "
+                            "non-CIR side";
+
+  // The cast preserves bit width. 'index' has no fixed width, so only check
+  // when the builtin side is a fixed-width integer.
+  if (auto builtinInt = mlir::dyn_cast<mlir::IntegerType>(builtinType)) {
+    cir::IntType cirInt = srcCirInt ? srcCirInt : resCirInt;
+    if (cirInt.getWidth() != builtinInt.getWidth())
+      return emitOpError()
+             << "requires the CIR and builtin integer types to have the same "
+                "width; use 'cir.cast' for width conversions";
+  }
+
+  return success();
+}
+
+OpFoldResult cir::BuiltinIntCastOp::fold(FoldAdaptor adaptor) {
+  // Fold: builtin_int_cast(builtin_int_cast(x)) -> x
+  // Inner source type must match the cast's result type.
+  if (auto inner = getSrc().getDefiningOp<cir::BuiltinIntCastOp>())
+    if (inner.getSrc().getType() == getType())
+      return inner.getSrc();
   return {};
 }
 
@@ -1339,7 +1648,7 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.emplace_back(getOperation());
     return;
   }
 
@@ -1353,12 +1662,7 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   if (elseRegion)
     regions.push_back(RegionSuccessor(elseRegion));
   else
-    regions.push_back(RegionSuccessor::parent());
-}
-
-mlir::ValueRange cir::IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
+    regions.emplace_back(getOperation());
 }
 
 void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
@@ -1393,17 +1697,12 @@ void cir::ScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The only region always branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.emplace_back(getOperation());
     return;
   }
 
   // If the condition isn't constant, both regions may be executed.
   regions.push_back(RegionSuccessor(&getScopeRegion()));
-}
-
-mlir::ValueRange cir::ScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
 }
 
 void cir::ScopeOp::build(
@@ -1475,18 +1774,13 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.emplace_back(getOperation());
     return;
   }
 
   // Execution always proceeds from the body region to the cleanup region.
   regions.push_back(RegionSuccessor(&getBodyRegion()));
   regions.push_back(RegionSuccessor(&getCleanupRegion()));
-}
-
-mlir::ValueRange
-cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return ValueRange();
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
@@ -1674,15 +1968,10 @@ Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 void cir::CaseOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.emplace_back(getOperation());
     return;
   }
   regions.push_back(RegionSuccessor(&getCaseRegion()));
-}
-
-mlir::ValueRange cir::CaseOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
 }
 
 void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
@@ -1705,16 +1994,11 @@ void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
 void cir::SwitchOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &region) {
   if (!point.isParent()) {
-    region.push_back(RegionSuccessor::parent());
+    region.emplace_back(getOperation());
     return;
   }
 
   region.push_back(RegionSuccessor(&getBody()));
-}
-
-mlir::ValueRange cir::SwitchOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
 }
 
 void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
@@ -1868,6 +2152,11 @@ static void printConstant(OpAsmPrinter &p, Attribute value) {
 }
 
 mlir::LogicalResult cir::GlobalOp::verify() {
+  // A function is not an object, so it cannot be the type of a global.  A
+  // global that holds a function's address carries a pointer type instead.
+  if (mlir::isa<cir::FuncType>(getSymType()))
+    return emitOpError("global type cannot be a function type");
+
   // Verify that the initial value, if present, is either a unit attribute or
   // an attribute CIR supports.
   if (getInitialValue().has_value()) {
@@ -1882,12 +2171,11 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
-  if (getDynTlsRefs()) {
+  if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
-      return emitOpError(
-          "cannot have both static local and dynamic tls references");
-    if (!getTlsModel() || getTlsModel() != TLS_Model::GeneralDynamic)
-      return emitOpError("'dyn_tls_refs' only valid for dynamic tls");
+      return emitOpError("cannot have both static local and tls references");
+    if (!getTlsModel())
+      return emitOpError("'tls_refs' only valid for tls");
   }
 
   if (getAliasee().has_value()) {
@@ -1947,7 +2235,7 @@ void cir::GlobalOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The `ctor` and `dtor` regions always branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.emplace_back(getOperation());
     return;
   }
 
@@ -1966,11 +2254,6 @@ void cir::GlobalOp::getSuccessorRegions(
     regions.push_back(RegionSuccessor(ctorRegion));
   if (dtorRegion)
     regions.push_back(RegionSuccessor(dtorRegion));
-}
-
-mlir::ValueRange cir::GlobalOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -2038,8 +2321,7 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
 
       assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
              "Non-typed attrs shouldn't appear here.");
-      auto typedAttr = mlir::cast<mlir::TypedAttr>(initialValueAttr);
-      opTy = typedAttr.getType();
+      opTy = mlir::cast<mlir::TypedAttr>(initialValueAttr).getType();
     }
 
     // Parse destructor, example:
@@ -2195,7 +2477,7 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, FuncType type,
                         GlobalLinkageKind linkage, CallingConv callingConv) {
   result.addRegion();
-  result.addAttribute(SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
@@ -2235,7 +2517,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
-  mlir::StringAttr specialMemberAttr = getCxxSpecialMemberAttrName(state.name);
+  mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
@@ -2279,7 +2561,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(state.name),
                              state.attributes))
     return failure();
   llvm::SmallVector<OpAsmParser::Argument, 8> arguments;
@@ -2312,7 +2594,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       (resultTypes.empty() ? cir::VoidType::get(builder.getContext())
                            : resultTypes.front());
 
-  cir::FuncType fnType = cir::FuncType::get(argTypes, returnType, isVariadic);
+  cir::FuncType fnType =
+      cir::FuncType::getChecked([&]() { return parser.emitError(loc); },
+                                argTypes, returnType, isVariadic);
   if (!fnType)
     return failure();
 
@@ -2390,19 +2674,21 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return success();
   };
 
-  // Parse CXXSpecialMember attribute
-  if (parser.parseOptionalKeyword("special_member").succeeded()) {
+  // Parse the func_info attribute
+  if (parser.parseOptionalKeyword("func_info").succeeded()) {
     if (parser.parseLess().failed())
       return failure();
 
+    llvm::SMLoc attrLoc = parser.getCurrentLocation();
     mlir::Attribute attr;
     if (parser.parseAttribute(attr).failed())
       return failure();
-    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
-            attr))
-      return parser.emitError(parser.getCurrentLocation(),
-                              "expected a C++ special member attribute");
-    state.addAttribute(specialMemberAttr, attr);
+    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr,
+                   cir::FuncIdentityAttr>(attr))
+      return parser.emitError(attrLoc,
+                              "expected a function info attribute, got ")
+             << attr;
+    state.addAttribute(funcInfoNameAttr, attr);
 
     if (parser.parseGreater().failed())
       return failure();
@@ -2489,26 +2775,29 @@ bool cir::FuncOp::isDeclaration() {
 }
 
 bool cir::FuncOp::isCXXSpecialMemberFunction() {
-  return getCxxSpecialMemberAttr() != nullptr;
+  // The func_info union can grow forms that are not special members, so the
+  // check names the concrete forms rather than testing for presence.
+  mlir::Attribute attr = getFuncInfoAttr();
+  return attr && mlir::isa<CXXCtorAttr, CXXDtorAttr, CXXAssignAttr>(attr);
 }
 
 bool cir::FuncOp::isCxxConstructor() {
-  auto attr = getCxxSpecialMemberAttr();
+  auto attr = getFuncInfoAttr();
   return attr && dyn_cast<CXXCtorAttr>(attr);
 }
 
 bool cir::FuncOp::isCxxDestructor() {
-  auto attr = getCxxSpecialMemberAttr();
+  auto attr = getFuncInfoAttr();
   return attr && dyn_cast<CXXDtorAttr>(attr);
 }
 
 bool cir::FuncOp::isCxxSpecialAssignment() {
-  auto attr = getCxxSpecialMemberAttr();
+  auto attr = getFuncInfoAttr();
   return attr && dyn_cast<CXXAssignAttr>(attr);
 }
 
 std::optional<CtorKind> cir::FuncOp::getCxxConstructorKind() {
-  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  mlir::Attribute attr = getFuncInfoAttr();
   if (attr) {
     if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
       return ctor.getCtorKind();
@@ -2517,7 +2806,7 @@ std::optional<CtorKind> cir::FuncOp::getCxxConstructorKind() {
 }
 
 std::optional<AssignKind> cir::FuncOp::getCxxSpecialAssignKind() {
-  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  mlir::Attribute attr = getFuncInfoAttr();
   if (attr) {
     if (auto assign = dyn_cast<CXXAssignAttr>(attr))
       return assign.getAssignKind();
@@ -2526,7 +2815,7 @@ std::optional<AssignKind> cir::FuncOp::getCxxSpecialAssignKind() {
 }
 
 bool cir::FuncOp::isCxxTrivialMemberFunction() {
-  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  mlir::Attribute attr = getFuncInfoAttr();
   if (attr) {
     if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
       return ctor.getIsTrivial();
@@ -2599,9 +2888,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << ")";
   }
 
-  if (auto specialMemberAttr = getCxxSpecialMember()) {
-    p << " special_member<";
-    p.printAttribute(*specialMemberAttr);
+  if (mlir::Attribute funcInfo = getFuncInfoAttr()) {
+    p << " func_info<";
+    p.printAttribute(funcInfo);
     p << '>';
   }
 
@@ -2710,42 +2999,25 @@ mlir::LogicalResult cir::FuncOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// AddOp / SubOp / MulOp
+// AddOp / SubOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyBinaryOverflowOp(mlir::Operation *op,
-                                            bool noSignedWrap,
-                                            bool noUnsignedWrap, bool saturated,
-                                            bool hasSat) {
-  bool noWrap = noSignedWrap || noUnsignedWrap;
-  if (!isa<cir::IntType>(op->getResultTypes()[0]) && noWrap)
-    return op->emitError()
-           << "only operations on integer values may have nsw/nuw flags";
-  if (hasSat && saturated && !isa<cir::IntType>(op->getResultTypes()[0]))
-    return op->emitError()
-           << "only operations on integer values may have sat flag";
-  if (hasSat && noWrap && saturated)
-    return op->emitError()
+// The integer-only type constraint on these ops makes the nsw/nuw/sat flag
+// type checks unnecessary. Only the mutual-exclusivity between nsw/nuw and
+// sat needs to be verified.
+
+LogicalResult cir::AddOp::verify() {
+  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
+    return emitOpError()
            << "the nsw/nuw flags and the saturated flag are mutually exclusive";
   return mlir::success();
 }
 
-LogicalResult cir::AddOp::verify() {
-  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
-                                getNoUnsignedWrap(), getSaturated(),
-                                /*hasSat=*/true);
-}
-
 LogicalResult cir::SubOp::verify() {
-  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
-                                getNoUnsignedWrap(), getSaturated(),
-                                /*hasSat=*/true);
-}
-
-LogicalResult cir::MulOp::verify() {
-  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
-                                getNoUnsignedWrap(), /*saturated=*/false,
-                                /*hasSat=*/false);
+  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
+    return emitOpError()
+           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2761,7 +3033,7 @@ void cir::TernaryOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The `true` and the `false` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.emplace_back(getOperation());
     return;
   }
 
@@ -2769,11 +3041,6 @@ void cir::TernaryOp::getSuccessorRegions(
   // regions are considered possible successors
   regions.push_back(RegionSuccessor(&getTrueRegion()));
   regions.push_back(RegionSuccessor(&getFalseRegion()));
-}
-
-mlir::ValueRange cir::TernaryOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
 }
 
 void cir::TernaryOp::build(
@@ -2919,23 +3186,32 @@ OpFoldResult cir::MinusOp::fold(FoldAdaptor adaptor) {
   if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
     return adaptor.getInput();
 
-  // Avoid materializing a duplicate constant for bool minus (identity).
-  if (auto srcConst = getInput().getDefiningOp<cir::ConstantOp>())
-    if (mlir::isa<cir::BoolType>(srcConst.getType()))
-      return srcConst.getResult();
+  // Fold with constant inputs. Floating-point negation is handled by
+  // cir::FNegOp.
+  if (auto intAttr =
+          mlir::dyn_cast_if_present<cir::IntAttr>(adaptor.getInput())) {
+    APInt val = intAttr.getValue();
+    val.negate();
+    return cir::IntAttr::get(getType(), val);
+  }
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// FNegOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::FNegOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
 
   // Fold with constant inputs.
-  if (mlir::Attribute attr = adaptor.getInput()) {
-    if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr)) {
-      APInt val = intAttr.getValue();
-      val.negate();
-      return cir::IntAttr::get(getType(), val);
-    }
-    if (auto fpAttr = mlir::dyn_cast<cir::FPAttr>(attr)) {
-      APFloat val = fpAttr.getValue();
-      val.changeSign();
-      return cir::FPAttr::get(getType(), val);
-    }
+  if (auto fpAttr =
+          mlir::dyn_cast_if_present<cir::FPAttr>(adaptor.getInput())) {
+    APFloat val = fpAttr.getValue();
+    val.changeSign();
+    return cir::FPAttr::get(getType(), val);
   }
 
   return {};
@@ -3042,31 +3318,32 @@ void cir::AwaitOp::build(OpBuilder &builder, OperationState &result,
 
 void cir::AwaitOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // If any index all the underlying regions branch back to the parent
-  // operation.
-  if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+  assert(point.isParent() || point.getTerminatorPredecessorOrNull());
+
+  // Execution always starts in the ready region.
+  if (point.isParent()) {
+    regions.emplace_back(&getReady());
     return;
   }
 
+  mlir::Region *parentRegion =
+      point.getTerminatorPredecessorOrNull()->getParentRegion();
+
+  // Branching from ready: the cir.condition terminating it selects between
+  // suspending and resuming. Keep in sync with
+  // ConditionOp::getSuccessorRegions.
+  //
   // TODO: retrieve information from the promise and only push the
   // necessary ones. Example: `std::suspend_never` on initial or final
   // await's might allow suspend region to be skipped.
-  regions.push_back(RegionSuccessor(&this->getReady()));
-  regions.push_back(RegionSuccessor(&this->getSuspend()));
-  regions.push_back(RegionSuccessor(&this->getResume()));
-}
+  if (&getReady() == parentRegion) {
+    regions.emplace_back(&getResume());
+    regions.emplace_back(&getSuspend());
+    return;
+  }
 
-mlir::ValueRange cir::AwaitOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
-    return getOperation()->getResults();
-  if (successor == &getReady())
-    return getReady().getArguments();
-  if (successor == &getSuspend())
-    return getSuspend().getArguments();
-  if (successor == &getResume())
-    return getResume().getArguments();
-  llvm_unreachable("invalid region successor");
+  // Branching from suspend or resume: exit to the parent operation.
+  regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::AwaitOp::verify() {
@@ -3082,16 +3359,11 @@ LogicalResult cir::AwaitOp::verify() {
 void cir::CoroBodyOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.emplace_back(getOperation());
     return;
   }
 
   regions.push_back(RegionSuccessor(&getBody()));
-}
-
-mlir::ValueRange
-cir::CoroBodyOp::getSuccessorInputs(RegionSuccessor successor) {
-  return ValueRange();
 }
 
 LogicalResult cir::CoroBodyOp::verify() {
@@ -3115,7 +3387,36 @@ void cir::CoroBodyOp::build(OpBuilder &builder, OperationState &result,
 // CopyOp Definitions
 //===----------------------------------------------------------------------===//
 
+// Prints the pointer type(s) for a `cir.copy`. `src` and `dst` share the same
+// pointee type but may differ in address space; a single type is printed when
+// they match, otherwise both are printed (`src` first).
+static void printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
+                           mlir::Type srcType, mlir::Type dstType) {
+  printer.printType(srcType);
+  if (srcType != dstType) {
+    printer << ", ";
+    printer.printType(dstType);
+  }
+}
+
+static mlir::ParseResult parseCopyTypes(mlir::OpAsmParser &parser,
+                                        mlir::Type &srcType,
+                                        mlir::Type &dstType) {
+  if (parser.parseType(srcType))
+    return mlir::failure();
+  if (parser.parseOptionalComma().succeeded()) {
+    if (parser.parseType(dstType))
+      return mlir::failure();
+  } else {
+    dstType = srcType;
+  }
+  return mlir::success();
+}
+
 LogicalResult cir::CopyOp::verify() {
+  // The pointee types of `src` and `dst` are guaranteed to match by the
+  // SameOperandsPointeeType trait; they may still differ in address space.
+
   // A data layout is required for us to know the number of bytes to be copied.
   if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
     return emitError() << "missing data layout for pointee type";
@@ -3133,10 +3434,9 @@ LogicalResult cir::CopyOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::GetRuntimeMemberOp::verify() {
-  auto recordTy = mlir::cast<RecordType>(getAddr().getType().getPointee());
   cir::DataMemberType memberPtrTy = getMember().getType();
 
-  if (recordTy != memberPtrTy.getClassTy())
+  if (getAddr().getType().getPointee() != memberPtrTy.getClassTy())
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
@@ -3183,7 +3483,11 @@ LogicalResult cir::GetMethodOp::verify() {
            << "the first parameter of callee must be a void pointer";
   }
 
-  if (calleeArgsTy.slice(1) != methodFuncArgsTy)
+  if (calleeArgsTy.size() != methodFuncArgsTy.size())
+    return emitError() << "callee and method parameter counts do not match";
+
+  if (calleeArgsTy.size() > 1 &&
+      calleeArgsTy.slice(1) != methodFuncArgsTy.slice(1))
     return emitError()
            << "callee parameters and method parameters do not match";
 
@@ -3194,6 +3498,10 @@ LogicalResult cir::GetMethodOp::verify() {
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
+static mlir::Type memberPointeeType(cir::RecordType recordTy, unsigned idx) {
+  return cir::memberStorageType(recordTy.getMembers()[idx]);
+}
+
 LogicalResult cir::GetMemberOp::verify() {
   const auto recordTy = dyn_cast<RecordType>(getAddrTy().getPointee());
   if (!recordTy)
@@ -3202,7 +3510,11 @@ LogicalResult cir::GetMemberOp::verify() {
   if (recordTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
 
-  if (recordTy.getMembers()[getIndex()] != getType().getPointee())
+  mlir::Type pointeeTy = memberPointeeType(recordTy, getIndex());
+  if (!pointeeTy)
+    return emitError() << "member owns no storage to point at";
+
+  if (pointeeTy != getType().getPointee())
     return emitError() << "member type mismatch";
 
   return mlir::success();
@@ -3213,13 +3525,16 @@ LogicalResult cir::GetMemberOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ExtractMemberOp::verify() {
-  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
-  if (recordTy.getKind() == cir::RecordType::Union)
+  if (mlir::isa<cir::UnionType>(getRecord().getType()))
     return emitError()
            << "cir.extract_member currently does not support unions";
-  if (recordTy.getMembers().size() <= getIndex())
+  auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
+  if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (recordTy.getMembers()[getIndex()] != getType())
+  mlir::Type memberTy = structTy.getMembers()[getIndex()];
+  if (mlir::isa<cir::BitFieldType>(memberTy))
+    return emitError() << "cir.extract_member does not support bit-fields";
+  if (memberTy != getType())
     return emitError() << "member type mismatch";
   return mlir::success();
 }
@@ -3229,12 +3544,15 @@ LogicalResult cir::ExtractMemberOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::InsertMemberOp::verify() {
-  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
-  if (recordTy.getKind() == cir::RecordType::Union)
+  if (mlir::isa<cir::UnionType>(getRecord().getType()))
     return emitError() << "cir.insert_member currently does not support unions";
-  if (recordTy.getMembers().size() <= getIndex())
+  auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
+  if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (recordTy.getMembers()[getIndex()] != getValue().getType())
+  mlir::Type memberTy = structTy.getMembers()[getIndex()];
+  if (mlir::isa<cir::BitFieldType>(memberTy))
+    return emitError() << "cir.insert_member does not support bit-fields";
+  if (memberTy != getValue().getType())
     return emitError() << "member type mismatch";
   // The op trait already checks that the types of $result and $record match.
   return mlir::success();
@@ -3301,10 +3619,36 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CmpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CmpOp::verify() {
+  if (getFenvAttr() && !cir::isAnyFloatingPointType(getLhs().getType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point comparisons";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult cir::VecCmpOp::verify() {
+  if (getFenvAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point comparisons";
+  return success();
+}
+
 OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
+  // Do not fold when fenv is present.
+  // TODO(cir): This is overly conservative. We could fold comparisons as long
+  //            as we can prove that the operation wouldn't raise exceptions or
+  //            when the fenv attribute does not require strict exception
+  //            semantics.
+  if (getFenvAttr())
+    return {};
+
   auto lhsVecAttr =
       mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
   auto rhsVecAttr =
@@ -3324,15 +3668,21 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 
   SmallVector<mlir::Attribute, 16> elements(vecSize);
   bool isIntAttr = vecSize && mlir::isa<cir::IntAttr>(lhsVecElhs[0]);
+  bool isUnsignedInt =
+      isIntAttr && mlir::cast<cir::IntType>(inputElemTy).isUnsigned();
   for (uint64_t i = 0; i < vecSize; i++) {
     mlir::Attribute lhsAttr = lhsVecElhs[i];
     mlir::Attribute rhsAttr = rhsVecElhs[i];
-    int cmpResult = 0;
+    bool cmpResult = false;
     switch (opKind) {
     case cir::CmpOpKind::lt: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3341,8 +3691,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::le: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3351,8 +3705,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::gt: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3361,8 +3719,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::ge: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3405,7 +3767,11 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     }
 
-    elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);
+    // A true result is all bits set (-1 in two's complement), and a false
+    // result is all bits clear. For a 1-bit element type these are the same
+    // bit pattern as 1 and 0, respectively.
+    elements[i] =
+        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL);
   }
 
   return cir::ConstVectorAttr::get(
@@ -4031,21 +4397,27 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// ThrowOp
+// ThrowOp / TryThrowOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cir::ThrowOp::verify() {
-  // For the no-rethrow version, it must have at least the exception pointer.
-  if (rethrows())
-    return success();
+template <typename ThrowOpTy>
+static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
+  if (op.rethrows())
+    return mlir::success();
 
-  if (getNumOperands() != 0) {
-    if (getTypeInfo())
-      return success();
-    return emitOpError() << "'type_info' symbol attribute missing";
+  if (op.getNumOperands() != 0) {
+    if (op.getTypeInfo())
+      return mlir::success();
+    return op.emitOpError() << "'type_info' symbol attribute missing";
   }
 
-  return failure();
+  return mlir::failure();
+}
+
+mlir::LogicalResult cir::ThrowOp::verify() { return verifyThrowOpImpl(*this); }
+
+mlir::LogicalResult cir::TryThrowOp::verify() {
+  return verifyThrowOpImpl(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4057,9 +4429,23 @@ LogicalResult cir::AtomicFetchOp::verify() {
       getBinop() != cir::AtomicFetchKind::Sub &&
       getBinop() != cir::AtomicFetchKind::Max &&
       getBinop() != cir::AtomicFetchKind::Min &&
+      getBinop() != cir::AtomicFetchKind::Maximum &&
+      getBinop() != cir::AtomicFetchKind::Minimum &&
+      getBinop() != cir::AtomicFetchKind::MaximumNum &&
+      getBinop() != cir::AtomicFetchKind::MinimumNum &&
       !mlir::isa<cir::IntType>(getVal().getType()))
-    return emitError("only atomic add, sub, max, and min operation could "
-                     "operate on floating-point values");
+    return emitError("only atomic add, sub, max, min, maximum, minimum, "
+                     "maximum_num, and minimum_num operation could operate on "
+                     "floating-point values");
+
+  if ((getBinop() == cir::AtomicFetchKind::Maximum ||
+       getBinop() == cir::AtomicFetchKind::Minimum ||
+       getBinop() == cir::AtomicFetchKind::MaximumNum ||
+       getBinop() == cir::AtomicFetchKind::MinimumNum) &&
+      !mlir::isa<cir::FPTypeInterface>(getVal().getType()))
+    return emitError("atomic maximum, minimum, maximum_num, and minimum_num "
+                     "operation could only operate on floating-point values");
+
   return success();
 }
 
@@ -4086,7 +4472,7 @@ void cir::TryOp::getSuccessorRegions(
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `try` and the `catchers` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.emplace_back(getOperation());
     return;
   }
 
@@ -4096,11 +4482,6 @@ void cir::TryOp::getSuccessorRegions(
   // can remove the catch handler.
   for (mlir::Region &handlerRegion : this->getHandlerRegions())
     regions.push_back(mlir::RegionSuccessor(&handlerRegion));
-}
-
-mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
 }
 
 LogicalResult cir::TryOp::verify() {
@@ -4133,15 +4514,43 @@ LogicalResult cir::TryOp::verify() {
     if (mlir::isa<cir::UnwindAttr>(typeAttr))
       continue;
 
-    // A catch handler region must start with cir.begin_catch, optionally
-    // preceded by a single cir.construct_catch_param that performs any
-    // pre-begin_catch initialization for the catch parameter.
+    // Nothing may run in a catch handler before cir.begin_catch, so it has to
+    // be the handler region's first operation, with two exceptions.
+    //
+    // When lifetime markers are enabled, the catch parameter's storage can be
+    // marked by a cir.lifetime.start. That parameter is the only variable
+    // whose lifetime begins before the catch is entered, so there is at most
+    // one such marker. Its lifetime-end cleanup has to run after the catch
+    // handler is finished (or exited by an exception unwind), so if there is a
+    // lifetime begin marker, it is followed by a cir.cleanup.scope that
+    // encloses the the rest of the handler with a cir.lifetime.end in its
+    // cleanup region.
+    //
+    // A cir.construct_catch_param may also precede cir.begin_catch, to
+    // perform any pre-begin_catch initialization of the catch parameter.
     if (entryBlock.empty())
       return emitOpError("catch handler region must not be empty");
+
     mlir::Operation *firstOp = &entryBlock.front();
+    if (mlir::isa<cir::LifetimeStartOp>(firstOp)) {
+      mlir::Operation *next = firstOp->getNextNode();
+      auto lifetimeScope = mlir::dyn_cast_if_present<cir::CleanupScopeOp>(next);
+      if (!lifetimeScope)
+        return emitOpError("'cir.lifetime.start' in a catch handler region "
+                           "must be followed by the 'cir.cleanup.scope' of "
+                           "its lifetime-end cleanup");
+      if (lifetimeScope.getBodyRegion().empty())
+        return emitOpError(
+            "'cir.lifetime.start' in a catch handler region must be "
+            "followed by the 'cir.cleanup.scope' of its lifetime-end "
+            "cleanup");
+      mlir::Block &scopeBody = lifetimeScope.getBodyRegion().front();
+      firstOp = scopeBody.empty() ? nullptr : &scopeBody.front();
+    }
+
     if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
       firstOp = firstOp->getNextNode();
-    if (!firstOp || !mlir::isa<cir::BeginCatchOp>(firstOp))
+    if (!mlir::isa_and_present<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
   }
@@ -4289,16 +4698,79 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// LifetimeStartOp & LifetimeEndOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::LifetimeStartOp::verify() {
+  return verifyProducedBy<cir::AllocaOp>(*this, getPtr(), "ptr");
+}
+
+LogicalResult cir::LifetimeEndOp::verify() {
+  return verifyProducedBy<cir::AllocaOp>(*this, getPtr(), "ptr");
+}
+
+//===----------------------------------------------------------------------===//
+// MemChrOp
+//===----------------------------------------------------------------------===//
+
+/// Reads a fundamental integer width from a signless i32 attribute.
+static std::optional<unsigned> getRecordedIntegerWidth(mlir::Attribute attr) {
+  auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr);
+  if (!intAttr || !intAttr.getType().isSignlessInteger(32))
+    return std::nullopt;
+  int64_t width = intAttr.getInt();
+  if (width < 0 ||
+      !cir::isValidFundamentalIntWidth(static_cast<unsigned>(width)))
+    return std::nullopt;
+  return static_cast<unsigned>(width);
+}
+
+LogicalResult cir::MemChrOp::verify() {
+  auto moduleOp = (*this)->getParentOfType<mlir::ModuleOp>();
+  if (!moduleOp)
+    return emitOpError("expects an enclosing module");
+
+  // libc memchr uses pointers in the target's default address space.
+  if (mlir::cast<cir::PointerType>(getSrc().getType()).getAddrSpace())
+    return emitOpError("src must be in the default address space");
+
+  auto checkWidth = [&](cir::IntType type, llvm::StringRef operandName,
+                        llvm::StringRef attrName) -> LogicalResult {
+    mlir::Attribute attr = moduleOp->getAttr(attrName);
+    if (!attr)
+      return emitOpError("expects the module to record ") << attrName;
+    std::optional<unsigned> width = getRecordedIntegerWidth(attr);
+    if (!width)
+      return emitOpError("requires ")
+             << attrName
+             << " to be a signless i32 holding a fundamental integer width";
+    if (type.getWidth() != *width)
+      return emitOpError() << operandName << " must have the width recorded in "
+                           << attrName;
+    return success();
+  };
+
+  if (failed(checkWidth(getPattern().getType(), "pattern",
+                        cir::CIRDialect::getIntTypeWidthAttrName())))
+    return failure();
+  return checkWidth(getLen().getType(), "len",
+                    cir::CIRDialect::getSizeTypeWidthAttrName());
+}
+
+//===----------------------------------------------------------------------===//
 // ConstructCatchParamOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
     SymbolTableCollection &symbolTable) {
+  auto copyFnAttr = getCopyFnAttr();
+  if (!copyFnAttr)
+    return success();
   auto fn =
       symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, getCopyFnAttr());
   if (!fn)
     return emitOpError("'")
-           << getCopyFn() << "' does not reference a valid cir.func";
+           << *getCopyFn() << "' does not reference a valid cir.func";
 
   if (!fn->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()))
     return emitOpError("catch-init copy_fn must be tagged with the ")
@@ -4461,6 +4933,18 @@ static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
   p.printNewline();
 
   p << "]";
+}
+
+//===----------------------------------------------------------------------===//
+// Standard library op signature matching
+//===----------------------------------------------------------------------===//
+
+bool cir::StdFindOp::signatureMatches(mlir::TypeRange operands,
+                                      mlir::TypeRange results) {
+  if (operands.size() != getNumArgs() || results.size() != 1)
+    return false;
+  mlir::Type iterTy = operands[0];
+  return iterTy == operands[1] && iterTy == operands[2] && iterTy == results[0];
 }
 
 //===----------------------------------------------------------------------===//

@@ -15,6 +15,9 @@ class ABIX86_i386 : public ABIX86 {
 public:
   uint32_t GetGenericNum(llvm::StringRef name) override;
 
+protected:
+  bool Is64Bit() const override { return false; }
+
 private:
   using ABIX86::ABIX86;
 };

@@ -234,26 +234,19 @@ public:
   /// Return true if there are no nodes using value ResNo of Node.
   inline bool use_empty() const;
 
-  /// Return true if there is exactly one node using value ResNo of Node.
+  /// Return true if there is exactly one node using value ResNo of Node, in
+  /// exactly one operand.
   inline bool hasOneUse() const;
+
+  /// Return true if there is exactly one node using value ResNo of Node, in
+  /// potentially multiple operands.
+  inline bool hasOneUser() const;
 };
 
-template<> struct DenseMapInfo<SDValue> {
-  static inline SDValue getEmptyKey() {
-    SDValue V;
-    V.ResNo = -1U;
-    return V;
-  }
-
-  static inline SDValue getTombstoneKey() {
-    SDValue V;
-    V.ResNo = -2U;
-    return V;
-  }
-
+template <> struct DenseMapInfo<SDValue> {
   static unsigned getHashValue(const SDValue &Val) {
-    return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
-            (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();
+    return DenseMapInfo<const void *>::getHashValue(Val.getNode()) +
+           Val.getResNo();
   }
 
   static bool isEqual(const SDValue &LHS, const SDValue &RHS) {
@@ -431,13 +424,17 @@ public:
     // Call does not require convergence guarantees.
     NoConvergent = 1 << 16,
 
+    // ISD::ADDRSPACECAST where the source is known not to be the null value of
+    // the source address space, so the result is poison if the source is null.
+    NonNull = 1 << 17,
+
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
-                            NonNeg | NoNaNs | NoInfs | SameSign | InBounds,
+        NonNeg | NoNaNs | NoInfs | SameSign | InBounds | NonNull,
     FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
-                    AllowContract | ApproximateFuncs | AllowReassociation,
+        AllowContract | ApproximateFuncs | AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -472,6 +469,7 @@ public:
   void setUnpredictable(bool b) { setFlag<Unpredictable>(b); }
   void setInBounds(bool b) { setFlag<InBounds>(b); }
   void setNoConvergent(bool b) { setFlag<NoConvergent>(b); }
+  void setNonNull(bool b) { setFlag<NonNull>(b); }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return Flags & NoUnsignedWrap; }
@@ -491,6 +489,7 @@ public:
   bool hasUnpredictable() const { return Flags & Unpredictable; }
   bool hasInBounds() const { return Flags & InBounds; }
   bool hasNoConvergent() const { return Flags & NoConvergent; }
+  bool hasNonNull() const { return Flags & NonNull; }
 
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
@@ -499,8 +498,7 @@ public:
   void operator|=(const SDNodeFlags &OtherFlags) { Flags |= OtherFlags.Flags; }
 };
 
-LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None),
-                             SDNodeFlags::NoConvergent);
+LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None), SDNodeFlags::NonNull);
 
 inline SDNodeFlags operator|(SDNodeFlags LHS, SDNodeFlags RHS) {
   LHS |= RHS;
@@ -763,6 +761,11 @@ public:
   /// Test if this node has a post-isel opcode, directly
   /// corresponding to a MachineInstr opcode.
   bool isMachineOpcode() const { return NodeType < 0; }
+
+  /// As above, for an opcode not held by a node.
+  static bool isMachineOpcode(unsigned Opc) {
+    return static_cast<int32_t>(Opc) < 0;
+  }
 
   /// This may only be called if isMachineOpcode returns
   /// true. It returns the MachineInstr opcode value that the node's opcode
@@ -1212,9 +1215,6 @@ public:
   LLVM_ABI void dumprWithDepth(const SelectionDAG *G = nullptr,
                                unsigned depth = 100) const;
 
-  /// Gather unique data for the node.
-  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
-
   /// This method should only be used by the SDUse class.
   void addUse(SDUse &U) { U.addToList(&UseList); }
 
@@ -1232,7 +1232,6 @@ protected:
       : NodeType(Opc), ValueList(VTs.VTs), NumValues(VTs.NumVTs),
         IROrder(Order), debugLoc(std::move(dl)) {
     memset(&RawSDNodeBits, 0, sizeof(RawSDNodeBits));
-    assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
     assert(NumValues == VTs.NumVTs &&
            "NumValues wasn't wide enough for its operands!");
   }
@@ -1329,6 +1328,13 @@ inline bool SDValue::use_empty() const {
 
 inline bool SDValue::hasOneUse() const {
   return Node->hasNUsesOfValue(1, ResNo);
+}
+
+inline bool SDValue::hasOneUser() const {
+  auto Uses = make_filter_range(Node->uses(),
+                                [this](SDUse &U) { return U.get() == *this; });
+  auto Users = map_range(Uses, [](SDUse &U) { return U.getUser(); });
+  return all_equal(Users);
 }
 
 inline const DebugLoc &SDValue::getDebugLoc() const {
@@ -1482,6 +1488,11 @@ public:
   /// Returns the Ranges that describes the dereference.
   const MDNode *getRanges() const { return getMemOperand()->getRanges(); }
 
+  /// Returns the cache hint metadata for this memory access.
+  const MDNode *getMemCacheHint() const {
+    return getMemOperand()->getMemCacheHint();
+  }
+
   /// Returns the synchronization scope ID for this memory operation.
   SyncScope::ID getSyncScopeID() const {
     return getMemOperand()->getSyncScopeID();
@@ -1568,21 +1579,24 @@ public:
     refineAlignment(ArrayRef(NewMMO));
   }
 
-  /// Refine range metadata for all MMOs. The NewMMOs array must parallel
-  /// memoperands(). For each pair, if ranges differ, the stored range is
-  /// cleared.
-  void refineRanges(ArrayRef<MachineMemOperand *> NewMMOs) {
+  /// Refine LLVM IR metadata for all MMOs. The NewMMOs array must parallel
+  /// memoperands(). For each pair, if metadata differs, the stored metadata is
+  /// cleared conservatively.
+  void refineMMOMetadata(ArrayRef<MachineMemOperand *> NewMMOs) {
     ArrayRef<MachineMemOperand *> MMOs = memoperands();
     assert(NewMMOs.size() == MMOs.size() && "MMO count mismatch");
-    // FIXME: Union the ranges instead?
     for (auto [MMO, NewMMO] : zip(MMOs, NewMMOs)) {
+      // FIXME: Union the ranges instead?
       if (MMO->getRanges() && MMO->getRanges() != NewMMO->getRanges())
         MMO->clearRanges();
+      if (MMO->getMemCacheHint() &&
+          MMO->getMemCacheHint() != NewMMO->getMemCacheHint())
+        MMO->clearMemCacheHint();
     }
   }
 
-  void refineRanges(MachineMemOperand *NewMMO) {
-    refineRanges(ArrayRef(NewMMO));
+  void refineMMOMetadata(MachineMemOperand *NewMMO) {
+    refineMMOMetadata(ArrayRef(NewMMO));
   }
 
   const SDValue &getChain() const { return getOperand(0); }
@@ -1632,6 +1646,8 @@ public:
     case ISD::ATOMIC_LOAD_FMIN:
     case ISD::ATOMIC_LOAD_FMAXIMUM:
     case ISD::ATOMIC_LOAD_FMINIMUM:
+    case ISD::ATOMIC_LOAD_FMAXIMUMNUM:
+    case ISD::ATOMIC_LOAD_FMINIMUMNUM:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
     case ISD::ATOMIC_LOAD_USUB_COND:
@@ -1720,6 +1736,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUMNUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUMNUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||
@@ -1893,6 +1911,12 @@ public:
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Value->isZero(); }
 
+  /// Return true if the value is positive zero.
+  bool isPosZero() const { return Value->isPosZero(); }
+
+  /// Return true if the value is negative zero.
+  bool isNegZero() const { return Value->isNegZero(); }
+
   /// Return true if the value is a NaN.
   bool isNaN() const { return Value->isNaN(); }
 
@@ -1901,6 +1925,12 @@ public:
 
   /// Return true if the value is negative.
   bool isNegative() const { return Value->isNegative(); }
+
+  /// Returns true if this value is exactly +1.0.
+  bool isOne() const { return Value->isOne(); }
+
+  /// Returns true if this value is exactly -1.0.
+  bool isMinusOne() const { return Value->isMinusOne(); }
 
   /// We don't rely on operator== working on double values, as
   /// it returns true for things that are clearly not equal, like -0.0 and 0.0.
@@ -3479,39 +3509,79 @@ namespace ISD {
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or
-  /// every element of a constant BUILD_VECTOR.
+  /// every element of a constant BUILD_VECTOR. The DemandedElts argument
+  /// allows us to only collect the known bits that are shared by the requested
+  /// vector elements.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
   template <typename ConstNodeType>
-  bool matchUnaryPredicateImpl(SDValue Op,
+  bool matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
                                std::function<bool(ConstNodeType *)> Match,
                                bool AllowUndefs = false,
                                bool AllowTruncation = false);
 
   /// Hook for matching ConstantSDNode predicate
+  inline bool matchUnaryPredicate(SDValue Op, const APInt &DemandedElts,
+                                  std::function<bool(ConstantSDNode *)> Match,
+                                  bool AllowUndefs = false,
+                                  bool AllowTruncation = false) {
+    return matchUnaryPredicateImpl<ConstantSDNode>(
+        Op, DemandedElts, Match, AllowUndefs, AllowTruncation);
+  }
+
   inline bool matchUnaryPredicate(SDValue Op,
                                   std::function<bool(ConstantSDNode *)> Match,
                                   bool AllowUndefs = false,
                                   bool AllowTruncation = false) {
-    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs,
-                                                   AllowTruncation);
+    EVT VT = Op.getValueType();
+    APInt DemandedElts = VT.isFixedLengthVector()
+                             ? APInt::getAllOnes(VT.getVectorNumElements())
+                             : APInt(1, 1);
+    return matchUnaryPredicate(Op, DemandedElts, Match, AllowUndefs,
+                               AllowTruncation);
   }
 
   /// Hook for matching ConstantFPSDNode predicate
   inline bool
+  matchUnaryFpPredicate(SDValue Op, const APInt &DemandedElts,
+                        std::function<bool(ConstantFPSDNode *)> Match,
+                        bool AllowUndefs = false) {
+    return matchUnaryPredicateImpl<ConstantFPSDNode>(Op, DemandedElts, Match,
+                                                     AllowUndefs);
+  }
+
+  inline bool
   matchUnaryFpPredicate(SDValue Op,
                         std::function<bool(ConstantFPSDNode *)> Match,
                         bool AllowUndefs = false) {
-    return matchUnaryPredicateImpl<ConstantFPSDNode>(Op, Match, AllowUndefs);
+    EVT VT = Op.getValueType();
+    APInt DemandedElts = VT.isFixedLengthVector()
+                             ? APInt::getAllOnes(VT.getVectorNumElements())
+                             : APInt(1, 1);
+    return matchUnaryFpPredicate(Op, DemandedElts, Match, AllowUndefs);
   }
 
   /// Attempt to match a binary predicate against a pair of scalar/splat
   /// constants or every element of a pair of constant BUILD_VECTORs.
+  /// The DemandedElts argument allows us to only collect the
+  /// known bits that are shared by the requested vector elements.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
   /// If AllowTypeMismatch is true then RetType + ArgTypes don't need to match.
   LLVM_ABI bool matchBinaryPredicate(
-      SDValue LHS, SDValue RHS,
+      SDValue LHS, SDValue RHS, const APInt &DemandedElts,
       std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
       bool AllowUndefs = false, bool AllowTypeMismatch = false);
+
+  inline bool matchBinaryPredicate(
+      SDValue LHS, SDValue RHS,
+      std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
+      bool AllowUndefs = false, bool AllowTypeMismatch = false) {
+    EVT VT = LHS.getValueType();
+    APInt DemandedElts = VT.isFixedLengthVector()
+                             ? APInt::getAllOnes(VT.getVectorNumElements())
+                             : APInt(1, 1);
+    return matchBinaryPredicate(LHS, RHS, DemandedElts, Match, AllowUndefs,
+                                AllowTypeMismatch);
+  }
 
   /// Returns true if the specified value is the overflow result from one
   /// of the overflow intrinsic nodes.

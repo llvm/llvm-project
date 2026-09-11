@@ -22,12 +22,13 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Setup Buildifier
         run: |
           sudo curl -L https://github.com/bazelbuild/buildtools/releases/download/v8.2.1/buildifier-linux-amd64 -o /usr/bin/buildifier --fail
+          echo "4d2e6da38c3ef993a6bd1329431de2e30c5741f2  /usr/bin/buildifier" | shasum --check -
           sudo chmod +x /usr/bin/buildifier
       - name: Run Buildifier
         run: |
@@ -52,7 +53,7 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
         # TODO(boomanaiden154): We should use a purpose built container for this. Move
@@ -63,6 +64,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libmpfr-dev libpfm4-dev m4 libedit-dev
           sudo curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.27.0/bazelisk-amd64.deb --fail > /tmp/bazelisk.deb
+          echo "d8b00ea975c823e15263c80200ac42979e17368547fbff4ab177af035badfa83  /tmp/bazelisk.deb" | shasum --check -
           sudo apt-get install -y /tmp/bazelisk.deb
           rm /tmp/bazelisk.deb
       - name: Build/Test

@@ -2,7 +2,7 @@
 # before running with --filter-failed.
 
 # RUN: rm -rf %t
-# RUN: cp -rL %{inputs}%{fs-sep}filter-failed %t
+# RUN: cp -RL %{inputs}%{fs-sep}filter-failed %t
 #
 # RUN: not %{lit} %t | FileCheck %s --check-prefix=CHECK-FIRST
 #

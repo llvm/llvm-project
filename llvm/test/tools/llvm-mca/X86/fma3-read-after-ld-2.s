@@ -79,4 +79,4 @@ vfmadd213ps (%rdi), %xmm1, %xmm2
 # ALL:                [0]    [1]    [2]    [3]
 # ALL-NEXT:     0.     1     1.0    1.0    0.0       vaddps	%xmm0, %xmm0, %xmm2
 # ALL-NEXT:     1.     1     1.0    0.0    0.0       vfmadd213ps	(%rdi), %xmm1, %xmm2
-# ALL-NEXT:            1     1.0    0.5    0.0       <total>
+# ALL-NEXT:        2     1.0    0.5    0.0       <total>

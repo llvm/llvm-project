@@ -417,11 +417,11 @@ void callReturnsComplex(void) {
   c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
 
-int complexMul[2 * (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+int complexMul[2 * (22222222222wb + 2i) == 2]; // pedantic-warning {{'_BitInt' suffix for literals is a C23 extension}} \
                                                // pedantic-warning {{imaginary constants are a C2y extension}} \
                                                // all-warning {{variable length array folded to constant array as an extension}}
 
-int complexDiv[2 / (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+int complexDiv[2 / (22222222222wb + 2i) == 2]; // pedantic-warning {{'_BitInt' suffix for literals is a C23 extension}} \
                                                // pedantic-warning {{imaginary constants are a C2y extension}} \
                                                // all-warning {{variable length array folded to constant array as an extension}}
 
@@ -465,4 +465,12 @@ struct Oops {
 void evaluatevalue(void) {
   const struct Oops s = {0, 0.};
   *(int *)(&s.a) = 42; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+}
+
+void AddrLabelDiffSub(void) {
+  _Static_assert((long)&&bar - (long)&&baz - 42 == foo, ""); // all-warning {{comparison between pointer and integer ('long' and 'int (*)()')}} \
+                                                             // all-error {{not an integral constant expression}} \
+                                                             // all-error {{use of undeclared label 'bar'}} \
+                                                             // all-error {{use of undeclared label 'baz'}} \
+                                                             // pedantic-warning 2{{use of GNU address-of-label extension}}
 }

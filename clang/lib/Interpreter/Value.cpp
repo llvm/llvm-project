@@ -177,9 +177,10 @@ Value::Value(Value &&RHS) noexcept {
   Data = RHS.Data;
   ValueKind = std::exchange(RHS.ValueKind, K_Unspecified);
   IsManuallyAlloc = std::exchange(RHS.IsManuallyAlloc, false);
-
-  if (IsManuallyAlloc)
-    ValueStorage::getFromPayload(getPtr())->Release();
+  // The move transfers ownership of the storage refcount from RHS to *this;
+  // RHS.IsManuallyAlloc is now false so its dtor won't Release, leaving
+  // *this as the sole owner of the existing reference. No Retain/Release is
+  // needed -- the physical RefCnt is unchanged across the move.
 }
 
 Value &Value::operator=(const Value &RHS) {
@@ -229,9 +230,9 @@ void *Value::getPtr() const {
   return Data.m_Ptr;
 }
 
-void Value::setRawBits(void *Ptr, unsigned NBits /*= sizeof(Storage)*/) {
-  assert(NBits <= sizeof(Storage) && "Greater than the total size");
-  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBits / 8);
+void Value::setRawBits(void *Ptr, unsigned NBytes /*= sizeof(Storage)*/) {
+  assert(NBytes <= sizeof(Storage) && "Greater than the total size");
+  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBytes);
 }
 
 QualType Value::getType() const {

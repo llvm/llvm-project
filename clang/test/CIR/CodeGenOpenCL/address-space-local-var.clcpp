@@ -1,0 +1,46 @@
+// RUN: %clang_cc1 -x clcpp -triple spir64 -cl-std=clc++ -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -x clcpp -triple spir64 -cl-std=clc++ -fclangir -emit-llvm -O0 %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: %clang_cc1 -x clcpp -triple spir64 -cl-std=clc++ -emit-llvm -O0 %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+
+// Test that local variable allocation works correctly in OpenCL C++,
+// where auto variables have the opencl_private address space.
+
+// CIR: cir.func {{.*}} @k(%arg0: !cir.ptr<!s32i, target_address_space(1)>
+// CIR:   %[[GP:.*]] = cir.alloca "gp" {{.*}} init : !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>
+// CIR:   %[[GR:.*]] = cir.alloca "gr" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>
+// CIR:   %[[R:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i, target_address_space(4)>>
+// CIR:   cir.store %arg0, %[[GP]] : !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>
+// CIR:   %[[DEREF:.*]] = cir.load deref {{.*}} %[[GP]] : !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>, !cir.ptr<!s32i, target_address_space(1)>
+// CIR:   cir.store {{.*}} %[[DEREF]], %[[GR]] : !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>
+// CIR:   %[[CAST:.*]] = cir.cast address_space %[[DEREF]] : !cir.ptr<!s32i, target_address_space(1)> -> !cir.ptr<!s32i, target_address_space(4)>
+// CIR:   cir.store {{.*}} %[[CAST]], %[[R]] : !cir.ptr<!s32i, target_address_space(4)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(4)>>
+
+// LLVM: define dso_local spir_kernel void @k(ptr addrspace(1) noundef %[[ARG:.*]])
+// LLVM:   %[[GP_ADDR:.*]] = alloca ptr addrspace(1)
+// LLVM:   %[[GR_ADDR:.*]] = alloca ptr addrspace(1)
+// LLVM:   %[[R_ADDR:.*]] = alloca ptr addrspace(4)
+// LLVM:   store ptr addrspace(1) %[[ARG]], ptr %[[GP_ADDR]]
+// LLVM:   %[[V1:.*]] = load ptr addrspace(1), ptr %[[GP_ADDR]]
+// LLVM:   store ptr addrspace(1) %[[V1]], ptr %[[GR_ADDR]]
+// LLVM:   %[[V2:.*]] = load ptr addrspace(1), ptr %[[GR_ADDR]]
+// LLVM:   %[[V3:.*]] = addrspacecast ptr addrspace(1) %[[V2]] to ptr addrspace(4)
+// LLVM:   store ptr addrspace(4) %[[V3]], ptr %[[R_ADDR]]
+
+// OGCG: define dso_local spir_func void @__clang_ocl_kern_imp_k(ptr addrspace(1) noundef align 4 %gp)
+// OGCG:   %gp.addr = alloca ptr addrspace(1)
+// OGCG:   %gr = alloca ptr addrspace(1)
+// OGCG:   %r = alloca ptr addrspace(4)
+// OGCG:   store ptr addrspace(1) %gp, ptr %gp.addr
+// OGCG:   %[[V1:.*]] = load ptr addrspace(1), ptr %gp.addr
+// OGCG:   store ptr addrspace(1) %[[V1]], ptr %gr
+// OGCG:   %[[V2:.*]] = load ptr addrspace(1), ptr %gr
+// OGCG:   %[[V3:.*]] = addrspacecast ptr addrspace(1) %[[V2]] to ptr addrspace(4)
+// OGCG:   store ptr addrspace(4) %[[V3]], ptr %r
+__kernel void k(__global int *gp) {
+  __global int &gr = *gp;
+  int &r = gr;
+  (void)r;
+}

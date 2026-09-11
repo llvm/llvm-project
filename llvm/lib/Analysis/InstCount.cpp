@@ -21,16 +21,33 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instcount"
 
-STATISTIC(TotalInsts, "Number of instructions (of all types)");
+STATISTIC(TotalInsts, "Number of instructions of all types");
 STATISTIC(TotalBlocks, "Number of basic blocks");
 STATISTIC(TotalFuncs, "Number of non-external functions");
+
 STATISTIC(LargestFunctionSize,
           "Largest number of instructions in a single function");
 STATISTIC(LargestFunctionBBCount,
           "Largest number of basic blocks in a single function");
 
+STATISTIC(TotalInstsPreOptimization,
+          "Number of instructions of all types (before optimizations)");
+STATISTIC(TotalBlocksPreOptimization,
+          "Number of basic blocks (before optimizations)");
+STATISTIC(TotalFuncsPreOptimization,
+          "Number of non-external functions (before optimizations)");
+
+STATISTIC(LargestFunctionSizePreOptimization,
+          "Largest number of instructions in a single function (before "
+          "optimizations)");
+STATISTIC(LargestFunctionBBCountPreOptimization,
+          "Largest number of basic blocks in a single function (before "
+          "optimizations)");
+
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
-  STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");
+  STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");                 \
+  STATISTIC(Num##OPCODE##InstPreOptimization,                                  \
+            "Number of " #OPCODE " insts (before optimizations)");
 
 #include "llvm/IR/Instruction.def"
 
@@ -38,17 +55,36 @@ namespace {
 class InstCount : public InstVisitor<InstCount> {
   friend class InstVisitor<InstCount>;
 
+  bool IsPreOptimization;
+
   void visitFunction(Function &F) {
-    ++TotalFuncs;
-    LargestFunctionSize.updateMax(F.getInstructionCount());
-    LargestFunctionBBCount.updateMax(F.size());
+    if (IsPreOptimization) {
+      ++TotalFuncsPreOptimization;
+      LargestFunctionSizePreOptimization.updateMax(F.getInstructionCount());
+      LargestFunctionBBCountPreOptimization.updateMax(F.size());
+    } else {
+      ++TotalFuncs;
+      LargestFunctionSize.updateMax(F.getInstructionCount());
+      LargestFunctionBBCount.updateMax(F.size());
+    }
   }
-  void visitBasicBlock(BasicBlock &BB) { ++TotalBlocks; }
+
+  void visitBasicBlock(BasicBlock &BB) {
+    if (IsPreOptimization)
+      ++TotalBlocksPreOptimization;
+    else
+      ++TotalBlocks;
+  }
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
   void visit##OPCODE(CLASS &) {                                                \
-    ++Num##OPCODE##Inst;                                                       \
-    ++TotalInsts;                                                              \
+    if (IsPreOptimization) {                                                   \
+      ++Num##OPCODE##InstPreOptimization;                                      \
+      ++TotalInstsPreOptimization;                                             \
+    } else {                                                                   \
+      ++Num##OPCODE##Inst;                                                     \
+      ++TotalInsts;                                                            \
+    }                                                                          \
   }
 
 #include "llvm/IR/Instruction.def"
@@ -57,6 +93,10 @@ class InstCount : public InstVisitor<InstCount> {
     errs() << "Instruction Count does not know about " << I;
     llvm_unreachable(nullptr);
   }
+
+public:
+  InstCount(bool IsPreOptimization = false)
+      : IsPreOptimization(IsPreOptimization) {}
 };
 } // namespace
 
@@ -64,7 +104,7 @@ PreservedAnalyses InstCountPass::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   LLVM_DEBUG(dbgs() << "INSTCOUNT: running on function " << F.getName()
                     << "\n");
-  InstCount().visit(F);
+  InstCount(this->IsPreOptimization).visit(F);
 
   return PreservedAnalyses::all();
 }

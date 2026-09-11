@@ -31,6 +31,14 @@ TEST(LlvmLibcLimitsTest, LimitsFollowSpec) {
   ASSERT_EQ(cpp::numeric_limits<long long>::min(), LLONG_MIN);
 
   ASSERT_EQ(cpp::numeric_limits<unsigned long long>::max(), ULLONG_MAX);
+
+#ifdef SSIZE_MAX
+  ASSERT_EQ(cpp::numeric_limits<__PTRDIFF_TYPE__>::max(), SSIZE_MAX);
+#else
+#ifdef LIBC_FULL_BUILD
+#error "SSIZE_MAX is not defined in full build mode"
+#endif
+#endif
 }
 
 TEST(LlvmLibcLimitsTest, UInt128Limits) {

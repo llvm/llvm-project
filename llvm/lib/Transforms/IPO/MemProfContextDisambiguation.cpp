@@ -40,7 +40,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -49,7 +48,6 @@
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include <deque>
 #include <sstream>
-#include <unordered_map>
 #include <vector>
 using namespace llvm;
 using namespace llvm::memprof;
@@ -207,7 +205,7 @@ static cl::opt<bool> AllowRecursiveContexts(
 // Set the minimum absolute count threshold for allowing inlining of indirect
 // calls promoted during cloning.
 static cl::opt<unsigned> MemProfICPNoInlineThreshold(
-    "memprof-icp-noinline-threshold", cl::init(2), cl::Hidden,
+    "memprof-icp-noinline-threshold", cl::init(0), cl::Hidden,
     cl::desc("Minimum absolute count for promoted target to be inlinable"));
 
 namespace llvm {
@@ -1103,8 +1101,8 @@ private:
   // frames that we discover while building the graph.
   // It maps from the summary of the function making the tail call, to a map
   // of callee ValueInfo to corresponding synthesized callsite info.
-  std::unordered_map<FunctionSummary *,
-                     std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
+  DenseMap<FunctionSummary *,
+           std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
       FunctionCalleesToSynthesizedCallsiteInfos;
 };
 } // namespace
@@ -1590,18 +1588,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
   for (auto EI = OrigEdges.begin(); EI != OrigEdges.end();) {
     auto Edge = *EI;
     DenseSet<uint32_t> NewEdgeContextIds;
-    DenseSet<uint32_t> NotFoundContextIds;
     // Remove any matching context ids from Edge, return set that were found and
-    // removed, these are the new edge's context ids. Also update the remaining
-    // (not found ids).
-    set_subtract(Edge->getContextIds(), RemainingContextIds, NewEdgeContextIds,
-                 NotFoundContextIds);
+    // removed, these are the new edge's context ids.
+    set_subtract(Edge->getContextIds(), RemainingContextIds, NewEdgeContextIds);
+    // If no matching context ids for this edge, skip it.
+    if (NewEdgeContextIds.empty()) {
+      ++EI;
+      continue;
+    }
     // Update the remaining context ids set for the later edges. This is a
     // compile time optimization.
     if (RecursiveContextIds.empty()) {
-      // No recursive ids, so all of the previously remaining context ids that
-      // were not seen on this edge are the new remaining set.
-      RemainingContextIds.swap(NotFoundContextIds);
+      set_subtract(RemainingContextIds, NewEdgeContextIds);
     } else {
       // Keep the recursive ids in the remaining set as we expect to see those
       // on another edge. We can remove the non-recursive remaining ids that
@@ -1614,11 +1612,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
       DenseSet<uint32_t> NonRecursiveRemainingCurEdgeIds =
           set_difference(NewEdgeContextIds, RecursiveContextIds);
       set_subtract(RemainingContextIds, NonRecursiveRemainingCurEdgeIds);
-    }
-    // If no matching context ids for this edge, skip it.
-    if (NewEdgeContextIds.empty()) {
-      ++EI;
-      continue;
     }
     if (TowardsCallee) {
       uint8_t NewAllocType = computeAllocType(NewEdgeContextIds);
@@ -2525,7 +2518,11 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
   // must be sorted.
   std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
-  for (auto &I : Index) {
+  // Sort by GUID for deterministic graph construction order.
+  // TODO: This sort has a measurable cost on the thin link when memprof is
+  // enabled. Investigate gating it behind an option that is only enabled for
+  // tests that check internal state.
+  for (const auto &I : Index.sortedGlobalValueSummariesRange()) {
     auto VI = Index.getValueInfo(I);
     if (GUIDsToSkip.contains(VI.getGUID()))
       continue;
@@ -3377,7 +3374,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
         // This is only emitted if the context size info is not present.
         std::string Msg =
             "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
-            " is " + getAllocTypeString(Node->AllocTypes) + " after cloning";
+            " context is " + getAllocTypeString(Node->AllocTypes) +
+            " after cloning";
         if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
           Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                  " due to cold byte percent";
@@ -4064,9 +4062,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
                         return true;
 
                       if (A->AllocTypes == B->AllocTypes)
-                        // Use the first context id for each edge as a
+                        // Use the caller node id as a deterministic
                         // tie-breaker.
-                        return *A->ContextIds.begin() < *B->ContextIds.begin();
+                        return A->Caller->NodeId < B->Caller->NodeId;
                       return AllocTypeCloningPriority[A->AllocTypes] <
                              AllocTypeCloningPriority[B->AllocTypes];
                     });
@@ -4579,8 +4577,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
   }
 
   // Helper for callee edge sorting below. Return true if A's callee has fewer
-  // caller edges than B, or if A is a clone and B is not, or if A's first
-  // context id is smaller than B's.
+  // caller edges than B, or if A is a clone and B is not, or if A's callee
+  // node id is smaller than B's.
   auto CalleeCallerEdgeLessThan = [](const std::shared_ptr<ContextEdge> &A,
                                      const std::shared_ptr<ContextEdge> &B) {
     if (A->Callee->CallerEdges.size() != B->Callee->CallerEdges.size())
@@ -4589,9 +4587,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
       return true;
     else if (!A->Callee->CloneOf && B->Callee->CloneOf)
       return false;
-    // Use the first context id for each edge as a
-    // tie-breaker.
-    return *A->ContextIds.begin() < *B->ContextIds.begin();
+    // Use the callee node id as a deterministic tie-breaker.
+    return A->Callee->NodeId < B->Callee->NodeId;
   };
 
   // Process each set of callee clones called by Node, performing the needed
@@ -5899,8 +5896,19 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           break;
         }
       }
-      assert(GVSummary && GVSummary->modulePath() == SrcModule);
+      // TODO: Put back the assert once we have metadata on imported copies of
+      // aliases linking them back to the original alias GUID, which would allow
+      // us to locate the alias summary here.
+      // assert(GVSummary && GVSummary->modulePath() == SrcModule);
     }
+
+    // GVSummary can be null if this is a function imported as a copy of an
+    // alias, and we don't have the aliasee's summary in our distributed index.
+    // TODO: Once we can locate the original GUID for imported aliases (e.g. via
+    // TBD additional metadata), we should find the alias summary instead, and
+    // we can remove this check and fall back to the original check below.
+    if (!GVSummary)
+      continue;
 
     // If this was an imported alias skip it as we won't have the function
     // summary, and it should be cloned in the original module.
@@ -6197,8 +6205,8 @@ void MemProfContextDisambiguation::performICP(
     auto *CB = Info.CB;
     auto CallsiteIndex = Info.CallsiteInfoStartIndex;
     auto TotalCount = Info.TotalCount;
-    unsigned NumPromoted = 0;
     unsigned NumClones = 0;
+    SmallVector<InstrProfValueData, 8> RemainingCandidates;
 
     for (auto &Candidate : Info.CandidateProfileData) {
       auto &StackNode = AllCallsites[CallsiteIndex++];
@@ -6227,6 +6235,7 @@ void MemProfContextDisambiguation::performICP(
         // FIXME: See if we can use the new declaration importing support to
         // at least get the declarations imported for this case. Hot indirect
         // targets should have been imported normally, however.
+        RemainingCandidates.push_back(Candidate);
         continue;
       }
 
@@ -6240,6 +6249,7 @@ void MemProfContextDisambiguation::performICP(
                  << " with count of " << ore::NV("TotalCount", TotalCount)
                  << ": " << Reason;
         });
+        RemainingCandidates.push_back(Candidate);
         continue;
       }
 
@@ -6293,10 +6303,9 @@ void MemProfContextDisambiguation::performICP(
 
       // Update TotalCount (all clones should get same count above)
       TotalCount -= Candidate.Count;
-      NumPromoted++;
     }
     // Adjust the MD.prof metadata for all clones, now that we have the new
-    // TotalCount and the number promoted.
+    // TotalCount and the remaining candidates.
     CallBase *CBClone = CB;
     for (unsigned J = 0; J < NumClones; J++) {
       // If the VMap is empty, this clone was a duplicate of another and was
@@ -6311,9 +6320,8 @@ void MemProfContextDisambiguation::performICP(
       // If all promoted, we don't need the MD.prof metadata.
       // Otherwise we need update with the un-promoted records back.
       if (TotalCount != 0)
-        annotateValueSite(
-            M, *CBClone, ArrayRef(Info.CandidateProfileData).slice(NumPromoted),
-            TotalCount, IPVK_IndirectCallTarget, Info.NumCandidates);
+        annotateValueSite(M, *CBClone, RemainingCandidates, TotalCount,
+                          IPVK_IndirectCallTarget, Info.NumCandidates);
     }
   }
 }

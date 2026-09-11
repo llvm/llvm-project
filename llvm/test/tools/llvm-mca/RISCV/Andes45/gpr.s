@@ -257,4 +257,4 @@ bext a0, a0, a0
 # CHECK-NEXT: 39.    1     0.0    0.0    0.0       bclr	a0, a0, a0
 # CHECK-NEXT: 40.    1     0.0    0.0    0.0       bexti	a0, a0, 4
 # CHECK-NEXT: 41.    1     0.0    0.0    0.0       bext	a0, a0, a0
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        42    0.0    0.0    0.0       <total>

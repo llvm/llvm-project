@@ -32,7 +32,7 @@ class IRTypeMapper {
 public:
   IRTypeMapper(LLVMContext &Ctx, const DataLayout &DL) : Context(Ctx), DL(DL) {}
 
-  llvm::Type *convertType(const abi::Type *ABIType);
+  LLVM_ABI llvm::Type *convertType(const abi::Type *ABIType);
 
   void clearCache() { TypeCache.clear(); }
 
@@ -44,6 +44,7 @@ private:
 
   llvm::Type *convertArrayType(const abi::ArrayType *AT);
   llvm::Type *convertVectorType(const abi::VectorType *VT);
+  llvm::Type *convertTupleType(const abi::TupleType *TT);
   llvm::Type *convertRecordType(const abi::RecordType *RT);
   llvm::Type *convertComplexType(const abi::ComplexType *CT);
   llvm::Type *convertMemberPointerType(const abi::MemberPointerType *MPT);

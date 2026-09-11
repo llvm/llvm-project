@@ -14,6 +14,8 @@
 #define MLIR_DIALECT_NVGPU_NVGPUDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialectDecl.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -54,8 +56,6 @@ constexpr unsigned kTMALastdimByte = 16;
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.h.inc"
-
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUOps.h.inc"

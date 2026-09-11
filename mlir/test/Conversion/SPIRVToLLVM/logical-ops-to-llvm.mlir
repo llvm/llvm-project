@@ -91,3 +91,39 @@ spirv.func @logical_or_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) "None" {
   %0 = spirv.LogicalOr %arg0, %arg1 : vector<4xi1>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.Ordered
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ordered_scalar
+spirv.func @ordered_scalar(%arg0: f32, %arg1: f32) "None" {
+  // CHECK: llvm.fcmp "ord" %{{.*}}, %{{.*}} : f32
+  %0 = spirv.Ordered %arg0, %arg1 : f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @ordered_vector
+spirv.func @ordered_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>) "None" {
+  // CHECK: llvm.fcmp "ord" %{{.*}}, %{{.*}} : vector<4xf32>
+  %0 = spirv.Ordered %arg0, %arg1 : vector<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.Unordered
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @unordered_scalar
+spirv.func @unordered_scalar(%arg0: f32, %arg1: f32) "None" {
+  // CHECK: llvm.fcmp "uno" %{{.*}}, %{{.*}} : f32
+  %0 = spirv.Unordered %arg0, %arg1 : f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @unordered_vector
+spirv.func @unordered_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>) "None" {
+  // CHECK: llvm.fcmp "uno" %{{.*}}, %{{.*}} : vector<4xf32>
+  %0 = spirv.Unordered %arg0, %arg1 : vector<4xf32>
+  spirv.Return
+}

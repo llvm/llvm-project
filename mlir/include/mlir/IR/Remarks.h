@@ -515,30 +515,6 @@ private:
   /// Atomic counter for generating unique remark IDs.
   std::atomic<uint64_t> nextRemarkId{1};
 
-  /// Return true if missed optimization remarks are enabled, override
-  /// to provide different implementation.
-  bool isMissedOptRemarkEnabled(StringRef categoryName) const;
-
-  /// Return true if passed optimization remarks are enabled, override
-  /// to provide different implementation.
-  bool isPassedOptRemarkEnabled(StringRef categoryName) const;
-
-  /// Return true if analysis optimization remarks are enabled, override
-  /// to provide different implementation.
-  bool isAnalysisOptRemarkEnabled(StringRef categoryName) const;
-
-  /// Return true if analysis optimization remarks are enabled, override
-  /// to provide different implementation.
-  bool isFailedOptRemarkEnabled(StringRef categoryName) const;
-
-  /// Return true if any type of remarks are enabled for this pass.
-  bool isAnyRemarkEnabled(StringRef categoryName) const {
-    return isMissedOptRemarkEnabled(categoryName) ||
-           isPassedOptRemarkEnabled(categoryName) ||
-           isFailedOptRemarkEnabled(categoryName) ||
-           isAnalysisOptRemarkEnabled(categoryName);
-  }
-
   /// Emit a remark using the given maker function, which should return
   /// a Remark instance. The remark will be emitted using the main
   /// remark streamer.
@@ -579,6 +555,45 @@ public:
   /// Generate a unique ID for a new remark.
   RemarkId generateRemarkId() {
     return RemarkId(nextRemarkId.fetch_add(1, std::memory_order_relaxed));
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Remark Filtering - query which remarks are enabled
+  //===--------------------------------------------------------------------===//
+
+  /// Return true if missed optimization remarks are enabled for the given
+  /// category.
+  bool isMissedOptRemarkEnabled(StringRef categoryName) const;
+
+  /// Return true if passed optimization remarks are enabled for the given
+  /// category.
+  bool isPassedOptRemarkEnabled(StringRef categoryName) const;
+
+  /// Return true if analysis remarks are enabled for the given category.
+  bool isAnalysisOptRemarkEnabled(StringRef categoryName) const;
+
+  /// Return true if failed optimization remarks are enabled for the given
+  /// category.
+  bool isFailedOptRemarkEnabled(StringRef categoryName) const;
+
+  /// Return true if remarks of the given kind are enabled for the given
+  /// category. Always returns false for `RemarkKind::RemarkUnknown`.
+  bool isRemarkEnabled(RemarkKind kind, StringRef categoryName) const;
+
+  /// Return true if any kind of remark is enabled for the given category.
+  bool isAnyRemarkEnabled(StringRef categoryName) const {
+    return isMissedOptRemarkEnabled(categoryName) ||
+           isPassedOptRemarkEnabled(categoryName) ||
+           isFailedOptRemarkEnabled(categoryName) ||
+           isAnalysisOptRemarkEnabled(categoryName);
+  }
+
+  /// Return true if any kind of remark is enabled for any category, i.e. if at
+  /// least one category filter is active. This is a cheap check that external
+  /// remark producers can use before doing any work to build a remark.
+  bool isAnyRemarkEnabled() const {
+    return missFilter.has_value() || passedFilter.has_value() ||
+           analysisFilter.has_value() || failedFilter.has_value();
   }
 
   //===--------------------------------------------------------------------===//
@@ -750,7 +765,6 @@ namespace llvm {
 template <>
 struct DenseMapInfo<mlir::remark::detail::Remark> {
   static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
-  static constexpr StringRef kTombstoneKey = "<TOMBSTONE_KEY>";
 
   /// Helper to provide a static dummy context for sentinel keys.
   static mlir::MLIRContext *getStaticDummyContext() {
@@ -759,21 +773,6 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
   }
 
   /// Create an empty remark
-  static inline mlir::remark::detail::Remark getEmptyKey() {
-    return mlir::remark::detail::Remark(
-        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
-        mlir::UnknownLoc::get(getStaticDummyContext()),
-        mlir::remark::RemarkOpts::name(kEmptyKey));
-  }
-
-  /// Create a dead remark
-  static inline mlir::remark::detail::Remark getTombstoneKey() {
-    return mlir::remark::detail::Remark(
-        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
-        mlir::UnknownLoc::get(getStaticDummyContext()),
-        mlir::remark::RemarkOpts::name(kTombstoneKey));
-  }
-
   /// Compute the hash value of the remark
   static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
     return llvm::hash_combine(
@@ -785,11 +784,8 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
 
   static bool isEqual(const mlir::remark::detail::Remark &lhs,
                       const mlir::remark::detail::Remark &rhs) {
-    // Check for empty/tombstone keys first
-    if (lhs.getRemarkName() == kEmptyKey ||
-        lhs.getRemarkName() == kTombstoneKey ||
-        rhs.getRemarkName() == kEmptyKey ||
-        rhs.getRemarkName() == kTombstoneKey) {
+    // Check for empty keys first.
+    if (lhs.getRemarkName() == kEmptyKey || rhs.getRemarkName() == kEmptyKey) {
       return lhs.getRemarkName() == rhs.getRemarkName();
     }
 

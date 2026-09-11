@@ -5,7 +5,7 @@
 ; RUN:   -mcpu=pwr7 < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-aix \
 ; RUN:   -mcpu=pwr7 < %s | FileCheck %s --check-prefix=CHECK-AIX
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix --code-model=small \
 ; RUN:   -mcpu=pwr7 < %s | FileCheck %s --check-prefix=CHECK-AIX64
 
 declare void @llvm.ppc.dcbtstt(ptr)

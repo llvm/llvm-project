@@ -15,10 +15,11 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
+
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 namespace flangomp {
 #define GEN_PASS_DEF_AUTOMAPTOTARGETDATAPASS
@@ -86,11 +87,7 @@ class AutomapToTargetDataPass
   }
 
   void runOnOperation() override {
-    ModuleOp module = getOperation()->getParentOfType<ModuleOp>();
-    if (!module)
-      module = dyn_cast<ModuleOp>(getOperation());
-    if (!module)
-      return;
+    ModuleOp module = getOperation();
 
     // Build FIR builder for helper utilities.
     fir::KindMapping kindMap = fir::getKindMapping(module);
@@ -113,16 +110,63 @@ class AutomapToTargetDataPass
       if (needsBoundsOps(memOp.getMemref()))
         genBoundsOps(builder, memOp.getMemref(), bounds);
 
+      mlir::Value boxValue;
+      if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(memOp.getOperation()))
+        boxValue = storeOp.getValue();
+      else
+        boxValue = mlir::cast<fir::LoadOp>(memOp.getOperation()).getResult();
+
+      mlir::Value baseAddr =
+          fir::BoxAddrOp::create(builder, memOp.getLoc(), boxValue);
+      mlir::Value dataAddr = builder.createConvert(
+          memOp.getLoc(),
+          builder.getRefType(fir::unwrapRefType(baseAddr.getType())), baseAddr);
+      mlir::Type baseTy = fir::unwrapRefType(dataAddr.getType());
+      if (mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(baseTy))
+        baseTy = eleTy;
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(baseTy))
+        if (seqTy.hasDynamicExtents())
+          baseTy = seqTy.getEleTy();
+
       omp::TargetEnterExitUpdateDataOperands clauses;
+      bool isAlloc = isa<fir::StoreOp>(memOp);
+
+      auto createDescriptorMap =
+          [&](mlir::omp::ClauseMapFlags mapType) -> mlir::omp::MapInfoOp {
+        mlir::Type descriptorTy =
+            fir::unwrapRefType(memOp.getMemref().getType());
+        // Keep the descriptor itself present. MapInfoFinalization expands this
+        // ref_ptr map and emits the attach map when the descriptor is created.
+        mapType |= omp::ClauseMapFlags::ref_ptr;
+        if (!isAlloc)
+          mapType |= omp::ClauseMapFlags::attach_never;
+        return mlir::omp::MapInfoOp::create(
+            builder, memOp.getLoc(), memOp.getMemref().getType(),
+            memOp.getMemref(), TypeAttr::get(descriptorTy),
+            builder.getAttr<omp::ClauseMapFlagsAttr>(mapType),
+            builder.getAttr<omp::VariableCaptureKindAttr>(
+                omp::VariableCaptureKind::ByRef),
+            /*var_ptr_ptr=*/mlir::Value{},
+            /*var_ptr_ptr_type=*/mlir::TypeAttr{},
+            /*members=*/SmallVector<Value>{},
+            /*members_index=*/ArrayAttr{},
+            /*bounds=*/SmallVector<Value>{},
+            /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
+            builder.getBoolAttr(false));
+      };
+
+      if (isAlloc)
+        clauses.mapVars.push_back(createDescriptorMap(
+            omp::ClauseMapFlags::to | omp::ClauseMapFlags::always));
+
+      mlir::omp::ClauseMapFlags mapType =
+          isAlloc ? omp::ClauseMapFlags::storage : omp::ClauseMapFlags::del;
       mlir::omp::MapInfoOp mapInfo = mlir::omp::MapInfoOp::create(
-          builder, memOp.getLoc(), memOp.getMemref().getType(),
-          memOp.getMemref(),
-          TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
-          builder.getAttr<omp::ClauseMapFlagsAttr>(
-              isa<fir::StoreOp>(memOp) ? omp::ClauseMapFlags::to
-                                       : omp::ClauseMapFlags::del),
+          builder, memOp.getLoc(), dataAddr.getType(), dataAddr,
+          TypeAttr::get(baseTy),
+          builder.getAttr<omp::ClauseMapFlagsAttr>(mapType),
           builder.getAttr<omp::VariableCaptureKindAttr>(
-              omp::VariableCaptureKind::ByCopy),
+              omp::VariableCaptureKind::ByRef),
           /*var_ptr_ptr=*/mlir::Value{},
           /*var_ptr_ptr_type=*/mlir::TypeAttr{},
           /*members=*/SmallVector<Value>{},
@@ -130,9 +174,13 @@ class AutomapToTargetDataPass
           /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
           builder.getBoolAttr(false));
       clauses.mapVars.push_back(mapInfo);
-      isa<fir::StoreOp>(memOp)
-          ? omp::TargetEnterDataOp::create(builder, memOp.getLoc(), clauses)
-          : omp::TargetExitDataOp::create(builder, memOp.getLoc(), clauses);
+
+      if (!isAlloc)
+        clauses.mapVars.push_back(
+            createDescriptorMap(omp::ClauseMapFlags::del));
+
+      isAlloc ? omp::TargetEnterDataOp::create(builder, memOp.getLoc(), clauses)
+              : omp::TargetExitDataOp::create(builder, memOp.getLoc(), clauses);
     };
 
     for (fir::GlobalOp globalOp : automapGlobals) {

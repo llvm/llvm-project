@@ -14,11 +14,11 @@
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__math/roots.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <__vector/comparison.h>
 #include <__vector/vector.h>
-#include <cmath>
 #include <initializer_list>
 #include <iosfwd>
 
@@ -60,8 +60,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI param_type(param_type const&) = default;
     _LIBCPP_HIDE_FROM_ABI param_type& operator=(const param_type& __rhs);
 
-    _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __b_; }
-    _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __densities_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __b_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __densities_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__densities_ == __y.__densities_ && __x.__b_ == __y.__b_;
@@ -110,21 +110,21 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __p_.intervals(); }
-  _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __p_.densities(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __p_.intervals(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __p_.densities(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return __p_.__b_.front(); }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return __p_.__b_.back(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return __p_.__b_.front(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return __p_.__b_.back(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool
   operator==(const piecewise_linear_distribution& __x, const piecewise_linear_distribution& __y) {
@@ -257,7 +257,8 @@ _RealType piecewise_linear_distribution<_RealType>::operator()(_URNG& __g, const
     return __u / __dk + __bk;
   const result_type __bk1    = __p.__b_[__k + 1];
   const result_type __deltab = __bk1 - __bk;
-  return (__bk * __dk1 - __bk1 * __dk + std::sqrt(__deltab * (__deltab * __dk * __dk + 2 * __deltad * __u))) / __deltad;
+  return (__bk * __dk1 - __bk1 * __dk + __math::sqrt(__deltab * (__deltab * __dk * __dk + 2 * __deltad * __u))) /
+         __deltad;
 }
 
 template <class _CharT, class _Traits, class _RT>

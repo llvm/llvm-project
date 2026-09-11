@@ -658,7 +658,10 @@ public:
   /// or "id" if NSNumber is unavailable.
   ExprResult BuildObjCNumericLiteral(SourceLocation AtLoc, Expr *Number);
   ExprResult ActOnObjCBoolLiteral(SourceLocation AtLoc, SourceLocation ValueLoc,
-                                  bool Value);
+                                  bool Value) {
+    return BuildObjCNumericLiteral(
+        AtLoc, SemaRef.BuildBoolLiteral(ValueLoc, Value).get());
+  }
   ExprResult BuildObjCArrayLiteral(SourceRange SR, MultiExprArg Elements);
 
   /// BuildObjCBoxedExpr - builds an ObjCBoxedExpr AST node for the
@@ -688,7 +691,8 @@ public:
 
   /// ParseObjCSelectorExpression - Build selector expression for \@selector
   ExprResult ParseObjCSelectorExpression(Selector Sel, SourceLocation AtLoc,
-                                         SourceLocation SelLoc,
+                                         SourceLocation SelKWLoc,
+                                         SourceLocation SelNameLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation RParenLoc,
                                          bool WarnMultipleSelectors);

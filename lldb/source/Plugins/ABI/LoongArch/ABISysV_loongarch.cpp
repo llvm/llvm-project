@@ -167,7 +167,7 @@ static bool UpdateRegister(RegisterContext *reg_ctx,
 
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(reg_kind, reg_num);
 
-  LLDB_LOG(log, "Writing {0}: 0x{1:x}", reg_info->name,
+  LLDB_LOG(log, "Writing {0}: {1:x}", reg_info->name,
            static_cast<uint64_t>(value));
   if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value)) {
     LLDB_LOG(log, "Writing {0}: failed", reg_info->name);
@@ -566,6 +566,7 @@ UnwindPlanSP ABISysV_loongarch::CreateDefaultUnwindPlan() {
   // have been spilled to stack already.
   row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
   row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
   plan_sp->AppendRow(std::move(row));

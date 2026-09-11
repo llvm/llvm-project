@@ -1075,6 +1075,84 @@ define void @t25_sret_to_sret_different_val(ptr noalias sret(%struct.foo) align 
   ret void
 }
 
+; Test musttail with non-forwarded stack arguments (more than 6 args).
+declare void @f1_64(i64, i64, i64, i64, i64, i64, i64)
+
+define void @stack_arg_const_64(i64, i64, i64, i64, i64, i64, i64) {
+; X86-LABEL: stack_arg_const_64:
+; X86:       # %bb.0:
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [1,0,4,0]
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [8,0,15,0]
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [16,0,23,0]
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    jmp f1_64@PLT # TAILCALL
+;
+; X64-LABEL: stack_arg_const_64:
+; X64:       # %bb.0:
+; X64-NEXT:    movq $42, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movl $1, %edi
+; X64-NEXT:    movl $4, %esi
+; X64-NEXT:    movl $8, %edx
+; X64-NEXT:    movl $15, %ecx
+; X64-NEXT:    movl $16, %r8d
+; X64-NEXT:    movl $23, %r9d
+; X64-NEXT:    jmp f1_64@PLT # TAILCALL
+;
+; X32-LABEL: stack_arg_const_64:
+; X32:       # %bb.0:
+; X32-NEXT:    movq $42, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl $1, %edi
+; X32-NEXT:    movl $4, %esi
+; X32-NEXT:    movl $8, %edx
+; X32-NEXT:    movl $15, %ecx
+; X32-NEXT:    movl $16, %r8d
+; X32-NEXT:    movl $23, %r9d
+; X32-NEXT:    jmp f1_64@PLT # TAILCALL
+  musttail call void @f1_64(i64 1, i64 4, i64 8, i64 15, i64 16, i64 23, i64 42)
+  ret void
+}
+
+declare void @f1_32(i32, i32, i32, i32, i32, i32, i32)
+
+define void @stack_arg_const_32(i32, i32, i32, i32, i32, i32, i32) {
+; X86-LABEL: stack_arg_const_32:
+; X86:       # %bb.0:
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [1,4,8,15]
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $16, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $23, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    jmp f1_32@PLT # TAILCALL
+;
+; X64-LABEL: stack_arg_const_32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $42, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movl $1, %edi
+; X64-NEXT:    movl $4, %esi
+; X64-NEXT:    movl $8, %edx
+; X64-NEXT:    movl $15, %ecx
+; X64-NEXT:    movl $16, %r8d
+; X64-NEXT:    movl $23, %r9d
+; X64-NEXT:    jmp f1_32@PLT # TAILCALL
+;
+; X32-LABEL: stack_arg_const_32:
+; X32:       # %bb.0:
+; X32-NEXT:    movl $42, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl $1, %edi
+; X32-NEXT:    movl $4, %esi
+; X32-NEXT:    movl $8, %edx
+; X32-NEXT:    movl $15, %ecx
+; X32-NEXT:    movl $16, %r8d
+; X32-NEXT:    movl $23, %r9d
+; X32-NEXT:    jmp f1_32@PLT # TAILCALL
+  musttail call void @f1_32(i32 1, i32 4, i32 8, i32 15, i32 16, i32 23, i32 42)
+  ret void
+}
+
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 declare void @callee_1(ptr)
 declare void @callee_2(ptr noalias sret(%struct.foo))

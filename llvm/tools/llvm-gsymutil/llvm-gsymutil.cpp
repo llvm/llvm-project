@@ -17,10 +17,13 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
@@ -98,6 +101,8 @@ static std::string OutputFilename;
 static std::string JsonSummaryFile;
 static bool Verify;
 static bool BenchmarkReader;
+static uint32_t BenchmarkStart;
+static uint32_t BenchmarkStride;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
 static bool Quiet;
@@ -109,6 +114,8 @@ static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
 // Default output version. Can be overridden by --output-version.
 static uint32_t OutputVersion = Header::getVersion();
+static bool ShowStatistics;
+static GsymReader::StatisticsFormat StatisticsFormat;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -161,7 +168,36 @@ static void parseArgs(int argc, char **argv) {
     JsonSummaryFile = A->getValue();
 
   Verify = Args.hasArg(OPT_verify);
-  BenchmarkReader = Args.hasArg(OPT_benchmark_reader);
+  BenchmarkStart = 0;
+  BenchmarkStride = 1;
+  if (Args.hasArg(OPT_benchmark_reader_all)) {
+    BenchmarkReader = true;
+  } else if (const llvm::opt::Arg *A = Args.getLastArg(OPT_benchmark_reader)) {
+    BenchmarkReader = true;
+    StringRef S{A->getValue()};
+    if (!S.empty()) {
+      auto [StartStr, StrideStr] = S.split(',');
+      if (!llvm::to_integer(StartStr, BenchmarkStart, 0)) {
+        llvm::errs() << ToolName
+                     << ": for the --benchmark-reader option: invalid start '"
+                     << StartStr << "'\n";
+        std::exit(1);
+      }
+      if (!StrideStr.empty() &&
+          !llvm::to_integer(StrideStr, BenchmarkStride, 0)) {
+        llvm::errs() << ToolName
+                     << ": for the --benchmark-reader option: invalid stride '"
+                     << StrideStr << "'\n";
+        std::exit(1);
+      }
+      if (BenchmarkStride == 0) {
+        llvm::errs() << ToolName
+                     << ": for the --benchmark-reader option: stride must be "
+                        "positive\n";
+        std::exit(1);
+      }
+    }
+  }
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_num_threads_EQ)) {
     StringRef S{A->getValue()};
@@ -206,6 +242,22 @@ static void parseArgs(int argc, char **argv) {
   }
 
   LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
+
+  ShowStatistics = Args.hasArg(OPT_statistics_EQ);
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_statistics_EQ)) {
+    StringRef Val = A->getValue();
+    if (Val == "" || Val == "text")
+      StatisticsFormat = GsymReader::StatisticsFormat::Text;
+    else if (Val == "json")
+      StatisticsFormat = GsymReader::StatisticsFormat::JSON;
+    else if (Val == "pretty-json")
+      StatisticsFormat = GsymReader::StatisticsFormat::PrettyJSON;
+    else {
+      errs() << "error: unknown statistics format '" << Val
+             << "'. Supported formats: text, json, pretty-json\n";
+      std::exit(1);
+    }
+  }
 
   for (const llvm::opt::Arg *A :
        Args.filtered(OPT_merged_functions_filter_EQ)) {
@@ -425,10 +477,10 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
   std::unique_ptr<GsymCreator> GsymPtr;
   switch (OutputVersion) {
   case Header::getVersion():
-    GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
+    GsymPtr = std::make_unique<GsymCreatorV1>();
     break;
   case HeaderV2::getVersion():
-    GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
+    GsymPtr = std::make_unique<GsymCreatorV2>();
     break;
   default:
     return createStringError(std::errc::invalid_argument,
@@ -610,14 +662,15 @@ static llvm::Error handleFileConversionToGSYM(StringRef Filename,
                                               const std::string &OutFile,
                                               OutputAggregator &Out) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
+      MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   error(Filename, BuffOrErr.getError());
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
 
   std::unique_ptr<MemoryBuffer> SymtabBuffer;
   std::unique_ptr<Binary> SymtabBinary;
   if (!SymtabFilename.empty()) {
-    auto SymtabBufOrErr = MemoryBuffer::getFile(SymtabFilename);
+    auto SymtabBufOrErr =
+        MemoryBuffer::getFile(SymtabFilename, /*IsText=*/true);
     if (!SymtabBufOrErr)
       return createStringError(SymtabBufOrErr.getError(),
                                "failed to open symbol table file '%s'",
@@ -706,6 +759,11 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
         if (i != Results->size() - 1)
           OS << "\n";
       }
+    } else {
+      if (Verbose)
+        OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+      OS << HEX64(Addr) << ": ";
+      logAllUnhandledErrors(Results.takeError(), OS, "error: ");
     }
   } else { /* UseMergedFunctions == false */
     if (auto Result = Gsym.lookup(Addr)) {
@@ -731,12 +789,14 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   }
 }
 
-static llvm::Error benchmarkReader(StringRef GSYMPath) {
+static llvm::Error benchmarkReader(StringRef GSYMPath, uint32_t Start,
+                                   uint32_t Stride) {
   auto Gsym = GsymReader::openFile(GSYMPath);
   if (!Gsym)
     return Gsym.takeError();
-  auto NumAddrs = (*Gsym)->getNumAddresses();
-  for (uint32_t I = 0; I < NumAddrs; ++I) {
+  uint32_t N = (*Gsym)->getNumAddresses();
+  uint32_t NumLookups = 0;
+  for (uint32_t I = Start; I < N; I += Stride) {
     auto Addr = (*Gsym)->getAddress(I);
     if (!Addr)
       return createStringError(std::errc::invalid_argument,
@@ -744,9 +804,10 @@ static llvm::Error benchmarkReader(StringRef GSYMPath) {
     auto LR = (*Gsym)->lookup(*Addr);
     if (!LR)
       return LR.takeError();
+    ++NumLookups;
   }
-  outs() << "Benchmarked " << NumAddrs << " lookups in \"" << GSYMPath
-         << "\"\n";
+  outs() << "Benchmarked " << NumLookups << " lookups (out of " << N
+         << " addresses) in \"" << GSYMPath << "\"\n";
   return Error::success();
 }
 
@@ -764,12 +825,12 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
   if (BenchmarkReader) {
     for (const auto &GSYMPath : InputFilenames)
-      if (auto Err = benchmarkReader(GSYMPath))
+      if (auto Err = benchmarkReader(GSYMPath, BenchmarkStart, BenchmarkStride))
         error("Benchmark failed: ", std::move(Err));
     return EXIT_SUCCESS;
   }
 
-  OutputAggregator Aggregation(&OS);
+  OutputAggregator Aggregation(&OS, Quiet);
   if (!ConvertFilename.empty()) {
     // Convert DWARF to GSYM
     if (!InputFilenames.empty()) {
@@ -862,6 +923,11 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     auto Gsym = GsymReader::openFile(GSYMPath);
     if (!Gsym)
       error(GSYMPath, Gsym.takeError());
+
+    if (ShowStatistics) {
+      (*Gsym)->dumpStatistics(OS, StatisticsFormat, GSYMPath);
+      continue;
+    }
 
     if (LookupAddresses.empty()) {
       (*Gsym)->dump(outs());

@@ -80,6 +80,8 @@ public:
     return SpillSGPRToVGPR;
   }
 
+  bool isCFISavedRegsSpillEnabled() const;
+
   /// Return the largest available SGPR aligned to \p Align for the register
   /// class \p RC.
   MCRegister getAlignedHighSGPRForRC(const MachineFunction &MF,
@@ -105,9 +107,17 @@ public:
   // lanes (not even inactive ones).
   static bool isChainScratchRegister(Register VGPR);
 
-  // Stack access is very expensive. CSRs are also the high registers, and we
-  // want to minimize the number of used registers.
-  unsigned getCSRCost() const override { return 100; }
+  unsigned getCSRFirstUseCost(const MachineFunction &) const override {
+    // The cost of 27 balances multiple factors that influence CSR cost:
+    // - Saving a SGPR CSR to VGPR lanes is relatively cheap.
+    // - In cases where this is not possible, stack access is very expensive.
+    // - CSRs are also the high registers, and we want to minimize the number of
+    //   used registers as it impacts occupancy.
+    // Note: Register allocation only applies these cost to callee-save
+    // registers according to getCalleeSavedRegs, so handling of calling
+    // conventions with no CSR is handled there.
+    return 27;
+  }
 
   // When building a block VGPR load, we only really transfer a subset of the
   // registers in the block, based on a mask. Liveness analysis is not aware of
@@ -118,6 +128,13 @@ public:
   // load instruction, so liveness analysis knows they're unavailable.
   void addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                       Register BlockReg) const;
+
+  // Iterate over all VGPRs in the given BlockReg and emit CFI for each VGPR
+  // as-needed depending on the (statically known) mask, relative to the given
+  // base Offset.
+  void buildCFIForBlockCSRStore(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                Register BlockReg, int64_t Offset) const;
 
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
@@ -174,8 +191,8 @@ public:
   /// free VGPR lane to spill.
   bool spillSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                  SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
-                 bool OnlyToVGPR = false,
-                 bool SpillToPhysVGPRLane = false) const;
+                 bool OnlyToVGPR = false, bool SpillToPhysVGPRLane = false,
+                 bool NeedsCFI = false) const;
 
   bool restoreSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                    SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
@@ -368,8 +385,8 @@ public:
   }
 
   const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                 const MachineRegisterInfo &MRI) const override;
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *getBoolRC() const {
     return isWave32 ? &AMDGPU::SReg_32RegClass
@@ -450,8 +467,8 @@ public:
                            unsigned LoadStoreOp, int Index, Register ValueReg,
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
                            int64_t InstrOffset, MachineMemOperand *MMO,
-                           RegScavenger *RS,
-                           LiveRegUnits *LiveUnits = nullptr) const;
+                           RegScavenger *RS, LiveRegUnits *LiveUnits = nullptr,
+                           bool NeedsCFI = false) const;
 
   // Return alignment in register file of first register in a register tuple.
   unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {
@@ -498,11 +515,6 @@ public:
                 : 1.0);
   }
 };
-
-namespace AMDGPU {
-/// Get the size in bits of a register from the register class \p RC.
-unsigned getRegBitWidth(const TargetRegisterClass &RC);
-} // namespace AMDGPU
 
 } // End namespace llvm
 

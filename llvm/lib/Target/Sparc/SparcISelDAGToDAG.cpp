@@ -49,6 +49,7 @@ public:
   // Complex Pattern Selectors.
   bool SelectADDRrr(SDValue N, SDValue &R1, SDValue &R2);
   bool SelectADDRri(SDValue N, SDValue &Base, SDValue &Offset);
+  bool SelectForceADDRrr(SDValue N, SDValue &Base, SDValue &Disp);
 
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
@@ -152,6 +153,18 @@ bool SparcDAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
   return true;
 }
 
+bool SparcDAGToDAGISel::SelectForceADDRrr(SDValue Addr, SDValue &Base,
+                                          SDValue &Disp) {
+  if (SelectADDRrr(Addr, Base, Disp))
+    return true;
+
+  // Otherwise we'll use the full address in base and set the offset part to
+  // zero.
+  Base = Addr;
+  Disp =
+      CurDAG->getRegister(SP::G0, TLI->getPointerTy(CurDAG->getDataLayout()));
+  return true;
+}
 
 // Re-assemble i64 arguments split up in SelectionDAGBuilder's
 // visitInlineAsm / GetRegistersForValue functions.

@@ -20,7 +20,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/Fortran.h"
-#include <initializer_list>
+#include "llvm/ADT/StringRef.h"
 #include <variant>
 
 namespace Fortran::semantics {
@@ -191,10 +191,23 @@ public:
   ArraySpec AnalyzeDeferredShapeSpecList(const parser::DeferredShapeSpecList &);
   ArraySpec Analyze(const parser::ComponentArraySpec &);
   ArraySpec Analyze(const parser::CoarraySpec &);
+  // Bounds of a zero-size explicit-shape bounds array (F2023).  The entity is
+  // scalar, so these are dropped from the shape, but they remain specification
+  // expressions to be validated during declaration checking.
+  std::vector<Bound> TakeDroppedBoundsToCheck() {
+    return std::move(droppedBoundsToCheck_);
+  }
 
 private:
   SemanticsContext &context_;
   ArraySpec arraySpec_;
+  // Set when an explicit-shape-bounds-spec with a zero-size bounds array
+  // legitimately produces a scalar (rank 0), leaving arraySpec_ empty.
+  bool zeroRankExplicitBounds_{false};
+  // Bounds dropped from a scalar (zero-size bounds array) declaration's shape,
+  // retained as specification expressions to be validated during declaration
+  // checking.
+  std::vector<Bound> droppedBoundsToCheck_;
 
   template <typename T> void Analyze(const std::list<T> &list) {
     for (const auto &elem : list) {
@@ -202,7 +215,9 @@ private:
     }
   }
   void Analyze(const parser::AssumedShapeSpec &);
+  void Analyze(const parser::AssumedShapeBoundsSpec &);
   void Analyze(const parser::ExplicitShapeSpec &);
+  void Analyze(const parser::ExplicitShapeBoundsSpec &);
   void Analyze(const parser::AssumedImpliedSpec &);
   void Analyze(const parser::DeferredShapeSpecList &);
   void Analyze(const parser::AssumedRankSpec &);
@@ -212,11 +227,22 @@ private:
   void MakeDeferred(int);
   Bound GetBound(const std::optional<parser::SpecificationExpr> &);
   Bound GetBound(const parser::SpecificationExpr &);
+  struct ExplicitShapeBoundsResult {
+    Bound ubound;
+    std::optional<Bound> lbound;
+    std::int64_t numDims;
+  };
+  std::optional<ExplicitShapeBoundsResult> CheckExplicitShapeBoundsSpec(
+      const parser::ExplicitShapeBoundsSpec &x);
 };
 
-ArraySpec AnalyzeArraySpec(
-    SemanticsContext &context, const parser::ArraySpec &arraySpec) {
-  return ArraySpecAnalyzer{context}.Analyze(arraySpec);
+ArraySpec AnalyzeArraySpec(SemanticsContext &context,
+    const parser::ArraySpec &arraySpec,
+    std::vector<Bound> &droppedBoundsToCheck) {
+  ArraySpecAnalyzer analyzer{context};
+  ArraySpec result{analyzer.Analyze(arraySpec)};
+  droppedBoundsToCheck = analyzer.TakeDroppedBoundsToCheck();
+  return result;
 }
 ArraySpec AnalyzeArraySpec(
     SemanticsContext &context, const parser::ComponentArraySpec &arraySpec) {
@@ -237,7 +263,114 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }
+
+static bool shouldRewriteShapeSpecListToExplicitBounds(
+    SemanticsContext &context, const parser::ArraySpec &x) {
+  auto &explicitShapeSpecList{
+      std::get<std::list<parser::ExplicitShapeSpec>>(x.u)};
+
+  if (explicitShapeSpecList.size() != 1) {
+    return false;
+  }
+
+  auto &explicitShapeSpec{explicitShapeSpecList.front()};
+  const auto &upperBound{std::get<1>(explicitShapeSpec.t)};
+  const auto &lowerBoundOpt{std::get<0>(explicitShapeSpec.t)};
+
+  bool foundArray{false};
+
+  if (MaybeExpr analyzedExpr =
+          AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(upperBound));
+      analyzedExpr && (analyzedExpr->Rank() > 0)) {
+    foundArray = true;
+  }
+
+  if (lowerBoundOpt) {
+    const auto &lowerBound{*lowerBoundOpt};
+    if (MaybeExpr analyzedExpr =
+            AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(lowerBound));
+        analyzedExpr && (analyzedExpr->Rank() > 0)) {
+      foundArray = true;
+    }
+  }
+
+  return foundArray;
+}
+
+static bool shouldRewriteAssumedShapeSpecListToAssumedBounds(
+    SemanticsContext &context, const parser::ArraySpec &x) {
+  auto &assumedShapeSpecList{
+      std::get<std::list<parser::AssumedShapeSpec>>(x.u)};
+
+  if (assumedShapeSpecList.size() != 1) {
+    return false;
+  }
+
+  auto &assumedShapeSpec{assumedShapeSpecList.front()};
+  const auto &lowerBoundOpt{assumedShapeSpec.v};
+
+  bool foundArray{false};
+
+  if (lowerBoundOpt) {
+    const auto &lowerBound{*lowerBoundOpt};
+    if (MaybeExpr analyzedExpr =
+            AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(lowerBound));
+        analyzedExpr && (analyzedExpr->Rank() > 0)) {
+      foundArray = true;
+    }
+  }
+
+  return foundArray;
+}
+
+static void rewriteShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
+  auto &explicitShapeSpecList{std::get<std::list<parser::ExplicitShapeSpec>>(
+      const_cast<parser::ArraySpec &>(x).u)};
+  auto &mutableArraySpec{const_cast<parser::ArraySpec &>(x)};
+  auto &mutableExplicitShapeSpec{explicitShapeSpecList.front()};
+
+  auto &mutableUpperBound{std::get<1>(mutableExplicitShapeSpec.t)};
+  parser::IntExpr upperIntExpr{std::move(mutableUpperBound.v.thing)};
+
+  auto &mutableLowerBound{std::get<0>(mutableExplicitShapeSpec.t)};
+  std::optional<parser::IntExpr> lowerIntExpr;
+  if (mutableLowerBound) {
+    lowerIntExpr = std::move(mutableLowerBound->v.thing);
+  }
+
+  parser::ExplicitShapeBoundsSpec boundsSpec{
+      std::move(lowerIntExpr), std::move(upperIntExpr)};
+  mutableArraySpec.u = std::move(boundsSpec);
+}
+
+static void rewriteAssumedShapeSpecListToAssumedBounds(
+    const parser::ArraySpec &x) {
+  auto &assumedShapeSpecList{std::get<std::list<parser::AssumedShapeSpec>>(
+      const_cast<parser::ArraySpec &>(x).u)};
+  auto &mutableArraySpec{const_cast<parser::ArraySpec &>(x)};
+  auto &mutableAssumedShapeSpec{assumedShapeSpecList.front()};
+
+  auto &lowerBoundOpt{mutableAssumedShapeSpec.v};
+  CHECK(lowerBoundOpt.has_value());
+
+  parser::IntExpr lowerIntExpr{std::move(lowerBoundOpt->v.thing)};
+  parser::AssumedShapeBoundsSpec boundsSpec{std::move(lowerIntExpr)};
+  mutableArraySpec.u = std::move(boundsSpec);
+}
+
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
+  // This node is rewritten manually here, as opposed to using RewriteParseTree,
+  // because RewriteParseTree is called after ResolveNames in
+  // PerformStatementSemantics, at which point we would have already
+  // aborted due to semantic errors before getting a chance to rewrite.
+  if (std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u) &&
+      shouldRewriteShapeSpecListToExplicitBounds(context_, x)) {
+    rewriteShapeSpecListToExplicitBounds(x);
+  }
+  if (std::get_if<std::list<parser::AssumedShapeSpec>>(&x.u) &&
+      shouldRewriteAssumedShapeSpecListToAssumedBounds(context_, x)) {
+    rewriteAssumedShapeSpecListToAssumedBounds(x);
+  }
   common::visit(common::visitors{
                     [&](const parser::AssumedSizeSpec &y) {
                       Analyze(
@@ -248,7 +381,12 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
                     [&](const auto &y) { Analyze(y); },
                 },
       x.u);
-  CHECK(!arraySpec_.empty());
+  // arraySpec_ may legitimately be empty when an explicit-shape-bounds-spec
+  // has a zero-size bounds array, which declares a scalar (rank 0).  It may
+  // also be empty on an error path, where a fatal diagnostic has already been
+  // emitted and we are only continuing far enough to surface it.
+  CHECK(context_.AnyFatalError() || !arraySpec_.empty() ||
+      zeroRankExplicitBounds_);
   return arraySpec_;
 }
 ArraySpec ArraySpecAnalyzer::AnalyzeDeferredShapeSpecList(
@@ -272,6 +410,13 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::CoarraySpec &x) {
   return arraySpec_;
 }
 
+void ArraySpecAnalyzer::Analyze(const parser::AssumedShapeBoundsSpec &x) {
+  context_.Say("Analyze overload for AssumedShapeBoundsSpec"_todo_en_US);
+  // prevent CHECK abort in Analyze(ArraySpec), otherwise it'll abort before
+  // printing error message
+  arraySpec_.push_back(ShapeSpec::MakeAssumedShape(Bound{1}));
+}
+
 void ArraySpecAnalyzer::Analyze(const parser::AssumedShapeSpec &x) {
   arraySpec_.push_back(ShapeSpec::MakeAssumedShape(GetBound(x.v)));
 }
@@ -279,6 +424,187 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
       std::get<parser::SpecificationExpr>(x.t));
 }
+
+std::optional<ArraySpecAnalyzer::ExplicitShapeBoundsResult>
+ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
+    const parser::ExplicitShapeBoundsSpec &x) {
+  const auto &lowerBoundOpt{std::get<0>(x.t)};
+  const auto &upperBound{std::get<1>(x.t)};
+
+  // Analyze, validate, fold, and wrap one bound expression in a Bound.
+  // Returns the Bound paired with the extent of the bound: std::nullopt
+  // for a scalar bound (which broadcasts to every dimension) or, for a
+  // rank-1 array bound, its constant extent (which may be zero).
+
+  // hasError should not be set to true unless there was an error
+  // diagnostic emitted beforehand.
+  bool hasError{false};
+  auto analyzeBound = [&](const auto &parseBound, bool isUpper)
+      -> std::optional<std::pair<Bound, std::optional<std::int64_t>>> {
+    MaybeExpr expr{AnalyzeExpr(context_, parseBound)};
+    // Analyzing the parser::Integer<> wrapper enforces the INTEGER type
+    // constraint (C885) and emits a diagnostic for a non-INTEGER bound,
+    // returning std::nullopt.
+    if (!expr) {
+      hasError = true;
+      return std::nullopt;
+    }
+    if (expr->Rank() > 1) {
+      context_.Say(parser::FindSourceLocation(parseBound),
+          "Integer array used as %s bounds in DECLARATION must be rank-1 "
+          "but is rank-%d"_err_en_US,
+          isUpper ? "upper" : "lower", expr->Rank());
+      hasError = true;
+      return std::nullopt;
+    }
+    auto folded{evaluate::Fold(context_.foldingContext(), std::move(*expr))};
+    // The parser::Integer<> constraint enforced above guarantees an INTEGER
+    // type, so unwrapping the folded result as an integer expression must
+    // succeed.
+    const auto *someInt{evaluate::UnwrapExpr<SomeIntExpr>(folded)};
+    CHECK(someInt);
+    auto asSI{evaluate::Fold(context_.foldingContext(),
+        evaluate::ConvertToType<evaluate::SubscriptInteger>(
+            common::Clone(*someInt)))};
+    if (folded.Rank() == 0) {
+      // Scalar bound: broadcasts to every dimension.
+      return std::make_pair(Bound{MaybeSubscriptIntExpr{std::move(asSI)}},
+          std::optional<std::int64_t>{});
+    }
+    // Rank-1: must have constant extent.
+    auto extents{
+        evaluate::GetConstantExtents(context_.foldingContext(), folded)};
+    if (!extents) {
+      context_.Say(parser::FindSourceLocation(parseBound),
+          "Rank-1 integer array used as %s bounds in DECLARATION must "
+          "have constant size"_err_en_US,
+          isUpper ? "upper" : "lower");
+      hasError = true;
+      return std::nullopt;
+    }
+    return std::make_pair(Bound{MaybeSubscriptIntExpr{std::move(asSI)}},
+        std::optional<std::int64_t>{(*extents)[0]});
+  };
+
+  // Upper bound (required)
+  auto ubResult{analyzeBound(upperBound, /*isUpper=*/true)};
+
+  // Lower bound (optional)
+  std::optional<std::pair<Bound, std::optional<std::int64_t>>> lbResult;
+  if (lowerBoundOpt) {
+    lbResult = analyzeBound(*lowerBoundOpt, /*isUpper=*/false);
+  }
+
+  if (hasError) {
+    return std::nullopt;
+  }
+
+  // A bound is rank-1 (array-valued) iff it has a concrete extent; a scalar
+  // bound (or an omitted lower bound) has none and merely broadcasts.
+  std::optional<std::int64_t> ubExtent{ubResult->second};
+  std::optional<std::int64_t> lbExtent;
+  if (lbResult) {
+    lbExtent = lbResult->second;
+  }
+  bool ubIsRank1{ubExtent.has_value()};
+  bool lbIsRank1{lbExtent.has_value()};
+
+  // C832: when both bounds are rank-1 arrays, they must have the same size.
+  // This must include the case where one of the sizes is zero.
+  if (ubIsRank1 && lbIsRank1 && *ubExtent != *lbExtent) {
+    context_.Say(parser::FindSourceLocation(x),
+        "DECLARATION bounds integer rank-1 arrays must have the same size; "
+        "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
+        *lbExtent, *ubExtent);
+    return std::nullopt;
+  }
+
+  // The rank of the entity is the size of whichever bound is the rank-1
+  // array (they are equal when both are).  A zero-size array yields rank 0,
+  // i.e. the entity is scalar.
+  std::int64_t numDims{ubIsRank1 ? *ubExtent : (lbIsRank1 ? *lbExtent : 0)};
+
+  // numDims is the rank determined from the bounds array(s) (already validated
+  // above to agree in size when both are rank-1).  Reject a rank above the
+  // maximum here, in signed 64-bit arithmetic, before numDims is narrowed to
+  // int and used to size the ArraySpec -- this avoids the signed-int overflow
+  // and avoids building an enormous ArraySpec for an already-invalid
+  // declaration.
+  if (numDims > common::maxRank) {
+    context_.Say(parser::FindSourceLocation(x),
+        "DECLARATION rank-1 integer array bound(s) imply rank %jd, which is "
+        "greater than the maximum "
+        "supported rank %d"_err_en_US,
+        static_cast<std::intmax_t>(numDims), common::maxRank);
+    hasError = true;
+    return std::nullopt;
+  }
+
+  std::optional<Bound> lb;
+  if (lbResult) {
+    lb.emplace(std::move(lbResult->first));
+  }
+  return ExplicitShapeBoundsResult{
+      std::move(ubResult->first), std::move(lb), numDims};
+}
+
+void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
+  auto result{CheckExplicitShapeBoundsSpec(x)};
+  // Every path that yields no result has already emitted a fatal diagnostic.
+  // Leave arraySpec_ empty and return; the CHECK in Analyze(ArraySpec) permits
+  // an empty spec once a fatal error has been recorded, so the real (user)
+  // error messages surface instead of an internal-error abort.
+  if (!result) {
+    CHECK(context_.AnyFatalError());
+    return;
+  }
+  // For rank-1 bounds, emit N ShapeSpecs each wrapping a scalar
+  // RankOneBoundElement that extracts element [dim] from the rank-1
+  // expression.  This makes all downstream consumers see scalar bounds.
+  int numDims = static_cast<int>(result->numDims);
+  if (numDims == 0) {
+    // A zero-size bounds array declares a scalar (rank 0); leave arraySpec_
+    // empty and record that the empty result is intentional.  The bounds are
+    // not part of the shape, but they are still specification expressions;
+    // stash them so declaration checking validates them once the scope is
+    // fully resolved (see ObjectEntityDetails::droppedBoundsToCheck()).
+    zeroRankExplicitBounds_ = true;
+    droppedBoundsToCheck_.push_back(std::move(result->ubound));
+    if (result->lbound) {
+      droppedBoundsToCheck_.push_back(std::move(*result->lbound));
+    }
+    return;
+  }
+  for (int dim = 0; dim < numDims; ++dim) {
+    // Upper bound
+    MaybeSubscriptIntExpr ubExpr;
+    if (auto &ubOrig = result->ubound.GetExplicit()) {
+      if (ubOrig->Rank() > 0) {
+        ubExpr = SubscriptIntExpr{
+            evaluate::RankOneBoundElement{common::Clone(*ubOrig), dim}};
+      } else {
+        ubExpr = common::Clone(*ubOrig);
+      }
+    }
+    // Lower bound
+    MaybeSubscriptIntExpr lbExpr;
+    if (result->lbound) {
+      if (auto &lbOrig = result->lbound->GetExplicit()) {
+        if (lbOrig->Rank() > 0) {
+          lbExpr = SubscriptIntExpr{
+              evaluate::RankOneBoundElement{common::Clone(*lbOrig), dim}};
+        } else {
+          lbExpr = common::Clone(*lbOrig);
+        }
+      }
+    }
+    Bound lb{lbExpr ? std::move(lbExpr)
+                    : MaybeSubscriptIntExpr{SubscriptIntExpr{1}}};
+    Bound ub{std::move(ubExpr)};
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(std::move(lb), std::move(ub)));
+  }
+}
+
 void ArraySpecAnalyzer::Analyze(const parser::AssumedImpliedSpec &x) {
   MakeImplied(x.v);
 }
@@ -879,6 +1205,40 @@ void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
     mapper.MapSymbolExprs(*ref);
   }
   newScope.InstantiateDerivedTypes();
+}
+
+std::string GetReductionFortranId(const parser::CharBlock &mangledName) {
+  llvm::StringRef name{mangledName.begin(), mangledName.size()};
+  if (!name.starts_with("op.")) {
+    return name.str();
+  }
+  llvm::StringRef suffix{name.drop_front(3)};
+  // Intrinsic arithmetic operators: op.+ -> operator(+)
+  if (suffix == "+" || suffix == "-" || suffix == "*") {
+    return ("operator(" + suffix + ")").str();
+  }
+  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
+  if (suffix == "AND") {
+    return "operator(.and.)";
+  }
+  if (suffix == "OR") {
+    return "operator(.or.)";
+  }
+  if (suffix == "EQV") {
+    return "operator(.eqv.)";
+  }
+  if (suffix == "NEQV") {
+    return "operator(.neqv.)";
+  }
+  // Defined operators: op.combine. -> .combine.
+  // MangleDefinedOperator prepends "op" to the operator name (e.g.,
+  // ".combine.") so after stripping "op.", the suffix ends with '.' for defined
+  // operators.
+  if (!suffix.empty() && suffix.back() == '.') {
+    return ("." + suffix).str();
+  }
+  // Named functions: op.max -> max
+  return suffix.str();
 }
 
 } // namespace Fortran::semantics

@@ -78,9 +78,8 @@ void ExceptionSearchFilter::UpdateModuleListIfNeeded() {
   }
 }
 
-SearchFilterSP ExceptionSearchFilter::DoCreateCopy() {
-  return SearchFilterSP(
-      new ExceptionSearchFilter(TargetSP(), m_language, false));
+std::unique_ptr<SearchFilter> ExceptionSearchFilter::DoCreateCopy() {
+  return std::make_unique<ExceptionSearchFilter>(TargetSP(), m_language, false);
 }
 
 SearchFilter *ExceptionSearchFilter::CreateFromStructuredData(
@@ -136,7 +135,7 @@ public:
 
     SetActualResolver();
     if (m_actual_resolver_sp) {
-      s->Printf(" using: ");
+      s->PutCString(" using: ");
       m_actual_resolver_sp->GetDescription(s);
     } else
       s->Printf(" the correct runtime exception handler will be determined "

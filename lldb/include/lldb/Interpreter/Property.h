@@ -60,7 +60,9 @@ public:
   void Dump(const ExecutionContext *exe_ctx, Stream &strm,
             uint32_t dump_mask) const;
 
-  bool DumpQualifiedName(Stream &strm) const;
+  bool DumpQualifiedName(
+      Stream &strm,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt) const;
 
   void DumpDescription(
       CommandInterpreter &interpreter, Stream &strm, uint32_t output_width,

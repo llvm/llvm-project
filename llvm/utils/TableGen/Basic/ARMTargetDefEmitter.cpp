@@ -18,6 +18,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <set>
 #include <string>
@@ -115,6 +116,8 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   if (!RK.getClass("Architecture64"))
     return;
 
+  StringToOffsetTable StrTab;
+
   // Emit the ArchExtKind enum
   OS << "#ifdef EMIT_ARCHEXTKIND_ENUM\n"
      << "enum ArchExtKind : unsigned {\n";
@@ -133,20 +136,28 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   for (const Record *Rec : SortedExtensions) {
     auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
     OS << "  ";
-    OS << "{\"" << Rec->getValueAsString("UserVisibleName") << "\"";
-    if (auto Alias = Rec->getValueAsString("UserVisibleAlias"); Alias.empty())
-      OS << ", {}";
-    else
-      OS << ", \"" << Alias << "\"";
+    OS << "{"
+       << StrTab.GetOrAddStringOffset(Rec->getValueAsString("UserVisibleName"));
+    // Empty string implies no alias.
+    OS << ", "
+       << StrTab.GetOrAddStringOffset(
+              Rec->getValueAsString("UserVisibleAlias"));
     OS << ", AArch64::" << AEK;
-    OS << ", \"" << Rec->getValueAsString("ArchFeatureName") << "\"";
-    OS << ", \"" << Rec->getValueAsString("Desc") << "\"";
-    OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
-    OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
+    OS << ", "
+       << StrTab.GetOrAddStringOffset(Rec->getValueAsString("ArchFeatureName"));
+    OS << ", " << StrTab.GetOrAddStringOffset(Rec->getValueAsString("Desc"));
+    OS << ", "
+       << StrTab.GetOrAddStringOffset(
+              std::string("+") +
+              Rec->getValueAsString("Name").str()); // posfeature
+    OS << ", "
+       << StrTab.GetOrAddStringOffset(
+              std::string("-") +
+              Rec->getValueAsString("Name").str()); // negfeature
     OS << "},\n";
   };
-  OS << "};\n"
-     << "#undef EMIT_EXTENSIONS\n"
+  OS << "};\n";
+  OS << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"
      << "\n";
 
@@ -210,6 +221,10 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   };
 
   auto Architectures = RK.getAllDerivedDefinitionsIfDefined("Architecture64");
+  OS << "\n"
+     << "/// The set of all architectures\n"
+     << "inline constexpr std::array<ArchInfo, " << Architectures.size()
+     << "> ArchInfos = {{\n";
   std::vector<std::string> CppSpellings;
   for (const Record *Rec : Architectures) {
     const int Major = Rec->getValueAsInt("Major");
@@ -224,41 +239,41 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
 
     // Name of the object in C++
     std::string CppSpelling = ArchInfoName(Major, Minor, ProfileUpper);
-    OS << "inline constexpr ArchInfo " << CppSpelling << " = {\n";
+    OS << "  {\n";
     CppSpellings.push_back(std::move(CppSpelling));
 
-    OS << llvm::format("  VersionTuple{%d, %d},\n", Major, Minor);
-    OS << llvm::format("  %sProfile,\n", ProfileUpper.c_str());
+    OS << llvm::format("    VersionTuple{%d, %d},\n", Major, Minor);
+    OS << llvm::format("    %sProfile,\n", ProfileUpper.c_str());
 
     // Name as spelled for -march.
+    std::string ArchStr;
+    llvm::raw_string_ostream AS(ArchStr);
     if (Minor == 0)
-      OS << llvm::format("  \"armv%d-%s\",\n", Major, ProfileLower.c_str());
+      AS << llvm::format("armv%d-%s", Major, ProfileLower.c_str());
     else
-      OS << llvm::format("  \"armv%d.%d-%s\",\n", Major, Minor,
-                         ProfileLower.c_str());
+      AS << llvm::format("armv%d.%d-%s", Major, Minor, ProfileLower.c_str());
+    OS << "    " << StrTab.GetOrAddStringOffset(ArchStr) << ",\n";
 
     // SubtargetFeature::Name, used for -target-feature. Here the "+" is added.
-    const auto TargetFeatureName = Rec->getValueAsString("Name");
-    OS << "  \"+" << TargetFeatureName << "\",\n";
+    std::string TargetFeatureName =
+        (Twine("+") + Rec->getValueAsString("Name")).str();
+    OS << "    " << StrTab.GetOrAddStringOffset(TargetFeatureName) << ",\n";
 
     // Construct the list of default extensions
-    OS << "  (AArch64::ExtensionBitset({";
+    OS << "    (AArch64::ExtensionBitset({";
     for (auto *E : Rec->getValueAsListOfDefs("DefaultExts")) {
       OS << "AArch64::" << E->getValueAsString("ArchExtKindSpelling").upper()
          << ", ";
     }
     OS << "}))\n";
 
-    OS << "};\n";
+    OS << "  },\n";
   }
+  OS << "}};\n";
 
-  OS << "\n"
-     << "/// The set of all architectures\n"
-     << "static constexpr std::array<const ArchInfo *, " << CppSpellings.size()
-     << "> ArchInfos = {\n";
-  for (StringRef CppSpelling : CppSpellings)
-    OS << "  &" << CppSpelling << ",\n";
-  OS << "};\n";
+  for (auto [Idx, CppSpelling] : enumerate(CppSpellings))
+    OS << "static constexpr const ArchInfo &" << CppSpelling << " = ArchInfos["
+       << Idx << "];\n";
 
   OS << "#undef EMIT_ARCHITECTURES\n"
      << "#endif // EMIT_ARCHITECTURES\n"
@@ -286,7 +301,8 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
       PrintFatalError(
           Rec, "Alias '" + Name + "' duplicates an existing ProcessorAlias");
 
-    OS << llvm::formatv(R"(  { "{0}", "{1}" },)", Name, Alias) << '\n';
+    OS << "  {" << StrTab.GetOrAddStringOffset(Name) << ", "
+       << StrTab.GetOrAddStringOffset(Alias) << "},\n";
   }
 
   OS << "};\n"
@@ -331,12 +347,14 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     auto Minor = Arch->getValueAsInt("Minor");
     auto Profile = Arch->getValueAsString("Profile");
     auto ArchInfo = ArchInfoName(Major, Minor, Profile);
+    unsigned ArchIdx =
+        llvm::find(CppSpellings, ArchInfo) - CppSpellings.begin();
 
     checkFeatureTree(Arch);
 
     OS << "  {\n"
-       << "    \"" << Name << "\",\n"
-       << "    " << ArchInfo << ",\n"
+       << "    " << StrTab.GetOrAddStringOffset(Name) << ",\n"
+       << "    " << ArchIdx << " /* " << ArchInfo << " */,\n"
        << "    AArch64::ExtensionBitset({\n";
 
     // Keep track of extensions we have seen
@@ -356,6 +374,13 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
 
   OS << "#undef EMIT_CPU_INFO\n"
      << "#endif // EMIT_CPU_INFO\n"
+     << "\n";
+
+  // Emit string table.
+  OS << "#ifdef EMIT_STRTAB\n";
+  StrTab.EmitStringTableDef(OS, "StrTab");
+  OS << "#undef EMIT_STRTAB\n"
+     << "#endif // EMIT_STRTAB\n"
      << "\n";
 }
 

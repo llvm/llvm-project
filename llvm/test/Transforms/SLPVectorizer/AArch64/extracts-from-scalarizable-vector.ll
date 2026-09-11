@@ -4,8 +4,7 @@
 define i1 @degenerate() {
 ; CHECK-LABEL: define i1 @degenerate() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_COND30:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> zeroinitializer)
-; CHECK-NEXT:    ret i1 [[OR_COND30]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %0 = extractelement <4 x fp128> zeroinitializer, i32 0

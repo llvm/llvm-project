@@ -1133,6 +1133,16 @@ TEST_P(ImportExpr, DependentSizedExtVectorType) {
                  has(typedefDecl(hasType(dependentSizedExtVectorType())))))));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportFileScopeAsmDecl) {
+  Decl *FromTU = getTuDecl("__asm(\"nop\");", Lang_CXX03);
+  auto From =
+      FirstDeclMatcher<FileScopeAsmDecl>().match(FromTU, fileScopeAsmDecl());
+  ASSERT_TRUE(From);
+  FileScopeAsmDecl *To = Import(From, Lang_CXX03);
+  EXPECT_TRUE(To);
+  EXPECT_EQ(To->getAsmString(), "nop");
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingPackDecl) {
   Decl *FromTU = getTuDecl(
       "struct A { int operator()() { return 1; } };"
@@ -6596,6 +6606,42 @@ TEST_P(ErrorHandlingTest, ErrorIsPropagatedFromMemberToClass) {
   // Cannot import the other member.
   CXXMethodDecl *ImportedOK = Import(FromOK, Lang_CXX03);
   EXPECT_FALSE(ImportedOK);
+}
+
+// Check that the imported types, and not only the decls, are invalidated
+// (removed from ImportedTypes) upon an import failure. It can happen, for
+// instance with a member whose signature refers back to the enclosing class,
+// that the type is successfully imported and pointing to the decl being
+// imported, but that the decl import then fails further on.
+// The decl mapping is correctly invalidated, but if the connected type is not
+// invalidated as well, the half-built decl (which unavoidably remains
+// in the 'To' AST) could be accessed through the type during later operations,
+// like structural equivalence checks.
+TEST_P(ErrorHandlingTest, ImportedTypeMappingIsInvalidatedOnFailure) {
+  TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+      class X {
+        void ok(const X &) {} // Succeeds; imports X's own type
+                              // as a side effect, before X's
+                              // own import is known to fail.
+        void bad() { )") + ErroneousStmt + R"(} // Fails to import.
+      };
+      )",
+                                          Lang_CXX03);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+
+  CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX03);
+  // Class X fails to import
+  EXPECT_FALSE(ImportedX);
+
+  ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+  const Type *FromXTy =
+      FromTU->getASTContext().getCanonicalTagType(FromX)->getTypePtr();
+  ASSERT_TRUE(FromXTy);
+  Expected<const Type *> ToTyOrErr = Importer->Import(FromXTy);
+  // And its type should fail to import as well
+  EXPECT_TRUE(ToTyOrErr.errorIsA<clang::ASTImportError>());
+  llvm::consumeError(ToTyOrErr.takeError());
 }
 
 // Check that an error propagates to the dependent AST nodes.

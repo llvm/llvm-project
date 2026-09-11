@@ -698,6 +698,27 @@ TEST(CompletionTest, PrivateMemberDefinition) {
                              snippetSuffix("(int a, int b)"))));
 }
 
+TEST(CompletionTest, DeclParamName) {
+  // This is 1/3 regression tests to make sure signatures
+  // 1) have consistent variable names between header and source file
+  // 2) find variable names in other declarations
+  // See SignatureHelpTest.DeclParamName and IndexActionTest.DeclParamName for
+  // the other tests.
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto FuncFromSource = completions(R"cpp(
+      void sun(int);
+      void sun(int night);
+      void sun(int day);
+      void sun(int);
+      void position() {
+        sun^;
+      }
+      )cpp",
+                                    {}, Opts);
+  EXPECT_THAT(FuncFromSource.Completions, Contains(signature("(int day)")));
+}
+
 TEST(CompletionTest, DefaultArgsWithValues) {
   clangd::CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
@@ -820,7 +841,7 @@ TEST(CompletionTest, Kinds) {
   EXPECT_THAT(
       Results.Completions,
       UnorderedElementsAre(
-          AllOf(named("complete_class"), kind(CompletionItemKind::Class)),
+          AllOf(named("complete_class"), kind(CompletionItemKind::Struct)),
           AllOf(named("complete_function"), kind(CompletionItemKind::Function)),
           AllOf(named("complete_type_alias"),
                 kind(CompletionItemKind::Interface)),
@@ -1676,6 +1697,25 @@ TEST(SignatureHelpTest, Overloads) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, DeclParamName) {
+  // This is 2/3 regression tests to make sure signatures
+  // 1) have consistent variable names between header and source file
+  // 2) find variable names in other declarations
+  // See CompletionTest.DeclParamName and IndexActionTest.DeclParamName for the
+  // other tests.
+  auto FuncFromSource = signatures(R"cpp(
+      void sun(int);
+      void sun(int night);
+      void sun(int day);
+      void sun(int);
+      void position() {
+        sun(^);
+      }
+      )cpp");
+  EXPECT_THAT(FuncFromSource.signatures,
+              UnorderedElementsAre(sig("sun([[int day]]) -> void")));
+}
+
 TEST(SignatureHelpTest, FunctionPointers) {
   llvm::StringLiteral Tests[] = {
       // Variable of function pointer type
@@ -1916,6 +1956,23 @@ TEST(SignatureHelpTest, StalePreamble) {
   EXPECT_THAT(Results.signatures, ElementsAre(sig("foo([[int x]]) -> int")));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, EOFInSkippedFunctionBody) {
+  Annotations Test(R"cpp(
+#ifdef IS_HEADER
+void frameSizeBlocksWarning() {
+  auto fn = []() {
+  };
+  fn();
+}
+#else
+#define IS_HEADER
+#include __FILE__
+#^endif
+)cpp");
+  auto Results = signatures(Test.code(), Test.point());
+  EXPECT_THAT(Results.signatures, IsEmpty());
 }
 
 class IndexRequestCollector : public SymbolIndex {
@@ -2539,6 +2596,45 @@ TEST(CompletionTest, CodeCompletionContext) {
   EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
 }
 
+TEST(CompletionTest, OffsetOfDesignator) {
+  auto Results = completions(R"cpp(
+    struct S { int field; int other; void fieldFn(); };
+    int x = __builtin_offsetof(S, fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+  EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
+
+  Results = completions(R"cpp(
+    struct Inner { int field; void fieldFn(); };
+    struct Outer { Inner inner; };
+    int x = __builtin_offsetof(Outer, inner.fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+
+  Results = completions(R"cpp(
+    struct Inner { int field; void fieldFn(); };
+    struct Outer { Inner inner[2]; };
+    int i;
+    int x = __builtin_offsetof(Outer, inner[i].fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+
+  Results = completions(R"cpp(
+    struct Base { int field; void fieldFn(); };
+    struct Derived : Base {};
+    int x = __builtin_offsetof(Derived, fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+}
+
 TEST(CompletionTest, FixItForArrowToDot) {
   MockFS FS;
   MockCompilationDatabase CDB;
@@ -2900,6 +2996,8 @@ TEST(CompletionTest, ArgumentListsPolicy) {
       template <class T>
       class foo_class{};
       template <class T>
+      struct foo_struct{};
+      template <class T>
       using foo_alias = T**;
       template <class T>
       T foo_var = T{};
@@ -2908,8 +3006,34 @@ TEST(CompletionTest, ArgumentListsPolicy) {
     EXPECT_THAT(
         Results.Completions,
         UnorderedElementsAre(AllOf(named("foo_class"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_struct"), snippetSuffix("<$0>")),
                              AllOf(named("foo_alias"), snippetSuffix("<$0>")),
                              AllOf(named("foo_var"), snippetSuffix("<$0>"))));
+  }
+  {
+    const char *Header = R"cpp(
+      template <class T>
+      class foo_class{};
+      template <class T>
+      struct foo_struct{};
+      template <class T>
+      using foo_alias = T**;
+      template <class T>
+      T foo_var = T{};
+    )cpp";
+    auto Index = TestTU::withHeaderCode(Header).index();
+    Opts.Index = Index.get();
+    auto Results = completions(
+        R"cpp(
+      void f() { foo_^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(named("foo_class"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_struct"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_alias"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_var"), snippetSuffix("<$0>"))));
+    Opts.Index = nullptr;
   }
   {
     auto Results = completions(

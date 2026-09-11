@@ -123,12 +123,12 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    SPIRV_Type:$value,
+    SPIRV_ScalarOrVector:$value,
     SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$localid
   );
 
   let results = (outs
-    SPIRV_Type:$result
+    SPIRV_ScalarOrVector:$result
   );
 
   let assemblyFormat = [{

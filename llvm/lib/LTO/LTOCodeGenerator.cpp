@@ -118,6 +118,8 @@ cl::opt<bool>
 cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
+
+extern cl::opt<std::string> SampleProfileFile;
 } // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -230,7 +232,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
 
 bool LTOCodeGenerator::useAIXSystemAssembler() {
   const auto &Triple = TargetMach->getTargetTriple();
-  return Triple.isOSAIX() && Config.Options.DisableIntegratedAS;
+  return Triple.isOSAIX() && Config.Options.MCOptions.DisableIntegratedAS;
 }
 
 bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
@@ -560,6 +562,7 @@ bool LTOCodeGenerator::optimize() {
   Config.StatsFile = LTOStatsFile;
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
+  Config.SampleProfile = SampleProfileFile;
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,

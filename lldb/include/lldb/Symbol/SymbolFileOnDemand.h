@@ -231,6 +231,10 @@ public:
                                                  load_all_debug_info);
   }
 
+  lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() override {
+    return m_sym_file_impl->GetSeparateDebugInfoFiles();
+  }
+
   lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
                         std::optional<uint64_t> byte_size,
                         SymbolContextScope *context,
@@ -249,10 +253,14 @@ public:
     return m_sym_file_impl->CopyType(other_type);
   }
 
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override {
+    return m_sym_file_impl->GetTypeEnclosingVariableUID(uid);
+  }
+
 private:
   Log *GetLog() const { return ::lldb_private::GetLog(LLDBLog::OnDemand); }
 
-  ConstString GetSymbolFileName() {
+  llvm::StringRef GetSymbolFileName() {
     return GetObjectFile()->GetFileSpec().GetFilename();
   }
 

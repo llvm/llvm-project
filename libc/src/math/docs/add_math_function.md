@@ -11,9 +11,13 @@ detail below.
 To register the function's entry points for supported OSes and architectures,
 together with its specifications:
 
-- Add entry points `libc.src.math.<func>` to the following files:
+- Add entry points `libc.src.math.<func>` to the following files (only add on platforms where its supported):
 ```
   libc/config/linux/<arch>/entrypoints.txt
+  libc/config/baremetal/<arch>/entrypoints.txt
+  libc/config/darwin/<arch>/entrypoints.txt
+  libc/config/freebsd/<arch>/entrypoints.txt
+  libc/config/gpu/<arch>/entrypoints.txt
   libc/config/windows/entrypoints.txt
 ```
 - Add function specs to the file:
@@ -85,13 +89,13 @@ If the function should be available to internal LLVM projects:
 - Floating point utilities and math functions that are also used internally are
 located at:
 ```
-  libc/src/__support/FPUtils
+  libc/src/__support/FPUtil
 ```
 - These are preferred to be included as header-only.
 - To manipulate bits of floating point numbers, use the template class
 `LIBC_NAMESPACE::fputil::FPBits<>` in the header file:
 ```
-  libc/src/__support/FPUtils/FPBits.h
+  libc/src/__support/FPUtil/FPBits.h
 ```
 
 ## Testing
@@ -213,20 +217,20 @@ implementation (which is very often glibc).
 
 - Build and Run a specific unit test:
 ```
-  $ ninja libc.test.src.math.<func>_test.__unit__
-  $ projects/libc/test/src/math/libc.test.src.math.<func>_test.__unit__
+  $ ninja libc.test.src.math.<func>_test
+  $ projects/libc/test/src/math/libc.test.src.math.<func>_test
 ```
 
 - Build and Run shared math test:
 ```
-  $ ninja libc.test.shared.shared_math_test.__unit__
-  $ projects/libc/test/shared/libc.test.shared.shared_math_test.__unit__
+  $ ninja libc.test.shared.shared_math_test
+  $ projects/libc/test/shared/libc.test.shared.shared_math_test
 ```
 
 - Build and Run exhaustive test (might take hours to run):
 ```
-  $ ninja libc.test.src.math.exhaustive.<func>_test.__unit__
-  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test.__unit__
+  $ ninja libc.test.src.math.exhaustive.<func>_test
+  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test
 ```
 
 - Build and Run performance test:

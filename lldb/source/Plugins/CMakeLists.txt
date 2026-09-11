@@ -1,5 +1,6 @@
 add_subdirectory(ABI)
 add_subdirectory(Architecture)
+add_subdirectory(BugReporter)
 add_subdirectory(Disassembler)
 add_subdirectory(DynamicLoader)
 add_subdirectory(ExpressionParser)

@@ -5,8 +5,8 @@
 define i32 @test_heuristic(ptr %b, i32 %e, i1 %0) {
 ; CHECK-LABEL: test_heuristic:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    add a3, a0, a1
 ; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    add a3, a0, a1
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cv.lbu a1, (a3), 1

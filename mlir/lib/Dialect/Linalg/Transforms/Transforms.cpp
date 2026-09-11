@@ -225,14 +225,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
-  // 1. Filter out NYI cases.
   auto packedTensorType =
       cast<RankedTensorType>(packOp->getResultTypes().front());
-  if (llvm::any_of(packOp.getStaticInnerTiles(), ShapedType::isDynamic)) {
-    return rewriter.notifyMatchFailure(
-        packOp,
-        "non-static shape NYI, needs a more powerful tensor.expand_shape op");
-  }
 
   Location loc = packOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
@@ -248,6 +242,15 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   // or inner permutations have been applied.
   SmallVector<int64_t> stripMinedShape(packedTensorType.getShape());
   applyPermutationToVector(stripMinedShape, packedToStripMinedShapePerm);
+
+  // Also compute the mixed (static+dynamic) strip-mined sizes for the
+  // expand_shape output. This is needed to support dynamic inner tile sizes,
+  // since the shapes cannot be inferred automatically when multiple dynamic
+  // dims appear in a single reassociation group during ExpandShapeOp
+  // construction.
+  SmallVector<OpFoldResult> stripMinedMixedSizes =
+      tensor::getMixedSizes(rewriter, loc, packOp.getDest());
+  applyPermutationToVector(stripMinedMixedSizes, packedToStripMinedShapePerm);
 
   // 4. Pad the source of packOp to a shape we can expand into stripMinedShape.
   SmallVector<OpFoldResult> lows(packOp.getSourceRank(),
@@ -331,7 +334,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
   auto reshapeOp = tensor::ExpandShapeOp::create(
       rewriter, loc, expandShapeResultType, padOp.getResult(),
-      packingMetadata.reassociations);
+      packingMetadata.reassociations, stripMinedMixedSizes);
 
   // 6. Transpose stripMinedShape to packedShape.
   SmallVector<int64_t> transpPerm =
@@ -480,6 +483,10 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
   if (packedSizes.size() != linalgOp.getNumLoops()) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "incorrect number of pack sizes");
+  }
+  if (!linalgOp.hasPureTensorSemantics()) {
+    return rewriter.notifyMatchFailure(
+        linalgOp, "expects LinalgOp with pure tensor semantics");
   }
 
   Location loc = linalgOp->getLoc();
@@ -1163,6 +1170,19 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
                    [](int64_t dim) { return dim != 1; })) {
     return rewriter.notifyMatchFailure(
         packOp, "not all outer dimensions of the result are 1s");
+  }
+
+  // When a padding value is set, getPackOpSourceOrPaddedSource only supports
+  // the case where every outer dim (including un-tiled ones) is 1. Bail out
+  // instead of hitting an assertion on a non-unit un-tiled outer dim.
+  // FIXME: Handle this case by decomposing the padded pack instead of bailing
+  // out; a non-unit un-tiled outer dim should be supported here.
+  if (packOp.getPaddingValue() &&
+      llvm::any_of(packOp.getAllOuterDims(),
+                   [](int64_t dim) { return dim != 1; })) {
+    return rewriter.notifyMatchFailure(
+        packOp, "cannot decompose padded pack with a non-unit un-tiled outer "
+                "dimension");
   }
 
   ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();

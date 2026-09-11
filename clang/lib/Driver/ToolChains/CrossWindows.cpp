@@ -282,8 +282,9 @@ AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   }
 }
 
-clang::SanitizerMask CrossWindowsToolChain::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+clang::SanitizerMask CrossWindowsToolChain::getSupportedSanitizers(
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

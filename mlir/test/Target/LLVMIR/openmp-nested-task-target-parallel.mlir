@@ -16,10 +16,10 @@ llvm.func @_QQmain() {
 %1 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
 %2 = llvm.mlir.constant(1 : i64) : i64
 %3 = llvm.alloca %2 x i32 {bindc_name = "c"} : (i64) -> !llvm.ptr
-%4 = llvm.mlir.constant(10 : index) : i64
-%5 = llvm.mlir.constant(0 : index) : i64
-%6 = llvm.mlir.constant(10000 : index) : i64
-%7 = llvm.mlir.constant(1 : index) : i64
+%4 = llvm.mlir.constant(10 : i64) : i64
+%5 = llvm.mlir.constant(0 : i64) : i64
+%6 = llvm.mlir.constant(10000 : i64) : i64
+%7 = llvm.mlir.constant(1 : i64) : i64
 %8 = llvm.mlir.constant(1 : i64) : i64
 %9 = llvm.mlir.addressof @_QFECchunksz : !llvm.ptr
 %10 = llvm.mlir.constant(1 : i64) : i64
@@ -29,25 +29,23 @@ llvm.br ^bb1(%11, %4 : i32, i64)
 %14 = llvm.icmp "sgt" %13, %5 : i64
 llvm.store %12, %3 : i32, !llvm.ptr
 omp.task private(@_QFEc_firstprivate_i32 %3 -> %arg0 : !llvm.ptr) {
-  %19 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
-  %20 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "c"}
-  %21 = omp.map.info var_ptr(%9 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "chunksz"}
-  omp.target map_entries(%19 -> %arg1, %20 -> %arg2, %21 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-    %22 = llvm.mlir.constant(9999 : i32) : i32
-    %23 = llvm.mlir.constant(1 : i32) : i32
+  %19 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("i") -> !llvm.ptr
+  %22 = llvm.mlir.constant(9999 : i32) : i32
+  %23 = llvm.mlir.constant(1 : i32) : i32
+  %24 = llvm.load %arg0 : !llvm.ptr -> i32
+  %25 = llvm.add %24, %22 : i32
+  omp.target kernel_type(spmd) host_eval(%23 -> %arg1, %24 -> %arg2, %25 -> %arg3 : i32, i32, i32) map_entries(%19 -> %arg4 : !llvm.ptr) {
     omp.parallel {
-      %24 = llvm.load %arg2 : !llvm.ptr -> i32
-      %25 = llvm.add %24, %22 : i32
-      omp.wsloop private(@_QFEi_private_i32 %arg1 -> %arg4 : !llvm.ptr) {
-        omp.loop_nest (%arg5) : i32 = (%24) to (%25) inclusive step (%23) {
-          llvm.store %arg5, %arg4 : i32, !llvm.ptr
+      omp.wsloop private(@_QFEi_private_i32 %arg4 -> %arg5 : !llvm.ptr) {
+        omp.loop_nest (%arg6) : i32 = (%arg2) to (%arg3) inclusive step (%arg1) {
+          llvm.store %arg6, %arg5 : i32, !llvm.ptr
           omp.yield
         }
       }
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
   omp.terminator
 }
 llvm.return

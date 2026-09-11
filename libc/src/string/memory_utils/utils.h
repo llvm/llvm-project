@@ -94,7 +94,9 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
 #ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#if defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 1100)
 #pragma GCC diagnostic ignored "-Wstringop-overread"
+#endif // LIBC_COMPILER_IS_GCC && LIBC_COMPILER_GCC_VER >= 1100
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif // !LIBC_COMPILER_IS_MSVC
   for (size_t i = 0; i < Size; ++i)
@@ -209,14 +211,14 @@ LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
 
 // Loads bytes from memory (possibly unaligned) and materializes them as
 // type.
-template <typename T> LIBC_INLINE T load(CPtr ptr) {
+template <typename T> LIBC_INLINE T load_unaligned(CPtr ptr) {
   T out;
   memcpy_inline<sizeof(T)>(&out, ptr);
   return out;
 }
 
 // Stores a value of type T in memory (possibly unaligned).
-template <typename T> LIBC_INLINE void store(Ptr ptr, T value) {
+template <typename T> LIBC_INLINE void store_unaligned(Ptr ptr, T value) {
   memcpy_inline<sizeof(T)>(ptr, &value);
 }
 
@@ -232,7 +234,7 @@ template <typename ValueType, typename T, typename... TS>
 LIBC_INLINE ValueType load_aligned(CPtr src) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   static_assert(Endian::IS_LITTLE || Endian::IS_BIG, "Invalid endianness");
-  const ValueType value = load<T>(assume_aligned<sizeof(T)>(src));
+  const ValueType value = load_unaligned<T>(assume_aligned<sizeof(T)>(src));
 
   if constexpr (sizeof...(TS) > 0) {
     const ValueType next = load_aligned<ValueType, TS...>(src + sizeof(T));
@@ -272,12 +274,12 @@ LIBC_INLINE void store_aligned(ValueType value, Ptr dst) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   constexpr size_t SHIFT = sizeof(T) * 8;
   if constexpr (Endian::IS_LITTLE) {
-    store<T>(assume_aligned<sizeof(T)>(dst), T(value & T(~0)));
+    store_unaligned<T>(assume_aligned<sizeof(T)>(dst), T(value & T(~0)));
     if constexpr (sizeof...(TS) > 0)
       store_aligned<ValueType, TS...>(value >> SHIFT, dst + sizeof(T));
   } else if constexpr (Endian::IS_BIG) {
     constexpr size_t OFFSET = (0 + ... + sizeof(TS));
-    store<T>(assume_aligned<sizeof(T)>(dst + OFFSET), value & ~T(0));
+    store_unaligned<T>(assume_aligned<sizeof(T)>(dst + OFFSET), value & ~T(0));
     if constexpr (sizeof...(TS) > 0)
       store_aligned<ValueType, TS...>(value >> SHIFT, dst);
   } else {

@@ -33,7 +33,6 @@
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -312,7 +311,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     if (!LIS->hasInterval(Reg))
       continue;
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-    if ((RC->MC->getSizeInBits() != 64 || !TRI->isSGPRClass(RC)) &&
+    if ((RC->getSizeInBits() != 64 || !TRI->isSGPRClass(RC)) &&
         (ST.hasGFX90AInsts() || !TRI->isAGPRClass(RC)))
       continue;
 

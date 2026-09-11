@@ -328,7 +328,7 @@ func.func @full_barrier_with_global_conflict(
 attributes {__parallel_region_boundary_for_test} {
   // CHECK: store
   memref.store %val, %global[%idx] : memref<?xf32, #gpu.address_space<global>>
-  // CHECK: gpu.barrier{{$}}
+  // CHECK: gpu.barrier{{ *}}{{$}}
   gpu.barrier
   // CHECK: load
   %0 = memref.load %global[%idx] : memref<?xf32, #gpu.address_space<global>>
@@ -340,6 +340,14 @@ func.func @barrier_fencing_nothing_removed()
 attributes {__parallel_region_boundary_for_test} {
   // CHECK-NOT: gpu.barrier
   gpu.barrier
+  return
+}
+
+// CHECK-LABEL: @non_workgroup_barrier_retained
+func.func @non_workgroup_barrier_retained()
+attributes {__parallel_region_boundary_for_test} {
+  // CHECK: gpu.barrier scope <subgroup>
+  gpu.barrier scope <subgroup>
   return
 }
 

@@ -139,6 +139,7 @@ enum TokKind {
   XInstances,
   XIf,
   XCond,
+  XSwitch,
   XEq,
   XIsA,
   XDag,

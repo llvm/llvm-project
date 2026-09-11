@@ -62,9 +62,11 @@ body:             |
   bb.0.bb0:
     ; CHECK-LABEL: name: main
     ; CHECK: $zmm16 = VPXORDZrr undef $zmm16, undef $zmm16
-    ; CHECK: VMOVAPSZmr $rip, 1, $noreg, @tst_, $noreg, killed renamable $zmm16 :: (store (s256) into %ir.lsr.iv1, align 64)
-    ; CHECK: RET 0
-    renamable $ymm16 = AVX512_256_SET0
+    ; CHECK-NEXT: renamable $ymm16 = KILL $xmm16
+    ; CHECK-NEXT: VMOVAPSZmr $rip, 1, $noreg, @tst_, $noreg, killed renamable $zmm16 :: (store (s256) into %ir.lsr.iv1, align 64)
+    ; CHECK-NEXT: RET 0
+    renamable $xmm16 = AVX512_128_SET0
+    renamable $ymm16 = SUBREG_TO_REG $xmm16, %subreg.sub_xmm
     VMOVAPSZmr $rip, 1, $noreg, @tst_, $noreg, killed renamable $zmm16 :: (store (s256) into %ir.lsr.iv1, align 64)
     RET 0
 

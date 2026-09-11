@@ -13,7 +13,7 @@
 #ifndef LLVM_SANDBOXIR_TYPE_H
 #define LLVM_SANDBOXIR_TYPE_H
 
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
@@ -25,6 +25,7 @@ namespace llvm::sandboxir {
 class Context;
 // Forward declare friend classes for MSVC.
 class ArrayType;
+class ByteType;
 class CallBase;
 class CmpInst;
 class ConstantDataSequential;
@@ -49,6 +50,7 @@ class Type {
 protected:
   llvm::Type *LLVMTy;
   friend class ArrayType;          // For LLVMTy.
+  friend class ByteType;           // For LLVMTy.
   friend class StructType;         // For LLVMTy.
   friend class VectorType;         // For LLVMTy.
   friend class FixedVectorType;    // For LLVMTy.
@@ -169,6 +171,12 @@ public:
   /// True if this is an instance of IntegerType.
   bool isIntegerTy() const { return LLVMTy->isIntegerTy(); }
 
+  /// True if this is an instance of ByteType.
+  bool isByteTy() const { return LLVMTy->isByteTy(); }
+
+  /// Return true if this is a ByteType of the given width.
+  bool isByteTy(unsigned Bitwidth) const { return LLVMTy->isByteTy(Bitwidth); }
+
   /// Return true if this is an IntegerType of the given width.
   bool isIntegerTy(unsigned Bitwidth) const {
     return LLVMTy->isIntegerTy(Bitwidth);
@@ -232,13 +240,7 @@ public:
   /// Return true if it makes sense to take the size of this type. To get the
   /// actual size for a particular target, it is reasonable to use the
   /// DataLayout subsystem to do this.
-  bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const {
-    SmallPtrSet<llvm::Type *, 8> LLVMVisited;
-    LLVMVisited.reserve(Visited->size());
-    for (Type *Ty : *Visited)
-      LLVMVisited.insert(Ty->LLVMTy);
-    return LLVMTy->isSized(&LLVMVisited);
-  }
+  bool isSized() const { return LLVMTy->isSized(); }
 
   /// Return the basic size of this type if it is a primitive type. These are
   /// fixed by LLVM and are not target-dependent.
@@ -278,6 +280,19 @@ public:
   LLVM_ABI static IntegerType *getInt16Ty(Context &Ctx);
   LLVM_ABI static IntegerType *getInt8Ty(Context &Ctx);
   LLVM_ABI static IntegerType *getInt1Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByteNTy(Context &Ctx, unsigned N);
+  LLVM_ABI static ByteType *getByte1Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte8Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte16Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte32Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte64Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte128Ty(Context &Ctx);
+  /// Returns an integer (vector of integer) type with the same size of a byte
+  /// of the given byte (vector of byte) type.
+  LLVM_ABI static Type *getIntFromByteType(Type *Ty);
+  /// Returns a byte (vector of byte) type with the same size of an integer of
+  /// the given integer (vector of integer) type.
+  LLVM_ABI static Type *getByteFromIntType(Type *Ty);
   LLVM_ABI static Type *getDoubleTy(Context &Ctx);
   LLVM_ABI static Type *getFloatTy(Context &Ctx);
   LLVM_ABI static Type *getHalfTy(Context &Ctx);
@@ -476,6 +491,24 @@ public:
   }
   operator llvm::IntegerType &() const {
     return *cast<llvm::IntegerType>(LLVMTy);
+  }
+};
+
+/// Class to represent byte types.
+class ByteType : public Type {
+public:
+  LLVM_ABI static ByteType *get(Context &C, unsigned NumBits);
+
+  /// Get the number of bits in this ByteType
+  unsigned getBitWidth() const {
+    return cast<llvm::ByteType>(LLVMTy)->getBitWidth();
+  }
+
+  /// Get a bit mask for this type.
+  APInt getMask() const { return cast<llvm::ByteType>(LLVMTy)->getMask(); }
+
+  static bool classof(const Type *From) {
+    return isa<llvm::ByteType>(From->LLVMTy);
   }
 };
 

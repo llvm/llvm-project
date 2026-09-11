@@ -23,13 +23,14 @@ class SuperRegionLivenessConsumer : public ExprEngineConsumer {
 
     // The variable must belong to a stack frame,
     // otherwise SymbolReaper would think it's a global.
-    const StackFrame *SF = Eng.getAnalysisDeclContextManager().getStackFrame(D);
+    const StackFrame *SF =
+        Eng.getAnalysisDeclContextManager().getTopStackFrame(D);
 
     // Create regions for 's' and 's.x'.
     const VarRegion *VR = Eng.getRegionManager().getVarRegion(VD, SF);
     const FieldRegion *FR = Eng.getRegionManager().getFieldRegion(FD, VR);
 
-    // Pass a null location context to the SymbolReaper so that
+    // Pass a null stack frame to the SymbolReaper so that
     // it was thinking that the variable is dead.
     SymbolReaper SymReaper((StackFrame *)nullptr, (Stmt *)nullptr,
                            Eng.getSymbolManager(), Eng.getStoreManager());

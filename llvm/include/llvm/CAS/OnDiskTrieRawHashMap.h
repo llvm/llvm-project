@@ -53,8 +53,8 @@ class OnDiskCASLogger;
 ///   are only appropriate for local storage.
 class OnDiskTrieRawHashMap {
 public:
-  LLVM_DUMP_METHOD void dump() const;
-  void
+  LLVM_DUMP_METHOD LLVM_ABI void dump() const;
+  LLVM_ABI void
   print(raw_ostream &OS,
         function_ref<void(ArrayRef<char>)> PrintRecordData = nullptr) const;
 
@@ -86,7 +86,7 @@ public:
   /// Validate the trie data structure.
   ///
   /// Callback receives the file offset to the data entry and the data stored.
-  LLVM_ABI_FOR_TEST Error validate(
+  LLVM_ABI Error validate(
       function_ref<Error(FileOffset, ConstValueProxy)> RecordVerifier) const;
 
   /// Check the valid range of file offset for OnDiskTrieRawHashMap.
@@ -164,10 +164,10 @@ public:
   ///
   /// \returns pointer to the value if exists, otherwise returns a non-value
   /// pointer that evaluates to `false` when convert to boolean.
-  LLVM_ABI_FOR_TEST ConstOnDiskPtr find(ArrayRef<uint8_t> Hash) const;
+  LLVM_ABI ConstOnDiskPtr find(ArrayRef<uint8_t> Hash) const;
 
   /// Helper function to recover a pointer into the trie from file offset.
-  LLVM_ABI_FOR_TEST Expected<ConstOnDiskPtr>
+  LLVM_ABI Expected<ConstOnDiskPtr>
   recoverFromFileOffset(FileOffset Offset) const;
 
   using LazyInsertOnConstructCB =
@@ -190,7 +190,7 @@ public:
   /// The in-memory \a TrieRawHashMap uses LazyAtomicPointer to synchronize
   /// simultaneous writes, but that seems dangerous to use in a memory-mapped
   /// file in case a process crashes in the busy state.
-  LLVM_ABI_FOR_TEST Expected<OnDiskPtr>
+  LLVM_ABI Expected<OnDiskPtr>
   insertLazy(ArrayRef<uint8_t> Hash,
              LazyInsertOnConstructCB OnConstruct = nullptr,
              LazyInsertOnLeakCB OnLeak = nullptr);
@@ -203,8 +203,8 @@ public:
     });
   }
 
-  LLVM_ABI_FOR_TEST size_t size() const;
-  LLVM_ABI_FOR_TEST size_t capacity() const;
+  LLVM_ABI size_t size() const;
+  LLVM_ABI size_t capacity() const;
 
   /// Gets or creates a file at \p Path with a hash-mapped trie named \p
   /// TrieName. The hash size is \p NumHashBits (in bits) and the records store
@@ -218,7 +218,7 @@ public:
   /// configure the trie, if it doesn't already exist.
   ///
   /// \pre NumHashBits is a multiple of 8 (byte-aligned).
-  LLVM_ABI_FOR_TEST static Expected<OnDiskTrieRawHashMap>
+  LLVM_ABI static Expected<OnDiskTrieRawHashMap>
   create(const Twine &Path, const Twine &TrieName, size_t NumHashBits,
          uint64_t DataSize, uint64_t MaxFileSize,
          std::optional<uint64_t> NewFileInitialSize,
@@ -226,9 +226,9 @@ public:
          std::optional<size_t> NewTableNumRootBits = std::nullopt,
          std::optional<size_t> NewTableNumSubtrieBits = std::nullopt);
 
-  LLVM_ABI_FOR_TEST OnDiskTrieRawHashMap(OnDiskTrieRawHashMap &&RHS);
-  LLVM_ABI_FOR_TEST OnDiskTrieRawHashMap &operator=(OnDiskTrieRawHashMap &&RHS);
-  LLVM_ABI_FOR_TEST ~OnDiskTrieRawHashMap();
+  LLVM_ABI OnDiskTrieRawHashMap(OnDiskTrieRawHashMap &&RHS);
+  LLVM_ABI OnDiskTrieRawHashMap &operator=(OnDiskTrieRawHashMap &&RHS);
+  LLVM_ABI ~OnDiskTrieRawHashMap();
 
 private:
   struct ImplType;

@@ -132,6 +132,8 @@ public:
   void DumpClangAST(Stream &s, llvm::StringRef filter,
                     bool show_color) override;
 
+  lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() override;
+
   /// List separate oso files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
                             bool load_all_debug_info = false) override;
@@ -144,6 +146,8 @@ public:
 
   void
   GetCompileOptions(std::unordered_map<lldb::CompUnitSP, Args> &args) override;
+
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override;
 
   llvm::Expected<SymbolContext>
   ResolveFunctionCallLabel(FunctionCallLabel &label) override;

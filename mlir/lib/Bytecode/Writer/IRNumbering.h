@@ -14,6 +14,7 @@
 #ifndef LIB_MLIR_BYTECODE_WRITER_IRNUMBERING_H
 #define LIB_MLIR_BYTECODE_WRITER_IRNUMBERING_H
 
+#include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
@@ -165,6 +166,7 @@ public:
     assert(attrs.count(attr) && "attribute not numbered");
     return attrs[attr]->number;
   }
+  unsigned getNumber(Location loc);
   unsigned getNumber(Block *block) {
     assert(blockIDs.count(block) && "block not numbered");
     return blockIDs[block];
@@ -221,6 +223,7 @@ private:
 
   /// Number the given IR unit for bytecode emission.
   void number(Attribute attr);
+  void number(Location loc);
   void number(Block &block);
   DialectNumbering &numberDialect(Dialect *dialect);
   DialectNumbering &numberDialect(StringRef dialect);

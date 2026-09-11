@@ -52,6 +52,9 @@ LIBRARY_DESCRIPTIONS = {
     "linux": "Linux",
     "uefi": "UEFI",
     "svid": "SVID",
+    "stdc_ext": "Standard C Extension",
+    "llvm_libc_ext": "LLVM libc Extension",
+    "llvm_libc_stdfix_ext": "LLVM libc stdfix Extension",
 }
 
 HEADER_TEMPLATE = """\
@@ -113,6 +116,7 @@ class HeaderFile:
         self.standards = []
         self.merge_yaml_files = []
         self.license_text = []
+        self.public_includes = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
@@ -136,6 +140,9 @@ class HeaderFile:
         self.objects = sorted(set(self.objects) | set(other.objects))
         self.functions = sorted(set(self.functions) | set(other.functions))
         self.extra_standards |= other.extra_standards
+        self.public_includes = sorted(
+            set(self.public_includes) | set(other.public_includes)
+        )
         if self.license_text:
             assert not other.license_text, "only one `license_text` allowed"
         else:
@@ -156,15 +163,32 @@ class HeaderFile:
         )
 
     def all_standards(self):
-        # FIXME: Only functions have the "standard" field, but all the entity
-        # types should have one too.
-        return set(self.standards).union(
-            *(filter(None, (f.standards for f in self.functions)))
-        )
+        standards = set(self.standards)
+        for collection in [
+            self.macros,
+            self.types,
+            self.enumerations,
+            self.objects,
+            self.functions,
+        ]:
+            for item in collection:
+                if item.standards:
+                    standards.update(item.standards)
+        descriptions = LIBRARY_DESCRIPTIONS | self.extra_standards
+        for standard in standards:
+            if standard not in descriptions:
+                # Provide a helpful error message with acceptable values.
+                expected = ", ".join(sorted(descriptions.keys()))
+                raise ValueError(
+                    f"Standard '{standard}' is not one of the canonical "
+                    f"identifiers: {expected}"
+                )
+        return standards
 
     def includes(self):
         return (
-            {
+            {f"<{inc}>" for inc in self.public_includes}
+            | {
                 PurePosixPath("llvm-libc-macros") / macro.header
                 for macro in self.macros
                 if macro.header is not None
@@ -190,6 +214,8 @@ class HeaderFile:
         return "_LLVM_LIBC_" + "_".join(words)
 
     def library_description(self):
+        # This also validates all standards.
+        standards = self.all_standards()
         descriptions = LIBRARY_DESCRIPTIONS | self.extra_standards
         # If the header itself is in standard C, just call it that.
         if "stdc" in self.standards:
@@ -198,7 +224,6 @@ class HeaderFile:
         if "posix" in self.standards:
             return descriptions["posix"]
         # Otherwise, consider the standards for each symbol as well.
-        standards = self.all_standards()
         # Otherwise, it's described by all those that apply, but ignoring
         # "stdc" and "posix" since this is not a "stdc" or "posix" header.
         return " / ".join(
@@ -339,6 +364,9 @@ class HeaderFile:
             "standards": self.standards,
             "includes": sorted(str(file) for file in {COMMON_HEADER} | self.includes()),
         }
+
+    def validate(self):
+        self.all_standards()
 
     def emit_guard(self, content, current_guard, new_guard):
         if current_guard != new_guard:

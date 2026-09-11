@@ -31,16 +31,16 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
   RegInfos.resize(TRI.getNumRegs());
 
   BitVector BadRC(TRI.getNumRegs());
-  for (const TargetRegisterClass *RC : TRI.regclasses()) {
-    for (MCPhysReg R : *RC) {
+  for (const TargetRegisterClass &RC : TRI.regclasses()) {
+    for (MCPhysReg R : RC) {
       RegInfo &RI = RegInfos[R];
       if (RI.RegClass != nullptr && !BadRC[R]) {
-        if (RC->LaneMask != RI.RegClass->LaneMask) {
+        if (RC.LaneMask != RI.RegClass->LaneMask) {
           BadRC.set(R);
           RI.RegClass = nullptr;
         }
       } else
-        RI.RegClass = RC;
+        RI.RegClass = &RC;
     }
   }
 

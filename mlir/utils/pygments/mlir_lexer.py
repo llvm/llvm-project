@@ -42,6 +42,7 @@ class MlirLexer(RegexLexer):
 
     tokens = {
         "root": [
+            (r"\s+", Text),
             # Comments
             (r"//.*?$", Comment.Single),
             # operation name with assignment: %... = op.name

@@ -96,7 +96,8 @@ Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -branch-to-branch
 Enable the branch-to-branch optimizations: a branch whose target is
 another branch instruction is rewritten to point to the latter branch
-target (AArch64 and X86_64 only). Enabled by default at
+target (AArch64 and X86_64 only), and CFI jump table entries are replaced
+with the function body where possible (X86_64 only). Enabled by default at
 .Fl O2 Ns .
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
@@ -581,7 +582,10 @@ version.txt containing the output of ld.lld --version.
 The archive when
 unpacked can be used to re-run the linker with the same options and input files.
 .It Fl -retain-symbols-file Ns = Ns Ar file
-Retain only the symbols listed in the file.
+Keep only the symbols listed in
+.Ar file
+in the static symbol table, along with symbols referenced by emitted relocations.
+This does not affect the dynamic symbol table.
 .It Fl -rpath Ns = Ns Ar value , Fl R Ar value
 Add a
 .Dv DT_RUNPATH

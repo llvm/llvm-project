@@ -35,6 +35,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <atomic>
 #include <cassert>
 
 namespace llvm {
@@ -483,8 +484,7 @@ public:
   /// \p Factor elements.
   LLT multiplyElements(int Factor) const {
     if (isVector()) {
-      return scalarOrVector(getElementCount().multiplyCoefficientBy(Factor),
-                            getElementType());
+      return scalarOrVector(getElementCount() * Factor, getElementType());
     }
 
     return fixed_vector(Factor, *this);
@@ -704,11 +704,20 @@ public:
     return ((uint64_t)RawData) | ((uint64_t)Info) << 60;
   }
 
-  static bool getUseExtended() { return ExtendedLLT; }
-  static void setUseExtended(bool Enable) { ExtendedLLT = Enable; }
+  static bool getUseExtended() {
+    return ExtendedLLT.load(std::memory_order_relaxed);
+  }
+  static void setUseExtended(bool Enable) {
+    ExtendedLLT.store(Enable, std::memory_order_relaxed);
+  }
 
 private:
-  static bool ExtendedLLT;
+  // Enabled during target construction, which may run concurrently. Relaxed
+  // ordering suffices because the flag publishes no other state.
+  //
+  // FIXME: Scope this per target rather than globally:
+  // https://github.com/llvm/llvm-project/issues/219517.
+  LLVM_ABI static std::atomic<bool> ExtendedLLT;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
@@ -717,16 +726,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
 }
 
 template <> struct DenseMapInfo<LLT> {
-  static inline LLT getEmptyKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::POINTER;
-    return Invalid;
-  }
-  static inline LLT getTombstoneKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::VECTOR_ANY;
-    return Invalid;
-  }
   static inline unsigned getHashValue(const LLT &Ty) {
     uint64_t Val = Ty.getUniqueRAWLLTData();
     return DenseMapInfo<uint64_t>::getHashValue(Val);

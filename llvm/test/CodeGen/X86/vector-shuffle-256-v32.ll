@@ -3901,9 +3901,9 @@ define <32 x i8> @shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz_zz_60_zz_zz_zz_61_zz_zz_zz_62_zz_zz_zz_63_zz_zz_zz:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [56,1,2,3,57,5,6,7,58,9,10,11,59,13,14,15,60,17,18,19,61,21,22,23,62,25,26,27,63,29,30,31]
-; AVX512VLVBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VLVBMI-NEXT:    vpermt2b %ymm0, %ymm2, %ymm1
+; AVX512VLVBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} ymm1 = [56,1,2,3,57,5,6,7,58,9,10,11,59,13,14,15,60,17,18,19,61,21,22,23,62,25,26,27,63,29,30,31]
+; AVX512VLVBMI-NEXT:    vpermi2b %ymm0, %ymm2, %ymm1
 ; AVX512VLVBMI-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -3949,10 +3949,10 @@ define <32 x i8> @shuffle_v32i8_01_09_00_03_11_02_05_13_04_07_15_06_17_25_16_19_
 ;
 ; AVX512VLBW-LABEL: shuffle_v32i8_01_09_00_03_11_02_05_13_04_07_15_06_17_25_16_19_27_18_21_29_20_23_31_22_zz_zz_zz_zz_zz_zz_zz_zz:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[1,9,0,3,11,2,5,13,4,7,15,6,u,u,u,u,17,25,16,19,27,18,21,29,20,23,31,22,u,u,u,u]
-; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VLBW-NEXT:    vpshufb {{.*#+}} ymm2 = ymm0[1,9,0,3,11,2,5,13,4,7,15,6,u,u,u,u,17,25,16,19,27,18,21,29,20,23,31,22,u,u,u,u]
 ; AVX512VLBW-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [0,1,2,4,5,6,14,15]
-; AVX512VLBW-NEXT:    vpermi2d %ymm2, %ymm1, %ymm0
+; AVX512VLBW-NEXT:    vpermi2d %ymm1, %ymm2, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_01_09_00_03_11_02_05_13_04_07_15_06_17_25_16_19_27_18_21_29_20_23_31_22_zz_zz_zz_zz_zz_zz_zz_zz:
@@ -5120,7 +5120,7 @@ define <64 x i8> @PR103564(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
 ; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm1[0,1],ymm2[0,1]
+; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm0
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm1[2,3],ymm2[2,3]
 ; AVX2-NEXT:    retq
 ;
@@ -5162,7 +5162,7 @@ define <64 x i8> @PR103564(<32 x i8> %a0, <32 x i8> %a1) {
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
 ; XOPAVX2-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
-; XOPAVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm1[0,1],ymm2[0,1]
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm0
 ; XOPAVX2-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm1[2,3],ymm2[2,3]
 ; XOPAVX2-NEXT:    retq
   %r = shufflevector <32 x i8> %a0, <32 x i8> %a1, <64 x i32> <i32 0, i32 32, i32 1, i32 33, i32 2, i32 34, i32 3, i32 35, i32 4, i32 36, i32 5, i32 37, i32 6, i32 38, i32 7, i32 39, i32 8, i32 40, i32 9, i32 41, i32 10, i32 42, i32 11, i32 43, i32 12, i32 44, i32 13, i32 45, i32 14, i32 46, i32 15, i32 47, i32 16, i32 48, i32 17, i32 49, i32 18, i32 50, i32 19, i32 51, i32 20, i32 52, i32 21, i32 53, i32 22, i32 54, i32 23, i32 55, i32 24, i32 56, i32 25, i32 57, i32 26, i32 58, i32 27, i32 59, i32 28, i32 60, i32 29, i32 61, i32 30, i32 62, i32 31, i32 63>

@@ -147,8 +147,9 @@ define i32 @bswap_src_zext_i8_to_i32(i8 %x) {
 define i64 @bswap_src_zext_i8_to_i64(i8 %x) {
 ; RV32ZB-LABEL: bswap_src_zext_i8_to_i64:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    slli a1, a0, 24
+; RV32ZB-NEXT:    mv a1, a0
 ; RV32ZB-NEXT:    li a0, 0
+; RV32ZB-NEXT:    slli a1, a1, 24
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_zext_i8_to_i64:
@@ -163,9 +164,10 @@ define i64 @bswap_src_zext_i8_to_i64(i8 %x) {
 define i64 @bswap_src_zext_i16_to_i64(i16 %x) {
 ; RV32ZB-LABEL: bswap_src_zext_i16_to_i64:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    zext.h a0, a0
-; RV32ZB-NEXT:    rev8 a1, a0
+; RV32ZB-NEXT:    mv a1, a0
 ; RV32ZB-NEXT:    li a0, 0
+; RV32ZB-NEXT:    zext.h a1, a1
+; RV32ZB-NEXT:    rev8 a1, a1
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_zext_i16_to_i64:

@@ -12,6 +12,26 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
+# Fortran sources for builtin .mod files
+set(module_sources
+  __fortran_builtins.f90
+  __cuda_builtins.f90
+  __fortran_ieee_exceptions.f90
+  __fortran_type_info.f90
+  flang_debug.f90
+  iso_fortran_env.f90
+  iso_fortran_env_impl.f90
+  ieee_arithmetic.f90
+  ieee_exceptions.f90
+  ieee_features.f90
+  iso_c_binding.f90
+
+  __cuda_device.f90
+  cooperative_groups.f90
+  cuda_runtime_api.f90
+  cudadevice.f90
+)
+
 # List of files that are buildable for all devices.
 set(supported_sources
   ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
@@ -29,15 +49,22 @@ set(supported_sources
   derived.cpp
   descriptor-io.cpp
   descriptor.cpp
-  dot-product.cpp
+  dot-product-integer.cpp
+  dot-product-real.cpp
+  dot-product-complex.cpp
   edit-input.cpp
   edit-output.cpp
   environment.cpp
   exceptions.cpp
   external-unit.cpp
-  extrema.cpp
+  extrema-maxloc.cpp
+  extrema-minloc.cpp
+  extrema-maxloc-dim.cpp
+  extrema-minloc-dim.cpp
+  extrema-value.cpp
   file.cpp
-  findloc.cpp
+  findloc-total.cpp
+  findloc-dim.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
@@ -46,8 +73,18 @@ set(supported_sources
   io-error.cpp
   io-stmt.cpp
   iostat.cpp
-  matmul-transpose.cpp
-  matmul.cpp
+  matmul-transpose-integer.cpp
+  matmul-transpose-real.cpp
+  matmul-transpose-complex.cpp
+  matmul-transpose-extypes-int16.cpp
+  matmul-transpose-extypes-real10.cpp
+  matmul-transpose-extypes-real16.cpp
+  matmul-integer.cpp
+  matmul-real.cpp
+  matmul-complex.cpp
+  matmul-extypes-int16.cpp
+  matmul-extypes-real10.cpp
+  matmul-extypes-real16.cpp
   memory.cpp
   misc-intrinsic.cpp
   namelist.cpp
@@ -75,7 +112,7 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
-  ${FLANG_SOURCE_DIR}/module/iso_fortran_env_impl.f90
+  iso_fortran_env_impl.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
@@ -91,10 +128,8 @@ set(host_sources
   time-intrinsic.cpp
   trampoline.cpp
   unit-map.cpp
+  io-api-server.cpp
 )
-if (TARGET llvm-libc-common-utilities)
-  list(APPEND host_sources io-api-server.cpp)
-endif()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -112,17 +147,34 @@ set(gpu_sources
   derived-api.cpp
   derived.cpp
   descriptor.cpp
-  dot-product.cpp
+  dot-product-integer.cpp
+  dot-product-real.cpp
+  dot-product-complex.cpp
   edit-output.cpp
-  extrema.cpp
+  extrema-maxloc.cpp
+  extrema-minloc.cpp
+  extrema-maxloc-dim.cpp
+  extrema-minloc-dim.cpp
+  extrema-value.cpp
   environment.cpp
-  findloc.cpp
+  findloc-total.cpp
+  findloc-dim.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
   iostat.cpp
-  matmul-transpose.cpp
-  matmul.cpp
+  matmul-transpose-integer.cpp
+  matmul-transpose-real.cpp
+  matmul-transpose-complex.cpp
+  matmul-transpose-extypes-int16.cpp
+  matmul-transpose-extypes-real10.cpp
+  matmul-transpose-extypes-real16.cpp
+  matmul-integer.cpp
+  matmul-real.cpp
+  matmul-complex.cpp
+  matmul-extypes-int16.cpp
+  matmul-extypes-real10.cpp
+  matmul-extypes-real16.cpp
   memory.cpp
   misc-intrinsic.cpp
   non-tbp-dio.cpp
@@ -158,6 +210,23 @@ file(GLOB_RECURSE private_headers
   "${FLANG_SOURCE_DIR}/lib/Common/*.h"
   )
 
+if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
+  list(APPEND module_sources
+    __ppc_types.f90
+    __ppc_intrinsics.f90
+    mma.f90
+  )
+endif ()
+
+# Compile as CUDA-Fortran, not directly supported by CMake
+set_property(SOURCE
+    __cuda_device.f90
+    cooperative_groups.f90
+    cuda_runtime_api.f90
+    cudadevice.f90
+  APPEND PROPERTY
+    COMPILE_OPTIONS --offload-host-only -xcuda
+)
 
 # Import changes from flang_rt.quadmath
 set(f128_sources "")
@@ -188,6 +257,63 @@ if (TARGET FortranFloat128MathILib)
   endif ()
 endif ()
 
+
+# When a target depends on an object library, CMake seems to try to only build
+# the object files that the target actual needs. Before having analyzed the module
+# dependencies, CMake assumes there are no module-dependencies.
+# To ensure that the module files are built, insert a custom target that is
+# opaque to CMake so the library has to be built regardless.
+# Dependees on module files must add a target-level dependency on the barrier,
+# and file-level dependencies on source files via target_link_libraries
+# on the OBJECT libray. The target-level dependency ensures that the module
+# files are built when they do not exist yet, the file-level dependency ensures
+# that dependees are rebuilt when the module file changes.
+function (add_module_barrier barriername objlib)
+  add_custom_target(${barriername})
+  add_dependencies(${barriername} ${objlib})
+endfunction ()
+
+# Build module files if requested.
+# The object files written by Flang for these are unused. In the future parts
+# of flang-rt may itself be implemented in Fortran in which case these Fortran
+# sources need to be added to ${sources} to be included in
+# libflang_rt.runtime{.a/.so}. If they also provide an importable .mod, add them
+# to flang_module_target(... PUBLIC).
+if (FLANG_RT_FORTRAN_MODULES)
+  add_flangrt_library(flang-rt-mod OBJECT
+    ${module_sources}
+  )
+  flang_module_target(flang-rt-mod PUBLIC)
+  add_module_barrier(flang-rt-mod.barrier flang-rt-mod)
+
+  if (RUNTIMES_FORTRAN_MODULES)
+    set(_mod_install_dest "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
+    cmake_path(NORMAL_PATH _mod_install_dest)
+    install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
+      DESTINATION "${_mod_install_dest}"
+      COMPONENT flang-rt-mod
+      EXCLUDE_FROM_ALL
+    )
+
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+      add_custom_target(install-flang-rt-mod
+        DEPENDS flang-rt-mod
+        COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                --component flang-rt-mod)
+      add_custom_target(install-flang-rt-mod-stripped
+        DEPENDS flang-rt-mod
+        COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                --component flang-rt-mod --strip)
+    endif ()
+  endif ()
+endif ()
+
+
+# Skip building libraries if not requested
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  return ()
+endif ()
+
 if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
@@ -205,7 +331,7 @@ if (NOT WIN32)
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
 
-  enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
+  enable_cuda_compilation(flang_rt.runtime "${sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
   if (TARGET flang_rt.runtime.default)

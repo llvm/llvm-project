@@ -96,6 +96,7 @@
 // CHECK-NEXT:     svinval              1.0       'Svinval' (Fine-Grained Address-Translation Cache Invalidation)
 // CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
+// CHECK-NEXT:     xsmtvdotii           1.0       'XSMTVDotII' (SpacemiT Vector Extension for Matrix 2.0)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
 // CHECK-EMPTY:

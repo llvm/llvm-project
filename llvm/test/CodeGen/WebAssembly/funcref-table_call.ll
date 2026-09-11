@@ -1,12 +1,13 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
 
-%funcref = type ptr addrspace(20) ;; addrspace 20 is nonintegral
+%funcref = type target("wasm.funcref")
 
 @funcref_table = local_unnamed_addr addrspace(1) global [0 x %funcref] undef
 
 ;  CHECK: .tabletype  __funcref_call_table, funcref, 1
 
 declare %funcref @llvm.wasm.table.get.funcref(ptr addrspace(1), i32) nounwind
+declare ptr @llvm.wasm.funcref.to_ptr(%funcref) nounwind
 
 define void @call_funcref_from_table(i32 %i) {
 ; CHECK-LABEL: call_funcref_from_table:
@@ -22,7 +23,8 @@ define void @call_funcref_from_table(i32 %i) {
 ; CHECK-NEXT: table.set       __funcref_call_table
 ; CHECK-NEXT: end_function
   %ref = call %funcref @llvm.wasm.table.get.funcref(ptr addrspace(1) @funcref_table, i32 %i)
-  call addrspace(20) void %ref()
+  %refptr = call ptr @llvm.wasm.funcref.to_ptr(%funcref %ref)
+  call void %refptr()
   ret void
 }
 

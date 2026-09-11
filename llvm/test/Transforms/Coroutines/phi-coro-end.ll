@@ -32,7 +32,6 @@ entry:
 ;CHECK: ret i32 0
 }
 
-declare ptr @llvm.coro.alloc()
 declare i32 @llvm.coro.size.i32()
 declare ptr @llvm.coro.free(token, ptr)
 declare i8  @llvm.coro.suspend(token, i1)

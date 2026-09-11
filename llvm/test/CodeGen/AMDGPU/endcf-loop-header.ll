@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu6.00 | FileCheck %s
 
 ; This tests that the llvm.SI.end.cf intrinsic is not inserted into the
 ; loop block.  This intrinsic will be lowered to s_or_b64 by the code

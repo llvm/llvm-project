@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports _BitInt wider than 128 bits.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -356,6 +358,51 @@ int test_builtin_popcount(unsigned x) {
 // OGCG-LABEL: _Z21test_builtin_popcountj
 // OGCG:         %{{.+}} = call i32 @llvm.ctpop.i32(i32 %{{.+}})
 
+int test_builtin_popcount_bitint() {
+  _BitInt(22) a;
+  _BitInt(64) b;
+  _BitInt(127) c;
+  _BitInt(128) d;
+
+  return __builtin_popcount(a) + __builtin_popcount(b) +
+         __builtin_popcount(c) + __builtin_popcount(d);
+}
+
+// CIR-LABEL: _Z28test_builtin_popcount_bitintv
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !cir.int<s, 22, bitint> -> !u32i
+// CIR: cir.popcount %[[CAST]] : !u32i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !s64i_bitint -> !u32i
+// CIR: cir.popcount %[[CAST]] : !u32i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !cir.int<s, 127, bitint> -> !u32i
+// CIR: cir.popcount %[[CAST]] : !u32i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !s128i_bitint -> !u32i
+// CIR: cir.popcount %[[CAST]] : !u32i
+
+// LLVM-LABEL: _Z28test_builtin_popcount_bitintv
+// LLVM: %[[TRUNC:.*]] = trunc i32 %{{.*}} to i22
+// LLVM: %[[CAST:.*]] = sext i22 %[[TRUNC]] to i32
+// LLVM: call i32 @llvm.ctpop.i32(i32 %[[CAST]])
+// LLVM: %[[CAST:.*]] = trunc i64 %{{.*}} to i32
+// LLVM: call i32 @llvm.ctpop.i32(i32 %[[CAST]])
+// LLVM: %[[TRUNC:.*]] = trunc i128 %{{.*}} to i127
+// LLVM: %[[CAST:.*]] = trunc i127 %[[TRUNC]] to i32
+// LLVM: call i32 @llvm.ctpop.i32(i32 %[[CAST]])
+// LLVM: %[[CAST:.*]] = trunc i128 %{{.*}} to i32
+// LLVM: call i32 @llvm.ctpop.i32(i32 %[[CAST]])
+
+// OGCG-LABEL: _Z28test_builtin_popcount_bitintv
+// OGCG: %[[TRUNC:.*]] = trunc i32 %{{.*}} to i22
+// OGCG: %[[CAST:.*]] = sext i22 %[[TRUNC]] to i32
+// OGCG: call i32 @llvm.ctpop.i32(i32 %[[CAST]])
+// OGCG: %[[CAST:.*]] = trunc i64 %{{.*}} to i32
+// OGCG: call i32 @llvm.ctpop.i32(i32 %[[CAST]])
+// OGCG: %[[TRUNC:.*]] = trunc i128 %{{.*}} to i127
+// OGCG: %[[CAST:.*]] = trunc i127 %[[TRUNC]] to i32
+// OGCG: call i32 @llvm.ctpop.i32(i32 %[[CAST]])
+// OGCG: %[[CAST:.*]] = trunc i128 %{{.*}} to i32
+// OGCG: call i32 @llvm.ctpop.i32(i32 %[[CAST]])
+
+
 int test_builtin_popcountl(unsigned long x) {
   return __builtin_popcountl(x);
 }
@@ -369,6 +416,48 @@ int test_builtin_popcountl(unsigned long x) {
 
 // OGCG-LABEL: _Z22test_builtin_popcountlm
 // OGCG:         %{{.+}} = call i64 @llvm.ctpop.i64(i64 %{{.+}})
+
+int test_builtin_popcountl_bitint() {
+  _BitInt(22) a;
+  _BitInt(64) b;
+  _BitInt(127) c;
+  _BitInt(128) d;
+
+  return __builtin_popcountl(a) + __builtin_popcountl(b) +
+         __builtin_popcountl(c) + __builtin_popcountl(d);
+}
+
+// CIR-LABEL: _Z29test_builtin_popcountl_bitintv
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !cir.int<s, 22, bitint> -> !u64i
+// CIR: cir.popcount %[[CAST]] : !u64i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !s64i_bitint -> !u64i
+// CIR: cir.popcount %[[CAST]] : !u64i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !cir.int<s, 127, bitint> -> !u64i
+// CIR: cir.popcount %[[CAST]] : !u64i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !s128i_bitint -> !u64i
+// CIR: cir.popcount %[[CAST]] : !u64i
+
+// LLVM-LABEL: _Z29test_builtin_popcountl_bitintv
+// LLVM: %[[TRUNC:.*]] = trunc i32 %{{.*}} to i22
+// LLVM: %[[CAST:.*]] = sext i22 %[[TRUNC]] to i64
+// LLVM: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+// LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// LLVM: %[[TRUNC:.*]] = trunc i128 %{{.*}} to i127
+// LLVM: %[[CAST:.*]] = trunc i127 %[[TRUNC]] to i64
+// LLVM: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+// LLVM: %[[CAST:.*]] = trunc i128 %{{.*}} to i64
+// LLVM: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+
+// OGCG-LABEL: _Z29test_builtin_popcountl_bitintv
+// OGCG: %[[TRUNC:.*]] = trunc i32 %{{.*}} to i22
+// OGCG: %[[CAST:.*]] = sext i22 %[[TRUNC]] to i64
+// OGCG: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+// OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// OGCG: %[[TRUNC:.*]] = trunc i128 %{{.*}} to i127
+// OGCG: %[[CAST:.*]] = trunc i127 %[[TRUNC]] to i64
+// OGCG: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+// OGCG: %[[CAST:.*]] = trunc i128 %{{.*}} to i64
+// OGCG: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
 
 int test_builtin_popcountll(unsigned long long x) {
   return __builtin_popcountll(x);
@@ -384,6 +473,48 @@ int test_builtin_popcountll(unsigned long long x) {
 // OGCG-LABEL: _Z23test_builtin_popcountlly
 // OGCG:         %{{.+}} = call i64 @llvm.ctpop.i64(i64 %{{.+}})
 
+int test_builtin_popcountll_bitint() {
+  _BitInt(22) a;
+  _BitInt(64) b;
+  _BitInt(127) c;
+  _BitInt(128) d;
+
+  return __builtin_popcountll(a) + __builtin_popcountll(b) +
+         __builtin_popcountll(c) + __builtin_popcountll(d);
+}
+
+// CIR-LABEL: _Z30test_builtin_popcountll_bitintv
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !cir.int<s, 22, bitint> -> !u64i
+// CIR: cir.popcount %[[CAST]] : !u64i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !s64i_bitint -> !u64i
+// CIR: cir.popcount %[[CAST]] : !u64i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !cir.int<s, 127, bitint> -> !u64i
+// CIR: cir.popcount %[[CAST]] : !u64i
+// CIR: %[[CAST:.*]] = cir.cast integral %{{.*}} : !s128i_bitint -> !u64i
+// CIR: cir.popcount %[[CAST]] : !u64i
+
+// LLVM-LABEL: _Z30test_builtin_popcountll_bitintv
+// LLVM: %[[TRUNC:.*]] = trunc i32 %{{.*}} to i22
+// LLVM: %[[CAST:.*]] = sext i22 %[[TRUNC]] to i64
+// LLVM: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+// LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// LLVM: %[[TRUNC:.*]] = trunc i128 %{{.*}} to i127
+// LLVM: %[[CAST:.*]] = trunc i127 %[[TRUNC]] to i64
+// LLVM: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+// LLVM: %[[CAST:.*]] = trunc i128 %{{.*}} to i64
+// LLVM: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+
+// OGCG-LABEL: _Z30test_builtin_popcountll_bitintv
+// OGCG: %[[TRUNC:.*]] = trunc i32 %{{.*}} to i22
+// OGCG: %[[CAST:.*]] = sext i22 %[[TRUNC]] to i64
+// OGCG: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+// OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// OGCG: %[[TRUNC:.*]] = trunc i128 %{{.*}} to i127
+// OGCG: %[[CAST:.*]] = trunc i127 %[[TRUNC]] to i64
+// OGCG: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+// OGCG: %[[CAST:.*]] = trunc i128 %{{.*}} to i64
+// OGCG: call i64 @llvm.ctpop.i64(i64 %[[CAST]])
+
 int test_builtin_popcountg(unsigned x) {
   return __builtin_popcountg(x);
 }
@@ -397,6 +528,99 @@ int test_builtin_popcountg(unsigned x) {
 
 // OGCG-LABEL: _Z22test_builtin_popcountgj
 // OGCG:         %{{.+}} = call i32 @llvm.ctpop.i32(i32 %{{.+}})
+
+int test_builtin_popcountg_bitint() {
+  unsigned _BitInt(22) a;
+  unsigned _BitInt(64) b;
+  unsigned _BitInt(127) c;
+  unsigned _BitInt(128) d;
+
+  return __builtin_popcountg(a) + __builtin_popcountg(b) +
+         __builtin_popcountg(c) + __builtin_popcountg(d);
+}
+// CIR-LABEL: _Z29test_builtin_popcountg_bitintv
+// CIR:  %[[TMP:.*]] = cir.popcount %{{.*}} : <u, 22, bitint>
+// CIR:  cir.cast integral %[[TMP]] : !cir.int<u, 22, bitint> -> !s32i
+// CIR:  %[[TMP:.*]] = cir.popcount %{{.*}} : !u64i_bitint
+// CIR:  cir.cast integral %[[TMP]] : !u64i_bitint -> !s32i
+// CIR:  %[[TMP:.*]] = cir.popcount %{{.*}} : <u, 127, bitint>
+// CIR:  cir.cast integral %[[TMP]] : !cir.int<u, 127, bitint> -> !s32i
+// CIR:  %[[TMP:.*]] = cir.popcount %{{.*}} : !u128i_bitint
+// CIR:  cir.cast integral %[[TMP]] : !u128i_bitint -> !s32i
+
+// LLVM-LABEL: _Z29test_builtin_popcountg_bitintv
+// LLVM: call i22 @llvm.ctpop.i22(i22 %{{.*}})
+// LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// LLVM: call i127 @llvm.ctpop.i127(i127 %{{.*}})
+// LLVM: call i128 @llvm.ctpop.i128(i128 %{{.*}})
+
+// OGCG-LABEL: _Z29test_builtin_popcountg_bitintv
+// OGCG: call i22 @llvm.ctpop.i22(i22 %{{.*}})
+// OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// OGCG: call i127 @llvm.ctpop.i127(i127 %{{.*}})
+// OGCG: call i128 @llvm.ctpop.i128(i128 %{{.*}})
+
+
+unsigned test_builtin_popcountg_u8(unsigned char x) {
+  return __builtin_popcountg(x);
+}
+
+// CIR-LABEL: _Z25test_builtin_popcountg_u8h
+// CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u8i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u8i -> !s32i
+// CIR:         {{%.+}} = cir.cast integral {{.*}} : !s32i -> !u32i
+
+// LLVM-LABEL: _Z25test_builtin_popcountg_u8h
+// LLVM:         %{{.+}} = call i8 @llvm.ctpop.i8(i8 %{{.+}})
+
+// OGCG-LABEL: _Z25test_builtin_popcountg_u8h
+// OGCG:         %{{.+}} = call i8 @llvm.ctpop.i8(i8 %{{.+}})
+
+#if defined(__SIZEOF_INT128__) && __SIZEOF_INT128__ == 16
+using u128 = unsigned __int128;
+
+int test_builtin_popcountg_u128(u128 x) {
+  return __builtin_popcountg(x);
+}
+
+// CIR-LABEL: _Z27test_builtin_popcountg_u128o
+// CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u128i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u128i -> !s32i
+
+// LLVM-LABEL: _Z27test_builtin_popcountg_u128o
+// LLVM:         %{{.+}} = call i128 @llvm.ctpop.i128(i128 %{{.+}})
+
+// OGCG-LABEL: _Z27test_builtin_popcountg_u128o
+// OGCG:         %{{.+}} = call i128 @llvm.ctpop.i128(i128 %{{.+}})
+
+int test_builtin_clzg_u128(u128 x) {
+  return __builtin_clzg(x, 0);
+}
+
+// CIR-LABEL: _Z22test_builtin_clzg_u128o
+// CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u128i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u128i -> !s32i
+
+// LLVM-LABEL: _Z22test_builtin_clzg_u128o
+// LLVM:         %{{.+}} = call i128 @llvm.ctlz.i128(i128 %{{.+}}, i1 true)
+
+// OGCG-LABEL: _Z22test_builtin_clzg_u128o
+// OGCG:         %{{.+}} = call i128 @llvm.ctlz.i128(i128 %{{.+}}, i1 true)
+
+int test_builtin_ctzg_u128(u128 x) {
+  return __builtin_ctzg(x, 0);
+}
+
+// CIR-LABEL: _Z22test_builtin_ctzg_u128o
+// CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u128i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u128i -> !s32i
+
+// LLVM-LABEL: _Z22test_builtin_ctzg_u128o
+// LLVM:         %{{.+}} = call i128 @llvm.cttz.i128(i128 %{{.+}}, i1 true)
+
+// OGCG-LABEL: _Z22test_builtin_ctzg_u128o
+// OGCG:         %{{.+}} = call i128 @llvm.cttz.i128(i128 %{{.+}}, i1 true)
+#endif
 
 unsigned char test_builtin_bitreverse8(unsigned char x) {
   return __builtin_bitreverse8(x);
@@ -488,6 +712,145 @@ unsigned long long test_builtin_bswap64(unsigned long long x) {
 
 // OGCG-LABEL: @_Z20test_builtin_bswap64y
 // OGCG:         %{{.+}} = call i64 @llvm.bswap.i64(i64 %{{.+}})
+
+unsigned short test_bswapg_u16(unsigned short x) {
+  return __builtin_bswapg(x);
+}
+
+// CIR-LABEL: @_Z15test_bswapg_u16t
+// CIR:         %{{.+}} = cir.byte_swap %{{.+}} : !u16i
+
+// LLVM-LABEL: @_Z15test_bswapg_u16t
+// LLVM:         %{{.+}} = call i16 @llvm.bswap.i16(i16 %{{.+}})
+
+// OGCG-LABEL: @_Z15test_bswapg_u16t
+// OGCG:         %{{.+}} = call i16 @llvm.bswap.i16(i16 %{{.+}})
+
+short test_bswapg_s16(short x) {
+  return __builtin_bswapg(x);
+}
+
+// A signed operand is reinterpreted as unsigned of the same width, byte
+// swapped, then cast back to the signed return type.
+// CIR-LABEL: @_Z15test_bswapg_s16s
+// CIR:         %[[ARG:.+]] = cir.cast integral %{{.+}} : !s16i -> !u16i
+// CIR:         %[[RES:.+]] = cir.byte_swap %[[ARG]] : !u16i
+// CIR:         %{{.+}} = cir.cast integral %[[RES]] : !u16i -> !s16i
+
+// LLVM-LABEL: @_Z15test_bswapg_s16s
+// LLVM:         %{{.+}} = call i16 @llvm.bswap.i16(i16 %{{.+}})
+
+// OGCG-LABEL: @_Z15test_bswapg_s16s
+// OGCG:         %{{.+}} = call i16 @llvm.bswap.i16(i16 %{{.+}})
+
+unsigned test_bswapg_u32(unsigned x) {
+  return __builtin_bswapg(x);
+}
+
+// CIR-LABEL: @_Z15test_bswapg_u32j
+// CIR:         %{{.+}} = cir.byte_swap %{{.+}} : !u32i
+
+// LLVM-LABEL: @_Z15test_bswapg_u32j
+// LLVM:         %{{.+}} = call i32 @llvm.bswap.i32(i32 %{{.+}})
+
+// OGCG-LABEL: @_Z15test_bswapg_u32j
+// OGCG:         %{{.+}} = call i32 @llvm.bswap.i32(i32 %{{.+}})
+
+unsigned long long test_bswapg_u64(unsigned long long x) {
+  return __builtin_bswapg(x);
+}
+
+// CIR-LABEL: @_Z15test_bswapg_u64y
+// CIR:         %{{.+}} = cir.byte_swap %{{.+}} : !u64i
+
+// LLVM-LABEL: @_Z15test_bswapg_u64y
+// LLVM:         %{{.+}} = call i64 @llvm.bswap.i64(i64 %{{.+}})
+
+// OGCG-LABEL: @_Z15test_bswapg_u64y
+// OGCG:         %{{.+}} = call i64 @llvm.bswap.i64(i64 %{{.+}})
+
+unsigned __int128 test_bswapg_u128(unsigned __int128 x) {
+  return __builtin_bswapg(x);
+}
+
+// CIR-LABEL: @_Z16test_bswapg_u128o
+// CIR:         %{{.+}} = cir.byte_swap %{{.+}} : !u128i
+
+// LLVM-LABEL: @_Z16test_bswapg_u128o
+// LLVM:         %{{.+}} = call i128 @llvm.bswap.i128(i128 %{{.+}})
+
+// OGCG-LABEL: @_Z16test_bswapg_u128o
+// OGCG:         %{{.+}} = call i128 @llvm.bswap.i128(i128 %{{.+}})
+
+unsigned _BitInt(256) test_bswapg_u256(unsigned _BitInt(256) x) {
+  return __builtin_bswapg(x);
+}
+
+// A wide _BitInt exercises the multiple-of-16 width constraint on the op.
+// CIR-LABEL: @_Z16test_bswapg_u256DU256_
+// CIR:         %{{.+}} = cir.byte_swap %{{.+}} : !u256i_bitint
+
+// LLVM-LABEL: @_Z16test_bswapg_u256DU256_
+// LLVM:         %{{.+}} = call i256 @llvm.bswap.i256(i256 %{{.+}})
+
+// OGCG-LABEL: @_Z16test_bswapg_u256DU256_
+// OGCG:         %{{.+}} = call i256 @llvm.bswap.i256(i256 %{{.+}})
+
+_BitInt(256) test_bswapg_s256(_BitInt(256) x) {
+  return __builtin_bswapg(x);
+}
+
+// CIR-LABEL: @_Z16test_bswapg_s256DB256_
+// CIR:         %[[ARG:.+]] = cir.cast integral %{{.+}} : !s256i_bitint -> !u256i
+// CIR:         %[[RES:.+]] = cir.byte_swap %[[ARG]] : !u256i
+// CIR:         %{{.+}} = cir.cast integral %[[RES]] : !u256i -> !s256i_bitint
+
+// LLVM-LABEL: @_Z16test_bswapg_s256DB256_
+// LLVM:         %{{.+}} = call i256 @llvm.bswap.i256(i256 %{{.+}})
+
+// OGCG-LABEL: @_Z16test_bswapg_s256DB256_
+// OGCG:         %{{.+}} = call i256 @llvm.bswap.i256(i256 %{{.+}})
+
+unsigned char test_bswapg_u8(unsigned char x) {
+  return __builtin_bswapg(x);
+}
+
+// A single-byte swap is the identity, so no cir.byte_swap / llvm.bswap.
+// CIR-LABEL: @_Z14test_bswapg_u8h
+// CIR-NOT:     cir.byte_swap
+
+// LLVM-LABEL: @_Z14test_bswapg_u8h
+// LLVM-NOT:    @llvm.bswap
+
+// OGCG-LABEL: @_Z14test_bswapg_u8h
+// OGCG-NOT:    @llvm.bswap
+
+bool test_bswapg_bool(bool x) {
+  return __builtin_bswapg(x);
+}
+
+// A bool is a single-byte value, so it is returned unchanged.
+// CIR-LABEL: @_Z16test_bswapg_boolb
+// CIR-NOT:     cir.byte_swap
+
+// LLVM-LABEL: @_Z16test_bswapg_boolb
+// LLVM-NOT:    @llvm.bswap
+
+// OGCG-LABEL: @_Z16test_bswapg_boolb
+// OGCG-NOT:    @llvm.bswap
+
+signed char test_bswapg_s8(signed char x) {
+  return __builtin_bswapg(x);
+}
+
+// CIR-LABEL: @_Z14test_bswapg_s8a
+// CIR-NOT:     cir.byte_swap
+
+// LLVM-LABEL: @_Z14test_bswapg_s8a
+// LLVM-NOT:    @llvm.bswap
+
+// OGCG-LABEL: @_Z14test_bswapg_s8a
+// OGCG-NOT:    @llvm.bswap
 
 unsigned char test_builtin_rotateleft8(unsigned char x, unsigned char y) {
   return __builtin_rotateleft8(x, y);

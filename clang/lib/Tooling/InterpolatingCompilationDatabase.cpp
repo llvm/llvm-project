@@ -113,6 +113,8 @@ static types::ID foldType(types::ID Lang) {
   case types::TY_CXXHeader:
   case types::TY_CXXModule:
   case types::TY_PP_CXXModule:
+  case types::TY_CXXStdModule:
+  case types::TY_PP_CXXStdModule:
     return types::TY_CXX;
   case types::TY_ObjCXX:
   case types::TY_ObjCXXHeader:
@@ -146,9 +148,9 @@ static LangStandard::Kind latestLangStandardC() {
 // flag in clang-CL mode.
 static LangStandard::Kind latestLangStandardCXX() {
   // FIXME: Have a single source of truth for the mapping from
-  // c++latest --> c++26 that's shared by the driver code
+  // c++latest --> c++29 that's shared by the driver code
   // (clang/lib/Driver/ToolChains/Clang.cpp) and this file.
-  return LangStandard::lang_cxx26;
+  return LangStandard::lang_cxx29;
 }
 
 // A CompileCommand that can be applied to another file.
@@ -277,6 +279,8 @@ struct TransferableCommand {
       if (ClangCLMode) {
         if (Std == LangStandard::lang_cxx23)
           Spelling = "c++23preview";
+        else if (Std == LangStandard::lang_cxx26)
+          Spelling = "c++26preview";
         else if (Std == latestLangStandardC())
           Spelling = "clatest";
         else if (Std == latestLangStandardCXX())
@@ -348,6 +352,8 @@ private:
         // Keep in sync with OPT__SLASH_std handling in Clang::ConstructJob().
         if (StringRef(Arg.getValue()) == "c++23preview")
           return LangStandard::lang_cxx23;
+        if (StringRef(Arg.getValue()) == "c++26preview")
+          return LangStandard::lang_cxx26;
         if (StringRef(Arg.getValue()) == "clatest")
           return latestLangStandardC();
         if (StringRef(Arg.getValue()) == "c++latest")

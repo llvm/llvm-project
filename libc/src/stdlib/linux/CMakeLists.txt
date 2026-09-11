@@ -10,6 +10,34 @@ add_header_library(
 )
 
 add_entrypoint_object(
+  realpath
+  SRCS
+    realpath.cpp
+  HDRS
+    ../realpath.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.limits_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.stat.kernel_statx_types
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getcwd
+    libc.src.__support.OSUtil.linux.syscall_wrappers.readlink
+    libc.src.__support.OSUtil.linux.syscall_wrappers.statx
+    libc.src.__support.OSUtil.path
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
   setenv
   SRCS
     setenv.cpp
@@ -23,3 +51,121 @@ add_entrypoint_object(
     libc.src.__support.macros.null_check
     libc.src.stdlib.environ_internal
 )
+
+add_entrypoint_object(
+  putenv
+  SRCS
+    putenv.cpp
+  HDRS
+    ../putenv.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
+  unsetenv
+  SRCS
+    unsetenv.cpp
+  HDRS
+    ../unsetenv.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
+  system
+  SRCS
+    system.cpp
+  HDRS
+    ../system.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.pid_t
+    libc.hdr.types.sigset_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execle
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clone3
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigaction
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
+    libc.src.signal.linux.signal_utils
+    libc.src.unistd.environ
+)
+
+add_entrypoint_object(
+  getloadavg
+  SRCS
+    getloadavg.cpp
+  HDRS
+    ../getloadavg.h
+  DEPENDS
+    libc.hdr.types.struct_sysinfo
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sysinfo
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  mktemp_util
+  HDRS
+    mktemp_util.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  mkdtemp
+  SRCS
+    mkdtemp.cpp
+  HDRS
+    ../mkdtemp.h
+  DEPENDS
+    .mktemp_util
+    libc.hdr.sys_stat_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mkdir
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  mkstemp
+  SRCS
+    mkstemp.cpp
+  HDRS
+    ../mkstemp.h
+  DEPENDS
+    .mktemp_util
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+

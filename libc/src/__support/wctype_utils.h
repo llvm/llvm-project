@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "hdr/types/wchar_t.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 
@@ -22,6 +23,7 @@
 
 #if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
 #include "src/__support/wctype/wctype_classification_utils.h"
+#include "src/__support/wctype/wctype_conversion_utils.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -585,8 +587,7 @@ LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
   if (static_cast<uint32_t>(wch) < 128) {
     return ascii::tolower(wch);
   }
-  // TODO: Add UTF8 implementation.
-  return wch;
+  return static_cast<wchar_t>(wctype_internal::tolower(wch));
 #endif
 }
 
@@ -597,8 +598,7 @@ LIBC_INLINE constexpr wchar_t toupper(wchar_t wch) {
   if (static_cast<uint32_t>(wch) < 128) {
     return ascii::toupper(wch);
   }
-  // TODO: Add UTF8 implementation.
-  return wch;
+  return static_cast<wchar_t>(wctype_internal::toupper(wch));
 #endif
 }
 
@@ -795,6 +795,17 @@ LIBC_INLINE static constexpr wchar_t int_to_b36_wchar(int num) {
 LIBC_INLINE static constexpr bool
 is_char_or_wchar(wchar_t ch, [[maybe_unused]] char, wchar_t wc_value) {
   return (ch == wc_value);
+}
+
+// Returns a three-way comparison between two wide character code points.
+LIBC_INLINE int threeway_cmp_single(wchar_t left, wchar_t right) {
+  // Valid UTF-32 code points are in [0, 0x10FFFF]. If invalid code points were
+  // treated as UB, the comparison below could done with 32-bit arithmetic.
+  if (left == right)
+    return 0;
+  if (left < right)
+    return -1;
+  return 1;
 }
 
 } // namespace internal

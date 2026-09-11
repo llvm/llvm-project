@@ -11,7 +11,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/types/off_t.h"
-#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl, linux_utils::is_valid_mmap
+#include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -46,16 +46,8 @@ LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
   // TODO: Reject sizes that are (after page alignment) larger than PTRDIFF_MAX.
   // This is mainly relevant for 32-bit architectures.
 
-  long ret = syscall_impl<long>(syscall_number, addr, size, prot, flags, fd,
-                                offset_for_syscall);
-
-  // A negative return value from the syscall can also be an error-free
-  // value returned by the syscall. However, since a valid return address
-  // cannot be within the last page, a return value corresponding to a
-  // location in the last page is an error value.
-  if (!linux_utils::is_valid_mmap(ret))
-    return Error(-static_cast<int>(ret));
-  return reinterpret_cast<void *>(ret);
+  return syscall_checked<void *>(syscall_number, addr, size, prot, flags, fd,
+                                 offset_for_syscall);
 }
 
 } // namespace linux_syscalls

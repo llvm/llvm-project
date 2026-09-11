@@ -53,11 +53,10 @@ int AddCases(std::initializer_list<TestCase> const& v) {
 
 #define CONCAT(x, y) CONCAT2(x, y)
 #define CONCAT2(x, y) x##y
-#define ADD_CASES(...) int CONCAT(dummy, __LINE__) = AddCases({__VA_ARGS__})
+#define ADD_CASES(...) \
+  const int CONCAT(dummy, __LINE__) = AddCases({__VA_ARGS__})
 
-}  // end namespace
-
-typedef benchmark::internal::Benchmark* ReturnVal;
+using ReturnVal = benchmark::Benchmark const* const;
 
 //----------------------------------------------------------------------------//
 // Test RegisterBenchmark with no additional arguments
@@ -76,7 +75,6 @@ ADD_CASES({"BM_function"}, {"BM_function_manual_registration"});
 // Note: GCC <= 4.8 do not support this form of RegisterBenchmark because they
 //       reject the variadic pack expansion of lambda captures.
 //----------------------------------------------------------------------------//
-#ifndef BENCHMARK_HAS_NO_VARIADIC_REGISTER_BENCHMARK
 
 void BM_extra_args(benchmark::State& st, const char* label) {
   for (auto _ : st) {
@@ -86,14 +84,13 @@ void BM_extra_args(benchmark::State& st, const char* label) {
 int RegisterFromFunction() {
   std::pair<const char*, const char*> cases[] = {
       {"test1", "One"}, {"test2", "Two"}, {"test3", "Three"}};
-  for (auto const& c : cases)
+  for (auto const& c : cases) {
     benchmark::RegisterBenchmark(c.first, &BM_extra_args, c.second);
+  }
   return 0;
 }
-int dummy2 = RegisterFromFunction();
+const int dummy2 = RegisterFromFunction();
 ADD_CASES({"test1", "One"}, {"test2", "Two"}, {"test3", "Three"});
-
-#endif  // BENCHMARK_HAS_NO_VARIADIC_REGISTER_BENCHMARK
 
 //----------------------------------------------------------------------------//
 // Test RegisterBenchmark with DISABLED_ benchmark
@@ -119,14 +116,11 @@ struct CustomFixture {
 };
 
 void TestRegistrationAtRuntime() {
-#ifdef BENCHMARK_HAS_CXX11
   {
     CustomFixture fx;
     benchmark::RegisterBenchmark("custom_fixture", fx);
     AddCases({std::string("custom_fixture")});
   }
-#endif
-#ifndef BENCHMARK_HAS_NO_VARIADIC_REGISTER_BENCHMARK
   {
     const char* x = "42";
     auto capturing_lam = [=](benchmark::State& st) {
@@ -137,7 +131,6 @@ void TestRegistrationAtRuntime() {
     benchmark::RegisterBenchmark("lambda_benchmark", capturing_lam);
     AddCases({{"lambda_benchmark", x}});
   }
-#endif
 }
 
 // Test that all benchmarks, registered at either during static init or runtime,
@@ -163,7 +156,7 @@ void RunTestOne() {
 // benchmarks.
 // Also test that new benchmarks can be registered and ran afterwards.
 void RunTestTwo() {
-  assert(ExpectedResults.size() != 0 &&
+  assert(!ExpectedResults.empty() &&
          "must have at least one registered benchmark");
   ExpectedResults.clear();
   benchmark::ClearRegisteredBenchmarks();
@@ -187,8 +180,10 @@ void RunTestTwo() {
   }
   assert(EB == ExpectedResults.end());
 }
+}  // end namespace
 
 int main(int argc, char* argv[]) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
   benchmark::Initialize(&argc, argv);
 
   RunTestOne();

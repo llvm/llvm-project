@@ -11,6 +11,7 @@ uint4x4 test_float_too_many_arg(float4x4 p0, float4x4 p1) {
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: requires 3 arguments, but 2 were provided}}
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: requires 3 arguments, but 2 were provided}}
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: requires 3 arguments, but 2 were provided}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function template not viable: requires 3 arguments, but 2 were provided}}
 }
 
 

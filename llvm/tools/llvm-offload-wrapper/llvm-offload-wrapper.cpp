@@ -40,7 +40,13 @@ static cl::opt<object::OffloadKind> Kind(
     cl::Required,
     cl::values(clEnumValN(object::OFK_OpenMP, "openmp", "Wrap OpenMP binaries"),
                clEnumValN(object::OFK_Cuda, "cuda", "Wrap CUDA binaries"),
-               clEnumValN(object::OFK_HIP, "hip", "Wrap HIP binaries")));
+               clEnumValN(object::OFK_HIP, "hip", "Wrap HIP binaries"),
+               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries")));
+
+static cl::opt<bool> Relocatable(
+    "relocatable",
+    cl::desc("Wrap for a relocatable offloading application (OpenMP only)"),
+    cl::cat(OffloadWrapeprCategory));
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
                                        cl::value_desc("file"),
@@ -70,7 +76,7 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
   case llvm::object::OFK_OpenMP:
     if (Error Err = offloading::wrapOpenMPBinaries(
             M, BuffersToWrap, offloading::getOffloadEntryArray(M),
-            /*Suffix=*/"", /*Relocatable=*/false))
+            /*Suffix=*/"", /*Relocatable=*/Relocatable))
       return Err;
     break;
   case llvm::object::OFK_Cuda:

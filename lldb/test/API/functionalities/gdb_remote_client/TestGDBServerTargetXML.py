@@ -668,7 +668,7 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                 "0102030405060708"  # t0
                 "0102030405060708"  # t1
                 "0102030405060708"  # t2
-                "0102030405060708"  # fp
+                "0102030405060708"  # fp/s0
                 "0102030405060708"  # s1
                 "0102030405060708"  # a0
                 "0102030405060708"  # a1
@@ -780,9 +780,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read x5", ["t0 = 0x0807060504030201"])
         self.match("register read x6", ["t1 = 0x0807060504030201"])
         self.match("register read x7", ["t2 = 0x0807060504030201"])
-        # Register x8 is probably not working because it has two aliases fp, s0
-        # See issue #127900
-        # self.match("register read x8", ["fp = 0x0807060504030201"])
+        self.match("register read fp", ["s0 = 0x0807060504030201"])
+        self.match("register read s0", ["s0 = 0x0807060504030201"])
+        self.match("register read x8", ["s0 = 0x0807060504030201"])
         self.match("register read x9", ["s1 = 0x0807060504030201"])
         self.match("register read x10", ["a0 = 0x0807060504030201"])
         self.match("register read x11", ["a1 = 0x0807060504030201"])

@@ -12,6 +12,8 @@
 #ifndef LLVM_ANALYSIS_GUARDUTILS_H
 #define LLVM_ANALYSIS_GUARDUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class BasicBlock;
@@ -22,19 +24,19 @@ template <typename T> class SmallVectorImpl;
 
 /// Returns true iff \p U has semantics of a guard expressed in a form of call
 /// of llvm.experimental.guard intrinsic.
-bool isGuard(const User *U);
+LLVM_ABI bool isGuard(const User *U);
 
 /// Returns true iff \p V has semantics of llvm.experimental.widenable.condition
 /// call
-bool isWidenableCondition(const Value *V);
+LLVM_ABI bool isWidenableCondition(const Value *V);
 
 /// Returns true iff \p U is a widenable branch (that is,
 /// extractWidenableCondition returns widenable condition).
-bool isWidenableBranch(const User *U);
+LLVM_ABI bool isWidenableBranch(const User *U);
 
 /// Returns true iff \p U has semantics of a guard expressed in a form of a
 /// widenable conditional branch to deopt block.
-bool isGuardAsWidenableBranch(const User *U);
+LLVM_ABI bool isGuardAsWidenableBranch(const User *U);
 
 /// If U is widenable branch looking like:
 ///   %cond = ...
@@ -45,25 +47,28 @@ bool isGuardAsWidenableBranch(const User *U);
 /// %if_true_bb, if_false_bb are returned in
 /// the parameters (Condition, WidenableCondition, IfTrueBB and IfFalseFF)
 /// respectively. If \p U does not match this pattern, return false.
-bool parseWidenableBranch(const User *U, Value *&Condition,
-                          Value *&WidenableCondition, BasicBlock *&IfTrueBB,
-                          BasicBlock *&IfFalseBB);
+LLVM_ABI bool parseWidenableBranch(const User *U, Value *&Condition,
+                                   Value *&WidenableCondition,
+                                   BasicBlock *&IfTrueBB,
+                                   BasicBlock *&IfFalseBB);
 
 /// Analogous to the above, but return the Uses so that they can be
 /// modified. Unlike previous version, Condition is optional and may be null.
-bool parseWidenableBranch(User *U, Use *&Cond, Use *&WC, BasicBlock *&IfTrueBB,
-                          BasicBlock *&IfFalseBB);
+LLVM_ABI bool parseWidenableBranch(User *U, Use *&Cond, Use *&WC,
+                                   BasicBlock *&IfTrueBB,
+                                   BasicBlock *&IfFalseBB);
 
 // The guard condition is expected to be in form of:
 //   cond1 && cond2 && cond3 ...
 // or in case of widenable branch:
 //   cond1 && cond2 && cond3 && widenable_contidion ...
 // Method collects the list of checks, but skips widenable_condition.
-void parseWidenableGuard(const User *U, llvm::SmallVectorImpl<Value *> &Checks);
+LLVM_ABI void parseWidenableGuard(const User *U,
+                                  llvm::SmallVectorImpl<Value *> &Checks);
 
 // Returns widenable_condition if it exists in the expression tree rooting from
 // \p U and has only one use.
-Value *extractWidenableCondition(const User *U);
+LLVM_ABI Value *extractWidenableCondition(const User *U);
 } // llvm
 
 #endif // LLVM_ANALYSIS_GUARDUTILS_H

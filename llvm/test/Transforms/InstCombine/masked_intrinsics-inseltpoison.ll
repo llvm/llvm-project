@@ -24,12 +24,12 @@ define <2 x double> @load_onemask(ptr %ptr, <2 x double> %passthru)  {
   ret <2 x double> %res
 }
 
-define <2 x double> @load_undefmask(ptr %ptr, <2 x double> %passthru)  {
-; CHECK-LABEL: @load_undefmask(
+define <2 x double> @load_one_withpoison_mask(ptr %ptr, <2 x double> %passthru)  {
+; CHECK-LABEL: @load_one_withpoison_mask(
 ; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x double>, ptr [[PTR:%.*]], align 2
 ; CHECK-NEXT:    ret <2 x double> [[UNMASKEDLOAD]]
 ;
-  %res = call <2 x double> @llvm.masked.load.v2f64.p0(ptr %ptr, i32 2, <2 x i1> <i1 1, i1 undef>, <2 x double> %passthru)
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0(ptr %ptr, i32 2, <2 x i1> <i1 1, i1 poison>, <2 x double> %passthru)
   ret <2 x double> %res
 }
 

@@ -13,7 +13,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 
 define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-LABEL: define void @vdiv(
-; CHECK-SAME: ptr writeonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]], double [[A:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) [[X:%.*]], ptr nofree readonly captures(none) [[Y:%.*]], double [[A:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -22,8 +22,8 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[Y5:%.*]] = ptrtoaddr ptr [[Y]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X4]], [[Y5]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 128
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[Y5]], [[X4]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i64 [[TMP0]], -128
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[FOR_BODY_PREHEADER9:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

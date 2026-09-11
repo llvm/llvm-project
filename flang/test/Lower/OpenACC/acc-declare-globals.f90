@@ -42,20 +42,20 @@ module acc_declare_test
  !$acc declare create(data1)
 end module
 
-! CHECK-LABEL: fir.global @_QMacc_declare_testEdata1 {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.array<100000xf32>
+! CHECK-LABEL: fir.global @_QMacc_declare_testEdata1 {acc.declare = #acc.declare<dataClause = acc_create>, alignment = 64 : i64} : !fir.array<100000xf32>
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_testEdata1_acc_ctor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_testEdata1) {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.ref<!fir.array<100000xf32>>
-! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {name = "data1", structured = false}
+! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) structured(false) name("data1") -> !fir.ref<!fir.array<100000xf32>>
 ! CHECK:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.ref<!fir.array<100000xf32>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
 ! CHECK-LABEL: acc.global_dtor @_QMacc_declare_testEdata1_acc_dtor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_testEdata1) {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.ref<!fir.array<100000xf32>>
-! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {dataClause = #acc<data_clause acc_create>, name = "data1", structured = false}
+! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) dataClause(acc_create) structured(false) name("data1") -> !fir.ref<!fir.array<100000xf32>>
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>)
-! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>) {dataClause = #acc<data_clause acc_create>, name = "data1", structured = false}
+! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>) dataClause(acc_create) structured(false) name("data1")
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
@@ -67,16 +67,16 @@ end module
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_copyin_testEdata1_acc_ctor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_copyin_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_copyin>} : !fir.ref<!fir.array<100000xf32>>
-! CHECK:         %[[COPYIN:.*]] = acc.copyin varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {name = "data1", structured = false}
+! CHECK:         %[[COPYIN:.*]] = acc.copyin varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) structured(false) name("data1") -> !fir.ref<!fir.array<100000xf32>>
 ! CHECK:         acc.declare_enter dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<100000xf32>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
 ! CHECK-LABEL: acc.global_dtor @_QMacc_declare_copyin_testEdata1_acc_dtor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_copyin_testEdata1) {acc.declare = #acc.declare<dataClause = acc_copyin>} : !fir.ref<!fir.array<100000xf32>>
-! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {dataClause = #acc<data_clause acc_copyin>, name = "data1", structured = false}
+! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) dataClause(acc_copyin) structured(false) name("data1") -> !fir.ref<!fir.array<100000xf32>>
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>)
-! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>) {dataClause = #acc<data_clause acc_copyin>, name = "data1", structured = false}
+! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>) dataClause(acc_copyin) structured(false) name("data1")
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
@@ -86,20 +86,20 @@ module acc_declare_device_resident_test
  !$acc declare device_resident(data1)
 end module
 
-! CHECK-LABEL: fir.global @_QMacc_declare_device_resident_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>} : !fir.array<5000xi32>
+! CHECK-LABEL: fir.global @_QMacc_declare_device_resident_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>, alignment = 64 : i64} : !fir.array<5000xi32>
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_device_resident_testEdata1_acc_ctor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_device_resident_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>} : !fir.ref<!fir.array<5000xi32>>
-! CHECK:         %[[DEVICERESIDENT:.*]] = acc.declare_device_resident varPtr(%0 : !fir.ref<!fir.array<5000xi32>>) -> !fir.ref<!fir.array<5000xi32>> {name = "data1", structured = false}
+! CHECK:         %[[DEVICERESIDENT:.*]] = acc.declare_device_resident varPtr(%0 : !fir.ref<!fir.array<5000xi32>>) structured(false) name("data1") -> !fir.ref<!fir.array<5000xi32>>
 ! CHECK:         acc.declare_enter dataOperands(%[[DEVICERESIDENT]] : !fir.ref<!fir.array<5000xi32>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
 ! CHECK-LABEL: acc.global_dtor @_QMacc_declare_device_resident_testEdata1_acc_dtor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_device_resident_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>} : !fir.ref<!fir.array<5000xi32>>
-! CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<5000xi32>>)   -> !fir.ref<!fir.array<5000xi32>> {dataClause = #acc<data_clause acc_declare_device_resident>, name = "data1", structured = false}
+! CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<5000xi32>>) dataClause(acc_declare_device_resident) structured(false) name("data1") -> !fir.ref<!fir.array<5000xi32>>
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<5000xi32>>)
-! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<5000xi32>>)   {dataClause = #acc<data_clause acc_declare_device_resident>, name = "data1", structured = false}
+! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<5000xi32>>)   dataClause(acc_declare_device_resident) structured(false) name("data1")
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
@@ -109,11 +109,11 @@ module acc_declare_device_link_test
  !$acc declare link(data1)
 end module
 
-! CHECK-LABEL: fir.global @_QMacc_declare_device_link_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_link>} : !fir.array<5000xi32> {
+! CHECK-LABEL: fir.global @_QMacc_declare_device_link_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_link>, alignment = 64 : i64} : !fir.array<5000xi32> {
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_device_link_testEdata1_acc_ctor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_device_link_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_declare_link>} : !fir.ref<!fir.array<5000xi32>>
-! CHECK:         %[[LINK:.*]] = acc.declare_link varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<5000xi32>>) -> !fir.ref<!fir.array<5000xi32>> {name = "data1", structured = false}
+! CHECK:         %[[LINK:.*]] = acc.declare_link varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<5000xi32>>) structured(false) name("data1") -> !fir.ref<!fir.array<5000xi32>>
 ! CHECK:         acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<5000xi32>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }

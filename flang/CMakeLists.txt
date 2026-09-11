@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "Flang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -202,13 +210,12 @@ if (FLANG_STANDALONE_BUILD)
 
   link_directories("${LLVM_LIBRARY_DIR}")
 
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-    ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-    ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
 
-  set(LLVM_EXTERNAL_LIT "${LLVM_TOOLS_BINARY_DIR}/llvm-lit" CACHE STRING "Command used to spawn lit")
   set(LIT_ARGS_DEFAULT "-sv")
   if (MSVC OR XCODE)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
@@ -241,9 +248,6 @@ if (FLANG_STANDALONE_BUILD)
   else()
     add_custom_target(check-all DEPENDS check-flang )
   endif()
-  if (LLVM_BUILD_DOCS)
-    add_custom_target(doxygen ALL)
-  endif()
 
 else()
   option(FLANG_INCLUDE_TESTS
@@ -273,7 +277,6 @@ set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
 mark_as_advanced(FLANG_TOOLS_INSTALL_DIR)
 
-set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_BINARY_DIR}/include/flang)
 set(FLANG_INCLUDE_DIR ${FLANG_BINARY_DIR}/include)
 
 # TODO: Remove when libclangDriver is lifted out of Clang
@@ -291,8 +294,8 @@ include_directories(SYSTEM ${CLANG_INCLUDE_DIR})
 
 # tco tool and FIR lib output directories
 if(FLANG_STANDALONE_BUILD)
-  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
-  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
 endif()
 # Always build tco tool
 set(LLVM_BUILD_TOOLS ON)
@@ -306,6 +309,7 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${FLANG_SOURCE_DIR}/cmake/modules"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
+
 include(AddFlang)
 
 if (NOT DEFAULT_SYSROOT)
@@ -495,7 +499,6 @@ endif()
 
 add_subdirectory(include)
 add_subdirectory(lib)
-add_subdirectory(cmake/modules)
 
 option(FLANG_INCLUDE_TOOLS "Generate build targets for the Flang tools." ON)
 option(FLANG_BUILD_TOOLS
@@ -517,6 +520,9 @@ endif()
 
 option(FLANG_INCLUDE_DOCS "Generate build targets for the Flang docs."
        ${LLVM_INCLUDE_DOCS})
+if(FLANG_STANDALONE_BUILD)
+  include(HandleDoxygen)
+endif()
 if (FLANG_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
@@ -590,3 +596,83 @@ install(
   COMPONENT flang-fortran-binding)
 add_llvm_install_targets(install-flang-fortran-binding
   COMPONENT flang-fortran-binding)
+
+# Dependency-only projects are excluded from their parent's aggregate build
+# and install scripts. Promote and install only the targets reachable from the
+# Flang SDK, together with the headers and compiler resources that SDK needs.
+if(LLVM_DEPENDENCY_ONLY_PROJECTS)
+  get_property(flang_exports GLOBAL PROPERTY FLANG_EXPORTS)
+  set(flang_dependency_build_targets)
+  set(flang_dependency_runtime_targets)
+  if(TARGET clang-resource-headers AND
+     "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+    list(APPEND flang_dependency_build_targets clang-resource-headers)
+  endif()
+  if(TARGET clang-linker-wrapper AND
+     "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+    list(APPEND flang_dependency_runtime_targets clang-linker-wrapper)
+  endif()
+  llvm_install_dependency_target_closure(
+    PROJECT Flang
+    COMPONENT flang-dependencies
+    ROOT_TARGETS ${flang_exports} ${flang_dependency_runtime_targets}
+    EXTRA_BUILD_TARGETS ${flang_dependency_build_targets})
+
+  if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND
+     "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+    get_target_property(mlir_source_dir mlir-headers SOURCE_DIR)
+    get_target_property(mlir_binary_dir mlir-headers BINARY_DIR)
+    install(DIRECTORY
+      "${mlir_source_dir}/include/mlir"
+      "${mlir_source_dir}/include/mlir-c"
+      "${mlir_binary_dir}/include/mlir"
+      "${mlir_binary_dir}/include/mlir-c"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      COMPONENT flang-dependency-headers
+      OPTIONAL
+      FILES_MATCHING
+      PATTERN "*.def"
+      PATTERN "*.h"
+      PATTERN "*.gen"
+      PATTERN "*.inc"
+      PATTERN "*.td"
+      PATTERN "CMakeFiles" EXCLUDE)
+  endif()
+
+  if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND
+     "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+    get_target_property(clang_source_dir clang-tablegen-targets SOURCE_DIR)
+    get_target_property(clang_binary_dir clang-tablegen-targets BINARY_DIR)
+    install(DIRECTORY
+      "${clang_source_dir}/include/clang"
+      "${clang_binary_dir}/include/clang"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      COMPONENT flang-dependency-headers
+      OPTIONAL
+      FILES_MATCHING
+      PATTERN "*.def"
+      PATTERN "*.h"
+      PATTERN "*.inc"
+      PATTERN "*.td"
+      PATTERN "CMakeFiles" EXCLUDE)
+  endif()
+
+  # Resource headers are needed by the compiler, including toolchain-only
+  # installations. Unlike the SDK headers, these are always installed.
+  if("clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+    get_target_property(clang_resource_build_dir clang-resource-headers
+      RUNTIME_OUTPUT_DIRECTORY)
+    if(clang_resource_build_dir)
+      install(DIRECTORY "${clang_resource_build_dir}/"
+        DESTINATION "${HEADER_INSTALL_DIR}"
+        COMPONENT flang-dependency-headers
+        OPTIONAL)
+    endif()
+  endif()
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-flang-dependency-headers
+      DEPENDS flang-dependencies COMPONENT flang-dependency-headers)
+  endif()
+endif()
+
+add_subdirectory(cmake/modules)

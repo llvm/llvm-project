@@ -47,3 +47,11 @@ void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
       builder, loc, fTy, desc, sourceFile, sourceLine)};
   fir::CallOp::create(builder, loc, func, args);
 }
+
+mlir::Value fir::runtime::cuda::genDeviceIsActive(fir::FirOpBuilder &builder,
+                                                  mlir::Location loc) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(CUFDeviceIsActive)>(loc, builder);
+  auto call = fir::CallOp::create(builder, loc, func, mlir::ValueRange{});
+  return builder.createConvert(loc, builder.getI1Type(), call.getResult(0));
+}

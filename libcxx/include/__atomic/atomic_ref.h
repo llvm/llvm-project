@@ -259,6 +259,8 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
@@ -278,6 +280,8 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
         std::__is_sufficiently_aligned<__base::required_alignment>(std::addressof(__obj)),
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
+
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
@@ -300,6 +304,32 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_xor(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     return __atomic_fetch_xor(this->__ptr_, __arg, std::__to_gcc_order(__order));
   }
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+#    if __has_builtin(__atomic_fetch_max)
+    return __atomic_fetch_max(this->__ptr_, __arg, std::__to_gcc_order(__order));
+#    else
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new;
+    do {
+      __new = __old > __arg ? __old : __arg;
+    } while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed));
+    return __old;
+#    endif
+  }
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+#    if __has_builtin(__atomic_fetch_min)
+    return __atomic_fetch_min(this->__ptr_, __arg, std::__to_gcc_order(__order));
+#    else
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new;
+    do {
+      __new = __old < __arg ? __old : __arg;
+    } while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed));
+    return __old;
+#    endif
+  }
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator++(int) const noexcept { return fetch_add(_Tp(1)); }
   _LIBCPP_HIDE_FROM_ABI _Tp operator--(int) const noexcept { return fetch_sub(_Tp(1)); }
@@ -324,6 +354,8 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
         std::__is_sufficiently_aligned<__base::required_alignment>(std::addressof(__obj)),
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
+
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
@@ -368,6 +400,8 @@ struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*& __ptr) : __base(__ptr) {}
 
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*&&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __desired) const noexcept { return __base::operator=(__desired); }
 
   atomic_ref& operator=(const atomic_ref&) = delete;
@@ -378,6 +412,26 @@ struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     return __atomic_fetch_sub(this->__ptr_, __arg * sizeof(_Tp), std::__to_gcc_order(__order));
   }
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_max(_Tp* __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    // TODO: Use __atomic_fetch_max once it accepts pointer arguments.
+    _Tp* __old = this->load(memory_order_relaxed);
+    _Tp* __new;
+    do {
+      __new = __old > __arg ? __old : __arg;
+    } while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed));
+    return __old;
+  }
+  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_min(_Tp* __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    // TODO: Use __atomic_fetch_min once it accepts pointer arguments.
+    _Tp* __old = this->load(memory_order_relaxed);
+    _Tp* __new;
+    do {
+      __new = __old < __arg ? __old : __arg;
+    } while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed));
+    return __old;
+  }
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) const noexcept { return fetch_add(1); }
   _LIBCPP_HIDE_FROM_ABI _Tp* operator--(int) const noexcept { return fetch_sub(1); }

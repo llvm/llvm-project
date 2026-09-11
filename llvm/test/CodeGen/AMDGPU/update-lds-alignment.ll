@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-- -amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
 
 ; Properly aligned, same size as alignment.
 ; CHECK: %llvm.amdgcn.kernel.k0.lds.t = type { [16 x i8], [8 x i8], [4 x i8], [2 x i8], [1 x i8] }

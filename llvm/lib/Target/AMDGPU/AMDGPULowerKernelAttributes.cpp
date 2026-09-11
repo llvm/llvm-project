@@ -113,7 +113,7 @@ static bool annotateGroupSizeLoadWithRangeMD(LoadInst *Load, bool IsRemainder) {
   MDBuilder MDB(Load->getContext());
   MDNode *Range = MDB.createRange(
       APInt(16, !IsRemainder),
-      APInt(16, AMDGPU::IsaInfo::getMaxFlatWorkGroupSize() + 1 - IsRemainder));
+      APInt(16, AMDGPU::getMaxFlatWorkGroupSize() + 1 - IsRemainder));
   Load->setMetadata(LLVMContext::MD_range, Range);
   return true;
 }
@@ -124,9 +124,8 @@ static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load,
   if (!Ty || Ty->getBitWidth() < 3)
     return false;
 
-  if (KnownNumGridDims != 0) {
-    Load->replaceAllUsesWith(
-        ConstantInt::get(Load->getType(), KnownNumGridDims));
+  if (KnownNumGridDims == 3) {
+    Load->replaceAllUsesWith(ConstantInt::get(Load->getType(), 3));
     return true;
   }
 
@@ -134,15 +133,18 @@ static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load,
   if (Load->hasMetadata(LLVMContext::MD_range))
     return false;
 
+  unsigned LowerBound = KnownNumGridDims == 2 ? 2 : 1;
   MDBuilder MDB(Load->getContext());
-  MDNode *Range =
-      MDB.createRange(APInt(Ty->getBitWidth(), 1), APInt(Ty->getBitWidth(), 4));
+  MDNode *Range = MDB.createRange(APInt(Ty->getBitWidth(), LowerBound),
+                                  APInt(Ty->getBitWidth(), 4));
   Load->setMetadata(LLVMContext::MD_range, Range);
   return true;
 }
 
-/// Compute the number of grid dimensions based on !reqd_work_group_size
-/// metadata
+/// Compute the known number of grid dimensions based on !reqd_work_group_size
+/// metadata. Returns 3 if the grid is known to be exactly 3-D, 2 if it is
+/// known to be at least 2-D, or 0 if nothing more than the default [1, 3]
+/// range can be deduced.
 static unsigned computeNumGridDims(const MDNode *ReqdWorkGroupSize) {
   ConstantInt *KnownZ =
       mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(2));
@@ -154,7 +156,7 @@ static unsigned computeNumGridDims(const MDNode *ReqdWorkGroupSize) {
   if (KnownY->getZExtValue() != 1)
     return 2;
 
-  return 1;
+  return 0;
 }
 
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
@@ -420,7 +422,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
         using namespace llvm::PatternMatch;
         if (!match(
                 Inst,
-                m_UDiv(m_ZExtOrSelf(m_Load(m_GEP(
+                m_UDiv(m_ZExtOrSelf(m_LoadSimple(m_GEP(
                            m_Intrinsic<Intrinsic::amdgcn_dispatch_ptr>(),
                            m_SpecificInt(GRID_SIZE_X + I * sizeof(uint32_t))))),
                        m_Value())))

@@ -50,6 +50,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -570,6 +571,9 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  if (!PSI)
+    reportFatalUsageError("this pass requires the profile-summary module "
+                          "analysis to be available");
   BBSectionsProfileReader =
       AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
   DomTreeUpdater DTUpdater(&AM.getResult<DominatorTreeAnalysis>(F),
@@ -616,7 +620,7 @@ bool CodeGenPrepare::_run(Function &F) {
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI);
+        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI, BPI);
       BB = Next;
     }
   }
@@ -655,7 +659,7 @@ bool CodeGenPrepare::_run(Function &F) {
            "Incorrect DominatorTree updates in CGP");
 
   if (VerifyLoopInfo)
-    LI->verify(getDT());
+    LI->verify();
 #endif
 
   // If we are optimzing huge function, we need to consider the build time.
@@ -719,7 +723,7 @@ bool CodeGenPrepare::_run(Function &F) {
              "Incorrect DominatorTree updates in CGP");
 
     if (VerifyLoopInfo)
-      LI->verify(getDT());
+      LI->verify();
 #endif
 
     // Really free removed instructions during promotion.
@@ -850,9 +854,10 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
 [[maybe_unused]] void CodeGenPrepare::verifyBFIUpdates(Function &F) {
   DominatorTree NewDT(F);
-  LoopInfo NewLI(NewDT);
-  BranchProbabilityInfo NewBPI(F, NewLI, TLInfo);
-  BlockFrequencyInfo NewBFI(F, NewBPI, NewLI);
+  CycleInfo NewCI;
+  NewCI.compute(F);
+  BranchProbabilityInfo NewBPI(F, NewCI, TLInfo);
+  BlockFrequencyInfo NewBFI(F, NewBPI, NewCI);
   NewBFI.verifyMatch(*BFI);
 }
 
@@ -943,11 +948,12 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
 
   ResetLI = false;
   bool MadeChange = false;
+  SmallPtrSet<PHINode *, 32> KnownNonDeadPHIs;
   // Note that this intentionally skips the entry block.
   for (auto &Block : llvm::drop_begin(F)) {
     // Delete phi nodes that could block deleting other empty blocks.
     if (!DisableDeletePHIs)
-      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
+      MadeChange |= DeleteDeadPHIs(&Block, TLInfo, nullptr, &KnownNonDeadPHIs);
   }
 
   for (auto &Block : llvm::drop_begin(F)) {
@@ -1123,7 +1129,8 @@ static void replaceAllUsesWith(Value *Old, Value *New,
                                bool IsHuge) {
   auto *OldI = dyn_cast<Instruction>(Old);
   if (OldI) {
-    for (Value::user_iterator UI = OldI->user_begin(), E = OldI->user_end();
+    for (Instruction::user_iterator UI = OldI->user_begin(),
+                                    E = OldI->user_end();
          UI != E; ++UI) {
       Instruction *User = cast<Instruction>(*UI);
       if (IsHuge)
@@ -1429,7 +1436,7 @@ static bool SinkCast(CastInst *CI) {
   DenseMap<BasicBlock *, CastInst *> InsertedCasts;
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = CI->user_begin(), E = CI->user_end();
+  for (Instruction::user_iterator UI = CI->user_begin(), E = CI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -1483,6 +1490,49 @@ static bool SinkCast(CastInst *CI) {
   }
 
   return MadeChange;
+}
+
+/// Hoists bitcasts to the source block to reduce register pressure
+static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
+                            const DataLayout &DL) {
+  auto *SrcInst = dyn_cast<Instruction>(BCI->getOperand(0));
+  if (!SrcInst || SrcInst->getParent() == BCI->getParent() ||
+      SrcInst->isTerminator())
+    return false;
+
+  Type *DestTy = BCI->getType();
+  Type *SrcTy = SrcInst->getType();
+  EVT SrcVT = TLI.getValueType(DL, SrcTy);
+  EVT DestVT = TLI.getValueType(DL, DestTy);
+
+  // Bail out on scalable vectors and illegal destination types
+  if (SrcVT.isScalableVector() || DestVT.isScalableVector())
+    return false;
+
+  // Only hoist if it reduces physical register count
+  if (TLI.getNumRegisters(BCI->getContext(), SrcVT) <=
+      TLI.getNumRegisters(BCI->getContext(), DestVT))
+    return false;
+
+  // Block large or cross-domain scalars to prevent spills and broken atomics.
+  bool IsCrossDomain = DestTy->isFPOrFPVectorTy() != SrcTy->isFPOrFPVectorTy();
+
+  // A scalar is large if it requires more than one native register.
+  unsigned NativeWidth = DL.getPointerSizeInBits();
+  bool IsLargeScalar =
+      !DestTy->isVectorTy() &&
+      DL.getTypeSizeInBits(DestTy).getFixedValue() > NativeWidth;
+
+  if (IsCrossDomain || IsLargeScalar)
+    return false;
+
+  // Hoist the bitcast
+  BasicBlock *SrcBB = SrcInst->getParent();
+  auto InsertPt = isa<PHINode>(SrcInst) ? SrcBB->getFirstInsertionPt()
+                                        : std::next(SrcInst->getIterator());
+  BCI->moveBefore(*SrcBB, InsertPt);
+
+  return true;
 }
 
 /// If the specified cast instruction is a noop copy (e.g. it's casting from
@@ -1896,7 +1946,7 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
   DenseMap<BasicBlock *, CmpInst *> InsertedCmps;
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
+  for (Instruction::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -2104,24 +2154,15 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 
   Value *AddInst, *AddOffset;
   // Find out loop increment PHI.
-  auto *PN = dyn_cast<PHINode>(Incr);
+  PHINode *PN = dyn_cast<PHINode>(Incr);
   if (PN != nullptr) {
     AddInst = nullptr;
     AddOffset = nullptr;
   } else {
     // Search through a NUW add on top of the loop increment.
-    Value *V0, *V1;
-    if (!match(Incr, m_NUWAdd(m_Value(V0), m_Value(V1))))
+    if (!match(Incr, m_c_NUWAdd(m_Phi(PN), m_Value(AddOffset))))
       return false;
-
     AddInst = Incr;
-    PN = dyn_cast<PHINode>(V0);
-    if (PN != nullptr) {
-      AddOffset = V1;
-    } else {
-      PN = dyn_cast<PHINode>(V1);
-      AddOffset = V0;
-    }
   }
 
   if (!PN)
@@ -2338,7 +2379,7 @@ static bool sinkAndCmp0Expression(Instruction *AndI, const TargetLowering &TLI,
   // Push the 'and' into the same block as the icmp 0.  There should only be
   // one (icmp (and, 0)) in each block, since CSE/GVN should have removed any
   // others, so we don't need to keep track of which BBs we insert into.
-  for (Value::user_iterator UI = AndI->user_begin(), E = AndI->user_end();
+  for (Instruction::user_iterator UI = AndI->user_begin(), E = AndI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -2397,8 +2438,8 @@ SinkShiftAndTruncate(BinaryOperator *ShiftI, Instruction *User, ConstantInt *CI,
   auto *TruncI = cast<TruncInst>(User);
   bool MadeChange = false;
 
-  for (Value::user_iterator TruncUI = TruncI->user_begin(),
-                            TruncE = TruncI->user_end();
+  for (Instruction::user_iterator TruncUI = TruncI->user_begin(),
+                                  TruncE = TruncI->user_end();
        TruncUI != TruncE;) {
 
     Use &TruncTheUse = TruncUI.getUse();
@@ -2493,7 +2534,8 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
   bool shiftIsLegal = TLI.isTypeLegal(TLI.getValueType(DL, ShiftI->getType()));
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = ShiftI->user_begin(), E = ShiftI->user_end();
+  for (Instruction::user_iterator UI = ShiftI->user_begin(),
+                                  E = ShiftI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -2923,10 +2965,9 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
       return false;
     }
 
-  LibFunc LF;
   Function *Callee = CI->getCalledFunction();
-  if (Callee && TLInfo && TLInfo->getLibFunc(*Callee, LF))
-    switch (LF) {
+  if (Callee && TLInfo)
+    switch (TLInfo->getLibFunc(*Callee)) {
     case LibFunc_strcpy:
     case LibFunc_strncpy:
     case LibFunc_strcat:
@@ -7366,7 +7407,7 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
   DenseMap<BasicBlock *, Instruction *> InsertedTruncs;
 
   bool MadeChange = false;
-  for (Use &U : Src->uses()) {
+  for (Use &U : make_early_inc_range(Src->uses())) {
     Instruction *User = cast<Instruction>(U.getUser());
 
     // Figure out which BB this ext is used in.
@@ -8586,8 +8627,8 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   if (!DL.typeSizeEqualsStoreSize(SplitStoreType))
     return false;
 
-  // Don't split the store if it is volatile.
-  if (SI.isVolatile())
+  // Don't split the store if it is volatile or atomic.
+  if (!SI.isSimple())
     return false;
 
   // Match the following patterns:
@@ -8935,6 +8976,14 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // evaluation in a block other than then one that uses it (e.g. to hoist
     // the address of globals out of a loop).  If this is the case, we don't
     // want to forward-subst the cast.
+    if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
+      // Hoist bitcasts of illegal types to reduce cross-block register pressure
+      // and prevent register splitting.
+      if (optimizeBitCast(BCI, *TLI, *DL)) {
+        return true;
+      }
+    }
+
     if (isa<Constant>(CI->getOperand(0)))
       return AnyChange;
 
@@ -9039,12 +9088,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     // freeze(icmp a, const)) -> icmp (freeze a), const
     // This helps generate efficient conditional jumps.
-    Instruction *CmpI = nullptr;
-    if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0)))
-      CmpI = II;
-    else if (FCmpInst *F = dyn_cast<FCmpInst>(FI->getOperand(0)))
-      CmpI = F->getFastMathFlags().none() ? F : nullptr;
-
+    CmpInst *CmpI = dyn_cast<CmpInst>(FI->getOperand(0));
     if (CmpI && CmpI->hasOneUse()) {
       auto Op0 = CmpI->getOperand(0), Op1 = CmpI->getOperand(1);
       bool Const0 = isa<ConstantInt>(Op0) || isa<ConstantFP>(Op0) ||
@@ -9056,6 +9100,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
           auto *F = new FreezeInst(Const0 ? Op1 : Op0, "", CmpI->getIterator());
           F->takeName(FI);
           CmpI->setOperand(Const0 ? 1 : 0, F);
+          CmpI->dropPoisonGeneratingFlags();
         }
         replaceAllUsesWith(FI, CmpI, FreshBBs, IsHugeFunc);
         FI->eraseFromParent();
@@ -9281,14 +9326,6 @@ bool CodeGenPrepare::placePseudoProbes(Function &F) {
   return MadeChange;
 }
 
-/// Scale down both weights to fit into uint32_t.
-static void scaleWeights(uint64_t &NewTrue, uint64_t &NewFalse) {
-  uint64_t NewMax = (NewTrue > NewFalse) ? NewTrue : NewFalse;
-  uint32_t Scale = (NewMax / std::numeric_limits<uint32_t>::max()) + 1;
-  NewTrue = NewTrue / Scale;
-  NewFalse = NewFalse / Scale;
-}
-
 /// Some targets prefer to split a conditional branch like:
 /// \code
 ///   %0 = icmp ne i32 %a, 0
@@ -9441,18 +9478,13 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       if (extractBranchWeights(*Br1, TrueWeight, FalseWeight)) {
         uint64_t NewTrueWeight = TrueWeight;
         uint64_t NewFalseWeight = TrueWeight + 2 * FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br1->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight,
-                                                  hasBranchWeightOrigin(*Br1)));
+        setFittedBranchWeights(*Br1, {NewTrueWeight, NewFalseWeight},
+                               hasBranchWeightOrigin(*Br1));
 
         NewTrueWeight = TrueWeight;
         NewFalseWeight = 2 * FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br2->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br2->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br2, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
       }
     } else {
       // Codegen X & Y as:
@@ -9477,17 +9509,13 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       if (extractBranchWeights(*Br1, TrueWeight, FalseWeight)) {
         uint64_t NewTrueWeight = 2 * TrueWeight + FalseWeight;
         uint64_t NewFalseWeight = FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br1->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br1, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
 
         NewTrueWeight = 2 * TrueWeight;
         NewFalseWeight = FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br2->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br2->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br2, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
       }
     }
 

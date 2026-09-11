@@ -40,10 +40,6 @@ void DerivedTypeSpec::ReplaceScope(const Scope &scope) {
   scope_ = &scope;
 }
 
-const Scope *DerivedTypeSpec::GetScope() const {
-  return scope_ ? scope_ : typeSymbol_.scope();
-}
-
 void DerivedTypeSpec::AddRawParamValue(
     const parser::Keyword *keyword, ParamValue &&value) {
   CHECK(parameters_.empty());
@@ -372,6 +368,20 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     return;
   }
   instantiated_ = true;
+
+  if (IsEnumerationType()) {
+    // Enumeration types have no components, no parameters, and need
+    // no instantiation, but scope_ must be set so that callers of
+    // scope() (e.g., GetAlignment, MeasureSizeInBytes) can access
+    // the type's size and alignment.
+    scope_ = typeSymbol_.scope();
+    Scope &mutableTypeScope{const_cast<Scope &>(*scope_)};
+    if (!mutableTypeScope.derivedTypeSpec()) {
+      mutableTypeScope.set_derivedTypeSpec(*this);
+    }
+    return;
+  }
+
   auto &context{containingScope.context()};
   auto &foldingContext{context.foldingContext()};
   if (IsForwardReferenced()) {
@@ -758,15 +768,10 @@ const DeclTypeSpec *CloneDerivedTypeForUseDevice(Scope &containingScope,
 }
 
 std::string DerivedTypeSpec::VectorTypeAsFortran() const {
-  std::string buf;
-  llvm::raw_string_ostream ss{buf};
+  int64_t vecElemKind{0};
+  int64_t vecElemCategory{-1};
 
-  switch (category()) {
-    SWITCH_COVERS_ALL_CASES
-  case (Fortran::semantics::DerivedTypeSpec::Category::IntrinsicVector): {
-    int64_t vecElemKind;
-    int64_t vecElemCategory;
-
+  if (category() == Category::IntrinsicVector) {
     for (const auto &pair : parameters()) {
       if (pair.first == "element_category") {
         vecElemCategory =
@@ -776,44 +781,19 @@ std::string DerivedTypeSpec::VectorTypeAsFortran() const {
             Fortran::evaluate::ToInt64(pair.second.GetExplicit()).value_or(0);
       }
     }
-
-    assert((vecElemCategory >= 0 &&
-               static_cast<size_t>(vecElemCategory) <
-                   Fortran::common::VectorElementCategory_enumSize) &&
-        "Vector element type is not specified");
-    assert(vecElemKind && "Vector element kind is not specified");
-
-    ss << "vector(";
-    switch (static_cast<common::VectorElementCategory>(vecElemCategory)) {
-      SWITCH_COVERS_ALL_CASES
-    case common::VectorElementCategory::Integer:
-      ss << "integer(" << vecElemKind << ")";
-      break;
-    case common::VectorElementCategory::Unsigned:
-      ss << "unsigned(" << vecElemKind << ")";
-      break;
-    case common::VectorElementCategory::Real:
-      ss << "real(" << vecElemKind << ")";
-      break;
-    }
-    ss << ")";
-    break;
   }
-  case (Fortran::semantics::DerivedTypeSpec::Category::PairVector):
-    ss << "__vector_pair";
-    break;
-  case (Fortran::semantics::DerivedTypeSpec::Category::QuadVector):
-    ss << "__vector_quad";
-    break;
-  case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
-    Fortran::common::die("Vector element type not implemented");
-  }
-  return buf;
+
+  return common::FormatVectorTypeAsFortran(
+      static_cast<int>(category()), vecElemCategory, vecElemKind);
 }
 
 std::string DerivedTypeSpec::AsFortran() const {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
+  if (IsEnumerationType()) {
+    ss << "ENUMERATION TYPE :: " << originalTypeSymbol_.name();
+    return buf;
+  }
   ss << originalTypeSymbol_.name();
   if (!rawParameters_.empty()) {
     CHECK(parameters_.empty());

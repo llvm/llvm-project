@@ -1,0 +1,5 @@
+; Test that an invalid summary version error includes the module name.
+RUN: not llvm-lto --thinlto-index-stats %p/Inputs/invalid-summary-version.bc 2>&1 | \
+RUN:   FileCheck %s
+
+CHECK: Invalid summary version {{[0-9]+}} in module '{{.*}}invalid-summary-version.bc'. Version should be in the range [1-{{[0-9]+}}].

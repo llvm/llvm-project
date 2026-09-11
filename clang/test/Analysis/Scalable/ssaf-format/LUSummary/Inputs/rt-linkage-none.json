@@ -1,0 +1,34 @@
+{
+  "data": [],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "test.cpp"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@foo"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "None"
+      }
+    }
+  ],
+  "lu_namespace": [
+    {
+      "kind": "CompilationUnit",
+      "name": "test.cpp"
+    }
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
+}

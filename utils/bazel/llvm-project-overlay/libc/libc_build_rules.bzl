@@ -18,7 +18,40 @@ def libc_common_copts():
         "-I" + libc_include_path,
         "-I" + paths.join(libc_include_path, "include"),
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
-    ]
+    ] + select({
+        Label(":full_build"): [
+            "-DLIBC_FULL_BUILD",
+            "-ffreestanding",
+            "-fno-asynchronous-unwind-tables",
+            "-fno-exceptions",
+            "-fno-rtti",
+            "-fno-unwind-tables",
+            "-nostdinc++",
+            "-nostdlib",
+            "-nostdlib++",
+            # This is a clang-only option. To support gcc, we should use
+            # -nostdinc and pass in compiler builtin headers separately.
+            "-nostdlibinc",
+        ],
+        "//conditions:default": [],
+    })
+
+def libc_common_deps():
+    return select({
+        Label(":full_build"): [
+            # This is too broad. Really, we should have every public header
+            # accessible as a distinct cc_library target. However, the glob
+            # here is convenient for keeping Bazel rules in sync with CMake.
+            Label(":public_headers"),
+            Label(":public_headers_deps"),
+        ],
+        "//conditions:default": [],
+    }) + select({
+        Label(":full_build_linux"): [
+            "@linux_uapi//:linux_uapi_headers",
+        ],
+        "//conditions:default": [],
+    })
 
 def libc_release_copts():
     copts = [
@@ -42,11 +75,12 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-def _libc_library(name, **kwargs):
+def _libc_library(name, deps = [], **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
+      deps: cc_library deps.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
@@ -57,6 +91,7 @@ def _libc_library(name, **kwargs):
         name = name,
         copts = libc_common_copts(),
         local_defines = LIBC_CONFIGURE_OPTIONS,
+        deps = deps + libc_common_deps(),
         linkstatic = 1,
         **kwargs
     )
@@ -169,6 +204,7 @@ def libc_release_library(
         name,
         libc_functions,
         weak_symbols = [],
+        srcs = [],
         **kwargs):
     """Create the release version of a libc library.
 
@@ -177,6 +213,7 @@ def libc_release_library(
         libc_functions: List of functions to include in the library. They should be
             created by libc_function macro.
         weak_symbols: List of function names that should be marked as weak symbols.
+        srcs: Additional sources for the cc_library.
         **kwargs: Other arguments relevant to cc_library.
     """
 
@@ -200,12 +237,12 @@ def libc_release_library(
     ]
     cc_library(
         name = name,
-        srcs = [":" + name + "_srcs"],
+        srcs = [":" + name + "_srcs"] + srcs,
         copts = libc_common_copts() + libc_release_copts(),
         local_defines = weak_attributes + LIBC_CONFIGURE_OPTIONS,
         deps = [
             ":" + name + "_textual_hdr_library",
-        ],
+        ] + libc_common_deps(),
         **kwargs
     )
 
@@ -239,7 +276,7 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         # We put _hdr_deps in srcs, as they are not a part of this cc_library
         # interface, but instead are used to implement shared headers.
         srcs = [":" + name + "_hdr_deps"],
-        deps = [":" + name + "_textual_hdr_library"],
+        deps = [":" + name + "_textual_hdr_library"] + libc_common_deps(),
         # copts don't really matter, since it's a header-only library, but we
         # need proper -I flags for header validation, which are specified in
         # libc_common_copts().
@@ -289,11 +326,13 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
 def libc_header_info(
         name,
         has_def_template = False,
+        proxy = False,
         other_srcs = []):
     return struct(
         target_name = "include_{}_h".format(name.replace("/", "_")),
         staging_path = "staging/include/{}.h".format(name),
         yaml_template = "include/{}.yaml".format(name),
+        proxy = proxy,
         other_srcs = other_srcs + (["include/{}.h.def".format(name)] if has_def_template else []),
     )
 

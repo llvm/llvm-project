@@ -11,14 +11,17 @@
 #define FLAG(name) FLAGS_##name
 
 // Macros for declaring flags.
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 #define BM_DECLARE_bool(name) BENCHMARK_EXPORT extern bool FLAG(name)
 #define BM_DECLARE_int32(name) BENCHMARK_EXPORT extern int32_t FLAG(name)
 #define BM_DECLARE_double(name) BENCHMARK_EXPORT extern double FLAG(name)
 #define BM_DECLARE_string(name) BENCHMARK_EXPORT extern std::string FLAG(name)
 #define BM_DECLARE_kvpairs(name) \
   BENCHMARK_EXPORT extern std::map<std::string, std::string> FLAG(name)
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 // Macros for defining flags.
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 #define BM_DEFINE_bool(name, default_val) \
   BENCHMARK_EXPORT bool FLAG(name) = benchmark::BoolFromEnv(#name, default_val)
 #define BM_DEFINE_int32(name, default_val) \
@@ -33,6 +36,7 @@
 #define BM_DEFINE_kvpairs(name, default_val)                       \
   BENCHMARK_EXPORT std::map<std::string, std::string> FLAG(name) = \
       benchmark::KvPairsFromEnv(#name, default_val)
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 namespace benchmark {
 

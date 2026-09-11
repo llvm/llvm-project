@@ -50,9 +50,9 @@ public:
 
   StringRef getUnqualifiedName() const { return getUnqualifiedName(getName()); }
 
-  MCSectionXCOFF *getRepresentedCsect() const;
+  LLVM_ABI MCSectionXCOFF *getRepresentedCsect() const;
 
-  void setRepresentedCsect(MCSectionXCOFF *C);
+  LLVM_ABI void setRepresentedCsect(MCSectionXCOFF *C);
 
   void setVisibilityType(XCOFF::VisibilityType SVT) { VisibilityType = SVT; };
 

@@ -173,6 +173,8 @@ define dso_local i32 @all(i32 returned %x) local_unnamed_addr #0 "zero-call-used
 ; I386-NEXT:    fldz
 ; I386-NEXT:    fldz
 ; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fstp %st(0)
 ; I386-NEXT:    fstp %st(0)
 ; I386-NEXT:    fstp %st(0)
 ; I386-NEXT:    fstp %st(0)
@@ -255,21 +257,261 @@ define dso_local void @tailcall(ptr %p) local_unnamed_addr #0 "zero-call-used-re
   ret void
 }
 
-; Don't emit zeroing registers in "main" function.
-define dso_local i32 @main() local_unnamed_addr #1 {
-; I386-LABEL: main:
+; The x87 scrub must not push zeros over a return value live in ST0.
+define dso_local x86_fp80 @all_x87_return(x86_fp80 %x) local_unnamed_addr #0 "zero-call-used-regs"="all" {
+; I386-LABEL: all_x87_return:
 ; I386:       # %bb.0: # %entry
+; I386-NEXT:    fldt {{[0-9]+}}(%esp)
+; I386-NEXT:    fld1
+; I386-NEXT:    faddp %st, %st(1)
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
 ; I386-NEXT:    xorl %eax, %eax
+; I386-NEXT:    xorl %ecx, %ecx
+; I386-NEXT:    xorl %edx, %edx
+; I386-NEXT:    xorps %xmm0, %xmm0
+; I386-NEXT:    xorps %xmm1, %xmm1
+; I386-NEXT:    xorps %xmm2, %xmm2
+; I386-NEXT:    xorps %xmm3, %xmm3
+; I386-NEXT:    xorps %xmm4, %xmm4
+; I386-NEXT:    xorps %xmm5, %xmm5
+; I386-NEXT:    xorps %xmm6, %xmm6
+; I386-NEXT:    xorps %xmm7, %xmm7
 ; I386-NEXT:    retl
 ;
-; X86-64-LABEL: main:
+; X86-64-LABEL: all_x87_return:
 ; X86-64:       # %bb.0: # %entry
+; X86-64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X86-64-NEXT:    fld1
+; X86-64-NEXT:    faddp %st, %st(1)
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
 ; X86-64-NEXT:    xorl %eax, %eax
+; X86-64-NEXT:    xorl %ecx, %ecx
+; X86-64-NEXT:    xorl %edi, %edi
+; X86-64-NEXT:    xorl %edx, %edx
+; X86-64-NEXT:    xorl %esi, %esi
+; X86-64-NEXT:    xorl %r8d, %r8d
+; X86-64-NEXT:    xorl %r9d, %r9d
+; X86-64-NEXT:    xorl %r10d, %r10d
+; X86-64-NEXT:    xorl %r11d, %r11d
+; X86-64-NEXT:    xorps %xmm0, %xmm0
+; X86-64-NEXT:    xorps %xmm1, %xmm1
+; X86-64-NEXT:    xorps %xmm2, %xmm2
+; X86-64-NEXT:    xorps %xmm3, %xmm3
+; X86-64-NEXT:    xorps %xmm4, %xmm4
+; X86-64-NEXT:    xorps %xmm5, %xmm5
+; X86-64-NEXT:    xorps %xmm6, %xmm6
+; X86-64-NEXT:    xorps %xmm7, %xmm7
+; X86-64-NEXT:    xorps %xmm8, %xmm8
+; X86-64-NEXT:    xorps %xmm9, %xmm9
+; X86-64-NEXT:    xorps %xmm10, %xmm10
+; X86-64-NEXT:    xorps %xmm11, %xmm11
+; X86-64-NEXT:    xorps %xmm12, %xmm12
+; X86-64-NEXT:    xorps %xmm13, %xmm13
+; X86-64-NEXT:    xorps %xmm14, %xmm14
+; X86-64-NEXT:    xorps %xmm15, %xmm15
 ; X86-64-NEXT:    retq
-
 entry:
-  ret i32 0
+  %add = fadd x86_fp80 %x, 0xK3FFF8000000000000000
+  ret x86_fp80 %add
+}
+
+; Same for a two-value (_Complex long double) return live in ST0:ST1.
+define dso_local { x86_fp80, x86_fp80 } @all_x87_complex_return(x86_fp80 %re, x86_fp80 %im) local_unnamed_addr #0 "zero-call-used-regs"="all" {
+; I386-LABEL: all_x87_complex_return:
+; I386:       # %bb.0: # %entry
+; I386-NEXT:    fldt {{[0-9]+}}(%esp)
+; I386-NEXT:    fldt {{[0-9]+}}(%esp)
+; I386-NEXT:    fld1
+; I386-NEXT:    fadd %st, %st(1)
+; I386-NEXT:    faddp %st, %st(2)
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    xorl %eax, %eax
+; I386-NEXT:    xorl %ecx, %ecx
+; I386-NEXT:    xorl %edx, %edx
+; I386-NEXT:    xorps %xmm0, %xmm0
+; I386-NEXT:    xorps %xmm1, %xmm1
+; I386-NEXT:    xorps %xmm2, %xmm2
+; I386-NEXT:    xorps %xmm3, %xmm3
+; I386-NEXT:    xorps %xmm4, %xmm4
+; I386-NEXT:    xorps %xmm5, %xmm5
+; I386-NEXT:    xorps %xmm6, %xmm6
+; I386-NEXT:    xorps %xmm7, %xmm7
+; I386-NEXT:    retl
+;
+; X86-64-LABEL: all_x87_complex_return:
+; X86-64:       # %bb.0: # %entry
+; X86-64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X86-64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X86-64-NEXT:    fld1
+; X86-64-NEXT:    fadd %st, %st(1)
+; X86-64-NEXT:    faddp %st, %st(2)
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    xorl %eax, %eax
+; X86-64-NEXT:    xorl %ecx, %ecx
+; X86-64-NEXT:    xorl %edi, %edi
+; X86-64-NEXT:    xorl %edx, %edx
+; X86-64-NEXT:    xorl %esi, %esi
+; X86-64-NEXT:    xorl %r8d, %r8d
+; X86-64-NEXT:    xorl %r9d, %r9d
+; X86-64-NEXT:    xorl %r10d, %r10d
+; X86-64-NEXT:    xorl %r11d, %r11d
+; X86-64-NEXT:    xorps %xmm0, %xmm0
+; X86-64-NEXT:    xorps %xmm1, %xmm1
+; X86-64-NEXT:    xorps %xmm2, %xmm2
+; X86-64-NEXT:    xorps %xmm3, %xmm3
+; X86-64-NEXT:    xorps %xmm4, %xmm4
+; X86-64-NEXT:    xorps %xmm5, %xmm5
+; X86-64-NEXT:    xorps %xmm6, %xmm6
+; X86-64-NEXT:    xorps %xmm7, %xmm7
+; X86-64-NEXT:    xorps %xmm8, %xmm8
+; X86-64-NEXT:    xorps %xmm9, %xmm9
+; X86-64-NEXT:    xorps %xmm10, %xmm10
+; X86-64-NEXT:    xorps %xmm11, %xmm11
+; X86-64-NEXT:    xorps %xmm12, %xmm12
+; X86-64-NEXT:    xorps %xmm13, %xmm13
+; X86-64-NEXT:    xorps %xmm14, %xmm14
+; X86-64-NEXT:    xorps %xmm15, %xmm15
+; X86-64-NEXT:    retq
+entry:
+  %add.re = fadd x86_fp80 %re, 0xK3FFF8000000000000000
+  %add.im = fadd x86_fp80 %im, 0xK3FFF8000000000000000
+  %r0 = insertvalue { x86_fp80, x86_fp80 } poison, x86_fp80 %add.re, 0
+  %r1 = insertvalue { x86_fp80, x86_fp80 } %r0, x86_fp80 %add.im, 1
+  ret { x86_fp80, x86_fp80 } %r1
+}
+
+; No x87 value is live at the return, so all eight physical x87 registers must
+; be zeroed. On i386 the old hardcoded count of 7 pushed one fldz too few,
+; leaving a call-used x87 register unzeroed under "all".
+define dso_local i32 @all_no_x87_live(i32 %x) local_unnamed_addr #0 "zero-call-used-regs"="all" {
+; I386-LABEL: all_no_x87_live:
+; I386:       # %bb.0: # %entry
+; I386-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-NEXT:    incl %eax
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fldz
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    fstp %st(0)
+; I386-NEXT:    xorl %ecx, %ecx
+; I386-NEXT:    xorl %edx, %edx
+; I386-NEXT:    xorps %xmm0, %xmm0
+; I386-NEXT:    xorps %xmm1, %xmm1
+; I386-NEXT:    xorps %xmm2, %xmm2
+; I386-NEXT:    xorps %xmm3, %xmm3
+; I386-NEXT:    xorps %xmm4, %xmm4
+; I386-NEXT:    xorps %xmm5, %xmm5
+; I386-NEXT:    xorps %xmm6, %xmm6
+; I386-NEXT:    xorps %xmm7, %xmm7
+; I386-NEXT:    retl
+;
+; X86-64-LABEL: all_no_x87_live:
+; X86-64:       # %bb.0: # %entry
+; X86-64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X86-64-NEXT:    leal 1(%rdi), %eax
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fldz
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    fstp %st(0)
+; X86-64-NEXT:    xorl %ecx, %ecx
+; X86-64-NEXT:    xorl %edi, %edi
+; X86-64-NEXT:    xorl %edx, %edx
+; X86-64-NEXT:    xorl %esi, %esi
+; X86-64-NEXT:    xorl %r8d, %r8d
+; X86-64-NEXT:    xorl %r9d, %r9d
+; X86-64-NEXT:    xorl %r10d, %r10d
+; X86-64-NEXT:    xorl %r11d, %r11d
+; X86-64-NEXT:    xorps %xmm0, %xmm0
+; X86-64-NEXT:    xorps %xmm1, %xmm1
+; X86-64-NEXT:    xorps %xmm2, %xmm2
+; X86-64-NEXT:    xorps %xmm3, %xmm3
+; X86-64-NEXT:    xorps %xmm4, %xmm4
+; X86-64-NEXT:    xorps %xmm5, %xmm5
+; X86-64-NEXT:    xorps %xmm6, %xmm6
+; X86-64-NEXT:    xorps %xmm7, %xmm7
+; X86-64-NEXT:    xorps %xmm8, %xmm8
+; X86-64-NEXT:    xorps %xmm9, %xmm9
+; X86-64-NEXT:    xorps %xmm10, %xmm10
+; X86-64-NEXT:    xorps %xmm11, %xmm11
+; X86-64-NEXT:    xorps %xmm12, %xmm12
+; X86-64-NEXT:    xorps %xmm13, %xmm13
+; X86-64-NEXT:    xorps %xmm14, %xmm14
+; X86-64-NEXT:    xorps %xmm15, %xmm15
+; X86-64-NEXT:    retq
+entry:
+  %add = add i32 %x, 1
+  ret i32 %add
 }
 
 attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone uwtable willreturn "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #1 = { nofree norecurse nounwind uwtable "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }

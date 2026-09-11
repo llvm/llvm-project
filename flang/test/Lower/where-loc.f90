@@ -1,5 +1,5 @@
 ! Test line location lowering of WHERE statements.
-! RUN: %flang -fc1 -emit-hlfir -mmlir -mlir-print-debuginfo -mmlir --mlir-print-local-scope -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -mmlir -mlir-print-debuginfo -mmlir --mlir-print-local-scope -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_where_construct
 subroutine test_where_construct(mask, m2, x, y)

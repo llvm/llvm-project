@@ -24,7 +24,10 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Alignment.h"
+
+#include <cassert>
 
 namespace mlir {
 namespace abi {
@@ -74,10 +77,39 @@ struct ArgClassification {
   /// For Indirect: whether the callee gets ownership (byval).
   bool byVal = false;
 
-  static ArgClassification getDirect(Type coerced = nullptr) {
+  /// For Direct with coercion: the byte offset within the original aggregate
+  /// at which the coerced value lives.  Non-zero when the low eightbyte is
+  /// NO_CLASS and the value is carried in a later eightbyte (x86-64 SysV).
+  unsigned directOffset = 0;
+
+  /// Whether the value is passed as-is, so a rewriter can leave it alone.
+  /// Only an uncoerced Direct qualifies.  Extend counts as needing a rewrite
+  /// even though it only adds an attribute, because the attribute changes
+  /// observable behavior.
+  bool isPassThrough() const { return kind == ArgKind::Direct && !coercedType; }
+
+  /// Whether two classifications describe the same wire format.  Every field
+  /// participates, so a field added above must be added here as well.
+  bool operator==(const ArgClassification &other) const {
+    return kind == other.kind && coercedType == other.coercedType &&
+           indirectAlign == other.indirectAlign &&
+           signExtend == other.signExtend && canFlatten == other.canFlatten &&
+           byVal == other.byVal && directOffset == other.directOffset;
+  }
+
+  static ArgClassification getDirect() {
+    return getDirect(/*coerced=*/nullptr, /*offset=*/0);
+  }
+
+  static ArgClassification getDirect(Type coerced, unsigned offset) {
+    // isPassThrough reads only coercedType, so an offset with no coerced
+    // type to read at it would be silently ignored.
+    assert((!offset || coerced) &&
+           "a direct offset needs a coerced type to read at it");
     ArgClassification c;
     c.kind = ArgKind::Direct;
     c.coercedType = coerced;
+    c.directOffset = offset;
     return c;
   }
 
@@ -109,6 +141,31 @@ struct ArgClassification {
 struct FunctionClassification {
   ArgClassification returnInfo;
   SmallVector<ArgClassification> argInfos;
+
+  /// Whether the classified return type was the source language's void.
+  ///
+  /// A void return classifies as Ignore, and so does a return the ABI drops,
+  /// such as an empty record.  The two need opposite treatment: void is
+  /// already its own wire form, while a dropped record return has to be
+  /// rewritten to one.  returnInfo alone cannot tell them apart, so whoever
+  /// produces the classification records it here, next to the return type it
+  /// came from.  A consumer that re-derived it from something else could pair
+  /// a classification with the wrong answer, and reading a dropped return as
+  /// void means silently skipping the rewrite it needs.
+  ///
+  /// Left false when unknown, which costs a needless rewrite rather than a
+  /// skipped one.
+  bool returnsVoid = false;
+
+  /// Whether any value in the signature is passed differently from how it is
+  /// written, so a rewriter has work to do.
+  bool needsRewrite() const {
+    if (!returnsVoid && !returnInfo.isPassThrough())
+      return true;
+    return !llvm::all_of(argInfos, [](const ArgClassification &ac) {
+      return ac.isPassThrough();
+    });
+  }
 };
 
 /// ABIRewriteContext is the abstract interface that each dialect
@@ -128,12 +185,12 @@ public:
   ///
   /// \param funcOp  The function to rewrite (via FunctionOpInterface).
   /// \param fc      The ABI classification for this function.
-  /// \param rewriter  The pattern rewriter to use for modifications.
+  /// \param builder  The OpBuilder to use for modifications.
   /// \returns success() if the function was rewritten.
   virtual LogicalResult
   rewriteFunctionDefinition(FunctionOpInterface funcOp,
                             const FunctionClassification &fc,
-                            OpBuilder &rewriter) = 0;
+                            OpBuilder &builder) = 0;
 
   /// Rewrite a call operation to match the callee's ABI-lowered
   /// signature.
@@ -143,11 +200,11 @@ public:
   ///
   /// \param callOp  The call operation to rewrite.
   /// \param fc      The ABI classification for the callee.
-  /// \param rewriter  The pattern rewriter to use for modifications.
+  /// \param builder  The OpBuilder to use for modifications.
   /// \returns success() if the call was rewritten.
   virtual LogicalResult rewriteCallSite(Operation *callOp,
                                         const FunctionClassification &fc,
-                                        OpBuilder &rewriter) = 0;
+                                        OpBuilder &builder) = 0;
 
   /// Return the dialect namespace this context handles (e.g. "cir").
   virtual StringRef getDialectNamespace() const = 0;

@@ -58,7 +58,7 @@ public:
   ///
   /// For an instruction operand, for example, this will return the
   /// instruction.
-  User *getUser() const { return Parent; };
+  User *getUser() const { return Parent; }
 
   LLVM_ABI inline void set(Value *Val);
 
@@ -116,6 +116,21 @@ template <> struct simplify_type<const Use> {
   using SimpleType = /*const*/ Value *;
 
   static SimpleType getSimplifiedValue(const Use &Val) { return Val.get(); }
+};
+
+template <> struct simplify_type<Use *> {
+  using SimpleType = Value *;
+
+  static SimpleType getSimplifiedValue(Use *Val) {
+    return Val ? Val->get() : nullptr;
+  }
+};
+template <> struct simplify_type<const Use *> {
+  using SimpleType = /*const*/ Value *;
+
+  static SimpleType getSimplifiedValue(const Use *Val) {
+    return Val ? Val->get() : nullptr;
+  }
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

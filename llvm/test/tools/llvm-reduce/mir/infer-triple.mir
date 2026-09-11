@@ -10,7 +10,7 @@
 # RESULT: name: func
 
 --- |
-  target triple = "amdgcn-amd-amdhsa"
+  target triple = "amdgpu9.00-amd-amdhsa"
 
   define void @func() {
     ret void

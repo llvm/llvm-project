@@ -361,7 +361,7 @@ static void printAmdKernelCodeField(const AMDGPUMCKernelCodeT &C, int FldIndex,
     Printer(get_amd_kernel_code_t_FldNames()[FldIndex + 1], C, OS, Ctx, Helper);
 }
 
-void AMDGPUMCKernelCodeT::initDefault(const MCSubtargetInfo *STI,
+void AMDGPUMCKernelCodeT::initDefault(const MCSubtargetInfo &STI,
                                       MCContext &Ctx, bool InitMCExpr) {
   AMDGPUMCKernelCodeT();
 

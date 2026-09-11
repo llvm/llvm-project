@@ -1,0 +1,10 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "id_table": [],
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
+}

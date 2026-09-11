@@ -197,3 +197,55 @@ subroutine bge_test11(c)
   ! CHECK: %[[V:.*]] = fir.convert %[[R]] : (i1) -> !fir.logical<4>
   ! CHECK: hlfir.assign %[[V]] to %[[C_DECL]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 end subroutine bge_test11
+
+! Test BOZ literal as second argument
+! CHECK-LABEL: func.func @_QPbge_boz_second(
+subroutine bge_boz_second(a, c)
+  integer :: a
+  logical :: c
+  c = bge(a, z'FF')
+  ! CHECK: %[[BOZ:.*]] = arith.constant 255 : i128
+  ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: %[[EXT:.*]] = arith.extui %[[A]] : i32 to i128
+  ! CHECK: %[[CMP:.*]] = arith.cmpi uge, %[[EXT]], %[[BOZ]] : i128
+  ! CHECK: %[[RES:.*]] = fir.convert %[[CMP]] : (i1) -> !fir.logical<4>
+  ! CHECK: hlfir.assign %[[RES]] to %{{.*}}
+end subroutine bge_boz_second
+
+! Test BOZ literal as first argument
+! CHECK-LABEL: func.func @_QPbge_boz_first(
+subroutine bge_boz_first(a, c)
+  integer :: a
+  logical :: c
+  c = bge(z'FF', a)
+  ! CHECK: %[[BOZ:.*]] = arith.constant 255 : i128
+  ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: %[[EXT:.*]] = arith.extui %[[A]] : i32 to i128
+  ! CHECK: %[[CMP:.*]] = arith.cmpi uge, %[[BOZ]], %[[EXT]] : i128
+  ! CHECK: %[[RES:.*]] = fir.convert %[[CMP]] : (i1) -> !fir.logical<4>
+  ! CHECK: hlfir.assign %[[RES]] to %{{.*}}
+end subroutine bge_boz_first
+
+! Test BOZ literal wider than companion integer type
+! CHECK-LABEL: func.func @_QPbge_boz_wide(
+subroutine bge_boz_wide(a, c)
+  integer :: a
+  logical :: c
+  c = bge(a, z'1FFFFFFFF')
+  ! CHECK: %[[BOZ:.*]] = arith.constant 8589934591 : i128
+  ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: %[[EXT:.*]] = arith.extui %[[A]] : i32 to i128
+  ! CHECK: %[[CMP:.*]] = arith.cmpi uge, %[[EXT]], %[[BOZ]] : i128
+  ! CHECK: %[[RES:.*]] = fir.convert %[[CMP]] : (i1) -> !fir.logical<4>
+  ! CHECK: hlfir.assign %[[RES]] to %{{.*}}
+end subroutine bge_boz_wide
+
+! Test BOZ literal for both arguments (folded at compile time)
+! CHECK-LABEL: func.func @_QPbge_boz_both(
+subroutine bge_boz_both(c)
+  logical :: c
+  c = bge(z'FF', z'FE')
+  ! CHECK: %[[R:.*]] = arith.constant true
+  ! CHECK: %[[V:.*]] = fir.convert %[[R]] : (i1) -> !fir.logical<4>
+  ! CHECK: hlfir.assign %[[V]] to %{{.*}}
+end subroutine bge_boz_both

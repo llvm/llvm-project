@@ -434,6 +434,26 @@ def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float8E5M3FNUType
+//===----------------------------------------------------------------------===//
+
+def Builtin_Float8E5M3FNU : Builtin_FloatType<"Float8E5M3FNU", "f8E5M3FNU"> {
+  let summary = "8-bit unsigned floating point with 5-bit exponent, 3-bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 0 sign bit, 5 bits exponent and 3 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it
+    follows similar conventions with the following characteristics:
+
+      * bit encoding: S0E5M3
+      * exponent bias: 15
+      * infinities: Not supported
+      * NaNs: Supported with all bits set to 1
+      * Zero: Supported
+      * denormals when exponent is 0
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BFloat16Type
 //===----------------------------------------------------------------------===//
 
@@ -1235,6 +1255,28 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TokenType
+//===----------------------------------------------------------------------===//
+
+def Builtin_Token : Builtin_Type<"Token", "token"> {
+  let summary = "Token type";
+  let description = [{
+    Syntax:
+
+    ```
+    token-type ::= `token`
+    ```
+
+    A use of a token SSA value is a pointer to an operation (in case of an
+    OpResult) or a pointer to a region (in case of an entry block argument).
+    A token carries no runtime data and cannot be forwarded. Tokens are
+    excluded from the `AnyType` type constraint. Operations must define
+    `TokenProducerTrait` to produce token results or token region entry block
+    arguments, and must define `TokenConsumerTrait` to consume token operands.
+  }];
 }
 
 //===----------------------------------------------------------------------===//

@@ -22,6 +22,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <optional>
@@ -681,8 +682,21 @@ private:
 TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
   // Collect the expanded token stream during preprocessing.
   PP.setTokenWatcher([this](const clang::Token &T) {
-    if (T.isAnnotation())
+    if (T.is(tok::annot_module_name)) {
+      auto &SM = this->PP.getSourceManager();
+      StringRef Text = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(T.getAnnotationRange()), SM,
+          this->PP.getLangOpts());
+      Expanded.push_back(
+          syntax::Token(T.getLocation(), Text.size(), tok::annot_module_name));
       return;
+    }
+
+    // These tokens do not have a one-to-one raw spelling.
+    if (T.isAnnotation() || T.is(tok::eod))
+      return;
+
+    Expanded.push_back(syntax::Token(T));
     DEBUG_WITH_TYPE("collect-tokens", llvm::dbgs()
                                           << "Token: "
                                           << syntax::Token(T).dumpForTests(
@@ -690,7 +704,6 @@ TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
                                           << "\n"
 
     );
-    Expanded.push_back(syntax::Token(T));
   });
   // And locations of macro calls, to properly recover boundaries of those in
   // case of empty expansions.

@@ -17,6 +17,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "llvm/Support/Error.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -26,7 +28,7 @@ public:
                          uint64_t addr_size)
       : ValueObject(parent), m_func_idx(func_idx), m_addr_size(addr_size) {
     SetFormat(eFormatPointer);
-    SetName(ConstString(llvm::formatv("[{0}]", func_idx).str()));
+    SetName(llvm::formatv("[{0}]", func_idx).str());
   }
 
   ~ValueObjectVTableChild() override = default;
@@ -73,16 +75,22 @@ protected:
       return false;
     }
 
+    parent_addr = process_sp->FixCodeAddress(parent_addr);
+
     // Each `vtable_entry_addr` points to the function pointer.
     addr_t vtable_entry_addr = parent_addr + m_func_idx * m_addr_size;
-    addr_t vfunc_ptr =
-        process_sp->ReadPointerFromMemory(vtable_entry_addr, m_error);
-    if (m_error.Fail()) {
+    llvm::Expected<lldb::addr_t> vfunc_ptr_or_err =
+        process_sp->ReadPointerFromMemory(vtable_entry_addr);
+    if (!vfunc_ptr_or_err) {
+      llvm::consumeError(vfunc_ptr_or_err.takeError());
       m_error = Status::FromErrorStringWithFormat(
           "failed to read virtual function entry 0x%16.16" PRIx64,
           vtable_entry_addr);
       return false;
     }
+    addr_t vfunc_ptr = *vfunc_ptr_or_err;
+
+    vfunc_ptr = process_sp->FixCodeAddress(vfunc_ptr);
 
     // Set our value to be the load address of the function pointer in memory
     // and our type to be the function pointer type.

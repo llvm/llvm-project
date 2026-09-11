@@ -19,10 +19,10 @@ void offset_of_builtin() {
   unsigned long d = __builtin_offsetof(Struct, d);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["b", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["c", init]
-// CIR: %[[D_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["d", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!u64i>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_0]], %[[A_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
@@ -32,10 +32,10 @@ void offset_of_builtin() {
 // CIR: %[[CONST_16:.*]] = cir.const #cir.int<16> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_16]], %[[D_ADDR]] : !u64i, !cir.ptr<!u64i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[C_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[D_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[C_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[D_ADDR:.*]] = alloca i64, align 8
 // LLVM: store i64 0, ptr %[[A_ADDR]], align 8
 // LLVM: store i64 4, ptr %[[B_ADDR]], align 8
 // LLVM: store i64 8, ptr %[[C_ADDR]], align 8
@@ -61,10 +61,10 @@ void offset_of_builtin_from_array_element() {
   unsigned long d = __builtin_offsetof(StructWithArray, array[3][3].d);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["b", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["c", init]
-// CIR: %[[D_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["d", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!u64i>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_0]], %[[A_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[CONST_124:.*]] = cir.const #cir.int<124> : !u64i
@@ -74,10 +74,10 @@ void offset_of_builtin_from_array_element() {
 // CIR: %[[CONST_376:.*]] = cir.const #cir.int<376> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_376]], %[[D_ADDR]] : !u64i, !cir.ptr<!u64i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[C_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[D_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[C_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[D_ADDR:.*]] = alloca i64, align 8
 // LLVM: store i64 0, ptr %[[A_ADDR]], align 8
 // LLVM: store i64 124, ptr %[[B_ADDR]], align 8
 // LLVM: store i64 248, ptr %[[C_ADDR]], align 8

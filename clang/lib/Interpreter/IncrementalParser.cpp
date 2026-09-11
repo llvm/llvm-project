@@ -13,6 +13,7 @@
 #include "IncrementalParser.h"
 #include "IncrementalAction.h"
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -172,8 +173,29 @@ IncrementalParser::Parse(llvm::StringRef input) {
   return PTU;
 }
 
+void IncrementalParser::withdrawMostRecentTU(
+    TranslationUnitDecl *MostRecentTU) {
+  TranslationUnitDecl *Prev = MostRecentTU->getPreviousDecl();
+  if (!Prev)
+    return;
+  assert(MostRecentTU->getMostRecentDecl() == MostRecentTU &&
+         "Not the most recent translation unit!");
+
+  // Rebuild A -> ... -> Prev -> MostRecentTU as A -> ... -> Prev.
+  MostRecentTU->getFirstDecl()->RedeclLink.setLatest(Prev);
+
+  // getTranslationUnitDecl() requires the active unit to be the latest one.
+  ASTContext &C = S.getASTContext();
+  if (C.TraversalScope.size() == 1 && C.TraversalScope.back() == MostRecentTU)
+    C.TraversalScope = {Prev};
+  C.TUDecl = Prev;
+}
+
 void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   if (StoredDeclsMap *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
+    // Collect the keys to erase: erasing during iteration invalidates the map
+    // iterator under backward-shift deletion.
+    llvm::SmallVector<DeclarationName, 16> KeysToErase;
     for (auto &&[Key, List] : *Map) {
       DeclContextLookupResult R = List.getLookupResult();
       std::vector<NamedDecl *> NamedDeclsToRemove;
@@ -185,13 +207,22 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
           RemoveAll = false;
       }
       if (LLVM_LIKELY(RemoveAll)) {
-        Map->erase(Key);
+        KeysToErase.push_back(Key);
       } else {
         for (NamedDecl *D : NamedDeclsToRemove)
           List.remove(D);
       }
     }
+    for (DeclarationName Key : KeysToErase)
+      Map->erase(Key);
   }
+
+  // Check if we need to clean up the IdResolver chain.
+  auto RemoveFromIdResolver = [&](NamedDecl *D) {
+    if (D->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
+        !D->getLangOpts().CPlusPlus)
+      S.IdResolver.RemoveDecl(D);
+  };
 
   ExternCContextDecl *ECCD = S.getASTContext().getExternCContextDecl();
   if (StoredDeclsMap *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
@@ -211,21 +242,20 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
       }
       for (NamedDecl *D : NamedDeclsToRemove) {
         List.remove(D);
-        S.IdResolver.RemoveDecl(D);
+        RemoveFromIdResolver(D);
       }
     }
   }
 
-  // FIXME: We should de-allocate MostRecentTU
   for (Decl *D : MostRecentTU->decls()) {
     auto *ND = dyn_cast<NamedDecl>(D);
     if (!ND || ND->getDeclName().isEmpty())
       continue;
-    // Check if we need to clean up the IdResolver chain.
-    if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
-        !D->getLangOpts().CPlusPlus)
-      S.IdResolver.RemoveDecl(ND);
+    RemoveFromIdResolver(ND);
   }
+
+  // Lookup alone is not enough: the redeclaration chain still reaches these.
+  withdrawMostRecentTU(MostRecentTU);
 }
 
 PartialTranslationUnit &

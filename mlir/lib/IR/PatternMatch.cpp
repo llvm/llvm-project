@@ -260,7 +260,9 @@ Operation *RewriterBase::eraseOpResults(Operation *op,
   InsertionGuard g(*this);
   setInsertionPoint(op);
   OperationState state(op->getLoc(), op->getName().getStringRef(),
-                       op->getOperands(), newResultTypes, op->getAttrs());
+                       op->getOperands(), newResultTypes,
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
   for ([[maybe_unused]] auto i : llvm::seq<unsigned>(0, op->getNumRegions()))
     state.addRegion();
   Operation *newOp = create(state);

@@ -431,7 +431,7 @@ clang::driver::toolchains::HLSLToolChain::parseTargetProfile(
 }
 
 DerivedArgList *
-HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
+HLSLToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
                              Action::OffloadKind DeviceOffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
 
@@ -529,6 +529,15 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
     if (A->getOption().getID() == options::OPT_fvk_use_gl_layout) {
       getDriver().Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+      A->claim();
+      continue;
+    }
+
+    if (A->getOption().getID() ==
+            options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order &&
+        getArch() != llvm::Triple::spirv) {
+      getDriver().Diag(diag::err_drv_argument_only_allowed_with)
+          << A->getAsString(Args) << "-spirv";
       A->claim();
       continue;
     }

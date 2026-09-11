@@ -67,7 +67,7 @@ cleanup:                                          ; preds = %wakeup, %entry
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @foo.resume(
+; CHECK-LABEL: define internal void @foo.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[CORO_STATE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
 ; CHECK-NEXT:    [[A1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CORO_STATE]], i64 16
@@ -83,7 +83,7 @@ cleanup:                                          ; preds = %wakeup, %entry
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @foo.destroy(
+; CHECK-LABEL: define internal void @foo.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[CORO_STATE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[CORO_MEMFREE:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[CORO_STATE]])
@@ -91,7 +91,7 @@ cleanup:                                          ; preds = %wakeup, %entry
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @foo.cleanup(
+; CHECK-LABEL: define internal void @foo.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[CORO_STATE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
 ; CHECK-NEXT:    call void @free(ptr null)

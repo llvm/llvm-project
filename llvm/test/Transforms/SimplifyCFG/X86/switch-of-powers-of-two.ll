@@ -4,9 +4,9 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 ;.
-; CHECK: @switch.table.switch_of_powers_two = private unnamed_addr constant [7 x i32] [i32 3, i32 poison, i32 poison, i32 2, i32 1, i32 0, i32 42], align 4
-; CHECK: @switch.table.switch_of_powers_two_default_reachable = private unnamed_addr constant [7 x i32] [i32 3, i32 5, i32 5, i32 2, i32 1, i32 0, i32 42], align 4
-; CHECK: @switch.table.switch_of_powers_two_default_reachable_multipreds = private unnamed_addr constant [7 x i32] [i32 3, i32 poison, i32 poison, i32 2, i32 1, i32 0, i32 42], align 4
+; CHECK: @switch.table.switch_of_powers_two = private unnamed_addr constant [7 x i8] [i8 3, i8 poison, i8 poison, i8 2, i8 1, i8 0, i8 42], align 4
+; CHECK: @switch.table.switch_of_powers_two_default_reachable = private unnamed_addr constant [7 x i8] c"\03\05\05\02\01\00*", align 4
+; CHECK: @switch.table.switch_of_powers_two_default_reachable_multipreds = private unnamed_addr constant [7 x i8] [i8 3, i8 poison, i8 poison, i8 2, i8 1, i8 0, i8 42], align 4
 ;.
 define i32 @switch_of_powers_two(i32 %arg) {
 ; CHECK-LABEL: define i32 @switch_of_powers_two(
@@ -14,8 +14,9 @@ define i32 @switch_of_powers_two(i32 %arg) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers_two, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers_two, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 entry:
@@ -53,11 +54,12 @@ define i32 @switch_of_powers_two_default_reachable(i32 %arg) !prof !0 {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN]], !prof [[PROF2:![0-9]+]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers_two_default_reachable, i64 0, i64 [[TMP4]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers_two_default_reachable, i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ], [ 5, %[[ENTRY_SPLIT]] ], [ 5, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SWITCH_EXT]], %[[SWITCH_LOOKUP]] ], [ 5, %[[ENTRY_SPLIT]] ], [ 5, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
@@ -100,11 +102,12 @@ define i32 @switch_of_powers_two_default_reachable_multipreds(i32 %arg, i1 %cond
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers_two_default_reachable_multipreds, i64 0, i64 [[TMP4]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers_two_default_reachable_multipreds, i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ], [ 0, %[[ENTRY]] ], [ [[ARG]], %[[SWITCH]] ], [ [[ARG]], %[[SWITCH_SPLIT]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SWITCH_EXT]], %[[SWITCH_LOOKUP]] ], [ 0, %[[ENTRY]] ], [ [[ARG]], %[[SWITCH]] ], [ [[ARG]], %[[SWITCH_SPLIT]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
@@ -138,6 +141,7 @@ return:
 !1 = !{!"branch_weights", i32 10, i32 5, i32 7, i32 11, i32 13, i32 17}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 58, i32 5}

@@ -1,0 +1,20 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "id_table": [],
+  "linkage_table": [],
+  "data": [
+    {
+      "summary_name": "PairsEntitySummary",
+      "summary_data": [
+        {
+          "entity_id": 0
+        }
+      ]
+    }
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
+}

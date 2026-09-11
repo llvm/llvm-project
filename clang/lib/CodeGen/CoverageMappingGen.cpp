@@ -618,9 +618,9 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
       : CoverageMappingBuilder(CVM, SM, LangOpts) {}
 
   void VisitDecl(const Decl *D) {
-    if (!D->hasBody())
+    Stmt *Body = D->getBody();
+    if (!Body)
       return;
-    auto Body = D->getBody();
     SourceLocation Start = getStart(Body);
     SourceLocation End = getEnd(Body);
     if (!SM.isWrittenInSameFile(Start, End)) {
@@ -2260,13 +2260,9 @@ struct CounterCoverageMappingBuilder
     (void)FoundCount;
 
     // Tell CodeGenPGO not to instrument.
-    for (auto I = MCDCState.BranchByStmt.begin(),
-              E = MCDCState.BranchByStmt.end();
-         I != E;) {
-      auto II = I++;
-      if (II->second.DecisionStmt == Decision)
-        MCDCState.BranchByStmt.erase(II);
-    }
+    MCDCState.BranchByStmt.remove_if([&](const auto &Entry) {
+      return Entry.second.DecisionStmt == Decision;
+    });
     MCDCState.DecisionByStmt.erase(Decision);
   }
 

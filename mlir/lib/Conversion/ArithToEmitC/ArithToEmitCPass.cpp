@@ -14,7 +14,8 @@
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitCPass.h"
 
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitC.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
+#include "mlir/Dialect/Arith/IR/ArithDialect.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -41,13 +42,7 @@ void ConvertArithToEmitC::runOnOperation() {
 
   RewritePatternSet patterns(&getContext());
 
-  TypeConverter typeConverter;
-  // Fallback for other types.
-  typeConverter.addConversion([](Type type) -> std::optional<Type> {
-    if (!emitc::isSupportedEmitCType(type))
-      return {};
-    return type;
-  });
+  EmitCTypeConverter typeConverter(&getContext());
 
   populateArithToEmitCPatterns(typeConverter, patterns);
 

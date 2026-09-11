@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm -split-input-file %s --verify-diagnostics | FileCheck %s
+; RUN: mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s --verify-diagnostics | FileCheck %s
 
 ; CHECK: llvm.func internal @func_internal
 define internal void @func_internal() {
@@ -58,6 +58,7 @@ attributes #0 = { readnone }
 ; CHECK-SAME:  !llvm.ptr {llvm.dead_on_return = 8 : i64}
 ; CHECK-SAME:  f32 {llvm.nofpclass = 519 : i64}
 ; CHECK-SAME:  i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>}
+; CHECK-SAME:  !llvm.ptr {llvm.nofreeobj}
 define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
     ptr byref(i64) %arg1,
@@ -80,7 +81,8 @@ define ptr @func_arg_attrs(
     ptr dead_on_unwind %arg20,
     ptr dead_on_return(8) %arg21,
     float nofpclass(nan inf) %arg22,
-    i64 range(i64 0, 4097) %arg23) {
+    i64 range(i64 0, 4097) %arg23,
+    ptr nofreeobj %arg24) {
   ret ptr %arg17
 }
 
@@ -106,6 +108,12 @@ declare ptr @allocator(i64 allocalign, ptr allocptr)
 ; CHECK-LABEL: @func_res_attr_noalias
 ; CHECK-SAME:  !llvm.ptr {llvm.noalias}
 declare noalias ptr @func_res_attr_noalias()
+
+; // -----
+
+; CHECK-LABEL: @func_res_attr_nofreeobj
+; CHECK-SAME:  !llvm.ptr {llvm.nofreeobj}
+declare nofreeobj ptr @func_res_attr_nofreeobj()
 
 ; // -----
 
@@ -171,12 +179,86 @@ declare range(i64 0, 4097) i64 @func_res_attr_range()
 ; // -----
 
 ; CHECK-LABEL: @entry_count
-; CHECK-SAME:  attributes {function_entry_count = 4242 : i64}
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 4242>}
 define void @entry_count() !prof !1 {
   ret void
 }
 
 !1 = !{!"function_entry_count", i64 4242}
+
+; // -----
+
+; CHECK-LABEL: @synthetic_entry_count
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic>}
+define void @synthetic_entry_count() !prof !2 {
+  ret void
+}
+
+!2 = !{!"synthetic_function_entry_count", i64 7}
+
+; // -----
+
+; CHECK-LABEL: @entry_count_imports
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 7, imports = 1234, 18446744073709551615, 4, 1234>}
+define void @entry_count_imports() !prof !3 {
+  ret void
+}
+
+!3 = !{!"function_entry_count", i64 7, i64 1234, i64 -1, i64 4, i64 1234}
+
+; // -----
+
+; CHECK-LABEL: @synthetic_entry_count_imports
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic, imports = 1234>}
+define void @synthetic_entry_count_imports() !prof !4 {
+  ret void
+}
+
+!4 = !{!"synthetic_function_entry_count", i64 7, i64 1234}
+
+; // -----
+
+; CHECK-LABEL: @entry_count_malformed_import
+; CHECK-NOT: function_entry_count
+; expected-warning @unknown {{unhandled function metadata}}
+define void @entry_count_malformed_import() !prof !5 {
+  ret void
+}
+
+!5 = !{!"function_entry_count", i64 7, !"bad"}
+
+; // -----
+
+; CHECK-LABEL: @entry_count_too_wide_count
+; CHECK-NOT: function_entry_count
+; expected-warning @unknown {{unhandled function metadata}}
+define void @entry_count_too_wide_count() !prof !6 {
+  ret void
+}
+
+!6 = !{!"function_entry_count", i128 18446744073709551616}
+
+; // -----
+
+; CHECK-LABEL: @entry_count_too_wide_import
+; CHECK-NOT: function_entry_count
+; expected-warning @unknown {{unhandled function metadata}}
+define void @entry_count_too_wide_import() !prof !7 {
+  ret void
+}
+
+!7 = !{!"function_entry_count", i64 7, i128 18446744073709551616}
+
+; // -----
+
+; Preserve the raw i64 metadata bit pattern.
+; CHECK-LABEL: @entry_count_negative_count
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615>}
+define void @entry_count_negative_count() !prof !8 {
+  ret void
+}
+
+!8 = !{!"function_entry_count", i64 -1}
 
 ; // -----
 
@@ -493,6 +575,12 @@ declare void @optsize() optsize
 declare void @save_reg_params() "save-reg-params"
 
 // -----
+
+; CHECK-LABEL: @uniform_work_group_size
+; CHECK-SAME: attributes {uniform_work_group_size}
+declare void @uniform_work_group_size() "uniform-work-group-size"
+
+; // -----
 
 ; CHECK-LABEL: @zero_call_used_regs
 ; CHECK-SAME: attributes {zero_call_used_regs = "skip"}

@@ -139,14 +139,6 @@ inline hash_code hash_value(const FixedPointSemantics &Val) {
 }
 
 template <> struct DenseMapInfo<FixedPointSemantics> {
-  static inline FixedPointSemantics getEmptyKey() {
-    return FixedPointSemantics(0, 0, false, false, false);
-  }
-
-  static inline FixedPointSemantics getTombstoneKey() {
-    return FixedPointSemantics(0, 1, false, false, false);
-  }
-
   static unsigned getHashValue(const FixedPointSemantics &Val) {
     return hash_value(Val);
   }
@@ -319,14 +311,6 @@ inline hash_code hash_value(const APFixedPoint &Val) {
 }
 
 template <> struct DenseMapInfo<APFixedPoint> {
-  static inline APFixedPoint getEmptyKey() {
-    return APFixedPoint(DenseMapInfo<FixedPointSemantics>::getEmptyKey());
-  }
-
-  static inline APFixedPoint getTombstoneKey() {
-    return APFixedPoint(DenseMapInfo<FixedPointSemantics>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const APFixedPoint &Val) {
     return hash_value(Val);
   }

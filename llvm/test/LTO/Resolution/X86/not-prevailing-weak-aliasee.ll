@@ -12,7 +12,7 @@
 ; not live and will also be dropped.
 ; RUN: llvm-dis %t2.o.1.1.promote.bc -o - | FileCheck %s
 ; CHECK: define weak hidden void @__a
-; CHECK: declare hidden void @__b
+; CHECK: declare !guid !{{[0-9]+}} hidden void @__b
 ; CHECK: declare void @b
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

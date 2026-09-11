@@ -18,7 +18,7 @@
 
 Instructions for regenerating the test:
 # cd %S/Inputs/coverage_prefix_map
-cp -r . /tmp/coverage_prefix_map
+cp -R . /tmp/coverage_prefix_map
 
 clang -fprofile-instr-generate -mllvm -enable-name-compression=false -fcoverage-mapping -fcoverage-prefix-map=$PWD=. main.cc -o main
 LLVM_PROFILE_FILE="main.raw" ./main

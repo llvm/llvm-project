@@ -12,9 +12,10 @@
 
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitCPass.h"
 
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -42,17 +43,9 @@ struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base::Base;
   void runOnOperation() override {
-    TypeConverter converter;
+    EmitCTypeConverter converter(&getContext());
     ConvertMemRefToEmitCOptions options;
     options.lowerToCpp = this->lowerToCpp;
-    // Fallback for other types.
-    converter.addConversion([](Type type) -> std::optional<Type> {
-      if (!emitc::isSupportedEmitCType(type))
-        return {};
-      return type;
-    });
-
-    populateMemRefToEmitCTypeConversion(converter);
 
     RewritePatternSet patterns(&getContext());
     populateMemRefToEmitCConversionPatterns(patterns, converter);
@@ -76,6 +69,7 @@ struct ConvertMemRefToEmitCPass
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
       StringRef expectedHeader;
       if (callOp.getCallee() == alignedAllocFunctionName ||
+          callOp.getCallee() == freeFunctionName ||
           callOp.getCallee() == mallocFunctionName)
         expectedHeader = options.lowerToCpp ? cppStandardLibraryHeader
                                             : cStandardLibraryHeader;

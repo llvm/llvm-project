@@ -60,7 +60,7 @@ void FullExport::key() { typeid(FullExport).name(); }
 /// is, so the vtable and typeinfo symbol must be imported.
 
 // PS-DAG: @_ZTV10PartImport = {{.*}}dllimport
-// WI-DAG: @_ZTV10PartImport = external dso_local unnamed_addr constant {
+// WI-DAG: @_ZTV10PartImport = external dso_local constant {
 // PS-DAG: @_ZTI10PartImport = {{.*}}dllimport
 // WI-DAG: @_ZTI10PartImport = external dso_local constant ptr
 struct PartImport {
@@ -83,7 +83,7 @@ void PartImportTest() {
 /// is, so the vtable and typeinfo symbol must be exported.
 
 // PS-DAG: @_ZTV10PartExport = {{.*}}dllexport
-// WI-DAG: @_ZTV10PartExport = dso_local unnamed_addr constant {
+// WI-DAG: @_ZTV10PartExport = dso_local constant {
 // PS-DAG: @_ZTI10PartExport = {{.*}}dllexport
 // WI-DAG: @_ZTI10PartExport = dso_local constant {
 struct PartExport {
@@ -102,7 +102,7 @@ void PartExport::key() { typeid(PartExport).name(); }
 /// is, so the vtable and typeinfo symbol must be exported.
 
 // PS-DAG: @_ZTV10ConsExport = {{.*}}dllexport
-// WI-DAG: @_ZTV10ConsExport = dso_local unnamed_addr constant {
+// WI-DAG: @_ZTV10ConsExport = dso_local constant {
 // PS-DAG: @_ZTI10ConsExport = {{.*}}dllexport
 // WI-DAG: @_ZTI10ConsExport = dso_local constant {
 struct ConsExport {

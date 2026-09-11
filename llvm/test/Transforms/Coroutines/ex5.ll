@@ -1,4 +1,4 @@
-; Fifth example from Doc/Coroutines.rst (final suspend)
+; Fifth example from Doc/Coroutines.md (final suspend)
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
 define ptr @f(i32 %n) presplitcoroutine {

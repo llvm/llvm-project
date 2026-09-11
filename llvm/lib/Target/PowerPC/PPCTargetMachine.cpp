@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
-#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
@@ -99,7 +98,7 @@ static cl::opt<bool>
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnablePPCGenScalarMASSEntries(
+cl::opt<bool> EnablePPCGenScalarMASSEntries(
     "enable-ppc-gen-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
              "(scalar) entries"),
@@ -246,8 +245,12 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
 
   if (JIT)
     return CodeModel::Small;
-  if (TT.isOSAIX())
+  if (TT.isOSAIX()) {
+    // Use large code model for 64-bit AIX by default.
+    if (TT.isArch64Bit())
+      return CodeModel::Large;
     return CodeModel::Small;
+  }
 
   assert(TT.isOSBinFormatELF() && "All remaining PPC OSes are ELF based.");
 
@@ -336,10 +339,6 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<PPCSubtarget>(
         TargetTriple, CPU, TuneCPU,
         // FIXME: It would be good to have the subtarget additions here
@@ -417,10 +416,8 @@ void PPCPassConfig::addIRPasses() {
   // Generate PowerPC target-specific entries for scalar math functions
   // that are available in IBM MASS (scalar) library.
   if (TM->getOptLevel() == CodeGenOptLevel::Aggressive &&
-      EnablePPCGenScalarMASSEntries) {
-    TM->Options.PPCGenScalarMASSEntries = EnablePPCGenScalarMASSEntries;
+      EnablePPCGenScalarMASSEntries)
     addPass(createPPCGenScalarMASSEntriesPass());
-  }
 
   // If explicitly requested, add explicit data prefetch intrinsics.
   if (EnablePrefetch.getNumOccurrences() > 0)
@@ -585,21 +582,21 @@ PPCPostRASchedRegistry("ppc-postra",
 
 // Global ISEL
 bool PPCPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslatorLegacy());
   return false;
 }
 
 bool PPCPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool PPCPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool PPCPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }

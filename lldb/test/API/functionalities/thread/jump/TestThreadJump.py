@@ -9,11 +9,14 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # Wasm has no writable PC to jump
 class ThreadJumpTestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.build()
 
+    # Flakey on Windows on Arm, https://github.com/llvm/llvm-project/issues/201068.
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test(self):
         """Test thread jump handling."""
         exe = self.getBuildArtifact("a.out")

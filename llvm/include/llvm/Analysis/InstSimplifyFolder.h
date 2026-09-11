@@ -120,10 +120,10 @@ public:
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
-  Value *
-  FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                      FastMathFlags FMF = FastMathFlags()) const override {
-    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, FMF, SQ);
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF = {},
+                       Function *CtxF = nullptr) const override {
+    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ, CtxF);
   }
 
   //===--------------------------------------------------------------------===//

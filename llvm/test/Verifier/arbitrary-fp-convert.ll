@@ -5,13 +5,16 @@
 ; RUN: not llvm-as %t/bad-interpretation-empty.ll -disable-output 2>&1 | FileCheck %s --check-prefix=BAD-INTERP-EMPTY
 ; RUN: not llvm-as %t/bad-interpretation-unknown.ll -disable-output 2>&1 | FileCheck %s --check-prefix=BAD-INTERP-UNKNOWN
 ; RUN: not llvm-as %t/bad-rounding.ll -disable-output 2>&1 | FileCheck %s --check-prefix=BAD-ROUNDING
-; RUN: not opt -S -passes=verify %t/ptr-to-arbitrary-fp.ll 2>&1 | FileCheck %s --check-prefix=PTR-TO-FP
-; RUN: not opt -S -passes=verify %t/arbitrary-fp-to-ptr.ll 2>&1 | FileCheck %s --check-prefix=FP-TO-PTR
-; RUN: not opt -S -passes=verify %t/int-to-arbitrary-fp.ll 2>&1 | FileCheck %s --check-prefix=INT-TO-FP
-; RUN: not opt -S -passes=verify %t/arbitrary-fp-to-int.ll 2>&1 | FileCheck %s --check-prefix=FP-TO-INT
-; RUN: not opt -S -passes=verify %t/vec-ptr-to-arbitrary-fp.ll 2>&1 | FileCheck %s --check-prefix=VEC-PTR-TO-FP
-; RUN: not opt -S -passes=verify %t/vec-to-scalar-mismatch.ll 2>&1 | FileCheck %s --check-prefix=VEC-SCALAR-MISMATCH
-; RUN: not opt -S -passes=verify %t/vec-size-mismatch.ll 2>&1 | FileCheck %s --check-prefix=VEC-SIZE-MISMATCH
+; RUN: not llvm-as %t/ptr-to-arbitrary-fp.ll -disable-output 2>&1 | FileCheck %s --check-prefix=PTR-TO-FP
+; RUN: not llvm-as %t/arbitrary-fp-to-ptr.ll -disable-output 2>&1 | FileCheck %s --check-prefix=FP-TO-PTR
+; RUN: not llvm-as %t/int-to-arbitrary-fp.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INT-TO-FP
+; RUN: not llvm-as %t/arbitrary-fp-to-int.ll -disable-output 2>&1 | FileCheck %s --check-prefix=FP-TO-INT
+; RUN: not llvm-as %t/vec-ptr-to-arbitrary-fp.ll -disable-output 2>&1 | FileCheck %s --check-prefix=VEC-PTR-TO-FP
+; RUN: not llvm-as %t/vec-to-scalar-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=VEC-SCALAR-MISMATCH
+; RUN: not llvm-as %t/vec-size-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=VEC-SIZE-MISMATCH
+; RUN: not llvm-as %t/width-to-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=WIDTH-TO-MISMATCH
+; RUN: not llvm-as %t/width-from-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=WIDTH-FROM-MISMATCH
+; RUN: not llvm-as %t/width-vec-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=WIDTH-VEC-MISMATCH
 
 ;--- bad-interpretation-empty.ll
 ; BAD-INTERP-EMPTY: interpretation metadata string must not be empty
@@ -47,7 +50,7 @@ define i8 @bad_rounding(half %v) {
 }
 
 ;--- ptr-to-arbitrary-fp.ll
-; PTR-TO-FP: intrinsic has incorrect argument type!
+; PTR-TO-FP: intrinsic argument 0 type (overload type 1) expected any fp or fp vector, but got ptr
 
 declare i8 @llvm.convert.to.arbitrary.fp.i8.ptr(ptr, metadata, metadata, i1)
 
@@ -58,7 +61,7 @@ define i8 @bad_ptr_to_fp(ptr %p) {
 }
 
 ;--- arbitrary-fp-to-ptr.ll
-; FP-TO-PTR: intrinsic has incorrect return type!
+; FP-TO-PTR: intrinsic return type (overload type 0) expected any fp or fp vector, but got ptr
 
 declare ptr @llvm.convert.from.arbitrary.fp.ptr.i8(i8, metadata)
 
@@ -69,7 +72,7 @@ define ptr @bad_fp_to_ptr(i8 %v) {
 }
 
 ;--- int-to-arbitrary-fp.ll
-; INT-TO-FP: intrinsic has incorrect argument type!
+; INT-TO-FP: intrinsic argument 0 type (overload type 1) expected any fp or fp vector, but got i32
 
 declare i8 @llvm.convert.to.arbitrary.fp.i8.i32(i32, metadata, metadata, i1)
 
@@ -80,7 +83,7 @@ define i8 @bad_int_to_fp(i32 %v) {
 }
 
 ;--- arbitrary-fp-to-int.ll
-; FP-TO-INT: intrinsic has incorrect return type!
+; FP-TO-INT: intrinsic return type (overload type 0) expected any fp or fp vector, but got i32
 
 declare i32 @llvm.convert.from.arbitrary.fp.i32.i8(i8, metadata)
 
@@ -91,7 +94,7 @@ define i32 @bad_fp_to_int(i8 %v) {
 }
 
 ;--- vec-ptr-to-arbitrary-fp.ll
-; VEC-PTR-TO-FP: intrinsic has incorrect argument type!
+; VEC-PTR-TO-FP: intrinsic argument 0 type (overload type 1) expected any fp or fp vector, but got <4 x ptr>
 
 declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4ptr(<4 x ptr>, metadata, metadata, i1)
 
@@ -120,5 +123,38 @@ declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v2f32(<2 x float>, metadata,
 define <4 x i8> @bad_vec_size_mismatch(<2 x float> %v) {
   %r = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v2f32(
       <2 x float> %v, metadata !"Float8E4M3", metadata !"round.tonearest", i1 false)
+  ret <4 x i8> %r
+}
+
+;--- width-to-mismatch.ll
+; WIDTH-TO-MISMATCH: integer type bit width must equal the arbitrary FP format width
+
+declare i8 @llvm.convert.to.arbitrary.fp.i8.f16(half, metadata, metadata, i1)
+
+define i8 @bad_width_to(half %v) {
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(
+      half %v, metadata !"Float4E2M1FN", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+;--- width-from-mismatch.ll
+; WIDTH-FROM-MISMATCH: integer type bit width must equal the arbitrary FP format width
+
+declare float @llvm.convert.from.arbitrary.fp.f32.i8(i8, metadata)
+
+define float @bad_width_from(i8 %v) {
+  %r = call float @llvm.convert.from.arbitrary.fp.f32.i8(
+      i8 %v, metadata !"Float4E2M1FN")
+  ret float %r
+}
+
+;--- width-vec-mismatch.ll
+; WIDTH-VEC-MISMATCH: integer type bit width must equal the arbitrary FP format width
+
+declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f16(<4 x half>, metadata, metadata, i1)
+
+define <4 x i8> @bad_width_vec(<4 x half> %v) {
+  %r = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f16(
+      <4 x half> %v, metadata !"Float4E2M1FN", metadata !"round.tonearest", i1 false)
   ret <4 x i8> %r
 }

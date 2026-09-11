@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-unknown-amdhsa -O0 -filetype=null < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu7.00-unknown-amdhsa -O0 -filetype=null < %s 2>&1 | FileCheck %s
 
 @I = global i32 42
 @P = global ptr @I

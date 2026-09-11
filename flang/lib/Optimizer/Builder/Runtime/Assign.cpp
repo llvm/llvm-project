@@ -95,3 +95,16 @@ void fir::runtime::genCopyOutAssign(fir::FirOpBuilder &builder,
                                             sourceBox, sourceFile, sourceLine);
   fir::CallOp::create(builder, loc, func, args);
 }
+
+void fir::runtime::genAssignSimple(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value destBox,
+                                   mlir::Value sourceBox) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(AssignSimple)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, destBox,
+                                            sourceBox, sourceFile, sourceLine);
+  fir::CallOp::create(builder, loc, func, args);
+}

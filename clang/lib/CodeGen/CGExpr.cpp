@@ -31,6 +31,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/StmtVisitor.h"
@@ -38,12 +39,14 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
@@ -286,7 +289,7 @@ RValue CodeGenFunction::EmitAnyExpr(const Expr *E,
     return RValue::getComplex(EmitComplexExpr(E, ignoreResult, ignoreResult));
   case TEK_Aggregate:
     if (!ignoreResult && aggSlot.isIgnored())
-      aggSlot = CreateAggTemp(E->getType(), "agg-temp");
+      aggSlot = CreateAggTemp(E->getType().getUnqualifiedType(), "agg-temp");
     EmitAggExpr(E, aggSlot);
     return aggSlot.asRValue();
   }
@@ -492,18 +495,15 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         CharUnits alignment = CGF.getContext().getTypeAlignInChars(Ty);
         GV->setAlignment(alignment.getAsAlign());
         llvm::Constant *C = GV;
-        if (AS != LangAS::Default)
+        if (AS != Ty.getAddressSpace())
           C = CGF.CGM.performAddrSpaceCast(
-              GV, llvm::PointerType::get(
-                      CGF.getLLVMContext(),
-                      CGF.getContext().getTargetAddressSpace(LangAS::Default)));
+              GV, llvm::PointerType::get(CGF.getLLVMContext(),
+                                         CGF.getContext().getTargetAddressSpace(
+                                             Ty.getAddressSpace())));
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
-    RawAddress Addr = CGF.CreateMemTempWithoutCast(Ty, "ref.tmp");
-    if (Alloca)
-      *Alloca = Addr;
-    return Addr;
+    return CGF.CreateMemTemp(Ty, "ref.tmp", Alloca);
   }
   case SD_Thread:
   case SD_Static:
@@ -513,11 +513,6 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
     llvm_unreachable("temporary can't have dynamic storage duration");
   }
   llvm_unreachable("unknown storage duration");
-}
-
-/// Helper method to check if the underlying ABI is AAPCS
-static bool isAAPCS(const TargetInfo &TargetInfo) {
-  return TargetInfo.getABI().starts_with("aapcs");
 }
 
 LValue CodeGenFunction::
@@ -1059,6 +1054,22 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
+/// Returns true if \p Field is reachable from \p RD either as a direct field or
+/// through a chain of nested record fields (including anonymous
+/// structs/unions). This mirrors the GEP path that getGEPIndicesToField builds,
+/// and is used to identify the right anchor expression in Base.
+static bool RecordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD == Field)
+      return true;
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType())
+      if (RecordContainsField(Ty->getAsRecordDecl(), Field))
+        return true;
+  }
+  return false;
+}
+
 namespace {
 
 /// \p StructAccessBase returns the base \p Expr of a field access. It returns
@@ -1079,17 +1090,24 @@ namespace {
 /// \p MemberExpr for \p p->ptr instead of \p p.
 class StructAccessBase
     : public ConstStmtVisitor<StructAccessBase, const Expr *> {
-  const RecordDecl *ExpectedRD;
+  /// The count field we're navigating to. We stop at the innermost expression
+  /// whose struct type transitively contains this field, so that
+  /// getGEPIndicesToField can navigate from that struct down to it.
+  const FieldDecl *CountDecl;
 
+  /// Returns true if E's record type (or pointee record type) transitively
+  /// contains CountDecl. Handles both direct containment and nested structs,
+  /// so we don't need a pre-computed RD from the caller.
   bool IsExpectedRecordDecl(const Expr *E) const {
     QualType Ty = E->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
-    return ExpectedRD == Ty->getAsRecordDecl();
+    const RecordDecl *RD = Ty->getAsRecordDecl();
+    return RD && RecordContainsField(RD, CountDecl);
   }
 
 public:
-  StructAccessBase(const RecordDecl *ExpectedRD) : ExpectedRD(ExpectedRD) {}
+  StructAccessBase(const FieldDecl *CountDecl) : CountDecl(CountDecl) {}
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
@@ -1201,22 +1219,21 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  // Find the record containing the count field. Walk up through anonymous
-  // structs/unions (which are transparent in C) but stop at named records.
-  // Using getOuterLexicalRecordContext() here would be wrong because it walks
-  // past named nested structs to the outermost record, causing a crash when a
-  // struct with a counted_by FAM is defined nested inside another struct.
-  const RecordDecl *RD = CountDecl->getParent();
-  while (RD->isAnonymousStructOrUnion()) {
-    const auto *Parent = dyn_cast<RecordDecl>(RD->getLexicalParent());
-    if (!Parent)
-      break;
-    RD = Parent;
-  }
-
-  // Find the base struct expr (i.e. p in p->a.b.c.d).
-  const Expr *StructBase = StructAccessBase(RD).Visit(Base);
+  // Walk Base to find the deepest sub-expression whose struct type transitively
+  // contains CountDecl. This is our GEP anchor — getGEPIndicesToField then
+  // builds the field indices from that struct down to CountDecl, handling any
+  // intermediate nesting without requiring us to pre-compute a RecordDecl from
+  // Base's type or from CountDecl's parent chain.
+  const Expr *StructBase = StructAccessBase(CountDecl).Visit(Base);
   if (!StructBase || StructBase->HasSideEffects(getContext()))
+    return nullptr;
+
+  // Derive the record type from the anchor expression itself.
+  QualType StructTy = StructBase->getType();
+  if (StructTy->isPointerType())
+    StructTy = StructTy->getPointeeType();
+  const RecordDecl *RD = StructTy->getAsRecordDecl();
+  if (!RD)
     return nullptr;
 
   llvm::Value *Res = nullptr;
@@ -1630,7 +1647,7 @@ RValue CodeGenFunction::GetUndefRValue(QualType Ty) {
   // identifiable address.  Just because the contents of the value are undefined
   // doesn't mean that the address can't be taken and compared.
   case TEK_Aggregate: {
-    Address DestPtr = CreateMemTempWithoutCast(Ty, "undef.agg.tmp");
+    Address DestPtr = CreateMemTemp(Ty, "undef.agg.tmp");
     return RValue::getAggregate(DestPtr);
   }
 
@@ -2363,9 +2380,8 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   // getEncodedElementAccess returns row-major linearized indices
   // If the matrix memory layout is column-major, convert indices
   // to column-major indices.
-  bool IsColMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                    LangOptions::MatrixMemoryLayout::MatrixColMajor;
-  if (IsColMajor) {
+  bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getBase()->getType());
+  if (!IsRowMajor) {
     const auto *MT = E->getBase()->getType()->castAs<ConstantMatrixType>();
     unsigned NumCols = MT->getNumColumns();
     for (uint32_t &Idx : Indices) {
@@ -2381,8 +2397,7 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     RawAddress MatAddr = Base.getAddress();
     if (getLangOpts().HLSL &&
         E->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant)
-      MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(
-          Base, E->getExprLoc(), *this);
+      MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(Base, *this);
 
     llvm::Constant *CV =
         llvm::ConstantDataVector::get(getLLVMContext(), Indices);
@@ -2495,8 +2510,7 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
   // non-padded local alloca before loading.
   if (CGF.getLangOpts().HLSL &&
       LV.getType().getAddressSpace() == LangAS::hlsl_constant)
-    DestAddr =
-        CGF.CGM.getHLSLRuntime().createBufferMatrixTempAddress(LV, Loc, CGF);
+    DestAddr = CGF.CGM.getHLSLRuntime().createBufferMatrixTempAddress(LV, CGF);
 
   Address Addr = MaybeConvertMatrixAddress(DestAddr, CGF);
   LV.setAddress(Addr);
@@ -2620,8 +2634,7 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
         ColIdx = ColConstsIndices->getAggregateElement(Col);
       else
         ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
-      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      bool IsMatrixRowMajor = isMatrixRowMajor(getLangOpts(), MatTy);
       llvm::Value *EltIndex =
           MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
       llvm::Value *Elt = Builder.CreateExtractElement(MatrixVec, EltIndex);
@@ -2648,7 +2661,8 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
       Builder.CreateLoad(Ptr, LV.isVolatileQualified(), "bf.load");
 
   bool UseVolatile = LV.isVolatileQualified() &&
-                     Info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
+                     Info.VolatileStorageSize != 0 &&
+                     CodeGenUtils::isAAPCS(CGM.getTarget());
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
@@ -2939,8 +2953,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
           ColIdx = ColConstsIndices->getAggregateElement(Col);
         else
           ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
-        bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                                LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+        bool IsMatrixRowMajor = isMatrixRowMajor(getLangOpts(), Dst.getType());
         llvm::Value *EltIndex =
             MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
         llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
@@ -3051,7 +3064,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
   const bool UseVolatile =
       CGM.getCodeGenOpts().AAPCSBitfieldWidth && Dst.isVolatileQualified() &&
-      Info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
+      Info.VolatileStorageSize != 0 && CodeGenUtils::isAAPCS(CGM.getTarget());
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
@@ -3085,7 +3098,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
     // with any non-bit-field member, its container must be read exactly once
     // and written exactly once using the access width appropriate to the type
     // of the container. The two accesses are not atomic.
-    if (Dst.isVolatileQualified() && isAAPCS(CGM.getTarget()) &&
+    if (Dst.isVolatileQualified() && CodeGenUtils::isAAPCS(CGM.getTarget()) &&
         CGM.getCodeGenOpts().ForceAAPCSBitfieldLoad)
       Builder.CreateLoad(Ptr, true, "bf.load");
   }
@@ -3458,6 +3471,15 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
     Address Addr = emitDeclTargetVarDeclLValue(CGF, VD, T);
     if (Addr.isValid())
       return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
+  }
+
+  // Global HLSL resource arrays initialized on access; create a temporary with
+  // the initialized global resource array.
+  if (CGF.getLangOpts().HLSL && VD->getType()->isHLSLResourceRecordArray()) {
+    std::optional<LValue> LV =
+        CGF.CGM.getHLSLRuntime().emitGlobalResourceArrayAsLValue(CGF, VD);
+    if (LV.has_value())
+      return LV.value();
   }
 
   llvm::Value *V = CGF.CGM.GetAddrOfGlobalVar(VD);
@@ -4282,8 +4304,8 @@ void CodeGenFunction::EmitCheck(
         CGM.getDataLayout().getDefaultGlobalsAddressSpace());
     InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-    Args.push_back(InfoPtr);
-    ArgTypes.push_back(Args.back()->getType());
+    Args.push_back(Builder.CreateAddrSpaceCast(InfoPtr, CGM.VoidPtrTy));
+    ArgTypes.push_back(CGM.VoidPtrTy);
   }
 
   for (llvm::Value *DynamicArg : DynamicArgs) {
@@ -4600,9 +4622,10 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   EmitBlock(Cont);
 }
 
-llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
-  llvm::CallInst *TrapCall =
-      Builder.CreateCall(CGM.getIntrinsic(IntrID));
+llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
+                                              bool EnsureInsertPoint) {
+  llvm::Function *TrapIntrinsic = CGM.getIntrinsic(IntrID);
+  llvm::CallInst *TrapCall = Builder.CreateCall(TrapIntrinsic);
 
   if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
     auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -4612,7 +4635,28 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
 
   if (InNoMergeAttributedStmt)
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+  if (TrapIntrinsic->doesNotThrow())
+    TrapCall->setDoesNotThrow();
+  if (TrapIntrinsic->doesNotReturn()) {
+    TrapCall->setDoesNotReturn();
+    Builder.CreateUnreachable();
+    if (EnsureInsertPoint)
+      EmitBlock(createBasicBlock());
+    else
+      Builder.ClearInsertionPoint();
+  }
   return TrapCall;
+}
+
+void CodeGenFunction::EmitTrapCallAndMakeUnreachable() {
+  llvm::CallInst *TrapCall =
+      EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
+  TrapCall->setDoesNotReturn();
+  TrapCall->setDoesNotThrow();
+  if (HaveInsertPoint()) {
+    Builder.CreateUnreachable();
+    Builder.ClearInsertionPoint();
+  }
 }
 
 Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
@@ -5201,8 +5245,7 @@ LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
   RawAddress MatAddr = Base.getAddress();
   if (getLangOpts().HLSL &&
       E->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant)
-    MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(
-        Base, E->getExprLoc(), *this);
+    MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(Base, *this);
 
   return LValue::MakeMatrixRow(MaybeConvertMatrixAddress(MatAddr, *this),
                                RowIdx, E->getBase()->getType(),
@@ -5222,8 +5265,8 @@ LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(getLangOpts(), E->getBase()->getType());
   llvm::Value *FinalIdx =
       MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
 
@@ -5770,7 +5813,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     const CGRecordLayout &RL =
         CGM.getTypes().getCGRecordLayout(field->getParent());
     const CGBitFieldInfo &Info = RL.getBitFieldInfo(field);
-    const bool UseVolatile = isAAPCS(CGM.getTarget()) &&
+    const bool UseVolatile = CodeGenUtils::isAAPCS(CGM.getTarget()) &&
                              CGM.getCodeGenOpts().AAPCSBitfieldWidth &&
                              Info.VolatileStorageSize != 0 &&
                              field->getType()
@@ -6359,6 +6402,11 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   Address OutTemp = CreateIRTempWithoutCast(ExprTy);
   LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
 
+  // Start the lifetime before the copy-in so that the temporary is live when
+  // the initial value is written. This ensures the store is within the
+  // lifetime and is not killed by a store undef inserted at lifetime.start.
+  EmitLifetimeStart(OutTemp.getBasePointer());
+
   if (E->isInOut())
     EmitInitializationToLValue(E->getCastedTemporary()->getSourceExpr(),
                                TempLV);
@@ -6374,8 +6422,6 @@ LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
 
   llvm::Value *Addr = TempLV.getAddress().getBasePointer();
   llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
-
-  EmitLifetimeStart(Addr);
 
   Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast());
@@ -6574,6 +6620,21 @@ static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   E = E->IgnoreParens();
 
+  // A WebAssembly funcref is an opaque reference type and llvm only accepts
+  // function pointers as the call target. To make an indirect call through a
+  // reference type, first use the llvm.wasm.funcref.to_ptr intrinsic to make a
+  // fake function pointer to it. The backend lowers the resulting indirect call
+  // to a table.set into a single element dummy table + call_indirect 0.
+  auto ConvertFuncrefToPtr = [&](llvm::Value *CalleePtr) -> llvm::Value * {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(CalleePtr->getType());
+        TET && TET->getName() == "wasm.funcref") {
+      llvm::Function *ToPtr =
+          CGM.getIntrinsic(llvm::Intrinsic::wasm_funcref_to_ptr);
+      return Builder.CreateCall(ToPtr, {CalleePtr});
+    }
+    return CalleePtr;
+  };
+
   // Look through function-to-pointer decay.
   if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
     if (ICE->getCastKind() == CK_FunctionToPointerDecay ||
@@ -6597,8 +6658,10 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
                 dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee())) {
           GD = GlobalDecl(VD);
         }
-        CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
-        CGCallee Callee(CalleeInfo, Result.first, Result.second);
+        CGCalleeInfo CalleeInfo(FunctionType->castAs<clang::FunctionType>(),
+                                GD);
+        CGCallee Callee(CalleeInfo, ConvertFuncrefToPtr(Result.first),
+                        Result.second);
         return Callee;
       }
     }
@@ -6640,9 +6703,9 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
           dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee()))
     GD = GlobalDecl(VD);
 
-  CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
+  CGCalleeInfo calleeInfo(functionType->castAs<clang::FunctionType>(), GD);
   CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
-  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
+  CGCallee callee(calleeInfo, ConvertFuncrefToPtr(calleePtr), pointerAuth);
   return callee;
 }
 
@@ -6767,9 +6830,14 @@ LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
 
   // If the RHS is a global resource array, copy all individual resources
   // into LHS.
-  if (E->getRHS()->getType()->isHLSLResourceRecordArray())
-    if (CGM.getHLSLRuntime().emitResourceArrayCopy(LHS, E->getRHS(), *this))
+  if (E->getRHS()->getType()->isHLSLResourceRecordArray()) {
+    AggValueSlot Slot = AggValueSlot::forAddr(
+        LHS.getAddress(), Qualifiers(), AggValueSlot::IsDestructed_t(true),
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
+        AggValueSlot::DoesNotOverlap);
+    if (CGM.getHLSLRuntime().emitGlobalResourceArray(*this, E->getRHS(), Slot))
       return LHS;
+  }
 
   // In C the RHS of an assignment operator is an RValue.
   // EmitAggregateAssign takes an LValue for the RHS. Instead we can call
@@ -7086,7 +7154,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
-      Args, FnType, /*ChainCall=*/Chain);
+      Args, FnType, /*ChainCall=*/Chain, getCurrentFunctionDecl());
 
   if (ResolvedFnInfo)
     *ResolvedFnInfo = &FnInfo;
@@ -7441,8 +7509,7 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
       Address MatAddr = MaybeConvertMatrixAddress(Base.getAddress(), *this);
       unsigned NumRows = MT->getNumRows();
       unsigned NumCols = MT->getNumColumns();
-      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      bool IsMatrixRowMajor = isMatrixRowMajor(getLangOpts(), T);
       llvm::MatrixBuilder MB(Builder);
       for (unsigned Row = 0; Row < MT->getNumRows(); Row++) {
         for (unsigned Col = 0; Col < MT->getNumColumns(); Col++) {

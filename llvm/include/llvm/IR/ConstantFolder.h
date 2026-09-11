@@ -182,8 +182,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             FastMathFlags FMF) const override {
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF, Function *CtxF) const override {
     // Use TargetFolder or InstSimplifyFolder instead.
     return nullptr;
   }

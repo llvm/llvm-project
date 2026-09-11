@@ -217,6 +217,14 @@ def gi_vop3_mad_mix_mods_ext :
     GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsExt">,
     GIComplexPatternEquiv<VOP3PMadMixModsExt>;
 
+def gi_vop3_mad_mix_mods_neg :
+    GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsNeg">,
+    GIComplexPatternEquiv<VOP3PMadMixModsNeg>;
+
+def gi_vop3_mad_mix_mods_ext_neg :
+    GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsExtNeg">,
+    GIComplexPatternEquiv<VOP3PMadMixModsExtNeg>;
+
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
 // directly before selecting a glue-less load, so hide this
@@ -271,6 +279,15 @@ def : GINodeEquiv<G_AMDGPU_CVT_PK_I16_I32, AMDGPUpk_i16_i32_impl>;
 def : GINodeEquiv<G_AMDGPU_SMED3, AMDGPUsmed3>;
 def : GINodeEquiv<G_AMDGPU_UMED3, AMDGPUumed3>;
 def : GINodeEquiv<G_AMDGPU_FMED3, AMDGPUfmed3_impl>;
+def : GINodeEquiv<G_AMDGPU_SMAX3, AMDGPUsmax3>;
+def : GINodeEquiv<G_AMDGPU_UMAX3, AMDGPUumax3>;
+def : GINodeEquiv<G_AMDGPU_FMAX3, AMDGPUfmax3>;
+def : GINodeEquiv<G_AMDGPU_SMIN3, AMDGPUsmin3>;
+def : GINodeEquiv<G_AMDGPU_UMIN3, AMDGPUumin3>;
+def : GINodeEquiv<G_AMDGPU_FMIN3, AMDGPUfmin3>;
+def : GINodeEquiv<G_AMDGPU_FMAXIMUM3, AMDGPUfmaximum3>;
+def : GINodeEquiv<G_AMDGPU_FMINIMUM3, AMDGPUfminimum3>;
+
 def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
@@ -464,9 +481,6 @@ def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
 
 def gi_extract_cpol_set_glc : GICustomOperandRenderer<"renderExtractCpolSetGLC">,
   GISDNodeXFormEquiv<extract_cpol_set_glc>;
-
-def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
-  GISDNodeXFormEquiv<frameindex_to_targetframeindex>;
 
 def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
   GISDNodeXFormEquiv<FPPow2ToExponentXForm>;

@@ -452,6 +452,26 @@ public:
       llvm::raw_ostream &, int kind, bool minimal = false) const;
   std::string AsFortran(int kind, bool minimal = false) const;
 
+  /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  /// Note that for REAL(10), this is 16 because X87IntegerContainer specifies
+  /// an alignment of 16 bytes which adds 6 unitialized bytes of limbs.
+  static constexpr std::size_t bytesStored() { return Word::bytesStored(); }
+
+  /// De-serializes a real from \p raw. \p expectedSize must match the the
+  /// number of bytes to be read.
+  static Real FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
+    return Real{Word::FromRawBytes(raw, expectedSize)};
+  }
+
+  /// Serializes this real to \p dst. \p expectedSize must match the the number
+  /// of bytes to be written. If \p changed points to a boolean, it will be set
+  /// to true if any bytes at \p dst have changed.
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
+    word_.StoreRawBytes(dst, expectedSize, changed);
+  }
+
 private:
   using Significand = Integer<significandBits>; // no implicit bit
 

@@ -1,17 +1,25 @@
 // REQUIRES: arm
-// RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes %s -o %t.o
-// RUN: echo "SECTIONS { \
-// RUN:          .text0 0x011006 : { *(.text.00) } \
-// RUN:          .text1 0x110000 : { *(.text.01) *(.text.02) *(.text.03) \
-// RUN:                             *(.text.04) } \
-// RUN:          .text2 0x210000 : { *(.text.05) } } " > %t.script
-// RUN: ld.lld --script %t.script --fix-cortex-a8 --shared -verbose %t.o -o %t2 2>&1
-// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t2 | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes a.s -o a.o
+// RUN: ld.lld --script a.lds --fix-cortex-a8 --shared -verbose a.o -o exe 2>&1
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn exe | FileCheck %s
 
 /// Test cases for Cortex-a8 Erratum 657417 that involve interactions with
 /// range extension thunks. Both erratum fixes and range extension thunks need
 /// precise information and after creation alter address information.
- .thumb
+
+//--- a.lds
+
+SECTIONS {
+  .text0 0x011006 : AT(0x011006) { *(.text.00) }
+  .text1 0x110000 : AT(0x110000) { *(.text.01) *(.text.02) *(.text.03)
+                      *(.text.04) }
+  .text2 0x210000 : AT(0x210000) { *(.text.05) }
+}
+
+//--- a.s
+
+.thumb
 
  .section .text.00, "ax", %progbits
  .thumb_func
