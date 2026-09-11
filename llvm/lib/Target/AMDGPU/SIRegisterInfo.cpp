@@ -3538,7 +3538,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           // A scalar result is already materialized in ResultReg, which holds
           // the scavenged register, or FrameReg itself if nothing was free.
           Register ScaledReg = TmpScaledReg;
-          if (!ScaledReg)
+          if (!ScaledReg.isValid())
             ScaledReg = IsSALU ? ResultReg : FrameReg;
           Register TmpResultReg = ScaledReg;
 
@@ -3614,19 +3614,20 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 .addReg(TmpResultReg);
             ResultReg = NewDest;
           }
-          if (!IsSALU)
+          // A scalar result still reads FrameReg at MI, so FrameReg is
+          // restored after MI instead.
+          if (!IsSALU) {
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
                 .addReg(TmpResultReg, RegState::Kill);
-          // If there were truly no free SGPRs, we need to undo everything. A
-          // scalar result keeps using FrameReg until MI has consumed it, so it
-          // is put back after MI instead.
-          if (!TmpScaledReg.isValid() && !IsSALU) {
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
-                .addReg(ScaledReg, RegState::Kill)
-                .addImm(-Offset);
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHL_B32), ScaledReg)
-                .addReg(FrameReg)
-                .addImm(ST.getWavefrontSizeLog2());
+            // If there were truly no free SGPRs, we need to undo everything.
+            if (!TmpScaledReg.isValid()) {
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
+                  .addReg(ScaledReg, RegState::Kill)
+                  .addImm(-Offset);
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHL_B32), ScaledReg)
+                  .addReg(FrameReg)
+                  .addImm(ST.getWavefrontSizeLog2());
+            }
           }
         }
       }
@@ -3642,23 +3643,25 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             .addReg(FrameReg)
             .addImm(ST.getWavefrontSize());
 
-        int64_t ScaledOffset = -Offset * ST.getWavefrontSize();
-        bool SCCLiveAfterMI = MI->definesRegister(AMDGPU::SCC, this) &&
-                              !MI->registerDefIsDead(AMDGPU::SCC, this);
-        if (Offset && !SCCLiveAfterMI) {
-          BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADD_I32), FrameReg)
-              .addReg(FrameReg)
-              .addImm(ScaledOffset);
-        } else if (Offset) {
-          BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADDC_U32), FrameReg)
-              .addReg(FrameReg)
-              .addImm(ScaledOffset);
-          BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_BITCMP1_B32))
-              .addReg(FrameReg)
-              .addImm(0);
-          BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_BITSET0_B32), FrameReg)
-              .addImm(0)
-              .addReg(FrameReg);
+        if (Offset) {
+          int64_t ScaledOffset = -Offset * ST.getWavefrontSize();
+          bool SCCLiveAfterMI = MI->definesRegister(AMDGPU::SCC, this) &&
+                                !MI->registerDefIsDead(AMDGPU::SCC, this);
+          if (!SCCLiveAfterMI) {
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADD_I32), FrameReg)
+                .addReg(FrameReg)
+                .addImm(ScaledOffset);
+          } else {
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADDC_U32), FrameReg)
+                .addReg(FrameReg)
+                .addImm(ScaledOffset);
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_BITCMP1_B32))
+                .addReg(FrameReg)
+                .addImm(0);
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_BITSET0_B32), FrameReg)
+                .addImm(0)
+                .addReg(FrameReg);
+          }
         }
       }
 

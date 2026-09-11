@@ -2,12 +2,9 @@
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=prolog-epilog -o - %s 2>&1 | FileCheck %s
 ---
 name:            scc_live_across_scalar_frame_index
-alignment:       4
 tracksRegLiveness: true
-frameInfo:
-  maxAlignment:    16
 stack:
-  - { id: 0, size: 64, alignment: 16 }
+  - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -56,19 +53,12 @@ body:             |
     S_ENDPGM 0, implicit $vcc
 ...
 
-# The frame index has a non-zero offset here, so the offset has to be folded
-# back into the frame register too. That addition writes SCC, so it is done
-# with the carry sequence that smuggles SCC through bit 0.
-
 ---
 name:            scc_live_across_scalar_frame_index_nonzero_offset
-alignment:       4
 tracksRegLiveness: true
-frameInfo:
-  maxAlignment:    16
 stack:
-  - { id: 0, size: 64, alignment: 16 }
-  - { id: 1, size: 64, alignment: 16 }
+  - { id: 0, size: 64, alignment: 4 }
+  - { id: 1, size: 64, alignment: 4 }
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -121,18 +111,12 @@ body:             |
     S_ENDPGM 0, implicit $vcc
 ...
 
-# Same non-zero offset, but nothing uses SCC after the instruction, so the
-# offset can be folded back with a plain add.
-
 ---
 name:            scc_dead_after_scalar_frame_index_nonzero_offset
-alignment:       4
 tracksRegLiveness: true
-frameInfo:
-  maxAlignment:    16
 stack:
-  - { id: 0, size: 64, alignment: 16 }
-  - { id: 1, size: 64, alignment: 16 }
+  - { id: 0, size: 64, alignment: 4 }
+  - { id: 1, size: 64, alignment: 4 }
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
