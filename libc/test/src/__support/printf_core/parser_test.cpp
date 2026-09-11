@@ -9,6 +9,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/printf_core/parser.h"
 
 #include <stdarg.h>
@@ -48,7 +49,11 @@ void evaluate(
   }
 }
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
+#else
+using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char>;
+#endif
 
 TYPED_TEST(LlvmLibcPrintfParserTest, Constructor, TestCharTypes) {
   using CharT = ParamType;
