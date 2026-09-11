@@ -1,31 +1,26 @@
-.. _code_review_policy:
+(code-review-policy)=
 
-=====================================
-LLVM Code-Review Policy and Practices
-=====================================
+# LLVM Code-Review Policy and Practices
 
 LLVM's code-review policy and practices help maintain high code quality across
 the project. Specifically, our code review process aims to:
 
- * Improve readability and maintainability.
- * Improve robustness and prevent the introduction of defects.
- * Best leverage the experience of other contributors for each proposed change.
- * Help grow and develop new contributors, through mentorship by community leaders.
+> - Improve readability and maintainability.
+> - Improve robustness and prevent the introduction of defects.
+> - Best leverage the experience of other contributors for each proposed change.
+> - Help grow and develop new contributors, through mentorship by community leaders.
 
 It is important for all contributors to understand our code-review
 practices and participate in the code-review process.
 
-General Policies
-================
+## General Policies
 
-What Code Should Be Reviewed?
------------------------------
+### What Code Should Be Reviewed?
 
 All developers are required to have significant changes reviewed before they
 are committed to the repository.
 
-Must Code Be Reviewed Prior to Being Committed?
------------------------------------------------
+### Must Code Be Reviewed Prior to Being Committed?
 
 Code can be reviewed either before it is committed or after. We expect
 significant patches to be reviewed before being committed. Smaller patches
@@ -38,15 +33,14 @@ Please note that the developer responsible for a patch is also
 responsible for making all necessary review-related changes, including
 those requested during any post-commit review.
 
-.. _post_commit_review:
+(post-commit-review)=
 
-Can Code Be Reviewed After It Is Committed?
--------------------------------------------
+### Can Code Be Reviewed After It Is Committed?
 
 Post-commit review is encouraged, and can be accomplished using any of the
 tools detailed below. There is a strong expectation that authors respond
 promptly to post-commit feedback and address it. Failure to do so is cause for
-the patch to be :ref:`reverted <revert_policy>`.
+the patch to be {ref}`reverted <revert_policy>`.
 
 If a community member expresses a concern about a recent commit, and this
 concern would have been significant enough to warrant a conversation during
@@ -77,41 +71,38 @@ original change was committed, it may be better to create a new patch to
 address the issues than comment on the original commit. The original patch
 author, for example, might no longer be an active contributor to the project.
 
-What Tools Are Used for Code Review?
-------------------------------------
+### What Tools Are Used for Code Review?
 
 Pre-commit code reviews are conducted on GitHub with Pull Requests. See
-:ref:`GitHub <github-reviews>` documentation.
+{ref}`GitHub <github-reviews>` documentation.
 
-When Is an RFC Required?
-------------------------
+### When Is an RFC Required?
 
 Some changes are too significant for just a code review. Changes that should
 change the LLVM Language Reference (e.g., adding new target-independent
 intrinsics), adding language extensions in Clang, and so on, require an RFC
-(Request for Comment) topic on the `LLVM Discussion Forums <https://discourse.llvm.org>`_
+(Request for Comment) topic on the [LLVM Discussion Forums](https://discourse.llvm.org)
 first. For changes that promise significant impact on users and/or downstream
 code bases, reviewers can request an RFC achieving consensus before proceeding
 with code review. That having been said, posting initial patches can help with
-discussions on an RFC. See the :doc:`RFC process <RFCProcess>` documentation
+discussions on an RFC. See the {doc}`RFC process <RFCProcess>` documentation
 for more details.
 
-Code-Review Workflow
-====================
+## Code-Review Workflow
 
 Code review can be an iterative process, which continues until the patch is
 ready to be committed. Specifically, once a patch is sent out for review, it
 needs an explicit approval before it is committed. Do not assume silent
 approval, or solicit objections to a patch with a deadline.
 
-.. note::
-   If you are using a Pull Request for purposes other than review
-   (eg: precommit CI results, convenient web-based reverts, etc)
-   `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
-   label to the PR.
+:::{note}
+If you are using a Pull Request for purposes other than review
+(eg: precommit CI results, convenient web-based reverts, etc)
+[skip-precommit-approval](https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval)
+label to the PR.
+:::
 
-Acknowledge All Reviewer Feedback
----------------------------------
+### Acknowledge All Reviewer Feedback
 
 All comments by reviewers should be acknowledged by the patch author. It is
 generally expected that suggested changes will be incorporated into a future
@@ -126,13 +117,13 @@ commit message).
 If you suggest changes in a code review, but don't wish the suggestion to be
 interpreted this strongly, please state so explicitly.
 
-.. note::
-   After responding to reviewer comments,
-   press `Re-request review <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review#:~:text=After%20your%20pull%20request%20is%20reviewed>`_
-   to bring the Pull Request to the reviewers' attention.
+:::{note}
+After responding to reviewer comments,
+press [Re-request review](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review#:~:text=After%20your%20pull%20request%20is%20reviewed)
+to bring the Pull Request to the reviewers' attention.
+:::
 
-Aim to Make Efficient Use of Everyone's Time
---------------------------------------------
+### Aim to Make Efficient Use of Everyone's Time
 
 Aim to limit the number of iterations in the review process. For example, when
 suggesting a change, if you want the author to make a similar set of changes at
@@ -143,10 +134,9 @@ from specific performance tests), please explain as many of these up front as
 possible. This allows the patch author and reviewers to make the most efficient
 use of their time.
 
-.. _lgtm_how_a_patch_is_accepted:
+(lgtm-how-a-patch-is-accepted)=
 
-LGTM - How a Patch Is Accepted
-------------------------------
+### LGTM - How a Patch Is Accepted
 
 A patch is approved to be committed when a reviewer accepts it, and this is
 almost always associated with a message containing the text "LGTM" (which
@@ -196,8 +186,7 @@ final approval should have commit access to the LLVM project.
 Every patch should be reviewed by at least one technical expert in the areas of
 the project affected by the change.
 
-Splitting Requests and Conditional Acceptance
----------------------------------------------
+### Splitting Requests and Conditional Acceptance
 
 Reviewers may request certain aspects of a patch to be broken out into separate
 patches for independent review. Reviewers may also accept a patch
@@ -207,8 +196,7 @@ project in a broken state). Moreover, reviewers can accept a patch conditioned o
 the author applying some set of minor updates prior to committing, and when
 applicable, it is polite for reviewers to do so.
 
-Don't Unintentionally Block a Review
-------------------------------------
+### Don't Unintentionally Block a Review
 
 If you review a patch, but don't intend for the review process to block on your
 approval, please state that explicitly. Out of courtesy, we generally wait on
@@ -216,11 +204,9 @@ committing a patch until all reviewers are satisfied, and if you don't intend
 to look at the patch again in a timely fashion, please communicate that fact in
 the review.
 
-Who Can/Should Review Code?
-===========================
+## Who Can/Should Review Code?
 
-Non-Experts Should Review Code
-------------------------------
+### Non-Experts Should Review Code
 
 You do not need to be an expert in some area of the code base to review patches;
 it's fine to ask questions about what some piece of code is doing. If it's not
@@ -235,38 +221,36 @@ the readability of the code in question. Structural changes, or further
 comments, may be appropriate.
 
 If you're new to the LLVM community, you might also find this presentation
-helpful: `How to Contribute to LLVM, A 2019 LLVM Developers' Meeting
-Presentation <https://youtu.be/C5Y977rLqpw>`_.
+helpful: [How to Contribute to LLVM, A 2019 LLVM Developers' Meeting
+Presentation](https://youtu.be/C5Y977rLqpw).
 
 A good way for new contributors to increase their knowledge of the code base is
 to review code. It is perfectly acceptable to review code and explicitly
 defer to others for approval decisions.
 
-Experts Should Review Code
---------------------------
+### Experts Should Review Code
 
 If you are an expert in an area of the compiler affected by a proposed patch,
 then you are highly encouraged to review the code. If you are a relevant
 maintainer, and no other experts are reviewing a patch, you must either help
 arrange for an expert to review the patch or review it yourself.
 
-Code Reviews, Speed, and Reciprocity
-------------------------------------
+### Code Reviews, Speed, and Reciprocity
 
 Sometimes code reviews will take longer than you might hope, especially for
 larger features. Common ways to speed up review times for your patches are:
 
-* Review other people's patches. If you help out, everybody will be more
+- Review other people's patches. If you help out, everybody will be more
   willing to do the same for you; goodwill is our currency.
-* Ping the patch. If it is urgent, provide reasons why it is important to you to
+- Ping the patch. If it is urgent, provide reasons why it is important to you to
   get this patch landed and ping it every couple of days. If it is
   not urgent, the common courtesy ping rate is one week. Remember that you're
   asking for valuable time from other professional developers.
-* Ask for help on Discord. Developers on Discord will be able to either help
+- Ask for help on Discord. Developers on Discord will be able to either help
   you directly, or tell you who might be a good reviewer.
-* Split your patch into multiple smaller patches that build on each other. The
+- Split your patch into multiple smaller patches that build on each other. The
   smaller your patch is, the higher the probability that somebody will take a quick
-  look at it. When doing this, it is helpful to add "[N/M]" (for 1 <= N <= M) to
+  look at it. When doing this, it is helpful to add "[N/M]" (for 1 \<= N \<= M) to
   the title of each patch in the series, so it is clear that there is an order
   and what that order is.
 
@@ -275,20 +259,20 @@ authors. If someone is kind enough to review your code, you should return the
 favor for someone else. Note that anyone is welcome to review and give feedback
 on a patch, but approval of patches should be consistent with the policy above.
 
-Upstreaming Changes to LLVM
-===========================
+## Upstreaming Changes to LLVM
 
 When upstreaming your own changes from a downstream project to LLVM, simply
 follow the process outlined above.
 
-When upstreaming changes originally written by someone else:  
+When upstreaming changes originally written by someone else:
 
-* Ensure that there are no obstacles to upstreaming the code. In some cases,
+- Ensure that there are no obstacles to upstreaming the code. In some cases,
   this simply means checking with the original author(s) to ensure they are
   aware of and approve the upstreaming. In other cases, licensing
   considerations may be more complex.
-* Properly attribute the original changes, e.g., by creating a commit with
-  multiple authors (`GitHub guide <https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors>`_).
-* Invite the original author(s) to review the changes, and also include
+- Properly attribute the original changes, e.g., by creating a commit with
+  multiple authors ([GitHub guide](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors)).
+- Invite the original author(s) to review the changes, and also include
   additional reviewers. Specifically, an LGTM from a (co-)author should not be
   taken as approval to land a change.
+

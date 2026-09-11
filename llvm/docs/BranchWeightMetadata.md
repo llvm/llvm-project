@@ -1,88 +1,78 @@
-===========================
-LLVM Branch Weight Metadata
-===========================
+# LLVM Branch Weight Metadata
 
-
-Introduction
-============
+## Introduction
 
 Branch Weight Metadata represents branch weights as its likeliness to be taken
-(see :doc:`BlockFrequencyTerminology`). Metadata is assigned to a
-terminator ``Instruction`` as an ``MDNode`` of the ``MD_prof`` kind.
-The first operand is always an ``MDString`` node with the string
-"branch_weights".  The number of operands depends on the terminator type.
+(see {doc}`BlockFrequencyTerminology`). Metadata is assigned to a
+terminator `Instruction` as an `MDNode` of the `MD_prof` kind.
+The first operand is always an `MDString` node with the string
+"branch_weights". The number of operands depends on the terminator type.
 
 Branch weights might be fetched from the profiling file or generated based on
-`__builtin_expect`_ and `__builtin_expect_with_probability`_ instructions.
+[\_\_builtin_expect][__builtin_expect] and [\_\_builtin_expect_with_probability][__builtin_expect_with_probability] instructions.
 
 All weights are represented as unsigned 32-bit values, where a higher value
 indicates a greater chance of being taken.
 
-Supported Instructions
-======================
+## Supported Instructions
 
-``CondBrInst``
-^^^^^^^^^^^^^^
+### `CondBrInst`
 
 There are two extra operands for the true and the false branch.
-We optionally track if the metadata was added by ``__builtin_expect`` or
-``__builtin_expect_with_probability`` with an optional field ``!"expected"``.
+We optionally track if the metadata was added by `__builtin_expect` or
+`__builtin_expect_with_probability` with an optional field `!"expected"`.
 
-.. code-block:: none
+```none
+!0 = !{
+  !"branch_weights",
+  [ !"expected", ]
+  i32 <TRUE_BRANCH_WEIGHT>,
+  i32 <FALSE_BRANCH_WEIGHT>
+}
+```
 
-  !0 = !{
-    !"branch_weights",
-    [ !"expected", ]
-    i32 <TRUE_BRANCH_WEIGHT>,
-    i32 <FALSE_BRANCH_WEIGHT>
-  }
+### `SwitchInst`
 
-``SwitchInst``
-^^^^^^^^^^^^^^
-
-Branch weights are assigned to every case (including the ``default`` case, which
+Branch weights are assigned to every case (including the `default` case, which
 is always case #0).
 
-.. code-block:: none
+```none
+!0 = !{
+  !"branch_weights",
+  [ !"expected", ]
+  i32 <DEFAULT_BRANCH_WEIGHT>
+  [ , i32 <CASE_BRANCH_WEIGHT> ... ]
+}
+```
 
-  !0 = !{
-    !"branch_weights",
-    [ !"expected", ]
-    i32 <DEFAULT_BRANCH_WEIGHT>
-    [ , i32 <CASE_BRANCH_WEIGHT> ... ]
-  }
-
-``IndirectBrInst``
-^^^^^^^^^^^^^^^^^^
+### `IndirectBrInst`
 
 Branch weights are assigned to every destination.
 
-.. code-block:: none
+```none
+!0 = !{
+  !"branch_weights",
+  [ !"expected", ]
+  i32 <LABEL_BRANCH_WEIGHT>
+  [ , i32 <LABEL_BRANCH_WEIGHT> ... ]
+}
+```
 
-  !0 = !{
-    !"branch_weights",
-    [ !"expected", ]
-    i32 <LABEL_BRANCH_WEIGHT>
-    [ , i32 <LABEL_BRANCH_WEIGHT> ... ]
-  }
-
-``CallInst``
-^^^^^^^^^^^^^^^^^^
+### `CallInst`
 
 Calls may have branch weight metadata, containing the execution count of
 the call. It is currently used in SamplePGO mode only, to augment the
 block and entry counts, which may not be accurate with sampling.
 
-.. code-block:: none
+```none
+!0 = !{
+  !"branch_weights",
+  [ !"expected", ]
+  i32 <CALL_BRANCH_WEIGHT>
+}
+```
 
-  !0 = !{
-    !"branch_weights",
-    [ !"expected", ]
-    i32 <CALL_BRANCH_WEIGHT>
-  }
-
-``InvokeInst``
-^^^^^^^^^^^^^^^^^^
+### `InvokeInst`
 
 Invoke instruction may have branch weight metadata with one or two weights.
 The second weight is optional and corresponds to the unwind branch.
@@ -94,113 +84,104 @@ the count of unwind branch taken. Both weights specified are used to calculate
 BranchProbability as for CondBrInst and for SamplePGO the sum of both weights
 is used.
 
-.. code-block:: none
+```none
+!0 = !{
+  !"branch_weights",
+  [ !"expected", ]
+  i32 <INVOKE_NORMAL_WEIGHT>
+  [ , i32 <INVOKE_UNWIND_WEIGHT> ]
+}
+```
 
-  !0 = !{
-    !"branch_weights",
-    [ !"expected", ]
-    i32 <INVOKE_NORMAL_WEIGHT>
-    [ , i32 <INVOKE_UNWIND_WEIGHT> ]
-  }
-
-Other
-^^^^^
+### Other
 
 Other terminator instructions are not allowed to contain Branch Weight Metadata.
 
-.. _\__builtin_expect:
+(builtin-expect)=
 
-Built-in ``expect`` Instructions
-================================
+## Built-in `expect` Instructions
 
-``__builtin_expect(long exp, long c)`` instruction provides branch prediction
-information. The return value is the value of ``exp``.
+`__builtin_expect(long exp, long c)` instruction provides branch prediction
+information. The return value is the value of `exp`.
 
 It is especially useful in conditional statements. Currently Clang supports two
 conditional statements:
 
-``if`` statement
-^^^^^^^^^^^^^^^^
+### `if` statement
 
-The ``exp`` parameter is the condition. The ``c`` parameter is the expected
+The `exp` parameter is the condition. The `c` parameter is the expected
 comparison value. If it is equal to 1 (true), the condition is likely to be
 true, in other case condition is likely to be false. For example:
 
-.. code-block:: c++
+```c++
+if (__builtin_expect(x > 0, 1)) {
+  // This block is likely to be taken.
+}
+```
 
-  if (__builtin_expect(x > 0, 1)) {
-    // This block is likely to be taken.
-  }
+### `switch` statement
 
-``switch`` statement
-^^^^^^^^^^^^^^^^^^^^
-
-The ``exp`` parameter is the value. The ``c`` parameter is the expected
-value. If the expected value doesn't appear in the cases list, the ``default``
+The `exp` parameter is the value. The `c` parameter is the expected
+value. If the expected value doesn't appear in the cases list, the `default`
 case is assumed to be likely taken.
 
-.. code-block:: c++
+```c++
+switch (__builtin_expect(x, 5)) {
+default: break;
+case 0:  // ...
+case 3:  // ...
+case 5:  // This case is likely to be taken.
+}
+```
 
-  switch (__builtin_expect(x, 5)) {
-  default: break;
-  case 0:  // ...
-  case 3:  // ...
-  case 5:  // This case is likely to be taken.
-  }
+(builtin-expect-with-probability)=
 
-.. _\__builtin_expect_with_probability:
+## Built-in `expect.with.probability` Instruction
 
-Built-in ``expect.with.probability`` Instruction
-================================================
-
-``__builtin_expect_with_probability(long exp, long c, double probability)`` has
-the same semantics as ``__builtin_expect``, but the caller provides the
-probability that ``exp == c``. The last argument ``probability`` must be
+`__builtin_expect_with_probability(long exp, long c, double probability)` has
+the same semantics as `__builtin_expect`, but the caller provides the
+probability that `exp == c`. The last argument `probability` must be
 a constant floating-point expression and be in the range [0.0, 1.0] inclusive.
-The usage is also similar as ``__builtin_expect``, for example:
+The usage is also similar as `__builtin_expect`, for example:
 
-``if`` statement
-^^^^^^^^^^^^^^^^
+### `if` statement
 
-If the expected comparison value ``c`` is equal to 1(true), and probability
-value ``probability`` is set to 0.8, that means the probability of condition
+If the expected comparison value `c` is equal to 1(true), and probability
+value `probability` is set to 0.8, that means the probability of condition
 being true is 80% while that of false is 20%.
 
-.. code-block:: c++
+```c++
+if (__builtin_expect_with_probability(x > 0, 1, 0.8)) {
+  // This block is likely to be taken with probability 80%.
+}
+```
 
-  if (__builtin_expect_with_probability(x > 0, 1, 0.8)) {
-    // This block is likely to be taken with probability 80%.
-  }
+### `switch` statement
 
-``switch`` statement
-^^^^^^^^^^^^^^^^^^^^
+This is similar to the `switch` statement in `__builtin_expect`.
+The probability that `exp` is equal to the expected value is given in
+the third argument `probability`, while the probability of other value is
+the average of remaining probability(`1.0 - probability`). For example:
 
-This is similar to the ``switch`` statement in ``__builtin_expect``.
-The probability that ``exp`` is equal to the expected value is given in
-the third argument ``probability``, while the probability of other value is
-the average of remaining probability(``1.0 - probability``). For example:
+```c++
+switch (__builtin_expect_with_probability(x, 5, 0.7)) {
+default: break;  // Take this case with probability 10%
+case 0:  break;  // Take this case with probability 10%
+case 3:  break;  // Take this case with probability 10%
+case 5:  break;  // This case is likely to be taken with probability 70%
+}
+```
 
-.. code-block:: c++
-
-  switch (__builtin_expect_with_probability(x, 5, 0.7)) {
-  default: break;  // Take this case with probability 10%
-  case 0:  break;  // Take this case with probability 10%
-  case 3:  break;  // Take this case with probability 10%
-  case 5:  break;  // This case is likely to be taken with probability 70%
-  }
-
-CFG Modifications
-=================
+## CFG Modifications
 
 Branch Weight Metadata is not proof against CFG changes. If terminator operands'
 are changed, some action should be taken. Otherwise, misoptimizations may
 occur due to incorrect branch prediction information.
 
-Function Entry Counts
-=====================
+## Function Entry Counts
 
 To allow comparing different functions during inter-procedural analysis and
-optimization, ``MD_prof`` nodes can also be assigned to a function definition.
+optimization, `MD_prof` nodes can also be assigned to a function definition.
 The first operand is a string indicating the name of the associated counter.
 
 Currently, one counter is supported: "function_entry_count". The second operand
@@ -209,15 +190,15 @@ invoked (in the case of instrumentation-based profiles). In the case of
 sampling-based profiles, this operand is an approximation of how many times
 the function was invoked.
 
-For example, in the code below, the instrumentation for function ``foo()``
+For example, in the code below, the instrumentation for function `foo()`
 indicates that it was called 2,590 times at runtime.
 
-.. code-block:: llvm
-
-  define i32 @foo() !prof !1 {
-    ret i32 0
-  }
-  !1 = !{!"function_entry_count", i64 2590}
+```llvm
+define i32 @foo() !prof !1 {
+  ret i32 0
+}
+!1 = !{!"function_entry_count", i64 2590}
+```
 
 If "function_entry_count" has more than 2 operands, the subsequent operands are
 the GUID of the functions that need to be imported by ThinLTO. This is only
@@ -226,5 +207,6 @@ was collected on a binary that had already imported and inlined these functions,
 and we need to ensure the IR matches in the ThinLTO backends for profile
 annotation. The reason why we cannot annotate this on the callsite is that it
 can only go down 1 level in the call chain. For the cases where
-``foo_in_a_cc()->bar_in_b_cc()->baz_in_c_cc()``, we will need to go down 2 levels
-in the call chain to import both ``bar_in_b_cc`` and ``baz_in_c_cc``.
+`foo_in_a_cc()->bar_in_b_cc()->baz_in_c_cc()`, we will need to go down 2 levels
+in the call chain to import both `bar_in_b_cc` and `baz_in_c_cc`.
+
