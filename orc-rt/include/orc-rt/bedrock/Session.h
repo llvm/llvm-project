@@ -10,21 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SESSION_H
-#define ORC_RT_SESSION_H
+#ifndef ORC_RT_BEDROCK_SESSION_H
+#define ORC_RT_BEDROCK_SESSION_H
 
 #include "orc-rt/bedrock/BootstrapInfo.h"
-#include "orc-rt/bedrock/Error.h"
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
-#include "orc-rt/bedrock/LockedAccess.h"
 #include "orc-rt/bedrock/Service.h"
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
 #include "orc-rt/bedrock/TaskGroup.h"
-#include "orc-rt/bedrock/WrapperFunction.h"
-#include "orc-rt/bedrock/move_only_function.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/LockedAccess.h"
+#include "orc-rt/support/WrapperFunction.h"
+#include "orc-rt/support/move_only_function.h"
 
-#include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/WrapperFunction.h"
+#include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/WrapperFunction.h"
 
 #include <cassert>
 #include <condition_variable>
@@ -424,6 +424,18 @@ public:
     return addService(std::move(*Srv));
   }
 
+  /// Attach to an already constructed ControllerAccess instance.
+  ///
+  /// A Session may be attached at most once, and attach must not be called
+  /// after -- or concurrently with -- detach or shutdown: by the time a detach
+  /// has been requested it may be arbitrarily far along, so there is no point
+  /// at which a newly attached controller could be connected, or its
+  /// disconnection coherently reported. Violating this is a programming error,
+  /// checked by assertion.
+  void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) noexcept {
+    doAttach(std::move(CA), std::move(BI));
+  }
+
   /// Construct a ControllerAccessT and immediately attach using the given
   /// BootstrapInfo.
   ///
@@ -748,4 +760,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SESSION_H
+#endif // ORC_RT_BEDROCK_SESSION_H

@@ -157,6 +157,44 @@ addLLVMOpBundleAttrs(mlir::ConversionPatternRewriter &rewriter,
   return newAttrs;
 }
 
+template <typename Op>
+struct BuilderAttributes {
+  typename Op::Properties properties{};
+  llvm::SmallVector<mlir::NamedAttribute> discardableAttributes;
+};
+
+template <typename Op>
+static BuilderAttributes<Op>
+splitBuilderAttributes(mlir::ConversionPatternRewriter &rewriter,
+                       llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  BuilderAttributes<Op> result;
+  Op::populateDefaultProperties(
+      mlir::OperationName(Op::getOperationName(), rewriter.getContext()),
+      result.properties);
+  mlir::LogicalResult converted = Op::setPropertiesFromAttr(
+      result.properties, rewriter.getDictionaryAttr(attributes), [&]() {
+        return mlir::emitError(rewriter.getUnknownLoc(),
+                               "failed to convert operation properties");
+      });
+  assert(mlir::succeeded(converted) && "failed to convert properties");
+  (void)converted;
+
+  for (mlir::NamedAttribute attr : attributes) {
+    if (!Op::getInherentAttr(rewriter.getContext(), result.properties,
+                             attr.getName().getValue()))
+      result.discardableAttributes.push_back(attr);
+  }
+  return result;
+}
+
+static BuilderAttributes<mlir::LLVM::CallOp>
+getLLVMCallBuilderAttributes(mlir::ConversionPatternRewriter &rewriter,
+                             llvm::ArrayRef<mlir::NamedAttribute> attributes,
+                             int32_t numCallOperands) {
+  return splitBuilderAttributes<mlir::LLVM::CallOp>(
+      rewriter, addLLVMOpBundleAttrs(rewriter, attributes, numCallOperands));
+}
+
 namespace {
 
 // Replaces an existing operation with an AddressOfOp or an AddrSpaceCastOp
@@ -347,9 +385,11 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
           emitError(loc, "did not find allocation function");
         mlir::NamedAttribute attr = rewriter.getNamedAttr(
             "callee", mlir::SymbolRefAttr::get(memSizeFn));
+        auto builderAttrs =
+            getLLVMCallBuilderAttributes(rewriter, {attr}, lenParams.size());
         auto call = mlir::LLVM::CallOp::create(
-            rewriter, loc, ity, lenParams,
-            addLLVMOpBundleAttrs(rewriter, {attr}, lenParams.size()));
+            rewriter, loc, mlir::TypeRange{ity}, lenParams,
+            builderAttrs.properties, builderAttrs.discardableAttributes);
         size = call.getResult();
         llvmObjectType = ::getI8Type(alloc.getContext());
       } else {
@@ -720,10 +760,16 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     // Convert arith::FastMathFlagsAttr to LLVM::FastMathFlagsAttr.
     mlir::arith::AttrConvertFastMathToLLVM<fir::CallOp, mlir::LLVM::CallOp>
         attrConvert(call);
+    auto builderAttrs = getLLVMCallBuilderAttributes(
+        rewriter, attrConvert.getDiscardableAttrs(),
+        adaptor.getOperands().size());
+    builderAttrs.properties.callee =
+        mlir::cast_if_present<mlir::FlatSymbolRefAttr>(call.getCalleeAttr());
+    builderAttrs.properties.fastmathFlags =
+        attrConvert.getProperties().fastmathFlags;
     auto llvmCall = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        call, resultTys, adaptor.getOperands(),
-        addLLVMOpBundleAttrs(rewriter, attrConvert.getAttrs(),
-                             adaptor.getOperands().size()));
+        call, resultTys, adaptor.getOperands(), builderAttrs.properties,
+        builderAttrs.discardableAttributes);
     if (mlir::ArrayAttr argAttrsArray = call.getArgAttrsAttr()) {
       // sret and byval type needs to be converted.
       auto convertTypeAttr = [&](const mlir::NamedAttribute &attr) {
@@ -1490,12 +1536,14 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
           mlir::LLVM::StoreOp::create(rewriter, loc, nullPtr, memptr);
           heap->setAttr("callee", getPosixMemalign(heap, rewriter, mallocTy,
                                                    this->options));
-          mlir::LLVM::CallOp::create(
-              rewriter, loc,
-              mlir::TypeRange{
-                  mlir::IntegerType::get(rewriter.getContext(), 32)},
-              mlir::ValueRange{memptr, alignVal, size},
-              addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 3));
+          auto builderAttrs =
+              getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 3);
+          mlir::LLVM::CallOp::create(rewriter, loc,
+                                     mlir::TypeRange{mlir::IntegerType::get(
+                                         rewriter.getContext(), 32)},
+                                     mlir::ValueRange{memptr, alignVal, size},
+                                     builderAttrs.properties,
+                                     builderAttrs.discardableAttributes);
           mlir::Value newPtr =
               mlir::LLVM::LoadOp::create(rewriter, loc, ptrTy, memptr);
           rewriter.replaceOp(heap, newPtr);
@@ -1513,18 +1561,23 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
             rewriter, loc, mallocTy, sizePlus, notAlignMinusOne);
         heap->setAttr("callee",
                       getAlignedAlloc(heap, rewriter, mallocTy, this->options));
+        auto builderAttrs =
+            getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 2);
         rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-            heap, ::getLlvmPtrType(heap.getContext()),
-            mlir::ValueRange{alignVal, roundedSize},
-            addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 2));
+            heap, mlir::TypeRange{::getLlvmPtrType(heap.getContext())},
+            mlir::ValueRange{alignVal, roundedSize}, builderAttrs.properties,
+            builderAttrs.discardableAttributes);
         return mlir::success();
       }
     }
 
     heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy, this->options));
+    auto builderAttrs =
+        getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 1);
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        heap, ::getLlvmPtrType(heap.getContext()), size,
-        addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 1));
+        heap, mlir::TypeRange{::getLlvmPtrType(heap.getContext())},
+        mlir::ValueRange{size}, builderAttrs.properties,
+        builderAttrs.discardableAttributes);
     return mlir::success();
   }
 
@@ -1594,10 +1647,12 @@ struct FreeMemOpConversion : public fir::FIROpConversion<fir::FreeMemOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = freemem.getLoc();
     freemem->setAttr("callee", getFree(freemem, rewriter, this->options));
-    mlir::LLVM::CallOp::create(
-        rewriter, loc, mlir::TypeRange{},
-        mlir::ValueRange{adaptor.getHeapref()},
-        addLLVMOpBundleAttrs(rewriter, freemem->getAttrs(), 1));
+    auto builderAttrs =
+        getLLVMCallBuilderAttributes(rewriter, freemem->getAttrs(), 1);
+    mlir::LLVM::CallOp::create(rewriter, loc, mlir::TypeRange{},
+                               mlir::ValueRange{adaptor.getHeapref()},
+                               builderAttrs.properties,
+                               builderAttrs.discardableAttributes);
     rewriter.eraseOp(freemem);
     return mlir::success();
   }
@@ -2323,8 +2378,19 @@ static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal,
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
     return isDeviceAllocation(convertOp.getValue(), {},
                               cudaDescriptorAllocFunction);
+  // fir.declare, and the fircg.ext_declare it becomes when debug info keeps it
+  // alive until codegen, are pass-through on their memref operand. The adaptor
+  // value is forwarded too so a declared dummy argument stays recognizable.
+  if (auto declareOp =
+          mlir::dyn_cast_or_null<fir::DeclareOp>(val.getDefiningOp()))
+    return isDeviceAllocation(declareOp.getMemref(), adaptorVal,
+                              cudaDescriptorAllocFunction);
+  if (auto xDeclareOp =
+          mlir::dyn_cast_or_null<fir::cg::XDeclareOp>(val.getDefiningOp()))
+    return isDeviceAllocation(xDeclareOp.getMemref(), adaptorVal,
+                              cudaDescriptorAllocFunction);
   if (!val.getDefiningOp() && adaptorVal) {
-    if (auto blockArg = llvm::cast<mlir::BlockArgument>(adaptorVal)) {
+    if (auto blockArg = llvm::dyn_cast<mlir::BlockArgument>(adaptorVal)) {
       if (blockArg.getOwner() && blockArg.getOwner()->getParentOp() &&
           blockArg.getOwner()->isEntryBlock()) {
         if (auto func = mlir::dyn_cast_or_null<mlir::FunctionOpInterface>(
@@ -2981,12 +3047,23 @@ struct InsertOnRangeOpConversion
 
     auto arrayType = adaptor.getSeq().getType();
 
-    // Iteratively extract the array dimensions from the type.
+    // Extract the dimensions of the array being initialized. Only those are
+    // used to expand a fallback insert chain. Any remaining LLVM array
+    // dimension belongs to an aggregate element type: a CHARACTER element is
+    // itself an array of characters.
     llvm::SmallVector<std::int64_t> dims;
     mlir::Type type = arrayType;
-    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(type)) {
+    for (std::size_t i = 0, rank = range.getType().getShape().size(); i < rank;
+         ++i) {
+      auto t = mlir::cast<mlir::LLVM::LLVMArrayType>(type);
       dims.push_back(t.getNumElements());
       type = t.getElementType();
+    }
+    llvm::SmallVector<std::int64_t> elementDims;
+    mlir::Type scalarType = type;
+    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(scalarType)) {
+      elementDims.push_back(t.getNumElements());
+      scalarType = t.getElementType();
     }
 
     // Avoid generating long insert chain that are very slow to fold back
@@ -2997,16 +3074,45 @@ struct InsertOnRangeOpConversion
       llvm::FailureOr<mlir::Attribute> cst =
           fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter);
       if (llvm::succeeded(cst)) {
-        mlir::Attribute dimVal = *cst;
-        for (auto dim : llvm::reverse(dims)) {
-          // Use std::vector in case the number of elements is big.
-          std::vector<mlir::Attribute> elements(dim, dimVal);
-          dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+        if (elementDims.empty()) {
+          mlir::Attribute dimVal = *cst;
+          for (auto dim : llvm::reverse(dims)) {
+            // Use std::vector in case the number of elements is big.
+            std::vector<mlir::Attribute> elements(dim, dimVal);
+            dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+          }
+          // Replace insert chain with constant.
+          rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
+                                                              dimVal);
+          return mlir::success();
         }
-        // Replace insert chain with constant.
-        rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
-                                                            dimVal);
-        return mlir::success();
+        // An array with an aggregate element type cannot be described by a
+        // nested ArrayAttr. A CHARACTER array is a dense array of characters,
+        // so replicate the element data into a dense attribute.
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(*cst)) {
+          llvm::StringRef element = strAttr.getValue();
+          std::int64_t elementSize = 1;
+          for (std::int64_t dim : elementDims)
+            elementSize *= dim;
+          if (scalarType.isInteger(8) &&
+              element.size() == static_cast<std::size_t>(elementSize)) {
+            std::int64_t count = 1;
+            for (std::int64_t dim : dims)
+              count *= dim;
+            std::string data;
+            data.reserve(count * element.size());
+            for (std::int64_t i = 0; i < count; ++i)
+              data.append(element.data(), element.size());
+            llvm::SmallVector<std::int64_t> shape(dims);
+            shape.append(elementDims);
+            auto denseAttr = mlir::DenseElementsAttr::getFromRawBuffer(
+                mlir::RankedTensorType::get(shape, scalarType),
+                llvm::ArrayRef(data.data(), data.size()));
+            rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+                range, arrayType, denseAttr);
+            return mlir::success();
+          }
+        }
       }
     }
 
@@ -3573,10 +3679,11 @@ struct FieldIndexOpConversion : public fir::FIROpConversion<fir::FieldIndexOp> {
     mlir::NamedAttribute callAttr = rewriter.getNamedAttr("callee", symAttr);
     mlir::NamedAttribute fieldAttr = rewriter.getNamedAttr(
         "field", mlir::IntegerAttr::get(lowerTy().indexType(), index));
+    auto builderAttrs = getLLVMCallBuilderAttributes(
+        rewriter, {callAttr, fieldAttr}, adaptor.getOperands().size());
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        field, lowerTy().offsetType(), adaptor.getOperands(),
-        addLLVMOpBundleAttrs(rewriter, {callAttr, fieldAttr},
-                             adaptor.getOperands().size()));
+        field, mlir::TypeRange{lowerTy().offsetType()}, adaptor.getOperands(),
+        builderAttrs.properties, builderAttrs.discardableAttributes);
     return mlir::success();
   }
 
@@ -3699,7 +3806,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
-    auto linkage = convertLinkage(global.getLinkName());
+    auto linkage = convertLinkage(global.getLinkage());
     auto isConst = global.getConstant().has_value();
     mlir::SymbolRefAttr comdat;
     llvm::ArrayRef<mlir::NamedAttribute> attrs;
@@ -3816,22 +3923,24 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     return mlir::success();
   }
 
-  // TODO: String comparisons should be avoided. Replace linkName with an
-  // enumeration.
   mlir::LLVM::Linkage
-  convertLinkage(std::optional<llvm::StringRef> optLinkage) const {
+  convertLinkage(std::optional<fir::LinkageEnum> optLinkage) const {
     if (optLinkage) {
-      auto name = *optLinkage;
-      if (name == "internal")
+      switch (*optLinkage) {
+      case fir::LinkageEnum::Internal:
         return mlir::LLVM::Linkage::Internal;
-      if (name == "linkonce")
+      case fir::LinkageEnum::Linkonce:
         return mlir::LLVM::Linkage::Linkonce;
-      if (name == "linkonce_odr")
+      case fir::LinkageEnum::LinkonceODR:
         return mlir::LLVM::Linkage::LinkonceODR;
-      if (name == "common")
+      case fir::LinkageEnum::Common:
         return mlir::LLVM::Linkage::Common;
-      if (name == "weak")
+      case fir::LinkageEnum::Weak:
         return mlir::LLVM::Linkage::Weak;
+      case fir::LinkageEnum::External:
+        return mlir::LLVM::Linkage::External;
+      }
+      return mlir::LLVM::Linkage::External;
     }
     return mlir::LLVM::Linkage::External;
   }
@@ -3941,9 +4050,12 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
 
       rewriter.replaceOp(load, newBoxStorage);
     } else {
-      mlir::LLVM::LoadOp loadOp =
-          mlir::LLVM::LoadOp::create(rewriter, load.getLoc(), llvmLoadTy,
-                                     adaptor.getOperands(), load->getAttrs());
+      auto builderAttrs = splitBuilderAttributes<mlir::LLVM::LoadOp>(
+          rewriter, load->getAttrs());
+      mlir::LLVM::LoadOp loadOp = mlir::LLVM::LoadOp::create(
+          rewriter, load.getLoc(), mlir::TypeRange{llvmLoadTy},
+          adaptor.getOperands(), builderAttrs.properties,
+          builderAttrs.discardableAttributes);
       loadOp.setVolatile_(isVolatile);
       if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
         loadOp.setTBAATags(*optionalTag);

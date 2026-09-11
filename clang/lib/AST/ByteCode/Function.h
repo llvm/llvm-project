@@ -25,7 +25,6 @@
 
 namespace clang {
 namespace interp {
-class Program;
 class ByteCodeEmitter;
 class Pointer;
 enum PrimType : uint8_t;
@@ -37,10 +36,10 @@ class Scope final {
 public:
   /// Information about a local's storage.
   struct Local {
+    /// Descriptor of the local.
+    const Descriptor *Desc;
     /// Offset of the local in frame.
     unsigned Offset;
-    /// Descriptor of the local.
-    Descriptor *Desc;
     /// If the cleanup for this local should be emitted.
     bool EnabledByDefault = true;
   };
@@ -238,6 +237,8 @@ public:
   bool isDefined() const { return Defined; }
 
   bool isVariadic() const { return Variadic; }
+  /// Returs the full number of parameters, including implicit instance and RVO
+  /// pointers.
   unsigned getNumParams() const {
     return ParamDescriptors.size() + hasThisPointer() + hasRVO();
   }
@@ -254,7 +255,7 @@ public:
 
 private:
   /// Construct a function representing an actual function.
-  Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
+  Function(FunctionDeclTy Source, unsigned ArgSize,
            llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
            bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker);
 
@@ -280,24 +281,22 @@ private:
   friend class ByteCodeEmitter;
   friend class Context;
 
-  /// Program reference.
-  Program &P;
-  /// Function Kind.
-  FunctionKind Kind;
   /// Declaration this function was compiled from.
   FunctionDeclTy Source;
-  /// Local area size: storage + metadata.
-  unsigned FrameSize = 0;
-  /// Size of the argument stack.
-  unsigned ArgSize;
   /// Program code.
   llvm::SmallVector<std::byte> Code;
   /// Opcode-to-expression mapping.
   SourceMap SrcMap;
   /// List of block descriptors.
   llvm::SmallVector<Scope, 2> Scopes;
-  /// List of all parameters, including RVO and instance pointer.
+  /// List of all parameters, excluding RVO and instance pointer.
   llvm::SmallVector<ParamDescriptor> ParamDescriptors;
+  /// Local area size: storage + metadata.
+  unsigned FrameSize = 0;
+  /// Size of the argument stack.
+  unsigned ArgSize;
+  /// Function Kind.
+  FunctionKind Kind;
   /// Flag to indicate if the function is valid.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;

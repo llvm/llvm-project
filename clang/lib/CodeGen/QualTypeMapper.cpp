@@ -34,6 +34,31 @@
 namespace clang {
 namespace CodeGen {
 
+/// Returns true if \p BT is one of the AArch64 SVE predicate types, i.e.
+/// svbool_t or one of its tuples.
+static bool isSVEPredicateBuiltinType(const BuiltinType *BT) {
+  switch (BT->getKind()) {
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:                                                        \
+    return true;
+#include "clang/Basic/AArch64ACLETypes.def"
+  default:
+    return false;
+  }
+}
+
+/// Maps a Clang vector kind onto the ABI library's notion of a vector flavor.
+static llvm::abi::VectorKind getABIVectorKind(clang::VectorKind Kind) {
+  switch (Kind) {
+  case clang::VectorKind::SveFixedLengthData:
+    return llvm::abi::VectorKind::SVEData;
+  case clang::VectorKind::SveFixedLengthPredicate:
+    return llvm::abi::VectorKind::SVEPredicate;
+  default:
+    return llvm::abi::VectorKind::Generic;
+  }
+}
+
 /// Main entry point for converting Clang QualType to LLVM ABI Type.
 /// This method performs type canonicalization, caching, and dispatches
 /// to specialized conversion methods based on the type kind.
@@ -242,11 +267,27 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   case BuiltinType::ObjCSel:
     return createPointerTypeForPointee(QT);
 
-    // Target-specific vector/matrix types — not yet implemented.
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+    // AArch64 SVE data and predicate types, including the x2/x3/x4 tuples.
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:
 #include "clang/Basic/AArch64ACLETypes.def"
+    return convertSVEBuiltinType(BT);
+
+  case BuiltinType::SveCount:
+    return Builder.getSVECountType(getTypeAlign(QT));
+
+  // TODO: __mfp8 has no floating-point semantics of its own, so representing
+  // it needs a decision about how the ABI library should model opaque
+  // floating-point data. As an mfloat8 vector element it is treated as an
+  // 8-bit integer, but that is not right for the scalar type, which is passed
+  // in a floating-point register.
+  case BuiltinType::MFloat8:
     llvm::reportFatalInternalError(
-        "AArch64 SVE types not yet supported in ABI lowering library");
+        "__mfp8 is not yet supported in the ABI lowering library");
+
+    // Target-specific vector/matrix types — not yet implemented.
 #define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
     llvm::reportFatalInternalError(
@@ -318,7 +359,43 @@ const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
   llvm::ElementCount NumElements = llvm::ElementCount::getFixed(NElems);
   llvm::Align VectorAlign = getTypeAlign(VectorQualType);
 
-  return Builder.getVectorType(ElementType, NumElements, VectorAlign);
+  // SveFixedLengthPredicate is tagged SVEPredicate, like sizeless svbool_t.
+  // The element type is left as the AST unsigned char (i8). The builtin path
+  // below maps sizeless predicates to i1. Both match the Clang AST, but
+  // consumers that key only off VectorKind cannot assume a 1-bit element.
+  return Builder.getVectorType(ElementType, NumElements, VectorAlign,
+                               getABIVectorKind(VT->getVectorKind()));
+}
+
+/// Converts the sizeless AArch64 SVE data and predicate builtin types.
+/// Single vectors become a scalable LLVM ABI VectorType. The x2/x3/x4
+/// forms become a TupleType of that vector.
+///
+/// \param BT The SVE BuiltinType to convert
+/// \return LLVM ABI VectorType or TupleType
+const llvm::abi::Type *
+QualTypeMapper::convertSVEBuiltinType(const BuiltinType *BT) {
+  ASTContext::BuiltinVectorTypeInfo Info = ASTCtx.getBuiltinVectorTypeInfo(BT);
+  assert(Info.NumVectors > 0 && Info.NumVectors <= 4 &&
+         "Expected 1, 2, 3 or 4 vectors!");
+
+  // __mfp8 carries no floating-point semantics, so mfloat8 vectors use an
+  // 8-bit integer element type, which is also how they are represented in
+  // LLVM IR.
+  const llvm::abi::Type *ElementType =
+      Info.ElementType->isMFloat8Type()
+          ? Builder.getIntegerType(8, llvm::Align(1), /*Signed=*/false)
+          : convertType(Info.ElementType);
+
+  llvm::abi::VectorKind VecKind = isSVEPredicateBuiltinType(BT)
+                                      ? llvm::abi::VectorKind::SVEPredicate
+                                      : llvm::abi::VectorKind::SVEData;
+
+  const llvm::abi::VectorType *VecTy = Builder.getVectorType(
+      ElementType, Info.EC, getTypeAlign(QualType(BT, 0)), VecKind);
+  if (Info.NumVectors == 1)
+    return VecTy;
+  return Builder.getTupleType(VecTy, Info.NumVectors);
 }
 
 /// Converts complex types to LLVM ABI complex representations.
@@ -397,19 +474,15 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   }
 
   for (const auto &Base : RD->bases()) {
+    if (Base.isVirtual())
+      continue;
+
     const RecordType *BaseRT = Base.getType()->castAs<RecordType>();
-    const CXXRecordDecl *BaseDecl = BaseRT->getAsCXXRecordDecl();
     const llvm::abi::Type *BaseType = convertType(Base.getType());
-    // Virtual and non-virtual base offsets live in separate maps in the AST
-    // record layout.
     uint64_t BaseOffset =
-        (Base.isVirtual() ? Layout.getVBaseClassOffset(BaseDecl)
-                          : Layout.getBaseClassOffset(BaseDecl))
-            .getQuantity() *
+        Layout.getBaseClassOffset(BaseRT->getAsCXXRecordDecl()).getQuantity() *
         8;
-    BaseClasses.emplace_back(BaseType, BaseOffset, /*IsBitField=*/false,
-                             /*BitFieldWidth=*/0, /*IsUnnamedBitField=*/false,
-                             /*IsVirtualBase=*/Base.isVirtual());
+    BaseClasses.emplace_back(BaseType, BaseOffset);
   }
 
   for (const auto &VBase : RD->vbases()) {
@@ -419,12 +492,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
         Layout.getVBaseClassOffset(VBaseRT->getAsCXXRecordDecl())
             .getQuantity() *
         8;
-
-    VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset,
-                                    /*IsBitField=*/false,
-                                    /*BitFieldWidth=*/0,
-                                    /*IsUnnamedBitField=*/false,
-                                    /*IsVirtualBase=*/true);
+    VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset);
   }
 
   computeFieldInfo(RD, Fields, Layout);
@@ -575,8 +643,9 @@ void QualTypeMapper::computeFieldInfo(
       IsUnnamedBitField = FD->isUnnamedBitField();
     }
 
+    bool HasNoUniqueAddress = FD->hasAttr<NoUniqueAddressAttr>();
     Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth,
-                        IsUnnamedBitField);
+                        IsUnnamedBitField, HasNoUniqueAddress);
     ++FieldIndex;
   }
 }

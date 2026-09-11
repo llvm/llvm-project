@@ -47,6 +47,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -401,21 +402,25 @@ ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
                                           const llvm::fltSemantics &semantics) {
   // Check for a floating point value.
   if (tok.is(Token::floatliteral)) {
-    auto val = tok.getFloatingPointValue();
-    if (!val)
-      return emitError(tok.getLoc()) << "floating point value too large";
-
     // A type with no signed representation, such as f8E8M0FNU, has no encoding
-    // for this value at all; the conversion below would keep the sign bit and
+    // for this value at all; negating below would keep the sign bit and
     // produce a value that asserts when it is printed.
     if (isNegative && !APFloat::semanticsHasSignedRepr(semantics))
       return emitError(tok.getLoc())
              << "negative floating point literal for a type with no signed "
                 "representation";
 
-    result.emplace(isNegative ? -*val : *val);
-    bool unused;
-    result->convert(semantics, APFloat::rmNearestTiesToEven, &unused);
+    // Parse with the requested semantics directly. Going through a double
+    // first would lose range and precision for wider semantics, such as f80.
+    // The lexer only forms a float literal token for a spelling that APFloat
+    // can parse, so this cannot fail.
+    APFloat value(semantics);
+    llvm::cantFail(value.convertFromString(tok.getSpelling(),
+                                           APFloat::rmNearestTiesToEven));
+
+    if (isNegative)
+      value.changeSign();
+    result.emplace(std::move(value));
     return success();
   }
 

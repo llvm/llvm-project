@@ -382,10 +382,10 @@ static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
 
 static void PutOpenMPRequirements(
     llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
 
   if (const auto *decls{GetOmpDeclarative(symbol)}) {
-    if (const llvm::omp::ClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+    if (const llvm::omp::Clauses &reqs{decls->ompRequires()}; reqs.count()) {
       os << "!$omp "
          << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                 llvm::omp::Directive::OMPD_requires, version));
@@ -397,11 +397,11 @@ static void PutOpenMPRequirements(
 
 static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
     const SymbolVector &symbols, SemanticsContext &semaCtx) {
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
 
   for (const Symbol &symbol : symbols) {
     if (const auto *decls{GetOmpDeclarative(symbol)}) {
-      if (const llvm::omp::ClauseSet &dtgt{decls->ompDeclTarget()};
+      if (const llvm::omp::Clauses &dtgt{decls->ompDeclTarget()};
           dtgt.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
@@ -414,8 +414,7 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
       // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
       // this module recovers the directive from the .mod file. Common-block
       // names must be wrapped in slashes when reparsed.
-      if (const llvm::omp::ClauseSet &gp{decls->ompGroupprivate()};
-          gp.count()) {
+      if (const llvm::omp::Clauses &gp{decls->ompGroupprivate()}; gp.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   llvm::omp::Directive::OMPD_groupprivate, version))

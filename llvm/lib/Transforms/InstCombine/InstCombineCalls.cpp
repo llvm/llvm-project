@@ -53,7 +53,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -1202,9 +1201,9 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
   // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
-  if ((Mask & Known.KnownFPClasses) != Mask) {
+  if ((Mask & Known.getKnownFPClasses()) != Mask) {
     II.setArgOperand(
-        1, ConstantInt::get(Src1->getType(), Mask & Known.KnownFPClasses));
+        1, ConstantInt::get(Src1->getType(), Mask & Known.getKnownFPClasses()));
     return &II;
   }
 
@@ -4032,8 +4031,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // call void @llvm.assume(i1 %A)
     // into
     // call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
-    if (match(IIOperand,
-              m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
+    if (match(
+            IIOperand,
+            m_CombineOr(m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero()),
+                        m_Not(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(A),
+                                             m_Zero())))) &&
         A->getType()->isPointerTy()) {
       Builder.CreateNonnullAssumption(A);
       return eraseInstFromFunction(*II);
