@@ -64,48 +64,42 @@ func.func @imag_of_create_op() -> f32 {
 }
 
 // CHECK-LABEL: func @complex_add_sub_lhs
-func.func @complex_add_sub_lhs() -> complex<f32> {
-  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
-  %complex2 = complex.constant [0.0 : f32, 2.0 : f32] : complex<f32>
-  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
-  // CHECK-NEXT: return %[[CPLX]] : complex<f32>
-  %sub = complex.sub %complex1, %complex2 : complex<f32>
-  %add = complex.add %sub, %complex2 fastmath<reassoc,nsz> : complex<f32>
+// CHECK-SAME: (%[[A:.*]]: complex<f32>, %[[B:.*]]: complex<f32>)
+func.func @complex_add_sub_lhs(%a: complex<f32>, %b: complex<f32>) -> complex<f32> {
+  // CHECK-NEXT: return %[[A]] : complex<f32>
+  %sub = complex.sub %a, %b : complex<f32>
+  %add = complex.add %sub, %b fastmath<reassoc,nsz> : complex<f32>
   return %add : complex<f32>
 }
 
 // CHECK-LABEL: func @complex_add_sub_lhs_without_fast_math
-func.func @complex_add_sub_lhs_without_fast_math() -> complex<f32> {
-  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
-  %complex2 = complex.constant [0.0 : f32, 2.0 : f32] : complex<f32>
-  // CHECK: %[[SUB:.*]] = complex.sub
-  // CHECK: %[[ADD:.*]] = complex.add %[[SUB]], %{{.*}} fastmath<reassoc> : complex<f32>
+// CHECK-SAME: (%[[A:.*]]: complex<f32>, %[[B:.*]]: complex<f32>)
+func.func @complex_add_sub_lhs_without_fast_math(%a: complex<f32>, %b: complex<f32>) -> complex<f32> {
+  // CHECK: %[[SUB:.*]] = complex.sub %[[A]], %[[B]] : complex<f32>
+  // CHECK: %[[ADD:.*]] = complex.add %[[SUB]], %[[B]] fastmath<reassoc> : complex<f32>
   // CHECK-NEXT: return %[[ADD]] : complex<f32>
-  %sub = complex.sub %complex1, %complex2 : complex<f32>
-  %add = complex.add %sub, %complex2 fastmath<reassoc> : complex<f32>
+  %sub = complex.sub %a, %b : complex<f32>
+  %add = complex.add %sub, %b fastmath<reassoc> : complex<f32>
   return %add : complex<f32>
 }
 
 // CHECK-LABEL: func @complex_add_sub_rhs
-func.func @complex_add_sub_rhs() -> complex<f32> {
-  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
-  %complex2 = complex.constant [0.0 : f32, 2.0 : f32] : complex<f32>
-  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
-  // CHECK-NEXT: return %[[CPLX]] : complex<f32>
-  %sub = complex.sub %complex1, %complex2 : complex<f32>
-  %add = complex.add %complex2, %sub fastmath<reassoc,nsz> : complex<f32>
+// CHECK-SAME: (%[[A:.*]]: complex<f32>, %[[B:.*]]: complex<f32>)
+func.func @complex_add_sub_rhs(%a: complex<f32>, %b: complex<f32>) -> complex<f32> {
+  // CHECK-NEXT: return %[[A]] : complex<f32>
+  %sub = complex.sub %a, %b : complex<f32>
+  %add = complex.add %b, %sub fastmath<reassoc,nsz> : complex<f32>
   return %add : complex<f32>
 }
 
 // CHECK-LABEL: func @complex_add_sub_rhs_without_fast_math
-func.func @complex_add_sub_rhs_without_fast_math() -> complex<f32> {
-  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
-  %complex2 = complex.constant [0.0 : f32, 2.0 : f32] : complex<f32>
-  // CHECK: %[[SUB:.*]] = complex.sub
-  // CHECK: %[[ADD:.*]] = complex.add %[[SUB]], %{{.*}} fastmath<nsz> : complex<f32>
+// CHECK-SAME: (%[[A:.*]]: complex<f32>, %[[B:.*]]: complex<f32>)
+func.func @complex_add_sub_rhs_without_fast_math(%a: complex<f32>, %b: complex<f32>) -> complex<f32> {
+  // CHECK: %[[SUB:.*]] = complex.sub %[[A]], %[[B]] : complex<f32>
+  // CHECK: %[[ADD:.*]] = complex.add %[[B]], %[[SUB]] fastmath<nsz> : complex<f32>
   // CHECK-NEXT: return %[[ADD]] : complex<f32>
-  %sub = complex.sub %complex1, %complex2 : complex<f32>
-  %add = complex.add %complex2, %sub fastmath<nsz> : complex<f32>
+  %sub = complex.sub %a, %b : complex<f32>
+  %add = complex.add %b, %sub fastmath<nsz> : complex<f32>
   return %add : complex<f32>
 }
 
@@ -131,23 +125,22 @@ func.func @complex_log_exp() -> complex<f32> {
 }
 
 // CHECK-LABEL: func @complex_exp_log
-func.func @complex_exp_log() -> complex<f32> {
-  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
-  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
-  // CHECK-NEXT: return %[[CPLX]] : complex<f32>
-  %log = complex.log %complex1 fastmath<afn> : complex<f32>
-  %exp = complex.exp %log fastmath<afn> : complex<f32>
+// CHECK-SAME: (%[[A:.*]]: complex<f32>)
+func.func @complex_exp_log(%a: complex<f32>) -> complex<f32> {
+  // CHECK-NEXT: return %[[A]] : complex<f32>
+  %log = complex.log %a : complex<f32>
+  %exp = complex.exp %log fastmath<reassoc> : complex<f32>
   return %exp : complex<f32>
 }
 
 // CHECK-LABEL: func @complex_exp_log_without_fast_math
-func.func @complex_exp_log_without_fast_math() -> complex<f32> {
-  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
-  // CHECK: %[[LOG:.*]] = complex.log
-  // CHECK: %[[EXP:.*]] = complex.exp %[[LOG]] fastmath<afn> : complex<f32>
+// CHECK-SAME: (%[[A:.*]]: complex<f32>)
+func.func @complex_exp_log_without_fast_math(%a: complex<f32>) -> complex<f32> {
+  // CHECK: %[[LOG:.*]] = complex.log %[[A]] fastmath<reassoc> : complex<f32>
+  // CHECK: %[[EXP:.*]] = complex.exp %[[LOG]] : complex<f32>
   // CHECK-NEXT: return %[[EXP]] : complex<f32>
-  %log = complex.log %complex1 : complex<f32>
-  %exp = complex.exp %log fastmath<afn> : complex<f32>
+  %log = complex.log %a fastmath<reassoc> : complex<f32>
+  %exp = complex.exp %log : complex<f32>
   return %exp : complex<f32>
 }
 
@@ -172,25 +165,22 @@ func.func @complex_add_neg_zero() -> complex<f32> {
 }
 
 // CHECK-LABEL: func @complex_sub_add_lhs
-func.func @complex_sub_add_lhs() -> complex<f32> {
-  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
-  %complex2 = complex.constant [0.0 : f32, 2.0 : f32] : complex<f32>
-  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
-  // CHECK-NEXT: return %[[CPLX]] : complex<f32>
-  %add = complex.add %complex1, %complex2 : complex<f32>
-  %sub = complex.sub %add, %complex2 fastmath<reassoc,nsz> : complex<f32>
+// CHECK-SAME: (%[[A:.*]]: complex<f32>, %[[B:.*]]: complex<f32>)
+func.func @complex_sub_add_lhs(%a: complex<f32>, %b: complex<f32>) -> complex<f32> {
+  // CHECK-NEXT: return %[[A]] : complex<f32>
+  %add = complex.add %a, %b : complex<f32>
+  %sub = complex.sub %add, %b fastmath<reassoc,nsz> : complex<f32>
   return %sub : complex<f32>
 }
 
 // CHECK-LABEL: func @complex_sub_add_lhs_without_fast_math
-func.func @complex_sub_add_lhs_without_fast_math() -> complex<f32> {
-  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
-  %complex2 = complex.constant [0.0 : f32, 2.0 : f32] : complex<f32>
-  // CHECK: %[[ADD:.*]] = complex.add
-  // CHECK: %[[SUB:.*]] = complex.sub %[[ADD]], %{{.*}} : complex<f32>
+// CHECK-SAME: (%[[A:.*]]: complex<f32>, %[[B:.*]]: complex<f32>)
+func.func @complex_sub_add_lhs_without_fast_math(%a: complex<f32>, %b: complex<f32>) -> complex<f32> {
+  // CHECK: %[[ADD:.*]] = complex.add %[[A]], %[[B]] : complex<f32>
+  // CHECK: %[[SUB:.*]] = complex.sub %[[ADD]], %[[B]] : complex<f32>
   // CHECK-NEXT: return %[[SUB]] : complex<f32>
-  %add = complex.add %complex1, %complex2 : complex<f32>
-  %sub = complex.sub %add, %complex2 : complex<f32>
+  %add = complex.add %a, %b : complex<f32>
+  %sub = complex.sub %add, %b : complex<f32>
   return %sub : complex<f32>
 }
 

@@ -322,11 +322,10 @@ OpFoldResult NegOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult ExpOp::fold(FoldAdaptor adaptor) {
   // complex.exp(complex.log(a)) -> a
-  // exp(log(a)) is only an approximation of a, so both ops need `afn`.
-  if (auto logOp = getOperand().getDefiningOp<LogOp>())
-    if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::afn) &&
-        arith::bitEnumContainsAll(logOp.getFastmath(),
-                                  arith::FastMathFlags::afn))
+  // exp(log(a)) is only an approximation of a, and log(a) has no finite
+  // result for a zero or non-finite a, so this needs `reassoc`.
+  if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::reassoc))
+    if (auto logOp = getOperand().getDefiningOp<LogOp>())
       return logOp.getOperand();
 
   return {};
