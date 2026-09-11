@@ -20,15 +20,16 @@ target triple = "x86_64-unknown-linux-gnu"
 ;   }
 ;
 ; With -slp-vectorize-non-power-of-2, SLP probes VF=7. The seven consecutive
-; backward loads A[i-12..i-6] widen to a 28-byte <7 x i32> load; the stores
-; A[i..i+6] widen to a 28-byte <7 x i32> store. The load base is 48 bytes behind:
+; backward loads A[i-12..i-6] would widen to a 28-byte <7 x i32> load; the stores
+; A[i..i+6] would widen to a 28-byte <7 x i32> store. The load base is 48 bytes
+; behind:
 ;   48 % 28 = 20 -> misaligned, and the 28-byte load overruns the 20 bytes left
 ;                   before the window boundary, straddling two widened stores;
 ;   48 / 28      = 1 -> store still hot in the store buffer.
-; so the STLF penalty prices the VF=7 (and the VF=4 base) widening out. With the
-; check disabled the whole chain widens to a single <7 x i32> store. This
-; exercises the hazard check at a non-power-of-2 VF and the divisor-based cache
-; propagation.
+; so the STLF penalty prices the VF=7 widening out. Smaller aligned sub-chains
+; (VF=4 / VF=2) do not straddle on the widened load's base lane, so they still
+; vectorize. With the check disabled the whole chain widens to a single
+; <7 x i32> store. This exercises the hazard check at a non-power-of-2 VF.
 ;
 define void @stlf_non_power_of_2(ptr noalias %A, i64 %n) {
 ; STLF-ON-LABEL: define void @stlf_non_power_of_2(
@@ -38,53 +39,34 @@ define void @stlf_non_power_of_2(ptr noalias %A, i64 %n) {
 ; STLF-ON:       [[FOR_BODY]]:
 ; STLF-ON-NEXT:    [[I:%.*]] = phi i64 [ 12, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
 ; STLF-ON-NEXT:    [[B0:%.*]] = add i64 [[I]], -12
-; STLF-ON-NEXT:    [[B1:%.*]] = add i64 [[I]], -11
 ; STLF-ON-NEXT:    [[B2:%.*]] = add i64 [[I]], -10
 ; STLF-ON-NEXT:    [[B3:%.*]] = add i64 [[I]], -9
 ; STLF-ON-NEXT:    [[B4:%.*]] = add i64 [[I]], -8
 ; STLF-ON-NEXT:    [[B5:%.*]] = add i64 [[I]], -7
-; STLF-ON-NEXT:    [[B6:%.*]] = add i64 [[I]], -6
 ; STLF-ON-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B0]]
-; STLF-ON-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B1]]
 ; STLF-ON-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B2]]
 ; STLF-ON-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B3]]
-; STLF-ON-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B4]]
+; STLF-ON-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B4]]
 ; STLF-ON-NEXT:    [[P5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B5]]
-; STLF-ON-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B6]]
-; STLF-ON-NEXT:    [[L0:%.*]] = load i32, ptr [[P0]], align 4
-; STLF-ON-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 4
-; STLF-ON-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
-; STLF-ON-NEXT:    [[L3:%.*]] = load i32, ptr [[P3]], align 4
-; STLF-ON-NEXT:    [[L4:%.*]] = load i32, ptr [[P4]], align 4
-; STLF-ON-NEXT:    [[L5:%.*]] = load i32, ptr [[P5]], align 4
 ; STLF-ON-NEXT:    [[L6:%.*]] = load i32, ptr [[P6]], align 4
-; STLF-ON-NEXT:    [[T1:%.*]] = add nsw i32 [[L0]], 1
-; STLF-ON-NEXT:    [[T2:%.*]] = add nsw i32 [[L1]], 2
-; STLF-ON-NEXT:    [[T3:%.*]] = add nsw i32 [[L2]], 3
-; STLF-ON-NEXT:    [[T4:%.*]] = add nsw i32 [[L3]], 4
-; STLF-ON-NEXT:    [[T5:%.*]] = add nsw i32 [[L4]], 5
-; STLF-ON-NEXT:    [[T6:%.*]] = add nsw i32 [[L5]], 6
-; STLF-ON-NEXT:    [[T7:%.*]] = add nsw i32 [[L6]], 7
-; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
-; STLF-ON-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
-; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
+; STLF-ON-NEXT:    [[T7:%.*]] = add nsw i32 [[L6]], 5
 ; STLF-ON-NEXT:    [[I4:%.*]] = add nuw nsw i64 [[I]], 4
 ; STLF-ON-NEXT:    [[I5:%.*]] = add nuw nsw i64 [[I]], 5
-; STLF-ON-NEXT:    [[I6:%.*]] = add nuw nsw i64 [[I]], 6
 ; STLF-ON-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; STLF-ON-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
-; STLF-ON-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
-; STLF-ON-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; STLF-ON-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I4]]
+; STLF-ON-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I4]]
 ; STLF-ON-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I5]]
-; STLF-ON-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I6]]
-; STLF-ON-NEXT:    store i32 [[T1]], ptr [[GEP0]], align 4
-; STLF-ON-NEXT:    store i32 [[T2]], ptr [[GEP1]], align 4
-; STLF-ON-NEXT:    store i32 [[T3]], ptr [[GEP2]], align 4
-; STLF-ON-NEXT:    store i32 [[T4]], ptr [[GEP3]], align 4
-; STLF-ON-NEXT:    store i32 [[T5]], ptr [[GEP4]], align 4
-; STLF-ON-NEXT:    store i32 [[T6]], ptr [[GEP5]], align 4
+; STLF-ON-NEXT:    [[L3:%.*]] = load i32, ptr [[P3]], align 4
+; STLF-ON-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
+; STLF-ON-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P0]], align 4
+; STLF-ON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; STLF-ON-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L2]], i64 2
+; STLF-ON-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[L3]], i64 3
+; STLF-ON-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], <i32 1, i32 2, i32 3, i32 4>
+; STLF-ON-NEXT:    store <4 x i32> [[TMP4]], ptr [[GEP0]], align 4
 ; STLF-ON-NEXT:    store i32 [[T7]], ptr [[GEP6]], align 4
+; STLF-ON-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[P5]], align 4
+; STLF-ON-NEXT:    [[TMP6:%.*]] = add nsw <2 x i32> [[TMP5]], <i32 6, i32 7>
+; STLF-ON-NEXT:    store <2 x i32> [[TMP6]], ptr [[GEP5]], align 4
 ; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 7
 ; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; STLF-ON-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]

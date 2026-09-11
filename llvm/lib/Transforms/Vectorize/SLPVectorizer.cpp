@@ -17996,13 +17996,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // Mirror the store-side model: add the target's modeled STLF penalty
       // instead of rejecting the tree, and only under throughput/latency cost
       // kinds. Use the number of distinct loaded scalars (not the reuse-
-      // inflated vector factor) for both the hazard's distance check and the
-      // penalty type, so reuse shuffles do not overstate the load footprint.
+      // inflated vector factor), scaled by the interleave factor, for both
+      // the hazard's distance check and the penalty type. Factor 0 means
+      // non-interleaved.
+      unsigned STLFLoadVF =
+          E->Scalars.size() * std::max(1u, E->getInterleaveFactor());
       if (EnableSLPStoreLoadForwardCheck && E->State == TreeEntry::Vectorize &&
           (CostKind == TTI::TCK_RecipThroughput ||
            CostKind == TTI::TCK_Latency) &&
-          findStoreLoadForwardingHazardForLoad(LI0, E->Scalars.size())) {
-        Type *STLFVecTy = getWidenedType(LI0->getType(), E->Scalars.size());
+          findStoreLoadForwardingHazardForLoad(LI0, STLFLoadVF)) {
+        Type *STLFVecTy = getWidenedType(LI0->getType(), STLFLoadVF);
         VecLdCost +=
             TTI->getStoreLoadForwardingConflictCost(STLFVecTy, CostKind);
       }
@@ -18090,7 +18093,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (EnableSLPStoreLoadForwardCheck && E->State == TreeEntry::Vectorize &&
           (CostKind == TTI::TCK_RecipThroughput ||
            CostKind == TTI::TCK_Latency) &&
-          findStoreLoadForwardingConflict(BaseSI, E->getVectorFactor()))
+          findStoreLoadForwardingConflict(
+              BaseSI,
+              E->getVectorFactor() * std::max(1u, E->getInterleaveFactor())))
         VecStCost += TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
       return VecStCost + CommonCost;
     };
@@ -29022,6 +29027,27 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
         break;
       }
     }
+    // Interior lanes are not independent wide loads; the base lane's
+    // evaluation covers the whole widened load.
+    bool IsWidenedBaseLane = WidenedLoadEntry != nullptr;
+    if (WidenedLoadEntry) {
+      for (Value *V : WidenedLoadEntry->Scalars) {
+        auto *OtherLd = dyn_cast<LoadInst>(V);
+        if (!OtherLd || OtherLd == LoadI)
+          continue;
+        std::optional<int64_t> LaneDiff = getPointersDiff(
+            LoadI->getType(), LoadI->getPointerOperand(), OtherLd->getType(),
+            OtherLd->getPointerOperand(), *DL, *SE, /*StrictCheck=*/false,
+            /*CheckType=*/false);
+        // Another lane sits at a lower address, so LoadI is not the base.
+        if (LaneDiff && *LaneDiff < 0) {
+          IsWidenedBaseLane = false;
+          break;
+        }
+      }
+      if (!IsWidenedBaseLane)
+        continue;
+    }
     std::optional<int64_t> Diff =
         getPointersDiff(ValueTy, BaseStore->getPointerOperand(),
                         LoadI->getType(), LoadI->getPointerOperand(), *DL, *SE,
@@ -29041,14 +29067,16 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
     // one element. Such a wide load can straddle two wide stores even when
     // perfectly aligned, which the misalignment-only test would miss. Use the
     // count of distinct scalars actually loaded from memory (not the reuse-
-    // inflated vector factor) for the emitted load width.
+    // inflated vector factor) for the emitted load width, scaled by the
+    // interleave factor (0 means non-interleaved).
     TypeSize LoadTypeSize = DL->getTypeStoreSize(LoadI->getType());
     uint64_t LoadElementSize =
         LoadTypeSize.isScalable() ? 0 : LoadTypeSize.getFixedValue();
     if (LoadSizeOverride)
       LoadElementSize = *LoadSizeOverride;
     else if (WidenedLoadEntry)
-      LoadElementSize *= WidenedLoadEntry->Scalars.size();
+      LoadElementSize *= WidenedLoadEntry->Scalars.size() *
+                         std::max(1u, WidenedLoadEntry->getInterleaveFactor());
     // A conflict is only a real hazard if a future iteration's load actually
     // re-reads the bytes this store wrote. With a common positive loop-carried
     // stride S, equal for the load and the store, the store's bytes are re-read
@@ -29063,28 +29091,8 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
     // iterations (k >= 1); it says nothing about the current iteration (k == 0,
     // i.e. Distance < LoadElementSize), where a load wide enough to reach
     // forward into the store's own bytes already overlaps it and must go
-    // through the conflict predicate. Only the widened load's base lane (the
-    // min-address element that actually emits the wide load) carries the full
-    // LoadElementSize footprint; the other lanes of the same widened load are
-    // not independent wide loads, so their smaller Distance must not be
-    // compared against the whole-vector width.
-    bool IsWidenedBaseLane = WidenedLoadEntry != nullptr;
-    if (WidenedLoadEntry) {
-      for (Value *V : WidenedLoadEntry->Scalars) {
-        auto *OtherLd = dyn_cast<LoadInst>(V);
-        if (!OtherLd || OtherLd == LoadI)
-          continue;
-        std::optional<int64_t> LaneDiff = getPointersDiff(
-            LoadI->getType(), LoadI->getPointerOperand(), OtherLd->getType(),
-            OtherLd->getPointerOperand(), *DL, *SE, /*StrictCheck=*/false,
-            /*CheckType=*/false);
-        // Another lane sits at a lower address, so LoadI is not the base.
-        if (LaneDiff && *LaneDiff < 0) {
-          IsWidenedBaseLane = false;
-          break;
-        }
-      }
-    }
+    // through the conflict predicate. After skipping interior lanes above,
+    // LoadI is the widened load's base (or a scalar load).
     // A k == 0 overlap is a store-to-load *forwarding* hazard only when the
     // store executes before the load in program order, so the load reads bytes
     // the store just wrote (RAW). If the load precedes the store (a WAR
