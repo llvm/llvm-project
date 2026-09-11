@@ -2006,9 +2006,9 @@ private:
         mlir::Value active =
             fir::runtime::cuda::genDeviceIsActive(*builder, loc);
         builder->genIfThen(loc, active)
-            .genThen([&]() { 
+            .genThen([&]() {
               fir::runtime::cuda::getCUDADeviceSynchronize(*builder, loc);
-              bridge.cudaCleanupCtx().finalizeAndKeep(); 
+              bridge.cudaCleanupCtx().finalizeAndKeep();
             })
             .end();
       }
