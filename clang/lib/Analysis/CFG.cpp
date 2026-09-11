@@ -5586,6 +5586,32 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
   llvm_unreachable("getKind() returned bogus value");
 }
 
+const CallExpr *CFGCleanupFunction::createPseudoCallExpr(VarDecl *VD) {
+  const ASTContext &Ctx = VD->getASTContext();
+  const CleanupAttr *A = VD->getAttr<CleanupAttr>();
+  FunctionDecl *FD = A->getFunctionDecl();
+
+  DeclRefExpr *RV = new (&Ctx)
+      DeclRefExpr(Ctx, VD, /*RefersToEnclosingVariableOrCapture=*/false,
+                  VD->getType(), VK_LValue, A->getArgLoc());
+  UnaryOperator *UO = UnaryOperator::Create(
+      Ctx, RV, UO_AddrOf, Ctx.getPointerType(VD->getType()), VK_LValue,
+      OK_Ordinary, A->getArgLoc(),
+      /*CanOverflow=*/false, FPOptionsOverride());
+  Expr *Args[1] = {UO};
+  DeclRefExpr *RF = new (&Ctx)
+      DeclRefExpr(Ctx, FD, /*RefersToEnclosingVariableOrCapture=*/false,
+                  FD->getType(), VK_LValue, A->getArgLoc());
+  ImplicitCastExpr *IC = ImplicitCastExpr::Create(
+      Ctx, Ctx.getPointerType(FD->getType()), CK_FunctionToPointerDecay, RF,
+      nullptr, VK_LValue, FPOptionsOverride());
+  CallExpr *CE =
+      CallExpr::Create(Ctx, IC, Args, FD->getReturnType(), VK_PRValue,
+                       A->getArgLoc(), FPOptionsOverride());
+
+  return CE;
+}
+
 //===----------------------------------------------------------------------===//
 // CFGBlock operations.
 //===----------------------------------------------------------------------===//
