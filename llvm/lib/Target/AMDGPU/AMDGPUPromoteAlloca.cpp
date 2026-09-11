@@ -1149,7 +1149,6 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       ElemCnt = cast<FixedVectorType>(MemberTy)->getNumElements();
     }
 
-
     AA.Vector.BaseLane[Member] = TotalElems;
     TotalElems += ElemCnt;
   }
@@ -1388,6 +1387,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   // Delete all the users that are known to be removeable.
   // Replace the uses with poison first so they can be deleted in any order.
   for (Instruction *I : AA.Vector.UsersToRemove) {
+    I->dropDroppableUses();
     I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     I->eraseFromParent();
   }
