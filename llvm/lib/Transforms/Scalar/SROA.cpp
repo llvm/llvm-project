@@ -5581,11 +5581,20 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
     // If we will get at least this much alignment from the type alone, leave
     // the alloca's alignment unconstrained.
     const bool IsUnconstrained = Alignment <= DL.getABITypeAlign(PartitionTy);
-    NewAI = new AllocaInst(
-        PartitionTy, AI.getAddressSpace(), nullptr,
-        IsUnconstrained ? DL.getPrefTypeAlign(PartitionTy) : Alignment,
-        AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
-        AI.getIterator());
+    Align NewAlignment = Alignment;
+    if (IsUnconstrained) {
+      NewAlignment = DL.getPrefTypeAlign(PartitionTy);
+      // Rewriting an aggregate to a vector can increase its preferred
+      // alignment beyond the target's natural stack alignment. Avoid
+      // introducing stack realignment when the original alloca did not
+      // require it, while preserving any stronger alignment it did require.
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlignment = std::max(Alignment, std::min(NewAlignment, *StackAlign));
+    }
+    NewAI =
+        new AllocaInst(PartitionTy, AI.getAddressSpace(), nullptr, NewAlignment,
+                       AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
+                       AI.getIterator());
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());
     ++NumNewAllocas;
