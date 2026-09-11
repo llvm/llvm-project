@@ -1144,6 +1144,86 @@ define half @known_negative_normal_or_inf__fadd__known_negative_or_nan(half nofp
   ret half %add
 }
 
+define float @ret_fadd_negnormal_negsubnormal_both_lhs_rhs_mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %lhs, float nofpclass(nan inf zero psub pnorm) %rhs) #6 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_fadd_negnormal_negsubnormal_both_lhs_rhs_mode_dynamic_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[LHS:%.*]], float nofpclass(nan inf zero psub pnorm) [[RHS:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = fadd float %lhs, %rhs
+  ret float %fadd
+}
+
+define float @ret_fadd_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %lhs, float nofpclass(nan inf zero psub pnorm) %rhs) #3 {
+; CHECK-LABEL: define nofpclass(nan pinf nzero psub pnorm) float @ret_fadd_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[LHS:%.*]], float nofpclass(nan inf zero psub pnorm) [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = fadd float %lhs, %rhs
+  ret float %fadd
+}
+
+define float @ret_fadd_self_negnormal_negsubnormal_mode_dynamic_dynamic(float noundef nofpclass(nan inf zero psub pnorm) %arg) #6 {
+; CHECK-LABEL: define noundef nofpclass(nan pinf psub pnorm) float @ret_fadd_self_negnormal_negsubnormal_mode_dynamic_dynamic(
+; CHECK-SAME: float noundef nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = fadd float %arg, %arg
+  ret float %fadd
+}
+
+define float @ret_fadd_self_negnormal_negsubnormal_mode_ftpz_dapz(float noundef nofpclass(nan inf zero psub pnorm) %arg) #3 {
+; CHECK-LABEL: define noundef nofpclass(nan pinf nzero psub pnorm) float @ret_fadd_self_negnormal_negsubnormal_mode_ftpz_dapz(
+; CHECK-SAME: float noundef nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = fadd float %arg, %arg
+  ret float %fadd
+}
+
+define float @ret_fsub_negnormal_negsubnormal_both_lhs_rhs_mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %lhs, float nofpclass(nan inf zero psub pnorm) %rhs) #6 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_fsub_negnormal_negsubnormal_both_lhs_rhs_mode_dynamic_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[LHS:%.*]], float nofpclass(nan inf zero psub pnorm) [[RHS:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FSUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FSUB]]
+;
+  %fsub = fsub float %lhs, %rhs
+  ret float %fsub
+}
+
+define float @ret_fsub_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %lhs, float nofpclass(nan inf zero psub pnorm) %rhs) #3 {
+; CHECK-LABEL: define nofpclass(nan nzero) float @ret_fsub_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[LHS:%.*]], float nofpclass(nan inf zero psub pnorm) [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FSUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FSUB]]
+;
+  %fsub = fsub float %lhs, %rhs
+  ret float %fsub
+}
+
+define float @ret_fsub_self_negnormal_negsubnormal_mode_dynamic_dynamic(float noundef nofpclass(nan inf zero psub pnorm) %arg) #6 {
+; CHECK-LABEL: define noundef nofpclass(nan) float @ret_fsub_self_negnormal_negsubnormal_mode_dynamic_dynamic(
+; CHECK-SAME: float noundef nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FSUB:%.*]] = fsub float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FSUB]]
+;
+  %fsub = fsub float %arg, %arg
+  ret float %fsub
+}
+
+define float @ret_fsub_self_negnormal_negsubnormal_mode_ftpz_dapz(float noundef nofpclass(nan inf zero psub pnorm) %arg) #3 {
+; CHECK-LABEL: define noundef nofpclass(nan nzero) float @ret_fsub_self_negnormal_negsubnormal_mode_ftpz_dapz(
+; CHECK-SAME: float noundef nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FSUB:%.*]] = fsub float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FSUB]]
+;
+  %fsub = fsub float %arg, %arg
+  ret float %fsub
+}
+
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(preservesign|ieee) }
 attributes #2 = { denormal_fpenv(ieee|preservesign) }
