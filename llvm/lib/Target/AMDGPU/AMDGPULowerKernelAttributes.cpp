@@ -113,7 +113,7 @@ static bool annotateGroupSizeLoadWithRangeMD(LoadInst *Load, bool IsRemainder) {
   MDBuilder MDB(Load->getContext());
   MDNode *Range = MDB.createRange(
       APInt(16, !IsRemainder),
-      APInt(16, AMDGPU::IsaInfo::getMaxFlatWorkGroupSize() + 1 - IsRemainder));
+      APInt(16, AMDGPU::getMaxFlatWorkGroupSize() + 1 - IsRemainder));
   Load->setMetadata(LLVMContext::MD_range, Range);
   return true;
 }

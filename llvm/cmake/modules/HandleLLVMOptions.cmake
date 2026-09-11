@@ -334,6 +334,13 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   endif()
 endif()
 
+if(CMAKE_SYSTEM_NAME MATCHES "OS390")
+  # COMPRESS=YES reduces the size of the binaries by compression the
+  # non-loadable parts.
+  append("-Wl,-bcompress=yes"
+         CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+endif()
+
 # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO
 # build might work on ELF but fail on MachO/COFF.
 if(NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD|OpenBSD|DragonFly|AIX|OS390|Emscripten" OR

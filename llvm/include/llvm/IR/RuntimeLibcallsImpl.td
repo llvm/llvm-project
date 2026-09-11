@@ -80,6 +80,17 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   bit IsDefault = false;
 }
 
+/// A family of runtime libcalls implementing one floating-point operation, used
+/// to generate both the backend selector RTLIB::get<base>(EVT) and the IR-level
+/// getLibcallForIntrinsic() mapping. The libcall for a type is `<base>_<suffix>`
+/// (e.g. SIN_F64).
+class RuntimeLibcallFamily<string base, list<string> intrinsics = [],
+                           list<string> vectorSuffixes = []> {
+  string LibcallBase = base;
+  list<string> Intrinsics = intrinsics;
+  list<string> VectorSuffixes = vectorSuffixes;
+}
+
 class LibcallImpls<dag funcList,
                    RuntimeLibcallAvailability Pred = AlwaysAvailable> {
   // Function of the triple where this applies
@@ -100,6 +111,18 @@ class LibcallsWithCC<dag funcList, LibcallCallingConv CC,
                      RuntimeLibcallAvailability Pred = AlwaysAvailable>
     : LibcallImpls<funcList, Pred> {
   LibcallCallingConv CallingConv = CC;
+}
+
+// A named runtime library whose Impls are made available as a unit. Impls use
+// the same dag vocabulary as SystemRuntimeLibrary.
+class LibcallLibrary<string name, dag impls,
+                     RuntimeLibcallAvailability pred = AlwaysAvailable> {
+  string LibraryName = name;
+  dag Impls = impls;
+
+  // Availability guard for the library. Libraries sharing a LibraryName merge
+  // into one function, each variant under its own Pred.
+  RuntimeLibcallAvailability Pred = pred;
 }
 
 /// Define a complete top level set of runtime libcalls for a target.

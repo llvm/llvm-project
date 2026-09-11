@@ -8,8 +8,10 @@
 
 #include "SLPUtils.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
@@ -460,6 +462,118 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
   return Mask;
 }
 
+/// Checks if the vector of instructions can be represented as a shuffle, like:
+/// %x0 = extractelement <4 x i8> %x, i32 0
+/// %x3 = extractelement <4 x i8> %x, i32 3
+/// %y1 = extractelement <4 x i8> %y, i32 1
+/// %y2 = extractelement <4 x i8> %y, i32 2
+/// %x0x0 = mul i8 %x0, %x0
+/// %x3x3 = mul i8 %x3, %x3
+/// %y1y1 = mul i8 %y1, %y1
+/// %y2y2 = mul i8 %y2, %y2
+/// %ins1 = insertelement <4 x i8> poison, i8 %x0x0, i32 0
+/// %ins2 = insertelement <4 x i8> %ins1, i8 %x3x3, i32 1
+/// %ins3 = insertelement <4 x i8> %ins2, i8 %y1y1, i32 2
+/// %ins4 = insertelement <4 x i8> %ins3, i8 %y2y2, i32 3
+/// ret <4 x i8> %ins4
+/// can be transformed into:
+/// %1 = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 3, i32 5,
+///                                                         i32 6>
+/// %2 = mul <4 x i8> %1, %1
+/// ret <4 x i8> %2
+/// Mask will return the Shuffle Mask equivalent to the extracted elements.
+/// TODO: Can we split off and reuse the shuffle mask detection from
+/// ShuffleVectorInst/getShuffleCost?
+std::optional<TargetTransformInfo::ShuffleKind>
+isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
+                     AssumptionCache *AC) {
+  const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
+  if (It == VL.end())
+    return std::nullopt;
+  unsigned Size = accumulate(VL, 0u, [](unsigned S, Value *V) {
+    auto *EI = dyn_cast<ExtractElementInst>(V);
+    if (!EI)
+      return S;
+    auto *VTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
+    if (!VTy)
+      return S;
+    return std::max(S, VTy->getNumElements());
+  });
+
+  Value *Vec1 = nullptr;
+  Value *Vec2 = nullptr;
+  bool HasNonUndefVec = any_of(VL, [&](Value *V) {
+    auto *EE = dyn_cast<ExtractElementInst>(V);
+    if (!EE)
+      return false;
+    Value *Vec = EE->getVectorOperand();
+    if (isa<UndefValue>(Vec))
+      return false;
+    return isGuaranteedNotToBePoison(Vec, AC);
+  });
+  enum ShuffleMode { Unknown, Select, Permute };
+  ShuffleMode CommonShuffleMode = Unknown;
+  Mask.assign(VL.size(), PoisonMaskElem);
+  for (unsigned I = 0, E = VL.size(); I < E; ++I) {
+    // Undef, or a copyable lane modeled on an extract main op, can be
+    // represented as an undef element in a vector.
+    if (isa<UndefValue>(VL[I]))
+      continue;
+    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
+    if (!EI)
+      continue;
+    if (isa<ScalableVectorType>(EI->getVectorOperandType()))
+      return std::nullopt;
+    auto *Vec = EI->getVectorOperand();
+    // We can extractelement from undef or poison vector.
+    if (isUndefVector</*isPoisonOnly=*/true>(Vec).all())
+      continue;
+    // All vector operands must have the same number of vector elements.
+    if (isa<UndefValue>(Vec)) {
+      Mask[I] = I;
+    } else {
+      if (isa<UndefValue>(EI->getIndexOperand()))
+        continue;
+      auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
+      if (!Idx)
+        return std::nullopt;
+      // Undefined behavior if Idx is negative or >= Size.
+      if (Idx->getValue().uge(Size))
+        continue;
+      unsigned IntIdx = Idx->getValue().getZExtValue();
+      Mask[I] = IntIdx;
+    }
+    if (isUndefVector(Vec).all() && HasNonUndefVec)
+      continue;
+    // For correct shuffling we have to have at most 2 different vector operands
+    // in all extractelement instructions.
+    if (!Vec1 || Vec1 == Vec) {
+      Vec1 = Vec;
+    } else if (!Vec2 || Vec2 == Vec) {
+      Vec2 = Vec;
+      Mask[I] += Size;
+    } else {
+      return std::nullopt;
+    }
+    if (CommonShuffleMode == Permute)
+      continue;
+    // If the extract index is not the same as the operation number, it is a
+    // permutation.
+    if (Mask[I] % Size != I) {
+      CommonShuffleMode = Permute;
+      continue;
+    }
+    CommonShuffleMode = Select;
+  }
+  // If we're not crossing lanes in different vectors, consider it as blending.
+  if (CommonShuffleMode == Select && Vec2)
+    return TargetTransformInfo::SK_Select;
+  // If Vec2 was never used, we have a permutation of a single vector, otherwise
+  // we have permutation of 2 vectors.
+  return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
+              : TargetTransformInfo::SK_PermuteSingleSrc;
+}
+
 SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask, UseMask MaskArg) {
   SmallBitVector UseMask(VF, true);
   for (auto [Idx, Value] : enumerate(Mask)) {
@@ -752,6 +866,142 @@ bool isOnceUsedSeed(const Instruction *I) {
            (!isa<CastInst>(U) || U->hasOneUse());
   return isa<BinaryOperator, UnaryOperator, SelectInst, FreezeInst, CallInst>(
       I);
+}
+
+Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
+  auto *Wide = dyn_cast<FPExtInst>(V);
+  if (!Wide || !Wide->hasOneUse())
+    return nullptr;
+  auto *Narrow = dyn_cast<FPTruncInst>(Wide->getOperand(0));
+  if (!Narrow || !Narrow->hasOneUse())
+    return nullptr;
+  Value *Src = Narrow->getOperand(0);
+  if (!isa<Instruction>(Src) || Src->getType() != Wide->getType())
+    return nullptr;
+  if (MustBeElidable && !(Wide->hasAllowContract() && Wide->hasNoNaNs() &&
+                          Wide->hasNoInfs() && Narrow->hasAllowContract()))
+    return nullptr;
+  return Narrow;
+}
+
+namespace {
+
+/// Shifts and the mask accumulated from the narrow ops on the current path:
+/// the shifts above and at the narrow level, the bitwidth of the narrow ops
+/// (0 if none) and the mask from the absorbed narrow ands.
+struct NarrowedChainState {
+  unsigned Shift = 0;
+  unsigned NarrowShift = 0;
+  unsigned NarrowBW = 0;
+  APInt NarrowMask = APInt(1, 0);
+
+  /// The mask for the absorbed narrow ops in the leaf type, applied before
+  /// widening and shifting; all-ones if nothing was absorbed.
+  APInt getMask(unsigned LeafBW) const {
+    if (NarrowBW == 0)
+      return APInt::getAllOnes(LeafBW);
+    return (NarrowMask & (APInt::getAllOnes(NarrowBW) << NarrowShift))
+        .lshr(NarrowShift)
+        .trunc(LeafBW);
+  }
+};
+
+} // namespace
+
+static void
+collectNarrowedLeavesImpl(Value *V, unsigned RdxOpcode, unsigned WideBW,
+                          NarrowedChainState S, unsigned Depth,
+                          unsigned MaxDepth,
+                          SmallVectorImpl<NarrowedLeafInfo> &Leaves,
+                          SmallVectorImpl<Instruction *> &ChainInsts) {
+  if (Depth < MaxDepth) {
+    if (auto *Z = dyn_cast<ZExtInst>(V);
+        Z && Z->getSrcTy()->isIntegerTy() && !Z->getSrcTy()->isIntegerTy(1)) {
+      ChainInsts.push_back(Z);
+      return collectNarrowedLeavesImpl(Z->getOperand(0), RdxOpcode, WideBW, S,
+                                       Depth + 1, MaxDepth, Leaves, ChainInsts);
+    }
+    if (auto *BO = dyn_cast<BinaryOperator>(V)) {
+      if (BO->getOpcode() == RdxOpcode) {
+        ChainInsts.push_back(BO);
+        collectNarrowedLeavesImpl(BO->getOperand(0), RdxOpcode, WideBW, S,
+                                  Depth + 1, MaxDepth, Leaves, ChainInsts);
+        collectNarrowedLeavesImpl(BO->getOperand(1), RdxOpcode, WideBW, S,
+                                  Depth + 1, MaxDepth, Leaves, ChainInsts);
+        return;
+      }
+      const APInt *Amt;
+      unsigned BW = V->getType()->getScalarSizeInBits();
+      auto *Z = dyn_cast<ZExtInst>(BO->getOperand(0));
+      if (BO->getOpcode() == Instruction::Shl && Z && S.NarrowBW == 0 &&
+          match(BO->getOperand(1), m_APInt(Amt)) && Amt->ult(BW) &&
+          Z->getSrcTy()->isIntegerTy() && !Z->getSrcTy()->isIntegerTy(1) &&
+          (BW == WideBW ||
+           Z->getSrcTy()->getIntegerBitWidth() + Amt->getZExtValue() <= BW) &&
+          S.Shift + Amt->getZExtValue() < WideBW) {
+        ChainInsts.push_back(BO);
+        ChainInsts.push_back(Z);
+        S.Shift += Amt->getZExtValue();
+        return collectNarrowedLeavesImpl(Z->getOperand(0), RdxOpcode, WideBW, S,
+                                         Depth + 1, MaxDepth, Leaves,
+                                         ChainInsts);
+      }
+      // Narrow shls fold into the shift and narrow ands into the mask; the
+      // mask clears the bits the shls shift out. Only same-width ops compose
+      // on one path, and the combined shift must stay a valid shift amount in
+      // both types.
+      if (BW < WideBW && (S.NarrowBW == 0 || BW == S.NarrowBW)) {
+        if (BO->getOpcode() == Instruction::Shl &&
+            match(BO->getOperand(1), m_APInt(Amt)) && Amt->ult(BW) &&
+            S.NarrowShift + Amt->getZExtValue() < BW &&
+            S.Shift + S.NarrowShift + Amt->getZExtValue() < WideBW) {
+          ChainInsts.push_back(BO);
+          if (BO->hasNoUnsignedWrap() && S.NarrowBW == 0) {
+            S.Shift += Amt->getZExtValue();
+            // Lossless shls shift out only known-zero bits; record them as
+            // the mask so matching lanes can form a splat.
+            S.NarrowBW = BW;
+            S.NarrowMask = APInt::getLowBitsSet(BW, BW - Amt->getZExtValue());
+          } else {
+            if (S.NarrowBW == 0) {
+              S.NarrowBW = BW;
+              S.NarrowMask = APInt::getAllOnes(BW);
+            }
+            S.NarrowShift += Amt->getZExtValue();
+          }
+          return collectNarrowedLeavesImpl(BO->getOperand(0), RdxOpcode, WideBW,
+                                           S, Depth + 1, MaxDepth, Leaves,
+                                           ChainInsts);
+        }
+        Value *X;
+        if (match(BO, m_c_And(m_Value(X), m_APInt(Amt)))) {
+          ChainInsts.push_back(BO);
+          if (S.NarrowBW == 0) {
+            S.NarrowBW = BW;
+            S.NarrowMask = APInt::getAllOnes(BW);
+          }
+          S.NarrowMask &= *Amt << S.NarrowShift;
+          return collectNarrowedLeavesImpl(X, RdxOpcode, WideBW, S, Depth + 1,
+                                           MaxDepth, Leaves, ChainInsts);
+        }
+      }
+    }
+  }
+  Leaves.emplace_back(V, S.Shift + S.NarrowShift,
+                      S.getMask(V->getType()->getScalarSizeInBits()));
+}
+
+void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
+                           unsigned MaxDepth,
+                           SmallVectorImpl<NarrowedLeafInfo> &Leaves,
+                           SmallVectorImpl<Instruction *> &ChainInsts) {
+  collectNarrowedLeavesImpl(V, RdxOpcode, WideBW, NarrowedChainState(),
+                            /*Depth=*/0, MaxDepth, Leaves, ChainInsts);
+}
+
+TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
+  assert(F && "Expected function.");
+  return F->hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
 }
 
 } // namespace llvm::slpvectorizer

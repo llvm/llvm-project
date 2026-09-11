@@ -387,6 +387,35 @@ TEST_F(LogChannelEnabledTest, JSONLOutput) {
   EXPECT_EQ(Obj->getString("function").value_or(""), "logAndTakeOutput");
 }
 
+TEST_F(LogChannelEnabledTest, JSONLOutputInvalidUTF8) {
+  // Arbitrary bytes must not abort the JSON writer.
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(),
+                                          /*log_options=*/LLDB_LOG_OPTION_JSON,
+                                          "chan", {}),
+                    llvm::Succeeded());
+
+  auto CheckMessage = [](llvm::StringRef Msg) {
+    llvm::Expected<llvm::json::Value> Parsed = llvm::json::parse(Msg);
+    ASSERT_TRUE(static_cast<bool>(Parsed))
+        << llvm::toString(Parsed.takeError());
+    llvm::json::Object *Obj = Parsed->getAsObject();
+    ASSERT_NE(Obj, nullptr);
+    std::optional<llvm::StringRef> Message = Obj->getString("message");
+    ASSERT_TRUE(Message.has_value());
+    EXPECT_TRUE(llvm::json::isUTF8(*Message));
+    EXPECT_TRUE(Message->contains("before"));
+    EXPECT_TRUE(Message->contains("after"));
+  };
+
+  // Check both entry points: Format and PutString.
+  CheckMessage(logAndTakeOutput("before\xff\xfe"
+                                "after"));
+
+  getLog()->PutString("before\xff\xfe"
+                      "after");
+  CheckMessage(takeOutput());
+}
+
 TEST_F(LogChannelEnabledTest, LLDB_LOG_ERROR) {
   LLDB_LOG_ERROR(getLog(), llvm::Error::success(), "Foo failed: {0}");
   ASSERT_EQ("", takeOutput());

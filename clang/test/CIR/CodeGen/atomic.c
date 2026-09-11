@@ -9,6 +9,8 @@ struct S1 {
   short x, y, z;
 };
 
+// CIR: !rec_anon_struct = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
+
 _Atomic int g1;
 _Atomic int g2 = 42;
 // CIR: cir.global external @g2 = #cir.int<42> : !s32i {alignment = 4 : i64}
@@ -3352,6 +3354,204 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
   // OGCG:      [[CONTINUE_BLK]]:
   // OGCG-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
+}
+
+_Bool atomic_compare_exchange_n(int *ptr, int *expected, int desired,
+                                int success, int failure) {
+  // CIR-LABEL: @atomic_compare_exchange_n
+  // LLVM-LABEL: @atomic_compare_exchange_n
+  // LLVM-SAME: ({{.*}}, i32 {{.*}}%[[SUCCESS_ARG:.+]], i32 {{.*}}%[[FAILURE_ARG:.+]])
+  // OGCG-LABEL: @atomic_compare_exchange_n
+  // OGCG-SAME: ({{.*}}, i32 {{.*}}%[[SUCCESS_ARG:.+]], i32 {{.*}}%[[FAILURE_ARG:.+]])
+
+  // CIR: %[[SUCCESS_ADDR:.+]] = cir.alloca "success"
+  // CIR: %[[FAILURE_ADDR:.+]] = cir.alloca "failure"
+  // CIR: %[[SUCCESS:.+]] = cir.load align(4) %[[SUCCESS_ADDR]]
+  // CIR: cir.switch(%[[SUCCESS]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(relaxed) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(relaxed) failure(seq_cst)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(acquire) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(acquire) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(acquire) failure(seq_cst)
+  // CIR: cir.case(anyof, [#cir.int<3> : !s32i])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(release) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(release) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(release) failure(seq_cst)
+  // CIR: cir.case(anyof, [#cir.int<4> : !s32i])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(acq_rel) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(acq_rel) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(acq_rel) failure(seq_cst)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst)
+
+  // LLVM: store i32 %[[SUCCESS_ARG]], ptr %[[SUCCESS_ADDR:.+]], align 4
+  // LLVM-NEXT: store i32 %[[FAILURE_ARG]], ptr %[[FAILURE_ADDR:.+]], align 4
+  // LLVM: %[[SUCCESS_ORDER:.+]] = load i32, ptr %[[SUCCESS_ADDR]], align 4
+  // LLVM: switch i32 %[[SUCCESS_ORDER]], label %[[CX_RELAXED:[^ ]+]]
+  // LLVM-NEXT: i32 1, label %[[CX_ACQUIRE:.+]]
+  // LLVM-NEXT: i32 2, label %[[CX_ACQUIRE]]
+  // LLVM-NEXT: i32 3, label %[[CX_RELEASE:.+]]
+  // LLVM-NEXT: i32 4, label %[[CX_ACQ_REL:.+]]
+  // LLVM-NEXT: i32 5, label %[[CX_SEQ_CST:.+]]
+  // LLVM: [[CX_RELAXED]]:
+  // LLVM: %[[FAILURE_ORDER:.+]] = load i32, ptr %[[FAILURE_ADDR]], align 4
+  // LLVM: switch i32 %[[FAILURE_ORDER]], label %[[CX_RELAXED_RELAXED:[^ ]+]]
+  // LLVM-NEXT: i32 1, label %[[CX_RELAXED_ACQUIRE:.+]]
+  // LLVM-NEXT: i32 2, label %[[CX_RELAXED_ACQUIRE]]
+  // LLVM-NEXT: i32 5, label %[[CX_RELAXED_SEQ_CST:.+]]
+  // LLVM: [[CX_RELAXED_RELAXED]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} monotonic monotonic
+  // LLVM: [[CX_RELAXED_ACQUIRE]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} monotonic acquire
+  // LLVM: [[CX_RELAXED_SEQ_CST]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} monotonic seq_cst
+  // LLVM: [[CX_ACQUIRE]]:
+  // LLVM: %[[FAILURE_ORDER:.+]] = load i32, ptr %[[FAILURE_ADDR]], align 4
+  // LLVM: switch i32 %[[FAILURE_ORDER]], label %[[CX_ACQUIRE_RELAXED:[^ ]+]]
+  // LLVM-NEXT: i32 1, label %[[CX_ACQUIRE_ACQUIRE:.+]]
+  // LLVM-NEXT: i32 2, label %[[CX_ACQUIRE_ACQUIRE]]
+  // LLVM-NEXT: i32 5, label %[[CX_ACQUIRE_SEQ_CST:.+]]
+  // LLVM: [[CX_ACQUIRE_RELAXED]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acquire monotonic
+  // LLVM: [[CX_ACQUIRE_ACQUIRE]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acquire acquire
+  // LLVM: [[CX_ACQUIRE_SEQ_CST]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acquire seq_cst
+  // LLVM: [[CX_RELEASE]]:
+  // LLVM: %[[FAILURE_ORDER:.+]] = load i32, ptr %[[FAILURE_ADDR]], align 4
+  // LLVM: switch i32 %[[FAILURE_ORDER]], label %[[CX_RELEASE_RELAXED:[^ ]+]]
+  // LLVM-NEXT: i32 1, label %[[CX_RELEASE_ACQUIRE:.+]]
+  // LLVM-NEXT: i32 2, label %[[CX_RELEASE_ACQUIRE]]
+  // LLVM-NEXT: i32 5, label %[[CX_RELEASE_SEQ_CST:.+]]
+  // LLVM: [[CX_RELEASE_RELAXED]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} release monotonic
+  // LLVM: [[CX_RELEASE_ACQUIRE]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} release acquire
+  // LLVM: [[CX_RELEASE_SEQ_CST]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} release seq_cst
+  // LLVM: [[CX_ACQ_REL]]:
+  // LLVM: %[[FAILURE_ORDER:.+]] = load i32, ptr %[[FAILURE_ADDR]], align 4
+  // LLVM: switch i32 %[[FAILURE_ORDER]], label %[[CX_ACQ_REL_RELAXED:[^ ]+]]
+  // LLVM-NEXT: i32 1, label %[[CX_ACQ_REL_ACQUIRE:.+]]
+  // LLVM-NEXT: i32 2, label %[[CX_ACQ_REL_ACQUIRE]]
+  // LLVM-NEXT: i32 5, label %[[CX_ACQ_REL_SEQ_CST:.+]]
+  // LLVM: [[CX_ACQ_REL_RELAXED]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acq_rel monotonic
+  // LLVM: [[CX_ACQ_REL_ACQUIRE]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acq_rel acquire
+  // LLVM: [[CX_ACQ_REL_SEQ_CST]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acq_rel seq_cst
+  // LLVM: [[CX_SEQ_CST]]:
+  // LLVM: %[[FAILURE_ORDER:.+]] = load i32, ptr %[[FAILURE_ADDR]], align 4
+  // LLVM: switch i32 %[[FAILURE_ORDER]], label %[[CX_SEQ_CST_RELAXED:[^ ]+]]
+  // LLVM-NEXT: i32 1, label %[[CX_SEQ_CST_ACQUIRE:.+]]
+  // LLVM-NEXT: i32 2, label %[[CX_SEQ_CST_ACQUIRE]]
+  // LLVM-NEXT: i32 5, label %[[CX_SEQ_CST_SEQ_CST:.+]]
+  // LLVM: [[CX_SEQ_CST_RELAXED]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // LLVM: [[CX_SEQ_CST_ACQUIRE]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // LLVM: [[CX_SEQ_CST_SEQ_CST]]:
+  // LLVM: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+
+  // OGCG: store i32 %[[SUCCESS_ARG]], ptr %[[SUCCESS_ADDR:.+]], align 4
+  // OGCG-NEXT: store i32 %[[FAILURE_ARG]], ptr %[[FAILURE_ADDR:.+]], align 4
+  // OGCG: %[[SUCCESS_ORDER:.+]] = load i32, ptr %[[SUCCESS_ADDR]], align 4
+  // OGCG: %[[FAILURE_ORDER:.+]] = load i32, ptr %[[FAILURE_ADDR]], align 4
+  // OGCG: switch i32 %[[SUCCESS_ORDER]], label %[[CX_RELAXED:[^ ]+]]
+  // OGCG-NEXT: i32 1, label %[[CX_ACQUIRE:.+]]
+  // OGCG-NEXT: i32 2, label %[[CX_ACQUIRE]]
+  // OGCG-NEXT: i32 3, label %[[CX_RELEASE:.+]]
+  // OGCG-NEXT: i32 4, label %[[CX_ACQ_REL:.+]]
+  // OGCG-NEXT: i32 5, label %[[CX_SEQ_CST:.+]]
+  // OGCG: [[CX_RELAXED]]:
+  // OGCG: switch i32 %[[FAILURE_ORDER]], label %[[CX_RELAXED_RELAXED:[^ ]+]]
+  // OGCG-NEXT: i32 1, label %[[CX_RELAXED_ACQUIRE:.+]]
+  // OGCG-NEXT: i32 2, label %[[CX_RELAXED_ACQUIRE]]
+  // OGCG-NEXT: i32 5, label %[[CX_RELAXED_SEQ_CST:.+]]
+  // OGCG: [[CX_ACQUIRE]]:
+  // OGCG: switch i32 %[[FAILURE_ORDER]], label %[[CX_ACQUIRE_RELAXED:[^ ]+]]
+  // OGCG-NEXT: i32 1, label %[[CX_ACQUIRE_ACQUIRE:.+]]
+  // OGCG-NEXT: i32 2, label %[[CX_ACQUIRE_ACQUIRE]]
+  // OGCG-NEXT: i32 5, label %[[CX_ACQUIRE_SEQ_CST:.+]]
+  // OGCG: [[CX_RELEASE]]:
+  // OGCG: switch i32 %[[FAILURE_ORDER]], label %[[CX_RELEASE_RELAXED:[^ ]+]]
+  // OGCG-NEXT: i32 1, label %[[CX_RELEASE_ACQUIRE:.+]]
+  // OGCG-NEXT: i32 2, label %[[CX_RELEASE_ACQUIRE]]
+  // OGCG-NEXT: i32 5, label %[[CX_RELEASE_SEQ_CST:.+]]
+  // OGCG: [[CX_ACQ_REL]]:
+  // OGCG: switch i32 %[[FAILURE_ORDER]], label %[[CX_ACQ_REL_RELAXED:[^ ]+]]
+  // OGCG-NEXT: i32 1, label %[[CX_ACQ_REL_ACQUIRE:.+]]
+  // OGCG-NEXT: i32 2, label %[[CX_ACQ_REL_ACQUIRE]]
+  // OGCG-NEXT: i32 5, label %[[CX_ACQ_REL_SEQ_CST:.+]]
+  // OGCG: [[CX_SEQ_CST]]:
+  // OGCG: switch i32 %[[FAILURE_ORDER]], label %[[CX_SEQ_CST_RELAXED:[^ ]+]]
+  // OGCG-NEXT: i32 1, label %[[CX_SEQ_CST_ACQUIRE:.+]]
+  // OGCG-NEXT: i32 2, label %[[CX_SEQ_CST_ACQUIRE]]
+  // OGCG-NEXT: i32 5, label %[[CX_SEQ_CST_SEQ_CST:.+]]
+  // OGCG: [[CX_RELAXED_RELAXED]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} monotonic monotonic
+  // OGCG: [[CX_RELAXED_ACQUIRE]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} monotonic acquire
+  // OGCG: [[CX_RELAXED_SEQ_CST]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} monotonic seq_cst
+  // OGCG: [[CX_ACQUIRE_RELAXED]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acquire monotonic
+  // OGCG: [[CX_ACQUIRE_ACQUIRE]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acquire acquire
+  // OGCG: [[CX_ACQUIRE_SEQ_CST]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acquire seq_cst
+  // OGCG: [[CX_RELEASE_RELAXED]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} release monotonic
+  // OGCG: [[CX_RELEASE_ACQUIRE]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} release acquire
+  // OGCG: [[CX_RELEASE_SEQ_CST]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} release seq_cst
+  // OGCG: [[CX_ACQ_REL_RELAXED]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acq_rel monotonic
+  // OGCG: [[CX_ACQ_REL_ACQUIRE]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acq_rel acquire
+  // OGCG: [[CX_ACQ_REL_SEQ_CST]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acq_rel seq_cst
+  // OGCG: [[CX_SEQ_CST_RELAXED]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // OGCG: [[CX_SEQ_CST_ACQUIRE]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // OGCG: [[CX_SEQ_CST_SEQ_CST]]:
+  // OGCG: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+
+  return __atomic_compare_exchange_n(ptr, expected, desired, 0, success,
+                                     failure);
 }
 
 int atomic_fetch_uinc(int *ptr, int value) {

@@ -27,6 +27,146 @@ struct E {
   constexpr E(){};
 } TestE;
 
+// Restored by this revert: a constexpr constructor that is only declared keeps
+// the class exempt from constructor homing. See Aliased below for a case where
+// narrowing the exemption to defined constructors homes the type nowhere.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DeclaredConstexpr"{{.*}}DIFlagTypePassByValue
+struct DeclaredConstexpr {
+  constexpr DeclaredConstexpr();
+} TestDeclaredConstexpr;
+
+// A constructor of a class template specialization is only instantiated, and
+// so only defined, where it is used. Nothing constructs Aliased<const int, int>
+// here - it is only read, through the common initial sequence it shares with
+// Aliased<int, int> - so its constructor is defined in no translation unit and
+// nothing anywhere homes the type, even though the type must be complete to
+// read the member. Constructing through the mutable alternative and reading
+// through the const-qualified one is what
+// absl::container_internal::map_slot_type does with std::pair.
+//
+// See https://timsong-cpp.github.io/cppwp/n3337/class.mem#19 for
+// the rule that allows an object to be constructed by a constructor
+// of one type and read via another type.
+//
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "Aliased<int, int>"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "Aliased<const int, int>"{{.*}}DIFlagTypePassByValue
+template <class A, class B> struct Aliased {
+  A first;
+  B second;
+  constexpr Aliased(const A &a, const B &b) : first(a), second(b) {}
+};
+union AliasedSlot {
+  Aliased<const int, int> value;
+  Aliased<int, int> mutable_value;
+  AliasedSlot() {}
+  ~AliasedSlot() {}
+} TestAliasedSlot;
+int ReadAliasedSlot() {
+  TestAliasedSlot.mutable_value = Aliased<int, int>(1, 2);
+  return TestAliasedSlot.value.first;
+}
+
+// Defined out-of-line constexpr constructor should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "OutOfLineConstexpr"{{.*}}DIFlagTypePassByValue
+struct OutOfLineConstexpr {
+  constexpr OutOfLineConstexpr();
+} TestOutOfLineConstexpr;
+constexpr OutOfLineConstexpr::OutOfLineConstexpr() {}
+
+// Defined delegating constructor where delegated constructor is not defined
+// should not emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "Delegating"{{.*}}flags: DIFlagFwdDecl
+struct Delegating {
+  Delegating() : Delegating(42) {}
+  Delegating(int);
+} TestDelegating;
+
+// Defined out-of-line delegating constructor where delegated constructor is not
+// defined should not emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "OutOfLineDelegating"{{.*}}flags: DIFlagFwdDecl
+struct OutOfLineDelegating {
+  OutOfLineDelegating();
+  OutOfLineDelegating(int);
+} TestOutOfLineDelegating;
+OutOfLineDelegating::OutOfLineDelegating() : OutOfLineDelegating(42) {}
+
+// Defined delegating constructor where delegated constructor is defined should
+// emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingToDefined"{{.*}}DIFlagTypePassByValue
+struct DelegatingToDefined {
+  DelegatingToDefined() : DelegatingToDefined(42) {}
+  DelegatingToDefined(int) {}
+} TestDelegatingToDefined;
+
+// Defined delegating constructor where delegated constructor is defined out of
+// line should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingToOutOfLine"{{.*}}DIFlagTypePassByValue
+struct DelegatingToOutOfLine {
+  DelegatingToOutOfLine() : DelegatingToOutOfLine(42) {}
+  DelegatingToOutOfLine(int);
+} TestDelegatingToOutOfLine;
+DelegatingToOutOfLine::DelegatingToOutOfLine(int) {}
+
+// Defined out-of-line delegating constructor where delegated constructor is
+// defined should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingOutOfLine"{{.*}}DIFlagTypePassByValue
+struct DelegatingOutOfLine {
+  DelegatingOutOfLine();
+  DelegatingOutOfLine(int) {}
+} TestDelegatingOutOfLine;
+DelegatingOutOfLine::DelegatingOutOfLine() : DelegatingOutOfLine(42) {}
+
+// Defined out-of-line delegating constructor where delegated constructor is
+// defined out-of-line should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingOutOfLineToOutOfLine"{{.*}}DIFlagTypePassByValue
+struct DelegatingOutOfLineToOutOfLine {
+  DelegatingOutOfLineToOutOfLine();
+  DelegatingOutOfLineToOutOfLine(int);
+} TestDelegatingOutOfLineToOutOfLine;
+DelegatingOutOfLineToOutOfLine::DelegatingOutOfLineToOutOfLine()
+    : DelegatingOutOfLineToOutOfLine(42) {}
+DelegatingOutOfLineToOutOfLine::DelegatingOutOfLineToOutOfLine(int) {}
+
+// Delegating constructor to a copy constructor should not enable constructor
+// homing, so it should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingToCopyCtor"{{.*}}DIFlagTypePassByValue
+struct DelegatingToCopyCtor {
+  DelegatingToCopyCtor(const DelegatingToCopyCtor&) = default;
+  DelegatingToCopyCtor(const DelegatingToCopyCtor& val, int)
+      : DelegatingToCopyCtor(val) {}
+};
+void TestDelegatingToCopyCtor(DelegatingToCopyCtor) {}
+
+// Delegating constructor to a move constructor should not enable constructor
+// homing, so it should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingToMoveCtor"{{.*}}DIFlagTypePassByValue
+struct DelegatingToMoveCtor {
+  DelegatingToMoveCtor(const DelegatingToMoveCtor&) = default;
+  DelegatingToMoveCtor(DelegatingToMoveCtor&&) = default;
+  DelegatingToMoveCtor(DelegatingToMoveCtor&& val, int)
+      : DelegatingToMoveCtor(static_cast<DelegatingToMoveCtor&&>(val)) {}
+};
+void TestDelegatingToMoveCtor(DelegatingToMoveCtor) {}
+
+// Defined delegating constexpr constructor where delegated constructor is also
+// defined should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingConstexpr"{{.*}}DIFlagTypePassByValue
+struct DelegatingConstexpr {
+  constexpr DelegatingConstexpr() : DelegatingConstexpr(42) {}
+  constexpr DelegatingConstexpr(int) {}
+} TestDelegatingConstexpr;
+
+// Defined out-of-line delegating constexpr constructor where delegated
+// constructor is also defined out-of-line should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingConstexprOutOfLine"{{.*}}DIFlagTypePassByValue
+struct DelegatingConstexprOutOfLine {
+  constexpr DelegatingConstexprOutOfLine();
+  constexpr DelegatingConstexprOutOfLine(int);
+} TestDelegatingConstexprOutOfLine;
+constexpr DelegatingConstexprOutOfLine::DelegatingConstexprOutOfLine()
+    : DelegatingConstexprOutOfLine(42) {}
+constexpr DelegatingConstexprOutOfLine::DelegatingConstexprOutOfLine(int) {}
+
 // Test for trivial constructor.
 // CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "F"{{.*}}DIFlagTypePassByValue
 struct F {
@@ -74,6 +214,7 @@ struct NonTrivial {
 };
 struct DeletedCtors {
   DeletedCtors() = delete;
+  constexpr DeletedCtors(int) = delete;
   DeletedCtors(const DeletedCtors &) = default;
   void f1();
   NonTrivial t;

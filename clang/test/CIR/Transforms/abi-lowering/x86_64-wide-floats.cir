@@ -4,7 +4,7 @@
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
 !s32i = !cir.int<s, 32>
-!rec_SLD = !cir.struct<"SLD" {!cir.long_double<!cir.f80>}>
+!rec_SLD = !cir.struct<"SLD" {data !cir.long_double<!cir.f80>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -72,4 +72,4 @@ module attributes {
 // LLVM: define fp128 @quad(fp128 %{{.+}})
 // LLVM: define x86_fp80 @x87(x86_fp80 %{{.+}})
 // LLVM: define x86_fp80 @raw_f80(x86_fp80 %{{.+}})
-// LLVM: define void @take_sld(ptr noalias noundef byval(%struct.SLD) align 16 %{{.+}})
+// LLVM: define void @take_sld(ptr noundef byval(%struct.SLD) align 16 %{{.+}})

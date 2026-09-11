@@ -9,8 +9,8 @@
 
 // Anonymous record aliases are numbered in the order they are printed, so
 // capture each pair rather than naming it.
-// CHECK-DAG: ![[X87PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.f80, !cir.f80}>
-// CHECK-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.double, !cir.double}>
+// CHECK-DAG: ![[X87PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.f80, data !cir.f80}>
+// CHECK-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.double, data !cir.double}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -72,4 +72,4 @@ module attributes {
 // LLVM: define { double, double } @cdouble(double %{{.+}}, double %{{.+}})
 // LLVM: define i32 @cshort(i32 %{{.+}})
 // LLVM: define i64 @cint(i64 %{{.+}})
-// LLVM: define { x86_fp80, x86_fp80 } @clongdouble(ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
+// LLVM: define { x86_fp80, x86_fp80 } @clongdouble(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})

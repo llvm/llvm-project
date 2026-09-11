@@ -15,7 +15,9 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.fcntl
     libc.include.features
     libc.include.fenv
+    libc.include.fnmatch
     libc.include.float
+    libc.include.grp
     libc.include.inttypes
     libc.include.langinfo
     libc.include.libgen
@@ -34,6 +36,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.pwd
     libc.include.sched
     libc.include.search
+    libc.include.semaphore
     libc.include.setjmp
     libc.include.signal
     libc.include.spawn
@@ -50,6 +53,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_fcntl
     libc.include.sys_ioctl
     libc.include.sys_mman
+    libc.include.sys_mount
     libc.include.sys_param
     libc.include.sys_personality
     libc.include.sys_poll
@@ -64,16 +68,21 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_stat
     libc.include.sys_statfs
     libc.include.sys_statvfs
+    libc.include.sys_sysinfo
     libc.include.sys_syscall
+    libc.include.sys_sysmacros
+    libc.include.sys_syslog
     libc.include.sys_time
     libc.include.sys_types
     libc.include.sys_uio
     libc.include.sys_un
     libc.include.sys_unistd
     libc.include.sys_utsname
+    libc.include.sys_vfs
     libc.include.sys_wait
     libc.include.syscall
     libc.include.sysexits
+    libc.include.syslog
     libc.include.termios
     libc.include.threads
     libc.include.time
@@ -85,6 +94,7 @@ set(TARGET_PUBLIC_HEADERS
 
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   list(APPEND TARGET_PUBLIC_HEADERS
+    libc.include.netdb
     libc.include.regex
     libc.include.sys_ptrace
   )

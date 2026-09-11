@@ -180,16 +180,6 @@ if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
   libc_set_definition(strfrom_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 
-add_header_library(
-  strfrom_test_support
-  HDRS
-    StrfromTest.h
-  DEPENDS
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.properties.architectures
-)
-
 add_libc_test(
   strfromf_test
   SUITE
@@ -197,7 +187,8 @@ add_libc_test(
   SRCS
     strfromf_test.cpp
   DEPENDS
-    .strfrom_test_support
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
     libc.src.stdlib.strfromf
   COMPILE_OPTIONS
     ${strfrom_test_copts}
@@ -210,7 +201,8 @@ add_libc_test(
   SRCS
     strfromd_test.cpp
   DEPENDS
-    .strfrom_test_support
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
     libc.src.stdlib.strfromd
   COMPILE_OPTIONS
     ${strfrom_test_copts}
@@ -223,7 +215,8 @@ add_libc_test(
   SRCS
     strfroml_test.cpp
   DEPENDS
-    .strfrom_test_support
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
     libc.src.stdlib.strfroml
   COMPILE_OPTIONS
     ${strfrom_test_copts}
@@ -391,6 +384,7 @@ add_libc_test(
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.utility
+    libc.src.__support.c_string
     libc.src.__support.fixedvector
     libc.src.__support.libc_assert
     libc.src.__support.libc_errno
@@ -578,6 +572,18 @@ if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
       libc.include.stdlib
       libc.src.stdlib.quick_exit
   )
+
+  add_libc_test(
+    system_test
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      system_test.cpp
+    DEPENDS
+      libc.hdr.sys_wait_macros
+      libc.src.stdlib.system
+      libc.test.UnitTest.ErrnoCheckingTest
+  )
 endif()
 
 # Only baremetal and GPU has an in-tree 'malloc' implementation.
@@ -595,3 +601,16 @@ if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
       libc.src.stdlib.free
   )
 endif()
+
+add_libc_test(
+  getloadavg_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    getloadavg_test.cpp
+  DEPENDS
+    libc.src.stdlib.getloadavg
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+

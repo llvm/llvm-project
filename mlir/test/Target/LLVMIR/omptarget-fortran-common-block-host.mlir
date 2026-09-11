@@ -7,13 +7,13 @@
 
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @omp_map_common_block_using_common_block_members() {
-    %0 = llvm.mlir.constant(4 : index) : i64
-    %1 = llvm.mlir.constant(0 : index) : i64
+    %0 = llvm.mlir.constant(4 : i64) : i64
+    %1 = llvm.mlir.constant(0 : i64) : i64
     %2 = llvm.mlir.addressof @var_common_ : !llvm.ptr
     %3 = llvm.getelementptr %2[%1] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %4 = llvm.getelementptr %2[%0] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var1"}
-    %6 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var2"}
+    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("var1") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("var2") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%5 -> %arg0, %6 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
@@ -22,7 +22,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
   llvm.func @omp_map_common_block_using_common_block_symbol() {
     %0 = llvm.mlir.addressof @var_common_ : !llvm.ptr
-    %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<8 x i8>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var_common"}
+    %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<8 x i8>) map_clauses(tofrom) capture(ByRef) name("var_common") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%1 -> %arg0 : !llvm.ptr) {
       omp.terminator
     }

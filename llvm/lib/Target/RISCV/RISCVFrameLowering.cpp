@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/LEB128.h"
@@ -232,7 +233,8 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 // Insert instruction to swap mscratchsw with sp
 static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI,
-                                    const DebugLoc &DL) {
+                                    const DebugLoc &DL,
+                                    MachineInstr::MIFlag FrameFlag) {
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
   if (!RVFI->isSiFiveStackSwapInterrupt(MF))
@@ -247,7 +249,7 @@ static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
       .addReg(SPReg, RegState::Define)
       .addImm(RISCVSysReg::sf_mscratchcsw)
       .addReg(SPReg, RegState::Kill)
-      .setMIFlag(MachineInstr::FrameSetup);
+      .setMIFlag(FrameFlag);
 
   // FIXME: CFI Information for this swap.
 }
@@ -344,7 +346,7 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
       .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mstatus)
       .addImm(8)
-      .setMIFlag(MachineInstr::FrameSetup);
+      .setMIFlag(MachineInstr::FrameDestroy);
 
   // Restore `mepc` from x9 (s1), and `mcause` from x8 (s0). If either were used
   // in the function, they have already been restored once, so now have the
@@ -353,23 +355,23 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
       .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mepc)
       .addReg(RISCV::X9, RegState::Kill)
-      .setMIFlag(MachineInstr::FrameSetup);
+      .setMIFlag(MachineInstr::FrameDestroy);
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
       .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mcause)
       .addReg(RISCV::X8, RegState::Kill)
-      .setMIFlag(MachineInstr::FrameSetup);
+      .setMIFlag(MachineInstr::FrameDestroy);
 
   // X8 and X9 need to be restored to their values on function entry, which we
   // saved onto the stack in `emitSiFiveCLICPreemptibleSaves`.
   TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X9,
                             RVFI->getInterruptCSRFrameIndex(1),
                             &RISCV::GPRRegClass, Register(),
-                            RISCV::NoSubRegister, MachineInstr::FrameSetup);
+                            RISCV::NoSubRegister, MachineInstr::FrameDestroy);
   TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X8,
                             RVFI->getInterruptCSRFrameIndex(0),
                             &RISCV::GPRRegClass, Register(),
-                            RISCV::NoSubRegister, MachineInstr::FrameSetup);
+                            RISCV::NoSubRegister, MachineInstr::FrameDestroy);
 }
 
 // Get the ID of the libcall used for spilling and restoring callee saved
@@ -491,9 +493,8 @@ bool RISCVFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-      RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-      MFI.isFrameAddressTaken())
+  if (MF.disableFramePointerElim() || RegInfo->hasStackRealignment(MF) ||
+      MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken())
     return true;
 
   // With large callframes around we may need to use FP to access the scavenging
@@ -1002,7 +1003,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     return;
 
   // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
-  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
+  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameSetup);
 
   // Emit prologue for shadow call stack.
   emitSCSPrologue(MF, MBB, MBBI, DL);
@@ -1480,7 +1481,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSCSEpilogue(MF, MBB, MBBI, DL);
 
   // SiFive CLIC needs to swap `sf.mscratchcsw` into `sp`
-  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
+  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameDestroy);
 }
 
 static MCRegister getPhysicalGPR(const TargetRegisterInfo &TRI,
@@ -2651,6 +2652,12 @@ bool RISCVFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   if (MF.getFunction().hasOptNone())
     return false;
 
+  // QCI and SiFive CLIC interrupt entry sequences must precede all handler
+  // code.
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (RVFI->useQCIInterrupt(MF) || RVFI->useSiFiveInterrupt(MF))
+    return false;
+
   return true;
 }
 
@@ -2687,11 +2694,6 @@ bool RISCVFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const auto *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
 
-  // We do not want QC.C.MILEAVERET to be subject to shrink-wrapping - it must
-  // come in the final block of its function as it both pops and returns.
-  if (RVFI->useQCIInterrupt(*MF))
-    return MBB.succ_empty();
-
   if (!RVFI->useSaveRestoreLibCalls(*MF))
     return true;
 
@@ -2725,6 +2727,7 @@ bool RISCVFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::SGPRSpill:
   case TargetStackID::WasmLocal:
   case TargetStackID::ScalablePredicateVector:
+  case TargetStackID::AvrAlign:
     return false;
   }
   llvm_unreachable("Invalid TargetStackID::Value");

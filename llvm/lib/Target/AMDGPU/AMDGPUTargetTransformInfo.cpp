@@ -290,8 +290,6 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
   SIModeRegisterDefaults Mode(F, *ST);
   HasFP32Denormals = Mode.FP32Denormals != DenormalMode::getPreserveSign();
-  HasFP64FP16Denormals =
-      Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
 }
 
 bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
@@ -524,6 +522,28 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
+/// \returns true if \p FMul and its single fadd/fsub user \p FAddSub are
+/// expected to fuse during instruction selection. \p Ty is the type the fused
+/// operation runs on.
+static bool canFuseFMulWithFAddSub(const SITargetLowering &TLI, Type *Ty,
+                                   const Instruction *FMul,
+                                   const Instruction *FAddSub) {
+  assert((FAddSub->getOpcode() == Instruction::FAdd ||
+          FAddSub->getOpcode() == Instruction::FSub) &&
+         "Expected an fadd or an fsub");
+
+  // The mad forms fuse exactly without fast-math flags but flush denormals.
+  // An fma forms only when it is not slower than the separate operations.
+  const Function &F = *FAddSub->getFunction();
+  const bool HasFMAD = TLI.isFMADLegal(F, Ty);
+  const bool HasFMA = TLI.isFMAFasterThanFMulAndFAdd(F, Ty);
+  if (!HasFMAD && !HasFMA)
+    return false;
+
+  // Without a mad the pair fuses only when both carry contract.
+  return HasFMAD || (FAddSub->hasAllowContract() && FMul->hasAllowContract());
+}
+
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -586,22 +606,14 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
     // fused operation.
-    if (CxtI && CxtI->hasOneUse())
-      if (const auto *FAdd = dyn_cast<BinaryOperator>(*CxtI->user_begin())) {
-        const int OPC = TLI->InstructionOpcodeToISD(FAdd->getOpcode());
-        if (OPC == ISD::FADD || OPC == ISD::FSUB) {
-          if (ST->hasMadMacF32Insts() && SLT == MVT::f32 && !HasFP32Denormals)
-            return TargetTransformInfo::TCC_Free;
-          if (ST->has16BitInsts() && SLT == MVT::f16 && !HasFP64FP16Denormals)
-            return TargetTransformInfo::TCC_Free;
-
-          // Estimate all types may be fused with contract/unsafe flags
-          const TargetOptions &Options = TLI->getTargetMachine().Options;
-          if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-              (FAdd->hasAllowContract() && CxtI->hasAllowContract()))
-            return TargetTransformInfo::TCC_Free;
-        }
-      }
+    if (CxtI && CxtI->hasOneUse()) {
+      const auto *FAddSub = dyn_cast<BinaryOperator>(*CxtI->user_begin());
+      if (FAddSub &&
+          (FAddSub->getOpcode() == Instruction::FAdd ||
+           FAddSub->getOpcode() == Instruction::FSub) &&
+          canFuseFMulWithFAddSub(*TLI, Ty, CxtI, FAddSub))
+        return TargetTransformInfo::TCC_Free;
+    }
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
@@ -980,12 +992,52 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
   return BaseT::getCFInstrCost(Opcode, CostKind, I);
 }
 
+// Measured packing cost of i1 for gfx9-12 is 4.0 to 4.8, up to 5.4 with
+// true16; unpacking is 2.6 to 2.9.
+static constexpr unsigned MaskPackCostPerElt = 4;
+static constexpr unsigned MaskUnpackCostPerElt = 3;
+
+static std::optional<unsigned> getNumberOfPackedMaskElts(Type *Ty) {
+  auto *FVT = dyn_cast<FixedVectorType>(Ty);
+  if (FVT && FVT->getElementType()->isIntegerTy(1) && FVT->getNumElements() > 1)
+    return FVT->getNumElements();
+  return std::nullopt;
+}
+
+InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                             Type *Src,
+                                             TTI::CastContextHint CCH,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) const {
+  // A bitcast between a vector of i1 and an integer packs or unpacks a mask.
+  if (Opcode == Instruction::BitCast) {
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Src);
+        Elts && Dst->isIntegerTy(*Elts))
+      return InstructionCost(MaskPackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Dst);
+        Elts && Src->isIntegerTy(*Elts))
+      return InstructionCost(MaskUnpackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+  }
+
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+}
+
 InstructionCost
 GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                        std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) const {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+
+  // An add or xor reduction over a vector of i1 becomes a bit count over the
+  // packed mask; the generic model prices a shuffle tree and misses that.
+  if (Opcode == Instruction::Add || Opcode == Instruction::Xor) {
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Ty))
+      return InstructionCost(MaskPackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+  }
 
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
@@ -1337,13 +1389,13 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
+                                           ArrayRef<int> Mask, int Index,
+                                           VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
   if (!isa<FixedVectorType>(SrcTy))
-    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                  SubTp);
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
@@ -1472,7 +1524,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                SubTp);
 }
 
@@ -1482,6 +1534,25 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
                                             SmallVectorImpl<Use *> &Ops) const {
   using namespace PatternMatch;
+
+  // The cost model prices this fmul as free assuming it fuses with its
+  // fadd/fsub user, which needs them in one block. Sink a stranded
+  // loop-invariant fmul back to the user when they would fuse. Single use only,
+  // so this stays a move.
+  if (I->getOpcode() == Instruction::FAdd ||
+      I->getOpcode() == Instruction::FSub) {
+    for (Use &Op : I->operands()) {
+      auto *FMul = dyn_cast<Instruction>(Op.get());
+      if (!FMul || FMul->getOpcode() != Instruction::FMul ||
+          !FMul->hasOneUse() ||
+          !canFuseFMulWithFAddSub(*TLI, I->getType(), FMul, I))
+        continue;
+      // The fused operand. Sink it when it sits in another block, then stop.
+      if (FMul->getParent() != I->getParent())
+        Ops.push_back(&Op);
+      break;
+    }
+  }
 
   for (auto &Op : I->operands()) {
     // Ensure we are not already sinking this operand.

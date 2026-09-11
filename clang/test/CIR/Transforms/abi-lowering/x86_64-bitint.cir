@@ -15,11 +15,11 @@
 !b127i = !cir.int<s, 127, bitint>
 !b128i = !cir.int<s, 128, bitint>
 !s8i = !cir.int<s, 8>
-!rec_S = !cir.struct<"S" {!b17i}>
-!rec_P = !cir.struct<"P" {!b65i}>
-!rec_W = !cir.struct<"W" {!b128i}>
-!rec_O = !cir.struct<"O" {!b128i, !s8i}>
-!rec_Arr = !cir.struct<"Arr" {!cir.array<!b65i x 2>}>
+!rec_S = !cir.struct<"S" {data !b17i}>
+!rec_P = !cir.struct<"P" {data !b65i}>
+!rec_W = !cir.struct<"W" {data !b128i}>
+!rec_O = !cir.struct<"O" {data !b128i, data !s8i}>
+!rec_Arr = !cir.struct<"Arr" {data !cir.array<!b65i x 2>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -763,12 +763,12 @@ module attributes {
 
   // CHECK-LABEL: cir.func{{.*}} @take_o(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_O> {llvm.align = 8 : i64
-  // CHECK-SAME:    , llvm.byval = !rec_O, llvm.noalias, llvm.noundef})
+  // CHECK-SAME:    , llvm.byval = !rec_O, llvm.noundef})
   // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_O>, !rec_O
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_o(
-  // LLVM-SAME:    ptr noalias noundef byval(%struct.O) align 8 %[[ARG:[0-9]+]])
+  // LLVM-SAME:    ptr noundef byval(%struct.O) align 8 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    %{{[0-9]+}} = load %struct.O, ptr %[[ARG]]
   // LLVM-NEXT:    ret void
 
@@ -804,12 +804,12 @@ module attributes {
 
   // CHECK-LABEL: cir.func{{.*}} @take_arr(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_Arr> {llvm.align = 8 : i64
-  // CHECK-SAME:    , llvm.byval = !rec_Arr, llvm.noalias, llvm.noundef})
+  // CHECK-SAME:    , llvm.byval = !rec_Arr, llvm.noundef})
   // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_Arr>, !rec_Arr
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_arr(
-  // LLVM-SAME:    ptr noalias noundef byval(%struct.Arr) align 8 %[[ARG:[0-9]+]])
+  // LLVM-SAME:    ptr noundef byval(%struct.Arr) align 8 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    %{{[0-9]+}} = load %struct.Arr, ptr %[[ARG]]
   // LLVM-NEXT:    ret void
 }

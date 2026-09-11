@@ -12,8 +12,6 @@
 
 #include "DXILWriterPass.h"
 #include "DXILBitcodeWriter.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
@@ -66,8 +64,7 @@ public:
   StringRef getPassName() const override { return "Bitcode Writer"; }
 
   bool runOnModule(Module &M) override {
-    const auto DIMap = DXILDebugInfoPass::run(M);
-    WriteDXILToFile(M, OS, DIMap);
+    WriteDXILToFile(M, OS);
     return false;
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -210,8 +207,7 @@ class EmbedDXILPass : public llvm::ModulePass {
           "Shader modules with debug info must have !DICompileUnit metadata.");
 #endif
     }
-    const auto DIMap = DXILDebugInfoPass::run(M);
-    WriteDXILToFile(M, OS, DIMap);
+    WriteDXILToFile(M, OS);
     return Data;
   }
 

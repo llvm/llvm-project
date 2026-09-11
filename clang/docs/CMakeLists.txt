@@ -80,7 +80,7 @@ if (LLVM_ENABLE_DOXYGEN)
 endif()
 endif()
 
-function (gen_rst_file_from_td output_file td_option source docs_targets)
+function (gen_sphinx_file_from_td output_file td_option source docs_targets)
   if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
     message(FATAL_ERROR "Cannot find source file: ${source} in ${CMAKE_CURRENT_SOURCE_DIR}")
   endif()
@@ -103,10 +103,10 @@ if (LLVM_ENABLE_SPHINX)
     # copy all the non-generated source files from the source to the build
     # directory before we run sphinx.
     set(clang_generated_docs
-      AttributeReference.rst
+      AttributeReference.md
       DiagnosticsReference.rst
       AMDGPUBuiltinReference.rst
-      ClangCommandLineReference.rst
+      ClangCommandLineReference.md
       analyzer/user-docs/Options.rst)
     add_sphinx_source_sync_target(copy-clang-rst-docs
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
@@ -145,10 +145,10 @@ if (LLVM_ENABLE_SPHINX)
     endif()
 
     # Generated files
-    gen_rst_file_from_td(AttributeReference.rst -gen-attr-docs ../include/clang/Basic/Attr.td "${docs_targets}")
-    gen_rst_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
-    gen_rst_file_from_td(AMDGPUBuiltinReference.rst -gen-builtin-docs ../include/clang/Basic/BuiltinsAMDGPU.td "${docs_targets}")
-    gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
+    gen_sphinx_file_from_td(AttributeReference.md -gen-attr-docs ../include/clang/Basic/Attr.td "${docs_targets}")
+    gen_sphinx_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
+    gen_sphinx_file_from_td(AMDGPUBuiltinReference.rst -gen-builtin-docs ../include/clang/Basic/BuiltinsAMDGPU.td "${docs_targets}")
+    gen_sphinx_file_from_td(ClangCommandLineReference.md -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
 
     # Another generated file from a different source
     set(docs_tools_dir ${CMAKE_CURRENT_SOURCE_DIR}/tools)

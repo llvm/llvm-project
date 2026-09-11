@@ -182,7 +182,7 @@ implementation.
 | device            | allow virtual functions calls for mapped object on device   | {part}`partial`     |                                                                                                                                                                                                                                 |
 | device            | interop construct                                           | {part}`partial`     | parsing/sema done: [D98558][D98558], [D98834][D98834], [D98815][D98815]                                                                                                                                                         |
 | device            | assorted routines for querying interoperable properties     | {part}`partial`     | [D106674][D106674]                                                                                                                                                                                                              |
-| loop              | Loop tiling transformation                                  | {good}`done`        | [D76342][D76342]                                                                                                                                                                                                                |
+| loop              | Loop tiling transformation                                  | {good}`done`        | [D76342][D76342], canonicalisation of intra-tile loops: [PR191114][PR191114] (stacked tile not yet supported)                                                                |
 | loop              | Loop unrolling transformation                               | {good}`done`        | [D99459][D99459]                                                                                                                                                                                                                |
 | loop              | 'reproducible'/'unconstrained' modifiers in 'order' clause  | {part}`partial`     | [D127855][D127855]                                                                                                                                                                                                              |
 | memory management | alignment for allocate directive and clause                 | {good}`done`        | [D115683][D115683]                                                                                                                                                                                                              |
@@ -389,7 +389,7 @@ implementation.
 | attach map-type modifier                                              | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370], [PR210213][PR210213]) |
 | need_device_ptr modifier for adjust_args clause                       | {part}`partial`     | {none}`unclaimed`   | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
 | fallback modifier for use_device_ptr clause                           | {good}`done`        | {none}`unclaimed`   | Clang: @abhinavgaba ([PR170578][PR170578], [PR173931][PR173931]) RT: @abhinavgaba ([PR169603][PR169603]) |
-| dims modifier for num_teams, thread_limit, and num_threads clauses    | {part}`partial`     | {part}`In Progress` | C/C++: @kevinsala ([PR206412]); Fortran: @skc7, @kparzysz, @mjklemm                                      |
+| dims modifier for num_teams, thread_limit, and num_threads clauses    | {part}`partial`     | {part}`In Progress` | C/C++: @kevinsala ([PR206412][PR208353]); Fortran: @skc7, @kparzysz, @mjklemm                            |
 
 ## OpenMP Extensions
 
@@ -559,6 +559,7 @@ considered for standardization. Please post on the
 [PR174659]: https://github.com/llvm/llvm-project/pull/174659
 [PR186281]: https://github.com/llvm/llvm-project/pull/186281
 [PR189347]: https://github.com/llvm/llvm-project/pull/189347
+[PR191114]: https://github.com/llvm/llvm-project/pull/191114
 [PR194168]: https://github.com/llvm/llvm-project/pull/194168
 [PR195829]: https://github.com/llvm/llvm-project/pull/195829
 [PR196431]: https://github.com/llvm/llvm-project/pull/196431

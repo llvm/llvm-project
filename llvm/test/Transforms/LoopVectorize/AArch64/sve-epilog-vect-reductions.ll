@@ -16,8 +16,7 @@ define i64 @int_reduction_add(ptr %a, i64 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -30,7 +29,7 @@ define i64 @int_reduction_add(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x i64>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[TMP16]] = add <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP17]] = add <vscale x 2 x i64> [[WIDE_LOAD3]], [[VEC_PHI2]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -86,4 +85,4 @@ for.end:
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.interleave.count", i32 2}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}

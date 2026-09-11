@@ -16,21 +16,23 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
 #include <optional>
 #include <string>
 
 namespace llvm {
+class AssumptionCache;
 class Constant;
 class DataLayout;
 class Instruction;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 class Type;
 class Value;
 } // namespace llvm
@@ -235,6 +237,13 @@ unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL);
 /// <0, 1, 2, 3, 12, 13, 14, 15, 16, 17, 18, 19, 28, 29, 30, 31>
 SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
 
+/// Checks if the values in \p VL can be represented as a shuffle of at most
+/// two vector operands (extractelement lanes). On success, \p Mask is the
+/// equivalent shuffle mask.
+std::optional<TargetTransformInfo::ShuffleKind>
+isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
+                     AssumptionCache *AC);
+
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.
 enum class UseMask {
@@ -327,6 +336,42 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 /// values, feeding the inserts, are vectorized together with them by the
 /// dedicated attempt.
 bool isOnceUsedSeed(const Instruction *I);
+
+/// If \p V is a single-use fpext of a single-use fptrunc forming a round-trip
+/// back to the type of \p V, returns the fptrunc; the round-trip source is its
+/// operand, always an instruction of the same type as \p V. If
+/// \p MustBeElidable, matches only when the intermediate rounding may be
+/// removed: both casts must allow contraction and the widening cast cannot
+/// produce nan/inf.
+Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
+
+/// Narrow reduction leaf: the value, the shift applied after widening and
+/// the mask applied in the narrow type before widening, clearing the bits
+/// the absorbed narrow shls shift out and applying the absorbed narrow
+/// and-masks. Lossless narrow shls contribute their known-zero bits to the
+/// mask so matching lanes can form a splat. All-ones mask means nothing
+/// was absorbed and no 'and' is needed.
+struct NarrowedLeafInfo {
+  NarrowedLeafInfo(Value *V, unsigned Shift, APInt Mask)
+      : V(V), Shift(Shift), Mask(std::move(Mask)) {}
+
+  Value *V;
+  unsigned Shift;
+  APInt Mask;
+};
+
+/// Recursively collects the narrow leaves of the widened reduction value
+/// \p V. zext is looked through directly, same-kind binops per operand,
+/// shl of a zext - only if no bits are shifted out in the current type,
+/// shls in narrower types fold into the shift and ands with a constant into
+/// the mask applied in the narrow type. Also collects the looked-through
+/// instructions into \p ChainInsts.
+void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
+                           unsigned MaxDepth,
+                           SmallVectorImpl<NarrowedLeafInfo> &Leaves,
+                           SmallVectorImpl<Instruction *> &ChainInsts);
+
+TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F);
 
 } // namespace llvm::slpvectorizer
 

@@ -50,7 +50,7 @@
 // CHECK:    %[[CONST_VAL:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:    %[[ALLOCA2:.*]] = llvm.alloca %[[CONST_VAL]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
 // CHECK:    %[[IDX_VAL:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:    %[[CONST_VAL1:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:    %[[CONST_VAL1:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:    %[[END_IDX:.*]] = llvm.mlir.constant(100 : i32) : i32
 // CHECK:    omp.simd nontemporal(%[[ARG0:.*]] : !llvm.ptr) {
 // CHECK:      omp.loop_nest (%[[ARG3:.*]]) : i32 = (%[[IDX_VAL]]) to (%[[END_IDX]]) inclusive step (%[[IDX_VAL]]) {

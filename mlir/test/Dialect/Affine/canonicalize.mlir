@@ -1879,6 +1879,27 @@ func.func @split_delinearize_empty_linearize_basis(%arg0: index) -> (index, inde
 
 // -----
 
+// A split that consumes an entire bounded delinearization basis would lose the
+// contribution of earlier linearization inputs to the first result.
+// CHECK-LABEL: func @dont_split_fully_consumed_bounded_basis
+// CHECK-SAME:    (%[[A:.+]]: index, %[[B:.+]]: index)
+// CHECK:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[A]], %[[B]]] by (2, 4) : index
+// CHECK:         %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 2) : index, index
+// CHECK:         return %[[DELIN]]#0, %[[DELIN]]#1
+// CHECK-BOTTOM-UP-LABEL: func @dont_split_fully_consumed_bounded_basis
+// CHECK-BOTTOM-UP-SAME:    (%[[A:.+]]: index, %[[B:.+]]: index)
+// CHECK-BOTTOM-UP:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[A]], %[[B]]] by (2, 4) : index
+// CHECK-BOTTOM-UP:         %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 2) : index, index
+// CHECK-BOTTOM-UP:         return %[[DELIN]]#0, %[[DELIN]]#1
+func.func @dont_split_fully_consumed_bounded_basis(%a: index, %b: index)
+    -> (index, index) {
+  %0 = affine.linearize_index disjoint [%a, %b] by (2, 4) : index
+  %1:2 = affine.delinearize_index %0 into (2, 2) : index, index
+  return %1#0, %1#1 : index, index
+}
+
+// -----
+
 // CHECK-LABEL: @linearize_unit_basis_disjoint
 // CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
 // CHECK: %[[ret:.+]] = affine.linearize_index disjoint [%[[arg0]], %[[arg2]]] by (3, %[[arg3]]) : index

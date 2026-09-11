@@ -22,6 +22,8 @@ on:
           - ubuntu-22.04
           - ubuntu-22.04-arm
           - macos-14
+          - windows-2022
+          - windows-11-arm
 
   workflow_call:
     inputs:
@@ -69,14 +71,9 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
-    - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-          persist-credentials: false
-
     - name: Validate Release Version
       if: inputs.release-version != ''
-      uses: ./.github/workflows/validate-release-version
+      uses: $/.github/workflows/validate-release-version
       with:
         release-version: ${{ inputs.release-version }}
 
@@ -84,7 +81,7 @@ jobs:
     # to fetch it here.
     - id: version-from-source
       if: runner.os == 'Windows'
-      uses: ./.github/workflows/get-llvm-version
+      uses: $/.github/workflows/get-llvm-version
 
     - name: Collect Variables
       id: vars
@@ -92,6 +89,7 @@ jobs:
         LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
         LLVM_VERSION_MAJOR: ${{ steps.version-from-source.outputs.major }}
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
+        INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
@@ -102,7 +100,7 @@ jobs:
       # | X.Y.Z-rcN | -rc N -test-asserts
       # | X.Y.Z     | -final
       run: |
-        trimmed=$(echo ${{ inputs.release-version }} | xargs)
+        trimmed=$(echo "$INPUTS_RELEASE_VERSION" | xargs)
         if [ -n "$trimmed" ]; then
           release_version="$trimmed"
           ref="llvmorg-$release_version"
@@ -283,16 +281,27 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
+    # Wix is not installed by default on Windows ARM64
+    - name: Install Wix (Windows ARM64)
+      env:
+        WIX_VERSION: 3.14
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        choco install wixtoolset --version "$($env:WIX_VERSION).1.20250415"
+        # Add wix install directory to PATH.
+        echo "C:\Program Files (x86)\WiX Toolset v$($env:WIX_VERSION)\bin" >> $env:GITHUB_PATH
+
     - name: Build Windows
       id: build-windows
       if: runner.os == 'Windows'
       env:
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
+        EXTRA_ARGS: ${{ case(needs.prepare.outputs.build-runs-on == 'windows-11-arm', '--fast-build', '--fast-build') }}
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
-        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout
+        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout $env:EXTRA_ARGS
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
           mv $zstd $env:GITHUB_WORKSPACE
@@ -305,7 +314,7 @@ jobs:
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
     
     - name: Dump Wix logs
-      if: runner.os == 'Windows' && always()
+      if: runner.os == 'Windows' && failure()
       env:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}

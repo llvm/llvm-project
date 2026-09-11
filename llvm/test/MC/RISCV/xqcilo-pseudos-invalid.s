@@ -1,43 +1,37 @@
 # Xqcilo - Qualcomm uC Large Offset Load Store extension
 # RUN: not llvm-mc %s -triple=riscv32 -mattr=+xqcilo,+xqcili \
-# RUN:     2>&1 | FileCheck -check-prefixes=CHECK-ENABLED %s
+# RUN:     2>&1 | FileCheck -check-prefixes=CHECK-ENABLED --implicit-check-not="error:" --implicit-check-not="note:" %s
 # RUN: not llvm-mc %s -triple=riscv32 -mattr=-xqcilo \
-# RUN:     2>&1 | FileCheck -check-prefixes=CHECK-DISABLED %s
+# RUN:     2>&1 | FileCheck -check-prefixes=CHECK-DISABLED --implicit-check-not="error:" --implicit-check-not="note:" %s
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:13: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:19: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
-qc.e.lb a0, 0xf000
-
-# CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-ENABLED: [[@LINE+3]]:13: note: operand must be a bare symbol name
-# CHECK-ENABLED: [[@LINE+2]]:19: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: invalid instruction
 qc.e.lb a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:14: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:20: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: invalid instruction
 qc.e.lbu a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:13: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:19: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: invalid instruction
 qc.e.lh a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:14: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:20: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: invalid instruction
 qc.e.lhu a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:13: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:19: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: invalid instruction
 qc.e.lw a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+2]]:13: error: operand must be a bare symbol name

@@ -106,13 +106,13 @@ struct ARMLoadStoreOpt {
   const TargetLowering *TL;
   ARMFunctionInfo *AFI;
   LiveRegUnits LiveRegs;
-  RegisterClassInfo RegClassInfo;
+  const RegisterClassInfo *RCI = nullptr;
   MachineBasicBlock::const_iterator LiveRegPos;
   bool LiveRegsValid;
-  bool RegClassInfoValid;
   bool isThumb1, isThumb2;
 
-  bool runOnMachineFunction(MachineFunction &Fn);
+  bool runOnMachineFunction(MachineFunction &Fn,
+                            const RegisterClassInfo &RegClassInfo);
 
 private:
   /// A set of load/store MachineInstrs with same base register sorted by
@@ -200,6 +200,7 @@ struct ARMLoadStoreOptLegacy : public MachineFunctionPass {
   StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -209,8 +210,11 @@ char ARMLoadStoreOptLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(ARMLoadStoreOptLegacy, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME,
-                false, false)
+INITIALIZE_PASS_BEGIN(ARMLoadStoreOptLegacy, "arm-ldst-opt",
+                      ARM_LOAD_STORE_OPT_NAME, false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
+INITIALIZE_PASS_END(ARMLoadStoreOptLegacy, "arm-ldst-opt",
+                    ARM_LOAD_STORE_OPT_NAME, false, false)
 
 static bool definesCPSR(const MachineInstr &MI) {
   for (const auto &MO : MI.operands()) {
@@ -592,13 +596,8 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
 
 /// Return the first register of class \p RegClass that is not in \p Regs.
 unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
-  if (!RegClassInfoValid) {
-    RegClassInfo.runOnMachineFunction(*MF);
-    RegClassInfoValid = true;
-  }
-
-  for (unsigned Reg : RegClassInfo.getOrder(&RegClass))
-    if (LiveRegs.available(Reg) && !MF->getRegInfo().isReserved(Reg))
+  for (unsigned Reg : RCI->getOrder(&RegClass))
+    if (LiveRegs.available(Reg))
       return Reg;
   return 0;
 }
@@ -2107,15 +2106,16 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
   llvm_unreachable("tMOVr doesn't kill a reg before tBX_RET?");
 }
 
-bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
+bool ARMLoadStoreOpt::runOnMachineFunction(
+    MachineFunction &Fn, const RegisterClassInfo &RegClassInfo) {
   MF = &Fn;
   STI = &Fn.getSubtarget<ARMSubtarget>();
   TL = STI->getTargetLowering();
   AFI = Fn.getInfo<ARMFunctionInfo>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
+  RCI = &RegClassInfo;
 
-  RegClassInfoValid = false;
   isThumb2 = AFI->isThumb2Function();
   isThumb1 = AFI->isThumbFunction() && !isThumb2;
 
@@ -2144,7 +2144,8 @@ bool ARMLoadStoreOptLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
   ARMLoadStoreOpt Impl;
-  return Impl.runOnMachineFunction(MF);
+  return Impl.runOnMachineFunction(
+      MF, getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI());
 }
 
 #define ARM_PREALLOC_LOAD_STORE_OPT_NAME                                       \
@@ -3344,11 +3345,13 @@ PreservedAnalyses
 ARMLoadStoreOptPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
   ARMLoadStoreOpt Impl;
-  bool Changed = Impl.runOnMachineFunction(MF);
+  bool Changed = Impl.runOnMachineFunction(
+      MF, MFAM.getResult<MachineRegisterClassAnalysis>(MF));
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineRegisterClassAnalysis>();
   return PA;
 }
 

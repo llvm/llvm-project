@@ -1,11 +1,16 @@
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering='target=x86_64 x86-avx-abi-level=avx' \
+// RUN:   | FileCheck %s --check-prefix=AVX
+// RUN: cir-opt %s -cir-call-conv-lowering='target=x86_64 x86-avx-abi-level=avx512' \
+// RUN:   | FileCheck %s --check-prefix=AVX512
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
 // RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
-!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
-!rec_F3 = !cir.struct<"F3" {!cir.float, !cir.float, !cir.float}>
-!rec_UFloats = !cir.union<"UFloats" {!cir.array<!cir.float x 2>, !cir.array<!cir.float x 2>}>
+!s32i = !cir.int<s, 32>
+!rec_FF = !cir.struct<"FF" {data !cir.float, data !cir.float}>
+!rec_F3 = !cir.struct<"F3" {data !cir.float, data !cir.float, data !cir.float}>
+!rec_UFloats = !cir.union<"UFloats" {data !cir.array<!cir.float x 2>, data !cir.array<!cir.float x 2>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -14,6 +19,52 @@ module attributes {
     #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
 } {
+
+  // A 128-bit vector fills one xmm register and passes in its own type, so no
+  // coercion is inserted.
+  cir.func @v128(%arg0: !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float> {
+    cir.return %arg0 : !cir.vector<4 x !cir.float>
+  }
+
+  // CHECK: cir.func{{.*}} @v128(%arg0: !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+  // CHECK-NEXT: cir.return %arg0
+
+  // The classifier does not look inside a vector when picking the type for an
+  // SSE eightbyte, so it falls back to double rather than to the two-element
+  // vector that take_ff below gets for the same eightbyte.
+  cir.func @v64(%arg0: !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float> {
+    cir.return %arg0 : !cir.vector<2 x !cir.float>
+  }
+
+  // CHECK: cir.func{{.*}} @v64(%arg0: !cir.double) -> !cir.double
+
+  // A 32-bit vector is passed as an integer, matching what gcc does.
+  cir.func @v32(%arg0: !cir.vector<1 x !s32i>) -> !cir.vector<1 x !s32i> {
+    cir.return %arg0 : !cir.vector<1 x !s32i>
+  }
+
+  // CHECK: cir.func{{.*}} @v32(%arg0: !u32i) -> !u32i
+
+  // Without AVX a 256-bit vector exceeds the native vector size and goes to
+  // memory, and with AVX it stays in a register.  The byval alignment is the
+  // greater of the vector's own alignment and 8.
+  cir.func @v256(%arg0: !cir.vector<8 x !cir.float>) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @v256(%arg0: !cir.ptr<!cir.vector<8 x !cir.float>> {{.*}}llvm.align = 32 : i64{{.*}}llvm.byval = !cir.vector<8 x !cir.float>{{.*}})
+  // AVX: cir.func{{.*}} @v256(%arg0: !cir.vector<8 x !cir.float>)
+  // AVX512: cir.func{{.*}} @v256(%arg0: !cir.vector<8 x !cir.float>)
+
+  // A 512-bit vector needs the top level before it reaches a register, so this
+  // is the case that distinguishes avx from avx512.
+  cir.func @v512(%arg0: !cir.vector<16 x !cir.float>) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @v512(%arg0: !cir.ptr<!cir.vector<16 x !cir.float>> {{.*}}llvm.align = 64 : i64{{.*}}llvm.byval = !cir.vector<16 x !cir.float>{{.*}})
+  // AVX: cir.func{{.*}} @v512(%arg0: !cir.ptr<!cir.vector<16 x !cir.float>> {{.*}}llvm.align = 64 : i64{{.*}}llvm.byval = !cir.vector<16 x !cir.float>{{.*}})
+  // AVX512: cir.func{{.*}} @v512(%arg0: !cir.vector<16 x !cir.float>)
 
   // Two floats in one eightbyte classify SSE, and the coercion type the
   // classifier picks for that eightbyte is a vector.
@@ -46,17 +97,29 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_f3(%arg0: !cir.vector<2 x !cir.float>, %arg1: !cir.float)
 
-  // A union whose highest-aligned member is an all-float array reaches the same
-  // vector coercion through the union path.
+  // A union whose widest member is an all-float array reaches the same vector
+  // coercion through the union path.
   cir.func @take_union_floats(%arg0: !rec_UFloats) {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_union_floats(%arg0: !cir.vector<2 x !cir.float>)
+
+  cir.func @call_v128(%arg0: !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float> {
+    %0 = cir.call @v128(%arg0) : (!cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+    cir.return %0 : !cir.vector<4 x !cir.float>
+  }
+
+  // CHECK: cir.func{{.*}} @call_v128(%arg0: !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+  // CHECK: cir.call @v128(%arg0) : (!cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
 }
 
-// LLVM: define void @take_ff(<2 x float> %{{.+}})
+// LLVM: define <4 x float> @v128(<4 x float> %{{[^,)]+}})
+// LLVM: define double @v64(double %{{[^,)]+}})
+// LLVM: define i32 @v32(i32 %{{[^,)]+}})
+// LLVM: define void @v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM: define void @take_ff(<2 x float> %{{[^,)]+}})
 // LLVM: define <2 x float> @ret_ff()
-// LLVM: define void @take_farr(<2 x float> %{{.+}})
-// LLVM: define void @take_f3(<2 x float> %{{.+}}, float %{{.+}})
-// LLVM: define void @take_union_floats(<2 x float> %{{.+}})
+// LLVM: define void @take_farr(<2 x float> %{{[^,)]+}})
+// LLVM: define void @take_f3(<2 x float> %{{[^,)]+}}, float %{{[^,)]+}})
+// LLVM: define void @take_union_floats(<2 x float> %{{[^,)]+}})

@@ -383,5 +383,8 @@ if config.run_rocm_tests:
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")
 
+if config.mlir_expensive_pattern_api_checks:
+    config.available_features.add("mlir-expensive-checks")
+
 if sys.version_info >= (3, 11):
     config.available_features.add("python-ge-311")

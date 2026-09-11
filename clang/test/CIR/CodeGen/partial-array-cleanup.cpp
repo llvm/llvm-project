@@ -1,9 +1,7 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -fexceptions -fcxx-exceptions -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir  2> %t-before-lp.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fexceptions -fcxx-exceptions -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir  2> %t-before-lp.cir
 // RUN: FileCheck --input-file=%t-before-lp.cir %s -check-prefix=CIR-BEFORE-LPP
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -823,6 +821,371 @@ void test_init_list_partial_array_cleanup() {
 // OGCG:     [[EH_RESUME]]:
 // OGCG:       resume { ptr, i32 }
 
+void test_multi_dim_init_list_partial_array_cleanup() {
+    S arr[2][2] = { {S(), S()}, {S(), S()} };
+}
+
+// There are three nested EH cleanups here, innermost first:
+//  - row 1's S[2] init list (elementType S, already non-array)
+//  - row 0's S[2] init list (elementType S, already non-array)
+//  - the outer S[2][2] init list (elementType S[2], STILL an array --
+//    this is the one that needs the bitcast down to S)
+// CIR-BEFORE-LPP-LABEL: cir.func {{.*}} @_Z46test_multi_dim_init_list_partial_array_cleanupv()
+// CIR-BEFORE-LPP:       %[[ARR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>>
+// CIR-BEFORE-LPP:       %[[OUTER_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>
+// CIR-BEFORE-LPP:       %[[ROW0_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR-BEFORE-LPP:       %[[ROW1_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR-BEFORE-LPP:       %[[ROW1_ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR-BEFORE-LPP:       %[[ROW0_ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR-BEFORE-LPP:       %[[OUTER_ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR-BEFORE-LPP:       %[[ROW0_BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>> -> !cir.ptr<!cir.array<!rec_S x 2>>
+// CIR-BEFORE-LPP:       cir.store {{.*}} %[[ROW0_BEGIN]], %[[OUTER_END]] : !cir.ptr<!cir.array<!rec_S x 2>>, !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>
+// CIR-BEFORE-LPP:       cir.cleanup.scope {
+// CIR-BEFORE-LPP:         %[[ROW0_ELT0:.*]] = cir.cast array_to_ptrdecay %[[ROW0_BEGIN]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:         cir.store {{.*}} %[[ROW0_ELT0]], %[[ROW0_END]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+// CIR-BEFORE-LPP:         cir.cleanup.scope {
+//                           --- row 0: S(), S() ---
+// CIR-BEFORE-LPP:           cir.call @_ZN1SC1Ev(%[[ROW0_ELT0]])
+// CIR-BEFORE-LPP:           %[[ROW0_ELT1:.*]] = cir.ptr_stride %[[ROW0_ELT0]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:           cir.store {{.*}} %[[ROW0_ELT1]], %[[ROW0_END]]
+// CIR-BEFORE-LPP:           cir.call @_ZN1SC1Ev(%[[ROW0_ELT1]])
+// CIR-BEFORE-LPP:           %[[ROW1_BEGIN:.*]] = cir.ptr_stride %[[ROW0_BEGIN]], %{{.*}} : (!cir.ptr<!cir.array<!rec_S x 2>>, !s64i) -> !cir.ptr<!cir.array<!rec_S x 2>>
+// CIR-BEFORE-LPP:           cir.store {{.*}} %[[ROW1_BEGIN]], %[[OUTER_END]]
+// CIR-BEFORE-LPP:           %[[ROW1_ELT0:.*]] = cir.cast array_to_ptrdecay %[[ROW1_BEGIN]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:           cir.store {{.*}} %[[ROW1_ELT0]], %[[ROW1_END]]
+// CIR-BEFORE-LPP:           cir.cleanup.scope {
+//                             --- row 1: S(), S() ---
+// CIR-BEFORE-LPP:             cir.call @_ZN1SC1Ev(%[[ROW1_ELT0]])
+// CIR-BEFORE-LPP:             %[[ROW1_ELT1:.*]] = cir.ptr_stride %[[ROW1_ELT0]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:             cir.store {{.*}} %[[ROW1_ELT1]], %[[ROW1_END]]
+// CIR-BEFORE-LPP:             cir.call @_ZN1SC1Ev(%[[ROW1_ELT1]])
+// CIR-BEFORE-LPP:             cir.yield
+//                             --- innermost EH cleanup (row 1): elementType is already S, no bitcast ---
+// CIR-BEFORE-LPP:           } cleanup eh {
+// CIR-BEFORE-LPP:             %[[ROW1_EH_END:.*]] = cir.load {{.*}} %[[ROW1_END]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:             %[[ROW1_EH_NE:.*]] = cir.cmp ne %[[ROW1_EH_END]], %[[ROW1_ELT0]] : !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:             cir.if %[[ROW1_EH_NE]] {
+// CIR-BEFORE-LPP:               cir.store {{.*}} %[[ROW1_EH_END]], %[[ROW1_ITER]]
+// CIR-BEFORE-LPP:               cir.do {
+// CIR-BEFORE-LPP:                 %[[ROW1_EH_CUR:.*]] = cir.load {{.*}} %[[ROW1_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:                 %[[ROW1_EH_PREV:.*]] = cir.ptr_stride %[[ROW1_EH_CUR]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:                 cir.store {{.*}} %[[ROW1_EH_PREV]], %[[ROW1_ITER]]
+// CIR-BEFORE-LPP:                 cir.call @_ZN1SD1Ev(%[[ROW1_EH_PREV]]) nothrow
+// CIR-BEFORE-LPP:                 cir.yield
+// CIR-BEFORE-LPP:               } while {
+// CIR-BEFORE-LPP:                 %[[ROW1_EH_CUR2:.*]] = cir.load {{.*}} %[[ROW1_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:                 %[[ROW1_EH_CONT:.*]] = cir.cmp ne %[[ROW1_EH_CUR2]], %[[ROW1_ELT0]] : !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:                 cir.condition(%[[ROW1_EH_CONT]])
+// CIR-BEFORE-LPP:               }
+// CIR-BEFORE-LPP:             }
+// CIR-BEFORE-LPP:             cir.yield
+// CIR-BEFORE-LPP:           }
+// CIR-BEFORE-LPP:           cir.yield
+//                           --- middle EH cleanup (row 0): elementType is already S, no bitcast ---
+// CIR-BEFORE-LPP:         } cleanup eh {
+// CIR-BEFORE-LPP:           %[[ROW0_EH_END:.*]] = cir.load {{.*}} %[[ROW0_END]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:           %[[ROW0_EH_NE:.*]] = cir.cmp ne %[[ROW0_EH_END]], %[[ROW0_ELT0]] : !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:           cir.if %[[ROW0_EH_NE]] {
+// CIR-BEFORE-LPP:             cir.store {{.*}} %[[ROW0_EH_END]], %[[ROW0_ITER]]
+// CIR-BEFORE-LPP:             cir.do {
+// CIR-BEFORE-LPP:               %[[ROW0_EH_CUR:.*]] = cir.load {{.*}} %[[ROW0_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:               %[[ROW0_EH_PREV:.*]] = cir.ptr_stride %[[ROW0_EH_CUR]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:               cir.store {{.*}} %[[ROW0_EH_PREV]], %[[ROW0_ITER]]
+// CIR-BEFORE-LPP:               cir.call @_ZN1SD1Ev(%[[ROW0_EH_PREV]]) nothrow
+// CIR-BEFORE-LPP:               cir.yield
+// CIR-BEFORE-LPP:             } while {
+// CIR-BEFORE-LPP:               %[[ROW0_EH_CUR2:.*]] = cir.load {{.*}} %[[ROW0_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:               %[[ROW0_EH_CONT:.*]] = cir.cmp ne %[[ROW0_EH_CUR2]], %[[ROW0_ELT0]] : !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:               cir.condition(%[[ROW0_EH_CONT]])
+// CIR-BEFORE-LPP:             }
+// CIR-BEFORE-LPP:           }
+// CIR-BEFORE-LPP:           cir.yield
+// CIR-BEFORE-LPP:         }
+// CIR-BEFORE-LPP:         cir.yield
+//                         --- outer EH cleanup (S[2][2]): elementType is still S[2] here, so the
+//                             cleanup must bitcast down to the base non-array element type (S)
+//                             before comparing pointers and destroying -- this is the regression ---
+// CIR-BEFORE-LPP:       } cleanup eh {
+// CIR-BEFORE-LPP:         %[[OUTER_EH_END:.*]] = cir.load {{.*}} %[[OUTER_END]] : !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>, !cir.ptr<!cir.array<!rec_S x 2>>
+// CIR-BEFORE-LPP:         %[[OUTER_EH_BEGIN_BASE:.*]] = cir.cast bitcast %[[ROW0_BEGIN]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:         %[[OUTER_EH_END_BASE:.*]] = cir.cast bitcast %[[OUTER_EH_END]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:         %[[OUTER_EH_NE:.*]] = cir.cmp ne %[[OUTER_EH_END_BASE]], %[[OUTER_EH_BEGIN_BASE]] : !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:         cir.if %[[OUTER_EH_NE]] {
+// CIR-BEFORE-LPP:           cir.store {{.*}} %[[OUTER_EH_END_BASE]], %[[OUTER_ITER]]
+// CIR-BEFORE-LPP:           cir.do {
+// CIR-BEFORE-LPP:             %[[OUTER_EH_CUR:.*]] = cir.load {{.*}} %[[OUTER_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:             %[[OUTER_EH_PREV:.*]] = cir.ptr_stride %[[OUTER_EH_CUR]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:             cir.store {{.*}} %[[OUTER_EH_PREV]], %[[OUTER_ITER]]
+// CIR-BEFORE-LPP:             cir.call @_ZN1SD1Ev(%[[OUTER_EH_PREV]]) nothrow
+// CIR-BEFORE-LPP:             cir.yield
+// CIR-BEFORE-LPP:           } while {
+// CIR-BEFORE-LPP:             %[[OUTER_EH_CUR2:.*]] = cir.load {{.*}} %[[OUTER_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:             %[[OUTER_EH_CONT:.*]] = cir.cmp ne %[[OUTER_EH_CUR2]], %[[OUTER_EH_BEGIN_BASE]] : !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:             cir.condition(%[[OUTER_EH_CONT]])
+// CIR-BEFORE-LPP:           }
+// CIR-BEFORE-LPP:         }
+// CIR-BEFORE-LPP:         cir.yield
+// CIR-BEFORE-LPP:       }
+//                       --- normal (non-EH) cleanup: unconditional, uses the array.dtor sugar
+//                           over the fully-flattened S[4] view (this path was never buggy) ---
+// CIR-BEFORE-LPP:       cir.cleanup.scope {
+// CIR-BEFORE-LPP:         cir.yield
+// CIR-BEFORE-LPP:       } cleanup all {
+// CIR-BEFORE-LPP:         %[[FLAT:.*]] = cir.cast bitcast %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>> -> !cir.ptr<!cir.array<!rec_S x 4>>
+// CIR-BEFORE-LPP:         cir.array.dtor %[[FLAT]] : !cir.ptr<!cir.array<!rec_S x 4>> {
+// CIR-BEFORE-LPP:         ^bb0(%[[DTOR_ARG:.*]]: !cir.ptr<!rec_S>):
+// CIR-BEFORE-LPP:           cir.call @_ZN1SD1Ev(%[[DTOR_ARG]]) nothrow
+// CIR-BEFORE-LPP:         }
+// CIR-BEFORE-LPP:         cir.yield
+// CIR-BEFORE-LPP:       }
+// CIR-BEFORE-LPP:       cir.return
+
+// CIR-LABEL: cir.func {{.*}} @_Z46test_multi_dim_init_list_partial_array_cleanupv()
+// CIR:       %[[ARRAY:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>>
+// CIR:       %[[END_OF_INIT:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>
+// CIR:       %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARRAY]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>> -> !cir.ptr<!cir.array<!rec_S x 2>>
+// CIR:       cir.store {{.*}} %[[BEGIN]], %[[END_OF_INIT]] : !cir.ptr<!cir.array<!rec_S x 2>>, !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>
+// CIR:       cir.cleanup.scope {
+//              --- explicit inits for both rows ---
+// CIR:         cir.call @_ZN1SC1Ev
+// CIR:         cir.call @_ZN1SC1Ev
+// CIR:         cir.call @_ZN1SC1Ev
+// CIR:         cir.call @_ZN1SC1Ev
+//              --- outer EH cleanup: drill the still-array elementType (S[2])
+//                  down to the base non-array element type (S) via bitcast ---
+// CIR:       } cleanup eh {
+// CIR:         %[[END_VAL:.*]] = cir.load {{.*}} %[[END_OF_INIT]] : !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>, !cir.ptr<!cir.array<!rec_S x 2>>
+// CIR:         %[[BEGIN_BASE:.*]] = cir.cast bitcast %[[BEGIN]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
+// CIR:         %[[END_BASE:.*]] = cir.cast bitcast %[[END_VAL]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
+// CIR:         %[[NE:.*]] = cir.cmp ne %[[END_BASE]], %[[BEGIN_BASE]] : !cir.ptr<!rec_S>
+// CIR:         cir.if %[[NE]] {
+// CIR:           cir.store {{.*}} %[[END_BASE]], %[[ITER:.*]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:           cir.do {
+// CIR:             %[[EL:.*]] = cir.load {{.*}} %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:             %[[NEG1:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR:             %[[PREV:.*]] = cir.ptr_stride %[[EL]], %[[NEG1]] : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR:             cir.store {{.*}} %[[PREV]], %[[ITER]]
+// CIR:             cir.call @_ZN1SD1Ev(%[[PREV]]) nothrow
+// CIR:             cir.yield
+// CIR:           } while {
+// CIR:             %[[EL2:.*]] = cir.load {{.*}} %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:             %[[CONT:.*]] = cir.cmp ne %[[EL2]], %[[BEGIN_BASE]] : !cir.ptr<!rec_S>
+// CIR:             cir.condition(%[[CONT]])
+// CIR:           }
+// CIR:         }
+// CIR:         cir.yield
+// CIR:       }
+//              --- normal (non-EH) cleanup: array.dtor has been expanded into an
+//                  explicit do-while loop over the flattened S[4] view ---
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.yield
+// CIR:       } cleanup all {
+// CIR:         %[[FLAT:.*]] = cir.cast bitcast %[[ARRAY]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>> -> !cir.ptr<!cir.array<!rec_S x 4>>
+// CIR:         %[[FOUR:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:         %[[FLAT_BEGIN:.*]] = cir.cast array_to_ptrdecay %[[FLAT]] : !cir.ptr<!cir.array<!rec_S x 4>> -> !cir.ptr<!rec_S>
+// CIR:         %[[FLAT_END:.*]] = cir.ptr_stride %[[FLAT_BEGIN]], %[[FOUR]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
+// CIR:         cir.do {
+// CIR:           cir.call @_ZN1SD1Ev
+// CIR:           cir.yield
+// CIR:         } while {
+// CIR:           cir.condition
+// CIR:         }
+// CIR:         cir.yield
+// CIR:       }
+
+// LLVM-LABEL: define {{.*}}@_Z46test_multi_dim_init_list_partial_array_cleanupv()
+// LLVM:      %[[ARR:.*]] = alloca [2 x [2 x %struct.S]]
+// LLVM:      %[[OUTER_END_A:.*]] = alloca ptr
+//
+//            --- row 0: element 0, element 1 ---
+// LLVM:      %[[ROW0_BEGIN:.*]] = getelementptr [2 x %struct.S], ptr %[[ARR]], i32 0
+// LLVM:      store ptr %[[ROW0_BEGIN]], ptr %[[OUTER_END_A]]
+// LLVM:      %[[ROW0_ELT0:.*]] = getelementptr %struct.S, ptr %[[ROW0_BEGIN]], i32 0
+// LLVM:      store ptr %[[ROW0_ELT0]], ptr %[[ROW0_END_A:.*]]
+// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW0_ELT0]])
+// LLVM:        to label %{{.*}} unwind label %[[ROW0_LPAD:.*]]
+//
+// LLVM:      %[[ROW0_ELT1:.*]] = getelementptr %struct.S, ptr %[[ROW0_ELT0]], i64 1
+// LLVM:      store ptr %[[ROW0_ELT1]], ptr %[[ROW0_END_A]]
+// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW0_ELT1]])
+// LLVM:        to label %{{.*}} unwind label %[[ROW0_LPAD]]
+//
+//            --- row 1: element 0, element 1 ---
+// LLVM:      %[[ROW1_BEGIN:.*]] = getelementptr [2 x %struct.S], ptr %[[ROW0_BEGIN]], i64 1
+// LLVM:      store ptr %[[ROW1_BEGIN]], ptr %[[OUTER_END_A]]
+// LLVM:      %[[ROW1_ELT0:.*]] = getelementptr %struct.S, ptr %[[ROW1_BEGIN]], i32 0
+// LLVM:      store ptr %[[ROW1_ELT0]], ptr %[[ROW1_END_A:.*]]
+// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT0]])
+// LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD:.*]]
+//
+// LLVM:      %[[ROW1_ELT1:.*]] = getelementptr %struct.S, ptr %[[ROW1_ELT0]], i64 1
+// LLVM:      store ptr %[[ROW1_ELT1]], ptr %[[ROW1_END_A]]
+// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT1]])
+// LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD]]
+//
+//            --- row 1 EH cleanup (elementType S, no bitcast needed) ---
+// LLVM:      [[ROW1_LPAD]]:
+// LLVM:        landingpad { ptr, i32 }
+// LLVM:          cleanup
+// LLVM:        %[[ROW1_EH_END:.*]] = load ptr, ptr %[[ROW1_END_A]]
+// LLVM:        %[[ROW1_EH_NE:.*]] = icmp ne ptr %[[ROW1_EH_END]], %[[ROW1_ELT0]]
+// LLVM:        br i1 %[[ROW1_EH_NE]], label %[[ROW1_DTOR:.*]], label %{{.*}}
+//
+// LLVM:      [[ROW1_DTOR]]:
+// LLVM:        store ptr %[[ROW1_EH_END]], ptr %[[ROW1_ITER:.*]]
+// LLVM:        br label %[[ROW1_DTOR_BODY:.*]]
+//
+// LLVM:      [[ROW1_DTOR_BODY]]:
+// LLVM:        %[[ROW1_DCUR:.*]] = load ptr, ptr %[[ROW1_ITER]]
+// LLVM:        %[[ROW1_DPREV:.*]] = getelementptr %struct.S, ptr %[[ROW1_DCUR]], i64 -1
+// LLVM:        store ptr %[[ROW1_DPREV]], ptr %[[ROW1_ITER]]
+// LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[ROW1_DPREV]])
+//
+//            --- row 0 EH cleanup (elementType S, no bitcast needed) ---
+// LLVM:      [[ROW0_LPAD]]:
+// LLVM:        landingpad { ptr, i32 }
+// LLVM:          cleanup
+// LLVM:        %[[ROW0_EH_END:.*]] = load ptr, ptr %[[ROW0_END_A]]
+// LLVM:        %[[ROW0_EH_NE:.*]] = icmp ne ptr %[[ROW0_EH_END]], %[[ROW0_ELT0]]
+// LLVM:        br i1 %[[ROW0_EH_NE]], label %[[ROW0_DTOR:.*]], label %{{.*}}
+//
+// LLVM:      [[ROW0_DTOR]]:
+// LLVM:        store ptr %[[ROW0_EH_END]], ptr %[[ROW0_ITER:.*]]
+// LLVM:        br label %[[ROW0_DTOR_BODY:.*]]
+//
+// LLVM:      [[ROW0_DTOR_BODY]]:
+// LLVM:        %[[ROW0_DCUR:.*]] = load ptr, ptr %[[ROW0_ITER]]
+// LLVM:        %[[ROW0_DPREV:.*]] = getelementptr %struct.S, ptr %[[ROW0_DCUR]], i64 -1
+// LLVM:        store ptr %[[ROW0_DPREV]], ptr %[[ROW0_ITER]]
+// LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[ROW0_DPREV]])
+//
+//            --- outer EH cleanup
+// LLVM:        %[[OUTER_EH_END:.*]] = load ptr, ptr %[[OUTER_END_A]]
+// LLVM:        %[[OUTER_EH_NE:.*]] = icmp ne ptr %[[OUTER_EH_END]], %[[ROW0_BEGIN]]
+// LLVM:        br i1 %[[OUTER_EH_NE]], label %[[OUTER_DTOR:.*]], label %{{.*}}
+//
+// LLVM:      [[OUTER_DTOR]]:
+// LLVM:        store ptr %[[OUTER_EH_END]], ptr %[[OUTER_ITER:.*]]
+// LLVM:        br label %[[OUTER_DTOR_BODY:.*]]
+//
+// LLVM:      [[OUTER_DTOR_BODY]]:
+// LLVM:        %[[OUTER_DCUR:.*]] = load ptr, ptr %[[OUTER_ITER]]
+// LLVM:        %[[OUTER_DPREV:.*]] = getelementptr %struct.S, ptr %[[OUTER_DCUR]], i64 -1
+// LLVM:        store ptr %[[OUTER_DPREV]], ptr %[[OUTER_ITER]]
+// LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[OUTER_DPREV]])
+// LLVM:        resume { ptr, i32 }
+//
+//            --- normal (non-EH) cleanup: destroys all 4 elements ---
+// LLVM:      %[[FLAT_BEGIN:.*]] = getelementptr %struct.S, ptr %[[ARR]], i32 0
+// LLVM:      %[[FLAT_END:.*]] = getelementptr %struct.S, ptr %[[FLAT_BEGIN]], i64 4
+// LLVM:      store ptr %[[FLAT_END]], ptr %[[NORM_ITER:.*]]
+// LLVM:      br label %[[NORM_BODY:.*]]
+//
+// LLVM:      [[NORM_BODY]]:
+// LLVM:        %[[NORM_CUR:.*]] = load ptr, ptr %[[NORM_ITER]]
+// LLVM:        %[[NORM_PREV:.*]] = getelementptr %struct.S, ptr %[[NORM_CUR]], i64 -1
+// LLVM:        store ptr %[[NORM_PREV]], ptr %[[NORM_ITER]]
+// LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[NORM_PREV]])
+// LLVM:      ret void
+
+// OGCG-LABEL: define {{.*}}@_Z46test_multi_dim_init_list_partial_array_cleanupv()
+// OGCG:      %[[ARR:.*]] = alloca [2 x [2 x %struct.S]]
+// OGCG:      %[[OUTER_END_A:.*]] = alloca ptr
+// OGCG:      %[[ROW0_END_A:.*]] = alloca ptr
+// OGCG:      store ptr %[[ARR]], ptr %[[OUTER_END_A]]
+// OGCG:      store ptr %[[ARR]], ptr %[[ROW0_END_A]]
+//
+//            --- row 0: element 0, element 1 ---
+// OGCG:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ARR]])
+// OGCG:        to label %{{.*}} unwind label %[[ROW0_LPAD:.*]]
+//
+// OGCG:      %[[ROW0_ELT1:.*]] = getelementptr inbounds %struct.S, ptr %[[ARR]], i64 1
+// OGCG:      store ptr %[[ROW0_ELT1]], ptr %[[ROW0_END_A]]
+// OGCG:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW0_ELT1]])
+// OGCG:        to label %{{.*}} unwind label %[[ROW0_LPAD]]
+//
+//            --- row 1: element 0, element 1 ---
+// OGCG:      %[[ROW1_BEGIN:.*]] = getelementptr inbounds [2 x %struct.S], ptr %[[ARR]], i64 1
+// OGCG:      store ptr %[[ROW1_BEGIN]], ptr %[[OUTER_END_A]]
+// OGCG:      store ptr %[[ROW1_BEGIN]], ptr %[[ROW1_END_A:.*]]
+// OGCG:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_BEGIN]])
+// OGCG:        to label %{{.*}} unwind label %[[ROW1_LPAD:.*]]
+//
+// OGCG:      %[[ROW1_ELT1:.*]] = getelementptr inbounds %struct.S, ptr %[[ROW1_BEGIN]], i64 1
+// OGCG:      store ptr %[[ROW1_ELT1]], ptr %[[ROW1_END_A]]
+// OGCG:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT1]])
+// OGCG:        to label %[[CTOR_DONE:.*]] unwind label %[[ROW1_LPAD]]
+//
+//            --- normal (non-EH) cleanup: destroys all 4 elements ---
+// OGCG:      [[CTOR_DONE]]:
+// OGCG:      %[[FLAT_BEGIN:.*]] = getelementptr inbounds [2 x [2 x %struct.S]], ptr %[[ARR]], i32 0, i32 0, i32 0
+// OGCG:      %[[FLAT_END:.*]] = getelementptr inbounds %struct.S, ptr %[[FLAT_BEGIN]], i64 4
+// OGCG:      br label %[[NORM_BODY:.*]]
+//
+// OGCG:      [[NORM_BODY]]:
+// OGCG:      %[[NORM_PAST:.*]] = phi ptr [ %[[FLAT_END]], %[[CTOR_DONE]] ], [ %[[NORM_PREV:.*]], %[[NORM_BODY]] ]
+// OGCG:      %[[NORM_PREV]] = getelementptr inbounds %struct.S, ptr %[[NORM_PAST]], i64 -1
+// OGCG:      call void @_ZN1SD1Ev(ptr {{.*}} %[[NORM_PREV]])
+// OGCG:      %[[NORM_DONE:.*]] = icmp eq ptr %[[NORM_PREV]], %[[FLAT_BEGIN]]
+// OGCG:      br i1 %[[NORM_DONE]], label %{{.*}}, label %[[NORM_BODY]]
+//
+//            --- row 0 EH cleanup (elementType S, no bitcast needed) ---
+// OGCG:      [[ROW0_LPAD]]:
+// OGCG:        landingpad { ptr, i32 }
+// OGCG:          cleanup
+// OGCG:        %[[ROW0_EH_END:.*]] = load ptr, ptr %[[ROW0_END_A]]
+// OGCG:        %[[ROW0_EH_EMPTY:.*]] = icmp eq ptr %[[ARR]], %[[ROW0_EH_END]]
+// OGCG:        br i1 %[[ROW0_EH_EMPTY]], label %[[ROW0_EH_DONE:.*]], label %[[ROW0_DTOR:.*]]
+//
+// OGCG:      [[ROW0_DTOR]]:
+// OGCG:      %[[ROW0_DPAST:.*]] = phi ptr [ %[[ROW0_EH_END]], %[[ROW0_LPAD]] ], [ %[[ROW0_DPREV:.*]], %[[ROW0_DTOR]] ]
+// OGCG:      %[[ROW0_DPREV]] = getelementptr inbounds %struct.S, ptr %[[ROW0_DPAST]], i64 -1
+// OGCG:      call void @_ZN1SD1Ev(ptr {{.*}} %[[ROW0_DPREV]])
+// OGCG:      %[[ROW0_DDONE:.*]] = icmp eq ptr %[[ROW0_DPREV]], %[[ARR]]
+// OGCG:      br i1 %[[ROW0_DDONE]], label %[[ROW0_EH_DONE]], label %[[ROW0_DTOR]]
+//
+// OGCG:      [[ROW0_EH_DONE]]:
+// OGCG:      br label %[[EHCLEANUP:.*]]
+//
+//            --- row 1 EH cleanup (elementType S, no bitcast needed) ---
+// OGCG:      [[ROW1_LPAD]]:
+// OGCG:        landingpad { ptr, i32 }
+// OGCG:          cleanup
+// OGCG:        %[[ROW1_EH_END:.*]] = load ptr, ptr %[[ROW1_END_A]]
+// OGCG:        %[[ROW1_EH_EMPTY:.*]] = icmp eq ptr %[[ROW1_BEGIN]], %[[ROW1_EH_END]]
+// OGCG:        br i1 %[[ROW1_EH_EMPTY]], label %[[ROW1_EH_DONE:.*]], label %[[ROW1_DTOR:.*]]
+//
+// OGCG:      [[ROW1_DTOR]]:
+// OGCG:      %[[ROW1_DPAST:.*]] = phi ptr [ %[[ROW1_EH_END]], %[[ROW1_LPAD]] ], [ %[[ROW1_DPREV:.*]], %[[ROW1_DTOR]] ]
+// OGCG:      %[[ROW1_DPREV]] = getelementptr inbounds %struct.S, ptr %[[ROW1_DPAST]], i64 -1
+// OGCG:      call void @_ZN1SD1Ev(ptr {{.*}} %[[ROW1_DPREV]])
+// OGCG:      %[[ROW1_DDONE:.*]] = icmp eq ptr %[[ROW1_DPREV]], %[[ROW1_BEGIN]]
+// OGCG:      br i1 %[[ROW1_DDONE]], label %[[ROW1_EH_DONE]], label %[[ROW1_DTOR]]
+//
+// OGCG:      [[ROW1_EH_DONE]]:
+// OGCG:      br label %[[EHCLEANUP]]
+//
+//            --- Classic-codegen does this in 2 steps/2 loops vs CIR just doing it as 1 loop.
+// OGCG:      [[EHCLEANUP]]:
+// OGCG:      %[[OUTER_EH_END:.*]] = load ptr, ptr %[[OUTER_END_A]]
+// OGCG:      %[[OUTER_EH_BEGIN_BASE:.*]] = getelementptr inbounds [2 x %struct.S], ptr %[[ARR]], i64 0, i64 0
+// OGCG:      %[[OUTER_EH_END_BASE:.*]] = getelementptr inbounds [2 x %struct.S], ptr %[[OUTER_EH_END]], i64 0, i64 0
+// OGCG:      %[[OUTER_EH_EMPTY:.*]] = icmp eq ptr %[[OUTER_EH_BEGIN_BASE]], %[[OUTER_EH_END_BASE]]
+// OGCG:      br i1 %[[OUTER_EH_EMPTY]], label %[[OUTER_EH_DONE:.*]], label %[[OUTER_DTOR:.*]]
+//
+// OGCG:      [[OUTER_DTOR]]:
+// OGCG:      %[[OUTER_DPAST:.*]] = phi ptr [ %[[OUTER_EH_END_BASE]], %[[EHCLEANUP]] ], [ %[[OUTER_DPREV:.*]], %[[OUTER_DTOR]] ]
+// OGCG:      %[[OUTER_DPREV]] = getelementptr inbounds %struct.S, ptr %[[OUTER_DPAST]], i64 -1
+// OGCG:      call void @_ZN1SD1Ev(ptr {{.*}} %[[OUTER_DPREV]])
+// OGCG:      %[[OUTER_DDONE:.*]] = icmp eq ptr %[[OUTER_DPREV]], %[[OUTER_EH_BEGIN_BASE]]
+// OGCG:      br i1 %[[OUTER_DDONE]], label %[[OUTER_EH_DONE]], label %[[OUTER_DTOR]]
+//
+// OGCG:      [[OUTER_EH_DONE]]:
+// OGCG:      br label %[[EH_RESUME:.*]]
+//
+// OGCG:      [[EH_RESUME]]:
+// OGCG:      resume { ptr, i32 }
+
 struct Temp2 {
   Temp2();
   ~Temp2();
@@ -874,8 +1237,7 @@ void Temp2InArray() {
 // CIR-NEXT:      %[[CURRENT:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>, !cir.ptr<!rec_CausesTemp2>
 // CIR-NEXT:      cir.call @_ZN5Temp2C1Ev(%[[TMP]])
 // CIR-NEXT:      cir.cleanup.scope {
-// CIR-NEXT:        %[[LOAD_TMP:.*]] = cir.load {{.*}}%[[TMP]] : !cir.ptr<!rec_Temp2>, !rec_Temp2
-// CIR-NEXT:        cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[LOAD_TMP]])
+// CIR-NEXT:        cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp2> {llvm.align = 1 : i64, llvm.byref = !rec_Temp2}) -> ()
 // CIR-NEXT:        cir.yield
 // CIR-NEXT:      } cleanup all {
 // CIR-NEXT:        cir.call @_ZN5Temp2D1Ev(%[[TMP]]) nothrow
@@ -925,8 +1287,7 @@ void Temp2InArray() {
 // LLVM: [[EMPTY2]]:
 // LLVM: br label %[[CONSTRUCT_CT:.*]]
 // LLVM: [[CONSTRUCT_CT]]:
-// LLVM: %[[LOAD:.*]] = load %struct.Temp2, ptr %[[TMP]]
-// LLVM: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr noundef nonnull align 1 dereferenceable(1) %12, %struct.Temp2 %15)
+// LLVM: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}} %{{.*}}, ptr byref(%struct.Temp2) align 1 %[[TMP]])
 // LLVM-NEXT:         to label %[[EMPTY3:.*]] unwind label %[[EXCEPT:.*]]
 // LLVM: [[EMPTY3]]:
 // LLVM: br label %[[DTOR_TEMP:.*]]
@@ -941,7 +1302,7 @@ void Temp2InArray() {
 // LLVM: [[EXCEPT_TEMP]]:
 // LLVM: br label %[[CHECK_TEMP:.*]]
 // LLVM: [[CHECK_TEMP]]:
-// LLVM: br i1 %37, label %[[EMPTY4:.*]], 
+// LLVM: br i1 %{{.*}}, label %[[EMPTY4:.*]], 
 // LLVM: [[EMPTY4]]:
 // LLVM: br label %[[DTOR_TMP:.*]]
 //

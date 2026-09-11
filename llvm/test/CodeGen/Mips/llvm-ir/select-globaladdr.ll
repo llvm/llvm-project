@@ -10,11 +10,10 @@ define ptr @tst_select_ptr_ptr(i1 %tobool.not) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    sll $1, $4, 0
 ; MIPS64-NEXT:    andi $1, $1, 1
-; MIPS64-NEXT:    daddiu $2, $zero, %gp_rel(.str)
-; MIPS64-NEXT:    daddiu $3, $zero, %gp_rel(.str.1)
-; MIPS64-NEXT:    movn $2, $3, $1
+; MIPS64-NEXT:    daddiu $2, $gp, %gp_rel(.str)
+; MIPS64-NEXT:    daddiu $3, $gp, %gp_rel(.str.1)
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    daddu $2, $gp, $2
+; MIPS64-NEXT:    movn $2, $3, $1
 entry:
   %cond = select i1 %tobool.not, ptr @.str.1, ptr @.str
   ret ptr %cond

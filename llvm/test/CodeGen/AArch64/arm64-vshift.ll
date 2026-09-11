@@ -2252,8 +2252,7 @@ define <8 x i16> @ushll2_8h(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_8h:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #1
+; CHECK-GI-NEXT:    ushll2 v0.8h, v0.16b, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
   %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -2272,8 +2271,7 @@ define <4 x i32> @ushll2_4s(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_4s:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #1
+; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
   %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -2292,8 +2290,7 @@ define <2 x i64> @ushll2_2d(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_2d:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #1
+; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
   %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -2892,8 +2889,7 @@ define <8 x i16> @sshll2_8h(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_8h:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #1
+; CHECK-GI-NEXT:    sshll2 v0.8h, v0.16b, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
   %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -2912,8 +2908,7 @@ define <4 x i32> @sshll2_4s(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_4s:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #1
+; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
   %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -2932,8 +2927,7 @@ define <2 x i64> @sshll2_2d(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_2d:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #1
+; CHECK-GI-NEXT:    sshll2 v0.2d, v0.4s, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
   %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -4119,32 +4113,20 @@ define <2 x i64> @shl_orr2d(ptr %A, ptr %B) nounwind {
 }
 
 define <8 x i16> @shll(<8 x i8> %in) {
-; CHECK-SD-LABEL: shll:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    shll v0.8h, v0.8b, #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shll:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shll:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-NEXT:    ret
   %ext = zext <8 x i8> %in to <8 x i16>
   %res = shl <8 x i16> %ext, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   ret <8 x i16> %res
 }
 
 define <4 x i32> @shll_high(<8 x i16> %in) {
-; CHECK-SD-LABEL: shll_high:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    shll2 v0.4s, v0.8h, #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shll_high:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #16
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shll_high:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll2 v0.4s, v0.8h, #16
+; CHECK-NEXT:    ret
   %extract = shufflevector <8 x i16> %in, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %ext = zext <4 x i16> %extract to <4 x i32>
   %res = shl <4 x i32> %ext, <i32 16, i32 16, i32 16, i32 16>

@@ -30,7 +30,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -376,8 +375,7 @@ private:
                         const MCSubtargetInfo &STI,
                         bool ForceSIB = false) const;
 
-  PrefixKind emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
-                            const MCSubtargetInfo &STI,
+  PrefixKind emitPrefixImpl(const MCInst &MI, const MCSubtargetInfo &STI,
                             SmallVectorImpl<char> &CB) const;
 
   PrefixKind emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
@@ -890,7 +888,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
 ///
 /// \returns one of the REX, XOP, VEX2, VEX3, EVEX if any of them is used,
 /// otherwise returns None.
-PrefixKind X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
+PrefixKind X86MCCodeEmitter::emitPrefixImpl(const MCInst &MI,
                                             const MCSubtargetInfo &STI,
                                             SmallVectorImpl<char> &CB) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
@@ -917,29 +915,20 @@ PrefixKind X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
   switch (Form) {
   default:
     break;
-  case X86II::RawFrmDstSrc: {
+  case X86II::RawFrmDstSrc:
     // Emit segment override opcode prefix as needed (not for %ds).
     if (MI.getOperand(2).getReg() != X86::DS)
       emitSegmentOverridePrefix(2, MI, CB);
-    CurOp += 3; // Consume operands.
     break;
-  }
-  case X86II::RawFrmSrc: {
+  case X86II::RawFrmSrc:
     // Emit segment override opcode prefix as needed (not for %ds).
     if (MI.getOperand(1).getReg() != X86::DS)
       emitSegmentOverridePrefix(1, MI, CB);
-    CurOp += 2; // Consume operands.
     break;
-  }
-  case X86II::RawFrmDst: {
-    ++CurOp; // Consume operand.
-    break;
-  }
-  case X86II::RawFrmMemOffs: {
+  case X86II::RawFrmMemOffs:
     // Emit segment override opcode prefix as needed.
     emitSegmentOverridePrefix(1, MI, CB);
     break;
-  }
   }
 
   // REX prefix is optional, but if used must be immediately before the opcode
@@ -1530,17 +1519,13 @@ PrefixKind X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
 
 void X86MCCodeEmitter::emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
                                   const MCSubtargetInfo &STI) const {
-  unsigned Opcode = MI.getOpcode();
-  const MCInstrDesc &Desc = MCII.get(Opcode);
-  uint64_t TSFlags = Desc.TSFlags;
+  uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
 
   // Pseudo instructions don't get encoded.
   if (X86II::isPseudo(TSFlags))
     return;
 
-  unsigned CurOp = X86II::getOperandBias(Desc);
-
-  emitPrefixImpl(CurOp, MI, STI, CB);
+  emitPrefixImpl(MI, STI, CB);
 }
 
 void X86_MC::emitPrefix(MCCodeEmitter &MCE, const MCInst &MI,
@@ -1565,7 +1550,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   uint64_t StartByte = CB.size();
 
-  PrefixKind Kind = emitPrefixImpl(CurOp, MI, STI, CB);
+  PrefixKind Kind = emitPrefixImpl(MI, STI, CB);
 
   // It uses the VEX.VVVV field?
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
@@ -1596,8 +1581,17 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   case X86II::Pseudo:
     llvm_unreachable("Pseudo instruction shouldn't be emitted");
   case X86II::RawFrmDstSrc:
+    emitByte(BaseOpcode, CB);
+    CurOp += 3; // Consume operands.
+    break;
   case X86II::RawFrmSrc:
+    emitByte(BaseOpcode, CB);
+    CurOp += 2; // Consume operands.
+    break;
   case X86II::RawFrmDst:
+    emitByte(BaseOpcode, CB);
+    ++CurOp; // Consume operand.
+    break;
   case X86II::PrefixByte:
     emitByte(BaseOpcode, CB);
     break;

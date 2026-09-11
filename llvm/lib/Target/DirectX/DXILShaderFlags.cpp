@@ -34,7 +34,10 @@ using namespace llvm::dxil;
 
 static bool hasUAVsAtEveryStage(const DXILResourceMap &DRM,
                                 const ModuleMetadataInfo &MMDI) {
-  if (DRM.uavs().empty())
+  // Heap resources do not count towards hasUAVsAtEveryStage.
+  bool HasUAVWithBinding = any_of(
+      DRM.uavs(), [](const ResourceInfo &RI) { return RI.hasBinding(); });
+  if (!HasUAVWithBinding)
     return false;
 
   switch (MMDI.ShaderProfile) {
@@ -121,6 +124,41 @@ static bool checkDoubleExtensionOps(Intrinsic::ID IID) {
   case Intrinsic::fma:
     return true;
   }
+}
+
+/// Texture load and sample operations accept "programmable offsets", i.e.
+/// offsets that are not compile-time constants. Such offsets require the
+/// AdvancedTextureOps shader feature flag. Returns true if \p II is one of
+/// those operations and its offsets operand is not a constant.
+static bool checkAdvancedTextureOps(const IntrinsicInst &II) {
+  // TODO: (#116137) Several other DXIL ops also require this feature flag, but
+  // none of them can be generated yet:
+  //  - SampleCmp, SampleCmpBias, SampleCmpGrad and SampleCmpLevelZero set the
+  //    flag for non-constant offsets, exactly like the ops handled below.
+  //  - SampleCmpLevel, TextureGatherRaw and TextureStoreSample set the flag
+  //    unconditionally, and have no intrinsics yet.
+
+  // The offsets operand index differs between the intrinsics.
+  unsigned OffsetsIdx;
+  switch (II.getIntrinsicID()) {
+  default:
+    return false;
+  case Intrinsic::dx_resource_load_level:
+  case Intrinsic::dx_resource_sample:
+  case Intrinsic::dx_resource_sample_clamp:
+    OffsetsIdx = 3;
+    break;
+  case Intrinsic::dx_resource_samplebias:
+  case Intrinsic::dx_resource_samplebias_clamp:
+  case Intrinsic::dx_resource_samplelevel:
+    OffsetsIdx = 4;
+    break;
+  case Intrinsic::dx_resource_samplegrad:
+  case Intrinsic::dx_resource_samplegrad_clamp:
+    OffsetsIdx = 5;
+    break;
+  }
+  return !isa<Constant>(II.getArgOperand(OffsetsIdx));
 }
 
 static bool isOptimizationDisabled(const Module &M) {
@@ -215,6 +253,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 
   if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    CSF.AdvancedTextureOps |= checkAdvancedTextureOps(*II);
+
     switch (II->getIntrinsicID()) {
     default:
       break;
@@ -234,6 +274,18 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         break;
       default:
         break;
+      }
+      break;
+    }
+    case Intrinsic::dx_resource_handlefromheap: {
+      dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
+      bool IsSamplerHeap = RTI.isSampler();
+      CSF.SamplerDescriptorHeapIndexing |= IsSamplerHeap;
+      CSF.ResourceDescriptorHeapIndexing |= !IsSamplerHeap;
+
+      if (!CSF.ResMayNotAlias && CanSetResMayNotAlias && RTI.isUAV() &&
+          MMDI.ValidatorVersion >= VersionTuple(1, 8)) {
+        CSF.ResMayNotAlias = true;
       }
       break;
     }
@@ -301,16 +353,20 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
 
   // Set the Max64UAVs flag if the number of UAVs is > 8
   uint32_t NumUAVs = 0;
-  for (auto &UAV : DRM.uavs())
+  for (auto &UAV : DRM.uavs()) {
+    // Heap resources do not count towards Max64UAVs flag.
+    if (!UAV.hasBinding())
+      continue;
     if (MMDI.ValidatorVersion < VersionTuple(1, 6)) {
       NumUAVs++;
     } else { // MMDI.ValidatorVersion >= VersionTuple(1, 6)
-      uint32_t Size = UAV.getBinding().Size;
+      uint32_t Size = UAV.getSize();
       uint32_t NewNum = NumUAVs + (Size == 0 ? ~0U : Size);
       if (NewNum < NumUAVs)
         NewNum = ~0U;
       NumUAVs = NewNum;
     }
+  }
   if (NumUAVs > 8)
     CSF.Max64UAVs = true;
 

@@ -165,6 +165,7 @@ void registerToLLVMTranslation() {
                                                       enableOpenMP);
         if (!llvmModule)
           return mlir::failure();
+        llvmModule->renumberMetadataForAssembly();
         llvmModule->print(output, nullptr);
         return mlir::success();
       },

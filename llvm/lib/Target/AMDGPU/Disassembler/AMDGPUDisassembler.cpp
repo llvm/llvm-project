@@ -123,6 +123,7 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
       OS << ":xnack+";
+      XnackOnFromEFlags = true;
       break;
     }
   }
@@ -232,6 +233,28 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
   return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));
 }
 
+// Decode an indexed-resource (rsrcidx) 9-bit srsrc field into a 32-bit index
+// register. SGPRs are encoded as 128-251, VGPRs have bit 8 set.
+static DecodeStatus decodeRsrcRegOp(MCInst &Inst, unsigned Imm,
+                                    uint64_t /* Addr */,
+                                    const MCDisassembler *Decoder,
+                                    unsigned OpWidth) {
+  // Uniform-indexed resource. SGPR[0..123] encoded as 128-251.
+  if (Imm >= 128 && Imm < 256)
+    Imm -= 128;
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, Decoder);
+}
+
+static DecodeStatus decodeRsrcReg128(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  unsigned OpWidth = 32;
+  // 0-127: Uniform-direct resource in SGPRs (SReg_128).
+  if (Imm < 128)
+    OpWidth = 128;
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
+}
+
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
 // get register class. Used by SGPR only operands.
 #define DECODE_OPERAND_SREG_7(RegClass, OpWidth)                               \
@@ -239,6 +262,9 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
 
 #define DECODE_OPERAND_SREG_8(RegClass, OpWidth)                               \
   DECODE_SrcOp(Decode##RegClass##RegisterClass, 8, OpWidth, Imm)
+
+#define DECODE_OPERAND_SREG_9(RegClass, OpWidth)                               \
+  DECODE_SrcOp(Decode##RegClass##RegisterClass, 9, OpWidth, Imm)
 
 // Decoder for registers. Imm(10-bit): Imm{7-0} is number of register,
 // Imm{9} is acc(agpr or vgpr) Imm{8} should be 0 (see VOP3Pe_SMFMAC).
@@ -333,12 +359,15 @@ DECODE_OPERAND_SREG_7(SReg_64_XEXEC, 64)
 DECODE_OPERAND_SREG_7(SReg_64_XEXEC_XNULL, 64)
 DECODE_OPERAND_SREG_7(SReg_96, 96)
 DECODE_OPERAND_SREG_7(SReg_128, 128)
-DECODE_OPERAND_SREG_7(SReg_128_XNULL, 128)
 DECODE_OPERAND_SREG_7(SReg_256, 256)
 DECODE_OPERAND_SREG_7(SReg_256_XNULL, 256)
 DECODE_OPERAND_SREG_7(SReg_512, 512)
 
 DECODE_OPERAND_SREG_8(SReg_64, 64)
+
+// GFX13 VBUFFER instructions use a 9-bit srsrc field. For the non-indexed form
+// the two extra MSBs are always 0, so the value still decodes to an SReg_128.
+DECODE_OPERAND_SREG_9(SReg_128_XNULL, 128)
 
 DECODE_OPERAND_REG_8(AGPR_32)
 DECODE_OPERAND_REG_8(AReg_64)
@@ -461,6 +490,22 @@ DECODE_OPERAND(decodeSDWA##DecName, decodeSDWA##DecName)
 DECODE_SDWA(Src32)
 DECODE_SDWA(Src16)
 DECODE_SDWA(VopcDst)
+
+#define DECODE_SDWA_IMM_FIELD(Name, MaxImm)                                    \
+  static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,    \
+                           const MCDisassembler * /* Decoder */) {             \
+    if (Imm > (MaxImm))                                                        \
+      return MCDisassembler::Fail;                                             \
+    return addOperand(Inst, MCOperand::createImm(Imm));                        \
+  }
+
+// The 3-bit SDWA sel fields only define values up to DWORD; 7 is reserved.
+DECODE_SDWA_IMM_FIELD(decodeSDWASel, AMDGPU::SDWA::SdwaSel::DWORD)
+// The 2-bit SDWA dst_unused field only defines values up to UNUSED_PRESERVE;
+// 3 is reserved.
+DECODE_SDWA_IMM_FIELD(decodeSDWADstUnused,
+                      AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
+#undef DECODE_SDWA_IMM_FIELD
 
 static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
                                      uint64_t /* Addr */,
@@ -2103,6 +2148,13 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const MCInst &Inst,
     return MCOperand::createImm(Val);
 
   if (Val == LITERAL64_CONST && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
+    // Only VOP1, VOP2, VOPC, SOP1, SOP2 and SOPC may encode a 64-bit literal.
+    // VOP3, VOP3P and VOPD have to use a 32-bit one.
+    if (SIInstrFlags::isVOP3Like(*MCII, Inst) ||
+        AMDGPU::isVOPD(Inst.getOpcode())) {
+      return errOperand(Val,
+                        "64-bit literal is not supported by this instruction");
+    }
     return decodeLiteral64Constant();
   }
 
@@ -2549,10 +2601,15 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
   if (!hasArchitectedFlatScratch())
     KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
-  bool ReservedXnackMask = STI.hasFeature(AMDGPU::FeatureXNACK);
-  assert(!ReservedXnackMask || STI.hasFeature(AMDGPU::FeatureSupportsXNACK));
-  KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
-           << '\n';
+  // Only print the directive on xnack-supporting targets (matching the
+  // asmprinter), unless the binary erronously set xnack on an unsupported
+  // target
+  bool ReservedXnackMask =
+      STI.hasFeature(AMDGPU::FeatureXNACK) || XnackOnFromEFlags;
+  if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK) || ReservedXnackMask) {
+    KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
+             << '\n';
+  }
   KdStream << Indent << ".amdhsa_next_free_sgpr " << NextFreeSGPR << "\n";
 
   CHECK_RESERVED_BITS(COMPUTE_PGM_RSRC1_PRIORITY);

@@ -621,6 +621,12 @@ Warning to detect dangling global references.
   }];
 }
 
+def LifetimeSafetyDanglingGlobalInMain : DiagGroup<"lifetime-safety-dangling-global-in-main"> {
+  code Documentation = [{
+Warning to detect dangling global references in main function.
+  }];
+}
+
 def LifetimeSafetyDanglingGlobalMoved : DiagGroup<"lifetime-safety-dangling-global-moved"> {
   code Documentation = [{
 Warning to detect dangling global references.
@@ -675,6 +681,7 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyDanglingFieldMoved,
                                     LifetimeSafetyDanglingFieldLambdaCapture,
                                     LifetimeSafetyDanglingGlobalMoved,
+                                    LifetimeSafetyDanglingGlobalInMain,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
@@ -1026,6 +1033,7 @@ def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
    NonTrivialMemaccess, MemsetTransposedArgs, SuspiciousBzero]>;
 def StaticInInline : DiagGroup<"static-in-inline">;
 def StaticLocalInInline : DiagGroup<"static-local-in-inline">;
+def CounterExt : DiagGroup<"counter-extension">;
 def UniqueObjectDuplication : DiagGroup<"unique-object-duplication"> {
   code Documentation = [{
 Warns when objects which are supposed to be globally unique might get duplicated
@@ -1206,7 +1214,6 @@ def Attributes : DiagGroup<"attributes", [UnknownAttributes,
 def UnknownSanitizers : DiagGroup<"unknown-sanitizers">;
 def UnnamedTypeTemplateArgs : DiagGroup<"unnamed-type-template-args",
                                         [CXX98CompatUnnamedTypeTemplateArgs]>;
-def UnsupportedFriend : DiagGroup<"unsupported-friend">;
 def UnusedArgument : DiagGroup<"unused-argument">;
 def UnusedCommandLineArgument : DiagGroup<"unused-command-line-argument">;
 def IgnoredOptimizationArgument : DiagGroup<"ignored-optimization-argument">;
@@ -1377,7 +1384,7 @@ def Conversion
 def Unused : DiagGroup<"unused",
                        [UnusedArgument, UnusedFunction, UnusedLabel,
                         // UnusedParameter, (matches GCC's behavior)
-                        UnusedTemplate,
+                        // UnusedTemplate, (clean-up libc++ before enabling)
                         // UnusedMemberFunction, (clean-up llvm before enabling)
                         UnusedPrivateField, UnusedLambdaCapture,
                         UnusedLocalTypedef, UnusedValue, UnusedVariable,
@@ -1617,7 +1624,7 @@ def C23 : DiagGroup<"c23-extensions", [VariadicMacroArgumentsOmitted]>;
 def : DiagGroup<"c2x-extensions", [C23]>;
 
 // A warning group for warnings about using C2y features as extensions.
-def C2y : DiagGroup<"c2y-extensions", [StaticInInline]>;
+def C2y : DiagGroup<"c2y-extensions", [StaticInInline, CounterExt]>;
 
 // Previously supported warning group which is no longer pertinent as binary
 // literals are a C++14 and C23 extension now instead of a GNU extension.
@@ -1688,6 +1695,8 @@ def MicrosoftStringLiteralFromPredefined : DiagGroup<
     "microsoft-string-literal-from-predefined">;
 def MicrosoftInlineOnNonFunction : DiagGroup<
     "microsoft-inline-on-non-function">;
+def MicrosoftRelaxedConstantFold :
+  DiagGroup<"relaxed-constant-fold">;
 
 // Aliases.
 def : DiagGroup<"msvc-include", [MicrosoftInclude]>;
@@ -2021,3 +2030,5 @@ def ExperimentalOption : DiagGroup<"experimental-option">;
 def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
 
 def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
+
+def DynamicDebugging : DiagGroup<"dynamic-debugging">;

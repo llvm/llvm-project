@@ -127,6 +127,8 @@ class OpenMP_AllocateClauseSkip<
     `allocate` `(`
       custom<AllocateAndAllocator>($allocate_vars, type($allocate_vars),
                                    $allocator_vars, type($allocator_vars)) `)`
+      (`allocate_alignments` `(` $allocate_alignments^ `)`)?
+      (`allocate_private_indices` `(` $allocate_private_indices^ `)`)?
   }];
 
   let description = [{
@@ -272,14 +274,15 @@ class OpenMP_CriticalNameClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    Symbol
+    SymbolName, SymbolVisibility, Symbol
   ];
 
   let arguments = (ins
-    SymbolNameAttr:$sym_name
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
-  let reqAssemblyFormat = "$sym_name";
+  let reqAssemblyFormat = "($sym_visibility^)? $sym_name";
 
   let description = [{
     The `sym_name` can be used in `omp.critical` constructs in the dialect.
@@ -393,9 +396,10 @@ class OpenMP_DoacrossClauseSkip<
   );
 
   let reqAssemblyFormat = [{
-    ( `depend_type` `` $doacross_depend_type^ )?
+    ( `depend_type` `(` enum($doacross_depend_type)^ `)` )?
     ( `depend_vec` `(` $doacross_depend_vars^ `:` type($doacross_depend_vars)
                    `)` )?
+    ( `num_loops` `(` $doacross_num_loops^ `)` )?
   }];
 
   let description = [{
@@ -581,12 +585,11 @@ class OpenMP_HeapAllocClauseSkip<
     Variadic<IntLikeType>:$shape
   );
 
-  // The custom parser doesn't parse `uniq_name` and `bindc_name`. This is
-  // handled by the attr-dict, which must be present in the operation's
-  // `assemblyFormat`.
   let reqAssemblyFormat = [{
     custom<HeapAllocClause>($in_type, $typeparams, type($typeparams), $shape,
                             type($shape))
+    ( `uniq_name` `(` $uniq_name^ `)` )?
+    ( `bindc_name` `(` $bindc_name^ `)` )?
   }];
 
   let extraClassDeclaration = [{
@@ -828,6 +831,7 @@ class OpenMP_LinearClauseSkip<
       custom<LinearClause>($linear_vars, type($linear_vars),
                            $linear_step_vars, type($linear_step_vars),
                            $linear_modifiers) `)`
+      ( `linear_var_types` `(` $linear_var_types^ `)` )?
   }];
 
   let description = [{

@@ -585,10 +585,10 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
 }
 
 Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
-  BinaryFunctionListType &OutputFunctions = BC.getOutputBinaryFunctions();
+  assert(BC.getOutputBinaryFunctions().empty() &&
+         "Output function list already initialized");
 
-  assert(OutputFunctions.empty() && "Output function list already initialized");
-
+  BinaryFunctionListType OutputFunctions;
   OutputFunctions.reserve(BC.getBinaryFunctions().size() +
                           BC.getInjectedBinaryFunctions().size());
   llvm::transform(llvm::make_second_range(BC.getBinaryFunctions()),
@@ -603,6 +603,17 @@ Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
   llvm::copy(BC.getInjectedBinaryFunctions(),
              std::back_inserter(OutputFunctions));
 
+  if (opts::HotFunctionsAtEnd) {
+    // Injected functions have no profile and precede other cold functions in
+    // the reverse layout.
+    std::stable_partition(
+        OutputFunctions.begin(), OutputFunctions.end(),
+        [](const BinaryFunction *A) { return A->isInjected(); });
+    std::stable_partition(
+        OutputFunctions.begin(), OutputFunctions.end(),
+        [](const BinaryFunction *A) { return !A->hasValidIndex(); });
+  }
+
   // Place hot text movers in front.
   if (opts::HotText) {
     std::stable_partition(
@@ -610,12 +621,7 @@ Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
         [](const BinaryFunction *A) { return opts::isHotTextMover(*A); });
   }
 
-  if (opts::HotFunctionsAtEnd) {
-    std::stable_partition(
-        OutputFunctions.begin(), OutputFunctions.end(),
-        [](const BinaryFunction *A) { return !A->hasValidIndex(); });
-  }
-
+  BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
   return Error::success();
 }
 

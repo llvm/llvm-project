@@ -158,7 +158,8 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
                                             OpBuilder &builder) {
   auto entryPointAttrName = spirv::getEntryPointABIAttrName();
   auto entryPointAttr =
-      funcOp->getAttrOfType<spirv::EntryPointABIAttr>(entryPointAttrName);
+      funcOp->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
+          entryPointAttrName);
   if (!entryPointAttr) {
     return failure();
   }
@@ -228,9 +229,9 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
   }
   if (entryPointAttr.getWorkgroupSize() || entryPointAttr.getSubgroupSize() ||
       entryPointAttr.getTargetWidth())
-    funcOp->setAttr(entryPointAttrName, entryPointAttr);
+    funcOp->setDiscardableAttr(entryPointAttrName, entryPointAttr);
   else
-    funcOp->removeAttr(entryPointAttrName);
+    funcOp->removeDiscardableAttr(entryPointAttrName);
   return success();
 }
 
@@ -277,7 +278,7 @@ class LowerABIAttributesPass final
 LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     spirv::FuncOp funcOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  if (!funcOp->getAttrOfType<spirv::EntryPointABIAttr>(
+  if (!funcOp->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
           spirv::getEntryPointABIAttrName())) {
     // TODO: Non-entry point functions are not handled.
     return failure();
@@ -458,7 +459,8 @@ void LowerABIAttributesPass::runOnOperation() {
   SmallVector<spirv::FuncOp, 1> entryPointFns;
   auto entryPointAttrName = spirv::getEntryPointABIAttrName();
   module.walk([&](spirv::FuncOp funcOp) {
-    if (funcOp->getAttrOfType<spirv::EntryPointABIAttr>(entryPointAttrName)) {
+    if (funcOp->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
+            entryPointAttrName)) {
       entryPointFns.push_back(funcOp);
     }
   });

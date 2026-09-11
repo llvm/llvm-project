@@ -10,7 +10,7 @@ define i32 @cost_prefers_fixed_width_vf_but_force_scalable_vf(ptr noalias %dst, 
 ; CHECK-LABEL: 'cost_prefers_fixed_width_vf_but_force_scalable_vf'
 ; CHECK:  Cost for VF 2: 12 (Estimated cost per lane: 6)
 ; CHECK:  Cost for VF 4: 8 (Estimated cost per lane: 2)
-; CHECK:  Cost for VF 8: 10 (Estimated cost per lane: 1.25)
+; CHECK:  Cost for VF 8: 9 (Estimated cost per lane: 1.13)
 ; CHECK:  Cost for VF vscale x 1: Invalid (Estimated cost per lane: Invalid)
 ; CHECK:  Cost for VF vscale x 2: 9 (Estimated cost per lane: 4.5)
 ; CHECK:  Cost for VF vscale x 4: 8 (Estimated cost per lane: 2)
