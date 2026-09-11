@@ -146,6 +146,14 @@ static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
   return true;
 }
 
+static FunctionHashInfo hashFunction(const Function &F) {
+  // Globals with local linkage are qualified with their module's source file
+  // name so that same-named locals in different modules are not mistaken for
+  // identical operands when the merged map is finalized across modules.
+  return StructuralHashWithDifferences(F, ignoreOp,
+                                       /*SourceQualifyLocalGlobals=*/true);
+}
+
 void GlobalMergeFunc::analyze(Module &M) {
   ++NumAnalyzedModues;
   for (Function &Func : M) {
@@ -153,7 +161,7 @@ void GlobalMergeFunc::analyze(Module &M) {
     if (isEligibleFunction(&Func)) {
       ++NumEligibleFunctions;
 
-      auto FI = llvm::StructuralHashWithDifferences(Func, ignoreOp);
+      auto FI = hashFunction(Func);
 
       // Convert the operand map to a vector for a serialization-friendly
       // format.
@@ -410,7 +418,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   for (auto &F : M) {
     if (!isEligibleFunction(&F))
       continue;
-    auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
+    auto FI = hashFunction(F);
     if (FunctionMap->contains(FI.FunctionHash))
       HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
   }
