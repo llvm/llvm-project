@@ -1037,34 +1037,40 @@ and `sm_107a`.
 The intrinsic types representing `mdata`, `cdata`, and `data` are overloaded.
 The packed metadata remains a bundle of 32-bit registers: one register is
 represented by `i32`, and `N` registers are represented by `<N x i32>`. The
-`cdata` and `data` bundles instead encode the element size in their scalar type.
-Each 32-bit register is represented by four `i8` lanes or two `i16` lanes, so a
-bundle of `N` registers uses `<4N x i8>` or `<2N x i16>`, respectively. The
-actual intrinsic names include the corresponding LLVM overload suffixes.
+`cdata` and `data` vectors instead use one `i8` or `i16` lane per logical
+element. Lowering packs these lanes into 32-bit PTX register operands and pads
+an incomplete final register when necessary. The actual intrinsic names
+include the corresponding LLVM overload suffixes.
 
-The trailing argument is an immediate qualifier with the following encoding:
+The immediate qualifiers have the following encodings:
 
-| Argument    | Values   | PTX qualifiers |
-| ----------- | -------- | -------------- |
-| `%idx_size` | `2`, `4` | `.b2`, `.b4`   |
+| Argument    | Values                | PTX qualifiers                  |
+| ----------- | --------------------- | ------------------------------- |
+| `%idx_size` | `2`, `4`              | `.b2`, `.b4`                    |
+| `%num_tgt`  | `2`, `4`, `8`, `16`   | target group size in `.sp::X:Y` |
 
 The PTX element-size qualifier (`.b8` or `.b16`) is inferred from the `i8` or
 `i16` element type. The repeat-factor qualifier is inferred from the bundle
-sizes.
+sizes. `%num_tgt` is `4` for `spcompress`.
 
-#### '`llvm.nvvm.spcompress.sp2to4`' Intrinsic
+#### '`llvm.nvvm.spcompress`' Intrinsic
 
 ##### Syntax:
 
 ```llvm
-declare {MDataTy, CDataTy} @llvm.nvvm.spcompress.sp2to4(
-    DataTy %data, i32 %spdesc, i32 immarg %idx_size)
+declare {MDataTy, CDataTy} @llvm.nvvm.spcompress(
+    DataTy %data, i32 %spdesc, i32 immarg %idx_size,
+    i32 immarg %num_tgt)
 ```
 
 ##### Overview:
 
 This intrinsic compresses the dense vector `%data` using 2:4 structured
-sparsity. It returns the selected element indices as `mdata` and the selected
+sparsity. `%num_tgt` specifies the target group size and must be `4`; the
+source-to-target ratio is inferred from the `CDataTy` and `DataTy` vector
+lengths. In `.sp::X:Y`, `Y` is `%num_tgt` and
+`X = Y * num_elements(CDataTy) / num_elements(DataTy)`; the division must be
+exact. It returns the selected element indices as `mdata` and the selected
 elements as `cdata`. The number of 32-bit registers in each bundle is:
 
 | Bundle  | Register count                            |
@@ -1100,27 +1106,35 @@ the selected indices are implementation-specific.
 For more information, see the
 [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spcompress).
 
-#### '`llvm.nvvm.spdecompress.*`' Intrinsics
+#### '`llvm.nvvm.spdecompress`' Intrinsic
 
 ##### Syntax:
 
 ```llvm
-declare DataTy @llvm.nvvm.spdecompress.{sp1to2,sp1to4,sp1to8,sp1to16,
-                                        sp2to4,sp2to8,sp2to16,
-                                        sp4to8,sp4to16}(
-    MDataTy %mdata, CDataTy %cdata, i32 immarg %idx_size)
+declare DataTy @llvm.nvvm.spdecompress(
+    MDataTy %mdata, CDataTy %cdata, i32 immarg %idx_size,
+    i32 immarg %num_tgt)
 ```
 
 ##### Overview:
 
-These intrinsics decompress the structured sparse vector `%cdata` into a
-dense `data` vector. The intrinsic name specifies the number of source and
-target elements in each group. For example, `sp2to4` maps two compressed
-elements into a group of four dense elements using the indices in `%mdata`.
-Dense positions not selected by the metadata are set to zero.
+This intrinsic decompresses the structured sparse vector `%cdata` into a dense
+`data` vector. `%num_tgt` specifies `Y`, the number of dense elements in each
+target group. The source group size `X` in `.sp::X:Y` is calculated from the
+vector lengths as:
 
-For an intrinsic named `spXtoY`, the number of 32-bit registers in each bundle
-is:
+`X = Y * num_elements(CDataTy) / num_elements(DataTy)`
+
+The division must be exact. For example, two compressed lanes for every four
+result lanes with `%num_tgt = 4` select `.sp::2:4`. Dense positions not selected
+by the metadata are set to zero.
+
+Let `Y` be `%num_tgt`. The repeat factor `num` and source group size `X` are:
+
+- `num = num_elements(DataTy) / Y`.
+- `X = num_elements(CDataTy) / num`.
+
+The number of 32-bit PTX registers in each bundle is:
 
 | Bundle  | Register count                                    |
 | ------- | ------------------------------------------------- |
@@ -1129,12 +1143,14 @@ is:
 | `data`  | `ceil(Y * elem_size * num / 32)`                  |
 
 Here, `elem_size` is the common `i8` or `i16` scalar bit width of `CDataTy` and
-`DataTy`. `num` is inferred from the number of registers in `DataTy` and
-determines the PTX repeat-factor qualifier (`.x1`, `.x2`, ..., `.x64`). Any
-unused lanes in the final `CDataTy` or `DataTy` register are padding.
+`DataTy`. `num` determines the PTX repeat-factor qualifier (`.x1`, `.x2`, ...,
+`.x64`). Padding needed to fill the final compressed-data register is added
+internally during lowering and is not represented in `CDataTy`.
 
 The following conditions must hold:
 
+- `X:Y` is one of `1:2`, `1:4`, `1:8`, `1:16`, `2:4`, `2:8`, `2:16`,
+  `4:8`, or `4:16`; consequently, `X < Y`.
 - `X * elem_size <= 32`.
 - `%idx_size` is `2` only when `Y <= 4`.
 - `32 <= Y * elem_size * num <= 4096`.
