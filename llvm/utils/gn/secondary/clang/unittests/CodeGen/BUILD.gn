@@ -9,6 +9,8 @@ unittest("ClangCodeGenTests") {
     "//clang/lib/Frontend",
     "//clang/lib/Lex",
     "//clang/lib/Parse",
+    "//clang/lib/Testing",
+    "//llvm/lib/ABI",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
@@ -18,6 +20,7 @@ unittest("ClangCodeGenTests") {
     "CheckTargetFeaturesTest.cpp",
     "CodeGenExternalTest.cpp",
     "DemangleTrapReasonInDebugInfo.cpp",
+    "QualTypeMapperTest.cpp",
     "TBAAMetadataTest.cpp",
   ]
 }

@@ -1092,7 +1092,7 @@ define double @opaque_fneg_leaves_mixed(ptr %x, ptr %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[Y]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg <4 x double> [[TMP1]]
-; CHECK-NEXT:    [[RDX_OP:%.*]] = fadd reassoc nsz contract <4 x double> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[RDX_OP:%.*]] = fadd reassoc nsz contract <4 x double> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[RDX_OP]])
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;

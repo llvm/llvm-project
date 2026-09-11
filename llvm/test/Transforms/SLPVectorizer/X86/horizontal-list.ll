@@ -842,11 +842,11 @@ define float @extra_args_no_replace(ptr nocapture readonly %x, i32 %a, i32 %b, i
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[MUL]] to float
 ; CHECK-NEXT:    [[CONVC:%.*]] = sitofp i32 [[C:%.*]] to float
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[CONV]], 2.000000e+00
 ; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP3]], [[CONV]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[CONV]], [[CONVC]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd fast float [[OP_RDX]], [[OP_RDX1]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX3]], 3.000000e+00
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], 3.000000e+00
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[CONVC]]
 ; CHECK-NEXT:    ret float [[OP_RDX2]]
 ;
 ; THRESHOLD-LABEL: @extra_args_no_replace(
@@ -855,17 +855,12 @@ define float @extra_args_no_replace(ptr nocapture readonly %x, i32 %a, i32 %b, i
 ; THRESHOLD-NEXT:    [[CONV:%.*]] = sitofp i32 [[MUL]] to float
 ; THRESHOLD-NEXT:    [[CONVC:%.*]] = sitofp i32 [[C:%.*]] to float
 ; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[X:%.*]], align 4
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[CONV]], 2.000000e+00
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP0]])
-; THRESHOLD-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
-; THRESHOLD-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> [[TMP2]], float [[CONVC]], i64 1
-; THRESHOLD-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[CONV]], i64 0
-; THRESHOLD-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> zeroinitializer
-; THRESHOLD-NEXT:    [[TMP6:%.*]] = fadd fast <2 x float> [[TMP9]], [[TMP5]]
-; THRESHOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP6]], i64 0
-; THRESHOLD-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP6]], i64 1
-; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP7]], [[TMP8]]
+; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP2]], [[TMP3]]
 ; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], 3.000000e+00
-; THRESHOLD-NEXT:    ret float [[OP_RDX1]]
+; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[CONVC]]
+; THRESHOLD-NEXT:    ret float [[OP_RDX2]]
 ;
   entry:
   %mul = mul nsw i32 %b, %a

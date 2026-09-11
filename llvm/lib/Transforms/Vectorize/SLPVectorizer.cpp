@@ -29844,17 +29844,21 @@ public:
            I->hasAllowReassoc() && I->hasNoSignedZeros();
   }
 
+  /// A group of loads or non-instructions rarely amortizes on its own the
+  /// cost of the reduction operation, charged to the first vectorized group.
+  static bool isCheapReductionGroup(ArrayRef<Value *> P) {
+    return !isa<Instruction>(P.front()) || isa<LoadInst>(P.front());
+  }
+
   /// Try to find a reduction tree. If \p FlattenNegations is false, the
   /// reassociable fsub/fneg links of an fadd chain are not flattened (they are
-  /// leaves of the reduction). \p IsSeedRoot enables the profitability
-  /// ordering of the same-size groups for the seed-level fadd reductions.
+  /// leaves of the reduction).
   bool matchAssociativeReduction(BoUpSLP &R, Instruction *Root,
                                  ScalarEvolution &SE, DominatorTree &DT,
                                  const DataLayout &DL,
                                  const TargetTransformInfo &TTI,
                                  const TargetLibraryInfo &TLI,
-                                 bool FlattenNegations = true,
-                                 bool IsSeedRoot = false) {
+                                 bool FlattenNegations = true) {
     RdxKind = HorizontalReduction::getRdxKind(Root);
     // A reassociable fsub root is a flattened link of an fadd reduction: its
     // subtracted operand enters with a flipped sign. Without the flattening
@@ -30240,24 +30244,20 @@ public:
       // sort them by size.
       optimizeReducedVals(R, DT, DL, TTI, TLI);
       // Sort the reduced values by number of same/alternate opcode and/or
-      // pointer operand. For the sign-aware and the seed-level fadd
-      // reductions, same-size groups are ordered by their expected
-      // profitability: the first vectorized group is charged the cost of the
-      // reduction operation itself, which a group of loads or
-      // non-instructions rarely amortizes on its own, while it is a cheap
-      // addition (a single vector operation) to an already vectorized group -
-      // such groups go last. Among the rest, non-negated groups go first.
+      // pointer operand. For the sign-aware reductions, same-size groups are
+      // ordered by their expected profitability: the first vectorized group
+      // is charged the cost of the reduction operation itself, which a group
+      // of loads or non-instructions rarely amortizes on its own, while it is
+      // a cheap addition (a single vector operation) to an already
+      // vectorized group - such groups go last. Among the rest, non-negated
+      // groups go first.
       stable_sort(ReducedVals, [&](ArrayRef<Value *> P1, ArrayRef<Value *> P2) {
         if (P1.size() != P2.size())
           return P1.size() > P2.size();
-        if (NegatedReducedVals.empty() &&
-            !(IsSeedRoot && RdxKind == RecurKind::FAdd))
+        if (NegatedReducedVals.empty())
           return false;
-        auto IsCheapGroup = [](ArrayRef<Value *> P) {
-          return !isa<Instruction>(P.front()) || isa<LoadInst>(P.front());
-        };
-        bool Cheap1 = IsCheapGroup(P1);
-        bool Cheap2 = IsCheapGroup(P2);
+        bool Cheap1 = isCheapReductionGroup(P1);
+        bool Cheap2 = isCheapReductionGroup(P2);
         if (Cheap1 != Cheap2)
           return Cheap2;
         return NegatedReducedVals.contains(P1.front()) <
@@ -30565,6 +30565,31 @@ public:
           return Vals.size() >= ReductionLimit ||
                  (Vals.size() == 2 && Vals.front() != Vals.back());
         });
+    // Same-size groups of the seed-level reduction get the profitability
+    // ordering (cheap groups go last) when the minimum vector factor covers
+    // the whole reduction.
+    if (IsSeedRoot && NegatedReducedVals.empty() && NoScalarLeftovers &&
+        any_of(ReducedVals,
+               [](ArrayRef<Value *> Vals) { return Vals.size() == 2; })) {
+      SmallVector<unsigned> GroupOrder(ReducedVals.size());
+      std::iota(GroupOrder.begin(), GroupOrder.end(), 0);
+      stable_sort(GroupOrder, [&](unsigned L, unsigned R) {
+        ArrayRef<Value *> P1 = ReducedVals[L], P2 = ReducedVals[R];
+        if (P1.size() != P2.size())
+          return P1.size() > P2.size();
+        return !isCheapReductionGroup(P1) && isCheapReductionGroup(P2);
+      });
+      SmallVector<SmallVector<Value *>> SortedVals;
+      SmallVector<InstructionsState> SortedStates;
+      SortedVals.reserve(ReducedVals.size());
+      SortedStates.reserve(States.size());
+      for (unsigned Idx : GroupOrder) {
+        SortedVals.emplace_back(std::move(ReducedVals[Idx]));
+        SortedStates.push_back(States[Idx]);
+      }
+      ReducedVals = std::move(SortedVals);
+      States = std::move(SortedStates);
+    }
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
       InstructionsState S = States[I];
@@ -32605,9 +32630,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
       return nullptr;
     HorizontalReduction HorRdx;
     Value *Res = nullptr;
-    if (HorRdx.matchAssociativeReduction(R, Inst, *SE, *DT, *DL, *TTI, *TLI,
-                                         /*FlattenNegations=*/true,
-                                         IsSeedRoot)) {
+    if (HorRdx.matchAssociativeReduction(R, Inst, *SE, *DT, *DL, *TTI, *TLI)) {
       Value *Red = HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT, IsSeedRoot);
       // The chain with the flattened fsub/fneg links produced no vector part:
       // retry with the fsub/fneg links as leaves, they may be vectorizable on
@@ -32615,8 +32638,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
       if (!Red && HorRdx.hasFlattenedNegations()) {
         HorizontalReduction UnflattenedHorRdx;
         if (UnflattenedHorRdx.matchAssociativeReduction(
-                R, Inst, *SE, *DT, *DL, *TTI, *TLI, /*FlattenNegations=*/false,
-                IsSeedRoot))
+                R, Inst, *SE, *DT, *DL, *TTI, *TLI, /*FlattenNegations=*/false))
           Red = UnflattenedHorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT,
                                               IsSeedRoot);
       }
@@ -33399,10 +33421,15 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
   }
   if (Operands.size() <= 1)
     return Changed;
+  constexpr unsigned Limit = 32;
   Changed |= tryToVectorizeSequence<Value>(
       Operands, OperandSorter, AreCompatibleOperands,
       [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
-        return tryToVectorizeList(Candidates, R, MaxVFOnly);
+        // Limit to StandaloneSeeds if !MaxVFOnly to avoid quadratic scan for
+        // large set of candidates.
+        return tryToVectorizeList(Candidates, R, MaxVFOnly,
+                                  /*StandaloneSeeds=*/!MaxVFOnly &&
+                                      Candidates.size() >= Limit);
       },
       /*MaxVFOnly=*/true, R);
   return Changed;

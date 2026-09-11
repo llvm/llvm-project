@@ -561,15 +561,22 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, {MVT::i16, MVT::i32},
                        Legal);
 
-  setOperationAction(
-      {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-      {MVT::f32, MVT::f64}, Custom);
-
-  // These are really only legal for ieee_mode functions. We should be avoiding
-  // them for functions that don't have ieee_mode enabled, so just say they are
-  // legal.
-  setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE},
-                     {MVT::f32, MVT::f64}, Legal);
+  // Do not have s_{min|max}_*f64 instruction f64 will only be lowered to
+  // v_{min|max}_*f64
+  if (Subtarget->hasIEEEMinimumMaximumInsts()) {
+    setOperationAction(
+        {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+        {MVT::f64, MVT::f32}, Legal);
+  } else {
+    setOperationAction(
+        {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+        {MVT::f64, MVT::f32}, Custom);
+    // These are really only legal for ieee_mode functions. We should be
+    // avoiding them for functions that don't have ieee_mode enabled, so just
+    // say they are legal.
+    setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE},
+                       {MVT::f64, MVT::f32}, Legal);
+  }
 
   if (Subtarget->haveRoundOpsF64())
     setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FROUNDEVEN}, MVT::f64,
@@ -840,20 +847,31 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         MVT::v8f16, MVT::v8bf16, MVT::v16f16, MVT::v16bf16,
                         MVT::v32f16, MVT::v32bf16},
                        Custom);
+    if (Subtarget->hasIEEEMinimumMaximumInsts()) {
+      setOperationAction(
+          {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          MVT::f16, Legal);
 
-    setOperationAction(
-        {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-        MVT::f16, Custom);
-    setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
+      setOperationAction(
+          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16}, Custom);
+    } else {
+      setOperationAction(
+          {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          MVT::f16, Custom);
 
-    setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::FMINIMUMNUM,
-                        ISD::FMAXIMUMNUM},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
-                       Custom);
+      setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16,
+                         Legal);
 
-    setOperationAction({ISD::FMINNUM, ISD::FMAXNUM},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
-                       Expand);
+      setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
+                          ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+                         {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                         Custom);
+
+      setOperationAction({ISD::FMINNUM, ISD::FMAXNUM},
+                         {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                         Expand);
+    }
 
     for (MVT Vec16 :
          {MVT::v8i16, MVT::v8f16, MVT::v8bf16, MVT::v16i16, MVT::v16f16,
@@ -872,7 +890,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        MVT::v2i16, Legal);
 
     setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
-                        ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
                         ISD::FCANONICALIZE},
                        MVT::v2f16, Legal);
 
@@ -899,23 +916,33 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                           ISD::FCANONICALIZE},
                          VT, Custom);
 
-    setOperationAction(
-        {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-        {MVT::v2f16, MVT::v4f16}, Custom);
+    if (Subtarget->hasIEEEMinimumMaximumInsts()) {
+      setOperationAction(
+          {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          MVT::v2f16, Legal);
+    } else {
+      setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE}, MVT::v2f16,
+                         Legal);
 
+      setOperationAction(
+          {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          {MVT::v2f16, MVT::v4f16}, Custom);
+    }
     setOperationAction(ISD::FEXP, MVT::v2f16, Custom);
     setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v4f16, MVT::v4bf16},
                        Custom);
 
     if (Subtarget->hasBF16PackedInsts()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMAXNUM, ISD::FMINNUM,
-                          ISD::FMA, ISD::FNEG, ISD::FABS, ISD::FCANONICALIZE},
+                          ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMA,
+                          ISD::FNEG, ISD::FABS, ISD::FCANONICALIZE},
                          MVT::v2bf16, Legal);
 
       for (MVT VT : {MVT::v4bf16, MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
         // Split vector operations.
         setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE,
-                            ISD::FNEG, ISD::FABS},
+                            ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM,
+                            ISD::FMAXIMUMNUM, ISD::FNEG, ISD::FABS},
                            VT, Custom);
     }
 
@@ -928,17 +955,31 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     }
     if (Subtarget->hasAnyPackedFP64Ops()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG,
-                          ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
                           ISD::FCANONICALIZE, ISD::BUILD_VECTOR},
                          MVT::v2f64, Legal);
       setOperationAction(
-          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-          MVT::v2f64, Custom);
-      setOperationAction(
-          {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FMINNUM_IEEE,
-           ISD::FMAXNUM_IEEE, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM,
-           ISD::FMAXIMUMNUM, ISD::FCANONICALIZE},
+          {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FCANONICALIZE},
           {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
+
+      if (Subtarget->hasIEEEMinimumMaximumInsts()) {
+        setOperationAction(
+            {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+            MVT::v2f64, Legal);
+
+        setOperationAction(
+            {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+            {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
+      } else {
+        setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE}, MVT::v2f64,
+                           Legal);
+        setOperationAction(
+            {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+            MVT::v2f64, Custom);
+        setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::FMINNUM,
+                            ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+                           {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64},
+                           Custom);
+      }
     }
 
     if (Subtarget->hasAnyPackedU64Ops()) {
@@ -8841,11 +8882,13 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   // ieee_mode. Currently a combine can produce the ieee version for non-ieee
   // mode functions, but this happens to be OK since it's only done in cases
   // where there is known no sNaN.
-  if (IsIEEEMode)
+  if (IsIEEEMode && !Subtarget->hasIEEEMinimumMaximumInsts())
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
-      VT == MVT::v16bf16)
+      VT == MVT::v32f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16 ||
+      VT == MVT::v16bf16 || VT == MVT::v32bf16 || VT == MVT::v4f64 ||
+      VT == MVT::v8f64 || VT == MVT::v16f64 || VT == MVT::v32f64)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -8858,11 +8901,13 @@ SITargetLowering::lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op,
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   bool IsIEEEMode = Info->getMode().IEEE;
 
-  if (IsIEEEMode)
+  if (IsIEEEMode && !Subtarget->hasIEEEMinimumMaximumInsts())
     return expandFMINIMUMNUM_FMAXIMUMNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
-      VT == MVT::v32f16)
+      VT == MVT::v32f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16 ||
+      VT == MVT::v16bf16 || VT == MVT::v32bf16 || VT == MVT::v4f64 ||
+      VT == MVT::v8f64 || VT == MVT::v16f64 || VT == MVT::v32f64)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }

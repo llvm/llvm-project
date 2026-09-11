@@ -19,9 +19,14 @@
 #include <sycl/__impl/context.hpp>
 #include <sycl/__impl/detail/config.hpp>
 
+#include <detail/device_image_wrapper.hpp>
+
 #include <OffloadAPI.h>
 
 #include <functional>
+#include <mutex>
+#include <string_view>
+#include <unordered_map>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -82,10 +87,43 @@ public:
   /// \return backend of the platform this context is associated with.
   backend getBackend() const;
 
+  /// Returns the liboffload kernel symbol for the specified kernel, taken from
+  /// the program built in this context from the specified device image for the
+  /// specified device. Creates the program on first use.
+  /// This method is thread-safe.
+  /// \param DeviceImage the device image containing the kernel's device code.
+  /// \param DeviceHandle the liboffload handle of the device the program must
+  /// be compatible with.
+  /// \param KernelName the name of the kernel to look up.
+  /// \throw sycl::exception with sycl::errc::runtime when program creation or
+  /// symbol lookup fails.
+  /// \return the liboffload symbol handle of the kernel.
+  ol_symbol_handle_t getOrCreateKernel(const DeviceImageManager &DeviceImage,
+                                       ol_device_handle_t DeviceHandle,
+                                       std::string_view KernelName);
+
+  /// Destroys every program in this context that was created from the specified
+  /// device image, together with the kernel symbols taken from them. Called
+  /// while the image is being unregistered, before it is destroyed.
+  /// This method is thread-safe.
+  /// \param DeviceImage the device image whose programs must be released.
+  void releaseProgramsForImage(const DeviceImageManager &DeviceImage);
+
+  /// Destroys every program in this context, together with the kernel symbols
+  /// taken from them.
+  /// This method is thread-safe.
+  void releaseAllPrograms();
+
 private:
   const async_handler MAsyncHandler;
   const std::vector<DeviceImpl *> MDevices;
   ol_context_handle_t MOffloadContext{};
+
+  // TODO: later to replace with efficient kernel & program cache impl.
+  std::mutex MProgramCacheMutex;
+  using ProgramsByDeviceT =
+      std::unordered_map<ol_device_handle_t, ProgramWrapper>;
+  std::unordered_map<const DeviceImageManager *, ProgramsByDeviceT> MPrograms;
 };
 
 } // namespace detail
