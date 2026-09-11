@@ -41,7 +41,7 @@ static cl::opt<unsigned long>
 
 namespace sandboxir {
 
-static BundleTy getOperand(ArrayRef<Value *> Bndl, unsigned OpIdx) {
+static BundleTy getOperand(BndlRef<Value *> Bndl, unsigned OpIdx) {
   BundleTy Operands;
   for (Value *BndlV : Bndl) {
     auto *BndlI = cast<Instruction>(BndlV);
@@ -50,10 +50,10 @@ static BundleTy getOperand(ArrayRef<Value *> Bndl, unsigned OpIdx) {
   return Operands;
 }
 
-Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
-                                    ArrayRef<Value *> Operands) {
-  auto CreateVectorInstr = [](ArrayRef<Value *> Bndl,
-                              ArrayRef<Value *> Operands) -> Value * {
+Value *BundleVec::createVectorInstr(BndlRef<Value *> Bndl,
+                                    BndlRef<Value *> Operands) {
+  auto CreateVectorInstr = [](BndlRef<Value *> Bndl,
+                              BndlRef<Value *> Operands) -> Value * {
     assert(all_of(Bndl, [](auto *V) { return isa<Instruction>(V); }) &&
            "Expect Instructions!");
     auto &Ctx = Bndl[0]->getContext();
@@ -169,7 +169,7 @@ Value *BundleVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
                                    VecOp->getContext(), "VShuf");
 }
 
-Value *BundleVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
+Value *BundleVec::createPack(BndlRef<Value *> ToPack, BasicBlock *UserBB) {
   BasicBlock::iterator WhereIt =
       VecUtils::getInsertPointAfterInstrs(ToPack, UserBB);
 
@@ -221,8 +221,8 @@ Value *BundleVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
   return LastInsert;
 }
 
-Action *BundleVec::vectorizeRec(ArrayRef<Value *> Bndl,
-                                ArrayRef<Value *> UserBndl, unsigned Depth,
+Action *BundleVec::vectorizeRec(BndlRef<Value *> Bndl,
+                                BndlRef<Value *> UserBndl, unsigned Depth,
                                 LegalityAnalysis &Legality) {
   bool StopForDebug =
       DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
@@ -239,8 +239,8 @@ Action *BundleVec::vectorizeRec(ArrayRef<Value *> Bndl,
     if (LegalityRes.getSubclassID() != LegalityResultID::Widen)
       return nullptr;
 
-    auto ActionPtr = std::make_unique<Action>(&LegalityRes, Bndl,
-                                              ArrayRef<Value *>(), Depth);
+    auto ActionPtr =
+        std::make_unique<Action>(&LegalityRes, Bndl, BndlRef<Value *>(), Depth);
     Action *Action = ActionPtr.get();
     IMaps->registerVector(Bndl, Action);
     Actions.push_back(std::move(ActionPtr));
@@ -309,8 +309,7 @@ void BundleVec::ActionsVector::print(raw_ostream &OS) const {
 void BundleVec::ActionsVector::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
-void BundleVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
-                                           Value *Vec) {
+void BundleVec::emitUnpacksForExternalUses(BndlRef<Value *> Bndl, Value *Vec) {
   // Find where we should emit the unpacks.
   BasicBlock::iterator WhereIt;
   if (auto *VecI = dyn_cast<Instruction>(Vec)) {
@@ -350,8 +349,8 @@ void BundleVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
 Value *BundleVec::emitVectors() {
   Value *NewVec = nullptr;
   for (const auto &ActionPtr : Actions) {
-    ArrayRef<Value *> Bndl = ActionPtr->Bndl;
-    ArrayRef<Value *> UserBndl = ActionPtr->UserBndl;
+    BndlRef<Value *> Bndl = ActionPtr->Bndl;
+    BndlRef<Value *> UserBndl = ActionPtr->UserBndl;
     const LegalityResult &LegalityRes = *ActionPtr->LegalityRes;
     unsigned Depth = ActionPtr->Depth;
     auto *UserBB = !UserBndl.empty()
@@ -512,7 +511,7 @@ Value *BundleVec::emitVectors() {
   return NewVec;
 }
 
-bool BundleVec::tryVectorize(ArrayRef<Value *> Bndl,
+bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
                              LegalityAnalysis &Legality) {
   Change = false;
   if (LLVM_UNLIKELY(InvocationCnt++ >= StopAt && StopAt != StopAtDisabled))
