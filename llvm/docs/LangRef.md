@@ -7897,21 +7897,38 @@ section is not marked as readable or writable and it uses the section flag
 !0 = !{}
 ```
 
+(md_uniformity_profile)=
+
+#### '`uniformity.profile`' Metadata
+
+`uniformity.profile` metadata indicates that uniformity profile data was
+loaded for a function. It may be attached only to a function definition and
+must be an empty metadata node.
+
+This marker lets an optimization distinguish a function without uniformity
+profile data from one whose individual blocks or branches are not known to be
+uniform. Missing block or branch metadata may mean that the control flow was
+divergent, was not observed, or lacked enough profile information.
+
+```llvm
+define void @example() !uniformity.profile !0 {
+  ret void
+}
+
+!0 = !{}
+```
+
 (md_block_uniformity_profile)=
 
 #### '`block.uniformity.profile`' Metadata
 
 `block.uniformity.profile` metadata records observed SIMT execution uniformity
-from an instrumentation profile. It may be attached to a function definition
-or a terminator instruction and must be an empty metadata node.
-
-On a function definition, this metadata indicates that a uniformity profile
-was loaded. On a terminator, it indicates that the profile classified the
-basic block as usually executing with all lanes active. This classification
-may tolerate some divergent executions in the profile. A function attachment
-without any annotated terminators can represent a profile in which no instrumented block was
-uniform. An unannotated block is not known to be uniform; it may be divergent
-or lack a uniformity observation.
+from an instrumentation profile. It may be attached only to a terminator
+instruction and must be an empty metadata node. It indicates that the profile
+classified the containing basic block as usually executing with all lanes
+active. This classification may tolerate some divergent executions in the
+profile. An unannotated block is not known to be uniform; it may be divergent,
+unobserved, or lack enough profile information.
 
 Block uniformity does not describe the uniformity of a branch decision. For
 example, all lanes may reach a block and then take different successors. See
@@ -7923,9 +7940,9 @@ guarantee uniform execution on other inputs and must not be used to justify
 transformations that require uniformity for correctness.
 
 ```llvm
-define void @example(i1 %condition) !block.uniformity.profile !0 {
+define void @example(i1 %condition) !uniformity.profile !0 {
 entry:
-  br i1 %condition, label %then, label %else, !block.uniformity.profile !0
+  br i1 %condition, label %then, label %else, !block.uniformity.profile !0, !branch.uniformity.profile !0
 then:
   ret void
 else:
@@ -7939,15 +7956,15 @@ else:
 
 #### '`branch.uniformity.profile`' Metadata
 
-`branch.uniformity.profile` metadata records that a profile classified a
-conditional branch as usually uniform across lanes in a SIMT execution group.
-It may be attached only to a conditional branch instruction and must be an
-empty metadata node. A uniform decision means the lanes choose the same
-successor on that execution; the chosen successor can vary between executions.
-The profile classification may tolerate some divergent executions.
+`branch.uniformity.profile` metadata records a profile-derived hint that every
+instrumented successor used to classify a conditional branch usually executed
+with all lanes active. It may be attached only to a conditional branch
+instruction and must be an empty metadata node. The profiler does not directly
+observe every branch decision or whether only the currently active lanes chose
+the same successor.
 
 An unannotated branch is not known to be uniform. Optimizations can use the
-function-level {ref}`block.uniformity.profile <md_block_uniformity_profile>`
+function-level {ref}`uniformity.profile <md_uniformity_profile>`
 attachment to distinguish a function with uniformity profile information from
 one without it.
 
