@@ -111,6 +111,7 @@ public:
                          mlir::omp::NumThreadsClauseOps &result) const;
   bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
+  bool processFull() const;
   bool processPartial(std::optional<int64_t> &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
@@ -124,6 +125,7 @@ public:
   bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
+  bool processThreadset(mlir::omp::ThreadsetClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
@@ -235,7 +237,7 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
   auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
-    unsigned version = semaCtx.langOptions().OpenMPVersion;
+    llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
     bool isSimdDirective = llvm::omp::getOpenMPDirectiveName(directive, version)
                                .upper()
                                .find("SIMD") != llvm::StringRef::npos;

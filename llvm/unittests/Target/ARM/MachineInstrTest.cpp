@@ -89,7 +89,8 @@ TEST(MachineInstructionDoubleWidthResult, IsCorrect) {
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
-                  TM->getTargetTriple().getDefaultFloatABI());
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -246,7 +247,8 @@ TEST(MachineInstructionHorizontalReduction, IsCorrect) {
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
-                  TM->getTargetTriple().getDefaultFloatABI());
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -346,7 +348,8 @@ TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
-                  TM->getTargetTriple().getDefaultFloatABI());
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -1053,7 +1056,8 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
-                  TM->getTargetTriple().getDefaultFloatABI());
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
 
   auto MII = TM->getMCInstrInfo();
   for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {
@@ -1197,7 +1201,8 @@ TEST(MachineInstr, HasSideEffects) {
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
-                  TM->getTargetTriple().getDefaultFloatABI());
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -2078,7 +2083,8 @@ TEST(MachineInstr, MVEVecSize) {
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
-                  TM->getTargetTriple().getDefaultFloatABI());
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
 
   auto MII = TM->getMCInstrInfo();
   for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {

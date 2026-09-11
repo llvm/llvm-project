@@ -235,12 +235,13 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       }
       if (S == TheSwitchStmt->getConditionVariableDeclStmt())
         return TheSwitchStmt->getCond();
-    } else if (const auto *TheWhileStmt = dyn_cast<WhileStmt>(Parent)) {
+    } else if (const auto *TheWhileStmt = dyn_cast<WhileStmt>(Parent);
+               TheWhileStmt &&
+               S == TheWhileStmt->getConditionVariableDeclStmt()) {
       // While statement: Sequence variable declaration (along with the
       // expression used to initialize it) before the evaluation of the
       // condition.
-      if (S == TheWhileStmt->getConditionVariableDeclStmt())
-        return TheWhileStmt->getCond();
+      return TheWhileStmt->getCond();
     }
   }
 

@@ -763,15 +763,6 @@ template <> struct DenseMapInfo<AA::RangeTy> {
   }
 };
 
-/// Helper for AA::PointerInfo::Access DenseMap/Set usage ignoring everythign
-/// but the instruction
-struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
-  using Base = DenseMapInfo<Instruction *>;
-  using Access = AAPointerInfo::Access;
-  static unsigned getHashValue(const Access &A);
-  static bool isEqual(const Access &LHS, const Access &RHS);
-};
-
 } // namespace llvm
 
 /// A type to track pointer/struct usage and accesses for AAPointerInfo.
@@ -9256,19 +9247,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     return true;
   }
 
-  /// See AAValueConstantRange::getKnownConstantRange(..).
-  ConstantRange
-  getKnownConstantRange(Attributor &A,
-                        const Instruction *CtxI = nullptr) const override {
-    if (!isValidCtxInstructionForOutsideAnalysis(A, CtxI,
-                                                 /* AllowAACtxI */ false))
-      return getKnown();
-
-    ConstantRange LVIR = getConstantRangeFromLVI(A, CtxI);
-    ConstantRange SCEVR = getConstantRangeFromSCEV(A, CtxI);
-    return getKnown().intersectWith(SCEVR).intersectWith(LVIR);
-  }
-
   /// See AAValueConstantRange::getAssumedConstantRange(..).
   ConstantRange
   getAssumedConstantRange(Attributor &A,
@@ -10552,7 +10530,7 @@ struct AANoFPClassImpl : AANoFPClass {
       SimplifyQuery Q(DL, TLI, DT, AC, CtxI);
 
       KnownFPClass KnownFPClass = computeKnownFPClass(&V, fcAllFlags, Q);
-      addKnownBits(~KnownFPClass.KnownFPClasses);
+      addKnownBits(~KnownFPClass.getKnownFPClasses());
     }
 
     if (CtxI)
@@ -12517,10 +12495,16 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       return ChangeStatus::UNCHANGED;
 
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    // The callees this is compared against below are functions, which live in
+    // the program address space. Normalize to that rather than to zero: they
+    // are only the same address space on a target that leaves it at the
+    // default.
+    unsigned ProgramAS = CB->getDataLayout().getProgramAddressSpace();
     Value *FP = CB->getCalledOperand();
-    if (FP->getType()->getPointerAddressSpace())
-      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getContext(), 0),
-                                 FP->getName() + ".as0", CB->getIterator());
+    if (FP->getType()->getPointerAddressSpace() != ProgramAS)
+      FP = new AddrSpaceCastInst(
+          FP, PointerType::get(FP->getContext(), ProgramAS),
+          FP->getName() + ".as" + Twine(ProgramAS), CB->getIterator());
 
     bool CBIsVoid = CB->getType()->isVoidTy();
     BasicBlock::iterator IP = CB->getIterator();

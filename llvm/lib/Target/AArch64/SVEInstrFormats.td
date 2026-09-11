@@ -2364,20 +2364,10 @@ multiclass sve_fp_2op_p_zds<bits<4> opc, string asm, string Ps,
            SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
   }
 
-  def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
-}
-
-multiclass sve_fp_2op_p_zds_fscale<bits<4> opc, string asm,
-                                   SDPatternOperator op> {
-  def _H : sve_fp_2op_p_zds<0b01, opc, asm, ZPR16>;
-  def _S : sve_fp_2op_p_zds<0b10, opc, asm, ZPR32>;
-  def _D : sve_fp_2op_p_zds<0b11, opc, asm, ZPR64>;
-
-  def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8i16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4i32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2i64, !cast<Instruction>(NAME # _D)>;
+  // FSCALE (opc == 0b1001) requires different operand types.
+  def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, !if(!eq(opc, 0b1001), nxv8i16, nxv8f16), !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, !if(!eq(opc, 0b1001), nxv4i32, nxv4f32), !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, !if(!eq(opc, 0b1001), nxv2i64, nxv2f64), !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_fp_2op_p_zds_bfloat<bits<4> opc, string asm, string Ps,
@@ -2389,16 +2379,8 @@ multiclass sve_fp_2op_p_zds_bfloat<bits<4> opc, string asm, string Ps,
              SVEPseudo2Instr<Ps, 1>, SVEInstr2Rev<NAME , revname , isReverseInstr>;
   }
 
-  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
-}
-
-multiclass sve_fp_2op_p_zds_bfscale<bits<4> opc, string asm, SDPatternOperator op,
-                                    DestructiveInstTypeEnum flags> {
-  let DestructiveInstType = flags in {
-  def _H : sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>;
-  }
-
-  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  // BFSCALE (opc == 0b1001) requires different operand types.
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, !if(!eq(opc, 0b1001), nxv8i16, nxv8bf16), !cast<Instruction>(NAME)>;
 }
 
 multiclass sve_fp_2op_p_zds_zeroing_hsd<SDPatternOperator op> {
@@ -9962,6 +9944,16 @@ multiclass sve_fp_bin_pred_hfd<SDPatternOperator op> {
   def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D_UNDEF)>;
 }
 
+multiclass sve_fp_bin_pred_hfd_fscale<SDPatternOperator op> {
+  def _H_UNDEF : PredTwoOpPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredTwoOpPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredTwoOpPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
+
+  def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8i16, !cast<Instruction>(NAME # _H_UNDEF)>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4i32, !cast<Instruction>(NAME # _S_UNDEF)>;
+  def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2i64, !cast<Instruction>(NAME # _D_UNDEF)>;
+}
+
 // Predicated pseudo floating point (BFloat) two operand instructions.
 multiclass sve_fp_bin_pred_bfloat<SDPatternOperator op> {
   def _UNDEF : PredTwoOpPseudo<NAME, ZPR16, FalseLanesUndef>;
@@ -9969,6 +9961,12 @@ multiclass sve_fp_bin_pred_bfloat<SDPatternOperator op> {
   def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, nxv8bf16, !cast<Instruction>(NAME # _UNDEF)>;
   def : SVE_3_Op_Pat<nxv4bf16, op, nxv4i1,  nxv4bf16, nxv4bf16, !cast<Instruction>(NAME # _UNDEF)>;
   def : SVE_3_Op_Pat<nxv2bf16, op, nxv2i1,  nxv2bf16, nxv2bf16, !cast<Instruction>(NAME # _UNDEF)>;
+}
+
+multiclass sve_fp_bin_pred_bfscale<SDPatternOperator op> {
+  def _UNDEF : PredTwoOpPseudo<NAME, ZPR16, FalseLanesUndef>;
+
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, nxv8i16, !cast<Instruction>(NAME # _UNDEF)>;
 }
 
 // Predicated pseudo floating point three operand instructions.

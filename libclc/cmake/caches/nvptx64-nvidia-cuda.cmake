@@ -1,0 +1,3 @@
+set(LLVM_ENABLE_PROJECTS "clang" CACHE STRING "")
+set(LLVM_RUNTIME_TARGETS "nvptx64-nvidia-cuda" CACHE STRING "")
+set(RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES "libclc" CACHE STRING "")

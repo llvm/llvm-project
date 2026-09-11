@@ -87,14 +87,14 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
    ...
    ```
 
-```{note}
+:::{note}
   Even when you only want compile-time results you still need to run the test
   with the above `llvm-lit` command. In this case, the `results.json` file will
   contain compile time metrics only (code size, llvm stats and so on).
 
   This mode is enabled by setting `-DTEST_SUITE_RUN_BENCHMARKS=OFF`,
   more details [here](common_configuration_options).
-```
+:::
 
 6. Show and compare result files (optional):
 

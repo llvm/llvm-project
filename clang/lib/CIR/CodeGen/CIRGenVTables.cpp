@@ -69,7 +69,8 @@ cir::RecordType CIRGenVTables::getVTableType(const VTableLayout &layout) {
 
   // FIXME(cir): should VTableLayout be encoded like we do for some
   // AST nodes?
-  return cgm.getBuilder().getAnonRecordTy(tys, /*incomplete=*/false);
+  return cgm.getBuilder().getAnonRecordTy(
+      tys, /*packed=*/false, cir::RecordType::getAllDataKinds(tys));
 }
 
 /// At this point in the translation unit, does it appear that can we

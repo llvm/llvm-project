@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/StaticMemoryPlanning.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -51,31 +51,41 @@ struct AllocationCandidate {
 // Helper utilities
 //===----------------------------------------------------------------------===//
 
-/// Collect all dealloc ops that might free the given value, following ops
-/// that implement BufferViewFlowOpInterface (e.g. arith.select). For example:
+/// Collect all dealloc ops that might free the given alloc value. Instead of a
+/// bespoke traversal, this uses the shared `BufferViewFlowAnalysis`, which
+/// already models all the ways a buffer can flow to a dealloc:
+///   - `arith.select`     (via BufferViewFlowOpInterface)
+///   - `scf.if`/`scf.for` (via RegionBranchOpInterface region/result wiring)
+///   - `cf.br`/`cf.cond_br` (via BranchOpInterface block arguments)
+///   - `memref.view`/subview (via ViewLikeOpInterface)
+/// `analysis.resolve(alloc)` returns the forward alias set (the alloc plus
+/// every value it may flow into); a dealloc on any of those aliases frees the
+/// alloc. For example:
 ///   %0 = memref.alloc()
 ///   %2 = arith.select %c, %0, %1
-///   memref.dealloc %2    <- this covers %0 conditionally
-/// `visited` prevents cycles in the use-def graph.
-///
-/// TODO: This relies on BufferViewFlowOpInterface external models being
-/// registered for the ops in the IR (e.g. via
-/// arith::registerBufferViewFlowOpInterfaceExternalModels).
-static void findPotentialDeallocs(Value value,
-                                  SmallVectorImpl<memref::DeallocOp> &deallocs,
-                                  SmallPtrSetImpl<Value> &visited) {
-  if (!visited.insert(value).second)
-    return;
-  for (Operation *user : value.getUsers()) {
-    if (auto dealloc = dyn_cast<memref::DeallocOp>(user)) {
-      deallocs.push_back(dealloc);
-    } else if (dyn_cast<bufferization::BufferViewFlowOpInterface>(user)) {
-      // Follow any op that propagates buffer values to its results.
-      for (Value result : user->getResults())
-        if (isa<MemRefType>(result.getType()))
-          findPotentialDeallocs(result, deallocs, visited);
-    }
-  }
+///   memref.dealloc %2      <- covers %0 conditionally (via alias set)
+///   %3 = scf.if %c { yield %0 } else { yield %1 }
+///   memref.dealloc %3      <- also covers %0 conditionally
+static void collectDeallocs(Value alloc, const BufferViewFlowAnalysis &analysis,
+                            SmallVectorImpl<memref::DeallocOp> &deallocs) {
+  for (Value alias : analysis.resolve(alloc))
+    for (Operation *user : alias.getUsers())
+      if (auto dealloc = dyn_cast<memref::DeallocOp>(user))
+        deallocs.push_back(dealloc);
+}
+
+/// Return the set of allocation ops whose buffer may be freed by `dealloc`,
+/// i.e. the terminal `memref.alloc` sources that flow into the dealloc operand.
+/// Uses the reverse alias set so that a dealloc reached through a `scf.if`
+/// result or `arith.select` is attributed to every alloc it may free.
+static SmallVector<memref::AllocOp>
+findFreedAllocs(memref::DeallocOp dealloc,
+                const BufferViewFlowAnalysis &analysis) {
+  SmallVector<memref::AllocOp> allocs;
+  for (Value source : analysis.resolveReverse(dealloc.getMemref()))
+    if (auto allocOp = source.getDefiningOp<memref::AllocOp>())
+      allocs.push_back(allocOp);
+  return allocs;
 }
 
 /// Compute the size in bytes for a memref type.
@@ -91,12 +101,13 @@ static int64_t computeSizeInBytes(MemRefType memrefType) {
 static int64_t buildAllocInfos(
     MutableArrayRef<AllocationCandidate> candidates,
     SmallVectorImpl<bufferization::MemoryPlannerAlloc> &allocInfos) {
-  // Build an op-index map with a single pass over the block.
+  // Build an op-index map with a single pass over the plan block.
   DenseMap<Operation *, int64_t> opIndex;
+  Block *planBlock = nullptr;
   if (!candidates.empty()) {
-    Block *block = candidates.front().alloc->getBlock();
+    planBlock = candidates.front().alloc->getBlock();
     int64_t idx = 0;
-    for (Operation &op : *block)
+    for (Operation &op : *planBlock)
       opIndex[&op] = idx++;
   }
 
@@ -106,11 +117,14 @@ static int64_t buildAllocInfos(
     info.sizeInBytes = candidate.sizeInBytes;
     info.alignment = candidate.alignment;
     info.timeStart = opIndex.lookup(candidate.alloc.getOperation());
-    // Conservative: timeEnd = latest dealloc index among all potential
-    // deallocs.
-    int64_t timeEnd = 0;
-    for (memref::DeallocOp d : candidate.deallocs)
-      timeEnd = std::max(timeEnd, opIndex.lookup(d.getOperation()));
+    // Conservative: timeEnd = latest dealloc position among all potential
+    // deallocs. A dealloc may be nested (e.g. inside an scf.if body); its
+    // lifetime contribution is bounded by the enclosing op in the plan block.
+    int64_t timeEnd = info.timeStart;
+    for (memref::DeallocOp d : candidate.deallocs) {
+      Operation *anchor = planBlock->findAncestorOpInBlock(*d.getOperation());
+      timeEnd = std::max(timeEnd, opIndex.lookup(anchor));
+    }
     info.timeEnd = timeEnd;
     allocInfos.push_back(info);
     arenaAlignment = std::lcm(arenaAlignment, candidate.alignment);
@@ -118,15 +132,35 @@ static int64_t buildAllocInfos(
   return arenaAlignment;
 }
 
-/// Collect alloc/dealloc pairs eligible for arena placement.
-/// An allocation is eligible if it has a static shape and its deallocs
-/// (including those reached via BufferViewFlowOpInterface chains)
-/// are in the same block. Allocations with dynamic shapes are skipped.
-/// Missing deallocs or cross-block deallocs are reported as errors.
+/// Collect alloc/dealloc groups eligible for arena placement.
+///
+/// Eligibility uses the shared `BufferViewFlowAnalysis` so that buffers flowing
+/// through `arith.select`, `scf.if`/`scf.for` results, `cf` branches, or view
+/// ops are handled uniformly. An allocation is eligible when:
+///   - it has a static shape (dynamic shapes are silently skipped), and
+///   - it lives directly in the function's entry block (allocs nested in a
+///     region are skipped for now), and
+///   - every dealloc that may free it is anchored in that same entry block --
+///     either directly, or nested inside an op of that block (e.g. an
+///     `scf.if` body), which conservatively bounds the lifetime.
+/// A dealloc that escapes the entry block entirely (e.g. lives in a sibling
+/// `cf` block) is reported as an error, as is an alloc with no dealloc.
+///
+/// To keep the rewrite safe, a dealloc is only accepted if *all* allocs it may
+/// free (per the reverse alias set) are themselves candidates in this block;
+/// otherwise erasing it during the rewrite could leak or double-free a buffer
+/// that is not managed by the arena.
 static LogicalResult
-collectCandidates(FunctionOpInterface funcOp, llvm::Statistic &numSkipDynamic,
-                  llvm::Statistic &numEligible,
+collectCandidates(FunctionOpInterface funcOp,
+                  const BufferViewFlowAnalysis &analysis,
+                  llvm::Statistic &numSkipDynamic,
+                  llvm::Statistic &numSkipNested, llvm::Statistic &numEligible,
                   SmallVector<AllocationCandidate> &candidates) {
+  // All candidates are planned relative to the function's entry block.
+  if (funcOp.getFunctionBody().empty())
+    return success();
+  Block *planBlock = &funcOp.getFunctionBody().front();
+
   bool walkFailed = false;
   funcOp->walk([&](memref::AllocOp allocOp) -> WalkResult {
     MemRefType memrefType = allocOp.getType();
@@ -135,9 +169,15 @@ collectCandidates(FunctionOpInterface funcOp, llvm::Statistic &numSkipDynamic,
       return WalkResult::advance();
     }
 
+    // Only plan allocs that live directly in the entry block. Allocs nested in
+    // a region (loop/conditional body) are skipped for now.
+    if (allocOp->getBlock() != planBlock) {
+      ++numSkipNested;
+      return WalkResult::advance();
+    }
+
     SmallVector<memref::DeallocOp> deallocs;
-    SmallPtrSet<Value, 8> visited;
-    findPotentialDeallocs(allocOp.getResult(), deallocs, visited);
+    collectDeallocs(allocOp.getResult(), analysis, deallocs);
 
     if (deallocs.empty()) {
       allocOp.emitError("no dealloc found; run the deallocation pipeline "
@@ -147,11 +187,20 @@ collectCandidates(FunctionOpInterface funcOp, llvm::Statistic &numSkipDynamic,
     }
 
     for (memref::DeallocOp d : deallocs) {
-      if (d->getBlock() != allocOp->getBlock()) {
-        allocOp.emitError("dealloc is in a different block than the alloc; "
-                          "run the deallocation pipeline before this pass");
+      // The dealloc must be anchored in the plan block (directly or via an
+      // enclosing op such as an scf.if). A dealloc in a sibling block escapes.
+      if (!planBlock->findAncestorOpInBlock(*d.getOperation())) {
+        allocOp.emitError("unstructured control flow is not supported");
         walkFailed = true;
         return WalkResult::interrupt();
+      }
+      // Every alloc that this dealloc may free must also be an entry-block
+      // candidate; otherwise erasing it during the rewrite is unsafe.
+      for (memref::AllocOp freed : findFreedAllocs(d, analysis)) {
+        if (freed->getBlock() != planBlock) {
+          ++numSkipNested;
+          return WalkResult::advance();
+        }
       }
     }
 
@@ -268,10 +317,13 @@ void StaticMemoryPlannerAnalysisPass::runOnOperation() {
     }
   }
 
-  // Step 1: Collect eligible allocation candidates.
+  // Step 1: Collect eligible allocation candidates. The buffer view-flow
+  // analysis models how buffers flow through selects, scf.if results, branches,
+  // and view ops so we can find deallocs and freed allocs uniformly.
+  BufferViewFlowAnalysis analysis(funcOp);
   SmallVector<AllocationCandidate> candidates;
-  if (failed(
-          collectCandidates(funcOp, numSkipDynamic, numEligible, candidates)))
+  if (failed(collectCandidates(funcOp, analysis, numSkipDynamic, numSkipNested,
+                               numEligible, candidates)))
     return signalPassFailure();
 
   if (candidates.empty())

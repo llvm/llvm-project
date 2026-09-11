@@ -38,13 +38,11 @@ add_llvm_target(LanaiCodeGen
   CodeGen
   CodeGenTypes
   Core
-  IRPrinter
   LanaiAsmParser
   LanaiDesc
   LanaiInfo
   MC
-  ObjCARC
-  Scalar
+  Passes
   SelectionDAG
   Support
   Target

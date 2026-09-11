@@ -1382,6 +1382,17 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     }
   }
 
+  // LHS << (cttz RHS) --> (RHS & -RHS) * LHS
+  if (match(Op1, m_OneUse(m_Cttz(m_Value(X), m_Value())))) {
+    Value *NegX = Builder.CreateNeg(X, "neg");
+    Value *LowBit = Builder.CreateAnd(NegX, X);
+    auto *Mul = BinaryOperator::CreateMul(LowBit, Op0);
+    // Propagate nuw from shl if present
+    if (I.hasNoUnsignedWrap())
+      Mul->setHasNoUnsignedWrap();
+    return Mul;
+  }
+
   return nullptr;
 }
 

@@ -75,4 +75,4 @@
 
 [0xdf,0xec,0x23,0xfa]
 # WARN: [[@LINE-1]]:2: warning: potentially undefined instruction encoding
-vscclrm {s31, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, vpr} @ encoding: [0xdf,0xec,0x21,0xfa]
+# CHECK: vscclrm {s31, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, vpr} @ encoding: [0xdf,0xec,0x21,0xfa]

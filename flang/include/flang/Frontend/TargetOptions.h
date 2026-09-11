@@ -54,6 +54,9 @@ public:
   /// Print verbose assembly
   bool asmVerbose = false;
 
+  /// Enable splitting of machine functions using profile information.
+  bool SplitMachineFunctions = false;
+
   /// Atomic control options
   bool atomicIgnoreDenormalMode = false;
   bool atomicRemoteMemory = false;

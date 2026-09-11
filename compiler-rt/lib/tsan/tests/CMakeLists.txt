@@ -2,7 +2,7 @@ include_directories(../rtl)
 
 add_custom_target(TsanUnitTests)
 set_target_properties(TsanUnitTests PROPERTIES
-  FOLDER "Compiler-RT Tests")
+  FOLDER "compiler-rt Tests")
 
 set(TSAN_UNITTEST_CFLAGS
   ${COMPILER_RT_UNITTEST_CFLAGS}

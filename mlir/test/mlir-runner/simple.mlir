@@ -36,7 +36,7 @@ llvm.func @main() -> f32 {
 
 // Helper typed functions wrapping calls to "malloc" and "free".
 llvm.func @allocation() -> !llvm.ptr {
-  %0 = llvm.mlir.constant(4 : index) : i64
+  %0 = llvm.mlir.constant(4 : i64) : i64
   %1 = llvm.call @malloc(%0) : (i64) -> !llvm.ptr
   llvm.return %1 : !llvm.ptr
 }
@@ -49,7 +49,7 @@ llvm.func @deallocation(%arg0: !llvm.ptr) {
 // works.
 llvm.func @foo() -> f32 {
   %0 = llvm.call @allocation() : () -> !llvm.ptr
-  %1 = llvm.mlir.constant(0 : index) : i64
+  %1 = llvm.mlir.constant(0 : i64) : i64
   %2 = llvm.mlir.constant(1.234000e+03 : f32) : f32
   %3 = llvm.getelementptr %0[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   llvm.store %2, %3 : f32, !llvm.ptr

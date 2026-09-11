@@ -5395,13 +5395,10 @@ define <4 x i8> @clmulh_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
 ;
 ; ZVBC-LABEL: clmulh_v4i8:
 ; ZVBC:       # %bb.0:
-; ZVBC-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVBC-NEXT:    vzext.vf2 v10, v9
-; ZVBC-NEXT:    vzext.vf2 v12, v8
-; ZVBC-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; ZVBC-NEXT:    vzext.vf4 v8, v10
-; ZVBC-NEXT:    vzext.vf4 v10, v12
-; ZVBC-NEXT:    vclmul.vv v8, v10, v8
+; ZVBC-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVBC-NEXT:    vzext.vf8 v10, v9
+; ZVBC-NEXT:    vzext.vf8 v12, v8
+; ZVBC-NEXT:    vclmul.vv v8, v12, v10
 ; ZVBC-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVBC-NEXT:    vnsrl.wi v10, v8, 0
 ; ZVBC-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -5486,13 +5483,10 @@ define <4 x i16> @clmulh_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
 ;
 ; ZVBC-LABEL: clmulh_v4i16:
 ; ZVBC:       # %bb.0:
-; ZVBC-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVBC-NEXT:    vzext.vf2 v10, v9
-; ZVBC-NEXT:    vzext.vf2 v12, v8
-; ZVBC-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; ZVBC-NEXT:    vzext.vf2 v8, v10
-; ZVBC-NEXT:    vzext.vf2 v10, v12
-; ZVBC-NEXT:    vclmul.vv v8, v10, v8
+; ZVBC-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVBC-NEXT:    vzext.vf4 v10, v9
+; ZVBC-NEXT:    vzext.vf4 v12, v8
+; ZVBC-NEXT:    vclmul.vv v8, v12, v10
 ; ZVBC-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVBC-NEXT:    vnsrl.wi v10, v8, 0
 ; ZVBC-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma

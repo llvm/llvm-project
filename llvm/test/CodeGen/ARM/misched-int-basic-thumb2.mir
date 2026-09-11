@@ -38,7 +38,7 @@
     ret i64 %add14
   }
 #
-# CHECK:       ********** MI Scheduling **********
+# CHECK:       Current Schedule Region
 # CHECK:       SU(2):   %2:rgpr = t2MOVi32imm @g1
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 2

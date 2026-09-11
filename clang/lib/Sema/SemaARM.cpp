@@ -1193,6 +1193,25 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__hlt)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);
 
+  if (BuiltinID == AArch64::BI__hvc || BuiltinID == AArch64::BI__svc) {
+    // The immediate is the instruction number; the remaining arguments (at most
+    // four) are passed in X0-X3, so the call takes at most five arguments.
+    if (SemaRef.checkArgCountAtMost(TheCall, 5) ||
+        SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff))
+      return true;
+    const FunctionDecl *FD = TheCall->getDirectCallee();
+    for (unsigned I = 1, N = TheCall->getNumArgs(); I < N; ++I) {
+      const Expr *Arg = TheCall->getArg(I);
+      QualType Ty = Arg->getType();
+      if (!Ty->isIntegerType() && !Ty->isAnyPointerType() &&
+          !Ty->isBlockPointerType() && !Ty->isFloatingType())
+        return Diag(Arg->getBeginLoc(),
+                    diag::err_aarch64_svc_hvc_invalid_arg_type)
+               << I + 1 << FD << Ty << Arg->getSourceRange();
+    }
+    return false;
+  }
+
   if (CheckNeonBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
 

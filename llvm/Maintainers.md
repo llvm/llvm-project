@@ -39,9 +39,7 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 #### HashRecognize
 
 Ramkumar Ramachandra \
-r@artagnon.com (email), [artagnon](https://github.com/artagnon) (GitHub), artagnon (Discourse) \
-Piotr Fusik \
-p.fusik@samsung.com (email), [pfusik](https://github.com/pfusik) (GitHub)
+r@artagnon.com (email), [artagnon](https://github.com/artagnon) (GitHub), artagnon (Discourse)
 
 #### InferAddressSpaces
 
@@ -78,6 +76,11 @@ dnovillo@google.com (email), [dnovillo](https://github.com/dnovillo) (GitHub)
 
 Arthur Eubanks \
 aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub)
+
+#### LoadStoreVectorizer 
+
+Drew Kersnar \
+dkersnar@nvidia.com (email), [dakersnar](https://github.com/dakersnar) (GitHub)
 
 #### LoopStrengthReduce
 
@@ -298,7 +301,9 @@ jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (G
 Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
+Durgadoss R \
+durgadossr@nvidia.com (email), [durga4github](https://github.com/durga4github) (GitHub)
 
 #### PowerPC backend
 

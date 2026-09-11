@@ -94,13 +94,15 @@ public:
                ol_context_handle_t *Context));
   MOCK_METHOD(ol_result_t, olDestroyContext, (ol_context_handle_t Context));
   MOCK_METHOD(ol_result_t, olCreateQueue,
-              (ol_device_handle_t Device, ol_queue_handle_t *Queue));
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               ol_queue_handle_t *Queue));
   MOCK_METHOD(ol_result_t, olDestroyQueue, (ol_queue_handle_t Queue));
   MOCK_METHOD(ol_result_t, olSyncQueue, (ol_queue_handle_t Queue));
   MOCK_METHOD(ol_result_t, olDestroyEvent, (ol_event_handle_t Event));
   MOCK_METHOD(ol_result_t, olCreateProgram,
-              (ol_device_handle_t Device, const void *ProgData,
-               size_t ProgDataSize, ol_program_handle_t *Program));
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               const void *ProgData, size_t ProgDataSize,
+               ol_program_handle_t *Program));
 
   MOCK_METHOD(ol_result_t, olGetSymbol,
               (ol_program_handle_t Program, const char *Name,
@@ -125,9 +127,18 @@ public:
               (ol_queue_handle_t Queue, void *DstPtr,
                ol_device_handle_t DstDevice, const void *SrcPtr,
                ol_device_handle_t SrcDevice, size_t Size));
+  MOCK_METHOD(ol_result_t, olMemPrefetch,
+              (ol_queue_handle_t Queue, size_t Count, const void **Mems,
+               const size_t *Sizes, ol_mem_migration_flags_t Flags));
   MOCK_METHOD(ol_result_t, olGetMemInfo,
               (const void *Ptr, ol_mem_info_t PropName, size_t PropSize,
                void *PropValue));
+  MOCK_METHOD(ol_result_t, olMemAlloc,
+              (ol_device_handle_t Device, ol_alloc_type_t Type, size_t Size,
+               void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemAllocHost,
+              (ol_device_handle_t Device, size_t Size, void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemFree, (void *Address));
 
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =

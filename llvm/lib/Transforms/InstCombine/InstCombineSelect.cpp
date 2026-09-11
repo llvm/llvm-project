@@ -928,6 +928,10 @@ static Value *foldSelectICmpAndBinOp(Value *CondVal, Value *TrueVal,
   bool NeedZExtTrunc = Y->getType()->getScalarSizeInBits() !=
                        V->getType()->getScalarSizeInBits();
 
+  // the demanded bits for the created shl make the and redundant
+  if (AndMask.isOne() && C2->isSignBitSet())
+    CreateAnd = false;
+
   // Make sure we don't create more instructions than we save.
   if ((NeedShift + NeedXor + NeedZExtTrunc + CreateAnd) >
       (CondVal->hasOneUse() + BinOp->hasOneUse()))
@@ -2714,9 +2718,9 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
   Value *X = ExtInst->getOperand(0);
   Type *SmallType = X->getType();
   Value *Cond = Sel.getCondition();
-  auto *Cmp = dyn_cast<CmpInst>(Cond);
   if (!SmallType->isIntOrIntVectorTy(1) &&
-      (!Cmp || Cmp->getOperand(0)->getType() != SmallType))
+      (!isa<CmpInst, TruncInst>(Cond) ||
+       cast<Instruction>(Cond)->getOperand(0)->getType() != SmallType))
     return nullptr;
 
   // If the constant is the same after truncation to the smaller type and
@@ -3722,8 +3726,11 @@ static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
                       *RHSC2);
     }
   }
+  // For non-poison X in [0, 1], `trunc nuw X to i1` is not poison, but an
+  // additional `nsw` flag makes it poison for X == 1.
   Value *A;
   if (match(ValAssumedPoison, m_NUWTrunc(m_Value(A))) &&
+      !cast<TruncInst>(ValAssumedPoison)->hasNoSignedWrap() &&
       isGuaranteedNotToBePoison(A)) {
     assert(ValAssumedPoison->getType()->isIntOrIntVectorTy(1));
     return computeKnownBits(
@@ -3851,18 +3858,16 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select a, false, b -> select !a, b, false
   if (match(TrueVal, m_Specific(Zero))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
-    SelectInst *NewSI =
-        SelectInst::Create(NotCond, FalseVal, Zero, "", nullptr, MDFrom);
+    SelectInst *NewSI = SelectInst::Create(NotCond, FalseVal, Zero, "", nullptr,
+                                           /*MDFrom=*/&SI);
     NewSI->swapProfMetadata();
     return NewSI;
   }
   // select a, b, true -> select !a, true, b
   if (match(FalseVal, m_Specific(One))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        SelectInst::Create(NotCond, One, TrueVal, "", nullptr, MDFrom);
+        SelectInst::Create(NotCond, One, TrueVal, "", nullptr, /*MDFrom=*/&SI);
     NewSI->swapProfMetadata();
     return NewSI;
   }
@@ -3872,9 +3877,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(&SI, m_LogicalAnd(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || TrueVal->hasOneUse()) &&
       !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
-    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        cast<SelectInst>(Builder.CreateSelect(A, One, B, "", MDFrom));
+        cast<SelectInst>(Builder.CreateSelect(A, One, B, "", /*MDFrom=*/&SI));
     NewSI->swapProfMetadata();
     return BinaryOperator::CreateNot(NewSI);
   }
@@ -3884,9 +3888,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(&SI, m_LogicalOr(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || FalseVal->hasOneUse()) &&
       !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
-    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        cast<SelectInst>(Builder.CreateSelect(A, B, Zero, "", MDFrom));
+        cast<SelectInst>(Builder.CreateSelect(A, B, Zero, "", /*MDFrom=*/&SI));
     NewSI->swapProfMetadata();
     return BinaryOperator::CreateNot(NewSI);
   }
@@ -4511,6 +4514,48 @@ static Instruction *foldSelectNegNot(SelectInst &SI,
   return nullptr;
 }
 
+/// Fold select (A & Shift == 0 | B & Shift == 0), 0, Shift -> Shift & A & B
+/// where Shift is known to be a power of two.
+static Instruction *foldSelectAndOrPowerOfTwo(SelectInst &SI,
+                                              InstCombiner::BuilderTy &Builder,
+                                              const SimplifyQuery &SQ) {
+  Value *Cond = SI.getCondition();
+
+  if (!Cond->hasOneUse())
+    return nullptr;
+
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+
+  Value *A, *B, *Shift;
+
+  bool Case1 =
+      match(TrueVal, m_Zero()) && match(FalseVal, m_Value(Shift)) &&
+      match(Cond, m_Or(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                      m_c_And(m_Specific(Shift), m_Value(A)),
+                                      m_Zero()),
+                       m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                      m_c_And(m_Specific(Shift), m_Value(B)),
+                                      m_Zero())));
+
+  bool Case2 =
+      match(FalseVal, m_Zero()) && match(TrueVal, m_Value(Shift)) &&
+      match(Cond, m_And(m_SpecificICmp(ICmpInst::ICMP_NE,
+                                       m_c_And(m_Specific(Shift), m_Value(A)),
+                                       m_Zero()),
+                        m_SpecificICmp(ICmpInst::ICMP_NE,
+                                       m_c_And(m_Specific(Shift), m_Value(B)),
+                                       m_Zero())));
+
+  if ((Case1 || Case2) && isKnownToBeAPowerOfTwo(Shift, /*OrZero=*/true,
+                                                 SQ.getWithInstruction(&SI))) {
+    Value *And1 = Builder.CreateAnd(Shift, A);
+    return BinaryOperator::CreateAnd(And1, B);
+  }
+
+  return nullptr;
+}
+
 // Return true if no use can observe the sign of zero of the select result,
 // looking through phis, selects and the loop back edge to the select itself.
 static bool isSelectZeroSignInsignificant(SelectInst &SI) {
@@ -4527,13 +4572,14 @@ static bool isSelectZeroSignInsignificant(SelectInst &SI) {
       auto *User = cast<Instruction>(U.getUser());
       if (User == &SI)
         continue;
+      if (canIgnoreSignBitOfZero(U))
+        continue;
       if (isa<PHINode, SelectInst>(User)) {
         if (Visited.insert(User).second)
           Worklist.push_back(User);
         continue;
       }
-      if (!canIgnoreSignBitOfZero(U))
-        return false;
+      return false;
     }
   }
   return true;
@@ -4628,6 +4674,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   }
 
   if (Instruction *I = foldSelectNegNot(SI, Builder))
+    return I;
+
+  if (Instruction *I = foldSelectAndOrPowerOfTwo(SI, Builder, SQ))
     return I;
 
   auto *SIFPOp = dyn_cast<FPMathOperator>(&SI);
@@ -4992,23 +5041,19 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         // select(C0, select(C1, a, b), b) -> select(C0&&C1, a, b)
         if (TrueSI->getFalseValue() == FalseVal) {
           And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition(), "",
-                                         ProfcheckDisableMetadataFixes ? nullptr
-                                                                       : &SI);
+                                         &SI);
           OtherVal = TrueSI->getTrueValue();
         }
         // select(C0, select(C1, b, a), b) -> select(C0&&!C1, a, b)
         else if (TrueSI->getTrueValue() == FalseVal) {
           Value *InvertedCond = Builder.CreateNot(TrueSI->getCondition());
-          And = Builder.CreateLogicalAnd(CondVal, InvertedCond, "",
-                                         ProfcheckDisableMetadataFixes ? nullptr
-                                                                       : &SI);
+          And = Builder.CreateLogicalAnd(CondVal, InvertedCond, "", &SI);
           OtherVal = TrueSI->getFalseValue();
         }
         if (And && OtherVal) {
           replaceOperand(SI, 0, And);
           replaceOperand(SI, 1, OtherVal);
-          if (!ProfcheckDisableMetadataFixes)
-            setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
+          setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
           return &SI;
         }
       }
@@ -5027,23 +5072,19 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         // select(C0, a, select(C1, a, b)) -> select(C0||C1, a, b)
         if (FalseSI->getTrueValue() == TrueVal) {
           Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition(), "",
-                                       ProfcheckDisableMetadataFixes ? nullptr
-                                                                     : &SI);
+                                       &SI);
           OtherVal = FalseSI->getFalseValue();
         }
         // select(C0, a, select(C1, b, a)) -> select(C0||!C1, a, b)
         else if (FalseSI->getFalseValue() == TrueVal) {
           Value *InvertedCond = Builder.CreateNot(FalseSI->getCondition());
-          Or = Builder.CreateLogicalOr(CondVal, InvertedCond, "",
-                                       ProfcheckDisableMetadataFixes ? nullptr
-                                                                     : &SI);
+          Or = Builder.CreateLogicalOr(CondVal, InvertedCond, "", &SI);
           OtherVal = FalseSI->getTrueValue();
         }
         if (Or && OtherVal) {
           replaceOperand(SI, 0, Or);
           replaceOperand(SI, 2, OtherVal);
-          if (!ProfcheckDisableMetadataFixes)
-            setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
+          setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
           return &SI;
         }
       }
@@ -5218,8 +5259,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // metadata of the original select as the net effect of this change is to
       // simplify the conditional.
       Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal &&
-          !ProfcheckDisableMetadataFixes) {
+      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal) {
         MDFrom = &SI;
       }
       return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
@@ -5333,11 +5373,16 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
                                            m_Specific(CondVal), m_Value())))) {
     auto *LoadInst = cast<IntrinsicInst>(TrueVal);
-    Instruction *In = Builder.CreateMaskedLoad(
-        TrueVal->getType(), MaskedLoadPtr,
-        LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
-    In->setAAMetadata(LoadInst->getAAMetadata());
-    return replaceInstUsesWith(SI, In);
+    // Keep the load at its original position to avoid crossing writes. The new
+    // passthrough must therefore be available there.
+    if (DT.dominates(FalseVal, LoadInst)) {
+      Builder.SetInsertPoint(LoadInst);
+      Instruction *In = Builder.CreateMaskedLoad(
+          TrueVal->getType(), MaskedLoadPtr,
+          LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
+      In->setAAMetadata(LoadInst->getAAMetadata());
+      return replaceInstUsesWith(SI, In);
+    }
   }
 
   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
