@@ -38,6 +38,7 @@ static void ProtectGap(uptr addr, uptr size) {
                              "unprotected gap shadow");
     return;
   }
+  VReport(2, "ProtectGap %p sz=%p\n", (void*)addr, (void*)size);
   __sanitizer::ProtectGap(addr, size, kZeroBaseShadowStart,
                           kZeroBaseMaxShadowStart);
 }
@@ -85,7 +86,44 @@ void InitializeShadowMemory() {
 
   if (Verbosity()) PrintAddressSpaceLayout();
 
-  if (full_shadow_is_available) {
+  if (full_shadow_is_available && kGaplessShadow) {
+    // Normally, the shadow memory overlaps with the memory mappable
+    // by the application, so we split shadow into "low" and "high"
+    // with a protected gap in the middle (the shadow of the shadow).
+    //
+    // However, on some platforms, we can map the shadow above
+    // the space normally addressable by the application. On these
+    // platforms, we do not need a gap.
+
+    // In the "gapless" configuration, there is only one shadow mapping
+    // which covers all app memory i.e. from kLowMemBeg to kHighMemEnd.
+    ReserveShadowMemoryRange(shadow_start, kHighShadowEnd, "shadow");
+
+    // kLowShadowEnd, kHighShadowBeg are defined assuming there is a gap,
+    // and this affects calls such as AddrIsInLowMem and AddrIsInHighMem.
+    //
+    // We want all of application memory to be in the "low mem" region and all
+    // of the shadow to be in the "low shadow" region. However, kLowMemEnd
+    // is defined differently in terms of the shadow base, which is always above
+    // the actual app mem max (i.e. >4TB, kHighMemEnd). This means
+    // (kLowMemBeg, kLowMemEnd) is a slight over-approximation of the low app
+    // memory. However, it's still good enough for us because it includes
+    // all app memory and no shadow memory, which we assert here.
+    CHECK_GE(kLowMemEnd, kHighMemEnd);
+    CHECK_LT(kLowMemEnd, kLowShadowBeg);
+    CHECK_GE(kLowShadowEnd, kHighShadowEnd);
+
+    // We don't use the "high mem" region, so we expect beg > end, to ensure
+    // that AddrIsInHighMem/AddrIsInHighShadow always fails.
+    CHECK_GT(kHighMemBeg, kHighMemEnd);
+    CHECK_GT(kHighShadowBeg, kHighShadowEnd);
+
+    // The shadow of the shadow may still technically be mappable by the
+    // sanitizers or other tools, so we protect it here just to be safe.
+    ProtectGap(
+        MEM_TO_SHADOW(kLowShadowBeg),
+        MEM_TO_SHADOW(kHighShadowEnd) - MEM_TO_SHADOW(kLowShadowBeg) + 1);
+  } else if (full_shadow_is_available) {
     // mmap the low shadow plus at least one page at the left.
     if (kLowShadowBeg)
       ReserveShadowMemoryRange(shadow_start, kLowShadowEnd, "low shadow");
