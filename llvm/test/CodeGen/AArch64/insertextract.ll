@@ -732,12 +732,10 @@ define <32 x i8> @insert_v32i8_c(<32 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    mov w8, w1
-; CHECK-GI-NEXT:    mov x10, sp
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    stp q0, q1, [sp]
 ; CHECK-GI-NEXT:    and x8, x8, #0x1f
-; CHECK-GI-NEXT:    lsl x9, x8, #1
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    strb w0, [x10, x8]
+; CHECK-GI-NEXT:    strb w0, [x9, x8]
 ; CHECK-GI-NEXT:    ldp q0, q1, [sp]
 ; CHECK-GI-NEXT:    mov sp, x29
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -2135,8 +2133,6 @@ define i8 @extract_v8i8_c(<8 x i8> %a, i32 %c) {
 ; CHECK-GI-NEXT:    add x8, sp, #8
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    and x9, x9, #0x7
-; CHECK-GI-NEXT:    lsl x10, x9, #1
-; CHECK-GI-NEXT:    sub x9, x10, x9
 ; CHECK-GI-NEXT:    ldrb w0, [x8, x9]
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
@@ -2186,8 +2182,6 @@ define i8 @extract_v16i8_c(<16 x i8> %a, i32 %c) {
 ; CHECK-GI-NEXT:    mov x8, sp
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0xf
-; CHECK-GI-NEXT:    lsl x10, x9, #1
-; CHECK-GI-NEXT:    sub x9, x10, x9
 ; CHECK-GI-NEXT:    ldrb w0, [x8, x9]
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
@@ -2239,11 +2233,9 @@ define i8 @extract_v32i8_c(<32 x i8> %a, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    stp q0, q1, [sp]
-; CHECK-GI-NEXT:    mov x10, sp
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    and x8, x8, #0x1f
-; CHECK-GI-NEXT:    lsl x9, x8, #1
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    ldrb w0, [x10, x8]
+; CHECK-GI-NEXT:    ldrb w0, [x9, x8]
 ; CHECK-GI-NEXT:    mov sp, x29
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
