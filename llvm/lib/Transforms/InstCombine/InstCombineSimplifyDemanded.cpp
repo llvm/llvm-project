@@ -3056,7 +3056,19 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       }
 
       if (InferredFMF != FMF) {
+        bool AddedNSZ = !FMF.noSignedZeros() && InferredFMF.noSignedZeros();
         CI->setFastMathFlags(InferredFMF);
+        
+        // BUG FIX: If we just added the nsz (No Signed Zero) flag, the demanded 
+        // FP class for our operands has changed. If an operand is a select, 
+        // it may now be foldable into a maxnum/minnum. Push it to the worklist!
+        if (AddedNSZ) {
+          for (Use &Op : CI->operands()) {
+            if (auto *Sel = dyn_cast<SelectInst>(Op.get()))
+              Worklist.push(Sel);
+          }
+        }
+        
         return FPOp;
       }
 

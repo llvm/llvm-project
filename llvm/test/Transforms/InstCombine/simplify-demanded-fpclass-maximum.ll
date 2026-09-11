@@ -2192,3 +2192,24 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
 
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
+
+
+; nsf flag or something
+
+; Adapted from ret_always_positive_nonzero__maximum__not_zero_select_positive_or_unknown
+; in file Transforms/InstCombine/simplify-demanded-fpclass-maximum.ll
+
+define nofpclass(pinf pnorm psub) float @test_nofpclass_worklist_bug(float %unknown, float nofpclass(zero) %not.zero) {
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @test_nofpclass_worklist_bug(
+; CHECK-SAME: float [[UNKNOWN:%.*]], float nofpclass(zero) [[NOT_ZERO:%.*]]) {
+; CHECK-NEXT:    [[ALWAYS_POSITIVE:%.*]] = call float @returns_positive()
+; CHECK-NEXT:    [[SELECT_RHS:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[ALWAYS_POSITIVE]], float [[UNKNOWN]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.maximum.f32(float [[NOT_ZERO]], float [[SELECT_RHS]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %always.positive = call float @returns_positive()
+  %cond = fcmp nnan ogt float %always.positive, %unknown
+  %select.rhs = select i1 %cond, float %always.positive, float %unknown
+  %result = call float @llvm.maximum.f32(float %not.zero, float %select.rhs)
+  ret float %result
+}
