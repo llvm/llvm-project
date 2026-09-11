@@ -136,6 +136,7 @@ static std::optional<ElementwiseKind> getElementwiseKind(Operation *op) {
       .Case([](math::PowFOp) { return ElementwiseKind::powf; })
       .Case([](arith::MaxUIOp) { return ElementwiseKind::max_unsigned; })
       .Case([](arith::MinUIOp) { return ElementwiseKind::min_unsigned; })
+      .Case([](arith::SelectOp) { return ElementwiseKind::select; })
       .Default([](Operation *) { return std::nullopt; });
 }
 
@@ -700,9 +701,10 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
 FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
     RewriterBase &rewriter, GenericOp genericOp,
     bool emitCategoryOps) {
-  // Elementwise - e.g. exp, add
+  // Elementwise - e.g. exp, add are always category ops
   if (isaElemwiseSingleUnaryOpInterface(genericOp) ||
-      isaElemwiseSingleBinaryOpInterface(genericOp)) {
+      isaElemwiseSingleBinaryOpInterface(genericOp) ||
+      isaElemwiseSingleTernaryOpInterface(genericOp)) {
     return specializeLinalgElementwise(rewriter, genericOp);
   }
 

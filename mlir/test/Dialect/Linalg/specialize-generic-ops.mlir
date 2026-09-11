@@ -663,6 +663,115 @@ func.func @negative_unary_op_using_block_arg_twice(%A: tensor<?xi32>,
 
 // -----
 
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @ternary_op_select_f32(%C: tensor<?x?xi1>, %T: tensor<?x?xf32>,
+                                 %F: tensor<?x?xf32>, %Out: tensor<?x?xf32>)
+                                  -> tensor<?x?xf32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map, #map],
+    iterator_types = ["parallel", "parallel"]}
+    ins(%C, %T, %F : tensor<?x?xi1>, tensor<?x?xf32>, tensor<?x?xf32>)
+    outs(%Out : tensor<?x?xf32>) {
+  ^bb0(%in: i1, %in_0: f32, %in_1: f32, %out: f32):
+    %v = arith.select %in, %in_0, %in_1 : f32
+    linalg.yield %v : f32
+  } -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// ALL-LABEL: ternary_op_select_f32
+// ALL-SAME: %[[C:.+]]: [[ITY:tensor<\?x\?xi1>]], %[[T:.+]]: [[TTY:tensor<\?x\?xf32>]], %[[F:.+]]: [[TTY]],
+// ALL-SAME: %[[OUT:.+]]: [[TTY]]) -> [[TTY]]
+
+// ALL-NOT: linalg.generic
+// ALL: linalg.elementwise <select>
+// ALL-SAME: ins(%[[C]], %[[T]], %[[F]] : [[ITY]], [[TTY]], [[TTY]])
+// ALL-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @ternary_op_select_i32(%C: tensor<?x?xi1>, %T: tensor<?x?xi32>,
+                                 %F: tensor<?x?xi32>, %Out: tensor<?x?xi32>)
+                                  -> tensor<?x?xi32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map, #map],
+    iterator_types = ["parallel", "parallel"]}
+    ins(%C, %T, %F : tensor<?x?xi1>, tensor<?x?xi32>, tensor<?x?xi32>)
+    outs(%Out : tensor<?x?xi32>) {
+  ^bb0(%in: i1, %in_0: i32, %in_1: i32, %out: i32):
+    %v = arith.select %in, %in_0, %in_1 : i32
+    linalg.yield %v : i32
+  } -> tensor<?x?xi32>
+  return %0 : tensor<?x?xi32>
+}
+
+// ALL-LABEL: ternary_op_select_i32
+// ALL-SAME: %[[C:.+]]: [[ITY:tensor<\?x\?xi1>]], %[[T:.+]]: [[TTY:tensor<\?x\?xi32>]], %[[F:.+]]: [[TTY]],
+// ALL-SAME: %[[OUT:.+]]: [[TTY]]) -> [[TTY]]
+
+// ALL-NOT: linalg.generic
+// ALL: linalg.elementwise <select>
+// ALL-SAME: ins(%[[C]], %[[T]], %[[F]] : [[ITY]], [[TTY]], [[TTY]])
+// ALL-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @ternary_op_select_i1(%C: tensor<?x?xi1>, %T: tensor<?x?xi1>,
+                                %F: tensor<?x?xi1>, %Out: tensor<?x?xi1>)
+                                 -> tensor<?x?xi1> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map, #map],
+    iterator_types = ["parallel", "parallel"]}
+    ins(%C, %T, %F : tensor<?x?xi1>, tensor<?x?xi1>, tensor<?x?xi1>)
+    outs(%Out : tensor<?x?xi1>) {
+  ^bb0(%in: i1, %in_0: i1, %in_1: i1, %out: i1):
+    %v = arith.select %in, %in_0, %in_1 : i1
+    linalg.yield %v : i1
+  } -> tensor<?x?xi1>
+  return %0 : tensor<?x?xi1>
+}
+
+// ALL-LABEL: ternary_op_select_i1
+// ALL-SAME: %[[C:.+]]: [[TTY:tensor<\?x\?xi1>]], %[[T:.+]]: [[TTY]], %[[F:.+]]: [[TTY]],
+// ALL-SAME: %[[OUT:.+]]: [[TTY]]) -> [[TTY]]
+
+// ALL-NOT: linalg.generic
+// ALL: linalg.elementwise <select>
+// ALL-SAME: ins(%[[C]], %[[T]], %[[F]] : [[TTY]], [[TTY]], [[TTY]])
+// ALL-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
+
+// -----
+
+// Mask comes from outside and is constant
+// this can be elided completely by canonicalization
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @negative_ternary_op_select(%C: tensor<?x?xi1>, %T: tensor<?x?xf32>,
+                                 %F: tensor<?x?xf32>, %Out: tensor<?x?xf32>)
+                                  -> tensor<?x?xf32> {
+  %true = arith.constant 1 : i1
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map, #map],
+    iterator_types = ["parallel", "parallel"]}
+    ins(%C, %T, %F : tensor<?x?xi1>, tensor<?x?xf32>, tensor<?x?xf32>)
+    outs(%Out : tensor<?x?xf32>) {
+  ^bb0(%in: i1, %in_0: f32, %in_1: f32, %out: f32):
+    %v = arith.select %true, %in_0, %in_1 : f32
+    linalg.yield %v : f32
+  } -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// ALL-LABEL: negative_ternary_op_select
+// ALL-SAME: %[[C:.+]]: [[ITY:tensor<\?x\?xi1>]], %[[T:.+]]: [[TTY:tensor<\?x\?xf32>]], %[[F:.+]]: [[TTY]],
+// ALL-SAME: %[[OUT:.+]]: [[TTY]]) -> [[TTY]]
+
+// ALL: linalg.generic
+// ALL-NOT: linalg.elementwise <select>
+
+// -----
+
 ///----------------------------------------------------------------------------------------
 /// Tests for linalg.matmul
 ///----------------------------------------------------------------------------------------

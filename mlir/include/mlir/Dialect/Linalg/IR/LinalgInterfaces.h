@@ -162,6 +162,12 @@ bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
 /// they can be represented by the category op.
 bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
 
+/// Checks whether `genericOp` is semantically equivalent to a single linalg
+/// elementwise ternary op e.g. linalg.fma.
+/// Operations with non-identity indexing maps are included in the check, as
+/// they can be represented by the category op.
+bool isaElemwiseSingleTernaryOpInterface(GenericOp genericOp);
+
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
 /// Supports two patterns:
 /// 1. External: linalg.generic ins(%scalar) outs(%tensor) { yield %scalar }

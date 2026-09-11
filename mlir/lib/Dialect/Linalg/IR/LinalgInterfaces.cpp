@@ -287,6 +287,21 @@ bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
            !op.payloadUsesValueFromOperand(inputOpOperand1));
 }
 
+bool linalg::isaElemwiseSingleTernaryOpInterface(linalg::GenericOp op) {
+  // All basic elemwise checks.
+  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 3))
+    return false;
+
+  // Check all three inputs are used (elementwise).
+  OpOperand *inputOpOperand0 = op.getDpsInputOperand(0);
+  OpOperand *inputOpOperand1 = op.getDpsInputOperand(1);
+  OpOperand *inputOpOperand2 = op.getDpsInputOperand(2);
+  return !(!op.payloadUsesValueFromOperand(inputOpOperand0) ||
+           !op.payloadUsesValueFromOperand(inputOpOperand1) ||
+           !op.payloadUsesValueFromOperand(inputOpOperand2));
+}
+
+
 //===----------------------------------------------------------------------===//
 // ContractionOpInterface implementation
 //===----------------------------------------------------------------------===//
