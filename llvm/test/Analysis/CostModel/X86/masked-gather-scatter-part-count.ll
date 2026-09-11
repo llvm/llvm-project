@@ -4,13 +4,19 @@
 ;
 ; The pairing is the point of the test: the code-size cost of a hardware
 ; gather/scatter is its part count, so every cost check below has a matching
-; instruction count taken from the same module. Three properties would
+; instruction count taken from the same module. Four properties would
 ; otherwise drift unnoticed. A part count taken from the legalized register
 ; count overstates the work when legalization widens to a power of two; an
 ; index width derived only for wide AVX-512 vectors leaves a dword-indexed
 ; operation tied with the qword-indexed form that CodeGen splits into more
-; instructions; and the tail a scatter still emits under a zeroed mask reaches
-; only as far as the predicate widens, which depends on AVX512BW.
+; instructions; an index width read from the declared type and the extension
+; opcode rather than from the range of values the index carries misreads both
+; a zero-extension too narrow to leave that range and an index wider than a
+; pointer; a stride the scale field cannot encode does not by itself force a
+; qword index, since the product may still fit a dword and then narrows or not
+; according to which vector types the subtarget makes legal; and the tail a
+; scatter still emits under a zeroed mask reaches only as far as the predicate
+; widens, which depends on AVX512BW.
 ;
 ; The throughput run pins the other half of the cost, the per-lane term, which
 ; code size does not expose: it is charged for the lanes that are really
@@ -76,6 +82,26 @@ define <9 x i32> @gather_v9i32_dword_index(ptr %base, <9 x i32> %idx, <9 x i1> %
 ; AVX2-ASM-NOT: vpgather
 define <9 x i32> @gather_v9i32_qword_index(ptr %base, <9 x i64> %idx, <9 x i1> %mask) {
   %ptrs = getelementptr inbounds i32, ptr %base, <9 x i64> %idx
+  %v = call <9 x i32> @llvm.masked.gather.v9i32.v9p0(<9 x ptr> %ptrs, i32 4, <9 x i1> %mask, <9 x i32> poison)
+  ret <9 x i32> %v
+}
+
+; The same shape indexed more widely than a pointer, which is not a narrow
+; index: it is cut down to pointer width rather than to a dword, so it costs
+; what the qword form above costs. Asking whether the index type is exactly 64
+; bits wide would miss it and price it as a dword.
+; SKX-COST-LABEL: 'gather_v9i32_oversized_index'
+; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v9i32_oversized_index:
+; SKX-ASM-COUNT-2: vpgatherqd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v9i32_oversized_index'
+; AVX2-COST: cost of 3 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v9i32_oversized_index:
+; AVX2-ASM-COUNT-3: vpgatherqd
+; AVX2-ASM-NOT: vpgatherqd
+define <9 x i32> @gather_v9i32_oversized_index(ptr %base, <9 x i128> %idx, <9 x i1> %mask) {
+  %ptrs = getelementptr inbounds i32, ptr %base, <9 x i128> %idx
   %v = call <9 x i32> @llvm.masked.gather.v9i32.v9p0(<9 x ptr> %ptrs, i32 4, <9 x i1> %mask, <9 x i32> poison)
   ret <9 x i32> %v
 }
@@ -392,12 +418,13 @@ define <8 x ptr> @gather_v8ptr_qword_index_first2_mask(ptr %base, <8 x i64> %idx
   ret <8 x ptr> %r
 }
 
-; A narrow index only stays narrow if the addressing mode can apply its stride
-; as a scale, and the scale field encodes 1, 2, 4 and 8. This GEP walks an
-; array of three-word structures, the form a loop vectorizer emits for
-; a[idx[i]].f, so its stride is twelve: the multiply is folded into the index
-; and the gather ends up indexed by qwords, taking twice the instructions of
-; the four-byte-stride control below.
+; A stride the scale field cannot encode -- it encodes 1, 2, 4 and 8 -- is
+; multiplied into the index instead, and that product is what CodeGen narrows
+; from. This GEP walks an array of three-word structures, the form a loop
+; vectorizer emits for a[idx[i]].f, so its stride is twelve: a dword index
+; scaled by twelve needs thirty-six bits and no longer fits a signed dword, so
+; the gather ends up indexed by qwords, taking twice the instructions of the
+; four-byte-stride control below.
 ; SKX-COST-LABEL: 'gather_v16i32_struct_stride'
 ; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v16i32_struct_stride:
@@ -410,6 +437,35 @@ define <8 x ptr> @gather_v8ptr_qword_index_first2_mask(ptr %base, <8 x i64> %idx
 ; AVX2-ASM-NOT: vpgatherqd
 define <16 x i32> @gather_v16i32_struct_stride(ptr %base, <16 x i32> %idx, <16 x i1> %mask) {
   %sext = sext <16 x i32> %idx to <16 x i64>
+  %ptrs = getelementptr inbounds {i32, i32, i32}, ptr %base, <16 x i64> %sext, i32 0
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
+  ret <16 x i32> %v
+}
+
+; The same stride over an index narrow enough that the product still fits a
+; signed dword, so a nonencodable stride does not by itself decide the width.
+; Fitting is not sufficient either: the multiply leaves the index as something
+; other than an extension node, and CodeGen then narrows it only where that
+; removes an illegal type. Sixteen qword indices are illegal everywhere, but
+; the dword form they would narrow to is itself legal only once a 512-bit
+; register is available, so the same gather keeps qword indices on AVX2 and
+; narrows to dwords on AVX-512.
+; SKX-COST-LABEL: 'gather_v16i32_struct_stride_narrow_index'
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v16i32_struct_stride_narrow_index:
+; SKX-ASM-COUNT-1: vpgatherdd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v16i32_struct_stride_narrow_index'
+; AVX2-COST: cost of 4 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v16i32_struct_stride_narrow_index:
+; AVX2-ASM-COUNT-4: vpgatherqd
+; AVX2-ASM-NOT: vpgatherqd
+; KNL-COST-LABEL: 'gather_v16i32_struct_stride_narrow_index'
+; KNL-COST: cost of 1 for instruction: {{.*}}masked.gather
+; KNL-ASM-LABEL: gather_v16i32_struct_stride_narrow_index:
+; KNL-ASM-COUNT-1: vpgatherdd
+define <16 x i32> @gather_v16i32_struct_stride_narrow_index(ptr %base, <16 x i16> %idx, <16 x i1> %mask) {
+  %sext = sext <16 x i16> %idx to <16 x i64>
   %ptrs = getelementptr inbounds {i32, i32, i32}, ptr %base, <16 x i64> %sext, i32 0
   %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
   ret <16 x i32> %v
@@ -432,6 +488,86 @@ define <16 x i32> @gather_v16i32_scaled_stride(ptr %base, <16 x i32> %idx, <16 x
   %ptrs = getelementptr inbounds i32, ptr %base, <16 x i64> %sext
   %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
   ret <16 x i32> %v
+}
+
+; A zero-extension from a narrow type cannot reach the signed dword range, so
+; the index stays a dword and one instruction covers all sixteen lanes, exactly
+; as for the sign-extension above. Reading the extension opcode rather than the
+; range it produces would price this as the qword form it is not.
+; SKX-COST-LABEL: 'gather_v16i32_narrow_zext_index'
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v16i32_narrow_zext_index:
+; SKX-ASM-COUNT-1: vpgatherdd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v16i32_narrow_zext_index'
+; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v16i32_narrow_zext_index:
+; AVX2-ASM-COUNT-2: vpgatherdd
+; AVX2-ASM-NOT: vpgatherdd
+define <16 x i32> @gather_v16i32_narrow_zext_index(ptr %base, <16 x i8> %idx, <16 x i1> %mask) {
+  %zext = zext <16 x i8> %idx to <16 x i64>
+  %ptrs = getelementptr inbounds i32, ptr %base, <16 x i64> %zext
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
+  ret <16 x i32> %v
+}
+
+; Zero-extending a dword is the case that has to stay distinct from it. The top
+; bit is no longer a sign, so the value can exceed what a signed dword index
+; addresses and the index stays a qword, taking twice the instructions of the
+; sign-extended form.
+; SKX-COST-LABEL: 'gather_v16i32_wide_zext_index'
+; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v16i32_wide_zext_index:
+; SKX-ASM-COUNT-2: vpgatherqd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v16i32_wide_zext_index'
+; AVX2-COST: cost of 4 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v16i32_wide_zext_index:
+; AVX2-ASM-COUNT-4: vpgatherqd
+; AVX2-ASM-NOT: vpgatherqd
+define <16 x i32> @gather_v16i32_wide_zext_index(ptr %base, <16 x i32> %idx, <16 x i1> %mask) {
+  %zext = zext <16 x i32> %idx to <16 x i64>
+  %ptrs = getelementptr inbounds i32, ptr %base, <16 x i64> %zext
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
+  ret <16 x i32> %v
+}
+
+; A constant index that does fit a signed dword stays one, the control for the
+; out-of-range form below.
+; SKX-COST-LABEL: 'gather_v8i32_const_index'
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v8i32_const_index:
+; SKX-ASM-COUNT-1: vpgatherdd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v8i32_const_index'
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v8i32_const_index:
+; AVX2-ASM-COUNT-1: vpgatherdd
+; AVX2-ASM-NOT: vpgatherdd
+define <8 x i32> @gather_v8i32_const_index(ptr %base, <8 x i1> %mask) {
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+  %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x i32> poison)
+  ret <8 x i32> %v
+}
+
+; A constant index is an index like any other, and it has to be examined like
+; one: these values do not fit a signed dword, so the gather ends up indexed by
+; qwords. Eight qword indices fill one AVX-512 register, which emits a single
+; instruction at either width, so only AVX2 shows the split.
+; SKX-COST-LABEL: 'gather_v8i32_const_index_out_of_range'
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v8i32_const_index_out_of_range:
+; SKX-ASM-COUNT-1: vpgatherqd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v8i32_const_index_out_of_range'
+; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v8i32_const_index_out_of_range:
+; AVX2-ASM-COUNT-2: vpgatherqd
+; AVX2-ASM-NOT: vpgatherqd
+define <8 x i32> @gather_v8i32_const_index_out_of_range(ptr %base, <8 x i1> %mask) {
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> <i64 0, i64 2147483648, i64 4294967296, i64 6442450944, i64 8589934592, i64 10737418240, i64 12884901888, i64 15032385536>
+  %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x i32> poison)
+  ret <8 x i32> %v
 }
 
 declare <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i32>)

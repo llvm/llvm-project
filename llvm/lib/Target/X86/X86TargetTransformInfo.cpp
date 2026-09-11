@@ -51,6 +51,7 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
@@ -6670,26 +6671,89 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
     for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
          GTI != GTE; ++GTI) {
       const Value *Operand = GTI.getOperand();
-      if (isa<Constant>(Operand))
+
+      // An index that holds the same value in every lane contributes a fixed
+      // byte offset, which folds into the base pointer instead of reaching the
+      // index operand. That covers every struct member, named by a scalar
+      // constant, as well as a splat. A constant that is not a splat does
+      // reach the index, so it is examined like any other.
+      if (isa<Constant>(Operand) && (!Operand->getType()->isVectorTy() ||
+                                     getSplatValue(Operand) != nullptr))
         continue;
-      Type *IndxTy = Operand->getType();
-      if (auto *IndexVTy = dyn_cast<VectorType>(IndxTy))
-        IndxTy = IndexVTy->getElementType();
-      if ((IndxTy->getPrimitiveSizeInBits() == 64 && !isa<SExtInst>(Operand)) ||
-          ++NumOfVarIndices > 1)
+
+      if (++NumOfVarIndices > 1)
         return IndexSize; // 64
-      // The narrow index only reaches the instruction if the addressing mode
-      // can apply its stride as a scale, and the scale field encodes 1, 2, 4
-      // and 8. Any other stride has to be multiplied into the index first,
-      // and that product is pointer-width, so the operation ends up gathering
-      // with 64-bit indices however narrow the index started out.
+
+      unsigned IndexBits;
+      if (Operand->getType()->isVectorTy()) {
+        // Whether the index reaches the instruction as a dword is a property
+        // of the values it takes, not of how it was written: CodeGen narrows
+        // it when it is representable in a signed dword, which is what the
+        // gather/scatter combine in X86ISelLowering tests with
+        // ComputeNumSignBits. Deciding on the declared width and the
+        // extension opcode instead misses in both directions -- a
+        // zero-extension from a narrow type is representable although it is
+        // not an SExtInst, and an index wider than a pointer is not
+        // representable although it is not exactly 64 bits -- and a constant
+        // vector was not examined at all.
+        IndexBits = ComputeMaxSignificantBits(Operand, DL);
+      } else {
+        // A scalar index reaches here from a caller that has not widened the
+        // address yet, so the component that varies across lanes is not
+        // visible and its range says nothing about the index the instruction
+        // will see. Keep the conservative width for those until the query
+        // carries the vector form.
+        IndexBits = Operand->getType()->getPrimitiveSizeInBits() == 64 &&
+                            !isa<SExtInst>(Operand)
+                        ? 64
+                        : 32;
+      }
+      if (IndexBits > 32)
+        return IndexSize; // 64
+
       TypeSize EltSize = DL.getTypeAllocSize(GTI.getIndexedType());
       if (EltSize.isScalable())
         return IndexSize; // 64
       uint64_t Stride = EltSize.getFixedValue();
-      if (!isPowerOf2_64(Stride) || Stride > 8)
+
+      // A stride the scale field encodes -- 1, 2, 4 or 8 -- is applied by the
+      // addressing mode, so the index reaches the combine as the extension it
+      // was written as, and narrowing follows from its range alone.
+      if (isPowerOf2_64(Stride) && Stride <= 8)
+        continue;
+
+      // Any other stride is multiplied into the index first, and the product
+      // is what the combine sees. It has to fit a signed dword with the
+      // stride included, and it is no longer an extension node, which is the
+      // route the combine normally narrows through.
+      if (IndexBits + Log2_64_Ceil(Stride) > 32)
+        return IndexSize; // 64
+
+      // Two routes remain for that product. A constant index narrows by being
+      // folded to its truncated form. Otherwise the combine narrows only
+      // where doing so removes an illegal type, which depends on the widest
+      // vector the subtarget has: sixteen qword indices are illegal
+      // everywhere, but the dword form they would narrow to is itself legal
+      // only once a 512-bit register is available. The same gather therefore
+      // keeps qword indices on AVX2 and narrows to dwords on AVX-512.
+      if (isa<Constant>(Operand))
+        continue;
+      LLVMContext &Ctx = SrcVTy->getContext();
+      if (TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i64, VF)) ||
+          !TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i32, VF)))
         return IndexSize; // 64
     }
+
+    // Every index holds the same value in every lane, so the component that
+    // varies has to be the base pointer, and the operation gathers from a
+    // vector of pointers at pointer width. A caller that has already widened
+    // the address says as much with a vector base, which is answered above;
+    // LoopVectorize asks with the original scalar address, where a pointer
+    // chase like p[i]->y is otherwise indistinguishable from a uniform base
+    // reached through a narrow index.
+    if (NumOfVarIndices == 0)
+      return IndexSize; // 64
+
     return (unsigned)32;
   };
 
