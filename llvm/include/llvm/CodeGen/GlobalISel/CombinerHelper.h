@@ -446,9 +446,6 @@ public:
   LLVM_ABI bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
                                             BuildFnTy &MatchInfo) const;
 
-  /// Transform PtrToInt(IntToPtr(x)) to x.
-  LLVM_ABI void applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) const;
-
   /// Transform anyext(trunc(x)) to x.
   LLVM_ABI bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) const;
 
@@ -476,15 +473,8 @@ public:
   /// Return true if a G_SHUFFLE_VECTOR instruction \p MI has an undef mask.
   LLVM_ABI bool matchUndefShuffleVectorMask(MachineInstr &MI) const;
 
-  /// Return true if a G_STORE instruction \p MI is storing an undef value.
-  LLVM_ABI bool matchUndefStore(MachineInstr &MI) const;
-
   /// Return true if a G_{EXTRACT,INSERT}_VECTOR_ELT has an out of range index.
   LLVM_ABI bool matchInsertExtractVecEltOutOfBounds(MachineInstr &MI) const;
-
-  /// Return true if a G_SELECT instruction \p MI has a constant comparison. If
-  /// true, \p OpIdx will store the operand index of the known selected value.
-  LLVM_ABI bool matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) const;
 
   /// Replace an instruction with a G_FCONSTANT with value \p C.
   LLVM_ABI void replaceInstWithFConstant(MachineInstr &MI, double C) const;
@@ -518,6 +508,10 @@ public:
   /// equivalent instructions.
   LLVM_ABI bool matchEqualDefs(const MachineOperand &MOP1,
                                const MachineOperand &MOP2) const;
+
+  /// Return true if \p MOP is defined by a G_CONSTANT or splat with a value
+  /// equal to \p C.
+  LLVM_ABI bool matchConstantOp(const MachineOperand &MOP, int64_t C) const;
 
   /// Return true if \p MOP is defined by a G_FCONSTANT or splat with a value exactly
   /// equal to \p C.
@@ -602,8 +596,8 @@ public:
                            std::pair<Register, Register> &MatchInfo) const;
   ///}
 
-  /// Combine G_PTR_ADD with nullptr to G_INTTOPTR
-  LLVM_ABI bool matchPtrAddZero(MachineInstr &MI) const;
+  /// Combine a vector G_PTR_ADD with a zero splat to G_INTTOPTR.
+  LLVM_ABI bool matchPtrAddZeroVector(MachineInstr &MI) const;
 
   /// Combine G_UREM x, (known power of 2) to an add and bitmasking.
   LLVM_ABI void applySimplifyURemByPow2(MachineInstr &MI) const;
@@ -665,8 +659,6 @@ public:
   LLVM_ABI bool matchOrShiftToFunnelShift(MachineInstr &MI,
                                           bool AllowScalarConstants,
                                           BuildFnTy &MatchInfo) const;
-  LLVM_ABI bool matchFunnelShiftToRotate(MachineInstr &MI) const;
-  LLVM_ABI void applyFunnelShiftToRotate(MachineInstr &MI) const;
   LLVM_ABI bool matchRotateOutOfRange(MachineInstr &MI) const;
   LLVM_ABI void applyRotateOutOfRange(MachineInstr &MI) const;
 
@@ -805,31 +797,10 @@ public:
                                            MachineInstr &SrcMI) const;
 
   /// Match:
-  ///   (G_UMULO x, 2) -> (G_UADDO x, x)
-  ///   (G_SMULO x, 2) -> (G_SADDO x, x)
-  LLVM_ABI bool matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo) const;
-
-  /// Match:
   /// (G_*MULO x, 0) -> 0 + no carry out
   LLVM_ABI bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
-  /// Match:
-  /// (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
-  /// (G_*SUBE x, y, 0) -> (G_*SUBO x, y)
-  LLVM_ABI bool matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo) const;
-
-  /// Transform (fadd x, fneg(y)) -> (fsub x, y)
-  ///           (fadd fneg(x), y) -> (fsub y, x)
-  ///           (fsub x, fneg(y)) -> (fadd x, y)
-  ///           (fmul fneg(x), fneg(y)) -> (fmul x, y)
-  ///           (fdiv fneg(x), fneg(y)) -> (fdiv x, y)
-  ///           (fmad fneg(x), fneg(y), z) -> (fmad x, y, z)
-  ///           (fma fneg(x), fneg(y), z) -> (fma x, y, z)
-  LLVM_ABI bool matchRedundantNegOperands(MachineInstr &MI,
-                                          BuildFnTy &MatchInfo) const;
-
-  LLVM_ABI bool matchFsubToFneg(MachineInstr &MI, Register &MatchInfo) const;
-  LLVM_ABI void applyFsubToFneg(MachineInstr &MI, Register &MatchInfo) const;
+  LLVM_ABI bool matchFsubToFneg(MachineInstr &MI) const;
 
   LLVM_ABI bool canCombineFMadOrFMA(MachineInstr &MI, bool &AllowFusionGlobally,
                                     bool &HasFMAD, bool &Aggressive,
@@ -884,8 +855,6 @@ public:
   LLVM_ABI bool
   matchCombineFSubFpExtFNegFMulToFMadOrFMA(MachineInstr &MI,
                                            BuildFnTy &MatchInfo) const;
-
-  LLVM_ABI bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info) const;
 
   LLVM_ABI bool
   matchRepeatedFPDivisor(MachineInstr &MI,
@@ -946,9 +915,6 @@ public:
   /// Match constant LHS FP ops that should be commuted.
   LLVM_ABI bool matchCommuteFPConstantToRHS(MachineInstr &MI) const;
 
-  // Given a binop \p MI, commute operands 1 and 2.
-  LLVM_ABI void applyCommuteBinOpOperands(MachineInstr &MI) const;
-
   /// Combine select to integer min/max.
   LLVM_ABI bool matchSelectIMinMax(const MachineOperand &MO,
                                    BuildFnTy &MatchInfo) const;
@@ -978,8 +944,7 @@ public:
   LLVM_ABI bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Combine extract vector element.
-  LLVM_ABI bool matchExtractVectorElement(MachineInstr &MI,
-                                          BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchExtractVectorElement(MachineInstr &MI) const;
 
   /// Combine extract vector element with a build vector on the vector register.
   LLVM_ABI bool
@@ -1028,8 +993,7 @@ public:
   LLVM_ABI void applyExpandFPowI(MachineInstr &MI, int64_t Exponent) const;
 
   /// Combine insert vector element OOB.
-  LLVM_ABI bool matchInsertVectorElementOOB(MachineInstr &MI,
-                                            BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchInsertVectorElementOOB(MachineInstr &MI) const;
 
   LLVM_ABI bool
   matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
@@ -1088,14 +1052,6 @@ public:
   LLVM_ABI bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
                                                     BuildFnTy &MatchInfo) const;
 
-  // merge_values(_, undef) -> anyext
-  LLVM_ABI bool matchMergeXAndUndef(const MachineInstr &MI,
-                                    BuildFnTy &MatchInfo) const;
-
-  // merge_values(_, zero) -> zext
-  LLVM_ABI bool matchMergeXAndZero(const MachineInstr &MI,
-                                   BuildFnTy &MatchInfo) const;
-
   // overflow sub
   LLVM_ABI bool matchSuboCarryOut(const MachineInstr &MI,
                                   BuildFnTy &MatchInfo) const;
@@ -1108,11 +1064,7 @@ public:
   // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
   LLVM_ABI bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
 
-  LLVM_ABI bool matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI, Register X,
-                         Register Y, unsigned TargetOpc) const;
-
   LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI) const;
-  LLVM_ABI void applyCountZeroToZeroPoison(MachineInstr &MI) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
