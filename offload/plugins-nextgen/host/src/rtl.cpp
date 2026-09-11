@@ -513,9 +513,6 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
     std::lock_guard<std::mutex> Lock(AllocsMutex);
-    if (Allocs.empty())
-      return Plugin::error(error::ErrorCode::NOT_FOUND,
-                           "pointer is not a known allocation in this context");
     auto It = Allocs.upper_bound(const_cast<void *>(Ptr));
     if (It == Allocs.begin())
       return Plugin::error(error::ErrorCode::NOT_FOUND,

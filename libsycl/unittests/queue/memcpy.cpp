@@ -32,7 +32,7 @@ TEST(Queue, Memcpy) {
       .WillRepeatedly([&](ol_context_handle_t Context, const void *Ptr,
                           ol_mem_info_t PropName, size_t PropSize,
                           void *PropValue) -> ol_result_t {
-        std::ignore = Context;
+        EXPECT_NE(Context, nullptr);
         EXPECT_TRUE(Ptr == SrcPtr || Ptr == DstPtr);
         bool IsHostPtr = Ptr == SrcPtr ? IsSrcHostPtr : IsDstHostPtr;
         if (IsHostPtr)
