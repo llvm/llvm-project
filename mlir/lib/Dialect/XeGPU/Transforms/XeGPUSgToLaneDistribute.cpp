@@ -1500,13 +1500,6 @@ struct SgToLaneVectorInsertStridedSlice
             op, "only single dimension distribution is supported");
       int64_t destDistDim = destDistributedDims[0];
 
-      const auto *uArch =
-          xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
-      if (!uArch)
-        return rewriter.notifyMatchFailure(
-            op, "target attribute required to determine subgroup size");
-      int subgroupSize = uArch->getSubgroupSize();
-
       VectorType srcType = op.getSourceVectorType();
       // The distributed dim must be in the last k (source rank) dims of dest.
       int64_t sourceDistDim =
@@ -1535,21 +1528,30 @@ struct SgToLaneVectorInsertStridedSlice
         return rewriter.notifyMatchFailure(
             op, "expecting unit lane data along the distributed dimension");
 
+      // The distributed dimension is spread over lane_layout[destDistDim]
+      // lanes, not necessarily the full subgroup. Use that lane count as the
+      // divisor for the distributed size and offset.
+      auto destLaneLayout = destLayout.getEffectiveLaneLayoutAsInt();
+      int64_t numLanesAlongDim =
+          destDistDim < static_cast<int64_t>(destLaneLayout.size())
+              ? destLaneLayout[destDistDim]
+              : 1;
+
       int64_t srcDistrDimSize = srcType.getDimSize(sourceDistDim);
-      if (srcDistrDimSize % subgroupSize != 0)
+      if (srcDistrDimSize % numLanesAlongDim != 0)
         return rewriter.notifyMatchFailure(
             op, "source distributed dim size is not a multiple of "
-                "subgroup size");
+                "the number of lanes along that dimension");
 
       int64_t destDistrDimOffset =
           cast<IntegerAttr>(op.getOffsets()[destDistDim]).getInt();
-      if (destDistrDimOffset % subgroupSize != 0)
+      if (destDistrDimOffset % numLanesAlongDim != 0)
         return rewriter.notifyMatchFailure(
             op, "offset along distributed dim is not a multiple of "
-                "subgroup size");
+                "the number of lanes along that dimension");
       // Adjust offset for the distributed dimension.
       updatedOffsets[destDistDim] =
-          rewriter.getI64IntegerAttr(destDistrDimOffset / subgroupSize);
+          rewriter.getI64IntegerAttr(destDistrDimOffset / numLanesAlongDim);
     }
 
     auto newOp = vector::InsertStridedSliceOp::create(

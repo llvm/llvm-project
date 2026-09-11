@@ -952,6 +952,26 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
   gpu.return
 }
 
+// The distributed (inner) dim is spread over only lane_layout[1] = 2 lanes,
+// fewer than the full subgroup. The divisor for the distributed size/offset
+// must be that lane count (2), not the subgroup size (16); dim1 of size 2
+// distributes to size 1.
+// CHECK-LABEL: gpu.func @vector_insert_strided_slice_inner_partial_lanes
+// CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [3, 0], strides = [1, 1] : vector<1x1xf32> into vector<16x1xf32>
+gpu.func @vector_insert_strided_slice_inner_partial_lanes() {
+  %0 = "some_op"()
+    : () -> vector<1x2xf32>
+  %1 = "some_op"()
+    : () -> vector<16x2xf32>
+  %2 = vector.insert_strided_slice %0, %1 offsets = [3, 0], strides = [1, 1]
+    : vector<1x2xf32> into vector<16x2xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 2], lane_data = [1, 1]>
+    }> : vector<16x2xf32>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_outer_distributed
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [2, 4], strides = [1, 1] : vector<1x16xf32> into vector<3x32xf32>
 gpu.func @vector_insert_strided_slice_outer_distributed() {
