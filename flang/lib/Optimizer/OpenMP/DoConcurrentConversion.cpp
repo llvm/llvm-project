@@ -602,24 +602,8 @@ private:
     };
 
     fir::RecordType recordType = asRecordType(eleType);
-
-    bool requiresImplcitMapper = [&]() {
-      if (!recordType)
-        return false;
-
-      for (auto [fieldName, fieldType] : recordType.getTypeList()) {
-        if (fir::isAllocatableType(fieldType))
-          return true;
-
-        if (asRecordType(fieldType))
-          TODO(liveIn.getLoc(), "Nested record types are not supported yet.");
-      }
-
-      return false;
-    }();
-
     mlir::FlatSymbolRefAttr mapperId;
-    if (requiresImplcitMapper) {
+    if (recordType && fir::isRecordWithAllocatableMember(recordType)) {
       std::string mapperIdName =
           Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
               recordType);
