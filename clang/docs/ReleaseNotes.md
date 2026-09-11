@@ -492,6 +492,8 @@ features cannot lower the translation-unit ABI level;
   `operator delete`, since such a delete expression never invokes the
   destructor. (#GH65524)
 
+- Fixed a false-positive `-Wshadow` warning when a function parameter in an inline-defined friend function shares the name of a non-static class member variable. (#GH221190)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

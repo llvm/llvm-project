@@ -8627,12 +8627,12 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (const auto *MD =
-            dyn_cast<CXXMethodDecl>(getFunctionLevelDeclContext())) {
-      // Fields aren't shadowed in C++ static members or in member functions
-      // with an explicit object parameter.
+    DeclContext *FnDC = getFunctionLevelDeclContext();
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FnDC)) {
       if (MD->isStatic() || MD->isExplicitObjectMemberFunction())
         return;
+    } else if (isa<FunctionDecl>(FnDC)) {
+      return;
     }
     // Fields shadowed by constructor parameters are a special case. Usually
     // the constructor initializes the field with the parameter.

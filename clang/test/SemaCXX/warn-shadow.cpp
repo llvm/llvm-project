@@ -90,6 +90,22 @@ class A {
   }
 };
 
+class FriendFunction {
+  int x; // expected-note {{previous declaration is here}}
+  friend bool operator==(const FriendFunction &f, int x) {
+    return f.x == x;
+  }
+  void test(int x) { // expected-warning {{declaration shadows a field of 'FriendFunction'}}
+  }
+};
+
+struct NSDMILambda {
+  int a; // expected-note {{previous declaration is here}}
+  int x = [this] {
+    int a = 0; // expected-warning {{declaration shadows a field of 'NSDMILambda'}}
+    return a;
+  }();
+};
 struct path {
   using value_type = char;
   typedef char value_type2;
