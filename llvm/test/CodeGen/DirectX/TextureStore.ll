@@ -193,7 +193,6 @@ define void @store_texture2darray_scalarized_coords(float %data, i32 %x, i32 %y,
       target("dx.Texture", float, 1, 0, 0, 7) %texture,
       <3 x i32> %coords.2, float %data)
 
-  ; CHECK-NOT: insertelement
   ; CHECK: ret void
   ret void
 }

@@ -358,7 +358,7 @@ define void @sample_grad_texture2d_scalarized(float %u, float %v, float %ddxu,
   %ddy.1 = insertelement <2 x float> %ddy.0, float %ddyv, i32 1
 
   ; CHECK-NOT: insertelement
-  ; CHECK-NOT: extractelement <2 x float>
+  ; CHECK-NOT: extractelement
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
