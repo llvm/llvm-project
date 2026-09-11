@@ -267,6 +267,30 @@ def BSR32 : MxBsr<MxBrTarget32, MxType32, (descend 0b1111, 0b1111),
                 (operand "$dst", 32, (encoder "encodePCRelImm<32>"),
                                      (decoder "DecodeImm32"))>;
 
+/// ---------------------------------------------------
+///  F  E  D  C | B  A  9  8 | 7  6  5  4  3 | 2  1  0
+/// ---------------------------------------------------
+///  0  1  0  1 | CONDITION  | 1  1  0  0  1 | REGISTER
+/// ---------------------------------------------------
+///  16-BIT DISPLACEMENT
+/// ---------------------------------------------------
+let isBranch = 1, isTerminator = 1, Uses = [CCR] in
+class MxDBcc<string cc>
+    : MxInst<(outs MxDRD32:$reg), (ins TARGET:$dst), "db"#cc#"\t$reg, $dst", []> {
+  let Inst =
+      (ascend
+        (descend 0b0101, !cast<MxEncCondOp>("MxCC"#cc).Value, 0b11001, (operand $reg, 3)),
+        (operand "$dst", 16, (encoder "encodePCRelImm<16>")
+      );
+}
+
+foreach cc = [ "t", "f", "cc", "ls", "lt", "eq", "mi", "ne", "ge",
+               "cs", "pl", "gt", "hi", "vc", "le", "vs"] in {
+  def DB#cc : MxDBcc<cc>;
+}
+
+def DBRA: MxDBcc<"t">;
+
 //===----------------------------------------------------------------------===//
 // Call
 //===----------------------------------------------------------------------===//
